@@ -1,0 +1,75 @@
+/* fonts.css — the four families schedule-visualizer.html uses, served from
+   this folder instead of fonts.googleapis.com.
+
+   Only the weights the stylesheet actually asks for are here. The old Google
+   Fonts URL pulled DM Sans 300, Fraunces 300 and Fraunces 300-italic, none of
+   which appear anywhere in the page; it did not pull Public Sans at all, even
+   though the embedded Schedule Browser is set in it. See README.md.
+
+   Italics are deliberately absent. The Google URL never requested any either,
+   so the six italic rules in the page have always been synthesised by the
+   browser. Shipping real italics would change how the tool looks, which is a
+   separate decision from removing a network dependency.
+
+   font-display:swap — text is readable immediately and reflows when the face
+   lands. These files are same-origin, so that window is milliseconds. */
+
+/* ── DM Sans — UI (--font-ui) ─────────────────────────────────────────────
+   One rule uses font-weight:800; there is no 800 file here and the browser
+   resolves it to 700. That was already true with the Google URL, which
+   stopped at 600. */
+@font-face {
+  font-family: 'DM Sans'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('dm-sans-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('dm-sans-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('dm-sans-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('dm-sans-latin-700-normal.woff2') format('woff2');
+}
+
+/* ── DM Mono — room numbers, coordinates, timings (--font-mono) ─────────── */
+@font-face {
+  font-family: 'DM Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('dm-mono-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('dm-mono-latin-500-normal.woff2') format('woff2');
+}
+
+/* ── Fraunces — headings (--font-display) ────────────────────────────────
+   Every use in the page sets font-weight:600 explicitly, so one weight is
+   the whole requirement. */
+@font-face {
+  font-family: 'Fraunces'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('fraunces-latin-600-normal.woff2') format('woff2');
+}
+
+/* ── Public Sans — the embedded Schedule Browser ─────────────────────────
+   New here. BR_CSS has always set 'Public Sans' and the page never loaded it,
+   so the browser view inside the tool rendered in system-ui while published
+   files rendered in Public Sans. Same stylesheet, two different results. */
+@font-face {
+  font-family: 'Public Sans'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('public-sans-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Public Sans'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('public-sans-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Public Sans'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('public-sans-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Public Sans'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('public-sans-latin-700-normal.woff2') format('woff2');
+}

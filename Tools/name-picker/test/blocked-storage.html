@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Name Picker — blocked-storage check</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#eaeaea;margin:0;padding:28px;line-height:1.55;}
+  h1{font-size:1.3em;color:#f5d76e;margin:0 0 6px;}
+  p{max-width:62ch;color:rgba(234,234,234,0.75);font-size:0.94em;}
+  code{background:#0f3460;padding:1px 5px;border-radius:3px;}
+  #out{margin-top:18px;border-collapse:collapse;font-size:0.9em;}
+  #out td{padding:5px 12px 5px 0;border-bottom:1px solid rgba(255,255,255,0.1);vertical-align:top;}
+  .ok::before{content:'PASS';color:#4ade80;font-weight:700;}
+  .no::before{content:'FAIL';color:#f87171;font-weight:700;}
+  #verdict{margin-top:20px;font-size:1.1em;font-weight:700;}
+</style>
+</head>
+<body>
+<h1>Blocked-storage check</h1>
+<p>
+  Chrome with site data blocked does not make <code>localStorage.setItem</code> fail —
+  it makes <b>reading the <code>localStorage</code> property itself</b> throw. None of the
+  Name Picker's old forty-six call sites survived that, and it is the case
+  <code>gvb-save</code>'s memory fallback exists for. Chrome's site settings cannot
+  be driven from a test script, so this page installs the same failure by replacing
+  the property with a throwing getter <i>before</i> importing the store.
+</p>
+<p>Open it and read the table. Everything should say PASS.</p>
+<table id="out"></table>
+<div id="verdict"></div>
+
+<script>
+/* Must run before the module below, hence a classic script and a separate tag:
+   an inline module is deferred, so the getter has to be installed here. */
+window.__probeCount = 0;
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  get() {
+    window.__probeCount++;
+    throw new DOMException('Access is denied for this document.', 'SecurityError');
+  }
+});
+</script>
+<script type="module">
+import { createStore } from '../np-store.js';
+
+const rows = [];
+const check = (name, cond, detail = '') => rows.push({ name, cond: !!cond, detail });
+
+let store = null, built = false;
+try { store = createStore(); built = true; } catch (e) { rows.push({ name: 'createStore() threw: ' + e.message, cond: false }); }
+check('the localStorage property really does throw when touched', window.__probeCount > 0,
+      `${window.__probeCount} access${window.__probeCount === 1 ? '' : 'es'} threw`);
+check('createStore() survives it', built);
+
+if (built) {
+  check('the store reports memoryOnly', store.memoryOnly === true);
+
+  let readOk = true, read = null;
+  try { read = store.get('rosters'); } catch (e) { readOk = false; }
+  check('reading a key does not throw', readOk);
+  check('a blocked read returns the default', read && Object.keys(read).length === 0);
+
+  let wroteOk = true;
+  try { store.set('current', ['Aiden Alvarez', 'Brooklyn Bell']); } catch (e) { wroteOk = false; }
+  check('writing a key does not throw', wroteOk);
+  check('the write is readable back from memory', store.get('current').length === 2);
+
+  check('defaults come through for every key', store.keys.every(d => {
+    try { store.get(d.name); return true; } catch (e) { return false; }
+  }), `${store.keys.length} keys`);
+
+  let snapOk = true;
+  try { store.snapshot(); store.census(); store.clearStudentData(); store.clearAll(); }
+  catch (e) { snapOk = false; }
+  check('snapshot, census and both erase paths all run', snapOk);
+
+  const text = store.serialize({ np_current: ['Camila Castro'] });
+  check('export still serializes, so a roster can be rescued to a file',
+        store.deserialize(text) !== null);
+}
+
+const table = document.getElementById('out');
+table.innerHTML = rows.map(r =>
+  `<tr><td class="${r.cond ? 'ok' : 'no'}"></td><td>${r.name}</td><td style="opacity:.6">${r.detail}</td></tr>`
+).join('');
+const failed = rows.filter(r => !r.cond).length;
+const verdict = document.getElementById('verdict');
+verdict.textContent = failed
+  ? `${failed} of ${rows.length} checks failed.`
+  : `All ${rows.length} checks passed — the tool runs with storage blocked.`;
+verdict.style.color = failed ? '#f87171' : '#4ade80';
+document.title = failed ? `FAIL (${failed}) — blocked-storage check` : 'PASS — blocked-storage check';
+</script>
+</body>
+</html>
