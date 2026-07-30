@@ -3,206 +3,674 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Six browser-only tools for classroom scheduling, grading, and logistics.">
-<title>Staff Toolkit — AI Tools</title>
+<meta name="description" content="Six single-file browser tools for rosters, seating, schedules, and grade math. No installs, no accounts.">
+<title>Six Tools — browser-only classroom utilities</title>
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231F5D50'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h9' stroke='%23D9AC55' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!--
+  DEV NOTES — deferred, do not lose:
+
+  1. LIVE PREVIEW THUMBNAILS ON CARD HOVER
+     Mini rendered snapshot per tool (fake seating chart, a schedule row, a
+     name-picker spin). Deferred to a later pass. Hook: each .row already has
+     data-tool="<slug>"; a preview panel can key off that.
+
+  2. INDIVIDUAL TOOL PAGE REDESIGNS
+     Restyle the six tool files (schedule-browser.html, seating chart generator,
+     etc.) to match this design system. Deferred — the six tool files were NOT
+     touched in this pass, only this landing shell. Tokens to reuse live in
+     :root below.
+
+  3. REAL USAGE COUNTER
+     Deferred. Requires a lightweight third-party hit-counter script (free
+     public API-based counter) added to each of the six tool pages individually,
+     incrementing a real shared per-tool count. Not implementable as a
+     static-only change to this landing page. Revisit as a follow-up once the
+     tool-page redesign pass (2) happens.
+-->
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F4F5F1'/%3E%3Cpath d='M16 4v24M4 16h24' stroke='%23E8500F' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='6.5' fill='none' stroke='%23223140' stroke-width='2'/%3E%3C/svg%3E">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
   :root {
-    --paper: #101615;
-    --panel: #171F1D;
-    --ink: #E8ECE8;
-    --ink-soft: #8CA098;
-    --line: #2A3532;
-    --teal: #5FBBA0;
-    --teal-dark: #1F5D50;
-    --yellow: #D9AC55;
-    --yellow-soft: #3A311F;
+    /* drafting sheet */
+    --paper:     #F4F5F1;   /* sheet ground — neutral white, not cream */
+    --grid-minor:#E3E8E6;
+    --grid-major:#CFD9DA;   /* graph-paper blue-gray */
+    --panel:     #FBFBF9;   /* raised card ground */
+    /* ink */
+    --ink:       #223140;   /* drafting ink navy */
+    --dim:       #5E6E77;
+    --faint:     #93A1A8;
+    /* line + accent */
+    --blue:      #33628F;   /* structural blueprint blue */
+    --orange:    #E8500F;   /* international orange — action + cursor only */
+    --orange-soft: rgba(232, 80, 15, .1);
+
+    --display: 'Bricolage Grotesque', system-ui, sans-serif;
+    --body:    'Atkinson Hyperlegible', system-ui, sans-serif;
+    --mono:    'IBM Plex Mono', ui-monospace, monospace;
+
+    --ease: cubic-bezier(.25, .8, .25, 1);
+    --ruler: 26px;          /* edge ruler thickness */
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
 
   body {
-    background: var(--paper);
+    background:
+      linear-gradient(to right, var(--grid-major) 1px, transparent 1px) 0 0 / 96px 96px,
+      linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px) 0 0 / 96px 96px,
+      linear-gradient(to right, var(--grid-minor) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(to bottom, var(--grid-minor) 1px, transparent 1px) 0 0 / 24px 24px,
+      var(--paper);
     color: var(--ink);
-    font-family: 'Inter', sans-serif;
-    line-height: 1.5;
+    font-family: var(--body);
+    font-size: 16.5px;
+    line-height: 1.55;
     min-height: 100vh;
-    padding: clamp(2.4rem, 6vw, 5rem) 1.4rem 4rem;
+    padding: calc(var(--ruler) + clamp(2rem, 6vw, 4.2rem)) 1.25rem 3.4rem calc(var(--ruler) + 1.25rem);
+    overflow-x: hidden;
   }
 
   a { color: inherit; }
+  ::selection { background: var(--orange-soft); }
 
-  .wrap { max-width: 900px; margin: 0 auto; }
+  .wrap { max-width: 920px; margin: 0 auto; position: relative; z-index: 2; }
 
-  /* ---------- hero ---------- */
-  .eyebrow {
-    font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--ink-soft);
-    display: flex; gap: .9rem; align-items: center; margin-bottom: 1.1rem;
+  /* ==================================================================
+     EDGE RULERS + CROSSHAIR (pointer devices only — see @media hover)
+     ================================================================== */
+  .ruler {
+    position: fixed; z-index: 40; pointer-events: none;
+    background: var(--paper);
+    opacity: 0;
   }
-  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  .ruler.x {
+    top: 0; left: var(--ruler); right: 0; height: var(--ruler);
+    border-bottom: 1px solid var(--grid-major);
+    background-image:
+      repeating-linear-gradient(to right,
+        var(--faint) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(to right,
+        var(--dim) 0 1px, transparent 1px 96px);
+    background-size: 100% 7px, 100% 12px;
+    background-position: bottom left, bottom left;
+    background-repeat: no-repeat;
+  }
+  .ruler.y {
+    top: var(--ruler); left: 0; bottom: 0; width: var(--ruler);
+    border-right: 1px solid var(--grid-major);
+    background-image:
+      repeating-linear-gradient(to bottom,
+        var(--faint) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(to bottom,
+        var(--dim) 0 1px, transparent 1px 96px);
+    background-size: 7px 100%, 12px 100%;
+    background-position: right top, right top;
+    background-repeat: no-repeat;
+  }
+  .corner {
+    position: fixed; top: 0; left: 0; z-index: 41; pointer-events: none;
+    width: var(--ruler); height: var(--ruler);
+    background: var(--paper);
+    border-right: 1px solid var(--grid-major);
+    border-bottom: 1px solid var(--grid-major);
+    opacity: 0;
+  }
+  .corner svg { display: block; width: 100%; height: 100%; }
+
+  /* markers that track the pointer along each ruler */
+  .mark { position: absolute; background: var(--orange); }
+  .ruler.x .mark { top: 0; bottom: 0; left: 0; width: 1.5px; transform: translateX(var(--mx, -40px)); }
+  .ruler.y .mark { left: 0; right: 0; top: 0; height: 1.5px; transform: translateY(var(--my, -40px)); }
+
+  /* full-viewport crosshair guides */
+  .guides { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; }
+  .guides .gx, .guides .gy { position: absolute; background: var(--orange); opacity: .34; }
+  .guides .gx { top: 0; bottom: 0; width: 1px; transform: translateX(var(--mx, -40px)); }
+  .guides .gy { left: 0; right: 0; height: 1px; transform: translateY(var(--my, -40px)); }
+
+  /* live coordinate readout */
+  .coords {
+    position: fixed; right: .9rem; bottom: .75rem; z-index: 40; pointer-events: none;
+    font-family: var(--mono); font-size: .66rem; letter-spacing: .08em;
+    color: var(--dim);
+    background: var(--panel);
+    border: 1px solid var(--grid-major);
+    padding: .28rem .55rem;
+    opacity: 0;
+  }
+  .coords b { color: var(--orange); font-weight: 500; }
+
+  /* everything above appears only after boot, on hover-capable devices */
+  @media (hover: hover) and (pointer: fine) {
+    .booted .ruler, .booted .corner, .booted .coords { opacity: 1; transition: opacity .6s var(--ease); }
+    .booted .guides { opacity: 1; transition: opacity .9s var(--ease) .15s; }
+  }
+
+  /* ==================================================================
+     LOAD CHOREOGRAPHY
+     .draw  — a rule that plots itself left→right
+     .ink   — content that inks on (fade + small rise)
+     Delays via --d (ms). Never blocks: pure CSS, content in DOM at once.
+     ================================================================== */
+  @keyframes plot { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes inkon { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+
+  .draw { transform-origin: left center; animation: plot .55s var(--ease) both; animation-delay: var(--d, 0ms); }
+  .ink  { animation: inkon .5s var(--ease) both; animation-delay: var(--d, 0ms); }
+
+  /* ============ header ============ */
+  .sheetline { height: 2px; background: var(--ink); margin-bottom: 1.35rem; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--dim);
+    display: flex; align-items: center; gap: .7rem; flex-wrap: wrap;
+    margin-bottom: 1.35rem;
+  }
+  .eyebrow .tick { color: var(--orange); }
+  .eyebrow .sep { color: var(--grid-major); }
 
   h1 {
-    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
-    font-size: clamp(2.1rem, 6vw, 3.1rem); line-height: 1.06;
-    letter-spacing: -.01em; max-width: 14ch;
+    font-family: var(--display);
+    font-variation-settings: 'opsz' 80;
+    font-weight: 760;
+    font-size: clamp(2.15rem, 5.6vw, 3.35rem);
+    line-height: 1.02;
+    letter-spacing: -.022em;
+    max-width: 21ch;
+    text-wrap: balance;
   }
+  h1 .accent { color: var(--blue); }
 
   .lede {
-    margin-top: 1.1rem; max-width: 46ch; color: var(--ink-soft); font-size: 1.02rem;
+    margin-top: 1.2rem; max-width: 56ch;
+    color: var(--dim); font-size: 1.03rem;
+  }
+  .lede strong { color: var(--ink); font-weight: 700; }
+
+  /* ============ filter ============ */
+  .controls {
+    margin-top: clamp(2rem, 4.5vw, 2.8rem);
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
   }
 
-  .lede strong { color: var(--ink); font-weight: 500; }
+  .field {
+    position: relative; flex: 1 1 320px; min-width: 0;
+    display: flex; align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--grid-major);
+    transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .field:focus-within {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-soft);
+  }
+  .field .lens { position: absolute; left: .85rem; color: var(--faint); display: flex; }
+  .field:focus-within .lens { color: var(--orange); }
 
-  /* ---------- gradebook grid ---------- */
-  .grid-shell {
-    margin-top: clamp(2.6rem, 6vw, 3.6rem);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
+  #filter {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--body); font-size: .95rem; color: var(--ink);
+    background: none; border: 0; outline: 0;
+    padding: .74rem 3.4rem .74rem 2.6rem;
+  }
+  #filter::placeholder { color: var(--faint); }
+  #filter { -webkit-appearance: none; appearance: none; }
+  #filter::-webkit-search-decoration,
+  #filter::-webkit-search-cancel-button,
+  #filter::-webkit-search-results-button { -webkit-appearance: none; display: none; }
+
+  .slash {
+    position: absolute; right: .6rem;
+    font-family: var(--mono); font-size: .68rem; color: var(--dim);
+    border: 1px solid var(--grid-major);
+    padding: .08rem .38rem; background: var(--paper);
+    transition: opacity .2s var(--ease);
+  }
+  .field:focus-within .slash { opacity: 0; }
+
+  .count {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--dim); white-space: nowrap;
+  }
+  .count b { color: var(--ink); font-weight: 500; }
+
+  /* ============ index (tool table) ============ */
+  .caption {
+    margin: 1.7rem 0 .55rem;
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .caption em { color: var(--blue); font-style: normal; }
+
+  .table {
+    border: 1px solid var(--ink);
+    background: var(--panel);
+    box-shadow: 5px 5px 0 rgba(34, 49, 64, .07);
+  }
+
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 3.6rem minmax(0, 1fr) minmax(0, auto) 5.2rem;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 1.15rem 1.3rem 1.15rem 1.35rem;
+    text-decoration: none; color: var(--ink);
+    transition: background .18s var(--ease);
+  }
+  .row + .row::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: var(--grid-major);
+    transform-origin: left center;
+    animation: plot .5s var(--ease) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .row:hover, .row:focus-visible { background: #F2F6F8; }
+  .row:focus-visible { outline: 2px solid var(--orange); outline-offset: -2px; }
+
+  /* signature hover: CAD selection marquee — dashed box + detail number */
+  .row::after {
+    content: ''; position: absolute; inset: 5px; pointer-events: none;
+    border: 1px dashed var(--orange);
+    opacity: 0; transition: opacity .16s var(--ease);
+  }
+  .row:hover::after, .row:focus-visible::after { opacity: .85; }
+
+  .num {
+    font-family: var(--mono); font-size: .78rem; font-weight: 500;
+    color: var(--faint); letter-spacing: .04em;
+    width: 2.1rem; height: 2.1rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--grid-major); border-radius: 50%;
+    transition: color .18s var(--ease), border-color .18s var(--ease);
+  }
+  .row:hover .num, .row:focus-visible .num { color: var(--orange); border-color: var(--orange); }
+
+  .name {
+    display: block;
+    font-family: var(--display);
+    font-variation-settings: 'opsz' 40;
+    font-weight: 680;
+    font-size: 1.12rem; line-height: 1.22; letter-spacing: -.012em;
+  }
+  .pitch { display: block; font-size: .875rem; color: var(--dim); margin-top: .14rem; }
+
+  .tags { display: flex; gap: .34rem; flex-wrap: wrap; justify-content: flex-end; }
+  .tags span {
+    font-family: var(--mono); font-size: .63rem; letter-spacing: .04em;
+    color: var(--blue); background: var(--paper);
+    border: 1px solid var(--grid-major);
+    padding: .12rem .42rem; white-space: nowrap;
+  }
+
+  .open {
+    justify-self: end;
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--blue);
+  }
+  .row:hover .open, .row:focus-visible .open { color: var(--orange); }
+  .open svg { transition: transform .2s var(--ease); }
+  .row:hover .open svg, .row:focus-visible .open svg { transform: translateX(4px); }
+
+  .empty {
+    padding: 2.1rem 1.35rem; color: var(--dim); font-size: .92rem;
+  }
+  .empty code {
+    font-family: var(--mono); font-size: .82rem; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--grid-major);
+    padding: .05rem .32rem;
+  }
+
+  /* ============ what's new ============ */
+  .news {
+    margin-top: 1.5rem;
+    border: 1px solid var(--grid-major);
     background: var(--panel);
   }
-
-  .grid-head {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    font-family: 'IBM Plex Mono', monospace; font-size: .68rem; letter-spacing: .1em;
-    color: var(--ink-soft); text-transform: uppercase;
-    border-bottom: 1px solid var(--line);
+  .news summary {
+    list-style: none; cursor: pointer;
+    display: flex; align-items: center; gap: .6rem;
+    padding: .85rem 1.3rem;
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--dim);
+    transition: color .2s var(--ease);
   }
-  .grid-head span { padding: .55rem .9rem; border-right: 1px solid var(--line); }
-  .grid-head span:last-child { border-right: none; }
+  .news summary::-webkit-details-marker { display: none; }
+  .news summary:hover { color: var(--ink); }
+  .news summary:focus-visible { outline: 2px solid var(--orange); outline-offset: -2px; }
+  .news .caret { color: var(--orange); transition: transform .25s var(--ease); display: inline-flex; }
+  .news[open] .caret { transform: rotate(90deg); }
+  .news[open] summary { color: var(--ink); border-bottom: 1px solid var(--grid-major); }
 
-  .cell-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+  .log { padding: .4rem 1.3rem 1.15rem; }
+  .log li {
+    list-style: none;
+    display: grid; grid-template-columns: 6.4rem 1fr; gap: 1rem;
+    padding: .68rem 0; border-bottom: 1px dashed var(--grid-major);
+    font-size: .89rem;
   }
-
-  .cell {
-    position: relative; display: block; text-decoration: none; color: var(--ink);
-    padding: 1.4rem 1.2rem 1.3rem;
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    isolation: isolate;
+  .log li:last-child { border-bottom: none; }
+  .log time {
+    font-family: var(--mono); font-size: .72rem; color: var(--dim);
+    padding-top: .12rem;
   }
-  .cell-grid .cell:nth-child(3n) { border-right: none; }
-  .cell-grid .cell:nth-last-child(-n+3) { border-bottom: none; }
+  .log b { font-weight: 700; }
 
-  .coord {
-    font-family: 'IBM Plex Mono', monospace; font-size: .68rem; letter-spacing: .1em;
-    color: var(--ink-soft);
+  /* ============ title block (footer) ============ */
+  .titleblock {
+    margin-top: 2.4rem;
+    border: 1.5px solid var(--ink);
+    background: var(--panel);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    font-family: var(--mono);
   }
-
-  .cell h2 {
-    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.08rem;
-    margin: .55rem 0 .5rem; position: relative; display: inline-block;
+  .titleblock .contact {
+    padding: .85rem 1.1rem;
+    font-size: .74rem; line-height: 1.8; color: var(--dim);
+    border-right: 1.5px solid var(--ink);
   }
-  .cell h2 .sweep {
-    position: absolute; left: -.15em; right: -.15em; bottom: .04em; height: .42em;
-    background: var(--yellow); opacity: .62; z-index: -1;
-    transform: scaleX(0); transform-origin: left;
-    transition: transform .22s ease;
+  .titleblock .handle { color: var(--orange); }
+  .titleblock .meta {
+    display: grid; grid-template-columns: auto auto;
   }
-  .cell:hover h2 .sweep, .cell:focus-visible h2 .sweep { transform: scaleX(1); }
-
-  .cell p {
-    font-size: .86rem; color: var(--ink-soft); min-height: 2.8em;
+  .titleblock .cell {
+    padding: .5rem .95rem;
+    border-left: 1px solid var(--grid-major);
+    display: flex; flex-direction: column; justify-content: center; gap: .1rem;
   }
-
-  .cell .go {
-    margin-top: .9rem; display: inline-flex; align-items: center; gap: .35rem;
-    font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .06em;
-    color: var(--teal);
+  .titleblock .cell:nth-child(-n+2) { border-bottom: 1px solid var(--grid-major); }
+  .titleblock .k {
+    font-size: .56rem; letter-spacing: .13em; text-transform: uppercase; color: var(--faint);
   }
-  .cell .go svg { transition: transform .18s ease; }
-  .cell:hover .go svg, .cell:focus-visible .go svg { transform: translateX(3px); }
+  .titleblock .v { font-size: .72rem; color: var(--ink); white-space: nowrap; }
 
-  .cell:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
-
-  @media (max-width: 640px) {
-    .grid-head { display: none; }
-    .cell-grid { grid-template-columns: 1fr; }
-    .cell-grid .cell:nth-child(3n) { border-right: none; }
-    .cell-grid .cell { border-right: none; }
-    .cell-grid .cell:last-child { border-bottom: none; }
+  /* ============ responsive ============ */
+  @media (max-width: 760px) {
+    body { padding-left: 1.1rem; padding-top: clamp(2rem, 6vw, 4.2rem); }
+    .row {
+      grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+      row-gap: .6rem; column-gap: .9rem;
+      padding: 1rem 1.1rem 1.05rem 1.15rem;
+    }
+    .num { align-self: start; width: 1.9rem; height: 1.9rem; font-size: .7rem; }
+    .open { grid-column: 3; grid-row: 1; align-self: start; padding-top: .3rem; }
+    .tags { grid-column: 2 / 4; grid-row: 2; justify-content: flex-start; }
+    .log li { grid-template-columns: 1fr; gap: .15rem; }
+    .controls { gap: .7rem; }
+    .titleblock { grid-template-columns: 1fr; }
+    .titleblock .contact { border-right: none; border-bottom: 1.5px solid var(--ink); }
+    .titleblock .meta { grid-template-columns: 1fr 1fr; }
+    .ruler, .corner, .guides, .coords { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .cell h2 .sweep, .cell .go svg { transition: none; }
-  }
-
-  /* ---------- footer ---------- */
-  footer {
-    max-width: 900px; margin: 2.4rem auto 0;
-    font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--ink-soft);
+    .draw, .ink, .row + .row::before { animation: none; }
+    .guides, .coords { display: none; }
+    * { transition-duration: .01ms !important; }
   }
 </style>
 </head>
 <body>
 
+<!-- CAD chrome: rulers, crosshair, coordinates (hover devices only) -->
+<div class="ruler x" aria-hidden="true"><span class="mark"></span></div>
+<div class="ruler y" aria-hidden="true"><span class="mark"></span></div>
+<div class="corner" aria-hidden="true">
+  <svg viewBox="0 0 26 26" fill="none"><path d="M6 13h14M13 6v14" stroke="#E8500F" stroke-width="1.4"/><circle cx="13" cy="13" r="4.5" stroke="#93A1A8" stroke-width="1"/></svg>
+</div>
+<div class="guides" aria-hidden="true"><span class="gx"></span><span class="gy"></span></div>
+<p class="coords" id="coords" aria-hidden="true">x <b id="cx">—</b> · y <b id="cy">—</b></p>
+
 <div class="wrap">
 
-  <div class="eyebrow"><span class="dot"></span> EAST MIDDLE · SOCIAL STUDIES · 6 TOOLS</div>
+  <header>
+    <div class="sheetline draw" style="--d:60ms"></div>
 
-  <h1>Six tools for the busywork.</h1>
-  <p class="lede">Small, single-file apps for the stuff that eats prep time. <strong>No installs, no logins, no data leaving your browser</strong> — open the file and use it.</p>
+    <p class="eyebrow ink" style="--d:220ms">
+      <span class="tick">+</span> Unofficial <span class="sep">/</span> Browser-only
+      <span class="sep">/</span> Nothing leaves your machine
+    </p>
 
-  <div class="grid-shell">
-    <div class="grid-head"><span>Scheduling</span><span>Grading &amp; docs</span><span>Classroom</span></div>
-    <div class="cell-grid">
+    <h1 class="ink" style="--d:320ms">Six tools for the parts of the job that <span class="accent">aren&rsquo;t teaching.</span></h1>
 
-      <a class="cell" href="Tools/schedule-browser.html">
-        <span class="coord">A1</span>
-        <h2><span class="sweep"></span>East Middle Schedule Browser</h2>
-        <p>This year's actual A/B schedule, searchable by teacher, room, or period — a live example of what the School Layout Visualizer (A2) can publish.</p>
-        <span class="go">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg></span>
+    <p class="lede ink" style="--d:440ms">
+      Single-file web apps for rosters, seating, schedules, and grade math.
+      <strong>No install, no account, no upload</strong> &mdash; open the file and use it.
+      Works offline once loaded.
+    </p>
+  </header>
+
+  <div class="controls ink" style="--d:560ms">
+    <label class="field" for="filter">
+      <span class="lens" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="6.4" cy="6.4" r="4.4" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M9.8 9.8L13.4 13.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <input id="filter" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Filter by name or tag&hellip;">
+      <span class="slash" aria-hidden="true">/</span>
+    </label>
+    <p class="count" id="count" role="status" aria-live="polite"><b>6</b> of 6 tools</p>
+  </div>
+
+  <p class="caption ink" style="--d:640ms"><em>01&ndash;06</em> &nbsp;in the order I reach for them</p>
+
+  <div class="table ink" style="--d:680ms">
+    <div id="rows">
+
+      <a class="row ink" style="--d:720ms" href="Tools/Name%20Picker.html"
+         data-tool="name-picker" data-tags="random cold call participation groups shuffle roster who goes first">
+        <span class="num">01</span>
+        <span>
+          <span class="name">Name Picker</span>
+          <span class="pitch">5 seconds. Pick a name, move on.</span>
+        </span>
+        <span class="tags"><span>random</span><span>cold-call</span><span>groups</span></span>
+        <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       </a>
 
-      <a class="cell" href="Tools/final_grade_checker.html">
-        <span class="coord">B1</span>
-        <h2><span class="sweep"></span>Final Grade Checker</h2>
-        <p>Enter grades by hand or paste a TAC export, and let the math check itself.</p>
-        <span class="go">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg></span>
+      <a class="row ink" style="--d:790ms" href="Tools/Seating%20Chart%20Generator.html"
+         data-tool="seating-chart" data-tags="seating chart roster groups shuffle reshuffle desks layout pairs">
+        <span class="num">02</span>
+        <span>
+          <span class="name">Seating Chart Generator</span>
+          <span class="pitch">Build it once, reshuffle whenever you need to.</span>
+        </span>
+        <span class="tags"><span>seating</span><span>roster</span><span>shuffle</span></span>
+        <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       </a>
 
-      <a class="cell" href="Tools/Name%20Picker.html">
-        <span class="coord">C1</span>
-        <h2><span class="sweep"></span>Name Picker</h2>
-        <p>Pull a random student for cold-calls, groups, or who goes first.</p>
-        <span class="go">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg></span>
+      <a class="row ink" style="--d:860ms" href="Tools/schedule-browser.html"
+         data-tool="schedule-browser" data-tags="schedule teacher room period blocks a/b day lookup coverage substitute">
+        <span class="num">03</span>
+        <span>
+          <span class="name">Schedule Browser</span>
+          <span class="pitch">Look up any teacher, room, or period in seconds.</span>
+        </span>
+        <span class="tags"><span>schedule</span><span>rooms</span><span>periods</span></span>
+        <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       </a>
 
-      <a class="cell" href="Tools/schedule-visualizer.html">
-        <span class="coord">A2</span>
-        <h2><span class="sweep"></span>School Layout Visualizer</h2>
-        <p>A hyperlinked map of teachers, rooms, and clusters through the building.</p>
-        <span class="go">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg></span>
+      <a class="row ink" style="--d:930ms" href="Tools/schedule-visualizer.html"
+         data-tool="layout-visualizer" data-tags="building map layout rooms clusters hallways floors wayfinding schedule">
+        <span class="num">04</span>
+        <span>
+          <span class="name">School Layout Visualizer</span>
+          <span class="pitch">See the whole building&rsquo;s schedule, hyperlinked.</span>
+        </span>
+        <span class="tags"><span>building</span><span>map</span><span>clusters</span></span>
+        <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       </a>
 
-      <a class="cell" href="Tools/image-to-pdf.html">
-        <span class="coord">B2</span>
-        <h2><span class="sweep"></span>Image → PDF Assembler</h2>
-        <p>Combine photos into one clean PDF, entirely in the browser.</p>
-        <span class="go">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg></span>
+      <a class="row ink" style="--d:1000ms" href="Tools/final_grade_checker.html"
+         data-tool="grade-checker" data-tags="grades grading report cards math weights averages quarter exam gradebook export">
+        <span class="num">05</span>
+        <span>
+          <span class="name">Final Grade Checker</span>
+          <span class="pitch">Double-check the math before report cards go out.</span>
+        </span>
+        <span class="tags"><span>grades</span><span>report-cards</span><span>math</span></span>
+        <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       </a>
 
-      <a class="cell" href="Tools/Seating%20Chart%20Generator.html">
-        <span class="coord">C2</span>
-        <h2><span class="sweep"></span>Seating Chart Generator</h2>
-        <p>Build a chart once, then reshuffle it whenever you need to.</p>
-        <span class="go">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg></span>
+      <a class="row ink" style="--d:1070ms" href="Tools/image-to-pdf.html"
+         data-tool="image-to-pdf" data-tags="pdf images photos scans handouts merge combine documents">
+        <span class="num">06</span>
+        <span>
+          <span class="name">Image &rarr; PDF Assembler</span>
+          <span class="pitch">Turn a stack of photos into one clean PDF.</span>
+        </span>
+        <span class="tags"><span>pdf</span><span>images</span><span>scans</span></span>
+        <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       </a>
 
     </div>
+
+    <p class="empty" id="empty" hidden>
+      No tool matches that. Try <code>seating</code>, <code>grades</code>, or <code>rooms</code>.
+    </p>
   </div>
 
-  <footer>Questions or bugs? Just ask.</footer>
+  <!-- Placeholder entries. Drop real ones in as <li> at the top of .log; keep the date format. -->
+  <details class="news ink" style="--d:1160ms">
+    <summary>
+      <span class="caret" aria-hidden="true">
+        <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      What&rsquo;s new
+    </summary>
+    <ul class="log">
+      <li>
+        <time datetime="2026-07-30">Jul 30, 2026</time>
+        <span><b>New landing page.</b> Filterable tool list, priority ordering, and this changelog.</span>
+      </li>
+      <li>
+        <time datetime="2026-07-22">Jul 22, 2026</time>
+        <span><b>Seating Chart Generator.</b> Reshuffling now keeps locked seats where you put them.</span>
+      </li>
+      <li>
+        <time datetime="2026-07-14">Jul 14, 2026</time>
+        <span><b>Schedule Browser.</b> Fixed mirrored floors in the route-tracing view.</span>
+      </li>
+    </ul>
+  </details>
+
+  <footer class="titleblock ink" style="--d:1240ms">
+    <div class="contact">
+      Questions or bugs? Want to contribute? Let me know.
+      Email <span class="handle">@dsmoore</span>
+    </div>
+    <div class="meta">
+      <div class="cell"><span class="k">Drawn by</span><span class="v">D. Moore + Claude</span></div>
+      <div class="cell"><span class="k">Sheet</span><span class="v">1 of 1</span></div>
+      <div class="cell"><span class="k">Scale</span><span class="v">None</span></div>
+      <div class="cell"><span class="k">Rev</span><span class="v" id="rev">2026-07-30</span></div>
+    </div>
+  </footer>
 
 </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---------- filter ---------- */
+  var input = document.getElementById('filter');
+  var count = document.getElementById('count');
+  var empty = document.getElementById('empty');
+  var rows  = Array.prototype.slice.call(document.querySelectorAll('#rows .row'));
+
+  var haystack = rows.map(function (row) {
+    return (row.getAttribute('data-tags') + ' ' + row.textContent)
+      .toLowerCase().replace(/\s+/g, ' ');
+  });
+
+  function apply() {
+    var q = input.value.trim().toLowerCase();
+    var shown = [];
+
+    rows.forEach(function (row, i) {
+      var hit = !q || haystack[i].indexOf(q) !== -1;
+      row.hidden = !hit;
+      if (hit) shown.push(row);
+    });
+
+    count.innerHTML = '<b>' + shown.length + '</b> of ' + rows.length + ' tools';
+    empty.hidden = shown.length > 0;
+  }
+
+  input.addEventListener('input', apply);
+  apply();
+
+  /* ---------- keyboard: "/" to filter, Esc to clear ---------- */
+  document.addEventListener('keydown', function (e) {
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+    if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      input.focus();
+      return;
+    }
+    if (e.key === 'Escape' && document.activeElement === input) {
+      if (input.value) { input.value = ''; apply(); }
+      else { input.blur(); }
+    }
+  });
+
+  /* ---------- CAD chrome: rulers, crosshair, coordinates ---------- */
+  var fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+  if (fine.matches && !reduced.matches) {
+    var root = document.documentElement;
+    var cx = document.getElementById('cx');
+    var cy = document.getElementById('cy');
+    var RULER = 26;
+    var x = -40, y = -40, queued = false;
+
+    function pad(n) { return ('0000' + Math.max(0, Math.round(n))).slice(-4); }
+
+    function paint() {
+      queued = false;
+      root.style.setProperty('--mx', (x - RULER) + 'px');   /* within .ruler.x, offset by y-ruler */
+      root.style.setProperty('--my', (y - RULER) + 'px');
+      document.querySelector('.guides .gx').style.transform = 'translateX(' + x + 'px)';
+      document.querySelector('.guides .gy').style.transform = 'translateY(' + y + 'px)';
+      cx.textContent = pad(x);
+      cy.textContent = pad(y + window.scrollY);
+    }
+    function queue() { if (!queued) { queued = true; requestAnimationFrame(paint); } }
+
+    window.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') return;
+      x = e.clientX; y = e.clientY;
+      queue();
+    }, { passive: true });
+
+    window.addEventListener('scroll', queue, { passive: true });
+  }
+
+  /* boot flag: fades in the CAD chrome after the plot sequence finishes */
+  window.setTimeout(function () {
+    document.documentElement.classList.add('booted');
+  }, reduced.matches ? 0 : 1350);
+})();
+</script>
 
 </body>
 </html>
