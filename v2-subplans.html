@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>As Per My Lesson Plan — browser-only classroom tools</title>
+
+<meta name="description" content="Seven single-file classroom tools. No install, no account, no upload. Open the file and use it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="As Per My Lesson Plan">
+<meta property="og:url" content="https://aspermylessonplan.com/">
+<meta property="og:title" content="As Per My Lesson Plan">
+<meta property="og:description" content="Seven single-file classroom tools. No install, no account, no upload.">
+<meta name="twitter:card" content="summary_large_image">
+<!-- TODO: og:image — 1200x630, drop at assets/og/plan.png -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23E9E8E2'/%3E%3Crect x='4' y='13' width='24' height='7' fill='%23FFE94A'/%3E%3Cpath d='M4 8h24M4 24h16' stroke='%23121212' stroke-width='2'/%3E%3C/svg%3E">
+
+<!--
+  DIRECTION 2 — "SUB PLANS"
+  The page is the artifact: a plan left on the desk. Brutalist editorial type,
+  bone stock, one highlighter, one red pen. The highlighter sweep is the
+  signature; marginalia drift with the cursor.
+-->
+
+<style>
+  @font-face{font-family:'Space Grotesk';font-weight:600;font-display:swap;
+    src:url('assets/fonts/space-grotesk-latin-600-normal.woff2') format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:400;font-display:swap;
+    src:url('assets/fonts/public-sans-latin-400-normal.woff2') format('woff2');}
+  @font-face{font-family:'IBM Plex Mono';font-weight:400;font-display:swap;
+    src:url('assets/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');}
+  @font-face{font-family:'IBM Plex Mono';font-weight:500;font-display:swap;
+    src:url('assets/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');}
+
+  :root{
+    --bone:#E9E8E2; --ink:#121212; --pencil:#6E6E68; --faint:#9A9A93;
+    --hi:#FFE94A; --pen:#C4342A; --rule:#C6C5BE;
+    --disp:'Space Grotesk',Arial Black,system-ui,sans-serif;
+    --body:Georgia,'Iowan Old Style',Times,serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --ui:'Public Sans',system-ui,sans-serif;
+    --ease:cubic-bezier(.2,.85,.3,1);
+  }
+
+  /* ---- theme switcher (added) ---- */
+  .theme-switch{
+    position:fixed; top:14px; right:14px; z-index:100000;
+    display:inline-flex; align-items:center; gap:7px;
+    padding:9px 14px 9px 12px;
+    background:var(--ink); color:var(--bone);
+    border:1px solid var(--hi); border-radius:999px;
+    font-family:var(--ui); font-size:12px; font-weight:600; letter-spacing:.02em;
+    text-decoration:none; box-shadow:0 4px 18px rgba(0,0,0,.24),0 1px 2px rgba(0,0,0,.16);
+    opacity:0; animation:themeSwitchIn 500ms var(--ease) 900ms both;
+    transition:transform 220ms var(--ease), background 220ms, border-color 220ms;
+  }
+  .theme-switch:hover{ transform:translateY(-2px); background:var(--pen); border-color:var(--hi); }
+  .theme-switch svg{ opacity:.85; flex-shrink:0; }
+  @keyframes themeSwitchIn{ from{opacity:0;transform:translateY(-8px);} to{opacity:1;transform:translateY(0);} }
+  @media (max-width:640px){
+    .theme-switch span{ display:none; }
+    .theme-switch{ padding:9px; top:10px; right:10px; }
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  [hidden]{display:none!important;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    background:var(--bone);color:var(--ink);
+    font-family:var(--body);font-size:16px;line-height:1.5;
+    padding:0 clamp(1.1rem,4vw,3rem) 4rem;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  ::selection{background:var(--hi);color:var(--ink);}
+  :focus-visible{outline:2px solid var(--pen);outline-offset:3px;}
+  .sheet{max-width:1120px;margin:0 auto;}
+
+  /* ---------------- load ---------------- */
+  @keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  @keyframes stamp{from{opacity:0;transform:scale(1.06) rotate(-5deg);}to{opacity:.92;transform:scale(1) rotate(-8deg);}}
+  @keyframes sweep{from{background-size:0 .78em;}to{background-size:100% .78em;}}
+  .up{animation:rise .5s var(--ease) both;animation-delay:var(--d,0ms);}
+
+  /* highlighter: marker laid under the ink */
+  .hi{
+    background-image:linear-gradient(transparent 6%,var(--hi) 6%,var(--hi) 94%,transparent 94%);
+    background-repeat:no-repeat;background-position:0 .16em;background-size:0 .78em;
+    animation:sweep .62s var(--ease) forwards;animation-delay:var(--sd,1100ms);
+    padding:0 .06em;
+  }
+
+  /* ---------------- masthead form block ---------------- */
+  .form{
+    border-bottom:2px solid var(--ink);
+    padding:1.1rem 0 .7rem;margin-bottom:clamp(2rem,6vw,3.4rem);
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem 1.6rem;
+    font-family:var(--mono);font-size:.7rem;line-height:1.5;
+  }
+  .form .cell span{
+    display:block;font-size:.56rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:.22rem;
+  }
+  .form .cell b{font-weight:500;color:var(--ink);}
+  .form .cell.wide{grid-column:span 2;}
+
+  /* ---------------- hero ---------------- */
+  header{position:relative;margin-bottom:clamp(1.8rem,4.4vw,2.6rem);}
+  h1{
+    font-family:var(--disp);font-weight:600;
+    font-size:clamp(2.6rem,8.6vw,5.9rem);
+    line-height:.92;letter-spacing:-.04em;text-transform:uppercase;
+    max-width:15ch;
+  }
+  h1 .l{display:block;}
+  .subhead{
+    margin-top:1.5rem;max-width:52ch;font-size:1.08rem;line-height:1.55;color:#2A2A26;
+  }
+  .subhead b{font-family:var(--disp);font-weight:600;letter-spacing:-.01em;}
+
+  .stamp{
+    position:absolute;right:0;top:-.6rem;transform:rotate(-8deg);opacity:.92;
+    border:2.5px solid var(--pen);color:var(--pen);
+    font-family:var(--mono);font-weight:500;font-size:.6rem;letter-spacing:.14em;
+    text-transform:uppercase;text-align:center;line-height:1.35;
+    padding:.44rem .7rem;max-width:11rem;
+    animation:stamp .5s var(--ease) both;animation-delay:1500ms;
+    will-change:transform;pointer-events:none;
+  }
+
+  /* ---------------- search strip ---------------- */
+  .strip{
+    display:flex;align-items:flex-end;gap:1.4rem;flex-wrap:wrap;
+    border-bottom:1px solid var(--ink);padding-bottom:.5rem;margin-bottom:.2rem;
+  }
+  .strip label{
+    flex:1 1 300px;min-width:0;display:block;
+  }
+  .strip .lab{
+    display:block;font-family:var(--mono);font-size:.56rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--faint);margin-bottom:.3rem;
+  }
+  #q{
+    width:100%;border:0;border-bottom:1px solid var(--rule);background:none;outline:0;
+    font-family:var(--disp);font-weight:600;font-size:1.24rem;letter-spacing:-.015em;
+    color:var(--ink);padding:.1rem 0 .3rem;-webkit-appearance:none;appearance:none;
+  }
+  #q::placeholder{color:var(--faint);font-weight:600;}
+  #q:focus{border-bottom-color:var(--pen);}
+  #q::-webkit-search-cancel-button{-webkit-appearance:none;display:none;}
+  .tally{
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--pencil);white-space:nowrap;padding-bottom:.35rem;
+  }
+  .tally b{font-weight:500;color:var(--ink);}
+
+  /* ---------------- agenda ---------------- */
+  .agenda{margin-bottom:3rem;}
+  .item{
+    position:relative;display:grid;
+    grid-template-columns:5.6rem minmax(0,1fr) 13rem 5.4rem;
+    gap:1.4rem;align-items:baseline;
+    padding:1.5rem 0 1.35rem;border-bottom:1px solid var(--rule);
+  }
+  .item:last-child{border-bottom:1px solid var(--ink);}
+
+  .num{
+    font-family:var(--disp);font-weight:600;font-size:2.9rem;line-height:.8;
+    letter-spacing:-.05em;color:transparent;
+    -webkit-text-stroke:1.4px var(--ink);
+    transition:color .18s var(--ease);
+    align-self:start;
+  }
+  .num small{
+    display:block;-webkit-text-stroke:0;color:var(--faint);
+    font-size:.5rem;letter-spacing:.18em;margin-top:.42rem;font-weight:600;
+  }
+  .item:hover .num,.item:focus-visible .num{color:var(--ink);}
+
+  .what{min-width:0;}
+  .title{
+    display:inline;font-family:var(--disp);font-weight:600;
+    font-size:clamp(1.35rem,3.1vw,1.95rem);line-height:1.08;letter-spacing:-.025em;
+    background-image:linear-gradient(transparent 6%,var(--hi) 6%,var(--hi) 94%,transparent 94%);
+    background-repeat:no-repeat;background-position:0 .12em;background-size:0 .8em;
+    transition:background-size .3s var(--ease);padding:0 .05em;
+  }
+  .item:hover .title,.item:focus-visible .title{background-size:100% .8em;}
+  .pitch{display:block;margin-top:.55rem;font-size:1rem;color:#333330;max-width:40ch;}
+  .tags{
+    display:block;margin-top:.6rem;font-family:var(--mono);font-size:.63rem;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+  }
+
+  .note{
+    font-family:var(--body);font-style:italic;font-size:.87rem;line-height:1.45;
+    color:var(--pen);transform:rotate(-1.4deg);transform-origin:left top;
+    padding-left:.9rem;border-left:1.5px solid rgba(196,52,42,.35);
+    will-change:transform;
+  }
+  .go{
+    justify-self:end;align-self:center;
+    font-family:var(--mono);font-weight:500;font-size:.68rem;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink);white-space:nowrap;
+    display:inline-flex;align-items:center;gap:.4rem;
+    border-bottom:1.5px solid var(--ink);padding-bottom:.15rem;
+  }
+  .item:hover .go,.item:focus-visible .go{color:var(--pen);border-bottom-color:var(--pen);}
+  .go svg{transition:transform .2s var(--ease);}
+  .item:hover .go svg{transform:translateX(4px);}
+
+  .none{
+    padding:2.4rem 0;border-bottom:1px solid var(--ink);
+    font-family:var(--disp);font-weight:600;font-size:1.4rem;letter-spacing:-.02em;
+  }
+  .none em{display:block;font-family:var(--body);font-style:normal;font-weight:400;
+    font-size:.95rem;color:var(--pencil);margin-top:.5rem;letter-spacing:0;}
+  .none code{font-family:var(--mono);font-size:.85rem;background:var(--hi);padding:0 .25rem;}
+
+  /* ---------------- addenda ---------------- */
+  .addenda{border-bottom:1px solid var(--ink);margin-bottom:2.6rem;}
+  .addenda summary{
+    list-style:none;cursor:pointer;display:flex;align-items:center;gap:.6rem;
+    padding:.9rem 0;font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--pencil);
+  }
+  .addenda summary::-webkit-details-marker{display:none;}
+  .addenda summary:hover{color:var(--ink);}
+  .addenda .caret{display:inline-flex;color:var(--pen);transition:transform .22s var(--ease);}
+  .addenda[open] .caret{transform:rotate(90deg);}
+  .addenda .cnt{margin-left:auto;letter-spacing:.04em;text-transform:none;color:var(--faint);}
+  .addenda ul{padding-bottom:1.2rem;}
+  .addenda li{
+    list-style:none;display:grid;grid-template-columns:6.4rem 1fr;gap:1.2rem;
+    padding:.6rem 0;border-top:1px dashed var(--rule);font-size:.95rem;color:#33332F;
+  }
+  .addenda time{font-family:var(--mono);font-size:.68rem;color:var(--faint);padding-top:.22rem;}
+  .addenda b{font-family:var(--disp);font-weight:600;letter-spacing:-.01em;}
+
+  /* ---------------- notes to the sub ---------------- */
+  .notes{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.6rem;
+    margin-bottom:2.4rem;
+  }
+  .notes .n{border-top:2px solid var(--ink);padding-top:.7rem;}
+  .notes .n b{
+    display:block;font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--pen);margin-bottom:.35rem;font-weight:500;
+  }
+  .notes .n p{font-size:.93rem;color:#33332F;}
+
+  footer{
+    display:flex;justify-content:space-between;align-items:flex-end;gap:1.4rem;flex-wrap:wrap;
+    font-family:var(--mono);font-size:.7rem;color:var(--pencil);
+  }
+  footer .sign{max-width:26rem;}
+  footer .line{
+    display:block;border-bottom:1px solid var(--ink);height:1.9rem;margin-bottom:.35rem;
+    font-family:var(--body);font-style:italic;font-size:1.15rem;color:var(--pen);
+    padding-left:.2rem;line-height:2.1;
+  }
+  footer .handle{color:var(--pen);}
+  footer .rhs{text-align:right;color:var(--faint);line-height:1.8;}
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width:900px){
+    .form{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .item{grid-template-columns:3.6rem minmax(0,1fr);gap:.5rem 1rem;}
+    .num{font-size:2rem;}
+    .note{grid-column:2;transform:none;margin-top:.85rem;font-size:.83rem;}
+    .go{grid-column:2;justify-self:start;margin-top:1rem;}
+    .stamp{position:static;display:inline-block;margin-top:1.4rem;transform:rotate(-2deg);}
+    .notes{grid-template-columns:1fr;gap:1.1rem;}
+    footer{flex-direction:column;align-items:flex-start;}
+    footer .rhs{text-align:left;}
+  }
+  @media (max-width:560px){
+    .addenda li{grid-template-columns:1fr;gap:.2rem;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .up,.stamp{animation:none!important;opacity:1;transform:none;}
+    .stamp{transform:rotate(-8deg);}
+    .hi{animation:none!important;background-size:100% .78em;}
+    *{transition-duration:.01ms!important;}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- ============ form block ============ -->
+  <div class="form up" style="--d:0ms">
+    <div class="cell"><span>Site</span><b>aspermylessonplan.com</b></div>
+    <div class="cell"><span>Prepared by</span><b>D. Moore</b></div>
+    <div class="cell"><span>Runs on</span><b>Any browser, offline</b></div>
+    <div class="cell"><span>Copies</span><b>Unlimited &mdash; take one</b></div>
+  </div>
+
+  <!-- ============ hero ============ -->
+  <header>
+    <h1>
+      <span class="l up" style="--d:120ms">Plans for</span>
+      <span class="l up" style="--d:220ms">the parts of</span>
+      <span class="l up" style="--d:320ms">the job that</span>
+      <span class="l up" style="--d:420ms"><span class="hi" style="--sd:900ms">aren&rsquo;t teaching</span>.</span>
+    </h1>
+    <p class="subhead up" style="--d:560ms">
+      Seven single-file web apps for rosters, seating, schedules, grade math, and paperwork.
+      <b>No install. No account. Nothing uploaded.</b> Open the file, use it, close the tab.
+      Once it has loaded it keeps working with the wifi off.
+    </p>
+    <div class="stamp" id="stamp" aria-hidden="true">Unofficial<br>Not affiliated with<br>any district or<br>SIS vendor</div>
+  </header>
+
+  <!-- ============ search ============ -->
+  <div class="strip up" style="--d:660ms">
+    <label for="q">
+      <span class="lab">Search the plan</span>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="seating, grades, rooms&hellip;">
+    </label>
+    <p class="tally" id="tally" role="status" aria-live="polite"><b>7 of 7</b> items</p>
+  </div>
+
+  <!-- ============ agenda ============ -->
+  <div class="agenda" id="agenda">
+
+    <a class="item up" style="--d:740ms" href="Tools/Name%20Picker.html"
+       data-tags="random cold call participation groups shuffle roster who goes first">
+      <span class="num">01<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">Name Picker</span>
+        <span class="pitch">5 seconds. Pick a name, move on.</span>
+        <span class="tags">random / cold-call / groups</span>
+      </span>
+      <span class="note">Nobody gets called twice until everybody has been called once.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="item up" style="--d:800ms" href="Tools/Seating%20Chart%20Generator.html"
+       data-tags="seating chart roster groups shuffle reshuffle desks layout pairs">
+      <span class="num">02<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">Seating Chart Generator</span>
+        <span class="pitch">Build it once, reshuffle whenever you need to.</span>
+        <span class="tags">seating / roster / shuffle</span>
+      </span>
+      <span class="note">Lock the seats you already fought for. It deals around them.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="item up" style="--d:860ms" href="Tools/schedule-browser.html"
+       data-tags="schedule teacher room period blocks a/b day lookup coverage substitute">
+      <span class="num">03<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">Schedule Browser</span>
+        <span class="pitch">Look up any teacher, room, or period in seconds.</span>
+        <span class="tags">schedule / rooms / periods</span>
+      </span>
+      <span class="note">Useful during coverage. Extremely useful during a fire drill.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="item up" style="--d:920ms" href="Tools/schedule-visualizer.html"
+       data-tags="building map layout rooms clusters hallways floors wayfinding schedule">
+      <span class="num">04<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">School Layout Visualizer</span>
+        <span class="pitch">See the whole building&rsquo;s schedule, hyperlinked.</span>
+        <span class="tags">building / map / clusters</span>
+      </span>
+      <span class="note">Turns a spreadsheet nobody reads into something you can point at.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="item up" style="--d:980ms" href="Tools/final_grade_checker.html"
+       data-tags="grades grading report cards math weights averages quarter exam gradebook export">
+      <span class="num">05<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">Final Grade Checker</span>
+        <span class="pitch">Double-check the math before report cards go out.</span>
+        <span class="tags">grades / report-cards / math</span>
+      </span>
+      <span class="note">Catches the rounding argument before the email about the rounding argument.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="item up" style="--d:1040ms" href="Tools/image-to-pdf.html"
+       data-tags="pdf images photos scans handouts merge combine documents">
+      <span class="num">06<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">Image &rarr; PDF Assembler</span>
+        <span class="pitch">Turn a stack of photos into one clean PDF.</span>
+        <span class="tags">pdf / images / scans</span>
+      </span>
+      <span class="note">Assembled in the tab. Saved to your machine. Uploaded nowhere.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="item up" style="--d:1100ms" href="Tools/prompt-builder.html"
+       data-tags="prompt ai writing template builder chatgpt claude questions">
+      <span class="num">07<small>PERIOD</small></span>
+      <span class="what">
+        <span class="title">Prompt Builder</span>
+        <span class="pitch">Answer a few questions, get a ready-to-use AI prompt.</span>
+        <span class="tags">prompt / ai / template</span>
+      </span>
+      <span class="note">For when a colleague asks how you got it to do that.</span>
+      <span class="go">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </a>
+
+  </div>
+
+  <p class="none" id="none" hidden>
+    Not on the plan.
+    <em>Seven items total, none of them that. Try <code>seating</code>, <code>grades</code>, or <code>rooms</code>.</em>
+  </p>
+
+  <!-- ============ addenda ============ -->
+  <details class="addenda up" style="--d:1160ms">
+    <summary>
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Addenda
+      <span class="cnt">3 recent changes</span>
+    </summary>
+    <ul>
+      <li><time datetime="2026-07-30">Jul 30, 2026</time><span><b>New front page.</b> Search, period ordering, and this list of changes.</span></li>
+      <li><time datetime="2026-07-22">Jul 22, 2026</time><span><b>Seating Chart Generator.</b> Reshuffling now keeps locked seats where you put them.</span></li>
+      <li><time datetime="2026-07-14">Jul 14, 2026</time><span><b>Schedule Browser.</b> Fixed mirrored floors in the route-tracing view.</span></li>
+    </ul>
+  </details>
+
+  <!-- ============ notes ============ -->
+  <div class="notes up" style="--d:1220ms">
+    <div class="n"><b>Note 1</b><p>Everything runs in your browser. Nothing is uploaded, logged, or synced. There is no server to send it to.</p></div>
+    <div class="n"><b>Note 2</b><p>Unofficial. Not affiliated with any school, district, or SIS vendor. Nobody approved this and nobody has to.</p></div>
+    <div class="n"><b>Note 3</b><p>Free, and staying that way. Save the files locally if you want them to outlive the domain.</p></div>
+  </div>
+
+  <footer class="up" style="--d:1280ms">
+    <div class="sign">
+      <span class="line" aria-hidden="true">D. Moore</span>
+      Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>
+    </div>
+    <div class="rhs">
+      Built by Devon Moore + Claude<br>
+      Rev 2026-07-30
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* ---------- filter ---------- */
+  var input = document.getElementById('q');
+  var tally = document.getElementById('tally');
+  var none  = document.getElementById('none');
+  var items = Array.prototype.slice.call(document.querySelectorAll('#agenda .item'));
+  var hay   = items.map(function(el){
+    return (el.getAttribute('data-tags')+' '+el.textContent).toLowerCase().replace(/\s+/g,' ');
+  });
+
+  function apply(){
+    var q = input.value.trim().toLowerCase(), shown = 0;
+    items.forEach(function(el,i){
+      var hit = !q || hay[i].indexOf(q) !== -1;
+      el.hidden = !hit; if(hit) shown++;
+    });
+    tally.innerHTML = '<b>'+shown+' of '+items.length+'</b> items';
+    none.hidden = shown > 0;
+  }
+  input.addEventListener('input', apply);
+  apply();
+
+  document.addEventListener('keydown', function(e){
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if(e.key === '/' && !typing && !e.metaKey && !e.ctrlKey){e.preventDefault();input.focus();return;}
+    if(e.key === 'Escape' && document.activeElement === input){
+      if(input.value){input.value='';apply();} else {input.blur();}
+    }
+  });
+
+  /* ---------- cursor parallax on the pen marks ---------- */
+  if(reduce || !window.matchMedia('(pointer:fine)').matches) return;
+
+  var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+  var stamp = document.getElementById('stamp');
+
+  /* CSS animations outrank inline styles — hand the stamp back once it lands */
+  if(stamp){
+    stamp.addEventListener('animationend', function(){
+      stamp.style.animation = 'none';
+      stamp.style.opacity = '.92';
+      stamp.style.transform = 'rotate(-8deg)';
+    });
+  }
+
+  var tx = 0, ty = 0, cx = 0, cy = 0, raf = null;
+
+  window.addEventListener('mousemove', function(e){
+    tx = (e.clientX / window.innerWidth  - .5) * 2;
+    ty = (e.clientY / window.innerHeight - .5) * 2;
+    if(!raf) raf = requestAnimationFrame(tick);
+  }, {passive:true});
+
+  function tick(){
+    cx += (tx - cx) * .07;
+    cy += (ty - cy) * .07;
+    notes.forEach(function(n,i){
+      var k = 3 + (i % 3);
+      n.style.transform = 'rotate(-1.4deg) translate('+(cx*k).toFixed(2)+'px,'+(cy*k*.6).toFixed(2)+'px)';
+    });
+    if(stamp) stamp.style.transform = 'rotate(-8deg) translate('+(cx*-7).toFixed(2)+'px,'+(cy*-5).toFixed(2)+'px)';
+    raf = (Math.abs(tx-cx) > .001 || Math.abs(ty-cy) > .001) ? requestAnimationFrame(tick) : null;
+  }
+})();
+</script>
+<a class="theme-switch" href="v3-bellboard.html" title="Switch landing page theme" aria-label="Switch to Bell Board theme">
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11 2l3 3-3 3M14 5H5.5A3.5 3.5 0 0 0 2 8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14l-3-3 3-3M2 11h8.5A3.5 3.5 0 0 0 14 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>Try: Bell Board</span>
+</a>
+</body>
+</html>
