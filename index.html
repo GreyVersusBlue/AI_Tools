@@ -194,7 +194,7 @@
     opacity:0;transition:opacity .16s var(--ease),transform .16s var(--ease);
     pointer-events:none;
   }
-  .row:hover .comment,.row:focus-visible .comment{
+  .row:has(.grade:hover) .comment,.row:has(.grade:focus-visible) .comment{
     opacity:1;transform:translateY(-50%) rotate(-2deg);
   }
 
@@ -409,6 +409,26 @@
   .report .meta .handle{color:var(--pen);}
   .report .meta .rhs{color:var(--faint);}
 
+  /* ============ easter eggs ============ */
+  .egg-toast{
+    position:fixed;left:50%;bottom:1.6rem;z-index:50;
+    transform:translateX(-50%) translateY(12px);
+    background:var(--ink);color:var(--paper);
+    font-family:var(--mono);font-size:.78rem;letter-spacing:.02em;
+    padding:.65rem 1.1rem;border-radius:6px;text-align:center;
+    max-width:min(90vw,26rem);
+    box-shadow:0 6px 20px rgba(22,34,46,.25);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s var(--ease),transform .25s var(--ease);
+  }
+  .egg-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  body.staff-meeting{filter:grayscale(85%) brightness(.95);transition:filter .4s ease;}
+
+  .grade.curved{color:var(--pen);transition:color .2s var(--ease);}
+
+  #rev{cursor:pointer;}
+
   /* ============ responsive ============ */
   @media (max-width:720px){
     .table-head{grid-template-columns:2.6rem 1fr 3.4rem;padding:0 .9rem .5rem;}
@@ -490,6 +510,7 @@
       <span>
         <span class="name">Name Picker</span>
         <span class="pitch">5 seconds. Pick a name, move on.</span>
+        <span class="comment" aria-hidden="true">The wheel doesn&rsquo;t lie. Mostly.</span>
       </span>
       <span class="tags"><span>random</span><span>cold-call</span><span>groups</span></span>
       <span class="grade" title="Comment: a pleasure to have in class.">A+
@@ -504,6 +525,7 @@
       <span>
         <span class="name">Seating Chart Generator</span>
         <span class="pitch">Build it once, reshuffle whenever you need to.</span>
+        <span class="comment" aria-hidden="true">Never once caused a diplomatic incident. Allegedly.</span>
       </span>
       <span class="tags"><span>seating</span><span>roster</span><span>shuffle</span></span>
       <span class="grade" title="Comment: works well with others. Rearranges them, actually.">A
@@ -518,6 +540,7 @@
       <span>
         <span class="name">Schedule Browser</span>
         <span class="pitch">Look up any teacher, room, or period in seconds.</span>
+        <span class="comment" aria-hidden="true">Knows where everyone is. Even you.</span>
       </span>
       <span class="tags"><span>schedule</span><span>rooms</span><span>periods</span></span>
       <span class="grade" title="Comment: always knows where everyone is supposed to be.">A+
@@ -532,6 +555,7 @@
       <span>
         <span class="name">School Layout Visualizer</span>
         <span class="pitch">See the whole building&rsquo;s schedule, hyperlinked.</span>
+        <span class="comment" aria-hidden="true">Finds every hallway shortcut you&rsquo;ve been hiding.</span>
       </span>
       <span class="tags"><span>building</span><span>map</span><span>clusters</span></span>
       <span class="grade" title="Comment: sees the big picture.">A
@@ -546,6 +570,7 @@
       <span>
         <span class="name">Final Grade Checker</span>
         <span class="pitch">Double-check the math before report cards go out.</span>
+        <span class="comment" aria-hidden="true">Catches my math before the parents do.</span>
       </span>
       <span class="tags"><span>grades</span><span>report-cards</span><span>math</span></span>
       <span class="grade" title="Comment: shows all work.">A+
@@ -560,6 +585,7 @@
       <span>
         <span class="name">Image &rarr; PDF Assembler</span>
         <span class="pitch">Turn a stack of photos into one clean PDF.</span>
+        <span class="comment" aria-hidden="true">Turns chaos into one PDF. Occasionally sideways.</span>
       </span>
       <span class="tags"><span>pdf</span><span>images</span><span>scans</span></span>
       <span class="grade" title="Comment: turns work in on time, stapled.">A
@@ -574,6 +600,7 @@
       <span>
         <span class="name">Prompt Builder</span>
         <span class="pitch">Answer a few questions, get a ready-to-use AI prompt.</span>
+        <span class="comment" aria-hidden="true">Better at asking questions than most staff meetings.</span>
       </span>
       <span class="tags"><span>prompt</span><span>ai</span><span>template</span></span>
       <span class="grade" title="Comment: asks good questions.">A
@@ -618,7 +645,8 @@
       <span class="legend">Comment codes</span>
       <span class="k">C1</span> Runs entirely in your browser &mdash; nothing is uploaded, logged, or synced.<br>
       <span class="k">C2</span> Unofficial. Not affiliated with any school, district, or SIS vendor.<br>
-      <span class="k">C3</span> A pleasure to have in your bookmarks bar.
+      <span class="k">C3</span> A pleasure to have in your bookmarks bar.<br id="c4-br" hidden>
+      <span class="k" id="c4-k" hidden>C4</span><span id="c4-txt" hidden> Filed under &ldquo;creative liberty.&rdquo;</span>
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
@@ -643,10 +671,111 @@
       .toLowerCase().replace(/\s+/g, ' ');
   });
 
-  function apply() {
-    var q = input.value.trim().toLowerCase();
-    var shown = [];
+  var DEFAULT_EMPTY_HTML = empty.innerHTML;
 
+  /* ---------- toast ---------- */
+  var toastEl = document.createElement('div');
+  toastEl.className = 'egg-toast';
+  document.body.appendChild(toastEl);
+  var toastTimer;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3200);
+  }
+
+  /* ---------- grade curve effect (shared by Konami + search gag) ---------- */
+  var GRADE_ORDER = ['C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'A++', 'A+++'];
+  var curveTimer;
+  function curveGrades() {
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.grade'));
+    chips.forEach(function (chip) {
+      var tn = chip.firstChild;
+      if (!tn) return;
+      if (!chip.dataset.orig) chip.dataset.orig = tn.nodeValue.trim();
+      var idx = GRADE_ORDER.indexOf(chip.dataset.orig);
+      var next = (idx > -1 && idx < GRADE_ORDER.length - 1) ? GRADE_ORDER[idx + 1] : chip.dataset.orig;
+      tn.nodeValue = ' ' + next + ' ';
+      chip.classList.add('curved');
+    });
+    showToast('Curve applied. Don\u2019t tell the department chair.');
+    clearTimeout(curveTimer);
+    curveTimer = setTimeout(function () {
+      chips.forEach(function (chip) {
+        var tn = chip.firstChild;
+        if (tn && chip.dataset.orig) tn.nodeValue = ' ' + chip.dataset.orig + ' ';
+        chip.classList.remove('curved');
+      });
+    }, 4000);
+  }
+
+  /* ---------- staff meeting desaturation ---------- */
+  var meetingTimer;
+  function staffMeetingBlip() {
+    document.body.classList.add('staff-meeting');
+    clearTimeout(meetingTimer);
+    meetingTimer = setTimeout(function () {
+      document.body.classList.remove('staff-meeting');
+    }, 2600);
+  }
+
+  /* ---------- C4 comment code reveal ---------- */
+  function revealC4() {
+    ['c4-br', 'c4-k', 'c4-txt'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = false;
+    });
+  }
+
+  /* ---------- search box gags ---------- */
+  var GAGS = {
+    'hall pass':        'One at a time, please.',
+    'staff meeting':     { msg: 'This meeting could have been an email.', effect: 'meeting' },
+    'snow day':          'Snow day. Everything\u2019s cancelled. Try again in the morning.',
+    'sub plans':         'Sub plans located. Godspeed.',
+    'copier':            'Copier is jammed. Again.',
+    'cafeteria':         'Mystery meat Wednesday detected.',
+    'lunch':             'Mystery meat Wednesday detected.',
+    'email':             'You have 47 unread emails. This is not one of them.',
+    'inbox':             'You have 47 unread emails. This is not one of them.',
+    'coffee':            'Teachers\u2019 lounge coffee status: burnt.',
+    'teachers lounge':   'Teachers\u2019 lounge coffee status: burnt.',
+    'detention':         'Detention slip filed. See you at 2:45.',
+    'fire drill':        'Fire drill in progress. Results paused.',
+    '42':                'Correct. Carry on.',
+    'sudo':              'Permission denied: you are not root. You are, however, the teacher.',
+    'vending machine':   'Vending machine ate a dollar. Again.',
+    'field trip':        'Permission slips: 12/30 returned. Chaperones: 0.',
+    'recess':            'Recess is cancelled. (Not really. Go outside.)',
+    'grade my code':     'Solid B+. Needs comments.',
+    'planning period':   'Currently in your planning period. This message is a lie.',
+    'password':          'Must contain a metaphor, a semicolon, and your cat\u2019s name.',
+    'ticket':            'Ticket #4471: have you tried turning it off and on again?',
+    'sick day':          'Sick day requested. Guilt: pending.',
+    'konami':            'You found it the boring way. There\u2019s an actual code, you know.',
+    'curve':             { msg: 'Curve applied. Don\u2019t tell the department chair.', effect: 'curve' }
+  };
+
+  function apply() {
+    var raw = input.value;
+    var q = raw.trim().toLowerCase();
+
+    var gag = GAGS[q];
+    if (gag) {
+      var msg = typeof gag === 'string' ? gag : gag.msg;
+      rows.forEach(function (row) { row.hidden = true; });
+      count.innerHTML = '<b>0 / ' + rows.length + '</b> present';
+      empty.innerHTML = msg;
+      empty.hidden = false;
+      if (gag.effect === 'curve') curveGrades();
+      if (gag.effect === 'meeting') staffMeetingBlip();
+      return;
+    }
+
+    empty.innerHTML = DEFAULT_EMPTY_HTML;
+
+    var shown = [];
     rows.forEach(function (row, i) {
       var hit = !q || haystack[i].indexOf(q) !== -1;
       row.hidden = !hit;
@@ -674,6 +803,51 @@
       else { input.blur(); }
     }
   });
+
+  /* ---------- Konami code ---------- */
+  var KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  var konamiPos = 0;
+  document.addEventListener('keydown', function (e) {
+    var key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key === KONAMI[konamiPos]) {
+      konamiPos++;
+    } else {
+      konamiPos = (key === KONAMI[0]) ? 1 : 0;
+    }
+    if (konamiPos === KONAMI.length) {
+      konamiPos = 0;
+      curveGrades();
+      revealC4();
+    }
+  });
+
+  /* ---------- rev-number rapid-click gag ---------- */
+  var rev = document.getElementById('rev');
+  if (rev) {
+    var revClicks = 0, revClickTimer, revRevertTimer;
+    rev.addEventListener('click', function () {
+      revClicks++;
+      clearTimeout(revClickTimer);
+      revClickTimer = setTimeout(function () { revClicks = 0; }, 900);
+      if (revClicks >= 5) {
+        revClicks = 0;
+        var original = rev.textContent;
+        rev.textContent = 'over-engineered';
+        clearTimeout(revRevertTimer);
+        revRevertTimer = setTimeout(function () { rev.textContent = original; }, 2600);
+      }
+    });
+  }
+
+  /* ---------- console banner ---------- */
+  console.log(
+    '%cASPERMYLESSONPLAN.COM',
+    'font-family:monospace;font-size:14px;font-weight:700;color:#2A6DB0;'
+  );
+  console.log(
+    '%cACCESS LOG: unauthorized gradebook inspection detected. No action taken. Carry on.',
+    'font-family:monospace;font-size:12px;color:#5B6B78;'
+  );
 })();
 </script>
 
