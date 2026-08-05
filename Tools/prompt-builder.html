@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1E2E28;
+    --bg-deep: #16221D;
+    --card: #FBF7EE;
+    --card-shadow-1: #E9E2D2;
+    --card-shadow-2: #DAD1BC;
+    --ink: #22302A;
+    --muted: #6B7A70;
+    --muted-light: #9FB0A6;
+    --marigold: #E3A73C;
+    --marigold-dark: #C48A24;
+    --teal: #4C8C7D;
+    --fill: #FFE49A;
+    --border: #D9D0BC;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+
+  body{
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+  }
+
+  a{ color: var(--marigold); }
+
+  header{
+    padding: 3.2rem 1.5rem 2.4rem;
+    text-align: center;
+    color: #F3EEDF;
+  }
+  header h1{
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  header p{
+    margin: 0 auto;
+    max-width: 40em;
+    color: var(--muted-light);
+    font-size: 1.02rem;
+    line-height: 1.55;
+  }
+  header .tag{
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--marigold);
+    background: rgba(227,167,60,0.12);
+    border: 1px solid rgba(227,167,60,0.35);
+    padding: 0.3rem 0.7rem;
+    border-radius: 100px;
+    margin-bottom: 1.1rem;
+  }
+
+  main{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 2.2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 880px){
+    main{ grid-template-columns: 1fr; }
+  }
+
+  /* ---- form ---- */
+  .form-panel{
+    background: rgba(251,247,238,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 1.6rem;
+  }
+
+  .section{
+    background: var(--card);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+    margin-bottom: 1.1rem;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  }
+  .section:last-child{ margin-bottom: 0; }
+
+  .section h2{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.12rem;
+    margin: 0 0 1rem;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+  }
+  .section h2 .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--teal);
+    text-transform: uppercase;
+  }
+
+  .field{ margin-bottom: 1rem; }
+  .field:last-child{ margin-bottom: 0; }
+
+  .field label{
+    display: block;
+    font-weight: 600;
+    font-size: 0.88rem;
+    margin-bottom: 0.32rem;
+    color: var(--ink);
+  }
+  .field .optional{
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .field input[type="text"],
+  .field select,
+  .field textarea{
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    padding: 0.62rem 0.75rem;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .field textarea{ resize: vertical; min-height: 4.2em; }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus{
+    outline: 3px solid rgba(76,140,125,0.35);
+    outline-offset: 1px;
+    border-color: var(--teal);
+  }
+
+  .two-col{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+  @media (max-width: 480px){ .two-col{ grid-template-columns: 1fr; } }
+
+  #toolTypeOtherWrap{ display: none; margin-top: 0.6rem; }
+
+  .reset-row{
+    text-align: center;
+    margin-top: 0.4rem;
+  }
+  .reset-row button{
+    background: none;
+    border: none;
+    color: var(--muted-light);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    padding: 0.5rem;
+    text-decoration: underline;
+  }
+  .reset-row button:hover{ color: #F3EEDF; }
+
+  /* ---- output / index card ---- */
+  .output-wrap{
+    position: sticky;
+    top: 1.5rem;
+  }
+  @media (max-width: 880px){
+    .output-wrap{ position: static; }
+  }
+
+  .card-stack{
+    position: relative;
+    padding-top: 10px;
+    padding-right: 10px;
+  }
+  .card-stack::before,
+  .card-stack::after{
+    content: "";
+    position: absolute;
+    inset: 10px 0 0 10px;
+    background: var(--card-shadow-1);
+    border-radius: 14px;
+    transform: rotate(1.6deg);
+    z-index: 1;
+  }
+  .card-stack::after{
+    background: var(--card-shadow-2);
+    transform: rotate(-1.3deg);
+    inset: 6px 4px 4px 6px;
+    z-index: 0;
+  }
+
+  .index-card{
+    position: relative;
+    z-index: 2;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 1.6rem 1.6rem 1.4rem;
+    transform: rotate(-0.6deg);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.28);
+  }
+
+  .pin{
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f2a4a4, #c74848);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.35);
+  }
+
+  .index-card .card-label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #promptOutput{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.93rem;
+    line-height: 1.7;
+    color: var(--ink);
+    min-height: 8em;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  #promptOutput .placeholder{
+    font-family: 'Inter', sans-serif;
+    font-style: italic;
+    color: var(--muted);
+  }
+  #promptOutput .fill{
+    background: var(--fill);
+    padding: 0.05em 0.15em;
+    border-radius: 3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .copy-row{
+    margin-top: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  #copyBtn{
+    background: var(--marigold);
+    color: #26210F;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 0.65rem 1.2rem;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  #copyBtn:hover{ background: var(--marigold-dark); }
+  #copyBtn:active{ transform: scale(0.97); }
+  #copyBtn:focus-visible{
+    outline: 3px solid rgba(76,140,125,0.5);
+    outline-offset: 2px;
+  }
+  #copyStatus{
+    font-size: 0.82rem;
+    color: var(--teal);
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  #copyStatus.show{ opacity: 1; }
+
+  .how-it-works{
+    margin-top: 1.3rem;
+    padding: 0.95rem 1.1rem;
+    background: rgba(251,247,238,0.05);
+    border: 1px dashed rgba(255,255,255,0.18);
+    border-radius: 12px;
+    color: var(--muted-light);
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+  .how-it-works strong{ color: #F3EEDF; }
+
+  /* ---- presets ---- */
+  .presets{
+    margin-bottom: 1.1rem;
+  }
+  .presets .presets-label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-light);
+    margin-bottom: 0.55rem;
+  }
+  .preset-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .preset-btn{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    background: rgba(251,247,238,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #F3EEDF;
+    padding: 0.45rem 0.85rem;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .preset-btn:hover{ background: rgba(227,167,60,0.16); border-color: rgba(227,167,60,0.4); }
+  .preset-btn:focus-visible{ outline: 3px solid rgba(76,140,125,0.5); outline-offset: 2px; }
+  .preset-btn-clear{
+    background: transparent;
+    border-style: dashed;
+    color: var(--muted-light);
+    margin-left: 0.2rem;
+  }
+  .preset-btn-clear:hover{ background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.3); color: #F3EEDF; }
+
+  .other-wrap{ display:none; margin-top: 0.6rem; }
+
+  /* ---- section hint ---- */
+  .section-hint{
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--muted);
+    margin: -0.4rem 0 1rem;
+    line-height: 1.45;
+  }
+
+  /* ---- dynamic (tool-specific) fields ---- */
+  #dynamicFields:empty{ display: none; }
+  #dynamicFields .field{
+    padding-top: 0.9rem;
+    margin-top: 0.9rem;
+    border-top: 1px dashed var(--border);
+  }
+
+  /* ---- strength meter ---- */
+  .strength-row{
+    margin-bottom: 0.85rem;
+  }
+  .strength-label{
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+  .strength-bar{
+    height: 6px;
+    border-radius: 100px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .strength-fill{
+    height: 100%;
+    width: 0%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--teal), var(--marigold));
+    transition: width 0.25s ease;
+  }
+
+  /* ---- action buttons (download / share) ---- */
+  .action-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.7rem;
+  }
+  .ghost-btn{
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .ghost-btn:hover{ border-color: var(--teal); background: rgba(76,140,125,0.08); }
+  .ghost-btn:focus-visible{ outline: 3px solid rgba(76,140,125,0.5); outline-offset: 2px; }
+
+  /* ---- open-in row ---- */
+  .open-in{
+    margin-top: 1.3rem;
+  }
+  .open-in .open-in-label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-light);
+    margin-bottom: 0.55rem;
+  }
+  .open-in-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .open-in-btn{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: rgba(251,247,238,0.05);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #F3EEDF;
+    padding: 0.5rem 0.9rem;
+    border-radius: 9px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .open-in-btn:hover{ background: rgba(76,140,125,0.15); border-color: var(--teal); }
+  .open-in-btn:focus-visible{ outline: 3px solid rgba(76,140,125,0.5); outline-offset: 2px; }
+
+  .autosave-note{
+    font-size: 0.72rem;
+    color: var(--muted-light);
+    text-align: center;
+    margin-top: 0.6rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .autosave-note.show{ opacity: 1; }
+
+  /* ---- simple / advanced mode ---- */
+  body.mode-simple .advanced-only{ display: none !important; }
+
+  .mode-toggle-wrap{
+    margin-bottom: 1.1rem;
+  }
+  .mode-toggle{
+    display: inline-flex;
+    background: rgba(251,247,238,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 100px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .mode-btn{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    color: var(--muted-light);
+    padding: 0.45rem 1.1rem;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .mode-btn.active{
+    background: var(--marigold);
+    color: #26210F;
+  }
+  .mode-btn:not(.active):hover{ color: #F3EEDF; }
+  .mode-btn:focus-visible{ outline: 3px solid rgba(76,140,125,0.5); outline-offset: 2px; }
+  .mode-note{
+    font-size: 0.78rem;
+    color: var(--muted-light);
+    margin: 0.55rem 0 0;
+  }
+</style>
+</head>
+<body class="mode-simple">
+
+<header>
+  <span class="tag">No AI required to run this</span>
+  <h1>Prompt Builder</h1>
+  <p>Answer what applies to you, skip what doesn't. The card on the right fills itself in as you type &mdash; then copy it and take it to whatever AI tool you use.</p>
+</header>
+
+<main>
+  <form class="form-panel" id="promptForm">
+
+    <div class="mode-toggle-wrap">
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" id="modeSimpleBtn">Simple</button>
+        <button type="button" class="mode-btn" id="modeAdvancedBtn">Advanced</button>
+      </div>
+      <p class="mode-note" id="modeNote">Just the core fields. Switch to Advanced for finer control &mdash; nothing you've typed is lost either way.</p>
+    </div>
+
+    <div class="presets">
+      <div class="presets-label">Quick start &mdash; try an example</div>
+      <div class="preset-row" id="presetRow">
+        <button type="button" class="preset-btn" data-preset="lesson">Lesson plan</button>
+        <button type="button" class="preset-btn" data-preset="quiz">Quiz</button>
+        <button type="button" class="preset-btn" data-preset="rubric">Rubric</button>
+        <button type="button" class="preset-btn" data-preset="email">Parent email</button>
+        <button type="button" class="preset-btn" data-preset="differentiated">Differentiated materials</button>
+        <button type="button" class="preset-btn preset-btn-clear" id="clearAllTop">Clear all fields</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="eyebrow">01</span> About you</h2>
+      <p class="section-hint">The more specific your teaching context, the less generic the AI's answer will be.</p>
+      <div class="field">
+        <label for="name">Your name <span class="optional">(optional)</span></label>
+        <input type="text" id="name" placeholder="e.g. Jordan Ellis">
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="grade">Grade level <span class="optional">(optional)</span></label>
+          <input type="text" id="grade" placeholder="e.g. 7th">
+        </div>
+        <div class="field">
+          <label for="subject">Subject <span class="optional">(optional)</span></label>
+          <input type="text" id="subject" placeholder="e.g. World History">
+        </div>
+      </div>
+      <div class="field">
+        <label for="classLevel">Class or section <span class="optional">(optional)</span></label>
+        <input type="text" id="classLevel" placeholder="e.g. Honors, co-taught, IEP support">
+      </div>
+      <div class="two-col advanced-only">
+        <div class="field">
+          <label for="classSize">Class size <span class="optional">(optional)</span></label>
+          <input type="text" id="classSize" placeholder="e.g. 24 students">
+        </div>
+        <div class="field">
+          <label for="schoolContext">School context <span class="optional">(optional)</span></label>
+          <input type="text" id="schoolContext" placeholder="e.g. block schedule, 1:1 Chromebooks, Title I school">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="eyebrow">02</span> What you're building</h2>
+      <p class="section-hint">Naming the format up front stops the AI from guessing &mdash; and defaulting to a worksheet.</p>
+      <div class="field">
+        <label for="toolType">Type of thing <span class="optional">(optional)</span></label>
+        <select id="toolType">
+          <option value="">Choose one&hellip;</option>
+          <option value="a lesson plan">A lesson plan</option>
+          <option value="a classroom activity or project">A classroom activity or project</option>
+          <option value="a quiz or assessment">A quiz or assessment</option>
+          <option value="a grading rubric">A grading rubric</option>
+          <option value="an email or letter">An email or letter</option>
+          <option value="a slide presentation">A slide presentation</option>
+          <option value="differentiated materials for multiple levels">Differentiated materials for multiple levels</option>
+          <option value="other">Something else&hellip;</option>
+        </select>
+        <div id="toolTypeOtherWrap" class="other-wrap">
+          <input type="text" id="toolTypeOther" placeholder="Describe what you're building">
+        </div>
+      </div>
+      <div class="field">
+        <label for="topic">Topic <span class="optional">(optional)</span></label>
+        <input type="text" id="topic" placeholder="e.g. the causes of World War I">
+      </div>
+      <div class="field">
+        <label for="objective">Standard or learning goal <span class="optional">(optional)</span></label>
+        <input type="text" id="objective" placeholder="e.g. analyze how nationalism contributed to the outbreak of war">
+      </div>
+      <div class="two-col advanced-only">
+        <div class="field">
+          <label for="standardCode">Standard code <span class="optional">(optional)</span></label>
+          <input type="text" id="standardCode" placeholder="e.g. MD 7.NAT.2">
+        </div>
+        <div class="field">
+          <label for="unitContext">Where this fits in your unit <span class="optional">(optional)</span></label>
+          <input type="text" id="unitContext" placeholder="e.g. lesson 3 of a 6-lesson unit">
+        </div>
+      </div>
+      <div class="field advanced-only">
+        <label for="priorKnowledge">What students already know <span class="optional">(optional)</span></label>
+        <textarea id="priorKnowledge" placeholder="e.g. they already know the alliance system but not the assassination"></textarea>
+      </div>
+      <div id="dynamicFields"></div>
+    </div>
+
+    <div class="section">
+      <h2><span class="eyebrow">03</span> Fit it to your students</h2>
+      <p class="section-hint">This is the field that gets skipped most &mdash; and the one that matters most for a real classroom.</p>
+      <div class="field">
+        <label for="studentNeeds">Students to keep in mind <span class="optional">(optional)</span></label>
+        <textarea id="studentNeeds" placeholder="e.g. two students with reading IEPs, several ESOL learners"></textarea>
+      </div>
+      <div class="two-col advanced-only">
+        <div class="field">
+          <label for="languageNeeds">Language needs <span class="optional">(optional)</span></label>
+          <input type="text" id="languageNeeds" placeholder="e.g. several ELL students at WIDA level 3">
+        </div>
+        <div class="field">
+          <label for="accommodations">Accommodations <span class="optional">(optional)</span></label>
+          <input type="text" id="accommodations" placeholder="e.g. extended time, chunked text, read-aloud option">
+        </div>
+      </div>
+      <div class="field advanced-only">
+        <label for="interestHooks">Student interests to tap into <span class="optional">(optional)</span></label>
+        <input type="text" id="interestHooks" placeholder="e.g. many students are into soccer and TikTok">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="eyebrow">04</span> Format &amp; guardrails</h2>
+      <p class="section-hint">Telling the AI what to avoid is often more useful than telling it what to include.</p>
+      <div class="field">
+        <label for="length">Length or time <span class="optional">(optional)</span></label>
+        <input type="text" id="length" placeholder="e.g. one 45-minute period">
+      </div>
+
+      <div class="field">
+        <label for="tone">Tone / voice <span class="optional">(optional)</span></label>
+        <select id="tone">
+          <option value="">Choose one&hellip;</option>
+          <option value="warm and encouraging">Warm and encouraging</option>
+          <option value="playful and fun">Playful and fun</option>
+          <option value="direct and concise">Direct and concise</option>
+          <option value="formal and academic">Formal and academic</option>
+          <option value="neutrally professional">Neutrally professional</option>
+          <option value="humorous">Humorous</option>
+          <option value="serious and matter-of-fact">Serious and matter-of-fact</option>
+          <option value="other">Something else&hellip;</option>
+        </select>
+        <div id="toneOtherWrap" class="other-wrap">
+          <input type="text" id="toneOther" placeholder="Describe the tone you want">
+        </div>
+      </div>
+      <div class="two-col advanced-only">
+        <div class="field">
+          <label for="readingLevel">Reading / audience level <span class="optional">(optional)</span></label>
+          <input type="text" id="readingLevel" placeholder="e.g. written at a 6th-grade reading level">
+        </div>
+        <div class="field">
+          <label for="outputStyle">Output style <span class="optional">(optional)</span></label>
+          <input type="text" id="outputStyle" placeholder="e.g. bullet points, not paragraphs">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="format">Final format <span class="optional">(optional)</span></label>
+        <input type="text" id="format" placeholder="e.g. a printable worksheet with an answer key">
+      </div>
+      <div class="two-col advanced-only">
+        <div class="field">
+          <label for="rigor">Rigor / difficulty <span class="optional">(optional)</span></label>
+          <input type="text" id="rigor" placeholder="e.g. on grade level, with one stretch question">
+        </div>
+        <div class="field">
+          <label for="exampleCount">Examples to include <span class="optional">(optional)</span></label>
+          <input type="text" id="exampleCount" placeholder="e.g. 2 fully worked examples">
+        </div>
+      </div>
+      <div class="field advanced-only">
+        <label for="citationsNeeded">Sources or citations <span class="optional">(optional)</span></label>
+        <input type="text" id="citationsNeeded" placeholder="e.g. cite any primary sources used">
+      </div>
+      <div class="field">
+        <label for="avoidInclude">Must include or avoid <span class="optional">(optional)</span></label>
+        <textarea id="avoidInclude" placeholder="e.g. no worksheets &mdash; needs to include a primary source"></textarea>
+      </div>
+    </div>
+
+    <div class="section advanced-only">
+      <h2><span class="eyebrow">05</span> Extend &amp; connect</h2>
+      <p class="section-hint">Optional add-ons for a more complete package &mdash; skip these if you just need the core piece.</p>
+      <div class="field">
+        <label for="earlyFinisher">Early-finisher extension <span class="optional">(optional)</span></label>
+        <input type="text" id="earlyFinisher" placeholder="e.g. an extension task for students who finish early">
+      </div>
+      <div class="field">
+        <label for="homeworkConnection">Homework connection <span class="optional">(optional)</span></label>
+        <input type="text" id="homeworkConnection" placeholder="e.g. a related 10-minute homework task">
+      </div>
+      <div class="field">
+        <label for="crossCurricular">Cross-curricular tie-in <span class="optional">(optional)</span></label>
+        <input type="text" id="crossCurricular" placeholder="e.g. connect to what they're reading in ELA">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="eyebrow">06</span> Anything else</h2>
+      <div class="field">
+        <textarea id="extra" placeholder="Anything else the AI should know"></textarea>
+      </div>
+    </div>
+
+    <div class="reset-row">
+      <button type="button" id="resetBtn">Clear everything</button>
+    </div>
+  </form>
+
+  <div class="output-wrap">
+    <div class="card-stack">
+      <div class="index-card">
+        <div class="pin"></div>
+        <div class="card-label">
+          <span>Your prompt</span>
+          <span id="charCount">0 characters</span>
+        </div>
+        <div class="strength-row">
+          <div class="strength-label"><span id="strengthText">Bare bones</span><span id="strengthCount">0 / 29 fields</span></div>
+          <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+        </div>
+        <div id="promptOutput"><span class="placeholder">Fill in a few boxes on the left &mdash; your prompt builds itself here.</span></div>
+        <div class="copy-row">
+          <button type="button" id="copyBtn">Copy prompt</button>
+          <span id="copyStatus">Copied!</span>
+        </div>
+        <div class="action-row">
+          <button type="button" class="ghost-btn" id="downloadBtn">Download .txt</button>
+          <button type="button" class="ghost-btn" id="shareBtn">Copy shareable link</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="open-in">
+      <div class="open-in-label">Copy prompt, then open in&hellip;</div>
+      <div class="open-in-row">
+        <button type="button" class="open-in-btn" data-url="https://claude.ai/new">Claude</button>
+        <button type="button" class="open-in-btn" data-url="https://chatgpt.com/">ChatGPT</button>
+        <button type="button" class="open-in-btn" data-url="https://gemini.google.com/app">Gemini</button>
+      </div>
+    </div>
+
+    <div class="how-it-works">
+      <strong>How this works:</strong> there's no AI in this page at all. Every box you fill in just gets dropped into a pre-written sentence with plain JavaScript. If a box is empty, its sentence is skipped. That's the whole trick &mdash; and it's a pattern you can reuse for almost any classroom tool.
+    </div>
+    <div class="autosave-note" id="autosaveNote">Draft saved in this browser</div>
+  </div>
+</main>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const form = $('promptForm');
+  const output = $('promptOutput');
+  const charCount = $('charCount');
+  const toolTypeSelect = $('toolType');
+  const toolTypeOtherWrap = $('toolTypeOtherWrap');
+  const toolTypeOther = $('toolTypeOther');
+  const toneSelect = $('tone');
+  const toneOtherWrap = $('toneOtherWrap');
+  const toneOther = $('toneOther');
+  const dynamicFieldsWrap = $('dynamicFields');
+
+  const STATIC_IDS = [
+    'name','grade','subject','classLevel','classSize','schoolContext',
+    'toolType','topic','objective','standardCode','unitContext','priorKnowledge',
+    'studentNeeds','languageNeeds','accommodations','interestHooks',
+    'length','tone','readingLevel','outputStyle','format','rigor','exampleCount','citationsNeeded','avoidInclude',
+    'earlyFinisher','homeworkConnection','crossCurricular',
+    'extra'
+  ];
+  const SIMPLE_IDS = [
+    'name','grade','subject','classLevel',
+    'toolType','topic','objective',
+    'studentNeeds',
+    'length','tone','format','avoidInclude',
+    'extra'
+  ];
+  const STORAGE_KEY = 'promptBuilderDraft_v2';
+  const MODE_KEY = 'promptBuilderMode_v1';
+
+  function esc(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  function fill(str){ return '<span class="fill">' + esc(str) + '</span>'; }
+  function val(id){ const el = $(id); return el ? el.value.trim() : ''; }
+
+  // ---- tool-specific extra fields ----
+  const TOOL_EXTRAS = {
+    'a lesson plan': [
+      { id: 'x_structure', label: 'Class structure', placeholder: 'e.g. warm-up, direct instruction, group work, exit ticket',
+        sentence: v => 'Structure the lesson around: ' + fill(v) + '.' }
+    ],
+    'a classroom activity or project': [
+      { id: 'x_groupsize', label: 'Group size', placeholder: 'e.g. pairs, groups of 4, individual',
+        sentence: v => 'Design it for ' + fill(v) + '.' }
+    ],
+    'a quiz or assessment': [
+      { id: 'x_qcount', label: 'Number of questions', placeholder: 'e.g. 10',
+        sentence: v => 'Include ' + fill(v) + ' questions.' },
+      { id: 'x_qtypes', label: 'Question types', placeholder: 'e.g. multiple choice and short answer',
+        sentence: v => 'Use these question types: ' + fill(v) + '.' }
+    ],
+    'a grading rubric': [
+      { id: 'x_criteria', label: 'Number of criteria', placeholder: 'e.g. 4',
+        sentence: v => 'Score against ' + fill(v) + ' criteria.' },
+      { id: 'x_scale', label: 'Point scale', placeholder: 'e.g. 4-point scale (1-4)',
+        sentence: v => 'Use a ' + fill(v) + '.' }
+    ],
+    'an email or letter': [
+      { id: 'x_recipient', label: 'Recipient', placeholder: 'e.g. parents, my principal',
+        sentence: v => "It's addressed to " + fill(v) + '.' }
+    ],
+    'a slide presentation': [
+      { id: 'x_slides', label: 'Number of slides', placeholder: 'e.g. 8-10',
+        sentence: v => 'Aim for ' + fill(v) + ' slides.' }
+    ],
+    'differentiated materials for multiple levels': [
+      { id: 'x_levels', label: 'Number of levels', placeholder: 'e.g. 3 versions: below, on, above grade level',
+        sentence: v => 'Create ' + fill(v) + '.' }
+    ]
+  };
+  const dynamicValues = {}; // persists values across tool-type switches
+
+  function getToolType(){
+    if (toolTypeSelect.value === 'other') return toolTypeOther.value.trim();
+    return toolTypeSelect.value;
+  }
+
+  function getTone(){
+    if (toneSelect.value === 'other') return toneOther.value.trim();
+    return toneSelect.value;
+  }
+
+  toneSelect.addEventListener('change', () => {
+    toneOtherWrap.style.display = toneSelect.value === 'other' ? 'block' : 'none';
+    build();
+    saveDraft();
+  });
+
+  function renderDynamicFields(){
+    const extras = TOOL_EXTRAS[toolTypeSelect.value] || [];
+    dynamicFieldsWrap.innerHTML = '';
+    extras.forEach(cfg => {
+      const wrap = document.createElement('div');
+      wrap.className = 'field';
+      const label = document.createElement('label');
+      label.setAttribute('for', cfg.id);
+      label.innerHTML = esc(cfg.label) + ' <span class="optional">(optional)</span>';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = cfg.id;
+      input.placeholder = cfg.placeholder;
+      input.value = dynamicValues[cfg.id] || '';
+      input.addEventListener('input', () => { dynamicValues[cfg.id] = input.value; build(); saveDraft(); });
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      dynamicFieldsWrap.appendChild(wrap);
+    });
+  }
+
+  toolTypeSelect.addEventListener('change', () => {
+    toolTypeOtherWrap.style.display = toolTypeSelect.value === 'other' ? 'block' : 'none';
+    renderDynamicFields();
+    build();
+    saveDraft();
+  });
+
+  function build(){
+    const name = val('name');
+    const grade = val('grade');
+    const subject = val('subject');
+    const classLevel = val('classLevel');
+    const classSize = val('classSize');
+    const schoolContext = val('schoolContext');
+    const toolType = getToolType();
+    const topic = val('topic');
+    const objective = val('objective');
+    const standardCode = val('standardCode');
+    const unitContext = val('unitContext');
+    const priorKnowledge = val('priorKnowledge');
+    const studentNeeds = val('studentNeeds');
+    const languageNeeds = val('languageNeeds');
+    const accommodations = val('accommodations');
+    const interestHooks = val('interestHooks');
+    const length = val('length');
+    const tone = getTone();
+    const readingLevel = val('readingLevel');
+    const outputStyle = val('outputStyle');
+    const format = val('format');
+    const rigor = val('rigor');
+    const exampleCount = val('exampleCount');
+    const citationsNeeded = val('citationsNeeded');
+    const avoidInclude = val('avoidInclude');
+    const earlyFinisher = val('earlyFinisher');
+    const homeworkConnection = val('homeworkConnection');
+    const crossCurricular = val('crossCurricular');
+    const extra = val('extra');
+
+    const sentences = [];
+
+    // 1. Identity sentence
+    if (name && grade && subject){
+      sentences.push('My name is ' + fill(name) + ', and I teach ' + fill(grade) + ' grade ' + fill(subject) + '.');
+    } else if (grade && subject){
+      sentences.push('I teach ' + fill(grade) + ' grade ' + fill(subject) + '.');
+    } else if (subject){
+      sentences.push('I teach ' + fill(subject) + '.');
+    } else if (name && grade){
+      sentences.push('My name is ' + fill(name) + ', and I teach ' + fill(grade) + ' grade.');
+    } else if (name){
+      sentences.push('My name is ' + fill(name) + '.');
+    } else if (grade){
+      sentences.push('I teach ' + fill(grade) + ' grade.');
+    }
+
+    if (classSize) sentences.push('My class has ' + fill(classSize) + '.');
+    if (schoolContext) sentences.push('Some school context: ' + fill(schoolContext) + '.');
+
+    // 2. What you're building (+ class level)
+    if (toolType && classLevel){
+      sentences.push("I'm building " + fill(toolType) + ' for my ' + fill(classLevel) + ' class.');
+    } else if (toolType){
+      sentences.push("I'm building " + fill(toolType) + '.');
+    } else if (classLevel){
+      sentences.push('This is for my ' + fill(classLevel) + ' class.');
+    }
+
+    if (topic) sentences.push('The topic is ' + fill(topic) + '.');
+    if (objective) sentences.push('The learning goal is: ' + fill(objective) + '.');
+    if (standardCode) sentences.push('This aligns to standard ' + fill(standardCode) + '.');
+    if (unitContext) sentences.push('For context, this is ' + fill(unitContext) + '.');
+    if (priorKnowledge) sentences.push('Here is what students already know: ' + fill(priorKnowledge) + '.');
+
+    // tool-specific extras
+    const extras = TOOL_EXTRAS[toolTypeSelect.value] || [];
+    extras.forEach(cfg => {
+      const v = (dynamicValues[cfg.id] || '').trim();
+      if (v) sentences.push(cfg.sentence(v));
+    });
+
+    if (studentNeeds) sentences.push('Please keep these students in mind: ' + fill(studentNeeds) + '.');
+    if (languageNeeds) sentences.push('Language needs: ' + fill(languageNeeds) + '.');
+    if (accommodations) sentences.push('Please build in these accommodations: ' + fill(accommodations) + '.');
+    if (interestHooks) sentences.push('For engagement, ' + fill(interestHooks) + '.');
+
+    if (length) sentences.push('Please plan for ' + fill(length) + '.');
+    if (tone) sentences.push('Keep the tone ' + fill(tone) + '.');
+    if (readingLevel) sentences.push(fill(readingLevel) + '.');
+    if (outputStyle) sentences.push('For the output style: ' + fill(outputStyle) + '.');
+    if (format) sentences.push('The final format should be ' + fill(format) + '.');
+    if (rigor) sentences.push('Rigor level: ' + fill(rigor) + '.');
+    if (exampleCount) sentences.push('Please include ' + fill(exampleCount) + '.');
+    if (citationsNeeded) sentences.push(fill(citationsNeeded) + '.');
+    if (avoidInclude) sentences.push('Important: ' + fill(avoidInclude) + '.');
+
+    if (earlyFinisher) sentences.push('Also include ' + fill(earlyFinisher) + '.');
+    if (homeworkConnection) sentences.push('Also, ' + fill(homeworkConnection) + '.');
+    if (crossCurricular) sentences.push('If possible, ' + fill(crossCurricular) + '.');
+
+    if (extra) sentences.push(fill(extra));
+
+    if (sentences.length === 0){
+      output.innerHTML = '<span class="placeholder">Fill in a few boxes on the left &mdash; your prompt builds itself here.</span>';
+      charCount.textContent = '0 characters';
+    } else {
+      output.innerHTML = sentences.join(' ');
+      charCount.textContent = output.innerText.length + ' characters';
+    }
+
+    updateStrength();
+  }
+
+  // ---- strength meter ----
+  function updateStrength(){
+    const ids = document.body.classList.contains('mode-simple') ? SIMPLE_IDS : STATIC_IDS;
+    let filled = 0;
+    ids.forEach(id => { if (val(id)) filled++; });
+    const total = ids.length;
+    const pct = Math.round((filled / total) * 100);
+    $('strengthFill').style.width = pct + '%';
+    $('strengthCount').textContent = filled + ' / ' + total + ' fields';
+    let label = 'Bare bones';
+    if (pct >= 85) label = 'Rich';
+    else if (pct >= 55) label = 'Solid';
+    else if (pct >= 25) label = 'Getting there';
+    $('strengthText').textContent = label;
+  }
+
+  // ---- simple / advanced mode ----
+  function setMode(mode){
+    document.body.classList.toggle('mode-simple', mode === 'simple');
+    document.body.classList.toggle('mode-advanced', mode === 'advanced');
+    $('modeSimpleBtn').classList.toggle('active', mode === 'simple');
+    $('modeAdvancedBtn').classList.toggle('active', mode === 'advanced');
+    $('modeNote').textContent = mode === 'simple'
+      ? "Just the core fields. Switch to Advanced for finer control \u2014 nothing you've typed is lost either way."
+      : "Every field is visible. Switch back to Simple any time \u2014 nothing you've typed is lost either way.";
+    try { localStorage.setItem(MODE_KEY, mode); } catch(e) {}
+    updateStrength();
+  }
+  $('modeSimpleBtn').addEventListener('click', () => setMode('simple'));
+  $('modeAdvancedBtn').addEventListener('click', () => setMode('advanced'));
+
+  // ---- presets ----
+  const PRESETS = {
+    lesson: {
+      toolType: 'a lesson plan',
+      topic: 'the causes of World War I',
+      objective: 'analyze how nationalism, alliances, and militarism contributed to the outbreak of war',
+      standardCode: 'MD 7.NAT.2',
+      studentNeeds: 'two students with reading IEPs, several ESOL learners',
+      length: 'one 45-minute period',
+      tone: 'warm and encouraging',
+      readingLevel: 'written for 12-year-olds',
+      earlyFinisher: 'an extension question about why the Balkans were called the "powder keg of Europe"',
+      dyn: { x_structure: 'a warm-up question, a short reading, a small-group task, and an exit ticket' }
+    },
+    quiz: {
+      toolType: 'a quiz or assessment',
+      topic: 'the water cycle',
+      objective: 'identify and explain the stages of the water cycle',
+      length: '20 minutes',
+      tone: 'direct and concise',
+      format: 'a printable quiz with an answer key',
+      rigor: 'on grade level',
+      dyn: { x_qcount: '10', x_qtypes: 'multiple choice and short answer' }
+    },
+    rubric: {
+      toolType: 'a grading rubric',
+      topic: 'a persuasive essay',
+      objective: 'take and defend a position using evidence',
+      format: 'a table I can paste into a document',
+      outputStyle: 'a table, not a paragraph',
+      dyn: { x_criteria: '4', x_scale: '4-point scale (1-4)' }
+    },
+    email: {
+      toolType: 'an email or letter',
+      topic: 'an upcoming field trip',
+      tone: 'other',
+      toneOther: 'friendly but informative',
+      avoidInclude: 'keep it under one page',
+      dyn: { x_recipient: 'parents and guardians' }
+    },
+    differentiated: {
+      toolType: 'differentiated materials for multiple levels',
+      topic: 'reading a primary source document',
+      objective: 'interpret a primary source and identify author bias',
+      studentNeeds: 'a mix of on-level, below-level, and advanced readers',
+      languageNeeds: 'include an ELL-friendly version with simplified vocabulary',
+      dyn: { x_levels: '3 versions: below, on, and above grade level' }
+    }
+  };
+
+  function clearAllFields(){
+    form.reset();
+    toolTypeOtherWrap.style.display = 'none';
+    toneOtherWrap.style.display = 'none';
+    Object.keys(dynamicValues).forEach(k => delete dynamicValues[k]);
+    renderDynamicFields();
+  }
+
+  function applyPreset(key){
+    const p = PRESETS[key];
+    if (!p) return;
+    clearAllFields();
+    setMode('advanced');
+    STATIC_IDS.forEach(id => { if (id in p) $(id).value = p[id]; });
+    if (p.toolTypeOther) toolTypeOther.value = p.toolTypeOther;
+    toolTypeOtherWrap.style.display = toolTypeSelect.value === 'other' ? 'block' : 'none';
+    if (p.toneOther) toneOther.value = p.toneOther;
+    toneOtherWrap.style.display = toneSelect.value === 'other' ? 'block' : 'none';
+    renderDynamicFields();
+    if (p.dyn){
+      Object.keys(p.dyn).forEach(k => {
+        dynamicValues[k] = p.dyn[k];
+        const el = $(k);
+        if (el) el.value = p.dyn[k];
+      });
+    }
+    build();
+    saveDraft();
+  }
+
+  document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // ---- reset / clear all ----
+  function handleClearAll(){
+    clearAllFields();
+    build();
+    localStorage.removeItem(STORAGE_KEY);
+    history.replaceState(null, '', location.pathname);
+  }
+  $('resetBtn').addEventListener('click', handleClearAll);
+  $('clearAllTop').addEventListener('click', handleClearAll);
+
+  // ---- copy ----
+  $('copyBtn').addEventListener('click', () => {
+    copyPromptText(showCopyStatus);
+  });
+
+  function copyPromptText(cb){
+    const text = output.innerText;
+    if (!text || output.querySelector('.placeholder')) return;
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(cb).catch(() => fallbackCopy(text, cb));
+    } else {
+      fallbackCopy(text, cb);
+    }
+  }
+
+  function showCopyStatus(){
+    const status = $('copyStatus');
+    status.classList.add('show');
+    setTimeout(() => status.classList.remove('show'), 1500);
+  }
+
+  function fallbackCopy(text, cb){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); if (cb) cb(); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+
+  // ---- download as .txt ----
+  $('downloadBtn').addEventListener('click', () => {
+    const text = output.innerText;
+    if (!text || output.querySelector('.placeholder')) return;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const slug = (val('topic') || getToolType() || 'prompt').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'prompt';
+    a.href = url;
+    a.download = slug + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ---- shareable link ----
+  $('shareBtn').addEventListener('click', () => {
+    const params = new URLSearchParams();
+    STATIC_IDS.forEach(id => { const v = val(id); if (v) params.set(id, v); });
+    if (toolTypeSelect.value === 'other') params.set('toolTypeOther', toolTypeOther.value.trim());
+    if (toneSelect.value === 'other') params.set('toneOther', toneOther.value.trim());
+    Object.keys(dynamicValues).forEach(k => { if (dynamicValues[k]) params.set(k, dynamicValues[k]); });
+    const url = location.origin + location.pathname + '?' + params.toString();
+    const shareStatus = () => showTempLabel($('shareBtn'), 'Link copied!');
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(shareStatus).catch(() => fallbackCopy(url, shareStatus));
+    } else {
+      fallbackCopy(url, shareStatus);
+    }
+  });
+
+  function showTempLabel(btn, text){
+    const original = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  }
+
+  // ---- open in AI tool ----
+  document.querySelectorAll('.open-in-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      copyPromptText(() => {
+        showCopyStatus();
+        window.open(btn.dataset.url, '_blank', 'noopener');
+      });
+    });
+  });
+
+  // ---- autosave to localStorage ----
+  let saveTimer = null;
+  function saveDraft(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        const data = { toolTypeOther: toolTypeOther.value, toneOther: toneOther.value, dyn: dynamicValues };
+        STATIC_IDS.forEach(id => { data[id] = val(id); });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        const note = $('autosaveNote');
+        note.classList.add('show');
+        setTimeout(() => note.classList.remove('show'), 1200);
+      } catch(e) {}
+    }, 400);
+  }
+
+  function loadFromParams(){
+    const params = new URLSearchParams(location.search);
+    if (![...params.keys()].length) return false;
+    STATIC_IDS.forEach(id => { if (params.has(id)) $(id).value = params.get(id); });
+    if (params.has('toolTypeOther')){
+      toolTypeOther.value = params.get('toolTypeOther');
+      toolTypeSelect.value = 'other';
+      toolTypeOtherWrap.style.display = 'block';
+    }
+    if (params.has('toneOther')){
+      toneOther.value = params.get('toneOther');
+      toneSelect.value = 'other';
+      toneOtherWrap.style.display = 'block';
+    }
+    renderDynamicFields();
+    (TOOL_EXTRAS[toolTypeSelect.value] || []).forEach(cfg => {
+      if (params.has(cfg.id)){
+        dynamicValues[cfg.id] = params.get(cfg.id);
+        const el = $(cfg.id);
+        if (el) el.value = params.get(cfg.id);
+      }
+    });
+    return true;
+  }
+
+  function loadFromStorage(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      STATIC_IDS.forEach(id => { if (data[id]) $(id).value = data[id]; });
+      if (data.toolTypeOther){
+        toolTypeOther.value = data.toolTypeOther;
+        if (toolTypeSelect.value === 'other') toolTypeOtherWrap.style.display = 'block';
+      }
+      if (data.toneOther){
+        toneOther.value = data.toneOther;
+        if (toneSelect.value === 'other') toneOtherWrap.style.display = 'block';
+      }
+      renderDynamicFields();
+      if (data.dyn){
+        Object.keys(data.dyn).forEach(k => {
+          dynamicValues[k] = data.dyn[k];
+          const el = $(k);
+          if (el) el.value = data.dyn[k];
+        });
+      }
+      return true;
+    } catch(e) { return false; }
+  }
+
+  form.addEventListener('input', () => { build(); saveDraft(); });
+  form.addEventListener('change', () => { build(); saveDraft(); });
+
+  // ---- init ----
+  renderDynamicFields();
+  const cameFromParams = loadFromParams();
+  if (!cameFromParams){
+    loadFromStorage();
+  }
+  toolTypeOtherWrap.style.display = toolTypeSelect.value === 'other' ? 'block' : 'none';
+  toneOtherWrap.style.display = toneSelect.value === 'other' ? 'block' : 'none';
+  let initialMode = 'simple';
+  try { initialMode = localStorage.getItem(MODE_KEY) || 'simple'; } catch(e) {}
+  setMode(cameFromParams ? 'advanced' : initialMode);
+  build();
+})();
+</script>
+
+</body>
+</html>
