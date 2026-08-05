@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>As Per My Lesson Plan — browser-only classroom tools</title>
+
+<meta name="description" content="Seven single-file classroom tools. No install, no account, no upload. Open the file and use it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="As Per My Lesson Plan">
+<meta property="og:url" content="https://aspermylessonplan.com/">
+<meta property="og:title" content="As Per My Lesson Plan">
+<meta property="og:description" content="Seven single-file classroom tools. No install, no account, no upload.">
+<meta name="twitter:card" content="summary_large_image">
+<!-- TODO: og:image — 1200x630 screenshot of the inbox, drop at assets/og/inbox.png -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23171A1F'/%3E%3Cpath d='M7 11h18v10H7z' fill='none' stroke='%23FAFAF8' stroke-width='1.8'/%3E%3Cpath d='M7 11l9 6 9-6' fill='none' stroke='%232438D6' stroke-width='1.8'/%3E%3C/svg%3E">
+
+<!--
+  DIRECTION 1 — "THE INBOX"
+  The domain is a joke about email, so the site is an email client. Each tool
+  is a message; the reading pane is the pitch. Hovering marks a message read
+  and the unread counter ticks down.
+  Fonts reused from the existing repo (assets/fonts/) + system Georgia.
+-->
+
+<style>
+  @font-face{font-family:'Public Sans';font-weight:400;font-display:swap;
+    src:url('assets/fonts/public-sans-latin-400-normal.woff2') format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:700;font-display:swap;
+    src:url('assets/fonts/public-sans-latin-700-normal.woff2') format('woff2');}
+  @font-face{font-family:'IBM Plex Mono';font-weight:400;font-display:swap;
+    src:url('assets/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');}
+  @font-face{font-family:'IBM Plex Mono';font-weight:500;font-display:swap;
+    src:url('assets/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');}
+
+  :root{
+    --paper:#FAFAF8; --panel:#FFFFFF; --hover:#F3F4F7;
+    --ink:#12161B; --dim:#59636E; --faint:#98A1AA;
+    --rule:#E4E6E9; --rule-hard:#D2D6DB;
+    --rail:#171A1F; --rail-line:#2A2F36; --rail-dim:#8C949D;
+    --accent:#2438D6; --accent-soft:rgba(36,56,214,.07);
+    --flag:#D2352C;
+    --sans:'Public Sans',system-ui,-apple-system,sans-serif;
+    --serif:Georgia,'Iowan Old Style',Times,serif;
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
+    --ease:cubic-bezier(.22,.8,.28,1);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  [hidden]{display:none!important;}
+  html,body{height:100%;}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:15.5px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  ::selection{background:var(--accent);color:#fff;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* ---------------- load choreography: messages arrive ---------------- */
+  @keyframes arrive{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes slidein{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
+  .in{animation:arrive .42s var(--ease) both;animation-delay:var(--d,0ms);}
+  .rail .in{animation-name:slidein;}
+
+  /* ---------------- shell ---------------- */
+  .client{
+    display:grid;
+    grid-template-columns:210px minmax(0,1.15fr) minmax(0,1fr);
+    max-width:1320px;margin:0 auto;min-height:100vh;
+    background:var(--panel);
+    border-left:1px solid var(--rule);border-right:1px solid var(--rule);
+  }
+
+  /* ---------------- rail ---------------- */
+  .rail{
+    background:var(--rail);color:var(--rail-dim);
+    padding:1.5rem 0 2rem;display:flex;flex-direction:column;gap:1.6rem;
+  }
+  .brand{padding:0 1.2rem;}
+  .brand .kicker{
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.22em;
+    text-transform:uppercase;color:#5D6570;display:block;margin-bottom:.28rem;
+  }
+  .brand .mark{
+    font-family:var(--sans);font-weight:700;color:#F5F6F7;
+    font-size:1.16rem;line-height:1.05;letter-spacing:-.025em;display:block;
+  }
+  .brand .mark em{font-style:normal;color:#fff;
+    background:linear-gradient(transparent 84%,var(--accent) 84%,var(--accent) 96%,transparent 96%);}
+
+  .folders{display:flex;flex-direction:column;gap:1px;}
+  .folders .grp{
+    font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;
+    color:#4E555E;padding:0 1.2rem .4rem;margin-top:.5rem;
+  }
+  .folder{
+    display:flex;align-items:center;gap:.6rem;
+    padding:.44rem 1.2rem;font-size:.86rem;color:var(--rail-dim);
+    border-left:2px solid transparent;background:none;border-right:0;border-top:0;border-bottom:0;
+    width:100%;text-align:left;font-family:var(--sans);cursor:pointer;
+    transition:color .15s var(--ease),background .15s var(--ease);
+  }
+  .folder:hover{color:#EDEEF0;background:rgba(255,255,255,.04);}
+  .folder[aria-current="true"]{
+    color:#fff;border-left-color:var(--accent);background:rgba(255,255,255,.06);
+  }
+  .folder .n{margin-left:auto;font-family:var(--mono);font-size:.7rem;color:#6C747E;}
+  .folder[aria-current="true"] .n{color:var(--accent);}
+  .folder svg{flex:0 0 auto;opacity:.85;}
+
+  .rail-foot{
+    margin-top:auto;padding:0 1.2rem;
+    font-family:var(--mono);font-size:.63rem;line-height:1.75;color:#5D6570;
+  }
+  .rail-foot .live{display:inline-block;width:5px;height:5px;border-radius:50%;
+    background:#3FA46A;margin-right:.4rem;vertical-align:middle;}
+
+  /* ---------------- list column ---------------- */
+  .list-col{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-width:0;}
+
+  .toolbar{
+    display:flex;align-items:center;gap:.7rem;
+    padding:.85rem 1.1rem;border-bottom:1px solid var(--rule);
+    position:sticky;top:0;background:var(--panel);z-index:5;
+  }
+  .search{
+    flex:1 1 auto;min-width:0;position:relative;display:flex;align-items:center;
+    background:var(--paper);border:1px solid var(--rule-hard);border-radius:5px;
+    transition:border-color .16s var(--ease),box-shadow .16s var(--ease);
+  }
+  .search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .search .lens{position:absolute;left:.7rem;display:flex;color:var(--faint);}
+  .search:focus-within .lens{color:var(--accent);}
+  #q{
+    flex:1;min-width:0;border:0;background:none;outline:0;
+    font-family:var(--sans);font-size:.9rem;color:var(--ink);
+    padding:.55rem 2.6rem .55rem 2.2rem;-webkit-appearance:none;appearance:none;
+  }
+  #q::placeholder{color:var(--faint);}
+  #q::-webkit-search-cancel-button{-webkit-appearance:none;display:none;}
+  .kbd{
+    position:absolute;right:.5rem;font-family:var(--mono);font-size:.65rem;
+    color:var(--dim);background:var(--panel);border:1px solid var(--rule-hard);
+    border-radius:3px;padding:.05rem .34rem;transition:opacity .16s var(--ease);
+  }
+  .search:focus-within .kbd{opacity:0;}
+  .unread{
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--dim);
+    white-space:nowrap;
+  }
+  .unread b{color:var(--accent);font-weight:500;}
+  .unread .zero{color:var(--faint);}
+
+  /* ---------------- messages ---------------- */
+  .msg{
+    position:relative;display:grid;
+    grid-template-columns:1.6rem minmax(0,1fr) auto;
+    gap:.1rem .7rem;align-items:start;
+    padding:.85rem 1.1rem .85rem .8rem;
+    border-bottom:1px solid var(--rule);
+    transition:background .13s var(--ease);
+  }
+  .msg::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+    background:var(--accent);transform:scaleY(0);transform-origin:center;
+    transition:transform .18s var(--ease);
+  }
+  .msg:hover,.msg.sel{background:var(--hover);}
+  .msg:hover::before,.msg.sel::before{transform:scaleY(1);}
+
+  .dot{
+    grid-row:1/3;align-self:start;justify-self:center;margin-top:.42rem;
+    width:7px;height:7px;border-radius:50%;background:var(--accent);
+    transition:transform .3s var(--ease),opacity .3s var(--ease);
+  }
+  .msg.read .dot{transform:scale(.34);opacity:.22;background:var(--faint);}
+
+  .from{
+    grid-column:2;font-weight:700;font-size:.94rem;letter-spacing:-.005em;
+    display:flex;align-items:center;gap:.45rem;min-width:0;
+  }
+  .msg.read .from{font-weight:400;color:#39424C;}
+  .from .thread{
+    font-family:var(--mono);font-size:.6rem;font-weight:400;color:var(--faint);
+    border:1px solid var(--rule-hard);border-radius:2px;padding:0 .22rem;flex:0 0 auto;
+  }
+  .subj{
+    grid-column:2;font-family:var(--serif);font-size:.97rem;line-height:1.4;
+    color:#25303B;margin-top:.05rem;
+  }
+  .snip{
+    grid-column:2;font-size:.78rem;color:var(--faint);margin-top:.16rem;
+    font-family:var(--mono);letter-spacing:.01em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .when{
+    grid-column:3;grid-row:1;font-family:var(--mono);font-size:.68rem;
+    color:var(--faint);white-space:nowrap;padding-top:.15rem;
+  }
+  .msg:hover .when,.msg.sel .when{color:var(--accent);}
+  .msg .paperclip{grid-column:3;grid-row:2;justify-self:end;color:var(--faint);margin-top:.2rem;}
+
+  .empty{padding:2.4rem 1.2rem;color:var(--dim);font-size:.9rem;}
+  .empty b{display:block;font-family:var(--serif);font-size:1.05rem;color:var(--ink);margin-bottom:.35rem;}
+  .empty code{font-family:var(--mono);font-size:.8rem;background:var(--paper);
+    border:1px solid var(--rule);border-radius:3px;padding:.05rem .3rem;}
+
+  /* ---------------- changelog ---------------- */
+  .sent{border-bottom:1px solid var(--rule);}
+  .sent summary{
+    list-style:none;cursor:pointer;display:flex;align-items:center;gap:.55rem;
+    padding:.7rem 1.1rem;font-family:var(--mono);font-size:.66rem;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+    background:var(--paper);
+  }
+  .sent summary::-webkit-details-marker{display:none;}
+  .sent summary:hover{color:var(--ink);}
+  .sent .caret{color:var(--accent);display:inline-flex;transition:transform .22s var(--ease);}
+  .sent[open] .caret{transform:rotate(90deg);}
+  .sent .tally{margin-left:auto;letter-spacing:.02em;text-transform:none;color:var(--faint);}
+  .log{padding:.3rem 1.1rem 1rem;}
+  .log li{list-style:none;display:grid;grid-template-columns:5.6rem 1fr;gap:.9rem;
+    padding:.55rem 0;border-bottom:1px dashed var(--rule);font-size:.85rem;color:var(--dim);}
+  .log li:last-child{border-bottom:none;}
+  .log time{font-family:var(--mono);font-size:.7rem;color:var(--faint);padding-top:.1rem;}
+  .log b{color:var(--ink);font-weight:700;}
+
+  /* ---------------- list footer ---------------- */
+  .mailfoot{
+    padding:1rem 1.1rem 1.6rem;font-family:var(--mono);font-size:.68rem;
+    line-height:1.9;color:var(--faint);
+  }
+  .mailfoot .row1{color:var(--dim);}
+  .mailfoot .handle{color:var(--flag);}
+
+  /* ---------------- reading pane ---------------- */
+  .pane{
+    position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    padding:1.9rem 2rem 2.4rem;background:var(--panel);
+  }
+  .pane-head{border-bottom:1px solid var(--rule);padding-bottom:1.1rem;margin-bottom:1.2rem;}
+  .pane .hdr{
+    font-family:var(--mono);font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);display:grid;grid-template-columns:3.1rem 1fr;gap:.3rem .5rem;margin-bottom:.9rem;
+  }
+  .pane .hdr span:nth-child(even){color:var(--dim);letter-spacing:.03em;text-transform:none;
+    font-family:var(--sans);font-size:.8rem;}
+  .pane h2{
+    font-family:var(--serif);font-weight:400;font-size:1.42rem;line-height:1.24;
+    letter-spacing:-.01em;text-wrap:balance;min-height:1.24em;
+  }
+  .pane h2 .cursor{
+    display:inline-block;width:.5ch;background:var(--accent);color:transparent;
+    animation:blink .9s steps(1,end) infinite;
+  }
+  @keyframes blink{50%{opacity:0;}}
+  .pane .body p{font-size:.94rem;color:#2C3640;margin-bottom:.85rem;max-width:46ch;}
+  .pane .body p:last-of-type{margin-bottom:1.2rem;}
+  .pane .body strong{font-weight:700;}
+
+  .attach{
+    display:flex;align-items:center;gap:.7rem;
+    border:1px solid var(--rule-hard);border-radius:5px;
+    padding:.65rem .8rem;margin-bottom:1.3rem;background:var(--paper);
+    transition:border-color .16s var(--ease),background .16s var(--ease);
+  }
+  .attach:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .attach .ico{
+    width:30px;height:30px;flex:0 0 auto;border-radius:3px;background:var(--rail);
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    font-family:var(--mono);font-size:.55rem;letter-spacing:.02em;
+  }
+  .attach .fn{font-family:var(--mono);font-size:.76rem;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .attach .sz{font-family:var(--mono);font-size:.65rem;color:var(--faint);}
+  .attach .go{margin-left:auto;font-family:var(--mono);font-size:.68rem;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--accent);white-space:nowrap;
+    display:flex;align-items:center;gap:.3rem;}
+  .attach:hover .go svg{transform:translateX(3px);}
+  .attach .go svg{transition:transform .18s var(--ease);}
+
+  .sig{
+    border-top:1px solid var(--rule);padding-top:.9rem;
+    font-family:var(--mono);font-size:.68rem;line-height:1.85;color:var(--faint);
+  }
+  .sig b{display:block;color:var(--dim);font-weight:500;}
+  .sig .hand{color:var(--flag);}
+
+  .fade{animation:arrive .3s var(--ease) both;}
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width:1080px){
+    .client{grid-template-columns:180px minmax(0,1fr);}
+    .pane{display:none;}
+    .list-col{border-right:none;}
+  }
+  @media (max-width:720px){
+    .client{grid-template-columns:1fr;border:none;}
+    .rail{flex-direction:row;align-items:center;gap:1rem;padding:.9rem 1rem;
+      overflow-x:auto;}
+    .rail .folders,.rail .rail-foot{display:none;}
+    .brand{padding:0;}
+    .toolbar{position:static;}
+    .msg{grid-template-columns:1.3rem minmax(0,1fr);padding-right:.9rem;}
+    .when{grid-column:2;grid-row:auto;padding-top:.25rem;}
+    .msg .paperclip{display:none;}
+    .snip{white-space:normal;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .in,.fade{animation:none!important;opacity:1;transform:none;}
+    .pane h2 .cursor{display:none;}
+    *{transition-duration:.01ms!important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="client">
+
+  <!-- ============ rail ============ -->
+  <aside class="rail">
+    <div class="brand in" style="--d:40ms">
+      <span class="kicker">Following up on</span>
+      <span class="mark">As Per My<br><em>Lesson Plan</em></span>
+    </div>
+
+    <nav class="folders" aria-label="Folders">
+      <span class="grp in" style="--d:120ms">Mailboxes</span>
+      <button class="folder in" style="--d:160ms" aria-current="true" data-filter="">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1.5 4h11v7h-11z" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 4l5.5 3.6L12.5 4" stroke="currentColor" stroke-width="1.3"/></svg>
+        Inbox <span class="n" id="railCount">7</span>
+      </button>
+      <button class="folder in" style="--d:200ms" data-filter="roster">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4.6" r="2.3" stroke="currentColor" stroke-width="1.3"/><path d="M2.4 12c.6-2.6 2.4-3.9 4.6-3.9s4 1.3 4.6 3.9" stroke="currentColor" stroke-width="1.3"/></svg>
+        Rosters <span class="n">2</span>
+      </button>
+      <button class="folder in" style="--d:240ms" data-filter="schedule">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1.7" y="2.7" width="10.6" height="9.6" stroke="currentColor" stroke-width="1.3"/><path d="M1.7 5.6h10.6M4.7 1.6v2M9.3 1.6v2" stroke="currentColor" stroke-width="1.3"/></svg>
+        Schedules <span class="n">2</span>
+      </button>
+      <button class="folder in" style="--d:280ms" data-filter="paperwork">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 1.7h5l3 3v7.6H3z" stroke="currentColor" stroke-width="1.3"/><path d="M5 7.4h4M5 9.4h4" stroke="currentColor" stroke-width="1.3"/></svg>
+        Paperwork <span class="n">3</span>
+      </button>
+    </nav>
+
+    <div class="rail-foot in" style="--d:340ms">
+      <span class="live" aria-hidden="true"></span>Working offline<br>
+      Nothing syncs. Nothing leaves<br>this tab. No account exists.
+    </div>
+  </aside>
+
+  <!-- ============ list ============ -->
+  <div class="list-col">
+
+    <div class="toolbar in" style="--d:100ms">
+      <label class="search" for="q">
+        <span class="lens" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+            <circle cx="6.4" cy="6.4" r="4.4" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M9.8 9.8l3.6 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search messages">
+        <span class="kbd" aria-hidden="true">/</span>
+      </label>
+      <p class="unread" id="unread" role="status" aria-live="polite"><b>7</b> unread</p>
+    </div>
+
+    <div id="list">
+
+      <a class="msg in" style="--d:380ms" href="Tools/Name%20Picker.html"
+         data-tool="picker" data-folder="roster"
+         data-tags="random cold call participation groups shuffle roster who goes first">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Name Picker <span class="thread">3</span></span>
+        <span class="subj">5 seconds. Pick a name, move on.</span>
+        <span class="snip">random · cold-call · groups</span>
+        <span class="when">Per. 1</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+      <a class="msg in" style="--d:440ms" href="Tools/Seating%20Chart%20Generator.html"
+         data-tool="seating" data-folder="roster"
+         data-tags="seating chart roster groups shuffle reshuffle desks layout pairs">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Seating Chart Generator <span class="thread">7</span></span>
+        <span class="subj">Build it once, reshuffle whenever you need to.</span>
+        <span class="snip">seating · roster · shuffle</span>
+        <span class="when">Per. 2</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+      <a class="msg in" style="--d:500ms" href="Tools/schedule-browser.html"
+         data-tool="browser" data-folder="schedule"
+         data-tags="schedule teacher room period blocks a/b day lookup coverage substitute">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Schedule Browser <span class="thread">2</span></span>
+        <span class="subj">Look up any teacher, room, or period in seconds.</span>
+        <span class="snip">schedule · rooms · periods</span>
+        <span class="when">Per. 3</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+      <a class="msg in" style="--d:560ms" href="Tools/schedule-visualizer.html"
+         data-tool="layout" data-folder="schedule"
+         data-tags="building map layout rooms clusters hallways floors wayfinding schedule">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">School Layout Visualizer <span class="thread">4</span></span>
+        <span class="subj">See the whole building&rsquo;s schedule, hyperlinked.</span>
+        <span class="snip">building · map · clusters</span>
+        <span class="when">Per. 4</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+      <a class="msg in" style="--d:620ms" href="Tools/final_grade_checker.html"
+         data-tool="grades" data-folder="paperwork"
+         data-tags="grades grading report cards math weights averages quarter exam gradebook export">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Final Grade Checker <span class="thread">11</span></span>
+        <span class="subj">Double-check the math before report cards go out.</span>
+        <span class="snip">grades · report-cards · math</span>
+        <span class="when">Per. 5</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+      <a class="msg in" style="--d:680ms" href="Tools/image-to-pdf.html"
+         data-tool="pdf" data-folder="paperwork"
+         data-tags="pdf images photos scans handouts merge combine documents">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Image &rarr; PDF Assembler <span class="thread">2</span></span>
+        <span class="subj">Turn a stack of photos into one clean PDF.</span>
+        <span class="snip">pdf · images · scans</span>
+        <span class="when">Per. 6</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+      <a class="msg in" style="--d:740ms" href="Tools/prompt-builder.html"
+         data-tool="prompt" data-folder="paperwork"
+         data-tags="prompt ai writing template builder chatgpt claude questions">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Prompt Builder <span class="thread">5</span></span>
+        <span class="subj">Answer a few questions, get a ready-to-use AI prompt.</span>
+        <span class="snip">prompt · ai · template</span>
+        <span class="when">Per. 7</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
+    </div>
+
+    <p class="empty" id="empty" hidden>
+      <b>Nothing matches that.</b>
+      Seven messages total, and none of them mention it. Try <code>seating</code>,
+      <code>grades</code>, or <code>rooms</code>.
+    </p>
+
+    <details class="sent in" style="--d:800ms">
+      <summary>
+        <span class="caret" aria-hidden="true"><svg width="8" height="9" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        Recently sent
+        <span class="tally">3 items</span>
+      </summary>
+      <ul class="log">
+        <li><time datetime="2026-07-30">Jul 30</time><span><b>New front page.</b> Search, folders, and this list of changes.</span></li>
+        <li><time datetime="2026-07-22">Jul 22</time><span><b>Seating Chart Generator.</b> Reshuffling now keeps locked seats where you put them.</span></li>
+        <li><time datetime="2026-07-14">Jul 14</time><span><b>Schedule Browser.</b> Fixed mirrored floors in the route-tracing view.</span></li>
+      </ul>
+    </details>
+
+    <div class="mailfoot in" style="--d:840ms">
+      <span class="row1">Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span></span><br>
+      Built by Devon Moore + Claude &middot; rev 2026-07-30 &middot; unofficial, and not affiliated
+      with any school, district, or SIS vendor.
+    </div>
+  </div>
+
+  <!-- ============ reading pane ============ -->
+  <section class="pane" id="pane" aria-live="polite" aria-label="Message preview">
+    <div class="pane-head">
+      <div class="hdr">
+        <span>From</span><span id="pFrom">Devon Moore</span>
+        <span>To</span><span id="pTo">Everyone who teaches a full load</span>
+      </div>
+      <h2 id="pSubj"></h2>
+    </div>
+    <div class="body" id="pBody"></div>
+    <div id="pAttach"></div>
+    <div class="sig">
+      <b>Devon Moore</b>
+      Social studies teacher. Not your IT department.<br>
+      Unofficial &mdash; not affiliated with any school, district, or SIS vendor.<br>
+      <span class="hand">Sent from a browser tab, which is the only place any of this runs.</span>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var MAIL = {
+    welcome:{
+      from:'Devon Moore', to:'Everyone who teaches a full load',
+      subj:'As per my lesson plan',
+      body:['Seven small web apps for the parts of the job that aren\u2019t teaching. Rosters, seating, schedules, grade math, paperwork.',
+            'Every one is a single file. <strong>No install, no account, no upload.</strong> Open it, use it, close the tab. Once a tool has loaded it keeps working with the wifi off, which matters more often than it should.',
+            'Pick a message on the left. Hover to read it, click to open the tool.']
+    },
+    picker:{from:'Name Picker',to:'Whoever is not raising a hand',subj:'5 seconds. Pick a name, move on.',
+      body:['Paste a roster. Press the button. Get a name. It will not ask you to create a class, join a class, or verify your email.',
+            'Nobody gets picked twice until everybody has been picked once.'],
+      file:'Name Picker.html',href:'Tools/Name%20Picker.html'},
+    seating:{from:'Seating Chart Generator',to:'The kid who cannot sit next to that other kid',subj:'Build it once, reshuffle whenever you need to.',
+      body:['Set your desks the way the room actually is, drop the roster in, and let it deal. Lock the seats you have already fought for and reshuffle around them.',
+            'Prints on one page without a fight.'],
+      file:'Seating Chart Generator.html',href:'Tools/Seating%20Chart%20Generator.html'},
+    browser:{from:'Schedule Browser',to:'Anyone covering a class in four minutes',subj:'Look up any teacher, room, or period in seconds.',
+      body:['Load the master schedule once and search it like a database, because it is one. Who is in 214 right now. Which period that teacher is free. Where a kid is supposed to be.',
+            'Useful during coverage. Extremely useful during a fire drill.'],
+      file:'schedule-browser.html',href:'Tools/schedule-browser.html'},
+    layout:{from:'School Layout Visualizer',to:'The person who got handed the master schedule',subj:'See the whole building\u2019s schedule, hyperlinked.',
+      body:['The whole building as a clickable map: rooms, clusters, floors. Click a room to see its day, click a teacher to follow them through it.',
+            'Turns a spreadsheet nobody reads into something you can point at in a meeting.'],
+      file:'schedule-visualizer.html',href:'Tools/schedule-visualizer.html'},
+    grades:{from:'Final Grade Checker',to:'You, at 11pm, the night grades are due',subj:'Double-check the math before report cards go out.',
+      body:['Enter the weights, enter the scores, see the number. Then see how it was arrived at, which is the part the gradebook will not show you.',
+            'Catches the rounding argument before the email about the rounding argument.'],
+      file:'final_grade_checker.html',href:'Tools/final_grade_checker.html'},
+    pdf:{from:'Image \u2192 PDF Assembler',to:'The copier, which is down again',subj:'Turn a stack of photos into one clean PDF.',
+      body:['Photograph the pages, drop them in, drag them into order, get one PDF. Nothing is uploaded anywhere \u2014 the file is assembled in this tab and saved to your machine.',
+            'Which is the entire reason it exists.'],
+      file:'image-to-pdf.html',href:'Tools/image-to-pdf.html'},
+    prompt:{from:'Prompt Builder',to:'Colleagues who asked what to type',subj:'Answer a few questions, get a ready-to-use AI prompt.',
+      body:['Answer a short set of questions about the assignment, the grade level, and what you actually want back. It writes the prompt.',
+            'For the moment when a colleague asks how you got it to do that and you would rather show than explain.'],
+      file:'prompt-builder.html',href:'Tools/prompt-builder.html'}
+  };
+
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var list   = document.getElementById('list');
+  var msgs   = Array.prototype.slice.call(list.querySelectorAll('.msg'));
+  var input  = document.getElementById('q');
+  var unread = document.getElementById('unread');
+  var railN  = document.getElementById('railCount');
+  var empty  = document.getElementById('empty');
+  var pane   = {from:document.getElementById('pFrom'),to:document.getElementById('pTo'),
+                subj:document.getElementById('pSubj'),body:document.getElementById('pBody'),
+                attach:document.getElementById('pAttach')};
+
+  var hay = msgs.map(function(m){
+    return (m.getAttribute('data-tags')+' '+m.textContent).toLowerCase().replace(/\s+/g,' ');
+  });
+
+  /* ---------- reading pane ---------- */
+  var typer = null, current = null;
+  function show(key){
+    if(key === current) return;
+    current = key;
+    var m = MAIL[key]; if(!m) return;
+
+    pane.from.textContent = m.from;
+    pane.to.textContent   = m.to;
+
+    pane.body.className = 'body fade';
+    pane.body.innerHTML = m.body.map(function(p){return '<p>'+p+'</p>';}).join('');
+    void pane.body.offsetWidth;
+
+    pane.attach.innerHTML = m.file ? (
+      '<a class="attach" href="'+m.href+'">'+
+        '<span class="ico" aria-hidden="true">HTML</span>'+
+        '<span><span class="fn">'+m.file+'</span><br><span class="sz">1 file &middot; runs offline &middot; no dependencies</span></span>'+
+        '<span class="go">Open<svg width="11" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>'+
+      '</a>') : '';
+
+    if(typer){clearInterval(typer);typer=null;}
+    if(reduce){ pane.subj.textContent = m.subj; return; }
+    var i = 0, s = m.subj;
+    pane.subj.innerHTML = '<span class="cursor">|</span>';
+    typer = setInterval(function(){
+      i += 2;
+      if(i >= s.length){ clearInterval(typer); typer=null; pane.subj.textContent = s; return; }
+      pane.subj.innerHTML = s.slice(0,i).replace(/&/g,'&amp;').replace(/</g,'&lt;') + '<span class="cursor">|</span>';
+    }, 14);
+  }
+
+  /* ---------- unread counter ---------- */
+  var left = msgs.length;
+  function markRead(m){
+    if(m.classList.contains('read')) return;
+    m.classList.add('read');
+    left--;
+    unread.innerHTML = left ? '<b>'+left+'</b> unread'
+                            : '<span class="zero">All read. Sorry.</span>';
+    railN.textContent = left || '';
+  }
+
+  msgs.forEach(function(m){
+    var key = m.getAttribute('data-tool');
+    function focusIt(){
+      msgs.forEach(function(o){o.classList.remove('sel');});
+      m.classList.add('sel'); show(key); markRead(m);
+    }
+    m.addEventListener('mouseenter', focusIt);
+    m.addEventListener('focus', focusIt);
+  });
+
+  show('welcome');
+
+  /* ---------- search + folders ---------- */
+  var folderQ = '';
+  function apply(){
+    var q = input.value.trim().toLowerCase();
+    var shown = 0;
+    msgs.forEach(function(m,i){
+      var hit = (!q || hay[i].indexOf(q) !== -1) &&
+                (!folderQ || m.getAttribute('data-folder') === folderQ);
+      m.hidden = !hit; if(hit) shown++;
+    });
+    empty.hidden = shown > 0;
+  }
+  input.addEventListener('input', apply);
+
+  Array.prototype.forEach.call(document.querySelectorAll('.folder'), function(btn){
+    btn.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.folder'), function(b){
+        b.setAttribute('aria-current','false');
+      });
+      btn.setAttribute('aria-current','true');
+      folderQ = btn.getAttribute('data-filter');
+      apply();
+    });
+  });
+
+  /* ---------- keyboard: / search, j/k move, Enter open, Esc clear ---------- */
+  var cursor = -1;
+  document.addEventListener('keydown', function(e){
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+    if(e.key === '/' && !typing && !e.metaKey && !e.ctrlKey){e.preventDefault();input.focus();return;}
+    if(e.key === 'Escape'){
+      if(document.activeElement === input){
+        if(input.value){input.value='';apply();} else {input.blur();}
+      }
+      return;
+    }
+    if(typing || e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if(e.key === 'j' || e.key === 'k'){
+      e.preventDefault();
+      var vis = msgs.filter(function(m){return !m.hidden;});
+      if(!vis.length) return;
+      cursor = vis.indexOf(document.activeElement);
+      cursor = (e.key === 'j') ? Math.min(cursor+1, vis.length-1)
+                               : Math.max(cursor-1, 0);
+      if(cursor < 0) cursor = 0;
+      vis[cursor].focus();
+    }
+  });
+})();
+</script>
+</body>
+</html>

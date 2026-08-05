@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>As Per My Lesson Plan — browser-only classroom tools</title>
+
+<meta name="description" content="Seven single-file classroom tools. No install, no account, no upload. Open the file and use it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="As Per My Lesson Plan">
+<meta property="og:url" content="https://aspermylessonplan.com/">
+<meta property="og:title" content="As Per My Lesson Plan">
+<meta property="og:description" content="Seven single-file classroom tools. No install, no account, no upload.">
+<meta name="twitter:card" content="summary_large_image">
+<!-- TODO: og:image — 1200x630, drop at assets/og/handout.png -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23E7E7DF'/%3E%3Crect x='5' y='5' width='18' height='18' fill='%230093A3'/%3E%3Crect x='9' y='9' width='18' height='18' fill='%23FF3D7F' opacity='.85'/%3E%3C/svg%3E">
+
+<!--
+  DIRECTION 4 — "RISO HANDOUT"
+  The good version of the photocopied thing you get at a PD session. Two-colour
+  riso print: every card is a teal plate and a pink plate slightly out of
+  register, and the misregistration tracks your cursor. Tear-off tabs at the
+  bottom, like a flyer on a staff-room corkboard.
+-->
+
+<style>
+  @font-face{font-family:'Space Grotesk';font-weight:600;font-display:swap;
+    src:url('assets/fonts/space-grotesk-latin-600-normal.woff2') format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:400;font-display:swap;
+    src:url('assets/fonts/public-sans-latin-400-normal.woff2') format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:700;font-display:swap;
+    src:url('assets/fonts/public-sans-latin-700-normal.woff2') format('woff2');}
+  @font-face{font-family:'IBM Plex Mono';font-weight:400;font-display:swap;
+    src:url('assets/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');}
+  @font-face{font-family:'IBM Plex Mono';font-weight:500;font-display:swap;
+    src:url('assets/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');}
+
+  :root{
+    --stock:#E7E7DF; --stock-2:#DEDED5;
+    --pink:#FF3D7F; --teal:#0093A3; --ink:#23231F; --soft:#5E5E56;
+    --disp:'Space Grotesk',Arial Black,system-ui,sans-serif;
+    --body:'Public Sans',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --ease:cubic-bezier(.2,.85,.3,1);
+    --ox:0px; --oy:0px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  [hidden]{display:none!important;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    background:var(--stock);color:var(--ink);
+    font-family:var(--body);font-size:16px;line-height:1.5;
+    padding:clamp(1rem,3.5vw,2.4rem) clamp(1rem,4vw,2.6rem) 0;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  ::selection{background:var(--pink);color:var(--stock);}
+  :focus-visible{outline:2.5px solid var(--teal);outline-offset:3px;}
+  .page{max-width:1160px;margin:0 auto;position:relative;}
+
+  /* paper grain, printed over everything */
+  .grain{
+    position:fixed;inset:0;z-index:99;pointer-events:none;opacity:.3;
+    mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+    background-size:180px 180px;
+  }
+
+  /* ---------------- load: plates print one at a time ---------------- */
+  @keyframes plate{from{opacity:0;translate:-10px 6px;}to{opacity:1;translate:0 0;}}
+  @keyframes drop{from{opacity:0;translate:0 20px;}to{opacity:1;translate:0 0;}}
+  .pr{animation:plate .5s var(--ease) both;animation-delay:var(--d,0ms);}
+
+  /* ---------------- masthead ---------------- */
+  .top{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;
+    font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--soft);border-bottom:2.5px solid var(--ink);padding-bottom:.5rem;
+  }
+  .top .r{color:var(--pink);}
+
+  header{position:relative;padding:clamp(1.6rem,5vw,2.8rem) 0 clamp(1.4rem,4vw,2.2rem);}
+  .mast{
+    position:relative;font-family:var(--disp);font-weight:600;
+    font-size:clamp(2.6rem,11.5vw,8.2rem);line-height:.86;letter-spacing:-.045em;
+    text-transform:uppercase;
+  }
+  /* three plates of the same word, out of register */
+  .mast .layer{display:block;}
+  .mast .layer.t{
+    position:absolute;inset:0;color:var(--teal);mix-blend-mode:multiply;
+    transform:translate(calc(var(--ox) * -1.4 - 5px),calc(var(--oy) * -1.4 - 3px));
+  }
+  .mast .layer.p{
+    position:absolute;inset:0;color:var(--pink);mix-blend-mode:multiply;
+    transform:translate(calc(var(--ox) * 1.4 + 5px),calc(var(--oy) * 1.4 + 3px));
+  }
+  .mast .layer.k{position:relative;color:var(--ink);}
+
+  .deck{
+    margin-top:1.5rem;max-width:44ch;font-size:1.06rem;line-height:1.5;
+    border-left:5px solid var(--pink);padding-left:1rem;
+  }
+  .deck b{font-weight:700;}
+
+  /* rubber stamps */
+  .stamp{
+    position:absolute;font-family:var(--mono);font-weight:500;
+    font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;text-align:center;
+    line-height:1.4;padding:.4rem .6rem;border:2.5px solid currentColor;
+    mix-blend-mode:multiply;pointer-events:none;
+  }
+  .stamp.one{color:var(--teal);top:.4rem;right:0;transform:rotate(6deg);}
+  .stamp.two{color:var(--pink);bottom:.6rem;right:6%;transform:rotate(-5deg);border-radius:100px;
+    padding:.5rem .9rem;}
+
+  /* ---------------- find bar ---------------- */
+  .find{
+    display:flex;align-items:flex-end;gap:1.2rem;flex-wrap:wrap;
+    border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);
+    padding:.9rem 0;margin-bottom:clamp(1.4rem,4vw,2.2rem);
+  }
+  .find label{flex:1 1 280px;min-width:0;}
+  .find .lab{
+    display:block;font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--teal);margin-bottom:.25rem;
+  }
+  #q{
+    width:100%;background:none;border:0;border-bottom:2px dashed var(--soft);outline:0;
+    font-family:var(--disp);font-weight:600;font-size:1.3rem;letter-spacing:-.02em;
+    text-transform:uppercase;color:var(--ink);padding:.05rem 0 .25rem;
+    -webkit-appearance:none;appearance:none;
+  }
+  #q::placeholder{color:#A3A399;}
+  #q:focus{border-bottom-color:var(--pink);border-bottom-style:solid;}
+  #q::-webkit-search-cancel-button{-webkit-appearance:none;display:none;}
+  .cnt{
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--soft);white-space:nowrap;padding-bottom:.4rem;
+  }
+  .cnt b{color:var(--pink);font-weight:500;}
+
+  /* ---------------- card grid ---------------- */
+  .grid{
+    display:grid;grid-template-columns:repeat(12,1fr);
+    gap:clamp(1rem,2.4vw,1.5rem);margin-bottom:2.6rem;
+  }
+  .card{
+    position:relative;grid-column:span 4;
+    background:var(--stock);border:2.5px solid var(--ink);
+    padding:1.1rem 1.1rem 1rem;min-height:11rem;
+    display:flex;flex-direction:column;
+    animation:drop .5s var(--ease) both;animation-delay:var(--d,0ms);
+    transition:transform .22s var(--ease),box-shadow .22s var(--ease);
+  }
+  .card:nth-child(1){grid-column:span 5;}
+  .card:nth-child(2){grid-column:span 7;}
+  .card:nth-child(6){grid-column:span 6;}
+  .card:nth-child(7){grid-column:span 6;}
+
+  /* two ink plates, printed slightly out of register */
+  .card{
+    box-shadow:
+      calc(var(--ox) * -1 - 6px) calc(var(--oy) * -1 - 6px) 0 0 var(--teal),
+      calc(var(--ox) + 6px)      calc(var(--oy) + 6px)      0 0 var(--pink);
+  }
+  .card:hover,.card:focus-visible{
+    transform:translate(-2px,-2px);
+    box-shadow:
+      calc(var(--ox) * -1 - 12px) calc(var(--oy) * -1 - 12px) 0 0 var(--teal),
+      calc(var(--ox) + 12px)      calc(var(--oy) + 12px)      0 0 var(--pink);
+  }
+  /* halftone screen inside the stock */
+  .card .screen{
+    position:absolute;inset:0;pointer-events:none;opacity:.3;mix-blend-mode:multiply;
+    background-image:radial-gradient(circle at 1px 1px,var(--teal) .9px,transparent 1.1px);
+    background-size:5px 5px;
+    -webkit-mask-image:linear-gradient(158deg,#000 0%,transparent 38%);
+    mask-image:linear-gradient(158deg,#000 0%,transparent 38%);
+  }
+
+  .card .no{
+    position:absolute;top:-2.5px;right:-2.5px;
+    background:var(--ink);color:var(--stock);
+    font-family:var(--mono);font-weight:500;font-size:.62rem;letter-spacing:.12em;
+    padding:.22rem .45rem;
+  }
+  .card h2,.card p,.card .tg{position:relative;}
+  .card h2{
+    font-family:var(--disp);font-weight:600;font-size:clamp(1.15rem,2.4vw,1.5rem);
+    line-height:1.05;letter-spacing:-.03em;text-transform:uppercase;
+    max-width:14ch;margin-bottom:.55rem;
+  }
+  .card:hover h2{color:var(--pink);}
+  .card p{font-size:.95rem;color:#37372F;max-width:34ch;}
+  .card .tg{
+    margin-top:auto;padding-top:.9rem;
+    font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--teal);display:flex;justify-content:space-between;align-items:flex-end;gap:.8rem;
+  }
+  .card .op{
+    color:var(--ink);font-weight:500;display:inline-flex;align-items:center;gap:.35rem;
+    border-bottom:2px solid var(--pink);padding-bottom:.1rem;white-space:nowrap;
+  }
+  .card:hover .op svg{transform:translateX(4px);}
+  .card .op svg{transition:transform .2s var(--ease);}
+
+  .nope{
+    grid-column:span 12;border:2.5px dashed var(--ink);padding:2rem 1.2rem;text-align:center;
+  }
+  .nope b{display:block;font-family:var(--disp);font-weight:600;font-size:1.5rem;
+    text-transform:uppercase;letter-spacing:-.02em;color:var(--pink);margin-bottom:.4rem;}
+  .nope span{font-size:.95rem;color:var(--soft);}
+  .nope code{font-family:var(--mono);font-size:.85rem;background:var(--ink);color:var(--stock);padding:.05rem .3rem;}
+
+  /* ---------------- errata + fine print ---------------- */
+  .lower{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+    gap:clamp(1rem,2.4vw,1.6rem);align-items:start;margin-bottom:2.4rem;}
+
+  .errata{border:2.5px solid var(--ink);background:var(--stock-2);}
+  .errata summary{
+    list-style:none;cursor:pointer;display:flex;align-items:center;gap:.55rem;
+    padding:.75rem .9rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--soft);
+  }
+  .errata summary::-webkit-details-marker{display:none;}
+  .errata summary:hover{color:var(--ink);}
+  .errata .caret{display:inline-flex;color:var(--pink);transition:transform .22s var(--ease);}
+  .errata[open] .caret{transform:rotate(90deg);}
+  .errata[open] summary{border-bottom:2px solid var(--ink);color:var(--ink);}
+  .errata .n{margin-left:auto;letter-spacing:.05em;text-transform:none;color:#8A8A80;}
+  .errata ul{padding:.4rem .9rem .9rem;}
+  .errata li{
+    list-style:none;display:grid;grid-template-columns:5.4rem 1fr;gap:.9rem;
+    padding:.55rem 0;border-bottom:1.5px dashed #B6B6AC;font-size:.9rem;color:#37372F;
+  }
+  .errata li:last-child{border-bottom:none;}
+  .errata time{font-family:var(--mono);font-size:.68rem;color:var(--teal);padding-top:.15rem;}
+  .errata b{font-family:var(--disp);font-weight:600;letter-spacing:-.01em;}
+
+  .fine{
+    border:2.5px solid var(--ink);padding:.9rem;
+    font-family:var(--mono);font-size:.7rem;line-height:1.8;color:#4A4A43;
+  }
+  .fine .h{display:block;font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--pink);margin-bottom:.4rem;}
+  .fine p+ .h{margin-top:.8rem;}
+
+  /* ---------------- tear-off tabs ---------------- */
+  .tearoff{margin:0 calc(-1 * clamp(1rem,4vw,2.6rem));}
+  .tear-line{
+    display:flex;align-items:center;gap:.6rem;
+    padding:0 clamp(1rem,4vw,2.6rem);
+    font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--soft);
+  }
+  .tear-line::after{content:'';flex:1;border-top:2px dashed var(--soft);}
+  .tabs{
+    display:flex;gap:0;padding:0 clamp(1rem,4vw,2.6rem);overflow:hidden;
+  }
+  .tab{
+    flex:1 1 0;min-width:0;
+    border-left:2px dashed var(--soft);
+    padding:1rem .3rem 1.6rem;
+    text-align:center;
+    font-family:var(--mono);font-size:.72rem;letter-spacing:.05em;color:var(--ink);
+    writing-mode:vertical-rl;text-orientation:mixed;
+    height:9rem;display:flex;align-items:flex-start;justify-content:center;
+    transition:transform .2s var(--ease),color .2s var(--ease);
+  }
+  .tab:first-child{border-left:0;}
+  .tab:hover{transform:translateY(9px) rotate(1.2deg);color:var(--pink);}
+  .tab .at{color:var(--teal);}
+
+  footer{
+    display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+    border-top:2.5px solid var(--ink);padding:.7rem 0 1.6rem;
+    font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--soft);
+  }
+  footer .p{color:var(--pink);}
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width:940px){
+    .grid{grid-template-columns:repeat(6,1fr);}
+    .card,.card:nth-child(1),.card:nth-child(2),
+    .card:nth-child(6),.card:nth-child(7){grid-column:span 3;}
+    .nope{grid-column:span 6;}
+    .lower{grid-template-columns:1fr;}
+    .stamp.two{display:none;}
+  }
+  @media (max-width:620px){
+    .grid{grid-template-columns:1fr;}
+    .card,.card:nth-child(1),.card:nth-child(2),
+    .card:nth-child(6),.card:nth-child(7){grid-column:span 1;}
+    .nope{grid-column:span 1;}
+    .stamp.one{position:static;display:inline-block;margin-top:1.2rem;transform:rotate(-2deg);}
+    .tab{font-size:.62rem;height:7.5rem;}
+    .tab:nth-child(n+6){display:none;}
+    .errata li{grid-template-columns:1fr;gap:.15rem;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .pr,.card{animation:none!important;opacity:1;transform:none;}
+    *{transition-duration:.01ms!important;}
+  }
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="page">
+
+  <div class="top pr" style="--d:0ms">
+    <span>aspermylessonplan.com &middot; single sheet, two colours</span>
+    <span class="r">Take one &middot; photocopy freely</span>
+  </div>
+
+  <!-- ============ masthead ============ -->
+  <header>
+    <h1 class="mast pr" style="--d:120ms" aria-label="As Per My Lesson Plan">
+      <span class="layer t" aria-hidden="true">As Per My<br>Lesson Plan</span>
+      <span class="layer p" aria-hidden="true">As Per My<br>Lesson Plan</span>
+      <span class="layer k">As Per My<br>Lesson Plan</span>
+    </h1>
+    <p class="deck pr" style="--d:420ms">
+      Seven single-file web apps for the parts of the job that aren&rsquo;t teaching.
+      <b>No install. No account. Nothing uploaded.</b> Open the file, use it, close the tab.
+      Once loaded, they keep working with the wifi off.
+    </p>
+    <span class="stamp one pr" style="--d:640ms" aria-hidden="true">Unofficial<br>No district<br>approved this</span>
+    <span class="stamp two pr" style="--d:720ms" aria-hidden="true">No login<br>required</span>
+  </header>
+
+  <!-- ============ find ============ -->
+  <div class="find pr" style="--d:520ms">
+    <label for="q">
+      <span class="lab">Find a tool</span>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="seating, grades, rooms&hellip;">
+    </label>
+    <p class="cnt" id="cnt" role="status" aria-live="polite"><b>7 of 7</b> printed</p>
+  </div>
+
+  <!-- ============ cards ============ -->
+  <div class="grid" id="grid">
+
+    <a class="card" style="--d:600ms" href="Tools/Name%20Picker.html"
+       data-tags="random cold call participation groups shuffle roster who goes first">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">01</span>
+      <h2>Name Picker</h2>
+      <p>5 seconds. Pick a name, move on.</p>
+      <span class="tg">random / cold-call / groups
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <a class="card" style="--d:660ms" href="Tools/Seating%20Chart%20Generator.html"
+       data-tags="seating chart roster groups shuffle reshuffle desks layout pairs">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">02</span>
+      <h2>Seating Chart Generator</h2>
+      <p>Build it once, reshuffle whenever you need to.</p>
+      <span class="tg">seating / roster / shuffle
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <a class="card" style="--d:720ms" href="Tools/schedule-browser.html"
+       data-tags="schedule teacher room period blocks a/b day lookup coverage substitute">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">03</span>
+      <h2>Schedule Browser</h2>
+      <p>Look up any teacher, room, or period in seconds.</p>
+      <span class="tg">schedule / rooms / periods
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <a class="card" style="--d:780ms" href="Tools/schedule-visualizer.html"
+       data-tags="building map layout rooms clusters hallways floors wayfinding schedule">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">04</span>
+      <h2>School Layout Visualizer</h2>
+      <p>See the whole building&rsquo;s schedule, hyperlinked.</p>
+      <span class="tg">building / map / clusters
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <a class="card" style="--d:840ms" href="Tools/final_grade_checker.html"
+       data-tags="grades grading report cards math weights averages quarter exam gradebook export">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">05</span>
+      <h2>Final Grade Checker</h2>
+      <p>Double-check the math before report cards go out.</p>
+      <span class="tg">grades / report-cards / math
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <a class="card" style="--d:900ms" href="Tools/image-to-pdf.html"
+       data-tags="pdf images photos scans handouts merge combine documents">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">06</span>
+      <h2>Image &rarr; PDF Assembler</h2>
+      <p>Turn a stack of photos into one clean PDF.</p>
+      <span class="tg">pdf / images / scans
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <a class="card" style="--d:960ms" href="Tools/prompt-builder.html"
+       data-tags="prompt ai writing template builder chatgpt claude questions">
+      <span class="screen" aria-hidden="true"></span>
+      <span class="no">07</span>
+      <h2>Prompt Builder</h2>
+      <p>Answer a few questions, get a ready-to-use AI prompt.</p>
+      <span class="tg">prompt / ai / template
+        <span class="op">Open<svg width="12" height="9" viewBox="0 0 12 10" fill="none"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+    </a>
+
+    <p class="nope" id="nope" hidden>
+      <b>Not on this sheet</b>
+      <span>Seven tools, none of them that. Try <code>seating</code>, <code>grades</code>, or <code>rooms</code>.</span>
+    </p>
+  </div>
+
+  <!-- ============ errata + fine print ============ -->
+  <div class="lower">
+    <details class="errata pr" style="--d:1020ms">
+      <summary>
+        <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        Errata &amp; revisions
+        <span class="n">3 recent</span>
+      </summary>
+      <ul>
+        <li><time datetime="2026-07-30">Jul 30</time><span><b>New handout.</b> Search, ordering, and this list of revisions.</span></li>
+        <li><time datetime="2026-07-22">Jul 22</time><span><b>Seating Chart Generator.</b> Reshuffling now keeps locked seats where you put them.</span></li>
+        <li><time datetime="2026-07-14">Jul 14</time><span><b>Schedule Browser.</b> Fixed mirrored floors in the route-tracing view.</span></li>
+      </ul>
+    </details>
+
+    <div class="fine pr" style="--d:1080ms">
+      <span class="h">Where your data goes</span>
+      <p>Nowhere. Every tool runs in the tab. Nothing is uploaded, logged, or synced, because there is no server to send it to.</p>
+      <span class="h">Who made this</span>
+      <p>A social studies teacher. Unofficial &mdash; not affiliated with any school, district, or SIS vendor.</p>
+      <span class="h">Cost</span>
+      <p>None, and staying that way. Save the files locally if you want them to outlive the domain.</p>
+    </div>
+  </div>
+
+  <!-- ============ tear-offs ============ -->
+  <div class="tearoff">
+    <p class="tear-line">Questions, bugs, contributions &mdash; take a tab</p>
+    <div class="tabs" id="tabs" aria-hidden="true"></div>
+  </div>
+
+  <footer>
+    <span>Email <span class="p">@dsmoore</span></span>
+    <span>Built by Devon Moore + Claude &middot; rev 2026-07-30</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* ---------- tear-off tabs ---------- */
+  var tabs = document.getElementById('tabs');
+  var strip = '';
+  for(var i = 0; i < 9; i++){
+    strip += '<span class="tab"><span class="at">@</span>dsmoore</span>';
+  }
+  tabs.innerHTML = strip;
+
+  /* ---------- filter ---------- */
+  var input = document.getElementById('q');
+  var cnt   = document.getElementById('cnt');
+  var nope  = document.getElementById('nope');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#grid .card'));
+  var hay   = cards.map(function(c){
+    return (c.getAttribute('data-tags')+' '+c.textContent).toLowerCase().replace(/\s+/g,' ');
+  });
+
+  function apply(){
+    var q = input.value.trim().toLowerCase(), shown = 0;
+    cards.forEach(function(c,i){
+      var hit = !q || hay[i].indexOf(q) !== -1;
+      c.hidden = !hit; if(hit) shown++;
+    });
+    cnt.innerHTML = '<b>'+shown+' of '+cards.length+'</b> printed';
+    nope.hidden = shown > 0;
+  }
+  input.addEventListener('input', apply);
+  apply();
+
+  document.addEventListener('keydown', function(e){
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if(e.key === '/' && !typing && !e.metaKey && !e.ctrlKey){e.preventDefault();input.focus();return;}
+    if(e.key === 'Escape' && document.activeElement === input){
+      if(input.value){input.value='';apply();} else {input.blur();}
+    }
+  });
+
+  /* ---------- registration drifts with the cursor ---------- */
+  if(reduce || !window.matchMedia('(pointer:fine)').matches) return;
+  var tx = 0, ty = 0, cx = 0, cy = 0, raf = null, root = document.documentElement;
+
+  window.addEventListener('mousemove', function(e){
+    tx = (e.clientX / window.innerWidth  - .5) * 5;
+    ty = (e.clientY / window.innerHeight - .5) * 5;
+    if(!raf) raf = requestAnimationFrame(tick);
+  }, {passive:true});
+
+  function tick(){
+    cx += (tx - cx) * .08;
+    cy += (ty - cy) * .08;
+    root.style.setProperty('--ox', cx.toFixed(2) + 'px');
+    root.style.setProperty('--oy', cy.toFixed(2) + 'px');
+    raf = (Math.abs(tx-cx) > .01 || Math.abs(ty-cy) > .01) ? requestAnimationFrame(tick) : null;
+  }
+})();
+</script>
+</body>
+</html>
