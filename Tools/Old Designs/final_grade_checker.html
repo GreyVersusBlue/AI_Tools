@@ -21,106 +21,133 @@
 <meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
-<script src="../_shared/theme-toggle.js"></script>
-<link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
-<link rel="stylesheet" href="../_shared/theme.css">
 <style>
-  * { box-sizing: border-box; }
-  body { min-height: 100vh; padding: var(--space-8) var(--space-4) 5rem; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
   @media print {
     body { background: #fff; padding: 0.5rem; }
     .no-print { display: none !important; }
-    .student-card { box-shadow: none; page-break-inside: avoid; margin-bottom: 0.5rem; padding: 0.75rem 1rem; }
+    .student-card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; margin-bottom: 0.5rem; padding: 0.75rem 1rem; }
     .legend, .import-panel { display: none; }
+    /* The note bar prints. A printed sheet that says "B" without saying which
+       of the two methods produced it is not something you can hand a parent. */
     .note-bar { border: 1px solid #ccc; background: #fff; font-size: 0.72rem; page-break-inside: avoid; }
     .result-box.winner { border: 2px solid #333; }
     .final-line { border-top: 1px solid #ccc; }
   }
-  .container { max-width: 1060px; margin: 0 auto; }
-  .page-header { text-align: center; margin-bottom: var(--space-6); }
-  .page-header h1 { font-size: 36px; }
-  .page-header p { font-size: 15px; opacity: 0.7; margin-top: var(--space-1); }
-  .header-actions { display: flex; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; }
-  .privacy-note { font-size: 12.5px; opacity: 0.6; margin-top: var(--space-3); }
+  .page-header { text-align: center; margin-bottom: 1.5rem; }
+  .page-header h1 { font-size: 1.6rem; font-weight: 700; color: #1a3a5c; letter-spacing: -0.5px; }
+  .page-header p { font-size: 0.85rem; color: #666; margin-top: 0.3rem; }
+  .header-actions { display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
 
-  .btn-danger { color: var(--color-danger); }
-  .btn-green  { color: var(--color-success); }
-  .btn-red    { color: var(--color-danger); }
+  .btn { padding: 6px 14px; border: 1px solid #c8d8e8; border-radius: 6px; background: #fff; color: #1a3a5c; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .btn:hover { background: #eef3f8; border-color: #1a3a5c; }
+  .btn:active { background: #d8e8f3; }
+  .btn-primary { background: #1a3a5c; color: #fff; border-color: #1a3a5c; }
+  .btn-primary:hover { background: #153050; }
+  .btn-danger { color: #a33; border-color: #e0d0d0; }
+  .btn-danger:hover { background: #fff0f0; border-color: #c44; }
+  .btn-green { background: #1a6b3a; color: #fff; border-color: #1a6b3a; }
+  .btn-green:hover { background: #155530; }
+  .btn-red { background: #7a1a1a; color: #fff; border-color: #7a1a1a; }
+  .btn-red:hover { background: #601515; }
 
-  .import-panel { border: 1.5px dashed var(--color-accent); padding: var(--space-6); margin-bottom: var(--space-6); }
-  .import-panel h2 { font-size: 18px; margin-bottom: 2px; }
-  .import-panel p { font-size: 13px; opacity: 0.65; margin-bottom: var(--space-3); }
-  .import-textarea { width: 100%; height: 110px; padding: 8px 10px; font-size: 13px; font-family: 'IBM Plex Mono', 'Consolas', monospace; resize: vertical; line-height: 1.5; }
-  .import-actions { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; }
-  .import-status { font-size: 13px; opacity: 0.75; flex: 1; min-width: 120px; }
-  .import-status.ok   { color: var(--color-success); opacity: 1; font-weight: 600; }
-  .import-status.warn { color: var(--color-warn); opacity: 1; font-weight: 600; }
-  .import-status.err  { color: var(--color-danger); opacity: 1; font-weight: 600; }
+  .container { max-width: 1020px; margin: 0 auto; }
 
-  .student-card { margin-bottom: var(--space-4); padding: var(--space-4) var(--space-6); }
-  .card-top { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
-  .student-num { font-size: 12px; font-weight: 700; color: var(--color-bg); background: var(--color-accent); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .import-panel { background: #fff; border: 1.5px dashed #b0c8e0; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+  .import-panel h2 { font-size: 0.9rem; font-weight: 700; color: #1a3a5c; margin-bottom: 2px; }
+  .import-panel p { font-size: 0.78rem; color: #666; margin-bottom: 0.75rem; }
+  .import-textarea { width: 100%; height: 110px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.78rem; font-family: 'Consolas','Courier New',monospace; color: #1a1a1a; background: #fafafa; resize: vertical; outline: none; transition: border-color 0.15s; line-height: 1.5; }
+  .import-textarea:focus { border-color: #1a3a5c; background: #fff; }
+  .import-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+  .import-status { font-size: 0.78rem; color: #555; flex: 1; min-width: 120px; }
+  .import-status.ok   { color: #2d7a3a; font-weight: 600; }
+  .import-status.warn { color: #b45000; font-weight: 600; }
+  .import-status.err  { color: #a33;    font-weight: 600; }
+
+  .student-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 1.1rem 1.4rem; margin-bottom: 0.85rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-top { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+  .student-num { font-size: 0.75rem; font-weight: 700; color: #fff; background: #1a3a5c; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .name-input-wrap { flex: 1; min-width: 160px; }
-  .name-input-wrap label { font-size: 11px; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 3px; }
-  .name-readonly { font-size: 15px; font-weight: 600; padding: 4px 0; }
+  .name-input-wrap label { font-size: 0.68rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 3px; }
+  .name-input { width: 100%; padding: 5px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; color: #1a1a1a; background: #fafafa; outline: none; transition: border-color 0.15s; }
+  .name-input:focus { border-color: #1a3a5c; background: #fff; }
+  .name-readonly { font-size: 0.95rem; font-weight: 600; color: #1a1a1a; padding: 4px 0; }
 
-  .grades-row { display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
-  .quarters-section { display: flex; gap: var(--space-3); flex-wrap: wrap; flex: 1; }
+  .grades-row { display: flex; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+  .quarters-section { display: flex; gap: 0.75rem; flex-wrap: wrap; flex: 1; }
   .quarter-wrap { display: flex; flex-direction: column; align-items: center; min-width: 72px; }
-  .quarter-wrap label, .quarter-wrap .quarter-label { display: block; font-size: 11px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; white-space: nowrap; }
-  .grade-input { width: 72px; padding: 8px 6px; font-size: 16px; font-weight: 600; text-align: center; }
-  .grade-input.input-error { border-color: var(--color-danger); background: var(--color-danger-bg); }
-  .grade-readonly { width: 72px; padding: 8px 6px; border: 1px solid var(--color-divider); font-size: 16px; font-weight: 600; text-align: center; opacity: 0.75; }
-  .letter-badge { margin-top: 6px; width: 72px; height: 28px; border-radius: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+  /* Imported cards have no input to point at, so those use a span. A <label>
+     with no control is a label for nothing. */
+  .quarter-wrap label, .quarter-wrap .quarter-label { display: block; font-size: 0.68rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; white-space: nowrap; }
+  .grade-input { width: 72px; padding: 8px 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; font-weight: 600; text-align: center; color: #1a1a1a; background: #fafafa; outline: none; transition: border-color 0.15s, background 0.15s; }
+  .grade-input:focus { border-color: #1a3a5c; background: #fff; }
+  .grade-input.input-error { border-color: #c0392b; background: #fff5f5; }
+  .grade-readonly { width: 72px; padding: 8px 6px; border: 1px solid #e8e8e8; border-radius: 6px; font-size: 1rem; font-weight: 600; text-align: center; color: #333; background: #f5f5f5; }
+  .letter-badge { margin-top: 6px; width: 72px; height: 28px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; transition: all 0.15s; }
 
-  .divider { width: 1px; background: var(--color-divider); align-self: stretch; margin: 0 2px; flex-shrink: 0; }
-  .results-section { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
-  .result-box { border: 1px solid var(--color-divider); padding: var(--space-2) var(--space-3); min-width: 148px; width: 148px; }
-  .result-box.winner { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
-  .result-box .result-label { font-size: 10px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .result-box.winner .result-label { color: var(--color-accent); opacity: 1; }
+  .divider { width: 1px; background: #e5e5e5; align-self: stretch; margin: 0 0.15rem; flex-shrink: 0; }
+  .results-section { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+  .result-box { background: #f5f4f0; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.55rem 0.85rem; min-width: 148px; width: 148px; }
+  .result-box.winner { border-color: #1a3a5c; background: #eef3f8; }
+  .result-box .result-label { font-size: 0.63rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .result-box.winner .result-label { color: #1a3a5c; }
   .result-row { display: flex; align-items: baseline; gap: 8px; }
-  .result-box .result-pct { font-size: 15px; font-weight: 700; }
-  .result-box .result-letter { font-size: 14px; font-weight: 700; }
-  .result-box .winner-tag { font-size: 9px; font-weight: 700; color: var(--color-bg); background: var(--color-accent); padding: 1px 5px; display: inline-block; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
-  .pending-note { font-size: 11px; opacity: 0.55; font-style: italic; margin-top: 2px; }
+  .result-box .result-pct { font-size: 1rem; font-weight: 700; color: #1a1a1a; }
+  .result-box .result-letter { font-size: 0.92rem; font-weight: 700; }
+  .result-box .winner-tag { font-size: 0.58rem; font-weight: 700; color: #fff; background: #1a3a5c; border-radius: 3px; padding: 1px 5px; display: inline-block; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .pending-note { font-size: 0.68rem; color: #999; font-style: italic; margin-top: 2px; }
 
-  .final-line { width: 148px; margin-top: 0.1rem; padding-top: var(--space-2); border-top: 1px solid var(--color-divider); display: flex; align-items: baseline; gap: 6px; }
-  .final-line .final-label { font-size: 10px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; }
-  .final-line .final-letter { font-size: 20px; font-weight: 700; line-height: 1; }
-  .final-line .final-method { font-size: 10px; opacity: 0.55; }
-  .final-line.pending .final-letter { font-size: 16px; opacity: 0.4; }
+  /* The answer, said out loud. Both boxes above show the working; this says
+     which number goes on the report card and where it came from. */
+  .final-line { width: 148px; margin-top: 0.1rem; padding-top: 0.45rem; border-top: 1px solid #e0e0e0; display: flex; align-items: baseline; gap: 6px; }
+  .final-line .final-label { font-size: 0.63rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .final-line .final-letter { font-size: 1.25rem; font-weight: 700; line-height: 1; }
+  .final-line .final-method { font-size: 0.63rem; color: #777; }
+  .final-line.pending .final-letter { font-size: 1rem; color: #aaa; }
 
+  /* A numeric-entry tool that hides the focus ring is a slow tool. */
+  .btn:focus-visible, .grade-input:focus-visible, .name-input:focus-visible,
+  .import-textarea:focus-visible { outline: 3px solid #1a3a5c; outline-offset: 2px; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-  .filled-count { font-size: 11px; opacity: 0.5; margin-top: 4px; }
-  .filled-count.all-filled { color: var(--color-success); opacity: 1; font-weight: 600; }
-  .missing-badge { width: 72px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--color-warn); background: var(--color-warn-bg); border: 1px dashed var(--color-warn); text-align: center; line-height: 1.2; }
+  .filled-count { font-size: 0.68rem; color: #aaa; margin-top: 4px; }
+  .filled-count.all-filled { color: #2d7a3a; font-weight: 600; }
+  .missing-badge { width: 72px; height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; color: #b45000; background: #fff3e0; border: 1px dashed #e0a060; text-align: center; line-height: 1.2; }
 
-  .grade-A { background: var(--color-success-bg); color: var(--color-success); }
-  .grade-B { background: var(--color-accent-100); color: var(--color-accent-800); }
-  .grade-C { background: var(--color-warn-bg); color: var(--color-warn); }
-  .grade-D { background: var(--color-caution-bg); color: var(--color-caution); }
-  .grade-F { background: var(--color-danger-bg); color: var(--color-danger); }
-  .grade-empty { background: var(--color-neutral-100); color: var(--color-neutral-600); }
-  .grade-error { background: var(--color-danger-bg); color: var(--color-danger); }
+  .grade-A { background: #d4edda; color: #155724; }
+  .grade-B { background: #d1ecf1; color: #0c5460; }
+  .grade-C { background: #fff3cd; color: #856404; }
+  .grade-D { background: #ffe5cc; color: #7c4700; }
+  .grade-F { background: #f8d7da; color: #721c24; }
+  .grade-empty { background: #f0f0f0; color: #aaa; }
+  .grade-error { background: #f8d7da; color: #721c24; }
 
-  .note-bar { background: var(--color-surface); border: 1px solid var(--color-divider); padding: var(--space-3) var(--space-4); margin-top: var(--space-4); font-size: 13px; line-height: 1.6; }
+  .note-bar { background: #eef3f8; border: 1px solid #c8d8e8; border-radius: 8px; padding: 0.7rem 1rem; margin-top: 1rem; font-size: 0.8rem; color: #1a3a5c; line-height: 1.6; }
   .note-bar strong { font-weight: 700; }
-  .legend { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-4); justify-content: center; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; opacity: 0.75; }
-  .legend-dot { width: 13px; height: 13px; display: inline-block; }
+  .legend { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #555; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; }
 
   @media (max-width: 680px) {
     .grades-row { flex-direction: column; }
-    .divider { width: 100%; height: 1px; margin: var(--space-1) 0; }
+    .divider { width: 100%; height: 1px; margin: 0.25rem 0; }
     .results-section { flex-direction: row; flex-wrap: wrap; width: 100%; }
     .result-box { min-width: 130px; width: auto; flex: 1; }
     .final-line { width: 100%; }
   }
+  /* 375px, which is a phone in a parent conference. Four 72px quarter inputs
+     plus gaps do not fit on one row there, so they go two-up rather than
+     wrapping into a ragged three-and-one. */
   @media (max-width: 430px) {
-    body { padding: var(--space-4) var(--space-2) 5rem; }
-    .student-card { padding: var(--space-3) var(--space-3); }
-    .quarters-section { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    body { padding: 1rem 0.6rem; }
+    .student-card { padding: 0.9rem 0.8rem; }
+    .quarters-section { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
     .quarter-wrap { min-width: 0; }
     .grade-input, .grade-readonly, .letter-badge, .missing-badge { width: 100%; }
     .results-section { flex-direction: column; }
@@ -130,45 +157,35 @@
 </style>
 </head>
 <body>
-<header class="nav tools-nav no-print">
-  <span class="nav-brand">Classroom Tools</span>
-  <a href="docx-merger.html">Doc Merger</a>
-  <a href="final_grade_checker.html" aria-current="page">Grade Checker</a>
-  <a href="image-to-pdf.html">Image → PDF</a>
-  <a href="prompt-builder.html">Prompt Builder</a>
-  <a href="Seating Chart Generator.html">Seating Chart</a>
-  <button type="button" class="btn btn-secondary" id="themeToggle" style="margin-left: var(--space-3);"></button>
-</header>
 <div class="container">
 
   <div class="page-header">
     <h1>Final Grade Checker</h1>
     <p>Manual entry or paste from your grade export. Grades calculate automatically.</p>
     <div class="header-actions no-print">
-      <button class="btn btn-secondary btn-danger" id="clear-all-btn" type="button">Clear All</button>
-      <button class="btn btn-secondary btn-green" id="export-excel-btn" type="button">Export Excel</button>
-      <button class="btn btn-secondary btn-red"   id="export-pdf-btn"   type="button">Export PDF</button>
-      <button class="btn btn-secondary" id="print-btn" type="button">Print</button>
+      <button class="btn btn-danger" id="clear-all-btn" type="button">Clear All</button>
+      <button class="btn btn-green" id="export-excel-btn" type="button">Export Excel</button>
+      <button class="btn btn-red"   id="export-pdf-btn"   type="button">Export PDF</button>
+      <button class="btn" id="print-btn" type="button">Print</button>
     </div>
-    <p class="privacy-note">
+    <p class="privacy-note" style="font-size:0.72rem;color:#777;margin-top:0.6rem;">
       Everything stays in this browser tab. Nothing is sent anywhere and nothing is saved.
       Close the tab and the grades are gone.
     </p>
   </div>
 
-  <div class="card blueprint import-panel no-print">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="import-panel no-print">
     <h2><label for="import-area">Paste Grade Export</label></h2>
     <p id="import-help">Paste rows directly from your grade system. Each row should have a student ID, name, section, grade level, and four quarter grades like <code>C(73.28)</code>. The system average column at the end is ignored. Paste with tabs between columns so an empty quarter stays in its own column.</p>
-    <textarea class="input import-textarea" id="import-area" aria-describedby="import-help" placeholder="Paste your grade data here, then click Import..."></textarea>
+    <textarea class="import-textarea" id="import-area" aria-describedby="import-help" placeholder="Paste your grade data here, then click Import..."></textarea>
     <div class="import-actions">
       <button class="btn btn-primary" id="import-btn" type="button">Import</button>
-      <button class="btn btn-secondary" id="clear-paste-btn" type="button">Clear paste area</button>
+      <button class="btn" id="clear-paste-btn" type="button">Clear paste area</button>
       <div class="import-status" id="import-status" role="status" aria-live="polite"></div>
     </div>
     <details id="import-warnings" class="import-warnings" hidden style="margin-top:0.6rem;font-size:0.76rem;">
-      <summary style="cursor:pointer;font-weight:600;color:var(--color-warn);">Import warnings</summary>
-      <ul id="import-warning-list" style="margin:0.4rem 0 0 1.1rem;line-height:1.6;opacity:0.8;"></ul>
+      <summary style="cursor:pointer;font-weight:600;color:#b45000;">Import warnings</summary>
+      <ul id="import-warning-list" style="margin:0.4rem 0 0 1.1rem;line-height:1.6;color:#555;"></ul>
     </details>
   </div>
 
@@ -198,7 +215,7 @@ import {
 } from './final-grade-checker/grade-math.mjs';
 
 function gradeClass(l) { return l ? 'grade-'+l : 'grade-empty'; }
-const letterColor = {A:'var(--color-success)',B:'var(--color-accent-800)',C:'var(--color-warn)',D:'var(--color-caution)',F:'var(--color-danger)'};
+const letterColor = {A:'#155724',B:'#0c5460',C:'#856404',D:'#7c4700',F:'#721c24'};
 const METHOD_NAME = { QP: 'quality points', PCT: 'percentage average' };
 
 // ── Shared data store (for export) ──────────────────────────
@@ -319,17 +336,17 @@ function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
 
-  const navy   = [89, 128, 166];
+  const navy   = [26, 58, 92];
   const white  = [255, 255, 255];
   const gradeColors = {
-    A: { bg:[220,235,225], text:[36,90,60] },
-    B: { bg:[214,235,255], text:[44,69,93] },
-    C: { bg:[250,235,205], text:[110,80,20] },
-    D: { bg:[248,222,205], text:[110,55,20] },
+    A: { bg:[212,237,218], text:[21,87,36] },
+    B: { bg:[209,236,241], text:[12,84,96] },
+    C: { bg:[255,243,205], text:[133,100,4] },
+    D: { bg:[255,229,204], text:[124,71,0] },
     F: { bg:[248,215,218], text:[114,28,36] },
   };
   const winnerBg   = [238,243,248];
-  const winnerText = [29,45,61];
+  const winnerText = [26,58,92];
   const bandBg     = [249,249,249];
 
   // Title
@@ -546,8 +563,7 @@ function renderImportedStudents(students) {
 
 function buildImportCard(student, i) {
   const card = document.createElement('div');
-  card.className = 'card blueprint student-card';
-  card.innerHTML = '<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>';
+  card.className = 'student-card';
   const scores = student.scores;
   const letters = scores.map(s => s !== null ? getLetter(s) : null);
 
@@ -569,26 +585,26 @@ function buildImportCard(student, i) {
       <div class="result-label">Quality Points</div>
       <div class="result-row">
         <div class="result-pct">avg ${f.avgQP.toFixed(2)} pts</div>
-        <div class="result-letter" style="color:${letterColor[f.qpFinal]||'inherit'}">${f.qpFinal}</div>
+        <div class="result-letter" style="color:${letterColor[f.qpFinal]||'#333'}">${f.qpFinal}</div>
       </div>${qpWin?'<div class="winner-tag">★ Use this</div>':''}
     </div>`;
     avgHtml = `<div class="result-box${avgWin?' winner':''}">
       <div class="result-label">Pct. Average</div>
       <div class="result-row">
         <div class="result-pct">${f.pctAvg.toFixed(2)}%</div>
-        <div class="result-letter" style="color:${letterColor[f.pctFinal]||'inherit'}">${f.pctFinal}</div>
+        <div class="result-letter" style="color:${letterColor[f.pctFinal]||'#333'}">${f.pctFinal}</div>
       </div>${avgWin?'<div class="winner-tag">★ Use this</div>':''}
     </div>`;
     finalHtml = `<div class="final-line">
       <span class="final-label">Final</span>
-      <span class="final-letter" style="color:${letterColor[f.finalLetter]||'inherit'}">${f.finalLetter}</span>
+      <span class="final-letter" style="color:${letterColor[f.finalLetter]||'#333'}">${f.finalLetter}</span>
       <span class="final-method">by ${METHOD_NAME[f.winner]}</span>
     </div>`;
   } else {
     const m = 4 - scores.filter(s=>s!==null).length;
     const note = `<div class="pending-note">${m} quarter(s) missing</div>`;
-    qpHtml  = `<div class="result-box"><div class="result-label">Quality Points</div><div class="result-pct" style="opacity:0.4">—</div>${note}</div>`;
-    avgHtml = `<div class="result-box"><div class="result-label">Pct. Average</div><div class="result-pct" style="opacity:0.4">—</div></div>`;
+    qpHtml  = `<div class="result-box"><div class="result-label">Quality Points</div><div class="result-pct" style="color:#aaa">—</div>${note}</div>`;
+    avgHtml = `<div class="result-box"><div class="result-label">Pct. Average</div><div class="result-pct" style="color:#aaa">—</div></div>`;
     finalHtml = `<div class="final-line pending">
       <span class="final-label">Final</span>
       <span class="final-letter">no grade</span>
@@ -596,7 +612,7 @@ function buildImportCard(student, i) {
     </div>`;
   }
 
-  card.innerHTML += `
+  card.innerHTML = `
     <div class="card-top">
       <div class="student-num" aria-hidden="true">${i+1}</div>
       <div class="name-input-wrap"><div class="name-readonly">${escHtml(student.name)}</div></div>
@@ -630,23 +646,22 @@ function renderManualCards() {
 
 function buildManualCard(i) {
   const card = document.createElement('div');
-  card.className = 'card blueprint student-card'; card.id = `card-${i}`;
+  card.className = 'student-card'; card.id = `card-${i}`;
   card.innerHTML = `
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <div class="card-top">
       <div class="student-num">${i+1}</div>
       <div class="name-input-wrap">
         <label for="name-${i}">Student name (optional)</label>
-        <input class="input name-input" type="text" id="name-${i}" placeholder="Student ${i+1}" data-student="${i}">
+        <input class="name-input" type="text" id="name-${i}" placeholder="Student ${i+1}" data-student="${i}">
       </div>
-      <button class="btn btn-secondary btn-danger no-print clear-row-btn" type="button" style="font-size:12px;padding:5px 11px;" data-student="${i}">Clear row</button>
+      <button class="btn btn-danger no-print clear-row-btn" type="button" style="font-size:0.75rem;padding:5px 11px;" data-student="${i}">Clear row</button>
     </div>
     <div class="grades-row">
       <div class="quarters-section">
         ${[1,2,3,4].map(q=>`
           <div class="quarter-wrap">
             <label for="q${q}-${i}">Quarter ${q}</label>
-            <input class="input grade-input" type="number" id="q${q}-${i}" min="0" max="100" step="0.01"
+            <input class="grade-input" type="number" id="q${q}-${i}" min="0" max="100" step="0.01"
               inputmode="decimal" placeholder="—" data-student="${i}" data-quarter="${q-1}"
               aria-describedby="badge-${i}-${q-1}">
             <div class="letter-badge grade-empty" id="badge-${i}-${q-1}">—</div>
@@ -658,7 +673,7 @@ function buildManualCard(i) {
           <div class="result-label">Quality Points</div>
           <div class="result-row">
             <div class="result-pct" id="qp-avg-${i}">—</div>
-            <div class="result-letter" id="qp-letter-${i}" style="opacity:0.4">—</div>
+            <div class="result-letter" id="qp-letter-${i}" style="color:#aaa">—</div>
           </div>
           <div class="pending-note" id="qp-note-${i}"></div>
         </div>
@@ -666,7 +681,7 @@ function buildManualCard(i) {
           <div class="result-label">Pct. Average</div>
           <div class="result-row">
             <div class="result-pct" id="avg-pct-${i}">—</div>
-            <div class="result-letter" id="avg-letter-${i}" style="opacity:0.4">—</div>
+            <div class="result-letter" id="avg-letter-${i}" style="color:#aaa">—</div>
           </div>
           <div class="pending-note" id="avg-note-${i}"></div>
         </div>
@@ -758,9 +773,9 @@ function updateManual(si) {
   const f = letters.filter(l=>l!==null).length < 4 ? null : calcFinals(scores);
 
   if (!f) {
-    qpAvgEl.textContent='—'; qpLetEl.textContent='—'; qpLetEl.style.opacity='0.4';
+    qpAvgEl.textContent='—'; qpLetEl.textContent='—'; qpLetEl.style.color='#aaa';
     qpNoteEl.textContent=filledCount>0?'Enter all 4 quarters':'';
-    avgPctEl.textContent='—'; avgLetEl.textContent='—'; avgLetEl.style.opacity='0.4';
+    avgPctEl.textContent='—'; avgLetEl.textContent='—'; avgLetEl.style.color='#aaa';
     avgNoteEl.textContent=filledCount>0?'Enter all 4 quarters':'';
     finalLine.classList.add('pending');
     finalLetEl.textContent = filledCount>0 ? 'no grade' : '—';
@@ -770,10 +785,10 @@ function updateManual(si) {
   }
 
   qpAvgEl.textContent='avg '+f.avgQP.toFixed(2)+' pts';
-  qpLetEl.textContent=f.qpFinal; qpLetEl.style.opacity='1'; qpLetEl.style.color=letterColor[f.qpFinal]||'inherit';
+  qpLetEl.textContent=f.qpFinal; qpLetEl.style.color=letterColor[f.qpFinal]||'#333';
   qpNoteEl.textContent='';
   avgPctEl.textContent=f.pctAvg.toFixed(2)+'%';
-  avgLetEl.textContent=f.pctFinal; avgLetEl.style.opacity='1'; avgLetEl.style.color=letterColor[f.pctFinal]||'inherit';
+  avgLetEl.textContent=f.pctFinal; avgLetEl.style.color=letterColor[f.pctFinal]||'#333';
   avgNoteEl.textContent='';
 
   const winnerBox = f.winner==='QP' ? qpBox : avgBox;
@@ -783,7 +798,7 @@ function updateManual(si) {
 
   finalLine.classList.remove('pending');
   finalLetEl.textContent=f.finalLetter;
-  finalLetEl.style.color=letterColor[f.finalLetter]||'inherit';
+  finalLetEl.style.color=letterColor[f.finalLetter]||'#333';
   finalMethodEl.textContent='by '+METHOD_NAME[f.winner];
 }
 
