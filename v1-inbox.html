@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>As Per My Lesson Plan — browser-only classroom tools</title>
 
-<meta name="description" content="Seven single-file classroom tools. No install, no account, no upload. Open the file and use it.">
+<meta name="description" content="Eight single-file classroom tools. No install, no account, no upload. Open the file and use it.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="As Per My Lesson Plan">
 <meta property="og:url" content="https://aspermylessonplan.com/">
 <meta property="og:title" content="As Per My Lesson Plan">
-<meta property="og:description" content="Seven single-file classroom tools. No install, no account, no upload.">
+<meta property="og:description" content="Eight single-file classroom tools. No install, no account, no upload.">
 <meta name="twitter:card" content="summary_large_image">
 <!-- TODO: og:image — 1200x630 screenshot of the inbox, drop at assets/og/inbox.png -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23171A1F'/%3E%3Cpath d='M7 11h18v10H7z' fill='none' stroke='%23FAFAF8' stroke-width='1.8'/%3E%3Cpath d='M7 11l9 6 9-6' fill='none' stroke='%232438D6' stroke-width='1.8'/%3E%3C/svg%3E">
@@ -351,7 +351,7 @@
       <span class="grp in" style="--d:120ms">Mailboxes</span>
       <button class="folder in" style="--d:160ms" aria-current="true" data-filter="">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1.5 4h11v7h-11z" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 4l5.5 3.6L12.5 4" stroke="currentColor" stroke-width="1.3"/></svg>
-        Inbox <span class="n" id="railCount">7</span>
+        Inbox <span class="n" id="railCount">8</span>
       </button>
       <button class="folder in" style="--d:200ms" data-filter="roster">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4.6" r="2.3" stroke="currentColor" stroke-width="1.3"/><path d="M2.4 12c.6-2.6 2.4-3.9 4.6-3.9s4 1.3 4.6 3.9" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -387,7 +387,7 @@
         <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search messages">
         <span class="kbd" aria-hidden="true">/</span>
       </label>
-      <p class="unread" id="unread" role="status" aria-live="polite"><b>7</b> unread</p>
+      <p class="unread" id="unread" role="status" aria-live="polite"><b>8</b> unread</p>
     </div>
 
     <div id="list">
@@ -469,11 +469,22 @@
         <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
       </a>
 
+      <a class="msg in" style="--d:800ms" href="Tools/docx-merger.html"
+         data-tool="docxmerger" data-folder="paperwork"
+         data-tags="word docx merge combine documents template letters">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="from">Word Doc Merger <span class="thread">2</span></span>
+        <span class="subj">Combine multiple Word docs into one, in order.</span>
+        <span class="snip">word · docx · merge</span>
+        <span class="when">Per. 8</span>
+        <span class="paperclip" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M9.5 5.2L5.6 9.1a2.2 2.2 0 01-3.1-3.1l4.2-4.2a1.5 1.5 0 012.1 2.1L4.6 8.1a.8.8 0 01-1.1-1.1l3.7-3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+      </a>
+
     </div>
 
     <p class="empty" id="empty" hidden>
       <b>Nothing matches that.</b>
-      Seven messages total, and none of them mention it. Try <code>seating</code>,
+      Eight messages total, and none of them mention it. Try <code>seating</code>,
       <code>grades</code>, or <code>rooms</code>.
     </p>
 
@@ -526,7 +537,7 @@
     welcome:{
       from:'Devon Moore', to:'Everyone who teaches a full load',
       subj:'As per my lesson plan',
-      body:['Seven small web apps for the parts of the job that aren\u2019t teaching. Rosters, seating, schedules, grade math, paperwork.',
+      body:['Eight small web apps for the parts of the job that aren\u2019t teaching. Rosters, seating, schedules, grade math, paperwork.',
             'Every one is a single file. <strong>No install, no account, no upload.</strong> Open it, use it, close the tab. Once a tool has loaded it keeps working with the wifi off, which matters more often than it should.',
             'Pick a message on the left. Hover to read it, click to open the tool.']
     },
@@ -557,7 +568,11 @@
     prompt:{from:'Prompt Builder',to:'Colleagues who asked what to type',subj:'Answer a few questions, get a ready-to-use AI prompt.',
       body:['Answer a short set of questions about the assignment, the grade level, and what you actually want back. It writes the prompt.',
             'For the moment when a colleague asks how you got it to do that and you would rather show than explain.'],
-      file:'prompt-builder.html',href:'Tools/prompt-builder.html'}
+      file:'prompt-builder.html',href:'Tools/prompt-builder.html'},
+    docxmerger:{from:'Word Doc Merger',to:'Whoever has six versions of the same letter',subj:'Combine multiple Word docs into one, in order.',
+      body:['Drop in a stack of .docx files, put them in order, get back one document. No copy-paste, no formatting drift between sections.',
+            'Everything happens in this tab \u2014 nothing is uploaded anywhere.'],
+      file:'docx-merger.html',href:'Tools/docx-merger.html'}
   };
 
   var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;

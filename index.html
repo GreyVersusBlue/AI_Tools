@@ -42,6 +42,22 @@
      incrementing a real shared per-tool count. Not implementable as a
      static-only change to this landing page. Revisit as a follow-up once the
      tool-page redesign pass (2) happens.
+
+  4. ALWAYS UPDATE ON EVERY REVISION
+     Any pass that changes this file — content, layout, or code — must also:
+       a) bump the memo <dd id="memo-date"> in the header to the date of the change,
+       b) bump the footer <span id="rev"> date (in .report .meta) to match, and
+       c) add a new <li> at the TOP of .log (the "Progress report" changelog below)
+          describing what changed, using the same date and the existing date/entry
+          format, and bump the "N recent entries" tally in the <summary> to match.
+     Do this every time, even for small tweaks. Do not skip it and do not remove
+     this note in future passes.
+
+  5. KEEP TOOL-COUNT TEXT IN SYNC
+     "N records" (.app-bar .rhs) and "N files" (memo Attach line) are static
+     text, NOT derived from the DOM — unlike the "X / X present" filter count,
+     which already computes live from #rows .row. Any pass that adds or removes
+     a tool row must manually update both of these to match the new row count.
 -->
 
 <style>
@@ -167,10 +183,20 @@
 
   /* ============ memo header block ============ */
   header{position:relative;}
+  .hero-grid{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:2.5rem;
+  }
+  .hero-main{flex:1;min-width:0;}
+  .hero-side{
+    flex-shrink:0;position:relative;
+    display:flex;flex-direction:column;align-items:flex-end;gap:1.1rem;
+    padding-top:1.9rem;
+  }
   .memo{
     display:grid;grid-template-columns:auto 1fr;gap:.12rem 1rem;
     font-family:var(--mono);font-size:.78rem;color:var(--ink);
-    margin-bottom:1.3rem;max-width:34rem;
+    max-width:20rem;
   }
   .memo dt{
     color:var(--faint);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;
@@ -450,6 +476,13 @@
   #rev{cursor:pointer;}
 
   /* ============ responsive ============ */
+  @media (max-width:760px){
+    .hero-grid{flex-direction:column;gap:1.3rem;}
+    .hero-side{align-items:flex-start;padding-top:0;width:100%;}
+    .stamp{position:static;align-self:flex-end;margin-bottom:.6rem;}
+    .memo{max-width:none;}
+  }
+
   @media (max-width:720px){
     .table-head{grid-template-columns:2.6rem 1fr 3.4rem;padding:0 .9rem .5rem;}
     .table-head .th-tags,.table-head .th-open{display:none;}
@@ -479,7 +512,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>7 records · local only · nothing syncs</span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>8 records · local only · nothing syncs</span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -487,20 +520,26 @@
   </div>
 
   <header>
-    <span class="stamp" aria-hidden="true"><b>Reviewed</b>as per my lesson plan</span>
-    <dl class="memo ink" style="--d:100ms">
-      <dt>To</dt><dd>All staff</dd>
-      <dt>From</dt><dd>D. Moore</dd>
-      <dt>Date</dt><dd id="memo-date">2026-08-05</dd>
-      <dt>CC</dt><dd>Whoever asked for the link again</dd>
-      <dt>Attach</dt><dd>7 files <span class="note">(browser-only, nothing to install)</span></dd>
-    </dl>
-    <h1 class="ink" style="--d:140ms"><span class="re-pre" aria-hidden="true">RE:</span>Tools for the parts of the job that <span class="accent">aren&rsquo;t teaching.</span></h1>
-    <p class="lede ink" style="--d:240ms">
-      Single-file web apps for rosters, seating, schedules, and grade math.
-      <strong>No install, no account, no upload</strong> &mdash; open the file and use it.
-      Works offline once loaded.
-    </p>
+    <div class="hero-grid">
+      <div class="hero-main">
+        <h1 class="ink" style="--d:140ms"><span class="re-pre" aria-hidden="true">RE:</span>Tools for the parts of the job that <span class="accent">aren&rsquo;t teaching.</span></h1>
+        <p class="lede ink" style="--d:240ms">
+          Single-file web apps for rosters, seating, schedules, and grade math.
+          <strong>No install, no account, no upload</strong> &mdash; open the file and use it.
+          Works offline once loaded.
+        </p>
+      </div>
+      <div class="hero-side">
+        <span class="stamp" aria-hidden="true"><b>Reviewed</b>as per my lesson plan</span>
+        <dl class="memo ink" style="--d:100ms">
+          <dt>To</dt><dd>All staff</dd>
+          <dt>From</dt><dd>D. Moore</dd>
+          <dt>Date</dt><dd id="memo-date">2026-08-06</dd>
+          <dt>CC</dt><dd>Whoever asked for the link again</dd>
+          <dt>Attach</dt><dd>8 files <span class="note">(browser-only, nothing to install)</span></dd>
+        </dl>
+      </div>
+    </div>
   </header>
 
   <div class="controls ink" style="--d:340ms">
@@ -629,6 +668,21 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
+    <a class="row ink" style="--d:970ms" href="Tools/docx-merger.html"
+       data-tool="docx-merger" data-tags="word docx merge combine documents template letters">
+      <span class="per"><span class="lbl">Per</span><b>8</b></span>
+      <span>
+        <span class="name">Word Doc Merger</span>
+        <span class="pitch">Combine multiple Word docs into one, in order.</span>
+        <span class="comment" aria-hidden="true">Plays well with others. Literally.</span>
+      </span>
+      <span class="tags"><span>word</span><span>docx</span><span>merge</span></span>
+      <span class="grade" title="Comment: works well with others.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
   </div>
 
   <p class="empty" id="empty" hidden>
@@ -642,9 +696,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       Progress report
-      <span class="tally">3 recent entries</span>
+      <span class="tally">4 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-06">Aug 6, 2026</time>
+        <span><b>Header layout.</b> Memo block (To/From/Date/CC/Attach) moved beside the headline instead of stacked above it, and the "7 records"/"7 files" counts corrected to match the actual tool count.</span>
+      </li>
       <li>
         <time datetime="2026-07-30">Jul 30, 2026</time>
         <span><b>New landing page.</b> Filterable tool list, priority ordering, and this changelog.</span>
@@ -670,7 +728,7 @@
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
-      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-08-05</span></span>
+      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-08-06</span></span>
     </div>
   </footer>
 

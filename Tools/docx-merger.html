@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Doc Merger</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --ink: #1f2430;
+    --paper: #fafaf8;
+    --line: #dcdad2;
+    --accent: #7a4f2b;
+    --accent-dark: #5c3a1e;
+    --ok: #2e6b3e;
+    --err: #a3372b;
+    --muted: #6b6a63;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 10px;
+  }
+  .sub {
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .dropzone {
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    padding: 30px 16px;
+    text-align: center;
+    background: #fff8ef;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .dropzone.drag-over { background: #f3e6d3; }
+  .dropzone p { margin: 4px 0; }
+  .dropzone .big { font-weight: 600; font-size: 1.05rem; }
+  .dropzone .small { color: var(--muted); font-size: 0.85rem; }
+  input[type=file] { display: none; }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+    align-items: center;
+  }
+  .toolbar input[type=text] {
+    flex: 1;
+    min-width: 140px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: inherit;
+  }
+  button {
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #fff;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  button:hover { background: #f2f0ea; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-dark);
+    font-weight: 600;
+  }
+  button.primary:hover { background: var(--accent-dark); }
+  button.danger { color: var(--err); }
+
+  .count-line {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 4px 0 10px;
+  }
+
+  ul#fileList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 480px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  ul#fileList:empty { display: none; }
+  li.file-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #ececec;
+    background: #fff;
+  }
+  li.file-row.dragging { opacity: 0.4; }
+  li.file-row.match { background: #fff3d6; }
+  li.file-row:last-child { border-bottom: none; }
+  .handle {
+    cursor: grab;
+    color: var(--muted);
+    font-size: 1rem;
+    user-select: none;
+    padding: 0 2px;
+  }
+  .idx {
+    color: var(--muted);
+    font-size: 0.78rem;
+    width: 26px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .fname {
+    flex: 1;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .fsize {
+    color: var(--muted);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+    width: 60px;
+    text-align: right;
+  }
+  .row-btns { display: flex; gap: 3px; flex-shrink: 0; }
+  .row-btns button {
+    padding: 3px 7px;
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+
+  .options label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .options input[type=checkbox] { margin-top: 3px; }
+  .options .hint {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: normal;
+  }
+  .outname {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .outname input[type=text] {
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: inherit;
+    flex: 1;
+  }
+
+  #status {
+    margin-top: 14px;
+    font-size: 0.88rem;
+    min-height: 1.2em;
+  }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+  #progressWrap {
+    height: 8px;
+    background: #ececec;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 10px;
+    display: none;
+  }
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.15s;
+  }
+  #downloadArea { margin-top: 14px; display: none; }
+  #errorList {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: var(--err);
+    background: #fdf0ee;
+    border: 1px solid #f3c9c1;
+    border-radius: 6px;
+    padding: 10px 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+  }
+  #errorList summary { cursor: pointer; font-weight: 600; }
+
+  .limits {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .limits summary { cursor: pointer; color: var(--accent-dark); font-weight: 600; }
+  .limits ul { margin: 6px 0 0 18px; padding: 0; }
+  .limits li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Word Doc Merger</h1>
+<p class="sub">Combine a big stack of .docx files into one document, in whatever order you like. Everything runs in your browser — files never leave your computer.</p>
+
+<div class="card">
+  <div class="dropzone" id="dropzone">
+    <p class="big">Click to choose files, or drag &amp; drop them here</p>
+    <p class="small">.docx only — you can select 80+ at once</p>
+    <input type="file" id="fileInput" accept=".docx" multiple>
+  </div>
+
+  <div class="toolbar" id="fileToolbar" style="display:none;">
+    <input type="text" id="filterBox" placeholder="Find a file in the list…">
+    <button id="btnAddMore">＋ Add more files</button>
+    <button id="btnSortAz">Sort A→Z</button>
+    <button id="btnReverse">Reverse order</button>
+    <button id="btnClearAll" class="danger">Clear all</button>
+  </div>
+
+  <p class="count-line" id="countLine"></p>
+  <ul id="fileList"></ul>
+</div>
+
+<div class="card options" id="optionsCard" style="display:none;">
+  <label>
+    <input type="checkbox" id="optPageBreak" checked>
+    <span>Start each file on a new page
+      <span class="hint">Inserts a page break before every file except the first.</span>
+    </span>
+  </label>
+  <label>
+    <input type="checkbox" id="optHeading" checked>
+    <span>Add the file name as a heading before each section
+      <span class="hint">Handy for knowing where one file ends and the next begins — especially useful with a lot of files.</span>
+    </span>
+  </label>
+  <div class="outname">
+    <label for="outName" style="margin:0; white-space:nowrap; font-size:0.9rem;">Output file name:</label>
+    <input type="text" id="outName" value="Merged Document">
+    <span style="color:var(--muted); font-size:0.9rem;">.docx</span>
+  </div>
+
+  <div style="margin-top:16px;">
+    <button class="primary" id="btnMerge">Merge into one document</button>
+  </div>
+
+  <div id="progressWrap"><div id="progressBar"></div></div>
+  <div id="status"></div>
+  <details id="errorList"><summary></summary><div id="errorItems"></div></details>
+  <div id="downloadArea">
+    <a id="downloadLink" download="">
+      <button class="primary" id="btnDownload">⬇ Download merged .docx</button>
+    </a>
+  </div>
+
+  <details class="limits">
+    <summary>Good to know before you merge</summary>
+    <ul>
+      <li>Text, headings, bullet/numbered lists, tables, and images are carried over from every file.</li>
+      <li>The page size, margins, and orientation of the <em>last</em> file in your list are used for the whole merged document.</li>
+      <li>If different files use very different custom styles or fonts, some formatting may fall back to a default look rather than matching the original exactly.</li>
+      <li>Headers/footers from individual files aren't merged in — only the content between them.</li>
+      <li>Corrupted or non-.docx files are skipped automatically and listed after merging, so one bad file won't stop the rest.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+(() => {
+  const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+  const REL_TYPE_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+  const REL_TYPE_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
+
+  let filesArr = []; // {file, name, size}
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileToolbar = document.getElementById('fileToolbar');
+  const optionsCard = document.getElementById('optionsCard');
+  const fileListEl = document.getElementById('fileList');
+  const countLine = document.getElementById('countLine');
+  const filterBox = document.getElementById('filterBox');
+  const statusEl = document.getElementById('status');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressBar = document.getElementById('progressBar');
+  const errorList = document.getElementById('errorList');
+  const errorItems = document.getElementById('errorItems');
+  const downloadArea = document.getElementById('downloadArea');
+  const downloadLink = document.getElementById('downloadLink');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  ['dragenter','dragover'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag-over'); }));
+  ['dragleave','drop'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag-over'); }));
+  dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+  fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.value = ''; });
+  document.getElementById('btnAddMore').addEventListener('click', () => fileInput.click());
+
+  function addFiles(fileListLike) {
+    const incoming = Array.from(fileListLike).filter(f => /\.docx$/i.test(f.name));
+    incoming.forEach(f => filesArr.push({ file: f, name: f.name, size: f.size }));
+    render();
+  }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+    return (bytes/1024/1024).toFixed(1) + ' MB';
+  }
+
+  function render() {
+    const hasFiles = filesArr.length > 0;
+    fileToolbar.style.display = hasFiles ? 'flex' : 'none';
+    optionsCard.style.display = hasFiles ? 'block' : 'none';
+    countLine.textContent = hasFiles
+      ? `${filesArr.length} file${filesArr.length === 1 ? '' : 's'} — will merge in the order shown below`
+      : '';
+
+    const filterTerm = filterBox.value.trim().toLowerCase();
+    fileListEl.innerHTML = '';
+    filesArr.forEach((entry, i) => {
+      const li = document.createElement('li');
+      li.className = 'file-row';
+      li.draggable = true;
+      li.dataset.index = i;
+      if (filterTerm && entry.name.toLowerCase().includes(filterTerm)) li.classList.add('match');
+
+      li.innerHTML = `
+        <span class="handle" title="Drag to reorder">⠿</span>
+        <span class="idx">${i + 1}.</span>
+        <span class="fname" title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</span>
+        <span class="fsize">${fmtSize(entry.size)}</span>
+        <span class="row-btns">
+          <button data-act="up" title="Move up">▲</button>
+          <button data-act="down" title="Move down">▼</button>
+          <button data-act="remove" title="Remove" class="danger">✕</button>
+        </span>`;
+      fileListEl.appendChild(li);
+    });
+
+    // drag reorder
+    let dragIndex = null;
+    fileListEl.querySelectorAll('li.file-row').forEach(li => {
+      li.addEventListener('dragstart', () => { dragIndex = +li.dataset.index; li.classList.add('dragging'); });
+      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+      li.addEventListener('dragover', e => e.preventDefault());
+      li.addEventListener('drop', e => {
+        e.preventDefault();
+        const dropIndex = +li.dataset.index;
+        if (dragIndex === null || dragIndex === dropIndex) return;
+        const [moved] = filesArr.splice(dragIndex, 1);
+        filesArr.splice(dropIndex, 0, moved);
+        render();
+      });
+    });
+
+    fileListEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const li = btn.closest('li');
+        const i = +li.dataset.index;
+        const act = btn.dataset.act;
+        if (act === 'up' && i > 0) { [filesArr[i-1], filesArr[i]] = [filesArr[i], filesArr[i-1]]; render(); }
+        if (act === 'down' && i < filesArr.length - 1) { [filesArr[i+1], filesArr[i]] = [filesArr[i], filesArr[i+1]]; render(); }
+        if (act === 'remove') { filesArr.splice(i, 1); render(); }
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  filterBox.addEventListener('input', render);
+  document.getElementById('btnSortAz').addEventListener('click', () => {
+    filesArr.sort((a, b) => a.name.localeCompare(b.name));
+    render();
+  });
+  document.getElementById('btnReverse').addEventListener('click', () => {
+    filesArr.reverse();
+    render();
+  });
+  document.getElementById('btnClearAll').addEventListener('click', () => {
+    if (filesArr.length && !confirm('Remove all files from the list?')) return;
+    filesArr = [];
+    downloadArea.style.display = 'none';
+    statusEl.textContent = '';
+    render();
+  });
+
+  // ---------- MERGE LOGIC ----------
+
+  document.getElementById('btnMerge').addEventListener('click', doMerge);
+
+  function setProgress(i, n, label) {
+    progressWrap.style.display = 'block';
+    progressBar.style.width = Math.round((i / n) * 100) + '%';
+    statusEl.className = '';
+    statusEl.textContent = label;
+  }
+
+  function xmlToString(xmlDoc) {
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' +
+      new XMLSerializer().serializeToString(xmlDoc.documentElement);
+  }
+
+  function parseXml(str) {
+    return new DOMParser().parseFromString(str, 'text/xml');
+  }
+
+  function wEl(doc, qname) { return doc.createElementNS(W_NS, qname); }
+
+  function createPageBreakParagraph(doc) {
+    const p = wEl(doc, 'w:p');
+    const r = wEl(doc, 'w:r');
+    const br = wEl(doc, 'w:br');
+    br.setAttributeNS(W_NS, 'w:type', 'page');
+    r.appendChild(br);
+    p.appendChild(r);
+    return p;
+  }
+
+  function createHeadingParagraph(doc, text) {
+    const p = wEl(doc, 'w:p');
+    const pPr = wEl(doc, 'w:pPr');
+    const pStyle = wEl(doc, 'w:pStyle');
+    pStyle.setAttributeNS(W_NS, 'w:val', 'Heading2');
+    pPr.appendChild(pStyle);
+    p.appendChild(pPr);
+    const r = wEl(doc, 'w:r');
+    const t = wEl(doc, 'w:t');
+    t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+    t.textContent = text.replace(/\.docx$/i, '');
+    r.appendChild(t);
+    p.appendChild(r);
+    return p;
+  }
+
+  function createDefaultSectPr(doc) {
+    const sectPr = wEl(doc, 'w:sectPr');
+    const pgSz = wEl(doc, 'w:pgSz');
+    pgSz.setAttributeNS(W_NS, 'w:w', '12240');
+    pgSz.setAttributeNS(W_NS, 'w:h', '15840');
+    const pgMar = wEl(doc, 'w:pgMar');
+    [['top','1440'],['right','1440'],['bottom','1440'],['left','1440'],['header','720'],['footer','720'],['gutter','0']]
+      .forEach(([k,v]) => pgMar.setAttributeNS(W_NS, 'w:'+k, v));
+    sectPr.appendChild(pgSz);
+    sectPr.appendChild(pgMar);
+    return sectPr;
+  }
+
+  function copyMissingNamespaces(sourceRoot, destRoot) {
+    Array.from(sourceRoot.attributes).forEach(attr => {
+      if ((attr.name === 'xmlns' || attr.name.startsWith('xmlns:')) && !destRoot.hasAttribute(attr.name)) {
+        destRoot.setAttribute(attr.name, attr.value);
+      }
+    });
+  }
+
+  function maxRelId(relsDoc) {
+    let max = 0;
+    Array.from(relsDoc.getElementsByTagName('Relationship')).forEach(r => {
+      const num = parseInt((r.getAttribute('Id') || '').replace(/\D/g, ''), 10);
+      if (!isNaN(num) && num > max) max = num;
+    });
+    return max;
+  }
+
+  function offsetRelIds(relsDoc, currentMax, fileIndex) {
+    const map = {};
+    const mediaRenameMap = {};
+    let localMax = 0;
+    Array.from(relsDoc.getElementsByTagName('Relationship')).forEach(r => {
+      const oldId = r.getAttribute('Id');
+      const num = parseInt(oldId.replace(/\D/g, ''), 10) || 0;
+      const newNum = num + currentMax;
+      if (newNum > localMax) localMax = newNum;
+      const newId = 'rId' + newNum;
+      map[oldId] = newId;
+      r.setAttribute('Id', newId);
+      const type = r.getAttribute('Type') || '';
+      const mode = r.getAttribute('TargetMode');
+      const target = r.getAttribute('Target') || '';
+      if (type.endsWith('/image') && target.indexOf('media/') === 0 && mode !== 'External') {
+        const origName = target.substring('media/'.length);
+        const dot = origName.lastIndexOf('.');
+        const ext = dot >= 0 ? origName.substring(dot) : '';
+        const newName = `img_f${fileIndex}_${num}${ext}`;
+        mediaRenameMap[origName] = newName;
+        r.setAttribute('Target', 'media/' + newName);
+      }
+    });
+    return { map, mediaRenameMap, newMax: Math.max(currentMax, localMax) };
+  }
+
+  function offsetNumbering(numDoc, abstractCurrentMax, numCurrentMax) {
+    const abstractMap = {};
+    const numIdMap = {};
+    let newAbstractMax = abstractCurrentMax;
+    let newNumMax = numCurrentMax;
+    Array.from(numDoc.getElementsByTagName('w:abstractNum')).forEach(el => {
+      const oldId = parseInt(el.getAttribute('w:abstractNumId'), 10) || 0;
+      const newId = oldId + abstractCurrentMax + 1;
+      abstractMap[oldId] = newId;
+      el.setAttribute('w:abstractNumId', String(newId));
+      if (newId > newAbstractMax) newAbstractMax = newId;
+    });
+    Array.from(numDoc.getElementsByTagName('w:num')).forEach(el => {
+      const oldId = parseInt(el.getAttribute('w:numId'), 10) || 0;
+      const newId = oldId + numCurrentMax + 1;
+      numIdMap[oldId] = newId;
+      el.setAttribute('w:numId', String(newId));
+      if (newId > newNumMax) newNumMax = newId;
+      const abstractRef = el.getElementsByTagName('w:abstractNumId')[0];
+      if (abstractRef) {
+        const oldAbs = parseInt(abstractRef.getAttribute('w:val'), 10);
+        if (abstractMap[oldAbs] !== undefined) abstractRef.setAttribute('w:val', String(abstractMap[oldAbs]));
+      }
+    });
+    return { numIdMap, newAbstractMax, newNumMax };
+  }
+
+  function mergeNumberingNodes(baseDoc, incomingDoc) {
+    const root = baseDoc.documentElement;
+    const abstractNodes = Array.from(incomingDoc.getElementsByTagName('w:abstractNum'));
+    const numNodes = Array.from(incomingDoc.getElementsByTagName('w:num'));
+    const firstNum = root.getElementsByTagName('w:num')[0] || null;
+    abstractNodes.forEach(n => {
+      const imported = baseDoc.importNode(n, true);
+      if (firstNum) root.insertBefore(imported, firstNum);
+      else root.appendChild(imported);
+    });
+    numNodes.forEach(n => root.appendChild(baseDoc.importNode(n, true)));
+  }
+
+  function updateReferences(bodyEl, relIdMap, numIdMap) {
+    const all = bodyEl.getElementsByTagName('*');
+    for (const el of Array.from(all)) {
+      ['r:id', 'r:embed', 'r:link'].forEach(attr => {
+        if (el.hasAttribute(attr)) {
+          const old = el.getAttribute(attr);
+          if (relIdMap[old]) el.setAttribute(attr, relIdMap[old]);
+        }
+      });
+      if (el.tagName === 'w:numId') {
+        const val = el.getAttribute('w:val');
+        if (numIdMap[val] !== undefined) el.setAttribute('w:val', String(numIdMap[val]));
+      }
+    }
+  }
+
+  function stripTrailingSectPr(body) {
+    const children = Array.from(body.childNodes);
+    for (let j = children.length - 1; j >= 0; j--) {
+      if (children[j].nodeType === 1 && children[j].tagName === 'w:sectPr') {
+        body.removeChild(children[j]);
+        return children[j];
+      }
+    }
+    return null;
+  }
+
+  async function updateContentTypes(zip, extensions, needsNumberingOverride) {
+    const path = '[Content_Types].xml';
+    const str = await zip.file(path).async('string');
+    const doc = parseXml(str);
+    const root = doc.documentElement;
+    const ns = root.namespaceURI;
+    const existingExt = new Set(Array.from(root.getElementsByTagName('Default')).map(e => e.getAttribute('Extension').toLowerCase()));
+    const extToType = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', bmp:'image/bmp', emf:'image/x-emf', wmf:'image/x-wmf', svg:'image/svg+xml', tif:'image/tiff', tiff:'image/tiff' };
+    extensions.forEach(ext => {
+      const e = ext.replace('.', '').toLowerCase();
+      if (e && !existingExt.has(e)) {
+        const def = doc.createElementNS(ns, 'Default');
+        def.setAttribute('Extension', e);
+        def.setAttribute('ContentType', extToType[e] || 'application/octet-stream');
+        root.appendChild(def);
+        existingExt.add(e);
+      }
+    });
+    if (needsNumberingOverride) {
+      const has = Array.from(root.getElementsByTagName('Override')).some(o => o.getAttribute('PartName') === '/word/numbering.xml');
+      if (!has) {
+        const ov = doc.createElementNS(ns, 'Override');
+        ov.setAttribute('PartName', '/word/numbering.xml');
+        ov.setAttribute('ContentType', 'application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml');
+        root.appendChild(ov);
+      }
+    }
+    zip.file(path, xmlToString(doc));
+  }
+
+  async function readDocxParts(file) {
+    const buf = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    if (!zip.file('word/document.xml')) throw new Error('Not a valid .docx (missing word/document.xml)');
+    return zip;
+  }
+
+  async function doMerge() {
+    if (filesArr.length === 0) return;
+    errorList.style.display = 'none';
+    downloadArea.style.display = 'none';
+    progressWrap.style.display = 'block';
+    progressBar.style.width = '0%';
+    statusEl.className = '';
+    const errors = [];
+
+    const addHeadings = document.getElementById('optHeading').checked;
+    const addPageBreak = document.getElementById('optPageBreak').checked;
+
+    // find a working base file
+    let baseZip = null, baseIndex = -1, baseName = '';
+    for (let i = 0; i < filesArr.length; i++) {
+      try {
+        baseZip = await readDocxParts(filesArr[i].file);
+        baseIndex = i;
+        baseName = filesArr[i].name;
+        break;
+      } catch (e) {
+        errors.push(`${filesArr[i].name}: ${e.message}`);
+      }
+    }
+    if (!baseZip) {
+      finish(null, errors, 'None of the selected files could be read as .docx.');
+      return;
+    }
+
+    const baseDocXmlStr = await baseZip.file('word/document.xml').async('string');
+    const baseDoc = parseXml(baseDocXmlStr);
+    const baseRoot = baseDoc.documentElement;
+    const baseBody = baseDoc.getElementsByTagName('w:body')[0];
+
+    const relsPath = 'word/_rels/document.xml.rels';
+    let baseRelsDoc;
+    if (baseZip.file(relsPath)) {
+      baseRelsDoc = parseXml(await baseZip.file(relsPath).async('string'));
+    } else {
+      baseRelsDoc = parseXml('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+    }
+    let relIdCounter = maxRelId(baseRelsDoc);
+
+    let baseNumberingDoc = null;
+    let hadBaseNumbering = !!baseZip.file('word/numbering.xml');
+    if (hadBaseNumbering) baseNumberingDoc = parseXml(await baseZip.file('word/numbering.xml').async('string'));
+    let abstractIdCounter = baseNumberingDoc ? Math.max(0, ...Array.from(baseNumberingDoc.getElementsByTagName('w:abstractNum')).map(el => parseInt(el.getAttribute('w:abstractNumId'), 10) || 0)) : -1;
+    let numIdCounter = baseNumberingDoc ? Math.max(0, ...Array.from(baseNumberingDoc.getElementsByTagName('w:num')).map(el => parseInt(el.getAttribute('w:numId'), 10) || 0)) : -1;
+    let createdNewNumbering = false;
+
+    let finalSectPr = stripTrailingSectPr(baseBody);
+    const allExtensions = new Set();
+
+    if (addHeadings) {
+      baseBody.insertBefore(createHeadingParagraph(baseDoc, baseName), baseBody.firstChild);
+    }
+
+    const remaining = filesArr.filter((_, i) => i !== baseIndex);
+    const total = remaining.length;
+
+    for (let idx = 0; idx < remaining.length; idx++) {
+      const entry = remaining[idx];
+      setProgress(idx, total, `Processing ${idx + 1} of ${total}: ${entry.name}`);
+      try {
+        const zip = await readDocxParts(entry.file);
+        const docXmlStr = await zip.file('word/document.xml').async('string');
+        const doc = parseXml(docXmlStr);
+        const body = doc.getElementsByTagName('w:body')[0];
+        const root = doc.documentElement;
+
+        copyMissingNamespaces(root, baseRoot);
+
+        let relIdMap = {};
+        if (zip.file(relsPath)) {
+          const relsDoc = parseXml(await zip.file(relsPath).async('string'));
+          const result = offsetRelIds(relsDoc, relIdCounter, idx + 1);
+          relIdMap = result.map;
+          relIdCounter = result.newMax;
+          const relsRoot = baseRelsDoc.documentElement;
+          Array.from(relsDoc.getElementsByTagName('Relationship')).forEach(node => {
+            relsRoot.appendChild(baseRelsDoc.importNode(node, true));
+          });
+          for (const [oldName, newName] of Object.entries(result.mediaRenameMap)) {
+            const mediaFile = zip.file(`word/media/${oldName}`);
+            if (mediaFile) {
+              const data = await mediaFile.async('uint8array');
+              baseZip.file(`word/media/${newName}`, data);
+              const dot = newName.lastIndexOf('.');
+              if (dot >= 0) allExtensions.add(newName.substring(dot));
+            }
+          }
+        }
+
+        let numIdMap = {};
+        if (zip.file('word/numbering.xml')) {
+          const numDoc = parseXml(await zip.file('word/numbering.xml').async('string'));
+          const result = offsetNumbering(numDoc, abstractIdCounter, numIdCounter);
+          numIdMap = result.numIdMap;
+          abstractIdCounter = result.newAbstractMax;
+          numIdCounter = result.newNumMax;
+          if (!baseNumberingDoc) {
+            baseNumberingDoc = parseXml('<?xml version="1.0"?><w:numbering xmlns:w="' + W_NS + '"></w:numbering>');
+            createdNewNumbering = true;
+          }
+          mergeNumberingNodes(baseNumberingDoc, numDoc);
+        }
+
+        updateReferences(body, relIdMap, numIdMap);
+
+        const sectPr = stripTrailingSectPr(body);
+        const isLast = idx === remaining.length - 1;
+        if (isLast && sectPr) finalSectPr = sectPr;
+
+        if (addPageBreak) baseBody.appendChild(createPageBreakParagraph(baseDoc));
+        if (addHeadings) baseBody.appendChild(createHeadingParagraph(baseDoc, entry.name));
+
+        Array.from(body.childNodes).forEach(node => {
+          baseBody.appendChild(baseDoc.importNode(node, true));
+        });
+      } catch (e) {
+        errors.push(`${entry.name}: ${e.message}`);
+      }
+    }
+
+    baseBody.appendChild(baseDoc.importNode(finalSectPr || createDefaultSectPr(baseDoc), true));
+
+    if (baseNumberingDoc) {
+      baseZip.file('word/numbering.xml', xmlToString(baseNumberingDoc));
+      if (createdNewNumbering) {
+        const relsRoot = baseRelsDoc.documentElement;
+        const newId = 'rId' + (relIdCounter + 1);
+        relIdCounter += 1;
+        const relEl = baseRelsDoc.createElementNS(relsRoot.namespaceURI, 'Relationship');
+        relEl.setAttribute('Id', newId);
+        relEl.setAttribute('Type', REL_TYPE_NUMBERING);
+        relEl.setAttribute('Target', 'numbering.xml');
+        relsRoot.appendChild(relEl);
+      }
+    }
+
+    await updateContentTypes(baseZip, allExtensions, createdNewNumbering);
+
+    baseZip.file('word/document.xml', xmlToString(baseDoc));
+    baseZip.file(relsPath, xmlToString(baseRelsDoc));
+
+    setProgress(total, total, 'Packaging final document…');
+    const blob = await baseZip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+
+    finish(blob, errors, null);
+  }
+
+  function finish(blob, errors, hardFailMessage) {
+    progressWrap.style.display = 'none';
+    if (hardFailMessage) {
+      statusEl.className = 'err';
+      statusEl.textContent = hardFailMessage;
+      return;
+    }
+    const okCount = filesArr.length - errors.length;
+    statusEl.className = 'ok';
+    statusEl.textContent = `Done — merged ${okCount} of ${filesArr.length} file${filesArr.length === 1 ? '' : 's'}.`;
+
+    if (errors.length) {
+      errorList.style.display = 'block';
+      errorList.querySelector('summary').textContent = `${errors.length} file${errors.length === 1 ? '' : 's'} skipped — click for details`;
+      errorItems.innerHTML = errors.map(e => `<div>• ${escapeHtml(e)}</div>`).join('');
+    }
+
+    const outNameRaw = document.getElementById('outName').value.trim() || 'Merged Document';
+    const outName = outNameRaw.replace(/\.docx$/i, '') + '.docx';
+    const url = URL.createObjectURL(blob);
+    downloadLink.href = url;
+    downloadLink.setAttribute('download', outName);
+    downloadArea.style.display = 'block';
+  }
+})();
+</script>
+</body>
+</html>
