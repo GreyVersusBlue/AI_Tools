@@ -1,0 +1,45 @@
+/* Shared dark-mode + semantic tokens for the classroom tools suite.
+   Load AFTER the Industry stylesheet. Dark mode works by remapping the
+   same custom properties components already consume via var(--color-*),
+   so almost nothing else has to change. */
+:root {
+  --color-success: oklch(55% 0.11 150);
+  --color-success-bg: oklch(94% 0.03 150);
+  --color-warn: oklch(58% 0.13 75);
+  --color-warn-bg: oklch(94% 0.045 75);
+  --color-caution: oklch(52% 0.14 45);
+  --color-caution-bg: oklch(93% 0.05 45);
+  --color-danger: oklch(50% 0.16 25);
+  --color-danger-bg: oklch(94% 0.03 25);
+}
+
+[data-theme="dark"] {
+  --color-bg: var(--color-neutral-900);
+  --color-surface: var(--color-neutral-800);
+  --color-text: var(--color-neutral-100);
+  --color-divider: color-mix(in srgb, var(--color-neutral-100) 20%, transparent);
+  --color-accent: var(--color-accent-400);
+  --color-accent-2: var(--color-accent-2-400);
+  --color-success: oklch(72% 0.13 150);
+  --color-success-bg: oklch(28% 0.05 150);
+  --color-warn: oklch(75% 0.14 75);
+  --color-warn-bg: oklch(30% 0.06 75);
+  --color-caution: oklch(72% 0.15 45);
+  --color-caution-bg: oklch(30% 0.06 45);
+  --color-danger: oklch(70% 0.15 25);
+  --color-danger-bg: oklch(30% 0.06 25);
+}
+[data-theme="dark"] .btn-primary { background: var(--color-accent-500); color: var(--color-neutral-900); }
+[data-theme="dark"] .btn-primary:hover { background: var(--color-accent-400); }
+[data-theme="dark"] .btn-primary:active { background: var(--color-accent-300); }
+[data-theme="dark"] .tag-accent { background: var(--color-accent-900); color: var(--color-accent-200); }
+[data-theme="dark"] .tag-accent-2 { background: var(--color-accent-2-900); color: var(--color-accent-2-200); }
+[data-theme="dark"] .tag-neutral { background: var(--color-neutral-800); color: var(--color-neutral-200); }
+
+html { background: var(--color-bg); }
+body { transition: background 0.15s ease, color 0.15s ease; }
+
+/* — shared suite header — */
+.tools-nav { border-bottom: 1px solid var(--color-divider); margin-bottom: var(--space-8); }
+.tools-nav a[aria-current="page"] { color: var(--color-accent); }
+#themeToggle { font-size: 15px; }

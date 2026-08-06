@@ -1,0 +1,168 @@
+/* Industry design system — base tokens + components for the classroom tools suite. */
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap');
+
+:root {
+  --font-body: 'Barlow', system-ui, sans-serif;
+  --font-heading: 'Barlow Condensed', system-ui, sans-serif;
+
+  --color-neutral-50:  oklch(99% 0.002 260);
+  --color-neutral-100: oklch(96% 0.004 260);
+  --color-neutral-200: oklch(91% 0.006 260);
+  --color-neutral-300: oklch(83% 0.008 260);
+  --color-neutral-400: oklch(70% 0.01 260);
+  --color-neutral-500: oklch(58% 0.01 260);
+  --color-neutral-600: oklch(48% 0.012 260);
+  --color-neutral-700: oklch(38% 0.012 260);
+  --color-neutral-800: oklch(27% 0.012 260);
+  --color-neutral-900: oklch(18% 0.01 260);
+
+  --color-accent-50:  oklch(96% 0.03 220);
+  --color-accent-100: oklch(92% 0.05 220);
+  --color-accent-200: oklch(85% 0.07 220);
+  --color-accent-300: oklch(76% 0.09 220);
+  --color-accent-400: oklch(66% 0.11 220);
+  --color-accent-500: oklch(56% 0.12 220);
+  --color-accent-600: oklch(49% 0.12 220);
+  --color-accent-700: oklch(42% 0.11 220);
+  --color-accent-800: oklch(34% 0.09 220);
+  --color-accent-900: oklch(26% 0.07 220);
+
+  --color-accent-2-50:  oklch(96% 0.04 80);
+  --color-accent-2-100: oklch(92% 0.06 80);
+  --color-accent-2-200: oklch(85% 0.09 80);
+  --color-accent-2-300: oklch(77% 0.11 80);
+  --color-accent-2-400: oklch(69% 0.12 80);
+  --color-accent-2-500: oklch(60% 0.13 80);
+  --color-accent-2-600: oklch(52% 0.12 80);
+  --color-accent-2-700: oklch(44% 0.11 80);
+  --color-accent-2-800: oklch(36% 0.09 80);
+  --color-accent-2-900: oklch(28% 0.07 80);
+
+  --color-bg: var(--color-neutral-50);
+  --color-surface: #fff;
+  --color-text: var(--color-neutral-900);
+  --color-divider: var(--color-neutral-200);
+  --color-accent: var(--color-accent-600);
+  --color-accent-2: var(--color-accent-2-600);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
+  --space-8: 2.5rem;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.08), 0 1px 1px oklch(0% 0 0 / 0.04);
+  --shadow-md: 0 4px 10px oklch(0% 0 0 / 0.10), 0 2px 4px oklch(0% 0 0 / 0.06);
+  --shadow-lg: 0 10px 24px oklch(0% 0 0 / 0.14), 0 4px 8px oklch(0% 0 0 / 0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 600; margin: 0 0 var(--space-2); }
+a { color: var(--color-accent); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* — top nav — */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+}
+.nav-brand { font-family: var(--font-heading); font-weight: 700; font-size: 16px; margin-right: var(--space-2); }
+.nav a {
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.nav a:hover { background: var(--color-surface); color: var(--color-accent); }
+.nav a[aria-current="page"] { font-weight: 700; }
+
+/* — buttons — */
+.btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--color-accent-700); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--color-accent-800); }
+.btn-primary:active:not(:disabled) { background: var(--color-accent-900); }
+.btn-secondary { background: var(--color-surface); color: var(--color-text); border-color: var(--color-divider); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); }
+.btn-ghost { background: transparent; color: var(--color-accent); border-color: transparent; }
+.btn-ghost:hover:not(:disabled) { background: var(--color-accent-100); }
+.btn-danger { color: var(--color-danger); border-color: var(--color-danger); }
+.btn-danger:hover:not(:disabled) { background: var(--color-danger-bg); }
+.btn-green { color: var(--color-success); border-color: var(--color-success); }
+.btn-green:hover:not(:disabled) { background: var(--color-success-bg); }
+.btn-red { color: var(--color-danger); border-color: var(--color-danger); }
+.btn-red:hover:not(:disabled) { background: var(--color-danger-bg); }
+
+/* — cards, blueprint corner decoration — */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+.elev-md { box-shadow: var(--shadow-md); }
+.blueprint { position: relative; }
+.blueprint .corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-accent);
+  opacity: 0.6;
+}
+.blueprint .corner.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.blueprint .corner.tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+.blueprint .corner.bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+.blueprint .corner.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+/* — form controls — */
+.input {
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.input:focus { border-color: var(--color-accent); }
+
+/* — badges / tags — */
+.type-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+}
+.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); border-radius: var(--radius-sm); padding: 2px 8px; font-size: 12px; font-weight: 600; }
+.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); border-radius: var(--radius-sm); padding: 2px 8px; font-size: 12px; font-weight: 600; }
+.tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-700); border-radius: var(--radius-sm); padding: 2px 8px; font-size: 12px; font-weight: 600; }
