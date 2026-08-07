@@ -10,18 +10,10 @@
 // small delete chip needs that screen-space treatment here, since it has
 // to stay a constant, tappable size regardless of zoom.
 
-export const REGION_COLORS = [
-  { key: "red", name: "Red", hex: "#a3372b" },
-  { key: "blue", name: "Blue", hex: "#2e6b8f" },
-  { key: "green", name: "Green", hex: "#2e6b3e" },
-  { key: "gold", name: "Gold", hex: "#b8862b" },
-  { key: "purple", name: "Purple", hex: "#6b4c9a" },
-  { key: "teal", name: "Teal", hex: "#1f7a72" },
-];
+import { PALETTE, colorHex } from "./bmg-colors.js";
 
-export function regionColorHex(key) {
-  return (REGION_COLORS.find(c => c.key === key) || REGION_COLORS[0]).hex;
-}
+export const REGION_COLORS = PALETTE;
+export const regionColorHex = colorHex;
 
 export function regionSwatchSvg(key, size = 16) {
   const hex = regionColorHex(key);

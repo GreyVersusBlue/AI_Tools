@@ -132,6 +132,10 @@
 
   #regionSvg { position: absolute; top: 0; left: 0; pointer-events: none; }
   #regionChipLayer { position: absolute; inset: 0; pointer-events: none; }
+  #lineSvg { position: absolute; top: 0; left: 0; pointer-events: none; }
+  #lineChipLayer { position: absolute; inset: 0; pointer-events: none; }
+  .lineArrowLabel { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--ink); }
+  .lineArrowLabel input { margin: 0; }
   .rgn-del {
     position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%;
     border: 1px solid var(--line); background: #fff; color: var(--err); font-size: 14px; line-height: 1;
@@ -158,6 +162,11 @@
     font-family: inherit; font-size: 0.76rem; padding: 3px 6px; border: 1px solid var(--line);
     border-radius: 4px; width: 140px;
   }
+  #legendPanel .legend-input.compact { width: 92px; }
+  #legendPanel .legend-select {
+    font-family: inherit; font-size: 0.72rem; padding: 3px 4px; border: 1px solid var(--line);
+    border-radius: 4px; background: #fff; color: var(--ink);
+  }
 
   .viewerToolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
   .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
@@ -175,6 +184,10 @@
   #calibratePanel input[type=number] {
     font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line);
     border-radius: 5px; width: 90px;
+  }
+  #calibratePanel select {
+    font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 5px; background: #fff; color: var(--ink);
   }
 
   #compassRose { position: absolute; top: 12px; right: 12px; cursor: grab; z-index: 7; }
@@ -209,6 +222,10 @@
 
   .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
 
+  .projectBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .projectBar label { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
+  #projectSwitcher { min-width: 160px; }
+
   #undoToast {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 20;
     background: var(--ink); color: #fff; border-radius: 8px; padding: 8px 10px 8px 16px;
@@ -236,6 +253,14 @@
   <p class="sub">Pull a map from Wikimedia Commons, then pan and zoom into the region you need for a labeling activity or display map.</p>
 
   <div id="storageWarn" class="storage-warn no-print" hidden></div>
+
+  <div class="card projectBar no-print">
+    <label for="projectSwitcher">Map project</label>
+    <select id="projectSwitcher" class="styleSelect"></select>
+    <button id="btnNewProject" class="small">+ New Project</button>
+    <button id="btnRenameProject" class="small">Rename</button>
+    <button id="btnDeleteProject" class="small">Delete</button>
+  </div>
 
   <div class="card search-card no-print">
     <h2>Find a map</h2>
@@ -269,8 +294,17 @@
         <option value="dot">Dot</option>
         <option value="flag">Flag</option>
       </select>
+      <select id="markerColorSelect" class="styleSelect" hidden></select>
+      <select id="markerSizeSelect" class="styleSelect" hidden></select>
       <button id="btnAddRegion" class="small toggle">+ Shade Region</button>
       <select id="regionColorSelect" class="styleSelect" hidden></select>
+      <button id="btnAddLine" class="small toggle">+ Draw Line</button>
+      <select id="lineColorSelect" class="styleSelect" hidden></select>
+      <select id="lineStyleSelect" class="styleSelect" hidden>
+        <option value="solid">Solid</option>
+        <option value="dashed">Dashed</option>
+      </select>
+      <label id="lineArrowWrap" class="lineArrowLabel" hidden><input type="checkbox" id="lineArrowCheck" checked data-no-pan> Arrowhead</label>
       <button id="btnFinishRegion" class="small primary" hidden>Finish shape</button>
       <button id="btnCancelRegion" class="small" hidden>Cancel shape</button>
       <span id="placeHint" class="toolHint" hidden></span>
@@ -288,15 +322,21 @@
     <div id="calibratePanel" class="card no-print" hidden>
       <h2>Map coordinates</h2>
       <p class="hint">
-        Sets the real-world latitude/longitude of this map's edges, assuming a simple equirectangular
-        (evenly-spaced lat/long) projection &mdash; most Commons "blank map" files use this. Readings will drift for
-        maps drawn in other projections (e.g. Mercator), especially away from the equator.
+        Sets the real-world latitude/longitude of this map's edges. Pick whichever projection this map was
+        drawn in below &mdash; most Commons "blank map" files use one of these two. Readings will still drift
+        for maps drawn in other projections (Robinson, conic, etc.).
       </p>
       <div class="calibRow">
         <label>North edge lat<input type="number" id="calNorth" step="0.1" data-no-pan></label>
         <label>South edge lat<input type="number" id="calSouth" step="0.1" data-no-pan></label>
         <label>West edge lon<input type="number" id="calWest" step="0.1" data-no-pan></label>
         <label>East edge lon<input type="number" id="calEast" step="0.1" data-no-pan></label>
+        <label>Projection
+          <select id="calProjection" data-no-pan>
+            <option value="equirectangular">Equirectangular (evenly spaced)</option>
+            <option value="mercator">Mercator (common wall/web maps)</option>
+          </select>
+        </label>
         <button id="btnApplyCalibration" class="small primary">Apply</button>
         <button id="btnClearCalibration" class="small">Clear</button>
       </div>
@@ -306,8 +346,10 @@
         <img id="mapImg" alt="" hidden>
         <div id="gridLayer"></div>
         <svg id="regionSvg" aria-hidden="true"></svg>
+        <svg id="lineSvg" aria-hidden="true"></svg>
       </div>
       <div id="regionChipLayer"></div>
+      <div id="lineChipLayer"></div>
       <div id="labelLayer"></div>
       <div id="markerLayer"></div>
       <div id="legendPanel" hidden></div>
@@ -342,15 +384,19 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
 import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
-import { createMarkerLayer, markerIconSvg, markerAnchor } from './blank-map-generator/bmg-markers.js';
+import {
+  createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex,
+  MARKER_COLORS, MARKER_SIZES, DEFAULT_MARKER_COLOR, DEFAULT_MARKER_SIZE,
+} from './blank-map-generator/bmg-markers.js';
 import { createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg } from './blank-map-generator/bmg-regions.js';
-import { createLegendPanel } from './blank-map-generator/bmg-legend.js';
+import { createLineLayer, LINE_COLORS, lineColorHex, lineSwatchSvg } from './blank-map-generator/bmg-lines.js';
+import { createLegendPanel, markerLegendKey } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, formatLatLon, computeGraticule } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 
 const store = createStore();
-let project = store.get();
+let project = store.getActiveProject();
 let currentObjectUrl = null;
 let currentSize = { width: 0, height: 0 };
 let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region'
@@ -365,7 +411,7 @@ const viewport = el('viewport');
 const stage = el('stage');
 const mapImg = el('mapImg');
 
-function save() { store.set(project); }
+function save() { store.setActiveProject(project); }
 
 const viewer = createViewer(viewport, stage, {
   onChange(v) {
@@ -375,6 +421,7 @@ const viewer = createViewer(viewport, stage, {
     labelLayer.reposition();
     markerLayer.reposition();
     regionLayer.reposition();
+    lineLayer.reposition();
     locator.updateRect();
   },
 });
@@ -394,18 +441,52 @@ const regionLayer = createRegionLayer(el('regionSvg'), el('regionChipLayer'), vi
   onDelete(region) { lastDeleted = { type: 'region', item: region }; showUndoToast('Shaded region'); },
 });
 
+const lineLayer = createLineLayer(el('lineSvg'), el('lineChipLayer'), viewer, {
+  onChange(lines) { project.lines = lines; save(); renderLegend(); },
+  onDelete(line) { lastDeleted = { type: 'line', item: line }; showUndoToast('Line'); },
+});
+
 const legendPanel = createLegendPanel(el('legendPanel'), {
-  onMarkerTextChange(style, text) { project.legendText[style] = text; save(); },
+  onMarkerTextChange(key, text) { project.legendText[key] = text; save(); },
   onRegionTextChange(color, text) { project.regionLegendText[color] = text; save(); },
+  onLineTextChange(color, text) { project.lineLegendText[color] = text; save(); },
+  onMarkerColorChange(style, oldColor, newColor) {
+    if (oldColor === newColor) return;
+    const oldKey = markerLegendKey(style, oldColor);
+    const newKey = markerLegendKey(style, newColor);
+    project.markers.forEach(m => { if (m.style === style && m.color === oldColor) m.color = newColor; });
+    if (project.legendText[oldKey] && !project.legendText[newKey]) {
+      project.legendText[newKey] = project.legendText[oldKey];
+      delete project.legendText[oldKey];
+    }
+    markerLayer.refreshIcons();
+    save();
+    renderLegend();
+  },
+  onMarkerSizeChange(style, color, newSize) {
+    project.markers.forEach(m => { if (m.style === style && m.color === color) m.size = newSize; });
+    markerLayer.refreshIcons();
+    save();
+  },
   onMove(pos) { project.legendPos = pos; save(); },
 });
 
 const locator = createLocatorInset(el('locatorInset'), el('locatorImg'), el('locatorRect'), viewport, viewer);
 
 el('regionColorSelect').innerHTML = REGION_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
+el('markerColorSelect').innerHTML = MARKER_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
+el('markerColorSelect').value = DEFAULT_MARKER_COLOR;
+el('markerSizeSelect').innerHTML = MARKER_SIZES.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
+el('markerSizeSelect').value = DEFAULT_MARKER_SIZE;
+el('lineColorSelect').innerHTML = LINE_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
 
 function renderLegend() {
-  legendPanel.render(project.markers, project.legendText, markerIconSvg, project.regions, project.regionLegendText, regionSwatchSvg);
+  legendPanel.render({
+    markers: project.markers, legendText: project.legendText, iconSvg: markerIconSvg,
+    markerColorHex, colorOptions: MARKER_COLORS, sizeOptions: MARKER_SIZES,
+    regions: project.regions, regionLegendText: project.regionLegendText, swatchSvg: regionSwatchSvg,
+    lines: project.lines, lineLegendText: project.lineLegendText, lineSwatchSvg,
+  });
 }
 
 function showUndoToast(kind) {
@@ -434,6 +515,7 @@ function performUndo() {
   if (type === 'label') labelLayer.restore(item);
   else if (type === 'marker') markerLayer.restore(item);
   else if (type === 'region') regionLayer.restore(item);
+  else if (type === 'line') lineLayer.restore(item);
 }
 
 function renderGrid() {
@@ -553,11 +635,12 @@ el('btnGrid').addEventListener('click', () => {
 });
 
 function openCalibratePanel() {
-  const c = project.calibration || { north: 90, south: -90, west: -180, east: 180 };
+  const c = project.calibration || { north: 90, south: -90, west: -180, east: 180, projection: 'equirectangular' };
   el('calNorth').value = c.north;
   el('calSouth').value = c.south;
   el('calWest').value = c.west;
   el('calEast').value = c.east;
+  el('calProjection').value = c.projection || 'equirectangular';
   el('calibratePanel').hidden = false;
 }
 
@@ -571,7 +654,7 @@ el('btnApplyCalibration').addEventListener('click', () => {
   const south = parseFloat(el('calSouth').value);
   const west = parseFloat(el('calWest').value);
   const east = parseFloat(el('calEast').value);
-  const candidate = { north, south, west, east };
+  const candidate = { north, south, west, east, projection: el('calProjection').value };
   if (!isCalibrated(candidate)) {
     alert('Enter four different numbers, with north above south and west left of east.');
     return;
@@ -614,52 +697,75 @@ const PLACE_HINTS = {
   label: 'Click the map to place a label &middot; Esc to stop',
   marker: 'Click the map to place a marker &middot; Esc to stop',
   region: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the shape',
+  line: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the line',
 };
+
+// Regions (closed, min 3 points) and lines (open, min 2 points) share the
+// exact same click-to-draft workflow and Finish/Cancel buttons — this
+// returns whichever one is currently active so the shared handlers below
+// don't need to duplicate that workflow per shape type.
+function activeDraftLayer() {
+  if (placeMode === 'region') return { layer: regionLayer, minPoints: 3 };
+  if (placeMode === 'line') return { layer: lineLayer, minPoints: 2 };
+  return null;
+}
 
 function setPlaceMode(mode) {
   if (placeMode === 'region' && mode !== 'region') regionLayer.cancelDraft();
+  if (placeMode === 'line' && mode !== 'line') lineLayer.cancelDraft();
   placeMode = mode;
   viewport.classList.toggle('adding', mode !== 'none');
   el('btnAddLabel').classList.toggle('active', mode === 'label');
   el('btnAddMarker').classList.toggle('active', mode === 'marker');
   el('btnAddRegion').classList.toggle('active', mode === 'region');
+  el('btnAddLine').classList.toggle('active', mode === 'line');
   el('markerStyleSelect').hidden = mode !== 'marker';
+  el('markerColorSelect').hidden = mode !== 'marker';
+  el('markerSizeSelect').hidden = mode !== 'marker';
   el('regionColorSelect').hidden = mode !== 'region';
+  el('lineColorSelect').hidden = mode !== 'line';
+  el('lineStyleSelect').hidden = mode !== 'line';
+  el('lineArrowWrap').hidden = mode !== 'line';
   el('placeHint').hidden = mode === 'none';
   if (mode !== 'none') el('placeHint').innerHTML = PLACE_HINTS[mode];
-  updateRegionShapeButtons();
+  updateShapeButtons();
 }
 
-function updateRegionShapeButtons() {
-  const n = placeMode === 'region' ? regionLayer.draftPointCount() : 0;
-  el('btnFinishRegion').hidden = n < 3;
-  el('btnCancelRegion').hidden = n < 1;
+function updateShapeButtons() {
+  const active = activeDraftLayer();
+  const n = active ? active.layer.draftPointCount() : 0;
+  el('btnFinishRegion').hidden = !active || n < active.minPoints;
+  el('btnCancelRegion').hidden = !active || n < 1;
 }
 
-function finishRegionShape() {
-  if (regionLayer.draftPointCount() >= 3) regionLayer.finishDraft();
-  updateRegionShapeButtons();
+function finishShape() {
+  const active = activeDraftLayer();
+  if (active && active.layer.draftPointCount() >= active.minPoints) active.layer.finishDraft();
+  updateShapeButtons();
 }
 
 el('btnAddLabel').addEventListener('click', () => setPlaceMode(placeMode === 'label' ? 'none' : 'label'));
 el('btnAddMarker').addEventListener('click', () => setPlaceMode(placeMode === 'marker' ? 'none' : 'marker'));
 el('btnAddRegion').addEventListener('click', () => setPlaceMode(placeMode === 'region' ? 'none' : 'region'));
-el('btnFinishRegion').addEventListener('click', finishRegionShape);
-el('btnCancelRegion').addEventListener('click', () => { regionLayer.cancelDraft(); updateRegionShapeButtons(); });
+el('btnAddLine').addEventListener('click', () => setPlaceMode(placeMode === 'line' ? 'none' : 'line'));
+el('btnFinishRegion').addEventListener('click', finishShape);
+el('btnCancelRegion').addEventListener('click', () => { activeDraftLayer()?.layer.cancelDraft(); updateShapeButtons(); });
 
 viewport.addEventListener('dblclick', e => {
-  if (placeMode !== 'region' || !regionLayer.isDrafting()) return;
+  const active = activeDraftLayer();
+  if (!active || !active.layer.isDrafting()) return;
   e.preventDefault();
-  regionLayer.popLastDraftPoint();
-  finishRegionShape();
+  active.layer.popLastDraftPoint();
+  finishShape();
 });
 
 document.addEventListener('keydown', e => {
+  const active = activeDraftLayer();
   if (e.key === 'Escape') {
-    if (placeMode === 'region' && regionLayer.draftPointCount() > 0) { regionLayer.cancelDraft(); updateRegionShapeButtons(); }
+    if (active && active.layer.draftPointCount() > 0) { active.layer.cancelDraft(); updateShapeButtons(); }
     else if (placeMode !== 'none') setPlaceMode('none');
-  } else if (e.key === 'Enter' && placeMode === 'region') {
-    finishRegionShape();
+  } else if (e.key === 'Enter' && active) {
+    finishShape();
   }
 });
 
@@ -677,11 +783,15 @@ viewport.addEventListener('pointerup', e => {
     const label = labelLayer.addAt(stagePt.x, stagePt.y);
     requestAnimationFrame(() => labelLayer.startEditing(label.id));
   } else if (placeMode === 'marker') {
-    markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value);
+    markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value, el('markerColorSelect').value, el('markerSizeSelect').value);
   } else if (placeMode === 'region') {
     if (!regionLayer.isDrafting()) regionLayer.startDraft(el('regionColorSelect').value);
     regionLayer.addDraftPoint(stagePt.x, stagePt.y);
-    updateRegionShapeButtons();
+    updateShapeButtons();
+  } else if (placeMode === 'line') {
+    if (!lineLayer.isDrafting()) lineLayer.startDraft(el('lineColorSelect').value, el('lineStyleSelect').value, el('lineArrowCheck').checked);
+    lineLayer.addDraftPoint(stagePt.x, stagePt.y);
+    updateShapeButtons();
   }
 });
 
@@ -794,6 +904,8 @@ function displayMap(record) {
     markerLayer.reposition();
     regionLayer.setSize(w, h);
     regionLayer.setRegions(project.regions);
+    lineLayer.setSize(w, h);
+    lineLayer.setLines(project.lines);
     renderGrid();
     locator.updateRect();
   };
@@ -809,6 +921,8 @@ function displayMap(record) {
     project.legendText = {};
     project.regions = [];
     project.regionLegendText = {};
+    project.lines = [];
+    project.lineLegendText = {};
     project.calibration = null;
     project.gridEnabled = false;
     setPlaceMode('none');
@@ -928,6 +1042,18 @@ function hexToRgba(hex, alpha) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
+function drawPngArrowhead(ctx, from, to, hex) {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const len = 12, spread = 0.45;
+  ctx.beginPath();
+  ctx.moveTo(to.x, to.y);
+  ctx.lineTo(to.x - len * Math.cos(angle - spread), to.y - len * Math.sin(angle - spread));
+  ctx.lineTo(to.x - len * Math.cos(angle + spread), to.y - len * Math.sin(angle + spread));
+  ctx.closePath();
+  ctx.fillStyle = hex;
+  ctx.fill();
+}
+
 function drawPngGridLabel(ctx, text, x, y) {
   ctx.font = '11px sans-serif';
   const w = ctx.measureText(text).width;
@@ -964,12 +1090,20 @@ function drawPngLabel(ctx, text, px, py) {
 }
 
 async function drawPngLegend(ctx) {
-  const styles = [...new Set(project.markers.map(m => m.style))];
+  const groups = [];
+  const seenGroup = new Set();
+  project.markers.forEach(m => {
+    const gkey = `${m.style}::${m.color}`;
+    if (seenGroup.has(gkey)) return;
+    seenGroup.add(gkey);
+    groups.push({ style: m.style, color: m.color });
+  });
   const colors = [...new Set(project.regions.map(r => r.color))];
-  if (!styles.length && !colors.length) return;
+  const lineColors = [...new Set(project.lines.map(l => l.color))];
+  if (!groups.length && !colors.length && !lineColors.length) return;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
-  const rows = styles.length + colors.length;
+  const rows = groups.length + colors.length + lineColors.length;
   const height = padTop + titleH + rows * rowH + 8;
 
   pngRoundRect(ctx, pos.x, pos.y, width, height, 8);
@@ -983,12 +1117,13 @@ async function drawPngLegend(ctx) {
   ctx.fillText('KEY', pos.x + padX, pos.y + padTop + 8);
 
   let rowY = pos.y + padTop + titleH;
-  for (const style of styles) {
-    const img = await svgToImage(markerIconSvg(style, iconSize));
+  for (const g of groups) {
+    const key = markerLegendKey(g.style, g.color);
+    const img = await svgToImage(markerIconSvg(g.style, iconSize, markerColorHex(g.color)));
     ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
     ctx.fillStyle = '#1f2430';
     ctx.font = '12px sans-serif';
-    ctx.fillText(project.legendText[style] || `(${style})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    ctx.fillText(project.legendText[key] || `(${g.style})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
     rowY += rowH;
   }
   for (const color of colors) {
@@ -997,6 +1132,15 @@ async function drawPngLegend(ctx) {
     ctx.fillStyle = '#1f2430';
     ctx.font = '12px sans-serif';
     ctx.fillText(project.regionLegendText[color] || `(${color})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    rowY += rowH;
+  }
+  for (const color of lineColors) {
+    const rep = project.lines.find(l => l.color === color);
+    const img = await svgToImage(lineSwatchSvg(color, iconSize, rep?.style));
+    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
+    ctx.fillStyle = '#1f2430';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(project.lineLegendText[color] || `(${color} line)`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
     rowY += rowH;
   }
 }
@@ -1085,9 +1229,24 @@ async function buildPngBlob() {
     ctx.stroke();
   });
 
+  project.lines.forEach(l => {
+    const hex = lineColorHex(l.color);
+    const pts = l.points.map(p => viewer.stageToScreen(p.x, p.y));
+    ctx.beginPath();
+    pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.strokeStyle = hex;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash(l.style === 'dashed' ? [10, 7] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (l.arrow && pts.length >= 2) drawPngArrowhead(ctx, pts[pts.length - 2], pts[pts.length - 1], hex);
+  });
+
   for (const m of project.markers) {
-    const size = 26;
-    const img = await svgToImage(markerIconSvg(m.style, size));
+    const size = markerSizePx(m.size);
+    const img = await svgToImage(markerIconSvg(m.style, size, markerColorHex(m.color)));
     const pt = viewer.stageToScreen(m.x, m.y);
     const anchor = markerAnchor(m.style);
     ctx.drawImage(img, pt.x - size / 2, anchor === 'bottom' ? pt.y - size : pt.y - size / 2, size, size);
@@ -1149,18 +1308,99 @@ el('btnClearCache').addEventListener('click', async () => {
   refreshRecent();
 });
 
+// --- Map projects (named save/switch) ---------------------------------
+// The workspace can hold any number of named projects; only one is
+// "active" (bound to `project` and everything on screen) at a time.
+// Switching, creating, or deleting reloads the whole viewer from scratch —
+// there's no cross-project state to reconcile since each project's
+// labels/markers/etc. only make sense against its own map.
+
+function refreshProjectSwitcher() {
+  const list = store.listProjects();
+  const activeId = store.getActiveId();
+  el('projectSwitcher').innerHTML = list
+    .map(p => `<option value="${p.id}"${p.id === activeId ? ' selected' : ''}>${escapeHtml(p.name)}</option>`)
+    .join('');
+}
+
+/** Clears the viewer down to "no map loaded" — used when a project has no map yet, or its cached map went missing. */
+function showEmptyMapState(mapMissing) {
+  if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+  currentSize = { width: 0, height: 0 };
+  mapImg.hidden = true;
+  mapImg.removeAttribute('src');
+  el('viewerEmpty').hidden = false;
+  el('viewerEmpty').textContent = mapMissing
+    ? "This project's map isn't cached in this browser anymore — search above and re-download it to keep annotating."
+    : 'Search above and pick a map to get started.';
+  setPlaceMode('none');
+  labelLayer.setLabels([]);
+  markerLayer.setMarkers([]);
+  regionLayer.setRegions([]);
+  lineLayer.setLines([]);
+  el('legendPanel').hidden = true;
+  el('compassRose').hidden = true;
+  el('btnCompass').classList.remove('active');
+  el('locatorInset').hidden = true;
+  el('btnLocator').classList.remove('active');
+  el('calibratePanel').hidden = true;
+  el('btnGrid').classList.remove('active');
+  el('attribution').innerHTML = '';
+  clearTimeout(undoTimer);
+  lastDeleted = null;
+  el('undoToast').hidden = true;
+}
+
+/** Loads whichever project is now active (after init, switch, create, or delete) into the viewer. */
+async function loadActiveProjectIntoUI() {
+  project = store.getActiveProject();
+  refreshProjectSwitcher();
+  if (project.mapId) {
+    const cached = await cache.getCachedMap(project.mapId).catch(() => null);
+    if (cached) { displayMap(cached); return; }
+    showEmptyMapState(true);
+    return;
+  }
+  showEmptyMapState(false);
+  el('searchInput').value = 'blank world map';
+  runSearch('blank world map');
+}
+
+el('projectSwitcher').addEventListener('change', () => {
+  store.switchProject(el('projectSwitcher').value);
+  loadActiveProjectIntoUI();
+});
+
+el('btnNewProject').addEventListener('click', () => {
+  const name = prompt('Name this new map project:', 'Untitled map');
+  if (name === null) return;
+  store.createProject(name.trim() || 'Untitled map');
+  loadActiveProjectIntoUI();
+});
+
+el('btnRenameProject').addEventListener('click', () => {
+  const current = store.listProjects().find(p => p.id === store.getActiveId());
+  const name = prompt('Rename this map project:', current ? current.name : '');
+  if (name === null || !name.trim()) return;
+  store.renameProject(store.getActiveId(), name.trim());
+  refreshProjectSwitcher();
+});
+
+el('btnDeleteProject').addEventListener('click', () => {
+  const current = store.listProjects().find(p => p.id === store.getActiveId());
+  const label = current ? current.name : 'this project';
+  if (!confirm(`Delete map project "${label}"? This can't be undone (the downloaded map image itself stays cached for reuse elsewhere).`)) return;
+  store.deleteProject(store.getActiveId());
+  loadActiveProjectIntoUI();
+});
+
 async function init() {
   if (!(await cache.isAvailable())) {
     el('storageWarn').hidden = false;
     el('storageWarn').textContent = "Your browser is blocking offline storage (private/incognito mode, or storage disabled), so downloaded maps won't be kept between visits.";
   }
   await refreshRecent();
-  if (project.mapId) {
-    const cached = await cache.getCachedMap(project.mapId).catch(() => null);
-    if (cached) { displayMap(cached); return; }
-  }
-  el('searchInput').value = 'blank world map';
-  runSearch('blank world map');
+  await loadActiveProjectIntoUI();
 }
 
 init();

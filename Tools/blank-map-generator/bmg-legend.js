@@ -1,10 +1,24 @@
-// bmg-legend.js — auto-built key: one row per marker style, plus one row
-// per shaded-region color, currently on the map, each with an editable
-// caption ("star = state capital", "red = deforested area"). The panel is
-// draggable in viewport (screen) space, independent of the map's own
-// pan/zoom, so moving it out of the way doesn't touch the map itself.
+// bmg-legend.js — auto-built key: one row per distinct marker style+color
+// combo in use, one row per shaded-region color, and one row per line
+// color, each with an editable caption ("star = state capital", "red =
+// deforested area", "blue = trade route"). Marker rows also carry a color
+// and size <select> so a whole style+color group (e.g. "every blue pin")
+// can be recolored or resized after the fact, letting two colors of the
+// same style stand for two different things. The panel is draggable in
+// viewport (screen) space, independent of the map's own pan/zoom, so
+// moving it out of the way doesn't touch the map itself.
 
-export function createLegendPanel(panelEl, { onMarkerTextChange, onRegionTextChange, onMove } = {}) {
+// Markers created before per-marker color existed (or placed with the
+// default color) keep the plain `style` key so old saved captions aren't
+// orphaned; only a non-default color gets a compound key.
+export function markerLegendKey(style, color) {
+  return color && color !== "blue" ? `${style}::${color}` : style;
+}
+
+export function createLegendPanel(panelEl, {
+  onMarkerTextChange, onRegionTextChange, onLineTextChange,
+  onMarkerColorChange, onMarkerSizeChange, onMove,
+} = {}) {
   let pos = { x: 12, y: 12 };
   let dragging = false, startX = 0, startY = 0, startPos = null;
 
@@ -14,7 +28,7 @@ export function createLegendPanel(panelEl, { onMarkerTextChange, onRegionTextCha
     panelEl.style.top = `${pos.y}px`;
   }
 
-  function addRow(key, legendText, iconHtml, placeholder, onInput) {
+  function addCaptionRow(key, legendText, iconHtml, placeholder, onInput) {
     const row = document.createElement("div");
     row.className = "legend-row";
     row.innerHTML = `
@@ -28,20 +42,69 @@ export function createLegendPanel(panelEl, { onMarkerTextChange, onRegionTextCha
     panelEl.appendChild(row);
   }
 
-  /** Rebuilds the panel from the current marker/region sets. Hidden when both are empty. */
-  function render(markers, legendText, iconSvg, regions, regionLegendText, swatchSvg) {
-    const styles = [...new Set((markers || []).map(m => m.style))];
-    const colors = [...new Set((regions || []).map(r => r.color))];
-    if (!styles.length && !colors.length) { panelEl.hidden = true; return; }
+  function addMarkerRow(group, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions) {
+    const { style, color, size } = group;
+    const key = markerLegendKey(style, color);
+    const row = document.createElement("div");
+    row.className = "legend-row";
+    row.innerHTML = `
+      <span class="legend-icon" data-no-pan>${iconSvg(style, 18, markerColorHex(color))}</span>
+      <input type="text" class="legend-input compact" data-no-pan placeholder="What does this mean?">
+      <select class="legend-select" data-no-pan title="Marker color"></select>
+      <select class="legend-select" data-no-pan title="Marker size"></select>
+    `;
+    const [input, colorSelect, sizeSelect] = row.querySelectorAll("input, select");
+
+    input.value = (legendText && legendText[key]) || "";
+    input.addEventListener("input", () => onMarkerTextChange?.(key, input.value));
+    input.addEventListener("pointerdown", e => e.stopPropagation());
+
+    colorSelect.innerHTML = colorOptions.map(c => `<option value="${c.key}"${c.key === color ? " selected" : ""}>${c.name}</option>`).join("");
+    colorSelect.addEventListener("pointerdown", e => e.stopPropagation());
+    colorSelect.addEventListener("change", () => onMarkerColorChange?.(style, color, colorSelect.value));
+
+    sizeSelect.innerHTML = sizeOptions.map(s => `<option value="${s.key}"${s.key === size ? " selected" : ""}>${s.label}</option>`).join("");
+    sizeSelect.addEventListener("pointerdown", e => e.stopPropagation());
+    sizeSelect.addEventListener("change", () => onMarkerSizeChange?.(style, color, sizeSelect.value));
+
+    panelEl.appendChild(row);
+  }
+
+  /**
+   * Rebuilds the panel from the current marker/region/line sets. Hidden
+   * when all three are empty. Takes a single options bag since it threads
+   * together three annotation types' worth of data plus the marker-only
+   * color/size editing controls.
+   */
+  function render({
+    markers, legendText, iconSvg, markerColorHex, colorOptions = [], sizeOptions = [],
+    regions, regionLegendText, swatchSvg,
+    lines, lineLegendText, lineSwatchSvg: lineSwatch,
+  } = {}) {
+    const groups = [];
+    const seenGroup = new Set();
+    (markers || []).forEach(m => {
+      const gkey = `${m.style}::${m.color}`;
+      if (seenGroup.has(gkey)) return;
+      seenGroup.add(gkey);
+      groups.push({ style: m.style, color: m.color, size: m.size });
+    });
+    const regionColors = [...new Set((regions || []).map(r => r.color))];
+    const lineColors = [...new Set((lines || []).map(l => l.color))];
+    if (!groups.length && !regionColors.length && !lineColors.length) { panelEl.hidden = true; return; }
     panelEl.hidden = false;
     panelEl.innerHTML = `<div class="legend-title" data-no-pan>Key</div>`;
-    styles.forEach(style => addRow(style, legendText, iconSvg(style, 18), "What does this mean?", onMarkerTextChange));
-    colors.forEach(color => addRow(color, regionLegendText, swatchSvg(color, 18), "What does this shading mean?", onRegionTextChange));
+    groups.forEach(g => addMarkerRow(g, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions));
+    regionColors.forEach(color => addCaptionRow(color, regionLegendText, swatchSvg(color, 18), "What does this shading mean?", onRegionTextChange));
+    lineColors.forEach(color => {
+      const rep = (lines || []).find(l => l.color === color);
+      addCaptionRow(color, lineLegendText, lineSwatch(color, 18, rep?.style), "What does this line mean?", onLineTextChange);
+    });
     apply();
   }
 
   function pointerDown(e) {
-    if (e.target.closest("input")) return;
+    if (e.target.closest("input, select")) return;
     dragging = true;
     startX = e.clientX;
     startY = e.clientY;

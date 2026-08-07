@@ -1,9 +1,29 @@
 // bmg-markers.js — draggable map markers (pin/star/dot/flag). Anchored to
 // stage (map-pixel) coordinates and repositioned in screen space on every
 // pan/zoom, same approach as bmg-labels.js's text labels, so the icon size
-// stays constant on screen rather than scaling with the map.
+// stays constant on screen rather than scaling with the map. Each marker
+// also carries its own color and size (from the shared bmg-colors.js
+// palette / MARKER_SIZE_PX below) rather than every marker of a style
+// sharing one fixed look, so e.g. two colors of star can mean two
+// different things on the same map's legend.
+
+import { PALETTE, colorHex } from "./bmg-colors.js";
 
 export const MARKER_STYLES = ["pin", "star", "dot", "flag"];
+export const MARKER_COLORS = PALETTE;
+export const markerColorHex = colorHex;
+export const DEFAULT_MARKER_COLOR = "blue";
+export const DEFAULT_MARKER_SIZE = "medium";
+
+export const MARKER_SIZES = [
+  { key: "small", label: "Small", px: 18 },
+  { key: "medium", label: "Medium", px: 26 },
+  { key: "large", label: "Large", px: 34 },
+];
+
+export function markerSizePx(size) {
+  return (MARKER_SIZES.find(s => s.key === size) || MARKER_SIZES[1]).px;
+}
 
 // Where the icon's "point" sits relative to its own box, so the marker's
 // (x, y) lands on the actual location rather than the icon's center.
@@ -11,8 +31,7 @@ const ANCHOR = { pin: "bottom", star: "center", dot: "center", flag: "bottom" };
 
 export function markerAnchor(style) { return ANCHOR[style] || "center"; }
 
-export function markerIconSvg(style, size = 22) {
-  const color = "#2e6b8f";
+export function markerIconSvg(style, size = 22, color = colorHex(DEFAULT_MARKER_COLOR)) {
   switch (style) {
     case "star":
       return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01z" fill="${color}" stroke="#fff" stroke-width="1"/></svg>`;
@@ -41,8 +60,8 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
 
   function getMarkers() { return markers; }
 
-  function addAt(stageX, stageY, style) {
-    const marker = { id: newId(), x: stageX, y: stageY, style };
+  function addAt(stageX, stageY, style, color = DEFAULT_MARKER_COLOR, size = DEFAULT_MARKER_SIZE) {
+    const marker = { id: newId(), x: stageX, y: stageY, style, color, size };
     markers.push(marker);
     reconcile();
     onChange?.(markers);
@@ -94,7 +113,7 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
     node.dataset.id = marker.id;
     node.setAttribute("data-no-pan", "");
     node.innerHTML = `
-      <span class="mkr-icon">${markerIconSvg(marker.style, 26)}</span>
+      <span class="mkr-icon">${markerIconSvg(marker.style, markerSizePx(marker.size), markerColorHex(marker.color))}</span>
       <button class="mkr-del" type="button" title="Delete marker" data-no-pan>&times;</button>
     `;
     wireDrag(node, marker);
@@ -103,6 +122,17 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
       remove(marker.id);
     });
     return node;
+  }
+
+  /** Re-renders every existing marker's icon in place (color/size changed from the legend), without rebuilding drag listeners. */
+  function refreshIcons() {
+    markers.forEach(m => {
+      const node = nodes.get(m.id);
+      if (!node) return;
+      node.className = `bmg-marker anchor-${markerAnchor(m.style)}`;
+      node.querySelector(".mkr-icon").innerHTML = markerIconSvg(m.style, markerSizePx(m.size), markerColorHex(m.color));
+    });
+    reposition();
   }
 
   function wireDrag(node, marker) {
@@ -135,5 +165,5 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
     node.addEventListener("pointercancel", end);
   }
 
-  return { setMarkers, getMarkers, addAt, remove, restore, reposition };
+  return { setMarkers, getMarkers, addAt, remove, restore, reposition, refreshIcons };
 }
