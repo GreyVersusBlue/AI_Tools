@@ -46,6 +46,25 @@ Reminder: coming soon means not right now.
 | Tournament Bracket & Station Rotation | Brackets plus timed station rotation for PE units, paired with the Classroom Timer. |
 | Gallery Walk QR Codes | Batch QR codes linking to student work for a gallery walk. |
 
+## Blank Map Generator — Enhancement Ideas
+
+Already built (`Tools/blank-map-generator.html`), but here's the wish list collected after building all five phases
+of it end to end. These are improvements to an existing tool, not new standalone tools, so they don't get a "coming
+soon" row on `index.html` — graduating one just means shipping it and deleting its row here.
+
+| Idea | What it would do |
+|---|---|
+| Mercator-aware calibration | Add a projection-type choice (equirectangular vs. Mercator) so lat/long stays accurate on the very common Mercator-projected Commons maps, not just the equirectangular ones the current linear math assumes. |
+| Draggable compass rose & locator inset | Both are pinned to a fixed corner right now; let them move like the legend already does, so they can be dragged out of the way of markers/labels. |
+| Multiple saved map projects | Only one working map persists today. Add named save/switch, like the School Calendar Visualizer's year templates, so a teacher can keep separate annotated maps per unit without losing one to start another. |
+| Per-legend-entry color & size | Every marker of a given style shares one fixed color. Let color (and maybe size) be set per legend entry, so e.g. two colors of star can mean two different things. |
+| Freehand/line drawing tool | Arrows and lines for trade routes, migration paths, borders — the single most common thing a "blank map" labeling activity needs that this can't do yet. |
+| Download as PNG | Export the finished map as an image file, not just through the browser print dialog, for dropping into a slide deck or worksheet. |
+| Undo for delete | Deleting a label or marker (an easy misclick mid-drag, especially on a touchscreen) has no way back except re-placing and retyping it. |
+| "Safe to hand out" license filter | A search toggle limiting results to Public Domain/CC0 maps, since classroom handouts should avoid anything with a restrictive attribution requirement. |
+| Bigger touch targets | Delete buttons and drag handles are sized for a mouse; on a shared classroom tablet they're fiddly. |
+| Search pagination | Results are capped at about a dozen with no "load more," so a niche regional map might never surface if it's not on the first page. |
+
 ## Picking one up
 
 When an idea gets built for real:

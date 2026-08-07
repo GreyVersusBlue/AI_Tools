@@ -183,6 +183,53 @@
     <span class="pitch">Batch QR codes linking to student work for a gallery walk.</span>
   </div>
 
+  <h2>Blank Map Generator &mdash; Enhancement Ideas</h2>
+  <p class="pitch" style="margin-bottom:.8rem;color:var(--dim);">
+    Already built &mdash; this is the wish list collected after building all five phases of it end to end.
+    Improvements to an existing tool, not new standalone tools.
+  </p>
+
+  <div class="idea" id="bmg-mercator-calibration">
+    <span class="name">Mercator-aware calibration</span><span class="badge">Enhancement</span>
+    <span class="pitch">Add a projection-type choice (equirectangular vs. Mercator) so lat/long stays accurate on the very common Mercator-projected Commons maps, not just the equirectangular ones the current linear math assumes.</span>
+  </div>
+  <div class="idea" id="bmg-draggable-compass-locator">
+    <span class="name">Draggable compass rose &amp; locator inset</span><span class="badge">Enhancement</span>
+    <span class="pitch">Both are pinned to a fixed corner right now; let them move like the legend already does, so they can be dragged out of the way of markers/labels.</span>
+  </div>
+  <div class="idea" id="bmg-multiple-projects">
+    <span class="name">Multiple saved map projects</span><span class="badge">Enhancement</span>
+    <span class="pitch">Only one working map persists today. Add named save/switch, like the School Calendar Visualizer&rsquo;s year templates, so a teacher can keep separate annotated maps per unit without losing one to start another.</span>
+  </div>
+  <div class="idea" id="bmg-legend-color-size">
+    <span class="name">Per-legend-entry color &amp; size</span><span class="badge">Enhancement</span>
+    <span class="pitch">Every marker of a given style shares one fixed color. Let color (and maybe size) be set per legend entry, so e.g. two colors of star can mean two different things.</span>
+  </div>
+  <div class="idea" id="bmg-freehand-drawing">
+    <span class="name">Freehand/line drawing tool</span><span class="badge">Enhancement</span>
+    <span class="pitch">Arrows and lines for trade routes, migration paths, borders &mdash; the single most common thing a "blank map" labeling activity needs that this can&rsquo;t do yet.</span>
+  </div>
+  <div class="idea" id="bmg-download-png">
+    <span class="name">Download as PNG</span><span class="badge">Enhancement</span>
+    <span class="pitch">Export the finished map as an image file, not just through the browser print dialog, for dropping into a slide deck or worksheet.</span>
+  </div>
+  <div class="idea" id="bmg-undo-delete">
+    <span class="name">Undo for delete</span><span class="badge">Enhancement</span>
+    <span class="pitch">Deleting a label or marker (an easy misclick mid-drag, especially on a touchscreen) has no way back except re-placing and retyping it.</span>
+  </div>
+  <div class="idea" id="bmg-license-filter">
+    <span class="name">"Safe to hand out" license filter</span><span class="badge">Enhancement</span>
+    <span class="pitch">A search toggle limiting results to Public Domain/CC0 maps, since classroom handouts should avoid anything with a restrictive attribution requirement.</span>
+  </div>
+  <div class="idea" id="bmg-touch-targets">
+    <span class="name">Bigger touch targets</span><span class="badge">Enhancement</span>
+    <span class="pitch">Delete buttons and drag handles are sized for a mouse; on a shared classroom tablet they&rsquo;re fiddly.</span>
+  </div>
+  <div class="idea" id="bmg-search-pagination">
+    <span class="name">Search pagination</span><span class="badge">Enhancement</span>
+    <span class="pitch">Results are capped at about a dozen with no "load more," so a niche regional map might never surface if it&rsquo;s not on the first page.</span>
+  </div>
+
   <footer>
     Source of truth for this list is <code>/IDEAS_BACKLOG.md</code> in the repo. See something missing, or want to
     call dibs on building one? Email <span style="color:var(--pen)">@dsmoore</span>.
