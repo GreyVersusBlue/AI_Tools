@@ -30,6 +30,12 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 
 `index.html` at the repo root is the toolkit landing page. Each tool's own entry point is a single `.html` file inside `Tools/`. Supporting scripts, fonts, and libraries for a given tool live in a matching subfolder under `Tools/` (e.g. `Tools/final-grade-checker/`, `Tools/schedule/`, `Tools/seating-chart/`). You shouldn't need to touch those unless you're editing the tool itself.
 
+## Ideas backlog
+
+Planned-but-not-built tools (subject-specific ones included) are tracked in [`IDEAS_BACKLOG.md`](IDEAS_BACKLOG.md),
+and shown as "coming soon" entries on the [live toolkit page](index.html) and on
+[`ideas-backlog.html`](ideas-backlog.html).
+
 ## Feedback
 
 Found a bug, or want something a tool doesn't do yet? Reach out directly — feedback's always welcome.

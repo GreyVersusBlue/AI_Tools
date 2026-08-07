@@ -57,7 +57,26 @@
      "N records" (.app-bar .rhs) and "N files" (memo Attach line) are static
      text, NOT derived from the DOM — unlike the "X / X present" filter count,
      which already computes live from #rows .row. Any pass that adds or removes
-     a tool row must manually update both of these to match the new row count.
+     a REAL (built, clickable) tool row must manually update both of these to
+     match the new row count. See note 6 below for why placeholders don't count.
+
+  6. "COMING SOON" PLACEHOLDER ROWS (added 2026-08-07)
+     #rows now also contains .section-head dividers (General / Classroom
+     Logistics, Math, ELA, Science, Social Studies, World Language, Arts & PE)
+     and .row.soon entries — same markup as a real row, but a <div> instead of
+     an <a> (no href), styled muted, with a "Soon"/"Idea" badge instead of a
+     real grade/Open link. These are backlog ideas, not built tools:
+       - They intentionally do NOT count toward "N records"/"N files" above.
+       - They DO still participate in the live filter/search (they're .row
+         elements with data-tags), so searching still surfaces them.
+       - The master list of ideas lives in /IDEAS_BACKLOG.md (repo root) and
+         on ideas-backlog.html (linked from the footer's C5 line). Keep those
+         two in sync with whatever's reflected here.
+     To graduate a placeholder into a real tool: delete its .row.soon div,
+     add a normal <a class="row ink" href="Tools/...">  in its place (reuse
+     its data-tool/data-tags), remove the matching entry from
+     IDEAS_BACKLOG.md / ideas-backlog.html, and THEN apply notes 4 and 5 above
+     (bump N records/N files, memo/footer dates, changelog entry).
 -->
 
 <style>
@@ -396,6 +415,27 @@
     padding:.05rem .32rem;
   }
 
+  /* ============ section dividers + "coming soon" placeholder rows ============ */
+  .section-head{
+    font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim);background:var(--paper);
+    padding:.6rem 1rem;border-bottom:1px solid var(--line-strong);
+  }
+  .section-head:not(:first-child){border-top:1px solid var(--line-strong);}
+
+  .row.soon{cursor:default;}
+  .row.soon:hover,.row.soon:focus-visible{background:transparent;}
+  .row.soon:nth-child(even):hover{background:var(--panel-alt);}
+  .row.soon::after,.row.soon::before{display:none;}
+  .row.soon:hover .per b{color:var(--faint);}
+  .row.soon .name{color:var(--dim);}
+  .row.soon .grade{
+    width:auto;height:auto;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);border:1px dashed var(--line-strong);border-radius:4px;
+    padding:.3rem .55rem;
+  }
+  .row.soon .open{color:var(--faint);}
+
   /* ============ progress report (changelog) ============ */
   .news{
     margin-top:1.5rem;
@@ -427,6 +467,12 @@
   .log li:last-child{border-bottom:none;}
   .log time{font-family:var(--mono);font-size:.72rem;color:var(--dim);padding-top:.12rem;}
   .log b{font-weight:700;}
+  .log a{color:var(--accent);}
+  .log code{
+    font-family:var(--mono);font-size:.82rem;color:var(--ink);
+    background:var(--paper);border:1px solid var(--line);border-radius:3px;
+    padding:.02rem .3rem;
+  }
 
   /* ============ report-card footer ============ */
   .report{
@@ -448,6 +494,7 @@
     display:block;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;
     color:var(--faint);margin-bottom:.35rem;
   }
+  .report .codes a{color:var(--accent);}
   .report .meta{
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;
     padding:.7rem 1.1rem;font-size:.7rem;color:var(--dim);
@@ -534,7 +581,7 @@
         <dl class="memo ink" style="--d:100ms">
           <dt>To</dt><dd>All staff</dd>
           <dt>From</dt><dd>D. Moore</dd>
-          <dt>Date</dt><dd id="memo-date">2026-08-06</dd>
+          <dt>Date</dt><dd id="memo-date">2026-08-07</dd>
           <dt>CC</dt><dd>Whoever asked for the link again</dd>
           <dt>Attach</dt><dd>12 files <span class="note">(browser-only, nothing to install)</span></dd>
         </dl>
@@ -554,7 +601,7 @@
              placeholder="Filter by name or tag&hellip;">
       <span class="slash" aria-hidden="true">/</span>
     </label>
-    <p class="count" id="count" role="status" aria-live="polite"><b>12 / 12</b> present</p>
+    <p class="count" id="count" role="status" aria-live="polite"><b>37 / 37</b> present</p>
   </div>
 
   <div class="table-head ink" style="--d:420ms">
@@ -562,6 +609,8 @@
   </div>
 
   <div class="rows" id="rows">
+
+    <div class="section-head ink" style="--d:460ms">General / Classroom Logistics</div>
 
     <a class="row ink" style="--d:480ms" href="Tools/Name%20Picker.html"
        data-tool="name-picker" data-tags="random cold call participation groups shuffle roster who goes first">
@@ -743,6 +792,343 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
+    <div class="row soon ink" style="--d:1260ms"
+       data-tool="group-team-generator" data-tags="groups teams randomizer constraints balance random">
+      <span class="per"><span class="lbl">Per</span><b>13</b></span>
+      <span>
+        <span class="name">Group / Team Generator</span>
+        <span class="pitch">Random groups with constraints &mdash; keep certain students apart, balance skill levels.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>groups</span><span>random</span><span>teams</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1272ms"
+       data-tool="behavior-points-tracker" data-tags="behavior points tracker classroom management incentives">
+      <span class="per"><span class="lbl">Per</span><b>14</b></span>
+      <span>
+        <span class="name">Behavior &amp; Points Tracker</span>
+        <span class="pitch">A quick per-student tally or point system you can run during class.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>behavior</span><span>points</span><span>tracker</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1284ms"
+       data-tool="exit-ticket-generator" data-tags="exit ticket bell ringer warm up printable">
+      <span class="per"><span class="lbl">Per</span><b>15</b></span>
+      <span>
+        <span class="name">Exit Ticket / Bell Ringer Generator</span>
+        <span class="pitch">Printable half-sheets or a rotating bank of warm-up prompts.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>exit ticket</span><span>bell ringer</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1296ms"
+       data-tool="rubric-builder" data-tags="rubric grading criteria printable">
+      <span class="per"><span class="lbl">Per</span><b>16</b></span>
+      <span>
+        <span class="name">Rubric Builder</span>
+        <span class="pitch">Build, save, and print grading rubrics.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>rubric</span><span>grading</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1308ms"
+       data-tool="bracket-tournament-generator" data-tags="bracket tournament review game elimination">
+      <span class="per"><span class="lbl">Per</span><b>17</b></span>
+      <span>
+        <span class="name">Bracket / Tournament Generator</span>
+        <span class="pitch">Single-elimination brackets for review games or PE tournaments.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>bracket</span><span>tournament</span><span>review game</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1320ms"
+       data-tool="review-game-board" data-tags="jeopardy review game quiz board projector">
+      <span class="per"><span class="lbl">Per</span><b>18</b></span>
+      <span>
+        <span class="name">Quiz / Review Game Board</span>
+        <span class="pitch">A simple Jeopardy-style board for projector review games.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>review game</span><span>quiz</span><span>projector</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1332ms"
+       data-tool="certificate-award-maker" data-tags="certificate award printable recognition">
+      <span class="per"><span class="lbl">Per</span><b>19</b></span>
+      <span>
+        <span class="name">Certificate &amp; Award Maker</span>
+        <span class="pitch">Printable certificates and awards for students.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>certificate</span><span>award</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1344ms"
+       data-tool="field-trip-permission-slip" data-tags="field trip permission slip printable">
+      <span class="per"><span class="lbl">Per</span><b>20</b></span>
+      <span>
+        <span class="name">Field Trip Permission Slip Generator</span>
+        <span class="pitch">Fill in the trip details, get a printable permission slip.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>field trip</span><span>permission slip</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1356ms"
+       data-tool="grade-distribution-visualizer" data-tags="grades distribution histogram stats gradebook">
+      <span class="per"><span class="lbl">Per</span><b>21</b></span>
+      <span>
+        <span class="name">Grade Distribution Visualizer</span>
+        <span class="pitch">Paste a gradebook export and see class-wide histograms and stats.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>grades</span><span>distribution</span><span>stats</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1368ms"
+       data-tool="qr-scavenger-hunt-builder" data-tags="qr code scavenger hunt stations answer key">
+      <span class="per"><span class="lbl">Per</span><b>22</b></span>
+      <span>
+        <span class="name">QR Scavenger Hunt Builder</span>
+        <span class="pitch">Batch-generate a set of station QR codes plus an answer key.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>qr code</span><span>scavenger hunt</span><span>stations</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1380ms"
+       data-tool="hall-pass-log" data-tags="hall pass sign out log tracking">
+      <span class="per"><span class="lbl">Per</span><b>23</b></span>
+      <span>
+        <span class="name">Digital Hall Pass / Sign-Out Log</span>
+        <span class="pitch">Track and print who&rsquo;s out of the room and when.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>hall pass</span><span>sign-out</span><span>log</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="section-head ink" style="--d:1392ms">Math</div>
+
+    <div class="row soon ink" style="--d:1400ms"
+       data-tool="graph-paper-generator" data-tags="math graph paper number line coordinate plane printable">
+      <span class="per"><span class="lbl">Per</span><b>24</b></span>
+      <span>
+        <span class="name">Graph Paper &amp; Number Line Generator</span>
+        <span class="pitch">Printable custom graph paper, number lines, and coordinate planes.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>math</span><span>graph paper</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1412ms"
+       data-tool="math-drill-generator" data-tags="math fluency drill facts timed printable">
+      <span class="per"><span class="lbl">Per</span><b>25</b></span>
+      <span>
+        <span class="name">Math Fact Drill Sheet Generator</span>
+        <span class="pitch">Randomized timed drill sheets with an answer key.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>math</span><span>fluency</span><span>drill</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1424ms"
+       data-tool="formula-sheet-builder" data-tags="math formulas reference sheet printable">
+      <span class="per"><span class="lbl">Per</span><b>26</b></span>
+      <span>
+        <span class="name">Formula Reference Sheet Builder</span>
+        <span class="pitch">Build a printable formula reference sheet for a unit.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>math</span><span>formulas</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="section-head ink" style="--d:1436ms">English / Language Arts</div>
+
+    <div class="row soon ink" style="--d:1444ms"
+       data-tool="vocab-flashcard-generator" data-tags="ela vocabulary flashcards word wall printable">
+      <span class="per"><span class="lbl">Per</span><b>27</b></span>
+      <span>
+        <span class="name">Vocabulary Flashcard &amp; Word Wall Generator</span>
+        <span class="pitch">Turn a word list into printable flashcards or word wall cards.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>vocabulary</span><span>flashcards</span><span>word wall</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1456ms"
+       data-tool="writing-prompt-generator" data-tags="ela writing prompt generator genre">
+      <span class="per"><span class="lbl">Per</span><b>28</b></span>
+      <span>
+        <span class="name">Writing Prompt Generator</span>
+        <span class="pitch">Random writing prompts by genre.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>writing</span><span>prompt</span><span>genre</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1468ms"
+       data-tool="ssr-log-tracker" data-tags="ela reading log ssr independent reading">
+      <span class="per"><span class="lbl">Per</span><b>29</b></span>
+      <span>
+        <span class="name">Silent Reading (SSR) Log Tracker</span>
+        <span class="pitch">Track books and pages read during independent reading time.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>reading log</span><span>ssr</span><span>independent reading</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="section-head ink" style="--d:1480ms">Science</div>
+
+    <div class="row soon ink" style="--d:1488ms"
+       data-tool="lab-group-role-randomizer" data-tags="science lab groups roles randomizer">
+      <span class="per"><span class="lbl">Per</span><b>30</b></span>
+      <span>
+        <span class="name">Lab Group &amp; Role Randomizer</span>
+        <span class="pitch">Randomize lab groups and assign roles &mdash; recorder, materials, safety, etc.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>lab groups</span><span>roles</span><span>randomizer</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1500ms"
+       data-tool="lab-safety-contract-tracker" data-tags="science lab safety contract tracker signature">
+      <span class="per"><span class="lbl">Per</span><b>31</b></span>
+      <span>
+        <span class="name">Lab Safety Contract Tracker</span>
+        <span class="pitch">Track signed lab safety contracts per student.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>lab safety</span><span>contract</span><span>tracker</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1512ms"
+       data-tool="data-chart-builder" data-tags="science data table chart graph lab report">
+      <span class="per"><span class="lbl">Per</span><b>32</b></span>
+      <span>
+        <span class="name">Data Table &rarr; Chart Builder</span>
+        <span class="pitch">Turn lab data into a quick chart to paste into a report.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>data table</span><span>chart</span><span>lab report</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="section-head ink" style="--d:1524ms">Social Studies</div>
+
+    <div class="row soon ink" style="--d:1532ms"
+       data-tool="blank-map-generator" data-tags="social studies map blank printable geography">
+      <span class="per"><span class="lbl">Per</span><b>33</b></span>
+      <span>
+        <span class="name">Blank Map Generator</span>
+        <span class="pitch">Printable blank maps by region for labeling activities.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>maps</span><span>geography</span><span>printable</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1544ms"
+       data-tool="timeline-builder" data-tags="social studies timeline events history">
+      <span class="per"><span class="lbl">Per</span><b>34</b></span>
+      <span>
+        <span class="name">Timeline Builder</span>
+        <span class="pitch">Build a printable or on-screen timeline of events.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>timeline</span><span>events</span><span>history</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="section-head ink" style="--d:1556ms">World Language</div>
+
+    <div class="row soon ink" style="--d:1564ms"
+       data-tool="vocab-conjugation-drill" data-tags="world language vocabulary conjugation drill flashcards">
+      <span class="per"><span class="lbl">Per</span><b>35</b></span>
+      <span>
+        <span class="name">Vocab &amp; Conjugation Drill Generator</span>
+        <span class="pitch">Flashcard-style drills for vocabulary and verb conjugation.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>vocabulary</span><span>conjugation</span><span>flashcards</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="section-head ink" style="--d:1576ms">Arts &amp; PE</div>
+
+    <div class="row soon ink" style="--d:1584ms"
+       data-tool="pe-tournament-station-rotation" data-tags="pe tournament bracket station rotation">
+      <span class="per"><span class="lbl">Per</span><b>36</b></span>
+      <span>
+        <span class="name">Tournament Bracket &amp; Station Rotation</span>
+        <span class="pitch">Brackets plus timed station rotation for PE units, paired with the Classroom Timer.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>pe</span><span>tournament</span><span>stations</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
+    <div class="row soon ink" style="--d:1596ms"
+       data-tool="gallery-walk-qr" data-tags="art gallery walk qr code student work">
+      <span class="per"><span class="lbl">Per</span><b>37</b></span>
+      <span>
+        <span class="name">Gallery Walk QR Codes</span>
+        <span class="pitch">Batch QR codes linking to student work for a gallery walk.</span>
+        <span class="comment" aria-hidden="true">Coming soon means not right now.</span>
+      </span>
+      <span class="tags"><span>art</span><span>gallery walk</span><span>qr code</span></span>
+      <span class="grade" title="Comment: coming soon means not right now.">Soon</span>
+      <span class="open">Idea</span>
+    </div>
+
   </div>
 
   <p class="empty" id="empty" hidden>
@@ -756,9 +1142,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       Progress report
-      <span class="tally">6 recent entries</span>
+      <span class="tally">7 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-07">Aug 7, 2026</time>
+        <span><b>Subject sections + Ideas Backlog.</b> Grouped the toolkit under "General / Classroom Logistics," then added Math, ELA, Science, Social Studies, World Language, and Arts &amp; PE sections with "coming soon" placeholders for what's planned. Full write-up lives on the new <a href="ideas-backlog.html">ideas backlog</a> page (also in <code>IDEAS_BACKLOG.md</code>).</span>
+      </li>
       <li>
         <time datetime="2026-08-06">Aug 6, 2026</time>
         <span><b>School Calendar Visualizer.</b> Full-year calendar template with tagged day types (holidays, half days, workdays, testing windows) and lesson pacing notes, saved locally and printable.</span>
@@ -792,11 +1182,12 @@
       <span class="k">C1</span> Runs entirely in your browser &mdash; nothing is uploaded, logged, or synced.<br>
       <span class="k">C2</span> Unofficial. Not affiliated with any school, district, or SIS vendor.<br>
       <span class="k">C3</span> A pleasure to have in your bookmarks bar.<br id="c4-br" hidden>
-      <span class="k" id="c4-k" hidden>C4</span><span id="c4-txt" hidden> Filed under &ldquo;creative liberty.&rdquo;</span>
+      <span class="k" id="c4-k" hidden>C4</span><span id="c4-txt" hidden> Filed under &ldquo;creative liberty.&rdquo;</span><br>
+      <span class="k">C5</span> Curious what&rsquo;s next? See the <a href="ideas-backlog.html">ideas backlog</a>. Reminder: coming soon means not right now.
     </div>
     <div class="meta">
       <span>Questions, bugs, contributions &mdash; email <span class="handle">@dsmoore</span>. Please advise.</span>
-      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-08-06</span></span>
+      <span class="rhs">Built by D. Moore + Claude · rev <span id="rev">2026-08-07</span></span>
     </div>
   </footer>
 
