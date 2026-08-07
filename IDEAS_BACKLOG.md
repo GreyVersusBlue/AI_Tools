@@ -23,7 +23,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Graph Paper & Number Line Generator | Printable custom graph paper, number lines, and coordinate planes. |
 | Math Fact Drill Sheet Generator | Randomized timed drill sheets with an answer key. |
 | Formula Reference Sheet Builder | Build a printable formula reference sheet for a unit. |
 
