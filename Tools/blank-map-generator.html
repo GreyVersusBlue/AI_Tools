@@ -57,6 +57,8 @@
   .regionRow { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .regionRow select { min-width: 160px; }
   .loadMoreRow { display: flex; justify-content: center; margin-top: 12px; }
+  .uploadRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .uploadRow .hint { flex: 1; min-width: 220px; }
 
   .status { font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
   .status.err { color: var(--err); font-weight: 600; }
@@ -119,6 +121,7 @@
   }
   .bmg-label:hover .lbl-del, .bmg-label.editing .lbl-del { display: flex; }
   .bmg-label.editing { flex-wrap: wrap; row-gap: 4px; }
+  .bmg-label.selected .lbl-text { outline: 2px solid var(--accent-2); outline-offset: 1px; }
   .lbl-style-bar {
     order: 5; width: 100%; display: flex; align-items: center; gap: 4px; margin-top: 2px;
     background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px;
@@ -145,6 +148,7 @@
     box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none; align-items: center; justify-content: center;
   }
   .bmg-marker:hover .mkr-del { display: flex; }
+  .bmg-marker.selected .mkr-icon { outline: 2px solid var(--accent-2); outline-offset: 2px; border-radius: 50%; }
 
   #regionSvg { position: absolute; top: 0; left: 0; pointer-events: none; }
   #regionChipLayer { position: absolute; inset: 0; pointer-events: none; }
@@ -172,6 +176,11 @@
   }
   #legendPanel .legend-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
   #legendPanel .legend-row:last-child { margin-bottom: 0; }
+  #legendPanel .legend-row.dragging-row { opacity: 0.4; }
+  #legendPanel .legend-grip {
+    cursor: grab; color: var(--muted); font-size: 0.7rem; line-height: 1; flex-shrink: 0;
+    padding: 0 1px; user-select: none;
+  }
   #legendPanel .legend-icon { display: flex; flex-shrink: 0; }
   #legendPanel .legend-icon svg { display: block; }
   #legendPanel .legend-input {
@@ -325,6 +334,11 @@
     <div id="searchStatus" class="status" hidden></div>
     <div id="resultsGrid" class="grid"></div>
     <div id="loadMoreRow" class="loadMoreRow" hidden><button id="btnLoadMore" class="small">Load more results</button></div>
+    <div class="uploadRow">
+      <span class="hint" style="margin:0;">Or use your own map image (a scan, a textbook figure, a district map) instead of searching Commons:</span>
+      <button id="btnUploadMap" class="small">Upload an image&hellip;</button>
+      <input type="file" id="uploadMapInput" accept="image/*" hidden data-no-pan>
+    </div>
   </div>
 
   <div id="recentCard" class="card recent-card no-print" hidden>
@@ -352,11 +366,13 @@
       <button id="btnBatchPlace" class="small" title="Paste a list of name/latitude/longitude coordinates and place a marker + label for each at once">Batch Place Markers&hellip;</button>
       <button id="btnAddRegion" class="small toggle">+ Shade Region</button>
       <select id="regionColorSelect" class="styleSelect" hidden></select>
+      <select id="regionPatternSelect" class="styleSelect" hidden></select>
       <button id="btnAddLine" class="small toggle">+ Draw Line</button>
       <select id="lineColorSelect" class="styleSelect" hidden></select>
       <select id="lineStyleSelect" class="styleSelect" hidden>
         <option value="solid">Solid</option>
         <option value="dashed">Dashed</option>
+        <option value="dotted">Dotted</option>
       </select>
       <label id="lineArrowWrap" class="lineArrowLabel" hidden><input type="checkbox" id="lineArrowCheck" checked data-no-pan> Arrowhead</label>
       <button id="btnFinishRegion" class="small primary" hidden>Finish shape</button>
@@ -468,9 +484,12 @@ import {
   createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex, numberedOrder,
   MARKER_COLORS, MARKER_SIZES, DEFAULT_MARKER_COLOR, DEFAULT_MARKER_SIZE,
 } from './blank-map-generator/bmg-markers.js';
-import { createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg } from './blank-map-generator/bmg-regions.js';
+import {
+  createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg,
+  REGION_PATTERNS, DEFAULT_REGION_PATTERN,
+} from './blank-map-generator/bmg-regions.js';
 import { createLineLayer, LINE_COLORS, lineColorHex, lineSwatchSvg } from './blank-map-generator/bmg-lines.js';
-import { createLegendPanel, markerLegendKey } from './blank-map-generator/bmg-legend.js';
+import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
@@ -529,8 +548,8 @@ const lineLayer = createLineLayer(el('lineSvg'), el('lineChipLayer'), viewer, {
 
 const legendPanel = createLegendPanel(el('legendPanel'), {
   onMarkerTextChange(key, text) { project.legendText[key] = text; save(); },
-  onRegionTextChange(color, text) { project.regionLegendText[color] = text; save(); },
-  onLineTextChange(color, text) { project.lineLegendText[color] = text; save(); },
+  onRegionTextChange(key, text) { project.regionLegendText[key] = text; save(); },
+  onLineTextChange(key, text) { project.lineLegendText[key] = text; save(); },
   onMarkerColorChange(style, oldColor, newColor) {
     if (oldColor === newColor) return;
     const oldKey = markerLegendKey(style, oldColor);
@@ -566,11 +585,28 @@ const legendPanel = createLegendPanel(el('legendPanel'), {
     save();
   },
   onMove(pos) { project.legendPos = pos; save(); },
+  onReorder(draggedKey, targetKey) {
+    // Read the row order straight off the DOM (which already reflects any
+    // previous saved order plus the natural grouping order for anything
+    // not yet explicitly placed) rather than trying to reconstruct it —
+    // that DOM order is exactly what the user just saw and dragged within.
+    const order = [...el('legendPanel').querySelectorAll('.legend-row')].map(r => r.dataset.legendKey);
+    const from = order.indexOf(draggedKey);
+    const to = order.indexOf(targetKey);
+    if (from === -1 || to === -1) return;
+    order.splice(from, 1);
+    order.splice(to, 0, draggedKey);
+    project.legendOrder = order;
+    save();
+    renderLegend();
+  },
 });
 
 const locator = createLocatorInset(el('locatorInset'), el('locatorImg'), el('locatorRect'), viewport, viewer);
 
 el('regionColorSelect').innerHTML = REGION_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
+el('regionPatternSelect').innerHTML = REGION_PATTERNS.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
+el('regionPatternSelect').value = DEFAULT_REGION_PATTERN;
 el('markerColorSelect').innerHTML = MARKER_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
 el('markerColorSelect').value = DEFAULT_MARKER_COLOR;
 el('markerSizeSelect').innerHTML = MARKER_SIZES.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
@@ -583,6 +619,7 @@ function renderLegend() {
     markerColorHex, colorOptions: MARKER_COLORS, sizeOptions: MARKER_SIZES,
     regions: project.regions, regionLegendText: project.regionLegendText, swatchSvg: regionSwatchSvg,
     lines: project.lines, lineLegendText: project.lineLegendText, lineSwatchSvg,
+    order: project.legendOrder,
   });
 }
 
@@ -937,6 +974,7 @@ function setPlaceMode(mode) {
   el('markerColorSelect').hidden = mode !== 'marker';
   el('markerSizeSelect').hidden = mode !== 'marker';
   el('regionColorSelect').hidden = mode !== 'region';
+  el('regionPatternSelect').hidden = mode !== 'region';
   el('lineColorSelect').hidden = mode !== 'line';
   el('lineStyleSelect').hidden = mode !== 'line';
   el('lineArrowWrap').hidden = mode !== 'line';
@@ -973,14 +1011,31 @@ viewport.addEventListener('dblclick', e => {
   finishShape();
 });
 
+const NUDGE_KEYS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+
 document.addEventListener('keydown', e => {
   const active = activeDraftLayer();
   if (e.key === 'Escape') {
     if (active && active.layer.draftPointCount() > 0) { active.layer.cancelDraft(); updateShapeButtons(); }
     else if (placeMode !== 'none') setPlaceMode('none');
-  } else if (e.key === 'Enter' && active) {
-    finishShape();
+    return;
   }
+  if (e.key === 'Enter' && active) { finishShape(); return; }
+
+  // Arrow-key nudge for whichever label or marker is currently selected
+  // (click one to select it — see bmg-labels.js/bmg-markers.js's select()).
+  // Skipped while focus is in a text field so typing/searching still works.
+  const dir = NUDGE_KEYS[e.key];
+  if (!dir) return;
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  const selLabel = labelLayer.getSelectedId();
+  const selMarker = markerLayer.getSelectedId();
+  if (!selLabel && !selMarker) return;
+  e.preventDefault();
+  const step = (e.shiftKey ? 10 : 2) / viewer.getView().scale;
+  if (selLabel) labelLayer.nudge(selLabel, dir[0] * step, dir[1] * step);
+  else markerLayer.nudge(selMarker, dir[0] * step, dir[1] * step);
 });
 
 viewport.addEventListener('pointerdown', e => {
@@ -991,7 +1046,13 @@ viewport.addEventListener('pointerup', e => {
   if (!downPt) return;
   const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
   downPt = null;
-  if (placeMode === 'none' || moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
+  if (placeMode === 'none') {
+    // A plain click on empty map background (not on a label/marker/other
+    // no-pan control) clears any keyboard-nudge selection.
+    if (moved < 4 && !e.target.closest('[data-no-pan]')) { labelLayer.deselect(); markerLayer.deselect(); }
+    return;
+  }
+  if (moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
   const stagePt = viewer.screenToStage(e.clientX, e.clientY);
   if (placeMode === 'label') {
     const label = labelLayer.addAt(stagePt.x, stagePt.y);
@@ -999,7 +1060,7 @@ viewport.addEventListener('pointerup', e => {
   } else if (placeMode === 'marker') {
     markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value, el('markerColorSelect').value, el('markerSizeSelect').value);
   } else if (placeMode === 'region') {
-    if (!regionLayer.isDrafting()) regionLayer.startDraft(el('regionColorSelect').value);
+    if (!regionLayer.isDrafting()) regionLayer.startDraft(el('regionColorSelect').value, el('regionPatternSelect').value);
     regionLayer.addDraftPoint(stagePt.x, stagePt.y);
     updateShapeButtons();
   } else if (placeMode === 'line') {
@@ -1124,6 +1185,49 @@ async function useResult(result) {
     setStatus(`Couldn't download that map (${escapeHtml(err.message)}).`, true);
   }
 }
+
+/** Reads a File's actual pixel dimensions by loading it into a throwaway <img>, since (unlike a Commons search result) an uploaded file has no metadata to read them from. */
+function readImageDimensions(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("that file doesn't look like a readable image")); };
+    img.src = url;
+  });
+}
+
+/** Bypasses Wikimedia Commons entirely — a teacher's own scan, textbook figure, or district map file, cached and used exactly like a downloaded Commons map from here on. Re-uploading the same file (same name/size/last-modified) reuses its existing cache entry instead of duplicating it. */
+async function useUploadedFile(file) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { setStatus('Please choose an image file (PNG, JPG, GIF, etc.).', true); return; }
+  setStatus('<span class="spinner"></span>Loading your image…');
+  try {
+    const id = `upload:${file.name}|${file.size}|${file.lastModified}`;
+    let record = await cache.getCachedMap(id).catch(() => null);
+    if (!record) {
+      const { width, height } = await readImageDimensions(file);
+      record = {
+        id, title: file.name.replace(/\.[a-zA-Z0-9]+$/, '') || 'Uploaded map', blob: file,
+        mime: file.type, width, height,
+        attribution: { artist: null, license: 'Uploaded image — you are responsible for verifying you have the right to use and share it.', licenseUrl: null, descriptionUrl: null },
+        cachedAt: Date.now(),
+      };
+      await cache.putCachedMap(record).catch(() => {});
+    }
+    displayMap(record);
+    setStatus('');
+  } catch (err) {
+    setStatus(`Couldn't load that image (${escapeHtml(err.message)}).`, true);
+  }
+}
+
+el('btnUploadMap').addEventListener('click', () => el('uploadMapInput').click());
+el('uploadMapInput').addEventListener('change', () => {
+  const file = el('uploadMapInput').files[0];
+  el('uploadMapInput').value = ''; // allow re-selecting the same file later
+  useUploadedFile(file);
+});
 
 function displayMap(record) {
   const isSameMap = project.mapId === record.id;
@@ -1301,6 +1405,44 @@ function pngRoundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Small canvas.createPattern() tile for a region's hatch/dots fill in PNG
+// export — mirrors bmg-regions.js's live SVG <pattern> defs (a light
+// background wash plus the differentiator shape), cached per color+pattern
+// combo so repeated regions of the same kind don't rebuild the tile.
+const pngPatternCache = new Map();
+function regionFillPatternTile(ctx, hex, pattern) {
+  const cacheKey = `${hex}::${pattern}`;
+  if (pngPatternCache.has(cacheKey)) return pngPatternCache.get(cacheKey);
+  const size = 14;
+  const tile = document.createElement('canvas');
+  tile.width = size;
+  tile.height = size;
+  const tctx = tile.getContext('2d');
+  tctx.fillStyle = hexToRgba(hex, 0.12);
+  tctx.fillRect(0, 0, size, size);
+  tctx.strokeStyle = hex;
+  tctx.fillStyle = hex;
+  if (pattern === 'hatch') {
+    tctx.lineWidth = 3.5;
+    [-size, 0, size].forEach(off => {
+      tctx.beginPath();
+      tctx.moveTo(off, size);
+      tctx.lineTo(off + size, 0);
+      tctx.stroke();
+    });
+  } else if (pattern === 'dots') {
+    tctx.beginPath();
+    tctx.arc(size * 0.28, size * 0.28, 1.6, 0, Math.PI * 2);
+    tctx.arc(size * 0.78, size * 0.78, 1.6, 0, Math.PI * 2);
+    tctx.fill();
+  }
+  const result = ctx.createPattern(tile, 'repeat');
+  pngPatternCache.set(cacheKey, result);
+  return result;
+}
+
+const LINE_DASH_ARRAYS = { dashed: [10, 7], dotted: [0.5, 8] };
+
 function hexToRgba(hex, alpha) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
@@ -1358,6 +1500,15 @@ function drawPngLabel(ctx, label, px, py, hideText) {
   }
 }
 
+/** Sorts drawable legend row descriptors per project.legendOrder, same rule bmg-legend.js's on-screen panel uses: explicitly-ordered keys first (in that order), anything new/unordered keeps its natural relative position after them. */
+function orderPngLegendRows(items) {
+  const orderIndex = new Map((project.legendOrder || []).map((k, i) => [k, i]));
+  return items
+    .map((item, i) => ({ item, i, o: orderIndex.has(item.key) ? orderIndex.get(item.key) : Infinity }))
+    .sort((a, b) => (a.o - b.o) || (a.i - b.i))
+    .map(x => x.item);
+}
+
 async function drawPngLegend(ctx) {
   const groups = [];
   const seenGroup = new Set();
@@ -1369,13 +1520,27 @@ async function drawPngLegend(ctx) {
     groups.push({ style: m.style, color: m.color });
   });
   const numbered = numberedOrder(project.markers);
-  const colors = [...new Set(project.regions.map(r => r.color))];
-  const lineColors = [...new Set(project.lines.map(l => l.color))];
-  if (!groups.length && !numbered.length && !colors.length && !lineColors.length) return;
+  const regionGroups = [];
+  const seenRegionGroup = new Set();
+  project.regions.forEach(r => {
+    const gkey = regionLegendKey(r.color, r.pattern);
+    if (seenRegionGroup.has(gkey)) return;
+    seenRegionGroup.add(gkey);
+    regionGroups.push({ color: r.color, pattern: r.pattern });
+  });
+  const lineGroups = [];
+  const seenLineGroup = new Set();
+  project.lines.forEach(l => {
+    const gkey = lineLegendKey(l.color, l.style);
+    if (seenLineGroup.has(gkey)) return;
+    seenLineGroup.add(gkey);
+    lineGroups.push({ color: l.color, style: l.style });
+  });
+  if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length) return;
   const hideText = !!project.studentBlankMode;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
-  const rows = groups.length + numbered.length + colors.length + lineColors.length;
+  const rows = groups.length + numbered.length + regionGroups.length + lineGroups.length;
   const height = padTop + titleH + rows * rowH + 8;
 
   pngRoundRect(ctx, pos.x, pos.y, width, height, 8);
@@ -1388,48 +1553,38 @@ async function drawPngLegend(ctx) {
   ctx.font = 'bold 10px sans-serif';
   ctx.fillText('KEY', pos.x + padX, pos.y + padTop + 8);
 
+  const items = [
+    ...groups.map(g => ({ key: markerLegendKey(g.style, g.color), kind: 'marker', data: g })),
+    ...numbered.map((m, i) => ({ key: m.id, kind: 'numbered', data: { m, number: i + 1 } })),
+    ...regionGroups.map(g => ({ key: regionLegendKey(g.color, g.pattern), kind: 'region', data: g })),
+    ...lineGroups.map(g => ({ key: lineLegendKey(g.color, g.style), kind: 'line', data: g })),
+  ];
+
   let rowY = pos.y + padTop + titleH;
-  for (const g of groups) {
-    const key = markerLegendKey(g.style, g.color);
-    const img = await svgToImage(markerIconSvg(g.style, iconSize, markerColorHex(g.color)));
-    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    if (!hideText) {
-      ctx.fillStyle = '#1f2430';
-      ctx.font = '12px sans-serif';
-      ctx.fillText(project.legendText[key] || `(${g.style})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+  for (const { key, kind, data } of orderPngLegendRows(items)) {
+    let img, fallback, textVal;
+    if (kind === 'marker') {
+      img = await svgToImage(markerIconSvg(data.style, iconSize, markerColorHex(data.color)));
+      fallback = `(${data.style})`;
+      textVal = project.legendText[key];
+    } else if (kind === 'numbered') {
+      img = await svgToImage(markerIconSvg('number', iconSize, markerColorHex(data.m.color), data.number));
+      fallback = `(#${data.number})`;
+      textVal = project.legendText[key];
+    } else if (kind === 'region') {
+      img = await svgToImage(regionSwatchSvg(data.color, iconSize, data.pattern));
+      fallback = `(${key})`;
+      textVal = project.regionLegendText[key];
+    } else {
+      img = await svgToImage(lineSwatchSvg(data.color, iconSize, data.style));
+      fallback = `(${key} line)`;
+      textVal = project.lineLegendText[key];
     }
-    rowY += rowH;
-  }
-  for (let i = 0; i < numbered.length; i++) {
-    const m = numbered[i];
-    const number = i + 1;
-    const img = await svgToImage(markerIconSvg('number', iconSize, markerColorHex(m.color), number));
     ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
     if (!hideText) {
       ctx.fillStyle = '#1f2430';
       ctx.font = '12px sans-serif';
-      ctx.fillText(project.legendText[m.id] || `(#${number})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
-    }
-    rowY += rowH;
-  }
-  for (const color of colors) {
-    const img = await svgToImage(regionSwatchSvg(color, iconSize));
-    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    if (!hideText) {
-      ctx.fillStyle = '#1f2430';
-      ctx.font = '12px sans-serif';
-      ctx.fillText(project.regionLegendText[color] || `(${color})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
-    }
-    rowY += rowH;
-  }
-  for (const color of lineColors) {
-    const rep = project.lines.find(l => l.color === color);
-    const img = await svgToImage(lineSwatchSvg(color, iconSize, rep?.style));
-    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    if (!hideText) {
-      ctx.fillStyle = '#1f2430';
-      ctx.font = '12px sans-serif';
-      ctx.fillText(project.lineLegendText[color] || `(${color} line)`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+      ctx.fillText(textVal || fallback, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
     }
     rowY += rowH;
   }
@@ -1538,7 +1693,9 @@ async function buildPngBlob() {
     ctx.beginPath();
     pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
     ctx.closePath();
-    ctx.fillStyle = hexToRgba(hex, 0.32);
+    ctx.fillStyle = (r.pattern && r.pattern !== 'solid')
+      ? regionFillPatternTile(ctx, hex, r.pattern)
+      : hexToRgba(hex, 0.32);
     ctx.fill();
     ctx.strokeStyle = hex;
     ctx.lineWidth = 2.5;
@@ -1554,7 +1711,7 @@ async function buildPngBlob() {
     ctx.lineWidth = 3.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.setLineDash(l.style === 'dashed' ? [10, 7] : []);
+    ctx.setLineDash(LINE_DASH_ARRAYS[l.style] || []);
     ctx.stroke();
     ctx.setLineDash([]);
     if (l.arrow && pts.length >= 2) drawPngArrowhead(ctx, pts[pts.length - 2], pts[pts.length - 1], hex);

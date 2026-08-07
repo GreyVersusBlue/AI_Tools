@@ -62,6 +62,7 @@ export function numberedOrder(list) {
 export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   let markers = [];
   const nodes = new Map(); // id -> element
+  let selectedId = null; // for keyboard-nudge — see select()/nudge()
 
   function newId() {
     return crypto.randomUUID ? crypto.randomUUID() : `mkr_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -69,10 +70,34 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
 
   function setMarkers(list) {
     markers = list;
+    selectedId = null;
     reconcile();
   }
 
   function getMarkers() { return markers; }
+
+  /** Selects a marker (highlighting it and making it the keyboard-nudge target), or clears selection if id is null/missing. Only one label or marker can be selected at a time — the main script coordinates that across layers. */
+  function select(id) {
+    if (selectedId === id) return;
+    const prevNode = nodes.get(selectedId);
+    if (prevNode) prevNode.classList.remove("selected");
+    selectedId = markers.some(m => m.id === id) ? id : null;
+    const node = nodes.get(selectedId);
+    if (node) node.classList.add("selected");
+  }
+
+  function deselect() { select(null); }
+  function getSelectedId() { return selectedId; }
+
+  /** Nudges a marker's position by a stage-space (dx, dy) — used for arrow-key nudging of the selected marker. */
+  function nudge(id, dx, dy) {
+    const marker = markers.find(m => m.id === id);
+    if (!marker) return;
+    marker.x += dx;
+    marker.y += dy;
+    reposition();
+    onChange?.(markers);
+  }
 
   function addAt(stageX, stageY, style, color = DEFAULT_MARKER_COLOR, size = DEFAULT_MARKER_SIZE) {
     const marker = { id: newId(), x: stageX, y: stageY, style, color, size };
@@ -85,6 +110,7 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
   function remove(id) {
     const removed = markers.find(m => m.id === id);
     markers = markers.filter(m => m.id !== id);
+    if (selectedId === id) selectedId = null;
     reconcile();
     onChange?.(markers);
     if (removed) onDelete?.(removed);
@@ -183,15 +209,19 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
       reposition();
       e.stopPropagation();
     });
-    function end() {
+    function end(e) {
       if (!dragging) return;
       dragging = false;
       node.classList.remove("dragging");
+      // A pointerdown+up with barely any movement is a click, not a drag —
+      // select this marker (for keyboard nudging) rather than treat it as
+      // having been dragged in place.
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) < 4) select(marker.id);
       onChange?.(markers);
     }
     node.addEventListener("pointerup", end);
     node.addEventListener("pointercancel", end);
   }
 
-  return { setMarkers, getMarkers, addAt, remove, restore, reposition, refreshIcons };
+  return { setMarkers, getMarkers, addAt, remove, restore, reposition, refreshIcons, select, deselect, getSelectedId, nudge };
 }

@@ -14,11 +14,14 @@ export const lineColorHex = colorHex;
 export const LINE_STYLES = [
   { key: "solid", label: "Solid" },
   { key: "dashed", label: "Dashed" },
+  { key: "dotted", label: "Dotted" },
 ];
+
+const DASH_ARRAYS = { dashed: "4 3", dotted: "0.5 3.5" };
 
 export function lineSwatchSvg(color, size = 16, style = "solid") {
   const hex = lineColorHex(color);
-  const dash = style === "dashed" ? ' stroke-dasharray="4 3"' : "";
+  const dash = DASH_ARRAYS[style] ? ` stroke-dasharray="${DASH_ARRAYS[style]}"` : "";
   return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true"><line x1="2" y1="13" x2="14" y2="3" stroke="${hex}" stroke-width="2.2" stroke-linecap="round"${dash}/></svg>`;
 }
 
@@ -138,6 +141,7 @@ export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange, onDelete
       poly.setAttribute("stroke-linecap", "round");
       poly.setAttribute("stroke-linejoin", "round");
       if (l.style === "dashed") poly.setAttribute("stroke-dasharray", "10 7");
+      if (l.style === "dotted") poly.setAttribute("stroke-dasharray", "0.5 6");
       if (l.arrow) poly.setAttribute("marker-end", `url(#${ensureArrowMarker(defsEl, l.color)})`);
       svgEl.appendChild(poly);
     });

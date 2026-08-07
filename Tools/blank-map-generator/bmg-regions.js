@@ -15,13 +15,84 @@ import { PALETTE, colorHex } from "./bmg-colors.js";
 export const REGION_COLORS = PALETTE;
 export const regionColorHex = colorHex;
 
-export function regionSwatchSvg(key, size = 16) {
+// A fill pattern is a second, color-independent way to tell regions apart
+// (in addition to color itself), so a shaded map still reads correctly for
+// colorblind students or on a grayscale printout.
+export const REGION_PATTERNS = [
+  { key: "solid", label: "Solid" },
+  { key: "hatch", label: "Hatched" },
+  { key: "dots", label: "Dotted" },
+];
+export const DEFAULT_REGION_PATTERN = "solid";
+
+let swatchIdCounter = 0;
+
+export function regionSwatchSvg(key, size = 16, pattern = DEFAULT_REGION_PATTERN) {
   const hex = regionColorHex(key);
+  if (pattern === "hatch") {
+    const id = `bmg-swatch-hatch-${swatchIdCounter++}`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">
+      <defs><pattern id="${id}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="4" height="4" fill="${hex}" fill-opacity="0.15"/>
+        <line x1="0" y1="0" x2="0" y2="4" stroke="${hex}" stroke-width="2"/>
+      </pattern></defs>
+      <rect x="1" y="1" width="14" height="14" rx="3" fill="url(#${id})" stroke="${hex}" stroke-width="1.5"/>
+    </svg>`;
+  }
+  if (pattern === "dots") {
+    const id = `bmg-swatch-dots-${swatchIdCounter++}`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">
+      <defs><pattern id="${id}" width="5" height="5" patternUnits="userSpaceOnUse">
+        <rect width="5" height="5" fill="${hex}" fill-opacity="0.15"/>
+        <circle cx="2.5" cy="2.5" r="1.1" fill="${hex}"/>
+      </pattern></defs>
+      <rect x="1" y="1" width="14" height="14" rx="3" fill="url(#${id})" stroke="${hex}" stroke-width="1.5"/>
+    </svg>`;
+  }
   return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="${hex}" fill-opacity="0.4" stroke="${hex}" stroke-width="1.5"/></svg>`;
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 function pointsAttr(points) { return points.map(p => `${p.x},${p.y}`).join(" "); }
+
+/** Lazily creates (and de-dupes) the <pattern> def a color+pattern combo needs, sized in stage/map-pixel units so it scales and pans with the map for free via the stage's own transform, same as everything else in this layer. Returns null for "solid" — callers fall back to a flat semi-transparent fill. */
+function ensureFillPattern(defsEl, colorKey, pattern) {
+  if (!pattern || pattern === "solid") return null;
+  const id = `bmg-region-fill-${colorKey}-${pattern}`;
+  if (defsEl.querySelector(`#${id}`)) return id;
+  const hex = regionColorHex(colorKey);
+  const pat = document.createElementNS(SVG_NS, "pattern");
+  pat.setAttribute("id", id);
+  pat.setAttribute("width", "14");
+  pat.setAttribute("height", "14");
+  pat.setAttribute("patternUnits", "userSpaceOnUse");
+  const bg = document.createElementNS(SVG_NS, "rect");
+  bg.setAttribute("width", "14");
+  bg.setAttribute("height", "14");
+  bg.setAttribute("fill", hex);
+  bg.setAttribute("fill-opacity", "0.12");
+  pat.appendChild(bg);
+  if (pattern === "hatch") {
+    pat.setAttribute("patternTransform", "rotate(45)");
+    const line = document.createElementNS(SVG_NS, "line");
+    line.setAttribute("x1", "0");
+    line.setAttribute("y1", "0");
+    line.setAttribute("x2", "0");
+    line.setAttribute("y2", "14");
+    line.setAttribute("stroke", hex);
+    line.setAttribute("stroke-width", "5");
+    pat.appendChild(line);
+  } else if (pattern === "dots") {
+    const dot = document.createElementNS(SVG_NS, "circle");
+    dot.setAttribute("cx", "7");
+    dot.setAttribute("cy", "7");
+    dot.setAttribute("r", "3");
+    dot.setAttribute("fill", hex);
+    pat.appendChild(dot);
+  }
+  defsEl.appendChild(pat);
+  return id;
+}
 
 export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDelete } = {}) {
   let regions = [];
@@ -51,7 +122,7 @@ export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDele
   function isDrafting() { return !!draft; }
   function draftPointCount() { return draft ? draft.points.length : 0; }
 
-  function startDraft(color) { draft = { color, points: [] }; }
+  function startDraft(color, pattern = DEFAULT_REGION_PATTERN) { draft = { color, pattern, points: [] }; }
 
   function addDraftPoint(x, y) {
     if (!draft) return;
@@ -71,7 +142,7 @@ export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDele
 
   function finishDraft() {
     if (!draft || draft.points.length < 3) return null;
-    const region = { id: newId(), color: draft.color, points: draft.points };
+    const region = { id: newId(), color: draft.color, pattern: draft.pattern, points: draft.points };
     regions.push(region);
     draft = null;
     renderAll();
@@ -109,12 +180,19 @@ export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDele
 
   function renderSvg() {
     svgEl.innerHTML = "";
+    const defsEl = document.createElementNS(SVG_NS, "defs");
+    svgEl.appendChild(defsEl);
     regions.forEach(r => {
       const hex = regionColorHex(r.color);
       const poly = document.createElementNS(SVG_NS, "polygon");
       poly.setAttribute("points", pointsAttr(r.points));
-      poly.setAttribute("fill", hex);
-      poly.setAttribute("fill-opacity", "0.32");
+      const patternId = ensureFillPattern(defsEl, r.color, r.pattern);
+      if (patternId) {
+        poly.setAttribute("fill", `url(#${patternId})`);
+      } else {
+        poly.setAttribute("fill", hex);
+        poly.setAttribute("fill-opacity", "0.32");
+      }
       poly.setAttribute("stroke", hex);
       poly.setAttribute("stroke-width", "2.5");
       svgEl.appendChild(poly);
@@ -124,8 +202,9 @@ export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDele
       if (draft.points.length >= 2) {
         const line = document.createElementNS(SVG_NS, "polyline");
         line.setAttribute("points", pointsAttr(draft.points));
-        line.setAttribute("fill", hex);
-        line.setAttribute("fill-opacity", "0.18");
+        const patternId = ensureFillPattern(defsEl, draft.color, draft.pattern);
+        line.setAttribute("fill", patternId ? `url(#${patternId})` : hex);
+        line.setAttribute("fill-opacity", patternId ? "1" : "0.18");
         line.setAttribute("stroke", hex);
         line.setAttribute("stroke-width", "2");
         line.setAttribute("stroke-dasharray", "6 4");

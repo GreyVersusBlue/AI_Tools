@@ -32,6 +32,7 @@ export function labelFontSizePx(size) {
 export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   let labels = [];
   const nodes = new Map(); // id -> element
+  let selectedId = null; // for keyboard-nudge — see select()/nudge()
 
   function newId() {
     return crypto.randomUUID ? crypto.randomUUID() : `lbl_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -39,7 +40,31 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
 
   function setLabels(list) {
     labels = list;
+    selectedId = null;
     reconcile();
+  }
+
+  /** Selects a label (highlighting it and making it the keyboard-nudge target), or clears selection if id is null/missing. Only one label or marker can be selected at a time — the main script coordinates that across layers. */
+  function select(id) {
+    if (selectedId === id) return;
+    const prevNode = nodes.get(selectedId);
+    if (prevNode) prevNode.classList.remove("selected");
+    selectedId = labels.some(l => l.id === id) ? id : null;
+    const node = nodes.get(selectedId);
+    if (node) node.classList.add("selected");
+  }
+
+  function deselect() { select(null); }
+  function getSelectedId() { return selectedId; }
+
+  /** Nudges a label's position by a stage-space (dx, dy) — used for arrow-key nudging of the selected label. */
+  function nudge(id, dx, dy) {
+    const label = labels.find(l => l.id === id);
+    if (!label) return;
+    label.x += dx;
+    label.y += dy;
+    reposition();
+    onChange?.(labels);
   }
 
   function getLabels() { return labels; }
@@ -54,6 +79,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   function remove(id) {
     const removed = labels.find(l => l.id === id);
     labels = labels.filter(l => l.id !== id);
+    if (selectedId === id) selectedId = null;
     reconcile();
     onChange?.(labels);
     if (removed) onDelete?.(removed);
@@ -152,6 +178,10 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
       if (!dragging) return;
       dragging = false;
       node.classList.remove("dragging");
+      // A pointerdown+up with barely any movement is a click, not a drag —
+      // select this label (for keyboard nudging) rather than treat it as
+      // having been dragged in place.
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) < 4) select(label.id);
       onChange?.(labels);
     }
     node.addEventListener("pointerup", end);
@@ -258,5 +288,5 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
     if (label && node) startEdit(node, label);
   }
 
-  return { setLabels, getLabels, addAt, remove, restore, reposition, startEditing };
+  return { setLabels, getLabels, addAt, remove, restore, reposition, startEditing, select, deselect, getSelectedId, nudge };
 }
