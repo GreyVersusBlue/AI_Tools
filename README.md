@@ -25,6 +25,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Certificate & Award Maker | `Tools/certificate-award-maker.html` | Five templates × four decorative borders, editable name/title/reason/date/signature with a live preview, and a batch mode that prints one certificate per name for a whole class. |
 | Graph Paper & Number Line Generator | `Tools/graph-paper-generator.html` | Printable graph paper (fill-the-page or exact grid size), number lines (single or several per page), and coordinate planes (four-quadrant or first-quadrant), all sized true-to-scale for printing. |
 | Math Fact Drill Sheet Generator | `Tools/math-drill-generator.html` | Randomized addition/subtraction/multiplication/division/mixed drill sheets with a matching answer key — a fresh sheet every time you generate. |
+| Formula Reference Sheet Builder | `Tools/formula-sheet-builder.html` | Five topic templates (geometry, linear equations, quadratics, basic statistics) or start blank, customize and reorder the list, print a one-page reference sheet. Saves multiple named sheets. |
 
 ## Using these
 

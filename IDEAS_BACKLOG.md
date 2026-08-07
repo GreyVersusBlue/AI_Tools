@@ -19,12 +19,6 @@ Reminder: coming soon means not right now.
 | QR Scavenger Hunt Builder | Batch-generate a set of station QR codes plus an answer key, building on the existing QR Code Generator. |
 | Digital Hall Pass / Sign-Out Log | Track and print who's out of the room and when. |
 
-## Math
-
-| Idea | What it would do |
-|---|---|
-| Formula Reference Sheet Builder | Build a printable formula reference sheet for a unit. |
-
 ## English / Language Arts
 
 | Idea | What it would do |
