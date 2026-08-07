@@ -53,6 +53,11 @@ export function createViewer(viewport, stage, { minScale = 0.05, maxScale = 12, 
     };
   }
 
+  /** Converts stage coordinates into viewport-relative screen coordinates (inverse of screenToStage). */
+  function stageToScreen(stageX, stageY) {
+    return { x: x + stageX * scale, y: y + stageY * scale };
+  }
+
   function pointerDown(e) {
     if (e.target.closest("[data-no-pan]")) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -94,5 +99,5 @@ export function createViewer(viewport, stage, { minScale = 0.05, maxScale = 12, 
     zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1 / 1.12);
   }, { passive: false });
 
-  return { getView, setView, zoomAt, fit, screenToStage, apply };
+  return { getView, setView, zoomAt, fit, screenToStage, stageToScreen, apply };
 }

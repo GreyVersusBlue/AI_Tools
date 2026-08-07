@@ -84,16 +84,41 @@
     overflow: hidden; background: #eef0ec; touch-action: none; cursor: grab;
   }
   #viewport.dragging { cursor: grabbing; }
+  #viewport.adding { cursor: crosshair; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   #viewerEmpty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-size: 0.9rem; text-align: center; padding: 0 20px;
   }
+  #labelLayer { position: absolute; inset: 0; pointer-events: none; }
+
+  .bmg-label {
+    position: absolute; display: flex; align-items: center; gap: 5px; pointer-events: auto;
+    transform: translate(-5px, -50%); cursor: grab; z-index: 5;
+  }
+  .bmg-label.dragging { cursor: grabbing; z-index: 6; }
+  .bmg-label .lbl-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2);
+    border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); flex-shrink: 0;
+  }
+  .bmg-label .lbl-text, .bmg-label .lbl-input {
+    background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px;
+    font-size: 0.8rem; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--ink);
+  }
+  .bmg-label .lbl-input { font-family: inherit; width: 120px; }
+  .bmg-label .lbl-del {
+    border: none; background: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 11px;
+    line-height: 1; padding: 0; color: var(--err); box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none;
+    align-items: center; justify-content: center;
+  }
+  .bmg-label:hover .lbl-del, .bmg-label.editing .lbl-del { display: flex; }
 
   .viewerToolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
   .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
   .spacer { flex: 1; }
+  button.toggle.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .toolHint { font-size: 0.78rem; color: var(--accent-2); font-weight: 600; }
 
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
   #attribution a { color: var(--accent-2); }
@@ -141,12 +166,15 @@
       <span id="zoomReadout" class="zoomReadout">&mdash;</span>
       <button id="btnZoomIn" class="icon" title="Zoom in">+</button>
       <button id="btnFit" class="small">Fit to view</button>
+      <button id="btnAddLabel" class="small toggle">+ Add Label</button>
+      <span id="labelHint" class="toolHint" hidden>Click the map to place a label &middot; Esc to stop</span>
       <span class="spacer"></span>
       <button id="btnClearCache" class="small">Clear cached maps</button>
       <button id="btnPrint" class="small primary">Print / Save PDF</button>
     </div>
     <div id="viewport">
       <div id="stage"><img id="mapImg" alt="" hidden></div>
+      <div id="labelLayer"></div>
       <div id="viewerEmpty">Search above and pick a map to get started.</div>
     </div>
     <div id="attribution"></div>
@@ -157,12 +185,15 @@
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 
 const store = createStore();
 let project = store.get();
 let currentObjectUrl = null;
 let currentSize = { width: 0, height: 0 };
+let addLabelMode = false;
+let downPt = null;
 
 const el = id => document.getElementById(id);
 const viewport = el('viewport');
@@ -172,7 +203,11 @@ const mapImg = el('mapImg');
 function save() { store.set(project); }
 
 const viewer = createViewer(viewport, stage, {
-  onChange(v) { project.view = v; save(); updateZoomReadout(v.scale); },
+  onChange(v) { project.view = v; save(); updateZoomReadout(v.scale); labelLayer.reposition(); },
+});
+
+const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
+  onChange(labels) { project.labels = labels; save(); },
 });
 
 function updateZoomReadout(scale) {
@@ -183,6 +218,30 @@ viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'
 ['pointerup', 'pointercancel'].forEach(evt =>
   viewport.addEventListener(evt, () => viewport.classList.remove('dragging'))
 );
+
+function setAddLabelMode(on) {
+  addLabelMode = on;
+  viewport.classList.toggle('adding', on);
+  el('btnAddLabel').classList.toggle('active', on);
+  el('labelHint').hidden = !on;
+}
+
+el('btnAddLabel').addEventListener('click', () => setAddLabelMode(!addLabelMode));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && addLabelMode) setAddLabelMode(false); });
+
+viewport.addEventListener('pointerdown', e => {
+  if (e.target.closest('[data-no-pan]')) return;
+  downPt = { x: e.clientX, y: e.clientY };
+});
+viewport.addEventListener('pointerup', e => {
+  if (!downPt) return;
+  const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
+  downPt = null;
+  if (!addLabelMode || moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
+  const stagePt = viewer.screenToStage(e.clientX, e.clientY);
+  const label = labelLayer.addAt(stagePt.x, stagePt.y);
+  requestAnimationFrame(() => labelLayer.startEditing(label.id));
+});
 
 function setStatus(msg, isErr) {
   const box = el('searchStatus');
@@ -244,6 +303,7 @@ async function useResult(result) {
 }
 
 function displayMap(record) {
+  const isSameMap = project.mapId === record.id;
   if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
   currentObjectUrl = URL.createObjectURL(record.blob);
   currentSize = { width: record.width, height: record.height };
@@ -251,18 +311,23 @@ function displayMap(record) {
   mapImg.onload = () => {
     const w = record.width || mapImg.naturalWidth;
     const h = record.height || mapImg.naturalHeight;
+    mapImg.width = w;
+    mapImg.height = h;
     currentSize = { width: w, height: h };
-    if (project.mapId === record.id && project.view && project.view.scale) {
+    if (isSameMap && project.view && project.view.scale) {
       viewer.setView(project.view);
     } else {
       viewer.fit(w, h);
     }
+    labelLayer.reposition();
   };
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
   el('viewerEmpty').hidden = true;
 
   project.mapId = record.id;
+  if (!isSameMap) { project.labels = []; project.markers = []; setAddLabelMode(false); }
+  labelLayer.setLabels(project.labels);
   save();
   renderAttribution(record);
   refreshRecent();
@@ -324,10 +389,6 @@ el('btnClearCache').addEventListener('click', async () => {
   await Promise.all(list.map(r => cache.deleteCachedMap(r.id).catch(() => {})));
   refreshRecent();
 });
-
-new ResizeObserver(() => {
-  if (currentSize.width && !project.view?.scale) viewer.fit(currentSize.width, currentSize.height);
-}).observe(viewport);
 
 async function init() {
   if (!(await cache.isAvailable())) {
