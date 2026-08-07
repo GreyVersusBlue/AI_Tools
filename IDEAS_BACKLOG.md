@@ -23,7 +23,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Math Fact Drill Sheet Generator | Randomized timed drill sheets with an answer key. |
 | Formula Reference Sheet Builder | Build a printable formula reference sheet for a unit. |
 
 ## English / Language Arts

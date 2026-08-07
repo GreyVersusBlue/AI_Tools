@@ -24,6 +24,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Quiz / Review Game Board | `Tools/review-game-board.html` | A Jeopardy-style review board — type in questions or import them from an Excel sheet (Category/Points/Question/Answer columns), click a cell to reveal it, award points per team. |
 | Certificate & Award Maker | `Tools/certificate-award-maker.html` | Five templates × four decorative borders, editable name/title/reason/date/signature with a live preview, and a batch mode that prints one certificate per name for a whole class. |
 | Graph Paper & Number Line Generator | `Tools/graph-paper-generator.html` | Printable graph paper (fill-the-page or exact grid size), number lines (single or several per page), and coordinate planes (four-quadrant or first-quadrant), all sized true-to-scale for printing. |
+| Math Fact Drill Sheet Generator | `Tools/math-drill-generator.html` | Randomized addition/subtraction/multiplication/division/mixed drill sheets with a matching answer key — a fresh sheet every time you generate. |
 
 ## Using these
 
