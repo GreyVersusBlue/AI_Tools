@@ -29,7 +29,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Vocabulary Flashcard & Word Wall Generator | `Tools/vocab-flashcard-generator.html` | Paste a "term: definition" word list, print cut-apart flashcards (front/back pages, mirrored for double-siding) or large word-wall cards. Saves multiple named word lists. |
 | Writing Prompt Generator | `Tools/writing-prompt-generator.html` | 200 prompts (100 middle school, 100 high school) across five genres, with a big projector-friendly display and a session history. |
 | Timeline Builder | `Tools/timeline-builder.html` | Add events (exact years, BCE, or ranges/eras) with an optional photo each, pick a line style, view a scrolling on-screen timeline or a paginated print layout. Saves multiple named timelines. |
-| Blank Map Generator | `Tools/blank-map-generator.html` | Search Wikimedia Commons for a map, pan/zoom into a region, and annotate it with draggable labels and markers (pin/star/dot/flag) that auto-build a legend. Optional compass rose, lat/long grid, and a locator inset. Maps are cached for offline reuse; print or save as PDF. |
+| Blank Map Generator | `Tools/blank-map-generator.html` | Search Wikimedia Commons for a map, pan/zoom into a region, and annotate it with draggable labels, markers (pin/star/dot/flag), and shaded polygon regions — all auto-building an editable legend. Optional compass rose, lat/long grid, and a locator inset. Undo for accidental deletes. Maps are cached for offline reuse; print or save as PDF. |
 
 ## Using these
 

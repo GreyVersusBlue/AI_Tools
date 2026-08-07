@@ -60,9 +60,7 @@ soon" row on `index.html` — graduating one just means shipping it and deleting
 | Per-legend-entry color & size | Every marker of a given style shares one fixed color. Let color (and maybe size) be set per legend entry, so e.g. two colors of star can mean two different things. |
 | Freehand/line drawing tool | Arrows and lines for trade routes, migration paths, borders — the single most common thing a "blank map" labeling activity needs that this can't do yet. |
 | Download as PNG | Export the finished map as an image file, not just through the browser print dialog, for dropping into a slide deck or worksheet. |
-| Undo for delete | Deleting a label or marker (an easy misclick mid-drag, especially on a touchscreen) has no way back except re-placing and retyping it. |
 | "Safe to hand out" license filter | A search toggle limiting results to Public Domain/CC0 maps, since classroom handouts should avoid anything with a restrictive attribution requirement. |
-| Bigger touch targets | Delete buttons and drag handles are sized for a mouse; on a shared classroom tablet they're fiddly. |
 | Search pagination | Results are capped at about a dozen with no "load more," so a niche regional map might never surface if it's not on the first page. |
 
 ## Picking one up

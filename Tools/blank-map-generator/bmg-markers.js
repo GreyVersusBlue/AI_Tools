@@ -26,7 +26,7 @@ export function markerIconSvg(style, size = 22) {
   }
 }
 
-export function createMarkerLayer(layerEl, viewer, { onChange } = {}) {
+export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   let markers = [];
   const nodes = new Map(); // id -> element
 
@@ -50,7 +50,16 @@ export function createMarkerLayer(layerEl, viewer, { onChange } = {}) {
   }
 
   function remove(id) {
+    const removed = markers.find(m => m.id === id);
     markers = markers.filter(m => m.id !== id);
+    reconcile();
+    onChange?.(markers);
+    if (removed) onDelete?.(removed);
+  }
+
+  /** Re-adds a previously removed marker (used to undo a delete). */
+  function restore(marker) {
+    markers.push(marker);
     reconcile();
     onChange?.(markers);
   }
@@ -85,7 +94,7 @@ export function createMarkerLayer(layerEl, viewer, { onChange } = {}) {
     node.dataset.id = marker.id;
     node.setAttribute("data-no-pan", "");
     node.innerHTML = `
-      <span class="mkr-icon">${markerIconSvg(marker.style)}</span>
+      <span class="mkr-icon">${markerIconSvg(marker.style, 26)}</span>
       <button class="mkr-del" type="button" title="Delete marker" data-no-pan>&times;</button>
     `;
     wireDrag(node, marker);
@@ -126,5 +135,5 @@ export function createMarkerLayer(layerEl, viewer, { onChange } = {}) {
     node.addEventListener("pointercancel", end);
   }
 
-  return { setMarkers, getMarkers, addAt, remove, reposition };
+  return { setMarkers, getMarkers, addAt, remove, restore, reposition };
 }

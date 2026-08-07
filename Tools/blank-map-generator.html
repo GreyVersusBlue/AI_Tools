@@ -99,7 +99,7 @@
   }
   .bmg-label.dragging { cursor: grabbing; z-index: 6; }
   .bmg-label .lbl-dot {
-    width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2);
+    width: 14px; height: 14px; border-radius: 50%; background: var(--accent-2);
     border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); flex-shrink: 0;
   }
   .bmg-label .lbl-text, .bmg-label .lbl-input {
@@ -108,7 +108,7 @@
   }
   .bmg-label .lbl-input { font-family: inherit; width: 120px; }
   .bmg-label .lbl-del {
-    border: none; background: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 11px;
+    border: none; background: #fff; border-radius: 50%; width: 20px; height: 20px; font-size: 13px;
     line-height: 1; padding: 0; color: var(--err); box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none;
     align-items: center; justify-content: center;
   }
@@ -121,11 +121,21 @@
   .bmg-marker.anchor-center { transform: translate(-50%, -50%); }
   .bmg-marker .mkr-icon { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
   .bmg-marker .mkr-del {
-    position: absolute; top: -6px; right: -6px; border: none; background: #fff; border-radius: 50%;
-    width: 16px; height: 16px; font-size: 11px; line-height: 1; padding: 0; color: var(--err);
+    position: absolute; top: -8px; right: -8px; border: none; background: #fff; border-radius: 50%;
+    width: 20px; height: 20px; font-size: 13px; line-height: 1; padding: 0; color: var(--err);
     box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none; align-items: center; justify-content: center;
   }
   .bmg-marker:hover .mkr-del { display: flex; }
+
+  #regionSvg { position: absolute; top: 0; left: 0; pointer-events: none; }
+  #regionChipLayer { position: absolute; inset: 0; pointer-events: none; }
+  .rgn-del {
+    position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid var(--line); background: #fff; color: var(--err); font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; opacity: 0.65;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: auto; cursor: pointer; z-index: 5;
+  }
+  .rgn-del:hover { opacity: 1; }
 
   #legendPanel {
     position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 8px;
@@ -192,6 +202,14 @@
   #attribution a { color: var(--accent-2); }
 
   .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
+
+  #undoToast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 20;
+    background: var(--ink); color: #fff; border-radius: 8px; padding: 8px 10px 8px 16px;
+    font-size: 0.84rem; box-shadow: 0 4px 14px rgba(0,0,0,.3);
+  }
+  #undoToast:not([hidden]) { display: flex; align-items: center; gap: 10px; }
+  #undoToast button { background: #fff; border-color: #fff; }
   .spinner {
     width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent-2);
     border-radius: 50%; display: inline-block; vertical-align: -2px; margin-right: 6px;
@@ -201,7 +219,7 @@
 
   @media print {
     .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
-    #calibratePanel, #latLonReadout { display: none !important; }
+    #calibratePanel, #latLonReadout, .rgn-del, #undoToast { display: none !important; }
     #viewport { height: 90vh; }
   }
 </style>
@@ -243,6 +261,10 @@
         <option value="dot">Dot</option>
         <option value="flag">Flag</option>
       </select>
+      <button id="btnAddRegion" class="small toggle">+ Shade Region</button>
+      <select id="regionColorSelect" class="styleSelect" hidden></select>
+      <button id="btnFinishRegion" class="small primary" hidden>Finish shape</button>
+      <button id="btnCancelRegion" class="small" hidden>Cancel shape</button>
       <span id="placeHint" class="toolHint" hidden></span>
       <span class="spacer"></span>
       <button id="btnClearCache" class="small">Clear cached maps</button>
@@ -274,7 +296,9 @@
       <div id="stage">
         <img id="mapImg" alt="" hidden>
         <div id="gridLayer"></div>
+        <svg id="regionSvg" aria-hidden="true"></svg>
       </div>
+      <div id="regionChipLayer"></div>
       <div id="labelLayer"></div>
       <div id="markerLayer"></div>
       <div id="legendPanel" hidden></div>
@@ -302,12 +326,15 @@
   </div>
 </div>
 
+<div id="undoToast" class="no-print" hidden></div>
+
 <script type="module">
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
 import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
 import { createMarkerLayer, markerIconSvg } from './blank-map-generator/bmg-markers.js';
+import { createRegionLayer, REGION_COLORS, regionSwatchSvg } from './blank-map-generator/bmg-regions.js';
 import { createLegendPanel } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, formatLatLon, computeGraticule } from './blank-map-generator/bmg-latlong.js';
@@ -317,8 +344,10 @@ const store = createStore();
 let project = store.get();
 let currentObjectUrl = null;
 let currentSize = { width: 0, height: 0 };
-let placeMode = 'none'; // 'none' | 'label' | 'marker'
+let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region'
 let downPt = null;
+let lastDeleted = null; // { type: 'label'|'marker'|'region', item } — most recent delete, for undo
+let undoTimer = null;
 
 const el = id => document.getElementById(id);
 const viewport = el('viewport');
@@ -334,27 +363,66 @@ const viewer = createViewer(viewport, stage, {
     updateZoomReadout(v.scale);
     labelLayer.reposition();
     markerLayer.reposition();
+    regionLayer.reposition();
     locator.updateRect();
   },
 });
 
 const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
   onChange(labels) { project.labels = labels; save(); },
+  onDelete(label) { lastDeleted = { type: 'label', item: label }; showUndoToast('Label'); },
 });
 
 const markerLayer = createMarkerLayer(el('markerLayer'), viewer, {
   onChange(markers) { project.markers = markers; save(); renderLegend(); },
+  onDelete(marker) { lastDeleted = { type: 'marker', item: marker }; showUndoToast('Marker'); },
+});
+
+const regionLayer = createRegionLayer(el('regionSvg'), el('regionChipLayer'), viewer, {
+  onChange(regions) { project.regions = regions; save(); renderLegend(); },
+  onDelete(region) { lastDeleted = { type: 'region', item: region }; showUndoToast('Shaded region'); },
 });
 
 const legendPanel = createLegendPanel(el('legendPanel'), {
-  onTextChange(style, text) { project.legendText[style] = text; save(); },
+  onMarkerTextChange(style, text) { project.legendText[style] = text; save(); },
+  onRegionTextChange(color, text) { project.regionLegendText[color] = text; save(); },
   onMove(pos) { project.legendPos = pos; save(); },
 });
 
 const locator = createLocatorInset(el('locatorInset'), el('locatorImg'), el('locatorRect'), viewport, viewer);
 
+el('regionColorSelect').innerHTML = REGION_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
+
 function renderLegend() {
-  legendPanel.render(project.markers, project.legendText, markerIconSvg);
+  legendPanel.render(project.markers, project.legendText, markerIconSvg, project.regions, project.regionLegendText, regionSwatchSvg);
+}
+
+function showUndoToast(kind) {
+  clearTimeout(undoTimer);
+  const box = el('undoToast');
+  box.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = `${kind} deleted.`;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'small';
+  btn.textContent = 'Undo';
+  btn.addEventListener('click', performUndo);
+  box.appendChild(span);
+  box.appendChild(btn);
+  box.hidden = false;
+  undoTimer = setTimeout(() => { box.hidden = true; lastDeleted = null; }, 6000);
+}
+
+function performUndo() {
+  if (!lastDeleted) return;
+  clearTimeout(undoTimer);
+  el('undoToast').hidden = true;
+  const { type, item } = lastDeleted;
+  lastDeleted = null;
+  if (type === 'label') labelLayer.restore(item);
+  else if (type === 'marker') markerLayer.restore(item);
+  else if (type === 'region') regionLayer.restore(item);
 }
 
 function renderGrid() {
@@ -478,21 +546,55 @@ viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'
 const PLACE_HINTS = {
   label: 'Click the map to place a label &middot; Esc to stop',
   marker: 'Click the map to place a marker &middot; Esc to stop',
+  region: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the shape',
 };
 
 function setPlaceMode(mode) {
+  if (placeMode === 'region' && mode !== 'region') regionLayer.cancelDraft();
   placeMode = mode;
   viewport.classList.toggle('adding', mode !== 'none');
   el('btnAddLabel').classList.toggle('active', mode === 'label');
   el('btnAddMarker').classList.toggle('active', mode === 'marker');
+  el('btnAddRegion').classList.toggle('active', mode === 'region');
   el('markerStyleSelect').hidden = mode !== 'marker';
+  el('regionColorSelect').hidden = mode !== 'region';
   el('placeHint').hidden = mode === 'none';
   if (mode !== 'none') el('placeHint').innerHTML = PLACE_HINTS[mode];
+  updateRegionShapeButtons();
+}
+
+function updateRegionShapeButtons() {
+  const n = placeMode === 'region' ? regionLayer.draftPointCount() : 0;
+  el('btnFinishRegion').hidden = n < 3;
+  el('btnCancelRegion').hidden = n < 1;
+}
+
+function finishRegionShape() {
+  if (regionLayer.draftPointCount() >= 3) regionLayer.finishDraft();
+  updateRegionShapeButtons();
 }
 
 el('btnAddLabel').addEventListener('click', () => setPlaceMode(placeMode === 'label' ? 'none' : 'label'));
 el('btnAddMarker').addEventListener('click', () => setPlaceMode(placeMode === 'marker' ? 'none' : 'marker'));
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && placeMode !== 'none') setPlaceMode('none'); });
+el('btnAddRegion').addEventListener('click', () => setPlaceMode(placeMode === 'region' ? 'none' : 'region'));
+el('btnFinishRegion').addEventListener('click', finishRegionShape);
+el('btnCancelRegion').addEventListener('click', () => { regionLayer.cancelDraft(); updateRegionShapeButtons(); });
+
+viewport.addEventListener('dblclick', e => {
+  if (placeMode !== 'region' || !regionLayer.isDrafting()) return;
+  e.preventDefault();
+  regionLayer.popLastDraftPoint();
+  finishRegionShape();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (placeMode === 'region' && regionLayer.draftPointCount() > 0) { regionLayer.cancelDraft(); updateRegionShapeButtons(); }
+    else if (placeMode !== 'none') setPlaceMode('none');
+  } else if (e.key === 'Enter' && placeMode === 'region') {
+    finishRegionShape();
+  }
+});
 
 viewport.addEventListener('pointerdown', e => {
   if (e.target.closest('[data-no-pan]')) return;
@@ -509,6 +611,10 @@ viewport.addEventListener('pointerup', e => {
     requestAnimationFrame(() => labelLayer.startEditing(label.id));
   } else if (placeMode === 'marker') {
     markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value);
+  } else if (placeMode === 'region') {
+    if (!regionLayer.isDrafting()) regionLayer.startDraft(el('regionColorSelect').value);
+    regionLayer.addDraftPoint(stagePt.x, stagePt.y);
+    updateRegionShapeButtons();
   }
 });
 
@@ -590,6 +696,8 @@ function displayMap(record) {
     }
     labelLayer.reposition();
     markerLayer.reposition();
+    regionLayer.setSize(w, h);
+    regionLayer.setRegions(project.regions);
     renderGrid();
     locator.updateRect();
   };
@@ -603,11 +711,16 @@ function displayMap(record) {
     project.labels = [];
     project.markers = [];
     project.legendText = {};
+    project.regions = [];
+    project.regionLegendText = {};
     project.calibration = null;
     project.gridEnabled = false;
     setPlaceMode('none');
     el('calibratePanel').hidden = true;
     el('btnGrid').classList.remove('active');
+    clearTimeout(undoTimer);
+    lastDeleted = null;
+    el('undoToast').hidden = true;
   }
   labelLayer.setLabels(project.labels);
   markerLayer.setMarkers(project.markers);
