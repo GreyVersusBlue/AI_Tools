@@ -16,6 +16,10 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Image → PDF Assembler | `Tools/image-to-pdf.html` | Combine photos into one clean PDF. |
 | Name Picker | `Tools/Name Picker.html` | Pull a random student for cold-calls, groups, or who goes first. Rosters stay in your browser. |
 | Seating Chart Generator | `Tools/Seating Chart Generator.html` | Build a chart once, then reshuffle it whenever you need to. |
+| Word Doc Merger | `Tools/docx-merger.html` | Combine multiple Word docs into one, in order. |
+| Sub Plan Builder | `Tools/Sub Plan Builder.html` | Fill in the boilerplate once (schedule, emergency info, phone numbers), then add today's lesson and export a ready-to-print sub plan as a Word doc. |
+| School Calendar Visualizer | `Tools/School Calendar Visualizer.html` | Build a full-year calendar template — holidays, half days, workdays, grading periods, testing windows — and lay lesson pacing on top. Saves in your browser; print or export a backup. |
+| Classroom Timer | `Tools/Classroom Timer.html` | Big-digit projector timer: countdown, transition presets, random-interval surprise cues, stopwatch, and round-robin stations. |
 
 ## Using these
 

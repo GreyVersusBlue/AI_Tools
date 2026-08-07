@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sub Plan Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --ink: #1f2430;
+    --paper: #fafaf8;
+    --line: #dcdad2;
+    --accent: #2e4c6d;
+    --accent-dark: #1f3550;
+    --ok: #2e6b3e;
+    --err: #a3372b;
+    --muted: #6b6a63;
+    --warn-bg: #fff3d6;
+    --warn-line: #e0c27a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 10px;
+  }
+  .sub {
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+  h2.section-title {
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+    color: var(--accent-dark);
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .card > .hint {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0 0 14px;
+  }
+  .card.warn {
+    background: var(--warn-bg);
+    border-color: var(--warn-line);
+  }
+  details.card { padding: 0; }
+  details.card > summary {
+    cursor: pointer;
+    padding: 16px 20px;
+    font-weight: 600;
+    color: var(--accent-dark);
+    list-style: none;
+  }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before {
+    content: "▸ ";
+    display: inline-block;
+    margin-right: 2px;
+  }
+  details.card[open] > summary::before { content: "▾ "; }
+  details.card > .inner { padding: 0 20px 18px; }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 12px 0 4px;
+  }
+  label:first-child { margin-top: 0; }
+  label .opt { font-weight: 400; color: var(--muted); }
+  input[type=text], input[type=date], textarea, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+  .field-hint {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .row-2 { display: flex; gap: 12px; }
+  .row-2 > div { flex: 1; }
+  .row-3 { display: flex; gap: 12px; }
+  .row-3 > div { flex: 1; }
+
+  fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 12px 0 4px; }
+  legend { font-size: 0.85rem; font-weight: 600; padding: 0 6px; }
+
+  .period-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .period-row input[type=text] { width: auto; }
+  .period-row .p-label { width: 70px; }
+  .period-row .p-time { flex: 1; }
+  .period-row button { flex-shrink: 0; }
+
+  button {
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #fff;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  button:hover { background: #f2f0ea; }
+  button.small { padding: 3px 8px; font-size: 0.78rem; }
+  button.danger { color: var(--err); }
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-dark);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 10px 18px;
+  }
+  button.primary:hover { background: var(--accent-dark); }
+
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+  .toggle-row input[type=checkbox] { width: auto; margin: 0; }
+  .toggle-row label { margin: 0; font-weight: 600; }
+
+  .period-block { border-left: 3px solid var(--line); padding-left: 12px; margin-bottom: 14px; }
+  .period-block h4 { margin: 0 0 4px; font-size: 0.88rem; color: var(--accent-dark); }
+
+  #generateArea { text-align: center; margin: 24px 0; }
+  #status { margin-top: 12px; font-size: 0.9rem; min-height: 1.2em; }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+  #downloadArea { margin-top: 14px; display: none; }
+
+  .save-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .save-note.saved { color: var(--ok); }
+
+  details.limits summary { cursor: pointer; color: var(--accent-dark); font-weight: 600; font-size: 0.85rem; }
+  details.limits ul { margin: 8px 0 0 18px; padding: 0; font-size: 0.82rem; color: var(--muted); }
+  details.limits li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Sub Plan Builder</h1>
+<p class="sub">Fill in the boilerplate once — it's saved in this browser. Then just add today's lesson and export a ready-to-print Word doc.</p>
+
+<details class="card" id="standingCard" open>
+  <summary>Standing details <span class="opt">— saved automatically, only edit these when something actually changes</span></summary>
+  <div class="inner">
+    <p class="hint">These stay in your browser (localStorage) between visits. Nothing here leaves your computer.</p>
+
+    <label for="teacherName">Your name</label>
+    <input type="text" id="teacherName" placeholder="Devon Moore">
+
+    <label>Class periods &amp; times <span class="opt">— add, remove, or reorder to match your schedule</span></label>
+    <div id="periodList"></div>
+    <button type="button" class="small" id="addPeriod">+ Add period</button>
+
+    <div class="row-2">
+      <div>
+        <label for="rosterLocation">Rosters / seating charts location</label>
+        <input type="text" id="rosterLocation" placeholder="blue substitute folder">
+      </div>
+      <div>
+        <label for="absenceLocation">Absence slips location</label>
+        <input type="text" id="absenceLocation" placeholder="blue substitute folder">
+      </div>
+    </div>
+    <label for="emergencyLocation">Emergency / substitute folder location</label>
+    <input type="text" id="emergencyLocation" placeholder="on my laptop podium">
+
+    <label for="attendanceText">Morning attendance instructions</label>
+    <textarea id="attendanceText" rows="3"></textarea>
+
+    <label>Behavior expectations wording</label>
+    <select id="behaviorVariant">
+      <option value="long">Full version — includes referral tracking instructions</option>
+      <option value="short">Short version</option>
+      <option value="custom">Custom (edit text below)</option>
+    </select>
+    <textarea id="behaviorCustom" rows="3" style="display:none;" placeholder="Custom behavior expectations text..."></textarea>
+
+    <label for="referralLines">Number of blank referral lines to include</label>
+    <input type="text" id="referralLines" style="width:80px;" value="4">
+
+    <fieldset>
+      <legend>Phone numbers</legend>
+      <div class="row-2">
+        <div><label for="phoneNurse">Nurse</label><input type="text" id="phoneNurse"></div>
+        <div><label for="phoneCounseling">Counseling office</label><input type="text" id="phoneCounseling"></div>
+      </div>
+      <div class="row-2">
+        <div><label for="phoneSupport">Support room</label><input type="text" id="phoneSupport"></div>
+        <div><label for="phoneOther">Other numbers</label><input type="text" id="phoneOther"></div>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="includeCallingOut">
+        <label for="includeCallingOut">Include "calling out of the building" instructions</label>
+      </div>
+    </fieldset>
+
+    <label for="signOffName">Sign-off name</label>
+    <input type="text" id="signOffName" placeholder="Devon Moore">
+
+    <p class="save-note" id="saveNote">&nbsp;</p>
+  </div>
+</details>
+
+<div class="card">
+  <h2 class="section-title">Today's plan</h2>
+  <p class="hint">This part is freeform and isn't saved — fill it in fresh each time.</p>
+
+  <div class="row-2">
+    <div>
+      <label for="planDate">Date</label>
+      <input type="date" id="planDate">
+    </div>
+    <div>
+      <label for="lessonTitle">Lesson / activity title</label>
+      <input type="text" id="lessonTitle" placeholder="e.g. Fall of Rome Video">
+    </div>
+  </div>
+
+  <label for="announcement">One-off announcement banner <span class="opt">(optional — e.g. a club cancellation, schedule change)</span></label>
+  <textarea id="announcement" rows="2" placeholder="Leave blank if there's nothing extra to flag"></textarea>
+
+  <label for="overviewText">Overview <span class="opt">— what's happening today, in a sentence or two, plus the task itself</span></label>
+  <textarea id="overviewText" rows="4" placeholder="Students continue their gallery walk from yesterday... Task: at each station, students will identify the text structure and answer two questions."></textarea>
+
+  <label for="scheduleText">Class schedule &amp; timing <span class="opt">— one step per line, use **bold** for the lead-in</span></label>
+  <textarea id="scheduleText" rows="5" placeholder="**Setup (5 min):** students get into groups from yesterday
+**Activity (36 min):** 6 minutes per station, rotate clockwise
+**Wrap-up (5-10 min):** submit worksheets, quiet seat time"></textarea>
+
+  <div class="toggle-row">
+    <input type="checkbox" id="samePeriods" checked>
+    <label for="samePeriods">All periods are doing the same thing today</label>
+  </div>
+
+  <div id="sharedPeriodWrap">
+    <label for="sharedPeriodNotes">Period notes <span class="opt">— one note per line, use **bold** for emphasis</span></label>
+    <textarea id="sharedPeriodNotes" rows="4" placeholder="Start with story #7
+Ms. Foyle may assist with the ESOL student in this class"></textarea>
+  </div>
+  <div id="perPeriodWrap" style="display:none;"></div>
+
+  <label for="materialsNote">Materials / where to find things <span class="opt">(optional)</span></label>
+  <textarea id="materialsNote" rows="2" placeholder="Worksheets are stapled on my desk. Video link is on the Schoology page."></textarea>
+</div>
+
+<div class="card warn">
+  <h2 class="section-title">Student notes &amp; concerns <span class="opt" style="font-weight:400;">(optional)</span></h2>
+  <p class="hint"><strong>Not saved.</strong> This box is cleared when you leave or refresh this page — it never sits in browser storage, so it's safe to use for IEP/504 reminders or behavior notes tied to a specific student.</p>
+  <textarea id="studentNotes" rows="4" placeholder="e.g. Period 3 — Jane D. has extended time on all written work per her 504."></textarea>
+</div>
+
+<div id="generateArea">
+  <button class="primary" id="btnGenerate">Generate Word document</button>
+  <div id="status"></div>
+  <div id="downloadArea">
+    <a id="downloadLink" download="">
+      <button class="primary" id="btnDownload">⬇ Download sub plan (.docx)</button>
+    </a>
+  </div>
+</div>
+
+<details class="limits">
+  <summary>Good to know</summary>
+  <ul>
+    <li>Everything in "Standing details" is saved only in this browser (localStorage) — it won't sync to another computer.</li>
+    <li>Use <code>**text**</code> in any of the note fields to bold that part in the exported document.</li>
+    <li>The Student Notes box is intentionally never saved — refreshing the page clears it.</li>
+    <li>No student names or other data are sent anywhere — the Word doc is built entirely in your browser.</li>
+  </ul>
+</details>
+
+<script>
+(() => {
+  const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+  const STORAGE_KEY = "subPlanBuilder.standingDetails.v1";
+
+  const DEFAULTS = {
+    teacherName: "Devon Moore",
+    periods: [
+      { label: "2", time: "" },
+      { label: "3", time: "" },
+      { label: "6", time: "" },
+      { label: "7", time: "" }
+    ],
+    rosterLocation: "blue substitute folder",
+    absenceLocation: "blue substitute folder",
+    emergencyLocation: "on my laptop podium",
+    attendanceText: "Students pull their “attendance chip” in the morning. Please make a quick statement like, “Is anyone actually not here?” before recording attendance. Absence slips can be found in the location noted above.",
+    behaviorVariant: "long",
+    behaviorCustom: "",
+    referralLines: "4",
+    phoneNurse: "647-2223",
+    phoneCounseling: "647-2222",
+    phoneSupport: "647-2256",
+    phoneOther: "posted on the filing cabinet",
+    includeCallingOut: true,
+    signOffName: "Devon Moore"
+  };
+
+  const BEHAVIOR_TEXT = {
+    long: "Ideally, students should not say anything during this entire lesson. If students talk, make noises, or are a distraction in class, DO NOT HESITATE to send them to the support room or main office. Record their name and reason below if you think their behavior deserves a referral. PLEASE actually do this — it helps me follow up.",
+    short: "Ideally, students should not say anything during this entire lesson. If students talk, make noises, or are a distraction in class, DO NOT HESITATE to send them to the support room or main office."
+  };
+
+  // ---------- Standing details: load / save ----------
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return JSON.parse(JSON.stringify(DEFAULTS));
+      const parsed = JSON.parse(raw);
+      return Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), parsed);
+    } catch (e) {
+      return JSON.parse(JSON.stringify(DEFAULTS));
+    }
+  }
+
+  let settings = loadSettings();
+
+  const el = id => document.getElementById(id);
+  const periodListEl = el('periodList');
+  const saveNote = el('saveNote');
+  let saveTimer = null;
+
+  function renderPeriods() {
+    periodListEl.innerHTML = '';
+    settings.periods.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'period-row';
+      row.innerHTML = `
+        <input type="text" class="p-label" data-i="${i}" data-f="label" value="${escapeAttr(p.label)}" placeholder="Period">
+        <input type="text" class="p-time" data-i="${i}" data-f="time" value="${escapeAttr(p.time)}" placeholder="Time (e.g. 9:10-10:10)">
+        <button type="button" class="small danger" data-remove="${i}">✕</button>`;
+      periodListEl.appendChild(row);
+    });
+    periodListEl.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const i = +inp.dataset.i, f = inp.dataset.f;
+        settings.periods[i][f] = inp.value;
+        scheduleSave();
+        renderPerPeriodBlocks();
+      });
+    });
+    periodListEl.querySelectorAll('button[data-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        settings.periods.splice(+btn.dataset.remove, 1);
+        renderPeriods();
+        scheduleSave();
+        renderPerPeriodBlocks();
+      });
+    });
+  }
+
+  el('addPeriod').addEventListener('click', () => {
+    settings.periods.push({ label: '', time: '' });
+    renderPeriods();
+    renderPerPeriodBlocks();
+  });
+
+  function escapeAttr(s) {
+    return String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  function bindField(id, key, isCheckbox) {
+    const node = el(id);
+    node.addEventListener('input', () => {
+      settings[key] = isCheckbox ? node.checked : node.value;
+      scheduleSave();
+    });
+    if (isCheckbox) node.addEventListener('change', () => { settings[key] = node.checked; scheduleSave(); });
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      saveNote.textContent = 'Saved.';
+      saveNote.classList.add('saved');
+      setTimeout(() => { saveNote.textContent = ' '; saveNote.classList.remove('saved'); }, 1500);
+    }, 300);
+  }
+
+  function applySettingsToForm() {
+    el('teacherName').value = settings.teacherName;
+    el('rosterLocation').value = settings.rosterLocation;
+    el('absenceLocation').value = settings.absenceLocation;
+    el('emergencyLocation').value = settings.emergencyLocation;
+    el('attendanceText').value = settings.attendanceText;
+    el('behaviorVariant').value = settings.behaviorVariant;
+    el('behaviorCustom').value = settings.behaviorCustom;
+    el('behaviorCustom').style.display = settings.behaviorVariant === 'custom' ? 'block' : 'none';
+    el('referralLines').value = settings.referralLines;
+    el('phoneNurse').value = settings.phoneNurse;
+    el('phoneCounseling').value = settings.phoneCounseling;
+    el('phoneSupport').value = settings.phoneSupport;
+    el('phoneOther').value = settings.phoneOther;
+    el('includeCallingOut').checked = !!settings.includeCallingOut;
+    el('signOffName').value = settings.signOffName;
+    renderPeriods();
+  }
+
+  applySettingsToForm();
+
+  bindField('teacherName', 'teacherName');
+  bindField('rosterLocation', 'rosterLocation');
+  bindField('absenceLocation', 'absenceLocation');
+  bindField('emergencyLocation', 'emergencyLocation');
+  bindField('attendanceText', 'attendanceText');
+  bindField('behaviorCustom', 'behaviorCustom');
+  bindField('referralLines', 'referralLines');
+  bindField('phoneNurse', 'phoneNurse');
+  bindField('phoneCounseling', 'phoneCounseling');
+  bindField('phoneSupport', 'phoneSupport');
+  bindField('phoneOther', 'phoneOther');
+  bindField('includeCallingOut', 'includeCallingOut', true);
+  bindField('signOffName', 'signOffName');
+
+  el('behaviorVariant').addEventListener('change', () => {
+    settings.behaviorVariant = el('behaviorVariant').value;
+    el('behaviorCustom').style.display = settings.behaviorVariant === 'custom' ? 'block' : 'none';
+    scheduleSave();
+  });
+
+  // ---------- Today's plan: per-period blocks ----------
+
+  const samePeriodsBox = el('samePeriods');
+  const sharedPeriodWrap = el('sharedPeriodWrap');
+  const perPeriodWrap = el('perPeriodWrap');
+  let perPeriodValues = {};
+
+  function renderPerPeriodBlocks() {
+    const same = samePeriodsBox.checked;
+    sharedPeriodWrap.style.display = same ? 'block' : 'none';
+    perPeriodWrap.style.display = same ? 'none' : 'block';
+    if (same) return;
+
+    perPeriodWrap.innerHTML = '';
+    settings.periods.forEach((p, i) => {
+      const label = p.label || `Period ${i + 1}`;
+      const key = 'p' + i;
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <label>Period ${escapeAttr(label)}${p.time ? ' (' + escapeAttr(p.time) + ')' : ''} <span class="opt">— one note per line, **bold** for emphasis</span></label>
+        <textarea rows="3" data-period-key="${key}">${escapeAttr(perPeriodValues[key] || '')}</textarea>`;
+      perPeriodWrap.appendChild(wrap);
+    });
+    perPeriodWrap.querySelectorAll('textarea').forEach(ta => {
+      ta.addEventListener('input', () => { perPeriodValues[ta.dataset.periodKey] = ta.value; });
+    });
+  }
+
+  samePeriodsBox.addEventListener('change', renderPerPeriodBlocks);
+  renderPerPeriodBlocks();
+
+  el('planDate').valueAsDate = new Date();
+
+  // ---------- DOCX generation ----------
+
+  function xmlEscape(s) {
+    return String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  }
+
+  // Splits "some **bold** text" into runs of {text, bold}
+  function splitBoldRuns(line) {
+    const parts = [];
+    const re = /\*\*(.+?)\*\*/g;
+    let last = 0, m;
+    while ((m = re.exec(line))) {
+      if (m.index > last) parts.push({ text: line.slice(last, m.index), bold: false });
+      parts.push({ text: m[1], bold: true });
+      last = re.lastIndex;
+    }
+    if (last < line.length) parts.push({ text: line.slice(last), bold: false });
+    if (parts.length === 0) parts.push({ text: line, bold: false });
+    return parts;
+  }
+
+  function run(text, bold) {
+    return `<w:r>${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>`;
+  }
+
+  function runsFor(line) {
+    return splitBoldRuns(line).map(p => run(p.text, p.bold)).join('');
+  }
+
+  function paragraph(line, opts) {
+    opts = opts || {};
+    const pPrParts = [];
+    if (opts.style) pPrParts.push(`<w:pStyle w:val="${opts.style}"/>`);
+    if (opts.bullet) {
+      pPrParts.push('<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>');
+    }
+    if (opts.spacingBefore || opts.spacingAfter) {
+      pPrParts.push(`<w:spacing${opts.spacingBefore ? ` w:before="${opts.spacingBefore}"` : ''}${opts.spacingAfter ? ` w:after="${opts.spacingAfter}"` : ''}/>`);
+    }
+    const pPr = pPrParts.length ? `<w:pPr>${pPrParts.join('')}</w:pPr>` : '';
+    const runsXml = opts.bold ? run(line, true) : runsFor(line);
+    return `<w:p>${pPr}${runsXml}</w:p>`;
+  }
+
+  function heading(level, text) {
+    return paragraph(text, { style: 'Heading' + level });
+  }
+
+  function emptyParagraph() {
+    return '<w:p/>';
+  }
+
+  function linesToParagraphs(text, opts) {
+    if (!text) return [];
+    return text.split('\n').map(l => l.trim()).filter(Boolean).map(l => paragraph(l, opts));
+  }
+
+  function buildDocumentXml() {
+    const paras = [];
+
+    const teacherName = el('teacherName').value.trim() || 'Devon Moore';
+    const signOff = el('signOffName').value.trim() || teacherName;
+    const dateVal = el('planDate').value;
+    const dateDisplay = dateVal ? new Date(dateVal + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+    const lessonTitle = el('lessonTitle').value.trim();
+
+    paras.push(heading(1, 'Substitute Plan' + (lessonTitle ? ' – ' + lessonTitle : '')));
+    paras.push(paragraph('Teacher: ' + teacherName, {}));
+    // bold just the label
+    paras[paras.length - 1] = `<w:p>${run('Teacher: ', true)}${run(teacherName, false)}</w:p>`;
+    paras.push(`<w:p>${run('Date: ', true)}${run(dateDisplay || '[Insert Date]', false)}</w:p>`);
+
+    const announcement = el('announcement').value.trim();
+    if (announcement) {
+      paras.push(emptyParagraph());
+      linesToParagraphs(announcement, { bold: true }).forEach(p => paras.push(p));
+    }
+
+    // Overview
+    const overview = el('overviewText').value.trim();
+    if (overview) {
+      paras.push(emptyParagraph());
+      paras.push(heading(2, 'Overview'));
+      linesToParagraphs(overview, {}).forEach(p => paras.push(p));
+    }
+
+    // Schedule & timing
+    const schedule = el('scheduleText').value.trim();
+    if (schedule) {
+      paras.push(emptyParagraph());
+      paras.push(heading(2, 'Class Schedule & Timing'));
+      linesToParagraphs(schedule, { style: 'ListParagraph', bullet: true }).forEach(p => paras.push(p));
+    }
+
+    // Period-specific details
+    const periods = settings.periods.filter(p => (p.label || '').trim());
+    if (periods.length) {
+      paras.push(emptyParagraph());
+      paras.push(heading(2, 'Period-Specific Details'));
+      const same = samePeriodsBox.checked;
+      const sharedNotes = el('sharedPeriodNotes').value.trim();
+      periods.forEach((p, i) => {
+        const label = 'Period ' + p.label + (p.time ? ' (' + p.time + ')' : '');
+        paras.push(heading(3, label));
+        const notes = same ? sharedNotes : (perPeriodValues['p' + i] || '');
+        if (notes.trim()) {
+          linesToParagraphs(notes, { style: 'ListParagraph', bullet: true }).forEach(p2 => paras.push(p2));
+        }
+      });
+    }
+
+    // Important notes
+    const materials = el('materialsNote').value.trim();
+    paras.push(emptyParagraph());
+    paras.push(heading(2, 'Important Notes'));
+    if (materials) {
+      linesToParagraphs(materials, {}).forEach(p => paras.push(p));
+    }
+    const attendanceText = el('attendanceText').value.trim();
+    if (attendanceText) {
+      paras.push(`<w:p>${run('Attendance: ', true)}${runsFor(attendanceText)}</w:p>`);
+    }
+    const rosterLoc = el('rosterLocation').value.trim();
+    const absenceLoc = el('absenceLocation').value.trim();
+    const emergencyLoc = el('emergencyLocation').value.trim();
+    paras.push(`<w:p>${run('Resources:', true)}</w:p>`);
+    if (rosterLoc) paras.push(paragraph('Rosters / seating charts: ' + rosterLoc, { style: 'ListParagraph', bullet: true }));
+    if (absenceLoc) paras.push(paragraph('Absence slips: ' + absenceLoc, { style: 'ListParagraph', bullet: true }));
+    if (emergencyLoc) paras.push(paragraph('Substitute / emergency folder: ' + emergencyLoc, { style: 'ListParagraph', bullet: true }));
+    paras.push(paragraph('Please review the IEP/504 accommodation grid for extra time, assistance, etc.', { style: 'ListParagraph', bullet: true }));
+
+    // Behavior expectations
+    paras.push(emptyParagraph());
+    paras.push(heading(2, 'Behavior Expectations'));
+    const variant = settings.behaviorVariant;
+    const behaviorText = variant === 'custom' ? (settings.behaviorCustom || '') : BEHAVIOR_TEXT[variant] || BEHAVIOR_TEXT.long;
+    if (behaviorText.trim()) {
+      linesToParagraphs(behaviorText, { bold: true }).forEach(p => paras.push(p));
+    }
+    const nLines = Math.max(0, parseInt(settings.referralLines, 10) || 0);
+    if (nLines > 0) {
+      paras.push(emptyParagraph());
+      for (let i = 0; i < nLines; i++) {
+        paras.push(paragraph('Student Name: _______________________   Period: _______   Reason: _______________________', {}));
+      }
+    }
+
+    // Emergency contacts
+    paras.push(emptyParagraph());
+    paras.push(heading(2, 'Emergency Contacts'));
+    paras.push(paragraph('Main Office: press 0 and hit “Call”', { style: 'ListParagraph', bullet: true }));
+    if (el('phoneNurse').value.trim()) paras.push(paragraph('Nurse: ' + el('phoneNurse').value.trim(), { style: 'ListParagraph', bullet: true }));
+    if (el('phoneCounseling').value.trim()) paras.push(paragraph('Counseling: ' + el('phoneCounseling').value.trim(), { style: 'ListParagraph', bullet: true }));
+    if (el('phoneSupport').value.trim()) paras.push(paragraph('Support Room: ' + el('phoneSupport').value.trim(), { style: 'ListParagraph', bullet: true }));
+    if (el('phoneOther').value.trim()) paras.push(paragraph('Other numbers: ' + el('phoneOther').value.trim(), { style: 'ListParagraph', bullet: true }));
+    if (settings.includeCallingOut) {
+      paras.push(paragraph('Calling out of the building: dial 9, then the number you want to call.', { style: 'ListParagraph', bullet: true }));
+    }
+
+    // Student notes (optional, never persisted)
+    const studentNotes = el('studentNotes').value.trim();
+    if (studentNotes) {
+      paras.push(emptyParagraph());
+      paras.push(heading(2, 'Student Notes & Concerns'));
+      linesToParagraphs(studentNotes, { style: 'ListParagraph', bullet: true }).forEach(p => paras.push(p));
+    }
+
+    // Sign-off
+    paras.push(emptyParagraph());
+    paras.push(paragraph('Questions? Call the main office.', {}));
+    paras.push(paragraph('Thank you for covering!', {}));
+    paras.push(paragraph(signOff, {}));
+
+    const sectPr = `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<w:document xmlns:w="${W_NS}"><w:body>${paras.join('')}${sectPr}</w:body></w:document>`;
+  }
+
+  function buildStylesXml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<w:styles xmlns:w="${W_NS}">` +
+      `<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>` +
+      `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1F3550"/></w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="120" w:after="80"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="1F3550"/></w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="100" w:after="60"/><w:outlineLvl w:val="2"/></w:pPr><w:rPr><w:b/><w:i/><w:sz w:val="23"/><w:color w:val="2E4C6D"/></w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:ind w:left="432"/></w:pPr></w:style>` +
+      `</w:styles>`;
+  }
+
+  function buildNumberingXml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<w:numbering xmlns:w="${W_NS}">` +
+      `<w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/>` +
+      `<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/>` +
+      `<w:pPr><w:ind w:left="432" w:hanging="288"/></w:pPr><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol" w:hint="default"/></w:rPr></w:lvl>` +
+      `</w:abstractNum>` +
+      `<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>` +
+      `</w:numbering>`;
+  }
+
+  function buildContentTypesXml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+      `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+      `<Default Extension="xml" ContentType="application/xml"/>` +
+      `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>` +
+      `<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>` +
+      `<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>` +
+      `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
+      `<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>` +
+      `</Types>`;
+  }
+
+  function buildRootRelsXml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>` +
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>` +
+      `<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>` +
+      `</Relationships>`;
+  }
+
+  function buildDocumentRelsXml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>` +
+      `</Relationships>`;
+  }
+
+  function buildCorePropsXml() {
+    const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">` +
+      `<dc:title>Substitute Plan</dc:title><dc:creator>Sub Plan Builder</dc:creator>` +
+      `<dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>` +
+      `<dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>` +
+      `</cp:coreProperties>`;
+  }
+
+  function buildAppPropsXml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">` +
+      `<Application>Sub Plan Builder</Application></Properties>`;
+  }
+
+  async function generateDocx() {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', buildContentTypesXml());
+    zip.file('_rels/.rels', buildRootRelsXml());
+    zip.file('word/document.xml', buildDocumentXml());
+    zip.file('word/styles.xml', buildStylesXml());
+    zip.file('word/numbering.xml', buildNumberingXml());
+    zip.file('word/_rels/document.xml.rels', buildDocumentRelsXml());
+    zip.file('docProps/core.xml', buildCorePropsXml());
+    zip.file('docProps/app.xml', buildAppPropsXml());
+    return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+
+  const statusEl = el('status');
+  const downloadArea = el('downloadArea');
+  const downloadLink = el('downloadLink');
+
+  el('btnGenerate').addEventListener('click', async () => {
+    statusEl.className = '';
+    statusEl.textContent = 'Building document…';
+    downloadArea.style.display = 'none';
+    try {
+      const blob = await generateDocx();
+      const dateVal = el('planDate').value || 'plan';
+      const title = (el('lessonTitle').value.trim() || 'Sub Plan').replace(/[\\/:*?"<>|]/g, '');
+      const filename = `${dateVal} - ${title}.docx`;
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.setAttribute('download', filename);
+      downloadArea.style.display = 'block';
+      statusEl.className = 'ok';
+      statusEl.textContent = 'Done — your sub plan is ready.';
+    } catch (e) {
+      statusEl.className = 'err';
+      statusEl.textContent = 'Something went wrong: ' + e.message;
+    }
+  });
+})();
+</script>
+</body>
+</html>
