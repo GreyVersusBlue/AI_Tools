@@ -672,6 +672,20 @@ el('btnFit').addEventListener('click', () => {
   if (currentSize.width) viewer.fit(currentSize.width, currentSize.height);
 });
 el('btnPrint').addEventListener('click', () => window.print());
+
+// Printing uses more vertical space than the on-screen viewport (see the
+// @media print rule for #viewport). Refit to that larger area right before
+// printing so the map fills the page instead of printing at its on-screen
+// size with blank space below, then restore the working view afterward.
+let viewBeforePrint = null;
+window.addEventListener('beforeprint', () => {
+  if (!currentSize.width) return;
+  viewBeforePrint = viewer.getView();
+  viewer.fit(currentSize.width, currentSize.height);
+});
+window.addEventListener('afterprint', () => {
+  if (viewBeforePrint) { viewer.setView(viewBeforePrint); viewBeforePrint = null; }
+});
 el('btnClearCache').addEventListener('click', async () => {
   if (!confirm('Remove every map cached in this browser? Nothing on your project is lost — you can search and re-download any of them again.')) return;
   const list = await cache.listCachedMaps().catch(() => []);

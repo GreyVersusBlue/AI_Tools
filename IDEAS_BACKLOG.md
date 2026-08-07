@@ -33,12 +33,6 @@ Reminder: coming soon means not right now.
 | Lab Safety Contract Tracker | Track signed lab safety contracts per student. |
 | Data Table → Chart Builder | Turn lab data into a quick chart to paste into a report. |
 
-## Social Studies
-
-| Idea | What it would do |
-|---|---|
-| Blank Map Generator ⚠️ claimed | Printable blank maps by region for labeling activities. **Already being built in a separate chat, on branch `claude/map-builder-tool-aduz3m` — don't pick this one up here.** |
-
 ## World Language
 
 | Idea | What it would do |
