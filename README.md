@@ -27,6 +27,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Math Fact Drill Sheet Generator | `Tools/math-drill-generator.html` | Randomized addition/subtraction/multiplication/division/mixed drill sheets with a matching answer key — a fresh sheet every time you generate. |
 | Formula Reference Sheet Builder | `Tools/formula-sheet-builder.html` | Five topic templates (geometry, linear equations, quadratics, basic statistics) or start blank, customize and reorder the list, print a one-page reference sheet. Saves multiple named sheets. |
 | Vocabulary Flashcard & Word Wall Generator | `Tools/vocab-flashcard-generator.html` | Paste a "term: definition" word list, print cut-apart flashcards (front/back pages, mirrored for double-siding) or large word-wall cards. Saves multiple named word lists. |
+| Writing Prompt Generator | `Tools/writing-prompt-generator.html` | 200 prompts (100 middle school, 100 high school) across five genres, with a big projector-friendly display and a session history. |
 
 ## Using these
 

@@ -23,7 +23,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Writing Prompt Generator | Random writing prompts by genre. |
 | Silent Reading (SSR) Log Tracker | Track books and pages read during independent reading time. |
 
 ## Science
