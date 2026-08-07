@@ -12,6 +12,7 @@ function blank() {
     labels: [], markers: [], legendText: {}, legendPos: { x: 12, y: 12 },
     regions: [], regionLegendText: {},
     compassEnabled: false, gridEnabled: false, locatorEnabled: false, calibration: null,
+    compassPos: null, locatorPos: null,
   };
 }
 
@@ -31,6 +32,8 @@ function normalize(p) {
   if (typeof p.gridEnabled !== "boolean") p.gridEnabled = false;
   if (typeof p.locatorEnabled !== "boolean") p.locatorEnabled = false;
   if (p.calibration !== null && typeof p.calibration !== "object") p.calibration = null;
+  if (p.compassPos !== null && typeof p.compassPos !== "object") p.compassPos = null;
+  if (p.locatorPos !== null && typeof p.locatorPos !== "object") p.locatorPos = null;
   return p;
 }
 

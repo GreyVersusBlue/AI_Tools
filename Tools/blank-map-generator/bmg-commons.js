@@ -20,26 +20,45 @@ function stripHtml(s) {
   return s ? s.replace(/<[^>]+>/g, "").trim() : "";
 }
 
+// Matches Commons' own "Public domain" / CC0 license short names, plus the
+// extmetadata Copyrighted=False flag some PD-USGov-style files use instead of
+// a license name. Used by the "safe to hand out" search filter — anything
+// else (including plain CC-BY, which still requires attribution) is excluded.
+function isSafeToHandOut(meta) {
+  if (meta.Copyrighted?.value === "False") return true;
+  const name = (meta.LicenseShortName?.value || "").toLowerCase();
+  return /public domain|^pd[\s-]|cc0/.test(name);
+}
+
 /**
  * Searches Commons file pages by keyword. Returns thumbnail-sized results
  * suitable for a picker grid; call fetchMapImage() to get the full image.
+ *
+ * `continueParams` re-issues the same search starting after a previous
+ * page's results — pass back the `continueParams` field from the prior
+ * call's return value verbatim (MediaWiki's search continuation needs every
+ * field it hands back, not just an offset number).
  */
-export async function searchMaps(query, limit = 12) {
+export async function searchMaps(query, { limit = 12, publicDomainOnly = false, continueParams = null } = {}) {
+  // publicDomainOnly filters client-side after the fetch, so over-fetch a
+  // few pages' worth of raw results to still land near `limit` matches.
+  const rawLimit = publicDomainOnly ? limit * 4 : limit;
   const url = buildUrl({
     action: "query",
     generator: "search",
     gsrsearch: query,
     gsrnamespace: "6",
-    gsrlimit: String(limit),
+    gsrlimit: String(rawLimit),
     prop: "imageinfo",
     iiprop: "url|size|mime|extmetadata",
     iiurlwidth: "320",
+    ...continueParams,
   });
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Commons search failed (HTTP ${res.status})`);
   const data = await res.json();
   const pages = data?.query?.pages || [];
-  return pages
+  let results = pages
     .filter(p => p.imageinfo?.[0] && DISPLAYABLE_MIME.has(p.imageinfo[0].mime))
     .map(p => {
       const info = p.imageinfo[0];
@@ -56,8 +75,11 @@ export async function searchMaps(query, limit = 12) {
         artist: stripHtml(meta.Artist?.value),
         license: meta.LicenseShortName?.value || "License on file page",
         licenseUrl: meta.LicenseUrl?.value || null,
+        safeToHandOut: isSafeToHandOut(meta),
       };
     });
+  if (publicDomainOnly) results = results.filter(r => r.safeToHandOut);
+  return { results: results.slice(0, limit), continueParams: data.continue || null };
 }
 
 /** Downloads the full-resolution image for a search result. */

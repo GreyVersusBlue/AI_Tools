@@ -52,6 +52,9 @@
   .searchRow { display: flex; gap: 8px; }
   .searchRow input { flex: 1; }
   .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+  .licenseFilterRow { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.8rem; color: var(--ink); }
+  .licenseFilterRow input { margin: 0; }
+  .loadMoreRow { display: flex; justify-content: center; margin-top: 12px; }
 
   .status { font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
   .status.err { color: var(--err); font-weight: 600; }
@@ -174,7 +177,8 @@
     border-radius: 5px; width: 90px;
   }
 
-  #compassRose { position: absolute; top: 12px; right: 12px; pointer-events: none; z-index: 7; }
+  #compassRose { position: absolute; top: 12px; right: 12px; cursor: grab; z-index: 7; }
+  #compassRose.dragging { cursor: grabbing; }
   #compassRose svg { display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); }
 
   #gridLayer { position: absolute; inset: 0; pointer-events: none; }
@@ -194,8 +198,10 @@
   #locatorInset {
     position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; border-radius: 4px;
     box-shadow: 0 1px 6px rgba(0,0,0,.35); overflow: hidden; z-index: 7; background: #eef0ec;
+    cursor: grab;
   }
-  #locatorInset img { display: block; width: 100%; height: 100%; object-fit: fill; }
+  #locatorInset.dragging { cursor: grabbing; }
+  #locatorInset img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
   #locatorRect { position: absolute; border: 2px solid var(--err); background: rgba(163,55,43,.12); pointer-events: none; }
 
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
@@ -238,8 +244,10 @@
       <button id="btnSearch" class="primary">Search Wikimedia Commons</button>
     </div>
     <p class="hint">Searches Commons' public map images. Once you pick one, it's downloaded and kept in this browser so it works offline afterward.</p>
+    <label class="licenseFilterRow"><input type="checkbox" id="licenseFilter" data-no-pan> Public domain / CC0 only (safe to hand out to students)</label>
     <div id="searchStatus" class="status" hidden></div>
     <div id="resultsGrid" class="grid"></div>
+    <div id="loadMoreRow" class="loadMoreRow" hidden><button id="btnLoadMore" class="small">Load more results</button></div>
   </div>
 
   <div id="recentCard" class="card recent-card no-print" hidden>
@@ -268,6 +276,7 @@
       <span id="placeHint" class="toolHint" hidden></span>
       <span class="spacer"></span>
       <button id="btnClearCache" class="small">Clear cached maps</button>
+      <button id="btnDownloadPng" class="small">Download PNG</button>
       <button id="btnPrint" class="small primary">Print / Save PDF</button>
     </div>
     <div class="viewerToolbar no-print">
@@ -333,8 +342,8 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
 import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
-import { createMarkerLayer, markerIconSvg } from './blank-map-generator/bmg-markers.js';
-import { createRegionLayer, REGION_COLORS, regionSwatchSvg } from './blank-map-generator/bmg-regions.js';
+import { createMarkerLayer, markerIconSvg, markerAnchor } from './blank-map-generator/bmg-markers.js';
+import { createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg } from './blank-map-generator/bmg-regions.js';
 import { createLegendPanel } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, formatLatLon, computeGraticule } from './blank-map-generator/bmg-latlong.js';
@@ -348,6 +357,8 @@ let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region'
 let downPt = null;
 let lastDeleted = null; // { type: 'label'|'marker'|'region', item } — most recent delete, for undo
 let undoTimer = null;
+let currentSearchQuery = '';
+let searchContinueParams = null;
 
 const el = id => document.getElementById(id);
 const viewport = el('viewport');
@@ -456,10 +467,66 @@ function renderGrid() {
   });
 }
 
+// Both overlays start out positioned by the stylesheet's fixed-corner rule
+// (top/right for the compass, bottom/right for the locator). The first time
+// each becomes visible with no stored position, ensureOverlayPos() reads
+// that rendered corner via getBoundingClientRect() and freezes it into an
+// explicit left/top so later drags have a starting point to move from.
+function applyOverlayPos(node, pos) {
+  node.style.left = `${pos.x}px`;
+  node.style.top = `${pos.y}px`;
+  node.style.right = 'auto';
+  node.style.bottom = 'auto';
+}
+
+function ensureOverlayPos(node, posKey) {
+  if (project[posKey]) { applyOverlayPos(node, project[posKey]); return; }
+  const r = node.getBoundingClientRect();
+  if (!r.width || !r.height) return; // not laid out yet (e.g. locator before a map has loaded)
+  const vp = viewport.getBoundingClientRect();
+  project[posKey] = { x: r.left - vp.left, y: r.top - vp.top };
+  applyOverlayPos(node, project[posKey]);
+  save();
+}
+
+function makeOverlayDraggable(node, posKey) {
+  node.setAttribute('data-no-pan', '');
+  let dragging = false, startX = 0, startY = 0, startPos = null;
+  node.addEventListener('pointerdown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startPos = project[posKey] || { x: 0, y: 0 };
+    node.setPointerCapture(e.pointerId);
+    node.classList.add('dragging');
+    e.stopPropagation();
+  });
+  node.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    applyOverlayPos(node, { x: startPos.x + (e.clientX - startX), y: startPos.y + (e.clientY - startY) });
+    e.stopPropagation();
+  });
+  function end(e) {
+    if (!dragging) return;
+    dragging = false;
+    node.classList.remove('dragging');
+    const r = node.getBoundingClientRect();
+    const vp = viewport.getBoundingClientRect();
+    project[posKey] = { x: r.left - vp.left, y: r.top - vp.top };
+    save();
+  }
+  node.addEventListener('pointerup', end);
+  node.addEventListener('pointercancel', end);
+}
+
+makeOverlayDraggable(el('compassRose'), 'compassPos');
+makeOverlayDraggable(el('locatorInset'), 'locatorPos');
+
 function setCompassEnabled(on) {
   project.compassEnabled = on;
   el('compassRose').hidden = !on;
   el('btnCompass').classList.toggle('active', on);
+  if (on) ensureOverlayPos(el('compassRose'), 'compassPos');
   save();
 }
 
@@ -467,7 +534,7 @@ function setLocatorEnabled(on) {
   project.locatorEnabled = on;
   el('locatorInset').hidden = !on;
   el('btnLocator').classList.toggle('active', on);
-  if (on) locator.updateRect();
+  if (on) { locator.updateRect(); ensureOverlayPos(el('locatorInset'), 'locatorPos'); }
   save();
 }
 
@@ -628,10 +695,14 @@ function setStatus(msg, isErr) {
 
 function escapeHtml(s) { return String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
-function renderResults(results) {
+function renderResults(results, { append = false } = {}) {
   const grid = el('resultsGrid');
-  grid.innerHTML = '';
-  if (!results.length) { setStatus('No displayable map images found for that search.'); return; }
+  if (!append) grid.innerHTML = '';
+  if (!append && !results.length) {
+    setStatus('No displayable map images found for that search.');
+    el('loadMoreRow').hidden = !searchContinueParams;
+    return;
+  }
   setStatus('');
   results.forEach(r => {
     const card = document.createElement('div');
@@ -647,18 +718,43 @@ function renderResults(results) {
     card.querySelector('button').addEventListener('click', () => useResult(r));
     grid.appendChild(card);
   });
+  el('loadMoreRow').hidden = !searchContinueParams;
 }
 
 async function runSearch(query) {
+  currentSearchQuery = query;
+  searchContinueParams = null;
+  el('loadMoreRow').hidden = true;
   setStatus('<span class="spinner"></span>Searching Wikimedia Commons…');
   el('btnSearch').disabled = true;
   try {
-    const results = await searchMaps(query);
+    const { results, continueParams } = await searchMaps(query, { publicDomainOnly: el('licenseFilter').checked });
+    searchContinueParams = continueParams;
     renderResults(results);
   } catch (err) {
     setStatus(`Couldn't reach Wikimedia Commons (${escapeHtml(err.message)}). Check your connection, or a school network filter may be blocking it.`, true);
   } finally {
     el('btnSearch').disabled = false;
+  }
+}
+
+async function loadMoreResults() {
+  if (!searchContinueParams) return;
+  const btn = el('btnLoadMore');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  try {
+    const { results, continueParams } = await searchMaps(currentSearchQuery, {
+      publicDomainOnly: el('licenseFilter').checked,
+      continueParams: searchContinueParams,
+    });
+    searchContinueParams = continueParams;
+    renderResults(results, { append: true });
+  } catch (err) {
+    setStatus(`Couldn't load more results (${escapeHtml(err.message)}).`, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Load more results';
   }
 }
 
@@ -728,8 +824,10 @@ function displayMap(record) {
   renderLegend();
   el('compassRose').hidden = !project.compassEnabled;
   el('btnCompass').classList.toggle('active', project.compassEnabled);
+  if (project.compassEnabled) ensureOverlayPos(el('compassRose'), 'compassPos');
   el('locatorInset').hidden = !project.locatorEnabled;
   el('btnLocator').classList.toggle('active', project.locatorEnabled);
+  if (project.locatorEnabled) ensureOverlayPos(el('locatorInset'), 'locatorPos');
   save();
   renderAttribution(record);
   refreshRecent();
@@ -772,6 +870,7 @@ el('btnSearch').addEventListener('click', () => {
   if (q) runSearch(q);
 });
 el('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') el('btnSearch').click(); });
+el('btnLoadMore').addEventListener('click', loadMoreResults);
 
 el('btnZoomIn').addEventListener('click', () => {
   const r = viewport.getBoundingClientRect();
@@ -785,6 +884,250 @@ el('btnFit').addEventListener('click', () => {
   if (currentSize.width) viewer.fit(currentSize.width, currentSize.height);
 });
 el('btnPrint').addEventListener('click', () => window.print());
+el('btnDownloadPng').addEventListener('click', downloadPng);
+
+// --- PNG export -------------------------------------------------------
+// Composites a raster snapshot of exactly what's currently on screen: the
+// visible crop of the map at the current pan/zoom, plus every overlay drawn
+// with plain Canvas 2D primitives (all overlay data — labels, markers,
+// regions, grid — is stored in stage/map-pixel coordinates, so
+// viewer.stageToScreen() converts each point the same way the DOM layers'
+// own reposition() functions do). Marker/region/compass icons are the same
+// inline SVGs used on screen, rasterized via a data: URL Image (no
+// html2canvas dependency, and no canvas-tainting since every image source
+// here is same-origin: a blob: URL or a data: URL).
+
+function svgToImage(svgMarkup) {
+  // The shared icon builders (markerIconSvg, regionSwatchSvg, the compass
+  // rose markup) omit xmlns since they're normally inserted as innerHTML,
+  // where the SVG namespace is implicit. Standalone, as an <img> source,
+  // Chromium requires it declared or the image silently fails to load.
+  const standalone = /\bxmlns=/.test(svgMarkup)
+    ? svgMarkup
+    : svgMarkup.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('icon render failed'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(standalone);
+  });
+}
+
+function pngRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function hexToRgba(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+function drawPngGridLabel(ctx, text, x, y) {
+  ctx.font = '11px sans-serif';
+  const w = ctx.measureText(text).width;
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillRect(x, y, w + 8, 14);
+  ctx.fillStyle = '#1f3550';
+  ctx.fillText(text, x + 4, y + 11);
+}
+
+function drawPngLabel(ctx, text, px, py) {
+  if (!text) return;
+  const dotR = 7;
+  ctx.beginPath();
+  ctx.arc(px, py, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = '#2e6b8f';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#fff';
+  ctx.stroke();
+
+  ctx.font = '13px "Segoe UI", Georgia, serif';
+  const padX = 7, padY = 4, textH = 13;
+  const textW = ctx.measureText(text).width;
+  const boxX = px + dotR + 5;
+  const boxY = py - (textH + padY * 2) / 2;
+  pngRoundRect(ctx, boxX, boxY, textW + padX * 2, textH + padY * 2, 4);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#dcdad2';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#1f2430';
+  ctx.fillText(text, boxX + padX, py + 4);
+}
+
+async function drawPngLegend(ctx) {
+  const styles = [...new Set(project.markers.map(m => m.style))];
+  const colors = [...new Set(project.regions.map(r => r.color))];
+  if (!styles.length && !colors.length) return;
+  const pos = project.legendPos || { x: 12, y: 12 };
+  const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
+  const rows = styles.length + colors.length;
+  const height = padTop + titleH + rows * rowH + 8;
+
+  pngRoundRect(ctx, pos.x, pos.y, width, height, 8);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#dcdad2';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#1f3550';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillText('KEY', pos.x + padX, pos.y + padTop + 8);
+
+  let rowY = pos.y + padTop + titleH;
+  for (const style of styles) {
+    const img = await svgToImage(markerIconSvg(style, iconSize));
+    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
+    ctx.fillStyle = '#1f2430';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(project.legendText[style] || `(${style})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    rowY += rowH;
+  }
+  for (const color of colors) {
+    const img = await svgToImage(regionSwatchSvg(color, iconSize));
+    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
+    ctx.fillStyle = '#1f2430';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(project.regionLegendText[color] || `(${color})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    rowY += rowH;
+  }
+}
+
+async function drawPngLocator(ctx, cssW, cssH) {
+  const contEl = el('locatorInset');
+  if (contEl.hidden) return;
+  const vpRect = viewport.getBoundingClientRect();
+  const r = contEl.getBoundingClientRect();
+  const lx = r.left - vpRect.left, ly = r.top - vpRect.top;
+  const lw = contEl.clientWidth, lh = contEl.clientHeight;
+  if (!lw || !lh) return;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.drawImage(el('locatorImg'), lx, ly, lw, lh);
+  ctx.strokeRect(lx, ly, lw, lh);
+  const rectEl = el('locatorRect');
+  const rx = lx + parseFloat(rectEl.style.left || '0');
+  const ry = ly + parseFloat(rectEl.style.top || '0');
+  const rw = parseFloat(rectEl.style.width || '0');
+  const rh = parseFloat(rectEl.style.height || '0');
+  ctx.fillStyle = 'rgba(163,55,43,.12)';
+  ctx.strokeStyle = '#a3372b';
+  ctx.fillRect(rx, ry, rw, rh);
+  ctx.strokeRect(rx, ry, rw, rh);
+}
+
+async function drawPngCompass(ctx) {
+  const node = el('compassRose');
+  if (node.hidden) return;
+  const svgEl = node.querySelector('svg');
+  const vpRect = viewport.getBoundingClientRect();
+  const r = node.getBoundingClientRect();
+  const img = await svgToImage(svgEl.outerHTML);
+  ctx.drawImage(img, r.left - vpRect.left, r.top - vpRect.top);
+}
+
+async function buildPngBlob() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const vpRect = viewport.getBoundingClientRect();
+  const cssW = vpRect.width, cssH = vpRect.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  ctx.fillStyle = '#eef0ec';
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  const { x, y, scale } = viewer.getView();
+  ctx.drawImage(mapImg, -x / scale, -y / scale, cssW / scale, cssH / scale, 0, 0, cssW, cssH);
+
+  if (project.gridEnabled && isCalibrated(project.calibration)) {
+    const { vLines, hLines } = computeGraticule(project.calibration, currentSize.width, currentSize.height);
+    ctx.strokeStyle = 'rgba(31,53,80,.35)';
+    ctx.lineWidth = 1;
+    vLines.forEach(({ lon, x: gx }) => {
+      const p = viewer.stageToScreen(gx, 0);
+      ctx.beginPath();
+      ctx.moveTo(p.x, 0);
+      ctx.lineTo(p.x, cssH);
+      ctx.stroke();
+      drawPngGridLabel(ctx, `${lon}°`, p.x, 0);
+    });
+    hLines.forEach(({ lat, y: gy }) => {
+      const p = viewer.stageToScreen(0, gy);
+      ctx.beginPath();
+      ctx.moveTo(0, p.y);
+      ctx.lineTo(cssW, p.y);
+      ctx.stroke();
+      drawPngGridLabel(ctx, `${lat}°`, 0, p.y);
+    });
+  }
+
+  project.regions.forEach(r => {
+    const hex = regionColorHex(r.color);
+    const pts = r.points.map(p => viewer.stageToScreen(p.x, p.y));
+    ctx.beginPath();
+    pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(hex, 0.32);
+    ctx.fill();
+    ctx.strokeStyle = hex;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  });
+
+  for (const m of project.markers) {
+    const size = 26;
+    const img = await svgToImage(markerIconSvg(m.style, size));
+    const pt = viewer.stageToScreen(m.x, m.y);
+    const anchor = markerAnchor(m.style);
+    ctx.drawImage(img, pt.x - size / 2, anchor === 'bottom' ? pt.y - size : pt.y - size / 2, size, size);
+  }
+
+  project.labels.forEach(l => {
+    const pt = viewer.stageToScreen(l.x, l.y);
+    drawPngLabel(ctx, l.text, pt.x, pt.y);
+  });
+
+  await drawPngLegend(ctx);
+  await drawPngCompass(ctx);
+  await drawPngLocator(ctx, cssW, cssH);
+
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function downloadPng() {
+  if (!currentSize.width) return;
+  const btn = el('btnDownloadPng');
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Generating…';
+  try {
+    const blob = await buildPngBlob();
+    if (!blob) throw new Error('canvas export unsupported');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(project.mapId || 'blank-map').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'blank-map'}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (err) {
+    alert(`Couldn't generate the PNG (${err.message}).`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
 
 // Printing uses more vertical space than the on-screen viewport (see the
 // @media print rule for #viewport). Refit to that larger area right before
