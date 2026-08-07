@@ -10,6 +10,7 @@ function blank() {
   return {
     __v: VERSION, mapId: null, view: { x: 0, y: 0, scale: 1 },
     labels: [], markers: [], legendText: {}, legendPos: { x: 12, y: 12 },
+    compassEnabled: false, gridEnabled: false, locatorEnabled: false, calibration: null,
   };
 }
 
@@ -19,10 +20,14 @@ function isValid(p) {
     && Array.isArray(p.labels) && Array.isArray(p.markers);
 }
 
-/** Backfills fields added after a project was first saved (e.g. legend state). */
+/** Backfills fields added after a project was first saved (e.g. legend, calibration). */
 function normalize(p) {
   if (!p.legendText || typeof p.legendText !== "object") p.legendText = {};
   if (!p.legendPos || typeof p.legendPos !== "object") p.legendPos = { x: 12, y: 12 };
+  if (typeof p.compassEnabled !== "boolean") p.compassEnabled = false;
+  if (typeof p.gridEnabled !== "boolean") p.gridEnabled = false;
+  if (typeof p.locatorEnabled !== "boolean") p.locatorEnabled = false;
+  if (p.calibration !== null && typeof p.calibration !== "object") p.calibration = null;
   return p;
 }
 

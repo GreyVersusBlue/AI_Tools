@@ -156,6 +156,38 @@
     border-radius: 6px; background: #fff; color: var(--ink);
   }
 
+  #calibratePanel { margin-bottom: 10px; }
+  #calibratePanel .calibRow { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-top: 10px; }
+  #calibratePanel label { display: flex; flex-direction: column; gap: 3px; font-size: 0.76rem; font-weight: 600; color: var(--muted); }
+  #calibratePanel input[type=number] {
+    font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 5px; width: 90px;
+  }
+
+  #compassRose { position: absolute; top: 12px; right: 12px; pointer-events: none; z-index: 7; }
+  #compassRose svg { display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); }
+
+  #gridLayer { position: absolute; inset: 0; pointer-events: none; }
+  .grid-line { position: absolute; background: rgba(31,53,80,.35); }
+  .grid-line.v { top: 0; bottom: 0; width: 1px; }
+  .grid-line.h { left: 0; right: 0; height: 1px; }
+  .grid-label {
+    position: absolute; font-size: 11px; color: var(--accent); background: rgba(255,255,255,.8);
+    padding: 1px 4px; border-radius: 2px; white-space: nowrap; transform: translate(2px, 2px);
+  }
+
+  #latLonReadout {
+    position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,.92); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 9px; font-size: 0.78rem; color: var(--ink); pointer-events: none; z-index: 7;
+  }
+
+  #locatorInset {
+    position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; border-radius: 4px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.35); overflow: hidden; z-index: 7; background: #eef0ec;
+  }
+  #locatorInset img { display: block; width: 100%; height: 100%; object-fit: fill; }
+  #locatorRect { position: absolute; border: 2px solid var(--err); background: rgba(163,55,43,.12); pointer-events: none; }
+
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
   #attribution a { color: var(--accent-2); }
 
@@ -169,6 +201,7 @@
 
   @media print {
     .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
+    #calibratePanel, #latLonReadout { display: none !important; }
     #viewport { height: 90vh; }
   }
 </style>
@@ -215,11 +248,54 @@
       <button id="btnClearCache" class="small">Clear cached maps</button>
       <button id="btnPrint" class="small primary">Print / Save PDF</button>
     </div>
+    <div class="viewerToolbar no-print">
+      <button id="btnCompass" class="small toggle">Compass Rose</button>
+      <button id="btnGrid" class="small toggle">Lat/Long Grid</button>
+      <button id="btnLocator" class="small toggle">Locator Map</button>
+      <button id="btnCalibrate" class="small">Set Map Coordinates&hellip;</button>
+    </div>
+    <div id="calibratePanel" class="card no-print" hidden>
+      <h2>Map coordinates</h2>
+      <p class="hint">
+        Sets the real-world latitude/longitude of this map's edges, assuming a simple equirectangular
+        (evenly-spaced lat/long) projection &mdash; most Commons "blank map" files use this. Readings will drift for
+        maps drawn in other projections (e.g. Mercator), especially away from the equator.
+      </p>
+      <div class="calibRow">
+        <label>North edge lat<input type="number" id="calNorth" step="0.1" data-no-pan></label>
+        <label>South edge lat<input type="number" id="calSouth" step="0.1" data-no-pan></label>
+        <label>West edge lon<input type="number" id="calWest" step="0.1" data-no-pan></label>
+        <label>East edge lon<input type="number" id="calEast" step="0.1" data-no-pan></label>
+        <button id="btnApplyCalibration" class="small primary">Apply</button>
+        <button id="btnClearCalibration" class="small">Clear</button>
+      </div>
+    </div>
     <div id="viewport">
-      <div id="stage"><img id="mapImg" alt="" hidden></div>
+      <div id="stage">
+        <img id="mapImg" alt="" hidden>
+        <div id="gridLayer"></div>
+      </div>
       <div id="labelLayer"></div>
       <div id="markerLayer"></div>
       <div id="legendPanel" hidden></div>
+      <div id="compassRose" hidden>
+        <svg viewBox="0 0 100 100" width="70" height="70" aria-hidden="true">
+          <circle cx="50" cy="50" r="46" fill="#fff" stroke="#1f3550" stroke-width="2"/>
+          <path d="M50 8 L58 46 L50 40 L42 46 Z" fill="#a3372b"/>
+          <path d="M50 92 L58 54 L50 60 L42 54 Z" fill="#1f3550"/>
+          <path d="M8 50 L46 42 L40 50 L46 58 Z" fill="#1f3550"/>
+          <path d="M92 50 L54 42 L60 50 L54 58 Z" fill="#1f3550"/>
+          <text x="50" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3550">N</text>
+          <text x="50" y="87" text-anchor="middle" font-size="10" fill="#1f3550">S</text>
+          <text x="15" y="53" text-anchor="middle" font-size="10" fill="#1f3550">W</text>
+          <text x="85" y="53" text-anchor="middle" font-size="10" fill="#1f3550">E</text>
+        </svg>
+      </div>
+      <div id="latLonReadout" hidden></div>
+      <div id="locatorInset" hidden>
+        <img id="locatorImg" alt="">
+        <div id="locatorRect"></div>
+      </div>
       <div id="viewerEmpty">Search above and pick a map to get started.</div>
     </div>
     <div id="attribution"></div>
@@ -233,6 +309,8 @@ import { createViewer } from './blank-map-generator/bmg-viewer.js';
 import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
 import { createMarkerLayer, markerIconSvg } from './blank-map-generator/bmg-markers.js';
 import { createLegendPanel } from './blank-map-generator/bmg-legend.js';
+import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
+import { isCalibrated, toLatLon, formatLatLon, computeGraticule } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 
 const store = createStore();
@@ -256,6 +334,7 @@ const viewer = createViewer(viewport, stage, {
     updateZoomReadout(v.scale);
     labelLayer.reposition();
     markerLayer.reposition();
+    locator.updateRect();
   },
 });
 
@@ -272,9 +351,120 @@ const legendPanel = createLegendPanel(el('legendPanel'), {
   onMove(pos) { project.legendPos = pos; save(); },
 });
 
+const locator = createLocatorInset(el('locatorInset'), el('locatorImg'), el('locatorRect'), viewport, viewer);
+
 function renderLegend() {
   legendPanel.render(project.markers, project.legendText, markerIconSvg);
 }
+
+function renderGrid() {
+  const layer = el('gridLayer');
+  layer.innerHTML = '';
+  if (!project.gridEnabled || !isCalibrated(project.calibration) || !currentSize.width) return;
+  const { vLines, hLines } = computeGraticule(project.calibration, currentSize.width, currentSize.height);
+  vLines.forEach(({ lon, x }) => {
+    const line = document.createElement('div');
+    line.className = 'grid-line v';
+    line.style.left = `${x}px`;
+    layer.appendChild(line);
+    const label = document.createElement('div');
+    label.className = 'grid-label';
+    label.style.left = `${x}px`;
+    label.style.top = '0px';
+    label.textContent = `${lon}°`;
+    layer.appendChild(label);
+  });
+  hLines.forEach(({ lat, y }) => {
+    const line = document.createElement('div');
+    line.className = 'grid-line h';
+    line.style.top = `${y}px`;
+    layer.appendChild(line);
+    const label = document.createElement('div');
+    label.className = 'grid-label';
+    label.style.left = '0px';
+    label.style.top = `${y}px`;
+    label.textContent = `${lat}°`;
+    layer.appendChild(label);
+  });
+}
+
+function setCompassEnabled(on) {
+  project.compassEnabled = on;
+  el('compassRose').hidden = !on;
+  el('btnCompass').classList.toggle('active', on);
+  save();
+}
+
+function setLocatorEnabled(on) {
+  project.locatorEnabled = on;
+  el('locatorInset').hidden = !on;
+  el('btnLocator').classList.toggle('active', on);
+  if (on) locator.updateRect();
+  save();
+}
+
+function setGridEnabled(on) {
+  project.gridEnabled = on;
+  el('btnGrid').classList.toggle('active', on);
+  renderGrid();
+  save();
+}
+
+el('btnCompass').addEventListener('click', () => setCompassEnabled(!project.compassEnabled));
+el('btnLocator').addEventListener('click', () => setLocatorEnabled(!project.locatorEnabled));
+el('btnGrid').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
+  setGridEnabled(!project.gridEnabled);
+});
+
+function openCalibratePanel() {
+  const c = project.calibration || { north: 90, south: -90, west: -180, east: 180 };
+  el('calNorth').value = c.north;
+  el('calSouth').value = c.south;
+  el('calWest').value = c.west;
+  el('calEast').value = c.east;
+  el('calibratePanel').hidden = false;
+}
+
+el('btnCalibrate').addEventListener('click', () => {
+  el('calibratePanel').hidden = !el('calibratePanel').hidden;
+  if (!el('calibratePanel').hidden) openCalibratePanel();
+});
+
+el('btnApplyCalibration').addEventListener('click', () => {
+  const north = parseFloat(el('calNorth').value);
+  const south = parseFloat(el('calSouth').value);
+  const west = parseFloat(el('calWest').value);
+  const east = parseFloat(el('calEast').value);
+  const candidate = { north, south, west, east };
+  if (!isCalibrated(candidate)) {
+    alert('Enter four different numbers, with north above south and west left of east.');
+    return;
+  }
+  project.calibration = candidate;
+  save();
+  renderGrid();
+  el('calibratePanel').hidden = true;
+});
+
+el('btnClearCalibration').addEventListener('click', () => {
+  project.calibration = null;
+  project.gridEnabled = false;
+  el('btnGrid').classList.remove('active');
+  save();
+  renderGrid();
+  el('calibratePanel').hidden = true;
+});
+
+viewport.addEventListener('pointermove', e => {
+  const box = el('latLonReadout');
+  if (!isCalibrated(project.calibration) || !currentSize.width) { box.hidden = true; return; }
+  const pt = viewer.screenToStage(e.clientX, e.clientY);
+  const { lat, lon } = toLatLon(project.calibration, currentSize.width, currentSize.height, pt.x, pt.y);
+  box.textContent = formatLatLon(lat, lon);
+  box.hidden = false;
+});
+viewport.addEventListener('pointerleave', () => { el('latLonReadout').hidden = true; });
 
 function updateZoomReadout(scale) {
   el('zoomReadout').textContent = scale ? `${Math.round(scale * 100)}%` : '—';
@@ -400,22 +590,33 @@ function displayMap(record) {
     }
     labelLayer.reposition();
     markerLayer.reposition();
+    renderGrid();
+    locator.updateRect();
   };
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
   el('viewerEmpty').hidden = true;
+  locator.setImage(currentObjectUrl, record.width, record.height);
 
   project.mapId = record.id;
   if (!isSameMap) {
     project.labels = [];
     project.markers = [];
     project.legendText = {};
+    project.calibration = null;
+    project.gridEnabled = false;
     setPlaceMode('none');
+    el('calibratePanel').hidden = true;
+    el('btnGrid').classList.remove('active');
   }
   labelLayer.setLabels(project.labels);
   markerLayer.setMarkers(project.markers);
   legendPanel.setPosition(project.legendPos);
   renderLegend();
+  el('compassRose').hidden = !project.compassEnabled;
+  el('btnCompass').classList.toggle('active', project.compassEnabled);
+  el('locatorInset').hidden = !project.locatorEnabled;
+  el('btnLocator').classList.toggle('active', project.locatorEnabled);
   save();
   renderAttribution(record);
   refreshRecent();
