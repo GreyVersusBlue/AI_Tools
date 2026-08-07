@@ -29,7 +29,7 @@ export function labelFontSizePx(size) {
   return labelFontSizeRem(size) * 16;
 }
 
-export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
+export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
   let labels = [];
   const nodes = new Map(); // id -> element
   let selectedId = null; // for keyboard-nudge — see select()/nudge()
@@ -77,17 +77,8 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   }
 
   function remove(id) {
-    const removed = labels.find(l => l.id === id);
     labels = labels.filter(l => l.id !== id);
     if (selectedId === id) selectedId = null;
-    reconcile();
-    onChange?.(labels);
-    if (removed) onDelete?.(removed);
-  }
-
-  /** Re-adds a previously removed label (used to undo a delete). */
-  function restore(label) {
-    labels.push(label);
     reconcile();
     onChange?.(labels);
   }
@@ -288,5 +279,5 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
     if (label && node) startEdit(node, label);
   }
 
-  return { setLabels, getLabels, addAt, remove, restore, reposition, startEditing, select, deselect, getSelectedId, nudge };
+  return { setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge };
 }

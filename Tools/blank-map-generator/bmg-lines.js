@@ -47,7 +47,7 @@ function ensureArrowMarker(defsEl, colorKey) {
   return id;
 }
 
-export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange, onDelete } = {}) {
+export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange } = {}) {
   let lines = [];
   let draft = null; // { color, style, arrow, points: [{x,y}] } — the in-progress line being clicked out
   const chips = new Map(); // id -> element
@@ -104,16 +104,7 @@ export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange, onDelete
   }
 
   function remove(id) {
-    const removed = lines.find(l => l.id === id);
     lines = lines.filter(l => l.id !== id);
-    renderAll();
-    onChange?.(lines);
-    if (removed) onDelete?.(removed);
-  }
-
-  /** Re-adds a previously removed line (used to undo a delete). */
-  function restore(line) {
-    lines.push(line);
     renderAll();
     onChange?.(lines);
   }
@@ -203,6 +194,6 @@ export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange, onDelete
 
   return {
     setSize, setLines, getLines, startDraft, addDraftPoint, popLastDraftPoint,
-    cancelDraft, finishDraft, isDrafting, draftPointCount, remove, restore, reposition,
+    cancelDraft, finishDraft, isDrafting, draftPointCount, remove, reposition,
   };
 }

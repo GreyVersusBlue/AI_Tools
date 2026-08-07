@@ -94,7 +94,7 @@ function ensureFillPattern(defsEl, colorKey, pattern) {
   return id;
 }
 
-export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDelete } = {}) {
+export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange } = {}) {
   let regions = [];
   let draft = null; // { color, points: [{x,y}] } — the in-progress shape being clicked out
   const chips = new Map(); // id -> element
@@ -151,16 +151,7 @@ export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDele
   }
 
   function remove(id) {
-    const removed = regions.find(r => r.id === id);
     regions = regions.filter(r => r.id !== id);
-    renderAll();
-    onChange?.(regions);
-    if (removed) onDelete?.(removed);
-  }
-
-  /** Re-adds a previously removed region (used to undo a delete). */
-  function restore(region) {
-    regions.push(region);
     renderAll();
     onChange?.(regions);
   }
@@ -256,6 +247,6 @@ export function createRegionLayer(svgEl, chipLayerEl, viewer, { onChange, onDele
 
   return {
     setSize, setRegions, getRegions, startDraft, addDraftPoint, popLastDraftPoint,
-    cancelDraft, finishDraft, isDrafting, draftPointCount, remove, restore, reposition,
+    cancelDraft, finishDraft, isDrafting, draftPointCount, remove, reposition,
   };
 }

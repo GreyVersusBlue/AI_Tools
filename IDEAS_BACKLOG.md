@@ -45,14 +45,10 @@ Reminder: coming soon means not right now.
 
 ## Blank Map Generator — Enhancement Ideas
 
-Already built and continuously extended (`Tools/blank-map-generator.html`) — this is the wish list of further
-enhancements collected since. These are improvements to an existing tool, not a new standalone tool, so they don't
-get a "coming soon" row on `index.html` — graduating one just means shipping it and deleting its row here.
-
-| Idea | What it would do |
-|---|---|
-| Multi-page tiled print | Print a heavily zoomed-in, detailed map across multiple tiled pages (poster-style) instead of squeezing it onto one sheet. |
-| Full undo/redo history | Broaden the current "undo the last delete" into a real undo/redo stack covering moves and edits too, not just deletions. |
+Already built and continuously extended (`Tools/blank-map-generator.html`). No open ideas on the list right now —
+every enhancement collected so far has shipped. Add new ones here as they come up; since this is an improvement to
+an existing tool rather than a new standalone one, graduating an idea just means shipping it and deleting its row,
+with no `index.html` "coming soon" row involved.
 
 ## Picking one up
 

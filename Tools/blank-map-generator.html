@@ -270,13 +270,6 @@
   .projectBar label { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
   #projectSwitcher { min-width: 160px; }
 
-  #undoToast {
-    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 20;
-    background: var(--ink); color: #fff; border-radius: 8px; padding: 8px 10px 8px 16px;
-    font-size: 0.84rem; box-shadow: 0 4px 14px rgba(0,0,0,.3);
-  }
-  #undoToast:not([hidden]) { display: flex; align-items: center; gap: 10px; }
-  #undoToast button { background: #fff; border-color: #fff; }
   .spinner {
     width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent-2);
     border-radius: 50%; display: inline-block; vertical-align: -2px; margin-right: 6px;
@@ -295,10 +288,35 @@
   body.student-blank .bmg-label .lbl-text { color: transparent !important; }
   body.student-blank #legendPanel .legend-input { color: transparent; }
 
+  #tiledPrintPanel .tileRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  #tiledPrintPanel label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+  #tiledPrintPanel select { font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--ink); }
+
+  #tiledPrintPages { display: none; }
+  .tiledPage { position: relative; }
+  .tiledPage img { display: block; width: 100%; height: auto; }
+  .tiledPageLabel {
+    position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: #888;
+    background: rgba(255,255,255,.85); padding: 1px 5px; border-radius: 2px;
+  }
+  .tiledLegendPageWrap { display: flex; align-items: center; justify-content: center; height: 100%; }
+  .tiledLegendClone {
+    position: static !important; box-shadow: none !important; border: 2px solid var(--line);
+    padding: 26px 30px; font-size: 1.15rem; max-width: 85%;
+  }
+  .tiledLegendClone .legend-grip { display: none; }
+  .tiledLegendClone .legend-title { font-size: 1.4rem; margin-bottom: 16px; }
+  .tiledLegendClone .legend-row { margin-bottom: 12px; gap: 10px; }
+  .tiledLegendClone .legend-icon svg { width: 26px; height: 26px; }
+
   @media print {
     .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
-    #calibratePanel, #latLonReadout, .rgn-del, #undoToast { display: none !important; }
+    #calibratePanel, #latLonReadout, .rgn-del { display: none !important; }
     #viewport { height: 90vh; }
+    body.tiled-printing .card { display: none !important; }
+    body.tiled-printing #tiledPrintPages { display: block; }
+    .tiledPage { page-break-after: always; }
+    .tiledPage:last-child { page-break-after: auto; }
   }
 </style>
 </head>
@@ -352,6 +370,8 @@
       <span id="zoomReadout" class="zoomReadout">&mdash;</span>
       <button id="btnZoomIn" class="icon" title="Zoom in">+</button>
       <button id="btnFit" class="small">Fit to view</button>
+      <button id="btnUndo" class="icon" title="Undo (Ctrl+Z)" disabled>&#8630;</button>
+      <button id="btnRedo" class="icon" title="Redo (Ctrl+Shift+Z)" disabled>&#8631;</button>
       <button id="btnAddLabel" class="small toggle">+ Add Label</button>
       <button id="btnAddMarker" class="small toggle">+ Add Marker</button>
       <select id="markerStyleSelect" class="styleSelect" hidden>
@@ -382,6 +402,7 @@
       <button id="btnClearCache" class="small">Clear cached maps</button>
       <button id="btnDownloadPng" class="small">Download PNG</button>
       <button id="btnPrint" class="small primary">Print / Save PDF</button>
+      <button id="btnTiledPrint" class="small">Tiled Print&hellip;</button>
     </div>
     <div class="viewerToolbar no-print">
       <button id="btnCompass" class="small toggle">Compass Rose</button>
@@ -432,6 +453,23 @@
       </div>
       <div id="batchStatus" class="status" hidden></div>
     </div>
+    <div id="tiledPrintPanel" class="card no-print" hidden>
+      <h2>Tiled poster print</h2>
+      <p class="hint">
+        Prints exactly the region you're currently panned/zoomed into, split across multiple full-size pages at
+        full print resolution &mdash; good for a heavily zoomed-in, detailed map that would lose detail squeezed
+        onto one sheet. Pages overlap slightly at their edges to make lining them up and taping them together
+        easier. A final page prints the key. (The compass rose and scale bar print on page 1 if enabled; the
+        locator inset doesn't apply to a tiled poster and is skipped.)
+      </p>
+      <div class="tileRow">
+        <label>Columns <select id="tileCols"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+        <label>Rows <select id="tileRows"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+        <button id="btnTiledPrintGo" class="small primary">Print Tiled Pages</button>
+        <button id="btnTiledPrintClose" class="small">Close</button>
+      </div>
+    </div>
+    <div id="tiledPrintPages" aria-hidden="true"></div>
     <div id="viewport">
       <div id="stage">
         <img id="mapImg" alt="" hidden>
@@ -472,8 +510,6 @@
   </div>
 </div>
 
-<div id="undoToast" class="no-print" hidden></div>
-
 <script type="module">
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
@@ -500,8 +536,6 @@ let currentObjectUrl = null;
 let currentSize = { width: 0, height: 0 };
 let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region'
 let downPt = null;
-let lastDeleted = null; // { type: 'label'|'marker'|'region', item } — most recent delete, for undo
-let undoTimer = null;
 let currentSearchQuery = '';
 let searchContinueParams = null;
 
@@ -510,7 +544,10 @@ const viewport = el('viewport');
 const stage = el('stage');
 const mapImg = el('mapImg');
 
-function save() { store.setActiveProject(project); }
+function save() {
+  store.setActiveProject(project);
+  recordHistoryPoint();
+}
 
 const viewer = createViewer(viewport, stage, {
   onChange(v) {
@@ -528,22 +565,18 @@ const viewer = createViewer(viewport, stage, {
 
 const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
   onChange(labels) { project.labels = labels; save(); },
-  onDelete(label) { lastDeleted = { type: 'label', item: label }; showUndoToast('Label'); },
 });
 
 const markerLayer = createMarkerLayer(el('markerLayer'), viewer, {
   onChange(markers) { project.markers = markers; save(); renderLegend(); },
-  onDelete(marker) { lastDeleted = { type: 'marker', item: marker }; showUndoToast('Marker'); },
 });
 
 const regionLayer = createRegionLayer(el('regionSvg'), el('regionChipLayer'), viewer, {
   onChange(regions) { project.regions = regions; save(); renderLegend(); },
-  onDelete(region) { lastDeleted = { type: 'region', item: region }; showUndoToast('Shaded region'); },
 });
 
 const lineLayer = createLineLayer(el('lineSvg'), el('lineChipLayer'), viewer, {
   onChange(lines) { project.lines = lines; save(); renderLegend(); },
-  onDelete(line) { lastDeleted = { type: 'line', item: line }; showUndoToast('Line'); },
 });
 
 const legendPanel = createLegendPanel(el('legendPanel'), {
@@ -623,33 +656,89 @@ function renderLegend() {
   });
 }
 
-function showUndoToast(kind) {
-  clearTimeout(undoTimer);
-  const box = el('undoToast');
-  box.innerHTML = '';
-  const span = document.createElement('span');
-  span.textContent = `${kind} deleted.`;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'small';
-  btn.textContent = 'Undo';
-  btn.addEventListener('click', performUndo);
-  box.appendChild(span);
-  box.appendChild(btn);
-  box.hidden = false;
-  undoTimer = setTimeout(() => { box.hidden = true; lastDeleted = null; }, 6000);
+// --- Undo/redo history ---------------------------------------------
+// Covers every content edit — adds, deletes, drags, style/text/caption
+// changes, legend reordering — not just deletions. Since save() is
+// already the one choke point every content mutation runs through,
+// history just piggybacks on it: after each save(), compare a snapshot
+// of the "content" fields (annotations + their legend captions/order,
+// deliberately excluding view/pan-zoom and UI toggles like the compass or
+// grid, which aren't "edits" a labeling activity would want to step back
+// through) against the last-recorded one, and push the *previous* state
+// onto the undo stack if anything changed. Plain JSON stringify/parse
+// doubles as a cheap deep-clone here since every one of these fields is
+// plain JSON-serializable data.
+let historyStack = [];
+let redoStack = [];
+let lastSnapshot = null;
+let restoringHistory = false; // guards against recording history *while* undo/redo is itself applying a snapshot
+
+function snapshotContent() {
+  return JSON.stringify({
+    labels: project.labels, markers: project.markers, regions: project.regions, lines: project.lines,
+    legendText: project.legendText, regionLegendText: project.regionLegendText, lineLegendText: project.lineLegendText,
+    legendOrder: project.legendOrder,
+  });
 }
 
-function performUndo() {
-  if (!lastDeleted) return;
-  clearTimeout(undoTimer);
-  el('undoToast').hidden = true;
-  const { type, item } = lastDeleted;
-  lastDeleted = null;
-  if (type === 'label') labelLayer.restore(item);
-  else if (type === 'marker') markerLayer.restore(item);
-  else if (type === 'region') regionLayer.restore(item);
-  else if (type === 'line') lineLayer.restore(item);
+function updateUndoRedoButtons() {
+  el('btnUndo').disabled = historyStack.length === 0;
+  el('btnRedo').disabled = redoStack.length === 0;
+}
+
+/** Resets undo/redo history to a fresh baseline — called whenever a different project or map is loaded, since history from one map's editing session shouldn't bleed into another's. */
+function resetHistory() {
+  historyStack = [];
+  redoStack = [];
+  lastSnapshot = snapshotContent();
+  updateUndoRedoButtons();
+}
+
+function recordHistoryPoint() {
+  if (restoringHistory) return;
+  const current = snapshotContent();
+  if (current === lastSnapshot) return;
+  if (lastSnapshot !== null) {
+    historyStack.push(lastSnapshot);
+    if (historyStack.length > 60) historyStack.shift();
+    redoStack = [];
+  }
+  lastSnapshot = current;
+  updateUndoRedoButtons();
+}
+
+function applySnapshot(json) {
+  const data = JSON.parse(json);
+  restoringHistory = true;
+  project.labels = data.labels;
+  project.markers = data.markers;
+  project.regions = data.regions;
+  project.lines = data.lines;
+  project.legendText = data.legendText;
+  project.regionLegendText = data.regionLegendText;
+  project.lineLegendText = data.lineLegendText;
+  project.legendOrder = data.legendOrder;
+  labelLayer.setLabels(project.labels);
+  markerLayer.setMarkers(project.markers);
+  regionLayer.setRegions(project.regions);
+  lineLayer.setLines(project.lines);
+  renderLegend();
+  save(); // recordHistoryPoint() no-ops while restoringHistory is true, above
+  lastSnapshot = json;
+  restoringHistory = false;
+  updateUndoRedoButtons();
+}
+
+function undo() {
+  if (!historyStack.length) return;
+  redoStack.push(lastSnapshot);
+  applySnapshot(historyStack.pop());
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  historyStack.push(lastSnapshot);
+  applySnapshot(redoStack.pop());
 }
 
 function renderGrid() {
@@ -1022,13 +1111,25 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Enter' && active) { finishShape(); return; }
 
+  const tag = document.activeElement?.tagName;
+  const inTextField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+  // Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo — skipped
+  // while focus is in a text field so the browser's own native undo for
+  // whatever the user is typing (a label's text, a search box) still works.
+  if ((e.ctrlKey || e.metaKey) && !inTextField && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
+    e.preventDefault();
+    if (e.key === 'y' || e.key === 'Y' || e.shiftKey) redo();
+    else undo();
+    return;
+  }
+
   // Arrow-key nudge for whichever label or marker is currently selected
   // (click one to select it — see bmg-labels.js/bmg-markers.js's select()).
   // Skipped while focus is in a text field so typing/searching still works.
   const dir = NUDGE_KEYS[e.key];
   if (!dir) return;
-  const tag = document.activeElement?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (inTextField) return;
   const selLabel = labelLayer.getSelectedId();
   const selMarker = markerLayer.getSelectedId();
   if (!selLabel && !selMarker) return;
@@ -1269,6 +1370,7 @@ function displayMap(record) {
     project.regionLegendText = {};
     project.lines = [];
     project.lineLegendText = {};
+    project.legendOrder = [];
     project.calibration = null;
     project.gridEnabled = false;
     project.scaleBarEnabled = false;
@@ -1276,10 +1378,8 @@ function displayMap(record) {
     el('calibratePanel').hidden = true;
     el('btnGrid').classList.remove('active');
     el('batchPanel').hidden = true;
-    clearTimeout(undoTimer);
-    lastDeleted = null;
-    el('undoToast').hidden = true;
   }
+  resetHistory(); // fresh undo/redo baseline for whichever map is now showing
   labelLayer.setLabels(project.labels);
   markerLayer.setMarkers(project.markers);
   legendPanel.setPosition(project.legendPos);
@@ -1365,8 +1465,18 @@ el('btnZoomOut').addEventListener('click', () => {
 el('btnFit').addEventListener('click', () => {
   if (currentSize.width) viewer.fit(currentSize.width, currentSize.height);
 });
+el('btnUndo').addEventListener('click', undo);
+el('btnRedo').addEventListener('click', redo);
 el('btnPrint').addEventListener('click', () => window.print());
 el('btnDownloadPng').addEventListener('click', downloadPng);
+el('btnTiledPrint').addEventListener('click', () => {
+  if (!currentSize.width) return;
+  el('tiledPrintPanel').hidden = !el('tiledPrintPanel').hidden;
+});
+el('btnTiledPrintClose').addEventListener('click', () => { el('tiledPrintPanel').hidden = true; });
+el('btnTiledPrintGo').addEventListener('click', () => {
+  printTiledPages(parseInt(el('tileCols').value, 10), parseInt(el('tileRows').value, 10));
+});
 
 // --- PNG export -------------------------------------------------------
 // Composites a raster snapshot of exactly what's currently on screen: the
@@ -1649,16 +1759,24 @@ async function drawPngCompass(ctx) {
   ctx.drawImage(img, r.left - vpRect.left, r.top - vpRect.top);
 }
 
-async function buildPngBlob() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const vpRect = viewport.getBoundingClientRect();
-  const cssW = vpRect.width, cssH = vpRect.height;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(cssW * dpr);
-  canvas.height = Math.round(cssH * dpr);
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
+/** Same compass rose, but at a fixed corner offset instead of the real on-screen drag position — used for the tiled poster print, where "real on-screen position relative to #viewport" is meaningless (the poster represents a different virtual view entirely). See printTiledPages(). */
+async function drawPngCompassFixed(ctx, cssW) {
+  if (!project.compassEnabled) return;
+  const svgEl = el('compassRose').querySelector('svg');
+  const img = await svgToImage(svgEl.outerHTML);
+  const size = 70;
+  ctx.drawImage(img, cssW - size - 12, 12, size, size);
+}
 
+// Draws everything that's positioned purely via viewer.stageToScreen() —
+// map image, grid, regions, lines, markers, labels — which stays correct
+// regardless of what (cssW, cssH) or virtual viewer.getView() the caller
+// has set up. This is exactly what a tiled poster print can safely reuse;
+// what it can't reuse is the legend/compass/locator/scale-bar drawing
+// below, which (except the scale bar) reads real on-screen DOM element
+// positions relative to the actual #viewport — meaningless for a poster
+// canvas representing a different virtual view. See printTiledPages().
+async function drawMapContent(ctx, cssW, cssH) {
   ctx.fillStyle = '#eef0ec';
   ctx.fillRect(0, 0, cssW, cssH);
 
@@ -1732,12 +1850,29 @@ async function buildPngBlob() {
     const pt = viewer.stageToScreen(l.x, l.y);
     drawPngLabel(ctx, l, pt.x, pt.y, project.studentBlankMode);
   });
+}
+
+async function renderMapCanvas(cssW, cssH, dpr = 1) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  await drawMapContent(ctx, cssW, cssH);
 
   await drawPngLegend(ctx);
   await drawPngCompass(ctx);
   await drawPngLocator(ctx, cssW, cssH);
   drawPngScaleBar(ctx, cssH);
 
+  return canvas;
+}
+
+async function buildPngBlob() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const vpRect = viewport.getBoundingClientRect();
+  const canvas = await renderMapCanvas(vpRect.width, vpRect.height, dpr);
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
 
@@ -1777,7 +1912,107 @@ window.addEventListener('beforeprint', () => {
 });
 window.addEventListener('afterprint', () => {
   if (viewBeforePrint) { viewer.setView(viewBeforePrint); viewBeforePrint = null; }
+  if (document.body.classList.contains('tiled-printing')) {
+    document.body.classList.remove('tiled-printing');
+    el('tiledPrintPages').innerHTML = '';
+  }
 });
+
+// --- Tiled poster print -------------------------------------------------
+// Rasterizes the region currently centered in the viewport at the CURRENT
+// zoom scale (i.e. exactly what "heavily zoomed in" means to the user
+// right now) across a cols x rows grid of full print-resolution pages,
+// each overlapping its neighbors slightly for easier alignment when taped
+// together. Reuses drawMapContent() — the same map/grid/regions/lines/
+// markers/labels drawing the single-page PNG export uses — since that's
+// all positioned purely via viewer.stageToScreen(), which stays correct
+// once the viewer's view is temporarily pointed at the poster's own
+// (much larger) virtual window instead of the real on-screen one.
+async function printTiledPages(cols, rows) {
+  if (!currentSize.width) return;
+  const btn = el('btnTiledPrintGo');
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const originalView = viewer.getView();
+    const tileW = 1200, tileH = 1550, overlap = 40;
+    const posterW = cols * tileW, posterH = rows * tileH;
+
+    const vpRect = viewport.getBoundingClientRect();
+    const centerStage = viewer.screenToStage(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
+    const posterView = {
+      x: posterW / 2 - centerStage.x * originalView.scale,
+      y: posterH / 2 - centerStage.y * originalView.scale,
+      scale: originalView.scale,
+    };
+
+    viewer.setView(posterView);
+    const posterCanvas = document.createElement('canvas');
+    posterCanvas.width = posterW;
+    posterCanvas.height = posterH;
+    const pctx = posterCanvas.getContext('2d');
+    await drawMapContent(pctx, posterW, posterH);
+    // Compass/scale bar drawn directly onto page 1's region (top-left
+    // tile) at a fixed offset — not the real on-screen drag position,
+    // which wouldn't mean anything relative to this virtual poster view.
+    await drawPngCompassFixed(pctx, tileW);
+    drawPngScaleBar(pctx, tileH);
+    viewer.setView(originalView);
+
+    const legendPageNeeded = !el('legendPanel').hidden;
+    const total = cols * rows + (legendPageNeeded ? 1 : 0);
+    const container = el('tiledPrintPages');
+    container.innerHTML = '';
+    let pageNum = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        pageNum++;
+        const sx = Math.max(0, c * tileW - overlap);
+        const sy = Math.max(0, r * tileH - overlap);
+        const ex = Math.min(posterW, (c + 1) * tileW + overlap);
+        const ey = Math.min(posterH, (r + 1) * tileH + overlap);
+        const tileCanvas = document.createElement('canvas');
+        tileCanvas.width = ex - sx;
+        tileCanvas.height = ey - sy;
+        tileCanvas.getContext('2d').drawImage(posterCanvas, sx, sy, ex - sx, ey - sy, 0, 0, ex - sx, ey - sy);
+        const page = document.createElement('div');
+        page.className = 'tiledPage';
+        const img = document.createElement('img');
+        img.src = tileCanvas.toDataURL('image/png');
+        img.alt = '';
+        const label = document.createElement('div');
+        label.className = 'tiledPageLabel';
+        label.textContent = `Page ${pageNum} of ${total} — row ${r + 1} of ${rows}, column ${c + 1} of ${cols}`;
+        page.append(img, label);
+        container.appendChild(page);
+      }
+    }
+    if (legendPageNeeded) {
+      const wrap = document.createElement('div');
+      wrap.className = 'tiledPage tiledLegendPageWrap';
+      const clone = el('legendPanel').cloneNode(true);
+      clone.removeAttribute('hidden');
+      clone.classList.add('tiledLegendClone');
+      wrap.appendChild(clone);
+      container.appendChild(wrap);
+    }
+
+    // Not img.decode() — it's been observed to hang indefinitely in some
+    // Chromium builds for freshly-created data: URL images, which would
+    // wedge this whole flow before it ever reaches window.print().
+    await Promise.all([...container.querySelectorAll('img')].map(img => img.complete
+      ? Promise.resolve()
+      : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; })));
+    el('tiledPrintPanel').hidden = true;
+    document.body.classList.add('tiled-printing');
+    window.print();
+  } catch (err) {
+    alert(`Couldn't build the tiled print pages (${err.message}).`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Print Tiled Pages';
+  }
+}
 el('btnClearCache').addEventListener('click', async () => {
   if (!confirm('Remove every map cached in this browser? Nothing on your project is lost — you can search and re-download any of them again.')) return;
   const list = await cache.listCachedMaps().catch(() => []);
@@ -1829,9 +2064,7 @@ function showEmptyMapState(mapMissing) {
   el('scaleBarUnitSelect').hidden = true;
   el('batchPanel').hidden = true;
   el('attribution').innerHTML = '';
-  clearTimeout(undoTimer);
-  lastDeleted = null;
-  el('undoToast').hidden = true;
+  resetHistory();
 }
 
 /** Loads whichever project is now active (after init, switch, create, or delete) into the viewer. */

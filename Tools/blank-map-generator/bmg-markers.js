@@ -59,7 +59,7 @@ export function numberedOrder(list) {
   return list.filter(m => m.style === "number");
 }
 
-export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) {
+export function createMarkerLayer(layerEl, viewer, { onChange } = {}) {
   let markers = [];
   const nodes = new Map(); // id -> element
   let selectedId = null; // for keyboard-nudge — see select()/nudge()
@@ -108,17 +108,8 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
   }
 
   function remove(id) {
-    const removed = markers.find(m => m.id === id);
     markers = markers.filter(m => m.id !== id);
     if (selectedId === id) selectedId = null;
-    reconcile();
-    onChange?.(markers);
-    if (removed) onDelete?.(removed);
-  }
-
-  /** Re-adds a previously removed marker (used to undo a delete). */
-  function restore(marker) {
-    markers.push(marker);
     reconcile();
     onChange?.(markers);
   }
@@ -223,5 +214,5 @@ export function createMarkerLayer(layerEl, viewer, { onChange, onDelete } = {}) 
     node.addEventListener("pointercancel", end);
   }
 
-  return { setMarkers, getMarkers, addAt, remove, restore, reposition, refreshIcons, select, deselect, getSelectedId, nudge };
+  return { setMarkers, getMarkers, addAt, remove, reposition, refreshIcons, select, deselect, getSelectedId, nudge };
 }
