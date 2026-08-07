@@ -29,6 +29,9 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Vocabulary Flashcard & Word Wall Generator | `Tools/vocab-flashcard-generator.html` | Paste a "term: definition" word list, print cut-apart flashcards (front/back pages, mirrored for double-siding) or large word-wall cards. Saves multiple named word lists. |
 | Writing Prompt Generator | `Tools/writing-prompt-generator.html` | 200 prompts (100 middle school, 100 high school) across five genres, with a big projector-friendly display and a session history. |
 | Timeline Builder | `Tools/timeline-builder.html` | Add events (exact years, BCE, or ranges/eras) with an optional photo each, pick a line style, view a scrolling on-screen timeline or a paginated print layout. Saves multiple named timelines. |
+| Group / Team Generator | `Tools/group-team-generator.html` | Split a pasted or Name-Picker roster into random groups by count or size, with optional skill-balancing and "keep these two apart" constraints. Prints a clean group sheet. |
+| Data Table → Chart Builder | `Tools/data-chart-builder.html` | Paste a table from a spreadsheet or lab notebook, pick the columns, and get a bar, line, pie, or scatter chart with quick descriptive stats — download as PNG or SVG. |
+| QR Scavenger Hunt Builder | `Tools/qr-scavenger-hunt-builder.html` | Type in stations (or paste them from a spreadsheet) and print a sheet of station QR codes sized however many-per-page you need, plus a separate answer key that never shares a page with the codes. |
 
 ## Using these
 
