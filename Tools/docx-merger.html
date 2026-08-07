@@ -4,241 +4,107 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Word Doc Merger</title>
+<script src="../_shared/theme-toggle.js"></script>
+<link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
+<link rel="stylesheet" href="../_shared/theme.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-  :root {
-    --ink: #1f2430;
-    --paper: #fafaf8;
-    --line: #dcdad2;
-    --accent: #7a4f2b;
-    --accent-dark: #5c3a1e;
-    --ok: #2e6b3e;
-    --err: #a3372b;
-    --muted: #6b6a63;
-  }
-  * { box-sizing: border-box; }
-  body {
-    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
-    background: var(--paper);
-    color: var(--ink);
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 32px 20px 80px;
-    line-height: 1.5;
-  }
-  h1 {
-    font-size: 1.6rem;
-    margin-bottom: 4px;
-    border-bottom: 3px solid var(--accent);
-    padding-bottom: 10px;
-  }
-  .sub {
-    color: var(--muted);
-    margin-top: 0;
-    margin-bottom: 24px;
-    font-size: 0.95rem;
-  }
-  .card {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 18px 20px;
-    margin-bottom: 20px;
-  }
+  body { max-width: 900px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
+  h1 { font-size: 32px; margin-bottom: var(--space-1); }
+  .sub { color: var(--color-text); opacity: 0.65; margin: 0 0 var(--space-6); font-size: 15px; }
+
+  .section-card { margin-bottom: var(--space-6); padding: var(--space-6); }
+
   .dropzone {
-    border: 2px dashed var(--accent);
-    border-radius: 8px;
-    padding: 30px 16px;
+    border: 1.5px dashed var(--color-accent);
+    padding: var(--space-8) var(--space-4);
     text-align: center;
-    background: #fff8ef;
     cursor: pointer;
     transition: background 0.15s;
   }
-  .dropzone.drag-over { background: #f3e6d3; }
-  .dropzone p { margin: 4px 0; }
-  .dropzone .big { font-weight: 600; font-size: 1.05rem; }
-  .dropzone .small { color: var(--muted); font-size: 0.85rem; }
+  .dropzone.drag-over { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+  .dropzone p { margin: var(--space-1) 0; }
+  .dropzone .big { font-family: var(--font-heading); font-weight: 600; font-size: 18px; }
+  .dropzone .small { color: var(--color-text); opacity: 0.6; font-size: 13px; }
   input[type=file] { display: none; }
 
   .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 14px 0;
-    align-items: center;
+    display: flex; flex-wrap: wrap; gap: var(--space-2);
+    margin: var(--space-4) 0; align-items: center;
   }
-  .toolbar input[type=text] {
-    flex: 1;
-    min-width: 140px;
-    padding: 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    font-family: inherit;
-  }
-  button {
-    font-family: inherit;
-    font-size: 0.85rem;
-    padding: 7px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-    background: #fff;
-    cursor: pointer;
-    color: var(--ink);
-  }
-  button:hover { background: #f2f0ea; }
-  button:disabled { opacity: 0.45; cursor: not-allowed; }
-  button.primary {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent-dark);
-    font-weight: 600;
-  }
-  button.primary:hover { background: var(--accent-dark); }
-  button.danger { color: var(--err); }
+  .toolbar .input { flex: 1; min-width: 160px; }
 
-  .count-line {
-    font-size: 0.85rem;
-    color: var(--muted);
-    margin: 4px 0 10px;
-  }
+  .count-line { font-size: 13px; opacity: 0.65; margin: var(--space-1) 0 var(--space-3); }
 
   ul#fileList {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-height: 480px;
-    overflow-y: auto;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    list-style: none; margin: 0; padding: 0;
+    max-height: 460px; overflow-y: auto;
+    border: 1px solid var(--color-divider);
   }
   ul#fileList:empty { display: none; }
   li.file-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-bottom: 1px solid #ececec;
-    background: #fff;
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--color-divider);
   }
   li.file-row.dragging { opacity: 0.4; }
-  li.file-row.match { background: #fff3d6; }
+  li.file-row.match { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
   li.file-row:last-child { border-bottom: none; }
-  .handle {
-    cursor: grab;
-    color: var(--muted);
-    font-size: 1rem;
-    user-select: none;
-    padding: 0 2px;
-  }
-  .idx {
-    color: var(--muted);
-    font-size: 0.78rem;
-    width: 26px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-  .fname {
-    flex: 1;
-    font-size: 0.9rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .fsize {
-    color: var(--muted);
-    font-size: 0.78rem;
-    flex-shrink: 0;
-    width: 60px;
-    text-align: right;
-  }
+  .handle { cursor: grab; opacity: 0.55; user-select: none; padding: 0 2px; }
+  .idx { opacity: 0.55; font-size: 12px; width: 26px; text-align: right; flex-shrink: 0; }
+  .fname { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fsize { opacity: 0.55; font-size: 12px; flex-shrink: 0; width: 60px; text-align: right; }
   .row-btns { display: flex; gap: 3px; flex-shrink: 0; }
-  .row-btns button {
-    padding: 3px 7px;
-    font-size: 0.78rem;
-    line-height: 1;
-  }
+  .row-btns .btn { padding: 3px 8px; font-size: 12px; }
 
   .options label {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-    cursor: pointer;
+    display: flex; align-items: flex-start; gap: var(--space-2);
+    margin-bottom: var(--space-3); font-size: 14px; cursor: pointer;
   }
-  .options input[type=checkbox] { margin-top: 3px; }
-  .options .hint {
-    display: block;
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-weight: normal;
-  }
-  .outname {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-  }
-  .outname input[type=text] {
-    padding: 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    font-family: inherit;
-    flex: 1;
-  }
+  .options input[type=checkbox] { margin-top: 3px; accent-color: var(--color-accent); }
+  .options .hint { display: block; opacity: 0.6; font-size: 12px; font-weight: normal; }
+  .outname { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); }
+  .outname .input { flex: 1; }
 
-  #status {
-    margin-top: 14px;
-    font-size: 0.88rem;
-    min-height: 1.2em;
-  }
-  #status.ok { color: var(--ok); }
-  #status.err { color: var(--err); }
+  #status { margin-top: var(--space-4); font-size: 14px; min-height: 1.2em; }
+  #status.ok { color: var(--color-success); }
+  #status.err { color: var(--color-danger); }
   #progressWrap {
-    height: 8px;
-    background: #ececec;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 10px;
-    display: none;
+    height: 7px; background: var(--color-divider); overflow: hidden;
+    margin-top: var(--space-3); display: none;
   }
-  #progressBar {
-    height: 100%;
-    width: 0%;
-    background: var(--accent);
-    transition: width 0.15s;
-  }
-  #downloadArea { margin-top: 14px; display: none; }
+  #progressBar { height: 100%; width: 0%; background: var(--color-accent); transition: width 0.15s; }
+  #downloadArea { margin-top: var(--space-4); display: none; }
   #errorList {
-    margin-top: 10px;
-    font-size: 0.82rem;
-    color: var(--err);
-    background: #fdf0ee;
-    border: 1px solid #f3c9c1;
-    border-radius: 6px;
-    padding: 10px 12px;
-    max-height: 160px;
-    overflow-y: auto;
-    display: none;
+    margin-top: var(--space-3); font-size: 13px; color: var(--color-danger);
+    background: var(--color-danger-bg); border: 1px solid var(--color-divider);
+    padding: var(--space-2) var(--space-3); max-height: 160px; overflow-y: auto; display: none;
   }
   #errorList summary { cursor: pointer; font-weight: 600; }
 
-  .limits {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-top: 6px;
-  }
-  .limits summary { cursor: pointer; color: var(--accent-dark); font-weight: 600; }
-  .limits ul { margin: 6px 0 0 18px; padding: 0; }
-  .limits li { margin-bottom: 4px; }
+  .limits { font-size: 13px; opacity: 0.75; margin-top: var(--space-2); }
+  .limits summary { cursor: pointer; color: var(--color-accent); font-weight: 600; }
+  .limits ul { margin: var(--space-2) 0 0 18px; padding: 0; }
+  .limits li { margin-bottom: var(--space-1); }
 </style>
 </head>
 <body>
 
+<header class="nav tools-nav">
+  <span class="nav-brand">Classroom Tools</span>
+  <a href="docx-merger.html" aria-current="page">Doc Merger</a>
+  <a href="final_grade_checker.html">Grade Checker</a>
+  <a href="image-to-pdf.html">Image → PDF</a>
+  <a href="prompt-builder.html">Prompt Builder</a>
+  <a href="Seating Chart Generator.html">Seating Chart</a>
+  <button type="button" class="btn btn-secondary" id="themeToggle" style="margin-left: var(--space-3);"></button>
+</header>
+
 <h1>Word Doc Merger</h1>
 <p class="sub">Combine a big stack of .docx files into one document, in whatever order you like. Everything runs in your browser — files never leave your computer.</p>
 
-<div class="card">
+<div class="card blueprint section-card">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
   <div class="dropzone" id="dropzone">
     <p class="big">Click to choose files, or drag &amp; drop them here</p>
     <p class="small">.docx only — you can select 80+ at once</p>
@@ -246,18 +112,19 @@
   </div>
 
   <div class="toolbar" id="fileToolbar" style="display:none;">
-    <input type="text" id="filterBox" placeholder="Find a file in the list…">
-    <button id="btnAddMore">＋ Add more files</button>
-    <button id="btnSortAz">Sort A→Z</button>
-    <button id="btnReverse">Reverse order</button>
-    <button id="btnClearAll" class="danger">Clear all</button>
+    <input class="input" type="text" id="filterBox" placeholder="Find a file in the list…">
+    <button class="btn btn-secondary" id="btnAddMore">＋ Add more files</button>
+    <button class="btn btn-secondary" id="btnSortAz">Sort A→Z</button>
+    <button class="btn btn-secondary" id="btnReverse">Reverse order</button>
+    <button class="btn btn-secondary" id="btnClearAll" style="color:var(--color-danger);">Clear all</button>
   </div>
 
   <p class="count-line" id="countLine"></p>
   <ul id="fileList"></ul>
 </div>
 
-<div class="card options" id="optionsCard" style="display:none;">
+<div class="card blueprint section-card options" id="optionsCard" style="display:none;">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
   <label>
     <input type="checkbox" id="optPageBreak" checked>
     <span>Start each file on a new page
@@ -271,13 +138,13 @@
     </span>
   </label>
   <div class="outname">
-    <label for="outName" style="margin:0; white-space:nowrap; font-size:0.9rem;">Output file name:</label>
-    <input type="text" id="outName" value="Merged Document">
-    <span style="color:var(--muted); font-size:0.9rem;">.docx</span>
+    <label for="outName" style="margin:0; white-space:nowrap; font-size:14px;">Output file name:</label>
+    <input class="input" type="text" id="outName" value="Merged Document">
+    <span style="opacity:0.6; font-size:14px;">.docx</span>
   </div>
 
-  <div style="margin-top:16px;">
-    <button class="primary" id="btnMerge">Merge into one document</button>
+  <div style="margin-top:var(--space-4);">
+    <button class="btn btn-primary" id="btnMerge">Merge into one document</button>
   </div>
 
   <div id="progressWrap"><div id="progressBar"></div></div>
@@ -285,7 +152,7 @@
   <details id="errorList"><summary></summary><div id="errorItems"></div></details>
   <div id="downloadArea">
     <a id="downloadLink" download="">
-      <button class="primary" id="btnDownload">⬇ Download merged .docx</button>
+      <button class="btn btn-primary" id="btnDownload">⬇ Download merged .docx</button>
     </a>
   </div>
 
@@ -368,9 +235,9 @@
         <span class="fname" title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</span>
         <span class="fsize">${fmtSize(entry.size)}</span>
         <span class="row-btns">
-          <button data-act="up" title="Move up">▲</button>
-          <button data-act="down" title="Move down">▼</button>
-          <button data-act="remove" title="Remove" class="danger">✕</button>
+          <button class="btn btn-secondary" data-act="up" title="Move up">▲</button>
+          <button class="btn btn-secondary" data-act="down" title="Move down">▼</button>
+          <button class="btn btn-secondary" data-act="remove" title="Remove" style="color:var(--color-danger);">✕</button>
         </span>`;
       fileListEl.appendChild(li);
     });
