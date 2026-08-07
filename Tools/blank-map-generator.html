@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blank Map Generator</title>
+<meta name="description" content="Pull a map from Wikimedia Commons, pan and zoom into a region, and use it as the base for a labeling activity.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 10l7-3 6 3 7-3v18l-7 3-6-3-7 3z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M13 7v18M19 10v18' stroke='%231f3550' stroke-width='1.4'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23a3372b'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430;
+    --paper: #fafaf8;
+    --card: #fff;
+    --line: #dcdad2;
+    --accent: #1f3550;
+    --accent-2: #2e6b8f;
+    --muted: #6b6a63;
+    --ok: #2e6b3e;
+    --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+    padding: 24px 20px 100px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; border-bottom: 3px solid var(--accent); padding-bottom: 10px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.92rem; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 18px; }
+  .card h2 { font-size: 1rem; margin: 0 0 10px; color: var(--accent); }
+
+  button {
+    font-family: inherit; font-size: 0.85rem; padding: 8px 13px; border-radius: 6px;
+    border: 1px solid var(--line); background: #fff; cursor: pointer; color: var(--ink);
+  }
+  button:hover { background: #f2f0ea; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: #16283f; }
+  button.small { padding: 4px 9px; font-size: 0.76rem; }
+  button.icon { width: 34px; padding: 6px 0; font-size: 1rem; line-height: 1; }
+  input[type=text] {
+    font-family: inherit; font-size: 0.88rem; padding: 7px 10px; border: 1px solid var(--line);
+    border-radius: 5px; background: #fff; color: var(--ink); width: 100%;
+  }
+
+  .searchRow { display: flex; gap: 8px; }
+  .searchRow input { flex: 1; }
+  .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+
+  .status { font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
+  .status.err { color: var(--err); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
+  .result {
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff;
+    display: flex; flex-direction: column;
+  }
+  .result .thumb {
+    height: 110px; background: #f2f0ea repeating-conic-gradient(#eceae2 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .result .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .result .meta { padding: 8px 10px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .result .rtitle { font-size: 0.8rem; font-weight: 600; line-height: 1.25; }
+  .result .rlicense { font-size: 0.7rem; color: var(--muted); }
+  .result button { margin: 0 10px 10px; }
+
+  .recentRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .recentItem {
+    display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 20px;
+    padding: 4px 10px 4px 4px; background: #fff; cursor: pointer; font-size: 0.78rem;
+  }
+  .recentItem:hover { background: #f2f0ea; }
+  .recentItem img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; background: #f2f0ea; }
+
+  #viewport {
+    position: relative; height: 62vh; min-height: 340px; border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden; background: #eef0ec; touch-action: none; cursor: grab;
+  }
+  #viewport.dragging { cursor: grabbing; }
+  #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
+  #viewerEmpty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 0.9rem; text-align: center; padding: 0 20px;
+  }
+
+  .viewerToolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
+  .spacer { flex: 1; }
+
+  #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+  #attribution a { color: var(--accent-2); }
+
+  .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent-2);
+    border-radius: 50%; display: inline-block; vertical-align: -2px; margin-right: 6px;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media print {
+    .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
+    #viewport { height: 90vh; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Blank Map Generator</h1>
+  <p class="sub">Pull a map from Wikimedia Commons, then pan and zoom into the region you need for a labeling activity or display map.</p>
+
+  <div id="storageWarn" class="storage-warn no-print" hidden></div>
+
+  <div class="card search-card no-print">
+    <h2>Find a map</h2>
+    <div class="searchRow">
+      <input type="text" id="searchInput" placeholder="e.g. world map, South America, blank United States map" data-no-pan>
+      <button id="btnSearch" class="primary">Search Wikimedia Commons</button>
+    </div>
+    <p class="hint">Searches Commons' public map images. Once you pick one, it's downloaded and kept in this browser so it works offline afterward.</p>
+    <div id="searchStatus" class="status" hidden></div>
+    <div id="resultsGrid" class="grid"></div>
+  </div>
+
+  <div id="recentCard" class="card recent-card no-print" hidden>
+    <h2>Recently used</h2>
+    <div id="recentRow" class="recentRow"></div>
+  </div>
+
+  <div class="card viewer-card">
+    <div class="viewerToolbar no-print">
+      <button id="btnZoomOut" class="icon" title="Zoom out">&minus;</button>
+      <span id="zoomReadout" class="zoomReadout">&mdash;</span>
+      <button id="btnZoomIn" class="icon" title="Zoom in">+</button>
+      <button id="btnFit" class="small">Fit to view</button>
+      <span class="spacer"></span>
+      <button id="btnClearCache" class="small">Clear cached maps</button>
+      <button id="btnPrint" class="small primary">Print / Save PDF</button>
+    </div>
+    <div id="viewport">
+      <div id="stage"><img id="mapImg" alt="" hidden></div>
+      <div id="viewerEmpty">Search above and pick a map to get started.</div>
+    </div>
+    <div id="attribution"></div>
+  </div>
+</div>
+
+<script type="module">
+import { createStore } from './blank-map-generator/bmg-store.js';
+import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
+import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import * as cache from './blank-map-generator/bmg-map-cache.js';
+
+const store = createStore();
+let project = store.get();
+let currentObjectUrl = null;
+let currentSize = { width: 0, height: 0 };
+
+const el = id => document.getElementById(id);
+const viewport = el('viewport');
+const stage = el('stage');
+const mapImg = el('mapImg');
+
+function save() { store.set(project); }
+
+const viewer = createViewer(viewport, stage, {
+  onChange(v) { project.view = v; save(); updateZoomReadout(v.scale); },
+});
+
+function updateZoomReadout(scale) {
+  el('zoomReadout').textContent = scale ? `${Math.round(scale * 100)}%` : '—';
+}
+
+viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'));
+['pointerup', 'pointercancel'].forEach(evt =>
+  viewport.addEventListener(evt, () => viewport.classList.remove('dragging'))
+);
+
+function setStatus(msg, isErr) {
+  const box = el('searchStatus');
+  if (!msg) { box.hidden = true; return; }
+  box.hidden = false;
+  box.className = 'status' + (isErr ? ' err' : '');
+  box.innerHTML = msg;
+}
+
+function escapeHtml(s) { return String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function renderResults(results) {
+  const grid = el('resultsGrid');
+  grid.innerHTML = '';
+  if (!results.length) { setStatus('No displayable map images found for that search.'); return; }
+  setStatus('');
+  results.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'result';
+    card.innerHTML = `
+      <div class="thumb"><img src="${r.thumbUrl}" alt="" loading="lazy"></div>
+      <div class="meta">
+        <div class="rtitle">${escapeHtml(r.title)}</div>
+        <div class="rlicense">${escapeHtml(r.license)}</div>
+      </div>
+      <button class="small primary" type="button">Use this map</button>
+    `;
+    card.querySelector('button').addEventListener('click', () => useResult(r));
+    grid.appendChild(card);
+  });
+}
+
+async function runSearch(query) {
+  setStatus('<span class="spinner"></span>Searching Wikimedia Commons…');
+  el('btnSearch').disabled = true;
+  try {
+    const results = await searchMaps(query);
+    renderResults(results);
+  } catch (err) {
+    setStatus(`Couldn't reach Wikimedia Commons (${escapeHtml(err.message)}). Check your connection, or a school network filter may be blocking it.`, true);
+  } finally {
+    el('btnSearch').disabled = false;
+  }
+}
+
+async function useResult(result) {
+  setStatus('<span class="spinner"></span>Downloading map…');
+  try {
+    let record = await cache.getCachedMap(result.id).catch(() => null);
+    if (!record) {
+      record = await fetchMapImage(result);
+      await cache.putCachedMap(record).catch(() => {});
+    }
+    displayMap(record);
+    setStatus('');
+  } catch (err) {
+    setStatus(`Couldn't download that map (${escapeHtml(err.message)}).`, true);
+  }
+}
+
+function displayMap(record) {
+  if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+  currentObjectUrl = URL.createObjectURL(record.blob);
+  currentSize = { width: record.width, height: record.height };
+
+  mapImg.onload = () => {
+    const w = record.width || mapImg.naturalWidth;
+    const h = record.height || mapImg.naturalHeight;
+    currentSize = { width: w, height: h };
+    if (project.mapId === record.id && project.view && project.view.scale) {
+      viewer.setView(project.view);
+    } else {
+      viewer.fit(w, h);
+    }
+  };
+  mapImg.src = currentObjectUrl;
+  mapImg.hidden = false;
+  el('viewerEmpty').hidden = true;
+
+  project.mapId = record.id;
+  save();
+  renderAttribution(record);
+  refreshRecent();
+}
+
+function renderAttribution(record) {
+  const a = record.attribution || {};
+  const parts = [`Map: <strong>${escapeHtml(record.title)}</strong>`];
+  if (a.artist) parts.push(escapeHtml(a.artist));
+  if (a.license) parts.push(escapeHtml(a.license));
+  let html = parts.join(' &middot; ');
+  if (a.descriptionUrl) html += ` &middot; <a href="${a.descriptionUrl}" target="_blank" rel="noopener">source on Wikimedia Commons</a>`;
+  el('attribution').innerHTML = html;
+}
+
+async function refreshRecent() {
+  let list = [];
+  try { list = await cache.listCachedMaps(); } catch (e) { /* cache unavailable */ }
+  const card = el('recentCard');
+  const row = el('recentRow');
+  if (!list.length) { card.hidden = true; return; }
+  card.hidden = false;
+  row.innerHTML = '';
+  list.sort((a, b) => (b.cachedAt || 0) - (a.cachedAt || 0));
+  list.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'recentItem';
+    item.textContent = r.title;
+    item.title = 'Load this cached map';
+    item.addEventListener('click', async () => {
+      const full = await cache.getCachedMap(r.id);
+      if (full) displayMap(full);
+    });
+    row.appendChild(item);
+  });
+}
+
+el('btnSearch').addEventListener('click', () => {
+  const q = el('searchInput').value.trim();
+  if (q) runSearch(q);
+});
+el('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') el('btnSearch').click(); });
+
+el('btnZoomIn').addEventListener('click', () => {
+  const r = viewport.getBoundingClientRect();
+  viewer.zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25);
+});
+el('btnZoomOut').addEventListener('click', () => {
+  const r = viewport.getBoundingClientRect();
+  viewer.zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25);
+});
+el('btnFit').addEventListener('click', () => {
+  if (currentSize.width) viewer.fit(currentSize.width, currentSize.height);
+});
+el('btnPrint').addEventListener('click', () => window.print());
+el('btnClearCache').addEventListener('click', async () => {
+  if (!confirm('Remove every map cached in this browser? Nothing on your project is lost — you can search and re-download any of them again.')) return;
+  const list = await cache.listCachedMaps().catch(() => []);
+  await Promise.all(list.map(r => cache.deleteCachedMap(r.id).catch(() => {})));
+  refreshRecent();
+});
+
+new ResizeObserver(() => {
+  if (currentSize.width && !project.view?.scale) viewer.fit(currentSize.width, currentSize.height);
+}).observe(viewport);
+
+async function init() {
+  if (!(await cache.isAvailable())) {
+    el('storageWarn').hidden = false;
+    el('storageWarn').textContent = "Your browser is blocking offline storage (private/incognito mode, or storage disabled), so downloaded maps won't be kept between visits.";
+  }
+  await refreshRecent();
+  if (project.mapId) {
+    const cached = await cache.getCachedMap(project.mapId).catch(() => null);
+    if (cached) { displayMap(cached); return; }
+  }
+  el('searchInput').value = 'blank world map';
+  runSearch('blank world map');
+}
+
+init();
+</script>
+</body>
+</html>
