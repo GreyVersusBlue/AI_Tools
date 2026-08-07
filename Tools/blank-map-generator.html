@@ -87,7 +87,7 @@
   #viewport.adding { cursor: crosshair; }
   #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
-  #viewerEmpty {
+  #viewerEmpty:not([hidden]) {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-size: 0.9rem; text-align: center; padding: 0 20px;
   }
@@ -114,11 +114,47 @@
   }
   .bmg-label:hover .lbl-del, .bmg-label.editing .lbl-del { display: flex; }
 
+  #markerLayer { position: absolute; inset: 0; pointer-events: none; }
+  .bmg-marker { position: absolute; pointer-events: auto; cursor: grab; z-index: 5; }
+  .bmg-marker.dragging { cursor: grabbing; z-index: 6; }
+  .bmg-marker.anchor-bottom { transform: translate(-50%, -100%); }
+  .bmg-marker.anchor-center { transform: translate(-50%, -50%); }
+  .bmg-marker .mkr-icon { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+  .bmg-marker .mkr-del {
+    position: absolute; top: -6px; right: -6px; border: none; background: #fff; border-radius: 50%;
+    width: 16px; height: 16px; font-size: 11px; line-height: 1; padding: 0; color: var(--err);
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none; align-items: center; justify-content: center;
+  }
+  .bmg-marker:hover .mkr-del { display: flex; }
+
+  #legendPanel {
+    position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 0.78rem; min-width: 150px;
+    cursor: grab; z-index: 8;
+  }
+  #legendPanel.dragging { cursor: grabbing; }
+  #legendPanel .legend-title {
+    font-weight: 700; color: var(--accent); margin-bottom: 6px; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  #legendPanel .legend-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  #legendPanel .legend-row:last-child { margin-bottom: 0; }
+  #legendPanel .legend-icon { display: flex; flex-shrink: 0; }
+  #legendPanel .legend-icon svg { display: block; }
+  #legendPanel .legend-input {
+    font-family: inherit; font-size: 0.76rem; padding: 3px 6px; border: 1px solid var(--line);
+    border-radius: 4px; width: 140px;
+  }
+
   .viewerToolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
   .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
   .spacer { flex: 1; }
   button.toggle.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
   .toolHint { font-size: 0.78rem; color: var(--accent-2); font-weight: 600; }
+  select.styleSelect {
+    font-family: inherit; font-size: 0.8rem; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 6px; background: #fff; color: var(--ink);
+  }
 
   #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
   #attribution a { color: var(--accent-2); }
@@ -167,7 +203,14 @@
       <button id="btnZoomIn" class="icon" title="Zoom in">+</button>
       <button id="btnFit" class="small">Fit to view</button>
       <button id="btnAddLabel" class="small toggle">+ Add Label</button>
-      <span id="labelHint" class="toolHint" hidden>Click the map to place a label &middot; Esc to stop</span>
+      <button id="btnAddMarker" class="small toggle">+ Add Marker</button>
+      <select id="markerStyleSelect" class="styleSelect" hidden>
+        <option value="pin">Pin</option>
+        <option value="star">Star</option>
+        <option value="dot">Dot</option>
+        <option value="flag">Flag</option>
+      </select>
+      <span id="placeHint" class="toolHint" hidden></span>
       <span class="spacer"></span>
       <button id="btnClearCache" class="small">Clear cached maps</button>
       <button id="btnPrint" class="small primary">Print / Save PDF</button>
@@ -175,6 +218,8 @@
     <div id="viewport">
       <div id="stage"><img id="mapImg" alt="" hidden></div>
       <div id="labelLayer"></div>
+      <div id="markerLayer"></div>
+      <div id="legendPanel" hidden></div>
       <div id="viewerEmpty">Search above and pick a map to get started.</div>
     </div>
     <div id="attribution"></div>
@@ -186,13 +231,15 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
 import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
+import { createMarkerLayer, markerIconSvg } from './blank-map-generator/bmg-markers.js';
+import { createLegendPanel } from './blank-map-generator/bmg-legend.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 
 const store = createStore();
 let project = store.get();
 let currentObjectUrl = null;
 let currentSize = { width: 0, height: 0 };
-let addLabelMode = false;
+let placeMode = 'none'; // 'none' | 'label' | 'marker'
 let downPt = null;
 
 const el = id => document.getElementById(id);
@@ -203,12 +250,31 @@ const mapImg = el('mapImg');
 function save() { store.set(project); }
 
 const viewer = createViewer(viewport, stage, {
-  onChange(v) { project.view = v; save(); updateZoomReadout(v.scale); labelLayer.reposition(); },
+  onChange(v) {
+    project.view = v;
+    save();
+    updateZoomReadout(v.scale);
+    labelLayer.reposition();
+    markerLayer.reposition();
+  },
 });
 
 const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
   onChange(labels) { project.labels = labels; save(); },
 });
+
+const markerLayer = createMarkerLayer(el('markerLayer'), viewer, {
+  onChange(markers) { project.markers = markers; save(); renderLegend(); },
+});
+
+const legendPanel = createLegendPanel(el('legendPanel'), {
+  onTextChange(style, text) { project.legendText[style] = text; save(); },
+  onMove(pos) { project.legendPos = pos; save(); },
+});
+
+function renderLegend() {
+  legendPanel.render(project.markers, project.legendText, markerIconSvg);
+}
 
 function updateZoomReadout(scale) {
   el('zoomReadout').textContent = scale ? `${Math.round(scale * 100)}%` : '—';
@@ -219,15 +285,24 @@ viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'
   viewport.addEventListener(evt, () => viewport.classList.remove('dragging'))
 );
 
-function setAddLabelMode(on) {
-  addLabelMode = on;
-  viewport.classList.toggle('adding', on);
-  el('btnAddLabel').classList.toggle('active', on);
-  el('labelHint').hidden = !on;
+const PLACE_HINTS = {
+  label: 'Click the map to place a label &middot; Esc to stop',
+  marker: 'Click the map to place a marker &middot; Esc to stop',
+};
+
+function setPlaceMode(mode) {
+  placeMode = mode;
+  viewport.classList.toggle('adding', mode !== 'none');
+  el('btnAddLabel').classList.toggle('active', mode === 'label');
+  el('btnAddMarker').classList.toggle('active', mode === 'marker');
+  el('markerStyleSelect').hidden = mode !== 'marker';
+  el('placeHint').hidden = mode === 'none';
+  if (mode !== 'none') el('placeHint').innerHTML = PLACE_HINTS[mode];
 }
 
-el('btnAddLabel').addEventListener('click', () => setAddLabelMode(!addLabelMode));
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && addLabelMode) setAddLabelMode(false); });
+el('btnAddLabel').addEventListener('click', () => setPlaceMode(placeMode === 'label' ? 'none' : 'label'));
+el('btnAddMarker').addEventListener('click', () => setPlaceMode(placeMode === 'marker' ? 'none' : 'marker'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && placeMode !== 'none') setPlaceMode('none'); });
 
 viewport.addEventListener('pointerdown', e => {
   if (e.target.closest('[data-no-pan]')) return;
@@ -237,10 +312,14 @@ viewport.addEventListener('pointerup', e => {
   if (!downPt) return;
   const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
   downPt = null;
-  if (!addLabelMode || moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
+  if (placeMode === 'none' || moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
   const stagePt = viewer.screenToStage(e.clientX, e.clientY);
-  const label = labelLayer.addAt(stagePt.x, stagePt.y);
-  requestAnimationFrame(() => labelLayer.startEditing(label.id));
+  if (placeMode === 'label') {
+    const label = labelLayer.addAt(stagePt.x, stagePt.y);
+    requestAnimationFrame(() => labelLayer.startEditing(label.id));
+  } else if (placeMode === 'marker') {
+    markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value);
+  }
 });
 
 function setStatus(msg, isErr) {
@@ -320,14 +399,23 @@ function displayMap(record) {
       viewer.fit(w, h);
     }
     labelLayer.reposition();
+    markerLayer.reposition();
   };
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
   el('viewerEmpty').hidden = true;
 
   project.mapId = record.id;
-  if (!isSameMap) { project.labels = []; project.markers = []; setAddLabelMode(false); }
+  if (!isSameMap) {
+    project.labels = [];
+    project.markers = [];
+    project.legendText = {};
+    setPlaceMode('none');
+  }
   labelLayer.setLabels(project.labels);
+  markerLayer.setMarkers(project.markers);
+  legendPanel.setPosition(project.legendPos);
+  renderLegend();
   save();
   renderAttribution(record);
   refreshRecent();

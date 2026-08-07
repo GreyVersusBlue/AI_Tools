@@ -1,19 +1,29 @@
 // bmg-store.js — localStorage persistence for the current project's map
-// choice and view state. `labels`/`markers` are carried in the shape now
-// (empty until later phases) so this doesn't need a migration once they're
-// used.
+// choice, view state, labels, markers, and legend (caption text + panel
+// position). normalize() backfills fields added after a project's first
+// save, so older saved projects don't need a version bump to pick them up.
 
 const KEY = "bmg_project_v1";
 export const VERSION = 1;
 
 function blank() {
-  return { __v: VERSION, mapId: null, view: { x: 0, y: 0, scale: 1 }, labels: [], markers: [] };
+  return {
+    __v: VERSION, mapId: null, view: { x: 0, y: 0, scale: 1 },
+    labels: [], markers: [], legendText: {}, legendPos: { x: 12, y: 12 },
+  };
 }
 
 function isValid(p) {
   return !!p && typeof p === "object" && p.__v === VERSION
     && p.view && typeof p.view === "object"
     && Array.isArray(p.labels) && Array.isArray(p.markers);
+}
+
+/** Backfills fields added after a project was first saved (e.g. legend state). */
+function normalize(p) {
+  if (!p.legendText || typeof p.legendText !== "object") p.legendText = {};
+  if (!p.legendPos || typeof p.legendPos !== "object") p.legendPos = { x: 12, y: 12 };
+  return p;
 }
 
 function probeBlocked() {
@@ -36,7 +46,7 @@ export function createStore() {
       const raw = localStorage.getItem(KEY);
       if (!raw) return blank();
       const parsed = JSON.parse(raw);
-      return isValid(parsed) ? parsed : blank();
+      return isValid(parsed) ? normalize(parsed) : blank();
     } catch (e) {
       return blank();
     }
