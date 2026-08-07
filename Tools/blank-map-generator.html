@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blank Map Generator</title>
+<meta name="description" content="Pull a map from Wikimedia Commons, pan and zoom into a region, and use it as the base for a labeling activity.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 10l7-3 6 3 7-3v18l-7 3-6-3-7 3z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M13 7v18M19 10v18' stroke='%231f3550' stroke-width='1.4'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23a3372b'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430;
+    --paper: #fafaf8;
+    --card: #fff;
+    --line: #dcdad2;
+    --accent: #1f3550;
+    --accent-2: #2e6b8f;
+    --muted: #6b6a63;
+    --ok: #2e6b3e;
+    --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+    padding: 24px 20px 100px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; border-bottom: 3px solid var(--accent); padding-bottom: 10px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.92rem; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 18px; }
+  .card h2 { font-size: 1rem; margin: 0 0 10px; color: var(--accent); }
+
+  button {
+    font-family: inherit; font-size: 0.85rem; padding: 8px 13px; border-radius: 6px;
+    border: 1px solid var(--line); background: #fff; cursor: pointer; color: var(--ink);
+  }
+  button:hover { background: #f2f0ea; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: #16283f; }
+  button.small { padding: 4px 9px; font-size: 0.76rem; }
+  button.icon { width: 34px; padding: 6px 0; font-size: 1rem; line-height: 1; }
+  input[type=text] {
+    font-family: inherit; font-size: 0.88rem; padding: 7px 10px; border: 1px solid var(--line);
+    border-radius: 5px; background: #fff; color: var(--ink); width: 100%;
+  }
+
+  .searchRow { display: flex; gap: 8px; }
+  .searchRow input { flex: 1; }
+  .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+
+  .status { font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
+  .status.err { color: var(--err); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
+  .result {
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff;
+    display: flex; flex-direction: column;
+  }
+  .result .thumb {
+    height: 110px; background: #f2f0ea repeating-conic-gradient(#eceae2 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .result .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .result .meta { padding: 8px 10px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .result .rtitle { font-size: 0.8rem; font-weight: 600; line-height: 1.25; }
+  .result .rlicense { font-size: 0.7rem; color: var(--muted); }
+  .result button { margin: 0 10px 10px; }
+
+  .recentRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .recentItem {
+    display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 20px;
+    padding: 4px 10px 4px 4px; background: #fff; cursor: pointer; font-size: 0.78rem;
+  }
+  .recentItem:hover { background: #f2f0ea; }
+  .recentItem img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; background: #f2f0ea; }
+
+  #viewport {
+    position: relative; height: 62vh; min-height: 340px; border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden; background: #eef0ec; touch-action: none; cursor: grab;
+  }
+  #viewport.dragging { cursor: grabbing; }
+  #viewport.adding { cursor: crosshair; }
+  #stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  #stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
+  #viewerEmpty:not([hidden]) {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 0.9rem; text-align: center; padding: 0 20px;
+  }
+  #labelLayer { position: absolute; inset: 0; pointer-events: none; }
+
+  .bmg-label {
+    position: absolute; display: flex; align-items: center; gap: 5px; pointer-events: auto;
+    transform: translate(-5px, -50%); cursor: grab; z-index: 5;
+  }
+  .bmg-label.dragging { cursor: grabbing; z-index: 6; }
+  .bmg-label .lbl-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2);
+    border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); flex-shrink: 0;
+  }
+  .bmg-label .lbl-text, .bmg-label .lbl-input {
+    background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px;
+    font-size: 0.8rem; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--ink);
+  }
+  .bmg-label .lbl-input { font-family: inherit; width: 120px; }
+  .bmg-label .lbl-del {
+    border: none; background: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 11px;
+    line-height: 1; padding: 0; color: var(--err); box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none;
+    align-items: center; justify-content: center;
+  }
+  .bmg-label:hover .lbl-del, .bmg-label.editing .lbl-del { display: flex; }
+
+  #markerLayer { position: absolute; inset: 0; pointer-events: none; }
+  .bmg-marker { position: absolute; pointer-events: auto; cursor: grab; z-index: 5; }
+  .bmg-marker.dragging { cursor: grabbing; z-index: 6; }
+  .bmg-marker.anchor-bottom { transform: translate(-50%, -100%); }
+  .bmg-marker.anchor-center { transform: translate(-50%, -50%); }
+  .bmg-marker .mkr-icon { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+  .bmg-marker .mkr-del {
+    position: absolute; top: -6px; right: -6px; border: none; background: #fff; border-radius: 50%;
+    width: 16px; height: 16px; font-size: 11px; line-height: 1; padding: 0; color: var(--err);
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); display: none; align-items: center; justify-content: center;
+  }
+  .bmg-marker:hover .mkr-del { display: flex; }
+
+  #legendPanel {
+    position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 0.78rem; min-width: 150px;
+    cursor: grab; z-index: 8;
+  }
+  #legendPanel.dragging { cursor: grabbing; }
+  #legendPanel .legend-title {
+    font-weight: 700; color: var(--accent); margin-bottom: 6px; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  #legendPanel .legend-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  #legendPanel .legend-row:last-child { margin-bottom: 0; }
+  #legendPanel .legend-icon { display: flex; flex-shrink: 0; }
+  #legendPanel .legend-icon svg { display: block; }
+  #legendPanel .legend-input {
+    font-family: inherit; font-size: 0.76rem; padding: 3px 6px; border: 1px solid var(--line);
+    border-radius: 4px; width: 140px;
+  }
+
+  .viewerToolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
+  .spacer { flex: 1; }
+  button.toggle.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .toolHint { font-size: 0.78rem; color: var(--accent-2); font-weight: 600; }
+  select.styleSelect {
+    font-family: inherit; font-size: 0.8rem; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 6px; background: #fff; color: var(--ink);
+  }
+
+  #calibratePanel { margin-bottom: 10px; }
+  #calibratePanel .calibRow { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-top: 10px; }
+  #calibratePanel label { display: flex; flex-direction: column; gap: 3px; font-size: 0.76rem; font-weight: 600; color: var(--muted); }
+  #calibratePanel input[type=number] {
+    font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 5px; width: 90px;
+  }
+
+  #compassRose { position: absolute; top: 12px; right: 12px; pointer-events: none; z-index: 7; }
+  #compassRose svg { display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.25)); }
+
+  #gridLayer { position: absolute; inset: 0; pointer-events: none; }
+  .grid-line { position: absolute; background: rgba(31,53,80,.35); }
+  .grid-line.v { top: 0; bottom: 0; width: 1px; }
+  .grid-line.h { left: 0; right: 0; height: 1px; }
+  .grid-label {
+    position: absolute; font-size: 11px; color: var(--accent); background: rgba(255,255,255,.8);
+    padding: 1px 4px; border-radius: 2px; white-space: nowrap; transform: translate(2px, 2px);
+  }
+
+  #latLonReadout {
+    position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,.92); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 9px; font-size: 0.78rem; color: var(--ink); pointer-events: none; z-index: 7;
+  }
+
+  #locatorInset {
+    position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; border-radius: 4px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.35); overflow: hidden; z-index: 7; background: #eef0ec;
+  }
+  #locatorInset img { display: block; width: 100%; height: 100%; object-fit: fill; }
+  #locatorRect { position: absolute; border: 2px solid var(--err); background: rgba(163,55,43,.12); pointer-events: none; }
+
+  #attribution { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+  #attribution a { color: var(--accent-2); }
+
+  .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent-2);
+    border-radius: 50%; display: inline-block; vertical-align: -2px; margin-right: 6px;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media print {
+    .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
+    #calibratePanel, #latLonReadout { display: none !important; }
+    #viewport { height: 90vh; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Blank Map Generator</h1>
+  <p class="sub">Pull a map from Wikimedia Commons, then pan and zoom into the region you need for a labeling activity or display map.</p>
+
+  <div id="storageWarn" class="storage-warn no-print" hidden></div>
+
+  <div class="card search-card no-print">
+    <h2>Find a map</h2>
+    <div class="searchRow">
+      <input type="text" id="searchInput" placeholder="e.g. world map, South America, blank United States map" data-no-pan>
+      <button id="btnSearch" class="primary">Search Wikimedia Commons</button>
+    </div>
+    <p class="hint">Searches Commons' public map images. Once you pick one, it's downloaded and kept in this browser so it works offline afterward.</p>
+    <div id="searchStatus" class="status" hidden></div>
+    <div id="resultsGrid" class="grid"></div>
+  </div>
+
+  <div id="recentCard" class="card recent-card no-print" hidden>
+    <h2>Recently used</h2>
+    <div id="recentRow" class="recentRow"></div>
+  </div>
+
+  <div class="card viewer-card">
+    <div class="viewerToolbar no-print">
+      <button id="btnZoomOut" class="icon" title="Zoom out">&minus;</button>
+      <span id="zoomReadout" class="zoomReadout">&mdash;</span>
+      <button id="btnZoomIn" class="icon" title="Zoom in">+</button>
+      <button id="btnFit" class="small">Fit to view</button>
+      <button id="btnAddLabel" class="small toggle">+ Add Label</button>
+      <button id="btnAddMarker" class="small toggle">+ Add Marker</button>
+      <select id="markerStyleSelect" class="styleSelect" hidden>
+        <option value="pin">Pin</option>
+        <option value="star">Star</option>
+        <option value="dot">Dot</option>
+        <option value="flag">Flag</option>
+      </select>
+      <span id="placeHint" class="toolHint" hidden></span>
+      <span class="spacer"></span>
+      <button id="btnClearCache" class="small">Clear cached maps</button>
+      <button id="btnPrint" class="small primary">Print / Save PDF</button>
+    </div>
+    <div class="viewerToolbar no-print">
+      <button id="btnCompass" class="small toggle">Compass Rose</button>
+      <button id="btnGrid" class="small toggle">Lat/Long Grid</button>
+      <button id="btnLocator" class="small toggle">Locator Map</button>
+      <button id="btnCalibrate" class="small">Set Map Coordinates&hellip;</button>
+    </div>
+    <div id="calibratePanel" class="card no-print" hidden>
+      <h2>Map coordinates</h2>
+      <p class="hint">
+        Sets the real-world latitude/longitude of this map's edges, assuming a simple equirectangular
+        (evenly-spaced lat/long) projection &mdash; most Commons "blank map" files use this. Readings will drift for
+        maps drawn in other projections (e.g. Mercator), especially away from the equator.
+      </p>
+      <div class="calibRow">
+        <label>North edge lat<input type="number" id="calNorth" step="0.1" data-no-pan></label>
+        <label>South edge lat<input type="number" id="calSouth" step="0.1" data-no-pan></label>
+        <label>West edge lon<input type="number" id="calWest" step="0.1" data-no-pan></label>
+        <label>East edge lon<input type="number" id="calEast" step="0.1" data-no-pan></label>
+        <button id="btnApplyCalibration" class="small primary">Apply</button>
+        <button id="btnClearCalibration" class="small">Clear</button>
+      </div>
+    </div>
+    <div id="viewport">
+      <div id="stage">
+        <img id="mapImg" alt="" hidden>
+        <div id="gridLayer"></div>
+      </div>
+      <div id="labelLayer"></div>
+      <div id="markerLayer"></div>
+      <div id="legendPanel" hidden></div>
+      <div id="compassRose" hidden>
+        <svg viewBox="0 0 100 100" width="70" height="70" aria-hidden="true">
+          <circle cx="50" cy="50" r="46" fill="#fff" stroke="#1f3550" stroke-width="2"/>
+          <path d="M50 8 L58 46 L50 40 L42 46 Z" fill="#a3372b"/>
+          <path d="M50 92 L58 54 L50 60 L42 54 Z" fill="#1f3550"/>
+          <path d="M8 50 L46 42 L40 50 L46 58 Z" fill="#1f3550"/>
+          <path d="M92 50 L54 42 L60 50 L54 58 Z" fill="#1f3550"/>
+          <text x="50" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3550">N</text>
+          <text x="50" y="87" text-anchor="middle" font-size="10" fill="#1f3550">S</text>
+          <text x="15" y="53" text-anchor="middle" font-size="10" fill="#1f3550">W</text>
+          <text x="85" y="53" text-anchor="middle" font-size="10" fill="#1f3550">E</text>
+        </svg>
+      </div>
+      <div id="latLonReadout" hidden></div>
+      <div id="locatorInset" hidden>
+        <img id="locatorImg" alt="">
+        <div id="locatorRect"></div>
+      </div>
+      <div id="viewerEmpty">Search above and pick a map to get started.</div>
+    </div>
+    <div id="attribution"></div>
+  </div>
+</div>
+
+<script type="module">
+import { createStore } from './blank-map-generator/bmg-store.js';
+import { searchMaps, fetchMapImage } from './blank-map-generator/bmg-commons.js';
+import { createViewer } from './blank-map-generator/bmg-viewer.js';
+import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
+import { createMarkerLayer, markerIconSvg } from './blank-map-generator/bmg-markers.js';
+import { createLegendPanel } from './blank-map-generator/bmg-legend.js';
+import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
+import { isCalibrated, toLatLon, formatLatLon, computeGraticule } from './blank-map-generator/bmg-latlong.js';
+import * as cache from './blank-map-generator/bmg-map-cache.js';
+
+const store = createStore();
+let project = store.get();
+let currentObjectUrl = null;
+let currentSize = { width: 0, height: 0 };
+let placeMode = 'none'; // 'none' | 'label' | 'marker'
+let downPt = null;
+
+const el = id => document.getElementById(id);
+const viewport = el('viewport');
+const stage = el('stage');
+const mapImg = el('mapImg');
+
+function save() { store.set(project); }
+
+const viewer = createViewer(viewport, stage, {
+  onChange(v) {
+    project.view = v;
+    save();
+    updateZoomReadout(v.scale);
+    labelLayer.reposition();
+    markerLayer.reposition();
+    locator.updateRect();
+  },
+});
+
+const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
+  onChange(labels) { project.labels = labels; save(); },
+});
+
+const markerLayer = createMarkerLayer(el('markerLayer'), viewer, {
+  onChange(markers) { project.markers = markers; save(); renderLegend(); },
+});
+
+const legendPanel = createLegendPanel(el('legendPanel'), {
+  onTextChange(style, text) { project.legendText[style] = text; save(); },
+  onMove(pos) { project.legendPos = pos; save(); },
+});
+
+const locator = createLocatorInset(el('locatorInset'), el('locatorImg'), el('locatorRect'), viewport, viewer);
+
+function renderLegend() {
+  legendPanel.render(project.markers, project.legendText, markerIconSvg);
+}
+
+function renderGrid() {
+  const layer = el('gridLayer');
+  layer.innerHTML = '';
+  if (!project.gridEnabled || !isCalibrated(project.calibration) || !currentSize.width) return;
+  const { vLines, hLines } = computeGraticule(project.calibration, currentSize.width, currentSize.height);
+  vLines.forEach(({ lon, x }) => {
+    const line = document.createElement('div');
+    line.className = 'grid-line v';
+    line.style.left = `${x}px`;
+    layer.appendChild(line);
+    const label = document.createElement('div');
+    label.className = 'grid-label';
+    label.style.left = `${x}px`;
+    label.style.top = '0px';
+    label.textContent = `${lon}°`;
+    layer.appendChild(label);
+  });
+  hLines.forEach(({ lat, y }) => {
+    const line = document.createElement('div');
+    line.className = 'grid-line h';
+    line.style.top = `${y}px`;
+    layer.appendChild(line);
+    const label = document.createElement('div');
+    label.className = 'grid-label';
+    label.style.left = '0px';
+    label.style.top = `${y}px`;
+    label.textContent = `${lat}°`;
+    layer.appendChild(label);
+  });
+}
+
+function setCompassEnabled(on) {
+  project.compassEnabled = on;
+  el('compassRose').hidden = !on;
+  el('btnCompass').classList.toggle('active', on);
+  save();
+}
+
+function setLocatorEnabled(on) {
+  project.locatorEnabled = on;
+  el('locatorInset').hidden = !on;
+  el('btnLocator').classList.toggle('active', on);
+  if (on) locator.updateRect();
+  save();
+}
+
+function setGridEnabled(on) {
+  project.gridEnabled = on;
+  el('btnGrid').classList.toggle('active', on);
+  renderGrid();
+  save();
+}
+
+el('btnCompass').addEventListener('click', () => setCompassEnabled(!project.compassEnabled));
+el('btnLocator').addEventListener('click', () => setLocatorEnabled(!project.locatorEnabled));
+el('btnGrid').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
+  setGridEnabled(!project.gridEnabled);
+});
+
+function openCalibratePanel() {
+  const c = project.calibration || { north: 90, south: -90, west: -180, east: 180 };
+  el('calNorth').value = c.north;
+  el('calSouth').value = c.south;
+  el('calWest').value = c.west;
+  el('calEast').value = c.east;
+  el('calibratePanel').hidden = false;
+}
+
+el('btnCalibrate').addEventListener('click', () => {
+  el('calibratePanel').hidden = !el('calibratePanel').hidden;
+  if (!el('calibratePanel').hidden) openCalibratePanel();
+});
+
+el('btnApplyCalibration').addEventListener('click', () => {
+  const north = parseFloat(el('calNorth').value);
+  const south = parseFloat(el('calSouth').value);
+  const west = parseFloat(el('calWest').value);
+  const east = parseFloat(el('calEast').value);
+  const candidate = { north, south, west, east };
+  if (!isCalibrated(candidate)) {
+    alert('Enter four different numbers, with north above south and west left of east.');
+    return;
+  }
+  project.calibration = candidate;
+  save();
+  renderGrid();
+  el('calibratePanel').hidden = true;
+});
+
+el('btnClearCalibration').addEventListener('click', () => {
+  project.calibration = null;
+  project.gridEnabled = false;
+  el('btnGrid').classList.remove('active');
+  save();
+  renderGrid();
+  el('calibratePanel').hidden = true;
+});
+
+viewport.addEventListener('pointermove', e => {
+  const box = el('latLonReadout');
+  if (!isCalibrated(project.calibration) || !currentSize.width) { box.hidden = true; return; }
+  const pt = viewer.screenToStage(e.clientX, e.clientY);
+  const { lat, lon } = toLatLon(project.calibration, currentSize.width, currentSize.height, pt.x, pt.y);
+  box.textContent = formatLatLon(lat, lon);
+  box.hidden = false;
+});
+viewport.addEventListener('pointerleave', () => { el('latLonReadout').hidden = true; });
+
+function updateZoomReadout(scale) {
+  el('zoomReadout').textContent = scale ? `${Math.round(scale * 100)}%` : '—';
+}
+
+viewport.addEventListener('pointerdown', () => viewport.classList.add('dragging'));
+['pointerup', 'pointercancel'].forEach(evt =>
+  viewport.addEventListener(evt, () => viewport.classList.remove('dragging'))
+);
+
+const PLACE_HINTS = {
+  label: 'Click the map to place a label &middot; Esc to stop',
+  marker: 'Click the map to place a marker &middot; Esc to stop',
+};
+
+function setPlaceMode(mode) {
+  placeMode = mode;
+  viewport.classList.toggle('adding', mode !== 'none');
+  el('btnAddLabel').classList.toggle('active', mode === 'label');
+  el('btnAddMarker').classList.toggle('active', mode === 'marker');
+  el('markerStyleSelect').hidden = mode !== 'marker';
+  el('placeHint').hidden = mode === 'none';
+  if (mode !== 'none') el('placeHint').innerHTML = PLACE_HINTS[mode];
+}
+
+el('btnAddLabel').addEventListener('click', () => setPlaceMode(placeMode === 'label' ? 'none' : 'label'));
+el('btnAddMarker').addEventListener('click', () => setPlaceMode(placeMode === 'marker' ? 'none' : 'marker'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && placeMode !== 'none') setPlaceMode('none'); });
+
+viewport.addEventListener('pointerdown', e => {
+  if (e.target.closest('[data-no-pan]')) return;
+  downPt = { x: e.clientX, y: e.clientY };
+});
+viewport.addEventListener('pointerup', e => {
+  if (!downPt) return;
+  const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y);
+  downPt = null;
+  if (placeMode === 'none' || moved >= 4 || e.target.closest('[data-no-pan]') || !currentSize.width) return;
+  const stagePt = viewer.screenToStage(e.clientX, e.clientY);
+  if (placeMode === 'label') {
+    const label = labelLayer.addAt(stagePt.x, stagePt.y);
+    requestAnimationFrame(() => labelLayer.startEditing(label.id));
+  } else if (placeMode === 'marker') {
+    markerLayer.addAt(stagePt.x, stagePt.y, el('markerStyleSelect').value);
+  }
+});
+
+function setStatus(msg, isErr) {
+  const box = el('searchStatus');
+  if (!msg) { box.hidden = true; return; }
+  box.hidden = false;
+  box.className = 'status' + (isErr ? ' err' : '');
+  box.innerHTML = msg;
+}
+
+function escapeHtml(s) { return String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function renderResults(results) {
+  const grid = el('resultsGrid');
+  grid.innerHTML = '';
+  if (!results.length) { setStatus('No displayable map images found for that search.'); return; }
+  setStatus('');
+  results.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'result';
+    card.innerHTML = `
+      <div class="thumb"><img src="${r.thumbUrl}" alt="" loading="lazy"></div>
+      <div class="meta">
+        <div class="rtitle">${escapeHtml(r.title)}</div>
+        <div class="rlicense">${escapeHtml(r.license)}</div>
+      </div>
+      <button class="small primary" type="button">Use this map</button>
+    `;
+    card.querySelector('button').addEventListener('click', () => useResult(r));
+    grid.appendChild(card);
+  });
+}
+
+async function runSearch(query) {
+  setStatus('<span class="spinner"></span>Searching Wikimedia Commons…');
+  el('btnSearch').disabled = true;
+  try {
+    const results = await searchMaps(query);
+    renderResults(results);
+  } catch (err) {
+    setStatus(`Couldn't reach Wikimedia Commons (${escapeHtml(err.message)}). Check your connection, or a school network filter may be blocking it.`, true);
+  } finally {
+    el('btnSearch').disabled = false;
+  }
+}
+
+async function useResult(result) {
+  setStatus('<span class="spinner"></span>Downloading map…');
+  try {
+    let record = await cache.getCachedMap(result.id).catch(() => null);
+    if (!record) {
+      record = await fetchMapImage(result);
+      await cache.putCachedMap(record).catch(() => {});
+    }
+    displayMap(record);
+    setStatus('');
+  } catch (err) {
+    setStatus(`Couldn't download that map (${escapeHtml(err.message)}).`, true);
+  }
+}
+
+function displayMap(record) {
+  const isSameMap = project.mapId === record.id;
+  if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+  currentObjectUrl = URL.createObjectURL(record.blob);
+  currentSize = { width: record.width, height: record.height };
+
+  mapImg.onload = () => {
+    const w = record.width || mapImg.naturalWidth;
+    const h = record.height || mapImg.naturalHeight;
+    mapImg.width = w;
+    mapImg.height = h;
+    currentSize = { width: w, height: h };
+    if (isSameMap && project.view && project.view.scale) {
+      viewer.setView(project.view);
+    } else {
+      viewer.fit(w, h);
+    }
+    labelLayer.reposition();
+    markerLayer.reposition();
+    renderGrid();
+    locator.updateRect();
+  };
+  mapImg.src = currentObjectUrl;
+  mapImg.hidden = false;
+  el('viewerEmpty').hidden = true;
+  locator.setImage(currentObjectUrl, record.width, record.height);
+
+  project.mapId = record.id;
+  if (!isSameMap) {
+    project.labels = [];
+    project.markers = [];
+    project.legendText = {};
+    project.calibration = null;
+    project.gridEnabled = false;
+    setPlaceMode('none');
+    el('calibratePanel').hidden = true;
+    el('btnGrid').classList.remove('active');
+  }
+  labelLayer.setLabels(project.labels);
+  markerLayer.setMarkers(project.markers);
+  legendPanel.setPosition(project.legendPos);
+  renderLegend();
+  el('compassRose').hidden = !project.compassEnabled;
+  el('btnCompass').classList.toggle('active', project.compassEnabled);
+  el('locatorInset').hidden = !project.locatorEnabled;
+  el('btnLocator').classList.toggle('active', project.locatorEnabled);
+  save();
+  renderAttribution(record);
+  refreshRecent();
+}
+
+function renderAttribution(record) {
+  const a = record.attribution || {};
+  const parts = [`Map: <strong>${escapeHtml(record.title)}</strong>`];
+  if (a.artist) parts.push(escapeHtml(a.artist));
+  if (a.license) parts.push(escapeHtml(a.license));
+  let html = parts.join(' &middot; ');
+  if (a.descriptionUrl) html += ` &middot; <a href="${a.descriptionUrl}" target="_blank" rel="noopener">source on Wikimedia Commons</a>`;
+  el('attribution').innerHTML = html;
+}
+
+async function refreshRecent() {
+  let list = [];
+  try { list = await cache.listCachedMaps(); } catch (e) { /* cache unavailable */ }
+  const card = el('recentCard');
+  const row = el('recentRow');
+  if (!list.length) { card.hidden = true; return; }
+  card.hidden = false;
+  row.innerHTML = '';
+  list.sort((a, b) => (b.cachedAt || 0) - (a.cachedAt || 0));
+  list.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'recentItem';
+    item.textContent = r.title;
+    item.title = 'Load this cached map';
+    item.addEventListener('click', async () => {
+      const full = await cache.getCachedMap(r.id);
+      if (full) displayMap(full);
+    });
+    row.appendChild(item);
+  });
+}
+
+el('btnSearch').addEventListener('click', () => {
+  const q = el('searchInput').value.trim();
+  if (q) runSearch(q);
+});
+el('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') el('btnSearch').click(); });
+
+el('btnZoomIn').addEventListener('click', () => {
+  const r = viewport.getBoundingClientRect();
+  viewer.zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25);
+});
+el('btnZoomOut').addEventListener('click', () => {
+  const r = viewport.getBoundingClientRect();
+  viewer.zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25);
+});
+el('btnFit').addEventListener('click', () => {
+  if (currentSize.width) viewer.fit(currentSize.width, currentSize.height);
+});
+el('btnPrint').addEventListener('click', () => window.print());
+
+// Printing uses more vertical space than the on-screen viewport (see the
+// @media print rule for #viewport). Refit to that larger area right before
+// printing so the map fills the page instead of printing at its on-screen
+// size with blank space below, then restore the working view afterward.
+let viewBeforePrint = null;
+window.addEventListener('beforeprint', () => {
+  if (!currentSize.width) return;
+  viewBeforePrint = viewer.getView();
+  viewer.fit(currentSize.width, currentSize.height);
+});
+window.addEventListener('afterprint', () => {
+  if (viewBeforePrint) { viewer.setView(viewBeforePrint); viewBeforePrint = null; }
+});
+el('btnClearCache').addEventListener('click', async () => {
+  if (!confirm('Remove every map cached in this browser? Nothing on your project is lost — you can search and re-download any of them again.')) return;
+  const list = await cache.listCachedMaps().catch(() => []);
+  await Promise.all(list.map(r => cache.deleteCachedMap(r.id).catch(() => {})));
+  refreshRecent();
+});
+
+async function init() {
+  if (!(await cache.isAvailable())) {
+    el('storageWarn').hidden = false;
+    el('storageWarn').textContent = "Your browser is blocking offline storage (private/incognito mode, or storage disabled), so downloaded maps won't be kept between visits.";
+  }
+  await refreshRecent();
+  if (project.mapId) {
+    const cached = await cache.getCachedMap(project.mapId).catch(() => null);
+    if (cached) { displayMap(cached); return; }
+  }
+  el('searchInput').value = 'blank world map';
+  runSearch('blank world map');
+}
+
+init();
+</script>
+</body>
+</html>
