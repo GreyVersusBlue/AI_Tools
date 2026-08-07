@@ -118,6 +118,20 @@
     align-items: center; justify-content: center;
   }
   .bmg-label:hover .lbl-del, .bmg-label.editing .lbl-del { display: flex; }
+  .bmg-label.editing { flex-wrap: wrap; row-gap: 4px; }
+  .lbl-style-bar {
+    order: 5; width: 100%; display: flex; align-items: center; gap: 4px; margin-top: 2px;
+    background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  }
+  .lbl-style-bar select {
+    font-family: inherit; font-size: 0.72rem; padding: 2px 4px; border: 1px solid var(--line);
+    border-radius: 4px; background: #fff; color: var(--ink);
+  }
+  .lbl-style-bar button {
+    padding: 2px 8px; font-size: 0.72rem; border-radius: 4px; line-height: 1.2;
+  }
+  .lbl-style-bar button.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
 
   #markerLayer { position: absolute; inset: 0; pointer-events: none; }
   .bmg-marker { position: absolute; pointer-events: auto; cursor: grab; z-index: 5; }
@@ -242,6 +256,17 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Student handout mode: hides the *text* of labels and legend captions
+     (while keeping the dot/icon and the input's box shape) so the map can
+     double as a fill-in-the-blank handout. Toggling it back off restores
+     the fully-labeled teacher/answer-key view — the underlying text isn't
+     touched, just its rendered color, so this is safe to flip on-screen or
+     right before printing. */
+  /* !important: a colored label sets its text color as an inline style
+     (see bmg-labels.js applyStyle()), which otherwise outranks this rule. */
+  body.student-blank .bmg-label .lbl-text { color: transparent !important; }
+  body.student-blank #legendPanel .legend-input { color: transparent; }
+
   @media print {
     .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
     #calibratePanel, #latLonReadout, .rgn-del, #undoToast { display: none !important; }
@@ -301,6 +326,7 @@
         <option value="star">Star</option>
         <option value="dot">Dot</option>
         <option value="flag">Flag</option>
+        <option value="number">Numbered pin</option>
       </select>
       <select id="markerColorSelect" class="styleSelect" hidden></select>
       <select id="markerSizeSelect" class="styleSelect" hidden></select>
@@ -326,6 +352,7 @@
       <button id="btnGrid" class="small toggle">Lat/Long Grid</button>
       <button id="btnLocator" class="small toggle">Locator Map</button>
       <button id="btnCalibrate" class="small">Set Map Coordinates&hellip;</button>
+      <button id="btnStudentMode" class="small toggle" title="Hide label and legend text for a printable student handout. Toggle off to see the labeled teacher/answer-key version.">Student Handout Mode</button>
     </div>
     <div id="calibratePanel" class="card no-print" hidden>
       <h2>Map coordinates</h2>
@@ -392,9 +419,9 @@ import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
 import { CONTINENTS } from './blank-map-generator/bmg-geography.js';
 import { createViewer } from './blank-map-generator/bmg-viewer.js';
-import { createLabelLayer } from './blank-map-generator/bmg-labels.js';
+import { createLabelLayer, labelColorHex, labelFontSizePx } from './blank-map-generator/bmg-labels.js';
 import {
-  createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex,
+  createMarkerLayer, markerIconSvg, markerAnchor, markerSizePx, markerColorHex, numberedOrder,
   MARKER_COLORS, MARKER_SIZES, DEFAULT_MARKER_COLOR, DEFAULT_MARKER_SIZE,
 } from './blank-map-generator/bmg-markers.js';
 import { createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg } from './blank-map-generator/bmg-regions.js';
@@ -474,6 +501,22 @@ const legendPanel = createLegendPanel(el('legendPanel'), {
   },
   onMarkerSizeChange(style, color, newSize) {
     project.markers.forEach(m => { if (m.style === style && m.color === color) m.size = newSize; });
+    markerLayer.refreshIcons();
+    save();
+  },
+  onNumberedTextChange(id, text) { project.legendText[id] = text; save(); },
+  onNumberedColorChange(id, newColor) {
+    const marker = project.markers.find(m => m.id === id);
+    if (!marker || marker.color === newColor) return;
+    marker.color = newColor;
+    markerLayer.refreshIcons();
+    save();
+    renderLegend();
+  },
+  onNumberedSizeChange(id, newSize) {
+    const marker = project.markers.find(m => m.id === id);
+    if (!marker) return;
+    marker.size = newSize;
     markerLayer.refreshIcons();
     save();
   },
@@ -636,8 +679,16 @@ function setGridEnabled(on) {
   save();
 }
 
+function setStudentModeEnabled(on) {
+  project.studentBlankMode = on;
+  document.body.classList.toggle('student-blank', on);
+  el('btnStudentMode').classList.toggle('active', on);
+  save();
+}
+
 el('btnCompass').addEventListener('click', () => setCompassEnabled(!project.compassEnabled));
 el('btnLocator').addEventListener('click', () => setLocatorEnabled(!project.locatorEnabled));
+el('btnStudentMode').addEventListener('click', () => setStudentModeEnabled(!project.studentBlankMode));
 el('btnGrid').addEventListener('click', () => {
   if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
   setGridEnabled(!project.gridEnabled);
@@ -979,6 +1030,8 @@ function displayMap(record) {
   el('locatorInset').hidden = !project.locatorEnabled;
   el('btnLocator').classList.toggle('active', project.locatorEnabled);
   if (project.locatorEnabled) ensureOverlayPos(el('locatorInset'), 'locatorPos');
+  document.body.classList.toggle('student-blank', !!project.studentBlankMode);
+  el('btnStudentMode').classList.toggle('active', !!project.studentBlankMode);
   save();
   renderAttribution(record);
   refreshRecent();
@@ -1113,20 +1166,23 @@ function drawPngGridLabel(ctx, text, x, y) {
   ctx.fillText(text, x + 4, y + 11);
 }
 
-function drawPngLabel(ctx, text, px, py) {
-  if (!text) return;
+function drawPngLabel(ctx, label, px, py, hideText) {
+  if (!label.text) return;
+  const dotColor = label.color ? labelColorHex(label.color) : '#2e6b8f';
+  const textColor = label.color ? labelColorHex(label.color) : '#1f2430';
+  const fontPx = labelFontSizePx(label.size);
   const dotR = 7;
   ctx.beginPath();
   ctx.arc(px, py, dotR, 0, Math.PI * 2);
-  ctx.fillStyle = '#2e6b8f';
+  ctx.fillStyle = dotColor;
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#fff';
   ctx.stroke();
 
-  ctx.font = '13px "Segoe UI", Georgia, serif';
-  const padX = 7, padY = 4, textH = 13;
-  const textW = ctx.measureText(text).width;
+  ctx.font = `${label.italic ? 'italic ' : ''}${label.bold ? '700' : '400'} ${fontPx}px "Segoe UI", Georgia, serif`;
+  const padX = 7, padY = 4, textH = fontPx;
+  const textW = ctx.measureText(label.text).width;
   const boxX = px + dotR + 5;
   const boxY = py - (textH + padY * 2) / 2;
   pngRoundRect(ctx, boxX, boxY, textW + padX * 2, textH + padY * 2, 4);
@@ -1135,25 +1191,30 @@ function drawPngLabel(ctx, text, px, py) {
   ctx.strokeStyle = '#dcdad2';
   ctx.lineWidth = 1;
   ctx.stroke();
-  ctx.fillStyle = '#1f2430';
-  ctx.fillText(text, boxX + padX, py + 4);
+  if (!hideText) {
+    ctx.fillStyle = textColor;
+    ctx.fillText(label.text, boxX + padX, py + fontPx / 3);
+  }
 }
 
 async function drawPngLegend(ctx) {
   const groups = [];
   const seenGroup = new Set();
   project.markers.forEach(m => {
+    if (m.style === 'number') return;
     const gkey = `${m.style}::${m.color}`;
     if (seenGroup.has(gkey)) return;
     seenGroup.add(gkey);
     groups.push({ style: m.style, color: m.color });
   });
+  const numbered = numberedOrder(project.markers);
   const colors = [...new Set(project.regions.map(r => r.color))];
   const lineColors = [...new Set(project.lines.map(l => l.color))];
-  if (!groups.length && !colors.length && !lineColors.length) return;
+  if (!groups.length && !numbered.length && !colors.length && !lineColors.length) return;
+  const hideText = !!project.studentBlankMode;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
-  const rows = groups.length + colors.length + lineColors.length;
+  const rows = groups.length + numbered.length + colors.length + lineColors.length;
   const height = padTop + titleH + rows * rowH + 8;
 
   pngRoundRect(ctx, pos.x, pos.y, width, height, 8);
@@ -1171,26 +1232,44 @@ async function drawPngLegend(ctx) {
     const key = markerLegendKey(g.style, g.color);
     const img = await svgToImage(markerIconSvg(g.style, iconSize, markerColorHex(g.color)));
     ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    ctx.fillStyle = '#1f2430';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(project.legendText[key] || `(${g.style})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    if (!hideText) {
+      ctx.fillStyle = '#1f2430';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(project.legendText[key] || `(${g.style})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    }
+    rowY += rowH;
+  }
+  for (let i = 0; i < numbered.length; i++) {
+    const m = numbered[i];
+    const number = i + 1;
+    const img = await svgToImage(markerIconSvg('number', iconSize, markerColorHex(m.color), number));
+    ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
+    if (!hideText) {
+      ctx.fillStyle = '#1f2430';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(project.legendText[m.id] || `(#${number})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    }
     rowY += rowH;
   }
   for (const color of colors) {
     const img = await svgToImage(regionSwatchSvg(color, iconSize));
     ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    ctx.fillStyle = '#1f2430';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(project.regionLegendText[color] || `(${color})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    if (!hideText) {
+      ctx.fillStyle = '#1f2430';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(project.regionLegendText[color] || `(${color})`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    }
     rowY += rowH;
   }
   for (const color of lineColors) {
     const rep = project.lines.find(l => l.color === color);
     const img = await svgToImage(lineSwatchSvg(color, iconSize, rep?.style));
     ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    ctx.fillStyle = '#1f2430';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(project.lineLegendText[color] || `(${color} line)`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    if (!hideText) {
+      ctx.fillStyle = '#1f2430';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(project.lineLegendText[color] || `(${color} line)`, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
+    }
     rowY += rowH;
   }
 }
@@ -1294,9 +1373,12 @@ async function buildPngBlob() {
     if (l.arrow && pts.length >= 2) drawPngArrowhead(ctx, pts[pts.length - 2], pts[pts.length - 1], hex);
   });
 
+  const markerNumbers = new Map();
+  numberedOrder(project.markers).forEach((m, i) => markerNumbers.set(m.id, i + 1));
   for (const m of project.markers) {
     const size = markerSizePx(m.size);
-    const img = await svgToImage(markerIconSvg(m.style, size, markerColorHex(m.color)));
+    const number = m.style === 'number' ? markerNumbers.get(m.id) : null;
+    const img = await svgToImage(markerIconSvg(m.style, size, markerColorHex(m.color), number));
     const pt = viewer.stageToScreen(m.x, m.y);
     const anchor = markerAnchor(m.style);
     ctx.drawImage(img, pt.x - size / 2, anchor === 'bottom' ? pt.y - size : pt.y - size / 2, size, size);
@@ -1304,7 +1386,7 @@ async function buildPngBlob() {
 
   project.labels.forEach(l => {
     const pt = viewer.stageToScreen(l.x, l.y);
-    drawPngLabel(ctx, l.text, pt.x, pt.y);
+    drawPngLabel(ctx, l, pt.x, pt.y, project.studentBlankMode);
   });
 
   await drawPngLegend(ctx);
@@ -1395,6 +1477,8 @@ function showEmptyMapState(mapMissing) {
   el('btnLocator').classList.remove('active');
   el('calibratePanel').hidden = true;
   el('btnGrid').classList.remove('active');
+  document.body.classList.remove('student-blank');
+  el('btnStudentMode').classList.remove('active');
   el('attribution').innerHTML = '';
   clearTimeout(undoTimer);
   lastDeleted = null;

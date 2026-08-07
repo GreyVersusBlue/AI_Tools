@@ -2,7 +2,32 @@
 // (map-pixel) coordinates. Labels render as plain DOM nodes positioned in
 // screen space via viewer.stageToScreen() and repositioned on every
 // pan/zoom, so their on-screen size stays constant and readable instead of
-// scaling with the map.
+// scaling with the map. Each label also carries its own optional color,
+// size, and bold/italic flags (parity with what markers got in
+// bmg-markers.js) — but unlike markers, labels aren't grouped by style in
+// a shared legend (each one already shows its own text on the map), so
+// style controls live inline on the label itself while it's being edited
+// rather than in a toolbar or legend row.
+
+import { PALETTE, colorHex } from "./bmg-colors.js";
+
+export const LABEL_COLORS = PALETTE;
+export const labelColorHex = colorHex;
+
+export const LABEL_SIZES = [
+  { key: "small", label: "S", rem: 0.7 },
+  { key: "medium", label: "M", rem: 0.8 },
+  { key: "large", label: "L", rem: 0.95 },
+];
+export const DEFAULT_LABEL_SIZE = "medium";
+
+export function labelFontSizeRem(size) {
+  return (LABEL_SIZES.find(s => s.key === size) || LABEL_SIZES[1]).rem;
+}
+
+export function labelFontSizePx(size) {
+  return labelFontSizeRem(size) * 16;
+}
 
 export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   let labels = [];
@@ -20,7 +45,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   function getLabels() { return labels; }
 
   function addAt(stageX, stageY, text = "") {
-    const label = { id: newId(), x: stageX, y: stageY, text };
+    const label = { id: newId(), x: stageX, y: stageY, text, color: null, bold: false, italic: false, size: DEFAULT_LABEL_SIZE };
     labels.push(label);
     reconcile();
     return label;
@@ -51,6 +76,18 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
     });
   }
 
+  /** Applies a label's color/size/bold/italic to its dot and text (or in-progress input) node. */
+  function applyStyle(node, label) {
+    const dot = node.querySelector(".lbl-dot");
+    if (dot) dot.style.background = label.color ? labelColorHex(label.color) : "";
+    const textEl = node.querySelector(".lbl-text, .lbl-input");
+    if (!textEl) return;
+    textEl.style.color = label.color ? labelColorHex(label.color) : "";
+    textEl.style.fontSize = `${labelFontSizeRem(label.size)}rem`;
+    textEl.style.fontWeight = label.bold ? "700" : "";
+    textEl.style.fontStyle = label.italic ? "italic" : "";
+  }
+
   function reconcile() {
     for (const [id, node] of nodes) {
       if (!labels.some(l => l.id === id)) { node.remove(); nodes.delete(id); }
@@ -64,6 +101,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
       } else {
         const textEl = node.querySelector(".lbl-text");
         if (textEl && textEl.textContent !== l.text) textEl.textContent = l.text;
+        applyStyle(node, l);
       }
     });
     reposition();
@@ -80,6 +118,7 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
       <button class="lbl-del" type="button" title="Delete label" data-no-pan>&times;</button>
     `;
     node.querySelector(".lbl-text").textContent = label.text;
+    applyStyle(node, label);
     wireDrag(node, label);
     node.addEventListener("dblclick", e => { e.stopPropagation(); startEdit(node, label); });
     node.querySelector(".lbl-del").addEventListener("click", e => {
@@ -119,6 +158,45 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
     node.addEventListener("pointercancel", end);
   }
 
+  /** Builds the inline style bar (color/size/bold/italic) shown only while a label is being edited. */
+  function buildStyleBar(label, node) {
+    const bar = document.createElement("div");
+    bar.className = "lbl-style-bar";
+    bar.setAttribute("data-no-pan", "");
+    bar.innerHTML = `
+      <select class="lbl-color-select" data-no-pan title="Text color">
+        <option value="">Default</option>
+        ${LABEL_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join("")}
+      </select>
+      <select class="lbl-size-select" data-no-pan title="Text size">
+        ${LABEL_SIZES.map(s => `<option value="${s.key}">${s.label}</option>`).join("")}
+      </select>
+      <button type="button" class="lbl-bold-btn" data-no-pan title="Bold"><b>B</b></button>
+      <button type="button" class="lbl-italic-btn" data-no-pan title="Italic"><i>I</i></button>
+    `;
+    const colorSelect = bar.querySelector(".lbl-color-select");
+    const sizeSelect = bar.querySelector(".lbl-size-select");
+    const boldBtn = bar.querySelector(".lbl-bold-btn");
+    const italicBtn = bar.querySelector(".lbl-italic-btn");
+    colorSelect.value = label.color || "";
+    sizeSelect.value = label.size || DEFAULT_LABEL_SIZE;
+    boldBtn.classList.toggle("active", !!label.bold);
+    italicBtn.classList.toggle("active", !!label.italic);
+
+    function commitStyle() { applyStyle(node, label); onChange?.(labels); }
+
+    colorSelect.addEventListener("pointerdown", e => e.stopPropagation());
+    colorSelect.addEventListener("change", () => { label.color = colorSelect.value || null; commitStyle(); });
+    sizeSelect.addEventListener("pointerdown", e => e.stopPropagation());
+    sizeSelect.addEventListener("change", () => { label.size = sizeSelect.value; commitStyle(); });
+    boldBtn.addEventListener("pointerdown", e => e.stopPropagation());
+    boldBtn.addEventListener("click", e => { e.stopPropagation(); label.bold = !label.bold; boldBtn.classList.toggle("active", label.bold); commitStyle(); });
+    italicBtn.addEventListener("pointerdown", e => e.stopPropagation());
+    italicBtn.addEventListener("click", e => { e.stopPropagation(); label.italic = !label.italic; italicBtn.classList.toggle("active", label.italic); commitStyle(); });
+
+    return bar;
+  }
+
   function startEdit(node, label) {
     if (node.classList.contains("editing")) return;
     node.classList.add("editing");
@@ -130,6 +208,9 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
     input.value = label.text;
     input.setAttribute("data-no-pan", "");
     textEl.replaceWith(input);
+    applyStyle(node, label);
+    const styleBar = buildStyleBar(label, node);
+    node.appendChild(styleBar);
     input.focus();
     input.select();
 
@@ -140,6 +221,8 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
     function commit() {
       if (committed) return;
       committed = true;
+      node.removeEventListener("focusout", onFocusOut);
+      styleBar.remove();
       const val = input.value.trim();
       if (!val) { remove(label.id); return; }
       label.text = val;
@@ -148,14 +231,23 @@ export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
       span.textContent = val;
       input.replaceWith(span);
       node.classList.remove("editing");
+      applyStyle(node, label);
       onChange?.(labels);
     }
+
+    // Focus can hop between the text input and the style bar's own
+    // select/button controls without the user being "done" editing — only
+    // commit once focus leaves the whole editing node (input + style bar).
+    function onFocusOut(e) {
+      if (node.contains(e.relatedTarget)) return;
+      commit();
+    }
+    node.addEventListener("focusout", onFocusOut);
 
     input.addEventListener("keydown", e => {
       if (e.key === "Enter") { e.preventDefault(); commit(); }
       if (e.key === "Escape") { e.preventDefault(); input.value = label.text; commit(); }
     });
-    input.addEventListener("blur", commit);
     input.addEventListener("pointerdown", e => e.stopPropagation());
   }
 

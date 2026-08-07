@@ -27,7 +27,7 @@ function blankProjectData() {
     regions: [], regionLegendText: {},
     lines: [], lineLegendText: {},
     compassEnabled: false, gridEnabled: false, locatorEnabled: false, calibration: null,
-    compassPos: null, locatorPos: null,
+    compassPos: null, locatorPos: null, studentBlankMode: false,
   };
 }
 
@@ -51,8 +51,12 @@ function normalizeProjectData(p) {
   if (p.calibration !== null && typeof p.calibration !== "object") p.calibration = null;
   if (p.compassPos !== null && typeof p.compassPos !== "object") p.compassPos = null;
   if (p.locatorPos !== null && typeof p.locatorPos !== "object") p.locatorPos = null;
+  if (typeof p.studentBlankMode !== "boolean") p.studentBlankMode = false;
   if (Array.isArray(p.markers)) {
     p.markers = p.markers.map(m => ({ color: "blue", size: "medium", ...m }));
+  }
+  if (Array.isArray(p.labels)) {
+    p.labels = p.labels.map(l => ({ color: null, bold: false, italic: false, size: "medium", ...l }));
   }
   return p;
 }

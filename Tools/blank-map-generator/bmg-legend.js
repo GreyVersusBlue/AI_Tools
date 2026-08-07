@@ -18,6 +18,7 @@ export function markerLegendKey(style, color) {
 export function createLegendPanel(panelEl, {
   onMarkerTextChange, onRegionTextChange, onLineTextChange,
   onMarkerColorChange, onMarkerSizeChange, onMove,
+  onNumberedTextChange, onNumberedColorChange, onNumberedSizeChange,
 } = {}) {
   let pos = { x: 12, y: 12 };
   let dragging = false, startX = 0, startY = 0, startPos = null;
@@ -70,6 +71,39 @@ export function createLegendPanel(panelEl, {
     panelEl.appendChild(row);
   }
 
+  // Numbered markers (style "number") each mean something different by
+  // design — unlike other marker styles, they don't share one legend row
+  // per style+color group. Each gets its own row instead, keyed by the
+  // marker's own id (not a style::color key) so its caption stays attached
+  // to that specific pin even if its color changes or other numbered pins
+  // are added/removed around it.
+  function addNumberedRow(marker, number, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions) {
+    const key = marker.id;
+    const row = document.createElement("div");
+    row.className = "legend-row";
+    row.innerHTML = `
+      <span class="legend-icon" data-no-pan>${iconSvg("number", 18, markerColorHex(marker.color), number)}</span>
+      <input type="text" class="legend-input compact" data-no-pan placeholder="What is #${number}?">
+      <select class="legend-select" data-no-pan title="Marker color"></select>
+      <select class="legend-select" data-no-pan title="Marker size"></select>
+    `;
+    const [input, colorSelect, sizeSelect] = row.querySelectorAll("input, select");
+
+    input.value = (legendText && legendText[key]) || "";
+    input.addEventListener("input", () => onNumberedTextChange?.(key, input.value));
+    input.addEventListener("pointerdown", e => e.stopPropagation());
+
+    colorSelect.innerHTML = colorOptions.map(c => `<option value="${c.key}"${c.key === marker.color ? " selected" : ""}>${c.name}</option>`).join("");
+    colorSelect.addEventListener("pointerdown", e => e.stopPropagation());
+    colorSelect.addEventListener("change", () => onNumberedColorChange?.(key, colorSelect.value));
+
+    sizeSelect.innerHTML = sizeOptions.map(s => `<option value="${s.key}"${s.key === marker.size ? " selected" : ""}>${s.label}</option>`).join("");
+    sizeSelect.addEventListener("pointerdown", e => e.stopPropagation());
+    sizeSelect.addEventListener("change", () => onNumberedSizeChange?.(key, sizeSelect.value));
+
+    panelEl.appendChild(row);
+  }
+
   /**
    * Rebuilds the panel from the current marker/region/line sets. Hidden
    * when all three are empty. Takes a single options bag since it threads
@@ -83,7 +117,9 @@ export function createLegendPanel(panelEl, {
   } = {}) {
     const groups = [];
     const seenGroup = new Set();
+    const numbered = [];
     (markers || []).forEach(m => {
+      if (m.style === "number") { numbered.push(m); return; }
       const gkey = `${m.style}::${m.color}`;
       if (seenGroup.has(gkey)) return;
       seenGroup.add(gkey);
@@ -91,10 +127,11 @@ export function createLegendPanel(panelEl, {
     });
     const regionColors = [...new Set((regions || []).map(r => r.color))];
     const lineColors = [...new Set((lines || []).map(l => l.color))];
-    if (!groups.length && !regionColors.length && !lineColors.length) { panelEl.hidden = true; return; }
+    if (!groups.length && !numbered.length && !regionColors.length && !lineColors.length) { panelEl.hidden = true; return; }
     panelEl.hidden = false;
     panelEl.innerHTML = `<div class="legend-title" data-no-pan>Key</div>`;
     groups.forEach(g => addMarkerRow(g, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions));
+    numbered.forEach((m, i) => addNumberedRow(m, i + 1, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions));
     regionColors.forEach(color => addCaptionRow(color, regionLegendText, swatchSvg(color, 18), "What does this shading mean?", onRegionTextChange));
     lineColors.forEach(color => {
       const rep = (lines || []).find(l => l.color === color);
