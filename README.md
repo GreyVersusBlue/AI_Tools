@@ -21,6 +21,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | School Calendar Visualizer | `Tools/School Calendar Visualizer.html` | Build a full-year calendar template — holidays, half days, workdays, grading periods, testing windows — and lay lesson pacing on top. Saves in your browser; print or export a backup. |
 | Classroom Timer | `Tools/Classroom Timer.html` | Big-digit projector timer: countdown, transition presets, random-interval surprise cues, stopwatch, and round-robin stations. |
 | Bracket / Tournament Generator | `Tools/bracket-tournament-generator.html` | Build a single-elimination bracket (byes handled automatically), run it live with click-to-advance picks, save/switch between multiple brackets, and print a blank copy. |
+| Quiz / Review Game Board | `Tools/review-game-board.html` | A Jeopardy-style review board — type in questions or import them from an Excel sheet (Category/Points/Question/Answer columns), click a cell to reveal it, award points per team. |
 
 ## Using these
 
