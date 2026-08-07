@@ -38,7 +38,6 @@ Reminder: coming soon means not right now.
 | Idea | What it would do |
 |---|---|
 | Blank Map Generator ⚠️ claimed | Printable blank maps by region for labeling activities. **Already being built in a separate chat, on branch `claude/map-builder-tool-aduz3m` — don't pick this one up here.** |
-| Timeline Builder | Build a printable or on-screen timeline of events. |
 
 ## World Language
 
