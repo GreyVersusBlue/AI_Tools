@@ -52,9 +52,7 @@ get a "coming soon" row on `index.html` — graduating one just means shipping i
 | Idea | What it would do |
 |---|---|
 | Upload your own map image | Let a teacher use a scanned or custom map file directly, bypassing Wikimedia Commons entirely, for district-specific or textbook maps that aren't on Commons. |
-| Auto-computed scale bar | Once a map is calibrated, show a real-world distance scale bar (e.g. "500 km") computed from the projection math. |
 | Accessibility hatching for regions/lines | Optional hatch/pattern fills as an alternative or addition to color, so shaded regions and lines stay distinguishable for colorblind students. |
-| Batch marker placement from coordinates | Paste a "name, lat, lon" list and auto-place matching markers at once on a calibrated map, instead of clicking each one by hand. |
 | Keyboard nudge + legend reordering | Arrow-key nudge for a selected label/marker's position, and drag-to-reorder legend rows instead of first-placed-first-listed order. |
 | Multi-page tiled print | Print a heavily zoomed-in, detailed map across multiple tiled pages (poster-style) instead of squeezing it onto one sheet. |
 | Full undo/redo history | Broaden the current "undo the last delete" into a real undo/redo stack covering moves and edits too, not just deletions. |

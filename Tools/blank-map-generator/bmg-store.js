@@ -28,6 +28,7 @@ function blankProjectData() {
     lines: [], lineLegendText: {},
     compassEnabled: false, gridEnabled: false, locatorEnabled: false, calibration: null,
     compassPos: null, locatorPos: null, studentBlankMode: false,
+    scaleBarEnabled: false, scaleBarUnit: "km", scaleBarPos: null,
   };
 }
 
@@ -52,6 +53,9 @@ function normalizeProjectData(p) {
   if (p.compassPos !== null && typeof p.compassPos !== "object") p.compassPos = null;
   if (p.locatorPos !== null && typeof p.locatorPos !== "object") p.locatorPos = null;
   if (typeof p.studentBlankMode !== "boolean") p.studentBlankMode = false;
+  if (typeof p.scaleBarEnabled !== "boolean") p.scaleBarEnabled = false;
+  if (p.scaleBarUnit !== "km" && p.scaleBarUnit !== "mi") p.scaleBarUnit = "km";
+  if (p.scaleBarPos !== null && typeof p.scaleBarPos !== "object") p.scaleBarPos = null;
   if (Array.isArray(p.markers)) {
     p.markers = p.markers.map(m => ({ color: "blue", size: "medium", ...m }));
   }

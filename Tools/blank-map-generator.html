@@ -219,6 +219,25 @@
     padding: 1px 4px; border-radius: 2px; white-space: nowrap; transform: translate(2px, 2px);
   }
 
+  #scaleBar {
+    position: absolute; bottom: 44px; left: 10px; z-index: 7; cursor: grab;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  #scaleBar.dragging { cursor: grabbing; }
+  #scaleBar .scalebar-fill {
+    height: 6px; background: var(--accent); border: 1px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35);
+  }
+  #scaleBar .scalebar-label {
+    font-size: 0.72rem; color: var(--ink); background: rgba(255,255,255,.88);
+    padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  }
+
+  #batchPanel textarea {
+    width: 100%; font-family: inherit; font-size: 0.85rem; padding: 8px; border: 1px solid var(--line);
+    border-radius: 6px; resize: vertical; color: var(--ink); background: #fff;
+  }
+  #batchPanel code { background: #f2f0ea; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+
   #latLonReadout {
     position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,.92); border: 1px solid var(--line);
     border-radius: 6px; padding: 4px 9px; font-size: 0.78rem; color: var(--ink); pointer-events: none; z-index: 7;
@@ -330,6 +349,7 @@
       </select>
       <select id="markerColorSelect" class="styleSelect" hidden></select>
       <select id="markerSizeSelect" class="styleSelect" hidden></select>
+      <button id="btnBatchPlace" class="small" title="Paste a list of name/latitude/longitude coordinates and place a marker + label for each at once">Batch Place Markers&hellip;</button>
       <button id="btnAddRegion" class="small toggle">+ Shade Region</button>
       <select id="regionColorSelect" class="styleSelect" hidden></select>
       <button id="btnAddLine" class="small toggle">+ Draw Line</button>
@@ -352,6 +372,11 @@
       <button id="btnGrid" class="small toggle">Lat/Long Grid</button>
       <button id="btnLocator" class="small toggle">Locator Map</button>
       <button id="btnCalibrate" class="small">Set Map Coordinates&hellip;</button>
+      <button id="btnScaleBar" class="small toggle">Scale Bar</button>
+      <select id="scaleBarUnitSelect" class="styleSelect" hidden>
+        <option value="km">km</option>
+        <option value="mi">mi</option>
+      </select>
       <button id="btnStudentMode" class="small toggle" title="Hide label and legend text for a printable student handout. Toggle off to see the labeled teacher/answer-key version.">Student Handout Mode</button>
     </div>
     <div id="calibratePanel" class="card no-print" hidden>
@@ -375,6 +400,21 @@
         <button id="btnApplyCalibration" class="small primary">Apply</button>
         <button id="btnClearCalibration" class="small">Clear</button>
       </div>
+    </div>
+    <div id="batchPanel" class="card no-print" hidden>
+      <h2>Batch place markers from coordinates</h2>
+      <p class="hint">
+        Paste one place per line as <code>name, latitude, longitude</code> (e.g. <code>Paris, 48.8566, 2.3522</code>).
+        Requires the map's coordinates to be set first (see &ldquo;Set Map Coordinates&hellip;&rdquo; above). Each
+        line places a marker &mdash; using whichever marker style/color/size is currently selected above &mdash;
+        plus a text label with its name.
+      </p>
+      <textarea id="batchCoordsInput" rows="6" data-no-pan placeholder="Paris, 48.8566, 2.3522&#10;Tokyo, 35.6762, 139.6503&#10;Cairo, 30.0444, 31.2357"></textarea>
+      <div class="calibRow">
+        <button id="btnBatchPlaceGo" class="small primary">Place All</button>
+        <button id="btnBatchPlaceClose" class="small">Close</button>
+      </div>
+      <div id="batchStatus" class="status" hidden></div>
     </div>
     <div id="viewport">
       <div id="stage">
@@ -402,6 +442,10 @@
         </svg>
       </div>
       <div id="latLonReadout" hidden></div>
+      <div id="scaleBar" hidden>
+        <div class="scalebar-fill"></div>
+        <div class="scalebar-label"></div>
+      </div>
       <div id="locatorInset" hidden>
         <img id="locatorImg" alt="">
         <div id="locatorRect"></div>
@@ -428,7 +472,7 @@ import { createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg } fro
 import { createLineLayer, LINE_COLORS, lineColorHex, lineSwatchSvg } from './blank-map-generator/bmg-lines.js';
 import { createLegendPanel, markerLegendKey } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
-import { isCalibrated, toLatLon, formatLatLon, computeGraticule } from './blank-map-generator/bmg-latlong.js';
+import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 
 const store = createStore();
@@ -459,6 +503,7 @@ const viewer = createViewer(viewport, stage, {
     regionLayer.reposition();
     lineLayer.reposition();
     locator.updateRect();
+    renderScaleBar();
   },
 });
 
@@ -601,6 +646,26 @@ function renderGrid() {
   });
 }
 
+// Unlike the grid (drawn once inside #stage, so the stage's own CSS
+// transform scales/pans it for free), the scale bar has to redraw its
+// pixel width on every pan/zoom: the ground distance a fixed screen-pixel
+// bar represents changes with zoom, and (on a Mercator map) with the
+// latitude currently centered in view.
+function renderScaleBar() {
+  const bar = el('scaleBar');
+  if (!project.scaleBarEnabled || !isCalibrated(project.calibration) || !currentSize.width) { bar.hidden = true; return; }
+  const rect = viewport.getBoundingClientRect();
+  const centerStage = viewer.screenToStage(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  const result = computeScaleBar(
+    project.calibration, currentSize.width, currentSize.height,
+    centerStage.y, viewer.getView().scale, project.scaleBarUnit || 'km'
+  );
+  if (!result) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.querySelector('.scalebar-fill').style.width = `${result.widthPx}px`;
+  bar.querySelector('.scalebar-label').textContent = result.label;
+}
+
 // Both overlays start out positioned by the stylesheet's fixed-corner rule
 // (top/right for the compass, bottom/right for the locator). The first time
 // each becomes visible with no stored position, ensureOverlayPos() reads
@@ -655,6 +720,7 @@ function makeOverlayDraggable(node, posKey) {
 
 makeOverlayDraggable(el('compassRose'), 'compassPos');
 makeOverlayDraggable(el('locatorInset'), 'locatorPos');
+makeOverlayDraggable(el('scaleBar'), 'scaleBarPos');
 
 function setCompassEnabled(on) {
   project.compassEnabled = on;
@@ -686,9 +752,27 @@ function setStudentModeEnabled(on) {
   save();
 }
 
+function setScaleBarEnabled(on) {
+  project.scaleBarEnabled = on;
+  el('btnScaleBar').classList.toggle('active', on);
+  el('scaleBarUnitSelect').hidden = !on;
+  if (on) ensureOverlayPos(el('scaleBar'), 'scaleBarPos');
+  renderScaleBar();
+  save();
+}
+
 el('btnCompass').addEventListener('click', () => setCompassEnabled(!project.compassEnabled));
 el('btnLocator').addEventListener('click', () => setLocatorEnabled(!project.locatorEnabled));
 el('btnStudentMode').addEventListener('click', () => setStudentModeEnabled(!project.studentBlankMode));
+el('btnScaleBar').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
+  setScaleBarEnabled(!project.scaleBarEnabled);
+});
+el('scaleBarUnitSelect').addEventListener('change', () => {
+  project.scaleBarUnit = el('scaleBarUnitSelect').value;
+  renderScaleBar();
+  save();
+});
 el('btnGrid').addEventListener('click', () => {
   if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
   setGridEnabled(!project.gridEnabled);
@@ -722,16 +806,86 @@ el('btnApplyCalibration').addEventListener('click', () => {
   project.calibration = candidate;
   save();
   renderGrid();
+  renderScaleBar();
   el('calibratePanel').hidden = true;
 });
 
 el('btnClearCalibration').addEventListener('click', () => {
   project.calibration = null;
   project.gridEnabled = false;
+  project.scaleBarEnabled = false;
   el('btnGrid').classList.remove('active');
+  el('btnScaleBar').classList.remove('active');
+  el('scaleBarUnitSelect').hidden = true;
   save();
   renderGrid();
+  renderScaleBar();
   el('calibratePanel').hidden = true;
+});
+
+// --- Batch marker placement from pasted "name, lat, lon" coordinates ---
+// Requires calibration (same guard as the scale bar / grid). Each valid
+// line gets a marker (using whatever style/color/size the marker toolbar
+// controls are currently set to, even while hidden) plus a text label
+// carrying its name, both placed via fromLatLon()'s inverse of the
+// calibration math the lat/long readout and grid already use.
+
+el('btnBatchPlace').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
+  el('batchPanel').hidden = !el('batchPanel').hidden;
+});
+el('btnBatchPlaceClose').addEventListener('click', () => { el('batchPanel').hidden = true; });
+
+/** Parses "name, lat, lon" (commas required; the name may itself contain commas, e.g. "Austin, TX, 30.27, -97.74"). Returns null for anything that doesn't end in two valid numbers. */
+function parseCoordLine(line) {
+  const parts = line.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length < 3) return null;
+  const lon = parseFloat(parts[parts.length - 1]);
+  const lat = parseFloat(parts[parts.length - 2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const name = parts.slice(0, parts.length - 2).join(', ');
+  if (!name) return null;
+  return { name, lat, lon };
+}
+
+el('btnBatchPlaceGo').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration) || !currentSize.width) { openCalibratePanel(); return; }
+  const lines = el('batchCoordsInput').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const style = el('markerStyleSelect').value;
+  const color = el('markerColorSelect').value;
+  const size = el('markerSizeSelect').value;
+  const scale = viewer.getView().scale;
+  let placed = 0, skipped = 0, offMap = 0;
+
+  lines.forEach(line => {
+    const parsed = parseCoordLine(line);
+    if (!parsed) { skipped++; return; }
+    const pt = fromLatLon(project.calibration, currentSize.width, currentSize.height, parsed.lat, parsed.lon);
+    if (pt.x < 0 || pt.x > currentSize.width || pt.y < 0 || pt.y > currentSize.height) offMap++;
+    markerLayer.addAt(pt.x, pt.y, style, color, size);
+    // Offset the label a constant on-screen distance (half the marker's
+    // width, roughly) to the right, in stage units, so it doesn't sit
+    // exactly on top of the marker icon at whatever zoom level this is.
+    const offset = (markerSizePx(size) / 2 + 4) / scale;
+    labelLayer.addAt(pt.x + offset, pt.y, parsed.name);
+    placed++;
+  });
+
+  // markerLayer.addAt() saves/renders as it goes (see its onChange), but
+  // labelLayer.addAt() intentionally doesn't — the normal add-a-label flow
+  // defers that until the user finishes typing/editing, which never
+  // happens here, so sync + save it once ourselves.
+  project.labels = labelLayer.getLabels();
+  save();
+
+  const box = el('batchStatus');
+  box.hidden = false;
+  box.className = 'status' + (skipped ? ' err' : '');
+  let msg = `Placed ${placed} marker${placed === 1 ? '' : 's'}.`;
+  if (skipped) msg += ` Skipped ${skipped} line${skipped === 1 ? '' : 's'} that didn't parse as "name, lat, lon".`;
+  if (offMap) msg += ` ${offMap} landed outside the map's calibrated bounds — pan/zoom out to find ${offMap === 1 ? 'it' : 'them'}.`;
+  box.textContent = msg;
+  if (placed) el('batchCoordsInput').value = '';
 });
 
 viewport.addEventListener('pointermove', e => {
@@ -1013,9 +1167,11 @@ function displayMap(record) {
     project.lineLegendText = {};
     project.calibration = null;
     project.gridEnabled = false;
+    project.scaleBarEnabled = false;
     setPlaceMode('none');
     el('calibratePanel').hidden = true;
     el('btnGrid').classList.remove('active');
+    el('batchPanel').hidden = true;
     clearTimeout(undoTimer);
     lastDeleted = null;
     el('undoToast').hidden = true;
@@ -1032,6 +1188,11 @@ function displayMap(record) {
   if (project.locatorEnabled) ensureOverlayPos(el('locatorInset'), 'locatorPos');
   document.body.classList.toggle('student-blank', !!project.studentBlankMode);
   el('btnStudentMode').classList.toggle('active', !!project.studentBlankMode);
+  el('scaleBarUnitSelect').value = project.scaleBarUnit || 'km';
+  el('btnScaleBar').classList.toggle('active', project.scaleBarEnabled);
+  el('scaleBarUnitSelect').hidden = !project.scaleBarEnabled;
+  if (project.scaleBarEnabled) ensureOverlayPos(el('scaleBar'), 'scaleBarPos');
+  renderScaleBar();
   save();
   renderAttribution(record);
   refreshRecent();
@@ -1297,6 +1458,32 @@ async function drawPngLocator(ctx, cssW, cssH) {
   ctx.strokeRect(rx, ry, rw, rh);
 }
 
+function drawPngScaleBar(ctx, cssH) {
+  if (!project.scaleBarEnabled || !isCalibrated(project.calibration)) return;
+  const view = viewer.getView();
+  const centerStageY = (cssH / 2 - view.y) / view.scale;
+  const result = computeScaleBar(
+    project.calibration, currentSize.width, currentSize.height,
+    centerStageY, view.scale, project.scaleBarUnit || 'km'
+  );
+  if (!result) return;
+  const pos = project.scaleBarPos || { x: 10, y: cssH - 66 };
+  const barY = pos.y + 14;
+  ctx.fillStyle = '#1f3550';
+  ctx.fillRect(pos.x, barY, result.widthPx, 6);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pos.x, barY, result.widthPx, 6);
+  ctx.font = '12px sans-serif';
+  const textW = ctx.measureText(result.label).width;
+  const labelX = pos.x + result.widthPx / 2 - textW / 2 - 4;
+  const labelY = barY + 22;
+  ctx.fillStyle = 'rgba(255,255,255,.88)';
+  ctx.fillRect(labelX, labelY - 11, textW + 8, 15);
+  ctx.fillStyle = '#1f2430';
+  ctx.fillText(result.label, labelX + 4, labelY);
+}
+
 async function drawPngCompass(ctx) {
   const node = el('compassRose');
   if (node.hidden) return;
@@ -1392,6 +1579,7 @@ async function buildPngBlob() {
   await drawPngLegend(ctx);
   await drawPngCompass(ctx);
   await drawPngLocator(ctx, cssW, cssH);
+  drawPngScaleBar(ctx, cssH);
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
@@ -1479,6 +1667,10 @@ function showEmptyMapState(mapMissing) {
   el('btnGrid').classList.remove('active');
   document.body.classList.remove('student-blank');
   el('btnStudentMode').classList.remove('active');
+  el('scaleBar').hidden = true;
+  el('btnScaleBar').classList.remove('active');
+  el('scaleBarUnitSelect').hidden = true;
+  el('batchPanel').hidden = true;
   el('attribution').innerHTML = '';
   clearTimeout(undoTimer);
   lastDeleted = null;
