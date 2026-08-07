@@ -14,7 +14,6 @@ Reminder: coming soon means not right now.
 | Behavior & Points Tracker | A quick per-student tally or point system you can run live during class. |
 | Exit Ticket / Bell Ringer Generator | Printable half-sheets or a rotating bank of daily warm-up prompts. |
 | Rubric Builder | Build, save, and print grading rubrics. |
-| Bracket / Tournament Generator | Single-elimination brackets for review games or PE tournaments. Pairs with the Classroom Timer's round-robin mode. |
 | Quiz / Review Game Board | A simple Jeopardy-style board for projector review games. |
 | Certificate & Award Maker | Printable certificates and awards for students. |
 | Field Trip Permission Slip Generator | Fill in the trip details once, get a printable permission slip. |
