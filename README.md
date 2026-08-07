@@ -20,6 +20,15 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Sub Plan Builder | `Tools/Sub Plan Builder.html` | Fill in the boilerplate once (schedule, emergency info, phone numbers), then add today's lesson and export a ready-to-print sub plan as a Word doc. |
 | School Calendar Visualizer | `Tools/School Calendar Visualizer.html` | Build a full-year calendar template — holidays, half days, workdays, grading periods, testing windows — and lay lesson pacing on top. Saves in your browser; print or export a backup. |
 | Classroom Timer | `Tools/Classroom Timer.html` | Big-digit projector timer: countdown, transition presets, random-interval surprise cues, stopwatch, and round-robin stations. |
+| Bracket / Tournament Generator | `Tools/bracket-tournament-generator.html` | Build a single-elimination bracket (byes handled automatically), run it live with click-to-advance picks, save/switch between multiple brackets, and print a blank copy. |
+| Quiz / Review Game Board | `Tools/review-game-board.html` | A Jeopardy-style review board — type in questions or import them from an Excel sheet (Category/Points/Question/Answer columns), click a cell to reveal it, award points per team. |
+| Certificate & Award Maker | `Tools/certificate-award-maker.html` | Five templates × four decorative borders, editable name/title/reason/date/signature with a live preview, and a batch mode that prints one certificate per name for a whole class. |
+| Graph Paper & Number Line Generator | `Tools/graph-paper-generator.html` | Printable graph paper (fill-the-page or exact grid size), number lines (single or several per page), and coordinate planes (four-quadrant or first-quadrant), all sized true-to-scale for printing. |
+| Math Fact Drill Sheet Generator | `Tools/math-drill-generator.html` | Randomized addition/subtraction/multiplication/division/mixed drill sheets with a matching answer key — a fresh sheet every time you generate. |
+| Formula Reference Sheet Builder | `Tools/formula-sheet-builder.html` | Five topic templates (geometry, linear equations, quadratics, basic statistics) or start blank, customize and reorder the list, print a one-page reference sheet. Saves multiple named sheets. |
+| Vocabulary Flashcard & Word Wall Generator | `Tools/vocab-flashcard-generator.html` | Paste a "term: definition" word list, print cut-apart flashcards (front/back pages, mirrored for double-siding) or large word-wall cards. Saves multiple named word lists. |
+| Writing Prompt Generator | `Tools/writing-prompt-generator.html` | 200 prompts (100 middle school, 100 high school) across five genres, with a big projector-friendly display and a session history. |
+| Timeline Builder | `Tools/timeline-builder.html` | Add events (exact years, BCE, or ranges/eras) with an optional photo each, pick a line style, view a scrolling on-screen timeline or a paginated print layout. Saves multiple named timelines. |
 
 ## Using these
 
@@ -29,6 +38,12 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 ## Repo structure
 
 `index.html` at the repo root is the toolkit landing page. Each tool's own entry point is a single `.html` file inside `Tools/`. Supporting scripts, fonts, and libraries for a given tool live in a matching subfolder under `Tools/` (e.g. `Tools/final-grade-checker/`, `Tools/schedule/`, `Tools/seating-chart/`). You shouldn't need to touch those unless you're editing the tool itself.
+
+## Ideas backlog
+
+Planned-but-not-built tools (subject-specific ones included) are tracked in [`IDEAS_BACKLOG.md`](IDEAS_BACKLOG.md),
+and shown as "coming soon" entries on the [live toolkit page](index.html) and on
+[`ideas-backlog.html`](ideas-backlog.html).
 
 ## Feedback
 
