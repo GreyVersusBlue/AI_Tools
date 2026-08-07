@@ -4,7 +4,7 @@
 // pan/zoom, so their on-screen size stays constant and readable instead of
 // scaling with the map.
 
-export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
+export function createLabelLayer(layerEl, viewer, { onChange, onDelete } = {}) {
   let labels = [];
   const nodes = new Map(); // id -> element
 
@@ -27,7 +27,16 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
   }
 
   function remove(id) {
+    const removed = labels.find(l => l.id === id);
     labels = labels.filter(l => l.id !== id);
+    reconcile();
+    onChange?.(labels);
+    if (removed) onDelete?.(removed);
+  }
+
+  /** Re-adds a previously removed label (used to undo a delete). */
+  function restore(label) {
+    labels.push(label);
     reconcile();
     onChange?.(labels);
   }
@@ -157,5 +166,5 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     if (label && node) startEdit(node, label);
   }
 
-  return { setLabels, getLabels, addAt, remove, reposition, startEditing };
+  return { setLabels, getLabels, addAt, remove, restore, reposition, startEditing };
 }
