@@ -82,6 +82,28 @@ export async function searchMaps(query, { limit = 12, publicDomainOnly = false, 
   return { results: results.slice(0, limit), continueParams: data.continue || null };
 }
 
+/**
+ * Resolves a continent/country pick (see bmg-geography.js) to actual
+ * Commons results. Tries a category-scoped search first — `incategory:"…"`
+ * is a plain CirrusSearch operator, so this reuses searchMaps() as-is
+ * rather than a separate categorymembers call — and falls back to an
+ * ordinary keyword search over the place's name if that comes up empty.
+ * The category name is a best-effort guess (see bmg-geography.js's own
+ * comment on why), so a wrong or missing guess just quietly degrades to
+ * the same search a typed-in place name would already get, rather than
+ * dead-ending the picker.
+ */
+export async function searchByRegion(region, opts = {}) {
+  if (region.category) {
+    const catQuery = `incategory:"${region.category}"`;
+    const catResult = await searchMaps(catQuery, opts);
+    if (catResult.results.length > 0) return { ...catResult, query: catQuery, usedCategory: true };
+  }
+  const fallbackQuery = `${region.name} blank map`;
+  const kwResult = await searchMaps(fallbackQuery, opts);
+  return { ...kwResult, query: fallbackQuery, usedCategory: false };
+}
+
 /** Downloads the full-resolution image for a search result. */
 export async function fetchMapImage(result) {
   const res = await fetch(result.fullUrl);
