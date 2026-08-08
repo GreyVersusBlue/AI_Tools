@@ -209,10 +209,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Apply the same tolerant paste parsing used elsewhere on the site (drop pasted row numbers/extra spreadsheet columns) — right now a line is only split into name + optional skill rating, so a direct spreadsheet paste with an ID column would corrupt names.
 
 ### Class Roster Hub (`Tools/class-roster-hub.html`)
-**Current state:** A single shared place to create, rename, duplicate, switch between, and print named rosters stored under `np_rosters`, which several other tools on the site already read from.
-**Suggested improvements:**
-- Add CSV/spreadsheet file import alongside the manual textarea, since the hub's whole purpose is being the one place a roster gets typed in — right now that typing has to happen by hand even here.
-- Add a share link or QR code for one roster (matching the `state-link.js` pattern already used in Seating Chart Generator/Bracket Generator) so a roster built here can reach a co-teacher's browser without them re-typing it, since today it only moves between tools that share the same browser's localStorage.
+**Current state:** A single shared place to create, rename, duplicate, switch between, and print named rosters stored under `np_rosters`, which several other tools on the site already read from, with a CSV/text file import alongside the manual textarea and a share link/QR code for one roster via `state-link.js`.
 
 ### Lab Group & Role Randomizer (`Tools/lab-group-role-randomizer.html`)
 **Current state:** Splits a roster into lab groups and assigns rotating roles per group using a recency-weighted fairness algorithm that remembers each student's role history, with multiple saved rosters and print output.
@@ -222,16 +219,10 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a "role history" report (per student, roles held to date) as a print-ready view — useful for a teacher who wants a paper record of who has and hasn't been Safety Officer this semester, which today is only visible as an aggregate count.
 
 ### Behavior & Points Tracker (`Tools/behavior-points-tracker.html`)
-**Current state:** A tap-a-behavior-then-tap-a-student point tracker with custom positive/negative behavior tags, a live sorted student grid, an activity feed with single-step undo, day archiving to history, CSV export of the archived history, and a print report of the current day's totals.
-**Suggested improvements:**
-- Extend undo beyond the single last action to a short stack — right now a teacher who taps the wrong student twice in a row can only take back the very last tap.
-- Add a per-student cumulative view across all archived days (sum of history entries by name) — currently each archived day is its own isolated table, with no running total to spot a pattern over the week/quarter.
+**Current state:** A tap-a-behavior-then-tap-a-student point tracker with custom positive/negative behavior tags, a live sorted student grid, an activity feed with a short (5-deep) per-item undo stack, day archiving to history, a per-student cumulative-totals view across every archived day, CSV export of the archived history, and a print report of the current day's totals.
 
 ### Bracket / Tournament Generator (`Tools/bracket-tournament-generator.html`)
-**Current state:** Builds a single-elimination bracket with automatic bye handling, click-to-advance progression, multiple saved/switchable brackets, a shareable link via `state-link.js`, a "print blank" toggle for handing out empty prediction sheets, and print output that otherwise shows the bracket's current decided/undecided state.
-**Suggested improvements:**
-- Add an optional score field per match (not just win/advance) — currently a click only records who won, with no way to note the actual score for a class record.
-- Render the existing share link as a QR code image (client-side canvas QR encoding, no external service) next to the "Share this bracket" button, so it can be scanned off the projector — today it's copy-link only.
+**Current state:** Builds a single-elimination bracket with automatic bye handling, click-to-advance progression, an optional score field per match, multiple saved/switchable brackets, a shareable link via `state-link.js` (also renderable as a scannable QR code), a "print blank" toggle for handing out empty prediction sheets, and print output that otherwise shows the bracket's current decided/undecided state.
 
 ### Quiz / Review Game Board (`Tools/review-game-board.html`)
 **Current state:** A Jeopardy-style board built manually or imported from an Excel file (Category/Points/Question/Answer columns via a bundled xlsx parser), with a scoreboard, click-to-reveal overlay, and multiple saved boards, but no print output and no JSON backup of a board.

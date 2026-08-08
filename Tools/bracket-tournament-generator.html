@@ -18,6 +18,7 @@
 <!-- gvb:social:end -->
 <script src="bracket-tournament-generator/bt-store.js"></script>
 <script src="../_shared/state-link.js"></script>
+<script src="bracket-tournament-generator/lib/qrcode.js"></script>
 <style>
   :root {
     --ink: #1f2430;
@@ -116,13 +117,37 @@
   .slot-decided { cursor: default; }
   .slot-decided:not(.slot-winner) { opacity: .5; text-decoration: line-through; }
 
+  .match-score {
+    width: 100%; font-family: inherit; font-size: .78rem; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 5px; background: #fbfaf7;
+    padding: .2rem .4rem; margin-top: -.05rem;
+  }
+  .match-score:focus { outline: none; border-color: var(--accent-2); color: var(--ink); }
+  .match-score::placeholder { color: var(--line-strong); }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  .qr-overlay {
+    position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .qr-overlay[hidden] { display: none; }
+  .qr-modal {
+    background: #fff; border-radius: 10px; border: 1px solid var(--line);
+    padding: 1.2rem; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .qr-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: .8rem; font-weight: 700; }
+  .qr-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
+  .qr-close:hover { color: var(--err); }
+  #qrCanvas { display: block; width: 260px; height: 260px; margin: 0 auto; image-rendering: pixelated; }
+  .qr-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 260px; }
 
   @media print {
     .toolbar, .card, .back-link, footer.note, .app-header .back-link { display: none !important; }
     body { padding: 0; background: #fff; }
     .bracket { overflow: visible; }
     .champion-banner { display: block !important; }
+    .match-score { border: none; background: transparent; padding: 0; color: var(--muted); }
   }
 </style>
 </head>
@@ -143,6 +168,7 @@
     <button class="secondary" id="resetPicksBtn">Reset picks</button>
     <button class="danger" id="deleteBracketBtn">Delete</button>
     <span id="shareBar"></span>
+    <button type="button" class="secondary" id="qrBtn">QR code</button>
     <span class="spacer"></span>
     <label class="checkline" style="margin:0;" title="Prints the bracket with only the starting matchups filled in, no picks marked — a blank sheet for students to predict on.">
       <input type="checkbox" id="printBlank"> Print blank
@@ -171,6 +197,17 @@
       <div style="flex:0 0 auto;">
         <button id="generateBtn">Generate bracket</button>
       </div>
+    </div>
+  </div>
+
+  <div class="qr-overlay" id="qrOverlay" hidden>
+    <div class="qr-modal" role="dialog" aria-modal="true" aria-label="Bracket QR code">
+      <div class="qr-modal-head">
+        <span>Scan to open this bracket</span>
+        <button type="button" class="qr-close" id="qrCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="qrCanvas"></canvas>
+      <p class="qr-hint" id="qrHint">Scanning opens a copy of this bracket on the other device — it won't stay in sync after that.</p>
     </div>
   </div>
 
@@ -208,7 +245,12 @@
     bracketTitle: document.getElementById('bracketTitle'),
     bracketView: document.getElementById('bracketView'),
     championBanner: document.getElementById('championBanner'),
-    shareBar: document.getElementById('shareBar')
+    shareBar: document.getElementById('shareBar'),
+    qrBtn: document.getElementById('qrBtn'),
+    qrOverlay: document.getElementById('qrOverlay'),
+    qrCloseBtn: document.getElementById('qrCloseBtn'),
+    qrCanvas: document.getElementById('qrCanvas'),
+    qrHint: document.getElementById('qrHint')
   };
 
   var state = null; // { name, slots: [ [round0...], [round1...], ... ] }
@@ -271,7 +313,7 @@
        because two contestants can share a name, so comparing the winner's
        *name* against a slot's name (as round rendering used to) can't tell
        them apart. */
-    return { name: name, slots: rounds, winnerSide: {} };
+    return { name: name, slots: rounds, winnerSide: {}, scores: {} };
   }
 
   /* Auto-advance byes: if exactly one of a pair is a real name and the
@@ -372,6 +414,27 @@
             }
             matchWrap.appendChild(slotEl);
           });
+
+          // A BYE match has no real opponent to record a score against.
+          var isByeMatch = round[m * 2] === null || round[m * 2 + 1] === null;
+          if (!isByeMatch) {
+            var scoreKey = r + '_' + m;
+            var scoreInput = document.createElement('input');
+            scoreInput.type = 'text';
+            scoreInput.className = 'match-score';
+            scoreInput.placeholder = 'Score (optional)';
+            scoreInput.value = (state.scores && state.scores[scoreKey]) || '';
+            scoreInput.addEventListener('change', (function (key) {
+              return function (e) {
+                if (!state.scores) state.scores = {};
+                var v = e.target.value.trim();
+                if (v) state.scores[key] = v; else delete state.scores[key];
+                save();
+              };
+            })(scoreKey));
+            matchWrap.appendChild(scoreInput);
+          }
+
           col.appendChild(matchWrap);
         }
       }
@@ -462,6 +525,7 @@
     if (!loaded) return;
     state = loaded;
     if (!state.winnerSide) state.winnerSide = {}; // brackets saved before this field existed
+    if (!state.scores) state.scores = {}; // brackets saved before this field existed
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -537,6 +601,46 @@
     onMessage: function (text) { alert(text); }
   });
 
+  // ── QR code for the share link (same vendored library/approach as the
+  //    site's other QR-generating tools) — scannable straight off a projector.
+  function drawBracketQr(canvas, text) {
+    var qr = window.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount();
+    var quiet = 4;
+    var total = count + quiet * 2;
+    var px = 6;
+    var size = total * px;
+    canvas.width = size;
+    canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#1f2430';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.qrBtn.addEventListener('click', function () {
+    if (!state) { alert("There's nothing to share yet."); return; }
+    var url = StateLink.buildShareUrl('bracket', state);
+    try {
+      drawBracketQr(els.qrCanvas, url);
+      els.qrHint.textContent = "Scanning opens a copy of this bracket on the other device — it won't stay in sync after that.";
+    } catch (e) {
+      alert('This bracket is too large to encode as a QR code — use the "Share this bracket" copy-link button instead.');
+      return;
+    }
+    els.qrOverlay.hidden = false;
+  });
+  els.qrCloseBtn.addEventListener('click', function () { els.qrOverlay.hidden = true; });
+  els.qrOverlay.addEventListener('mousedown', function (e) { if (e.target === els.qrOverlay) els.qrOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.qrOverlay.hidden) els.qrOverlay.hidden = true; });
+
   function looksLikeBracket(obj) {
     return !!obj && typeof obj === 'object' && typeof obj.name === 'string'
       && Array.isArray(obj.slots) && obj.slots.length > 0;
@@ -564,7 +668,12 @@
       return false;
     }
     var name = uniqueBracketName(decoded.name);
-    state = { name: name, slots: decoded.slots, winnerSide: (decoded.winnerSide && typeof decoded.winnerSide === 'object') ? decoded.winnerSide : {} };
+    state = {
+      name: name,
+      slots: decoded.slots,
+      winnerSide: (decoded.winnerSide && typeof decoded.winnerSide === 'object') ? decoded.winnerSide : {},
+      scores: (decoded.scores && typeof decoded.scores === 'object') ? decoded.scores : {}
+    };
     BracketStore.saveBracket(name, state);
     render();
     return true;
