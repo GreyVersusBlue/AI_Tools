@@ -73,7 +73,6 @@ browser APIs the toolkit doesn't use yet.
 |---|---|
 | Cross-Tool Shareable State Links | Encode a tool's current board (a seating chart, a bracket, a rubric) into the page URL itself, so pasting a link opens that exact state on another screen — no server, no login, just a longer link. |
 | Full Offline Install (PWA) | A manifest + service worker so the whole toolkit installs like an app and works with zero connectivity, including previously-downloaded Blank Map Generator tiles. |
-| One-Click Backup / Restore | A single "export everything" JSON download (and matching import) covering every tool's saved local data, so a new computer or a wiped browser cache isn't a total loss. |
 | Sitewide Accessibility Pass | Adjustable text size, a high-contrast/dark theme, a dyslexia-friendly font toggle, and text-to-speech read-aloud wired into the tools that display blocks of text (Writing Prompt Generator, Vocab & Conjugation Drill, SSR Log Tracker). |
 | Landing Page Command Palette | A Ctrl/Cmd+K quick-jump search over every tool (and idea) from anywhere on the site, keyboard only. |
 | Live Student-View Sync | Peer-to-peer (WebRTC, no server) mirroring of Review Game Board scores, Bracket picks, or the Classroom Timer onto students' own devices, not just the projector. |

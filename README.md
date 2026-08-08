@@ -40,6 +40,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Grade Distribution Visualizer | `Tools/grade-distribution-visualizer.html` | Paste a gradebook export and get class-wide stats, an editable letter-grade breakdown, and a score histogram — a companion to the Final Grade Checker. |
 | Vocab & Conjugation Drill Generator | `Tools/vocab-conjugation-drill.html` | Vocabulary quiz drills (any language) and verb-conjugation tables with editable person/subject labels, each with a printable answer key. |
 | Gallery Walk QR Codes | `Tools/gallery-walk-qr.html` | Batch-generate QR codes linking to student work for a gallery walk, printed in a configurable grid, plus a plain-text reference sheet for you. |
+| Backup & Restore | `Tools/backup-restore.html` | Scans your browser for everything every tool on this site has saved and downloads it as one file, or restores it back on a new computer or after a wiped cache. |
 
 ## Using these
 
