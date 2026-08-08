@@ -62,11 +62,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - The "Publish for Teachers" flow only downloads a standalone HTML file that then has to be manually placed into the repo; add a "copy publish HTML to clipboard" alternative so the person doing the publish can paste it directly into GitHub's web file editor without a local download/upload round-trip.
 
 ### School Calendar Visualizer (`Tools/School Calendar Visualizer.html`)
-**Current state:** A reusable year-at-a-glance calendar builder with a custom legend of day types (each with a color + print-safe pattern), a day-editor drawer for labels/lesson notes/other notes, JSON backup export/import, and print/PDF support via `window.print()`.
-**Suggested improvements:**
-- Add an ICS (.ics) export of tagged days so a teacher can subscribe to holidays/half-days/grading-period boundaries from their phone or Outlook/Google calendar, since right now the only way out is a JSON backup or a printed grid.
-- Add a "copy lesson pacing to next year" tool that shifts every `lesson` note by a chosen number of weekdays when starting a new year from a template, since `btnNewYear` currently carries forward only the day-type legend and drops all days (including lesson pacing) entirely.
-- Add a simple week or month "jump to date" control — with a year of months rendered in one long scroll, there's no way to jump straight to a specific month without scrolling.
+**Current state:** A reusable year-at-a-glance calendar builder with a custom legend of day types (each with a color + print-safe pattern), a day-editor drawer for labels/lesson notes/other notes, an ICS (.ics) export of tagged days for subscribing from a phone or Outlook/Google calendar, an opt-in "copy lesson pacing to next year" step (shifting `lesson` notes by a chosen number of weekdays) when starting a new year from a template, a "jump to month" control, JSON backup export/import, and print/PDF support via `window.print()`.
 
 ### Sub Plan Builder (`Tools/Sub Plan Builder.html`)
 **Current state:** A form that saves "standing details" (periods, phone numbers, behavior-expectations text, etc.) to localStorage, takes a fresh freeform lesson plan each time (with a `**bold**` markdown convention and same-vs-per-period notes), and assembles it all into a downloadable .docx via a hand-built OOXML/JSZip generator — the student-notes box is deliberately never persisted.
@@ -95,11 +91,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Surface a link/section for the current Hall Pass Log "currently out" count on this same dashboard, since a teacher running the room from here would otherwise need to switch tabs to see who's out of the room.
 
 ### Field Trip Permission Slip Generator (`Tools/field-trip-permission-slip.html`)
-**Current state:** A trip-details form (destination, dates, cost, what-to-bring, chaperone/emergency info) that saves multiple named trip templates to localStorage and generates a live-previewed, printable permission slip in single/batch (roster-driven)/blank-copies modes.
-**Suggested improvements:**
-- Add a "collected" tracker — a simple checklist (student name + returned/paid checkbox) saved alongside the trip, since right now the tool only prints slips and has no way to track which ones actually came back signed.
-- Add a QR code on each printed slip that encodes the trip name/date/destination (using the site's existing QR generation approach) so a scan-in table at drop-off could quickly confirm/log a returned slip against the right trip.
-- Export a trip's saved field values as a small JSON file so a template can be shared with a co-teacher running the same trip, rather than only living in one browser's storage.
+**Current state:** A trip-details form (destination, dates, cost, what-to-bring, chaperone/emergency info) that saves multiple named trip templates to localStorage and generates a live-previewed, printable permission slip in single/batch (roster-driven)/blank-copies modes, with a "collected" tracker (returned/paid checkboxes per student), a QR code on each printed slip encoding the trip name/date/destination, and JSON export/import of a trip's saved fields.
 
 ### Hall Pass Log (`Tools/hall-pass-log.html`)
 **Current state:** A tap-destination-then-tap-student sign-out board per class section, with a live "currently out" list (auto-flagging trips over a per-destination overtime threshold, with a pulsing visual alert and an optional audible beep the first time a trip crosses it), a same-day activity feed, a "This Week" per-destination/per-student trip-count summary, day-archiving to history, and a printable report for today or any archived day.
@@ -167,10 +159,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
 
 ### Formula Reference Sheet Builder (`Tools/formula-sheet-builder.html`)
-**Current state:** Topic templates (geometry, linear equations, quadratics, stats) or a blank sheet, with add/reorder/remove formula rows, multiple named saved sheets, a column-count control (1/2/3), and a one-page print preview.
-**Suggested improvements:**
-- Support a small inline diagram/image per formula item (e.g., a triangle sketch next to the area formula), stored as a data URL, since right now every entry is plain text only.
-- Add JSON export/import of a sheet (download/upload) for backup or sharing between a teacher's home and school computer, independent of localStorage.
+**Current state:** Topic templates (geometry, linear equations, quadratics, stats) or a blank sheet, with add/reorder/remove formula rows, an optional small inline diagram/image per formula item (downscaled and stored as a data URL), multiple named saved sheets with JSON export/import for backup or sharing, a column-count control (1/2/3), and a one-page print preview.
 
 ### Prompt Builder (`Tools/prompt-builder.html`)
 **Current state:** A no-AI, pure-template tool that turns filled-in fields (teaching context, task type, differentiation, format/guardrails) into a ready-to-copy prompt, with five built-in presets plus teacher-saved custom presets, simple/advanced modes, a completeness meter, autosave, a short local history of recently used prompts, URL-based sharing, a `navigator.share` button on supporting devices, and one-click "open in Claude/ChatGPT/Gemini."
@@ -193,21 +182,13 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a "print all sections" option — the current print flow only trims and prints the active section, so printing charts for every class period means switching sections and re-printing one at a time.
 
 ### Group / Team Generator (`Tools/group-team-generator.html`)
-**Current state:** Splits a pasted roster into random or skill-balanced groups with a "keep apart" constraint solver, reshuffle, print, and copy-as-text, persisting only the last-used settings under one `gtg-settings` key.
-**Suggested improvements:**
-- Add a "keep together" constraint to mirror the existing "keep apart" one — Seating Chart Generator already supports both, and pairing a stronger/weaker student on purpose is a common ask this tool currently has no way to express.
-- Support multiple named/saved configurations (like the roster-switcher pattern used in Lab Group & Role Randomizer) instead of one global settings blob — a teacher running several periods currently has each new roster overwrite the last one's saved settings.
-- Apply the same tolerant paste parsing used elsewhere on the site (drop pasted row numbers/extra spreadsheet columns) — right now a line is only split into name + optional skill rating, so a direct spreadsheet paste with an ID column would corrupt names.
+**Current state:** Splits a pasted roster into random or skill-balanced groups with both "keep apart" and "keep together" constraint solving, reshuffle, print, and copy-as-text, supporting multiple named/saved configurations (with automatic one-time migration from the old single-settings storage) and tolerant paste parsing (drops row numbers, extra spreadsheet columns, and trailing commas).
 
 ### Class Roster Hub (`Tools/class-roster-hub.html`)
 **Current state:** A single shared place to create, rename, duplicate, switch between, and print named rosters stored under `np_rosters`, which several other tools on the site already read from, with a CSV/text file import alongside the manual textarea and a share link/QR code for one roster via `state-link.js`.
 
 ### Lab Group & Role Randomizer (`Tools/lab-group-role-randomizer.html`)
-**Current state:** Splits a roster into lab groups and assigns rotating roles per group using a recency-weighted fairness algorithm that remembers each student's role history, with multiple saved rosters and print output.
-**Suggested improvements:**
-- Add a "keep apart" constraint for lab partners (same mechanism as Group/Team Generator's) — a chemistry teacher separating two students who shouldn't be at the same bench currently has no way to express that here.
-- Add JSON export/import of a roster's full state — the per-student role history is the tool's whole value proposition, and right now it lives only in localStorage with no backup path if the browser's storage is cleared.
-- Add a "role history" report (per student, roles held to date) as a print-ready view — useful for a teacher who wants a paper record of who has and hasn't been Safety Officer this semester, which today is only visible as an aggregate count.
+**Current state:** Splits a roster into lab groups and assigns rotating roles per group using a recency-weighted fairness algorithm that remembers each student's role history, with a "keep apart" constraint for lab partners, multiple saved rosters with JSON export/import, a printable per-student role history report, and print output.
 
 ### Behavior & Points Tracker (`Tools/behavior-points-tracker.html`)
 **Current state:** A tap-a-behavior-then-tap-a-student point tracker with custom positive/negative behavior tags, a live sorted student grid, an activity feed with a short (5-deep) per-item undo stack, day archiving to history, a per-student cumulative-totals view across every archived day, CSV export of the archived history, and a print report of the current day's totals.
@@ -216,11 +197,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Builds a single-elimination bracket with automatic bye handling, click-to-advance progression, an optional score field per match, multiple saved/switchable brackets, a shareable link via `state-link.js` (also renderable as a scannable QR code), a "print blank" toggle for handing out empty prediction sheets, and print output that otherwise shows the bracket's current decided/undecided state.
 
 ### Quiz / Review Game Board (`Tools/review-game-board.html`)
-**Current state:** A Jeopardy-style board built manually or imported from an Excel file (Category/Points/Question/Answer columns via a bundled xlsx parser), with a scoreboard, click-to-reveal overlay, and multiple saved boards, but no print output and no JSON backup of a board.
-**Suggested improvements:**
-- Add a printable answer key (categories, points, questions, and answers as a plain list) — there's currently no print styling or button anywhere in this tool, so a teacher can't hand a co-teacher or sub a paper copy of the questions.
-- Add JSON export/import of a board — a hand-typed board of dozens of questions lives only in localStorage today, with no backup if the browser's storage is cleared, unlike the Excel-imported source file which the teacher may not have kept.
-- Add a "Daily Double" option (mark one random unused clue per board for double points or a wager) — a well-known Jeopardy mechanic that's a small addition given the reveal overlay and scoring already exist.
+**Current state:** A Jeopardy-style board built manually or imported from an Excel file (Category/Points/Question/Answer columns via a bundled xlsx parser), with a scoreboard, click-to-reveal overlay, an optional "Daily Double" toggle that doubles one random unused clue's points (redrawable on demand), a printable answer key, multiple saved boards with JSON export/import, and print output.
 
 ### PE Tournament & Station Rotation (`Tools/pe-tournament-stations.html`)
 **Current state:** Combines a persisted countdown rotation timer that auto-advances groups through named stations with a single-elimination bracket (fed from the groups or a custom list), and prints a combined station schedule + bracket summary.

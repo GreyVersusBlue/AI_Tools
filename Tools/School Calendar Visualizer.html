@@ -140,6 +140,8 @@
     <button id="btnExport">Export Backup (JSON)</button>
     <button id="btnImport">Import Backup</button>
     <input type="file" id="fileImport" accept="application/json" hidden>
+    <button id="btnExportIcs">Export Calendar (.ics)</button>
+    <select id="jumpMonth" title="Jump to month"></select>
     <button id="btnPrint" class="primary">Print / Save PDF</button>
   </div>
 
@@ -266,6 +268,7 @@ function renderMonths() {
   list.forEach(({ y, m }) => {
     const monthEl = document.createElement("div");
     monthEl.className = "month";
+    monthEl.id = `month-${y}-${m}`;
     monthEl.innerHTML = `<h3>${MONTH_NAMES[m]} ${y}</h3>
       <div class="weekdays">${WEEKDAYS.map(w => `<div>${w}</div>`).join("")}</div>
       <div class="weeks" id="grid-${y}-${m}"></div>`;
@@ -306,7 +309,7 @@ function renderMonths() {
   });
 }
 
-function render() { renderLegend(); renderMonths(); syncMeta(); }
+function render() { renderLegend(); renderMonths(); syncMeta(); renderJumpControl(); }
 
 function syncMeta() {
   document.getElementById("metaLabel").value = cal.meta.yearLabel;
@@ -314,6 +317,18 @@ function syncMeta() {
   document.getElementById("metaEnd").value = cal.meta.end;
   document.getElementById("printTitle").textContent = cal.meta.yearLabel;
 }
+
+/* --- jump to month --- */
+function renderJumpControl() {
+  const sel = document.getElementById("jumpMonth");
+  const list = monthsBetween(cal.meta.start, cal.meta.end);
+  sel.innerHTML = list.map(({ y, m }) => `<option value="${y}-${m}">${MONTH_NAMES[m]} ${y}</option>`).join("");
+}
+
+document.getElementById("jumpMonth").addEventListener("change", e => {
+  const el = document.getElementById(`month-${e.target.value}`);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+});
 
 /* --- drawer --- */
 function openDrawer(dateISO) {
@@ -394,6 +409,21 @@ document.getElementById("btnBlank").addEventListener("click", () => {
   save(); render();
 });
 
+/** Walks a date forward (positive n) or backward (negative n) by n
+    weekdays (Mon–Fri), skipping weekends, so a shifted lesson-pacing
+    note never lands on a Saturday/Sunday. */
+function addWeekdays(startISO, n) {
+  const d = new Date(startISO + "T00:00:00");
+  const step = n >= 0 ? 1 : -1;
+  let remaining = Math.abs(n);
+  while (remaining > 0) {
+    d.setDate(d.getDate() + step);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) remaining--;
+  }
+  return iso(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 document.getElementById("btnNewYear").addEventListener("click", () => {
   const label = prompt("Label for the new year:", "");
   if (label === null) return;
@@ -403,6 +433,18 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
   if (end === null) return;
   const fresh = blankCalendar(label || "School Year", start, end);
   fresh.dayTypes = cal.dayTypes.map(t => ({ ...t })); // carry the legend forward, drop the days
+
+  const lessonEntries = Object.entries(cal.days).filter(([, d]) => d.lesson);
+  if (lessonEntries.length && confirm(`Copy ${lessonEntries.length} lesson pacing note(s) from the current calendar into the new year, shifted by a number of weekdays you choose?`)) {
+    const shiftInput = prompt("Shift each lesson note forward by how many weekdays (school days)? Use a negative number to shift earlier.", "0");
+    const shift = shiftInput === null ? 0 : (parseInt(shiftInput, 10) || 0);
+    lessonEntries.forEach(([dateISO, entry]) => {
+      const shifted = shift === 0 ? dateISO : addWeekdays(dateISO, shift);
+      if (!fresh.days[shifted]) fresh.days[shifted] = { types: [], label: "", note: "", lesson: "" };
+      fresh.days[shifted].lesson = entry.lesson;
+    });
+  }
+
   cal = fresh;
   save(); render();
 });
@@ -437,6 +479,51 @@ document.getElementById("fileImport").addEventListener("change", e => {
   };
   reader.readAsText(file);
   e.target.value = "";
+});
+
+/* --- ICS export --- */
+function icsEscape(s) {
+  return String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+function icsDateStamp(dateISO, dayOffset) {
+  const d = new Date(dateISO + "T00:00:00");
+  if (dayOffset) d.setDate(d.getDate() + dayOffset);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function buildIcs() {
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AsPerMyLessonPlan.com//School Calendar Visualizer//EN", "CALSCALE:GREGORIAN"];
+  Object.keys(cal.days).sort().forEach(dateISO => {
+    const entry = cal.days[dateISO];
+    if (!entry.types.length && !entry.label) return; // skip days with only a lesson/other note — not calendar-worthy on their own
+    const typeLabels = entry.types.map(id => { const t = typeById(id); return t ? t.label : null; }).filter(Boolean);
+    const summary = entry.label || typeLabels.join(" / ") || "Tagged Day";
+    const descParts = [];
+    if (typeLabels.length) descParts.push(typeLabels.join(", "));
+    if (entry.lesson) descParts.push("Lesson: " + entry.lesson);
+    if (entry.note) descParts.push(entry.note);
+    lines.push("BEGIN:VEVENT");
+    lines.push("UID:" + dateISO + "-scv@aspermylessonplan.com");
+    lines.push("DTSTART;VALUE=DATE:" + icsDateStamp(dateISO, 0));
+    lines.push("DTEND;VALUE=DATE:" + icsDateStamp(dateISO, 1));
+    lines.push("SUMMARY:" + icsEscape(summary));
+    if (descParts.length) lines.push("DESCRIPTION:" + icsEscape(descParts.join(" — ")));
+    lines.push("END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+document.getElementById("btnExportIcs").addEventListener("click", () => {
+  const ics = buildIcs();
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `school-calendar-${cal.meta.start}-to-${cal.meta.end}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
 document.getElementById("btnPrint").addEventListener("click", () => window.print());

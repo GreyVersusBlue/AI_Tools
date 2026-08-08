@@ -102,6 +102,11 @@
   .roster-load-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .roster-load-row select { flex: 1; }
 
+  .config-toolbar { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; width: 100%; max-width: 1080px; }
+  .config-toolbar label { margin: 0; font-weight: 600; color: var(--text); }
+  .config-toolbar select { width: auto; flex: 0 1 220px; }
+  .config-toolbar button { width: auto; }
+
   .pair-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
   .pair-row select { flex: 1; }
   .pair-list { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
@@ -147,6 +152,14 @@
   <h1>Group / Team Generator</h1>
   <p>Paste a roster, set constraints, and split it into random groups — everything stays in your browser</p>
 </header>
+
+<div class="config-toolbar" id="config-toolbar" style="display:none;">
+  <label for="config-select">Class:</label>
+  <select id="config-select"></select>
+  <button class="btn-secondary btn-small" id="new-config-btn">New class</button>
+  <button class="btn-secondary btn-small" id="duplicate-config-btn">Duplicate</button>
+  <button class="btn-secondary btn-small" id="delete-config-btn">Delete</button>
+</div>
 
 <div class="layout">
   <div class="col-left">
@@ -194,6 +207,18 @@
       <div class="pair-list" id="pair-list"></div>
     </div>
 
+    <div class="card">
+      <div class="card-title">4 · Keep Together (optional)</div>
+      <div class="pair-row">
+        <select id="together-a"></select>
+        <span style="color:var(--text-dim);font-size:0.8rem;">&amp;</span>
+        <select id="together-b"></select>
+        <button class="btn-secondary btn-small" id="add-together-btn">Add</button>
+      </div>
+      <div class="hint">Pairs listed here will be placed in the same group whenever possible.</div>
+      <div class="pair-list" id="together-list"></div>
+    </div>
+
     <div class="btn-row" style="margin-top:0;">
       <button class="btn-primary" id="generate-btn" disabled>🎲 Make Groups</button>
       <button class="btn-secondary" id="regenerate-btn" disabled>🔀 Reshuffle</button>
@@ -221,10 +246,18 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = 'gtg-settings';
+  var LIST_KEY = 'gtg:list';
+  var DATA_PREFIX = 'gtg:data:';
+  var CURRENT_KEY = 'gtg:current';
+  var LEGACY_STORAGE_KEY = 'gtg-settings'; // single global blob, before named configs existed
   var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   var els = {
+    configToolbar: document.getElementById('config-toolbar'),
+    configSelect: document.getElementById('config-select'),
+    newConfigBtn: document.getElementById('new-config-btn'),
+    duplicateConfigBtn: document.getElementById('duplicate-config-btn'),
+    deleteConfigBtn: document.getElementById('delete-config-btn'),
     rosterSelect: document.getElementById('roster-select'),
     loadRosterBtn: document.getElementById('load-roster-btn'),
     namesInput: document.getElementById('names-input'),
@@ -236,6 +269,10 @@
     pairB: document.getElementById('pair-b'),
     addPairBtn: document.getElementById('add-pair-btn'),
     pairList: document.getElementById('pair-list'),
+    togetherA: document.getElementById('together-a'),
+    togetherB: document.getElementById('together-b'),
+    addTogetherBtn: document.getElementById('add-together-btn'),
+    togetherList: document.getElementById('together-list'),
     generateBtn: document.getElementById('generate-btn'),
     regenerateBtn: document.getElementById('regenerate-btn'),
     warnArea: document.getElementById('warn-area'),
@@ -249,33 +286,143 @@
 
   var students = [];        // [{name, skill|null}]
   var keepApart = [];       // [[nameA, nameB]]
+  var keepTogether = [];    // [[nameA, nameB]]
   var lastGroups = null;    // last generated result, for reshuffle/export
+  var state = null;         // { name, names, mode, splitValue, balance, keepApart, keepTogether }
 
-  // ── Persisted settings (roster text + options, not student records) ────────
-  function loadSettings() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      var s = JSON.parse(raw);
-      if (typeof s.names === 'string') els.namesInput.value = s.names;
-      if (s.mode) document.getElementById(s.mode === 'size' ? 'mode-size' : 'mode-count').checked = true;
-      if (s.splitValue) els.splitValue.value = s.splitValue;
-      if (s.balance) els.balanceSkill.checked = true;
-      if (Array.isArray(s.keepApart)) keepApart = s.keepApart;
-    } catch (e) { /* ignore corrupt/blocked storage */ }
+  // ── Named, saved configurations (one per class/period) ──────────────────
+  function safeParse(json, fallback) {
+    if (json == null) return fallback;
+    try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
+  }
+  function listConfigs() { return safeParse(localStorage.getItem(LIST_KEY), []); }
+  function saveConfig(name, data) {
+    var names = listConfigs();
+    if (names.indexOf(name) === -1) {
+      names.push(name);
+      localStorage.setItem(LIST_KEY, JSON.stringify(names));
+    }
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+    localStorage.setItem(CURRENT_KEY, name);
+  }
+  function loadConfigData(name) { return safeParse(localStorage.getItem(DATA_PREFIX + name), null); }
+  function deleteConfigData(name) {
+    var names = listConfigs().filter(function (n) { return n !== name; });
+    localStorage.setItem(LIST_KEY, JSON.stringify(names));
+    localStorage.removeItem(DATA_PREFIX + name);
+    if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+  }
+  function getCurrentConfigName() { return localStorage.getItem(CURRENT_KEY); }
+
+  function defaultConfig(name) {
+    return { name: name, names: '', mode: 'count', splitValue: 4, balance: false, keepApart: [], keepTogether: [] };
   }
 
-  function saveSettings() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        names: els.namesInput.value,
-        mode: document.getElementById('mode-size').checked ? 'size' : 'count',
-        splitValue: els.splitValue.value,
-        balance: els.balanceSkill.checked,
-        keepApart: keepApart,
-      }));
-    } catch (e) { /* private browsing / storage full — silently skip */ }
+  /** A teacher who already had the single old `gtg-settings` blob saved gets
+      it carried forward as their first named config instead of silently
+      losing it the first time this page loads after the multi-config
+      rewrite. */
+  function migrateLegacySettings() {
+    if (listConfigs().length) return;
+    var raw;
+    try { raw = localStorage.getItem(LEGACY_STORAGE_KEY); } catch (e) { raw = null; }
+    if (!raw) return;
+    var legacy = safeParse(raw, null);
+    if (!legacy) return;
+    var cfg = defaultConfig('My Class');
+    if (typeof legacy.names === 'string') cfg.names = legacy.names;
+    if (legacy.mode) cfg.mode = legacy.mode;
+    if (legacy.splitValue) cfg.splitValue = legacy.splitValue;
+    if (legacy.balance) cfg.balance = true;
+    if (Array.isArray(legacy.keepApart)) cfg.keepApart = legacy.keepApart;
+    saveConfig(cfg.name, cfg);
+    try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (e) { /* ignore */ }
   }
+
+  function refreshConfigSwitcher() {
+    var names = listConfigs();
+    els.configSelect.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (state && n === state.name) opt.selected = true;
+      els.configSelect.appendChild(opt);
+    });
+    els.configToolbar.style.display = names.length ? '' : 'none';
+  }
+
+  function saveCurrentConfig() {
+    if (!state) return;
+    state.names = els.namesInput.value;
+    state.mode = document.getElementById('mode-size').checked ? 'size' : 'count';
+    state.splitValue = els.splitValue.value;
+    state.balance = els.balanceSkill.checked;
+    state.keepApart = keepApart;
+    state.keepTogether = keepTogether;
+    saveConfig(state.name, state);
+  }
+
+  function applyStateToForm() {
+    els.namesInput.value = state.names || '';
+    document.getElementById(state.mode === 'size' ? 'mode-size' : 'mode-count').checked = true;
+    els.splitValue.value = state.splitValue || 4;
+    els.balanceSkill.checked = !!state.balance;
+    keepApart = Array.isArray(state.keepApart) ? state.keepApart : [];
+    keepTogether = Array.isArray(state.keepTogether) ? state.keepTogether : [];
+    syncSplitLabel();
+    onNamesChanged();
+    renderPairList();
+    renderTogetherList();
+  }
+
+  function newConfig(name) {
+    state = defaultConfig(name);
+    saveConfig(name, state);
+    refreshConfigSwitcher();
+    applyStateToForm();
+  }
+
+  function loadConfigByName(name) {
+    var loaded = loadConfigData(name);
+    if (!loaded) return;
+    state = loaded;
+    if (!Array.isArray(state.keepApart)) state.keepApart = [];
+    if (!Array.isArray(state.keepTogether)) state.keepTogether = [];
+    localStorage.setItem(CURRENT_KEY, name);
+    refreshConfigSwitcher();
+    applyStateToForm();
+  }
+
+  els.configSelect.addEventListener('change', function () { loadConfigByName(els.configSelect.value); });
+
+  els.newConfigBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new class:', 'New Class');
+    if (!name) return;
+    name = name.trim();
+    if (!name) return;
+    if (listConfigs().indexOf(name) !== -1) { loadConfigByName(name); return; }
+    newConfig(name);
+  });
+
+  els.duplicateConfigBtn.addEventListener('click', function () {
+    if (!state) return;
+    saveCurrentConfig();
+    var base = state.name + ' (copy)', newName = base, n = 2;
+    while (listConfigs().indexOf(newName) !== -1) { newName = base + ' ' + n; n++; }
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = newName;
+    saveConfig(newName, clone);
+    loadConfigByName(newName);
+  });
+
+  els.deleteConfigBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    deleteConfigData(state.name);
+    var remaining = listConfigs();
+    if (remaining.length) loadConfigByName(remaining[0]);
+    else newConfig('New Class');
+  });
 
   // ── Reading Name Picker's saved rosters (read-only reuse, separate storage) ─
   function populateRosterSelect() {
@@ -304,14 +451,35 @@
 
   // ── Parsing the roster textarea ─────────────────────────────────────────
   // Each line is a name, optionally followed by ", <1-5>" as a skill rating.
+  // Tolerates a pasted spreadsheet column too: a leading row number ("1. " /
+  // "12) "), tab-separated extra columns (keeping the first as the name and
+  // checking the last for a bare 1-5 rating), and a bare trailing comma.
   function parseNames(text) {
     return text.split('\n')
       .map(function (line) { return line.trim(); })
       .filter(Boolean)
-      .map(function (line) {
+      .map(function (raw) {
+        var line = raw.replace(/^\s*\d+[.)]\s+/, '');
+        var skill = null;
+
+        if (line.indexOf('\t') !== -1) {
+          var cells = line.split('\t').map(function (c) { return c.trim(); }).filter(function (c) { return c !== ''; });
+          if (cells.length) {
+            var last = cells[cells.length - 1];
+            if (cells.length > 1 && /^[1-5]$/.test(last)) {
+              skill = parseInt(last, 10);
+              line = cells.slice(0, -1).join(' ');
+            } else {
+              line = cells[0];
+            }
+          }
+        }
+
+        line = line.replace(/,\s*$/, '');
+
         var m = line.match(/^(.*?),\s*([1-5])\s*$/);
         if (m) return { name: m[1].trim(), skill: parseInt(m[2], 10) };
-        return { name: line, skill: null };
+        return { name: line.trim(), skill: skill };
       })
       .filter(function (s) { return s.name.length > 0; });
   }
@@ -324,17 +492,19 @@
     if (!hasSkills) els.balanceSkill.checked = false;
     els.generateBtn.disabled = students.length < 2;
     populatePairSelects();
-    saveSettings();
+    saveCurrentConfig();
   }
 
   els.namesInput.addEventListener('input', onNamesChanged);
 
-  // ── Keep-apart constraint pairs ──────────────────────────────────────────
+  // ── Keep-apart / keep-together constraint pairs ──────────────────────────
   function populatePairSelects() {
     var opts = '<option value="">Select a name&hellip;</option>' +
       students.map(function (s) { return '<option value="' + escapeAttr(s.name) + '">' + escapeHtml(s.name) + '</option>'; }).join('');
     els.pairA.innerHTML = opts;
     els.pairB.innerHTML = opts;
+    els.togetherA.innerHTML = opts;
+    els.togetherB.innerHTML = opts;
   }
 
   function renderPairList() {
@@ -348,6 +518,17 @@
     }).join('');
   }
 
+  function renderTogetherList() {
+    if (!keepTogether.length) {
+      els.togetherList.innerHTML = '';
+      return;
+    }
+    els.togetherList.innerHTML = keepTogether.map(function (pair, i) {
+      return '<div class="pair-item"><span>' + escapeHtml(pair[0]) + ' &amp; ' + escapeHtml(pair[1]) + '</span>' +
+        '<button class="x" data-remove-together="' + i + '" title="Remove">&#10005;</button></div>';
+    }).join('');
+  }
+
   els.addPairBtn.addEventListener('click', function () {
     var a = els.pairA.value, b = els.pairB.value;
     if (!a || !b || a === b) { showMsg('Pick two different names to keep apart.'); return; }
@@ -356,7 +537,7 @@
     clearMsg();
     keepApart.push([a, b]);
     renderPairList();
-    saveSettings();
+    saveCurrentConfig();
   });
 
   els.pairList.addEventListener('click', function (e) {
@@ -364,7 +545,26 @@
     if (!btn) return;
     keepApart.splice(parseInt(btn.dataset.remove, 10), 1);
     renderPairList();
-    saveSettings();
+    saveCurrentConfig();
+  });
+
+  els.addTogetherBtn.addEventListener('click', function () {
+    var a = els.togetherA.value, b = els.togetherB.value;
+    if (!a || !b || a === b) { showMsg('Pick two different names to keep together.'); return; }
+    var exists = keepTogether.some(function (p) { return (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a); });
+    if (exists) { showMsg('That pair is already on the list.'); return; }
+    clearMsg();
+    keepTogether.push([a, b]);
+    renderTogetherList();
+    saveCurrentConfig();
+  });
+
+  els.togetherList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-together]');
+    if (!btn) return;
+    keepTogether.splice(parseInt(btn.dataset.removeTogether, 10), 1);
+    renderTogetherList();
+    saveCurrentConfig();
   });
 
   // ── Split mode (count vs size) ───────────────────────────────────────────
@@ -373,10 +573,10 @@
     els.splitValueLabel.textContent = isSize ? 'Students per group' : 'Number of groups';
   }
   document.querySelectorAll('input[name="split-mode"]').forEach(function (r) {
-    r.addEventListener('change', function () { syncSplitLabel(); saveSettings(); });
+    r.addEventListener('change', function () { syncSplitLabel(); saveCurrentConfig(); });
   });
-  els.splitValue.addEventListener('input', saveSettings);
-  els.balanceSkill.addEventListener('change', saveSettings);
+  els.splitValue.addEventListener('input', saveCurrentConfig);
+  els.balanceSkill.addEventListener('change', saveCurrentConfig);
 
   function groupCountFor(n) {
     var isSize = document.getElementById('mode-size').checked;
@@ -419,9 +619,10 @@
       shuffled.forEach(function (s, idx) { groups[idx % k].push(s); });
     }
 
-    resolveKeepApart(groups, balance);
-    var violations = findViolations(groups);
-    return { groups: groups, violations: violations };
+    resolveConstraints(groups);
+    var violations = findApartViolations(groups);
+    var togetherViolations = findTogetherViolations(groups);
+    return { groups: groups, violations: violations, togetherViolations: togetherViolations };
   }
 
   function groupIndexOf(groups, name) {
@@ -431,7 +632,7 @@
     return -1;
   }
 
-  function findViolations(groups) {
+  function findApartViolations(groups) {
     return keepApart.filter(function (pair) {
       var ia = groupIndexOf(groups, pair[0]);
       var ib = groupIndexOf(groups, pair[1]);
@@ -439,40 +640,61 @@
     });
   }
 
-  // Randomized local search: repeatedly swap a member of a violating group
-  // with a member of another group, keeping the swap only if it doesn't make
-  // things worse. Best-effort — some constraint sets (e.g. 5 people who must
-  // all avoid each other, split into 2 groups) simply cannot all be satisfied.
-  function resolveKeepApart(groups, balance) {
-    if (!keepApart.length || groups.length < 2) return;
-    var attempts = 0, maxAttempts = 600;
-    var bestViolationCount = findViolations(groups).length;
-    while (bestViolationCount > 0 && attempts < maxAttempts) {
+  function findTogetherViolations(groups) {
+    return keepTogether.filter(function (pair) {
+      var ia = groupIndexOf(groups, pair[0]);
+      var ib = groupIndexOf(groups, pair[1]);
+      return ia !== -1 && ib !== -1 && ia !== ib;
+    });
+  }
+
+  function totalViolationCount(groups) {
+    return findApartViolations(groups).length + findTogetherViolations(groups).length;
+  }
+
+  // Randomized local search over BOTH constraint kinds at once: repeatedly
+  // swap a student between two groups, keeping the swap only if the combined
+  // apart+together violation count doesn't get worse. Best-effort — some
+  // constraint sets (e.g. 5 people who must all avoid each other, split into
+  // 2 groups) simply cannot all be satisfied.
+  function resolveConstraints(groups) {
+    if ((!keepApart.length && !keepTogether.length) || groups.length < 2) return;
+    var attempts = 0, maxAttempts = 800;
+    var bestCount = totalViolationCount(groups);
+    while (bestCount > 0 && attempts < maxAttempts) {
       attempts++;
-      var violations = findViolations(groups);
-      if (!violations.length) break;
-      var offender = violations[Math.floor(Math.random() * violations.length)];
+      var allViolations = findApartViolations(groups).concat(findTogetherViolations(groups));
+      if (!allViolations.length) break;
+      var offender = allViolations[Math.floor(Math.random() * allViolations.length)];
       var groupIdx = groupIndexOf(groups, offender[0]);
-      var otherIdx = Math.floor(Math.random() * groups.length);
-      if (otherIdx === groupIdx || !groups[otherIdx].length) continue;
-
-      // Swap offender[1] (the second half of the violating pair) with a
-      // random student in another group.
       var fromArr = groups[groupIdx];
-      var swapOutIdx = fromArr.findIndex(function (s) { return s.name === offender[1]; });
-      if (swapOutIdx === -1) continue;
-      var toArr = groups[otherIdx];
-      var swapInIdx = Math.floor(Math.random() * toArr.length);
+      var sameGroupIdx = fromArr.findIndex(function (s) { return s.name === offender[1]; });
 
-      var a = fromArr[swapOutIdx], b = toArr[swapInIdx];
-      fromArr[swapOutIdx] = b; toArr[swapInIdx] = a;
-
-      var newCount = findViolations(groups).length;
-      if (newCount > bestViolationCount) {
-        // Worse — revert.
-        fromArr[swapOutIdx] = a; toArr[swapInIdx] = b;
+      if (sameGroupIdx !== -1) {
+        // An apart-violation: offender[1] shares offender[0]'s group — swap
+        // it out for a random student in a different group.
+        var otherIdx = Math.floor(Math.random() * groups.length);
+        if (otherIdx === groupIdx || !groups[otherIdx].length) continue;
+        var toArr = groups[otherIdx];
+        var swapInIdx = Math.floor(Math.random() * toArr.length);
+        var a = fromArr[sameGroupIdx], b = toArr[swapInIdx];
+        fromArr[sameGroupIdx] = b; toArr[swapInIdx] = a;
+        var newCount = totalViolationCount(groups);
+        if (newCount > bestCount) { fromArr[sameGroupIdx] = a; toArr[swapInIdx] = b; }
+        else { bestCount = newCount; }
       } else {
-        bestViolationCount = newCount;
+        // A together-violation: offender[1] is in a different group — move
+        // it into offender[0]'s group by swapping with a random member there.
+        var otherGroupIdx = groupIndexOf(groups, offender[1]);
+        if (otherGroupIdx === -1) continue;
+        var togetherArr = groups[otherGroupIdx];
+        var moveIdx = togetherArr.findIndex(function (s) { return s.name === offender[1]; });
+        var swapInIdx2 = Math.floor(Math.random() * fromArr.length);
+        var a2 = fromArr[swapInIdx2], b2 = togetherArr[moveIdx];
+        fromArr[swapInIdx2] = b2; togetherArr[moveIdx] = a2;
+        var newCount2 = totalViolationCount(groups);
+        if (newCount2 > bestCount) { fromArr[swapInIdx2] = a2; togetherArr[moveIdx] = b2; }
+        else { bestCount = newCount2; }
       }
     }
   }
@@ -489,14 +711,20 @@
     lastGroups = result;
     var balance = !els.balanceSkill.disabled && els.balanceSkill.checked;
 
+    var warnParts = [];
     if (result.violations.length) {
-      els.warnArea.innerHTML = '<div class="warn-box">⚠ Could not keep ' + result.violations.length +
-        ' pair' + (result.violations.length === 1 ? '' : 's') + ' apart with this group count: ' +
-        result.violations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') +
-        '. Try more groups, or fewer keep-apart constraints.</div>';
-    } else {
-      els.warnArea.innerHTML = '';
+      warnParts.push('⚠ Could not keep ' + result.violations.length +
+        ' pair' + (result.violations.length === 1 ? '' : 's') + ' apart: ' +
+        result.violations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') + '.');
     }
+    if (result.togetherViolations && result.togetherViolations.length) {
+      warnParts.push('⚠ Could not keep ' + result.togetherViolations.length +
+        ' pair' + (result.togetherViolations.length === 1 ? '' : 's') + ' together: ' +
+        result.togetherViolations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') + '.');
+    }
+    els.warnArea.innerHTML = warnParts.length
+      ? '<div class="warn-box">' + warnParts.join(' ') + ' Try a different group count, or fewer constraints.</div>'
+      : '';
 
     els.results.innerHTML = '<div class="groups-wrap">' + result.groups.map(function (group, i) {
       var avg = balance ? avgSkill(group) : null;
@@ -555,11 +783,17 @@
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────
-  loadSettings();
+  migrateLegacySettings();
   populateRosterSelect();
-  syncSplitLabel();
-  onNamesChanged();
-  renderPairList();
+  var existingConfigs = listConfigs();
+  var currentName = getCurrentConfigName();
+  if (currentName && loadConfigData(currentName)) {
+    loadConfigByName(currentName);
+  } else if (existingConfigs.length) {
+    loadConfigByName(existingConfigs[0]);
+  } else {
+    newConfig('My Class');
+  }
 
 })();
 </script>
