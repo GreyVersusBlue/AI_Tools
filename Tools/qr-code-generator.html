@@ -388,6 +388,17 @@
   @media (max-width: 780px) {
     .col-right { position: static; flex-basis: 100%; }
   }
+
+  .print-only { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area {
+      display: flex !important; position: absolute; inset: 0;
+      align-items: center; justify-content: center; background: #fff;
+    }
+    #print-img { max-width: 80%; max-height: 80%; }
+  }
 </style>
 </head>
 <body>
@@ -507,10 +518,15 @@
       <div class="btn-row" style="width:100%;">
         <button class="btn-primary" id="btn-png" disabled>Download PNG</button>
         <button class="btn-secondary" id="btn-svg" disabled>Download SVG</button>
+        <button class="btn-secondary" id="btn-print" disabled>Print this code</button>
       </div>
       <div id="msg"></div>
     </div>
   </div>
+</div>
+
+<div class="print-only" id="print-area">
+  <img id="print-img" alt="QR code">
 </div>
 
 <script>
@@ -545,6 +561,8 @@
     filename: document.getElementById('filename'),
     btnPng: document.getElementById('btn-png'),
     btnSvg: document.getElementById('btn-svg'),
+    btnPrint: document.getElementById('btn-print'),
+    printImg: document.getElementById('print-img'),
     msg: document.getElementById('msg'),
   };
 
@@ -835,6 +853,7 @@
       setScanBadge('pending', 'Type something above to generate a code');
       els.btnPng.disabled = true;
       els.btnSvg.disabled = true;
+      els.btnPrint.disabled = true;
       lastQR = null;
       clearMsg();
       return;
@@ -859,6 +878,7 @@
       lastQR = { qr: qr, opts: opts, meta: meta, size: size, text: text };
       els.btnPng.disabled = false;
       els.btnSvg.disabled = false;
+      els.btnPrint.disabled = false;
       clearMsg();
       // Canvas 2D drawing is synchronous, so the pixels are already there —
       // no need to wait a frame (which browsers throttle for hidden tabs).
@@ -867,6 +887,7 @@
       lastQR = null;
       els.btnPng.disabled = true;
       els.btnSvg.disabled = true;
+      els.btnPrint.disabled = true;
       setScanBadge('pending', 'Fix the error below to generate a code');
       showMsg('Could not build a QR code from this text: ' + err.message + '\nTry shortening it or lowering the error-correction level.');
     }
@@ -906,6 +927,12 @@
     var svg = buildSVG(lastQR);
     var blob = new Blob([svg], { type: 'image/svg+xml' });
     downloadBlob(blob, currentFilename('svg'));
+  });
+
+  els.btnPrint.addEventListener('click', function () {
+    if (!lastQR) return;
+    els.printImg.src = els.canvas.toDataURL('image/png');
+    window.print();
   });
 
   function buildSVG(state) {

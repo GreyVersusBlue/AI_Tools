@@ -144,6 +144,9 @@
     <button class="danger" id="deleteBracketBtn">Delete</button>
     <span id="shareBar"></span>
     <span class="spacer"></span>
+    <label class="checkline" style="margin:0;" title="Prints the bracket with only the starting matchups filled in, no picks marked — a blank sheet for students to predict on.">
+      <input type="checkbox" id="printBlank"> Print blank
+    </label>
     <button id="printBtn">Print</button>
   </div>
 
@@ -195,6 +198,7 @@
     resetPicksBtn: document.getElementById('resetPicksBtn'),
     deleteBracketBtn: document.getElementById('deleteBracketBtn'),
     printBtn: document.getElementById('printBtn'),
+    printBlank: document.getElementById('printBlank'),
     setupCard: document.getElementById('setupCard'),
     bracketName: document.getElementById('bracketName'),
     contestants: document.getElementById('contestants'),
@@ -384,6 +388,64 @@
     }
   }
 
+  /* Renders the bracket into #bracketView with only round 0 (the starting
+     matchups/byes) filled in and every later slot blank, regardless of what's
+     actually been decided in `state` — a printable prediction sheet, not a
+     view of live progress. Doesn't touch `state` itself, so the live view is
+     one plain render() call away once printing is done. */
+  function renderBlank() {
+    if (!state) return;
+    els.bracketTitle.textContent = state.name;
+    els.bracketView.innerHTML = '';
+    var totalRounds = state.slots.length;
+
+    state.slots.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = (r === totalRounds - 1) ? 'Champion' : 'Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === totalRounds - 1) {
+        var slot = document.createElement('div');
+        slot.className = 'slot slot-empty';
+        slot.textContent = 'TBD';
+        var wrapMatch = document.createElement('div');
+        wrapMatch.className = 'match';
+        wrapMatch.appendChild(slot);
+        col.appendChild(wrapMatch);
+      } else {
+        var next = state.slots[r + 1];
+        for (var m = 0; m < next.length; m++) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          [0, 1].forEach(function (side) {
+            var idx = m * 2 + side;
+            var contestant = r === 0 ? round[idx] : false;
+            var slotEl = document.createElement('div');
+            if (contestant === null) {
+              slotEl.textContent = 'BYE';
+              slotEl.className = 'slot slot-bye';
+            } else if (contestant === false) {
+              slotEl.textContent = 'TBD';
+              slotEl.className = 'slot slot-empty';
+            } else {
+              slotEl.textContent = contestant;
+              slotEl.className = 'slot';
+            }
+            matchWrap.appendChild(slotEl);
+          });
+          col.appendChild(matchWrap);
+        }
+      }
+      els.bracketView.appendChild(col);
+    });
+
+    els.championBanner.classList.remove('show');
+  }
+
   function refreshSwitcher() {
     var names = BracketStore.listBrackets();
     els.bracketSwitch.innerHTML = '';
@@ -458,7 +520,15 @@
     }
   });
 
-  els.printBtn.addEventListener('click', function () { window.print(); });
+  els.printBtn.addEventListener('click', function () {
+    if (state && els.printBlank.checked) {
+      renderBlank();
+      window.print();
+      render(); // window.print() blocks until the dialog closes, so this restores the live view right after
+    } else {
+      window.print();
+    }
+  });
 
   StateLink.mountShareControl(els.shareBar, {
     param: 'bracket',

@@ -192,6 +192,28 @@
   const downloadArea = document.getElementById('downloadArea');
   const downloadLink = document.getElementById('downloadLink');
 
+  // Repeat use of this tool shouldn't require re-checking the same two boxes
+  // every time — they default on, matching the checked="" attributes in the HTML.
+  const OPTIONS_KEY = 'docx-merger-options';
+  const optPageBreak = document.getElementById('optPageBreak');
+  const optHeading = document.getElementById('optHeading');
+  (function loadOptionPrefs() {
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}'); } catch (e) { raw = {}; }
+    if (typeof raw.pageBreak === 'boolean') optPageBreak.checked = raw.pageBreak;
+    if (typeof raw.heading === 'boolean') optHeading.checked = raw.heading;
+  })();
+  function saveOptionPrefs() {
+    try {
+      localStorage.setItem(OPTIONS_KEY, JSON.stringify({
+        pageBreak: optPageBreak.checked,
+        heading: optHeading.checked
+      }));
+    } catch (e) { /* storage full/blocked */ }
+  }
+  optPageBreak.addEventListener('change', saveOptionPrefs);
+  optHeading.addEventListener('change', saveOptionPrefs);
+
   dropzone.addEventListener('click', () => fileInput.click());
   ['dragenter','dragover'].forEach(evt =>
     dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag-over'); }));
