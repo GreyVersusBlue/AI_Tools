@@ -49,9 +49,7 @@ no `index.html` "coming soon" row for these, since there's no single new tool pa
 all still within GitHub Pages' static-hosting limits (no server, no accounts, no database) — several lean on
 browser APIs the toolkit doesn't use yet.
 
-| Idea | What it would do |
-|---|---|
-| Live Student-View Sync | Peer-to-peer (WebRTC, no server) mirroring of Review Game Board scores, Bracket picks, or the Classroom Timer onto students' own devices, not just the projector. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## Picking one up
 

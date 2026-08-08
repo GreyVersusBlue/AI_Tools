@@ -1403,9 +1403,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       Progress report
-      <span class="tally">16 recent entries</span>
+      <span class="tally">17 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-08">Aug 8, 2026</time>
+        <span><b>Live Student-View Sync.</b> The fifth and last platform-wide &ldquo;big swing,&rdquo; and the hardest one honestly: real peer-to-peer WebRTC needs an SDP offer/answer handshake, which normally means a signaling server, and &ldquo;no server&rdquo; is a real constraint here, not a formality. The serverless answer is manual signaling &mdash; Classroom Timer's new &ldquo;Mirror to a device&rdquo; shows a QR code containing the connection offer, the other device (open <code>classroom-timer/mirror.html</code>, or scan it directly) scans it and shows an answer code back, camera-to-camera or copy/pasted by hand either way. Once paired, the countdown mirrors live over a direct data-channel connection &mdash; no server relays it, so it only works between devices that can already reach each other (the same classroom Wi-Fi). Scoped to exactly this one pairing rather than a generalized system, per the backlog's own note; verified end-to-end with two separate simulated browser sessions actually connecting and syncing live, not just each half in isolation.</span>
+      </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
         <span><b>Cross-Tool Shareable State Links.</b> The fourth platform-wide &ldquo;big swing&rdquo;: a shared <code>_shared/state-link.js</code> helper encodes a tool's current board into the page URL itself (the same base64-in-a-query-param trick the Digital Escape Room Builder already uses for its QR codes), so pasting a link opens that exact board somewhere else &mdash; no server, no login, just a longer link. Wired into three high-value tools first: Seating Chart Generator (share the active section), Bracket / Tournament Generator (share the current bracket, picks included), and Rubric Builder (share the current rubric). Opening a shared link always imports as a new, uniquely-named section/bracket/rubric rather than overwriting anything already saved in that browser, so the same link is safe to open twice. More tools to follow in a later pass.</span>
