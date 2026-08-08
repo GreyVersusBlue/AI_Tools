@@ -1403,9 +1403,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       Progress report
-      <span class="tally">15 recent entries</span>
+      <span class="tally">16 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-08">Aug 8, 2026</time>
+        <span><b>Cross-Tool Shareable State Links.</b> The fourth platform-wide &ldquo;big swing&rdquo;: a shared <code>_shared/state-link.js</code> helper encodes a tool's current board into the page URL itself (the same base64-in-a-query-param trick the Digital Escape Room Builder already uses for its QR codes), so pasting a link opens that exact board somewhere else &mdash; no server, no login, just a longer link. Wired into three high-value tools first: Seating Chart Generator (share the active section), Bracket / Tournament Generator (share the current bracket, picks included), and Rubric Builder (share the current rubric). Opening a shared link always imports as a new, uniquely-named section/bracket/rubric rather than overwriting anything already saved in that browser, so the same link is safe to open twice. More tools to follow in a later pass.</span>
+      </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
         <span><b>Sitewide Accessibility Pass.</b> The third platform-wide &ldquo;big swing&rdquo;: a floating &ldquo;Aa&rdquo; widget (bottom-right corner) with adjustable text size, a dark theme, a dyslexia-friendly font toggle, and read-aloud via the browser's built-in text-to-speech &mdash; all sharing one saved preference. This supersedes the old light/dark-only toggle on the six tools that had it (Seating Chart Generator, Word Doc Merger, Classroom Timer, Final Grade Checker, Prompt Builder, Image &rarr; PDF Assembler) rather than running a second parallel theme system alongside it: those tools keep their own native dark palette, while newly-wired tools get a generic dark-mode filter since they don't share that palette. Wired into the three tools named on the backlog first &mdash; Writing Prompt Generator, Vocab &amp; Conjugation Drill Generator, and the Silent Reading (SSR) Log Tracker &mdash; with more tools to follow in later passes.</span>

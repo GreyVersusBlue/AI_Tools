@@ -17,6 +17,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 9h6v4h-6zM6 19h6v4h-6zM20 9h6v14h-6z' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M12 11h5M12 21h5M17 11v10' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="bracket-tournament-generator/bt-store.js"></script>
+<script src="../_shared/state-link.js"></script>
 <style>
   :root {
     --ink: #1f2430;
@@ -141,6 +142,7 @@
     <button class="secondary" id="newBracketBtn">New bracket</button>
     <button class="secondary" id="resetPicksBtn">Reset picks</button>
     <button class="danger" id="deleteBracketBtn">Delete</button>
+    <span id="shareBar"></span>
     <span class="spacer"></span>
     <button id="printBtn">Print</button>
   </div>
@@ -201,7 +203,8 @@
     bracketCard: document.getElementById('bracketCard'),
     bracketTitle: document.getElementById('bracketTitle'),
     bracketView: document.getElementById('bracketView'),
-    championBanner: document.getElementById('championBanner')
+    championBanner: document.getElementById('championBanner'),
+    shareBar: document.getElementById('shareBar')
   };
 
   var state = null; // { name, slots: [ [round0...], [round1...], ... ] }
@@ -457,12 +460,54 @@
 
   els.printBtn.addEventListener('click', function () { window.print(); });
 
+  StateLink.mountShareControl(els.shareBar, {
+    param: 'bracket',
+    label: 'Share this bracket',
+    getState: function () { return state; },
+    onMessage: function (text) { alert(text); }
+  });
+
+  function looksLikeBracket(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string'
+      && Array.isArray(obj.slots) && obj.slots.length > 0;
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved bracket,
+      so a shared link never silently overwrites something already here. */
+  function uniqueBracketName(base) {
+    var existing = BracketStore.listBrackets();
+    if (existing.indexOf(base) === -1) return base;
+    var n = 2;
+    while (existing.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  /** A ?bracket=... link imports as a brand-new, uniquely-named bracket rather
+      than overwriting anything already saved here. */
+  function importSharedBracketFromUrl() {
+    var raw = StateLink.getParam('bracket');
+    if (!raw) return false;
+    StateLink.clearParam('bracket'); // consume it up front so a bad payload can't loop on refresh
+    var decoded = StateLink.decodeState(raw);
+    if (!looksLikeBracket(decoded)) {
+      alert("That shared link's bracket data looks corrupted.");
+      return false;
+    }
+    var name = uniqueBracketName(decoded.name);
+    state = { name: name, slots: decoded.slots, winnerSide: (decoded.winnerSide && typeof decoded.winnerSide === 'object') ? decoded.winnerSide : {} };
+    BracketStore.saveBracket(name, state);
+    render();
+    return true;
+  }
+
   /* ---------- boot ---------- */
-  var current = BracketStore.getCurrentName();
-  if (current && BracketStore.loadBracket(current)) {
-    loadBracketByName(current);
-  } else {
-    showSetup();
+  if (!importSharedBracketFromUrl()) {
+    var current = BracketStore.getCurrentName();
+    if (current && BracketStore.loadBracket(current)) {
+      loadBracketByName(current);
+    } else {
+      showSetup();
+    }
   }
 })();
 </script>

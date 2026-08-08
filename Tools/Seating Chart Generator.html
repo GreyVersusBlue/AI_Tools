@@ -23,6 +23,7 @@
 <!-- gvb:social:end -->
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -508,11 +509,12 @@
 
 <script type="module">
 import {
-  ROOM, snap, freshState, newSection, createSeatingSlot,
+  ROOM, snap, freshState, newSection, createSeatingSlot, repairState,
   assignSeats, checkConstraints, pickNext, parseRoster,
   gridDesks, rowDesks, nextSpot, contentBox,
 } from './seating-chart/seating.mjs';
 import { mountSaveBar, defaultStorage } from '../assets/js/gvb-save.js';
+const { getParam, decodeState, clearParam, mountShareControl } = window.StateLink;
 
 /* ============================================================
    State
@@ -1177,7 +1179,35 @@ function mountBar(){
     erasing = true;
     setTimeout(() => { erasing = false; }, 0);
   }, true);
+
+  mountShareControl(el('saveBar'), {
+    param: 'section',
+    label: 'Share this section',
+    getState: () => sec(),
+    onMessage: text => say(text, /nothing to share/i.test(text) ? 'bad' : 'good'),
+  });
+
   return bar;
+}
+
+/** A ?section=... link imports as a brand-new section rather than overwriting
+    anything already saved here — pasting the same link twice is harmless.
+    Returns the status message to show, or null if there was nothing to
+    import. Doesn't call say() itself: boot() calls renderAll() (which resets
+    the status bar via refreshStatus()) after this runs, so the message has
+    to be applied after that, not before it. */
+function importSharedSectionFromUrl(){
+  const raw = getParam('section');
+  if (!raw) return null;
+  clearParam('section'); // consume it up front so a bad payload can't loop on refresh
+  const decoded = decodeState(raw);
+  if (!decoded) return { text: "That shared link's data looks corrupted.", kind: 'bad' };
+  const repaired = repairState({ sections: [decoded] });
+  const shared = repaired.sections[0];
+  state.sections.push(shared);
+  state.active = shared.id;
+  slot.save(state);
+  return { text: `Imported "${shared.name}" from a shared link as a new section.`, kind: 'good' };
 }
 
 function boot(){
@@ -1185,9 +1215,12 @@ function boot(){
   state = loaded || slot.fresh();
   autosaver = slot.autosave(() => state, 1200);
   mountBar();
+  const imported = importSharedSectionFromUrl();
   applyZoom(); renderAll();
   populateRosterHubSelect();
-  if (loaded){
+  if (imported){
+    say(imported.text, imported.kind);
+  } else if (loaded){
     const n = state.sections.reduce((t, s) => t + s.students.length, 0);
     say(`Reloaded ${state.sections.length} sections and ${n} students from this browser.`, 'good');
   } else {
