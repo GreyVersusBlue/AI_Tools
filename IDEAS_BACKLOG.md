@@ -8,21 +8,15 @@ Reminder: coming soon means not right now.
 
 ## General / Classroom Logistics
 
-| Idea | What it would do |
-|---|---|
-| Sub Binder / Day Bundle Generator | Pulls today's Sub Plan, the current Seating Chart, and a Schedule Browser snapshot into one printable packet, so a substitute gets everything in one stack instead of three separate tools. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## Math
 
-| Idea | What it would do |
-|---|---|
-| Number Talks / Mental Math Routine Board | A daily mental-math prompt with a strategy-sharing board — reveal a number string, then stamp students' strategies up on the projector as they share out. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## English / Language Arts
 
-| Idea | What it would do |
-|---|---|
-| Novel Study / Reading Circles Manager | Track reading groups, rotate discussion roles (Discussion Director, Summarizer, Word Wizard...), and pace chapter checkpoints for a whole-class novel study — the group cousin of the SSR Log Tracker. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## Science
 

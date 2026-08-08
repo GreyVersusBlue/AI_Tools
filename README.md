@@ -47,6 +47,9 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Command Center | `Tools/command-center-dashboard.html` | A timer, today's School Calendar Visualizer entry, and a no-repeats roster quick-call, side by side on one projector page. |
 | Field Trip Permission Slip Generator | `Tools/field-trip-permission-slip.html` | Fill in trip details once, then print one slip, a whole class set, or blank copies — save the trip as a template for next year. |
 | Digital Escape Room / Puzzle Lock Builder | `Tools/escape-room-builder.html` | Chain QR-code puzzle stations into a linear or branching escape room — scanning one out of order sends a student back instead of giving away the clue. |
+| Sub Binder / Day Bundle Generator | `Tools/sub-binder-generator.html` | Pulls Sub Plan Builder's standing details and the current Seating Chart into one printable packet, plus today's lesson. |
+| Number Talks / Mental Math Routine Board | `Tools/number-talks-board.html` | A bank of number-talk prompts that reveal one expression at a time on a projector display, plus a lightweight strategy-sharing board. |
+| Novel Study / Reading Circles Manager | `Tools/novel-study-circles-manager.html` | Splits a roster into reading circles and rotates discussion roles meeting after meeting, with a chapter checkpoint logged each time. |
 
 ## Using these
 
