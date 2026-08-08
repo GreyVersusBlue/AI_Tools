@@ -51,7 +51,6 @@ browser APIs the toolkit doesn't use yet.
 
 | Idea | What it would do |
 |---|---|
-| Cross-Tool Shareable State Links | Encode a tool's current board (a seating chart, a bracket, a rubric) into the page URL itself, so pasting a link opens that exact state on another screen — no server, no login, just a longer link. |
 | Live Student-View Sync | Peer-to-peer (WebRTC, no server) mirroring of Review Game Board scores, Bracket picks, or the Classroom Timer onto students' own devices, not just the projector. |
 
 ## Picking one up

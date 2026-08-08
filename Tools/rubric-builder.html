@@ -18,6 +18,7 @@
 <!-- gvb:social:end -->
 <script src="rubric-builder/rb-templates.js"></script>
 <script src="rubric-builder/rb-store.js"></script>
+<script src="../_shared/state-link.js"></script>
 <style>
   :root {
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
@@ -128,6 +129,7 @@
     <select id="rubricSwitch"></select>
     <button class="secondary" id="newRubricBtn">New rubric</button>
     <button class="danger" id="deleteRubricBtn">Delete</button>
+    <span id="shareBar"></span>
   </div>
 
   <div class="layout">
@@ -187,7 +189,7 @@
   ['toolbar','rubricSwitch','newRubricBtn','deleteRubricBtn',
    'rubricName','rubricTitle','templatePicker','loadTemplateBtn',
    'levelsRow','addLevelBtn','criteriaList','emptyHint','addCriterionBtn',
-   'printBtn','previewArea','totalPoints'
+   'printBtn','previewArea','totalPoints','shareBar'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, title, levels: [{id,label,points}], criteria: [{id,name,cells:{levelId:text}}] }
@@ -501,13 +503,57 @@
     window.print();
   });
 
+  StateLink.mountShareControl(els.shareBar, {
+    param: 'rubric',
+    label: 'Share this rubric',
+    getState: function () { return state; },
+    onMessage: function (text) { alert(text); }
+  });
+
+  function looksLikeRubric(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string'
+      && Array.isArray(obj.levels) && Array.isArray(obj.criteria);
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved rubric,
+      so a shared link never silently overwrites something already here. */
+  function uniqueRubricName(base) {
+    var existing = RubricStore.listRubrics();
+    if (existing.indexOf(base) === -1) return base;
+    var n = 2;
+    while (existing.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  /** A ?rubric=... link imports as a brand-new, uniquely-named rubric rather
+      than overwriting anything already saved here. */
+  function importSharedRubricFromUrl() {
+    var raw = StateLink.getParam('rubric');
+    if (!raw) return false;
+    StateLink.clearParam('rubric'); // consume it up front so a bad payload can't loop on refresh
+    var decoded = StateLink.decodeState(raw);
+    if (!looksLikeRubric(decoded)) {
+      alert("That shared link's rubric data looks corrupted.");
+      return false;
+    }
+    var name = uniqueRubricName(decoded.name || decoded.title || 'Shared Rubric');
+    state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria };
+    bumpIdCounterFromState();
+    RubricStore.saveRubric(name, state);
+    RubricStore.setCurrentName(name);
+    renderAll();
+    return true;
+  }
+
   /* ---------- boot ---------- */
   buildTemplatePicker();
-  var current = RubricStore.getCurrentName();
-  if (current && RubricStore.loadRubric(current)) {
-    loadRubricByName(current);
-  } else {
-    newRubric('New Rubric');
+  if (!importSharedRubricFromUrl()) {
+    var current = RubricStore.getCurrentName();
+    if (current && RubricStore.loadRubric(current)) {
+      loadRubricByName(current);
+    } else {
+      newRubric('New Rubric');
+    }
   }
 })();
 </script>
