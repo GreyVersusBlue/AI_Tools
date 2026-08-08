@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape Room — Lock Screen</title>
+<meta name="description" content="Scan a station code, solve the clue, unlock the next one.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='15' width='14' height='11' rx='2' fill='%232A6DB0'/%3E%3Cpath d='M12 15v-4a4 4 0 0 1 8 0v4' fill='none' stroke='%23C43A2F' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='1.8' fill='%23F6F7F9'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f6b3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 1.5rem 1rem 2.5rem; line-height: 1.5;
+  }
+  .wrap { width: 100%; max-width: 460px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 1.6rem 1.4rem; box-shadow: 0 6px 20px rgba(20,20,10,0.06);
+  }
+  .room-title { text-align: center; font-size: 1rem; font-weight: 700; color: var(--accent); letter-spacing: .02em; margin: 0 0 .3rem; }
+  .station-badge {
+    display: block; text-align: center; font-size: .74rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); margin-bottom: 1rem;
+  }
+  .clue-box {
+    background: #f4f3ee; border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.1rem 1.1rem; margin-bottom: 1.2rem; font-size: 1.15rem; line-height: 1.55;
+    white-space: pre-line; overflow-wrap: anywhere;
+  }
+  label { display: block; font-weight: 600; font-size: .88rem; margin-bottom: .4rem; }
+  input[type="text"] {
+    width: 100%; font-family: inherit; font-size: 1.15rem; color: var(--ink);
+    background: #fff; border: 2px solid var(--line-strong); border-radius: 8px;
+    padding: .7rem .8rem; margin-bottom: .9rem;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--accent-2); }
+  button {
+    font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 9px; padding: .8rem 1rem; width: 100%;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary {
+    background: #fff; color: var(--accent); border-color: var(--line-strong);
+    font-size: .85rem; font-weight: 600; padding: .55rem .8rem; margin-top: .6rem;
+  }
+  button.secondary:hover { background: #f1f0ea; color: var(--accent); }
+  .feedback { font-size: .92rem; margin-top: .85rem; padding: .65rem .8rem; border-radius: 8px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.bad { background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+  .feedback.good { background: #eaf5ec; color: var(--good); border: 1px solid #c7e2cb; }
+  .hint-box {
+    margin-top: .9rem; font-size: .88rem; color: var(--accent-2); background: #eef4f8;
+    border: 1px solid #cfe0ea; border-radius: 8px; padding: .7rem .85rem; display: none;
+  }
+  .hint-box.show { display: block; }
+  .gate-icon, .done-icon { text-align: center; font-size: 2.4rem; margin-bottom: .5rem; }
+  .gate-text, .done-text { text-align: center; font-size: 1.05rem; line-height: 1.55; }
+  .progress-note { text-align: center; font-size: .78rem; color: var(--muted); margin-top: 1rem; }
+  .error-card { text-align: center; color: var(--muted); }
+  .home-link { display: block; text-align: center; font-size: .76rem; color: var(--muted); text-decoration: none; margin-top: 1.2rem; }
+  .home-link:hover { color: var(--accent-2); }
+  .stars { text-align: center; letter-spacing: .3rem; font-size: 1.4rem; margin-bottom: .6rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <p class="error-card">Loading…</p>
+  </div>
+  <a class="home-link" href="../../index.html">&larr; AsPerMyLessonPlan.com Toolkit</a>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Room data travels entirely inside the URL (no server, no accounts). ──
+  // Encoding: base64( encodeURIComponent(JSON) ) via btoa(unescape(...)) so
+  // it's unicode-safe and a bit shorter/denser in the QR code than raw
+  // encodeURIComponent JSON would be. See escape-room-builder.html for the
+  // matching encode step.
+  function decodeRoom(raw) {
+    var jsonStr = decodeURIComponent(escape(atob(raw)));
+    return JSON.parse(jsonStr);
+  }
+
+  function getParam(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+  }
+
+  function normalizeAnswer(s) {
+    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,!?'"]/g, '');
+  }
+
+  function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  var card = document.getElementById('card');
+
+  var rParam = getParam('r');
+  if (!rParam) {
+    card.innerHTML = '<p class="error-card">No escape room data found in this link. Ask your teacher for the real station QR code or link.</p>';
+    return;
+  }
+
+  var room;
+  try {
+    room = decodeRoom(rParam);
+    if (!room || !Array.isArray(room.stations) || !room.stations.length) throw new Error('empty room');
+  } catch (e) {
+    card.innerHTML = '<p class="error-card">This escape room link looks damaged or incomplete. Ask your teacher for a fresh QR code.</p>';
+    return;
+  }
+
+  var roomId = room.id || 'room';
+  var stationParamRaw = getParam('s');
+  // If a station is embedded in this physical QR code, that's the station
+  // this printed code represents. If absent, this is the generic "one link
+  // for everyone" mode — always show whatever the player's own progress is.
+  var scannedStation = stationParamRaw !== null ? parseInt(stationParamRaw, 10) : null;
+  if (scannedStation !== null && (isNaN(scannedStation) || scannedStation < 0 || scannedStation >= room.stations.length)) {
+    scannedStation = null;
+  }
+
+  var PROGRESS_KEY = 'escape-room-progress:' + roomId;
+
+  function loadProgress() {
+    try {
+      var raw = localStorage.getItem(PROGRESS_KEY);
+      if (!raw) return { current: 0, misses: {} };
+      var p = JSON.parse(raw);
+      if (!p || typeof p !== 'object') return { current: 0, misses: {} };
+      if (typeof p.current === 'undefined') p.current = 0;
+      if (!p.misses || typeof p.misses !== 'object') p.misses = {};
+      return p;
+    } catch (e) { return { current: 0, misses: {} }; }
+  }
+  function saveProgress(p) {
+    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* private browsing — progress just won't persist */ }
+  }
+
+  var progress = loadProgress();
+
+  function render() {
+    if (progress.current === 'done') {
+      renderDone();
+      return;
+    }
+    var current = progress.current;
+    // Physical per-station QR mode: if this code isn't the player's current
+    // target station, gate them off instead of revealing it early.
+    if (scannedStation !== null && scannedStation !== current) {
+      renderGate(current, scannedStation);
+      return;
+    }
+    renderClue(current);
+  }
+
+  function renderGate(current, scanned) {
+    var already = scanned < current;
+    card.innerHTML =
+      '<div class="gate-icon">' + (already ? '✅' : '🔒') + '</div>' +
+      '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
+      '<p class="gate-text">' + (already
+        ? 'You already solved this station. Your next clue is waiting at <strong>Station ' + (current + 1) + '</strong>.'
+        : 'Not so fast — this isn’t your next station yet. Go find <strong>Station ' + (current + 1) + '</strong> and solve that clue first.') +
+      '</p>';
+  }
+
+  function renderDone() {
+    card.innerHTML =
+      '<div class="stars">⭐ 🏆 ⭐</div>' +
+      '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
+      '<div class="done-icon">🎉</div>' +
+      '<p class="done-text"><strong>You escaped!</strong><br>Every station solved. Great work.</p>' +
+      '<button type="button" class="secondary" id="resetBtn">Restart this room</button>';
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      if (!confirm('Reset your progress on this escape room and start over from Station 1?')) return;
+      progress = { current: 0, misses: {} };
+      saveProgress(progress);
+      render();
+    });
+  }
+
+  function renderClue(idx) {
+    var station = room.stations[idx];
+    var misses = progress.misses[idx] || 0;
+    var showHintNow = !!station.hint && misses >= 2;
+
+    card.innerHTML =
+      '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
+      '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + '</span>' +
+      '<div class="clue-box">' + escapeHtml(station.clue || '(no clue text)') + '</div>' +
+      '<form id="answerForm" autocomplete="off">' +
+        '<label for="answerInput">Your answer</label>' +
+        '<input type="text" id="answerInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type the answer to unlock the next clue">' +
+        '<button type="submit">Unlock</button>' +
+      '</form>' +
+      '<div class="feedback" id="feedback"></div>' +
+      (station.hint ? '<div class="hint-box' + (showHintNow ? ' show' : '') + '" id="hintBox">💡 Hint: ' + escapeHtml(station.hint) + '</div>' : '') +
+      (station.hint && !showHintNow ? '<button type="button" class="secondary" id="hintBtn">Show a hint</button>' : '') +
+      '<p class="progress-note">Progress is saved on this device — re-scanning this code won’t lose your place.</p>';
+
+    var form = document.getElementById('answerForm');
+    var input = document.getElementById('answerInput');
+    var feedback = document.getElementById('feedback');
+    var hintBtn = document.getElementById('hintBtn');
+    var hintBox = document.getElementById('hintBox');
+
+    if (hintBtn) {
+      hintBtn.addEventListener('click', function () {
+        hintBox.classList.add('show');
+        hintBtn.style.display = 'none';
+      });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var given = normalizeAnswer(input.value);
+      var accepted = (station.answers || []).map(normalizeAnswer);
+      var correct = given.length > 0 && accepted.indexOf(given) !== -1;
+
+      if (correct) {
+        feedback.className = 'feedback show good';
+        feedback.textContent = '✓ Correct! Unlocking the next clue…';
+        var nextIdx = (typeof station.next === 'number') ? station.next : idx + 1;
+        if (nextIdx >= room.stations.length || nextIdx === null) {
+          progress.current = 'done';
+        } else {
+          progress.current = nextIdx;
+        }
+        saveProgress(progress);
+        setTimeout(render, 550);
+      } else {
+        progress.misses[idx] = (progress.misses[idx] || 0) + 1;
+        saveProgress(progress);
+        feedback.className = 'feedback show bad';
+        feedback.textContent = 'Not quite — try again.';
+        if (station.hint && progress.misses[idx] >= 2 && hintBox && !hintBox.classList.contains('show')) {
+          hintBox.classList.add('show');
+          if (hintBtn) hintBtn.style.display = 'none';
+        }
+        input.select();
+      }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
