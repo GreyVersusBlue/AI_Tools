@@ -20,27 +20,19 @@ No open ideas on the list right now — everything collected so far has shipped.
 
 ## Science
 
-| Idea | What it would do |
-|---|---|
-| Lab Safety Contract Tracker | Track signed lab safety contracts per student. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## Social Studies
 
-| Idea | What it would do |
-|---|---|
-| Primary Source Analysis Worksheet Generator | Paste in or describe a primary source (photo, speech excerpt, political cartoon) and get a structured OPTIC/SOAPSTone-style analysis worksheet built around it, plus a matching answer-key version. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## World Language
 
-| Idea | What it would do |
-|---|---|
-| Immersion Roleplay Scenario Generator | Random real-life dialogue scenarios (ordering food, asking directions, checking into a hotel) with vocabulary scaffolding cards, printable or projected for partner speaking practice — pairs with the Vocab & Conjugation Drill Generator. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## Arts & PE
 
-| Idea | What it would do |
-|---|---|
-| Tournament Bracket & Station Rotation | Brackets plus timed station rotation for PE units, paired with the Classroom Timer. |
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ## Blank Map Generator — Enhancement Ideas
 
