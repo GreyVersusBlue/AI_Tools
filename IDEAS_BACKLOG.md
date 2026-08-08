@@ -10,7 +10,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Behavior & Points Tracker | A quick per-student tally or point system you can run live during class. |
 | Exit Ticket / Bell Ringer Generator | Printable half-sheets or a rotating bank of daily warm-up prompts. |
 | Field Trip Permission Slip Generator | Fill in the trip details once, get a printable permission slip. |
 | Digital Hall Pass / Sign-Out Log | Track and print who's out of the room and when. |
