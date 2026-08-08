@@ -133,6 +133,13 @@
         <label for="sheetTitle">Printed title</label>
         <input type="text" id="sheetTitle" placeholder="e.g. Unit 4: Area &amp; Volume Formulas">
 
+        <label for="columnCount">Columns</label>
+        <select id="columnCount">
+          <option value="1">1 column</option>
+          <option value="2" selected>2 columns</option>
+          <option value="3">3 columns</option>
+        </select>
+
         <label for="templatePicker">Start from a template</label>
         <select id="templatePicker"></select>
         <button type="button" class="secondary full" id="loadTemplateBtn">Load template (replaces current list)</button>
@@ -177,7 +184,7 @@
 
   var els = {};
   ['toolbar','sheetSwitch','newSheetBtn','deleteSheetBtn',
-   'sheetName','sheetTitle','templatePicker','loadTemplateBtn',
+   'sheetName','sheetTitle','columnCount','templatePicker','loadTemplateBtn',
    'itemsList','emptyHint','newName','newExpr','newNote','addItemBtn',
    'printBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -270,7 +277,7 @@
       '<div class="sheet">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<div class="sheet-sub">Name: _______________________&emsp;&emsp;Period: _____</div>' +
-        '<div class="formulas">' + itemsHtml + '</div>' +
+        '<div class="formulas" style="column-count:' + (state.columns || 2) + ';">' + itemsHtml + '</div>' +
       '</div>'
     );
   }
@@ -281,12 +288,13 @@
     els.toolbar.style.display = '';
     els.sheetName.value = state.name;
     els.sheetTitle.value = state.title;
+    els.columnCount.value = state.columns || 2;
     renderItemsEditor();
     els.previewArea.innerHTML = sheetHtml();
   }
 
   function newSheet(name) {
-    state = { name: name, title: '', items: [] };
+    state = { name: name, title: '', columns: 2, items: [] };
     FormulaSheetStore.setCurrentName(name);
     renderAll();
   }
@@ -295,6 +303,7 @@
     var loaded = FormulaSheetStore.loadSheet(name);
     if (!loaded) return;
     state = loaded;
+    if (!state.columns) state.columns = 2; // sheets saved before this field existed
     FormulaSheetStore.setCurrentName(name);
     renderAll();
   }
@@ -311,6 +320,12 @@
     renderAll();
   });
   els.sheetTitle.addEventListener('input', function () { if (state) { state.title = els.sheetTitle.value; save(); els.previewArea.innerHTML = sheetHtml(); } });
+  els.columnCount.addEventListener('change', function () {
+    if (!state) return;
+    state.columns = parseInt(els.columnCount.value, 10) || 2;
+    save();
+    els.previewArea.innerHTML = sheetHtml();
+  });
 
   els.loadTemplateBtn.addEventListener('click', function () {
     if (!state) return;
