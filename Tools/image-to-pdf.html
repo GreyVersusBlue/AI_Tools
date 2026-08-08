@@ -250,6 +250,10 @@
     return m ? m[1].toLowerCase() : '';
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
   function badgeExt(name) {
     const e = extOf(name);
     if (e === 'jpg' || e === 'jpeg') return 'jpg';
@@ -375,17 +379,18 @@
       const { id, file } = entry;
       const li = document.createElement('li');
       const ext = badgeExt(file.name);
+      const safeName = escapeHtml(file.name);
       li.dataset.id = String(id);
       li.draggable = isCustom;
 
       li.innerHTML = `
         <span class="seq">${i + 1}</span>
         <span class="type-badge badge-${ext}">${ext.toUpperCase()}</span>
-        <span class="filename">${file.name}</span>
+        <span class="filename">${safeName}</span>
         <span class="row-actions">
-          <button type="button" data-act="up" aria-label="Move ${file.name} up" ${i === 0 ? 'disabled' : ''}>&#8593;</button>
-          <button type="button" data-act="down" aria-label="Move ${file.name} down" ${i === ordered.length - 1 ? 'disabled' : ''}>&#8595;</button>
-          <button type="button" data-act="remove" aria-label="Remove ${file.name}">&#10005;</button>
+          <button type="button" data-act="up" aria-label="Move ${safeName} up" ${i === 0 ? 'disabled' : ''}>&#8593;</button>
+          <button type="button" data-act="down" aria-label="Move ${safeName} down" ${i === ordered.length - 1 ? 'disabled' : ''}>&#8595;</button>
+          <button type="button" data-act="remove" aria-label="Remove ${safeName}">&#10005;</button>
         </span>
       `;
 

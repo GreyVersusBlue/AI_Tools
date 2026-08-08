@@ -549,6 +549,8 @@
       sentences.push('My name is ' + fill(name) + ', and I teach ' + fill(grade) + ' grade ' + fill(subject) + '.');
     } else if (grade && subject){
       sentences.push('I teach ' + fill(grade) + ' grade ' + fill(subject) + '.');
+    } else if (name && subject){
+      sentences.push('My name is ' + fill(name) + ', and I teach ' + fill(subject) + '.');
     } else if (subject){
       sentences.push('I teach ' + fill(subject) + '.');
     } else if (name && grade){

@@ -185,8 +185,8 @@
 </div>
 
 <script type="module">
-import { createStore } from './school-calendar/scv-store.js';
-import { seedCalendar2026, blankCalendar, VERSION } from './school-calendar/scv-seed.js';
+import { createStore, isValid as isValidCalendar } from './school-calendar/scv-store.js';
+import { seedCalendar2026, blankCalendar } from './school-calendar/scv-seed.js';
 
 const store = createStore(seedCalendar2026);
 let cal = store.get();
@@ -425,7 +425,7 @@ document.getElementById("fileImport").addEventListener("change", e => {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      if (!parsed || parsed.__v !== VERSION || !parsed.days || !parsed.dayTypes) {
+      if (!isValidCalendar(parsed)) {
         alert("That file doesn't look like a School Calendar Visualizer backup.");
         return;
       }

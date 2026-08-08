@@ -301,9 +301,13 @@ export function assignSeats(section, { attempts = 800, rng = Math.random } = {})
   const seedDesk = {}, seedStudent = {}, lockedSids = new Set(), lockedDesks = new Set();
   for (const d of section.desks) {
     if (!d.locked) continue;
-    lockedDesks.add(d.id);
     const sid = section.assign[d.id];
-    if (sid) { seedDesk[d.id] = sid; seedStudent[sid] = d.id; lockedSids.add(sid); }
+    // A locked desk only "keeps its occupant in place" if it has one — a locked
+    // but empty desk (occupant removed, or locked before ever being filled) has
+    // nothing to pin, so treat it as free rather than losing it from the chart.
+    if (!sid) continue;
+    lockedDesks.add(d.id);
+    seedDesk[d.id] = sid; seedStudent[sid] = d.id; lockedSids.add(sid);
   }
   const freeDesks = section.desks.filter(d => !lockedDesks.has(d.id)).map(d => d.id);
   const toPlace = section.students.filter(st => !lockedSids.has(st.id)).map(st => st.id);

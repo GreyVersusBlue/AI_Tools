@@ -81,10 +81,15 @@
     var page = pageSize(opts.orientation);
     var usableW = page.w - MARGIN * 2;
     var usableH = page.h - MARGIN * 2;
-    var min = opts.min, max = opts.max, interval = Math.max(1e-6, opts.interval);
+    // A typed 0, negative, or non-numeric interval must not survive as a tiny
+    // positive one (Math.max(1e-6, -1) is still 1e-6) — that turns a normal
+    // range into tens of millions of ticks and hangs the tab.
+    var interval = Math.abs(opts.interval) || 1;
+    var min = opts.min, max = opts.max;
+    if (!(max > min)) max = min + interval; // zero/inverted range → one tick, not NaN/Infinity
     var labelEvery = Math.max(1, Math.round(opts.labelEvery));
     var copies = Math.max(1, Math.round(opts.copies));
-    var tickCount = Math.max(1, Math.round((max - min) / interval));
+    var tickCount = Math.min(2000, Math.max(1, Math.round((max - min) / interval)));
 
     var spacing = usableH / copies;
     var parts = [];
@@ -119,7 +124,9 @@
     var xMax = opts.xMax;
     var yMin = opts.quadrants === 'first' ? 0 : opts.yMin;
     var yMax = opts.yMax;
-    var interval = Math.max(1e-6, opts.interval);
+    var interval = Math.abs(opts.interval) || 1;
+    if (!(xMax > xMin)) xMax = xMin + interval;
+    if (!(yMax > yMin)) yMax = yMin + interval;
     var labelEvery = Math.max(1, Math.round(opts.labelEvery));
 
     var xRange = xMax - xMin, yRange = yMax - yMin;
@@ -131,8 +138,8 @@
     function toSvgX(v) { return offsetX + (v - xMin) * scale; }
     function toSvgY(v) { return offsetY + (yMax - v) * scale; } // SVG y grows downward
 
-    var xTicks = Math.round(xRange / interval);
-    var yTicks = Math.round(yRange / interval);
+    var xTicks = Math.min(2000, Math.round(xRange / interval));
+    var yTicks = Math.min(2000, Math.round(yRange / interval));
     var parts = [];
 
     for (var i = 0; i <= xTicks; i++) {

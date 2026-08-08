@@ -131,7 +131,7 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
-    #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
     .cert { box-shadow: none; width: 100vw; max-width: none; aspect-ratio: auto; height: 100vh; page-break-after: always; }
     .cert:last-child { page-break-after: auto; }
     @page { size: letter landscape; margin: 0.35in; }
@@ -230,6 +230,15 @@
    'previewArea','previewNote'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
+  // toISOString() renders in UTC, which rolls to tomorrow's date in the evening
+  // for any timezone behind UTC (all of North America) — use the local date.
+  function todayLocalISO() {
+    var d = new Date();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+
   var settings = {
     theme: 'elegant',
     border: 'double-line',
@@ -239,7 +248,7 @@
     awardTitle: 'Certificate of Achievement',
     awardTitleCustom: '',
     reason: '',
-    certDate: new Date().toISOString().slice(0, 10),
+    certDate: todayLocalISO(),
     signature: ''
   };
 

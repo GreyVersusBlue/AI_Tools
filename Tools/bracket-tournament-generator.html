@@ -259,7 +259,12 @@
       rounds.push(new Array(count).fill(false));
     }
 
-    return { name: name, slots: rounds };
+    /* winnerSide records WHICH source slot (its absolute index within the
+       earlier round) won each match, keyed "roundIndex_matchIndex" — needed
+       because two contestants can share a name, so comparing the winner's
+       *name* against a slot's name (as round rendering used to) can't tell
+       them apart. */
+    return { name: name, slots: rounds, winnerSide: {} };
   }
 
   /* Auto-advance byes: if exactly one of a pair is a real name and the
@@ -280,8 +285,8 @@
              undecided match is `false` — loose `== null` would match a real
              null bye only (false != null, so this is already safe either
              way), kept strict for clarity. */
-          if (a && b === null) { next[m] = a; changed = true; }
-          else if (b && a === null) { next[m] = b; changed = true; }
+          if (a && b === null) { next[m] = a; s.winnerSide[(r + 1) + '_' + m] = m * 2; changed = true; }
+          else if (b && a === null) { next[m] = b; s.winnerSide[(r + 1) + '_' + m] = m * 2 + 1; changed = true; }
         }
       }
     }
@@ -346,16 +351,17 @@
               slotEl.className = 'slot slot-empty';
             } else if (decidedWinner !== false) {
               slotEl.textContent = contestant;
-              slotEl.className = 'slot slot-decided' + (decidedWinner === contestant ? ' slot-winner' : '');
+              slotEl.className = 'slot slot-decided' + (state.winnerSide[(r + 1) + '_' + m] === idx ? ' slot-winner' : '');
             } else {
               slotEl.textContent = contestant;
               slotEl.className = 'slot';
-              slotEl.addEventListener('click', (function (roundIdx, matchIdx, name) {
+              slotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx) {
                 return function () {
                   state.slots[roundIdx + 1][matchIdx] = name;
+                  state.winnerSide[(roundIdx + 1) + '_' + matchIdx] = sourceIdx;
                   render();
                 };
-              })(r, m, contestant));
+              })(r, m, contestant, idx));
             }
             matchWrap.appendChild(slotEl);
           });
@@ -390,6 +396,7 @@
     var loaded = BracketStore.loadBracket(name);
     if (!loaded) return;
     state = loaded;
+    if (!state.winnerSide) state.winnerSide = {}; // brackets saved before this field existed
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
