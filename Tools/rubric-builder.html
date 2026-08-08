@@ -82,6 +82,9 @@
   .criterion-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
   .criterion-head input.crit-name { flex: 1; min-width: 0; margin-bottom: 0; font-weight: 700; }
   .criterion-head .btns { display: flex; gap: .3rem; flex-shrink: 0; }
+  .crit-weight-wrap { display: flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+  .crit-weight-label { font-size: .8rem; color: var(--muted); font-weight: 700; }
+  .crit-weight-wrap input.crit-weight { width: 3.6rem; margin-bottom: 0; text-align: center; padding: .4rem .3rem; }
   .criterion-cells { display: grid; gap: .5rem; }
   .cell-wrap { min-width: 0; }
   .cell-label { font-size: .72rem; font-weight: 600; color: var(--muted); margin-bottom: .2rem; }
@@ -208,6 +211,16 @@
 
   function nextId(prefix) { return prefix + (idCounter++); }
 
+  /** Backfills `weight` (default 1) on criteria loaded from before this field
+      existed — old saves, JSON imports, and shared links alike. */
+  function normalizeCriteria(criteria) {
+    (criteria || []).forEach(function (c) {
+      var w = Number(c.weight);
+      c.weight = (isFinite(w) && w > 0) ? w : 1;
+    });
+    return criteria;
+  }
+
   function bumpIdCounterFromState() {
     var max = 0;
     state.levels.concat(state.criteria).forEach(function (item) {
@@ -316,6 +329,24 @@
       nameInput.placeholder = 'Criterion name';
       nameInput.addEventListener('input', function () { crit.name = nameInput.value; renderPreview(); });
 
+      var weightWrap = document.createElement('div');
+      weightWrap.className = 'crit-weight-wrap';
+      var weightLabel = document.createElement('span');
+      weightLabel.className = 'crit-weight-label';
+      weightLabel.textContent = '×';
+      var weightInput = document.createElement('input');
+      weightInput.type = 'number'; weightInput.min = '0.1'; weightInput.step = '0.1';
+      weightInput.className = 'crit-weight'; weightInput.value = crit.weight;
+      weightInput.title = 'Point multiplier for this criterion — e.g. 2 to make it worth double the others';
+      weightInput.setAttribute('aria-label', 'Point weight for ' + (crit.name || 'this criterion'));
+      weightInput.addEventListener('input', function () {
+        var v = parseFloat(weightInput.value);
+        crit.weight = (isFinite(v) && v > 0) ? v : 1;
+        renderPreview();
+      });
+      weightWrap.appendChild(weightLabel);
+      weightWrap.appendChild(weightInput);
+
       var btns = document.createElement('div');
       btns.className = 'btns';
       var upBtn = document.createElement('button');
@@ -339,7 +370,7 @@
         renderEditor(); renderPreview();
       });
       btns.appendChild(upBtn); btns.appendChild(downBtn); btns.appendChild(removeBtn);
-      head.appendChild(nameInput); head.appendChild(btns);
+      head.appendChild(nameInput); head.appendChild(weightWrap); head.appendChild(btns);
       block.appendChild(head);
 
       var cellsGrid = document.createElement('div');
@@ -365,16 +396,25 @@
   }
 
   /* ---------- preview / print table (also used to compute total points) ---------- */
+  function fmtNum(n) {
+    return String(Math.round(n * 100) / 100);
+  }
+
+  function maxLevelPoints() {
+    return state.levels.length ? state.levels.reduce(function (m, l) { return Math.max(m, Number(l.points) || 0); }, -Infinity) : 0;
+  }
+
   function totalPossiblePoints() {
     if (!state.levels.length) return 0;
-    var maxPts = state.levels.reduce(function (m, l) { return Math.max(m, Number(l.points) || 0); }, -Infinity);
-    return maxPts * state.criteria.length;
+    var maxPts = maxLevelPoints();
+    return state.criteria.reduce(function (sum, c) { return sum + maxPts * (c.weight || 1); }, 0);
   }
 
   function updateTotalPointsDisplay() {
-    var maxPts = state.levels.length ? state.levels.reduce(function (m, l) { return Math.max(m, Number(l.points) || 0); }, -Infinity) : 0;
-    els.totalPoints.textContent = 'Total possible points: ' + totalPossiblePoints() +
-      ' (' + state.criteria.length + ' criteria × ' + maxPts + ' pts)';
+    var maxPts = maxLevelPoints();
+    var isWeighted = state.criteria.some(function (c) { return (c.weight || 1) !== 1; });
+    els.totalPoints.textContent = 'Total possible points: ' + fmtNum(totalPossiblePoints()) +
+      ' (' + state.criteria.length + ' criteria' + (isWeighted ? ', weighted' : (' × ' + fmtNum(maxPts) + ' pts')) + ')';
   }
 
   function rubricTableHtml() {
@@ -384,12 +424,17 @@
 
     var bodyRows;
     if (state.criteria.length) {
+      var maxPts = maxLevelPoints();
       bodyRows = state.criteria.map(function (c) {
         var cells = state.levels.map(function (l) {
           var text = escapeHtml(c.cells[l.id] || '').replace(/\n/g, '<br>');
           return '<td>' + text + '</td>';
         }).join('');
-        return '<tr><th class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + '</th>' + cells + '</tr>';
+        var weight = c.weight || 1;
+        var weightNote = weight !== 1
+          ? '<span class="pts">&times;' + escapeHtml(fmtNum(weight)) + ' &middot; up to ' + escapeHtml(fmtNum(maxPts * weight)) + ' pts</span>'
+          : '';
+        return '<tr><th class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + weightNote + '</th>' + cells + '</tr>';
       }).join('');
     } else {
       bodyRows = '<tr><td class="empty-row" colspan="' + (state.levels.length + 1) + '">No criteria yet.</td></tr>';
@@ -438,6 +483,7 @@
     state = loaded;
     if (!state.levels) state.levels = defaultLevels();
     if (!state.criteria) state.criteria = [];
+    normalizeCriteria(state.criteria);
     bumpIdCounterFromState();
     RubricStore.setCurrentName(name);
     renderAll();
@@ -466,7 +512,7 @@
     state.criteria = tmpl.criteria.map(function (c) {
       var cells = {};
       c.cells.forEach(function (text, idx) { cells[levelIds[idx]] = text; });
-      return { id: nextId('crit'), name: c.name, cells: cells };
+      return { id: nextId('crit'), name: c.name, weight: 1, cells: cells };
     });
     if (!state.title) state.title = tmpl.label;
     renderEditor(); renderPreview();
@@ -482,7 +528,7 @@
   els.addCriterionBtn.addEventListener('click', function () {
     var cells = {};
     state.levels.forEach(function (l) { cells[l.id] = ''; });
-    state.criteria.push({ id: nextId('crit'), name: 'New Criterion', cells: cells });
+    state.criteria.push({ id: nextId('crit'), name: 'New Criterion', weight: 1, cells: cells });
     renderEditor(); renderPreview();
   });
 
@@ -547,7 +593,7 @@
         return;
       }
       var name = uniqueRubricName(decoded.name || decoded.title || 'Imported Rubric');
-      state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria };
+      state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: normalizeCriteria(decoded.criteria) };
       bumpIdCounterFromState();
       RubricStore.saveRubric(name, state);
       RubricStore.setCurrentName(name);
@@ -596,7 +642,7 @@
       return false;
     }
     var name = uniqueRubricName(decoded.name || decoded.title || 'Shared Rubric');
-    state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria };
+    state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: normalizeCriteria(decoded.criteria) };
     bumpIdCounterFromState();
     RubricStore.saveRubric(name, state);
     RubricStore.setCurrentName(name);

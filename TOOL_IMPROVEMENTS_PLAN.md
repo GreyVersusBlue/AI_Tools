@@ -105,10 +105,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A tap-destination-then-tap-student sign-out board per class section, with a live "currently out" list (auto-flagging trips over a per-destination overtime threshold, with a pulsing visual alert and an optional audible beep the first time a trip crosses it), a same-day activity feed, a "This Week" per-destination/per-student trip-count summary, day-archiving to history, and a printable report for today or any archived day.
 
 ### Backup & Restore (`Tools/backup-restore.html`)
-**Current state:** Scans every key in the browser's localStorage, groups them under friendly per-tool labels via a hardcoded lookup table, and can export everything to one JSON file or merge-restore a previously exported file back in.
-**Suggested improvements:**
-- Add a selective export/restore mode — check off specific tools/groups instead of always backing up or restoring everything, useful when a teacher only wants to move, say, Name Picker rosters to a new computer without dragging along every other tool's data.
-- Make the pre-restore overwrite warning more specific — the current preview only shows an aggregate overwrite count per tool group; listing which specific saved items (e.g. which named roster, which trip template) would be overwritten would reduce the risk of silently losing a specific record buried inside a group.
+**Current state:** Scans every key in the browser's localStorage, groups them under friendly per-tool labels via a hardcoded lookup table, and can selectively export or merge-restore just the checked tool groups, with a restore preview that names the specific saved items (e.g. which named roster) an overwrite would touch where that detail is available.
 
 ---
 
@@ -133,9 +130,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a custom Y-axis label field independent of the column header, since right now the axis title is always just the source column name.
 
 ### Rubric Builder (`Tools/rubric-builder.html`)
-**Current state:** Template-or-scratch rubric builder with fully editable performance levels and criteria, a live one-page landscape print preview, multiple named rubrics in localStorage, a working URL-based share link via `_shared/state-link.js`, JSON export/import of a single rubric, and a "Duplicate" action.
-**Suggested improvements:**
-- Support optional per-criterion point weighting (a multiplier) for teachers who want, say, "Thesis" worth double "Grammar" — currently every criterion shares the same level-point scale.
+**Current state:** Template-or-scratch rubric builder with fully editable performance levels, criteria (each with an optional point-weight multiplier), a live one-page landscape print preview, multiple named rubrics in localStorage, a working URL-based share link via `_shared/state-link.js`, JSON export/import of a single rubric, and a "Duplicate" action.
 
 ---
 
@@ -178,11 +173,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add JSON export/import of a sheet (download/upload) for backup or sharing between a teacher's home and school computer, independent of localStorage.
 
 ### Prompt Builder (`Tools/prompt-builder.html`)
-**Current state:** A no-AI, pure-template tool that turns filled-in fields (teaching context, task type, differentiation, format/guardrails) into a ready-to-copy prompt, with five built-in presets, simple/advanced modes, a completeness meter, autosave, URL-based sharing, and one-click "open in Claude/ChatGPT/Gemini."
-**Suggested improvements:**
-- Let a teacher save their own custom presets (beyond the 5 built-in ones) to localStorage, the way Rubric/Formula Sheet Builder save multiple named documents — useful for a recurring prompt shape like "weekly parent update email."
-- Keep a short local history of the last few generated prompts so a teacher can recover yesterday's prompt without re-filling the form.
-- Add a `navigator.share` button on mobile so the finished prompt can be shared straight into the ChatGPT/Claude app rather than only copy-and-switch-app.
+**Current state:** A no-AI, pure-template tool that turns filled-in fields (teaching context, task type, differentiation, format/guardrails) into a ready-to-copy prompt, with five built-in presets plus teacher-saved custom presets, simple/advanced modes, a completeness meter, autosave, a short local history of recently used prompts, URL-based sharing, a `navigator.share` button on supporting devices, and one-click "open in Claude/ChatGPT/Gemini."
 
 ---
 
@@ -250,10 +241,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## QR Codes & Trackers
 
 ### QR Code Generator (`Tools/qr-code-generator.html`)
-**Current state:** Generates a single QR code from typed text/a link — or a quick-fill template for a Wi-Fi network, vCard contact, phone number, or email — with adjustable size, colors, error-correction level, and an optional center logo or short-text overlay, self-verifying scannability with an offline jsQR decode before enabling PNG/SVG download or direct printing.
-**Suggested improvements:**
-- Save a small "recently generated" list (last 5–10 codes, label + text) to localStorage so a teacher can quickly regenerate a room/station code from an earlier session instead of retyping it.
-- Offer an actual camera-based test scan (reusing the site's shared `_shared/qr-scan.js`) so a teacher can point their device at a printed copy and confirm it still reads after paper/toner/glare, rather than relying only on the synthetic canvas decode.
+**Current state:** Generates a single QR code from typed text/a link — or a quick-fill template for a Wi-Fi network, vCard contact, phone number, or email — with adjustable size, colors, error-correction level, an optional center logo or short-text overlay, a "recently generated" list of the last 10 codes, and a live camera-based test scan (via `_shared/qr-scan.js`) alongside the synthetic canvas decode check, before enabling PNG/SVG download or direct printing.
 
 ### QR Scavenger Hunt Builder (`Tools/qr-scavenger-hunt-builder.html`)
 **Current state:** Lets a teacher type or paste a list of stations (label, QR content, private answer-key note), then print a grid of station QR codes at a chosen density plus a separate answer key, with the current single hunt autosaved to localStorage.
@@ -288,10 +276,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a lightweight "days logged this week" streak indicator per student to flag kids who've gone quiet, since the summary currently only totals pages/minutes, not entry frequency.
 
 ### Lab Safety Contract Tracker (`Tools/lab-safety-contract-tracker.html`)
-**Current state:** Tracks one signed/unsigned status per student per class (with date and optional note), showing a live "N of M signed" count, a due-date urgency banner, a "show missing only" list filter, a bulk "mark all as signed" action, and printable full/missing-only reports.
-**Suggested improvements:**
-- Support more than one required document per student (e.g., "Lab Safety" plus "Chemical Handling") as separate checkable items instead of a single signed/unsigned boolean, since many science classes require multiple signed forms.
-- Add a "download reminder" button that generates a `.ics` calendar file for the due date, so it lands on the teacher's own calendar app rather than relying solely on the in-page banner.
+**Current state:** Tracks one or more editable required documents (e.g. "Lab Safety Contract" plus "Chemical Handling") with a separate signed/unsigned status per student per document (each with date and a shared optional note), showing a live "N of M fully signed" count with a per-document breakdown, a due-date urgency banner with a "download reminder" `.ics` calendar file, a "show missing only" list filter, a bulk "mark all as signed" action, and printable full/missing-only reports.
 
 ### Exit Ticket / Bell Ringer Generator (`Tools/exit-ticket-generator.html`)
 **Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display, a custom-prompt box, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips.

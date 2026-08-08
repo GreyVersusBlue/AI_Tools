@@ -85,6 +85,18 @@
   .missing-chip { background: #fbeceA; border: 1px solid var(--err); color: var(--err); border-radius: 999px; padding: .25rem .7rem; font-size: .82rem; font-weight: 600; }
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 1.4rem 1rem; }
 
+  .doc-breakdown { display: flex; flex-wrap: wrap; gap: .4rem; margin: .4rem 0; }
+  .doc-breakdown-chip { background: #eaf1f5; border: 1px solid #c9dbe3; color: var(--accent-2); border-radius: 999px; padding: .2rem .65rem; font-size: .78rem; font-weight: 600; }
+
+  /* ── Required documents editor ────────────────────────────────────── */
+  .doc-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+  .doc-row input[type="text"] { flex: 1; margin-bottom: 0; }
+  .doc-remove-btn {
+    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
+  }
+  .doc-remove-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+
   /* ── Student rows ─────────────────────────────────────────────────── */
   .student-rows { display: flex; flex-direction: column; gap: .5rem; }
   .student-row {
@@ -105,6 +117,8 @@
   .s-date { width: auto; flex-shrink: 0; max-width: 9.5rem; margin-bottom: 0; font-size: .82rem; padding: .4rem .5rem; }
   .s-note { flex: 1 1 180px; min-width: 140px; margin-bottom: 0; font-size: .82rem; padding: .4rem .55rem; }
   .s-note::placeholder { color: #a9a79d; }
+  .doc-groups { display: flex; gap: .8rem; flex-wrap: wrap; }
+  .doc-group { display: flex; align-items: center; gap: .35rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -169,11 +183,21 @@
   </div>
 
   <div class="card">
+    <div class="card-title"><span>Required documents</span><button class="secondary small" id="addDocBtn" type="button">+ Add document</button></div>
+    <div id="docsEditor"></div>
+    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms.</p>
+  </div>
+
+  <div class="card">
     <div class="card-title"><span>Class summary</span></div>
     <div class="summary-stat">
       <span class="big" id="summaryCount">0 of 0 signed</span>
     </div>
+    <div class="doc-breakdown" id="docBreakdown" style="display:none;"></div>
     <p class="due-note" id="dueNote" style="display:none;"></p>
+    <div class="btn-row" style="margin-bottom:.6rem;">
+      <button type="button" class="secondary small" id="downloadReminderBtn" style="display:none;">Add lab-day reminder to calendar (.ics)</button>
+    </div>
     <div id="missingWrap">
       <p class="hint" id="allSignedHint" style="display:none;margin:0;">Everyone is cleared for lab day.</p>
       <div class="missing-list" id="missingList"></div>
@@ -234,15 +258,20 @@
     'toolbar', 'sectionSwitch', 'newSectionBtn', 'deleteSectionBtn',
     'sectionName', 'dueDate',
     'rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'rosterCount',
-    'summaryCount', 'dueNote', 'missingWrap', 'allSignedHint', 'missingList', 'noRosterHint',
+    'docsEditor', 'addDocBtn',
+    'summaryCount', 'docBreakdown', 'dueNote', 'downloadReminderBtn', 'missingWrap', 'allSignedHint', 'missingList', 'noRosterHint',
     'studentRows', 'noStudentsHint', 'allCaughtUpHint', 'missingOnlyToggle', 'markAllSignedBtn',
     'printFullBtn', 'printMissingBtn',
     'printFullArea', 'printFullTitle', 'printFullSub', 'printFullBody',
     'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  // state = { name, dueDate, roster: [names...], contracts: { name: {signed, date, note} } }
+  // state = { name, dueDate, documents: [{id,label}], roster: [names...],
+  //           contracts: { name: { docs: { docId: {signed,date} }, note } } }
   var state = null;
+  var docIdCounter = 0;
+  function nextDocId() { docIdCounter++; return 'doc' + Date.now() + docIdCounter; }
+  function defaultDocuments() { return [{ id: nextDocId(), label: 'Lab Safety Contract' }]; }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -282,7 +311,7 @@
   function saveCurrentState() {
     if (!state) return;
     var all = readAllSections();
-    all[state.name] = { roster: state.roster, contracts: state.contracts, dueDate: state.dueDate };
+    all[state.name] = { roster: state.roster, contracts: state.contracts, dueDate: state.dueDate, documents: state.documents };
     writeAllSections(all);
   }
   function deleteSectionData(name) {
@@ -302,7 +331,46 @@
     return text.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
   }
 
-  function defaultContract() { return { signed: false, date: '', note: '' }; }
+  function defaultContract() { return { docs: {}, note: '' }; }
+
+  /** Read-only lookup of one student's status for one document — never
+      mutates state, so it's safe to call from render code. */
+  function getDoc(name, docId) {
+    var c = state.contracts[name];
+    return (c && c.docs && c.docs[docId]) || { signed: false, date: '' };
+  }
+  function setDocSigned(name, docId, signed) {
+    var c = state.contracts[name] || (state.contracts[name] = defaultContract());
+    if (!c.docs) c.docs = {};
+    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '' });
+    d.signed = signed;
+    if (signed && !d.date) d.date = todayStr();
+  }
+  function setDocDate(name, docId, dateVal) {
+    var c = state.contracts[name] || (state.contracts[name] = defaultContract());
+    if (!c.docs) c.docs = {};
+    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '' });
+    d.date = dateVal;
+  }
+  function isFullySigned(name) {
+    return state.documents.every(function (d) { return getDoc(name, d.id).signed; });
+  }
+
+  /** Converts contract records saved before multi-document support existed
+      (a flat {signed, date, note} per student) into the new {docs, note}
+      shape, mapping the old single boolean onto today's first document so
+      existing "N of M signed" history isn't lost. */
+  function migrateContracts() {
+    var firstDocId = state.documents.length ? state.documents[0].id : null;
+    Object.keys(state.contracts).forEach(function (name) {
+      var c = state.contracts[name];
+      if (!c || typeof c !== 'object') { state.contracts[name] = defaultContract(); return; }
+      if (c.docs && typeof c.docs === 'object') return; // already in the new shape
+      var docs = {};
+      if (firstDocId) docs[firstDocId] = { signed: !!c.signed, date: c.date || '' };
+      state.contracts[name] = { docs: docs, note: c.note || '' };
+    });
+  }
 
   /* ---------- section lifecycle ---------- */
   function refreshSectionSwitch() {
@@ -317,7 +385,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, dueDate: '', roster: [], contracts: {} };
+    state = { name: name, dueDate: '', documents: defaultDocuments(), roster: [], contracts: {} };
     setCurrentName(name);
     saveCurrentState();
     applyStateToForm();
@@ -329,7 +397,14 @@
   function loadSection(name) {
     var data = loadSectionData(name);
     if (!data) return;
-    state = { name: name, dueDate: data.dueDate || '', roster: data.roster || [], contracts: data.contracts || {} };
+    state = {
+      name: name,
+      dueDate: data.dueDate || '',
+      documents: (Array.isArray(data.documents) && data.documents.length) ? data.documents : defaultDocuments(),
+      roster: data.roster || [],
+      contracts: data.contracts || {}
+    };
+    migrateContracts();
     setCurrentName(name);
     applyStateToForm();
     refreshSectionSwitch();
@@ -342,7 +417,48 @@
     els.dueDate.value = state.dueDate || '';
     els.rosterInput.value = state.roster.join('\n');
     els.rosterCount.textContent = state.roster.length + ' student' + (state.roster.length === 1 ? '' : 's');
+    renderDocsEditor();
   }
+
+  /* ---------- required documents editor ---------- */
+  function renderDocsEditor() {
+    els.docsEditor.innerHTML = state.documents.map(function (d) {
+      return '<div class="doc-row" data-id="' + escapeAttr(d.id) + '">' +
+        '<input type="text" class="doc-label" value="' + escapeAttr(d.label) + '">' +
+        (state.documents.length > 1
+          ? '<button type="button" class="doc-remove-btn" data-remove-doc="' + escapeAttr(d.id) + '" title="Remove document">&#10005;</button>'
+          : '') +
+        '</div>';
+    }).join('');
+  }
+
+  els.docsEditor.addEventListener('input', function (e) {
+    var row = e.target.closest('.doc-row');
+    if (!row) return;
+    var doc = state.documents.filter(function (d) { return d.id === row.dataset.id; })[0];
+    if (!doc || !e.target.classList.contains('doc-label')) return;
+    doc.label = e.target.value;
+    saveCurrentState();
+    renderAll();
+  });
+
+  els.docsEditor.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-doc]');
+    if (!btn || state.documents.length <= 1) return;
+    if (!confirm('Remove this required document? Existing signed/unsigned records for it are kept but hidden.')) return;
+    state.documents = state.documents.filter(function (d) { return d.id !== btn.dataset.removeDoc; });
+    renderDocsEditor();
+    saveCurrentState();
+    renderAll();
+  });
+
+  els.addDocBtn.addEventListener('click', function () {
+    if (!state) return;
+    state.documents.push({ id: nextDocId(), label: 'New Document' });
+    renderDocsEditor();
+    saveCurrentState();
+    renderAll();
+  });
 
   els.sectionName.addEventListener('change', function () {
     if (!state) return;
@@ -435,21 +551,27 @@
     els.noStudentsHint.style.display = state.roster.length ? 'none' : '';
     var onlyMissing = els.missingOnlyToggle.checked;
     var visible = onlyMissing
-      ? state.roster.filter(function (name) { return !(state.contracts[name] || defaultContract()).signed; })
+      ? state.roster.filter(function (name) { return !isFullySigned(name); })
       : state.roster;
     els.allCaughtUpHint.style.display = (onlyMissing && state.roster.length && !visible.length) ? '' : 'none';
     els.studentRows.innerHTML = '';
     visible.forEach(function (name) {
       var c = state.contracts[name] || defaultContract();
       var row = document.createElement('div');
-      row.className = 'student-row ' + (c.signed ? 'signed' : 'unsigned');
+      row.className = 'student-row ' + (isFullySigned(name) ? 'signed' : 'unsigned');
       row.dataset.name = name;
+      var docsHtml = state.documents.map(function (docDef) {
+        var d = getDoc(name, docDef.id);
+        return '<span class="doc-group">' +
+          '<button type="button" class="status-toggle' + (d.signed ? ' is-signed' : '') + '" data-toggle="' + escapeAttr(name) + '" data-doc="' + escapeAttr(docDef.id) + '">' +
+            (d.signed ? '✓ ' + escapeHtml(docDef.label) : escapeHtml(docDef.label)) +
+          '</button>' +
+          '<input type="date" class="s-date" data-date="' + escapeAttr(name) + '" data-doc="' + escapeAttr(docDef.id) + '" value="' + escapeAttr(d.date || '') + '" aria-label="Date received — ' + escapeAttr(docDef.label) + ' for ' + escapeAttr(name) + '">' +
+          '</span>';
+      }).join('');
       row.innerHTML =
         '<span class="s-name">' + escapeHtml(name) + '</span>' +
-        '<button type="button" class="status-toggle' + (c.signed ? ' is-signed' : '') + '" data-toggle="' + escapeAttr(name) + '">' +
-          (c.signed ? '✓ Signed' : 'Mark signed') +
-        '</button>' +
-        '<input type="date" class="s-date" data-date="' + escapeAttr(name) + '" value="' + escapeAttr(c.date || '') + '" aria-label="Date received for ' + escapeAttr(name) + '">' +
+        '<span class="doc-groups">' + docsHtml + '</span>' +
         '<input type="text" class="s-note" data-note="' + escapeAttr(name) + '" value="' + escapeAttr(c.note || '') + '" placeholder="Note (optional)" aria-label="Note for ' + escapeAttr(name) + '">';
       els.studentRows.appendChild(row);
     });
@@ -459,9 +581,8 @@
     var btn = ev.target.closest('[data-toggle]');
     if (!btn) return;
     var name = btn.dataset.toggle;
-    var c = state.contracts[name] || (state.contracts[name] = defaultContract());
-    c.signed = !c.signed;
-    if (c.signed && !c.date) c.date = todayStr();
+    var docId = btn.dataset.doc;
+    setDocSigned(name, docId, !getDoc(name, docId).signed);
     saveCurrentState();
     renderAll();
   });
@@ -470,9 +591,7 @@
     var dateInput = ev.target.closest('[data-date]');
     var noteInput = ev.target.closest('[data-note]');
     if (dateInput) {
-      var name1 = dateInput.dataset.date;
-      var c1 = state.contracts[name1] || (state.contracts[name1] = defaultContract());
-      c1.date = dateInput.value || '';
+      setDocDate(dateInput.dataset.date, dateInput.dataset.doc, dateInput.value || '');
       saveCurrentState();
       renderSummary();
       return;
@@ -489,16 +608,15 @@
 
   els.markAllSignedBtn.addEventListener('click', function () {
     if (!state || !state.roster.length) return;
-    var toMark = state.roster.filter(function (name) {
-      return !(state.contracts[name] || defaultContract()).signed;
-    });
+    var toMark = state.roster.filter(function (name) { return !isFullySigned(name); });
     if (!toMark.length) return;
-    if (!confirm('Mark all ' + toMark.length + ' remaining student' + (toMark.length === 1 ? '' : 's') + ' as signed today?')) return;
-    var today = todayStr();
+    var confirmMsg = 'Mark all ' + toMark.length + ' remaining student' + (toMark.length === 1 ? '' : 's') +
+      ' as signed for every required document, today?';
+    if (!confirm(confirmMsg)) return;
     toMark.forEach(function (name) {
-      var c = state.contracts[name] || (state.contracts[name] = defaultContract());
-      c.signed = true;
-      if (!c.date) c.date = today;
+      state.documents.forEach(function (docDef) {
+        if (!getDoc(name, docDef.id).signed) setDocSigned(name, docDef.id, true);
+      });
     });
     saveCurrentState();
     renderAll();
@@ -510,11 +628,14 @@
     var signed = 0;
     var missing = [];
     state.roster.forEach(function (name) {
-      var c = state.contracts[name] || defaultContract();
-      if (c.signed) signed++;
+      if (isFullySigned(name)) signed++;
       else missing.push(name);
     });
-    return { total: total, signed: signed, missing: missing };
+    var perDoc = state.documents.map(function (d) {
+      var count = state.roster.filter(function (name) { return getDoc(name, d.id).signed; }).length;
+      return { id: d.id, label: d.label, count: count };
+    });
+    return { total: total, signed: signed, missing: missing, perDoc: perDoc };
   }
 
   function daysUntil(iso) {
@@ -528,7 +649,16 @@
     els.noRosterHint.style.display = data.total ? 'none' : '';
     els.missingWrap.style.display = data.total ? '' : 'none';
 
-    els.summaryCount.textContent = data.signed + ' of ' + data.total + ' signed';
+    els.summaryCount.textContent = data.signed + ' of ' + data.total + (state.documents.length > 1 ? ' fully signed' : ' signed');
+
+    if (state.documents.length > 1 && data.total) {
+      els.docBreakdown.innerHTML = data.perDoc.map(function (d) {
+        return '<span class="doc-breakdown-chip">' + escapeHtml(d.label) + ': ' + d.count + '/' + data.total + '</span>';
+      }).join('');
+      els.docBreakdown.style.display = '';
+    } else {
+      els.docBreakdown.style.display = 'none';
+    }
 
     els.allSignedHint.style.display = (data.total && !data.missing.length) ? '' : 'none';
     els.missingList.innerHTML = data.missing.map(function (n) {
@@ -562,6 +692,7 @@
     } else {
       els.dueNote.style.display = 'none';
     }
+    els.downloadReminderBtn.style.display = state.dueDate ? '' : 'none';
   }
 
   function renderAll() {
@@ -581,12 +712,16 @@
     els.printFullTitle.textContent = state.name + ' — Lab Safety Contract Report';
     var dueBit = state.dueDate ? (' · Lab day: ' + formatDate(state.dueDate)) : '';
     els.printFullSub.textContent = 'Printed ' + formatDate(todayStr()) + dueBit;
+    document.querySelector('#printFullArea table thead tr').innerHTML =
+      '<th>Student</th>' + state.documents.map(function (d) { return '<th>' + escapeHtml(d.label) + '</th>'; }).join('') + '<th>Note</th>';
     els.printFullBody.innerHTML = state.roster.map(function (name) {
       var c = state.contracts[name] || defaultContract();
-      return '<tr><td>' + escapeHtml(name) + '</td>' +
-        '<td class="' + (c.signed ? 'status-yes' : 'status-no') + '">' + (c.signed ? 'Yes' : 'No') + '</td>' +
-        '<td>' + (c.date ? escapeHtml(formatDate(c.date)) : '—') + '</td>' +
-        '<td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
+      var docCells = state.documents.map(function (docDef) {
+        var d = getDoc(name, docDef.id);
+        return '<td class="' + (d.signed ? 'status-yes' : 'status-no') + '">' +
+          (d.signed ? ('Yes' + (d.date ? ' (' + escapeHtml(formatDate(d.date)) + ')' : '')) : 'No') + '</td>';
+      }).join('');
+      return '<tr><td>' + escapeHtml(name) + '</td>' + docCells + '<td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
     }).join('');
     activatePrint(els.printFullArea);
   });
@@ -594,15 +729,75 @@
   els.printMissingBtn.addEventListener('click', function () {
     if (!state) return;
     var data = summaryData();
+    var multiDoc = state.documents.length > 1;
     els.printMissingTitle.textContent = state.name + ' — Missing Lab Safety Contracts';
     var dueBit = state.dueDate ? (' · Needed before ' + formatDate(state.dueDate)) : '';
     els.printMissingSub.textContent = 'Printed ' + formatDate(todayStr()) + dueBit + ' · ' +
-      data.missing.length + ' of ' + data.total + ' still missing';
+      data.missing.length + ' of ' + data.total + ' still missing' + (multiDoc ? ' at least one document' : '');
+    document.querySelector('#printMissingArea table thead tr').innerHTML =
+      multiDoc ? '<th>Student</th><th>Missing</th><th>Note</th>' : '<th>Student</th><th>Note</th>';
     els.printMissingBody.innerHTML = (data.missing.length ? data.missing.map(function (name) {
       var c = state.contracts[name] || defaultContract();
+      if (multiDoc) {
+        var missingLabels = state.documents.filter(function (d) { return !getDoc(name, d.id).signed; })
+          .map(function (d) { return d.label; }).join(', ');
+        return '<tr><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(missingLabels) + '</td><td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
+      }
       return '<tr><td>' + escapeHtml(name) + '</td><td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
-    }).join('') : '<tr><td colspan="2">Everyone has turned theirs in.</td></tr>');
+    }).join('') : ('<tr><td colspan="' + (multiDoc ? 3 : 2) + '">Everyone has turned theirs in.</td></tr>'));
     activatePrint(els.printMissingArea);
+  });
+
+  /* ---------- lab-day reminder (.ics) ---------- */
+  function sanitizeFilename(s) {
+    return String(s || 'reminder').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'reminder';
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function icsTimestamp() {
+    var d = new Date();
+    return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + 'T' +
+      pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + pad2(d.getUTCSeconds()) + 'Z';
+  }
+  function icsEscape(s) {
+    return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  }
+  function buildIcsForDueDate() {
+    var compact = state.dueDate.replace(/-/g, '');
+    var next = new Date(state.dueDate + 'T00:00:00');
+    next.setDate(next.getDate() + 1);
+    var dtend = next.getFullYear() + pad2(next.getMonth() + 1) + pad2(next.getDate());
+    var data = summaryData();
+    var desc = data.missing.length
+      ? (data.missing.length + ' of ' + data.total + ' students still missing a signed contract as of the day this reminder was downloaded: ' + data.missing.join(', '))
+      : 'Everyone was cleared as of the day this reminder was downloaded.';
+    var uid = 'lsct-' + compact + '-' + sanitizeFilename(state.name).replace(/[^a-zA-Z0-9]/g, '') + '@aspermylessonplan.com';
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//AsPerMyLessonPlan.com//Lab Safety Contract Tracker//EN',
+      'BEGIN:VEVENT',
+      'UID:' + uid,
+      'DTSTAMP:' + icsTimestamp(),
+      'DTSTART;VALUE=DATE:' + compact,
+      'DTEND;VALUE=DATE:' + dtend,
+      'SUMMARY:' + icsEscape('Lab Safety Contracts Due — ' + state.name),
+      'DESCRIPTION:' + icsEscape(desc),
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+  }
+
+  els.downloadReminderBtn.addEventListener('click', function () {
+    if (!state || !state.dueDate) return;
+    var blob = new Blob([buildIcsForDueDate()], { type: 'text/calendar' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '-lab-day-reminder.ics';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   });
 
   /* ---------- boot ---------- */

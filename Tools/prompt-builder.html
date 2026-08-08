@@ -84,6 +84,22 @@
 
   .other-wrap{ display:none; margin-top: var(--space-2); }
 
+  .preset-chip{ display: inline-flex; align-items: stretch; }
+  .preset-chip .preset-btn{ border-radius: 4px 0 0 4px; }
+  .preset-remove{
+    background: none; border: 1px solid var(--color-divider); border-left: none; border-radius: 0 4px 4px 0;
+    opacity: .6; font-size: 12px; cursor: pointer; padding: 0 8px;
+  }
+  .preset-remove:hover{ opacity: 1; }
+  .custom-preset-row:empty{ display: none; }
+
+  .history-item{ display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; padding: var(--space-2) 0; border-top: 1px dashed var(--color-divider); }
+  .history-item:first-child{ border-top: none; }
+  .history-text{ font-size: 12.5px; line-height: 1.45; opacity: .85; flex: 1; min-width: 0; white-space: pre-wrap; }
+  .history-meta{ display: flex; align-items: center; gap: .4rem; flex-shrink: 0; }
+  .history-remove{ background: none; border: none; opacity: .5; cursor: pointer; font-size: 14px; padding: 2px 4px; }
+  .history-remove:hover{ opacity: 1; }
+
   .section-hint{ font-size: 12.5px; font-style: italic; opacity: 0.6; margin: calc(var(--space-2) * -1) 0 var(--space-3); line-height: 1.45; }
 
   #dynamicFields:empty{ display: none; }
@@ -152,8 +168,10 @@
         <button type="button" class="btn btn-secondary preset-btn" data-preset="rubric">Rubric</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="email">Parent email</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="differentiated">Differentiated materials</button>
+        <button type="button" class="btn btn-secondary" id="savePresetBtn">+ Save current as preset</button>
         <button type="button" class="btn btn-ghost preset-btn-clear" id="clearAllTop">Clear all fields</button>
       </div>
+      <div class="preset-row custom-preset-row" id="customPresetRow" style="margin-top: var(--space-2);"></div>
     </div>
 
     <div class="card blueprint section">
@@ -371,6 +389,7 @@
       <div class="action-row">
         <button type="button" class="btn btn-secondary" id="downloadBtn">Download .txt</button>
         <button type="button" class="btn btn-secondary" id="shareBtn">Copy shareable link</button>
+        <button type="button" class="btn btn-secondary" id="webShareBtn" style="display:none;">Share to app&hellip;</button>
       </div>
     </div>
 
@@ -381,6 +400,11 @@
         <button type="button" class="btn btn-secondary open-in-btn" data-url="https://chatgpt.com/">ChatGPT</button>
         <button type="button" class="btn btn-secondary open-in-btn" data-url="https://gemini.google.com/app">Gemini</button>
       </div>
+    </div>
+
+    <div class="card blueprint index-card" style="margin-top: var(--space-4);">
+      <div class="card-label"><span>Recent prompts</span></div>
+      <div id="promptHistoryWrap"></div>
     </div>
 
     <div class="how-it-works">
@@ -403,6 +427,8 @@
   const toneOtherWrap = $('toneOtherWrap');
   const toneOther = $('toneOther');
   const dynamicFieldsWrap = $('dynamicFields');
+  const customPresetRow = $('customPresetRow');
+  const promptHistoryWrap = $('promptHistoryWrap');
 
   const STATIC_IDS = [
     'name','grade','subject','classLevel','classSize','schoolContext',
@@ -708,30 +734,92 @@
     renderDynamicFields();
   }
 
-  function applyPreset(key){
-    const p = PRESETS[key];
-    if (!p) return;
-    clearAllFields();
-    setMode('advanced');
-    STATIC_IDS.forEach(id => { if (id in p) $(id).value = p[id]; });
-    if (p.toolTypeOther) toolTypeOther.value = p.toolTypeOther;
+  /** Shared by built-in presets, custom saved presets, and URL-param loading
+      alike — all three hand it the same {STATIC_IDS..., toolTypeOther,
+      toneOther, dyn} shape. */
+  function applyFieldsFromData(data){
+    STATIC_IDS.forEach(id => { if (data[id]) $(id).value = data[id]; });
+    if (data.toolTypeOther) toolTypeOther.value = data.toolTypeOther;
     toolTypeOtherWrap.style.display = toolTypeSelect.value === 'other' ? 'block' : 'none';
-    if (p.toneOther) toneOther.value = p.toneOther;
+    if (data.toneOther) toneOther.value = data.toneOther;
     toneOtherWrap.style.display = toneSelect.value === 'other' ? 'block' : 'none';
     renderDynamicFields();
-    if (p.dyn){
-      Object.keys(p.dyn).forEach(k => {
-        dynamicValues[k] = p.dyn[k];
+    if (data.dyn){
+      Object.keys(data.dyn).forEach(k => {
+        dynamicValues[k] = data.dyn[k];
         const el = $(k);
-        if (el) el.value = p.dyn[k];
+        if (el) el.value = data.dyn[k];
       });
     }
     build();
     saveDraft();
   }
 
+  function applyPreset(key){
+    const p = PRESETS[key];
+    if (!p) return;
+    clearAllFields();
+    setMode('advanced');
+    applyFieldsFromData(p);
+  }
+
   document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
     btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // ---- custom saved presets ----
+  const CUSTOM_PRESETS_KEY = 'promptBuilderCustomPresets_v1';
+  const CUSTOM_PRESETS_MAX = 20;
+
+  function loadCustomPresets(){
+    try { const v = JSON.parse(localStorage.getItem(CUSTOM_PRESETS_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+    catch(e){ return []; }
+  }
+  function saveCustomPresetsList(list){
+    try { localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(list.slice(0, CUSTOM_PRESETS_MAX))); } catch(e) {}
+  }
+  function snapshotFields(){
+    const data = { toolTypeOther: toolTypeOther.value, toneOther: toneOther.value, dyn: Object.assign({}, dynamicValues) };
+    STATIC_IDS.forEach(id => { data[id] = val(id); });
+    return data;
+  }
+  function renderCustomPresets(){
+    const list = loadCustomPresets();
+    customPresetRow.innerHTML = list.map((p, i) => (
+      '<span class="preset-chip">' +
+        '<button type="button" class="btn btn-secondary preset-btn" data-custom-i="' + i + '">' + esc(p.name) + '</button>' +
+        '<button type="button" class="preset-remove" data-remove-preset-i="' + i + '" aria-label="Delete preset ' + esc(p.name) + '">&times;</button>' +
+      '</span>'
+    )).join('');
+  }
+  customPresetRow.addEventListener('click', (e) => {
+    const applyBtn = e.target.closest('[data-custom-i]');
+    if (applyBtn){
+      const p = loadCustomPresets()[Number(applyBtn.dataset.customI)];
+      if (!p) return;
+      clearAllFields();
+      setMode('advanced');
+      applyFieldsFromData(p.data);
+      return;
+    }
+    const removeBtn = e.target.closest('[data-remove-preset-i]');
+    if (removeBtn){
+      const list = loadCustomPresets();
+      list.splice(Number(removeBtn.dataset.removePresetI), 1);
+      saveCustomPresetsList(list);
+      renderCustomPresets();
+    }
+  });
+  $('savePresetBtn').addEventListener('click', () => {
+    const data = snapshotFields();
+    const hasAny = STATIC_IDS.some(id => data[id]) || Object.keys(data.dyn || {}).some(k => data.dyn[k]);
+    if (!hasAny) { alert('Fill in at least one field before saving a preset.'); return; }
+    const name = prompt('Name this preset (e.g. "Weekly parent update email"):', '');
+    if (!name || !name.trim()) return;
+    const list = loadCustomPresets();
+    list.unshift({ name: name.trim().slice(0, 60), data: data });
+    saveCustomPresetsList(list);
+    renderCustomPresets();
   });
 
   // ---- reset / clear all ----
@@ -749,9 +837,65 @@
     copyPromptText(showCopyStatus);
   });
 
+  // ---- recent-prompts history (captured whenever a prompt is actually used —
+  //      copied, downloaded, shared, or sent to an AI tool — not on every
+  //      keystroke, so the list stays a handful of intentional snapshots) ----
+  const PROMPT_HISTORY_KEY = 'promptBuilderHistory_v1';
+  const PROMPT_HISTORY_MAX = 5;
+
+  function loadPromptHistory(){
+    try { const v = JSON.parse(localStorage.getItem(PROMPT_HISTORY_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+    catch(e){ return []; }
+  }
+  function savePromptHistory(list){
+    try { localStorage.setItem(PROMPT_HISTORY_KEY, JSON.stringify(list.slice(0, PROMPT_HISTORY_MAX))); } catch(e) {}
+  }
+  function addPromptToHistory(text){
+    if (!text) return;
+    const list = loadPromptHistory().filter(h => h.text !== text);
+    list.unshift({ text: text, ts: Date.now() });
+    savePromptHistory(list);
+    renderPromptHistory();
+  }
+  function renderPromptHistory(){
+    const list = loadPromptHistory();
+    if (!list.length){
+      promptHistoryWrap.innerHTML = '<p class="section-hint" style="margin:0;">Prompts you copy, download, or send to an AI tool are kept here for quick recovery.</p>';
+      return;
+    }
+    promptHistoryWrap.innerHTML = list.map((h, i) => (
+      '<div class="history-item">' +
+        '<div class="history-text">' + esc(h.text.slice(0, 140)) + (h.text.length > 140 ? '…' : '') + '</div>' +
+        '<div class="history-meta">' +
+          '<button type="button" class="btn btn-secondary" data-copy-hist-i="' + i + '">Copy</button>' +
+          '<button type="button" class="history-remove" data-remove-hist-i="' + i + '" aria-label="Remove this prompt from history">&times;</button>' +
+        '</div>' +
+      '</div>'
+    )).join('');
+  }
+  promptHistoryWrap.addEventListener('click', (e) => {
+    const copyBtn = e.target.closest('[data-copy-hist-i]');
+    if (copyBtn){
+      const h = loadPromptHistory()[Number(copyBtn.dataset.copyHistI)];
+      if (!h) return;
+      const done = () => showTempLabel(copyBtn, 'Copied!');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(h.text).then(done).catch(() => fallbackCopy(h.text, done));
+      else fallbackCopy(h.text, done);
+      return;
+    }
+    const removeBtn = e.target.closest('[data-remove-hist-i]');
+    if (removeBtn){
+      const list = loadPromptHistory();
+      list.splice(Number(removeBtn.dataset.removeHistI), 1);
+      savePromptHistory(list);
+      renderPromptHistory();
+    }
+  });
+
   function copyPromptText(cb){
     const text = output.innerText;
     if (!text || output.querySelector('.placeholder')) return;
+    addPromptToHistory(text);
     if (navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(text).then(cb).catch(() => fallbackCopy(text, cb));
     } else {
@@ -780,6 +924,7 @@
   $('downloadBtn').addEventListener('click', () => {
     const text = output.innerText;
     if (!text || output.querySelector('.placeholder')) return;
+    addPromptToHistory(text);
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -807,6 +952,18 @@
       fallbackCopy(url, shareStatus);
     }
   });
+
+  // ---- native share sheet (mobile) ----
+  if (navigator.share){
+    const webShareBtn = $('webShareBtn');
+    webShareBtn.style.display = '';
+    webShareBtn.addEventListener('click', () => {
+      const text = output.innerText;
+      if (!text || output.querySelector('.placeholder')) return;
+      addPromptToHistory(text);
+      navigator.share({ text: text }).catch(() => {});
+    });
+  }
 
   function showTempLabel(btn, text){
     const original = btn.textContent;
@@ -895,6 +1052,8 @@
   form.addEventListener('change', () => { build(); saveDraft(); });
 
   // ---- init ----
+  renderCustomPresets();
+  renderPromptHistory();
   renderDynamicFields();
   const cameFromParams = loadFromParams();
   if (!cameFromParams){
