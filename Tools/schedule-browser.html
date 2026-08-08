@@ -643,5 +643,12 @@ if (!Object.keys(BR_TEACHERS).length) {
   document.getElementById('br-empty-sub').textContent = 'Ask the publisher to re-export after adding rooms and groups.';
 }
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>

@@ -815,5 +815,12 @@ currentStudents = Array.from({length: MANUAL_COUNT}, () => ({ name:'', scores:[n
 document.getElementById('clear-all-btn').onclick = clearAllManual;
 renderManualCards();
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>
