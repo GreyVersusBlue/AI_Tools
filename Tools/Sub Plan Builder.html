@@ -308,10 +308,10 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   const DEFAULTS = {
     teacherName: "Devon Moore",
     periods: [
-      { label: "2", time: "" },
-      { label: "3", time: "" },
-      { label: "6", time: "" },
-      { label: "7", time: "" }
+      { label: "2", time: "", _id: "p0" },
+      { label: "3", time: "", _id: "p1" },
+      { label: "6", time: "", _id: "p2" },
+      { label: "7", time: "", _id: "p3" }
     ],
     rosterLocation: "blue substitute folder",
     absenceLocation: "blue substitute folder",
@@ -335,15 +335,30 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   // ---------- Standing details: load / save ----------
 
+  let nextPeriodId = 0;
+  function assignMissingPeriodIds(periods) {
+    // Notes are keyed by period `_id`, not array position, so a period
+    // added before this field existed (or restored from an older save)
+    // still needs a stable id assigned once, here, rather than every render.
+    (periods || []).forEach(p => { if (!p._id) p._id = 'p' + (nextPeriodId++); });
+  }
+
   function loadSettings() {
+    let out;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return JSON.parse(JSON.stringify(DEFAULTS));
-      const parsed = JSON.parse(raw);
-      return Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), parsed);
+      if (!raw) { out = JSON.parse(JSON.stringify(DEFAULTS)); }
+      else {
+        const parsed = JSON.parse(raw);
+        out = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), parsed);
+      }
     } catch (e) {
-      return JSON.parse(JSON.stringify(DEFAULTS));
+      out = JSON.parse(JSON.stringify(DEFAULTS));
     }
+    nextPeriodId = Math.max(0, ...out.periods.map(p =>
+      (typeof p._id === 'string' && /^p\d+$/.test(p._id)) ? parseInt(p._id.slice(1), 10) + 1 : 0), nextPeriodId);
+    assignMissingPeriodIds(out.periods);
+    return out;
   }
 
   let settings = loadSettings();
@@ -383,7 +398,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   }
 
   el('addPeriod').addEventListener('click', () => {
-    settings.periods.push({ label: '', time: '' });
+    settings.periods.push({ label: '', time: '', _id: 'p' + (nextPeriodId++) });
     renderPeriods();
     renderPerPeriodBlocks();
   });
@@ -468,7 +483,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     perPeriodWrap.innerHTML = '';
     settings.periods.forEach((p, i) => {
       const label = p.label || `Period ${i + 1}`;
-      const key = 'p' + i;
+      const key = p._id;
       const wrap = document.createElement('div');
       wrap.innerHTML = `
         <label>Period ${escapeAttr(label)}${p.time ? ' (' + escapeAttr(p.time) + ')' : ''} <span class="opt">— one note per line, **bold** for emphasis</span></label>
@@ -589,7 +604,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       periods.forEach((p, i) => {
         const label = 'Period ' + p.label + (p.time ? ' (' + p.time + ')' : '');
         paras.push(heading(3, label));
-        const notes = same ? sharedNotes : (perPeriodValues['p' + i] || '');
+        const notes = same ? sharedNotes : (perPeriodValues[p._id] || '');
         if (notes.trim()) {
           linesToParagraphs(notes, { style: 'ListParagraph', bullet: true }).forEach(p2 => paras.push(p2));
         }

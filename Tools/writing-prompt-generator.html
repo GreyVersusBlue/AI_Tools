@@ -135,8 +135,15 @@
 
   function loadSaved() {
     var saved = WritingPromptStore.load();
-    if (saved && saved.bands && saved.bands.length) settings.bands = saved.bands;
-    if (saved && saved.genre) settings.genre = saved.genre;
+    var validBands = Object.keys(WritingPrompts.PROMPTS); // ['ms','hs']
+    var validGenres = WritingPrompts.GENRES.map(function (g) { return g.key; });
+    if (saved && Array.isArray(saved.bands)) {
+      var bands = saved.bands.filter(function (b) { return validBands.indexOf(b) !== -1; });
+      if (bands.length) settings.bands = bands;
+    }
+    if (saved && saved.genre && (saved.genre === 'all' || validGenres.indexOf(saved.genre) !== -1)) {
+      settings.genre = saved.genre;
+    }
   }
   function persist() { WritingPromptStore.save(settings); }
 

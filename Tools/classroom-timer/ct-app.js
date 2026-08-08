@@ -117,7 +117,10 @@ function stopTicking() {
 
 function resetPhaseForMode() {
   phase = { status: 'idle', laps: [] };
-  setRingVisible(mode !== 'stopwatch');
+  // Random Interval hides its numeric countdown so the cue is a genuine
+  // surprise — the progress ring draining toward empty would leak the same
+  // information visually, so it stays hidden right alongside the numbers.
+  setRingVisible(mode !== 'stopwatch' && mode !== 'random');
   if (COUNTDOWN_LIKE.has(mode)) {
     phase.totalMs = getConfiguredMs(mode === 'roundrobin' ? 'roundrobin' : mode);
     if (mode === 'roundrobin') {
@@ -245,7 +248,7 @@ function startPreset(modeKey, minutes, seconds) {
   const inputs = modeKey === 'transition' ? [els.trMinutes, els.trSeconds] : [els.cdMinutes, els.cdSeconds];
   inputs[0].value = minutes;
   inputs[1].value = seconds;
-  if (phase.status === 'idle') {
+  if (phase.status === 'idle' || phase.status === 'done') {
     resetPhaseForMode();
     onStart();
   }

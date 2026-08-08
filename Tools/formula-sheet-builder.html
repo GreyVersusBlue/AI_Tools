@@ -100,7 +100,7 @@
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
-    #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
+    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
     #printArea .sheet { box-shadow: none; }
     @page { size: letter portrait; margin: 0; }
   }
