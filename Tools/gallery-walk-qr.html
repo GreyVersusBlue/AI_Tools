@@ -141,9 +141,12 @@
     .print-qr-grid.pp-6 .p-card:nth-child(6n) { page-break-after: always; }
     .print-qr-grid.pp-8 .p-card { width: calc(25% - 8px); }
     .print-qr-grid.pp-8 .p-card:nth-child(8n) { page-break-after: always; }
-    .print-qr-grid.pp-1 .p-card, .print-qr-grid.pp-2 .p-card { page-break-after: always; }
-    .print-qr-grid.pp-1 .p-card:last-child, .print-qr-grid.pp-2 .p-card:nth-child(2n):last-child,
+    .print-qr-grid.pp-1 .p-card { page-break-after: always; }
+    .print-qr-grid.pp-2 .p-card:nth-child(2n) { page-break-after: always; }
+    .print-qr-grid.pp-1 .p-card:last-child,
     .print-qr-grid.pp-2 .p-card:last-child { page-break-after: auto; }
+    .print-qr-grid.pp-4 .p-card:last-child, .print-qr-grid.pp-6 .p-card:last-child,
+    .print-qr-grid.pp-8 .p-card:last-child { page-break-after: auto; }
 
     .ref-sheet h2 { font-size: 1.1rem; margin-bottom: 12px; }
     .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .85rem; }

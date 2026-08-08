@@ -273,13 +273,19 @@
   }
 
   /* ---------- manual editor ---------- */
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   function newClueRow(points, question, answer) {
     var row = document.createElement('div');
     row.className = 'clue-row';
     row.innerHTML =
       '<input type="number" class="clue-points" placeholder="Pts" value="' + (points != null ? points : '') + '">' +
-      '<textarea class="clue-question" placeholder="Question">' + (question || '') + '</textarea>' +
-      '<textarea class="clue-answer" placeholder="Answer">' + (answer || '') + '</textarea>' +
+      '<textarea class="clue-question" placeholder="Question">' + escapeHtml(question) + '</textarea>' +
+      '<textarea class="clue-answer" placeholder="Answer">' + escapeHtml(answer) + '</textarea>' +
       '<button type="button" class="secondary small remove-clue">&times;</button>';
     row.querySelector('.remove-clue').addEventListener('click', function () { row.remove(); });
     return row;
@@ -429,10 +435,22 @@
   }
 
   /* ---------- board lifecycle ---------- */
-  function startBoard(name, categories) {
-    state = { name: name, categories: categories, teams: [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }] };
+  function startBoard(name, categories, teams) {
+    state = { name: name, categories: categories, teams: teams || [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }] };
     ReviewBoardStore.setCurrentName(name);
     renderBoard();
+  }
+
+  // Set only between an "Edit questions" click and the "Save board" that follows
+  // it, so re-saving edited categories can restore the scores/team names/used
+  // state that editing would otherwise silently reset to a fresh board's defaults.
+  var editingBoard = null;
+  function usedMapFor(categories) {
+    var map = {};
+    categories.forEach(function (c) {
+      c.clues.forEach(function (cl) { map[c.name + '||' + cl.question] = cl.used; });
+    });
+    return map;
   }
 
   function loadBoardByName(name) {
@@ -445,6 +463,7 @@
   }
 
   function showSetup(prefillCategories) {
+    editingBoard = null;
     state = null;
     els.setupCard.style.display = '';
     els.boardCard.style.display = 'none';
@@ -620,7 +639,18 @@
     var categories = readManualEditor();
     if (!categories.length) { alert('Add at least one category with at least one question.'); return; }
     var name = els.boardName.value.trim() || ('Board ' + new Date().toISOString().slice(0, 10));
-    startBoard(name, categories);
+    if (editingBoard && editingBoard.name === name) {
+      categories.forEach(function (c) {
+        c.clues.forEach(function (cl) {
+          var key = c.name + '||' + cl.question;
+          if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
+        });
+      });
+      startBoard(name, categories, editingBoard.teams);
+    } else {
+      startBoard(name, categories);
+    }
+    editingBoard = null;
   });
 
   els.importFile.addEventListener('change', function () {
@@ -636,7 +666,10 @@
     if (!state) return;
     var categories = state.categories;
     var name = state.name;
+    var teams = state.teams;
+    var usedMap = usedMapFor(categories);
     showSetup(categories);
+    editingBoard = { name: name, teams: teams, usedMap: usedMap };
     els.boardName.value = name;
   });
 

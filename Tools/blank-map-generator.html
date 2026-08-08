@@ -1362,6 +1362,20 @@ function displayMap(record) {
   locator.setImage(currentObjectUrl, record.width, record.height);
 
   project.mapId = record.id;
+  // Every caller of displayMap() is a user action that loads/selects a map —
+  // switching projects, picking a search result, uploading a file, or
+  // clicking a recent map — never an incidental internal re-render mid-edit.
+  // So the active tool (marker/label/region/line placement) and any open
+  // calibrate/batch panel always get closed here, regardless of whether the
+  // map image itself is changing. That used to be bundled into the
+  // isSameMap-gated block below, which meant switching to a different
+  // project whose map happened to already be cached left the OLD project's
+  // placement mode active — the next click would silently add a marker (or
+  // whatever tool was active) into the NEW project using stale style/color.
+  setPlaceMode('none');
+  el('calibratePanel').hidden = true;
+  el('btnGrid').classList.remove('active');
+  el('batchPanel').hidden = true;
   if (!isSameMap) {
     project.labels = [];
     project.markers = [];
@@ -1374,10 +1388,6 @@ function displayMap(record) {
     project.calibration = null;
     project.gridEnabled = false;
     project.scaleBarEnabled = false;
-    setPlaceMode('none');
-    el('calibratePanel').hidden = true;
-    el('btnGrid').classList.remove('active');
-    el('batchPanel').hidden = true;
   }
   resetHistory(); // fresh undo/redo baseline for whichever map is now showing
   labelLayer.setLabels(project.labels);
@@ -1392,6 +1402,7 @@ function displayMap(record) {
   if (project.locatorEnabled) ensureOverlayPos(el('locatorInset'), 'locatorPos');
   document.body.classList.toggle('student-blank', !!project.studentBlankMode);
   el('btnStudentMode').classList.toggle('active', !!project.studentBlankMode);
+  el('btnGrid').classList.toggle('active', !!project.gridEnabled);
   el('scaleBarUnitSelect').value = project.scaleBarUnit || 'km';
   el('btnScaleBar').classList.toggle('active', project.scaleBarEnabled);
   el('scaleBarUnitSelect').hidden = !project.scaleBarEnabled;

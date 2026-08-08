@@ -353,11 +353,14 @@
   }
 
   function readCutoffs() {
+    // `|| default` would silently override an intentional cutoff of 0 (e.g.
+    // "no F — anyone scoring at all gets a D or better") since 0 is falsy.
+    var num = function (el, dflt) { var v = parseFloat(el.value); return isNaN(v) ? dflt : v; };
     return {
-      A: parseFloat(els.cutA.value) || 90,
-      B: parseFloat(els.cutB.value) || 80,
-      C: parseFloat(els.cutC.value) || 70,
-      D: parseFloat(els.cutD.value) || 60
+      A: num(els.cutA, 90),
+      B: num(els.cutB, 80),
+      C: num(els.cutC, 70),
+      D: num(els.cutD, 60)
     };
   }
 

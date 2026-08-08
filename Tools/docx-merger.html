@@ -514,6 +514,7 @@
 
     // find a working base file
     let baseZip = null, baseIndex = -1, baseName = '';
+    const failedBeforeBase = new Set();
     for (let i = 0; i < filesArr.length; i++) {
       try {
         baseZip = await readDocxParts(filesArr[i].file);
@@ -522,6 +523,7 @@
         break;
       } catch (e) {
         errors.push(`${filesArr[i].name}: ${e.message}`);
+        failedBeforeBase.add(i);
       }
     }
     if (!baseZip) {
@@ -557,7 +559,7 @@
       baseBody.insertBefore(createHeadingParagraph(baseDoc, baseName), baseBody.firstChild);
     }
 
-    const remaining = filesArr.filter((_, i) => i !== baseIndex);
+    const remaining = filesArr.filter((_, i) => i !== baseIndex && !failedBeforeBase.has(i));
     const total = remaining.length;
 
     for (let idx = 0; idx < remaining.length; idx++) {

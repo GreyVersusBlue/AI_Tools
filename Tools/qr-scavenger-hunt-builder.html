@@ -126,9 +126,12 @@
     .print-station-grid.pp-6 .p-card:nth-child(6n) { page-break-after: always; }
     .print-station-grid.pp-9 .p-card { width: calc(33.33% - 8px); }
     .print-station-grid.pp-9 .p-card:nth-child(9n) { page-break-after: always; }
-    .print-station-grid.pp-1 .p-card, .print-station-grid.pp-2 .p-card { page-break-after: always; }
-    .print-station-grid.pp-1 .p-card:last-child, .print-station-grid.pp-2 .p-card:nth-child(2n):last-child,
+    .print-station-grid.pp-1 .p-card { page-break-after: always; }
+    .print-station-grid.pp-2 .p-card:nth-child(2n) { page-break-after: always; }
+    .print-station-grid.pp-1 .p-card:last-child,
     .print-station-grid.pp-2 .p-card:last-child { page-break-after: auto; }
+    .print-station-grid.pp-4 .p-card:last-child, .print-station-grid.pp-6 .p-card:last-child,
+    .print-station-grid.pp-9 .p-card:last-child { page-break-after: auto; }
 
     .answer-key h2 { font-size: 1.1rem; margin-bottom: 12px; }
     .answer-key table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }

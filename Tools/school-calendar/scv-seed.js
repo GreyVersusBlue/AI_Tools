@@ -14,12 +14,21 @@ export const DEFAULT_DAY_TYPES = [
   { id: "firstlast", label: "First / Last Day",            color: "#1f3550", pattern: "solid",   abbr: "★"  }
 ];
 
+function toLocalISO(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + mm + "-" + dd;
+}
+
 function range(startISO, endISO) {
+  // Both the parse (local midnight, no "Z") and the render (local getters,
+  // not toISOString's UTC) must stay in the same timezone, or every date in
+  // a timezone ahead of UTC comes out one day early.
   const out = [];
   let d = new Date(startISO + "T00:00:00");
   const end = new Date(endISO + "T00:00:00");
   while (d <= end) {
-    out.push(d.toISOString().slice(0, 10));
+    out.push(toLocalISO(d));
     d.setDate(d.getDate() + 1);
   }
   return out;

@@ -1158,7 +1158,7 @@ function setRollingState(rolling){
 
 const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 
-function escapeHtml(s){const div=document.createElement('div');div.textContent=s;return div.innerHTML;}
+function escapeHtml(s){const div=document.createElement('div');div.textContent=s;return div.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function loadStats(){statsCache=store.get('stats');}
 function saveStats(){store.set('stats',statsCache);}
@@ -1716,9 +1716,44 @@ function exportAllData(){
     `Save it somewhere you would be comfortable keeping a printed class list.`
   );
   if(!ok)return;
-  store.bundle.exportToFile(store.snapshot(),name);
+  exportToFile(store.snapshot(),name);
   const note=document.getElementById('exportNote');
   if(note)note.textContent=`Last backup this session: ${name} — ${c.names} names.`;
+}
+
+/* Small local export/import helpers — mirrors the download/upload pattern
+   gvb-save's mountSaveBar uses elsewhere on this site, but wired to this
+   tool's own confirm dialogs and named-file convention instead of a mounted
+   toolbar. No file input needs to live in the markup; one is created here
+   only for the moment it's needed. */
+function exportToFile(state,filename){
+  const text=store.serialize(state);
+  const blob=new Blob([text],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function promptImportFile(){
+  return new Promise((resolve,reject)=>{
+    const input=document.createElement('input');
+    input.type='file';input.accept='.json,application/json';input.hidden=true;
+    input.addEventListener('change',async ()=>{
+      const file=input.files&&input.files[0];
+      input.remove();
+      if(!file){reject(new Error('No file selected.'));return;}
+      let text;
+      try{text=await file.text();}
+      catch(e){reject(new Error('Could not read that file.'));return;}
+      const imported=store.deserialize(text);
+      if(imported===null){reject(new Error('That file is not a valid backup.'));return;}
+      resolve(imported);
+    });
+    document.body.appendChild(input);
+    input.click();
+  });
 }
 
 function restoreFromState(state){
@@ -1925,10 +1960,10 @@ document.getElementById('clearHof').addEventListener('click',()=>{
   if(confirm('Clear the Hall of Fame ticker? Recent high-rarity picks will be erased.')){hallOfFame=[];saveHof();updateHofTicker();updateDataTab();}
 });
 document.getElementById('exportRosters').addEventListener('click',exportAllData);
-/* The file picker comes from gvb-save's promptImport(), so there is no hidden
-   <input type="file"> in the markup any more. */
+/* The file picker comes from promptImportFile() above, so there is no hidden
+   <input type="file"> in the markup. */
 document.getElementById('importRostersBtn').addEventListener('click',()=>{
-  store.bundle.promptImport().then(restoreFromState,restoreFailed);
+  promptImportFile().then(restoreFromState,restoreFailed);
 });
 document.getElementById('eraseStudentData').addEventListener('click',eraseStudentData);
 document.getElementById('eraseEverything').addEventListener('click',eraseEverything);

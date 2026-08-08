@@ -299,6 +299,17 @@ let BR_TEACHERS = PUBLISHED_DATA.teachers, BR_SECTIONS = PUBLISHED_DATA.sections
     BR_MOD_LABEL = PUBLISHED_DATA.modLabel;
 let BR_GROUPROOMS = PUBLISHED_DATA.groupRooms || {}, BR_BELL = PUBLISHED_DATA.bell,
     BR_GEOM = PUBLISHED_DATA.geometry;
+/* Teacher/room/section names come straight from typed input in the visualizer
+   this file was published from, so they can contain characters (', ", <, &)
+   that would otherwise break out of an onclick="...('...')" attribute or
+   corrupt surrounding markup — e.g. any teacher literally named "O'Brien". */
+function brEscHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function brJsAttr(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];
 let brGrpDay = 'A', brMapFloorIdx = 0;
 function brBuildOpts() {
@@ -414,8 +425,8 @@ function brRenderTeacher(n) {
   const deptLabel=(BR_DEPT[t.dept]||{}).name||t.dept;
   document.getElementById('br-view').innerHTML=`
    <div class="idhead">
-     <div class="ibadge" style="background:${col}">${n[0]}</div>
-     <div><h2>${n}</h2><div class="role" style="color:${col}">${deptLabel} · Room ${t.room}</div></div>
+     <div class="ibadge" style="background:${col}">${brEscHtml(n[0])}</div>
+     <div><h2>${brEscHtml(n)}</h2><div class="role" style="color:${col}">${brEscHtml(deptLabel)} · Room ${brEscHtml(t.room)}</div></div>
    </div>
    <p class="factline">Teaches <b>${t.sec.length} class${t.sec.length!==1?'es':''}</b>. Planning is <b>${BR_MOD_LABEL} ${t.plan}</b>.
      ${split?'A&nbsp;days and B&nbsp;days are different — both are shown below.':'A&nbsp;days and B&nbsp;days are the same.'}</p>
@@ -428,16 +439,16 @@ function brRenderTeacher(n) {
    ${brMiniMapHTML(n)}
    <h3 class="block-title">Your classes</h3>
    <p class="hint">Tap a class to see everyone else who teaches those students.</p>
-   <div class="classrow">${t.sec.map(s=>`<button class="gchip" onclick="brJumpGroup('${s}')">${s}</button>`).join('')}</div>
+   <div class="classrow">${t.sec.map(s=>`<button class="gchip" onclick="brJumpGroup('${brJsAttr(s)}')">${brEscHtml(s)}</button>`).join('')}</div>
    ${mates.length>0?`
    <h3 class="block-title">Other teachers for your students</h3>
    <p class="hint">Tap a card to open that teacher's schedule.</p>
    <div class="team">${mates.map(m=>{const mc=brDColor(m.dept);const mt=BR_TEACHERS[m.n];if(!mt)return '';
      const shared=t.sec.filter(s=>(BR_SECTIONS[s]||[]).includes(m.n));
      const mdLabel=(BR_DEPT[m.dept]||{}).name||m.dept;
-     return `<button class="tcard" style="border-left-color:${mc}" onclick="brJumpTeacher('${m.n}')">
-       <div class="nm">${m.n}</div><div class="sj" style="color:${mc}">${mdLabel}</div>
-       <div class="rm">Room ${mt.room} · shares ${shared.join(', ')}</div></button>`;}).join('')}</div>`:''}
+     return `<button class="tcard" style="border-left-color:${mc}" onclick="brJumpTeacher('${brJsAttr(m.n)}')">
+       <div class="nm">${brEscHtml(m.n)}</div><div class="sj" style="color:${mc}">${brEscHtml(mdLabel)}</div>
+       <div class="rm">Room ${brEscHtml(mt.room)} · shares ${brEscHtml(shared.join(', '))}</div></button>`;}).join('')}</div>`:''}
    ${brOverviewHTML()}`;
 }
 
@@ -452,18 +463,18 @@ function brRenderGroup(sec) {
   };
   document.getElementById('br-view').innerHTML=`
    <div class="idhead">
-     <div class="ibadge" style="background:#0c4b31">${grade}</div>
-     <div><h2>Class ${sec}</h2><div class="role" style="color:#62756a">Grade ${grade} · ${list.length} teacher${list.length!==1?'s':''}</div></div>
+     <div class="ibadge" style="background:#0c4b31">${brEscHtml(grade)}</div>
+     <div><h2>Class ${brEscHtml(sec)}</h2><div class="role" style="color:#62756a">Grade ${brEscHtml(grade)} · ${list.length} teacher${list.length!==1?'s':''}</div></div>
    </div>
-   <h3 class="block-title">Who teaches class ${sec}</h3>
+   <h3 class="block-title">Who teaches class ${brEscHtml(sec)}</h3>
    <p class="hint">Tap a name to open that teacher's full schedule.</p>
    <div class="tscroll"><table class="gtable">
      <thead><tr><th>Subject</th><th>Teacher</th><th>Room</th><th>A day</th><th>B day</th></tr></thead>
      <tbody>${list.map(name=>{const t=BR_TEACHERS[name];if(!t)return '';const c=brDColor(t.dept);const s=slot(name);
        const dLabel=(BR_DEPT[t.dept]||{}).name||t.dept;
-       return `<tr><td class="subj" style="color:${c}">${dLabel}</td>
-         <td><button class="lnk" onclick="brJumpTeacher('${name}')">${name}</button></td>
-         <td>${t.room}</td><td>${s.a}</td><td>${s.b}</td></tr>`;}).join('')}</tbody>
+       return `<tr><td class="subj" style="color:${c}">${brEscHtml(dLabel)}</td>
+         <td><button class="lnk" onclick="brJumpTeacher('${brJsAttr(name)}')">${brEscHtml(name)}</button></td>
+         <td>${brEscHtml(t.room)}</td><td>${brEscHtml(s.a)}</td><td>${brEscHtml(s.b)}</td></tr>`;}).join('')}</tbody>
    </table></div>
    ${brGroupMapHTML(sec)}
    ${brOverviewHTML()}`;
@@ -520,10 +531,10 @@ function brGeoFloorSVG(fg, opts) {
     const bx = minC*px, by = minR*px, bw = (maxC-minC+1)*px, bh = (maxR-minR+1)*px;
     const fs = named ? Math.max(8, Math.min(px*0.42, (bw-6)/Math.max(1, room.rn.length)*1.65)) : 0;
     const label = named
-      ? `<text x="${bx+bw/2}" y="${by+bh/2+fs*0.36}" text-anchor="middle" font-size="${fs}" font-family="Public Sans,sans-serif" font-weight="600" fill="#3c4a42">${room.rn}</text>`
+      ? `<text x="${bx+bw/2}" y="${by+bh/2+fs*0.36}" text-anchor="middle" font-size="${fs}" font-family="Public Sans,sans-serif" font-weight="600" fill="#3c4a42">${brEscHtml(room.rn)}</text>`
       : '';
-    const click = canClick ? ` onclick="brJumpTeacher('${teacher.replace(/'/g, "\\'")}')"` : '';
-    s += `<g class="geo-room${canClick?' live':''}"${click}>${cellsSvg}${label}${canClick?`<title>${teacher} · ${room.rn}</title>`:''}</g>`;
+    const click = canClick ? ` onclick="brJumpTeacher('${brJsAttr(teacher)}')"` : '';
+    s += `<g class="geo-room${canClick?' live':''}"${click}>${cellsSvg}${label}${canClick?`<title>${brEscHtml(teacher)} · ${brEscHtml(room.rn)}</title>`:''}</g>`;
     if (isHi) {
       rings.push(`<rect x="${bx-2.5}" y="${by-2.5}" width="${bw+5}" height="${bh+5}" rx="6" fill="none" stroke="${col}" stroke-width="3"/>`);
       const badge = hi[room.rn];
@@ -548,15 +559,15 @@ function brMiniMapHTML(name) {
   if (!loc) {
     const hasGeo = BR_GEOM && BR_GEOM.floors && BR_GEOM.floors.length;
     return `<div class="mini-wrap"><div class="mini-side" style="flex:1 1 100%">
-      <div><div class="roomtag" style="color:${col}">${t.room}</div><div class="floortag">Location not mapped</div></div>
-      <div class="offmap">Room <b>${t.room}</b> isn't on the blueprint floor plan${hasGeo?'':' — no blueprint data is available'}.</div>
+      <div><div class="roomtag" style="color:${col}">${brEscHtml(t.room)}</div><div class="floortag">Location not mapped</div></div>
+      <div class="offmap">Room <b>${brEscHtml(t.room)}</b> isn't on the blueprint floor plan${hasGeo?'':' — no blueprint data is available'}.</div>
       ${hasGeo?`<button class="btn-map" onclick="brSetMode('map')">Open building map</button>`:''}</div></div>`;
   }
   const hiOne = {}; hiOne[t.room] = true;
   return `<div class="mini-wrap">
-    <div class="mini-card"><div class="mhd">${loc.floor.label}</div><div class="msvg">${brGeoFloorSVG(loc.floor,{highlights:hiOne})}</div></div>
+    <div class="mini-card"><div class="mhd">${brEscHtml(loc.floor.label)}</div><div class="msvg">${brGeoFloorSVG(loc.floor,{highlights:hiOne})}</div></div>
     <div class="mini-side">
-      <div><div class="roomtag" style="color:${col}">${t.room}</div><div class="floortag">${loc.floor.label}</div></div>
+      <div><div class="roomtag" style="color:${col}">${brEscHtml(t.room)}</div><div class="floortag">${brEscHtml(loc.floor.label)}</div></div>
       <div class="where">You're <b>highlighted</b> here. Colored rooms with teachers are clickable.</div>
       <button class="btn-map" onclick="brOpenMapFloorIdx(${loc.floorIdx})">See the whole floor</button>
     </div></div>`;
@@ -582,13 +593,13 @@ function brGroupMapHTML(sec) {
   if (!idxs.length) return '';
   const maps = idxs.map(fi => {
     const fg = BR_GEOM.floors[fi];
-    return `<div class="mini-card"><div class="mhd">${fg.label}</div><div class="msvg">${brGeoFloorSVG(fg,{highlights:perFloor[fi]})}</div></div>`;
+    return `<div class="mini-card"><div class="mhd">${brEscHtml(fg.label)}</div><div class="msvg">${brGeoFloorSVG(fg,{highlights:perFloor[fi]})}</div></div>`;
   }).join('');
   const toggle = abDiff
     ? `<div class="daychips"><button class="${day==='A'?'on':''}" onclick="brSetGrpDay('A')">A Day</button><button class="${day==='B'?'on':''}" onclick="brSetGrpDay('B')">B Day</button></div>`
     : '';
   return `<h3 class="block-title">Where this class goes</h3>
-   <p class="hint">Every room class ${sec} visits on a${day==='B'?' B':'n A'} day, labeled by ${BR_MOD_LABEL.toLowerCase()}${BR_BELL?' and time':''}. Tap a room to open that teacher's schedule.</p>
+   <p class="hint">Every room class ${brEscHtml(sec)} visits on a${day==='B'?' B':'n A'} day, labeled by ${BR_MOD_LABEL.toLowerCase()}${BR_BELL?' and time':''}. Tap a room to open that teacher's schedule.</p>
    ${toggle}<div class="groupmaps">${maps}</div>`;
 }
 

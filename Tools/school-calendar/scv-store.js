@@ -6,7 +6,7 @@
 const KEY = "scv_calendar_v1";
 export const VERSION = 1;
 
-function isValid(cal) {
+export function isValid(cal) {
   return !!cal
     && typeof cal === "object"
     && cal.__v === VERSION
