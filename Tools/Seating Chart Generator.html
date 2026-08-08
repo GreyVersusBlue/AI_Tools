@@ -368,6 +368,10 @@
 
       <div class="block">
         <h2>Roster <span class="count" id="rosterCount">0</span></h2>
+        <div class="row tight">
+          <select id="rosterHubSelect" aria-label="Load a saved roster"><option value="">Load a saved roster&hellip;</option></select>
+          <button class="btn sm ghost" onclick="loadRosterHub()">Load</button>
+        </div>
         <label class="field" for="nameInput">Paste a column of names, or type one and add</label>
         <textarea id="nameInput" placeholder="Ada Lovelace&#10;Marco Polo&#10;Mansa Musa"></textarea>
         <label class="check"><input type="checkbox" id="lastFirst" onchange="setLastFirst(this.checked)">
@@ -619,6 +623,30 @@ function deleteSection(){
 /* ============================================================
    Roster
 ============================================================ */
+// Read-only reuse of the shared roster list (Class Roster Hub / Name Picker
+// both save here under 'np_rosters') — separate storage, this file never writes it.
+function populateRosterHubSelect(){
+  const select = el('rosterHubSelect');
+  try {
+    const rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+    const names = Object.keys(rosters);
+    select.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
+      names.map(n => `<option value="${esc(n)}">${esc(n)} (${rosters[n].length})</option>`).join('');
+  } catch (e) {
+    select.innerHTML = '<option value="">No saved rosters found</option>';
+  }
+}
+function loadRosterHub(){
+  const name = el('rosterHubSelect').value;
+  if (!name) return;
+  try {
+    const rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+    const list = rosters[name];
+    if (!list || !list.length) return;
+    el('nameInput').value = list.join('\n');
+    addNames();
+  } catch (e) { say('Could not read that roster from this browser.', 'bad'); }
+}
 function setLastFirst(on){ state.lastFirst = !!on; touch(); }
 function addNames(){
   const box = el('nameInput');
@@ -1157,6 +1185,7 @@ function boot(){
   autosaver = slot.autosave(() => state, 1200);
   mountBar();
   applyZoom(); renderAll();
+  populateRosterHubSelect();
   if (loaded){
     const n = state.sections.reduce((t, s) => t + s.students.length, 0);
     say(`Reloaded ${state.sections.length} sections and ${n} students from this browser.`, 'good');
@@ -1178,6 +1207,7 @@ function boot(){
 Object.assign(window, {
   addSection, renameSection, deleteSection,
   addNames, sortRoster, setLastFirst, toggleFlag, editNote, removeStudent,
+  loadRosterHub,
   addPair, removePair,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
   autoAssign, undo, pickStudent, toggleZoom, printChart,

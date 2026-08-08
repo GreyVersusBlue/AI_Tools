@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hall Pass Log</title>
+<meta name="description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/hall-pass-log.html">
+<meta property="og:title" content="Hall Pass Log — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hall Pass Log — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='6' width='12' height='20' rx='1.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='15.4' cy='16' r='1.3' fill='%232A6DB0'/%3E%3Cpath d='M20 16h6M23.2 12.8L26.4 16l-3.2 3.2' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header p.tagline { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar label { margin: 0; font-weight: 600; font-size: .85rem; }
+
+  .layout { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 1.4rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .8rem; gap: .5rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
+  input[type="text"], select, textarea {
+    width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .5rem .6rem; margin-bottom: .8rem;
+  }
+  textarea { min-height: 8rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-2); }
+
+  .roster-load-row { display: flex; gap: .5rem; }
+  .roster-load-row select { flex: 1; margin-bottom: .6rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
+  button.link-btn:hover { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .btn-row { display: flex; gap: .6rem; margin-top: .7rem; flex-wrap: wrap; }
+  .btn-row button { width: auto; }
+
+  .remove-row-btn {
+    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
+  }
+  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+
+  #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
+  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+  #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+
+  .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
+
+  /* ── Destination editor rows ─────────────────────────────────────────── */
+  .tag-row { display: flex; align-items: center; gap: .5rem; }
+  .tag-row input[type="text"] { flex: 1; margin-bottom: .5rem; }
+
+  /* ── Live board ───────────────────────────────────────────────────── */
+  .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .dest-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+  .dest-chip {
+    cursor: pointer; border-radius: 999px; padding: .45rem .95rem; font-size: .85rem; font-weight: 700;
+    border: 1.5px solid var(--line-strong); background: #fff; color: var(--ink); user-select: none;
+  }
+  .dest-chip.armed { background: var(--accent-2); color: #fff; border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(0,0,0,.12); }
+
+  .board-controls { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; flex-wrap: wrap; }
+  .board-controls label { margin: 0; }
+  .board-controls select { width: auto; margin: 0; }
+  .board-controls .spacer { flex: 1; }
+
+  .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .6rem; margin-bottom: 1.3rem; }
+  .student-card {
+    background: #fff; border: 2px solid var(--line); border-radius: 10px; padding: .7rem .5rem; text-align: center;
+    cursor: pointer; user-select: none; transition: transform .08s ease, background .25s, border-color .25s;
+  }
+  .student-card:hover { border-color: var(--accent-2); }
+  .student-card:active { transform: scale(0.96); }
+  .student-card .s-name { font-weight: 700; font-size: .85rem; overflow-wrap: anywhere; margin-bottom: .3rem; }
+  .student-card .s-status { font-size: .72rem; color: var(--muted); }
+  .student-card.is-out { border-color: var(--err); background: #fbeceA; cursor: not-allowed; }
+  .student-card.is-out .s-status { color: var(--err); font-weight: 700; }
+  .student-card.flash { background: #e4f5ea; border-color: var(--good); }
+
+  .live-board { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.3rem; }
+  .out-row {
+    display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+    background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem;
+  }
+  .out-row.over-time { border-color: var(--err); background: #fbeceA; }
+  .out-info { display: flex; flex-direction: column; min-width: 120px; }
+  .out-name { font-weight: 700; font-size: .9rem; }
+  .out-dest { font-size: .78rem; color: var(--muted); }
+  .out-time { display: flex; flex-direction: column; margin-left: auto; text-align: right; }
+  .out-clock { font-size: .78rem; color: var(--muted); }
+  .out-elapsed { font-size: .85rem; font-weight: 700; }
+  .out-row.over-time .out-elapsed { color: var(--err); }
+
+  .activity-feed { max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
+  .activity-item { display: flex; justify-content: space-between; gap: .6rem; font-size: .82rem; padding: .35rem 0; border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
+  .activity-item:last-child { border-bottom: none; }
+  .a-who { font-weight: 600; }
+  .a-what { color: var(--muted); }
+  .a-delta { color: var(--good); font-weight: 700; }
+  .a-delta.out { color: var(--err); }
+  .a-time { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+
+  /* ── History ──────────────────────────────────────────────────────── */
+  .history-entry { border: 1px solid var(--line); border-radius: 7px; margin-bottom: .5rem; overflow: hidden; }
+  .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: #f4f3ee; list-style: none; }
+  .history-entry summary::-webkit-details-marker { display: none; }
+  .history-entry summary b { color: var(--accent); }
+  .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .history-table th, .history-table td { border-top: 1px solid var(--line); padding: .3rem .6rem; text-align: left; }
+  .history-table th { color: var(--muted); font-weight: 600; }
+
+  footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  /* ── Print report ─────────────────────────────────────────────────── */
+  .print-only { display: none; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .wrap > *:not(.print-only) { display: none !important; }
+    .print-only.active { display: block; }
+    .print-only h2 { font-size: 1.2rem; margin-bottom: .3rem; }
+    .print-only .p-sub { color: #555; font-size: .85rem; margin-bottom: .9rem; }
+    .print-only table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .print-only th, .print-only td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+    .print-only th { background: #eee; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Hall Pass Log</h1>
+      <p class="tagline">Tap a destination, then tap a student &mdash; a live, printable log of who's out of the room and for how long</p>
+    </div>
+  </div>
+
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <label for="setSwitch">Section:</label>
+    <select id="setSwitch"></select>
+    <button class="secondary" id="newSetBtn" type="button">New section</button>
+    <button class="danger" id="deleteSetBtn" type="button">Delete</button>
+  </div>
+
+  <div class="layout">
+    <div class="editor">
+
+      <div class="card">
+        <label for="setName">Section / class name</label>
+        <input type="text" id="setName" placeholder="e.g. Period 3 — Earth Science">
+
+        <div class="card-title" style="margin-top:.6rem;"><span>Roster</span></div>
+        <div class="roster-load-row">
+          <select id="rosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+          <button class="secondary" id="loadRosterBtn" type="button">Load</button>
+        </div>
+        <label for="namesInput">One name per line</label>
+        <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
+        <div class="hint" id="nameCount">0 names</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Destinations</span><button class="link-btn" id="addDestBtn" type="button">+ Add destination</button></div>
+        <div id="destsEditor"></div>
+        <div class="hint">Renaming a destination here only affects sign-outs from now on &mdash; it doesn&rsquo;t rewrite trips already logged today.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Day</span></div>
+        <div class="hint">Archiving saves today&rsquo;s log to history and clears the board for a fresh day. The roster and destination list carry over. Everyone must be signed in first.</div>
+        <div class="btn-row" style="margin-top:0;">
+          <button id="archiveBtn" type="button">Archive Day &amp; Reset</button>
+        </div>
+        <div id="historyWrap"></div>
+      </div>
+
+      <div id="msg"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="card-title" style="margin-bottom:.7rem;"><span>Tap a destination, then tap a student</span></div>
+      <div class="dest-chips" id="destChips"></div>
+
+      <div id="studentGrid" class="student-grid"><p class="empty-hint">Add a roster on the left to get started.</p></div>
+
+      <div class="card-title" style="margin:.2rem 0 .7rem;"><span>Currently Out</span></div>
+      <div id="liveBoard" class="live-board"><p class="empty-hint">No one is currently out.</p></div>
+
+      <div class="board-controls">
+        <label for="printSelect">Report for:</label>
+        <select id="printSelect"></select>
+        <div class="spacer"></div>
+        <button class="secondary" id="printBtn" type="button">Print Report</button>
+      </div>
+
+      <div class="card-title" style="margin:0 0 .6rem;"><span>Today&rsquo;s Log</span></div>
+      <div id="activityFeed" class="activity-feed"><p class="empty-hint">No one has signed out yet today.</p></div>
+    </div>
+  </div>
+
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded, and no student data leaves this device.</footer>
+
+</div>
+
+<div class="print-only" id="printArea">
+  <h2 id="printTitle">Hall Pass Log</h2>
+  <p class="p-sub" id="printSub"></p>
+  <table>
+    <thead><tr><th>Student</th><th>Destination</th><th>Time Out</th><th>Time In</th><th>Duration</th></tr></thead>
+    <tbody id="printBody"></tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = 'hall-pass-log-sections';
+  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
+  var HISTORY_LIMIT = 90;
+  var LOG_LIMIT = 300;
+  var OVER_TIME_MIN = 9;
+  var LIVE_REFRESH_MS = 20000;
+
+  var els = {};
+  ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
+   'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
+   'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap',
+   'destChips', 'studentGrid', 'liveBoard', 'printSelect', 'printBtn', 'activityFeed',
+   'printArea', 'printTitle', 'printSub', 'printBody', 'msg'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var DEFAULT_DESTS = [
+    { id: 'd1', label: 'Restroom' },
+    { id: 'd2', label: 'Nurse' },
+    { id: 'd3', label: 'Office' },
+    { id: 'd4', label: 'Locker' },
+    { id: 'd5', label: 'Water fountain' },
+    { id: 'd6', label: 'Other' },
+  ];
+
+  // state = { name, namesText, destinations, armedDestId, outNow, log, history }
+  var state = null;
+  var idCounter = 0;
+
+  function nextId(prefix) { idCounter++; return prefix + Date.now() + idCounter; }
+
+  // ── Persisted sections ───────────────────────────────────────────────────
+  function loadStore() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { current: null, sets: {} };
+      var s = JSON.parse(raw);
+      if (!s || typeof s !== 'object') return { current: null, sets: {} };
+      if (!s.sets || typeof s.sets !== 'object') s.sets = {};
+      return s;
+    } catch (e) { return { current: null, sets: {} }; }
+  }
+  function saveStore(store) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+  function save() {
+    if (!state) return;
+    var store = loadStore();
+    store.sets[state.name] = state;
+    store.current = state.name;
+    saveStore(store);
+  }
+  function listNames() {
+    var store = loadStore();
+    return Object.keys(store.sets).sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  function refreshSwitcher() {
+    var names = listNames();
+    els.setSwitch.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (state && n === state.name) opt.selected = true;
+      els.setSwitch.appendChild(opt);
+    });
+  }
+
+  function normalizeState(s) {
+    if (!Array.isArray(s.destinations) || !s.destinations.length) {
+      s.destinations = DEFAULT_DESTS.map(function (d) { return { id: d.id, label: d.label }; });
+    }
+    if (typeof s.namesText !== 'string') s.namesText = '';
+    if (!Array.isArray(s.outNow)) s.outNow = [];
+    if (!Array.isArray(s.log)) s.log = [];
+    if (!Array.isArray(s.history)) s.history = [];
+    var hasArmed = s.destinations.some(function (d) { return d.id === s.armedDestId; });
+    if (!hasArmed) s.armedDestId = s.destinations.length ? s.destinations[0].id : null;
+    return s;
+  }
+
+  function newSet(name) {
+    state = normalizeState({ name: name, namesText: '' });
+    applyStateToForm();
+    refreshSwitcher();
+    els.toolbar.style.display = '';
+    save();
+  }
+
+  function loadSetByName(name) {
+    var store = loadStore();
+    var loaded = store.sets[name];
+    if (!loaded) return;
+    state = normalizeState(loaded);
+    applyStateToForm();
+    refreshSwitcher();
+  }
+
+  function applyStateToForm() {
+    els.setName.value = state.name;
+    els.namesInput.value = state.namesText;
+    updateNameCount();
+    renderDestsEditor();
+    renderChips();
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    renderHistory();
+  }
+
+  // ── Roster ───────────────────────────────────────────────────────────────
+  function parseNames() {
+    return state.namesText.split('\n')
+      .map(function (l) { return l.trim(); })
+      .filter(Boolean);
+  }
+
+  function updateNameCount() {
+    var n = parseNames().length;
+    els.nameCount.textContent = n + ' name' + (n === 1 ? '' : 's');
+  }
+
+  els.namesInput.addEventListener('input', function () {
+    state.namesText = els.namesInput.value;
+    updateNameCount();
+    renderStudentGrid();
+    save();
+  });
+
+  function populateRosterSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var names = Object.keys(rosters);
+      els.rosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) {
+      els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
+    }
+  }
+  els.loadRosterBtn.addEventListener('click', function () {
+    var name = els.rosterSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var list = rosters[name];
+      if (!list) return;
+      els.namesInput.value = list.join('\n');
+      state.namesText = els.namesInput.value;
+      updateNameCount();
+      renderStudentGrid();
+      save();
+    } catch (e) { showMsg('Could not read that roster from this browser.', 'error'); }
+  });
+
+  // ── Destinations editor ──────────────────────────────────────────────────
+  function renderDestsEditor() {
+    els.destsEditor.innerHTML = state.destinations.map(function (d) {
+      return '<div class="tag-row" data-id="' + escapeAttr(d.id) + '">' +
+        '<input type="text" class="dest-label" value="' + escapeAttr(d.label) + '">' +
+        '<button type="button" class="remove-row-btn" data-remove-dest="' + escapeAttr(d.id) + '" title="Remove destination">&#10005;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.destsEditor.addEventListener('input', function (e) {
+    var row = e.target.closest('.tag-row');
+    if (!row) return;
+    var dest = state.destinations.filter(function (d) { return d.id === row.dataset.id; })[0];
+    if (!dest) return;
+    if (e.target.classList.contains('dest-label')) dest.label = e.target.value;
+    renderChips();
+    save();
+  });
+
+  els.destsEditor.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-dest]');
+    if (!btn) return;
+    var id = btn.dataset.removeDest;
+    state.destinations = state.destinations.filter(function (d) { return d.id !== id; });
+    if (state.armedDestId === id) state.armedDestId = state.destinations.length ? state.destinations[0].id : null;
+    renderDestsEditor();
+    renderChips();
+    save();
+  });
+
+  els.addDestBtn.addEventListener('click', function () {
+    var d = { id: nextId('dt'), label: 'New destination' };
+    state.destinations.push(d);
+    if (!state.armedDestId) state.armedDestId = d.id;
+    renderDestsEditor();
+    renderChips();
+    save();
+  });
+
+  // ── Chips (armed destination) ────────────────────────────────────────────
+  function renderChips() {
+    if (!state.destinations.length) {
+      els.destChips.innerHTML = '<p class="empty-hint">Add a destination to sign students out.</p>';
+      return;
+    }
+    els.destChips.innerHTML = state.destinations.map(function (d) {
+      var armed = state.armedDestId === d.id ? ' armed' : '';
+      return '<span class="dest-chip' + armed + '" data-chip="' + escapeAttr(d.id) + '">' + escapeHtml(d.label) + '</span>';
+    }).join('');
+  }
+
+  els.destChips.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-chip]');
+    if (!chip) return;
+    state.armedDestId = chip.dataset.chip;
+    renderChips();
+    save();
+  });
+
+  // ── Student board / sign-out ─────────────────────────────────────────────
+  function sortedNames() {
+    return parseNames().slice().sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  function outEntryFor(name) {
+    return state.outNow.filter(function (o) { return o.name === name; })[0];
+  }
+
+  function armedDest() {
+    return state.destinations.filter(function (d) { return d.id === state.armedDestId; })[0] || state.destinations[0];
+  }
+
+  function renderStudentGrid() {
+    var names = sortedNames();
+    if (!names.length) {
+      els.studentGrid.innerHTML = '<p class="empty-hint">Add a roster on the left to get started.</p>';
+      return;
+    }
+    els.studentGrid.innerHTML = names.map(function (n) {
+      var out = outEntryFor(n);
+      var cls = out ? 'is-out' : '';
+      var status = out ? ('Out \u2014 ' + escapeHtml(out.destLabel)) : 'Tap to sign out';
+      return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '">' +
+        '<div class="s-name">' + escapeHtml(n) + '</div>' +
+        '<div class="s-status">' + status + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.studentGrid.addEventListener('click', function (e) {
+    var card = e.target.closest('.student-card');
+    if (!card) return;
+    signOutStudent(card.dataset.name, card);
+  });
+
+  function signOutStudent(name, cardEl) {
+    if (!state.destinations.length) { showMsg('Add at least one destination before signing students out.', 'error'); return; }
+    if (outEntryFor(name)) { showMsg(name + ' is already signed out.', 'error'); return; }
+    var dest = armedDest();
+    if (!dest) { showMsg('Pick a destination first.', 'error'); return; }
+    var now = new Date();
+    state.outNow.unshift({
+      id: nextId('ev'),
+      name: name,
+      destId: dest.id,
+      destLabel: dest.label,
+      outMs: now.getTime(),
+      outStr: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    });
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    save();
+    if (cardEl) {
+      var refreshed = els.studentGrid.querySelector('.student-card[data-name="' + cssEscape(name) + '"]');
+      if (refreshed) {
+        refreshed.classList.add('flash');
+        setTimeout(function () { refreshed.classList.remove('flash'); }, 350);
+      }
+    }
+  }
+
+  function cssEscape(s) {
+    return String(s).replace(/["\\]/g, '\\$&');
+  }
+
+  // ── Live board (currently out) ───────────────────────────────────────────
+  function renderLiveBoard() {
+    if (!state) return;
+    if (!state.outNow.length) {
+      els.liveBoard.innerHTML = '<p class="empty-hint">No one is currently out.</p>';
+      return;
+    }
+    var nowMs = Date.now();
+    els.liveBoard.innerHTML = state.outNow.map(function (o) {
+      var mins = Math.floor((nowMs - o.outMs) / 60000);
+      var over = mins >= OVER_TIME_MIN;
+      var elapsedText = mins < 1 ? 'just now' : (mins + ' min');
+      return '<div class="out-row' + (over ? ' over-time' : '') + '">' +
+        '<div class="out-info"><span class="out-name">' + escapeHtml(o.name) + '</span><span class="out-dest">' + escapeHtml(o.destLabel) + '</span></div>' +
+        '<div class="out-time"><span class="out-clock">Out at ' + escapeHtml(o.outStr) + '</span><span class="out-elapsed">' + elapsedText + '</span></div>' +
+        '<button class="secondary" type="button" data-signin="' + escapeAttr(o.id) + '">Sign in</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.liveBoard.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-signin]');
+    if (!btn) return;
+    signInStudent(btn.dataset.signin);
+  });
+
+  function signInStudent(id) {
+    var idx = -1;
+    for (var i = 0; i < state.outNow.length; i++) {
+      if (state.outNow[i].id === id) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    var entry = state.outNow[idx];
+    state.outNow.splice(idx, 1);
+    var now = new Date();
+    var inMs = now.getTime();
+    var durationMin = Math.max(1, Math.round((inMs - entry.outMs) / 60000));
+    state.log.unshift({
+      id: entry.id,
+      name: entry.name,
+      destLabel: entry.destLabel,
+      outMs: entry.outMs,
+      outStr: entry.outStr,
+      inMs: inMs,
+      inStr: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      durationMin: durationMin,
+    });
+    if (state.log.length > LOG_LIMIT) state.log.length = LOG_LIMIT;
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    save();
+  }
+
+  setInterval(function () { renderLiveBoard(); }, LIVE_REFRESH_MS);
+
+  // ── Today's log (combined, newest first) ─────────────────────────────────
+  function combinedTodayItems() {
+    var items = state.log.map(function (e) {
+      return { name: e.name, destLabel: e.destLabel, outStr: e.outStr, outMs: e.outMs, inStr: e.inStr, durationMin: e.durationMin, stillOut: false };
+    });
+    state.outNow.forEach(function (o) {
+      items.push({ name: o.name, destLabel: o.destLabel, outStr: o.outStr, outMs: o.outMs, inStr: null, durationMin: null, stillOut: true });
+    });
+    items.sort(function (a, b) { return b.outMs - a.outMs; });
+    return items;
+  }
+
+  function renderTodayLog() {
+    var items = combinedTodayItems();
+    if (!items.length) {
+      els.activityFeed.innerHTML = '<p class="empty-hint">No one has signed out yet today.</p>';
+      refreshPrintSelect();
+      return;
+    }
+    els.activityFeed.innerHTML = items.slice(0, 60).map(function (it) {
+      var right = it.stillOut
+        ? '<span class="a-delta out">still out</span>'
+        : ('<span class="a-delta">' + it.durationMin + ' min</span>');
+      return '<div class="activity-item">' +
+        '<span><span class="a-who">' + escapeHtml(it.name) + '</span> <span class="a-what">&mdash; ' + escapeHtml(it.destLabel) + '</span></span>' +
+        '<span>' + right + ' <span class="a-time">' + escapeHtml(it.outStr) + '</span></span>' +
+        '</div>';
+    }).join('');
+    refreshPrintSelect();
+  }
+
+  // ── Archive day ──────────────────────────────────────────────────────────
+  els.archiveBtn.addEventListener('click', function () {
+    if (state.outNow.length) {
+      showMsg('Sign in ' + state.outNow.length + ' student(s) still out before archiving the day.', 'error');
+      return;
+    }
+    if (!state.log.length) { showMsg('Nothing logged yet today — nothing to archive.', 'info'); return; }
+    if (!confirm('Archive today\u2019s log to history and start a fresh day?')) return;
+
+    state.history.unshift({
+      date: new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
+      rows: state.log.slice().reverse().map(function (e) {
+        return { name: e.name, destLabel: e.destLabel, outStr: e.outStr, inStr: e.inStr, durationMin: e.durationMin };
+      }),
+    });
+    if (state.history.length > HISTORY_LIMIT) state.history.length = HISTORY_LIMIT;
+
+    state.log = [];
+
+    renderTodayLog();
+    renderHistory();
+    save();
+    showMsg('Day archived. Ready for a fresh day.', 'info');
+  });
+
+  function renderHistory() {
+    if (!state.history.length) { els.historyWrap.innerHTML = ''; refreshPrintSelect(); return; }
+    els.historyWrap.innerHTML = state.history.map(function (h, i) {
+      var rowsHtml = h.rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td><td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + r.durationMin + ' min</td></tr>';
+      }).join('');
+      return '<details class="history-entry"' + (i === 0 ? ' open' : '') + '>' +
+        '<summary><b>' + escapeHtml(h.date) + '</b> &middot; ' + h.rows.length + ' sign-out' + (h.rows.length === 1 ? '' : 's') + '</summary>' +
+        '<table class="history-table"><thead><tr><th>Student</th><th>Destination</th><th>Out</th><th>In</th><th>Duration</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+        '</details>';
+    }).join('');
+    refreshPrintSelect();
+  }
+
+  // ── Print report ─────────────────────────────────────────────────────────
+  function refreshPrintSelect() {
+    if (!state) return;
+    var prevVal = els.printSelect.value;
+    var opts = '<option value="today">Today (' + combinedTodayItems().length + ')</option>';
+    opts += state.history.map(function (h, i) {
+      return '<option value="' + i + '">' + escapeHtml(h.date) + ' (' + h.rows.length + ')</option>';
+    }).join('');
+    els.printSelect.innerHTML = opts;
+    if (prevVal && els.printSelect.querySelector('option[value="' + cssEscape(prevVal) + '"]')) {
+      els.printSelect.value = prevVal;
+    }
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var sel = els.printSelect.value;
+    var rows, sub;
+    if (sel === 'today' || !sel) {
+      var items = combinedTodayItems().slice().sort(function (a, b) { return a.outMs - b.outMs; });
+      rows = items.map(function (it) {
+        return { name: it.name, destLabel: it.destLabel, outStr: it.outStr, inStr: it.stillOut ? '\u2014 still out \u2014' : it.inStr, durationMin: it.stillOut ? '\u2014' : (it.durationMin + ' min') };
+      });
+      sub = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) + ' (Today)';
+    } else {
+      var h = state.history[parseInt(sel, 10)];
+      if (!h) return;
+      rows = h.rows.map(function (r) {
+        return { name: r.name, destLabel: r.destLabel, outStr: r.outStr, inStr: r.inStr, durationMin: r.durationMin + ' min' };
+      });
+      sub = h.date;
+    }
+    els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Hall Pass Log';
+    els.printSub.textContent = sub;
+    els.printBody.innerHTML = rows.length
+      ? rows.map(function (r) {
+          return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td><td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + escapeHtml(String(r.durationMin)) + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="5">No sign-outs recorded.</td></tr>';
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printArea.classList.add('active');
+    window.print();
+  });
+
+  function showMsg(text, kind) { els.msg.textContent = text; els.msg.className = kind || 'error'; }
+
+  function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+  /* ---------- section lifecycle ---------- */
+  els.setName.addEventListener('change', function () {
+    if (!state) return;
+    var oldName = state.name;
+    var newName = els.setName.value.trim() || oldName;
+    if (newName !== oldName) {
+      var store = loadStore();
+      delete store.sets[oldName];
+      state.name = newName;
+      store.sets[newName] = state;
+      store.current = newName;
+      saveStore(store);
+      refreshSwitcher();
+    }
+  });
+
+  els.setSwitch.addEventListener('change', function () { loadSetByName(els.setSwitch.value); });
+
+  els.newSetBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new section:', 'New Section');
+    if (!name) return;
+    newSet(name.trim());
+  });
+
+  els.deleteSetBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Delete "' + state.name + '" completely? This can\u2019t be undone.')) return;
+    var store = loadStore();
+    delete store.sets[state.name];
+    var remaining = Object.keys(store.sets);
+    if (remaining.length) {
+      store.current = remaining[0];
+      saveStore(store);
+      loadSetByName(remaining[0]);
+    } else {
+      saveStore(store);
+      newSet('New Section');
+    }
+  });
+
+  /* ---------- boot ---------- */
+  populateRosterSelect();
+  var initial = loadStore();
+  if (initial.current && initial.sets[initial.current]) {
+    loadSetByName(initial.current);
+    els.toolbar.style.display = '';
+  } else {
+    var names = Object.keys(initial.sets);
+    if (names.length) {
+      loadSetByName(names[0]);
+      els.toolbar.style.display = '';
+    } else {
+      newSet('New Section');
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
