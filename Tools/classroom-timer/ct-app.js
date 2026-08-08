@@ -328,6 +328,37 @@ function initTabs() {
   showPanel(mode);
 }
 
+function renderCustomPresets() {
+  const list = prefs.customPresets || [];
+  els.cdCustomPresets.innerHTML = list.map((p, i) => `
+    <span class="custom-preset-chip">
+      <button type="button" class="cd-custom-load" data-i="${i}">${escapeHtmlCT(p.name)} (${p.minutes}:${String(p.seconds).padStart(2, '0')})</button>
+      <button type="button" class="cd-custom-del" data-i="${i}" aria-label="Delete preset ${escapeHtmlCT(p.name)}">&times;</button>
+    </span>
+  `).join('');
+  els.cdCustomPresets.querySelectorAll('.cd-custom-load').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = list[Number(btn.dataset.i)];
+      if (!p) return;
+      els.cdMinutes.value = p.minutes;
+      els.cdSeconds.value = p.seconds;
+      prefs = save({ countdown: { minutes: p.minutes, seconds: p.seconds } });
+      if (phase.status === 'idle' && mode === 'countdown') resetPhaseForMode();
+    });
+  });
+  els.cdCustomPresets.querySelectorAll('.cd-custom-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const next = list.filter((_, i) => i !== Number(btn.dataset.i));
+      prefs = save({ customPresets: next });
+      renderCustomPresets();
+    });
+  });
+}
+
+function escapeHtmlCT(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function initCountdownPanel() {
   els.cdMinutes.value = prefs.countdown.minutes;
   els.cdSeconds.value = prefs.countdown.seconds;
@@ -341,6 +372,19 @@ function initCountdownPanel() {
       prefs = save({ countdown: { minutes: min, seconds: 0 } });
       if (phase.status === 'idle' && mode === 'countdown') resetPhaseForMode();
     });
+  });
+  renderCustomPresets();
+  els.cdSavePreset.addEventListener('click', () => {
+    const name = els.cdPresetName.value.trim();
+    if (!name) { els.cdPresetName.focus(); return; }
+    const minutes = Math.max(0, Math.min(180, Math.floor(Number(els.cdMinutes.value)) || 0));
+    const seconds = Math.max(0, Math.min(59, Math.floor(Number(els.cdSeconds.value)) || 0));
+    if (minutes === 0 && seconds === 0) return;
+    const next = (prefs.customPresets || []).filter(p => p.name !== name);
+    next.push({ name, minutes, seconds });
+    prefs = save({ customPresets: next });
+    els.cdPresetName.value = '';
+    renderCustomPresets();
   });
 }
 
@@ -437,6 +481,9 @@ function cacheEls() {
   els.resetBtn = q('resetBtn');
   els.cdMinutes = q('cdMinutes');
   els.cdSeconds = q('cdSeconds');
+  els.cdPresetName = q('cdPresetName');
+  els.cdSavePreset = q('cdSavePreset');
+  els.cdCustomPresets = q('cdCustomPresets');
   els.trMinutes = q('trMinutes');
   els.trSeconds = q('trSeconds');
   els.trCustomStart = q('trCustomStart');

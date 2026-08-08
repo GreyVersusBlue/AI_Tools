@@ -88,6 +88,13 @@
   /* ── Destination editor rows ─────────────────────────────────────────── */
   .tag-row { display: flex; align-items: center; gap: .5rem; }
   .tag-row input[type="text"] { flex: 1; margin-bottom: .5rem; }
+  .tag-row .dest-overtime-wrap { display: flex; align-items: center; gap: .3rem; margin-bottom: .5rem; flex-shrink: 0; }
+  .tag-row .dest-overtime-wrap label { margin: 0; font-weight: 400; font-size: .74rem; color: var(--muted); white-space: nowrap; }
+  .tag-row input[type="number"].dest-overtime {
+    width: 3.4rem; font-family: inherit; font-size: .85rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .4rem .3rem; text-align: center;
+  }
 
   /* ── Live board ───────────────────────────────────────────────────── */
   .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
@@ -121,7 +128,14 @@
     display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
     background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem;
   }
-  .out-row.over-time { border-color: var(--err); background: #fbeceA; }
+  .out-row.over-time { border-color: var(--err); background: #fbeceA; animation: overtimePulse 1.6s ease-in-out infinite; }
+  @keyframes overtimePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163,55,43,.45); }
+    50% { box-shadow: 0 0 0 7px rgba(163,55,43,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .out-row.over-time { animation: none; } }
+  .alert-sound-label { display: flex; align-items: center; gap: .3rem; font-weight: 400; font-size: .78rem; text-transform: none; letter-spacing: 0; color: var(--muted); }
+  .alert-sound-label input { margin: 0; }
   .out-info { display: flex; flex-direction: column; min-width: 120px; }
   .out-name { font-weight: 700; font-size: .9rem; }
   .out-dest { font-size: .78rem; color: var(--muted); }
@@ -147,6 +161,15 @@
   .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
   .history-table th, .history-table td { border-top: 1px solid var(--line); padding: .3rem .6rem; text-align: left; }
   .history-table th { color: var(--muted); font-weight: 600; }
+
+  /* ── Weekly frequency ─────────────────────────────────────────────── */
+  .weekly-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .weekly-col { flex: 1; min-width: 130px; }
+  .weekly-col h4 { font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin: 0 0 .4rem; font-weight: 700; }
+  .weekly-list { list-style: none; margin: 0; padding: 0; font-size: .85rem; }
+  .weekly-list li { display: flex; justify-content: space-between; gap: .5rem; padding: .28rem 0; border-bottom: 1px solid var(--line); }
+  .weekly-list li:last-child { border-bottom: none; }
+  .weekly-count { font-weight: 700; color: var(--accent); }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -202,7 +225,7 @@
       <div class="card">
         <div class="card-title"><span>Destinations</span><button class="link-btn" id="addDestBtn" type="button">+ Add destination</button></div>
         <div id="destsEditor"></div>
-        <div class="hint">Renaming a destination here only affects sign-outs from now on &mdash; it doesn&rsquo;t rewrite trips already logged today.</div>
+        <div class="hint">Renaming a destination here only affects sign-outs from now on &mdash; it doesn&rsquo;t rewrite trips already logged today. &ldquo;Over after&rdquo; sets how many minutes out flags that destination as overdue on the live board.</div>
       </div>
 
       <div class="card">
@@ -214,6 +237,12 @@
         <div id="historyWrap"></div>
       </div>
 
+      <div class="card">
+        <div class="card-title"><span>This Week</span></div>
+        <div class="hint">Sign-out counts since Sunday (today plus any archived days) &mdash; a quick way to spot a pattern worth a hallway or nurse conversation.</div>
+        <div class="weekly-grid" id="weeklyWrap"></div>
+      </div>
+
       <div id="msg"></div>
     </div>
 
@@ -223,7 +252,10 @@
 
       <div id="studentGrid" class="student-grid"><p class="empty-hint">Add a roster on the left to get started.</p></div>
 
-      <div class="card-title" style="margin:.2rem 0 .7rem;"><span>Currently Out</span></div>
+      <div class="card-title" style="margin:.2rem 0 .7rem;">
+        <span>Currently Out</span>
+        <label class="alert-sound-label"><input type="checkbox" id="alertSoundToggle">Sound alert when over time</label>
+      </div>
       <div id="liveBoard" class="live-board"><p class="empty-hint">No one is currently out.</p></div>
 
       <div class="board-controls">
@@ -265,18 +297,18 @@
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
-   'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap',
-   'destChips', 'studentGrid', 'liveBoard', 'printSelect', 'printBtn', 'activityFeed',
+   'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap', 'weeklyWrap',
+   'destChips', 'studentGrid', 'liveBoard', 'alertSoundToggle', 'printSelect', 'printBtn', 'activityFeed',
    'printArea', 'printTitle', 'printSub', 'printBody', 'msg'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_DESTS = [
-    { id: 'd1', label: 'Restroom' },
-    { id: 'd2', label: 'Nurse' },
-    { id: 'd3', label: 'Office' },
-    { id: 'd4', label: 'Locker' },
-    { id: 'd5', label: 'Water fountain' },
-    { id: 'd6', label: 'Other' },
+    { id: 'd1', label: 'Restroom', overtimeMin: OVER_TIME_MIN },
+    { id: 'd2', label: 'Nurse', overtimeMin: OVER_TIME_MIN },
+    { id: 'd3', label: 'Office', overtimeMin: OVER_TIME_MIN },
+    { id: 'd4', label: 'Locker', overtimeMin: OVER_TIME_MIN },
+    { id: 'd5', label: 'Water fountain', overtimeMin: OVER_TIME_MIN },
+    { id: 'd6', label: 'Other', overtimeMin: OVER_TIME_MIN },
   ];
 
   // state = { name, namesText, destinations, armedDestId, outNow, log, history }
@@ -325,12 +357,17 @@
 
   function normalizeState(s) {
     if (!Array.isArray(s.destinations) || !s.destinations.length) {
-      s.destinations = DEFAULT_DESTS.map(function (d) { return { id: d.id, label: d.label }; });
+      s.destinations = DEFAULT_DESTS.map(function (d) { return { id: d.id, label: d.label, overtimeMin: d.overtimeMin }; });
     }
+    s.destinations.forEach(function (d) {
+      var n = parseInt(d.overtimeMin, 10);
+      d.overtimeMin = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : OVER_TIME_MIN;
+    });
     if (typeof s.namesText !== 'string') s.namesText = '';
     if (!Array.isArray(s.outNow)) s.outNow = [];
     if (!Array.isArray(s.log)) s.log = [];
     if (!Array.isArray(s.history)) s.history = [];
+    s.alertSoundOn = (typeof s.alertSoundOn === 'boolean') ? s.alertSoundOn : true;
     var hasArmed = s.destinations.some(function (d) { return d.id === s.armedDestId; });
     if (!hasArmed) s.armedDestId = s.destinations.length ? s.destinations[0].id : null;
     return s;
@@ -356,6 +393,7 @@
   function applyStateToForm() {
     els.setName.value = state.name;
     els.namesInput.value = state.namesText;
+    els.alertSoundToggle.checked = state.alertSoundOn;
     updateNameCount();
     renderDestsEditor();
     renderChips();
@@ -363,7 +401,49 @@
     renderLiveBoard();
     renderTodayLog();
     renderHistory();
+    renderWeekly();
   }
+
+  els.alertSoundToggle.addEventListener('change', function () {
+    state.alertSoundOn = els.alertSoundToggle.checked;
+    save();
+  });
+
+  // ── Overtime alert sound ─────────────────────────────────────────────────
+  // Lazily created/unlocked on the first tap anywhere on the page, since
+  // browsers block audio started outside a user gesture — by the time a
+  // live-board tick actually needs to beep, this has long since fired.
+  var audioCtx = null;
+  document.addEventListener('click', function unlockAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { /* Web Audio unavailable */ }
+  }, { capture: true });
+
+  function playOvertimeBeep() {
+    if (!audioCtx) return;
+    try {
+      var now = audioCtx.currentTime;
+      [0, 0.2].forEach(function (offset) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, now + offset);
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.linearRampToValueAtTime(0.15, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.17);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.18);
+      });
+    } catch (e) { /* Web Audio unavailable */ }
+  }
+
+  // Tracks which currently-out sign-outs have already triggered an overtime
+  // alert, so the beep fires once per trip rather than every 20s tick.
+  var alertedOverIds = {};
 
   // ── Roster ───────────────────────────────────────────────────────────────
   function parseNames() {
@@ -414,6 +494,9 @@
     els.destsEditor.innerHTML = state.destinations.map(function (d) {
       return '<div class="tag-row" data-id="' + escapeAttr(d.id) + '">' +
         '<input type="text" class="dest-label" value="' + escapeAttr(d.label) + '">' +
+        '<span class="dest-overtime-wrap"><label>Over after</label>' +
+        '<input type="number" class="dest-overtime" min="1" max="120" value="' + d.overtimeMin + '">' +
+        '<label>min</label></span>' +
         '<button type="button" class="remove-row-btn" data-remove-dest="' + escapeAttr(d.id) + '" title="Remove destination">&#10005;</button>' +
         '</div>';
     }).join('');
@@ -425,7 +508,12 @@
     var dest = state.destinations.filter(function (d) { return d.id === row.dataset.id; })[0];
     if (!dest) return;
     if (e.target.classList.contains('dest-label')) dest.label = e.target.value;
+    if (e.target.classList.contains('dest-overtime')) {
+      var n = parseInt(e.target.value, 10);
+      dest.overtimeMin = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : dest.overtimeMin;
+    }
     renderChips();
+    renderLiveBoard();
     save();
   });
 
@@ -441,7 +529,7 @@
   });
 
   els.addDestBtn.addEventListener('click', function () {
-    var d = { id: nextId('dt'), label: 'New destination' };
+    var d = { id: nextId('dt'), label: 'New destination', overtimeMin: OVER_TIME_MIN };
     state.destinations.push(d);
     if (!state.armedDestId) state.armedDestId = d.id;
     renderDestsEditor();
@@ -522,6 +610,7 @@
     renderStudentGrid();
     renderLiveBoard();
     renderTodayLog();
+    renderWeekly();
     save();
     if (cardEl) {
       var refreshed = els.studentGrid.querySelector('.student-card[data-name="' + cssEscape(name) + '"]');
@@ -544,9 +633,19 @@
       return;
     }
     var nowMs = Date.now();
+    var stillOutIds = {};
+    state.outNow.forEach(function (o) { stillOutIds[o.id] = true; });
+    Object.keys(alertedOverIds).forEach(function (id) { if (!stillOutIds[id]) delete alertedOverIds[id]; });
+
     els.liveBoard.innerHTML = state.outNow.map(function (o) {
       var mins = Math.floor((nowMs - o.outMs) / 60000);
-      var over = mins >= OVER_TIME_MIN;
+      var dest = state.destinations.filter(function (d) { return d.id === o.destId; })[0];
+      var threshold = dest ? dest.overtimeMin : OVER_TIME_MIN;
+      var over = mins >= threshold;
+      if (over && !alertedOverIds[o.id]) {
+        alertedOverIds[o.id] = true;
+        if (state.alertSoundOn) playOvertimeBeep();
+      }
       var elapsedText = mins < 1 ? 'just now' : (mins + ' min');
       return '<div class="out-row' + (over ? ' over-time' : '') + '">' +
         '<div class="out-info"><span class="out-name">' + escapeHtml(o.name) + '</span><span class="out-dest">' + escapeHtml(o.destLabel) + '</span></div>' +
@@ -587,10 +686,62 @@
     renderStudentGrid();
     renderLiveBoard();
     renderTodayLog();
+    renderWeekly();
     save();
   }
 
-  setInterval(function () { renderLiveBoard(); }, LIVE_REFRESH_MS);
+  setInterval(function () { renderLiveBoard(); renderWeekly(); }, LIVE_REFRESH_MS);
+
+  // ── Weekly frequency (per-destination / per-student) ─────────────────────
+  function startOfWeekMs(ms) {
+    var d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - d.getDay());
+    return d.getTime();
+  }
+
+  function weeklyCounts() {
+    var weekStart = startOfWeekMs(Date.now());
+    var byDest = {}, byStudent = {};
+    function tally(name, destLabel) {
+      byDest[destLabel] = (byDest[destLabel] || 0) + 1;
+      byStudent[name] = (byStudent[name] || 0) + 1;
+    }
+    combinedTodayItems().forEach(function (it) { tally(it.name, it.destLabel); });
+    state.history.forEach(function (h) {
+      var ms = (h.dateMs != null) ? h.dateMs : Date.parse(h.date);
+      if (!isNaN(ms) && ms >= weekStart) {
+        h.rows.forEach(function (r) { tally(r.name, r.destLabel); });
+      }
+    });
+    return { byDest: byDest, byStudent: byStudent };
+  }
+
+  function topEntries(counts, limit) {
+    return Object.keys(counts)
+      .map(function (k) { return { label: k, count: counts[k] }; })
+      .sort(function (a, b) { return b.count - a.count || a.label.localeCompare(b.label); })
+      .slice(0, limit);
+  }
+
+  function renderWeekly() {
+    if (!state) return;
+    var counts = weeklyCounts();
+    var destTop = topEntries(counts.byDest, 8);
+    var studentTop = topEntries(counts.byStudent, 8);
+    if (!destTop.length) {
+      els.weeklyWrap.innerHTML = '<p class="empty-hint">No trips logged yet this week.</p>';
+      return;
+    }
+    function list(entries) {
+      return '<ul class="weekly-list">' + entries.map(function (e) {
+        return '<li><span>' + escapeHtml(e.label) + '</span><span class="weekly-count">' + e.count + '</span></li>';
+      }).join('') + '</ul>';
+    }
+    els.weeklyWrap.innerHTML =
+      '<div class="weekly-col"><h4>By destination</h4>' + list(destTop) + '</div>' +
+      '<div class="weekly-col"><h4>By student</h4>' + list(studentTop) + '</div>';
+  }
 
   // ── Today's log (combined, newest first) ─────────────────────────────────
   function combinedTodayItems() {
@@ -634,6 +785,7 @@
 
     state.history.unshift({
       date: new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
+      dateMs: Date.now(),
       rows: state.log.slice().reverse().map(function (e) {
         return { name: e.name, destLabel: e.destLabel, outStr: e.outStr, inStr: e.inStr, durationMin: e.durationMin };
       }),
@@ -644,6 +796,7 @@
 
     renderTodayLog();
     renderHistory();
+    renderWeekly();
     save();
     showMsg('Day archived. Ready for a fresh day.', 'info');
   });

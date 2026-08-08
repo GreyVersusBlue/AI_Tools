@@ -10,6 +10,8 @@ const RUNNING_KEY = 'ct_running_v1';
 const TABS = ['countdown', 'transition', 'random', 'stopwatch', 'roundrobin'];
 const SOUNDS = ['chime', 'bell', 'buzzer', 'none'];
 
+export const MAX_CUSTOM_PRESETS = 12;
+
 const DEFAULTS = {
   v: 1,
   activeTab: 'countdown',
@@ -17,7 +19,8 @@ const DEFAULTS = {
   transition: { minutes: 2, seconds: 0 },
   random: { minMinutes: 3, maxMinutes: 8 },
   roundrobin: { minutes: 2, seconds: 0, stations: 5, loop: false },
-  sound: { choice: 'chime', volume: 0.7, muted: false }
+  sound: { choice: 'chime', volume: 0.7, muted: false },
+  customPresets: []
 };
 
 function clamp(n, lo, hi, fallback) {
@@ -56,6 +59,17 @@ function sanitize(raw) {
     if (SOUNDS.includes(raw.sound.choice)) out.sound.choice = raw.sound.choice;
     out.sound.volume = clamp(raw.sound.volume, 0, 1, out.sound.volume);
     out.sound.muted = !!raw.sound.muted;
+  }
+  if (Array.isArray(raw.customPresets)) {
+    out.customPresets = raw.customPresets
+      .filter(p => p && typeof p === 'object')
+      .map(p => ({
+        name: String(p.name || '').trim().slice(0, 40),
+        minutes: clamp(p.minutes, 0, 180, 0),
+        seconds: clamp(p.seconds, 0, 59, 0)
+      }))
+      .filter(p => p.name && (p.minutes > 0 || p.seconds > 0))
+      .slice(0, MAX_CUSTOM_PRESETS);
   }
   return out;
 }
@@ -100,4 +114,4 @@ export function clearRunning() {
   try { localStorage.removeItem(RUNNING_KEY); } catch (e) { /* ignore */ }
 }
 
-export default { load, save, loadRunning, saveRunning, clearRunning, DEFAULTS, TABS, SOUNDS };
+export default { load, save, loadRunning, saveRunning, clearRunning, DEFAULTS, TABS, SOUNDS, MAX_CUSTOM_PRESETS };
