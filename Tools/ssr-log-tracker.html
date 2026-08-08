@@ -111,6 +111,8 @@
     @page { size: letter portrait; margin: 0.3in; }
   }
 </style>
+<link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/a11y.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -155,7 +157,7 @@
     </div>
 
     <div class="main-col">
-      <div class="card" id="logCard" style="display:none;">
+      <div class="card" id="logCard" style="display:none;" data-a11y-read>
         <div class="log-header">
           <h2 id="activeStudentName">&mdash;</h2>
           <button type="button" class="secondary small" id="printStudentBtn">Print this student's log</button>
