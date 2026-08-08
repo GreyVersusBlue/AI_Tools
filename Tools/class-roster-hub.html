@@ -16,6 +16,8 @@
 <meta name="twitter:description" content="Build and save a class roster once — Name Picker, Seating Chart, Group/Team Generator, and other tools on this site can all load it from here instead of being re-typed.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='13' cy='11' r='4' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M6 25c0-4.4 3.1-7.5 7-7.5s7 3.1 7 7.5' fill='none' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M22 14.5h5M24.5 12v5' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<script src="../_shared/state-link.js"></script>
+<script src="class-roster-hub/lib/qrcode.js"></script>
 
 <style>
   :root {
@@ -94,6 +96,21 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  .qr-overlay {
+    position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .qr-overlay[hidden] { display: none; }
+  .qr-modal {
+    background: #fff; border-radius: 10px; border: 1px solid var(--line);
+    padding: 1.2rem; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .qr-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: .8rem; font-weight: 700; }
+  .qr-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
+  .qr-close:hover { color: var(--err); }
+  #qrCanvas { display: block; width: 260px; height: 260px; margin: 0 auto; image-rendering: pixelated; }
+  .qr-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 260px; }
+
   .print-only { display: none; }
   @media print {
     body { background: #fff; color: #000; padding: 0; }
@@ -122,6 +139,19 @@
     <button class="secondary small" id="newRosterBtn" type="button">New roster</button>
     <button class="secondary small" id="duplicateRosterBtn" type="button">Duplicate</button>
     <button class="danger small" id="deleteRosterBtn" type="button">Delete</button>
+    <span id="shareBar"></span>
+    <button class="secondary small" id="qrBtn" type="button">QR code</button>
+  </div>
+
+  <div class="qr-overlay" id="qrOverlay" hidden>
+    <div class="qr-modal" role="dialog" aria-modal="true" aria-label="Roster QR code">
+      <div class="qr-modal-head">
+        <span>Scan to import this roster</span>
+        <button type="button" class="qr-close" id="qrCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="qrCanvas"></canvas>
+      <p class="qr-hint">Scanning imports a new copy of this roster on the other device &mdash; it won&rsquo;t stay in sync after that.</p>
+    </div>
   </div>
 
   <div id="msg"></div>
@@ -140,6 +170,11 @@
         <label for="namesInput">Students &mdash; one name per line</label>
         <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
         <div id="nameCount">0 names</div>
+
+        <div class="btn-row" style="margin-bottom:.8rem;">
+          <button class="secondary small" id="importCsvBtn" type="button">Import from file&hellip;</button>
+          <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none;">
+        </div>
 
         <div class="btn-row">
           <button id="saveBtn" type="button">Save roster</button>
@@ -190,7 +225,8 @@
 
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'duplicateRosterBtn', 'deleteRosterBtn', 'rosterName', 'renameBtn',
-   'namesInput', 'nameCount', 'saveBtn', 'printBtn', 'allRosters', 'emptyHint', 'msg'
+   'namesInput', 'nameCount', 'saveBtn', 'printBtn', 'allRosters', 'emptyHint', 'msg',
+   'shareBar', 'qrBtn', 'qrOverlay', 'qrCloseBtn', 'qrCanvas', 'importCsvBtn', 'csvFileInput'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentName = null;
@@ -231,6 +267,58 @@
     out = out.slice(0, MAX_ROSTER);
     return { names: out, truncatedNames: truncatedNames, truncatedList: truncatedList };
   }
+
+  // ── CSV/spreadsheet file import ──────────────────────────────────────────
+  var CSV_HEADER_WORDS = ['name', 'names', 'student', 'student name', 'full name'];
+
+  /** Pulls just the first cell out of one CSV/TSV row — a quoted first cell
+      (so a "Last, First"-style name keeps its internal comma) takes priority,
+      otherwise splits on the first tab or comma. Good enough for the common
+      case of a name column plus an ID/grade/etc. column after it. */
+  function firstCellOf(line) {
+    var t = line.trim();
+    if (!t) return '';
+    if (t[0] === '"') {
+      var end = t.indexOf('"', 1);
+      while (end !== -1 && t[end + 1] === '"') end = t.indexOf('"', end + 2);
+      if (end !== -1) return t.slice(1, end).replace(/""/g, '"').trim();
+    }
+    if (t.indexOf('\t') !== -1) return t.split('\t')[0].trim();
+    if (t.indexOf(',') !== -1) return t.split(',')[0].trim();
+    return t;
+  }
+
+  function namesFromFileText(text) {
+    return String(text || '').split(/\r?\n/).map(firstCellOf).filter(Boolean);
+  }
+
+  els.importCsvBtn.addEventListener('click', function () { els.csvFileInput.click(); });
+
+  els.csvFileInput.addEventListener('change', function () {
+    var file = els.csvFileInput.files[0];
+    els.csvFileInput.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var rows = namesFromFileText(reader.result);
+      var skippedHeader = false;
+      if (rows.length && CSV_HEADER_WORDS.indexOf(rows[0].toLowerCase()) !== -1) {
+        rows.shift();
+        skippedHeader = true;
+      }
+      if (!rows.length) { showMsg('Could not find any names in that file.'); return; }
+      var existing = els.namesInput.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+      els.namesInput.value = existing.concat(rows).join('\n');
+      updateNameCount();
+      showMsg(
+        'Imported ' + rows.length + ' name' + (rows.length === 1 ? '' : 's') + ' from "' + file.name + '"' +
+        (skippedHeader ? ' (header row skipped)' : '') + ' — review the list, then Save roster.',
+        true
+      );
+    };
+    reader.onerror = function () { showMsg('Could not read that file.'); };
+    reader.readAsText(file);
+  });
 
   function showMsg(text, ok) {
     els.msg.textContent = text;
@@ -387,8 +475,95 @@
     if (name) loadRosterByName(name.textContent);
   });
 
+  // ── Share link + QR code for one roster ──────────────────────────────────
+  StateLink.mountShareControl(els.shareBar, {
+    param: 'roster',
+    label: 'Share this roster',
+    getState: function () {
+      return currentName ? { name: currentName, names: parseNames(els.namesInput.value).names } : null;
+    },
+    onMessage: function (text) { alert(text); }
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L'); // typeNumber 0 = smallest version that fits; L = lowest EC, most capacity
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount();
+    var quiet = 4;
+    var total = count + quiet * 2;
+    var px = 6;
+    var size = total * px;
+    canvas.width = size;
+    canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#1f2430';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.qrBtn.addEventListener('click', function () {
+    if (!currentName) { showMsg('Save a roster first, then share it.'); return; }
+    var url = StateLink.buildShareUrl('roster', { name: currentName, names: parseNames(els.namesInput.value).names });
+    try {
+      drawShareQr(els.qrCanvas, url);
+    } catch (e) {
+      alert('This roster is too large to encode as a QR code — use the "Share this roster" copy-link button instead.');
+      return;
+    }
+    els.qrOverlay.hidden = false;
+  });
+  els.qrCloseBtn.addEventListener('click', function () { els.qrOverlay.hidden = true; });
+  els.qrOverlay.addEventListener('mousedown', function (e) { if (e.target === els.qrOverlay) els.qrOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.qrOverlay.hidden) els.qrOverlay.hidden = true; });
+
+  function looksLikeRosterPayload(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string' && Array.isArray(obj.names);
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved roster,
+      so a shared link never silently overwrites something already here. */
+  function uniqueRosterName(base) {
+    var all = loadAll();
+    if (!all[base]) return base;
+    var n = 2;
+    while (all[base + ' (' + n + ')']) n++;
+    return base + ' (' + n + ')';
+  }
+
+  /** A ?roster=... link imports as a brand-new, uniquely-named roster rather
+      than overwriting anything already saved here. */
+  function importSharedRosterFromUrl() {
+    var raw = StateLink.getParam('roster');
+    if (!raw) return false;
+    StateLink.clearParam('roster'); // consume it up front so a bad payload can't loop on refresh
+    var decoded = StateLink.decodeState(raw);
+    if (!looksLikeRosterPayload(decoded)) {
+      showMsg("That shared link's roster data looks corrupted.");
+      return false;
+    }
+    var all = loadAll();
+    if (Object.keys(all).length >= MAX_ROSTERS) {
+      showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters — delete one before importing another.');
+      return false;
+    }
+    var name = uniqueRosterName((decoded.name || 'Shared Roster').trim().slice(0, 80) || 'Shared Roster');
+    var parsed = parseNames(decoded.names.join('\n'));
+    all[name] = parsed.names;
+    saveAll(all);
+    loadRosterByName(name);
+    showMsg('Imported shared roster as "' + name + '".', true);
+    return true;
+  }
+
   // ── Init ─────────────────────────────────────────────────────────────────
   (function init() {
+    if (importSharedRosterFromUrl()) return;
     var all = loadAll();
     var names = Object.keys(all);
     refreshSwitcher();

@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -58,10 +58,12 @@ const PRECACHE_URLS = [
   "Tools/blank-map-generator/bmg-viewer.js",
   "Tools/bracket-tournament-generator.html",
   "Tools/bracket-tournament-generator/bt-store.js",
+  "Tools/bracket-tournament-generator/lib/qrcode.js",
   "Tools/certificate-award-maker.html",
   "Tools/certificate-award-maker/cam-borders.js",
   "Tools/certificate-award-maker/cam-store.js",
   "Tools/class-roster-hub.html",
+  "Tools/class-roster-hub/lib/qrcode.js",
   "Tools/classroom-timer/ct-app.js",
   "Tools/classroom-timer/ct-mirror.js",
   "Tools/classroom-timer/ct-sounds.js",

@@ -132,6 +132,7 @@
   .a-delta.pos { color: var(--good); font-weight: 700; }
   .a-delta.neg { color: var(--err); font-weight: 700; }
   .a-time { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+  .a-undo { font-size: .72rem; padding: 0; margin-left: .5rem; }
 
   /* ── History ──────────────────────────────────────────────────────── */
   .history-entry { border: 1px solid var(--line); border-radius: 7px; margin-bottom: .5rem; overflow: hidden; }
@@ -210,6 +211,12 @@
         <div id="historyWrap"></div>
       </div>
 
+      <div class="card">
+        <div class="card-title"><span>Cumulative Totals</span></div>
+        <div class="hint">Running totals across every archived day &mdash; today's live totals join this once the day is archived.</div>
+        <div id="cumulativeWrap"></div>
+      </div>
+
       <div id="msg"></div>
     </div>
 
@@ -225,7 +232,6 @@
           <option value="points-asc">Points, low &rarr; high</option>
         </select>
         <div class="spacer"></div>
-        <button class="secondary" id="undoBtn" type="button" disabled>Undo Last</button>
         <button class="secondary" id="printBtn" type="button" disabled>Print Report</button>
       </div>
 
@@ -258,11 +264,13 @@
   var HISTORY_LIMIT = 90;
   var LOG_LIMIT = 300;
 
+  var UNDO_STACK_LIMIT = 5;
+
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
-   'tagsEditor', 'addTagBtn', 'archiveBtn', 'exportHistoryBtn', 'historyWrap',
-   'tagChips', 'sortMode', 'undoBtn', 'printBtn', 'studentGrid', 'activityFeed',
+   'tagsEditor', 'addTagBtn', 'archiveBtn', 'exportHistoryBtn', 'historyWrap', 'cumulativeWrap',
+   'tagChips', 'sortMode', 'printBtn', 'studentGrid', 'activityFeed',
    'printArea', 'printTitle', 'printSub', 'printBody', 'msg'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -284,8 +292,10 @@
   // state = { name, namesText, tags, armedTagId, points, posCount, negCount, log, history, sortMode }
   var state = null;
   var tagIdCounter = 0;
+  var logIdCounter = 0;
 
   function nextTagId() { tagIdCounter++; return 'nt' + Date.now() + tagIdCounter; }
+  function nextLogId() { logIdCounter++; return 'ev' + Date.now() + logIdCounter; }
 
   // ── Persisted sections ───────────────────────────────────────────────────
   function loadStore() {
@@ -332,6 +342,7 @@
     if (!s.posCount || typeof s.posCount !== 'object') s.posCount = {};
     if (!s.negCount || typeof s.negCount !== 'object') s.negCount = {};
     if (!Array.isArray(s.log)) s.log = [];
+    s.log.forEach(function (ev) { if (!ev.id) ev.id = nextLogId(); }); // backfill entries saved before undo-by-id existed
     if (!Array.isArray(s.history)) s.history = [];
     if (!s.armedTagId) s.armedTagId = 'm+1';
     if (!s.sortMode) s.sortMode = 'name';
@@ -364,6 +375,7 @@
     renderChips();
     renderBoard();
     renderHistory();
+    renderCumulative();
   }
 
   // ── Roster ───────────────────────────────────────────────────────────────
@@ -524,6 +536,7 @@
     else state.negCount[name] = (state.negCount[name] || 0) + 1;
 
     state.log.unshift({
+      id: nextLogId(),
       name: name,
       tagLabel: chip.builtin ? 'Manual' : chip.label,
       delta: delta,
@@ -549,33 +562,49 @@
     return String(s).replace(/["\\]/g, '\\$&');
   }
 
-  // ── Activity feed + undo ─────────────────────────────────────────────────
+  // ── Activity feed + undo (a short stack, not just the very last tap) ─────
   function renderActivity() {
     if (!state.log.length) {
       els.activityFeed.innerHTML = '<p class="empty-hint">Nothing logged yet today.</p>';
-      els.undoBtn.disabled = true;
       return;
     }
-    els.activityFeed.innerHTML = state.log.slice(0, 40).map(function (ev) {
+    els.activityFeed.innerHTML = state.log.slice(0, 40).map(function (ev, i) {
       var sign = ev.delta > 0 ? 'pos' : 'neg';
+      var undoBtn = i < UNDO_STACK_LIMIT
+        ? '<button type="button" class="link-btn a-undo" data-undo-id="' + escapeAttr(ev.id) + '">Undo</button>'
+        : '';
       return '<div class="activity-item">' +
         '<span><span class="a-who">' + escapeHtml(ev.name) + '</span> <span class="a-what">&mdash; ' + escapeHtml(ev.tagLabel) + '</span></span>' +
-        '<span><span class="a-delta ' + sign + '">' + (ev.delta > 0 ? '+' : '') + ev.delta + '</span> <span class="a-time">' + escapeHtml(ev.ts) + '</span></span>' +
+        '<span><span class="a-delta ' + sign + '">' + (ev.delta > 0 ? '+' : '') + ev.delta + '</span> <span class="a-time">' + escapeHtml(ev.ts) + '</span>' + undoBtn + '</span>' +
         '</div>';
     }).join('');
-    els.undoBtn.disabled = false;
   }
 
-  els.undoBtn.addEventListener('click', function () {
-    var ev = state.log.shift();
-    if (!ev) return;
+  els.activityFeed.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-undo-id]');
+    if (!btn) return;
+    undoLogEntry(btn.dataset.undoId);
+  });
+
+  /** Reverses one specific past tap, not necessarily the very last one —
+      valid regardless of position since points/pos/negCount are just running
+      sums, so undoing an older entry while newer ones stand is still
+      arithmetically correct. */
+  function undoLogEntry(id) {
+    var idx = -1;
+    for (var i = 0; i < state.log.length; i++) {
+      if (state.log[i].id === id) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    var ev = state.log[idx];
+    state.log.splice(idx, 1);
     state.points[ev.name] = (state.points[ev.name] || 0) - ev.delta;
     if (ev.delta > 0) state.posCount[ev.name] = Math.max(0, (state.posCount[ev.name] || 0) - 1);
     else state.negCount[ev.name] = Math.max(0, (state.negCount[ev.name] || 0) - 1);
     renderBoard();
     renderActivity();
     save();
-  });
+  }
 
   // ── Archive day ──────────────────────────────────────────────────────────
   els.archiveBtn.addEventListener('click', function () {
@@ -601,9 +630,38 @@
     renderBoard();
     renderActivity();
     renderHistory();
+    renderCumulative();
     save();
     showMsg('Day archived. Every student is back to 0.', 'info');
   });
+
+  // ── Cumulative totals across every archived day ──────────────────────────
+  function renderCumulative() {
+    if (!els.cumulativeWrap) return;
+    if (!state.history.length) {
+      els.cumulativeWrap.innerHTML = '<p class="empty-hint">Archive at least one day to see cumulative totals.</p>';
+      return;
+    }
+    var totals = {};
+    state.history.forEach(function (h) {
+      h.rows.forEach(function (r) {
+        if (!totals[r.name]) totals[r.name] = { points: 0, pos: 0, neg: 0 };
+        totals[r.name].points += r.points;
+        totals[r.name].pos += r.pos;
+        totals[r.name].neg += r.neg;
+      });
+    });
+    var rows = Object.keys(totals).map(function (n) {
+      return { name: n, points: totals[n].points, pos: totals[n].pos, neg: totals[n].neg };
+    }).sort(function (a, b) { return b.points - a.points || a.name.localeCompare(b.name); });
+
+    els.cumulativeWrap.innerHTML =
+      '<table class="history-table"><thead><tr><th>Student</th><th>Points</th><th>+</th><th>&minus;</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + (r.points > 0 ? '+' : '') + r.points + '</td><td>' + r.pos + '</td><td>' + r.neg + '</td></tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
 
   function csvCell(v) {
     var s = String(v);
