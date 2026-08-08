@@ -114,7 +114,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Scans every key in the browser's localStorage, groups them under friendly per-tool labels via a hardcoded lookup table, and can export everything to one JSON file or merge-restore a previously exported file back in.
 **Suggested improvements:**
 - Add a selective export/restore mode — check off specific tools/groups instead of always backing up or restoring everything, useful when a teacher only wants to move, say, Name Picker rosters to a new computer without dragging along every other tool's data.
-- Add a "last backup" reminder banner (e.g. "last backup: 46 days ago", tracked via its own localStorage timestamp) since nothing currently prompts a teacher to actually take a backup before clearing their browser or switching devices.
 - Make the pre-restore overwrite warning more specific — the current preview only shows an aggregate overwrite count per tool group; listing which specific saved items (e.g. which named roster, which trip template) would be overwritten would reduce the risk of silently losing a specific record buried inside a group.
 
 ---
@@ -122,9 +121,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Grading & Data
 
 ### Final Grade Checker (`Tools/final_grade_checker.html`)
-**Current state:** A privacy-first (nothing saved) tool that lets a teacher enter grades for a fixed set of 5 students manually or paste a TAC export, then computes the final grade both by quality-point average and by percentage average, highlights the higher per county policy, and exports to Excel/PDF or print.
+**Current state:** A privacy-first (nothing saved) tool that lets a teacher enter grades manually (starting with 5 student rows, with add/remove-row controls) or paste a TAC export, then computes the final grade both by quality-point average and by percentage average, highlights the higher per county policy, and exports to Excel/PDF or print.
 **Suggested improvements:**
-- Let manual mode add/remove student rows instead of the hardcoded 5-card limit (`MANUAL_COUNT = 5`), so a small group of students doesn't need the paste workflow just to check more than five kids.
 - Accept a dropped `.csv`/`.xlsx` file in addition to pasted text, reusing the already-loaded SheetJS library for export — many TAC exports come down as files rather than clipboard-friendly text.
 - Add a "borderline grade" flag (e.g., within 0.3 points of the next letter) on the QP/percentage boxes, since the tool already treats the exact 0.5 rounding boundary as policy-critical.
 - Offer a Web Share API button next to Export PDF so a finished report can be shared directly to Mail/Files on an iPad instead of only downloading.
