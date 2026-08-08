@@ -1,0 +1,150 @@
+/* Sitewide accessibility widget — styling.
+   Loaded alongside a11y.js. Supersedes theme.css/theme-toggle.js's old
+   light/dark-only toggle with one wider widget (text size, theme,
+   dyslexia-friendly font, read-aloud) sharing a single localStorage key.
+
+   Theme handling: pages that already ship their own `[data-theme="dark"]`
+   CSS (the old Industry-design-system tools, and Classroom Timer's bespoke
+   one) set `window.A11Y_NATIVE_THEME = true` before loading a11y.js, and
+   keep using their native dark-mode styling untouched. Everywhere else,
+   a11y.js adds `.a11y-filter-dark` to <html> instead, and the filter rules
+   below do the work — a standard "force dark mode on any page" technique
+   (invert + hue-rotate, with images/video/canvas counter-inverted so
+   photos don't come out looking like film negatives). */
+
+html.a11y-filter-dark {
+  filter: invert(0.93) hue-rotate(180deg);
+  background: #fff;
+}
+html.a11y-filter-dark img,
+html.a11y-filter-dark video,
+html.a11y-filter-dark canvas,
+html.a11y-filter-dark svg image,
+html.a11y-filter-dark [style*="background-image"] {
+  filter: invert(1) hue-rotate(180deg);
+}
+/* keep the widget itself readable/normal instead of double-inverted */
+html.a11y-filter-dark .a11y-widget {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* dyslexia-friendly font: a legible, simply-shaped sans-serif stack with a
+   little extra letter/word/line spacing, since we can't vendor a specialty
+   typeface (no build step, no bundled webfont for this pass) */
+html.a11y-dyslexic body,
+html.a11y-dyslexic input,
+html.a11y-dyslexic textarea,
+html.a11y-dyslexic select,
+html.a11y-dyslexic button {
+  font-family: Verdana, Tahoma, 'Comic Sans MS', Arial, sans-serif !important;
+  letter-spacing: 0.02em !important;
+  word-spacing: 0.08em !important;
+  line-height: 1.6 !important;
+}
+
+.a11y-widget {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 999999;
+  font-family: system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.a11y-widget * { box-sizing: border-box; }
+
+.a11y-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid #2A6DB0;
+  background: #16222E;
+  color: #F6F7F9;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.18);
+}
+.a11y-toggle:hover { background: #2A6DB0; }
+.a11y-toggle:focus-visible { outline: 2px solid #2A6DB0; outline-offset: 2px; }
+
+.a11y-panel {
+  position: absolute;
+  right: 0;
+  bottom: 56px;
+  width: 268px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  color: #16222E;
+  border: 1px solid #C7CFD6;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.16);
+  padding: 12px;
+  display: none;
+}
+.a11y-panel.open { display: block; }
+
+.a11y-panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin: 0 0 10px;
+  color: #5B6B78;
+}
+.a11y-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid #E1E5EA;
+}
+.a11y-row:first-of-type { border-top: none; }
+.a11y-row .a11y-label { font-size: 13px; color: #16222E; }
+
+.a11y-btn-group { display: inline-flex; gap: 4px; }
+.a11y-btn {
+  border: 1px solid #C7CFD6;
+  background: #F6F7F9;
+  color: #16222E;
+  border-radius: 5px;
+  padding: 4px 9px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.a11y-btn:hover { border-color: #2A6DB0; color: #2A6DB0; }
+.a11y-btn:focus-visible { outline: 2px solid #2A6DB0; outline-offset: 1px; }
+.a11y-btn[aria-pressed="true"] { background: #2A6DB0; border-color: #2A6DB0; color: #fff; }
+.a11y-btn:disabled { opacity: .45; cursor: default; }
+
+.a11y-scale-value {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #5B6B78;
+  min-width: 3.2em;
+  text-align: center;
+}
+
+.a11y-reset {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: #5B6B78;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 0 0;
+  font-family: inherit;
+}
+.a11y-reset:hover { color: #2A6DB0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .a11y-panel { transition: opacity .12s ease; }
+}

@@ -79,6 +79,8 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; text-align: center; }
 </style>
+<link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/a11y.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -98,7 +100,7 @@
     <select id="genreSelect"></select>
   </div>
 
-  <div class="stage" id="stage">
+  <div class="stage" id="stage" data-a11y-read>
     <p class="empty">Press Generate to get a prompt.</p>
   </div>
 
