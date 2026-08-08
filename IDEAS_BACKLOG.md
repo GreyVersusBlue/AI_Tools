@@ -10,10 +10,7 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Field Trip Permission Slip Generator | Fill in the trip details once, get a printable permission slip. |
 | Sub Binder / Day Bundle Generator | Pulls today's Sub Plan, the current Seating Chart, and a Schedule Browser snapshot into one printable packet, so a substitute gets everything in one stack instead of three separate tools. |
-| Command Center (Daily Dashboard) | One glanceable projector page — the Classroom Timer, today's A/B schedule block, and the current class roster side by side, for running the whole period from the front of the room. |
-| Digital Escape Room / Puzzle Lock Builder | Chain QR-code and typed-answer puzzle stations into a linear or branching escape-room activity, each correct answer unlocking the next clue — built on the same QR engine as the Scavenger Hunt Builder. |
 
 ## Math
 
