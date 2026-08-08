@@ -41,6 +41,9 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Vocab & Conjugation Drill Generator | `Tools/vocab-conjugation-drill.html` | Vocabulary quiz drills (any language) and verb-conjugation tables with editable person/subject labels, each with a printable answer key. |
 | Gallery Walk QR Codes | `Tools/gallery-walk-qr.html` | Batch-generate QR codes linking to student work for a gallery walk, printed in a configurable grid, plus a plain-text reference sheet for you. |
 | Backup & Restore | `Tools/backup-restore.html` | Scans your browser for everything every tool on this site has saved and downloads it as one file, or restores it back on a new computer or after a wiped cache. |
+| Class Roster Hub | `Tools/class-roster-hub.html` | Build and save a class roster once, in the same shared storage Name Picker uses — several other tools can load it straight in instead of re-typing a class list. |
+| Digital Hall Pass / Sign-Out Log | `Tools/hall-pass-log.html` | Tap a destination, tap a student — a live board tracks who's out and for how long, with a per-day log, archived history, and a printable report. |
+| Exit Ticket / Bell Ringer Generator | `Tools/exit-ticket-generator.html` | A bank of short warm-up and reflection prompts with a big projector display, plus a printable handout mode for half- or quarter-sheet exit tickets. |
 
 ## Using these
 

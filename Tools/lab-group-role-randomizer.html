@@ -141,6 +141,10 @@
         <label for="rosterName">Roster name</label>
         <input type="text" id="rosterName" placeholder="e.g. Period 3 Chemistry">
 
+        <div class="btn-row" style="margin-bottom:.8rem;">
+          <select id="rosterHubSelect" aria-label="Load a saved roster" style="margin-bottom:0;"><option value="">Load a saved roster&hellip;</option></select>
+          <button type="button" class="secondary small" id="rosterHubLoadBtn" style="width:auto;margin-bottom:0;">Load</button>
+        </div>
         <label for="namesInput">Students — one name per line</label>
         <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
         <div id="name-count">0 names</div>
@@ -205,7 +209,7 @@
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'deleteRosterBtn', 'rosterName', 'namesInput', 'nameCount',
    'splitValueLabel', 'splitValue', 'roleList', 'addRoleBtn', 'shuffleBtn', 'printBtn', 'resetHistoryBtn',
-   'historyHint', 'resultsArea', 'printTitle', 'msg'
+   'historyHint', 'resultsArea', 'printTitle', 'msg', 'rosterHubSelect', 'rosterHubLoadBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.printTitle = document.getElementById('print-title');
   els.nameCount = document.getElementById('name-count');
@@ -258,6 +262,30 @@
   function studentNames() {
     return parseNames(els.namesInput.value);
   }
+
+  // ── Read-only reuse of the shared roster list (Class Roster Hub / Name
+  // Picker both save here under 'np_rosters') — separate storage from lgrr_rosters.
+  function populateRosterHubSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var names = Object.keys(rosters);
+      els.rosterHubSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) {
+      els.rosterHubSelect.innerHTML = '<option value="">No saved rosters found</option>';
+    }
+  }
+  els.rosterHubLoadBtn.addEventListener('click', function () {
+    var name = els.rosterHubSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var list = rosters[name];
+      if (!list) return;
+      els.namesInput.value = list.join('\n');
+      onNamesChanged(true);
+    } catch (e) { showMsg('Could not read that roster from this browser.'); }
+  });
 
   // ── Role list editor ────────────────────────────────────────────────────
   function renderRoleList() {
@@ -566,6 +594,7 @@
     newRoster('New Roster');
   }
   els.toolbar.style.display = '';
+  populateRosterHubSelect();
 
 })();
 </script>

@@ -10,10 +10,7 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Exit Ticket / Bell Ringer Generator | Printable half-sheets or a rotating bank of daily warm-up prompts. |
 | Field Trip Permission Slip Generator | Fill in the trip details once, get a printable permission slip. |
-| Digital Hall Pass / Sign-Out Log | Track and print who's out of the room and when. |
-| Class Roster Hub | Build and save a class roster once — Name Picker, Seating Chart, Group/Team Generator, Lab Group & Role Randomizer, Gallery Walk QR, and the SSR Log Tracker all pull from it instead of every tool needing the roster re-pasted into it separately. |
 | Sub Binder / Day Bundle Generator | Pulls today's Sub Plan, the current Seating Chart, and a Schedule Browser snapshot into one printable packet, so a substitute gets everything in one stack instead of three separate tools. |
 | Command Center (Daily Dashboard) | One glanceable projector page — the Classroom Timer, today's A/B schedule block, and the current class roster side by side, for running the whole period from the front of the room. |
 | Digital Escape Room / Puzzle Lock Builder | Chain QR-code and typed-answer puzzle stations into a linear or branching escape-room activity, each correct answer unlocking the next clue — built on the same QR engine as the Scavenger Hunt Builder. |

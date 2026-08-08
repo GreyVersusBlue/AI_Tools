@@ -134,6 +134,10 @@
     <label for="sectionName">Class / section name</label>
     <input type="text" id="sectionName" placeholder="e.g. 3rd Period ELA">
 
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;">
+      <select id="rosterHubSelect" aria-label="Load a saved roster" style="flex:1;"><option value="">Load a saved roster&hellip;</option></select>
+      <button type="button" class="small" id="rosterHubLoadBtn">Load</button>
+    </div>
     <label for="rosterInput">Roster (one student name per line)</label>
     <p class="hint">Paste your class list, one name per line. Saving the roster keeps any existing logs, even for names you remove.</p>
     <textarea id="rosterInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel"></textarea>
@@ -234,7 +238,7 @@
   var els = {};
   [
     'toolbar', 'sectionSwitch', 'newSectionBtn', 'deleteSectionBtn', 'sectionName',
-    'rosterInput', 'saveRosterBtn', 'rosterCount',
+    'rosterInput', 'saveRosterBtn', 'rosterCount', 'rosterHubSelect', 'rosterHubLoadBtn',
     'studentList', 'noStudentsHint',
     'logCard', 'activeStudentName', 'printStudentBtn',
     'entryForm', 'entryDate', 'entryBook', 'entryPages', 'entryMinutes',
@@ -393,6 +397,30 @@
     var remaining = listSections();
     if (remaining.length) loadSection(remaining[0]);
     else newSection('New Class');
+  });
+
+  // Read-only reuse of the shared roster list (Class Roster Hub / Name Picker
+  // both save here under 'np_rosters') — separate storage from sslt_sections_v1.
+  function populateRosterHubSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var names = Object.keys(rosters);
+      els.rosterHubSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) {
+      els.rosterHubSelect.innerHTML = '<option value="">No saved rosters found</option>';
+    }
+  }
+  els.rosterHubLoadBtn.addEventListener('click', function () {
+    var name = els.rosterHubSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var list = rosters[name];
+      if (!list) return;
+      els.rosterInput.value = list.join('\n');
+      els.saveRosterBtn.click();
+    } catch (e) { /* ignore */ }
   });
 
   els.saveRosterBtn.addEventListener('click', function () {
@@ -705,6 +733,7 @@
     else newSection('New Class');
   }
   resetForm();
+  populateRosterHubSelect();
 
 })();
 </script>

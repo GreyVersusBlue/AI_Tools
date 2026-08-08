@@ -191,6 +191,11 @@
         <div class="btn-row" style="margin-top:0;">
           <button class="secondary" id="addRowBtn" type="button">+ Add entry</button>
         </div>
+        <div class="btn-row">
+          <select id="rosterHubSelect" aria-label="Load names from a saved roster"><option value="">Load names from a saved roster&hellip;</option></select>
+          <button class="secondary" id="rosterHubLoadBtn" type="button">Add names</button>
+        </div>
+        <div class="hint">Fills in the name column only &mdash; add each student's link or text after.</div>
 
         <div class="import-box" id="importBox">
           <label for="importText">One entry per line &mdash; name, then the link or text, separated by a tab or a comma</label>
@@ -276,6 +281,7 @@
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'entriesBody', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
+   'rosterHubSelect', 'rosterHubLoadBtn',
    'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
    'refSheetTitle', 'previewNote', 'msg'
@@ -624,6 +630,33 @@
     }
   });
 
+  /* ---------- read-only reuse of the shared roster list (Class Roster Hub /
+     Name Picker both save here under 'np_rosters') — separate storage. ---------- */
+  function populateRosterHubSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var names = Object.keys(rosters);
+      els.rosterHubSelect.innerHTML = '<option value="">Load names from a saved roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) {
+      els.rosterHubSelect.innerHTML = '<option value="">No saved rosters found</option>';
+    }
+  }
+  els.rosterHubLoadBtn.addEventListener('click', function () {
+    var name = els.rosterHubSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var list = rosters[name];
+      if (!list || !list.length) return;
+      if (state.entries.length === 1 && !state.entries[0].name && !state.entries[0].value) state.entries = [];
+      state.entries = state.entries.concat(list.map(function (n) { return { name: n, value: '' }; }));
+      renderRows();
+      save();
+      scheduleRender();
+    } catch (e) { /* ignore — leaves entries unchanged */ }
+  });
+
   /* ---------- boot ---------- */
   var initial = loadStore();
   if (initial.current && initial.sets[initial.current]) {
@@ -638,6 +671,7 @@
       newSet('New Gallery Walk');
     }
   }
+  populateRosterHubSelect();
 
 })();
 </script>
