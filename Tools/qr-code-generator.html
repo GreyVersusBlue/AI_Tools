@@ -23,6 +23,7 @@
 <!-- gvb:social:end -->
 <script src="qr-code-generator/lib/qrcode.js"></script>
 <script src="qr-code-generator/lib/jsqr.js"></script>
+<script src="../_shared/qr-scan.js"></script>
 
 <style>
   :root {
@@ -406,6 +407,41 @@
     .col-right { position: static; flex-basis: 100%; }
   }
 
+  /* Camera test-scan modal */
+  .cam-overlay {
+    position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .cam-overlay[hidden] { display: none; }
+  .cam-modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  .cam-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text); }
+  .cam-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--text-dim); padding: 0; }
+  .cam-close:hover { color: var(--danger); }
+  .cam-body { padding: 1.1rem; text-align: center; }
+  .cam-body video { width: 100%; max-width: 280px; border-radius: 8px; background: #000; margin: 0 auto .8rem; display: block; }
+  .cam-status { font-size: .85rem; color: var(--text-dim); margin: 0 0 .8rem; }
+  .cam-status.ok { color: var(--success); }
+  .cam-status.bad { color: var(--danger); }
+
+  /* Recently-generated list */
+  .recent-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
+  .recent-item {
+    display: flex; align-items: center; gap: .6rem; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; padding: .5rem .65rem; cursor: pointer;
+  }
+  .recent-item:hover { border-color: var(--accent); }
+  .recent-main { flex: 1; min-width: 0; }
+  .recent-label { font-size: .82rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-text { font-size: .72rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); }
+  .recent-remove {
+    flex-shrink: 0; background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 4px; width: 1.7rem; height: 1.7rem; font-size: .85rem; cursor: pointer; padding: 0;
+  }
+  .recent-remove:hover { background: var(--danger); border-color: var(--danger); color: #fff; opacity: 1; }
+
   .print-only { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -548,7 +584,30 @@
         <button class="btn-secondary" id="btn-svg" disabled>Download SVG</button>
         <button class="btn-secondary" id="btn-print" disabled>Print this code</button>
       </div>
+      <div class="btn-row" style="width:100%;">
+        <button class="btn-secondary" id="btn-camera-scan" disabled>📷 Test scan with camera</button>
+        <button class="btn-secondary" id="btn-save-recent" disabled>☆ Save to Recent</button>
+      </div>
       <div id="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recently generated</div>
+      <div id="recent-list" class="recent-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="cam-overlay" id="cam-overlay" hidden>
+  <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Camera test scan">
+    <div class="cam-head">
+      <span>Camera test scan</span>
+      <button type="button" class="cam-close" id="cam-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="cam-body">
+      <video id="cam-video" autoplay muted playsinline></video>
+      <p class="cam-status" id="cam-status">Point the camera at your printed QR code&hellip;</p>
+      <button type="button" class="btn-secondary" id="cam-cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -592,6 +651,9 @@
     btnPng: document.getElementById('btn-png'),
     btnSvg: document.getElementById('btn-svg'),
     btnPrint: document.getElementById('btn-print'),
+    btnCameraScan: document.getElementById('btn-camera-scan'),
+    btnSaveRecent: document.getElementById('btn-save-recent'),
+    recentList: document.getElementById('recent-list'),
     printImg: document.getElementById('print-img'),
     msg: document.getElementById('msg'),
   };
@@ -982,6 +1044,8 @@
       els.btnPng.disabled = true;
       els.btnSvg.disabled = true;
       els.btnPrint.disabled = true;
+      els.btnCameraScan.disabled = true;
+      els.btnSaveRecent.disabled = true;
       lastQR = null;
       clearMsg();
       return;
@@ -1007,6 +1071,8 @@
       els.btnPng.disabled = false;
       els.btnSvg.disabled = false;
       els.btnPrint.disabled = false;
+      els.btnCameraScan.disabled = false;
+      els.btnSaveRecent.disabled = false;
       clearMsg();
       // Canvas 2D drawing is synchronous, so the pixels are already there —
       // no need to wait a frame (which browsers throttle for hidden tabs).
@@ -1016,6 +1082,8 @@
       els.btnPng.disabled = true;
       els.btnSvg.disabled = true;
       els.btnPrint.disabled = true;
+      els.btnCameraScan.disabled = true;
+      els.btnSaveRecent.disabled = true;
       setScanBadge('pending', 'Fix the error below to generate a code');
       showMsg('Could not build a QR code from this text: ' + err.message + '\nTry shortening it or lowering the error-correction level.');
     }
@@ -1118,9 +1186,112 @@
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ── Recently generated codes ─────────────────────────────────────────────
+  var RECENT_KEY = 'qr-code-generator-recent';
+  var RECENT_MAX = 10;
+
+  function loadRecent() {
+    try {
+      var v = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(v) ? v : [];
+    } catch (e) { return []; }
+  }
+
+  function saveRecentList(list) {
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX))); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function renderRecent() {
+    var list = loadRecent();
+    if (!list.length) {
+      els.recentList.innerHTML = '<p class="hint" style="margin:0;">Nothing saved yet — generate a code and click &ldquo;Save to Recent.&rdquo;</p>';
+      return;
+    }
+    els.recentList.innerHTML = list.map(function (r, i) {
+      return '<div class="recent-item" data-i="' + i + '" title="Click to reload this code">' +
+        '<div class="recent-main"><div class="recent-label">' + escapeHtml(r.label) + '</div><div class="recent-text">' + escapeHtml(r.text) + '</div></div>' +
+        '<button type="button" class="recent-remove" data-i="' + i + '" aria-label="Remove ' + escapeHtml(r.label) + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.btnSaveRecent.addEventListener('click', function () {
+    if (!lastQR) return;
+    var label = (els.filename.value || '').trim() || lastQR.text.slice(0, 40);
+    var list = loadRecent().filter(function (r) { return r.text !== lastQR.text; });
+    list.unshift({ label: label, text: lastQR.text, ts: Date.now() });
+    saveRecentList(list);
+    renderRecent();
+  });
+
+  els.recentList.addEventListener('click', function (e) {
+    var removeBtn = e.target.closest('.recent-remove');
+    if (removeBtn) {
+      var list = loadRecent();
+      list.splice(Number(removeBtn.dataset.i), 1);
+      saveRecentList(list);
+      renderRecent();
+      return;
+    }
+    var item = e.target.closest('.recent-item');
+    if (!item) return;
+    var entry = loadRecent()[Number(item.dataset.i)];
+    if (!entry) return;
+    els.text.value = entry.text;
+    els.charCount.textContent = entry.text.length + ' character' + (entry.text.length === 1 ? '' : 's');
+    render();
+  });
+
+  // ── Camera test scan (confirms a printed copy still reads) ──────────────
+  var camScanHandle = null;
+  var camOverlay = document.getElementById('cam-overlay');
+  var camVideo = document.getElementById('cam-video');
+  var camStatus = document.getElementById('cam-status');
+
+  function setCamStatus(text, kind) {
+    camStatus.textContent = text;
+    camStatus.className = 'cam-status' + (kind ? ' ' + kind : '');
+  }
+
+  function stopCameraScan() {
+    if (camScanHandle) { camScanHandle.stop(); camScanHandle = null; }
+    camOverlay.hidden = true;
+  }
+
+  els.btnCameraScan.addEventListener('click', function () {
+    if (!lastQR) return;
+    camOverlay.hidden = false;
+    setCamStatus('Point the camera at your printed QR code…');
+    camScanHandle = window.QRScan.scanQRFromCamera(camVideo, {
+      onResult: function (text) {
+        if (lastQR && text === lastQR.text) {
+          setCamStatus('✓ Camera confirms this printed code reads correctly.', 'ok');
+        } else {
+          setCamStatus('⚠ Camera read something different than expected — try better lighting, a larger print, or a fresh copy. Decoded: "' + text + '"', 'bad');
+        }
+      },
+      onError: function (err) {
+        setCamStatus('Camera unavailable: ' + err.message, 'bad');
+      }
+    });
+  });
+
+  document.getElementById('cam-close').addEventListener('click', stopCameraScan);
+  document.getElementById('cam-cancel').addEventListener('click', stopCameraScan);
+  camOverlay.addEventListener('mousedown', function (e) { if (e.target === camOverlay) stopCameraScan(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !camOverlay.hidden) stopCameraScan(); });
+
   // ── Init ─────────────────────────────────────────────────────────────────
   syncLabels();
   syncOverlayPanes();
+  renderRecent();
   render();
 
 })();

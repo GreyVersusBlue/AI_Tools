@@ -58,8 +58,12 @@
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
   button.danger:hover { background: var(--err); color: #fff; }
   button:disabled { opacity: .45; cursor: not-allowed; }
+  button.small { padding: .3rem .6rem; font-size: .78rem; }
 
   .btn-row { display: flex; gap: .6rem; margin-top: .3rem; flex-wrap: wrap; align-items: center; }
+
+  table.scan th.chk, table.scan td.chk { width: 1.6rem; text-align: center; }
+  table.scan tr.total td.chk { border-top: 2px solid var(--line-strong); }
 
   input[type="file"] { font-family: inherit; font-size: .88rem; }
 
@@ -74,7 +78,10 @@
 
   .preview { display: none; margin-top: .9rem; border-top: 1px dashed var(--line); padding-top: .9rem; }
   .preview.active { display: block; }
-  .preview ul { margin: .3rem 0 .8rem; padding-left: 1.2rem; font-size: .85rem; }
+  .preview ul { list-style: none; margin: .3rem 0 .8rem; padding-left: 0; font-size: .85rem; }
+  .preview ul li { padding: .2rem 0; }
+  .preview ul li label { display: flex; align-items: flex-start; gap: .45rem; cursor: pointer; }
+  .preview ul li input[type="checkbox"] { margin-top: .2rem; flex-shrink: 0; }
   .preview .warn-count { color: var(--err); font-weight: 700; }
   .preview .new-count { color: var(--good); font-weight: 700; }
 
@@ -94,9 +101,9 @@
 
   <div class="card">
     <div class="card-title">What&rsquo;s saved right now</div>
-    <p class="hint">Scanned from this browser&rsquo;s storage &mdash; every roster, saved section, and settings file any tool on this site has kept for you.</p>
+    <p class="hint">Scanned from this browser&rsquo;s storage &mdash; every roster, saved section, and settings file any tool on this site has kept for you. Uncheck a tool below to leave it out of the next download.</p>
     <table class="scan" id="scanTable">
-      <thead><tr><th>Tool</th><th class="num">Items</th><th class="num">Size</th></tr></thead>
+      <thead><tr><th class="chk"><input type="checkbox" id="scanSelectAll" checked title="Select / deselect all"></th><th>Tool</th><th class="num">Items</th><th class="num">Size</th></tr></thead>
       <tbody id="scanBody"></tbody>
     </table>
     <div class="btn-row"><button class="secondary" id="rescanBtn" type="button">Rescan</button></div>
@@ -104,7 +111,7 @@
 
   <div class="card">
     <div class="card-title">Download a backup</div>
-    <p class="hint">Saves everything above into one <code>.json</code> file. Keep it somewhere safe &mdash; a shared drive, email to yourself, a flash drive.</p>
+    <p class="hint">Saves the checked tools above into one <code>.json</code> file. Keep it somewhere safe &mdash; a shared drive, email to yourself, a flash drive.</p>
     <div class="btn-row"><button id="downloadBtn" type="button">Download backup (.json)</button></div>
   </div>
 
@@ -117,9 +124,10 @@
 
     <div class="preview" id="preview">
       <p id="previewSummary"></p>
+      <p class="hint" style="margin:0 0 .4rem;">Uncheck a tool to leave it out of this restore.</p>
       <ul id="previewList"></ul>
       <div class="btn-row">
-        <button id="restoreBtn" type="button">Restore backup</button>
+        <button id="restoreBtn" type="button">Restore checked items</button>
         <button class="secondary" id="cancelRestoreBtn" type="button">Cancel</button>
       </div>
     </div>
@@ -224,8 +232,12 @@
   }
 
   var scanBody = document.getElementById('scanBody');
+  var scanSelectAll = document.getElementById('scanSelectAll');
+  var lastScanGroups = []; // populated by renderScan(), read back by the download handler below
+
   function renderScan() {
     var groups = scanGroups();
+    lastScanGroups = groups;
     scanBody.innerHTML = '';
     var totalItems = 0, totalSize = 0;
     groups.forEach(function (g) {
@@ -234,19 +246,31 @@
       var tr = document.createElement('tr');
       if (g.label === 'Other saved data') tr.className = 'other';
       tr.innerHTML =
+        '<td class="chk"><input type="checkbox" class="scan-grp-check" data-label="' + escapeHtml(g.label) + '" checked></td>' +
         '<td class="g-label">' + escapeHtml(g.label) + '</td>' +
         '<td class="num">' + g.count + '</td>' +
         '<td class="num">' + formatSize(g.size) + '</td>';
       scanBody.appendChild(tr);
     });
     if (!groups.length) {
-      scanBody.innerHTML = '<tr><td colspan="3" style="color:var(--muted);">Nothing saved in this browser yet.</td></tr>';
+      scanBody.innerHTML = '<tr><td colspan="4" style="color:var(--muted);">Nothing saved in this browser yet.</td></tr>';
     }
     var totalRow = document.createElement('tr');
     totalRow.className = 'total';
-    totalRow.innerHTML = '<td>Total</td><td class="num">' + totalItems + '</td><td class="num">' + formatSize(totalSize) + '</td>';
+    totalRow.innerHTML = '<td class="chk"></td><td>Total</td><td class="num">' + totalItems + '</td><td class="num">' + formatSize(totalSize) + '</td>';
     scanBody.appendChild(totalRow);
+    scanSelectAll.checked = true;
   }
+
+  scanSelectAll.addEventListener('change', function () {
+    document.querySelectorAll('.scan-grp-check').forEach(function (cb) { cb.checked = scanSelectAll.checked; });
+  });
+  scanBody.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('scan-grp-check')) return;
+    var boxes = document.querySelectorAll('.scan-grp-check');
+    var allChecked = Array.prototype.every.call(boxes, function (cb) { return cb.checked; });
+    scanSelectAll.checked = allChecked;
+  });
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -296,12 +320,23 @@
 
   /* ---------- download ---------- */
   document.getElementById('downloadBtn').addEventListener('click', function () {
+    var selectedLabels = {};
+    document.querySelectorAll('.scan-grp-check:checked').forEach(function (cb) { selectedLabels[cb.dataset.label] = true; });
+    if (!lastScanGroups.length) {
+      showMsg('error', 'Nothing saved in this browser yet — there’s nothing to back up.');
+      return;
+    }
+    if (!Object.keys(selectedLabels).length) {
+      showMsg('error', 'Check at least one tool above before downloading a backup.');
+      return;
+    }
+
     var data = {};
-    var keys = [];
-    try { keys = Object.keys(localStorage); } catch (e) {}
-    keys.forEach(function (key) {
-      if (isInternalKey(key)) return;
-      try { data[key] = localStorage.getItem(key); } catch (e) {}
+    lastScanGroups.forEach(function (g) {
+      if (!selectedLabels[g.label]) return;
+      g.keys.forEach(function (key) {
+        try { data[key] = localStorage.getItem(key); } catch (e) {}
+      });
     });
     var payload = {
       source: 'AsPerMyLessonPlan.com backup',
@@ -330,6 +365,7 @@
   var previewSummary = document.getElementById('previewSummary');
   var previewList = document.getElementById('previewList');
   var pendingData = null;
+  var lastRestoreGroups = {};
 
   var msgEl = document.getElementById('msg');
   function showMsg(kind, text) {
@@ -345,6 +381,7 @@
     var file = fileInput.files && fileInput.files[0];
     clearMsg();
     pendingData = null;
+    lastRestoreGroups = {};
     preview.classList.remove('active');
     if (!file) return;
 
@@ -379,12 +416,19 @@
         try { existing = localStorage.getItem(key); } catch (e) { existing = null; }
         var willOverwrite = existing !== null;
         if (willOverwrite) overwriteCount++; else newCount++;
-        if (!groups[label]) groups[label] = { count: 0, overwrite: 0 };
+        if (!groups[label]) groups[label] = { count: 0, overwrite: 0, keys: [], overwrittenNames: [] };
         groups[label].count++;
-        if (willOverwrite) groups[label].overwrite++;
+        groups[label].keys.push(key);
+        if (willOverwrite) {
+          groups[label].overwrite++;
+          var names = describeOverwrittenNames(key, existing, parsed.data[key]);
+          if (names) groups[label].overwrittenNames = groups[label].overwrittenNames.concat(names);
+          else groups[label].overwrittenNames.push(null); // an overwrite happened, but no finer detail is available
+        }
       });
 
       pendingData = parsed.data;
+      lastRestoreGroups = groups;
 
       var when = parsed.exportedAt ? ' from ' + new Date(parsed.exportedAt).toLocaleString() : '';
       previewSummary.innerHTML = 'This backup' + when + ' contains <b>' + keys.length + '</b> item' + (keys.length === 1 ? '' : 's') + ':' +
@@ -394,9 +438,20 @@
       previewList.innerHTML = '';
       Object.keys(groups).sort().forEach(function (label) {
         var g = groups[label];
+        var text = label + ' — ' + g.count + ' item' + (g.count === 1 ? '' : 's');
+        if (g.overwrite) {
+          var realNames = g.overwrittenNames.filter(Boolean);
+          var uniqueNames = realNames.filter(function (n, i) { return realNames.indexOf(n) === i; });
+          if (uniqueNames.length) {
+            var shown = uniqueNames.slice(0, 8);
+            var more = uniqueNames.length - shown.length;
+            text += ' — will overwrite: ' + shown.map(function (n) { return '"' + n + '"'; }).join(', ') + (more > 0 ? ', +' + more + ' more' : '');
+          } else {
+            text += ' (' + g.overwrite + ' overwritten)';
+          }
+        }
         var li = document.createElement('li');
-        li.textContent = label + ' — ' + g.count + ' item' + (g.count === 1 ? '' : 's') +
-          (g.overwrite ? ' (' + g.overwrite + ' overwritten)' : '');
+        li.innerHTML = '<label><input type="checkbox" class="restore-grp-check" data-label="' + escapeHtml(label) + '" checked>' + escapeHtml(text) + '</label>';
         previewList.appendChild(li);
       });
 
@@ -408,8 +463,38 @@
     reader.readAsText(file);
   });
 
+  /** Best-effort extraction of which *named* records inside one localStorage
+      key would actually change, so the restore preview can say "will
+      overwrite: Period 3, Period 5" instead of just "2 items overwritten" —
+      covers the two conventions this site's tools already use for a
+      multi-record key: a `<prefix>:data:<name>` key per record, or one flat
+      key holding `{name: data}` (optionally wrapped one level deeper in a
+      `.sets` object, the shape several roster/section tools use). Returns
+      null when neither pattern applies, so the caller falls back to the
+      plain aggregate count. */
+  function describeOverwrittenNames(key, oldRaw, newRaw) {
+    var prefixMatch = /^(.*?:data:)(.+)$/.exec(key);
+    if (prefixMatch) return [prefixMatch[2]];
+
+    function parseNamedMap(raw) {
+      var v;
+      try { v = JSON.parse(raw); } catch (e) { return null; }
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+      if (v.sets && typeof v.sets === 'object' && !Array.isArray(v.sets)) return v.sets;
+      return v;
+    }
+    var oldMap = parseNamedMap(oldRaw);
+    var newMap = parseNamedMap(newRaw);
+    if (!oldMap || !newMap) return null;
+    var changed = Object.keys(newMap).filter(function (name) {
+      return JSON.stringify(oldMap[name]) !== JSON.stringify(newMap[name]);
+    });
+    return changed.length ? changed : null;
+  }
+
   document.getElementById('cancelRestoreBtn').addEventListener('click', function () {
     pendingData = null;
+    lastRestoreGroups = {};
     fileInput.value = '';
     preview.classList.remove('active');
     clearMsg();
@@ -417,9 +502,21 @@
 
   document.getElementById('restoreBtn').addEventListener('click', function () {
     if (!pendingData) return;
+    var selectedLabels = {};
+    document.querySelectorAll('.restore-grp-check:checked').forEach(function (cb) { selectedLabels[cb.dataset.label] = true; });
+    if (!Object.keys(selectedLabels).length) {
+      showMsg('error', 'Check at least one tool above before restoring.');
+      return;
+    }
+
+    var keysToRestore = [];
+    Object.keys(lastRestoreGroups).forEach(function (label) {
+      if (selectedLabels[label]) keysToRestore = keysToRestore.concat(lastRestoreGroups[label].keys);
+    });
+
     var restored = 0;
     var failed = [];
-    Object.keys(pendingData).forEach(function (key) {
+    keysToRestore.forEach(function (key) {
       try {
         localStorage.setItem(key, pendingData[key]);
         restored++;
@@ -428,6 +525,7 @@
       }
     });
     pendingData = null;
+    lastRestoreGroups = {};
     fileInput.value = '';
     preview.classList.remove('active');
     renderScan();
