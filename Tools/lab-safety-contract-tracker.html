@@ -185,6 +185,10 @@
     <div class="card-title">
       <span>Students</span>
       <div class="btn-row">
+        <label style="display:flex;align-items:center;gap:.35rem;font-weight:600;font-size:.82rem;margin:0;">
+          <input type="checkbox" id="missingOnlyToggle" style="width:auto;margin:0;"> Show missing only
+        </label>
+        <button type="button" class="secondary small" id="markAllSignedBtn">Mark all as signed</button>
         <button type="button" class="secondary small" id="printFullBtn">Print full report</button>
         <button type="button" class="secondary small" id="printMissingBtn">Print missing list</button>
       </div>
@@ -192,6 +196,7 @@
     <p class="hint">Tap a student's status pill to mark today's date as signed &mdash; tap again to undo. Use the date field to backdate, and the note field for things like "needs updated parent signature."</p>
     <div class="student-rows" id="studentRows"></div>
     <p class="empty-hint" id="noStudentsHint" style="display:none;">No students yet &mdash; paste a roster above.</p>
+    <p class="empty-hint" id="allCaughtUpHint" style="display:none;">Everyone showing is signed &mdash; turn off &ldquo;Show missing only&rdquo; to see the full roster.</p>
   </div>
 
   <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded, and no student data leaves this device.</footer>
@@ -230,7 +235,7 @@
     'sectionName', 'dueDate',
     'rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'rosterCount',
     'summaryCount', 'dueNote', 'missingWrap', 'allSignedHint', 'missingList', 'noRosterHint',
-    'studentRows', 'noStudentsHint',
+    'studentRows', 'noStudentsHint', 'allCaughtUpHint', 'missingOnlyToggle', 'markAllSignedBtn',
     'printFullBtn', 'printMissingBtn',
     'printFullArea', 'printFullTitle', 'printFullSub', 'printFullBody',
     'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody'
@@ -428,8 +433,13 @@
   /* ---------- student rows ---------- */
   function renderStudentRows() {
     els.noStudentsHint.style.display = state.roster.length ? 'none' : '';
+    var onlyMissing = els.missingOnlyToggle.checked;
+    var visible = onlyMissing
+      ? state.roster.filter(function (name) { return !(state.contracts[name] || defaultContract()).signed; })
+      : state.roster;
+    els.allCaughtUpHint.style.display = (onlyMissing && state.roster.length && !visible.length) ? '' : 'none';
     els.studentRows.innerHTML = '';
-    state.roster.forEach(function (name) {
+    visible.forEach(function (name) {
       var c = state.contracts[name] || defaultContract();
       var row = document.createElement('div');
       row.className = 'student-row ' + (c.signed ? 'signed' : 'unsigned');
@@ -473,6 +483,25 @@
       c2.note = noteInput.value;
       saveCurrentState();
     }
+  });
+
+  els.missingOnlyToggle.addEventListener('change', renderStudentRows);
+
+  els.markAllSignedBtn.addEventListener('click', function () {
+    if (!state || !state.roster.length) return;
+    var toMark = state.roster.filter(function (name) {
+      return !(state.contracts[name] || defaultContract()).signed;
+    });
+    if (!toMark.length) return;
+    if (!confirm('Mark all ' + toMark.length + ' remaining student' + (toMark.length === 1 ? '' : 's') + ' as signed today?')) return;
+    var today = todayStr();
+    toMark.forEach(function (name) {
+      var c = state.contracts[name] || (state.contracts[name] = defaultContract());
+      c.signed = true;
+      if (!c.date) c.date = today;
+    });
+    saveCurrentState();
+    renderAll();
   });
 
   /* ---------- summary ---------- */

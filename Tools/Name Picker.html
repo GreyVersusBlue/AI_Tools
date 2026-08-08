@@ -1230,9 +1230,31 @@ function deleteRoster(name){
   updateRosterUI();updateDataTab();
 }
 
+/* Tolerant roster paste parsing, mirroring Seating Chart Generator's
+   `parseRoster` — a straight paste from a gradebook column often carries
+   row numbers ("1. Aiden Smith"), a leftover tab-separated ID/section
+   column from a spreadsheet selection, or a trailing comma from an empty
+   adjacent column, none of which are actual name text. */
+const ROSTER_NUMBERING=/^\s*\d+\s*[.)\]-]?\s+/;
+function parseNamesText(text){
+  const out=[];
+  for(const rawLine of String(text??'').split(/\r?\n/)){
+    let line=rawLine.replace(/\s+/g,' ').trim();
+    if(!line)continue;
+    if(line.includes('\t')||rawLine.includes('\t')){
+      const cell=rawLine.split('\t').map(c=>c.replace(/\s+/g,' ').trim()).find(c=>c&&!/^\d+$/.test(c));
+      line=cell||'';
+    }
+    line=line.replace(ROSTER_NUMBERING,'').replace(/^["']|["']$/g,'').replace(/,\s*$/,'').trim();
+    if(!line||/^\d+$/.test(line))continue;
+    out.push(line);
+  }
+  return out;
+}
+
 function loadNamesFromInput(){
   const text=document.getElementById('namesInput').value;
-  const list=text.split('\n').map(n=>n.trim()).filter(n=>n.length>0);
+  const list=parseNamesText(text);
   names=list.slice();originalNames=list.slice();
   store.set('current',originalNames);
   absentSet=new Set();

@@ -120,6 +120,7 @@
     <label>Roster:</label>
     <select id="rosterSwitch"></select>
     <button class="secondary small" id="newRosterBtn" type="button">New roster</button>
+    <button class="secondary small" id="duplicateRosterBtn" type="button">Duplicate</button>
     <button class="danger small" id="deleteRosterBtn" type="button">Delete</button>
   </div>
 
@@ -188,7 +189,7 @@
   var MAX_NAME = 120, MAX_ROSTER = 400, MAX_ROSTERS = 60; // mirrors Name Picker's own ceilings
 
   var els = {};
-  ['toolbar', 'rosterSwitch', 'newRosterBtn', 'deleteRosterBtn', 'rosterName', 'renameBtn',
+  ['toolbar', 'rosterSwitch', 'newRosterBtn', 'duplicateRosterBtn', 'deleteRosterBtn', 'rosterName', 'renameBtn',
    'namesInput', 'nameCount', 'saveBtn', 'printBtn', 'allRosters', 'emptyHint', 'msg'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -291,6 +292,22 @@
     if (all[name] && !confirm('"' + name + '" already exists. Open it instead?')) return;
     if (!all[name]) { all[name] = []; saveAll(all); }
     loadRosterByName(name);
+  });
+
+  els.duplicateRosterBtn.addEventListener('click', function () {
+    if (!currentName) { showMsg('Save a roster first, then duplicate it.'); return; }
+    var all = loadAll();
+    if (Object.keys(all).length >= MAX_ROSTERS) {
+      showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters. Delete one before adding another.');
+      return;
+    }
+    var base = currentName + ' (copy)';
+    var newName = base, n = 2;
+    while (all[newName]) { newName = base + ' ' + n; n++; }
+    all[newName] = parseNames(els.namesInput.value).names;
+    saveAll(all);
+    loadRosterByName(newName);
+    showMsg('Duplicated as "' + newName + '".', true);
   });
 
   els.deleteRosterBtn.addEventListener('click', function () {

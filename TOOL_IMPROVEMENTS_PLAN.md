@@ -144,10 +144,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a custom Y-axis label field independent of the column header, since right now the axis title is always just the source column name.
 
 ### Rubric Builder (`Tools/rubric-builder.html`)
-**Current state:** Template-or-scratch rubric builder with fully editable performance levels and criteria, a live one-page landscape print preview, multiple named rubrics in localStorage, and a working URL-based share link via `_shared/state-link.js`.
+**Current state:** Template-or-scratch rubric builder with fully editable performance levels and criteria, a live one-page landscape print preview, multiple named rubrics in localStorage, a working URL-based share link via `_shared/state-link.js`, JSON export/import of a single rubric, and a "Duplicate" action.
 **Suggested improvements:**
-- Add JSON export/import of a single rubric (download/upload a `.json` file) as a backup/transfer path that doesn't depend on the share-link's URL length limits or on localStorage surviving.
-- Add a "duplicate this rubric" action so a teacher can branch a variant (e.g., an easier version for co-taught sections) without retyping every cell.
 - Support optional per-criterion point weighting (a multiplier) for teachers who want, say, "Thesis" worth double "Grammar" — currently every criterion shares the same level-point scale.
 
 ---
@@ -204,9 +202,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Rosters, Randomizers & Games
 
 ### Name Picker (`Tools/Name Picker.html`)
-**Current state:** A projector-friendly random student picker with three draw modes (Jump/Disappear/Slot Machine), a rarity/gacha system with Hall of Fame and achievement toasts, saved rosters, cold-call prompts, a synthesized-audio soundboard, absent/lucky-student toggles, tournament and retro-mode easter eggs, and full JSON backup/erase controls, all built on `np_rosters` in localStorage.
+**Current state:** A projector-friendly random student picker with three draw modes (Jump/Disappear/Slot Machine), a rarity/gacha system with Hall of Fame and achievement toasts, saved rosters, cold-call prompts, a synthesized-audio soundboard, absent/lucky-student toggles, tournament and retro-mode easter eggs, tolerant roster paste parsing (strips row numbers, extra tab-separated spreadsheet columns, trailing commas), and full JSON backup/erase controls, all built on `np_rosters` in localStorage.
 **Suggested improvements:**
-- Add tolerant roster paste parsing (strip pasted row numbers, trailing commas/extra spreadsheet columns) like Seating Chart Generator's `parseRoster` — right now the textarea only splits on newlines, so a straight paste from a gradebook column with numbering breaks it.
 - Add a "Share roster" link/QR code (using the site's existing `_shared/state-link.js` pattern already wired into Seating Chart and Bracket Generator) so a co-teacher can load the same class list and prompt set without retyping — today the only way to move a roster elsewhere is JSON export/import of the whole app state.
 - Add a printable "today's picks" report (formatted list of who was picked, in what order, with prompts) — currently the only output is a plain-text history export, with no print-styled report to hand a substitute or keep as a participation record.
 
@@ -225,9 +222,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Apply the same tolerant paste parsing used elsewhere on the site (drop pasted row numbers/extra spreadsheet columns) — right now a line is only split into name + optional skill rating, so a direct spreadsheet paste with an ID column would corrupt names.
 
 ### Class Roster Hub (`Tools/class-roster-hub.html`)
-**Current state:** A single shared place to create, rename, switch between, and print named rosters stored under `np_rosters`, which several other tools on the site already read from.
+**Current state:** A single shared place to create, rename, duplicate, switch between, and print named rosters stored under `np_rosters`, which several other tools on the site already read from.
 **Suggested improvements:**
-- Add a "Duplicate roster" button — currently the only way to start a new roster based on an existing one is to select all the text, copy it, click New, and paste, since New always opens blank.
 - Add CSV/spreadsheet file import alongside the manual textarea, since the hub's whole purpose is being the one place a roster gets typed in — right now that typing has to happen by hand even here.
 - Add a share link or QR code for one roster (matching the `state-link.js` pattern already used in Seating Chart Generator/Bracket Generator) so a roster built here can reach a co-teacher's browser without them re-typing it, since today it only moves between tools that share the same browser's localStorage.
 
@@ -318,12 +314,10 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a lightweight "days logged this week" streak indicator per student to flag kids who've gone quiet, since the summary currently only totals pages/minutes, not entry frequency.
 
 ### Lab Safety Contract Tracker (`Tools/lab-safety-contract-tracker.html`)
-**Current state:** Tracks one signed/unsigned status per student per class (with date and optional note), showing a live "N of M signed" count, a due-date urgency banner, and printable full/missing-only reports.
+**Current state:** Tracks one signed/unsigned status per student per class (with date and optional note), showing a live "N of M signed" count, a due-date urgency banner, a "show missing only" list filter, a bulk "mark all as signed" action, and printable full/missing-only reports.
 **Suggested improvements:**
 - Support more than one required document per student (e.g., "Lab Safety" plus "Chemical Handling") as separate checkable items instead of a single signed/unsigned boolean, since many science classes require multiple signed forms.
-- Add a "show missing only" filter toggle on the student list itself, so the teacher can scan/tap through just the outstanding names during a busy turn-in period instead of scrolling the full roster.
 - Add a "download reminder" button that generates a `.ics` calendar file for the due date, so it lands on the teacher's own calendar app rather than relying solely on the in-page banner.
-- Add a bulk "mark all as signed" action for the day slips are collected en masse, rather than tapping each student's pill individually.
 
 ### Exit Ticket / Bell Ringer Generator (`Tools/exit-ticket-generator.html`)
 **Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display, a custom-prompt box, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips.

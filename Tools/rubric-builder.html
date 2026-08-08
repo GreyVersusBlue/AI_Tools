@@ -128,7 +128,11 @@
     <label style="margin:0;font-weight:600;font-size:.85rem;">Rubric:</label>
     <select id="rubricSwitch"></select>
     <button class="secondary" id="newRubricBtn">New rubric</button>
+    <button class="secondary" id="duplicateRubricBtn">Duplicate</button>
     <button class="danger" id="deleteRubricBtn">Delete</button>
+    <button class="secondary" id="exportRubricBtn">Export JSON</button>
+    <button class="secondary" id="importRubricBtn">Import JSON</button>
+    <input type="file" id="importRubricFile" accept="application/json,.json" style="display:none;">
     <span id="shareBar"></span>
   </div>
 
@@ -186,7 +190,8 @@
   'use strict';
 
   var els = {};
-  ['toolbar','rubricSwitch','newRubricBtn','deleteRubricBtn',
+  ['toolbar','rubricSwitch','newRubricBtn','duplicateRubricBtn','deleteRubricBtn',
+   'exportRubricBtn','importRubricBtn','importRubricFile',
    'rubricName','rubricTitle','templatePicker','loadTemplateBtn',
    'levelsRow','addLevelBtn','criteriaList','emptyHint','addCriterionBtn',
    'printBtn','previewArea','totalPoints','shareBar'
@@ -496,6 +501,60 @@
     var remaining = RubricStore.listRubrics();
     if (remaining.length) loadRubricByName(remaining[0]);
     else newRubric('New Rubric');
+  });
+
+  els.duplicateRubricBtn.addEventListener('click', function () {
+    if (!state) return;
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = uniqueRubricName(state.name + ' (copy)');
+    RubricStore.saveRubric(clone.name, clone);
+    loadRubricByName(clone.name);
+  });
+
+  function sanitizeFilename(s) {
+    var cleaned = String(s || 'rubric').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    return cleaned || 'rubric';
+  }
+
+  els.exportRubricBtn.addEventListener('click', function () {
+    if (!state) return;
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  els.importRubricBtn.addEventListener('click', function () { els.importRubricFile.click(); });
+
+  els.importRubricFile.addEventListener('change', function () {
+    var file = els.importRubricFile.files && els.importRubricFile.files[0];
+    els.importRubricFile.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var decoded;
+      try { decoded = JSON.parse(reader.result); } catch (e) {
+        alert('That file isn’t valid JSON.');
+        return;
+      }
+      if (!looksLikeRubric(decoded)) {
+        alert('That doesn’t look like a rubric file exported from this page.');
+        return;
+      }
+      var name = uniqueRubricName(decoded.name || decoded.title || 'Imported Rubric');
+      state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria };
+      bumpIdCounterFromState();
+      RubricStore.saveRubric(name, state);
+      RubricStore.setCurrentName(name);
+      renderAll();
+    };
+    reader.onerror = function () { alert('Couldn’t read that file.'); };
+    reader.readAsText(file);
   });
 
   els.printBtn.addEventListener('click', function () {
