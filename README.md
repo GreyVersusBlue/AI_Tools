@@ -50,6 +50,10 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Sub Binder / Day Bundle Generator | `Tools/sub-binder-generator.html` | Pulls Sub Plan Builder's standing details and the current Seating Chart into one printable packet, plus today's lesson. |
 | Number Talks / Mental Math Routine Board | `Tools/number-talks-board.html` | A bank of number-talk prompts that reveal one expression at a time on a projector display, plus a lightweight strategy-sharing board. |
 | Novel Study / Reading Circles Manager | `Tools/novel-study-circles-manager.html` | Splits a roster into reading circles and rotates discussion roles meeting after meeting, with a chapter checkpoint logged each time. |
+| Lab Safety Contract Tracker | `Tools/lab-safety-contract-tracker.html` | One-tap signed/not-signed tracking per student, with a live "N of M signed" count and a missing-list before lab day. |
+| Primary Source Analysis Worksheet Generator | `Tools/primary-source-analysis-generator.html` | Builds a printable OPTIC or SOAPSTone worksheet around a described or pasted-in source, with an answer key from your own notes. |
+| Immersion Roleplay Scenario Generator | `Tools/roleplay-scenario-generator.html` | Real-life dialogue scenarios with vocabulary scaffolding cards you fill in for whatever language you teach. |
+| Tournament Bracket & Station Rotation | `Tools/pe-tournament-stations.html` | A station rotation timer with named stations and groups, plus a tournament bracket for PE units. |
 
 ## Using these
 
