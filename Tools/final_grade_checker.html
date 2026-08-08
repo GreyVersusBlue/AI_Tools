@@ -175,6 +175,10 @@
 
   <div id="students-container"></div>
 
+  <div class="no-print" id="add-student-row" style="text-align:center;margin:-0.25rem 0 1.5rem;">
+    <button class="btn btn-secondary" id="add-student-btn" type="button">+ Add student</button>
+  </div>
+
   <div class="note-bar">
     <strong>Which grade to use?</strong> Per Carroll County grading policy, award the <strong>higher</strong> of the two methods. The highlighted box is the one to report.<br>
     <strong>Quality Points:</strong> Each quarter letter converts to a point value (A=4, B=3, C=2, D=1, F=0). Those four values are averaged, then converted back to a letter (3.5 and up is an A).<br>
@@ -489,7 +493,11 @@ function exportPDF() {
 
 // ── State ────────────────────────────────────────────────────
 let mode = 'manual';
-const MANUAL_COUNT = 5;
+const DEFAULT_MANUAL_COUNT = 5;
+// Manual-mode rows are keyed by this counter rather than array position, so
+// removing a row in the middle doesn't require renumbering every input's id
+// and data-student attribute to keep them in sync with currentStudents.
+let manualNextId = 0;
 
 // ── Import ───────────────────────────────────────────────────
 function setStatus(msg, cls) {
@@ -543,6 +551,7 @@ function renderImportedStudents(students) {
   container.innerHTML = '';
   students.forEach((s, i) => container.appendChild(buildImportCard(s, i)));
   document.getElementById('clear-all-btn').onclick = () => switchToManual();
+  document.getElementById('add-student-row').style.display = 'none';
 }
 
 function buildImportCard(student, i) {
@@ -617,68 +626,99 @@ function switchToManual() {
   mode = 'manual';
   document.getElementById('import-area').value = '';
   setStatus('','');
-  currentStudents = Array.from({length: MANUAL_COUNT}, (_,i) => ({ name:'', scores:[null,null,null,null] }));
+  currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores:[null,null,null,null] }));
   renderManualCards();
   document.getElementById('clear-all-btn').onclick = clearAllManual;
+  document.getElementById('add-student-row').style.display = '';
 }
 
 function renderManualCards() {
   const container = document.getElementById('students-container');
   container.innerHTML = '';
-  for (let i = 0; i < MANUAL_COUNT; i++) container.appendChild(buildManualCard(i));
+  currentStudents.forEach((s, i) => container.appendChild(buildManualCard(s, i)));
   attachManualListeners();
+  currentStudents.forEach(s => updateManual(s.id));
 }
 
-function buildManualCard(i) {
+function findStudentIndexById(id) {
+  return currentStudents.findIndex(s => s.id === id);
+}
+
+function addManualStudent() {
+  const student = { id: manualNextId++, name: '', scores: [null,null,null,null] };
+  currentStudents.push(student);
+  renderManualCards();
+  const nameInput = document.getElementById(`name-${student.id}`);
+  if (nameInput) nameInput.focus();
+}
+
+function removeManualStudent(id) {
+  if (currentStudents.length <= 1) return;
+  const idx = findStudentIndexById(id);
+  if (idx === -1) return;
+  const s = currentStudents[idx];
+  const hasData = (s.name && s.name.trim() !== '') || s.scores.some(v => v !== null);
+  if (hasData && !confirm('Remove this student row? Any entered grades for this row will be lost.')) return;
+  currentStudents.splice(idx, 1);
+  renderManualCards();
+}
+
+function buildManualCard(student, displayIndex) {
+  const id = student.id;
+  const canRemove = currentStudents.length > 1;
   const card = document.createElement('div');
-  card.className = 'card blueprint student-card'; card.id = `card-${i}`;
+  card.className = 'card blueprint student-card'; card.id = `card-${id}`;
   card.innerHTML = `
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <div class="card-top">
-      <div class="student-num">${i+1}</div>
+      <div class="student-num">${displayIndex+1}</div>
       <div class="name-input-wrap">
-        <label for="name-${i}">Student name (optional)</label>
-        <input class="input name-input" type="text" id="name-${i}" placeholder="Student ${i+1}" data-student="${i}">
+        <label for="name-${id}">Student name (optional)</label>
+        <input class="input name-input" type="text" id="name-${id}" placeholder="Student ${displayIndex+1}" data-student="${id}" value="${escHtml(student.name || '')}">
       </div>
-      <button class="btn btn-secondary btn-danger no-print clear-row-btn" type="button" style="font-size:12px;padding:5px 11px;" data-student="${i}">Clear row</button>
+      <button class="btn btn-secondary btn-danger no-print clear-row-btn" type="button" style="font-size:12px;padding:5px 11px;" data-student="${id}">Clear row</button>
+      <button class="btn btn-secondary btn-danger no-print remove-row-btn" type="button" style="font-size:12px;padding:5px 11px;" data-student="${id}" ${canRemove ? '' : 'disabled'} title="${canRemove ? 'Remove this student' : 'At least one student is required'}">Remove</button>
     </div>
     <div class="grades-row">
       <div class="quarters-section">
-        ${[1,2,3,4].map(q=>`
+        ${[1,2,3,4].map(q=>{
+          const val = student.scores[q-1];
+          return `
           <div class="quarter-wrap">
-            <label for="q${q}-${i}">Quarter ${q}</label>
-            <input class="input grade-input" type="number" id="q${q}-${i}" min="0" max="100" step="0.01"
-              inputmode="decimal" placeholder="—" data-student="${i}" data-quarter="${q-1}"
-              aria-describedby="badge-${i}-${q-1}">
-            <div class="letter-badge grade-empty" id="badge-${i}-${q-1}">—</div>
-          </div>`).join('')}
+            <label for="q${q}-${id}">Quarter ${q}</label>
+            <input class="input grade-input" type="number" id="q${q}-${id}" min="0" max="100" step="0.01"
+              inputmode="decimal" placeholder="—" data-student="${id}" data-quarter="${q-1}"
+              aria-describedby="badge-${id}-${q-1}" value="${val !== null && val !== undefined ? val : ''}">
+            <div class="letter-badge grade-empty" id="badge-${id}-${q-1}">—</div>
+          </div>`;
+        }).join('')}
       </div>
       <div class="divider" aria-hidden="true"></div>
-      <div class="results-section" role="group" aria-label="Student ${i+1} result">
-        <div class="result-box" id="qp-box-${i}">
+      <div class="results-section" role="group" aria-label="Student ${displayIndex+1} result">
+        <div class="result-box" id="qp-box-${id}">
           <div class="result-label">Quality Points</div>
           <div class="result-row">
-            <div class="result-pct" id="qp-avg-${i}">—</div>
-            <div class="result-letter" id="qp-letter-${i}" style="opacity:0.4">—</div>
+            <div class="result-pct" id="qp-avg-${id}">—</div>
+            <div class="result-letter" id="qp-letter-${id}" style="opacity:0.4">—</div>
           </div>
-          <div class="pending-note" id="qp-note-${i}"></div>
+          <div class="pending-note" id="qp-note-${id}"></div>
         </div>
-        <div class="result-box" id="avg-box-${i}">
+        <div class="result-box" id="avg-box-${id}">
           <div class="result-label">Pct. Average</div>
           <div class="result-row">
-            <div class="result-pct" id="avg-pct-${i}">—</div>
-            <div class="result-letter" id="avg-letter-${i}" style="opacity:0.4">—</div>
+            <div class="result-pct" id="avg-pct-${id}">—</div>
+            <div class="result-letter" id="avg-letter-${id}" style="opacity:0.4">—</div>
           </div>
-          <div class="pending-note" id="avg-note-${i}"></div>
+          <div class="pending-note" id="avg-note-${id}"></div>
         </div>
-        <div class="final-line pending" id="final-line-${i}" role="status" aria-live="polite">
+        <div class="final-line pending" id="final-line-${id}" role="status" aria-live="polite">
           <span class="final-label">Final</span>
-          <span class="final-letter" id="final-letter-${i}">—</span>
-          <span class="final-method" id="final-method-${i}"></span>
+          <span class="final-letter" id="final-letter-${id}">—</span>
+          <span class="final-method" id="final-method-${id}"></span>
         </div>
       </div>
     </div>
-    <div class="filled-count" id="filled-${i}"></div>`;
+    <div class="filled-count" id="filled-${id}"></div>`;
   return card;
 }
 
@@ -690,7 +730,7 @@ function attachManualListeners() {
   // grade inputs. DOM order is already the order you want to type in, so the
   // attribute is gone.
   document.querySelectorAll('.grade-input').forEach(inp => {
-    inp.addEventListener('input', () => updateManual(parseInt(inp.dataset.student)));
+    inp.addEventListener('input', () => updateManual(parseInt(inp.dataset.student, 10)));
     inp.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
@@ -701,23 +741,27 @@ function attachManualListeners() {
   });
   document.querySelectorAll('.name-input').forEach(inp => {
     inp.addEventListener('input', () => {
-      const si = parseInt(inp.dataset.student);
-      if (currentStudents[si]) currentStudents[si].name = inp.value;
+      const id = parseInt(inp.dataset.student, 10);
+      const idx = findStudentIndexById(id);
+      if (idx !== -1) currentStudents[idx].name = inp.value;
     });
   });
   document.querySelectorAll('.clear-row-btn').forEach(btn => {
-    btn.addEventListener('click', () => clearManualStudent(parseInt(btn.dataset.student)));
+    btn.addEventListener('click', () => clearManualStudent(parseInt(btn.dataset.student, 10)));
+  });
+  document.querySelectorAll('.remove-row-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeManualStudent(parseInt(btn.dataset.student, 10)));
   });
 }
 
-function updateManual(si) {
-  const inputs = document.querySelectorAll(`.grade-input[data-student="${si}"]`);
+function updateManual(id) {
+  const inputs = document.querySelectorAll(`.grade-input[data-student="${id}"]`);
   const scores = [], letters = [];
   let filledCount = 0;
 
   inputs.forEach((inp, qi) => {
     const val = inp.value.trim();
-    const badge = document.getElementById(`badge-${si}-${qi}`);
+    const badge = document.getElementById(`badge-${id}-${qi}`);
     if (val === '') {
       badge.textContent='—'; badge.className='letter-badge grade-empty';
       inp.classList.remove('input-error'); scores.push(null); letters.push(null);
@@ -736,21 +780,22 @@ function updateManual(si) {
   });
 
   // Sync to data store
-  if (currentStudents[si]) currentStudents[si].scores = scores;
+  const si = findStudentIndexById(id);
+  if (si !== -1) currentStudents[si].scores = scores;
 
-  const filledEl = document.getElementById(`filled-${si}`);
+  const filledEl = document.getElementById(`filled-${id}`);
   if (filledCount===0) { filledEl.textContent=''; filledEl.className='filled-count'; }
   else if (filledCount<4) { filledEl.textContent=`${filledCount} of 4 quarters entered, need all 4 for a final grade`; filledEl.className='filled-count'; }
   else { filledEl.textContent='All 4 quarters entered'; filledEl.className='filled-count all-filled'; }
 
-  const qpBox=document.getElementById(`qp-box-${si}`), avgBox=document.getElementById(`avg-box-${si}`);
-  const qpAvgEl=document.getElementById(`qp-avg-${si}`), qpLetEl=document.getElementById(`qp-letter-${si}`);
-  const qpNoteEl=document.getElementById(`qp-note-${si}`);
-  const avgPctEl=document.getElementById(`avg-pct-${si}`), avgLetEl=document.getElementById(`avg-letter-${si}`);
-  const avgNoteEl=document.getElementById(`avg-note-${si}`);
-  const finalLine=document.getElementById(`final-line-${si}`);
-  const finalLetEl=document.getElementById(`final-letter-${si}`);
-  const finalMethodEl=document.getElementById(`final-method-${si}`);
+  const qpBox=document.getElementById(`qp-box-${id}`), avgBox=document.getElementById(`avg-box-${id}`);
+  const qpAvgEl=document.getElementById(`qp-avg-${id}`), qpLetEl=document.getElementById(`qp-letter-${id}`);
+  const qpNoteEl=document.getElementById(`qp-note-${id}`);
+  const avgPctEl=document.getElementById(`avg-pct-${id}`), avgLetEl=document.getElementById(`avg-letter-${id}`);
+  const avgNoteEl=document.getElementById(`avg-note-${id}`);
+  const finalLine=document.getElementById(`final-line-${id}`);
+  const finalLetEl=document.getElementById(`final-letter-${id}`);
+  const finalMethodEl=document.getElementById(`final-method-${id}`);
 
   qpBox.classList.remove('winner'); avgBox.classList.remove('winner');
   qpBox.querySelectorAll('.winner-tag').forEach(t=>t.remove());
@@ -788,13 +833,14 @@ function updateManual(si) {
   finalMethodEl.textContent='by '+METHOD_NAME[f.winner];
 }
 
-function clearManualStudent(i) {
-  document.querySelectorAll(`.grade-input[data-student="${i}"]`).forEach(inp=>{inp.value='';inp.classList.remove('input-error');});
-  const n=document.getElementById(`name-${i}`); if(n) n.value='';
-  if (currentStudents[i]) currentStudents[i] = { name:'', scores:[null,null,null,null] };
-  updateManual(i);
+function clearManualStudent(id) {
+  document.querySelectorAll(`.grade-input[data-student="${id}"]`).forEach(inp=>{inp.value='';inp.classList.remove('input-error');});
+  const n=document.getElementById(`name-${id}`); if(n) n.value='';
+  const idx = findStudentIndexById(id);
+  if (idx !== -1) currentStudents[idx] = { id, name:'', scores:[null,null,null,null] };
+  updateManual(id);
 }
-function clearAllManual() { for(let i=0;i<MANUAL_COUNT;i++) clearManualStudent(i); }
+function clearAllManual() { currentStudents.forEach(s => clearManualStudent(s.id)); }
 
 // ── Wiring ───────────────────────────────────────────────────
 // This is a module, so nothing here is on `window` and the old inline
@@ -810,9 +856,10 @@ on('clear-paste-btn', () => {
 on('print-btn', () => window.print());
 on('export-excel-btn', e => withLibs('excel', e.currentTarget, exportExcel));
 on('export-pdf-btn',   e => withLibs('pdf',   e.currentTarget, exportPDF));
+on('add-student-btn', addManualStudent);
 
 // ── Boot ─────────────────────────────────────────────────────
-currentStudents = Array.from({length: MANUAL_COUNT}, () => ({ name:'', scores:[null,null,null,null] }));
+currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores:[null,null,null,null] }));
 document.getElementById('clear-all-btn').onclick = clearAllManual;
 renderManualCards();
 </script>

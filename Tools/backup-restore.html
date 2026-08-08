@@ -68,6 +68,10 @@
   #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
   #msg.good { display: block; background: #e4f5ea; color: var(--good); border: 1px solid #bfe3cd; }
 
+  #backupBanner { font-size: .85rem; padding: .6rem .9rem; border-radius: 6px; display: none; margin-bottom: 1.1rem; }
+  #backupBanner.warn { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+  #backupBanner.ok { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+
   .preview { display: none; margin-top: .9rem; border-top: 1px dashed var(--line); padding-top: .9rem; }
   .preview.active { display: block; }
   .preview ul { margin: .3rem 0 .8rem; padding-left: 1.2rem; font-size: .85rem; }
@@ -85,6 +89,8 @@
     <h1>Backup &amp; Restore</h1>
     <p class="tagline">Everything below is saved in this browser only. Download a copy so a wiped cache or a new computer isn&rsquo;t a total loss.</p>
   </div>
+
+  <div id="backupBanner" role="status"></div>
 
   <div class="card">
     <div class="card-title">What&rsquo;s saved right now</div>
@@ -168,6 +174,12 @@
     { label: 'Sub Plan Builder', keys: ['subPlanBuilder.standingDetails.v1'] }
   ];
 
+  /* Internal bookkeeping key this page itself writes — not a teacher's data,
+   * so it's kept out of the scan table and the backup file's item counts. */
+  var LAST_BACKUP_KEY = 'br_last_backup_at';
+  var STALE_DAYS = 30;
+  function isInternalKey(key) { return key === LAST_BACKUP_KEY; }
+
   function labelFor(key) {
     for (var i = 0; i < KNOWN_GROUPS.length; i++) {
       var g = KNOWN_GROUPS[i];
@@ -192,6 +204,7 @@
     var keys = [];
     try { keys = Object.keys(localStorage); } catch (e) { keys = []; }
     keys.forEach(function (key) {
+      if (isInternalKey(key)) return;
       var label = labelFor(key) || 'Other saved data';
       var value = '';
       try { value = localStorage.getItem(key) || ''; } catch (e) {}
@@ -241,8 +254,45 @@
     });
   }
 
+  /* ---------- last-backup reminder ---------- */
+  function daysAgo(iso) {
+    var then = new Date(iso).getTime();
+    if (isNaN(then)) return null;
+    return Math.max(0, Math.floor((Date.now() - then) / 86400000));
+  }
+  function formatDaysAgo(days) {
+    if (days === 0) return 'today';
+    if (days === 1) return '1 day ago';
+    return days + ' days ago';
+  }
+  function renderBackupBanner() {
+    var banner = document.getElementById('backupBanner');
+    var hasData = false;
+    try { hasData = Object.keys(localStorage).some(function (k) { return !isInternalKey(k); }); } catch (e) {}
+    if (!hasData) { banner.className = ''; banner.textContent = ''; return; }
+
+    var iso = null;
+    try { iso = localStorage.getItem(LAST_BACKUP_KEY); } catch (e) {}
+    var days = iso ? daysAgo(iso) : null;
+
+    if (days === null) {
+      banner.className = 'warn';
+      banner.textContent = 'No backup on file yet — download one below before clearing your browser or switching computers.';
+    } else if (days >= STALE_DAYS) {
+      banner.className = 'warn';
+      banner.textContent = 'Last backup: ' + formatDaysAgo(days) + ' — worth downloading a fresh one.';
+    } else {
+      banner.className = 'ok';
+      banner.textContent = 'Last backup: ' + formatDaysAgo(days) + '.';
+    }
+  }
+
   renderScan();
-  document.getElementById('rescanBtn').addEventListener('click', renderScan);
+  renderBackupBanner();
+  document.getElementById('rescanBtn').addEventListener('click', function () {
+    renderScan();
+    renderBackupBanner();
+  });
 
   /* ---------- download ---------- */
   document.getElementById('downloadBtn').addEventListener('click', function () {
@@ -250,6 +300,7 @@
     var keys = [];
     try { keys = Object.keys(localStorage); } catch (e) {}
     keys.forEach(function (key) {
+      if (isInternalKey(key)) return;
       try { data[key] = localStorage.getItem(key); } catch (e) {}
     });
     var payload = {
@@ -267,7 +318,10 @@
     a.click();
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    showMsg('good', 'Backup downloaded: ' + keys.length + ' item' + (keys.length === 1 ? '' : 's') + '.');
+    var count = Object.keys(data).length;
+    try { localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString()); } catch (e) {}
+    renderBackupBanner();
+    showMsg('good', 'Backup downloaded: ' + count + ' item' + (count === 1 ? '' : 's') + '.');
   });
 
   /* ---------- restore ---------- */
