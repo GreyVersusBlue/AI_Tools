@@ -47,6 +47,20 @@ function paint(displayMs, fraction) {
   if (fraction != null) setRing(fraction);
 }
 
+/** Read-only snapshot of what's currently on screen, for the "mirror to a
+    device" feature (see the inline script at the bottom of the page) to
+    poll and relay over its data channel. Deliberately a pull, not a push —
+    the timer's own lifecycle (five modes, each with their own start/pause/
+    resume/reset paths) shouldn't need to know a mirror might be listening. */
+export function getDisplaySnapshot() {
+  return {
+    text: els.timeDisplay.textContent,
+    sub: els.subDisplay.textContent,
+    running: phase.status === 'running',
+    mode,
+  };
+}
+
 function updateSubDisplay(text) {
   els.subDisplay.textContent = text;
 }

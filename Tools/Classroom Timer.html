@@ -24,6 +24,11 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/qr-scan.js"></script>
+<script src="classroom-timer/lib/qrcode.js"></script>
+<script src="classroom-timer/lib/jsqr.js"></script>
 <style>
   :root {
     --color-bg: #f5f4f0;
@@ -159,6 +164,55 @@
   @media (max-width: 480px) {
     .app-header h1 { font-size: 1.3rem; }
   }
+
+  /* ---------- mirror-to-a-device ---------- */
+  .mirror-live-badge {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--color-success);
+    font-weight: 600;
+  }
+  .mirror-live-badge.show { display: inline-flex; }
+  .mirror-live-badge .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--color-success);
+    animation: mirrorPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes mirrorPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .mirror-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .mirror-overlay[hidden] { display: none; }
+  .mirror-modal {
+    background: var(--color-surface); color: var(--color-text);
+    border-radius: var(--radius); border: 1px solid var(--color-divider);
+    max-width: 380px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+  .mirror-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.1rem; border-bottom: 1px solid var(--color-divider);
+  }
+  .mirror-head h2 { font-size: 1.05rem; margin: 0; }
+  .mirror-close {
+    border: none; background: none; font-size: 1.3rem; line-height: 1; padding: 0.2rem 0.4rem;
+    color: var(--color-dim);
+  }
+  .mirror-close:hover { color: var(--color-danger); border-color: transparent; }
+  .mirror-body { padding: 1.1rem; font-size: 0.92rem; line-height: 1.5; }
+  .mirror-body p { margin: 0 0 0.9rem; color: var(--color-dim); }
+  .mirror-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto 0.9rem; border-radius: 6px; }
+  .mirror-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto 0.9rem; border-radius: 6px; background: #000; }
+  .mirror-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .mirror-actions button { flex: 1 1 auto; }
+  .mirror-status { font-size: 0.85rem; color: var(--color-dim); margin-top: 0.6rem; }
+  .mirror-status.bad { color: var(--color-danger); }
+  .mirror-status.good { color: var(--color-success); }
 </style>
 </head>
 <body>
@@ -169,7 +223,21 @@
       <a class="back-link" href="../index.html">← All tools</a>
       <h1>Classroom Timer</h1>
     </div>
+    <div class="header-actions">
+      <span class="mirror-live-badge" id="mirrorLiveBadge"><span class="dot" aria-hidden="true"></span>Mirroring</span>
+      <button type="button" id="mirrorBtn">Mirror to a device</button>
+    </div>
   </header>
+
+  <div class="mirror-overlay" id="mirrorOverlay" hidden>
+    <div class="mirror-modal" role="dialog" aria-modal="true" aria-label="Mirror to a device">
+      <div class="mirror-head">
+        <h2>Mirror to a device</h2>
+        <button type="button" class="mirror-close" id="mirrorCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="mirror-body" id="mirrorBody"></div>
+    </div>
+  </div>
 
   <nav class="mode-tabs" role="tablist" aria-label="Timer mode">
     <button class="mode-tab" role="tab" data-mode="countdown">Countdown</button>
@@ -296,6 +364,162 @@
 
 </div>
 <script type="module" src="classroom-timer/ct-app.js"></script>
+<script type="module">
+import { getDisplaySnapshot } from './classroom-timer/ct-app.js';
+import { drawQR, startHost } from './classroom-timer/ct-mirror.js';
+
+const overlay = document.getElementById('mirrorOverlay');
+const body = document.getElementById('mirrorBody');
+const closeBtn = document.getElementById('mirrorCloseBtn');
+const openBtn = document.getElementById('mirrorBtn');
+const liveBadge = document.getElementById('mirrorLiveBadge');
+
+let host = null;      // the active WebRTCPair/ct-mirror host handle, once pairing starts
+let pushTimer = null; // interval pushing getDisplaySnapshot() over the data channel
+let scanHandle = null; // active QRScan handle, if the camera is open
+
+function stopPushing() {
+  if (pushTimer) { clearInterval(pushTimer); pushTimer = null; }
+}
+
+function stopScanning() {
+  if (scanHandle) { scanHandle.stop(); scanHandle = null; }
+}
+
+function teardownConnection() {
+  stopPushing();
+  stopScanning();
+  if (host && host.pc) host.pc.close();
+  host = null;
+  liveBadge.classList.remove('show');
+}
+
+function openModal() { overlay.hidden = false; }
+function closeModal() { overlay.hidden = true; stopScanning(); }
+
+closeBtn.addEventListener('click', closeModal);
+overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) closeModal(); });
+
+openBtn.addEventListener('click', () => {
+  openModal();
+  if (host) renderConnected();
+  else renderIntro();
+});
+
+function renderIntro() {
+  body.innerHTML = `
+    <p>Show this timer's live countdown on a student's phone or another device &mdash; no apps, no accounts. Works between devices on the same Wi-Fi.</p>
+    <div class="mirror-actions"><button type="button" id="mStart">Start pairing</button></div>
+  `;
+  document.getElementById('mStart').addEventListener('click', beginPairing);
+}
+
+async function beginPairing() {
+  body.innerHTML = `<p>Preparing a pairing code&hellip;</p>`;
+  try {
+    host = await startHost();
+  } catch (err) {
+    body.innerHTML = `<p>Couldn&rsquo;t start pairing: ${escapeHtml(err.message)}</p>
+      <div class="mirror-actions"><button type="button" id="mBack">Back</button></div>`;
+    document.getElementById('mBack').addEventListener('click', renderIntro);
+    return;
+  }
+  renderOffer();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderOffer() {
+  body.innerHTML = `
+    <p>On the other device, open <b>Classroom Timer &rarr; Mirror this timer</b> and scan this code, or copy/paste it by hand:</p>
+    <canvas id="mOfferCanvas" width="320" height="320"></canvas>
+    <div class="mirror-actions">
+      <button type="button" id="mCopyOffer">Copy code</button>
+    </div>
+    <p style="margin-top:1rem;">Then connect their reply:</p>
+    <div class="mirror-actions">
+      <button type="button" id="mScanAnswer">Scan their code with camera</button>
+    </div>
+    <textarea id="mAnswerPaste" rows="3" style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;margin-top:.6rem;" placeholder="…or paste their reply code here"></textarea>
+    <div class="mirror-actions">
+      <button type="button" id="mConnect">Connect</button>
+    </div>
+    <p class="mirror-status" id="mStatus"></p>
+  `;
+  drawQR(document.getElementById('mOfferCanvas'), host.offerPayload);
+  document.getElementById('mCopyOffer').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(host.offerPayload); setStatus('Code copied.', 'good'); }
+    catch (e) { setStatus('Could not copy — select the code by hand from the QR reader.', 'bad'); }
+  });
+  document.getElementById('mConnect').addEventListener('click', () => {
+    const val = document.getElementById('mAnswerPaste').value.trim();
+    if (!val) { setStatus('Paste the reply code first.', 'bad'); return; }
+    connectWithAnswer(val);
+  });
+  document.getElementById('mScanAnswer').addEventListener('click', scanAnswerWithCamera);
+}
+
+function setStatus(text, kind) {
+  const el = document.getElementById('mStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'mirror-status' + (kind ? ' ' + kind : '');
+}
+
+function scanAnswerWithCamera() {
+  body.insertAdjacentHTML('beforeend', `
+    <video id="mScanVideo" autoplay muted playsinline></video>
+    <div class="mirror-actions"><button type="button" id="mCancelScan">Cancel</button></div>
+  `);
+  document.getElementById('mScanAnswer').disabled = true;
+  document.getElementById('mCancelScan').addEventListener('click', () => {
+    stopScanning();
+    renderOffer();
+  });
+  scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('mScanVideo'), {
+    onResult: (text) => { stopScanning(); connectWithAnswer(text); },
+    onError: (err) => { setStatus('Camera unavailable: ' + err.message, 'bad'); },
+  });
+}
+
+async function connectWithAnswer(answerPayload) {
+  setStatus('Connecting…');
+  try {
+    await host.applyAnswer(answerPayload, host.pc);
+  } catch (err) {
+    setStatus(err.message, 'bad');
+    return;
+  }
+  const failTimer = setTimeout(() => {
+    setStatus('Still trying — make sure both devices are on the same Wi-Fi network.', 'bad');
+  }, 8000);
+  host.onOpen(() => {
+    clearTimeout(failTimer);
+    pushTimer = setInterval(() => host.send(getDisplaySnapshot()), 300);
+    liveBadge.classList.add('show');
+    renderConnected();
+  });
+  host.onClose(() => {
+    stopPushing();
+    liveBadge.classList.remove('show');
+    if (!overlay.hidden) renderIntro();
+  });
+}
+
+function renderConnected() {
+  body.innerHTML = `
+    <p><b>Connected.</b> The other device is showing this timer live.</p>
+    <div class="mirror-actions"><button type="button" id="mStop">Stop mirroring</button></div>
+  `;
+  document.getElementById('mStop').addEventListener('click', () => {
+    teardownConnection();
+    closeModal();
+  });
+}
+</script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

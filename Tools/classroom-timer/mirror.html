@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Timer — Mirror</title>
+<meta name="description" content="Scan a code from your teacher's Classroom Timer to mirror its live countdown on this device — no apps, no accounts.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
+<script>window.A11Y_NATIVE_THEME = true;</script>
+<script src="../../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../../_shared/a11y.css">
+<script src="../../_shared/state-link.js"></script>
+<script src="../../_shared/webrtc-pair.js"></script>
+<script src="../../_shared/qr-scan.js"></script>
+<script src="lib/qrcode.js"></script>
+<script src="lib/jsqr.js"></script>
+<style>
+  :root {
+    --color-bg: #f5f4f0;
+    --color-surface: #ffffff;
+    --color-text: #1a1a1a;
+    --color-dim: #5b6b78;
+    --color-divider: #e1e5ea;
+    --color-accent: #2a6db0;
+    --color-success: #2f8f5b;
+    --color-danger: #c43a2f;
+    --radius: 10px;
+  }
+  [data-theme="dark"] {
+    --color-bg: #14181c;
+    --color-surface: #1e242b;
+    --color-text: #eef1f4;
+    --color-dim: #9aa7b2;
+    --color-divider: #333c44;
+    --color-accent: #5b9bd9;
+    --color-success: #4caf7d;
+    --color-danger: #e0665a;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--color-bg); }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    margin: 0;
+    padding: 1.5rem 1rem 3rem;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  .app-header { margin-bottom: 1.25rem; }
+  .app-header h1 { font-size: 1.3rem; margin: 0 0 0.2rem; }
+  .back-link { color: var(--color-dim); text-decoration: none; font-size: 0.9rem; }
+  .back-link:hover { color: var(--color-accent); }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card p { margin: 0 0 0.9rem; color: var(--color-dim); line-height: 1.5; }
+  button, textarea {
+    font-family: inherit; font-size: 0.95rem; color: var(--color-text);
+    background: var(--color-surface); border: 1px solid var(--color-divider);
+    border-radius: 8px; padding: 0.6rem 0.9rem;
+  }
+  button { cursor: pointer; width: 100%; margin-bottom: 0.6rem; }
+  button:hover:not(:disabled) { border-color: var(--color-accent); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+  textarea { width: 100%; font-family: ui-monospace, monospace; font-size: 0.78rem; margin-bottom: 0.6rem; }
+  canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto 0.9rem; border-radius: 6px; }
+  video { display: block; width: 100%; margin: 0 auto 0.9rem; border-radius: 6px; background: #000; }
+  .status { font-size: 0.85rem; color: var(--color-dim); margin-top: 0.3rem; }
+  .status.bad { color: var(--color-danger); }
+  .status.good { color: var(--color-success); }
+
+  .mirror-stage { display: none; flex-direction: column; align-items: center; text-align: center; gap: 0.6rem; padding: 2.5rem 0; }
+  .mirror-stage.show { display: flex; }
+  .mirror-time {
+    font-family: 'Consolas', 'SFMono-Regular', ui-monospace, monospace;
+    font-size: clamp(3rem, 18vw, 5rem);
+    font-weight: 700; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .mirror-sub { font-size: 1rem; color: var(--color-dim); min-height: 1.3em; }
+  .mirror-live { font-size: 0.8rem; color: var(--color-success); display: inline-flex; align-items: center; gap: 0.4rem; }
+  .mirror-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-success); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="app-header">
+    <a class="back-link" href="../Classroom%20Timer.html">&larr; Classroom Timer</a>
+    <h1>Mirror</h1>
+  </header>
+
+  <div class="card" id="setupCard">
+    <div id="setupBody">
+      <p>Ask your teacher to open <b>Mirror to a device</b> on their Classroom Timer, then scan the code they show, or paste it below.</p>
+      <button type="button" class="primary" id="scanBtn">Scan with camera</button>
+      <textarea id="pastePayload" rows="3" placeholder="…or paste the teacher's code here"></textarea>
+      <button type="button" id="connectBtn">Connect</button>
+      <p class="status" id="setupStatus"></p>
+    </div>
+  </div>
+
+  <div class="mirror-stage" id="mirrorStage">
+    <span class="mirror-live"><span class="dot" aria-hidden="true"></span>Live</span>
+    <div class="mirror-time" id="mirrorTime">&mdash;</div>
+    <div class="mirror-sub" id="mirrorSub"></div>
+  </div>
+
+</div>
+
+<script type="module">
+import { startJoin, drawQR } from './ct-mirror.js';
+
+const setupCard = document.getElementById('setupCard');
+const setupBody = document.getElementById('setupBody');
+const setupStatus = document.getElementById('setupStatus');
+const mirrorStage = document.getElementById('mirrorStage');
+const mirrorTime = document.getElementById('mirrorTime');
+const mirrorSub = document.getElementById('mirrorSub');
+
+let scanHandle = null;
+
+function setStatus(text, kind) {
+  setupStatus.textContent = text;
+  setupStatus.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function stopScanning() {
+  if (scanHandle) { scanHandle.stop(); scanHandle = null; }
+}
+
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const val = document.getElementById('pastePayload').value.trim();
+  if (!val) { setStatus('Paste the code first.', 'bad'); return; }
+  connect(val);
+});
+
+document.getElementById('scanBtn').addEventListener('click', () => {
+  setupBody.insertAdjacentHTML('beforeend', `
+    <video id="scanVideo" autoplay muted playsinline></video>
+    <button type="button" id="cancelScanBtn">Cancel</button>
+  `);
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('cancelScanBtn').addEventListener('click', () => {
+    stopScanning();
+    document.getElementById('scanVideo').remove();
+    document.getElementById('cancelScanBtn').remove();
+    document.getElementById('scanBtn').disabled = false;
+  });
+  scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('scanVideo'), {
+    onResult: (text) => { stopScanning(); connect(text); },
+    onError: (err) => { setStatus('Camera unavailable: ' + err.message, 'bad'); },
+  });
+});
+
+async function connect(offerPayload) {
+  stopScanning();
+  setStatus('Connecting…');
+  let join;
+  try {
+    join = await startJoin(offerPayload);
+  } catch (err) {
+    setStatus(err.message, 'bad');
+    return;
+  }
+
+  join.onOpen(() => {
+    setupCard.hidden = true;
+    mirrorStage.classList.add('show');
+  });
+  join.onClose(() => {
+    mirrorStage.classList.remove('show');
+    setupCard.hidden = false;
+    setStatus('Disconnected. Ask your teacher to start pairing again.', 'bad');
+  });
+  join.onMessage((data) => {
+    if (typeof data.text === 'string') mirrorTime.textContent = data.text;
+    if (typeof data.sub === 'string') mirrorSub.textContent = data.sub;
+  });
+
+  // Show the reply code either way — some browsers/devices can't reach each
+  // other's camera at all, so the paste-back path always has to work too.
+  setupBody.innerHTML = `
+    <p>Show this code back to your teacher, or read them the text below:</p>
+    <canvas id="answerCanvas" width="320" height="320"></canvas>
+    <textarea id="answerText" rows="3" readonly></textarea>
+    <button type="button" id="copyAnswerBtn">Copy code</button>
+    <p class="status" id="setupStatus">Waiting for your teacher to connect&hellip;</p>
+  `;
+  drawQR(document.getElementById('answerCanvas'), join.answerPayload);
+  document.getElementById('answerText').value = join.answerPayload;
+  document.getElementById('copyAnswerBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(join.answerPayload); }
+    catch (e) { /* textarea already shows it selectable */ }
+  });
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

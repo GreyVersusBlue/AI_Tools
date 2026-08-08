@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -63,8 +63,12 @@ const PRECACHE_URLS = [
   "Tools/certificate-award-maker/cam-store.js",
   "Tools/class-roster-hub.html",
   "Tools/classroom-timer/ct-app.js",
+  "Tools/classroom-timer/ct-mirror.js",
   "Tools/classroom-timer/ct-sounds.js",
   "Tools/classroom-timer/ct-store.js",
+  "Tools/classroom-timer/lib/jsqr.js",
+  "Tools/classroom-timer/lib/qrcode.js",
+  "Tools/classroom-timer/mirror.html",
   "Tools/command-center-dashboard.html",
   "Tools/data-chart-builder.html",
   "Tools/docx-merger.html",
@@ -159,8 +163,10 @@ const PRECACHE_URLS = [
   "_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css",
   "_shared/a11y.css",
   "_shared/a11y.js",
+  "_shared/qr-scan.js",
   "_shared/state-link.js",
   "_shared/theme.css",
+  "_shared/webrtc-pair.js",
   "assets/icons/icon-192.png",
   "assets/icons/icon-512.png",
   "assets/js/gvb-save.js",
