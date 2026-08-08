@@ -522,6 +522,77 @@
 
   #rev{cursor:pointer;}
 
+  /* ============ command palette ============ */
+  .cmdk-hint{
+    display:inline-flex;align-items:center;gap:.32rem;
+    font-family:var(--mono);font-size:.68rem;color:var(--dim);
+    border:1px solid var(--line);border-radius:4px;background:var(--panel);
+    padding:.22rem .5rem;cursor:pointer;line-height:1.3;
+    transition:border-color .15s var(--ease),color .15s var(--ease);
+  }
+  .cmdk-hint:hover,.cmdk-hint:focus-visible{border-color:var(--accent);color:var(--accent);outline:none;}
+
+  .cmdk-overlay{
+    position:fixed;inset:0;z-index:100010;
+    background:rgba(22,34,46,.5);
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:11vh 1.25rem 2rem;
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .15s var(--ease),visibility 0s linear .15s;
+  }
+  .cmdk-overlay.is-open{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .15s var(--ease);}
+  .cmdk{
+    width:100%;max-width:560px;
+    background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;
+    box-shadow:0 20px 60px rgba(22,34,46,.35),0 4px 16px rgba(22,34,46,.2);
+    overflow:hidden;
+    transform:translateY(-10px) scale(.98);
+    transition:transform .18s var(--ease);
+  }
+  .cmdk-overlay.is-open .cmdk{transform:translateY(0) scale(1);}
+  .cmdk-field{
+    display:flex;align-items:center;gap:.6rem;
+    padding:.9rem 1rem;border-bottom:1px solid var(--line);
+  }
+  .cmdk-field svg{color:var(--faint);flex-shrink:0;}
+  .cmdk-field input{
+    flex:1;min-width:0;border:0;outline:0;background:none;
+    font-family:var(--body);font-size:1rem;color:var(--ink);
+  }
+  .cmdk-field input::placeholder{color:var(--faint);}
+  .cmdk-field .esc{
+    font-family:var(--mono);font-size:.65rem;color:var(--dim);
+    border:1px solid var(--line);border-radius:3px;padding:.1rem .4rem;
+    flex-shrink:0;
+  }
+  .cmdk-list{list-style:none;margin:0;max-height:min(50vh,420px);overflow-y:auto;padding:.4rem;}
+  .cmdk-item{
+    display:flex;align-items:center;gap:.7rem;
+    padding:.55rem .7rem;border-radius:6px;cursor:pointer;
+    scroll-margin:.4rem;
+  }
+  .cmdk-item .per{
+    font-family:var(--mono);font-size:.68rem;color:var(--faint);
+    width:1.6rem;text-align:center;flex-shrink:0;
+  }
+  .cmdk-item .meta{min-width:0;flex:1;}
+  .cmdk-item .name{display:block;font-family:var(--display);font-weight:600;font-size:.94rem;color:var(--ink);}
+  .cmdk-item .pitch{
+    display:block;font-size:.78rem;color:var(--dim);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .cmdk-item mark{background:var(--accent-soft);color:var(--accent);border-radius:2px;}
+  .cmdk-item[aria-selected="true"]{background:var(--accent-soft);}
+  .cmdk-item[aria-selected="true"] .name{color:var(--accent);}
+  .cmdk-empty{padding:1.4rem 1rem;text-align:center;color:var(--dim);font-size:.88rem;}
+  @media (max-width:640px){
+    .cmdk-hint span{font-size:.66rem;}
+    .cmdk-overlay{padding-top:6vh;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .cmdk-overlay,.cmdk{transition:none!important;}
+  }
+
   /* ============ responsive ============ */
   @media (max-width:760px){
     .hero-grid{flex-direction:column;gap:1.3rem;}
@@ -559,7 +630,7 @@
 
   <div class="app-bar ink" style="--d:40ms">
     <span><span class="wordmark">ASPERMYLESSONPLAN<span class="tld">.COM</span></span> · Unofficial Toolbook · Term 2026–27 · Q1</span>
-    <span class="rhs"><span class="dot" aria-hidden="true"></span>46 records · local only · nothing syncs</span>
+    <span class="rhs"><span class="dot" aria-hidden="true"></span>46 records · local only · nothing syncs<button type="button" class="cmdk-hint" id="cmdkOpenBtn" aria-haspopup="dialog" aria-controls="cmdkOverlay" aria-label="Open quick jump search (Control or Command plus K)"><span aria-hidden="true">&#8984;K</span> Quick jump</button></span>
   </div>
 
   <div class="letterhead ink" style="--d:90ms" aria-hidden="true">
@@ -1329,9 +1400,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       Progress report
-      <span class="tally">12 recent entries</span>
+      <span class="tally">13 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-08">Aug 8, 2026</time>
+        <span><b>Landing Page Command Palette.</b> Press <code>Ctrl</code>/<code>&#8984;</code>+<code>K</code> anywhere on this page (or click the &ldquo;Quick jump&rdquo; badge in the app bar) to open a fuzzy-search jump box over every tool &mdash; type a few letters of a name, tag, or description, arrow through the matches, and hit Enter to open one. First of the platform-wide &ldquo;big swings&rdquo; off the backlog; the rest (offline install, accessibility pass, shareable state links, live student-view sync) are still ahead.</span>
+      </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
         <span><b>Lab Safety Contract Tracker, Primary Source Analysis Worksheet Generator, Immersion Roleplay Scenario Generator, and Tournament Bracket &amp; Station Rotation.</b> Four more off the backlog &mdash; every subject-specific idea and every General/Classroom Logistics idea collected so far is now built. Lab Safety Contract Tracker gives every student a one-tap signed/not-signed toggle stamped with today's date, with a live &ldquo;N of M signed&rdquo; count and a missing-list before lab day. Primary Source Analysis Worksheet Generator builds a printable OPTIC (visual sources) or SOAPSTone (text sources) worksheet around a described or pasted-in source, using the real guiding questions for each framework step, with an answer key built from the teacher's own per-step notes. Immersion Roleplay Scenario Generator pairs 38 real-life dialogue scenarios with vocabulary scaffolding cards a teacher fills in for whatever language they teach, printable per-pair or as a multi-scenario handout set. Tournament Bracket &amp; Station Rotation combines a projector-friendly station rotation timer (named stations and groups, correct wraparound at any group-to-station ratio) with a tournament bracket reusing the existing Bracket Generator's own bye-handling algorithm.</span>
@@ -1398,6 +1473,17 @@
     </div>
   </footer>
 
+</div>
+
+<div class="cmdk-overlay" id="cmdkOverlay" role="presentation">
+  <div class="cmdk" role="dialog" aria-modal="true" aria-label="Quick jump to a tool">
+    <div class="cmdk-field">
+      <svg width="16" height="16" viewBox="0 0 15 15" fill="none" aria-hidden="true"><circle cx="6.4" cy="6.4" r="4.4" stroke="currentColor" stroke-width="1.5"/><path d="M9.8 9.8L13.4 13.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input id="cmdkInput" type="text" autocomplete="off" spellcheck="false" placeholder="Jump to a tool&hellip;" role="combobox" aria-expanded="true" aria-controls="cmdkList" aria-autocomplete="list">
+      <span class="esc">esc</span>
+    </div>
+    <ul class="cmdk-list" id="cmdkList" role="listbox" aria-label="Tools"></ul>
+  </div>
 </div>
 
 <script>
@@ -1532,6 +1618,166 @@
 
   input.addEventListener('input', apply);
   apply();
+
+  /* ---------- command palette (Ctrl/Cmd+K) ---------- */
+  var cmdkOverlay = document.getElementById('cmdkOverlay');
+  var cmdkInput = document.getElementById('cmdkInput');
+  var cmdkList = document.getElementById('cmdkList');
+  var cmdkOpenBtn = document.getElementById('cmdkOpenBtn');
+  var cmdkTools = rows.filter(function (row) { return row.tagName === 'A'; }).map(function (row) {
+    var nameEl = row.querySelector('.name');
+    var pitchEl = row.querySelector('.pitch');
+    var perEl = row.querySelector('.per b');
+    return {
+      href: row.getAttribute('href'),
+      name: nameEl ? nameEl.textContent : '',
+      pitch: pitchEl ? pitchEl.textContent : '',
+      per: perEl ? perEl.textContent : '',
+      tags: row.getAttribute('data-tags') || ''
+    };
+  });
+  var cmdkMatches = [];
+  var cmdkSelected = -1;
+  var cmdkLastFocused = null;
+
+  function cmdkEscapeHtml(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* subsequence fuzzy match: every query char must appear in order in text;
+     score rewards consecutive runs and an exact-substring/prefix hit */
+  function cmdkFuzzy(query, text) {
+    if (!query) return { score: 0, positions: [] };
+    var ql = query.toLowerCase(), tl = text.toLowerCase();
+    var qi = 0, score = 0, streak = 0;
+    var positions = [];
+    for (var ti = 0; ti < tl.length && qi < ql.length; ti++) {
+      if (tl.charAt(ti) === ql.charAt(qi)) {
+        score += 1 + streak * 2;
+        streak++;
+        positions.push(ti);
+        qi++;
+      } else {
+        streak = 0;
+      }
+    }
+    if (qi < ql.length) return null;
+    if (tl.indexOf(ql) === 0) score += 25;
+    else if (tl.indexOf(ql) !== -1) score += 15;
+    return { score: score, positions: positions };
+  }
+
+  function cmdkHighlight(text, positions) {
+    if (!positions || !positions.length) return cmdkEscapeHtml(text);
+    var out = '', last = 0;
+    positions.forEach(function (pos) {
+      out += cmdkEscapeHtml(text.slice(last, pos)) + '<mark>' + cmdkEscapeHtml(text.charAt(pos)) + '</mark>';
+      last = pos + 1;
+    });
+    out += cmdkEscapeHtml(text.slice(last));
+    return out;
+  }
+
+  function cmdkRender() {
+    var q = cmdkInput.value.trim();
+    var results = cmdkTools.map(function (tool) {
+      var m = cmdkFuzzy(q, tool.name + ' ' + tool.pitch + ' ' + tool.tags);
+      if (!m) return null;
+      var nameMatch = cmdkFuzzy(q, tool.name);
+      return { tool: tool, score: m.score, namePositions: nameMatch ? nameMatch.positions : [] };
+    }).filter(Boolean);
+
+    if (q) results.sort(function (a, b) { return b.score - a.score; });
+    results = results.slice(0, 8);
+    cmdkMatches = results;
+
+    cmdkList.innerHTML = '';
+    if (!results.length) {
+      var empty = document.createElement('li');
+      empty.className = 'cmdk-empty';
+      empty.textContent = 'No tool matches that.';
+      cmdkList.appendChild(empty);
+      cmdkSelected = -1;
+      return;
+    }
+    results.forEach(function (r, i) {
+      var li = document.createElement('li');
+      li.className = 'cmdk-item';
+      li.id = 'cmdk-opt-' + i;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', 'false');
+      li.innerHTML =
+        '<span class="per">' + cmdkEscapeHtml(r.tool.per) + '</span>' +
+        '<span class="meta"><span class="name">' + cmdkHighlight(r.tool.name, r.namePositions) + '</span>' +
+        '<span class="pitch">' + cmdkEscapeHtml(r.tool.pitch) + '</span></span>';
+      li.addEventListener('mouseenter', function () { cmdkSetSelected(i); });
+      li.addEventListener('click', function () { cmdkGo(i); });
+      cmdkList.appendChild(li);
+    });
+    cmdkSetSelected(0);
+  }
+
+  function cmdkSetSelected(i) {
+    var items = cmdkList.querySelectorAll('.cmdk-item');
+    if (!items.length) { cmdkSelected = -1; return; }
+    cmdkSelected = (i + items.length) % items.length;
+    items.forEach(function (el, idx) {
+      el.setAttribute('aria-selected', idx === cmdkSelected ? 'true' : 'false');
+    });
+    cmdkInput.setAttribute('aria-activedescendant', items[cmdkSelected].id);
+    items[cmdkSelected].scrollIntoView({ block: 'nearest' });
+  }
+
+  function cmdkGo(i) {
+    var match = cmdkMatches[i];
+    if (!match) return;
+    window.location.href = match.tool.href;
+  }
+
+  function cmdkIsOpen() {
+    return cmdkOverlay.classList.contains('is-open');
+  }
+
+  function cmdkOpen() {
+    if (cmdkIsOpen()) return;
+    cmdkLastFocused = document.activeElement;
+    cmdkOverlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    cmdkInput.value = '';
+    cmdkRender();
+    cmdkInput.focus();
+  }
+
+  function cmdkClose() {
+    if (!cmdkIsOpen()) return;
+    cmdkOverlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+    if (cmdkLastFocused && typeof cmdkLastFocused.focus === 'function') cmdkLastFocused.focus();
+  }
+
+  if (cmdkOpenBtn) cmdkOpenBtn.addEventListener('click', cmdkOpen);
+  cmdkOverlay.addEventListener('mousedown', function (e) {
+    if (e.target === cmdkOverlay) cmdkClose();
+  });
+  cmdkInput.addEventListener('input', cmdkRender);
+  cmdkInput.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); cmdkSetSelected(cmdkSelected + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); cmdkSetSelected(cmdkSelected - 1); }
+    else if (e.key === 'Enter') { e.preventDefault(); cmdkGo(cmdkSelected); }
+    else if (e.key === 'Escape') { e.preventDefault(); cmdkClose(); }
+    else if (e.key === 'Tab') { e.preventDefault(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    var key = e.key ? e.key.toLowerCase() : '';
+    if ((e.metaKey || e.ctrlKey) && key === 'k') {
+      e.preventDefault();
+      if (cmdkIsOpen()) cmdkClose(); else cmdkOpen();
+    } else if (e.key === 'Escape' && cmdkIsOpen()) {
+      cmdkClose();
+    }
+  });
 
   /* ---------- keyboard: "/" to filter, Esc to clear ---------- */
   document.addEventListener('keydown', function (e) {
