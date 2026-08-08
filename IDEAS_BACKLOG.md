@@ -12,36 +12,20 @@ Reminder: coming soon means not right now.
 |---|---|
 | Behavior & Points Tracker | A quick per-student tally or point system you can run live during class. |
 | Exit Ticket / Bell Ringer Generator | Printable half-sheets or a rotating bank of daily warm-up prompts. |
-| Rubric Builder | Build, save, and print grading rubrics. |
 | Field Trip Permission Slip Generator | Fill in the trip details once, get a printable permission slip. |
-| Grade Distribution Visualizer | Paste a gradebook export and see class-wide histograms and stats — a companion to the Final Grade Checker. |
 | Digital Hall Pass / Sign-Out Log | Track and print who's out of the room and when. |
-
-## English / Language Arts
-
-| Idea | What it would do |
-|---|---|
-| Silent Reading (SSR) Log Tracker | Track books and pages read during independent reading time. |
 
 ## Science
 
 | Idea | What it would do |
 |---|---|
-| Lab Group & Role Randomizer | Randomize lab groups and assign roles — recorder, materials, safety, etc. |
 | Lab Safety Contract Tracker | Track signed lab safety contracts per student. |
-
-## World Language
-
-| Idea | What it would do |
-|---|---|
-| Vocab & Conjugation Drill Generator | Flashcard-style drills for vocabulary and verb conjugation. |
 
 ## Arts & PE
 
 | Idea | What it would do |
 |---|---|
 | Tournament Bracket & Station Rotation | Brackets plus timed station rotation for PE units, paired with the Classroom Timer. |
-| Gallery Walk QR Codes | Batch QR codes linking to student work for a gallery walk. |
 
 ## Blank Map Generator — Enhancement Ideas
 

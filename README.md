@@ -33,6 +33,12 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Group / Team Generator | `Tools/group-team-generator.html` | Split a pasted or Name-Picker roster into random groups by count or size, with optional skill-balancing and "keep these two apart" constraints. Prints a clean group sheet. |
 | Data Table → Chart Builder | `Tools/data-chart-builder.html` | Paste a table from a spreadsheet or lab notebook, pick the columns, and get a bar, line, pie, or scatter chart with quick descriptive stats — download as PNG or SVG. |
 | QR Scavenger Hunt Builder | `Tools/qr-scavenger-hunt-builder.html` | Type in stations (or paste them from a spreadsheet) and print a sheet of station QR codes sized however many-per-page you need, plus a separate answer key that never shares a page with the codes. |
+| Silent Reading (SSR) Log Tracker | `Tools/ssr-log-tracker.html` | Track books and pages read during independent reading time, per student or for the whole class — multiple saved sections, a class summary table, and printable logs. |
+| Lab Group & Role Randomizer | `Tools/lab-group-role-randomizer.html` | Randomize lab groups and assign roles (recorder, materials, safety, etc.) — remembers who's had which role so nobody's stuck as Recorder every lab. |
+| Rubric Builder | `Tools/rubric-builder.html` | Build a grading rubric from a template or from scratch — editable criteria and performance levels, live point totals, print a clean landscape table. Saves multiple named rubrics. |
+| Grade Distribution Visualizer | `Tools/grade-distribution-visualizer.html` | Paste a gradebook export and get class-wide stats, an editable letter-grade breakdown, and a score histogram — a companion to the Final Grade Checker. |
+| Vocab & Conjugation Drill Generator | `Tools/vocab-conjugation-drill.html` | Vocabulary quiz drills (any language) and verb-conjugation tables with editable person/subject labels, each with a printable answer key. |
+| Gallery Walk QR Codes | `Tools/gallery-walk-qr.html` | Batch-generate QR codes linking to student work for a gallery walk, printed in a configurable grid, plus a plain-text reference sheet for you. |
 
 ## Using these
 
