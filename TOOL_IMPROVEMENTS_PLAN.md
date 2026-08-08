@@ -127,9 +127,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Offer a Web Share API button next to Export PDF so a finished report can be shared directly to Mail/Files on an iPad instead of only downloading.
 
 ### Grade Distribution Visualizer (`Tools/grade-distribution-visualizer.html`)
-**Current state:** A tolerant score-paste parser feeds class-wide stats (mean/median/mode/stdev), an editable-cutoff letter-grade breakdown with a stacked bar, and a bucketed histogram, with multiple named assignments saved to localStorage and a print view.
+**Current state:** A tolerant score-paste parser feeds class-wide stats (mean/median/mode/stdev), an editable-cutoff letter-grade breakdown with a stacked bar, and a bucketed histogram, with multiple named assignments saved to localStorage, a print view, and PNG/SVG download of both charts.
 **Suggested improvements:**
-- Add PNG/SVG download of the histogram and stacked bar (the sibling Data Chart Builder already has this pattern) so a chart can be dropped into a slide deck without a full-page print.
 - Show quartiles (Q1/Q3/IQR) alongside the existing mean/median/mode/stdev — useful for identifying a skewed distribution at a glance.
 - Add a simple two-assignment comparison view that pulls two saved lists side by side (e.g., "Unit 3 Test" vs "Unit 4 Test") to spot whether the class improved.
 - Flag individual scores more than 2 standard deviations from the mean in the parsed list, to surface likely data-entry errors or true outliers.
@@ -182,9 +181,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
 
 ### Formula Reference Sheet Builder (`Tools/formula-sheet-builder.html`)
-**Current state:** Topic templates (geometry, linear equations, quadratics, stats) or a blank sheet, with add/reorder/remove formula rows, multiple named saved sheets, and a one-page two-column print preview.
+**Current state:** Topic templates (geometry, linear equations, quadratics, stats) or a blank sheet, with add/reorder/remove formula rows, multiple named saved sheets, a column-count control (1/2/3), and a one-page print preview.
 **Suggested improvements:**
-- Add a column-count control (1/2/3 columns) since the print layout is currently hardcoded to `column-count: 2`, which can crowd a sheet with only a few long formulas or waste space on a dense one.
 - Support a small inline diagram/image per formula item (e.g., a triangle sketch next to the area formula), stored as a data URL, since right now every entry is plain text only.
 - Add JSON export/import of a sheet (download/upload) for backup or sharing between a teacher's home and school computer, independent of localStorage.
 
@@ -233,10 +231,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a "role history" report (per student, roles held to date) as a print-ready view — useful for a teacher who wants a paper record of who has and hasn't been Safety Officer this semester, which today is only visible as an aggregate count.
 
 ### Behavior & Points Tracker (`Tools/behavior-points-tracker.html`)
-**Current state:** A tap-a-behavior-then-tap-a-student point tracker with custom positive/negative behavior tags, a live sorted student grid, an activity feed with single-step undo, day archiving to history, and a print report of the current day's totals.
+**Current state:** A tap-a-behavior-then-tap-a-student point tracker with custom positive/negative behavior tags, a live sorted student grid, an activity feed with single-step undo, day archiving to history, CSV export of the archived history, and a print report of the current day's totals.
 **Suggested improvements:**
 - Extend undo beyond the single last action to a short stack — right now a teacher who taps the wrong student twice in a row can only take back the very last tap.
-- Add CSV export of archived day history — the archive view is print-only today, so pulling totals into a gradebook means retyping them by hand.
 - Add a per-student cumulative view across all archived days (sum of history entries by name) — currently each archived day is its own isolated table, with no running total to spot a pattern over the week/quarter.
 
 ### Bracket / Tournament Generator (`Tools/bracket-tournament-generator.html`)
@@ -332,11 +329,10 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a quiet, teacher-only "show the answer" hint (computed client-side from the known expressions) visible only on the control panel, not the projector stage.
 
 ### Timeline Builder (`Tools/timeline-builder.html`)
-**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style) with both a scrolling on-screen view and a separate paginated print layout.
+**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style) with both a scrolling on-screen view, a separate paginated print layout, and JSON export/import of a timeline file.
 **Suggested improvements:**
 - Add the parallel/comparison timeline track the tool's own UI already flags as unsupported, so two related timelines (e.g., a country's history vs. world history) can be viewed stacked against the same year axis.
 - Add background era/period shading bands (e.g., a colored band labeled "Renaissance" spanning a range of years) distinct from the existing single-event range bars, for showing overlapping historical periods.
-- Add JSON export/import of a timeline file, since timelines are currently locked to one browser's localStorage with no way to hand a finished timeline to another teacher or move it to another device.
 - Add fixed decade/century gridlines with labels on the on-screen scrolling view for a sense of scale, which the current auto-spaced layout doesn't provide.
 
 ### Blank Map Generator (`Tools/blank-map-generator.html`)

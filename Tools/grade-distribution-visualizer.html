@@ -70,6 +70,8 @@
   button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.small { width: auto; padding: .3rem .6rem; font-size: .78rem; margin-bottom: 0; }
+  .chart-dl-row { display: flex; gap: .4rem; margin: -.4rem 0 .9rem; }
   button.danger:hover { background: var(--err); color: #fff; }
 
   .output-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.4rem; }
@@ -222,6 +224,7 @@
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth }
+  var lastChartData = null; // snapshot of what's currently rendered, for the PNG/SVG downloads below
 
   /* ---------- tolerant score parser ----------
      Accepts, per line: "Name, 87" / "Name: 87" / "Name<TAB>87" / a bare
@@ -352,6 +355,109 @@
     return f.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1') || f;
   }
 
+  var LETTER_HEX = { A: '#2f7d4f', B: '#2a6db0', C: '#b98900', D: '#c1652b', F: '#a3372b' };
+
+  function escapeXml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* Rebuilt as standalone SVG (distinct from the CSS flexbox bar shown on
+     screen) so it can be downloaded as a self-contained file — a flexbox
+     layout has no meaning outside this page's stylesheet. */
+  function buildStackedBarSvg(data) {
+    var W = 640, H = 150, pad = 20, barY = 30, barH = 40;
+    var barW = W - pad * 2;
+    var x = pad, legend = '', segs = '';
+    var legendY = barY + barH + 34, lx = pad;
+    data.letterOrder.forEach(function (l) {
+      var count = data.letters[l];
+      var pct = data.stats.n ? (count / data.stats.n * 100) : 0;
+      var w = barW * (pct / 100);
+      if (w > 0) {
+        segs += '<rect x="' + x.toFixed(2) + '" y="' + barY + '" width="' + w.toFixed(2) + '" height="' + barH + '" fill="' + LETTER_HEX[l] + '"/>';
+        if (pct >= 6) {
+          segs += '<text x="' + (x + w / 2).toFixed(2) + '" y="' + (barY + barH / 2 + 5) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="Segoe UI, Arial, sans-serif">' + Math.round(pct) + '%</text>';
+        }
+        x += w;
+      }
+      var legendText = l + ': ' + count + ' (' + fmt(pct, 1) + '%)';
+      legend += '<rect x="' + lx + '" y="' + (legendY - 11) + '" width="11" height="11" fill="' + LETTER_HEX[l] + '"/>' +
+        '<text x="' + (lx + 16) + '" y="' + legendY + '" font-size="12" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml(legendText) + '</text>';
+      lx += 16 + legendText.length * 6.6 + 18;
+    });
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
+      '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' +
+      '<text x="' + pad + '" y="18" font-size="14" font-weight="700" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml((data.name || 'Assignment') + ' — Letter-grade breakdown') + '</text>' +
+      '<rect x="' + pad + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" fill="none" stroke="#c3c0b6"/>' +
+      segs + legend +
+      '</svg>';
+  }
+
+  function buildHistogramSvg(data) {
+    var W = 640, H = 320, padL = 30, padR = 20, padT = 40, padB = 50;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var buckets = data.buckets;
+    var maxCount = buckets.reduce(function (m, b) { return Math.max(m, b.count); }, 0) || 1;
+    var n = buckets.length;
+    var gap = 6;
+    var barW = (plotW - gap * (n - 1)) / n;
+    var bars = '', labels = '';
+    buckets.forEach(function (b, i) {
+      var h = (b.count / maxCount) * plotH;
+      var x = padL + i * (barW + gap);
+      var y = padT + (plotH - h);
+      bars += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + barW.toFixed(2) + '" height="' + h.toFixed(2) + '" fill="#2e6b8f"/>';
+      if (b.count) bars += '<text x="' + (x + barW / 2).toFixed(2) + '" y="' + (y - 6).toFixed(2) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#1f3550" font-family="Segoe UI, Arial, sans-serif">' + b.count + '</text>';
+      labels += '<text x="' + (x + barW / 2).toFixed(2) + '" y="' + (padT + plotH + 18) + '" text-anchor="middle" font-size="10" fill="#6b6a63" font-family="Segoe UI, Arial, sans-serif">' + escapeXml(b.label) + '</text>';
+    });
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
+      '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' +
+      '<text x="' + padL + '" y="20" font-size="14" font-weight="700" font-family="Segoe UI, Arial, sans-serif" fill="#1f2430">' + escapeXml((data.name || 'Assignment') + ' — Score histogram (bucket width ' + data.bucketWidth + ')') + '</text>' +
+      '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (padL + plotW) + '" y2="' + (padT + plotH) + '" stroke="#c3c0b6" stroke-width="1.5"/>' +
+      bars + labels +
+      '</svg>';
+  }
+
+  function downloadBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function downloadSvgString(svgString, filenameBase) {
+    downloadBlob(new Blob([svgString], { type: 'image/svg+xml' }), filenameBase + '.svg');
+  }
+
+  function downloadSvgAsPng(svgString, filenameBase, w, h) {
+    var img = new Image();
+    var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    var url = URL.createObjectURL(svgBlob);
+    img.onload = function () {
+      var scale = 2;
+      var canvas = document.createElement('canvas');
+      canvas.width = w * scale; canvas.height = h * scale;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(function (blob) { downloadBlob(blob, filenameBase + '.png'); }, 'image/png');
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); alert('Could not render a PNG — try downloading the SVG instead.'); };
+    img.src = url;
+  }
+
+  els.outputBody.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-dl]');
+    if (!btn || !lastChartData) return;
+    var base = (lastChartData.name || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
+    if (btn.dataset.dl === 'letter-svg') downloadSvgString(buildStackedBarSvg(lastChartData), base + '-letter-grades');
+    else if (btn.dataset.dl === 'letter-png') downloadSvgAsPng(buildStackedBarSvg(lastChartData), base + '-letter-grades', 640, 150);
+    else if (btn.dataset.dl === 'hist-svg') downloadSvgString(buildHistogramSvg(lastChartData), base + '-histogram');
+    else if (btn.dataset.dl === 'hist-png') downloadSvgAsPng(buildHistogramSvg(lastChartData), base + '-histogram', 640, 320);
+  });
+
   function readCutoffs() {
     // `|| default` would silently override an intentional cutoff of 0 (e.g.
     // "no F — anyone scoring at all gets a D or better") since 0 is falsy.
@@ -382,6 +488,7 @@
     els.printTitle.textContent = state.name || 'Assignment';
 
     if (!scores.length) {
+      lastChartData = null;
       els.outputBody.innerHTML = '<p class="empty-note">Paste some scores on the left to see stats here.</p>';
       return;
     }
@@ -438,7 +545,11 @@
       '<h3>Letter-grade breakdown</h3>' +
       '<table class="letter-table"><thead><tr><th>Letter</th><th>Range</th><th>Count</th><th>% of class</th></tr></thead>' +
       '<tbody>' + letterRows + '</tbody></table>' +
-      '<div class="stack-bar">' + stackSegs + '</div>';
+      '<div class="stack-bar">' + stackSegs + '</div>' +
+      '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-dl="letter-svg">Download SVG</button>' +
+        '<button type="button" class="secondary small" data-dl="letter-png">Download PNG</button>' +
+      '</div>';
 
     var maxCount = buckets.reduce(function (m, b) { return Math.max(m, b.count); }, 0) || 1;
     var histBars = buckets.map(function (b) {
@@ -451,7 +562,13 @@
     var histHtml =
       '<h3>Score histogram (bucket width ' + bucketWidth + ')</h3>' +
       '<div class="hist">' + histBars + '</div>' +
-      '<div class="hist-labels">' + histLabels + '</div>';
+      '<div class="hist-labels">' + histLabels + '</div>' +
+      '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-dl="hist-svg">Download SVG</button>' +
+        '<button type="button" class="secondary small" data-dl="hist-png">Download PNG</button>' +
+      '</div>';
+
+    lastChartData = { name: state.name, stats: stats, letters: letters, letterOrder: letterOrder, buckets: buckets, bucketWidth: bucketWidth };
 
     els.outputBody.innerHTML = statsHtml + letterHtml + histHtml;
   }

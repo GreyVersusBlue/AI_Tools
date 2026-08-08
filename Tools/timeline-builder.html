@@ -135,6 +135,9 @@
     <select id="timelineSwitch"></select>
     <button class="secondary" style="width:auto;" id="newTimelineBtn">New timeline</button>
     <button class="danger" style="width:auto;" id="deleteTimelineBtn">Delete</button>
+    <button class="secondary" style="width:auto;" id="exportTimelineBtn">Export JSON</button>
+    <button class="secondary" style="width:auto;" id="importTimelineBtn">Import JSON</button>
+    <input type="file" id="importTimelineFile" accept="application/json,.json" style="display:none;">
   </div>
 
   <div class="layout">
@@ -219,6 +222,7 @@
 
   var els = {};
   ['toolbar','timelineSwitch','newTimelineBtn','deleteTimelineBtn',
+   'exportTimelineBtn','importTimelineBtn','importTimelineFile',
    'timelineName','timelineTitle','lineStyle','compactLabels',
    'evTitle','evYearStart','evYearEnd','evDisplayDate','evDescription','evPhoto',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
@@ -488,6 +492,74 @@
     var remaining = TimelineStore.listTimelines();
     if (remaining.length) loadTimelineByName(remaining[0]);
     else newTimeline('New Timeline');
+  });
+
+  function looksLikeTimeline(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string' && Array.isArray(obj.events);
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved timeline,
+      so importing a file never silently overwrites something already here. */
+  function uniqueTimelineName(base) {
+    var existing = TimelineStore.listTimelines();
+    if (existing.indexOf(base) === -1) return base;
+    var n = 2;
+    while (existing.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  function sanitizeFilename(s) {
+    var cleaned = String(s || 'timeline').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    return cleaned || 'timeline';
+  }
+
+  els.exportTimelineBtn.addEventListener('click', function () {
+    if (!state) return;
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  els.importTimelineBtn.addEventListener('click', function () { els.importTimelineFile.click(); });
+
+  els.importTimelineFile.addEventListener('change', function () {
+    var file = els.importTimelineFile.files && els.importTimelineFile.files[0];
+    els.importTimelineFile.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var decoded;
+      try { decoded = JSON.parse(reader.result); } catch (e) {
+        alert('That file isn’t valid JSON.');
+        return;
+      }
+      if (!looksLikeTimeline(decoded)) {
+        alert('That doesn’t look like a timeline file exported from this page.');
+        return;
+      }
+      var name = uniqueTimelineName(decoded.name);
+      state = {
+        name: name,
+        title: decoded.title || '',
+        lineStyle: decoded.lineStyle || 'solid',
+        compactLabels: !!decoded.compactLabels,
+        events: decoded.events
+      };
+      var maxId = 0;
+      state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
+      idCounter = Math.max(idCounter, maxId + 1);
+      TimelineStore.setCurrentName(name);
+      resetForm();
+      renderAll();
+    };
+    reader.onerror = function () { alert('Couldn’t read that file.'); };
+    reader.readAsText(file);
   });
 
   els.viewScreenBtn.addEventListener('click', function () {

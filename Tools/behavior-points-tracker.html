@@ -205,6 +205,7 @@
         <div class="hint">Archiving saves today&rsquo;s totals below and zeroes every student back to 0. Do this at the end of the day, not between periods, if you want points to carry across periods.</div>
         <div class="btn-row" style="margin-top:0;">
           <button id="archiveBtn" type="button">Archive Day &amp; Reset</button>
+          <button class="secondary" id="exportHistoryBtn" type="button">Export history (CSV)</button>
         </div>
         <div id="historyWrap"></div>
       </div>
@@ -260,7 +261,7 @@
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
-   'tagsEditor', 'addTagBtn', 'archiveBtn', 'historyWrap',
+   'tagsEditor', 'addTagBtn', 'archiveBtn', 'exportHistoryBtn', 'historyWrap',
    'tagChips', 'sortMode', 'undoBtn', 'printBtn', 'studentGrid', 'activityFeed',
    'printArea', 'printTitle', 'printSub', 'printBody', 'msg'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -602,6 +603,31 @@
     renderHistory();
     save();
     showMsg('Day archived. Every student is back to 0.', 'info');
+  });
+
+  function csvCell(v) {
+    var s = String(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  els.exportHistoryBtn.addEventListener('click', function () {
+    if (!state.history.length) { showMsg('No archived days yet — archive a day first.', 'info'); return; }
+    var rows = [['Date', 'Student', 'Points', 'Positive taps', 'Negative taps']];
+    state.history.forEach(function (h) {
+      h.rows.forEach(function (r) {
+        rows.push([h.date, r.name, r.points, r.pos, r.neg]);
+      });
+    });
+    var csv = rows.map(function (row) { return row.map(csvCell).join(','); }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (state.name || 'behavior-points').replace(/[\\/:*?"<>|]+/g, '-') + '-history.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   });
 
   function renderHistory() {
