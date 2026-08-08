@@ -88,6 +88,13 @@
   /* ── Destination editor rows ─────────────────────────────────────────── */
   .tag-row { display: flex; align-items: center; gap: .5rem; }
   .tag-row input[type="text"] { flex: 1; margin-bottom: .5rem; }
+  .tag-row .dest-overtime-wrap { display: flex; align-items: center; gap: .3rem; margin-bottom: .5rem; flex-shrink: 0; }
+  .tag-row .dest-overtime-wrap label { margin: 0; font-weight: 400; font-size: .74rem; color: var(--muted); white-space: nowrap; }
+  .tag-row input[type="number"].dest-overtime {
+    width: 3.4rem; font-family: inherit; font-size: .85rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .4rem .3rem; text-align: center;
+  }
 
   /* ── Live board ───────────────────────────────────────────────────── */
   .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
@@ -202,7 +209,7 @@
       <div class="card">
         <div class="card-title"><span>Destinations</span><button class="link-btn" id="addDestBtn" type="button">+ Add destination</button></div>
         <div id="destsEditor"></div>
-        <div class="hint">Renaming a destination here only affects sign-outs from now on &mdash; it doesn&rsquo;t rewrite trips already logged today.</div>
+        <div class="hint">Renaming a destination here only affects sign-outs from now on &mdash; it doesn&rsquo;t rewrite trips already logged today. &ldquo;Over after&rdquo; sets how many minutes out flags that destination as overdue on the live board.</div>
       </div>
 
       <div class="card">
@@ -271,12 +278,12 @@
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_DESTS = [
-    { id: 'd1', label: 'Restroom' },
-    { id: 'd2', label: 'Nurse' },
-    { id: 'd3', label: 'Office' },
-    { id: 'd4', label: 'Locker' },
-    { id: 'd5', label: 'Water fountain' },
-    { id: 'd6', label: 'Other' },
+    { id: 'd1', label: 'Restroom', overtimeMin: OVER_TIME_MIN },
+    { id: 'd2', label: 'Nurse', overtimeMin: OVER_TIME_MIN },
+    { id: 'd3', label: 'Office', overtimeMin: OVER_TIME_MIN },
+    { id: 'd4', label: 'Locker', overtimeMin: OVER_TIME_MIN },
+    { id: 'd5', label: 'Water fountain', overtimeMin: OVER_TIME_MIN },
+    { id: 'd6', label: 'Other', overtimeMin: OVER_TIME_MIN },
   ];
 
   // state = { name, namesText, destinations, armedDestId, outNow, log, history }
@@ -325,8 +332,12 @@
 
   function normalizeState(s) {
     if (!Array.isArray(s.destinations) || !s.destinations.length) {
-      s.destinations = DEFAULT_DESTS.map(function (d) { return { id: d.id, label: d.label }; });
+      s.destinations = DEFAULT_DESTS.map(function (d) { return { id: d.id, label: d.label, overtimeMin: d.overtimeMin }; });
     }
+    s.destinations.forEach(function (d) {
+      var n = parseInt(d.overtimeMin, 10);
+      d.overtimeMin = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : OVER_TIME_MIN;
+    });
     if (typeof s.namesText !== 'string') s.namesText = '';
     if (!Array.isArray(s.outNow)) s.outNow = [];
     if (!Array.isArray(s.log)) s.log = [];
@@ -414,6 +425,9 @@
     els.destsEditor.innerHTML = state.destinations.map(function (d) {
       return '<div class="tag-row" data-id="' + escapeAttr(d.id) + '">' +
         '<input type="text" class="dest-label" value="' + escapeAttr(d.label) + '">' +
+        '<span class="dest-overtime-wrap"><label>Over after</label>' +
+        '<input type="number" class="dest-overtime" min="1" max="120" value="' + d.overtimeMin + '">' +
+        '<label>min</label></span>' +
         '<button type="button" class="remove-row-btn" data-remove-dest="' + escapeAttr(d.id) + '" title="Remove destination">&#10005;</button>' +
         '</div>';
     }).join('');
@@ -425,7 +439,12 @@
     var dest = state.destinations.filter(function (d) { return d.id === row.dataset.id; })[0];
     if (!dest) return;
     if (e.target.classList.contains('dest-label')) dest.label = e.target.value;
+    if (e.target.classList.contains('dest-overtime')) {
+      var n = parseInt(e.target.value, 10);
+      dest.overtimeMin = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : dest.overtimeMin;
+    }
     renderChips();
+    renderLiveBoard();
     save();
   });
 
@@ -441,7 +460,7 @@
   });
 
   els.addDestBtn.addEventListener('click', function () {
-    var d = { id: nextId('dt'), label: 'New destination' };
+    var d = { id: nextId('dt'), label: 'New destination', overtimeMin: OVER_TIME_MIN };
     state.destinations.push(d);
     if (!state.armedDestId) state.armedDestId = d.id;
     renderDestsEditor();
@@ -546,7 +565,9 @@
     var nowMs = Date.now();
     els.liveBoard.innerHTML = state.outNow.map(function (o) {
       var mins = Math.floor((nowMs - o.outMs) / 60000);
-      var over = mins >= OVER_TIME_MIN;
+      var dest = state.destinations.filter(function (d) { return d.id === o.destId; })[0];
+      var threshold = dest ? dest.overtimeMin : OVER_TIME_MIN;
+      var over = mins >= threshold;
       var elapsedText = mins < 1 ? 'just now' : (mins + ' min');
       return '<div class="out-row' + (over ? ' over-time' : '') + '">' +
         '<div class="out-info"><span class="out-name">' + escapeHtml(o.name) + '</span><span class="out-dest">' + escapeHtml(o.destLabel) + '</span></div>' +

@@ -85,7 +85,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Classroom Timer (`Tools/Classroom Timer.html`)
 **Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen, and a running/paused timer that survives a page reload or tab-close.
 **Suggested improvements:**
-- Add a saved custom-preset list (beyond the fixed 5/10/15/20/30-minute buttons) so a teacher can name and reuse their own recurring durations (e.g. "Bell ringer — 7 min", "Exit ticket — 4 min").
 - Add a full-screen / "presentation mode" toggle (Fullscreen API) so the timer fills the whole projector screen without browser chrome, without requiring the teacher to manually fullscreen the browser tab.
 
 ### Command Center (`Tools/command-center-dashboard.html`)
@@ -107,7 +106,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Suggested improvements:**
 - Add an audible or more attention-grabbing visual alert (not just a color change) when a student crosses the "over time" threshold, since the live board currently only re-renders passively every 20 seconds with no way to notice from across the room.
 - Add a per-student or per-destination weekly frequency count (e.g. "Restroom: 6 trips this week") to help flag a pattern worth a hallway/nurse conversation — currently the tool only exposes chronological logs and archived day tables, with no aggregate view.
-- Let the "over time" minute threshold (hardcoded to 9) be a per-destination setting in the UI, since a Restroom pass and a Nurse visit reasonably need different time limits.
 
 ### Backup & Restore (`Tools/backup-restore.html`)
 **Current state:** Scans every key in the browser's localStorage, groups them under friendly per-tool labels via a hardcoded lookup table, and can export everything to one JSON file or merge-restore a previously exported file back in.
@@ -129,7 +127,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Grade Distribution Visualizer (`Tools/grade-distribution-visualizer.html`)
 **Current state:** A tolerant score-paste parser feeds class-wide stats (mean/median/mode/stdev), an editable-cutoff letter-grade breakdown with a stacked bar, and a bucketed histogram, with multiple named assignments saved to localStorage, a print view, and PNG/SVG download of both charts.
 **Suggested improvements:**
-- Show quartiles (Q1/Q3/IQR) alongside the existing mean/median/mode/stdev — useful for identifying a skewed distribution at a glance.
 - Add a simple two-assignment comparison view that pulls two saved lists side by side (e.g., "Unit 3 Test" vs "Unit 4 Test") to spot whether the class improved.
 - Flag individual scores more than 2 standard deviations from the mean in the parsed list, to surface likely data-entry errors or true outliers.
 
@@ -270,7 +267,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### QR Code Generator (`Tools/qr-code-generator.html`)
 **Current state:** Generates a single QR code from typed text/a link with adjustable size, colors, error-correction level, and an optional center logo or short-text overlay, self-verifying scannability with an offline jsQR decode before enabling PNG/SVG download or direct printing.
 **Suggested improvements:**
-- Add quick-fill templates for common payload types (Wi-Fi network, vCard contact, `tel:`/`mailto:`) that build the correctly-formatted string for the user, since today it's freeform text only and most teachers don't know the Wi-Fi/vCard QR syntax.
 - Save a small "recently generated" list (last 5–10 codes, label + text) to localStorage so a teacher can quickly regenerate a room/station code from an earlier session instead of retyping it.
 - Offer an actual camera-based test scan (reusing the site's shared `_shared/qr-scan.js`) so a teacher can point their device at a printed copy and confirm it still reads after paper/toner/glare, rather than relying only on the synthetic canvas decode.
 

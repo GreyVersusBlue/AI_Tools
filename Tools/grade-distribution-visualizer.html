@@ -309,7 +309,20 @@
     var variance = scores.reduce(function (acc, s) { return acc + Math.pow(s - mean, 2); }, 0) / n;
     var stdev = Math.sqrt(variance);
 
-    return { n: n, mean: mean, median: median, mode: mode, modeTied: modeTied, min: min, max: max, range: max - min, stdev: stdev };
+    // Tukey's hinges: split at the median, excluding it from both halves on
+    // an odd n, then take the median of each half as Q1/Q3.
+    function medianOf(arr) {
+      if (!arr.length) return null;
+      var m = Math.floor(arr.length / 2);
+      return (arr.length % 2 === 0) ? (arr[m - 1] + arr[m]) / 2 : arr[m];
+    }
+    var lowerHalf = sorted.slice(0, mid);
+    var upperHalf = sorted.slice(n % 2 === 0 ? mid : mid + 1);
+    var q1 = medianOf(lowerHalf);
+    var q3 = medianOf(upperHalf);
+    var iqr = (q1 != null && q3 != null) ? (q3 - q1) : null;
+
+    return { n: n, mean: mean, median: median, mode: mode, modeTied: modeTied, min: min, max: max, range: max - min, stdev: stdev, q1: q1, q3: q3, iqr: iqr };
   }
 
   function computeLetters(scores, cutoffs) {
@@ -510,6 +523,9 @@
       '<tr><td class="stat-label">Number of scores</td><td class="stat-value">' + stats.n + '</td></tr>' +
       '<tr><td class="stat-label">Mean</td><td class="stat-value">' + fmt(stats.mean, 2) + '</td></tr>' +
       '<tr><td class="stat-label">Median</td><td class="stat-value">' + fmt(stats.median, 2) + '</td></tr>' +
+      '<tr><td class="stat-label">Q1 (25th percentile)</td><td class="stat-value">' + fmt(stats.q1, 2) + '</td></tr>' +
+      '<tr><td class="stat-label">Q3 (75th percentile)</td><td class="stat-value">' + fmt(stats.q3, 2) + '</td></tr>' +
+      '<tr><td class="stat-label">IQR (Q3 &minus; Q1)</td><td class="stat-value">' + fmt(stats.iqr, 2) + '</td></tr>' +
       '<tr><td class="stat-label">Mode</td><td class="stat-value">' + modeText + '</td></tr>' +
       '<tr><td class="stat-label">Minimum</td><td class="stat-value">' + fmt(stats.min, 2) + '</td></tr>' +
       '<tr><td class="stat-label">Maximum</td><td class="stat-value">' + fmt(stats.max, 2) + '</td></tr>' +

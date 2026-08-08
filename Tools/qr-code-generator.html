@@ -165,6 +165,23 @@
 
   .control-row > .control-group { flex: 1; min-width: 130px; }
 
+  #template-fields:empty { display: none; }
+  #template-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  #template-fields .control-group { flex: 1 1 140px; margin-bottom: 0; }
+  #template-fields .tf-checkbox { display: flex; align-items: center; gap: 0.4rem; flex: 1 1 100%; }
+  #template-fields .tf-checkbox input { width: auto; }
+  #template-fields .tf-checkbox label { margin: 0; }
+  #template-fields .btn-secondary { flex: 1 1 100%; }
+
   .range-row {
     display: flex;
     align-items: center;
@@ -415,6 +432,17 @@
     <div class="card">
       <div class="card-title">1 · Content</div>
       <div class="control-group">
+        <label for="template-type">Quick-fill template</label>
+        <select id="template-type">
+          <option value="">Plain text / link</option>
+          <option value="wifi">Wi-Fi network</option>
+          <option value="vcard">Contact card (vCard)</option>
+          <option value="tel">Phone number</option>
+          <option value="mailto">Email</option>
+        </select>
+      </div>
+      <div id="template-fields"></div>
+      <div class="control-group">
         <label for="qr-text">Link or text to encode</label>
         <textarea id="qr-text" placeholder="https://carrollk12.schoology.com/..." spellcheck="false"></textarea>
         <div id="char-count">0 characters</div>
@@ -538,6 +566,8 @@
   var els = {
     text: document.getElementById('qr-text'),
     charCount: document.getElementById('char-count'),
+    templateType: document.getElementById('template-type'),
+    templateFields: document.getElementById('template-fields'),
     size: document.getElementById('size-slider'),
     sizeVal: document.getElementById('size-val'),
     fg: document.getElementById('fg-color'),
@@ -707,6 +737,104 @@
     els.logoPreviewRow.classList.remove('visible');
     scheduleRender();
   });
+
+  // ── Quick-fill templates ─────────────────────────────────────────────────
+  // WIFI/vCard payload strings use a small ad-hoc escape (backslash before
+  // ; , : and \ itself) per the de-facto WIFI: / vCard field syntax that
+  // most phone camera apps recognize — not a full spec parser, just enough
+  // to keep a stray comma or colon in an SSID/name from corrupting the code.
+  function escField(s) {
+    return String(s || '').replace(/([\\;,:])/g, '\\$1');
+  }
+
+  var TEMPLATES = {
+    wifi: {
+      fields: [
+        { id: 'tf-ssid', label: 'Network name (SSID)', type: 'text' },
+        { id: 'tf-pass', label: 'Password', type: 'text' },
+        { id: 'tf-sec', label: 'Security', type: 'select', options: [['WPA', 'WPA/WPA2'], ['WEP', 'WEP'], ['nopass', 'None (open network)']] },
+        { id: 'tf-hidden', label: 'Hidden network', type: 'checkbox' }
+      ],
+      build: function (v) {
+        if (!v['tf-ssid']) return '';
+        var sec = v['tf-sec'] || 'WPA';
+        var pass = sec === 'nopass' ? '' : 'P:' + escField(v['tf-pass']) + ';';
+        return 'WIFI:T:' + sec + ';S:' + escField(v['tf-ssid']) + ';' + pass + 'H:' + (v['tf-hidden'] ? 'true' : 'false') + ';;';
+      }
+    },
+    vcard: {
+      fields: [
+        { id: 'tf-name', label: 'Full name', type: 'text' },
+        { id: 'tf-org', label: 'Organization (optional)', type: 'text' },
+        { id: 'tf-phone', label: 'Phone (optional)', type: 'text' },
+        { id: 'tf-email', label: 'Email (optional)', type: 'text' }
+      ],
+      build: function (v) {
+        if (!v['tf-name']) return '';
+        var lines = ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + escField(v['tf-name']), 'FN:' + escField(v['tf-name'])];
+        if (v['tf-org']) lines.push('ORG:' + escField(v['tf-org']));
+        if (v['tf-phone']) lines.push('TEL:' + escField(v['tf-phone']));
+        if (v['tf-email']) lines.push('EMAIL:' + escField(v['tf-email']));
+        lines.push('END:VCARD');
+        return lines.join('\n');
+      }
+    },
+    tel: {
+      fields: [
+        { id: 'tf-tel', label: 'Phone number', type: 'text', placeholder: '(555) 123-4567' }
+      ],
+      build: function (v) {
+        if (!v['tf-tel']) return '';
+        return 'tel:' + v['tf-tel'].replace(/[^\d+]/g, '');
+      }
+    },
+    mailto: {
+      fields: [
+        { id: 'tf-mail', label: 'Email address', type: 'text' },
+        { id: 'tf-subject', label: 'Subject (optional)', type: 'text' },
+        { id: 'tf-body', label: 'Body (optional)', type: 'text' }
+      ],
+      build: function (v) {
+        if (!v['tf-mail']) return '';
+        var params = [];
+        if (v['tf-subject']) params.push('subject=' + encodeURIComponent(v['tf-subject']));
+        if (v['tf-body']) params.push('body=' + encodeURIComponent(v['tf-body']));
+        return 'mailto:' + v['tf-mail'] + (params.length ? '?' + params.join('&') : '');
+      }
+    }
+  };
+
+  function renderTemplateFields() {
+    var type = els.templateType.value;
+    var tpl = TEMPLATES[type];
+    if (!tpl) { els.templateFields.innerHTML = ''; return; }
+    var html = tpl.fields.map(function (f) {
+      if (f.type === 'checkbox') {
+        return '<div class="tf-checkbox"><input type="checkbox" id="' + f.id + '"><label for="' + f.id + '">' + f.label + '</label></div>';
+      }
+      if (f.type === 'select') {
+        var opts = f.options.map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+        return '<div class="control-group"><label for="' + f.id + '">' + f.label + '</label><select id="' + f.id + '">' + opts + '</select></div>';
+      }
+      return '<div class="control-group"><label for="' + f.id + '">' + f.label + '</label><input type="text" id="' + f.id + '" placeholder="' + (f.placeholder || '') + '"></div>';
+    }).join('') + '<button type="button" class="btn-secondary" id="tf-insert">Insert into code</button>';
+    els.templateFields.innerHTML = html;
+    document.getElementById('tf-insert').addEventListener('click', function () {
+      var values = {};
+      tpl.fields.forEach(function (f) {
+        var el = document.getElementById(f.id);
+        values[f.id] = f.type === 'checkbox' ? el.checked : el.value.trim();
+      });
+      var result = tpl.build(values);
+      if (!result) { showMsg('Fill in the required field(s) above first.'); return; }
+      clearMsg();
+      els.text.value = result;
+      els.charCount.textContent = result.length + ' character' + (result.length === 1 ? '' : 's');
+      scheduleRender();
+    });
+  }
+
+  els.templateType.addEventListener('change', renderTemplateFields);
 
   // ── Wiring ───────────────────────────────────────────────────────────────
   [els.text].forEach(function (el) {
