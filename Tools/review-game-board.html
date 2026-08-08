@@ -143,7 +143,22 @@
   .award-row button { background: #fff; color: var(--accent); }
   .overlay button.ghost { background: transparent; color: #cfd6ea; border-color: #445; }
 
+  .board-options { display: flex; align-items: center; gap: 1rem; margin-bottom: .9rem; flex-wrap: wrap; }
+  .board-options label { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .85rem; margin: 0; }
+  .board-options input[type="checkbox"] { width: auto; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  .print-only { display: none; }
+  .key-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .key-table th, .key-table td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .key-table th { background: #eee; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.4in; color: #000; background: #fff; }
+    @page { size: letter portrait; margin: 0.4in; }
+  }
 </style>
 </head>
 <body>
@@ -162,6 +177,10 @@
     <button class="secondary" id="newBoardBtn">New board</button>
     <button class="secondary" id="editBoardBtn">Edit questions</button>
     <button class="secondary" id="resetGameBtn">Reset game</button>
+    <button class="secondary" id="printAnswerKeyBtn">Print answer key</button>
+    <button class="secondary" id="exportBoardBtn">Export JSON</button>
+    <button class="secondary" id="importBoardBtn">Import JSON</button>
+    <input type="file" id="importBoardFile" accept="application/json,.json" style="display:none;">
     <button class="danger" id="deleteBoardBtn">Delete</button>
   </div>
 
@@ -199,6 +218,10 @@
 
   <div id="boardCard" style="display:none;">
     <p class="board-title" id="boardTitle"></p>
+    <div class="board-options">
+      <label><input type="checkbox" id="dailyDoubleToggle"> Daily Double (doubles the points on one random unused clue)</label>
+      <button type="button" class="secondary small" id="redrawDailyDoubleBtn">Redraw Daily Double</button>
+    </div>
     <div class="scoreboard" id="scoreboard"></div>
     <div class="board-grid">
       <div class="board-cols" id="boardCols"></div>
@@ -210,6 +233,8 @@
   </footer>
 
 </div>
+
+<div class="print-only" id="printArea"></div>
 
 <div class="overlay" id="overlay">
   <div class="cat-points" id="overlayCatPoints"></div>
@@ -245,9 +270,10 @@
 
   var els = {};
   ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn',
+   'printAnswerKeyBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
-   'boardCard','boardTitle','scoreboard','boardCols',
+   'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','scoreboard','boardCols',
    'overlay','overlayCatPoints','overlayQuestion','overlayAnswer',
    'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -435,10 +461,29 @@
   }
 
   /* ---------- board lifecycle ---------- */
-  function startBoard(name, categories, teams) {
-    state = { name: name, categories: categories, teams: teams || [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }] };
+  function startBoard(name, categories, teams, dailyDoubleEnabled) {
+    state = {
+      name: name,
+      categories: categories,
+      teams: teams || [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
+      dailyDoubleEnabled: !!dailyDoubleEnabled
+    };
     ReviewBoardStore.setCurrentName(name);
+    assignDailyDouble();
     renderBoard();
+  }
+
+  /** Clears any existing Daily Double flag, then — if the option is on —
+      marks exactly one random still-unused clue as the Daily Double. Called
+      whenever the board (re)starts or the game is reset, since "unused" (and
+      therefore eligible) clues change at both points. */
+  function assignDailyDouble() {
+    state.categories.forEach(function (c) { c.clues.forEach(function (cl) { cl.dailyDouble = false; }); });
+    if (!state.dailyDoubleEnabled) return;
+    var unused = [];
+    state.categories.forEach(function (c) { c.clues.forEach(function (cl) { if (!cl.used) unused.push(cl); }); });
+    if (!unused.length) return;
+    unused[Math.floor(Math.random() * unused.length)].dailyDouble = true;
   }
 
   // Set only between an "Edit questions" click and the "Save board" that follows
@@ -457,10 +502,126 @@
     var loaded = ReviewBoardStore.loadBoard(name);
     if (!loaded) return;
     state = loaded;
+    if (typeof state.dailyDoubleEnabled !== 'boolean') state.dailyDoubleEnabled = false; // boards saved before this field existed
     ReviewBoardStore.setCurrentName(name);
     refreshSwitcher();
     renderBoard();
   }
+
+  /* ---------- printable answer key ---------- */
+  function answerKeyHtml() {
+    var rows = [];
+    state.categories.forEach(function (cat) {
+      cat.clues.forEach(function (cl) {
+        rows.push('<tr><td>' + escapeHtml(cat.name) + '</td><td>' + (cl.dailyDouble ? '★ ' : '') + cl.points +
+          '</td><td>' + escapeHtml(cl.question) + '</td><td>' + escapeHtml(cl.answer) + '</td></tr>');
+      });
+    });
+    return '<h2>' + escapeHtml(state.name) + ' — Answer Key</h2>' +
+      '<table class="key-table"><thead><tr><th>Category</th><th>Points</th><th>Question</th><th>Answer</th></tr></thead>' +
+      '<tbody>' + rows.join('') + '</tbody></table>';
+  }
+
+  els.printAnswerKeyBtn.addEventListener('click', function () {
+    if (!state) return;
+    els.printArea.innerHTML = answerKeyHtml();
+    window.print();
+  });
+
+  /* ---------- JSON export / import ---------- */
+  function sanitizeFilename(s) {
+    var cleaned = String(s || 'review-board').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    return cleaned || 'review-board';
+  }
+
+  function looksLikeBoard(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string' && Array.isArray(obj.categories);
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved board,
+      so an import never silently overwrites something already here. */
+  function uniqueBoardName(base) {
+    var existing = ReviewBoardStore.listBoards();
+    if (existing.indexOf(base) === -1) return base;
+    var n = 2;
+    while (existing.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  /** Defensively rebuilds a board object loaded from anywhere (a JSON
+      import) so type mismatches or missing fields can't corrupt state. */
+  function normalizeBoard(loaded, name) {
+    var categories = (Array.isArray(loaded.categories) ? loaded.categories : []).map(function (c) {
+      var clues = (Array.isArray(c && c.clues) ? c.clues : []).map(function (cl) {
+        return {
+          points: Number(cl && cl.points) || 0,
+          question: String((cl && cl.question) || ''),
+          answer: String((cl && cl.answer) || ''),
+          used: !!(cl && cl.used),
+          dailyDouble: false
+        };
+      }).filter(function (cl) { return cl.question || cl.answer; });
+      return { name: String((c && c.name) || ''), clues: clues };
+    }).filter(function (c) { return c.name && c.clues.length; });
+    var teams = (Array.isArray(loaded.teams) ? loaded.teams : []).map(function (t) {
+      return { name: String((t && t.name) || 'Team'), score: Number(t && t.score) || 0 };
+    });
+    return {
+      name: name,
+      categories: categories,
+      teams: teams.length ? teams : [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
+      dailyDoubleEnabled: !!loaded.dailyDoubleEnabled
+    };
+  }
+
+  els.exportBoardBtn.addEventListener('click', function () {
+    if (!state) return;
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  els.importBoardBtn.addEventListener('click', function () { els.importBoardFile.click(); });
+
+  els.importBoardFile.addEventListener('change', function () {
+    var file = els.importBoardFile.files && els.importBoardFile.files[0];
+    els.importBoardFile.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var decoded;
+      try { decoded = JSON.parse(reader.result); } catch (e) {
+        alert('That file isn’t valid JSON.');
+        return;
+      }
+      if (!looksLikeBoard(decoded)) {
+        alert('That doesn’t look like a game board file exported from this page.');
+        return;
+      }
+      if (!decoded.categories.length) {
+        alert('That board has no categories/clues to import.');
+        return;
+      }
+      var name = uniqueBoardName(decoded.name || 'Imported Board');
+      state = normalizeBoard(decoded, name);
+      assignDailyDouble();
+      ReviewBoardStore.saveBoard(name, state);
+      ReviewBoardStore.setCurrentName(name);
+      refreshSwitcher();
+      els.setupCard.style.display = 'none';
+      els.boardCard.style.display = '';
+      els.toolbar.style.display = '';
+      renderBoard();
+    };
+    reader.onerror = function () { alert('Couldn’t read that file.'); };
+    reader.readAsText(file);
+  });
 
   function showSetup(prefillCategories) {
     editingBoard = null;
@@ -489,6 +650,8 @@
     els.boardCard.style.display = '';
     els.toolbar.style.display = '';
     els.boardTitle.textContent = state.name;
+    els.dailyDoubleToggle.checked = !!state.dailyDoubleEnabled;
+    els.redrawDailyDoubleBtn.disabled = !state.dailyDoubleEnabled;
 
     // scoreboard
     els.scoreboard.innerHTML = '';
@@ -569,7 +732,9 @@
     currentClue = { catIdx: catIdx, clueIdx: clueIdx };
     var cat = state.categories[catIdx];
     var clue = cat.clues[clueIdx];
-    els.overlayCatPoints.textContent = cat.name + ' — ' + clue.points;
+    var effectivePoints = clue.points * (clue.dailyDouble ? 2 : 1);
+    els.overlayCatPoints.innerHTML = (clue.dailyDouble ? '🌟 DAILY DOUBLE! 🌟<br>' : '') +
+      escapeHtml(cat.name) + ' — ' + effectivePoints + (clue.dailyDouble ? ' (doubled)' : '');
     els.overlayQuestion.textContent = clue.question;
     els.overlayAnswer.textContent = clue.answer;
     els.overlayAnswer.classList.remove('show');
@@ -598,11 +763,12 @@
 
     els.awardRow.innerHTML = '';
     var clue = state.categories[currentClue.catIdx].clues[currentClue.clueIdx];
+    var effectivePoints = clue.points * (clue.dailyDouble ? 2 : 1);
     state.teams.forEach(function (team) {
       var b = document.createElement('button');
-      b.textContent = '+' + clue.points + ' ' + team.name;
+      b.textContent = '+' + effectivePoints + ' ' + team.name;
       b.addEventListener('click', function () {
-        team.score += clue.points;
+        team.score += effectivePoints;
         markCurrentClueUsed();
         closeOverlay();
         renderBoard();
@@ -646,7 +812,7 @@
           if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
         });
       });
-      startBoard(name, categories, editingBoard.teams);
+      startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled);
     } else {
       startBoard(name, categories);
     }
@@ -669,7 +835,7 @@
     var teams = state.teams;
     var usedMap = usedMapFor(categories);
     showSetup(categories);
-    editingBoard = { name: name, teams: teams, usedMap: usedMap };
+    editingBoard = { name: name, teams: teams, usedMap: usedMap, dailyDoubleEnabled: state.dailyDoubleEnabled };
     els.boardName.value = name;
   });
 
@@ -678,6 +844,23 @@
     if (!confirm('Clear all used questions and reset scores to 0 in "' + state.name + '"? Questions themselves are kept.')) return;
     state.categories.forEach(function (c) { c.clues.forEach(function (cl) { cl.used = false; }); });
     state.teams.forEach(function (t) { t.score = 0; });
+    assignDailyDouble();
+    save();
+    renderBoard();
+  });
+
+  els.dailyDoubleToggle.addEventListener('change', function () {
+    if (!state) return;
+    state.dailyDoubleEnabled = els.dailyDoubleToggle.checked;
+    assignDailyDouble();
+    save();
+    renderBoard();
+  });
+
+  els.redrawDailyDoubleBtn.addEventListener('click', function () {
+    if (!state || !state.dailyDoubleEnabled) return;
+    assignDailyDouble();
+    save();
     renderBoard();
   });
 

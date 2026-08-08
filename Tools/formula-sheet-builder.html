@@ -74,6 +74,13 @@
   .item-row .item-expr { font-family: Consolas, monospace; font-size: .85rem; color: var(--accent-2); }
   .item-row .item-note { font-size: .78rem; color: var(--muted); }
   .item-row .btns { display: flex; gap: .3rem; flex-shrink: 0; }
+  .item-thumb-wrap { position: relative; display: inline-block; margin: .3rem 0; }
+  .item-thumb { max-width: 3.2rem; max-height: 3.2rem; display: block; border: 1px solid var(--line-strong); border-radius: 4px; background: #fff; }
+  .item-thumb-remove {
+    position: absolute; top: -6px; right: -6px; width: 1.1rem; height: 1.1rem; padding: 0; font-size: .7rem;
+    border-radius: 50%; line-height: 1; background: #fff; border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer;
+  }
+  .item-thumb-remove:hover { background: var(--err); color: #fff; border-color: var(--err); }
 
   .add-form { border-top: 1px solid var(--line); margin-top: .8rem; padding-top: .8rem; }
   .add-form .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: .5rem; align-items: end; }
@@ -93,6 +100,7 @@
   .formula .fname { font-weight: 700; font-size: .92rem; }
   .formula .fexpr { font-family: Consolas, monospace; font-size: 1.05rem; color: var(--accent); margin: .1rem 0; }
   .formula .fnote { font-size: .78rem; color: var(--muted); font-style: italic; }
+  .formula .fimg { float: right; max-width: 2.6rem; max-height: 2.6rem; margin: 0 0 .3rem .5rem; }
   .empty-sheet { color: var(--muted); text-align: center; padding: 3rem 1rem; font-style: italic; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
@@ -121,6 +129,9 @@
     <select id="sheetSwitch"></select>
     <button class="secondary" id="newSheetBtn">New sheet</button>
     <button class="danger" id="deleteSheetBtn">Delete</button>
+    <button class="secondary" id="exportSheetBtn">Export JSON</button>
+    <button class="secondary" id="importSheetBtn">Import JSON</button>
+    <input type="file" id="importSheetFile" accept="application/json,.json" style="display:none;">
   </div>
 
   <div class="layout">
@@ -183,13 +194,56 @@
   'use strict';
 
   var els = {};
-  ['toolbar','sheetSwitch','newSheetBtn','deleteSheetBtn',
+  ['toolbar','sheetSwitch','newSheetBtn','deleteSheetBtn','exportSheetBtn','importSheetBtn','importSheetFile',
    'sheetName','sheetTitle','columnCount','templatePicker','loadTemplateBtn',
    'itemsList','emptyHint','newName','newExpr','newNote','addItemBtn',
    'printBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, title, items: [{name, expression, note}] }
+  var state = null; // { name, title, items: [{name, expression, note, image}] }
+
+  // One shared hidden file input for the per-item "add diagram" pickers,
+  // rather than one per row — pendingImageIndex tracks which item it's for.
+  var imageFileInput = document.createElement('input');
+  imageFileInput.type = 'file';
+  imageFileInput.accept = 'image/*';
+  imageFileInput.style.display = 'none';
+  document.body.appendChild(imageFileInput);
+  var pendingImageIndex = -1;
+
+  /** Downscales an uploaded image to at most maxDim px on its longest side
+      before it's stored as a data URL — a formula sheet diagram only needs
+      to be legible at thumbnail size, and localStorage/JSON export both
+      have a real size cost to keeping the original photo resolution. */
+  function readAndDownscaleImage(file, maxDim, cb) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.max(1, Math.round(img.naturalWidth * scale));
+        var h = Math.max(1, Math.round(img.naturalHeight * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(canvas.toDataURL('image/png'));
+      };
+      img.onerror = function () { alert('Could not read that image.'); };
+      img.src = reader.result;
+    };
+    reader.onerror = function () { alert('Could not read that file.'); };
+    reader.readAsDataURL(file);
+  }
+
+  imageFileInput.addEventListener('change', function () {
+    var file = imageFileInput.files && imageFileInput.files[0];
+    imageFileInput.value = '';
+    if (!file || pendingImageIndex < 0) return;
+    var idx = pendingImageIndex;
+    readAndDownscaleImage(file, 200, function (dataUrl) {
+      if (state.items[idx]) { state.items[idx].image = dataUrl; renderAll(); }
+    });
+  });
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -232,11 +286,20 @@
       fields.innerHTML =
         '<div class="item-name">' + escapeHtml(item.name) + '</div>' +
         '<div class="item-expr">' + escapeHtml(item.expression) + '</div>' +
-        (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : '');
+        (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : '') +
+        (item.image
+          ? '<div class="item-thumb-wrap"><img class="item-thumb" src="' + item.image + '" alt="Diagram for ' + escapeHtml(item.name) + '">' +
+            '<button type="button" class="item-thumb-remove" data-remove-image="' + i + '" title="Remove diagram">&times;</button></div>'
+          : '');
       row.appendChild(fields);
 
       var btns = document.createElement('div');
       btns.className = 'btns';
+      var imgBtn = document.createElement('button');
+      imgBtn.type = 'button'; imgBtn.className = 'secondary small'; imgBtn.textContent = '🖼️';
+      imgBtn.title = item.image ? 'Replace diagram/image' : 'Add a small diagram/image';
+      imgBtn.addEventListener('click', function () { pendingImageIndex = i; imageFileInput.click(); });
+      btns.appendChild(imgBtn);
       var upBtn = document.createElement('button');
       upBtn.type = 'button'; upBtn.className = 'secondary small'; upBtn.textContent = '↑';
       upBtn.disabled = i === 0;
@@ -263,10 +326,18 @@
     });
   }
 
+  els.itemsList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-image]');
+    if (!btn) return;
+    var idx = Number(btn.dataset.removeImage);
+    if (state.items[idx]) { state.items[idx].image = ''; renderAll(); }
+  });
+
   function sheetHtml() {
     var itemsHtml = state.items.length
       ? state.items.map(function (item) {
           return '<div class="formula">' +
+            (item.image ? '<img class="fimg" src="' + item.image + '" alt="">' : '') +
             '<div class="fname">' + escapeHtml(item.name) + '</div>' +
             '<div class="fexpr">' + escapeHtml(item.expression) + '</div>' +
             (item.note ? '<div class="fnote">' + escapeHtml(item.note) + '</div>' : '') +
@@ -342,7 +413,7 @@
     var expr = els.newExpr.value.trim();
     var note = els.newNote.value.trim();
     if (!name || !expr) { alert('Enter at least a name and an expression.'); return; }
-    state.items.push({ name: name, expression: expr, note: note });
+    state.items.push({ name: name, expression: expr, note: note, image: '' });
     els.newName.value = ''; els.newExpr.value = ''; els.newNote.value = '';
     renderAll();
   });
@@ -367,6 +438,70 @@
   els.printBtn.addEventListener('click', function () {
     document.getElementById('printArea').innerHTML = sheetHtml();
     window.print();
+  });
+
+  /* ---------- JSON export/import ---------- */
+  function sanitizeFilename(s) {
+    var cleaned = String(s || 'formula-sheet').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    return cleaned || 'formula-sheet';
+  }
+
+  function looksLikeSheet(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string' && Array.isArray(obj.items);
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved sheet,
+      so an import never silently overwrites something already here. */
+  function uniqueSheetName(base) {
+    var existing = FormulaSheetStore.listSheets();
+    if (existing.indexOf(base) === -1) return base;
+    var n = 2;
+    while (existing.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  els.exportSheetBtn.addEventListener('click', function () {
+    if (!state) return;
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  els.importSheetBtn.addEventListener('click', function () { els.importSheetFile.click(); });
+
+  els.importSheetFile.addEventListener('change', function () {
+    var file = els.importSheetFile.files && els.importSheetFile.files[0];
+    els.importSheetFile.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var decoded;
+      try { decoded = JSON.parse(reader.result); } catch (e) {
+        alert('That file isn’t valid JSON.');
+        return;
+      }
+      if (!looksLikeSheet(decoded)) {
+        alert('That doesn’t look like a formula sheet file exported from this page.');
+        return;
+      }
+      var name = uniqueSheetName(decoded.name || decoded.title || 'Imported Sheet');
+      state = {
+        name: name,
+        title: decoded.title || '',
+        columns: decoded.columns || 2,
+        items: decoded.items.map(function (i) { return { name: i.name || '', expression: i.expression || '', note: i.note || '', image: i.image || '' }; })
+      };
+      FormulaSheetStore.setCurrentName(name);
+      renderAll();
+    };
+    reader.onerror = function () { alert('Couldn’t read that file.'); };
+    reader.readAsText(file);
   });
 
   /* ---------- boot ---------- */

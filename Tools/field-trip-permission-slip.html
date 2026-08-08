@@ -16,6 +16,7 @@
 <meta name="twitter:description" content="Fill in a field trip's details once and print a clean, signable permission slip — one per student, or a stack of blank copies.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='5' y='10' width='22' height='12' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='11' y1='10' x2='11' y2='22' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Cline x1='21' y1='10' x2='21' y2='22' stroke='%232A6DB0' stroke-width='1.4'/%3E%3Ccircle cx='11' cy='24' r='2.2' fill='%23C43A2F'/%3E%3Ccircle cx='21' cy='24' r='2.2' fill='%23C43A2F'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
+<script src="field-trip-permission-slip/lib/qrcode.js"></script>
 <style>
   :root {
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
@@ -79,6 +80,13 @@
 
   .name-count { font-size: .78rem; color: var(--muted); margin: -.5rem 0 .7rem; }
 
+  .collection-summary { font-size: .85rem; font-weight: 700; color: var(--accent); margin-bottom: .6rem; }
+  .collection-rows { display: flex; flex-direction: column; gap: .4rem; max-height: 280px; overflow-y: auto; }
+  .collection-row { display: flex; align-items: center; gap: .8rem; padding: .35rem .6rem; border: 1px solid var(--line); border-radius: 6px; flex-wrap: wrap; }
+  .collection-name { flex: 1 1 auto; font-weight: 600; font-size: .88rem; min-width: 100px; }
+  .collection-check { display: flex; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 400; margin: 0; white-space: nowrap; }
+  .collection-check input { width: auto; margin: 0; }
+
   .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
 
@@ -113,6 +121,7 @@
 
   .slip-footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-top: 1rem; font-size: .88rem; border-top: 1px solid #000; padding-top: .6rem; flex-wrap: wrap; }
   .slip-footer .due { font-weight: 700; }
+  .slip-qr { width: .85in; height: .85in; flex-shrink: 0; image-rendering: pixelated; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -141,6 +150,9 @@
     <select id="tripSwitch"></select>
     <button class="secondary" id="newTripBtn">New trip</button>
     <button class="danger" id="deleteTripBtn">Delete</button>
+    <button class="secondary" id="exportTripBtn">Export JSON</button>
+    <button class="secondary" id="importTripBtn">Import JSON</button>
+    <input type="file" id="importTripFile" accept="application/json,.json" style="display:none;">
   </div>
 
   <div class="layout">
@@ -231,6 +243,12 @@
 
         <button type="button" id="printBtn" class="full">Print</button>
       </div>
+
+      <div class="card">
+        <div class="card-title">Slip collection tracker</div>
+        <p class="hint">Tracks who's turned theirs in, using the same student list as &ldquo;Whole class (batch)&rdquo; above. This is separate from what prints on the slip.</p>
+        <div id="collectionWrap"></div>
+      </div>
     </div>
 
     <div class="preview-wrap">
@@ -293,13 +311,13 @@
   /* ---------- elements ---------- */
   var els = {};
   [
-    'toolbar', 'tripSwitch', 'newTripBtn', 'deleteTripBtn',
+    'toolbar', 'tripSwitch', 'newTripBtn', 'deleteTripBtn', 'exportTripBtn', 'importTripBtn', 'importTripFile',
     'tripName', 'schoolTeacher', 'destination', 'tripStartDate', 'tripEndDate',
     'departureTime', 'returnTime', 'purpose', 'cost', 'whatToBring',
     'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate',
     'singleFields', 'batchFields', 'blankFields',
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
-    'printBtn', 'previewArea', 'previewNote'
+    'printBtn', 'previewArea', 'previewNote', 'collectionWrap'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var FIELD_KEYS = [
@@ -318,7 +336,7 @@
   }
 
   function defaultState(name) {
-    var s = { name: name, mode: 'single', studentName: '', batchNames: '', blankCount: 5 };
+    var s = { name: name, mode: 'single', studentName: '', batchNames: '', blankCount: 5, collected: {} };
     FIELD_KEYS.forEach(function (k) { s[k] = ''; });
     return s;
   }
@@ -399,6 +417,91 @@
     return (state.batchNames || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
   }
 
+  /* ---------- collection tracker (separate from what prints) ---------- */
+  function renderCollectionTracker() {
+    var names = batchNamesList();
+    if (!names.length) {
+      els.collectionWrap.innerHTML = '<p class="hint" style="margin:0;">Add student names in the &ldquo;Whole class (batch)&rdquo; tab above to track which slips have come back.</p>';
+      return;
+    }
+    var showPaid = !!(state.cost && state.cost.trim());
+    els.collectionWrap.innerHTML =
+      '<div class="collection-summary" id="collectionSummary"></div>' +
+      '<div class="collection-rows">' + names.map(function (n) {
+        var rec = (state.collected && state.collected[n]) || { returned: false, paid: false };
+        return '<div class="collection-row">' +
+          '<span class="collection-name">' + escapeHtml(n) + '</span>' +
+          '<label class="collection-check"><input type="checkbox" data-collected-returned="' + escapeHtml(n) + '"' + (rec.returned ? ' checked' : '') + '> Returned</label>' +
+          (showPaid ? '<label class="collection-check"><input type="checkbox" data-collected-paid="' + escapeHtml(n) + '"' + (rec.paid ? ' checked' : '') + '> Paid</label>' : '') +
+        '</div>';
+      }).join('') + '</div>';
+    updateCollectionSummary(names);
+  }
+
+  function updateCollectionSummary(names) {
+    var el = document.getElementById('collectionSummary');
+    if (!el) return;
+    var total = names.length;
+    var returned = names.filter(function (n) { return state.collected && state.collected[n] && state.collected[n].returned; }).length;
+    var text = returned + ' of ' + total + ' returned';
+    if (state.cost && state.cost.trim()) {
+      var paid = names.filter(function (n) { return state.collected && state.collected[n] && state.collected[n].paid; }).length;
+      text += ' &middot; ' + paid + ' of ' + total + ' paid';
+    }
+    el.innerHTML = text;
+  }
+
+  els.collectionWrap.addEventListener('change', function (e) {
+    var returnedBox = e.target.closest('[data-collected-returned]');
+    var paidBox = e.target.closest('[data-collected-paid]');
+    if (!returnedBox && !paidBox) return;
+    if (!state.collected) state.collected = {};
+    var name = returnedBox ? returnedBox.dataset.collectedReturned : paidBox.dataset.collectedPaid;
+    if (!state.collected[name]) state.collected[name] = { returned: false, paid: false };
+    if (returnedBox) state.collected[name].returned = returnedBox.checked;
+    if (paidBox) state.collected[name].paid = paidBox.checked;
+    save();
+    updateCollectionSummary(batchNamesList());
+  });
+
+  /* ---------- QR code encoding trip name/date/destination ---------- */
+  var qrCache = { key: '', url: null };
+  function buildTripQrDataUrl() {
+    try {
+      var payload = [state.name, state.destination, tripDateLine().replace(/&ndash;/g, '-')].filter(Boolean).join(' | ') || 'Field Trip';
+      var qr = window.qrcode(0, 'M');
+      qr.addData(payload);
+      qr.make();
+      var count = qr.getModuleCount();
+      var quiet = 2;
+      var total = count + quiet * 2;
+      var px = 4;
+      var size = total * px;
+      var canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000';
+      for (var r = 0; r < count; r++) {
+        for (var c = 0; c < count; c++) {
+          if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+        }
+      }
+      return canvas.toDataURL('image/png');
+    } catch (e) { return null; }
+  }
+
+  // Cached by trip identity so a 30-student batch print doesn't redraw an
+  // identical QR canvas 30 times.
+  function getTripQrDataUrl() {
+    var key = state.name + '|' + state.destination + '|' + tripDateLine();
+    if (qrCache.key !== key) {
+      qrCache.key = key;
+      qrCache.url = buildTripQrDataUrl();
+    }
+    return qrCache.url;
+  }
+
   function slipHtml(studentName) {
     var isBlank = studentName === null;
     var nameHtml = isBlank
@@ -414,6 +517,7 @@
     }
 
     var dateLine = tripDateLine();
+    var qrDataUrl = getTripQrDataUrl();
     var timesLine = [];
     if (state.departureTime) timesLine.push('Depart ' + formatTime(state.departureTime));
     if (state.returnTime) timesLine.push('Return ' + formatTime(state.returnTime));
@@ -452,6 +556,7 @@
         '<div class="slip-footer">' +
           '<div>Please return this slip by:</div>' +
           '<div class="due">' + (formatDate(state.dueDate) || '&mdash;') + '</div>' +
+          (qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code encoding this trip\'s name, destination, and date" title="Scan for trip details">' : '') +
         '</div>' +
       '</div>'
     );
@@ -512,8 +617,9 @@
   FIELD_KEYS.forEach(function (key) { bindTextField(key, key); });
 
   els.studentName.addEventListener('input', function () { state.studentName = els.studentName.value; renderAll(); });
-  els.batchNames.addEventListener('input', function () { state.batchNames = els.batchNames.value; renderAll(); });
+  els.batchNames.addEventListener('input', function () { state.batchNames = els.batchNames.value; renderAll(); renderCollectionTracker(); });
   els.blankCount.addEventListener('input', function () { state.blankCount = els.blankCount.value; renderAll(); });
+  els.cost.addEventListener('input', renderCollectionTracker);
 
   Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -562,6 +668,75 @@
     else newTrip('New Field Trip');
   });
 
+  /* ---------- JSON export/import ---------- */
+  function sanitizeFilename(s) {
+    var cleaned = String(s || 'field-trip').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    return cleaned || 'field-trip';
+  }
+
+  function looksLikeTrip(obj) {
+    return !!obj && typeof obj === 'object' && typeof obj.name === 'string';
+  }
+
+  /** Suffixes a name until it doesn't collide with an already-saved trip,
+      so an import never silently overwrites something already here. */
+  function uniqueTripName(base) {
+    var existing = TripStore.listTrips();
+    if (existing.indexOf(base) === -1) return base;
+    var n = 2;
+    while (existing.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  els.exportTripBtn.addEventListener('click', function () {
+    if (!state) return;
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  els.importTripBtn.addEventListener('click', function () { els.importTripFile.click(); });
+
+  els.importTripFile.addEventListener('change', function () {
+    var file = els.importTripFile.files && els.importTripFile.files[0];
+    els.importTripFile.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var decoded;
+      try { decoded = JSON.parse(reader.result); } catch (e) {
+        alert('That file isn’t valid JSON.');
+        return;
+      }
+      if (!looksLikeTrip(decoded)) {
+        alert('That doesn’t look like a field trip file exported from this page.');
+        return;
+      }
+      var name = uniqueTripName(decoded.name || 'Imported Trip');
+      var next = defaultState(name);
+      FIELD_KEYS.forEach(function (k) { if (typeof decoded[k] === 'string') next[k] = decoded[k]; });
+      if (typeof decoded.mode === 'string') next.mode = decoded.mode;
+      if (typeof decoded.studentName === 'string') next.studentName = decoded.studentName;
+      if (typeof decoded.batchNames === 'string') next.batchNames = decoded.batchNames;
+      if (decoded.blankCount !== undefined) next.blankCount = decoded.blankCount;
+      if (decoded.collected && typeof decoded.collected === 'object') next.collected = decoded.collected;
+      state = next;
+      TripStore.setCurrentName(name);
+      refreshSwitcher();
+      els.toolbar.style.display = '';
+      fillForm();
+      renderAll();
+    };
+    reader.onerror = function () { alert('Couldn’t read that file.'); };
+    reader.readAsText(file);
+  });
+
   /* ---------- lifecycle ---------- */
   function fillForm() {
     els.tripName.value = state.name;
@@ -577,6 +752,7 @@
     els.batchFields.style.display = state.mode === 'batch' ? '' : 'none';
     els.blankFields.style.display = state.mode === 'blank' ? '' : 'none';
     if (state.mode === 'batch') populateRosterSelect();
+    renderCollectionTracker();
   }
 
   function newTrip(name) {
@@ -594,6 +770,7 @@
     state = loaded;
     if (!state.mode) state.mode = 'single';
     if (state.blankCount === undefined) state.blankCount = 5;
+    if (!state.collected || typeof state.collected !== 'object') state.collected = {};
     FIELD_KEYS.forEach(function (k) { if (state[k] === undefined) state[k] = ''; });
     TripStore.setCurrentName(name);
     refreshSwitcher();
