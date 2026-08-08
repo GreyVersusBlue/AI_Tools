@@ -83,10 +83,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add an explicit "refresh" affordance to re-pull the latest Sub Plan Builder / Seating Chart data without a full page reload, so it's obvious the bundle isn't showing stale data from an earlier visit.
 
 ### Classroom Timer (`Tools/Classroom Timer.html`)
-**Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, and a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen.
+**Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen, and a running/paused timer that survives a page reload or tab-close.
 **Suggested improvements:**
 - Add a saved custom-preset list (beyond the fixed 5/10/15/20/30-minute buttons) so a teacher can name and reuse their own recurring durations (e.g. "Bell ringer — 7 min", "Exit ticket — 4 min").
-- Persist and resume an in-progress timer across a page reload/tab-close (store start time + duration in localStorage) — right now refreshing the page mid-countdown loses the running timer.
 - Add a full-screen / "presentation mode" toggle (Fullscreen API) so the timer fills the whole projector screen without browser chrome, without requiring the teacher to manually fullscreen the browser tab.
 
 ### Command Center (`Tools/command-center-dashboard.html`)
@@ -161,9 +160,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add an optional "N images per page" contact-sheet/grid layout for handing out thumbnail overviews.
 
 ### Word Doc Merger (`Tools/docx-merger.html`)
-**Current state:** Client-side OOXML merger (via JSZip + raw XML manipulation) that combines up to 80+ `.docx` files in a drag-reorderable list, with optional page breaks and filename headings, and per-file error skipping.
+**Current state:** Client-side OOXML merger (via JSZip + raw XML manipulation) that combines up to 80+ `.docx` files in a drag-reorderable list, with optional page breaks and filename headings (choices persisted to localStorage), and per-file error skipping.
 **Suggested improvements:**
-- Persist the "start each file on a new page" / "add filename heading" checkbox choices to localStorage so repeat use doesn't require re-checking them.
 - Add an optional auto-generated table of contents page (using the inserted headings as entries) at the front of the merged document.
 - Show an estimated total page/section count before merging for very large batches, so a teacher can sanity-check the file count before waiting on 80 files.
 
@@ -242,9 +240,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a per-student cumulative view across all archived days (sum of history entries by name) — currently each archived day is its own isolated table, with no running total to spot a pattern over the week/quarter.
 
 ### Bracket / Tournament Generator (`Tools/bracket-tournament-generator.html`)
-**Current state:** Builds a single-elimination bracket with automatic bye handling, click-to-advance progression, multiple saved/switchable brackets, a shareable link via `state-link.js`, and print output that shows the bracket's current decided/undecided state.
+**Current state:** Builds a single-elimination bracket with automatic bye handling, click-to-advance progression, multiple saved/switchable brackets, a shareable link via `state-link.js`, a "print blank" toggle for handing out empty prediction sheets, and print output that otherwise shows the bracket's current decided/undecided state.
 **Suggested improvements:**
-- Add a "print blank" toggle that outputs the bracket with no picks marked — right now printing always reflects live progress, so there's no way to hand out an empty bracket sheet ahead of the tournament for students to predict on.
 - Add an optional score field per match (not just win/advance) — currently a click only records who won, with no way to note the actual score for a class record.
 - Render the existing share link as a QR code image (client-side canvas QR encoding, no external service) next to the "Share this bracket" button, so it can be scanned off the projector — today it's copy-link only.
 
@@ -274,9 +271,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## QR Codes & Trackers
 
 ### QR Code Generator (`Tools/qr-code-generator.html`)
-**Current state:** Generates a single QR code from typed text/a link with adjustable size, colors, error-correction level, and an optional center logo or short-text overlay, self-verifying scannability with an offline jsQR decode before enabling PNG/SVG download.
+**Current state:** Generates a single QR code from typed text/a link with adjustable size, colors, error-correction level, and an optional center logo or short-text overlay, self-verifying scannability with an offline jsQR decode before enabling PNG/SVG download or direct printing.
 **Suggested improvements:**
-- Add a "Print this code" button with a dedicated print stylesheet — right now the only outputs are PNG/SVG downloads, so printing means exporting first and opening the file elsewhere, unlike the QR-based sibling tools which all print directly.
 - Add quick-fill templates for common payload types (Wi-Fi network, vCard contact, `tel:`/`mailto:`) that build the correctly-formatted string for the user, since today it's freeform text only and most teachers don't know the Wi-Fi/vCard QR syntax.
 - Save a small "recently generated" list (last 5–10 codes, label + text) to localStorage so a teacher can quickly regenerate a room/station code from an earlier session instead of retyping it.
 - Offer an actual camera-based test scan (reusing the site's shared `_shared/qr-scan.js`) so a teacher can point their device at a printed copy and confirm it still reads after paper/toner/glare, rather than relying only on the synthetic canvas decode.

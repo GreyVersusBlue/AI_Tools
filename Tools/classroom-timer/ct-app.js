@@ -4,7 +4,7 @@
 // throttling never drift, while random/stopwatch drive it from an accumulated
 // elapsed base for the same reason.
 
-import { load, save } from './ct-store.js';
+import { load, save, loadRunning, saveRunning, clearRunning } from './ct-store.js';
 import * as Sounds from './ct-sounds.js';
 
 const RING_R = 90;
@@ -129,6 +129,14 @@ function stopTicking() {
   if (timerId) { clearInterval(timerId); timerId = null; }
 }
 
+/** Keeps `ct_running_v1` in sync with `phase` so a reload/tab-close mid
+    countdown can pick back up — see tryRestoreRunning() in init(). Cheap to
+    call after every state transition since it's just a JSON write. */
+function syncRunningPersistence() {
+  if (phase.status === 'running' || phase.status === 'paused') saveRunning(mode, phase);
+  else clearRunning();
+}
+
 function resetPhaseForMode() {
   phase = { status: 'idle', laps: [] };
   // Random Interval hides its numeric countdown so the cue is a genuine
@@ -157,6 +165,7 @@ function resetPhaseForMode() {
     renderLaps();
   }
   setButtonsIdle();
+  syncRunningPersistence();
 }
 
 function switchMode(newMode) {
@@ -177,6 +186,7 @@ function onPhaseZero() {
       phase.totalMs = getConfiguredMs('roundrobin');
       phase.endAt = Date.now() + phase.totalMs;
       updateSubDisplay(`Station ${phase.station} of ${phase.stations}`);
+      syncRunningPersistence();
       return;
     }
     if (phase.loop) {
@@ -184,6 +194,7 @@ function onPhaseZero() {
       phase.totalMs = getConfiguredMs('roundrobin');
       phase.endAt = Date.now() + phase.totalMs;
       updateSubDisplay(`Station 1 of ${phase.stations}`);
+      syncRunningPersistence();
       return;
     }
     updateSubDisplay('All stations complete!');
@@ -195,6 +206,7 @@ function onPhaseZero() {
   disableOtherTabs(false);
   paint(0, 0);
   setButtonsIdle();
+  syncRunningPersistence();
 }
 
 function onRandomFire() {
@@ -207,6 +219,7 @@ function onRandomFire() {
   paint(firedAt, 0);
   updateSubDisplay(`Triggered at ${formatTime(firedAt)}`);
   setButtonsIdle();
+  syncRunningPersistence();
 }
 
 function tick() {
@@ -255,6 +268,7 @@ function onStart() {
   setButtonsRunning();
   disableOtherTabs(true);
   startTicking();
+  syncRunningPersistence();
 }
 
 function startPreset(modeKey, minutes, seconds) {
@@ -277,6 +291,7 @@ function onPause() {
     phase.elapsedBase = (phase.elapsedBase || 0) + (Date.now() - phase.startAt);
   }
   setButtonsPaused();
+  syncRunningPersistence();
 }
 
 function onResume() {
@@ -289,6 +304,7 @@ function onResume() {
   phase.status = 'running';
   setButtonsRunning();
   startTicking();
+  syncRunningPersistence();
 }
 
 function onReset() {
@@ -354,6 +370,7 @@ function initStopwatchPanel() {
     const elapsed = Date.now() - phase.startAt + phase.elapsedBase;
     phase.laps.unshift(elapsed);
     renderLaps();
+    syncRunningPersistence();
   });
 }
 
@@ -437,9 +454,53 @@ function cacheEls() {
   els.soundTest = q('soundTest');
 }
 
+/** Paints the display from a restored `phase` without waiting for the next
+    tick — subDisplay text isn't part of the persisted phase (it's derived,
+    same as resetPhaseForMode() derives it), so it's recomputed here too. */
+function renderRestoredDisplay() {
+  if (COUNTDOWN_LIKE.has(mode)) {
+    const remaining = phase.status === 'running' ? Math.max(0, phase.endAt - Date.now()) : phase.remainingAtPause;
+    paint(remaining, phase.totalMs > 0 ? remaining / phase.totalMs : 0);
+    updateSubDisplay(mode === 'roundrobin' ? `Station ${phase.station} of ${phase.stations}` : '');
+  } else if (mode === 'random') {
+    const elapsed = phase.status === 'running' ? (Date.now() - phase.startAt + phase.elapsedBase) : phase.elapsedBase;
+    paint(elapsed, 1 - Math.min(1, elapsed / phase.maxMs));
+    updateSubDisplay('Watching for the random cue…');
+  } else if (mode === 'stopwatch') {
+    const elapsed = phase.status === 'running' ? (Date.now() - phase.startAt + phase.elapsedBase) : phase.elapsedBase;
+    paint(elapsed, null);
+  }
+}
+
+/** Picks a running/paused timer back up after a reload or tab-close —
+    `endAt`/`startAt` are absolute timestamps, so the elapsed real time during
+    the reload is already correctly reflected without any adjustment.
+    Returns true if it restored something, so init() knows to skip the normal
+    idle reset. */
+function tryRestoreRunning() {
+  const running = loadRunning();
+  if (!running) return false;
+  mode = running.mode;
+  phase = running.phase;
+  phase.laps = phase.laps || [];
+  prefs = save({ activeTab: mode });
+  setRingVisible(mode !== 'stopwatch' && mode !== 'random');
+  if (mode === 'stopwatch') renderLaps();
+  renderRestoredDisplay();
+  disableOtherTabs(true);
+  if (phase.status === 'running') {
+    setButtonsRunning();
+    startTicking();
+  } else {
+    setButtonsPaused();
+  }
+  return true;
+}
+
 function init() {
   cacheEls();
   els.ringFg.style.strokeDasharray = String(RING_C);
+  const restored = tryRestoreRunning();
   initTabs();
   initCountdownPanel();
   initTransitionPanel();
@@ -448,7 +509,7 @@ function init() {
   initRoundrobinPanel();
   initSoundPanel();
   initControls();
-  resetPhaseForMode();
+  if (!restored) resetPhaseForMode();
 }
 
 if (document.readyState === 'loading') {

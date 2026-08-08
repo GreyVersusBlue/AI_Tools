@@ -3,6 +3,10 @@
 // get a fully-shaped object back.
 
 const KEY = 'ct_prefs';
+// Separate key from KEY: this is a snapshot of an in-progress `phase` object,
+// not a preference, and its shape varies per mode — sanitize() above assumes
+// a fixed schema, so this gets its own guarded, unvalidated read/write.
+const RUNNING_KEY = 'ct_running_v1';
 const TABS = ['countdown', 'transition', 'random', 'stopwatch', 'roundrobin'];
 const SOUNDS = ['chime', 'bell', 'buzzer', 'none'];
 
@@ -73,4 +77,27 @@ export function save(patch) {
   return next;
 }
 
-export default { load, save, DEFAULTS, TABS, SOUNDS };
+/** A running/paused timer snapshot ({mode, phase}), or null if there isn't
+    one worth resuming — nothing saved, corrupt JSON, or a phase that was
+    idle/done when it was last written. */
+export function loadRunning() {
+  try {
+    const raw = localStorage.getItem(RUNNING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!TABS.includes(parsed.mode)) return null;
+    if (!parsed.phase || (parsed.phase.status !== 'running' && parsed.phase.status !== 'paused')) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+
+export function saveRunning(mode, phase) {
+  try { localStorage.setItem(RUNNING_KEY, JSON.stringify({ mode, phase })); } catch (e) { /* storage full/blocked */ }
+}
+
+export function clearRunning() {
+  try { localStorage.removeItem(RUNNING_KEY); } catch (e) { /* ignore */ }
+}
+
+export default { load, save, loadRunning, saveRunning, clearRunning, DEFAULTS, TABS, SOUNDS };
