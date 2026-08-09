@@ -75,7 +75,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A single projector-friendly page combining a basic countdown timer, a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), and a no-repeats random-caller against a saved Name Picker roster, with a per-student "exclude for today" toggle (session/day-scoped, never touching the saved roster) for skipping an absent student.
 **Suggested improvements:**
 - The timer here is a stripped-down duplicate of Classroom Timer's countdown mode with no visual progress ring and only one beep sound; giving it feature parity (or at least a sound-choice control) would make this a real replacement for the standalone tool on one page.
-- Surface a link/section for the current Hall Pass Log "currently out" count on this same dashboard, since a teacher running the room from here would otherwise need to switch tabs to see who's out of the room.
+- 🔒 **CLAIMED (2026-08-09)** — Surface a link/section for the current Hall Pass Log "currently out" count on this same dashboard, since a teacher running the room from here would otherwise need to switch tabs to see who's out of the room.
 
 ### Field Trip Permission Slip Generator (`Tools/field-trip-permission-slip.html`)
 **Current state:** A trip-details form (destination, dates, cost, what-to-bring, chaperone/emergency info) that saves multiple named trip templates to localStorage and generates a live-previewed, printable permission slip in single/batch (roster-driven)/blank-copies modes, with a "collected" tracker (returned/paid checkboxes per student), a QR code on each printed slip encoding the trip name/date/destination, and JSON export/import of a trip's saved fields.
@@ -141,7 +141,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Seating Chart Generator (`Tools/Seating Chart Generator.html`)
 **Current state:** A drag-and-drop desk layout builder with multiple sections, roster import, flag/note per student, keep-apart/put-together constraint solving, keyboard-accessible desk controls, undo, a cold-call picker, trimmed/scaled print output (single-section, or all sections at once as one page per class period), and JSON export/import plus single-section link sharing.
 **Suggested improvements:**
-- Add a "Duplicate section" action that copies an existing section's desk layout (but not its roster/assignments) into a new section — right now a teacher with the same room layout across five periods has to rebuild the grid five times.
+- 🔒 **CLAIMED (2026-08-09)** — Add a "Duplicate section" action that copies an existing section's desk layout (but not its roster/assignments) into a new section — right now a teacher with the same room layout across five periods has to rebuild the grid five times.
 - Add an optional per-student photo thumbnail (loaded from a local file, stored as a data URL) shown on the desk — useful for a substitute matching faces to names, and stays fully local.
 
 ### Group / Team Generator (`Tools/group-team-generator.html`)
@@ -170,7 +170,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Novel Study / Reading Circles Manager (`Tools/novel-study-circles-manager.html`)
 **Current state:** Splits a roster into reading circles, assigns discussion roles each meeting using the same recency-fairness algorithm as the Lab Group tool, logs chapter checkpoints per meeting (whole-class or per-group pacing), prints only the latest meeting's role sheet, and supports JSON export/import of the whole project (groups, meeting history, checkpoints, role-fairness history) — import adds the file as a new project rather than touching any existing one.
 **Suggested improvements:**
-- Add a "print full meeting log" option covering every logged meeting, not just the latest — the Meeting History section already renders this data on-screen but only the current meeting's role sheet is printable today.
+- 🔒 **CLAIMED (2026-08-09)** — Add a "print full meeting log" option covering every logged meeting, not just the latest — the Meeting History section already renders this data on-screen but only the current meeting's role sheet is printable today.
 - Add an optional numeric chapter/page field alongside the free-text checkpoint, so groups' progress can be shown as a simple at-a-glance comparison — currently checkpoints are free text, which can't be compared programmatically to flag a group falling behind.
 
 ---
@@ -186,7 +186,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Gallery Walk QR Codes (`Tools/gallery-walk-qr.html`)
 **Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import, URL normalization, and a dedicated `.csv` file-picker alongside the paste box), and prints a QR grid, a plain reference sheet, or copies every entry's link to the clipboard as a list.
 **Suggested improvements:**
-- Flag duplicate links/text across entries (a common paste-mistake when copying the same folder link for two students) before printing.
+- 🔒 **CLAIMED (2026-08-09)** — Flag duplicate links/text across entries (a common paste-mistake when copying the same folder link for two students) before printing.
 
 ### Digital Escape Room / Puzzle Lock Builder (`Tools/escape-room-builder.html`)
 **Current state:** Builds a linear or branching chain of QR-code puzzle stations (clue, accepted answers, hint, next-station routing) encoded into a shared player link, with a live chain preview, printable per-station QR codes, a separate answer key, and a "randomize starting station" toggle so each station's own printed code can be its own valid entry point for physical rotations where teams start simultaneously at different stations.
@@ -199,7 +199,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Tracks per-class rosters and per-student reading log entries (date/book/pages-to/minutes), auto-computing pages-read-per-session, with a sortable, date-filterable class summary, printable per-student or class-summary reports, a CSV export of the (currently filtered) class log for gradebook import or archiving, and a per-book "mark finished" flag feeding a "Books completed" column in the summary.
 **Suggested improvements:**
 - Add an optional weekly pages/minutes goal per class, shown as a simple progress indicator next to each student's summary row.
-- Add a lightweight "days logged this week" streak indicator per student to flag kids who've gone quiet, since the summary currently only totals pages/minutes, not entry frequency.
+- 🔒 **CLAIMED (2026-08-09)** — Add a lightweight "days logged this week" streak indicator per student to flag kids who've gone quiet, since the summary currently only totals pages/minutes, not entry frequency.
 
 ### Lab Safety Contract Tracker (`Tools/lab-safety-contract-tracker.html`)
 **Current state:** Tracks one or more editable required documents (e.g. "Lab Safety Contract" plus "Chemical Handling") with a separate signed/unsigned status per student per document (each with date and a shared optional note), showing a live "N of M fully signed" count with a per-document breakdown, a due-date urgency banner with a "download reminder" `.ics` calendar file, a "show missing only" list filter, a bulk "mark all as signed" action, and printable full/missing-only reports.
