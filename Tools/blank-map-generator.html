@@ -333,6 +333,9 @@
     <button id="btnNewProject" class="small">+ New Project</button>
     <button id="btnRenameProject" class="small">Rename</button>
     <button id="btnDeleteProject" class="small">Delete</button>
+    <button id="btnExportProject" class="small">Export&hellip;</button>
+    <button id="btnImportProject" class="small">Import&hellip;</button>
+    <input type="file" id="importProjectInput" accept="application/json,.json" hidden data-no-pan>
   </div>
 
   <div class="card search-card no-print">
@@ -2119,6 +2122,61 @@ el('btnDeleteProject').addEventListener('click', () => {
   if (!confirm(`Delete map project "${label}"? This can't be undone (the downloaded map image itself stays cached for reuse elsewhere).`)) return;
   store.deleteProject(store.getActiveId());
   loadActiveProjectIntoUI();
+});
+
+/** Turns a project name into a safe download filename (same idea as a browser's own "Save As" sanitizing). */
+function sanitizeProjectFilename(name) {
+  const cleaned = String(name || 'map-project').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+  return cleaned || 'map-project';
+}
+
+el('btnExportProject').addEventListener('click', () => {
+  const current = store.listProjects().find(p => p.id === store.getActiveId());
+  const name = current ? current.name : 'Untitled map';
+  // The map image itself isn't embedded: `project.mapId` is just a Commons file
+  // title/id, resolved against this browser's own offline map cache (bmg-map-cache.js)
+  // rather than stored as image bytes here. Importing this file on another device
+  // re-fetches and re-caches that same map the first time it's opened there, just
+  // like when the project was first created.
+  const exportObj = { name, ...project };
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${sanitizeProjectFilename(name)}-map-project.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+el('btnImportProject').addEventListener('click', () => el('importProjectInput').click());
+
+el('importProjectInput').addEventListener('change', () => {
+  const file = el('importProjectInput').files && el('importProjectInput').files[0];
+  el('importProjectInput').value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try { parsed = JSON.parse(reader.result); } catch (e) {
+      alert("That file isn't valid JSON.");
+      return;
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      alert("That doesn't look like a map project file exported from this tool.");
+      return;
+    }
+    const { name, ...data } = parsed;
+    const imported = store.importProject(name || file.name.replace(/\.json$/i, ''), data);
+    if (!imported) {
+      alert("That doesn't look like a map project file exported from this tool.");
+      return;
+    }
+    loadActiveProjectIntoUI();
+  };
+  reader.onerror = () => alert("Couldn't read that file.");
+  reader.readAsText(file);
 });
 
 async function init() {

@@ -182,6 +182,16 @@ export function createStore() {
     saveWorkspace();
   }
 
+  /** Imports a project exported from this tool (or another copy of it) as a new project and activates it. Returns the new project's data, or null if `data` doesn't look like a valid project (caller should show a friendly error in that case). */
+  function importProject(name, data) {
+    if (!isValidProjectData(data)) return null;
+    const id = newId();
+    workspace.projects.push({ id, name: name || "Imported map", updatedAt: Date.now(), data: normalizeProjectData(data) });
+    workspace.activeId = id;
+    saveWorkspace();
+    return getActiveProject();
+  }
+
   /** Deletes a project; if it was active, activates another (creating a fresh one if it was the last). Returns the now-active project's data. */
   function deleteProject(id) {
     workspace.projects = workspace.projects.filter(e => e.id !== id);
@@ -198,7 +208,7 @@ export function createStore() {
 
   return {
     getActiveProject, setActiveProject, listProjects, getActiveId,
-    createProject, switchProject, renameProject, deleteProject,
+    createProject, switchProject, renameProject, deleteProject, importProject,
     get isMemoryOnly() { return blocked; },
   };
 }
