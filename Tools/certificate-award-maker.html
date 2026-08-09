@@ -47,6 +47,9 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
+  .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+
   .layout { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
@@ -92,6 +95,8 @@
   button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
   button.small { padding: .25rem .5rem; font-size: .78rem; width: auto; margin: 0; }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
 
   .logo-preview { display: flex; align-items: center; gap: .6rem; margin: .5rem 0 .8rem; }
   .logo-preview img { width: 2.6rem; height: 2.6rem; object-fit: contain; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; }
@@ -176,8 +181,20 @@
     </div>
   </div>
 
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <label style="margin:0;font-weight:600;font-size:.85rem;">Preset:</label>
+    <select id="presetSwitch"></select>
+    <button class="secondary" style="width:auto;" id="newPresetBtn">New preset</button>
+    <button class="danger" style="width:auto;" id="deletePresetBtn">Delete</button>
+  </div>
+
   <div class="layout">
     <div class="editor">
+
+      <div class="card">
+        <label for="presetName">Preset name</label>
+        <input type="text" id="presetName" placeholder="e.g. Honor Roll Certificate">
+      </div>
 
       <div class="card">
         <label>Template</label>
@@ -265,7 +282,8 @@
   ];
 
   var els = {};
-  ['themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoRemove',
+  ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
+   'themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoRemove',
    'singleFields','batchFields','studentName','batchNames',
    'awardTitle','awardTitleCustom','reason','certDate','signature','printBtn',
    'previewArea','previewNote','viewToggle'
@@ -284,30 +302,39 @@
     return d.getFullYear() + '-' + mm + '-' + dd;
   }
 
-  var settings = {
-    theme: 'elegant',
-    border: 'double-line',
-    logo: '', // downscaled data URL of an uploaded crest/mascot, or '' for none
-    mode: 'single',
-    studentName: '',
-    batchNames: '',
-    awardTitle: 'Certificate of Achievement',
-    awardTitleCustom: '',
-    reason: '',
-    certDate: todayLocalISO(),
-    signature: ''
-  };
+  var settings = null;
+  // { name, theme, border, logo, mode, studentName, batchNames,
+  //   awardTitle, awardTitleCustom, reason, certDate, signature }
 
-  function loadSaved() {
-    var saved = CertificateStore.load();
-    if (saved) {
-      Object.keys(settings).forEach(function (k) {
-        if (saved[k] !== undefined) settings[k] = saved[k];
-      });
-    }
+  function defaultSettings(name) {
+    return {
+      name: name,
+      theme: 'elegant',
+      border: 'double-line',
+      logo: '', // downscaled data URL of an uploaded crest/mascot, or '' for none
+      mode: 'single',
+      studentName: '',
+      batchNames: '',
+      awardTitle: 'Certificate of Achievement',
+      awardTitleCustom: '',
+      reason: '',
+      certDate: todayLocalISO(),
+      signature: ''
+    };
   }
 
-  function persist() { CertificateStore.save(settings); }
+  function persist() { if (settings) CertificateStore.savePreset(settings.name, settings); }
+
+  function refreshSwitcher() {
+    var names = CertificateStore.listPresets();
+    els.presetSwitch.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (settings && n === settings.name) opt.selected = true;
+      els.presetSwitch.appendChild(opt);
+    });
+  }
 
   /* ---------- swatch pickers ---------- */
   function buildSwatches(container, items, activeKey, onPick) {
@@ -476,7 +503,76 @@
     document.getElementById('printArea').innerHTML = html;
   }
 
+  /* ---------- lifecycle ---------- */
+  function applySettingsToForm() {
+    els.presetName.value = settings.name;
+    els.studentName.value = settings.studentName;
+    els.batchNames.value = settings.batchNames;
+    els.awardTitle.value = settings.awardTitle === '__custom' ? '__custom' : settings.awardTitle;
+    els.awardTitleCustom.value = settings.awardTitleCustom;
+    els.awardTitleCustom.style.display = settings.awardTitle === '__custom' ? '' : 'none';
+    els.reason.value = settings.reason;
+    els.certDate.value = settings.certDate;
+    els.signature.value = settings.signature;
+    updateLogoPreview();
+
+    var isBatch = settings.mode === 'batch';
+    document.querySelector('.mode-tab[data-mode="batch"]').classList.toggle('active', isBatch);
+    document.querySelector('.mode-tab[data-mode="single"]').classList.toggle('active', !isBatch);
+    els.singleFields.style.display = isBatch ? 'none' : '';
+    els.batchFields.style.display = isBatch ? '' : 'none';
+
+    buildThemeSwatches();
+    buildBorderSwatches();
+  }
+
+  function newPreset(name) {
+    settings = defaultSettings(name);
+    CertificateStore.setCurrentName(name);
+    applySettingsToForm();
+    refreshSwitcher();
+    els.toolbar.style.display = '';
+    viewMode = 'single';
+    renderAll();
+  }
+
+  function loadPresetByName(name) {
+    var loaded = CertificateStore.loadPreset(name);
+    if (!loaded) return;
+    settings = loaded;
+    if (!settings.name) settings.name = name;
+    CertificateStore.setCurrentName(name);
+    applySettingsToForm();
+    refreshSwitcher();
+    els.toolbar.style.display = '';
+    viewMode = 'single';
+    renderAll();
+  }
+
   /* ---------- wiring ---------- */
+  els.presetName.addEventListener('change', function () {
+    if (!settings) return;
+    var oldName = settings.name;
+    var newName = els.presetName.value.trim() || oldName;
+    if (newName !== oldName) { CertificateStore.deletePreset(oldName); settings.name = newName; }
+    renderAll(); refreshSwitcher();
+  });
+
+  els.presetSwitch.addEventListener('change', function () { loadPresetByName(els.presetSwitch.value); });
+  els.newPresetBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new preset:', 'New Preset');
+    if (!name) return;
+    newPreset(name.trim());
+  });
+  els.deletePresetBtn.addEventListener('click', function () {
+    if (!settings) return;
+    if (!confirm('Delete "' + settings.name + '" completely? This can’t be undone.')) return;
+    CertificateStore.deletePreset(settings.name);
+    var remaining = CertificateStore.listPresets();
+    if (remaining.length) loadPresetByName(remaining[0]);
+    else newPreset('My Certificate');
+  });
+
   Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (tab) {
     tab.addEventListener('click', function () {
       Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.remove('active'); });
@@ -545,26 +641,15 @@
   });
 
   /* ---------- boot ---------- */
-  loadSaved();
-  els.studentName.value = settings.studentName;
-  els.batchNames.value = settings.batchNames;
-  els.awardTitle.value = settings.awardTitle === '__custom' ? '__custom' : settings.awardTitle;
-  els.awardTitleCustom.value = settings.awardTitleCustom;
-  els.awardTitleCustom.style.display = settings.awardTitle === '__custom' ? '' : 'none';
-  els.reason.value = settings.reason;
-  els.certDate.value = settings.certDate;
-  els.signature.value = settings.signature;
-  updateLogoPreview();
-  if (settings.mode === 'batch') {
-    document.querySelector('.mode-tab[data-mode="batch"]').classList.add('active');
-    document.querySelector('.mode-tab[data-mode="single"]').classList.remove('active');
-    els.singleFields.style.display = 'none';
-    els.batchFields.style.display = '';
+  CertificateStore.migrateLegacyIfNeeded();
+  var current = CertificateStore.getCurrentName();
+  if (current && CertificateStore.loadPreset(current)) {
+    loadPresetByName(current);
+  } else {
+    var existing = CertificateStore.listPresets();
+    if (existing.length) loadPresetByName(existing[0]);
+    else newPreset('My Certificate');
   }
-
-  buildThemeSwatches();
-  buildBorderSwatches();
-  renderAll();
 })();
 </script>
 <script>
