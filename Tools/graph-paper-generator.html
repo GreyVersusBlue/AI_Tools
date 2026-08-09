@@ -48,6 +48,9 @@
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .nlRow { display: grid; grid-template-columns: 2.4rem 1fr 1fr 1fr; gap: .5rem; align-items: center; margin-bottom: .6rem; }
+  .nlRow label { margin: 0; font-weight: 400; color: var(--muted); white-space: nowrap; }
+  .nlRow input { margin-bottom: 0; }
   .checkline { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .85rem; margin-bottom: .8rem; }
   .checkline input { width: auto; margin: 0; }
 
@@ -145,17 +148,26 @@
 
         <!-- ===== Number line panel ===== -->
         <div class="mode-panel" id="panel-numberline">
-          <div class="row2">
-            <div><label for="nlMin">Min</label><input type="number" id="nlMin" value="0"></div>
-            <div><label for="nlMax">Max</label><input type="number" id="nlMax" value="20"></div>
-          </div>
-          <div class="row2">
+          <div id="nlUniformFields">
+            <div class="row2">
+              <div><label for="nlMin">Min</label><input type="number" id="nlMin" value="0"></div>
+              <div><label for="nlMax">Max</label><input type="number" id="nlMax" value="20"></div>
+            </div>
             <div><label for="nlInterval">Tick interval</label><input type="number" id="nlInterval" value="1" min="0.1" step="0.1"></div>
-            <div><label for="nlLabelEvery">Label every Nth tick</label><input type="number" id="nlLabelEvery" value="1" min="1" step="1"></div>
           </div>
+          <label for="nlLabelEvery">Label every Nth tick</label>
+          <input type="number" id="nlLabelEvery" value="1" min="1" step="1">
+
           <label for="nlCopies">Copies on one page</label>
           <p class="hint">For handing out cut-apart strips.</p>
           <input type="number" id="nlCopies" value="1" min="1" max="10" step="1">
+
+          <div class="checkline" id="nlIndependentLine">
+            <input type="checkbox" id="nlIndependent">
+            <label style="margin:0;" for="nlIndependent">Give each copy its own min/max/interval</label>
+          </div>
+          <p class="hint" id="nlRowsHint" style="display:none;">One row per copy, top to bottom on the printed page.</p>
+          <div id="nlRowsContainer" style="display:none;"></div>
         </div>
 
         <!-- ===== Coordinate plane panel ===== -->
@@ -204,7 +216,7 @@
 
   var els = {};
   ['orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
-   'nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies',
+   'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery',
    'printBtn','downloadPngBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -220,6 +232,7 @@
     exactRows: 10,
     boldCenter: false,
     nlMin: 0, nlMax: 20, nlInterval: 1, nlLabelEvery: 1, nlCopies: 1,
+    nlIndependent: false, nlRows: [],
     planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
     planeInterval: 1, planeLabelEvery: 5
   };
@@ -248,6 +261,9 @@
     els.nlMin.value = settings.nlMin; els.nlMax.value = settings.nlMax;
     els.nlInterval.value = settings.nlInterval; els.nlLabelEvery.value = settings.nlLabelEvery;
     els.nlCopies.value = settings.nlCopies;
+    els.nlIndependent.checked = settings.nlIndependent;
+    toggleNumberLineRangeUI();
+    if (settings.nlIndependent) { ensureRowsLength(); buildRowsUI(); }
     els.planeQuadrants.value = settings.planeQuadrants;
     els.planeXMin.value = settings.planeXMin; els.planeXMax.value = settings.planeXMax;
     els.planeYMin.value = settings.planeYMin; els.planeYMax.value = settings.planeYMax;
@@ -269,7 +285,8 @@
     settings.nlMax = parseFloat(els.nlMax.value) || 0;
     settings.nlInterval = parseFloat(els.nlInterval.value) || 1;
     settings.nlLabelEvery = parseInt(els.nlLabelEvery.value, 10) || 1;
-    settings.nlCopies = parseInt(els.nlCopies.value, 10) || 1;
+    settings.nlCopies = Math.max(1, Math.min(10, parseInt(els.nlCopies.value, 10) || 1));
+    settings.nlIndependent = els.nlIndependent.checked;
 
     settings.planeQuadrants = els.planeQuadrants.value;
     settings.planeXMin = parseFloat(els.planeXMin.value) || 0;
@@ -278,6 +295,47 @@
     settings.planeYMax = parseFloat(els.planeYMax.value) || 0;
     settings.planeInterval = parseFloat(els.planeInterval.value) || 1;
     settings.planeLabelEvery = parseInt(els.planeLabelEvery.value, 10) || 1;
+  }
+
+  function toggleNumberLineRangeUI() {
+    els.nlUniformFields.style.display = settings.nlIndependent ? 'none' : '';
+    els.nlRowsHint.style.display = settings.nlIndependent ? '' : 'none';
+    els.nlRowsContainer.style.display = settings.nlIndependent ? '' : 'none';
+  }
+
+  /** Grow/trim settings.nlRows to match nlCopies, seeding new rows from the shared min/max/interval. */
+  function ensureRowsLength() {
+    while (settings.nlRows.length < settings.nlCopies) {
+      settings.nlRows.push({ min: settings.nlMin, max: settings.nlMax, interval: settings.nlInterval });
+    }
+    settings.nlRows.length = settings.nlCopies;
+  }
+
+  function buildRowsUI() {
+    els.nlRowsContainer.innerHTML = settings.nlRows.map(function (r, i) {
+      return '<div class="nlRow">' +
+        '<label>Copy ' + (i + 1) + '</label>' +
+        '<input type="number" class="nlRowMin" data-i="' + i + '" value="' + r.min + '" placeholder="Min">' +
+        '<input type="number" class="nlRowMax" data-i="' + i + '" value="' + r.max + '" placeholder="Max">' +
+        '<input type="number" class="nlRowInterval" data-i="' + i + '" value="' + r.interval + '" min="0.1" step="0.1" placeholder="Interval">' +
+        '</div>';
+    }).join('');
+    Array.prototype.slice.call(els.nlRowsContainer.querySelectorAll('input')).forEach(function (inp) {
+      inp.addEventListener('input', function () { readRowsFromUI(); persist(); render(); });
+      inp.addEventListener('change', function () { readRowsFromUI(); persist(); render(); });
+    });
+  }
+
+  function readRowsFromUI() {
+    Array.prototype.slice.call(els.nlRowsContainer.querySelectorAll('.nlRowMin')).forEach(function (inp) {
+      settings.nlRows[parseInt(inp.dataset.i, 10)].min = parseFloat(inp.value) || 0;
+    });
+    Array.prototype.slice.call(els.nlRowsContainer.querySelectorAll('.nlRowMax')).forEach(function (inp) {
+      settings.nlRows[parseInt(inp.dataset.i, 10)].max = parseFloat(inp.value) || 0;
+    });
+    Array.prototype.slice.call(els.nlRowsContainer.querySelectorAll('.nlRowInterval')).forEach(function (inp) {
+      settings.nlRows[parseInt(inp.dataset.i, 10)].interval = parseFloat(inp.value) || 1;
+    });
   }
 
   function gridSizeInches() {
@@ -300,11 +358,20 @@
         boldCenter: settings.boldCenter
       });
     } else if (settings.mode === 'numberline') {
-      result = window.GraphPaperRender.renderNumberLine({
-        orientation: settings.orientation,
-        min: settings.nlMin, max: settings.nlMax,
-        interval: settings.nlInterval, labelEvery: settings.nlLabelEvery, copies: settings.nlCopies
-      });
+      if (settings.nlIndependent) {
+        result = window.GraphPaperRender.renderNumberLine({
+          orientation: settings.orientation,
+          rows: settings.nlRows.map(function (r) {
+            return { min: r.min, max: r.max, interval: r.interval, labelEvery: settings.nlLabelEvery };
+          })
+        });
+      } else {
+        result = window.GraphPaperRender.renderNumberLine({
+          orientation: settings.orientation,
+          min: settings.nlMin, max: settings.nlMax,
+          interval: settings.nlInterval, labelEvery: settings.nlLabelEvery, copies: settings.nlCopies
+        });
+      }
     } else {
       result = window.GraphPaperRender.renderCoordinatePlane({
         orientation: settings.orientation,
@@ -343,6 +410,18 @@
     els.boldCenterLine.style.display = isSquare ? '' : 'none';
     els.exactCountFields.style.display = (isSquare && els.exactCount.checked) ? '' : 'none';
     render();
+  });
+
+  els.nlIndependent.addEventListener('change', function () {
+    settings.nlIndependent = els.nlIndependent.checked;
+    toggleNumberLineRangeUI();
+    if (settings.nlIndependent) { ensureRowsLength(); buildRowsUI(); }
+    persist();
+    render();
+  });
+  els.nlCopies.addEventListener('input', function () {
+    settings.nlCopies = Math.max(1, Math.min(10, parseInt(els.nlCopies.value, 10) || 1));
+    if (settings.nlIndependent) { ensureRowsLength(); buildRowsUI(); }
   });
 
   Array.prototype.slice.call(document.querySelectorAll('input, select')).forEach(function (el) {

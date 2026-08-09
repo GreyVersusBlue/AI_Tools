@@ -122,7 +122,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
 **Current state:** Three modes (graph paper, number line, coordinate plane) rendered as true-to-scale SVG with fine control over grid size/exact row-column counts/intervals/labels, settings saved to localStorage, print-at-100%-scale output, and a "Download PNG" button next to Print for posting a sheet directly to Google Classroom/Schoology.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Let number-line "copies on one page" use independent min/max/interval per copy (e.g., three different-range number lines stacked for a differentiated worksheet) instead of identical copies.
 - Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
 
 ### Formula Reference Sheet Builder (`Tools/formula-sheet-builder.html`)
@@ -142,7 +141,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A drag-and-drop desk layout builder with multiple sections, roster import, flag/note per student, keep-apart/put-together constraint solving, keyboard-accessible desk controls, undo, a cold-call picker, trimmed/scaled print output (single-section, or all sections at once as one page per class period), and JSON export/import plus single-section link sharing.
 **Suggested improvements:**
 - 🔒 **CLAIMED (2026-08-09)** — Add a "Duplicate section" action that copies an existing section's desk layout (but not its roster/assignments) into a new section — right now a teacher with the same room layout across five periods has to rebuild the grid five times.
-- 🔒 **CLAIMED (2026-08-09)** — Add an optional per-student photo thumbnail (loaded from a local file, stored as a data URL) shown on the desk — useful for a substitute matching faces to names, and stays fully local.
 
 ### Group / Team Generator (`Tools/group-team-generator.html`)
 **Current state:** Splits a pasted roster into random or skill-balanced groups with both "keep apart" and "keep together" constraint solving, reshuffle, print, and copy-as-text, supporting multiple named/saved configurations (with automatic one-time migration from the old single-settings storage) and tolerant paste parsing (drops row numbers, extra spreadsheet columns, and trailing commas).
@@ -197,7 +195,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Silent Reading Log Tracker (`Tools/ssr-log-tracker.html`)
 **Current state:** Tracks per-class rosters and per-student reading log entries (date/book/pages-to/minutes), auto-computing pages-read-per-session, with a sortable, date-filterable class summary, printable per-student or class-summary reports, a CSV export of the (currently filtered) class log for gradebook import or archiving, and a per-book "mark finished" flag feeding a "Books completed" column in the summary.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Add an optional weekly pages/minutes goal per class, shown as a simple progress indicator next to each student's summary row.
 - 🔒 **CLAIMED (2026-08-09)** — Add a lightweight "days logged this week" streak indicator per student to flag kids who've gone quiet, since the summary currently only totals pages/minutes, not entry frequency.
 
 ### Lab Safety Contract Tracker (`Tools/lab-safety-contract-tracker.html`)
@@ -213,7 +210,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Reveals a number string one expression at a time from a grade-banded prompt bank (or a custom prompt), with an ephemeral, session-only strategy-sharing board and session history that both disappear on reload — a "Save this session" button exports the day's number talks plus strategy cards as a text file on demand without changing that session-only design, and a teacher-only "show the answer" reveal (computed client-side, control-panel only, never on the projector stage).
 **Suggested improvements:**
 - Let a teacher favorite/save their own custom number strings into a small persistent personal bank, rather than only pulling from the built-in category lists or a one-off custom entry that isn't remembered.
-- 🔒 **CLAIMED (2026-08-09)** — Add a print-friendly handout of the current number string for an absent student or as a written record.
 
 ### Timeline Builder (`Tools/timeline-builder.html`)
 **Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style, and optional parallel/comparison tracks stacked on one shared year axis) with both a scrolling on-screen view (with auto-scaled decade/century/millennium gridlines and year labels for a sense of scale, plus optional background era/period shading bands for overlapping historical periods), a separate paginated print layout, and JSON export/import of a timeline file.
@@ -231,7 +227,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Math Fact Drill Sheet Generator (`Tools/math-drill-generator.html`)
 **Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Add per-template operand range controls (min/max inputs) instead of the hardcoded ranges in `mdg-templates.js` — a 3rd grader drilling addition to 5 and a 5th grader drilling to 100 currently get the same fixed 1–12 range.
 - Add a "generate a set of N distinct sheets" option that prints several different randomized versions back-to-back (e.g., Version A/B/C), useful for preventing copying during in-class timed drills.
 - Add an optional timed-fluency header (a blank "Start time / End time" or "Target: ___ seconds" line) since the sheet is explicitly framed as a drill tool but has no fluency-tracking element today.
 - Add fact-family-focused templates (e.g., "×6 facts only," "÷ by 7 only") as extra entries in `mdg-templates.js`, since the generator architecture already supports adding templates with no UI changes.

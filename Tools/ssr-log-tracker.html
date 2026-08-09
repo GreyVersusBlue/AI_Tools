@@ -102,6 +102,17 @@
   .summary-filter { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
   .summary-filter label { margin: 0; font-weight: 600; font-size: .8rem; display: flex; align-items: center; gap: .3rem; }
   .summary-filter input[type="date"] { width: auto; margin: 0; }
+  .summary-filter input[type="number"] { width: 5.5rem; margin: 0; }
+
+  .goal-mini { display: flex; flex-direction: column; gap: .25rem; min-width: 9rem; }
+  .goal-row { display: flex; align-items: center; gap: .35rem; font-size: .74rem; color: var(--muted); }
+  .goal-row .glabel { width: 2.6rem; flex: none; }
+  .goal-row .gbar { flex: 1; height: .45rem; background: #e7e5db; border-radius: 4px; overflow: hidden; }
+  .goal-row .gfill { height: 100%; background: var(--accent-2); border-radius: 4px; }
+  .goal-row .gfill.met { background: #3a7d44; }
+  .goal-row .gval { flex: none; font-variant-numeric: tabular-nums; }
+  .summary-table .goal-col { display: none; }
+  .summary-table.has-goal .goal-col { display: table-cell; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -220,6 +231,12 @@
       <button type="button" class="secondary small" id="clearFilterBtn">Clear filter</button>
       <span class="hint" style="margin:0;">Date filter applies to totals only, not the current-book column.</span>
     </div>
+    <div class="summary-filter" style="margin-bottom:.9rem;">
+      <label>Weekly goal <input type="number" id="goalPages" min="0" step="1" placeholder="pages"></label>
+      <label>+ <input type="number" id="goalMinutes" min="0" step="1" placeholder="minutes"></label>
+      <span class="hint" style="margin:0;">Optional &mdash; shown as a per-student progress indicator in the
+        &ldquo;This week&rdquo; column below (Monday&ndash;Sunday, resets automatically). Leave both blank to hide it.</span>
+    </div>
     <div class="table-wrap">
       <table class="summary-table" id="summaryTable">
         <thead>
@@ -229,6 +246,7 @@
             <th data-sort="finishedCount">Books completed <span class="arrow"></span></th>
             <th data-sort="pages">Total pages <span class="arrow"></span></th>
             <th data-sort="minutes">Total minutes <span class="arrow"></span></th>
+            <th data-sort="weekPages" class="goal-col">This week <span class="arrow"></span></th>
           </tr>
         </thead>
         <tbody id="summaryTableBody"></tbody>
@@ -263,13 +281,16 @@
     'bookProgress', 'bookProgressList',
     'logTable', 'logTableBody', 'noEntriesHint', 'noStudentCard',
     'printSummaryBtn', 'filterFrom', 'filterTo', 'clearFilterBtn',
+    'goalPages', 'goalMinutes',
     'summaryTable', 'summaryTableBody', 'noSummaryHint', 'exportCsvBtn',
     'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
-  //           finished: { studentName: [bookKey, ...] } } — bookKey is the trimmed,
+  //           finished: { studentName: [bookKey, ...] },
+  //           weeklyGoalPages, weeklyGoalMinutes } — bookKey is the trimmed,
   //           lowercased book title, matching the grouping key used by withSessionPages.
+  //           weeklyGoalPages/weeklyGoalMinutes are 0 when off (goal is optional, per class).
   var state = null;
   var activeStudent = null;
   var editingEntryId = null;
@@ -309,7 +330,10 @@
   function saveCurrentState() {
     if (!state) return;
     var all = readAllSections();
-    all[state.name] = { roster: state.roster, logs: state.logs, finished: state.finished };
+    all[state.name] = {
+      roster: state.roster, logs: state.logs, finished: state.finished,
+      weeklyGoalPages: state.weeklyGoalPages || 0, weeklyGoalMinutes: state.weeklyGoalMinutes || 0
+    };
     writeAllSections(all);
   }
   function deleteSectionData(name) {
@@ -344,7 +368,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, roster: [], logs: {}, finished: {} };
+    state = { name: name, roster: [], logs: {}, finished: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0 };
     activeStudent = null;
     editingEntryId = null;
     setCurrentName(name);
@@ -360,7 +384,10 @@
   function loadSection(name) {
     var data = loadSectionData(name);
     if (!data) return;
-    state = { name: name, roster: data.roster || [], logs: data.logs || {}, finished: data.finished || {} };
+    state = {
+      name: name, roster: data.roster || [], logs: data.logs || {}, finished: data.finished || {},
+      weeklyGoalPages: data.weeklyGoalPages || 0, weeklyGoalMinutes: data.weeklyGoalMinutes || 0
+    };
     activeStudent = (state.roster.indexOf(activeStudent) !== -1) ? activeStudent : null;
     editingEntryId = null;
     setCurrentName(name);
@@ -376,7 +403,22 @@
     els.sectionName.value = state.name;
     els.rosterInput.value = state.roster.join('\n');
     els.rosterCount.textContent = state.roster.length + ' student' + (state.roster.length === 1 ? '' : 's');
+    els.goalPages.value = state.weeklyGoalPages ? state.weeklyGoalPages : '';
+    els.goalMinutes.value = state.weeklyGoalMinutes ? state.weeklyGoalMinutes : '';
   }
+
+  els.goalPages.addEventListener('change', function () {
+    if (!state) return;
+    state.weeklyGoalPages = Math.max(0, parseInt(els.goalPages.value, 10) || 0);
+    saveCurrentState();
+    renderSummaryTable();
+  });
+  els.goalMinutes.addEventListener('change', function () {
+    if (!state) return;
+    state.weeklyGoalMinutes = Math.max(0, parseInt(els.goalMinutes.value, 10) || 0);
+    saveCurrentState();
+    renderSummaryTable();
+  });
 
   els.sectionName.addEventListener('change', function () {
     if (!state) return;
@@ -682,6 +724,20 @@
   });
 
   /* ---------- class summary ---------- */
+
+  // Monday-through-Sunday range containing today, independent of the totals
+  // date filter above — the weekly goal is meant to reset every Monday, not
+  // follow whatever range a teacher happens to have picked for other totals.
+  function currentWeekRange() {
+    var now = new Date();
+    var day = now.getDay(); // 0=Sun..6=Sat
+    var diffToMonday = (day === 0 ? -6 : 1 - day);
+    var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+    var sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    function fmt(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    return { from: fmt(monday), to: fmt(sunday) };
+  }
+
   function inRange(dateStr) {
     var from = els.filterFrom.value, to = els.filterTo.value;
     if (from && dateStr < from) return false;
@@ -690,6 +746,7 @@
   }
 
   function summaryRows() {
+    var week = currentWeekRange();
     return state.roster.map(function (name) {
       var all = studentEntries(name);
       var filtered = all.filter(function (e) { return inRange(e.date); });
@@ -702,14 +759,44 @@
       // "Current book" always reflects the most recent entry overall,
       // regardless of the totals date filter.
       var latest = sortedAscending(all).slice(-1)[0];
+
+      var weekEntries = all.filter(function (e) { return e.date >= week.from && e.date <= week.to; });
+      var weekSessionById = withSessionPages(weekEntries);
+      var weekPages = 0, weekMinutes = 0;
+      weekEntries.forEach(function (e) {
+        weekPages += weekSessionById[e.id] || 0;
+        weekMinutes += (e.minutes || 0);
+      });
+
       return {
         name: name,
         book: latest ? latest.book : '',
         finishedCount: studentFinished(name).length,
         pages: totalPages,
-        minutes: totalMinutes
+        minutes: totalMinutes,
+        weekPages: weekPages,
+        weekMinutes: weekMinutes
       };
     });
+  }
+
+  function goalCellHtml(row) {
+    var goalPages = state.weeklyGoalPages || 0;
+    var goalMinutes = state.weeklyGoalMinutes || 0;
+    var parts = [];
+    if (goalPages > 0) {
+      var pPct = Math.min(100, Math.round((row.weekPages / goalPages) * 100));
+      parts.push('<div class="goal-row"><span class="glabel">Pages</span><div class="gbar"><div class="gfill' +
+        (row.weekPages >= goalPages ? ' met' : '') + '" style="width:' + pPct + '%;"></div></div>' +
+        '<span class="gval">' + row.weekPages + '/' + goalPages + '</span></div>');
+    }
+    if (goalMinutes > 0) {
+      var mPct = Math.min(100, Math.round((row.weekMinutes / goalMinutes) * 100));
+      parts.push('<div class="goal-row"><span class="glabel">Min</span><div class="gbar"><div class="gfill' +
+        (row.weekMinutes >= goalMinutes ? ' met' : '') + '" style="width:' + mPct + '%;"></div></div>' +
+        '<span class="gval">' + row.weekMinutes + '/' + goalMinutes + '</span></div>');
+    }
+    return '<div class="goal-mini">' + parts.join('') + '</div>';
   }
 
   function renderSummaryTable() {
@@ -722,6 +809,8 @@
       if (av > bv) return 1 * dir;
       return 0;
     });
+    var hasGoal = !!((state.weeklyGoalPages || 0) > 0 || (state.weeklyGoalMinutes || 0) > 0);
+    els.summaryTable.classList.toggle('has-goal', hasGoal);
     els.noSummaryHint.style.display = rows.length ? 'none' : '';
     els.summaryTableBody.innerHTML = '';
     rows.forEach(function (r) {
@@ -731,7 +820,8 @@
         '<td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
         '<td class="num">' + r.finishedCount + '</td>' +
         '<td class="num">' + r.pages + '</td>' +
-        '<td class="num">' + r.minutes + '</td>';
+        '<td class="num">' + r.minutes + '</td>' +
+        '<td class="goal-col">' + (hasGoal ? goalCellHtml(r) : '') + '</td>';
       els.summaryTableBody.appendChild(tr);
     });
     document.querySelectorAll('.summary-table th[data-sort]').forEach(function (th) {
