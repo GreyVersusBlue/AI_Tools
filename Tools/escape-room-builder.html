@@ -237,6 +237,11 @@
           <input type="checkbox" id="showNumber" checked>
           <label class="option-label" for="showNumber">Show station number above the label</label>
         </div>
+        <div class="option-row">
+          <input type="checkbox" id="randomizeStart">
+          <label class="option-label" for="randomizeStart">Randomize starting station for each printed/shared link</label>
+        </div>
+        <div class="hint">For physical rotations where several teams start at different stations at once: turns each station's own code into its own entry point, so a team that starts by scanning Station 4 begins the chain right there instead of being told to go find Station 1 first. Leave off if everyone starts together at Station 1.</div>
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print Station QR Codes</button>
           <button class="secondary" id="printAnswersBtn" disabled type="button">Print Answer Key</button>
@@ -283,13 +288,13 @@
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'chainPreview', 'stationsList', 'addStationBtn',
    'playerLink', 'copyLinkBtn',
-   'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printAnswersBtn',
+   'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart', 'printCodesBtn', 'printAnswersBtn',
    'cards-preview', 'answerPreview', 'printQrArea', 'printQrGrid', 'printAnswerArea', 'printAnswerBody',
    'answerSheetTitle', 'previewNote', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
-  // state = { name, roomId, stations: [{clue, answers, hint, next}], cardsPerPage, ecLevel, showNumber }
+  // state = { name, roomId, stations: [{clue, answers, hint, next}], cardsPerPage, ecLevel, showNumber, randomizeStart }
   // `next` is null for "auto — next in order", or a 0-based station index for branching.
   var state = null;
 
@@ -344,7 +349,7 @@
     state = {
       name: name, roomId: makeRoomId(),
       stations: [{ clue: '', answers: '', hint: '', next: null }],
-      cardsPerPage: '4', ecLevel: 'Q', showNumber: true,
+      cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
     };
     applyStateToForm();
     refreshSwitcher();
@@ -371,6 +376,7 @@
     els.cardsPerPage.value = state.cardsPerPage || '4';
     els.ecLevel.value = state.ecLevel || 'Q';
     els.showNumber.checked = state.showNumber !== false;
+    els.randomizeStart.checked = !!state.randomizeStart;
     renderStations();
   }
 
@@ -503,11 +509,17 @@
     return btoa(unescape(encodeURIComponent(JSON.stringify(room))));
   }
 
-  function playerLinkFor(room, stationIdx) {
+  // `startHere` marks this station's own code as a valid entry point — lock.html
+  // uses it to seed a first-time player's progress at this station instead of
+  // the fixed first one, for rotations where teams start at different stations
+  // at once. Omitted entirely unless the "randomize starting station" toggle is
+  // on, so the link is byte-for-byte the same as before when it's off.
+  function playerLinkFor(room, stationIdx, startHere) {
     var encoded = encodeRoom(room);
     var url = new URL('escape-room-builder/lock.html', window.location.href);
     url.searchParams.set('r', encoded);
     if (typeof stationIdx === 'number') url.searchParams.set('s', String(stationIdx));
+    if (startHere && typeof stationIdx === 'number') url.searchParams.set('start', '1');
     return url.href;
   }
 
@@ -580,7 +592,7 @@
     els.cardsPreview.innerHTML = '';
     valid.forEach(function (s, n) {
       try {
-        var link = playerLinkFor(room, n);
+        var link = playerLinkFor(room, n, els.randomizeStart.checked);
         var qr = buildQR(link, ecLevel);
         var card = document.createElement('div');
         card.className = 'preview-card';
@@ -634,7 +646,7 @@
         '<div class="p-name">' + escapeHtml(state.name || 'Escape Room') + '</div><canvas></canvas>';
       els.printQrGrid.appendChild(card);
       try {
-        drawQR(card.querySelector('canvas'), buildQR(playerLinkFor(room, n), ecLevel), 600);
+        drawQR(card.querySelector('canvas'), buildQR(playerLinkFor(room, n, els.randomizeStart.checked), ecLevel), 600);
       } catch (err) { /* already reported in the live preview */ }
     });
   }
@@ -669,7 +681,7 @@
     }
   });
 
-  [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
+  [els.cardsPerPage, els.ecLevel, els.showNumber, els.randomizeStart].forEach(function (el) {
     el.addEventListener('change', function () { save(); scheduleRender(); });
   });
 
