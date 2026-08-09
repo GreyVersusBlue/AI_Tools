@@ -188,6 +188,18 @@
     </div>
 
     <div class="control-group">
+      <label>Layout</label>
+      <select class="input" id="grid-density">
+        <option value="1" selected>One image per page</option>
+        <option value="2">Contact sheet — 2 per page</option>
+        <option value="4">Contact sheet — 4 per page</option>
+        <option value="6">Contact sheet — 6 per page</option>
+        <option value="9">Contact sheet — 9 per page</option>
+        <option value="12">Contact sheet — 12 per page</option>
+      </select>
+    </div>
+
+    <div class="control-group">
       <label>Quality</label>
       <select class="input" id="quality">
         <option value="standard" selected>Standard — smaller file, best for email/Schoology</option>
@@ -248,6 +260,7 @@
   const SETTINGS_KEY = 'image-to-pdf-settings';
   const pageSizeSel  = document.getElementById('page-size');
   const qualitySel   = document.getElementById('quality');
+  const gridDensitySel = document.getElementById('grid-density');
 
   (function loadSettingsPrefs() {
     let raw;
@@ -262,6 +275,9 @@
     if (raw.quality && qualitySel.querySelector(`option[value="${raw.quality}"]`)) {
       qualitySel.value = raw.quality;
     }
+    if (raw.gridDensity && gridDensitySel.querySelector(`option[value="${raw.gridDensity}"]`)) {
+      gridDensitySel.value = raw.gridDensity;
+    }
   })();
 
   function saveSettingsPrefs() {
@@ -269,12 +285,14 @@
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
         pageSize: pageSizeSel.value,
         orient: document.querySelector('input[name="orient"]:checked').value,
-        quality: qualitySel.value
+        quality: qualitySel.value,
+        gridDensity: gridDensitySel.value
       }));
     } catch (e) { /* storage full/blocked */ }
   }
   pageSizeSel.addEventListener('change', saveSettingsPrefs);
   qualitySel.addEventListener('change', saveSettingsPrefs);
+  gridDensitySel.addEventListener('change', saveSettingsPrefs);
   document.querySelectorAll('input[name="orient"]').forEach(r => r.addEventListener('change', saveSettingsPrefs));
 
   const VALID_EXT = /\.(png|jpe?g|webp|svg)$/i;
@@ -487,6 +505,36 @@
 
   function pxToMm(px) { return px * 25.4 / 96; }
 
+  // ── Contact-sheet ("N per page") grid layout ────────────────────────────────
+  // Base shapes are portrait-leaning (rows >= cols) since PAGE_SIZES stores
+  // fixed formats as [w, h] with w <= h by default; resolveGridPageDimsMm()
+  // swaps cols/rows for landscape pages (see below) so the grid always reads
+  // as "wider than tall" on a wide page instead of staying portrait-shaped.
+  const GRID_LAYOUTS = {
+    2:  { cols: 1, rows: 2 },
+    4:  { cols: 2, rows: 2 },
+    6:  { cols: 2, rows: 3 },
+    9:  { cols: 3, rows: 3 },
+    12: { cols: 3, rows: 4 },
+  };
+  const GRID_MARGIN_MM = 8;  // outer page margin
+  const GRID_GUTTER_MM = 4;  // space between cells
+
+  // A grid spans multiple images per page, so — unlike the one-per-page path —
+  // the page size can't be picked per image. "Match image size" has no single
+  // meaning across a page of differently-sized images, so it falls back to
+  // Letter for the grid path only. "Auto" orientation similarly can't look at
+  // one image's aspect ratio, so it falls back to each fixed format's default
+  // (portrait) orientation; only an explicit "Landscape" choice flips it.
+  function resolveGridPageDimsMm(pageMode, orient) {
+    const mode = PAGE_SIZES[pageMode] ? pageMode : 'letter';
+    let [w, h] = PAGE_SIZES[mode];
+    const wantLandscape = orient === 'landscape';
+    if (wantLandscape && h > w) [w, h] = [h, w];
+    if (!wantLandscape && w > h) [w, h] = [h, w];
+    return [w, h];
+  }
+
   // "Match image size" used to place the image's raw pixel count in mm, which
   // makes a 4032×3024 phone photo a ~1067×800mm page. Clamp the long edge into
   // a sane print range instead — this is what "match image size" should mean
@@ -517,11 +565,12 @@
 
   async function generatePDF() {
     clearMsg();
-    const ordered   = getOrderedEntries();
-    const pageMode  = document.getElementById('page-size').value;
-    const orient    = document.querySelector('input[name="orient"]:checked').value;
-    const quality   = document.getElementById('quality').value;
-    let   outName   = document.getElementById('filename').value.trim() || 'assembled.pdf';
+    const ordered     = getOrderedEntries();
+    const pageMode    = document.getElementById('page-size').value;
+    const orient      = document.querySelector('input[name="orient"]:checked').value;
+    const quality     = document.getElementById('quality').value;
+    const gridDensity = parseInt(document.getElementById('grid-density').value, 10) || 1;
+    let   outName     = document.getElementById('filename').value.trim() || 'assembled.pdf';
     if (!/\.pdf$/i.test(outName)) outName += '.pdf';
 
     btnGen.disabled = true;
@@ -532,9 +581,28 @@
     // jsPDF is loaded from the vendored copy as window.jspdf
     const { jsPDF } = window.jspdf;
 
+    // Contact-sheet ("N per page") setup — computed once up front since every
+    // grid page shares the same size/orientation/cell grid, unlike the
+    // one-per-page path where each page is sized off its own image.
+    let gridCols = 0, gridRows = 0, gridPgW = 0, gridPgH = 0, gridCellW = 0, gridCellH = 0;
+    if (gridDensity > 1) {
+      [gridPgW, gridPgH] = resolveGridPageDimsMm(pageMode, orient);
+      const base = GRID_LAYOUTS[gridDensity];
+      const landscape = gridPgW > gridPgH;
+      const swap = landscape && base.cols !== base.rows;
+      gridCols = swap ? base.rows : base.cols;
+      gridRows = swap ? base.cols : base.rows;
+      const usableW = gridPgW - 2 * GRID_MARGIN_MM;
+      const usableH = gridPgH - 2 * GRID_MARGIN_MM;
+      gridCellW = (usableW - (gridCols - 1) * GRID_GUTTER_MM) / gridCols;
+      gridCellH = (usableH - (gridRows - 1) * GRID_GUTTER_MM) / gridRows;
+    }
+
     let pdf = null;
     const skipped = [];
     let sourceBytes = 0;
+    let pdfPageCount = 0; // actual PDF pages created — fewer than ordered.length in grid mode
+    let placedCount  = 0; // successfully-embedded images only; skipped ones don't consume a grid cell
 
     for (let i = 0; i < ordered.length; i++) {
       const { file, rotation } = ordered[i];
@@ -575,20 +643,55 @@
         }
 
         const wMm = pxToMm(pxW), hMm = pxToMm(pxH);
-        const [pgW, pgH] = resolvePageDimsMm(pageMode, orient, wMm, hMm);
 
-        if (!pdf) {
-          pdf = new jsPDF({ orientation: pgW >= pgH ? 'l' : 'p', unit: 'mm', format: [pgW, pgH], compress: true });
+        if (gridDensity > 1) {
+          // Contact sheet: pack successfully-processed images density-per-page,
+          // in cell order (row-major), starting a new page every `gridDensity`th one.
+          const cellIdx = placedCount % gridDensity;
+          if (cellIdx === 0) {
+            if (!pdf) {
+              pdf = new jsPDF({ orientation: gridPgW >= gridPgH ? 'l' : 'p', unit: 'mm', format: [gridPgW, gridPgH], compress: true });
+            } else {
+              pdf.addPage([gridPgW, gridPgH], gridPgW >= gridPgH ? 'l' : 'p');
+            }
+            pdfPageCount++;
+          }
+          const row = Math.floor(cellIdx / gridCols);
+          const col = cellIdx % gridCols;
+          const cellX = GRID_MARGIN_MM + col * (gridCellW + GRID_GUTTER_MM);
+          const cellY = GRID_MARGIN_MM + row * (gridCellH + GRID_GUTTER_MM);
+
+          // Fit the image inside its cell, keeping aspect ratio (letterboxed,
+          // never stretched/cropped), centered — same approach as the
+          // one-per-page path below, just against the cell instead of the page.
+          const scale = Math.min(gridCellW / wMm, gridCellH / hMm);
+          const dW = wMm * scale, dH = hMm * scale;
+          const offX = cellX + (gridCellW - dW) / 2, offY = cellY + (gridCellH - dH) / 2;
+
+          pdf.addImage(embedDataURL, embedFormat, offX, offY, dW, dH, undefined, 'FAST');
+          // Faint cell border so the sheet reads as a grid at a glance.
+          pdf.setDrawColor(200);
+          pdf.setLineWidth(0.2);
+          pdf.rect(cellX, cellY, gridCellW, gridCellH);
+
+          placedCount++;
         } else {
-          pdf.addPage([pgW, pgH], pgW >= pgH ? 'l' : 'p');
+          const [pgW, pgH] = resolvePageDimsMm(pageMode, orient, wMm, hMm);
+
+          if (!pdf) {
+            pdf = new jsPDF({ orientation: pgW >= pgH ? 'l' : 'p', unit: 'mm', format: [pgW, pgH], compress: true });
+          } else {
+            pdf.addPage([pgW, pgH], pgW >= pgH ? 'l' : 'p');
+          }
+          pdfPageCount++;
+
+          // Scale image to fit the page, keeping aspect ratio, centered
+          const scale = Math.min(pgW / wMm, pgH / hMm);
+          const dW = wMm * scale, dH = hMm * scale;
+          const offX = (pgW - dW) / 2, offY = (pgH - dH) / 2;
+
+          pdf.addImage(embedDataURL, embedFormat, offX, offY, dW, dH, undefined, 'FAST');
         }
-
-        // Scale image to fit the page, keeping aspect ratio, centered
-        const scale = Math.min(pgW / wMm, pgH / hMm);
-        const dW = wMm * scale, dH = hMm * scale;
-        const offX = (pgW - dW) / 2, offY = (pgH - dH) / 2;
-
-        pdf.addImage(embedDataURL, embedFormat, offX, offY, dW, dH, undefined, 'FAST');
 
       } catch (err) {
         console.error(err);
@@ -610,11 +713,10 @@
     const blob = pdf.output('blob');
     downloadBlob(blob, outName);
 
-    const pageCount = ordered.length - skipped.length;
     const kb = Math.round(blob.size / 1024);
     const srcKb = Math.round(sourceBytes / 1024);
     setProgress(100, `✓ Done! Saved as "${outName}"`);
-    let text = `PDF saved: ${outName} — ${pageCount} page(s), ${kb} KB (source images totaled ${srcKb} KB)`;
+    let text = `PDF saved: ${outName} — ${pdfPageCount} page(s), ${kb} KB (source images totaled ${srcKb} KB)`;
     if (skipped.length > 0) text += `\nSkipped ${skipped.length}: ${skipped.join('; ')}`;
     showMsg(text, skipped.length > 0 ? 'warn' : 'info');
 
