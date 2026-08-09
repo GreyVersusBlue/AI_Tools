@@ -55,9 +55,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### School Layout Visualizer (`Tools/schedule-visualizer.html`)
 **Current state:** An extremely full-featured building/schedule editor — multi-floor canvas-based blueprint drawing (classrooms, hallways, staircases), a group/schedule manager with CSV import/export and bulk editing, A* pathfinding with a congestion heatmap and travel-time playback simulation, a "what-if" scenario comparator, undo/redo, named snapshots, full-project JSON import/export, PNG/PDF export of the plain floor-plan blueprint itself (a clean building map/evacuation poster, distinct from the movement-viz export), and a one-click "Publish for Teachers" pipeline that generates the standalone Schedule Browser file.
 **Suggested improvements:**
-- Support importing a photo or scanned image of the school's real floor plan as a low-opacity canvas underlay to trace over when laying out rooms — would make first-time setup for a new building dramatically faster than placing tiles from a blank grid.
-- Since `_shared/webrtc-pair.js` and QR pairing are already used elsewhere on the site (Classroom Timer), reuse that same pattern here to let one staff member hand off the in-progress blueprint/schedule JSON to another device on the same Wi-Fi for a joint editing session, instead of relying only on manual JSON export/import.
-- The "Publish for Teachers" flow only downloads a standalone HTML file that then has to be manually placed into the repo; add a "copy publish HTML to clipboard" alternative so the person doing the publish can paste it directly into GitHub's web file editor without a local download/upload round-trip.
+- 🔒 **CLAIMED (2026-08-09)** Support importing a photo or scanned image of the school's real floor plan as a low-opacity canvas underlay to trace over when laying out rooms — would make first-time setup for a new building dramatically faster than placing tiles from a blank grid.
+- 🔒 **CLAIMED (2026-08-09)** Since `_shared/webrtc-pair.js` and QR pairing are already used elsewhere on the site (Classroom Timer), reuse that same pattern here to let one staff member hand off the in-progress blueprint/schedule JSON to another device on the same Wi-Fi for a joint editing session, instead of relying only on manual JSON export/import.
+- 🔒 **CLAIMED (2026-08-09)** The "Publish for Teachers" flow only downloads a standalone HTML file that then has to be manually placed into the repo; add a "copy publish HTML to clipboard" alternative so the person doing the publish can paste it directly into GitHub's web file editor without a local download/upload round-trip.
 
 ### School Calendar Visualizer (`Tools/School Calendar Visualizer.html`)
 **Current state:** A reusable year-at-a-glance calendar builder with a custom legend of day types (each with a color + print-safe pattern), a day-editor drawer for labels/lesson notes/other notes, an ICS (.ics) export of tagged days for subscribing from a phone or Outlook/Google calendar, an opt-in "copy lesson pacing to next year" step (shifting `lesson` notes by a chosen number of weekdays) when starting a new year from a template, a "jump to month" control, JSON backup export/import, and print/PDF support via `window.print()`.
@@ -183,8 +183,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Digital Escape Room / Puzzle Lock Builder (`Tools/escape-room-builder.html`)
 **Current state:** Builds a linear or branching chain of QR-code puzzle stations (clue, accepted answers, hint, next-station routing) encoded into a shared player link, with a live chain preview, printable per-station QR codes, a separate answer key, a "randomize starting station" toggle so each station's own printed code can be its own valid entry point for physical rotations where teams start simultaneously at different stations, and an optional whole-room countdown timer baked into the player link that shows live on the student's lock screen.
 **Suggested improvements:**
-- Add a same-network "teacher monitor" view using the toolkit's existing `_shared/webrtc-pair.js`/BroadcastChannel pattern, so a teacher's own screen can see live pings of which station each device has reached — currently there's no way to know how far any group has gotten short of walking around.
-- Allow an optional image per station clue (the way Timeline Builder attaches downscaled photos to events), useful for picture-based puzzles rather than text-only clues.
+- 🔒 **CLAIMED (2026-08-09)** Add a same-network "teacher monitor" view using the toolkit's existing `_shared/webrtc-pair.js`/BroadcastChannel pattern, so a teacher's own screen can see live pings of which station each device has reached — currently there's no way to know how far any group has gotten short of walking around.
+- 🔒 **CLAIMED (2026-08-09)** Allow an optional image per station clue (the way Timeline Builder attaches downscaled photos to events), useful for picture-based puzzles rather than text-only clues.
 
 ### Silent Reading Log Tracker (`Tools/ssr-log-tracker.html`)
 **Current state:** Tracks per-class rosters and per-student reading log entries (date/book/pages-to/minutes), auto-computing pages-read-per-session, with a sortable, date-filterable class summary (including a rolling "days logged this week" streak column, flagging students who've gone quiet, independent of the date filter), printable per-student or class-summary reports, a CSV export of the (currently filtered) class log for gradebook import or archiving, and a per-book "mark finished" flag feeding a "Books completed" column in the summary.
@@ -221,20 +221,20 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
 **Suggested improvements:**
 - 🔒 **CLAIMED (2026-08-09)** Add a "generate a set of N distinct sheets" option that prints several different randomized versions back-to-back (e.g., Version A/B/C), useful for preventing copying during in-class timed drills.
-- Add an optional timed-fluency header (a blank "Start time / End time" or "Target: ___ seconds" line) since the sheet is explicitly framed as a drill tool but has no fluency-tracking element today.
+- 🔒 **CLAIMED (2026-08-09)** Add an optional timed-fluency header (a blank "Start time / End time" or "Target: ___ seconds" line) since the sheet is explicitly framed as a drill tool but has no fluency-tracking element today.
 - Add fact-family-focused templates (e.g., "×6 facts only," "÷ by 7 only") as extra entries in `mdg-templates.js`, since the generator architecture already supports adding templates with no UI changes.
 
 ### Vocabulary Flashcard & Word Wall Generator (`Tools/vocab-flashcard-generator.html`)
 **Current state:** Turns a pasted "term: definition" list (or a tab-separated/CSV paste straight from a spreadsheet column) into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
 **Suggested improvements:**
 - 🔒 **CLAIMED (2026-08-09)** Add an on-screen self-quiz/flip mode (click a card to reveal the definition) similar to the reveal-on-click pattern already used in `vocab-conjugation-drill.html`, since today preview is print-only, not usable directly with a student at a screen.
-- Add auto-shrinking font size for long definitions on fixed-size cards to prevent text overflow/clipping when a definition runs long relative to the card dimensions chosen.
+- 🔒 **CLAIMED (2026-08-09)** Add auto-shrinking font size for long definitions on fixed-size cards to prevent text overflow/clipping when a definition runs long relative to the card dimensions chosen.
 
 ### Vocab & Conjugation Drill Generator (`Tools/vocab-conjugation-drill.html`)
 **Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets, a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order, and a "Listen" button per word/verb form using the browser's built-in text-to-speech with a language selector.
 **Suggested improvements:**
 - 🔒 **CLAIMED (2026-08-09)** Add quick-start person-label presets (Spanish/French/German/Latin pronoun sets) as buttons above the person-row editor, since today every new set starts from the same Spanish default persons and must be manually retyped for other languages.
-- Add JSON export/import of a drill set so language teachers on the same team can share a built conjugation table instead of re-entering every verb form.
+- 🔒 **CLAIMED (2026-08-09)** Add JSON export/import of a drill set so language teachers on the same team can share a built conjugation table instead of re-entering every verb form.
 - 🔒 **CLAIMED (2026-08-09)** Add an option to print vocab and conjugation sections together in a single packet, since the two modes currently produce fully separate print outputs even when saved under the same set name.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
@@ -246,19 +246,19 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories with two-role setups, fill-in vocabulary scaffolding cards saved per scenario, shuffle/prev/next navigation, and printable single or multi-scenario handout sets.
 **Suggested improvements:**
 - 🔒 **CLAIMED (2026-08-09)** Let teachers add their own custom scenarios (title, roles, setup, scaffolding phrases) saved to localStorage and merged into the shuffle/print pool, since the 34 scenarios are currently hardcoded with no extension point.
-- Add a proficiency-level tag/filter (e.g., Novice/Intermediate/Advanced) to the existing category filter, since right now all scenarios are treated as equally appropriate for any class level.
-- Store scaffolding fill-ins per named "class/session" rather than only per scenario id, so switching between class periods doesn't overwrite one class's filled-in target-language phrases with another's.
+- 🔒 **CLAIMED (2026-08-09)** Add a proficiency-level tag/filter (e.g., Novice/Intermediate/Advanced) to the existing category filter, since right now all scenarios are treated as equally appropriate for any class level.
+- 🔒 **CLAIMED (2026-08-09)** Store scaffolding fill-ins per named "class/session" rather than only per scenario id, so switching between class periods doesn't overwrite one class's filled-in target-language phrases with another's.
 - Add a "randomly assign role A/B" button for accountability/fairness when partners are deciding who plays which role, since roles are currently just displayed, not randomized.
-- Add the shared accessibility helper (`_shared/a11y.js`, already used by sibling tools like `vocab-conjugation-drill.html` and `writing-prompt-generator.html`) so the stage content gets the same read-aloud/accessibility treatment.
+- 🔒 **CLAIMED (2026-08-09)** Add the shared accessibility helper (`_shared/a11y.js`, already used by sibling tools like `vocab-conjugation-drill.html` and `writing-prompt-generator.html`) so the stage content gets the same read-aloud/accessibility treatment.
 
 ### Primary Source Analysis Worksheet Generator (`Tools/primary-source-analysis-generator.html`)
 **Current state:** Lets a teacher describe or paste a primary source and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions for each framework step, plus a matching answer-key view populated from the teacher's own per-step notes, across multiple saved worksheets.
 **Suggested improvements:**
-- Support embedding a local image as a data URI (via a file input + `FileReader`) in addition to the current external Image URL field, so the source image doesn't depend on it already being hosted somewhere online.
+- 🔒 **CLAIMED (2026-08-09)** Support embedding a local image as a data URI (via a file input + `FileReader`) in addition to the current external Image URL field, so the source image doesn't depend on it already being hosted somewhere online.
 - 🔒 **CLAIMED (2026-08-09)** Add one or two more frameworks (e.g., APPARTS for text sources, or a simplified "5 W's" for younger/EL students) alongside the existing OPTIC/SOAPSTone pair, since the frameworks are already a clean, extensible data structure.
-- Let teachers add an optional custom follow-up question per step (appended after the built-in guiding questions) instead of being limited strictly to the fixed question sets baked into each framework.
-- Make the number of blank answer lines per step configurable instead of the current fixed count, since some steps warrant more space than others.
-- Add JSON export/import of a saved worksheet so a department can share a built worksheet (source + framework + teacher notes) between colleagues without re-entering everything.
+- 🔒 **CLAIMED (2026-08-09)** Let teachers add an optional custom follow-up question per step (appended after the built-in guiding questions) instead of being limited strictly to the fixed question sets baked into each framework.
+- 🔒 **CLAIMED (2026-08-09)** Make the number of blank answer lines per step configurable instead of the current fixed count, since some steps warrant more space than others.
+- 🔒 **CLAIMED (2026-08-09)** Add JSON export/import of a saved worksheet so a department can share a built worksheet (source + framework + teacher notes) between colleagues without re-entering everything.
 
 ---
 ## Picking one up
