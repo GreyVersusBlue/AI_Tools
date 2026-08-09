@@ -122,6 +122,9 @@
     <select id="listSwitch"></select>
     <button class="secondary" style="width:auto;" id="newListBtn">New list</button>
     <button class="danger" style="width:auto;" id="deleteListBtn">Delete</button>
+    <button class="secondary" style="width:auto;" id="exportListBtn">Export list</button>
+    <button class="secondary" style="width:auto;" id="importListBtn">Import list</button>
+    <input type="file" id="importListFile" accept="application/json,.json" style="display:none;">
   </div>
 
   <div class="layout">
@@ -193,7 +196,7 @@
   'use strict';
 
   var els = {};
-  ['toolbar','listSwitch','newListBtn','deleteListBtn','listName','wordInput',
+  ['toolbar','listSwitch','newListBtn','deleteListBtn','exportListBtn','importListBtn','importListFile','listName','wordInput',
    'flashOptions','wallOptions','flashCols','flashRows','wallPerPage','wallShowDef','shuffleOrder',
    'printBtn','previewArea','previewNote','printNote','sheetView'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -425,6 +428,70 @@
     var remaining = VocabStore.listSets();
     if (remaining.length) loadListByName(remaining[0]);
     else newList('New List');
+  });
+
+  function uniqueListName(base) {
+    var names = VocabStore.listSets();
+    if (names.indexOf(base) === -1) return base;
+    var n = 2, candidate = base + ' ' + n;
+    while (names.indexOf(candidate) !== -1) { n++; candidate = base + ' ' + n; }
+    return candidate;
+  }
+
+  els.exportListBtn.addEventListener('click', function () {
+    if (!state) return;
+    readFormIntoState();
+    save();
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (state.name || 'list').replace(/[\\/:*?"<>|]+/g, '-') + '-vocab-flashcards.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  els.importListBtn.addEventListener('click', function () { els.importListFile.click(); });
+  els.importListFile.addEventListener('change', function () {
+    var file = els.importListFile.files && els.importListFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch (e) {
+        alert('That file isn’t valid JSON — pick a list exported from this page.');
+        els.importListFile.value = '';
+        return;
+      }
+      if (!parsed || typeof parsed !== 'object' || typeof parsed.words !== 'string') {
+        alert('That doesn’t look like a vocab list export — no "words" field found.');
+        els.importListFile.value = '';
+        return;
+      }
+      var importedName = uniqueListName((typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : 'Imported list') + ' (imported)');
+      var imported = {
+        name: importedName,
+        words: parsed.words,
+        mode: parsed.mode === 'wordwall' ? 'wordwall' : 'flashcards',
+        flashCols: Math.max(1, parseInt(parsed.flashCols, 10) || 2),
+        flashRows: Math.max(1, parseInt(parsed.flashRows, 10) || 4),
+        wallPerPage: parseInt(parsed.wallPerPage, 10) || 2,
+        wallShowDef: parsed.wallShowDef !== false,
+        shuffle: !!parsed.shuffle
+      };
+      VocabStore.saveSet(importedName, imported);
+      loadListByName(importedName);
+      els.importListFile.value = '';
+    };
+    reader.onerror = function () {
+      alert('Could not read that file.');
+      els.importListFile.value = '';
+    };
+    reader.readAsText(file);
   });
 
   els.printBtn.addEventListener('click', function () {
