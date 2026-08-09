@@ -93,6 +93,32 @@
   .stat-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .8rem; }
   .stat-points { font-weight: 700; font-size: .95rem; color: var(--accent); background: #eaf1f6; border: 1px solid #c9dce6; border-radius: 6px; padding: .4rem .7rem; }
 
+  /* ---- build / score mode tabs ---- */
+  .mode-tabs { display: flex; gap: .4rem; margin-bottom: 1.2rem; }
+  .mode-tab {
+    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 7px 7px 0 0; padding: .55rem 1.1rem;
+  }
+  .mode-tab:hover { background: #f1f0ea; }
+  .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mode-tab.active:hover { background: var(--accent); }
+
+  /* ---- score-a-student editor ---- */
+  .score-crit-block { border-bottom: 1px dashed var(--line); padding: .7rem 0; }
+  .score-crit-block:last-child { border-bottom: none; }
+  .score-crit-name { font-weight: 700; font-size: .9rem; margin-bottom: .45rem; }
+  .level-btn-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .level-btn {
+    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 7px; padding: .45rem .75rem; font-size: .85rem; font-weight: 600;
+  }
+  .level-btn:hover { background: #f1f0ea; }
+  .level-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .level-btn.selected:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .score-student-line { font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: .6rem; }
+  .score-summary { font-size: 1rem; font-weight: 700; text-align: right; color: var(--accent); margin-top: .8rem; }
+  .rubric-table td.selected-cell { background: #eaf1f6; border: 2px solid var(--accent); }
+
   .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
 
@@ -139,7 +165,12 @@
     <span id="shareBar"></span>
   </div>
 
-  <div class="layout">
+  <div class="mode-tabs" id="modeTabs" style="display:none;">
+    <button type="button" class="mode-tab active" id="modeBuildBtn">Build rubric</button>
+    <button type="button" class="mode-tab" id="modeScoreBtn">Score a student</button>
+  </div>
+
+  <div class="layout" id="buildMode">
     <div class="editor">
       <div class="card">
         <label for="rubricName">Rubric name</label>
@@ -180,6 +211,36 @@
     </div>
   </div>
 
+  <div class="layout" id="scoreMode" style="display:none;">
+    <div class="editor">
+      <div class="card">
+        <label for="studentNameInput">Student name</label>
+        <p class="hint">Type a new name, or pick a previously scored student from the list to reopen their score.</p>
+        <input type="text" id="studentNameInput" list="studentNamesList" placeholder="e.g. Jordan A.">
+        <datalist id="studentNamesList"></datalist>
+        <button type="button" class="secondary full" id="loadStudentScoreBtn">Load / start scoring this student</button>
+        <button type="button" class="danger full" id="deleteScoreBtn">Delete this student&rsquo;s score</button>
+      </div>
+
+      <div class="card">
+        <label style="margin-bottom:.6rem;">Score each criterion</label>
+        <p class="hint">Click the performance level that applies. Click it again to clear a selection.</p>
+        <div id="scoreCriteriaList"></div>
+        <p class="hint" id="scoreEmptyHint" style="display:none;">This rubric has no criteria yet &mdash; add some in Build rubric mode.</p>
+      </div>
+
+      <button type="button" id="printScoreBtn" class="full">Print this student&rsquo;s scored rubric</button>
+    </div>
+
+    <div class="preview-wrap">
+      <div class="stat-bar">
+        <p class="preview-note" style="margin:0;">Scoring: <strong id="scoreStudentLabel">(no student selected)</strong></p>
+        <div class="stat-points" id="scoreTotalPoints"></div>
+      </div>
+      <div id="scorePreviewArea"></div>
+    </div>
+  </div>
+
   <footer class="note">
     Runs entirely in your browser &mdash; nothing is uploaded.
   </footer>
@@ -197,11 +258,17 @@
    'exportRubricBtn','importRubricBtn','importRubricFile',
    'rubricName','rubricTitle','templatePicker','loadTemplateBtn',
    'levelsRow','addLevelBtn','criteriaList','emptyHint','addCriterionBtn',
-   'printBtn','previewArea','totalPoints','shareBar'
+   'printBtn','previewArea','totalPoints','shareBar',
+   'modeTabs','modeBuildBtn','modeScoreBtn','buildMode','scoreMode',
+   'studentNameInput','studentNamesList','loadStudentScoreBtn','deleteScoreBtn',
+   'scoreCriteriaList','scoreEmptyHint','scoreStudentLabel','scoreTotalPoints',
+   'scorePreviewArea','printScoreBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, title, levels: [{id,label,points}], criteria: [{id,name,cells:{levelId:text}}] }
   var idCounter = 1;
+  var currentMode = 'build'; // 'build' | 'score'
+  var currentScore = null; // { student, selections: {critId: levelId} } — the student currently being scored, or null
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -449,6 +516,63 @@
     );
   }
 
+  /* ---------- score-a-student: totals & printable sheet ---------- */
+
+  /** Points earned so far for the given score record — a selected level
+      that no longer exists (e.g. its column was removed) simply counts as
+      unscored, same as a criterion that hasn't been clicked yet. */
+  function earnedPoints(scoreRec) {
+    if (!scoreRec) return 0;
+    return state.criteria.reduce(function (sum, c) {
+      var levelId = scoreRec.selections[c.id];
+      if (!levelId) return sum;
+      var level = state.levels.filter(function (l) { return l.id === levelId; })[0];
+      if (!level) return sum;
+      return sum + (Number(level.points) || 0) * (c.weight || 1);
+    }, 0);
+  }
+
+  function scoreTableHtml(scoreRec) {
+    var maxPts = maxLevelPoints();
+    var headerCells = state.levels.map(function (l) {
+      return '<th>' + escapeHtml(l.label || 'Untitled') + '<span class="pts">' + escapeHtml(String(l.points)) + ' pts</span></th>';
+    }).join('');
+
+    var bodyRows;
+    if (state.criteria.length) {
+      bodyRows = state.criteria.map(function (c) {
+        var weight = c.weight || 1;
+        var selectedId = scoreRec.selections[c.id];
+        var cells = state.levels.map(function (l) {
+          var text = escapeHtml(c.cells[l.id] || '').replace(/\n/g, '<br>');
+          var isSelected = l.id === selectedId;
+          var mark = isSelected ? '<span class="pts">&#10003; ' + escapeHtml(fmtNum((Number(l.points) || 0) * weight)) + ' pts</span>' : '';
+          return '<td' + (isSelected ? ' class="selected-cell"' : '') + '>' + text + mark + '</td>';
+        }).join('');
+        var weightNote = weight !== 1
+          ? '<span class="pts">&times;' + escapeHtml(fmtNum(weight)) + ' &middot; up to ' + escapeHtml(fmtNum(maxPts * weight)) + ' pts</span>'
+          : '';
+        return '<tr><th class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + weightNote + '</th>' + cells + '</tr>';
+      }).join('');
+    } else {
+      bodyRows = '<tr><td class="empty-row" colspan="' + (state.levels.length + 1) + '">No criteria yet.</td></tr>';
+    }
+
+    var possible = totalPossiblePoints();
+    var earned = earnedPoints(scoreRec);
+    var pctText = possible > 0 ? ' (' + fmtNum((earned / possible) * 100) + '%)' : '';
+
+    return (
+      '<div class="rubric-sheet">' +
+        '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
+        '<div class="score-student-line">Student: ' + escapeHtml(scoreRec.student || '') + '</div>' +
+        '<table class="rubric-table"><thead><tr><th class="corner">Criteria</th>' + headerCells + '</tr></thead>' +
+        '<tbody>' + bodyRows + '</tbody></table>' +
+        '<div class="score-summary">Total: ' + fmtNum(earned) + ' / ' + fmtNum(possible) + ' pts' + pctText + '</div>' +
+      '</div>'
+    );
+  }
+
   /* ---------- render orchestration ---------- */
   function renderPreview() {
     save();
@@ -461,13 +585,97 @@
     renderCriteriaEditor();
   }
 
+  /* ---------- score-a-student: mode + editor rendering ---------- */
+  function populateStudentDatalist() {
+    els.studentNamesList.innerHTML = '';
+    RubricStore.listScoredStudents(state.name).forEach(function (name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      els.studentNamesList.appendChild(opt);
+    });
+  }
+
+  function renderScoreCriteria() {
+    els.scoreCriteriaList.innerHTML = '';
+    els.scoreEmptyHint.style.display = state.criteria.length ? 'none' : '';
+    if (!currentScore) return;
+    state.criteria.forEach(function (crit) {
+      var block = document.createElement('div');
+      block.className = 'score-crit-block';
+
+      var nameEl = document.createElement('div');
+      nameEl.className = 'score-crit-name';
+      nameEl.textContent = (crit.name || 'Untitled') + ((crit.weight || 1) !== 1 ? ' (×' + fmtNum(crit.weight) + ')' : '');
+      block.appendChild(nameEl);
+
+      var row = document.createElement('div');
+      row.className = 'level-btn-row';
+      state.levels.forEach(function (level) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'level-btn' + (currentScore.selections[crit.id] === level.id ? ' selected' : '');
+        btn.textContent = (level.label || 'Untitled') + ' — ' + fmtNum(level.points) + ' pts';
+        btn.addEventListener('click', function () {
+          if (currentScore.selections[crit.id] === level.id) {
+            delete currentScore.selections[crit.id]; // click the selected level again to clear it
+          } else {
+            currentScore.selections[crit.id] = level.id;
+          }
+          RubricStore.saveScore(state.name, currentScore.student, currentScore);
+          renderScoreCriteria();
+          renderScoreTotals();
+          renderScorePreview();
+        });
+        row.appendChild(btn);
+      });
+      block.appendChild(row);
+      els.scoreCriteriaList.appendChild(block);
+    });
+  }
+
+  function renderScoreTotals() {
+    els.scoreStudentLabel.textContent = currentScore ? currentScore.student : '(no student selected)';
+    if (!currentScore) { els.scoreTotalPoints.textContent = ''; return; }
+    var possible = totalPossiblePoints();
+    var earned = earnedPoints(currentScore);
+    var pctText = possible > 0 ? ' (' + fmtNum((earned / possible) * 100) + '%)' : '';
+    els.scoreTotalPoints.textContent = 'Score: ' + fmtNum(earned) + ' / ' + fmtNum(possible) + ' pts' + pctText;
+  }
+
+  function renderScorePreview() {
+    els.scorePreviewArea.innerHTML = currentScore
+      ? scoreTableHtml(currentScore)
+      : '<p class="hint">Enter or pick a student on the left to begin scoring.</p>';
+  }
+
+  function renderScoreMode() {
+    populateStudentDatalist();
+    renderScoreCriteria();
+    renderScoreTotals();
+    renderScorePreview();
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    var isScore = mode === 'score';
+    els.buildMode.style.display = isScore ? 'none' : '';
+    els.scoreMode.style.display = isScore ? '' : 'none';
+    els.modeBuildBtn.classList.toggle('active', !isScore);
+    els.modeScoreBtn.classList.toggle('active', isScore);
+    if (isScore) renderScoreMode();
+  }
+
   function renderAll() {
     refreshSwitcher();
     els.toolbar.style.display = '';
+    els.modeTabs.style.display = '';
     els.rubricName.value = state.name;
     els.rubricTitle.value = state.title;
     renderEditor();
     renderPreview();
+    currentScore = null;
+    els.studentNameInput.value = '';
+    if (currentMode === 'score') renderScoreMode();
   }
 
   /* ---------- lifecycle ---------- */
@@ -496,6 +704,7 @@
     var newName = els.rubricName.value.trim() || oldName;
     if (newName !== oldName) {
       RubricStore.deleteRubric(oldName);
+      RubricStore.renameScores(oldName, newName);
       state.name = newName;
     }
     renderAll();
@@ -544,6 +753,7 @@
     if (!state) return;
     if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
     RubricStore.deleteRubric(state.name);
+    RubricStore.deleteAllScores(state.name);
     var remaining = RubricStore.listRubrics();
     if (remaining.length) loadRubricByName(remaining[0]);
     else newRubric('New Rubric');
@@ -605,6 +815,42 @@
 
   els.printBtn.addEventListener('click', function () {
     document.getElementById('printArea').innerHTML = rubricTableHtml();
+    window.print();
+  });
+
+  /* ---------- score-a-student: wiring ---------- */
+  els.modeBuildBtn.addEventListener('click', function () { setMode('build'); });
+  els.modeScoreBtn.addEventListener('click', function () { setMode('score'); });
+
+  els.loadStudentScoreBtn.addEventListener('click', function () {
+    if (!state) return;
+    var name = els.studentNameInput.value.trim();
+    if (!name) { alert('Enter a student name first.'); return; }
+    var existing = RubricStore.loadScore(state.name, name);
+    currentScore = existing || { student: name, selections: {} };
+    if (!existing) RubricStore.saveScore(state.name, name, currentScore);
+    els.studentNameInput.value = name;
+    populateStudentDatalist();
+    renderScoreCriteria();
+    renderScoreTotals();
+    renderScorePreview();
+  });
+
+  els.deleteScoreBtn.addEventListener('click', function () {
+    if (!state || !currentScore) return;
+    if (!confirm('Delete the saved score for "' + currentScore.student + '"? This can’t be undone.')) return;
+    RubricStore.deleteScore(state.name, currentScore.student);
+    currentScore = null;
+    els.studentNameInput.value = '';
+    populateStudentDatalist();
+    renderScoreCriteria();
+    renderScoreTotals();
+    renderScorePreview();
+  });
+
+  els.printScoreBtn.addEventListener('click', function () {
+    if (!currentScore) { alert('Enter or pick a student first.'); return; }
+    document.getElementById('printArea').innerHTML = scoreTableHtml(currentScore);
     window.print();
   });
 
