@@ -165,6 +165,9 @@
     <select id="setSwitch"></select>
     <button class="secondary" id="newSetBtn">New set</button>
     <button class="danger" id="deleteSetBtn">Delete</button>
+    <button class="secondary" id="exportSetBtn">Export set</button>
+    <button class="secondary" id="importSetBtn">Import set</button>
+    <input type="file" id="importSetFile" accept="application/json,.json" style="display:none;">
     <span class="tts-lang-row">
       <label for="ttsLangSelect">Pronunciation:</label>
       <select id="ttsLangSelect"></select>
@@ -259,7 +262,7 @@
   };
 
   var els = {};
-  ['toolbar','setSwitch','newSetBtn','deleteSetBtn','setName',
+  ['toolbar','setSwitch','newSetBtn','deleteSetBtn','exportSetBtn','importSetBtn','importSetFile','setName',
    'vocabEditor','conjugationEditor','vocabInput',
    'personsList','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
    'printBtn','previewArea','previewNote','sheetNav','ttsLangSelect'
@@ -686,6 +689,58 @@
     var remaining = Store.list();
     if (remaining.length) loadSetByName(remaining[0]);
     else newSet('New Drill Set');
+  });
+
+  /* ---------- share a drill set (export / import) ---------- */
+  function isPlausibleDrillSet(obj) {
+    return !!obj && typeof obj === 'object' &&
+      typeof obj.name === 'string' &&
+      (obj.mode === 'vocab' || obj.mode === 'conjugation') &&
+      Array.isArray(obj.persons) && Array.isArray(obj.conjugations);
+  }
+
+  function exportSet() {
+    save();
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (state.name || 'drill-set').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importSetFromFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try { parsed = JSON.parse(reader.result); } catch (e) { parsed = null; }
+      if (!isPlausibleDrillSet(parsed)) {
+        alert('That file doesn\'t look like a drill set exported from this tool.');
+      } else {
+        var name = parsed.name;
+        var existing = Store.list();
+        while (existing.indexOf(name) !== -1) name = name + ' (imported)';
+        parsed.name = name;
+        Store.save(name, parsed);
+        loadSetByName(name);
+      }
+      els.importSetFile.value = '';
+    };
+    reader.onerror = function () {
+      alert('Could not read that file.');
+      els.importSetFile.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  els.exportSetBtn.addEventListener('click', exportSet);
+  els.importSetBtn.addEventListener('click', function () { els.importSetFile.click(); });
+  els.importSetFile.addEventListener('change', function () {
+    var file = els.importSetFile.files && els.importSetFile.files[0];
+    if (file) importSetFromFile(file);
   });
 
   els.printBtn.addEventListener('click', function () {
