@@ -99,6 +99,12 @@
   .exclude-toggle { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
   .exclude-toggle input { margin: 0; }
 
+  /* ── Hall Pass ─────────────────────────────────────────────────────── */
+  .card-wide { grid-column: 1 / -1; }
+  .hallpass-row { display: flex; align-items: baseline; justify-content: center; gap: .6rem; flex-wrap: wrap; }
+  .hallpass-count { font-size: clamp(1.8rem, 6vw, 2.6rem); font-weight: 700; color: var(--accent); }
+  .hallpass-sub { color: var(--muted); font-size: .9rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 1.6rem; text-align: center; }
 </style>
 </head>
@@ -149,6 +155,14 @@
       </div>
       <div class="roster-count" id="rosterCount"></div>
       <ul class="roster-list" id="rosterList"></ul>
+    </div>
+
+    <div class="card card-wide">
+      <div class="card-title"><span>Hall Pass</span><a href="hall-pass-log.html">Open Hall Pass Log</a></div>
+      <div class="hallpass-row">
+        <span class="hallpass-count" id="hallPassCount">0</span>
+        <span class="hallpass-sub" id="hallPassSub">students currently out</span>
+      </div>
     </div>
 
   </div>
@@ -413,6 +427,42 @@
   });
 
   populateRosterSelect();
+
+  /* ==================== Hall Pass (read-only) ====================
+     Reads the same 'hall-pass-log-sections' localStorage key that
+     hall-pass-log.html writes ({ current, sets: { [sectionName]: state } },
+     each state carrying an outNow[] array of currently-signed-out students).
+     Never writes to this key — this card is a read-only summary. */
+  var HALLPASS_STORAGE_KEY = 'hall-pass-log-sections';
+  var HALLPASS_REFRESH_MS = 20000;
+  var hallPassCountEl = document.getElementById('hallPassCount');
+  var hallPassSubEl = document.getElementById('hallPassSub');
+
+  function hallPassCurrentlyOut() {
+    try {
+      var raw = localStorage.getItem(HALLPASS_STORAGE_KEY);
+      if (!raw) return { count: 0, sections: 0 };
+      var store = JSON.parse(raw);
+      var sets = (store && typeof store === 'object' && store.sets && typeof store.sets === 'object') ? store.sets : {};
+      var names = Object.keys(sets);
+      var count = 0;
+      names.forEach(function (n) {
+        var s = sets[n];
+        if (s && Array.isArray(s.outNow)) count += s.outNow.length;
+      });
+      return { count: count, sections: names.length };
+    } catch (e) { return { count: 0, sections: 0 }; }
+  }
+
+  function renderHallPass() {
+    var info = hallPassCurrentlyOut();
+    hallPassCountEl.textContent = info.count;
+    var label = (info.count === 1 ? 'student' : 'students') + ' currently out';
+    if (info.sections > 1) label += ' · ' + info.sections + ' sections tracked';
+    hallPassSubEl.textContent = label;
+  }
+  renderHallPass();
+  setInterval(renderHallPass, HALLPASS_REFRESH_MS);
 })();
 </script>
 <script>
