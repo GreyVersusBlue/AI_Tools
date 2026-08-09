@@ -114,6 +114,23 @@
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; opacity: 0.75; }
   .legend-dot { width: 13px; height: 13px; display: inline-block; }
 
+  .mode-tabs { display: flex; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; }
+  .mode-tab-btn.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+
+  .need-quarters-row { display: flex; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-4) 0; }
+  .need-quarter-wrap { display: flex; flex-direction: column; align-items: center; min-width: 100px; gap: 4px; }
+  .need-quarter-wrap label[for] { font-size: 11px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; }
+  .need-quarter-wrap .grade-input:disabled { opacity: 0.35; }
+  .need-solve-radio { font-size: 11px; opacity: 0.75; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .need-target-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2); }
+  .need-target-type { display: flex; gap: var(--space-3); font-size: 13px; flex-wrap: wrap; }
+  .need-target-type label { display: flex; align-items: center; gap: 5px; }
+  #need-target-letter, #need-target-pct { width: 150px; padding: 8px 10px; }
+  .need-result-note { font-size: 11px; opacity: 0.75; margin-top: 4px; line-height: 1.4; }
+  #need-results.results-section { flex-direction: row; flex-wrap: wrap; }
+  #need-results .result-box { width: 220px; min-width: 220px; }
+  #need-results .final-line { width: 100%; flex-wrap: wrap; }
+
   @media (max-width: 680px) {
     .grades-row { flex-direction: column; }
     .divider { width: 100%; height: 1px; margin: var(--space-1) 0; }
@@ -158,7 +175,13 @@
       Everything stays in this browser tab. Nothing is sent anywhere and nothing is saved.
       Close the tab and the grades are gone.
     </p>
+    <div class="mode-tabs no-print" role="tablist" aria-label="Grade checker mode">
+      <button class="btn btn-secondary mode-tab-btn active" id="tab-calc-btn" type="button" role="tab" aria-selected="true">Calculate My Grade</button>
+      <button class="btn btn-secondary mode-tab-btn" id="tab-need-btn" type="button" role="tab" aria-selected="false">What Do I Need on the Final?</button>
+    </div>
   </div>
+
+  <div id="calc-section">
 
   <div class="card blueprint import-panel no-print">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
@@ -197,6 +220,61 @@
     <div class="legend-item"><div class="legend-dot grade-D"></div> D (60–69)</div>
     <div class="legend-item"><div class="legend-dot grade-F"></div> F (below 60)</div>
   </div>
+
+  </div>
+
+  <div id="need-section" style="display:none;">
+    <div class="card blueprint import-panel">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h2>What Do I Need on the Remaining Quarter?</h2>
+      <p>
+        Enter the quarters you already know, mark which one is still open, and set a target final grade.
+        This solves the same two county rules used above — Quality Points and Percentage Average — for the
+        score needed on the open quarter, using whichever method gets there with the lower score. Each
+        quarter counts equally: 25% of the final grade.
+      </p>
+
+      <div class="need-quarters-row">
+        <div class="need-quarter-wrap">
+          <label for="need-q1">Quarter 1</label>
+          <input class="input grade-input" type="number" id="need-q1" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—">
+          <label class="need-solve-radio"><input type="radio" name="need-solve" value="0"> solving for this one</label>
+        </div>
+        <div class="need-quarter-wrap">
+          <label for="need-q2">Quarter 2</label>
+          <input class="input grade-input" type="number" id="need-q2" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—">
+          <label class="need-solve-radio"><input type="radio" name="need-solve" value="1"> solving for this one</label>
+        </div>
+        <div class="need-quarter-wrap">
+          <label for="need-q3">Quarter 3</label>
+          <input class="input grade-input" type="number" id="need-q3" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—">
+          <label class="need-solve-radio"><input type="radio" name="need-solve" value="2"> solving for this one</label>
+        </div>
+        <div class="need-quarter-wrap">
+          <label for="need-q4">Quarter 4</label>
+          <input class="input grade-input" type="number" id="need-q4" min="0" max="100" step="0.01" inputmode="decimal" placeholder="—" disabled>
+          <label class="need-solve-radio"><input type="radio" name="need-solve" value="3" checked> solving for this one</label>
+        </div>
+      </div>
+
+      <div class="need-target-row">
+        <div class="need-target-type">
+          <label><input type="radio" name="need-target-type" value="letter" checked> Target letter grade</label>
+          <label><input type="radio" name="need-target-type" value="pct"> Target percentage</label>
+        </div>
+        <select class="input" id="need-target-letter">
+          <option value="A">A (90–100)</option>
+          <option value="B">B (80–89)</option>
+          <option value="C">C (70–79)</option>
+          <option value="D">D (60–69)</option>
+        </select>
+        <input class="input" type="number" id="need-target-pct" min="0" max="100" step="0.01" placeholder="e.g. 85" disabled>
+      </div>
+
+      <div id="need-results" class="results-section" style="margin-top:var(--space-4);"></div>
+    </div>
+  </div>
+
 </div>
 
 <script type="module">
@@ -205,7 +283,7 @@
 // hand-worked cases. Do not reimplement any of it here.
 import {
   getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
-  isGradeCell, Q1_COLUMN, QUARTERS,
+  isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
 } from './final-grade-checker/grade-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
@@ -895,6 +973,202 @@ function clearManualStudent(id) {
 }
 function clearAllManual() { currentStudents.forEach(s => clearManualStudent(s.id)); }
 
+// ── "What do I need?" mode ───────────────────────────────────
+// Same county rules as calcFinals() above, run backwards: given three known
+// quarters and a target, solve for the fourth. The two methods are solved
+// separately because they behave differently — Percentage Average is a
+// straight linear average, so the required score is a single algebra step.
+// Quality Points is not: a quarter only ever contributes 0/1/2/3/4 points, so
+// the "required score" for that method is really "required letter", and the
+// lowest score that earns that letter is the county's own cutoff for it. The
+// final grade is the higher of the two methods, so a student only needs one
+// of them to work — the bottom line reports whichever needs the lower score.
+function switchToCalcTab() {
+  document.getElementById('calc-section').style.display = '';
+  document.getElementById('need-section').style.display = 'none';
+  document.getElementById('tab-calc-btn').classList.add('active');
+  document.getElementById('tab-calc-btn').setAttribute('aria-selected', 'true');
+  document.getElementById('tab-need-btn').classList.remove('active');
+  document.getElementById('tab-need-btn').setAttribute('aria-selected', 'false');
+}
+function switchToNeedTab() {
+  document.getElementById('calc-section').style.display = 'none';
+  document.getElementById('need-section').style.display = '';
+  document.getElementById('tab-need-btn').classList.add('active');
+  document.getElementById('tab-need-btn').setAttribute('aria-selected', 'true');
+  document.getElementById('tab-calc-btn').classList.remove('active');
+  document.getElementById('tab-calc-btn').setAttribute('aria-selected', 'false');
+  computeNeed();
+}
+
+function pctCutoffForLetter(letter) {
+  const found = LETTER_CUTOFFS.find(([l]) => l === letter);
+  return found ? found[1] : 0; // F has no floor
+}
+function qpCutoffForLetter(letter) {
+  const found = QP_CUTOFFS.find(([l]) => l === letter);
+  return found ? found[1] : 0; // F has no floor
+}
+const QP_MIN_PCT_FOR_VALUE = { 4: pctCutoffForLetter('A'), 3: pctCutoffForLetter('B'), 2: pctCutoffForLetter('C'), 1: pctCutoffForLetter('D') };
+
+/** Rounds a required-score threshold UP to two decimals, so float noise never
+ * understates what's needed — an 83.99999999 has to read as 84.00, not 83.99. */
+function ceil2(n) { return Math.ceil(n * 100 - 1e-9) / 100; }
+
+/** required <= 0 → already locked in; required > 100 → out of reach this way;
+ * otherwise the exact score (or higher) needed on the open quarter. */
+function classifyRequired(required) {
+  if (required <= 0) return { status: 'secured' };
+  if (required > 100) return { status: 'impossible' };
+  return { status: 'ok', value: ceil2(required) };
+}
+
+function needBoxHtml(label, required, qLabel, bestCaseLetter) {
+  const c = classifyRequired(required);
+  if (c.status === 'secured') {
+    return `<div class="result-box">
+      <div class="result-label">${label}</div>
+      <div class="result-pct" style="color:var(--color-success)">Secured</div>
+      <div class="need-result-note">Even a 0 on ${qLabel} holds this method at target or better.</div>
+    </div>`;
+  }
+  if (c.status === 'impossible') {
+    return `<div class="result-box">
+      <div class="result-label">${label}</div>
+      <div class="result-pct" style="color:var(--color-danger)">Not possible</div>
+      <div class="need-result-note">Even a 100 on ${qLabel} only reaches ${bestCaseLetter()} this way.</div>
+    </div>`;
+  }
+  return `<div class="result-box">
+    <div class="result-label">${label}</div>
+    <div class="result-pct">${c.value.toFixed(2)}% or higher</div>
+    <div class="need-result-note">needed on ${qLabel}</div>
+  </div>`;
+}
+
+function renderNeedResults(errorMsg, data) {
+  const box = document.getElementById('need-results');
+  if (errorMsg) {
+    box.innerHTML = `<div class="pending-note" style="font-size:13px;opacity:0.8;">${errorMsg}</div>`;
+    return;
+  }
+  const { qLabel, requiredPct, requiredQP, knownSumPct, knownSumQP } = data;
+
+  const pctHtml = needBoxHtml('Percentage Average method', requiredPct, qLabel,
+    () => getLetter((knownSumPct + 100) / QUARTERS));
+  const qpHtml = needBoxHtml('Quality Points method', requiredQP, qLabel,
+    () => qpToFinalLetter((knownSumQP + 4) / QUARTERS));
+
+  const pctClass = classifyRequired(requiredPct);
+  const qpClass  = classifyRequired(requiredQP);
+  let bottomHtml;
+  if (pctClass.status === 'secured' || qpClass.status === 'secured') {
+    const method = pctClass.status === 'secured' ? 'Percentage Average' : 'Quality Points';
+    bottomHtml = `<div class="final-line">
+      <span class="final-label">Bottom line</span>
+      <span class="final-letter" style="color:var(--color-success);font-size:16px;">Already secured</span>
+      <span class="final-method">guaranteed via ${method}</span>
+    </div>`;
+  } else if (pctClass.status === 'ok' || qpClass.status === 'ok') {
+    let need, method;
+    if (pctClass.status === 'ok' && (qpClass.status !== 'ok' || pctClass.value <= qpClass.value)) {
+      need = pctClass.value; method = 'Percentage Average';
+    } else {
+      need = qpClass.value; method = 'Quality Points';
+    }
+    bottomHtml = `<div class="final-line">
+      <span class="final-label">Bottom line</span>
+      <span class="final-letter" style="font-size:18px;">${need.toFixed(2)}%+</span>
+      <span class="final-method">on ${qLabel}, via ${method}</span>
+    </div>`;
+  } else {
+    const bestPctLetter = getLetter((knownSumPct + 100) / QUARTERS);
+    const bestQpLetter  = qpToFinalLetter((knownSumQP + 4) / QUARTERS);
+    const bestLetter = (RANK[bestQpLetter] ?? -1) >= (RANK[bestPctLetter] ?? -1) ? bestQpLetter : bestPctLetter;
+    bottomHtml = `<div class="final-line pending">
+      <span class="final-label">Bottom line</span>
+      <span class="final-letter">Not achievable</span>
+      <span class="final-method">best possible with a 100 on ${qLabel} is ${bestLetter}</span>
+    </div>`;
+  }
+
+  box.innerHTML = pctHtml + qpHtml + bottomHtml;
+}
+
+function updateNeedSolveTarget() {
+  const solveIdx = parseInt(document.querySelector('input[name="need-solve"]:checked').value, 10);
+  for (let i = 0; i < QUARTERS; i++) {
+    const inp = document.getElementById(`need-q${i+1}`);
+    inp.disabled = (i === solveIdx);
+    if (i === solveIdx) inp.value = '';
+  }
+}
+
+function computeNeed() {
+  const solveIdx = parseInt(document.querySelector('input[name="need-solve"]:checked').value, 10);
+  const known = [];
+  for (let i = 0; i < QUARTERS; i++) {
+    if (i === solveIdx) continue;
+    const v = document.getElementById(`need-q${i+1}`).value.trim();
+    const n = v === '' ? NaN : parseFloat(v);
+    if (isNaN(n) || n < 0 || n > 100) { known.push(NaN); } else { known.push(n); }
+  }
+  if (known.some(v => isNaN(v))) {
+    renderNeedResults('Enter valid scores (0–100) for the other three quarters to calculate.');
+    return;
+  }
+
+  const targetType = document.querySelector('input[name="need-target-type"]:checked').value;
+  let targetLetter;
+  if (targetType === 'letter') {
+    targetLetter = document.getElementById('need-target-letter').value;
+  } else {
+    const v = document.getElementById('need-target-pct').value.trim();
+    const n = v === '' ? NaN : parseFloat(v);
+    if (isNaN(n) || n < 0 || n > 100) {
+      renderNeedResults('Enter a target percentage between 0 and 100.');
+      return;
+    }
+    targetLetter = getLetter(n);
+  }
+  const targetPctRaw = targetType === 'pct' ? parseFloat(document.getElementById('need-target-pct').value) : pctCutoffForLetter(targetLetter);
+
+  const knownSumPct = known.reduce((a, b) => a + b, 0);
+  const knownSumQP  = known.reduce((a, b) => a + getQP(getLetter(b)), 0);
+
+  // Percentage Average — continuous, solved exactly: avg of 4 >= target.
+  const requiredPct = targetPctRaw * QUARTERS - knownSumPct;
+
+  // Quality Points — discrete: only the letter the remaining score lands in
+  // matters, so translate the needed QP value back to its minimum percentage.
+  const neededSumQP = qpCutoffForLetter(targetLetter) * QUARTERS;
+  const neededRemainingQP = Math.round(neededSumQP - knownSumQP);
+  let requiredQP;
+  if (neededRemainingQP <= 0) requiredQP = -Infinity;
+  else if (neededRemainingQP > 4) requiredQP = Infinity;
+  else requiredQP = QP_MIN_PCT_FOR_VALUE[neededRemainingQP];
+
+  renderNeedResults(null, {
+    qLabel: `Quarter ${solveIdx + 1}`,
+    requiredPct, requiredQP, knownSumPct, knownSumQP,
+  });
+}
+
+function attachNeedListeners() {
+  document.querySelectorAll('input[name="need-solve"]').forEach(r => r.addEventListener('change', () => { updateNeedSolveTarget(); computeNeed(); }));
+  for (let i = 1; i <= QUARTERS; i++) {
+    document.getElementById(`need-q${i}`).addEventListener('input', computeNeed);
+  }
+  document.querySelectorAll('input[name="need-target-type"]').forEach(r => r.addEventListener('change', () => {
+    const isPct = document.querySelector('input[name="need-target-type"]:checked').value === 'pct';
+    document.getElementById('need-target-letter').disabled = isPct;
+    document.getElementById('need-target-pct').disabled = !isPct;
+    computeNeed();
+  }));
+  document.getElementById('need-target-letter').addEventListener('change', computeNeed);
+  document.getElementById('need-target-pct').addEventListener('input', computeNeed);
+}
+
 // ── Wiring ───────────────────────────────────────────────────
 // This is a module, so nothing here is on `window` and the old inline
 // onclick="" attributes could not have reached it. They are listeners now.
@@ -910,6 +1184,11 @@ on('print-btn', () => window.print());
 on('export-excel-btn', e => withLibs('excel', e.currentTarget, exportExcel));
 on('export-pdf-btn',   e => withLibs('pdf',   e.currentTarget, exportPDF));
 on('add-student-btn', addManualStudent);
+on('tab-calc-btn', switchToCalcTab);
+on('tab-need-btn', switchToNeedTab);
+attachNeedListeners();
+updateNeedSolveTarget();
+computeNeed();
 
 if (navigator.share) {
   document.getElementById('share-pdf-btn').style.display = '';
