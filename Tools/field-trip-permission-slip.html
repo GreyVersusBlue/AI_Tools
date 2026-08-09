@@ -438,6 +438,14 @@
     updateCollectionSummary(names);
   }
 
+  function parseCostAmount(costStr) {
+    if (!costStr) return NaN;
+    var match = String(costStr).replace(/,/g, '').match(/[\d.]+/);
+    if (!match) return NaN;
+    var val = parseFloat(match[0]);
+    return isNaN(val) ? NaN : val;
+  }
+
   function updateCollectionSummary(names) {
     var el = document.getElementById('collectionSummary');
     if (!el) return;
@@ -447,6 +455,10 @@
     if (state.cost && state.cost.trim()) {
       var paid = names.filter(function (n) { return state.collected && state.collected[n] && state.collected[n].paid; }).length;
       text += ' &middot; ' + paid + ' of ' + total + ' paid';
+      var perStudent = parseCostAmount(state.cost);
+      if (!isNaN(perStudent)) {
+        text += ' &middot; $' + (paid * perStudent).toFixed(2) + ' collected';
+      }
     }
     el.innerHTML = text;
   }
