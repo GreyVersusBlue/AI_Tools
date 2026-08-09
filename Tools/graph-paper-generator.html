@@ -66,6 +66,8 @@
     border-radius: 7px; padding: .6rem 1.1rem; width: 100%;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .btnRow { display: flex; gap: .6rem; }
+  .btnRow button { width: auto; flex: 1 1 0; }
 
   .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
@@ -177,7 +179,10 @@
           </div>
         </div>
 
-        <button type="button" id="printBtn">Print</button>
+        <div class="btnRow">
+          <button type="button" id="printBtn">Print</button>
+          <button type="button" id="downloadPngBtn">Download PNG</button>
+        </div>
       </div>
     </div>
 
@@ -201,7 +206,7 @@
   ['orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
    'nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery',
-   'printBtn','previewArea'
+   'printBtn','downloadPngBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var settings = {
@@ -346,6 +351,45 @@
   });
 
   els.printBtn.addEventListener('click', function () { window.print(); });
+
+  // The preview <svg> has its width/height set in real inches (see gpg-render.js),
+  // so rasterizing it at a fixed DPI onto a canvas sized inches*DPI reproduces
+  // the same true-to-scale sheet as printing at 100%, just as a PNG. A canvas
+  // can't draw an <svg> directly — it has to go through an <img> loaded from a
+  // Blob URL of the serialized SVG markup first.
+  var PNG_DPI = 300;
+  function downloadPng() {
+    var svgEl = els.previewArea.querySelector('svg');
+    if (!svgEl) return;
+    var widthIn = parseFloat(svgEl.getAttribute('width'));
+    var heightIn = parseFloat(svgEl.getAttribute('height'));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(widthIn * PNG_DPI);
+    canvas.height = Math.round(heightIn * PNG_DPI);
+
+    var svgString = new XMLSerializer().serializeToString(svgEl);
+    var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    var svgUrl = URL.createObjectURL(svgBlob);
+    var img = new Image();
+    img.onload = function () {
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(svgUrl);
+      canvas.toBlob(function (blob) {
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'graph-paper-' + settings.mode + '.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }, 'image/png');
+    };
+    img.src = svgUrl;
+  }
+  els.downloadPngBtn.addEventListener('click', downloadPng);
 
   /* ---------- boot ---------- */
   loadSaved();
