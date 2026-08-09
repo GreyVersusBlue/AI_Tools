@@ -150,6 +150,9 @@
     <select id="projectSwitch"></select>
     <button class="secondary small" id="newProjectBtn">New project</button>
     <button class="danger small" id="deleteProjectBtn">Delete</button>
+    <button class="secondary small" id="exportProjectBtn">Export project</button>
+    <button class="secondary small" id="importProjectBtn">Import project</button>
+    <input type="file" id="importProjectFile" accept="application/json,.json" style="display:none;">
   </div>
 
   <div id="msg"></div>
@@ -254,7 +257,7 @@
   var MEMBER_LABEL = 'Group Member';
 
   var els = {};
-  ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'projectName', 'bookTitle',
+  ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'exportProjectBtn', 'importProjectBtn', 'importProjectFile', 'projectName', 'bookTitle',
    'namesInput', 'rosterHubSelect', 'rosterHubLoadBtn',
    'splitValueLabel', 'splitValue', 'splitBtn', 'groupEditList',
    'roleList', 'addRoleBtn',
@@ -778,6 +781,74 @@
     var remaining = Object.keys(all);
     if (remaining.length) loadProjectByName(remaining[0]);
     else newProject('New Project');
+  });
+
+  // ── Export / Import whole project (groups, meetings, checkpoints, role history) ──
+  els.exportProjectBtn.addEventListener('click', function () {
+    if (!state) return;
+    var data = JSON.stringify(state, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'novel-study-circles-project.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  els.importProjectBtn.addEventListener('click', function () {
+    els.importProjectFile.click();
+  });
+
+  els.importProjectFile.addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var imported;
+      try { imported = JSON.parse(reader.result); }
+      catch (err) { showMsg('That file is not valid JSON.'); els.importProjectFile.value = ''; return; }
+      var looksValid = imported && typeof imported === 'object' && !Array.isArray(imported) &&
+        Array.isArray(imported.groups) && Array.isArray(imported.roles) && Array.isArray(imported.meetings) &&
+        imported.history && typeof imported.history === 'object';
+      if (!looksValid) {
+        showMsg("That file doesn't look like a Novel Study Circles project export.");
+        els.importProjectFile.value = '';
+        return;
+      }
+      // Imported as a brand-new project (never overwriting or deleting any
+      // other saved project) — dedupe against existing names so it can't
+      // silently clobber a same-named project already on this device either.
+      var existingNames = listProjectNames();
+      var baseName = imported.name || 'Imported Project';
+      var newName = baseName, suffix = 2;
+      while (existingNames.indexOf(newName) !== -1) { newName = baseName + ' (' + suffix + ')'; suffix++; }
+      state = {
+        name: newName,
+        students: imported.students || '',
+        bookTitle: imported.bookTitle || '',
+        mode: imported.mode === 'size' ? 'size' : 'count',
+        splitValue: imported.splitValue || 4,
+        groups: imported.groups || [],
+        roles: (imported.roles && imported.roles.length) ? imported.roles : DEFAULT_ROLES.slice(),
+        together: imported.together !== false,
+        history: imported.history || {},
+        meetings: imported.meetings || []
+      };
+      saveCurrent();
+      els.toolbar.style.display = '';
+      applyStateToForm();
+      refreshSwitcher();
+      showMsg('Imported as "' + newName + '".', true);
+      els.importProjectFile.value = '';
+    };
+    reader.onerror = function () {
+      showMsg('Could not read that file.');
+      els.importProjectFile.value = '';
+    };
+    reader.readAsText(file);
   });
 
   els.projectName.addEventListener('change', function () {

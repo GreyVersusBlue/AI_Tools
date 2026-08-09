@@ -2992,6 +2992,21 @@
                 </svg>Import
               </button>
             </div>
+            <div class="bp-io-row">
+              <button class="bp-io-btn export" id="btn-export-blueprint-png" title="Export Blueprint PNG — the current floor's plain floor plan">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>PNG
+              </button>
+              <button class="bp-io-btn export" id="btn-export-blueprint-pdf" title="Export Blueprint PDF — the current floor's plain floor plan">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>PDF
+              </button>
+            </div>
             <input type="file" id="bp-import-file" accept=".json" style="display:none;" />
             <div class="bp-autosave-indicator saved" id="bp-autosave-indicator">
               <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -5615,6 +5630,12 @@ function generateExportFilename() {
 }
 
 /* ==============================================
+   BLUEPRINT PNG/PDF EXPORT — plain floor plan (active floor)
+=============================================== */
+document.getElementById('btn-export-blueprint-png').addEventListener('click', exportBlueprintAsPNG);
+document.getElementById('btn-export-blueprint-pdf').addEventListener('click', exportBlueprintAsPDF);
+
+/* ==============================================
    JSON IMPORT
 =============================================== */
 document.getElementById('btn-import-blueprint').addEventListener('click', () => {
@@ -6260,6 +6281,133 @@ function renderCanvas() {
 
   // Draw heat-exclude zone overlays (drawn last so they float above tiles)
   drawHeatExcludeZones(cellSize);
+}
+
+/* ==============================================
+   BLUEPRINT EXPORT (plain floor plan — PNG/PDF)
+   Prints a clean building map / evacuation poster of the active
+   floor straight from the editor. Reuses the exact offscreen-canvas
+   + jsPDF technique already used by renderExportCanvas() /
+   exportVizAsPNG() / exportVizAsPDF() for the movement-viz canvas,
+   but draws via this editor's own renderCanvas() (rooms/hallways/
+   staircases/labels only — no heatmap or route overlays).
+=============================================== */
+function renderBlueprintExportCanvas() {
+  const EXPORT_SCALE = 2.5; // matches the viz export's 'high' preset
+  const cellSize = getEffectiveCellSize();
+  const { gridCols, gridRows } = AppState.blueprint;
+  const logicalW = gridCols * cellSize;
+  const logicalH = gridRows * cellSize;
+  const W = logicalW * EXPORT_SCALE;
+  const H = logicalH * EXPORT_SCALE;
+
+  // Offscreen canvas at export resolution
+  const off = document.createElement('canvas');
+  off.width  = W;
+  off.height = H;
+  const offCtx = off.getContext('2d');
+  offCtx.scale(EXPORT_SCALE, EXPORT_SCALE);
+
+  // Temporarily retarget the drawing helpers to the offscreen context
+  const savedCtx = ctx;
+  ctx = offCtx;
+  try {
+    // Draw the plain floor-plan blueprint for the currently active floor
+    renderCanvas();
+
+    // ── Info block overlay (top-left corner) ───────────────────────────────
+    const floor = AppState.blueprint.floors[AppState.blueprint.activeFloorIdx] ||
+                  AppState.blueprint.floors[0];
+    const schoolName = AppState.settings.schoolName || 'Building Blueprint';
+    const floorLabel = floor ? floor.label : 'Floor 1';
+    const lines = [schoolName, floorLabel];
+
+    offCtx.save();
+    offCtx.font = `600 11px 'DM Sans', sans-serif`;
+    let maxW = 0;
+    for (const line of lines) {
+      const w = offCtx.measureText(line).width;
+      if (w > maxW) maxW = w;
+    }
+    const padding = 10;
+    const lineH   = 16;
+    const boxW = maxW + padding * 2;
+    const boxH = lines.length * lineH + padding * 2;
+    const blockX = 12, blockY = 12;
+
+    offCtx.globalAlpha = 0.88;
+    offCtx.fillStyle = '#0f1a2e';  // navy-900 matching app header
+    offCtx.beginPath();
+    if (typeof offCtx.roundRect === 'function') {
+      offCtx.roundRect(blockX, blockY, boxW, boxH, 6);
+    } else {
+      offCtx.rect(blockX, blockY, boxW, boxH);
+    }
+    offCtx.fill();
+    offCtx.globalAlpha = 1;
+
+    lines.forEach((line, i) => {
+      const isFirst = i === 0;
+      offCtx.font = isFirst
+        ? `600 11px 'DM Sans', sans-serif`
+        : `400 10px 'DM Sans', sans-serif`;
+      offCtx.fillStyle = isFirst ? '#ffffff' : '#a8c4de';  // white / navy-200
+      offCtx.textAlign  = 'left';
+      offCtx.textBaseline = 'top';
+      offCtx.fillText(line, blockX + padding, blockY + padding + i * lineH);
+    });
+    offCtx.restore();
+  } finally {
+    // Guaranteed restore of the live global regardless of any drawing error.
+    ctx = savedCtx;
+  }
+
+  return { dataURL: off.toDataURL('image/png'), w: W, h: H };
+}
+
+function exportBlueprintAsPNG() {
+  if (!canvas) { showToast('Canvas not ready.', 'warn'); return; }
+  showToast('Exporting…', 'info');
+  try {
+    const { dataURL } = renderBlueprintExportCanvas();
+    const schoolName = (AppState.settings.schoolName || 'School').replace(/[^\w\s-]/g, '').trim() || 'School';
+    const floor = AppState.blueprint.floors[AppState.blueprint.activeFloorIdx] || AppState.blueprint.floors[0];
+    const floorLabel = ((floor && floor.label) || 'Floor 1').replace(/[^\w\s-]/g, '').trim() || 'Floor';
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = `Blueprint — ${schoolName} — ${floorLabel}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    showToast('Saved as PNG', 'success');
+  } catch (err) {
+    showToast('PNG export failed.', 'error');
+    console.warn('[STVIZ] Blueprint PNG export error:', err);
+  }
+}
+
+function exportBlueprintAsPDF() {
+  if (!canvas) { showToast('Canvas not ready.', 'warn'); return; }
+  showToast('Exporting…', 'info');
+  try {
+    const { dataURL, w, h } = renderBlueprintExportCanvas();
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      showToast('PDF export unavailable — try PNG instead.', 'warn');
+      return;
+    }
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const mmW = w * 0.264583;
+    const mmH = h * 0.264583;
+    const orientation = w > h ? 'landscape' : 'portrait';
+    const doc = new jsPDF({ orientation, unit: 'mm', format: [mmW, mmH] });
+    doc.addImage(dataURL, 'PNG', 0, 0, mmW, mmH);
+    const schoolName = (AppState.settings.schoolName || 'School').replace(/[^\w\s-]/g, '').trim() || 'School';
+    const floor = AppState.blueprint.floors[AppState.blueprint.activeFloorIdx] || AppState.blueprint.floors[0];
+    const floorLabel = ((floor && floor.label) || 'Floor 1').replace(/[^\w\s-]/g, '').trim() || 'Floor';
+    doc.save(`Blueprint — ${schoolName} — ${floorLabel}.pdf`);
+    showToast('Saved as PDF', 'success');
+  } catch (err) {
+    showToast('PDF export failed — try PNG instead.', 'error');
+    console.warn('[STVIZ] Blueprint PDF export error:', err);
+  }
 }
 
 function drawGrid(cols, rows, cellSize, W, H) {

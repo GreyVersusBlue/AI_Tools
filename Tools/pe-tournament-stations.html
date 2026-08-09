@@ -219,6 +219,10 @@
       </div>
     </div>
     <p class="hint">Time each group spends at a station before the group at the last station wraps back to the first.</p>
+    <div class="checkline">
+      <input type="checkbox" id="soundToggle" checked>
+      <label style="margin:0;" for="soundToggle">Play a sound when the timer hits 0:00</label>
+    </div>
   </div>
 
   <div class="stage">
@@ -292,7 +296,7 @@
   ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'printBtn',
    'projectName', 'addStationBtn', 'stationsList',
    'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
-   'rotMinutes', 'rotSeconds',
+   'rotMinutes', 'rotSeconds', 'soundToggle',
    'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'stationTiles',
    'bracketSource', 'bracketCustomWrap', 'bracketEntrants', 'bracketSeedRandom', 'generateBracketBtn', 'resetBracketBtn', 'msg',
    'championBanner', 'bracketCard', 'bracketTitle', 'bracketView',
@@ -350,6 +354,7 @@
     if (typeof r.endAt !== 'number') r.endAt = null;
     if (typeof r.remainingMs !== 'number') r.remainingMs = null;
     if (r.running && typeof r.endAt !== 'number') r.running = false;
+    s.soundEnabled = s.soundEnabled !== false;
     if (s.bracketSource !== 'groups') s.bracketSource = 'custom';
     if (typeof s.bracketEntrants !== 'string') s.bracketEntrants = '';
     s.bracketSeedRandom = s.bracketSeedRandom !== false;
@@ -499,6 +504,43 @@
     renderStage();
   });
 
+  /* ---------- rotation alarm sound (WebAudio, no audio files) ---------- */
+  var audioCtx = null;
+  function ensureAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      else if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { audioCtx = null; }
+    return audioCtx;
+  }
+  function playTone(ctx, freq, startAt, duration, volume) {
+    var osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.value = freq;
+    var attack = 0.01, release = 0.08;
+    gain.gain.setValueAtTime(0.00001, startAt);
+    gain.gain.linearRampToValueAtTime(volume, startAt + attack);
+    gain.gain.setValueAtTime(volume, startAt + duration - release);
+    gain.gain.exponentialRampToValueAtTime(0.00001, startAt + duration);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.02);
+  }
+  function playRotationAlarm() {
+    if (!state.soundEnabled) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    try {
+      var now = ctx.currentTime;
+      playTone(ctx, 880, now, 0.16, 0.18);
+      playTone(ctx, 1175, now + 0.18, 0.2, 0.18);
+    } catch (e) { /* ignore — sound is a nice-to-have, never block the rotation */ }
+  }
+
+  els.soundToggle.addEventListener('change', function () {
+    state.soundEnabled = els.soundToggle.checked;
+    save();
+  });
+
   /* ---------- rotation timer / stage ---------- */
   function computeAssignment() {
     var s = state.stations.length;
@@ -572,7 +614,7 @@
       guard++;
       changed = true;
     }
-    if (changed) { save(); renderStage(); }
+    if (changed) { playRotationAlarm(); save(); renderStage(); }
     else { tickDisplay(); }
   }
 
@@ -580,6 +622,7 @@
     if (!state.stations.length) { showMsg('Add at least one station before starting the rotation.'); return; }
     var totalMs = getRotationMs();
     if (totalMs <= 0) { showMsg('Set a rotation time greater than 0.'); return; }
+    ensureAudio(); // unlock/create the AudioContext on this user gesture so the 0:00 alarm can play later
     clearMsg();
     var r = state.rotation;
     r.running = true;
@@ -602,6 +645,7 @@
   els.resumeBtn.addEventListener('click', function () {
     var r = state.rotation;
     if (!r.paused) return;
+    ensureAudio();
     r.running = true;
     r.paused = false;
     r.endAt = Date.now() + (r.remainingMs != null ? r.remainingMs : getRotationMs());
@@ -894,6 +938,7 @@
     els.splitCount.value = state.stations.length || 4;
     els.rotMinutes.value = state.rotation.minutes;
     els.rotSeconds.value = state.rotation.seconds;
+    els.soundToggle.checked = state.soundEnabled;
     renderStationsEditor();
     renderGroupsEditor();
     syncBracketSourceUI();

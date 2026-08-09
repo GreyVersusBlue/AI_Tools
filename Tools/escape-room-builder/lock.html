@@ -132,18 +132,27 @@
     scannedStation = null;
   }
 
+  // "start" marks this code as a valid entry point (set by the "randomize
+  // starting station" toggle in the builder, one station per printed/shared
+  // code) — a brand-new player seeds their progress at the scanned station
+  // instead of the fixed first one, so a physical rotation can have teams
+  // begin at different stations simultaneously. Absent by default, so a
+  // first-time player without it still starts at station 0 as before.
+  var startHere = getParam('start') !== null && scannedStation !== null;
+
   var PROGRESS_KEY = 'escape-room-progress:' + roomId;
 
   function loadProgress() {
+    var fresh = { current: startHere ? scannedStation : 0, misses: {} };
     try {
       var raw = localStorage.getItem(PROGRESS_KEY);
-      if (!raw) return { current: 0, misses: {} };
+      if (!raw) return fresh;
       var p = JSON.parse(raw);
-      if (!p || typeof p !== 'object') return { current: 0, misses: {} };
-      if (typeof p.current === 'undefined') p.current = 0;
+      if (!p || typeof p !== 'object') return fresh;
+      if (typeof p.current === 'undefined') p.current = fresh.current;
       if (!p.misses || typeof p.misses !== 'object') p.misses = {};
       return p;
-    } catch (e) { return { current: 0, misses: {} }; }
+    } catch (e) { return fresh; }
   }
   function saveProgress(p) {
     try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* private browsing — progress just won't persist */ }

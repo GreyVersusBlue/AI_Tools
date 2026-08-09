@@ -85,7 +85,7 @@
   #file-list li:last-child { border-bottom: none; }
   #file-list li:hover { background: var(--color-surface); }
   #file-list .seq { opacity: 0.5; min-width: 2.5rem; text-align: right; }
-  #file-list .thumb { width: 2.4rem; height: 2.4rem; object-fit: cover; border: 1px solid var(--color-divider); flex-shrink: 0; background: #fff; }
+  #file-list .thumb { width: 2.4rem; height: 2.4rem; object-fit: cover; border: 1px solid var(--color-divider); flex-shrink: 0; background: #fff; transition: transform 0.15s; }
   #file-list .type-badge { font-size: 10px; padding: 1px 5px; font-weight: 700; text-transform: uppercase; }
   .badge-png { background: var(--color-accent-100); color: var(--color-accent-800); }
   .badge-svg { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
@@ -244,7 +244,7 @@
 
   const VALID_EXT = /\.(png|jpe?g|webp|svg)$/i;
 
-  let loadedFiles = [];   // Array of { id, file } — array order is the "custom" order
+  let loadedFiles = [];   // Array of { id, file, thumbUrl, rotation } — array order is the "custom" order
   let nextId = 1;
 
   function extOf(name) {
@@ -294,7 +294,7 @@
 
     const existingNames = new Set(loadedFiles.map(e => e.file.name));
     const newOnes = valid.filter(f => !existingNames.has(f.name));
-    newOnes.forEach(f => loadedFiles.push({ id: nextId++, file: f, thumbUrl: URL.createObjectURL(f) }));
+    newOnes.forEach(f => loadedFiles.push({ id: nextId++, file: f, thumbUrl: URL.createObjectURL(f), rotation: 0 }));
 
     if (invalid.length > 0) {
       const lines = invalid.slice(0, 5).map(f => rejectionReason(f.name));
@@ -359,6 +359,13 @@
     renderList();
   }
 
+  function rotateFile(id) {
+    const i = indexOfId(id);
+    if (i === -1) return;
+    loadedFiles[i].rotation = (loadedFiles[i].rotation + 90) % 360;
+    renderList();
+  }
+
   let dragId = null;
 
   // ── Render the file queue list ─────────────────────────────────────────────
@@ -379,7 +386,7 @@
     const isCustom = getSortMode() === 'custom';
 
     ordered.forEach((entry, i) => {
-      const { id, file, thumbUrl } = entry;
+      const { id, file, thumbUrl, rotation } = entry;
       const li = document.createElement('li');
       const ext = badgeExt(file.name);
       const safeName = escapeHtml(file.name);
@@ -388,18 +395,20 @@
 
       li.innerHTML = `
         <span class="seq">${i + 1}</span>
-        <img class="thumb" src="${thumbUrl}" alt="" loading="lazy">
+        <img class="thumb" src="${thumbUrl}" alt="" loading="lazy" style="transform: rotate(${rotation}deg);">
         <span class="type-badge badge-${ext}">${ext.toUpperCase()}</span>
         <span class="filename">${safeName}</span>
         <span class="row-actions">
           <button type="button" data-act="up" aria-label="Move ${safeName} up" ${i === 0 ? 'disabled' : ''}>&#8593;</button>
           <button type="button" data-act="down" aria-label="Move ${safeName} down" ${i === ordered.length - 1 ? 'disabled' : ''}>&#8595;</button>
+          <button type="button" data-act="rotate" aria-label="Rotate ${safeName} 90° (currently ${rotation}°)">&#8635;</button>
           <button type="button" data-act="remove" aria-label="Remove ${safeName}">&#10005;</button>
         </span>
       `;
 
       li.querySelector('[data-act="up"]').addEventListener('click', () => moveFile(id, -1));
       li.querySelector('[data-act="down"]').addEventListener('click', () => moveFile(id, 1));
+      li.querySelector('[data-act="rotate"]').addEventListener('click', () => rotateFile(id));
       li.querySelector('[data-act="remove"]').addEventListener('click', () => removeFile(id));
 
       // Drag-and-drop reorder — desktop-mouse enhancement. Touch devices don't
@@ -493,7 +502,7 @@
     let sourceBytes = 0;
 
     for (let i = 0; i < ordered.length; i++) {
-      const { file } = ordered[i];
+      const { file, rotation } = ordered[i];
       sourceBytes += file.size;
       const isSVG = /\.svg$/i.test(file.name);
 
@@ -502,22 +511,35 @@
       await new Promise(r => setTimeout(r, 0));
 
       try {
-        let embedDataURL, embedFormat, wMm, hMm;
+        let embedDataURL, embedFormat, pxW, pxH;
 
         if (isSVG) {
           const svg = await processSVG(file);
           embedDataURL = svg.dataURL;
           embedFormat  = 'PNG';
-          wMm = pxToMm(svg.w);
-          hMm = pxToMm(svg.h);
+          pxW = svg.w;
+          pxH = svg.h;
         } else {
           const raster = await processRaster(file, extOf(file.name), quality);
           embedDataURL = raster.dataURL;
           embedFormat  = raster.format;
-          wMm = pxToMm(raster.naturalW);
-          hMm = pxToMm(raster.naturalH);
+          pxW = raster.naturalW;
+          pxH = raster.naturalH;
         }
 
+        // Apply the per-image rotation chosen in the queue by pre-rotating
+        // onto an off-screen canvas — jsPDF has no way to rotate an inserted
+        // image in place, so the rotated pixels (and swapped dimensions for
+        // 90°/270°) are what get embedded and what the page-fit math below sees.
+        if (rotation) {
+          const jpegQuality = QUALITY_PRESETS[quality] ? QUALITY_PRESETS[quality].q : 0.95;
+          const rotated = await rotateForEmbed(embedDataURL, embedFormat, rotation, jpegQuality);
+          embedDataURL = rotated.dataURL;
+          pxW = rotated.w;
+          pxH = rotated.h;
+        }
+
+        const wMm = pxToMm(pxW), hMm = pxToMm(pxH);
         const [pgW, pgH] = resolvePageDimsMm(pageMode, orient, wMm, hMm);
 
         if (!pdf) {
@@ -603,6 +625,32 @@
       img.onerror = () => rej(new Error('could not decode image data — the file may be corrupt or in an unsupported format'));
       img.src = dataURL;
     });
+  }
+
+  // Pre-rotate an already-processed image's dataURL onto an off-screen canvas
+  // by 90/180/270°, swapping width/height for 90°/270° so the caller can feed
+  // the ROTATED dimensions into the page-fit math instead of the original
+  // file's. Returns { dataURL, w, h } in pixels.
+  async function rotateForEmbed(dataURL, format, rotation, jpegQuality) {
+    const img = await loadImageElement(dataURL);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const swap = rotation === 90 || rotation === 270;
+    const cw = swap ? h : w, ch = swap ? w : h;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.translate(cw / 2, ch / 2);
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+    const rotatedDataURL = format === 'PNG'
+      ? canvas.toDataURL('image/png')
+      : canvas.toDataURL('image/jpeg', jpegQuality);
+    return { dataURL: rotatedDataURL, w: cw, h: ch };
   }
 
   // Raster (PNG/JPG/WEBP) → { dataURL, format, naturalW, naturalH } ready to embed.

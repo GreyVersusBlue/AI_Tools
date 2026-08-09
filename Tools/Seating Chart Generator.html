@@ -324,10 +324,17 @@
     .desk-ctrls,.selnote,.lockbadge{display:none !important;}
     .print-head{display:block !important;}
     body,.desk,.desk .seat,.print-head p{background:#fff; color:#000 !important;}
+    /* Print-all mode swaps the live single-section floor for a stack of static
+       per-section snapshots (built in preparePrintAll()) so nothing here has to
+       duplicate the trim/scale math above — see printLayoutFor() in the script. */
+    body.printing-all .app{display:none !important;}
+    body.printing-all #printAllWrap{display:block;}
+    #printAllWrap .print-page + .print-page{page-break-before:always;}
   }
   .print-head{display:none; text-align:center; margin:0 0 10px;}
   .print-head h2{font-family: var(--font-heading); font-size:20px; color:var(--blue);}
   .print-head p{margin:2px 0 0; font-size:11px; opacity:0.65; letter-spacing:.3px;}
+  #printAllWrap{display:none;}
 </style>
 </head>
 <body>
@@ -458,6 +465,7 @@
       <div class="grp">
         <button class="btn sm ghost" id="zoomBtn" onclick="toggleZoom()" title="Fit the room to the window, or show it full size">Actual size</button>
         <button class="btn sm ghost" onclick="printChart()">Print</button>
+        <button class="btn sm ghost" onclick="printAllSections()" title="One class period per printed page">Print all sections</button>
       </div>
       <div class="sep"></div>
       <span class="grp" id="saveBar"></span>
@@ -495,6 +503,11 @@
     </div>
   </div>
 </div>
+
+<!-- Populated by preparePrintAll() just before printing every section, one
+     page per class period, and emptied again by restoreAfterPrintAll(). Stays
+     empty and display:none the rest of the time (see #printAllWrap in CSS). -->
+<div id="printAllWrap"></div>
 
 <script>
   // The app is an ES module, and a module that fails to load fails silently: no
@@ -1068,10 +1081,13 @@ function say(text, kind){
 ============================================================ */
 const PAPER = { w: 979, h: 660 };   // letter landscape at 0.4in margins, minus the header
 let printRestore = null;
+let printMode = 'single';           // 'single' (Print / Ctrl+P) or 'all' (Print all sections)
 
-function preparePrint(){
-  const s = sec();
-  const box = contentBox(s.desks);
+/** The trim-and-scale math, pulled out so preparePrint() (the live floor) and
+    preparePrintAll() (one static snapshot per section) compute it the same way
+    instead of one of them drifting out of sync with the other. */
+function printLayoutFor(desks){
+  const box = contentBox(desks);
   const pad = 30;
   const topRoom = 58;               // leave the FRONT OF ROOM bar room to breathe
   const w = box.w + pad * 2;
@@ -1080,6 +1096,19 @@ function preparePrint(){
   // most of the sheet, and a name a substitute can read from the doorway is the
   // whole point. 1.5x is where the rounded corners start looking silly.
   const fit = Math.min(1.5, PAPER.w / w, PAPER.h / h);
+  return { box, pad, topRoom, w, h, fit };
+}
+function printMetaLine(s){
+  const seated = Object.keys(s.assign).length;
+  const unseated = s.students.length - seated;
+  return `${seated} seated of ${s.students.length} · ${s.desks.length} desks · `
+    + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    + (unseated ? ` · ${unseated} not seated` : '');
+}
+
+function preparePrint(){
+  const s = sec();
+  const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks);
 
   const floor = el('floor'), wrap = el('floorWrap'), layer = el('deskLayer');
   // Chrome can fire beforeprint more than once for one trip through the dialog,
@@ -1092,13 +1121,8 @@ function preparePrint(){
   wrap.style.width = (w * fit) + 'px';
   wrap.style.height = (h * fit) + 'px';
 
-  const seated = Object.keys(s.assign).length;
-  const unseated = s.students.length - seated;
   el('printTitle').textContent = s.name;
-  el('printMeta').textContent =
-    `${seated} seated of ${s.students.length} · ${s.desks.length} desks · `
-    + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
-    + (unseated ? ` · ${unseated} not seated` : '');
+  el('printMeta').textContent = printMetaLine(s);
 }
 function restoreAfterPrint(){
   if (printRestore){
@@ -1115,10 +1139,89 @@ function restoreAfterPrint(){
   applyZoom();
   requestAnimationFrame(applyZoom);
 }
-// Covers both the toolbar button and Ctrl+P.
-window.addEventListener('beforeprint', preparePrint);
-window.addEventListener('afterprint', restoreAfterPrint);
-function printChart(){ window.print(); }
+
+/* ---- print every section, one class period per page ----
+   Reuses printLayoutFor()/printMetaLine() above rather than a second copy of
+   the trim-and-scale math, but builds a fresh, static (non-interactive) floor
+   per section instead of repurposing the live #floor — the live one only ever
+   holds the active section, and pushing every section through it in turn would
+   mean juggling as many beforeprint/afterprint round trips as there are
+   sections. #printAllWrap and the CSS it comes with (body.printing-all) are
+   what actually put these pages on paper instead of the live one. */
+function deskNodeForPrint(d, i, total, s){
+  const sid = s.assign[d.id];
+  const st = sid ? s.students.find(x => x.id === sid) : null;
+  const node = document.createElement('div');
+  node.className = 'desk ' + (st ? 'assigned' : 'empty') + (st && st.flag ? ' flagged' : '') + (d.locked ? ' locked' : '');
+  node.style.left = d.x + 'px'; node.style.top = d.y + 'px';
+  node.style.transform = (d.rot ? 'rotate(' + d.rot + 'deg)' : '');
+  const label = st
+    ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
+    : `Seat ${i + 1} of ${total}, empty`;
+  node.innerHTML = `<span class="seat" aria-label="${esc(label)}">${st ? esc(st.name) : 'empty'}</span>`
+    + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : '');
+  return node;
+}
+function buildPrintPage(s){
+  const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks);
+
+  const page = document.createElement('div');
+  page.className = 'print-page';
+
+  const head = document.createElement('div');
+  head.className = 'print-head';
+  head.innerHTML = `<h2>${esc(s.name)}</h2><p>${esc(printMetaLine(s))}</p>`;
+  page.appendChild(head);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'floor-wrap';
+  wrap.style.width = (w * fit) + 'px';
+  wrap.style.height = (h * fit) + 'px';
+
+  const floor = document.createElement('div');
+  floor.className = 'floor';
+  floor.style.width = w + 'px';
+  floor.style.height = h + 'px';
+  floor.style.transform = `scale(${fit})`;
+  floor.style.transformOrigin = 'top left';
+
+  const front = document.createElement('div');
+  front.className = 'front-bar';
+  front.innerHTML = 'FRONT OF ROOM &nbsp;&middot;&nbsp; BOARD';
+  floor.appendChild(front);
+
+  const layer = document.createElement('div');
+  layer.className = 'desk-layer';
+  layer.style.transform = `translate(${-box.x + pad}px, ${-box.y + topRoom}px)`;
+  const total = s.desks.length;
+  s.desks.forEach((d, i) => layer.appendChild(deskNodeForPrint(d, i, total, s)));
+  floor.appendChild(layer);
+
+  wrap.appendChild(floor);
+  page.appendChild(wrap);
+  return page;
+}
+function preparePrintAll(){
+  document.body.classList.add('printing-all');
+  const wrap = el('printAllWrap');
+  wrap.innerHTML = '';
+  state.sections.forEach(s => wrap.appendChild(buildPrintPage(s)));
+}
+function restoreAfterPrintAll(){
+  document.body.classList.remove('printing-all');
+  el('printAllWrap').innerHTML = '';
+}
+
+// Covers both the toolbar button and Ctrl+P. printMode picks which of the two
+// preparation paths above runs, and always resets to 'single' afterward so a
+// stray Ctrl+P following "Print all sections" doesn't inherit that mode.
+window.addEventListener('beforeprint', () => { if (printMode === 'all') preparePrintAll(); else preparePrint(); });
+window.addEventListener('afterprint', () => {
+  if (printMode === 'all') restoreAfterPrintAll(); else restoreAfterPrint();
+  printMode = 'single';
+});
+function printChart(){ printMode = 'single'; window.print(); }
+function printAllSections(){ printMode = 'all'; window.print(); }
 
 /* ============================================================
    Util + boot
@@ -1244,7 +1347,7 @@ Object.assign(window, {
   loadRosterHub,
   addPair, removePair,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
-  autoAssign, undo, pickStudent, toggleZoom, printChart,
+  autoAssign, undo, pickStudent, toggleZoom, printChart, printAllSections,
   poolDragOver, poolDragLeave, poolDrop, poolClick,
 });
 

@@ -78,6 +78,13 @@
   .event-list .row-item .thumb { width: 2.2rem; height: 2.2rem; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
   .event-list .btns { display: flex; gap: .3rem; flex-shrink: 0; }
 
+  .era-list .row-item { display: flex; align-items: center; gap: .5rem; padding: .45rem 0; border-bottom: 1px dashed var(--line); }
+  .era-list .row-item .info { flex: 1; min-width: 0; }
+  .era-list .row-item .info .t { font-weight: 700; font-size: .85rem; }
+  .era-list .row-item .info .d { font-size: .76rem; color: var(--muted); }
+  .era-list .row-item .swatch { width: 1.4rem; height: 1.4rem; border-radius: 4px; flex-shrink: 0; border: 1px solid var(--line-strong); }
+  .era-list .btns { display: flex; gap: .3rem; flex-shrink: 0; }
+
   .photo-preview { display: flex; align-items: center; gap: .6rem; margin-bottom: .8rem; }
   .photo-preview img { width: 3.5rem; height: 3.5rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
 
@@ -93,6 +100,8 @@
   .timeline-line.dotted { border-top-style: dotted; }
   .grid-line { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--line); }
   .grid-label { position: absolute; top: calc(50% + .3rem); transform: translateX(-50%); font-size: .68rem; color: var(--muted); white-space: nowrap; }
+  .era-band { position: absolute; top: 0; bottom: 0; opacity: .28; border-radius: 3px; pointer-events: none; }
+  .era-label { position: absolute; top: .35rem; font-size: .68rem; font-weight: 700; color: var(--ink); background: rgba(255,255,255,.8); padding: .05rem .4rem; border-radius: 3px; white-space: nowrap; pointer-events: none; }
   .marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); transform: translate(-50%, -50%); }
   .marker-bar { position: absolute; top: 50%; height: 6px; background: var(--accent-2); opacity: .55; transform: translateY(-50%); border-radius: 3px; }
   .event-label { position: absolute; width: 9rem; text-align: center; font-size: .78rem; transform: translateX(-50%); }
@@ -171,6 +180,22 @@
       </div>
 
       <div class="card">
+        <label style="margin-bottom:.6rem;">Add / edit an era (background shading)</label>
+        <p class="hint">Broad periods like "Renaissance" shown as a shaded band behind the events, distinct from a single event's own range bar.</p>
+        <input type="text" id="eraLabel" placeholder="Era name, e.g. Renaissance">
+        <div class="row2">
+          <div><input type="number" id="eraYearStart" placeholder="Start year (negative = BCE)"></div>
+          <div><input type="number" id="eraYearEnd" placeholder="End year (negative = BCE)"></div>
+        </div>
+        <label for="eraColor">Band color</label>
+        <input type="color" id="eraColor" value="#2e6b8f" style="width:100%;height:2.3rem;padding:.2rem;border:1px solid var(--line-strong);border-radius:6px;margin-bottom:.8rem;">
+        <button type="button" id="saveEraBtn">Add era</button>
+        <button type="button" class="secondary" id="cancelEraEditBtn" style="display:none;">Cancel edit</button>
+
+        <div class="era-list" id="eraList"></div>
+      </div>
+
+      <div class="card">
         <label style="margin-bottom:.6rem;">Add / edit an event</label>
         <input type="text" id="evTitle" placeholder="Event title">
         <div class="row2">
@@ -226,6 +251,7 @@
   ['toolbar','timelineSwitch','newTimelineBtn','deleteTimelineBtn',
    'exportTimelineBtn','importTimelineBtn','importTimelineFile',
    'timelineName','timelineTitle','lineStyle','compactLabels',
+   'eraLabel','eraYearStart','eraYearEnd','eraColor','saveEraBtn','cancelEraEditBtn','eraList',
    'evTitle','evYearStart','evYearEnd','evDisplayDate','evDescription','evPhoto',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
    'saveEventBtn','cancelEditBtn','eventList','printBtn',
@@ -233,10 +259,12 @@
    'timelineCanvas','printViewInner'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, title, lineStyle, compactLabels, events: [...] }
+  var state = null; // { name, title, lineStyle, compactLabels, events: [...], eras: [...] }
   var editingId = null;
   var pendingPhoto = null; // data URL staged for the event being added/edited
   var idCounter = 1;
+  var editingEraId = null;
+  var eraIdCounter = 1;
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -347,6 +375,53 @@
 
   els.cancelEditBtn.addEventListener('click', resetForm);
 
+  /* ---------- era form ---------- */
+  function resetEraForm() {
+    editingEraId = null;
+    els.eraLabel.value = '';
+    els.eraYearStart.value = '';
+    els.eraYearEnd.value = '';
+    els.eraColor.value = '#2e6b8f';
+    els.saveEraBtn.textContent = 'Add era';
+    els.cancelEraEditBtn.style.display = 'none';
+  }
+
+  function loadEraIntoForm(era) {
+    editingEraId = era.id;
+    els.eraLabel.value = era.label;
+    els.eraYearStart.value = era.yearStart;
+    els.eraYearEnd.value = era.yearEnd;
+    els.eraColor.value = era.color;
+    els.saveEraBtn.textContent = 'Save changes';
+    els.cancelEraEditBtn.style.display = '';
+  }
+
+  els.saveEraBtn.addEventListener('click', function () {
+    var label = els.eraLabel.value.trim();
+    var yearStart = parseFloat(els.eraYearStart.value);
+    var yearEnd = parseFloat(els.eraYearEnd.value);
+    if (!label || isNaN(yearStart) || isNaN(yearEnd)) { alert('Enter a name, start year, and end year for the era.'); return; }
+
+    var era = {
+      id: editingEraId || (eraIdCounter++),
+      label: label,
+      yearStart: yearStart,
+      yearEnd: yearEnd,
+      color: els.eraColor.value
+    };
+
+    if (editingEraId) {
+      var idx = state.eras.findIndex(function (e) { return e.id === editingEraId; });
+      if (idx !== -1) state.eras[idx] = era;
+    } else {
+      state.eras.push(era);
+    }
+    resetEraForm();
+    renderAll();
+  });
+
+  els.cancelEraEditBtn.addEventListener('click', resetEraForm);
+
   /* ---------- rendering ---------- */
   function renderEventList() {
     var sorted = state.events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
@@ -376,19 +451,65 @@
     });
   }
 
+  function renderEraList() {
+    var sorted = state.eras.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
+    els.eraList.innerHTML = '';
+    sorted.forEach(function (era) {
+      var row = document.createElement('div');
+      row.className = 'row-item';
+      var swatch = '<div class="swatch" style="background:' + era.color + ';"></div>';
+      row.innerHTML = swatch +
+        '<div class="info"><div class="t">' + escapeHtml(era.label) + '</div>' +
+        '<div class="d">' + escapeHtml(TimelineLayout.formatYear(era.yearStart)) + '–' + escapeHtml(TimelineLayout.formatYear(era.yearEnd)) + '</div></div>';
+      var btns = document.createElement('div');
+      btns.className = 'btns';
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button'; editBtn.className = 'secondary small'; editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', function () { loadEraIntoForm(era); });
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button'; removeBtn.className = 'danger small'; removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', function () {
+        state.eras = state.eras.filter(function (e) { return e.id !== era.id; });
+        if (editingEraId === era.id) resetEraForm();
+        renderAll();
+      });
+      btns.appendChild(editBtn); btns.appendChild(removeBtn);
+      row.appendChild(btns);
+      els.eraList.appendChild(row);
+    });
+  }
+
   function renderScreenTimeline() {
     var canvas = els.timelineCanvas;
     canvas.innerHTML = '';
-    if (!state.events.length) {
+    if (!state.events.length && !state.eras.length) {
       canvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">Add events to see them on the timeline.</p>';
       return;
     }
-    var range = TimelineLayout.yearRangeOf(state.events);
+    var range = TimelineLayout.yearRangeOf(state.events.concat(state.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
-    var layout = TimelineLayout.computeLayout(state.events, pxPerYear, 70);
+    var layout = TimelineLayout.computeLayout(state.events, pxPerYear, 70, range);
     var positioned = state.compactLabels ? TimelineLayout.assignLabelSides(layout.positioned, 100) : layout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
 
     canvas.style.width = layout.totalWidth + 'px';
+
+    // Era bands are appended first so they sit behind the gridlines, line,
+    // markers, and labels appended below (later DOM siblings paint on top).
+    var eraBands = TimelineLayout.computeEraBands(state.eras, layout.minYear, layout.maxYear, pxPerYear, 70);
+    eraBands.forEach(function (b) {
+      var band = document.createElement('div');
+      band.className = 'era-band';
+      band.style.left = b.x + 'px';
+      band.style.width = b.width + 'px';
+      band.style.backgroundColor = b.era.color;
+      canvas.appendChild(band);
+
+      var eraLabel = document.createElement('div');
+      eraLabel.className = 'era-label';
+      eraLabel.style.left = b.x + 'px';
+      eraLabel.textContent = b.era.label;
+      canvas.appendChild(eraLabel);
+    });
 
     var gridlines = TimelineLayout.computeGridlines(layout.minYear, layout.maxYear, pxPerYear, 70);
     gridlines.forEach(function (g) {
@@ -462,15 +583,17 @@
     els.lineStyle.value = state.lineStyle;
     els.compactLabels.value = String(state.compactLabels);
     renderEventList();
+    renderEraList();
     renderScreenTimeline();
     renderPrintPreview();
   }
 
   /* ---------- lifecycle ---------- */
   function newTimeline(name) {
-    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [] };
+    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [], eras: [] };
     TimelineStore.setCurrentName(name);
     resetForm();
+    resetEraForm();
     renderAll();
   }
 
@@ -478,8 +601,10 @@
     var loaded = TimelineStore.loadTimeline(name);
     if (!loaded) return;
     state = loaded;
+    if (!Array.isArray(state.eras)) state.eras = []; // backward-compat: older saved timelines predate eras
     TimelineStore.setCurrentName(name);
     resetForm();
+    resetEraForm();
     renderAll();
   }
 
@@ -565,13 +690,18 @@
         title: decoded.title || '',
         lineStyle: decoded.lineStyle || 'solid',
         compactLabels: !!decoded.compactLabels,
-        events: decoded.events
+        events: decoded.events,
+        eras: Array.isArray(decoded.eras) ? decoded.eras : [] // backward-compat: older exports predate eras
       };
       var maxId = 0;
       state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
       idCounter = Math.max(idCounter, maxId + 1);
+      var maxEraId = 0;
+      state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
+      eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
       TimelineStore.setCurrentName(name);
       resetForm();
+      resetEraForm();
       renderAll();
     };
     reader.onerror = function () { alert('Couldn’t read that file.'); };

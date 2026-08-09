@@ -206,8 +206,9 @@
       <div class="btn-row">
         <button class="btn-primary" id="print-stations-btn" disabled>🖨️ Print Station Cards</button>
         <button class="btn-secondary" id="print-answers-btn" disabled>📋 Print Answer Key</button>
+        <button class="btn-secondary" id="export-csv-btn" type="button">⬇️ Export CSV</button>
       </div>
-      <div class="hint">The answer key prints separately, with your notes and the raw QR content — keep it with you, not with the students.</div>
+      <div class="hint">The answer key prints separately, with your notes and the raw QR content — keep it with you, not with the students. Export CSV saves your typed station list (not the print-ready QR content) for your own records.</div>
     </div>
     <div id="msg"></div>
   </div>
@@ -239,7 +240,7 @@
 
   var els = {};
   ['stations-body', 'add-row-btn', 'toggle-import', 'import-box', 'import-text', 'import-btn',
-   'cards-per-page', 'ec-level', 'show-number', 'print-stations-btn', 'print-answers-btn',
+   'cards-per-page', 'ec-level', 'show-number', 'print-stations-btn', 'print-answers-btn', 'export-csv-btn',
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
@@ -489,6 +490,29 @@
 
   [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
     el.addEventListener('change', function () { saveSettings(); scheduleRender(); });
+  });
+
+  // ── CSV export (raw typed values, for the teacher's own records) ────────
+  function csvField(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  els.exportCsvBtn.addEventListener('click', function () {
+    var rows = [['Label', 'Content', 'Note']].concat(stations.map(function (s) {
+      return [s.label, s.content, s.note];
+    }));
+    var csv = rows.map(function (row) { return row.map(csvField).join(','); }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'scavenger-hunt-stations.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }

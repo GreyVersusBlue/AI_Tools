@@ -140,6 +140,20 @@
         <label class="option-label" for="has-headers">First row is column headers</label>
       </div>
       <div id="preview-table-wrap" style="display:none;"><table id="preview-table"></table></div>
+
+      <div class="control-group" id="saved-datasets-group">
+        <label for="dataset-name">Saved datasets</label>
+        <div class="file-drop-row">
+          <input type="text" id="dataset-name" placeholder="Name this dataset…" style="flex:1;" maxlength="60">
+          <button type="button" class="btn-file" id="btn-save-dataset">Save</button>
+        </div>
+        <div class="file-drop-row">
+          <select id="saved-datasets-select" style="flex:1;"><option value="">Select a saved dataset…</option></select>
+          <button type="button" class="btn-file" id="btn-load-dataset">Load</button>
+          <button type="button" class="btn-file" id="btn-delete-dataset">Delete</button>
+        </div>
+        <p class="hint">Saved to this browser only — nothing is uploaded.</p>
+      </div>
     </div>
 
     <div class="card" id="columns-card" style="display:none;">
@@ -231,6 +245,7 @@
   "use strict";
 
   var STORAGE_KEY = 'data-chart-builder-settings';
+  var DATASETS_KEY = 'data-chart-builder-datasets';
   var PALETTE = ['var(--series1)', 'var(--series2)', 'var(--series3)', 'var(--series4)', 'var(--series5)', 'var(--series6)'];
   var PALETTE_HEX = ['#6c8ef5', '#a78bfa', '#4ade80', '#fbbf24', '#f87171', '#38bdf8'];
 
@@ -238,7 +253,8 @@
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
    'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
-   'btn-choose-file', 'file-input'
+   'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
+   'btn-load-dataset', 'btn-delete-dataset'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -266,6 +282,54 @@
       }));
     } catch (e) { /* ignore */ }
   }
+
+  // ── Saved datasets (name → raw pasted text, stored locally by choice) ─────
+  function getSavedDatasets() {
+    try {
+      var raw = localStorage.getItem(DATASETS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function setSavedDatasets(map) {
+    try { localStorage.setItem(DATASETS_KEY, JSON.stringify(map)); } catch (e) { /* ignore */ }
+  }
+  function refreshSavedDatasetsSelect() {
+    var map = getSavedDatasets();
+    var names = Object.keys(map).sort(function (a, b) { return a.localeCompare(b); });
+    els.savedDatasetsSelect.innerHTML = '<option value="">Select a saved dataset…</option>' +
+      names.map(function (n) { return '<option value="' + escapeXML(n) + '">' + escapeHtml(n) + '</option>'; }).join('');
+  }
+  els.btnSaveDataset.addEventListener('click', function () {
+    var name = els.datasetName.value.trim();
+    if (!name) { showMsg('Enter a name for this dataset before saving.'); return; }
+    var text = els.dataInput.value;
+    if (!text.trim()) { showMsg('Nothing to save — paste or load some data first.'); return; }
+    var map = getSavedDatasets();
+    map[name] = text;
+    setSavedDatasets(map);
+    refreshSavedDatasetsSelect();
+    els.savedDatasetsSelect.value = name;
+    els.datasetName.value = '';
+    clearMsg();
+  });
+  els.btnLoadDataset.addEventListener('click', function () {
+    var name = els.savedDatasetsSelect.value;
+    if (!name) { showMsg('Choose a saved dataset to load.'); return; }
+    var map = getSavedDatasets();
+    if (!Object.prototype.hasOwnProperty.call(map, name)) { showMsg('That saved dataset no longer exists.'); refreshSavedDatasetsSelect(); return; }
+    els.dataInput.value = map[name];
+    handleParse();
+    clearMsg();
+  });
+  els.btnDeleteDataset.addEventListener('click', function () {
+    var name = els.savedDatasetsSelect.value;
+    if (!name) { showMsg('Choose a saved dataset to delete.'); return; }
+    if (!window.confirm('Delete the saved dataset "' + name + '"?')) return;
+    var map = getSavedDatasets();
+    delete map[name];
+    setSavedDatasets(map);
+    refreshSavedDatasetsSelect();
+  });
 
   // ── Parsing ──────────────────────────────────────────────────────────────
   function splitLine(line, delim) {
@@ -807,6 +871,7 @@
   // ── Init ─────────────────────────────────────────────────────────────────
   loadSettings();
   syncChartTypeUI();
+  refreshSavedDatasetsSelect();
 
 })();
 </script>

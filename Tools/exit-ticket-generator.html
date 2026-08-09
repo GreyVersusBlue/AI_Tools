@@ -77,10 +77,17 @@
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 3rem 2rem; text-align: center; margin-bottom: .9rem; min-height: 13rem;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
   }
   .stage .prompt-text { font-size: clamp(1.5rem, 4.4vw, 2.5rem); font-weight: 700; max-width: 44rem; }
   .stage .empty { color: var(--muted); font-size: 1.1rem; font-weight: 400; }
+  .stage .think-timer {
+    font-size: clamp(1.8rem, 5.2vw, 3.2rem); font-weight: 800; margin: 0;
+    color: var(--accent-2); font-variant-numeric: tabular-nums;
+  }
+  .stage .think-timer:empty { display: none; }
+  .stage .think-timer.think-timer-done { color: var(--err); animation: think-timer-flash 1s steps(2, start) infinite; }
+  @keyframes think-timer-flash { 50% { opacity: .2; } }
 
   .meta-row { display: flex; justify-content: center; gap: .5rem; margin-bottom: 1.3rem; flex-wrap: wrap; min-height: 1.4rem; }
   .meta-row .tag {
@@ -183,12 +190,22 @@
         <label for="categorySelect" style="margin-bottom:.2rem;">Category</label>
         <select id="categorySelect"></select>
       </div>
+      <div>
+        <label for="thinkTimeSelect" style="margin-bottom:.2rem;">Think time</label>
+        <select id="thinkTimeSelect">
+          <option value="0">Off</option>
+          <option value="30">30 sec</option>
+          <option value="60">1 min</option>
+          <option value="120">2 min</option>
+        </select>
+      </div>
       <label class="check-inline" for="includeMineCheck"><input type="checkbox" id="includeMineCheck"> Also include My Prompts</label>
       <button type="button" id="shuffleBtn">&#128256; Shuffle / Next Prompt</button>
     </div>
 
     <div class="stage" id="stage">
       <p class="prompt-text empty" id="promptText">Press Shuffle to get a prompt.</p>
+      <p class="think-timer" id="thinkTimer" aria-live="polite"></p>
     </div>
     <div class="meta-row" id="metaRow"></div>
 
@@ -272,8 +289,11 @@
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow',
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
-   'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea'
+   'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
+   'thinkTimeSelect', 'thinkTimer'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var THINK_TIME_OPTIONS = [0, 30, 60, 120];
 
   var CATEGORIES = [
     { key: 'general', label: 'General reflection' },
@@ -394,10 +414,12 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0 };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
   var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
+  var thinkTimerInterval = null;
+  var thinkTimeRemaining = 0;
 
   // ── Persistence ──────────────────────────────────────────────────────────
   function loadSettings() {
@@ -421,6 +443,7 @@
     if (typeof saved.showName === 'boolean') settings.showName = saved.showName;
     if (typeof saved.showDate === 'boolean') settings.showDate = saved.showDate;
     if (typeof saved.includeMine === 'boolean') settings.includeMine = saved.includeMine;
+    if (THINK_TIME_OPTIONS.indexOf(saved.thinkTime) !== -1) settings.thinkTime = saved.thinkTime;
   }
 
   function loadCustomBank() {
@@ -490,6 +513,7 @@
     if (!items.length) {
       currentPrompt = { cat: '', text: '' };
       renderStage();
+      stopThinkTimer();
       renderHandoutPromptDisplay();
       renderHandout();
       return;
@@ -503,6 +527,7 @@
     els.customPrompt.value = '';
     pushHistory(currentPrompt);
     renderStage();
+    startThinkTimer();
     renderHistory();
     renderHandoutPromptDisplay();
     renderHandout();
@@ -514,6 +539,7 @@
     currentPrompt = { cat: 'custom', text: val };
     pushHistory(currentPrompt);
     renderStage();
+    startThinkTimer();
     renderHistory();
     renderHandoutPromptDisplay();
     renderHandout();
@@ -542,6 +568,51 @@
     }).join('');
   }
 
+  // ── Think-time countdown ─────────────────────────────────────────────────
+  function formatThinkTime(sec) {
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function playThinkTimeChime() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.frequency.value = 880;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch (e) { /* WebAudio unavailable — visual cue still shows */ }
+  }
+  function stopThinkTimer() {
+    if (thinkTimerInterval) { clearInterval(thinkTimerInterval); thinkTimerInterval = null; }
+    els.thinkTimer.textContent = '';
+    els.thinkTimer.classList.remove('think-timer-done');
+  }
+  function startThinkTimer() {
+    stopThinkTimer();
+    if (!settings.thinkTime || !currentPrompt.text) return;
+    thinkTimeRemaining = settings.thinkTime;
+    els.thinkTimer.textContent = formatThinkTime(thinkTimeRemaining);
+    thinkTimerInterval = setInterval(function () {
+      thinkTimeRemaining--;
+      if (thinkTimeRemaining <= 0) {
+        clearInterval(thinkTimerInterval);
+        thinkTimerInterval = null;
+        els.thinkTimer.textContent = "Time's up!";
+        els.thinkTimer.classList.add('think-timer-done');
+        playThinkTimeChime();
+      } else {
+        els.thinkTimer.textContent = formatThinkTime(thinkTimeRemaining);
+      }
+    }, 1000);
+  }
+
   els.categorySelect.addEventListener('change', function () {
     settings.category = els.categorySelect.value;
     saveSettings();
@@ -554,6 +625,12 @@
   });
   els.shuffleBtn.addEventListener('click', pickPrompt);
   els.useCustomBtn.addEventListener('click', useCustomPrompt);
+  els.thinkTimeSelect.addEventListener('change', function () {
+    var v = parseInt(els.thinkTimeSelect.value, 10);
+    settings.thinkTime = THINK_TIME_OPTIONS.indexOf(v) !== -1 ? v : 0;
+    saveSettings();
+    startThinkTimer();
+  });
 
   // ── My Prompts bank ──────────────────────────────────────────────────────
   function addBankPrompt() {
@@ -677,6 +754,7 @@
   els.perPageSelect.value = String(settings.perPage);
   els.showNameCheck.checked = settings.showName;
   els.showDateCheck.checked = settings.showDate;
+  els.thinkTimeSelect.value = String(settings.thinkTime);
 
   pickPrompt();
   renderHandout();
