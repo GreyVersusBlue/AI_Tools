@@ -120,6 +120,9 @@
   .print-only { display: none; }
   .print-only h2 { font-size: 1.3rem; margin: 0 0 .2rem; }
   .print-only .p-sub { color: #555; font-size: .85rem; margin-bottom: 1rem; }
+  .print-only .print-meeting { margin-bottom: 1.6rem; }
+  .print-only .print-meeting + .print-meeting { border-top: 1px solid #999; padding-top: 1rem; }
+  .print-only .print-meeting h3 { font-size: 1.02rem; margin: 0 0 .6rem; color: #000; }
 
   @media print {
     body { background: #fff; padding: 0; }
@@ -214,6 +217,9 @@
         </div>
         <div class="btn-row">
           <button type="button" class="secondary" id="printBtn">Print today's roles sheet</button>
+          <button type="button" class="secondary" id="printLogBtn">Print full meeting log</button>
+        </div>
+        <div class="btn-row">
           <button type="button" class="danger" id="resetHistoryBtn">Reset role history</button>
         </div>
         <p class="hint" id="historyHint"></p>
@@ -247,6 +253,12 @@
   <div id="printGroups" class="groups-grid"></div>
 </div>
 
+<div class="print-only" id="printLogArea">
+  <h2 id="printLogTitle">Full Meeting Log</h2>
+  <p class="p-sub" id="printLogSub"></p>
+  <div id="printLogMeetings"></div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -261,9 +273,10 @@
    'namesInput', 'rosterHubSelect', 'rosterHubLoadBtn',
    'splitValueLabel', 'splitValue', 'splitBtn', 'groupEditList',
    'roleList', 'addRoleBtn',
-   'meetingDate', 'checkpointInputs', 'logMeetingBtn', 'printBtn', 'resetHistoryBtn', 'historyHint',
+   'meetingDate', 'checkpointInputs', 'logMeetingBtn', 'printBtn', 'printLogBtn', 'resetHistoryBtn', 'historyHint',
    'resultsArea', 'meetingHistory', 'msg',
-   'printArea', 'printTitle', 'printSub', 'printGroups'
+   'printArea', 'printTitle', 'printSub', 'printGroups',
+   'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.nameCount = document.getElementById('name-count');
 
@@ -606,8 +619,10 @@
     return (state.meetings && state.meetings.length) ? state.meetings[0] : null;
   }
 
-  function groupsGridHtml(meeting) {
-    return '<div class="groups-grid">' + meeting.groups.map(function (g) {
+  // Shared per-group-card renderer — used for the on-screen "latest meeting"
+  // results, the single-meeting print sheet, and the full meeting log print.
+  function groupCardsHtml(groups) {
+    return groups.map(function (g) {
       var cpHtml = g.checkpoint ? '<p class="checkpoint">' + escapeHtml(g.checkpoint) + '</p>' : '';
       return '<div class="group-card"><h3>' + escapeHtml(g.label) + '</h3>' + cpHtml + '<ul>' +
         g.assignment.map(function (s) {
@@ -615,7 +630,11 @@
           var cls = s.role ? 'role' : 'role member';
           return '<li><span class="name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
         }).join('') + '</ul></div>';
-    }).join('') + '</div>';
+    }).join('');
+  }
+
+  function groupsGridHtml(meeting) {
+    return '<div class="groups-grid">' + groupCardsHtml(meeting.groups) + '</div>';
   }
 
   function renderResults() {
@@ -676,17 +695,37 @@
     if (state.bookTitle) subBits.push(state.bookTitle);
     if (meeting.together && meeting.wholeClassCheckpoint) subBits.push('Checkpoint: ' + meeting.wholeClassCheckpoint);
     els.printSub.textContent = subBits.join(' · ');
-    els.printGroups.innerHTML = meeting.groups.map(function (g) {
-      var cpHtml = g.checkpoint ? '<p class="checkpoint">' + escapeHtml(g.checkpoint) + '</p>' : '';
-      return '<div class="group-card"><h3>' + escapeHtml(g.label) + '</h3>' + cpHtml + '<ul>' +
-        g.assignment.map(function (s) {
-          var roleText = s.role || MEMBER_LABEL;
-          var cls = s.role ? 'role' : 'role member';
-          return '<li><span class="name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
-        }).join('') + '</ul></div>';
-    }).join('');
+    els.printGroups.innerHTML = groupCardsHtml(meeting.groups);
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printArea.classList.add('active');
+    window.print();
+  });
+
+  // One meeting's section within the full-log print view: reuses the same
+  // groupCardsHtml() renderer that powers the on-screen results/history and
+  // the single-meeting print sheet above.
+  function meetingLogSectionHtml(meeting) {
+    var subBits = [];
+    subBits.push('Meeting: ' + escapeHtml(meeting.date));
+    if (meeting.together && meeting.wholeClassCheckpoint) subBits.push('Checkpoint: ' + escapeHtml(meeting.wholeClassCheckpoint));
+    else if (!meeting.together) subBits.push('Per-group pacing');
+    return '<div class="print-meeting"><h3>' + subBits.join(' &middot; ') + '</h3>' +
+      '<div class="groups-grid">' + groupCardsHtml(meeting.groups) + '</div></div>';
+  }
+
+  els.printLogBtn.addEventListener('click', function () {
+    var meetings = state.meetings || [];
+    if (!meetings.length) { showMsg('Log a meeting before printing.'); return; }
+    els.printLogTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Full Meeting Log';
+    var subBits = [];
+    if (state.bookTitle) subBits.push(state.bookTitle);
+    subBits.push(meetings.length + ' meeting' + (meetings.length === 1 ? '' : 's'));
+    els.printLogSub.textContent = subBits.join(' · ');
+    // state.meetings is stored newest-first; print in chronological order.
+    var chronological = meetings.slice().reverse();
+    els.printLogMeetings.innerHTML = chronological.map(meetingLogSectionHtml).join('');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printLogArea.classList.add('active');
     window.print();
   });
 
