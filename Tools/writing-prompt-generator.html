@@ -82,8 +82,12 @@
 
   .history { border-top: 1px solid var(--line); padding-top: 1rem; }
   .history h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 .6rem; }
-  .history ol { margin: 0; padding-left: 1.3rem; color: var(--muted); font-size: .88rem; }
+  .history ol { margin: 0; padding-left: 1.3rem; color: var(--muted); font-size: .88rem; max-height: 16rem; overflow-y: auto; }
   .history li { margin-bottom: .3rem; }
+  .history .hist-date {
+    font-family: Consolas, monospace; font-size: .72rem; color: var(--muted);
+    border: 1px solid var(--line-strong); border-radius: 4px; padding: .05rem .35rem; margin-right: .4rem;
+  }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; text-align: center; }
 </style>
@@ -122,7 +126,7 @@
   </div>
 
   <div class="history">
-    <h2>Recently shown this session</h2>
+    <h2>Prompt history</h2>
     <ol id="historyList"></ol>
   </div>
 
@@ -142,9 +146,15 @@
   });
 
   var settings = { bands: ['ms', 'hs'], genre: 'all' };
-  var history = []; // {band, genre, text}
-  var HISTORY_LIMIT = 8;
+  var history = []; // {band, genre, text, date} — persisted across sessions, newest first
+  var HISTORY_LIMIT = 200; // keep a school-year's worth of entries without growing unbounded
   var AVOID_REPEAT_WINDOW = 6;
+
+  function todayStr() {
+    var d = new Date();
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
 
   function loadSaved() {
     var saved = WritingPromptStore.load();
@@ -157,8 +167,18 @@
     if (saved && saved.genre && (saved.genre === 'all' || validGenres.indexOf(saved.genre) !== -1)) {
       settings.genre = saved.genre;
     }
+
+    var savedHistory = WritingPromptStore.loadHistory();
+    var isDate = function (s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); };
+    history = savedHistory.filter(function (h) {
+      return h && typeof h.text === 'string' &&
+        validBands.indexOf(h.band) !== -1 &&
+        validGenres.indexOf(h.genre) !== -1 &&
+        isDate(h.date);
+    }).slice(0, HISTORY_LIMIT);
   }
   function persist() { WritingPromptStore.save(settings); }
+  function persistHistory() { WritingPromptStore.saveHistory(history); }
 
   function buildGenreSelect() {
     var allOpt = document.createElement('option');
@@ -212,9 +232,11 @@
     var candidates = items.filter(function (i) { return avoid.indexOf(i.text) === -1; });
     if (!candidates.length) candidates = items; // pool smaller than the avoid-repeat window
     var pick = candidates[Math.floor(Math.random() * candidates.length)];
+    pick = { band: pick.band, genre: pick.genre, text: pick.text, date: todayStr() };
 
     history.unshift(pick);
     history = history.slice(0, HISTORY_LIMIT);
+    persistHistory();
 
     els.stage.innerHTML = '<p class="prompt-text">' + escapeHtml(pick.text) + '</p>';
     els.metaRow.innerHTML =
@@ -225,8 +247,8 @@
   }
 
   function renderHistory() {
-    els.historyList.innerHTML = history.slice(1).map(function (h) {
-      return '<li>' + escapeHtml(h.text) + '</li>';
+    els.historyList.innerHTML = history.map(function (h) {
+      return '<li><span class="hist-date">' + escapeHtml(h.date) + '</span>' + escapeHtml(h.text) + '</li>';
     }).join('');
   }
 
@@ -285,6 +307,7 @@
   loadSaved();
   buildGenreSelect();
   applyBandTabs();
+  renderHistory();
 })();
 </script>
 <script>

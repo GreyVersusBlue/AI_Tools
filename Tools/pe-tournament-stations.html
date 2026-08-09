@@ -110,6 +110,7 @@
   .stage-controls button.secondary:hover { background: rgba(255,255,255,.22); border-color: #fff; }
   .stage-controls button.danger { background: rgba(255,255,255,.12); color: #ffd8d0; border-color: #e08a7a; }
   .stage-controls button.danger:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
 
   .station-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .7rem; margin-top: .5rem; }
   .station-tile {
@@ -225,7 +226,7 @@
     </div>
   </div>
 
-  <div class="stage">
+  <div class="stage" id="stage">
     <div class="stage-sub" id="stageSub">Rotation 1</div>
     <div class="stage-time" id="stageTime">04:00</div>
     <div class="stage-status" id="stageStatus"></div>
@@ -235,6 +236,7 @@
       <button id="resumeBtn" type="button" hidden>Resume</button>
       <button id="rotateNowBtn" class="secondary" type="button">Rotate now</button>
       <button id="resetRotationBtn" class="danger" type="button">Reset</button>
+      <button id="fullscreenBtn" class="secondary" type="button" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
     </div>
     <div class="station-tiles" id="stationTiles"></div>
   </div>
@@ -297,7 +299,7 @@
    'projectName', 'addStationBtn', 'stationsList',
    'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
    'rotMinutes', 'rotSeconds', 'soundToggle',
-   'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'stationTiles',
+   'stage', 'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'fullscreenBtn', 'stationTiles',
    'bracketSource', 'bracketCustomWrap', 'bracketEntrants', 'bracketSeedRandom', 'generateBracketBtn', 'resetBracketBtn', 'msg',
    'championBanner', 'bracketCard', 'bracketTitle', 'bracketView',
    'printArea', 'printTitle', 'printSub', 'printScheduleWrap', 'printBracketWrap'
@@ -679,6 +681,25 @@
   els.rotSeconds.addEventListener('change', function () { state.rotation.seconds = Math.max(0, Math.min(59, parseInt(els.rotSeconds.value, 10) || 0)); save(); tickDisplay(); });
 
   setInterval(tick, TICK_MS);
+
+  /* ---------- fullscreen / kiosk toggle for the stage ---------- */
+  function updateFullscreenLabel() {
+    var active = document.fullscreenElement === els.stage;
+    els.fullscreenBtn.innerHTML = active ? '&#10530; Exit Fullscreen' : '&#9970; Fullscreen';
+  }
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (els.stage.requestFullscreen) els.stage.requestFullscreen();
+  }
+  els.fullscreenBtn.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', updateFullscreenLabel);
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+      toggleFullscreen();
+    }
+  });
 
   /* ---------- bracket (same algorithm as Bracket / Tournament Generator) ---------- */
   function nextPowerOf2(n) {

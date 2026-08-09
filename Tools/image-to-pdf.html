@@ -242,6 +242,41 @@
   const progressLabel = document.getElementById('progress-label');
   const msg        = document.getElementById('msg');
 
+  // Assembling several packets in a row shouldn't require re-picking the same
+  // page-size/orientation/quality every time — persist just those three (not
+  // the file queue, sort order, or per-image rotations).
+  const SETTINGS_KEY = 'image-to-pdf-settings';
+  const pageSizeSel  = document.getElementById('page-size');
+  const qualitySel   = document.getElementById('quality');
+
+  (function loadSettingsPrefs() {
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch (e) { raw = {}; }
+    if (raw.pageSize && pageSizeSel.querySelector(`option[value="${raw.pageSize}"]`)) {
+      pageSizeSel.value = raw.pageSize;
+    }
+    if (raw.orient) {
+      const orientInput = document.querySelector(`input[name="orient"][value="${raw.orient}"]`);
+      if (orientInput) orientInput.checked = true;
+    }
+    if (raw.quality && qualitySel.querySelector(`option[value="${raw.quality}"]`)) {
+      qualitySel.value = raw.quality;
+    }
+  })();
+
+  function saveSettingsPrefs() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        pageSize: pageSizeSel.value,
+        orient: document.querySelector('input[name="orient"]:checked').value,
+        quality: qualitySel.value
+      }));
+    } catch (e) { /* storage full/blocked */ }
+  }
+  pageSizeSel.addEventListener('change', saveSettingsPrefs);
+  qualitySel.addEventListener('change', saveSettingsPrefs);
+  document.querySelectorAll('input[name="orient"]').forEach(r => r.addEventListener('change', saveSettingsPrefs));
+
   const VALID_EXT = /\.(png|jpe?g|webp|svg)$/i;
 
   let loadedFiles = [];   // Array of { id, file, thumbUrl, rotation } — array order is the "custom" order
