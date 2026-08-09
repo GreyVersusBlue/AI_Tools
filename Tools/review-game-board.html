@@ -131,6 +131,9 @@
   }
   .overlay.show { display: flex; }
   .overlay .cat-points { color: var(--gold); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 1.2rem; font-size: 1.1rem; }
+  .overlay .countdown { display: none; font-family: Consolas, monospace; font-size: 2.4rem; font-weight: 700; color: var(--gold); margin-bottom: 1rem; }
+  .overlay .countdown.show { display: block; }
+  .overlay .countdown.low { color: var(--err); }
   .overlay .question-text { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 700; max-width: 50rem; margin-bottom: 1.6rem; }
   .overlay .answer-text {
     font-size: clamp(1.3rem, 3vw, 2rem); color: var(--gold); max-width: 50rem;
@@ -146,6 +149,7 @@
   .board-options { display: flex; align-items: center; gap: 1rem; margin-bottom: .9rem; flex-wrap: wrap; }
   .board-options label { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .85rem; margin: 0; }
   .board-options input[type="checkbox"] { width: auto; }
+  .board-options .seconds-input { width: 3.6rem; padding: .3rem .4rem; font-weight: 400; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -221,6 +225,8 @@
     <div class="board-options">
       <label><input type="checkbox" id="dailyDoubleToggle"> Daily Double (doubles the points on one random unused clue)</label>
       <button type="button" class="secondary small" id="redrawDailyDoubleBtn">Redraw Daily Double</button>
+      <label><input type="checkbox" id="lightningRoundToggle"> Lightning round (visible countdown per question)</label>
+      <label for="lightningRoundSeconds">Seconds: <input type="number" id="lightningRoundSeconds" class="seconds-input" min="3" max="120" value="15"></label>
     </div>
     <div class="scoreboard" id="scoreboard"></div>
     <div class="board-grid">
@@ -238,6 +244,7 @@
 
 <div class="overlay" id="overlay">
   <div class="cat-points" id="overlayCatPoints"></div>
+  <div class="countdown" id="overlayCountdown"></div>
   <div class="question-text" id="overlayQuestion"></div>
   <div class="answer-text" id="overlayAnswer"></div>
   <div class="overlay-actions">
@@ -273,13 +280,16 @@
    'printAnswerKeyBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
-   'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','scoreboard','boardCols',
-   'overlay','overlayCatPoints','overlayQuestion','overlayAnswer',
+   'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','lightningRoundToggle','lightningRoundSeconds',
+   'scoreboard','boardCols',
+   'overlay','overlayCatPoints','overlayCountdown','overlayQuestion','overlayAnswer',
    'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
   var currentClue = null; // {catIdx, clueIdx}
+  var lightningTimer = null;
+  var lightningRemaining = 0;
 
   /* ---------- persistence ---------- */
   function save() {
@@ -461,12 +471,14 @@
   }
 
   /* ---------- board lifecycle ---------- */
-  function startBoard(name, categories, teams, dailyDoubleEnabled) {
+  function startBoard(name, categories, teams, dailyDoubleEnabled, lightningRoundEnabled, lightningRoundSeconds) {
     state = {
       name: name,
       categories: categories,
       teams: teams || [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
-      dailyDoubleEnabled: !!dailyDoubleEnabled
+      dailyDoubleEnabled: !!dailyDoubleEnabled,
+      lightningRoundEnabled: !!lightningRoundEnabled,
+      lightningRoundSeconds: lightningRoundSeconds || 15
     };
     ReviewBoardStore.setCurrentName(name);
     assignDailyDouble();
@@ -503,6 +515,8 @@
     if (!loaded) return;
     state = loaded;
     if (typeof state.dailyDoubleEnabled !== 'boolean') state.dailyDoubleEnabled = false; // boards saved before this field existed
+    if (typeof state.lightningRoundEnabled !== 'boolean') state.lightningRoundEnabled = false; // boards saved before this field existed
+    if (!state.lightningRoundSeconds) state.lightningRoundSeconds = 15;
     ReviewBoardStore.setCurrentName(name);
     refreshSwitcher();
     renderBoard();
@@ -570,7 +584,9 @@
       name: name,
       categories: categories,
       teams: teams.length ? teams : [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
-      dailyDoubleEnabled: !!loaded.dailyDoubleEnabled
+      dailyDoubleEnabled: !!loaded.dailyDoubleEnabled,
+      lightningRoundEnabled: !!loaded.lightningRoundEnabled,
+      lightningRoundSeconds: Number(loaded.lightningRoundSeconds) || 15
     };
   }
 
@@ -652,6 +668,8 @@
     els.boardTitle.textContent = state.name;
     els.dailyDoubleToggle.checked = !!state.dailyDoubleEnabled;
     els.redrawDailyDoubleBtn.disabled = !state.dailyDoubleEnabled;
+    els.lightningRoundToggle.checked = !!state.lightningRoundEnabled;
+    els.lightningRoundSeconds.value = state.lightningRoundSeconds;
 
     // scoreboard
     els.scoreboard.innerHTML = '';
@@ -743,6 +761,7 @@
     els.awardRow.classList.remove('show');
     els.closeUsedRow.style.display = 'none';
     els.overlay.classList.add('show');
+    startLightningTimer();
   }
 
   function markCurrentClueUsed() {
@@ -751,11 +770,38 @@
   }
 
   function closeOverlay() {
+    stopLightningTimer();
     els.overlay.classList.remove('show');
     currentClue = null;
   }
 
-  els.showAnswerBtn.addEventListener('click', function () {
+  /* ---------- lightning round countdown ---------- */
+  function stopLightningTimer() {
+    if (lightningTimer) { clearInterval(lightningTimer); lightningTimer = null; }
+    els.overlayCountdown.classList.remove('show', 'low');
+  }
+
+  function startLightningTimer() {
+    stopLightningTimer();
+    if (!state.lightningRoundEnabled) return;
+    lightningRemaining = state.lightningRoundSeconds;
+    els.overlayCountdown.textContent = lightningRemaining;
+    els.overlayCountdown.classList.add('show');
+    lightningTimer = setInterval(function () {
+      lightningRemaining--;
+      if (lightningRemaining <= 0) {
+        stopLightningTimer();
+        revealAnswer();
+        return;
+      }
+      els.overlayCountdown.textContent = lightningRemaining;
+      els.overlayCountdown.classList.toggle('low', lightningRemaining <= 5);
+    }, 1000);
+  }
+
+  function revealAnswer() {
+    if (!currentClue) return;
+    stopLightningTimer();
     els.overlayAnswer.classList.add('show');
     els.showAnswerBtn.style.display = 'none';
     els.closeNoAskBtn.style.display = 'none';
@@ -776,7 +822,9 @@
       els.awardRow.appendChild(b);
     });
     els.awardRow.classList.add('show');
-  });
+  }
+
+  els.showAnswerBtn.addEventListener('click', revealAnswer);
 
   els.closeNoAskBtn.addEventListener('click', function () {
     // Closed before the question was even shown to the class — don't mark used.
@@ -812,7 +860,8 @@
           if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
         });
       });
-      startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled);
+      startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
+        editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds);
     } else {
       startBoard(name, categories);
     }
@@ -835,7 +884,10 @@
     var teams = state.teams;
     var usedMap = usedMapFor(categories);
     showSetup(categories);
-    editingBoard = { name: name, teams: teams, usedMap: usedMap, dailyDoubleEnabled: state.dailyDoubleEnabled };
+    editingBoard = {
+      name: name, teams: teams, usedMap: usedMap, dailyDoubleEnabled: state.dailyDoubleEnabled,
+      lightningRoundEnabled: state.lightningRoundEnabled, lightningRoundSeconds: state.lightningRoundSeconds
+    };
     els.boardName.value = name;
   });
 
@@ -862,6 +914,20 @@
     assignDailyDouble();
     save();
     renderBoard();
+  });
+
+  els.lightningRoundToggle.addEventListener('change', function () {
+    if (!state) return;
+    state.lightningRoundEnabled = els.lightningRoundToggle.checked;
+    save();
+  });
+
+  els.lightningRoundSeconds.addEventListener('change', function () {
+    if (!state) return;
+    var seconds = parseInt(els.lightningRoundSeconds.value, 10);
+    state.lightningRoundSeconds = (isNaN(seconds) || seconds < 1) ? 15 : seconds;
+    els.lightningRoundSeconds.value = state.lightningRoundSeconds;
+    save();
   });
 
   els.deleteBoardBtn.addEventListener('click', function () {
