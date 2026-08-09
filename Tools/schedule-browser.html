@@ -91,6 +91,10 @@
 #app-browser .btn-print{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-gold-soft);background:#fff;
   color:var(--br-forest);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s}
 #app-browser .btn-print:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
+#app-browser .btn-dl{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-forest);background:var(--br-forest);
+  color:#fff;padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s;margin-left:auto;flex:none}
+#app-browser .btn-dl:hover{background:var(--br-forest-2);border-color:var(--br-forest-2)}
+@media(max-width:620px){#app-browser .btn-dl{margin-left:0;width:100%}}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
 #app-browser .br-empty .big{font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--br-forest);margin-bottom:8px}
@@ -202,7 +206,7 @@
 #app-browser .offmap b{color:var(--br-forest)}
 @media(max-width:620px){#app-browser .mini-side{flex:1 1 100%}}
 @media print{
-  #app-browser .toolbar,#app-browser .btn-print,#app-browser .br-menu,
+  #app-browser .toolbar,#app-browser .btn-print,#app-browser .btn-dl,#app-browser .br-menu,
   #app-browser .overview,#app-browser .footnote,#btn-toggle-app,#btn-open-schedule-browser{display:none!important}
   #app-browser .mast,#app-browser .panel{box-shadow:none;border-radius:0;border:none}
   #app-browser .tcard,#app-browser .gchip{cursor:default}
@@ -427,6 +431,7 @@ function brRenderTeacher(n) {
    <div class="idhead">
      <div class="ibadge" style="background:${col}">${brEscHtml(n[0])}</div>
      <div><h2>${brEscHtml(n)}</h2><div class="role" style="color:${col}">${brEscHtml(deptLabel)} · Room ${brEscHtml(t.room)}</div></div>
+     <button class="btn-dl" onclick="brDownloadTeacherSchedule('${brJsAttr(n)}')">Download schedule (PNG)</button>
    </div>
    <p class="factline">Teaches <b>${t.sec.length} class${t.sec.length!==1?'es':''}</b>. Planning is <b>${BR_MOD_LABEL} ${t.plan}</b>.
      ${split?'A&nbsp;days and B&nbsp;days are different — both are shown below.':'A&nbsp;days and B&nbsp;days are the same.'}</p>
@@ -450,6 +455,112 @@ function brRenderTeacher(n) {
        <div class="nm">${brEscHtml(m.n)}</div><div class="sj" style="color:${mc}">${brEscHtml(mdLabel)}</div>
        <div class="rm">Room ${brEscHtml(mt.room)} · shares ${brEscHtml(shared.join(', '))}</div></button>`;}).join('')}</div>`:''}
    ${brOverviewHTML()}`;
+}
+
+/* ── R61: download a teacher's day as a PNG, drawn on an off-screen canvas ── */
+function brSlug(s) {
+  return String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'teacher';
+}
+function brFitText(ctx, text, maxW) {
+  text = String(text);
+  if (ctx.measureText(text).width <= maxW) return text;
+  let s = text;
+  while (s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+  return s.length ? s + '…' : '…';
+}
+function brDrawDayBlock(ctx, x, y, w, label, arr, room, day) {
+  const rowH = 62, headH = 38, periodW = 78, pad = 14;
+  ctx.fillStyle = day === 'B' ? '#4d5f3f' : '#0c4b31';
+  ctx.fillRect(x, y, w, headH);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 15px "Public Sans", Arial, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(brFitText(ctx, label, w - pad * 2), x + pad, y + headH / 2 + 1);
+  let ry = y + headH;
+  const bell = BR_BELL ? (day === 'B' ? BR_BELL.B : BR_BELL.A) : null;
+  for (let i = 0; i < BR_MODCOUNT; i++) {
+    const sec = arr[i], plan = !sec || sec === 'Planning';
+    const time = bell ? (bell[i] || '') : '';
+    ctx.fillStyle = plan ? '#fdfaef' : (i % 2 ? '#ffffff' : '#fbfcfa');
+    ctx.fillRect(x, ry, w, rowH);
+    ctx.strokeStyle = '#e8eee9'; ctx.lineWidth = 1;
+    ctx.strokeRect(x + .5, ry + .5, w - 1, rowH - 1);
+    ctx.strokeRect(x + .5, ry + .5, periodW - 1, rowH - 1);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#0c4b31';
+    ctx.font = '700 20px Georgia, "Times New Roman", serif';
+    ctx.fillText(String(i + 1), x + periodW / 2, ry + 28);
+    ctx.font = '700 9px "Public Sans", Arial, sans-serif';
+    ctx.fillStyle = '#62756a';
+    ctx.fillText(brFitText(ctx, BR_MOD_LABEL.toUpperCase(), periodW - 6), x + periodW / 2, ry + 40);
+    if (time) {
+      ctx.font = '600 9px "Public Sans", Arial, sans-serif';
+      ctx.fillText(brFitText(ctx, time, periodW - 6), x + periodW / 2, ry + 52);
+    }
+    ctx.textAlign = 'left';
+    const cx = x + periodW + pad, cw = w - periodW - pad * 2;
+    if (plan) {
+      ctx.fillStyle = '#9a8430';
+      ctx.font = 'italic 700 15px "Public Sans", Arial, sans-serif';
+      ctx.fillText(brFitText(ctx, 'Planning / Intervention', cw), cx, ry + rowH / 2 + 5);
+    } else {
+      ctx.fillStyle = '#283831';
+      ctx.font = '700 16px "Public Sans", Arial, sans-serif';
+      ctx.fillText(brFitText(ctx, 'Class ' + sec, cw), cx, ry + 27);
+      ctx.fillStyle = '#62756a';
+      ctx.font = '400 13px "Public Sans", Arial, sans-serif';
+      ctx.fillText(brFitText(ctx, 'Room ' + room, cw), cx, ry + 46);
+    }
+    ry += rowH;
+  }
+}
+function brDownloadTeacherSchedule(n) {
+  const t = BR_TEACHERS[n]; if (!t) return;
+  const split = JSON.stringify(t.A) !== JSON.stringify(t.B);
+  const deptLabel = (BR_DEPT[t.dept] || {}).name || t.dept;
+  const scale = 2, pad = 32, gap = 20, headH = 118, dayHeadH = 38, rowH = 62;
+  const colW = split ? 380 : 780;
+  const width = pad * 2 + colW * (split ? 2 : 1) + (split ? gap : 0);
+  const height = headH + 14 + dayHeadH + BR_MODCOUNT * rowH + 24;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale; canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = '#f6f8f5';
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = '#0c4b31';
+  ctx.fillRect(0, 0, width, headH);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#f3c63f';
+  ctx.font = '700 12px "Public Sans", Arial, sans-serif';
+  ctx.fillText('TEACHER SCHEDULE', pad, 30);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 30px Georgia, "Times New Roman", serif';
+  ctx.fillText(brFitText(ctx, n, width - pad * 2), pad, 66);
+  ctx.fillStyle = '#eaf3ec';
+  ctx.font = '600 14.5px "Public Sans", Arial, sans-serif';
+  const sub = `${deptLabel} · Room ${t.room} · Planning is ${BR_MOD_LABEL} ${t.plan}`;
+  ctx.fillText(brFitText(ctx, sub, width - pad * 2), pad, 92);
+
+  const cy = headH + 14;
+  brDrawDayBlock(ctx, pad, cy, colW, split ? 'A Day' : 'Every day (A & B the same)', t.A, t.room, 'A');
+  if (split) brDrawDayBlock(ctx, pad + colW + gap, cy, colW, 'B Day', t.B, t.room, 'B');
+
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = brSlug(n) + '-schedule.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }, 'image/png');
 }
 
 function brRenderGroup(sec) {
