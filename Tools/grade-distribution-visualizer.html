@@ -108,10 +108,20 @@
 
   .outlier-note { font-size: .82rem; color: var(--err); background: #f7e1de; border: 1px solid #e8c3bb; border-radius: 6px; padding: .5rem .7rem; margin: -.4rem 0 1.2rem; }
 
+  .compare-table-wrap { overflow-x: auto; }
   .compare-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin-top: .6rem; }
   .compare-table th, .compare-table td { padding: .35rem .5rem; border-bottom: 1px solid var(--line); text-align: right; }
   .compare-table th:first-child, .compare-table td:first-child { text-align: left; color: var(--muted); font-weight: 600; }
   .compare-table th { font-weight: 600; color: var(--accent); }
+
+  .compare-checks { max-height: 9rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; margin-bottom: .3rem; }
+  .compare-check-row { display: flex; align-items: center; gap: .4rem; font-size: .85rem; padding: .15rem 0; cursor: pointer; font-weight: normal; }
+  .compare-check-row input { margin: 0; width: auto; }
+
+  .compare-trend { margin: .6rem 0 1rem; }
+  .compare-trend-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem; }
+  .compare-trend-label { flex: 0 0 9rem; font-size: .82rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compare-trend-bar { flex: 1; margin-bottom: 0; height: 1.5rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
   footer.note a { color: var(--accent-2); }
@@ -175,9 +185,9 @@
       </div>
 
       <div class="card">
-        <label for="compareSelect">Compare current assignment with</label>
-        <select id="compareSelect"><option value="">None</option></select>
-        <p class="hint">Pulls another saved assignment's own scores and letter cutoffs and lines the two up side by side.</p>
+        <label>Compare current assignment with</label>
+        <div class="compare-checks" id="compareChecks"></div>
+        <p class="hint">Pick any number of saved assignments to pull in their own scores and letter cutoffs and line them up alongside this one &mdash; handy for tracking a trend across a unit.</p>
       </div>
     </div>
 
@@ -235,10 +245,10 @@
   var els = {};
   ['toolbar', 'listSwitch', 'newListBtn', 'deleteListBtn', 'listName', 'scoreInput', 'parseNote',
    'cutA', 'cutB', 'cutC', 'cutD', 'bucketWidth', 'printBtn', 'printTitle', 'outputBody',
-   'compareSelect', 'compareWrap'
+   'compareChecks', 'compareWrap'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth }
+  var state = null; // { name, text, cutA, cutB, cutC, cutD, bucketWidth, compareNames }
   var lastChartData = null; // snapshot of what's currently rendered, for the PNG/SVG downloads below
 
   /* ---------- tolerant score parser ----------
@@ -626,7 +636,7 @@
     renderComparison();
   }
 
-  /* ---------- two-assignment comparison ---------- */
+  /* ---------- multi-assignment comparison ---------- */
   function computeForSavedSet(name) {
     var d = loadSet(name);
     if (!d) return null;
@@ -645,57 +655,125 @@
 
   function renderComparison() {
     if (!els.compareWrap) return;
-    var otherName = els.compareSelect.value;
-    if (!otherName || !state) { els.compareWrap.innerHTML = ''; return; }
+    var selectedNames = (state && state.compareNames) ? state.compareNames : [];
+    if (!selectedNames.length || !state) { els.compareWrap.innerHTML = ''; return; }
 
     var parsedCur = parseScores(state.text);
     if (!parsedCur.scores.length) { els.compareWrap.innerHTML = ''; return; }
     var curStats = computeStats(parsedCur.scores);
     var curLetters = computeLetters(parsedCur.scores, readCutoffs());
+    var curName = state.name || 'This assignment';
 
-    var other = computeForSavedSet(otherName);
-    if (!other) {
-      els.compareWrap.innerHTML = '<p class="empty-note">That assignment has no scores saved.</p>';
+    // Look each selected name up fresh — a comparison assignment's own
+    // scores/cutoffs may have changed since it was picked here.
+    var missing = [];
+    var present = [];
+    selectedNames.forEach(function (n) {
+      var o = computeForSavedSet(n);
+      if (o) present.push(o); else missing.push(n);
+    });
+
+    if (!present.length) {
+      var noneMsg = selectedNames.length === 1 ? 'That assignment has no scores saved.' : 'None of the selected assignments have scores saved.';
+      els.compareWrap.innerHTML = '<p class="empty-note">' + escapeHtml(noneMsg) + '</p>';
       return;
     }
 
-    var curName = state.name || 'This assignment';
     var letterOrder = ['A', 'B', 'C', 'D', 'F'];
     function pct(count, n) { return n ? (count / n * 100) : 0; }
+
+    var heading = present.length === 1 ? ('Compare with ' + escapeHtml(present[0].name)) :
+      ('Compare across ' + (present.length + 1) + ' assignments');
+
+    var missingHtml = missing.length ?
+      '<p class="hint">No saved scores for: ' + missing.map(escapeHtml).join(', ') + '.</p>' : '';
+
+    var deltaHtml;
+    if (present.length === 1) {
+      var meanDelta = curStats.mean - present[0].stats.mean;
+      var deltaText = curName + '’s mean is ' + fmt(Math.abs(meanDelta), 2) + ' point' + (Math.abs(meanDelta) === 1 ? '' : 's') +
+        (meanDelta >= 0 ? ' higher' : ' lower') + ' than ' + present[0].name + '’s.';
+      deltaHtml = '<p class="hint">' + escapeHtml(deltaText) + '</p>';
+    } else {
+      deltaHtml = present.map(function (o) {
+        var d = curStats.mean - o.stats.mean;
+        var line = curName + '’s mean is ' + fmt(Math.abs(d), 2) + ' point' + (Math.abs(d) === 1 ? '' : 's') +
+          (d >= 0 ? ' higher' : ' lower') + ' than ' + o.name + '’s.';
+        return '<p class="hint" style="margin:0 0 .3rem;">' + escapeHtml(line) + '</p>';
+      }).join('');
+    }
+
     var rows = [
-      ['Number of scores', curStats.n, other.stats.n],
-      ['Mean', fmt(curStats.mean, 2), fmt(other.stats.mean, 2)],
-      ['Median', fmt(curStats.median, 2), fmt(other.stats.median, 2)],
-      ['Standard deviation', fmt(curStats.stdev, 2), fmt(other.stats.stdev, 2)],
-      ['Minimum', fmt(curStats.min, 2), fmt(other.stats.min, 2)],
-      ['Maximum', fmt(curStats.max, 2), fmt(other.stats.max, 2)]
+      ['Number of scores', curStats.n].concat(present.map(function (o) { return o.stats.n; })),
+      ['Mean', fmt(curStats.mean, 2)].concat(present.map(function (o) { return fmt(o.stats.mean, 2); })),
+      ['Median', fmt(curStats.median, 2)].concat(present.map(function (o) { return fmt(o.stats.median, 2); })),
+      ['Standard deviation', fmt(curStats.stdev, 2)].concat(present.map(function (o) { return fmt(o.stats.stdev, 2); })),
+      ['Minimum', fmt(curStats.min, 2)].concat(present.map(function (o) { return fmt(o.stats.min, 2); })),
+      ['Maximum', fmt(curStats.max, 2)].concat(present.map(function (o) { return fmt(o.stats.max, 2); }))
     ];
     letterOrder.forEach(function (l) {
-      rows.push([l + ' (% of class)', fmt(pct(curLetters[l], curStats.n), 1) + '%', fmt(pct(other.letters[l], other.stats.n), 1) + '%']);
+      rows.push(
+        [l + ' (% of class)', fmt(pct(curLetters[l], curStats.n), 1) + '%'].concat(
+          present.map(function (o) { return fmt(pct(o.letters[l], o.stats.n), 1) + '%'; })
+        )
+      );
     });
 
-    var meanDelta = curStats.mean - other.stats.mean;
-    var deltaText = curName + '’s mean is ' + fmt(Math.abs(meanDelta), 2) + ' point' + (Math.abs(meanDelta) === 1 ? '' : 's') +
-      (meanDelta >= 0 ? ' higher' : ' lower') + ' than ' + other.name + '’s.';
+    var theadCols = '<th>' + escapeHtml(curName) + '</th>' +
+      present.map(function (o) { return '<th>' + escapeHtml(o.name) + '</th>'; }).join('');
 
-    els.compareWrap.innerHTML =
-      '<h3>Compare with ' + escapeHtml(other.name) + '</h3>' +
-      '<p class="hint">' + escapeHtml(deltaText) + '</p>' +
-      '<table class="compare-table"><thead><tr><th></th><th>' + escapeHtml(curName) + '</th><th>' + escapeHtml(other.name) + '</th></tr></thead><tbody>' +
-      rows.map(function (r) { return '<tr><td>' + escapeHtml(r[0]) + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>'; }).join('') +
-      '</tbody></table>';
+    var tableHtml = '<div class="compare-table-wrap"><table class="compare-table"><thead><tr><th></th>' + theadCols + '</tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r[0]) + '</td>' +
+          r.slice(1).map(function (v) { return '<td>' + v + '</td>'; }).join('') + '</tr>';
+      }).join('') +
+      '</tbody></table></div>';
+
+    // A row of mini letter-grade bars, current assignment first then each
+    // comparison in the order it was picked — reads as a trend across a
+    // unit when several assignments are checked at once.
+    var trendRows = [{ name: curName, letters: curLetters, n: curStats.n }].concat(
+      present.map(function (o) { return { name: o.name, letters: o.letters, n: o.stats.n }; })
+    );
+    var trendHtml = '<div class="compare-trend">' + trendRows.map(function (tr) {
+      var segs = letterOrder.map(function (l) {
+        var count = tr.letters[l];
+        var p = pct(count, tr.n);
+        if (p <= 0) return '';
+        return '<div class="stack-seg ' + l + '" style="width:' + p + '%;" title="' + l + ': ' + count + ' (' + fmt(p, 1) + '%)">' +
+          (p >= 8 ? (fmt(p, 0) + '%') : '') + '</div>';
+      }).join('');
+      return '<div class="compare-trend-row"><div class="compare-trend-label">' + escapeHtml(tr.name) + '</div>' +
+        '<div class="stack-bar compare-trend-bar">' + segs + '</div></div>';
+    }).join('') + '</div>';
+
+    els.compareWrap.innerHTML = '<h3>' + heading + '</h3>' + missingHtml + deltaHtml + trendHtml + tableHtml;
   }
 
   function refreshCompareOptions() {
-    if (!els.compareSelect) return;
+    if (!els.compareChecks) return;
     var names = listSets().filter(function (n) { return !state || n !== state.name; });
-    var prevVal = els.compareSelect.value;
-    els.compareSelect.innerHTML = '<option value="">None</option>' +
-      names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + '</option>'; }).join('');
-    if (prevVal && names.indexOf(prevVal) !== -1) els.compareSelect.value = prevVal;
+    var selected = (state && state.compareNames) ?
+      state.compareNames.filter(function (n) { return names.indexOf(n) !== -1; }) : [];
+    if (state) state.compareNames = selected; // drop names of assignments since deleted/renamed
+
+    if (!names.length) {
+      els.compareChecks.innerHTML = '<p class="hint" style="margin:0;">No other saved assignments yet.</p>';
+      return;
+    }
+    els.compareChecks.innerHTML = names.map(function (n) {
+      var checked = selected.indexOf(n) !== -1 ? ' checked' : '';
+      return '<label class="compare-check-row"><input type="checkbox" value="' + escapeAttr(n) + '"' + checked + '> ' + escapeHtml(n) + '</label>';
+    }).join('');
   }
 
-  els.compareSelect.addEventListener('change', renderComparison);
+  els.compareChecks.addEventListener('change', function (e) {
+    if (!state || !e.target.matches('input[type="checkbox"]')) return;
+    state.compareNames = Array.prototype.slice.call(els.compareChecks.querySelectorAll('input[type="checkbox"]:checked'))
+      .map(function (cb) { return cb.value; });
+    save();
+    renderComparison();
+  });
 
   function readFormIntoState() {
     state.text = els.scoreInput.value;
@@ -737,7 +815,7 @@
 
   /* ---------- lifecycle ---------- */
   function newList(name) {
-    state = { name: name, text: '', cutA: 90, cutB: 80, cutC: 70, cutD: 60, bucketWidth: 10 };
+    state = { name: name, text: '', cutA: 90, cutB: 80, cutC: 70, cutD: 60, bucketWidth: 10, compareNames: [] };
     applyStateToForm();
     refreshSwitcher();
     els.toolbar.style.display = '';
@@ -750,6 +828,7 @@
     if (!loaded) return;
     state = loaded;
     if (state.bucketWidth == null) state.bucketWidth = 10;
+    if (!state.compareNames) state.compareNames = [];
     applyStateToForm();
     refreshSwitcher();
     renderOutput();
