@@ -101,6 +101,11 @@
   .person-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .4rem; }
   .person-row input { margin-bottom: 0; }
   .person-row button { flex-shrink: 0; }
+  .preset-row { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .7rem; }
+  .preset-row button { flex: 1; }
+
+  /* ---- combined print sections ---- */
+  .page-kicker { text-align: center; color: var(--accent-2); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .2rem; }
 
   /* ---- conjugation entry editor ---- */
   .conj-entry { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; margin-bottom: .8rem; }
@@ -197,6 +202,12 @@
         <div class="card">
           <label style="margin-bottom:.3rem;">Person / subject rows</label>
           <p class="hint">Shared across every verb below. Relabel these for whatever language you&rsquo;re drilling (French, German, etc.) &mdash; add or remove rows as needed.</p>
+          <div class="preset-row" id="personPresets">
+            <button type="button" class="secondary small" data-preset="spanish">Spanish</button>
+            <button type="button" class="secondary small" data-preset="french">French</button>
+            <button type="button" class="secondary small" data-preset="german">German</button>
+            <button type="button" class="secondary small" data-preset="latin">Latin</button>
+          </div>
           <div id="personsList"></div>
           <button type="button" class="secondary full" id="addPersonBtn">+ Add row</button>
         </div>
@@ -210,6 +221,7 @@
         </div>
       </div>
 
+      <label class="check-toggle"><input type="checkbox" id="printCombined"> Print vocab + conjugation together</label>
       <button type="button" id="printBtn" class="full">Print</button>
     </div>
 
@@ -261,11 +273,18 @@
   var els = {};
   ['toolbar','setSwitch','newSetBtn','deleteSetBtn','setName',
    'vocabEditor','conjugationEditor','vocabInput',
-   'personsList','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
-   'printBtn','previewArea','previewNote','sheetNav','ttsLangSelect'
+   'personsList','personPresets','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
+   'printBtn','printCombined','previewArea','previewNote','sheetNav','ttsLangSelect'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_PERSONS = ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'];
+
+  var PERSON_PRESETS = {
+    spanish: DEFAULT_PERSONS,
+    french: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
+    german: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'],
+    latin: ['ego', 'tū', 'is / ea / id', 'nōs', 'vōs', 'eī / eae / ea']
+  };
 
   var TTS_LANGS = [
     { code: 'es-ES', label: 'Spanish' }, { code: 'fr-FR', label: 'French' },
@@ -358,6 +377,17 @@
   }
 
   /* ---------- persons editor ---------- */
+  function applyPersonsPreset(newPersons) {
+    state.persons = newPersons.slice();
+    var len = state.persons.length;
+    state.conjugations.forEach(function (c) {
+      while (c.forms.length < len) c.forms.push('');
+      if (c.forms.length > len) c.forms.length = len;
+    });
+    renderConjugationEditor();
+    renderPreview();
+  }
+
   function renderPersonsList() {
     els.personsList.innerHTML = '';
     state.persons.forEach(function (label, i) {
@@ -456,7 +486,7 @@
   }
 
   /* ---------- vocab preview / print ---------- */
-  function vocabDrillPages(items, filled) {
+  function vocabDrillPages(items, filled, kicker) {
     var rows = items.map(function (item, i) {
       var right = filled
         ? '<span class="answer">' + escapeHtml(item.translation) + '</span>'
@@ -465,6 +495,7 @@
         '<span class="word">' + escapeHtml(item.word) + '</span>' + right + '</div>';
     }).join('');
     return '<div class="page">' +
+      (kicker ? '<div class="page-kicker">' + escapeHtml(kicker) + '</div>' : '') +
       '<div class="page-title">' + escapeHtml(state.name) + '</div>' +
       '<div class="page-sub">' + (filled ? 'Answer key' : 'Name: _______________________&emsp;&emsp;Date: _____') + '</div>' +
       '<div class="drill-list">' + rows + '</div>' +
@@ -513,7 +544,7 @@
     '</div>';
   }
 
-  function conjugationPages(filled, list) {
+  function conjugationPages(filled, list, kicker) {
     var conjList = list || state.conjugations;
     if (!conjList.length) return [];
     var perPage = 4;
@@ -523,6 +554,7 @@
     }
     return pages.map(function (group) {
       return '<div class="page">' +
+        (kicker ? '<div class="page-kicker">' + escapeHtml(kicker) + '</div>' : '') +
         '<div class="page-title">' + escapeHtml(state.name) + '</div>' +
         '<div class="page-sub">' + (filled ? 'Answer key' : 'Name: _______________________&emsp;&emsp;Date: _____') + '</div>' +
         '<div class="conj-grid">' + group.map(function (e) { return conjCardHtml(e, filled); }).join('') + '</div>' +
@@ -590,6 +622,7 @@
     els.vocabInput.value = state.vocabText;
     els.vocabShuffle.checked = !!state.shuffleVocab;
     els.conjShuffle.checked = !!state.shuffleConjugation;
+    els.printCombined.checked = !!state.printCombined;
     populateTtsLangSelect();
     els.ttsLangSelect.value = state.ttsLang;
     switchModeUI();
@@ -602,7 +635,7 @@
   /* ---------- lifecycle ---------- */
   function newSet(name) {
     state = { name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [],
-      shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES' };
+      shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES', printCombined: false };
     Store.save(name, state);
     renderAll();
   }
@@ -616,6 +649,7 @@
     if (!state.mode) state.mode = 'vocab';
     if (typeof state.shuffleVocab !== 'boolean') state.shuffleVocab = false;
     if (typeof state.shuffleConjugation !== 'boolean') state.shuffleConjugation = false;
+    if (typeof state.printCombined !== 'boolean') state.printCombined = false;
     if (!state.ttsLang) state.ttsLang = 'es-ES';
     renderAll();
   }
@@ -659,6 +693,18 @@
     save();
   });
 
+  els.personPresets.addEventListener('click', function (evt) {
+    var btn = evt.target.closest('button[data-preset]');
+    if (!btn) return;
+    var preset = PERSON_PRESETS[btn.getAttribute('data-preset')];
+    if (preset) applyPersonsPreset(preset);
+  });
+
+  els.printCombined.addEventListener('change', function () {
+    state.printCombined = els.printCombined.checked;
+    save();
+  });
+
   els.addPersonBtn.addEventListener('click', function () {
     state.persons.push('New row');
     state.conjugations.forEach(function (c) { c.forms.push(''); });
@@ -690,13 +736,24 @@
 
   els.printBtn.addEventListener('click', function () {
     var html;
-    if (state.mode === 'vocab') {
+    if (state.printCombined) {
+      var vocabItems = parseVocab(state.vocabText);
+      if (state.shuffleVocab) vocabItems = shuffleCopy(vocabItems);
+      var conjList = state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations;
+      var vocabHtml = vocabItems.length
+        ? vocabDrillPages(vocabItems, false, 'Vocabulary Drill') + vocabDrillPages(vocabItems, true, 'Vocabulary Drill')
+        : '';
+      var conjHtml = conjList.length
+        ? conjugationPages(false, conjList, 'Conjugation Drill').join('') + conjugationPages(true, conjList, 'Conjugation Drill').join('')
+        : '';
+      html = vocabHtml + conjHtml;
+    } else if (state.mode === 'vocab') {
       var items = parseVocab(state.vocabText);
       if (state.shuffleVocab) items = shuffleCopy(items);
       html = vocabDrillPages(items, false) + vocabDrillPages(items, true);
     } else {
-      var conjList = state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations;
-      html = conjugationPages(false, conjList).join('') + conjugationPages(true, conjList).join('');
+      var list = state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations;
+      html = conjugationPages(false, list).join('') + conjugationPages(true, list).join('');
     }
     document.getElementById('printArea').innerHTML = html;
     window.print();

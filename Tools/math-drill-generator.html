@@ -48,6 +48,7 @@
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -136,7 +137,13 @@
           <div><label for="columns">Columns</label><input type="number" id="columns" value="3" min="1" max="6"></div>
         </div>
 
+        <label for="versionCount">Number of versions</label>
+        <input type="number" id="versionCount" value="1" min="1" max="6">
+        <p class="hint">Generates that many distinct randomized sheets (Version A/B/C&hellip;) back to back &mdash; useful for preventing copying during a timed drill.</p>
+
         <button type="button" id="generateBtn">Generate new sheet</button>
+
+        <div class="toggle-row" id="versionTabs" style="display:none;"></div>
 
         <div class="toggle-row">
           <button type="button" class="secondary active" id="viewWorksheetBtn">Worksheet</button>
@@ -172,14 +179,15 @@
   'use strict';
 
   var els = {};
-  ['templateKey','sheetTitle','problemCount','columns','generateBtn',
+  ['templateKey','sheetTitle','problemCount','columns','versionCount','versionTabs','generateBtn',
    'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote',
    'exportSettingsBtn','importSettingsBtn','importSettingsFile',
    'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, rangesByTemplate: {} };
-  var problems = [];
+  var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, versions: 1, rangesByTemplate: {} };
+  var problemSets = []; // [{ label: 'Version A'|null, problems: [...] }, ...]
+  var currentVersionIndex = 0;
   var view = 'worksheet';
   var todayStr = new Date().toLocaleDateString();
 
@@ -246,40 +254,64 @@
     });
   }
 
-  function worksheetHtml() {
+  function sheetTitleFor(label) {
+    var base = escapeHtml(settings.sheetTitle || MathDrillTemplates.byKey(settings.templateKey).label);
+    return label ? base + ' &mdash; ' + label : base;
+  }
+
+  function worksheetHtml(set) {
     var cols = settings.columns;
-    var items = problems.map(function (p, i) {
+    var items = set.problems.map(function (p, i) {
       return '<div class="p"><span class="num">' + (i + 1) + '.</span>' +
         p.a + ' ' + p.symbol + ' ' + p.b + ' = _____</div>';
     }).join('');
     return (
       '<div class="sheet">' +
-        '<div class="sheet-title">' + escapeHtml(settings.sheetTitle || MathDrillTemplates.byKey(settings.templateKey).label) + '</div>' +
+        '<div class="sheet-title">' + sheetTitleFor(set.label) + '</div>' +
         '<div class="sheet-meta"><span>Name: <span class="fill-line">&nbsp;</span></span><span>Date: ' + todayStr + '</span></div>' +
         '<div class="problems" style="column-count:' + cols + ';">' + items + '</div>' +
       '</div>'
     );
   }
 
-  function answersHtml() {
+  function answersHtml(set) {
     var cols = settings.columns + 1;
-    var items = problems.map(function (p, i) {
+    var items = set.problems.map(function (p, i) {
       return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + p.answer + '</div>';
     }).join('');
     return (
       '<div class="sheet">' +
-        '<div class="sheet-title">' + escapeHtml(settings.sheetTitle || MathDrillTemplates.byKey(settings.templateKey).label) + ' &mdash; Answer Key</div>' +
+        '<div class="sheet-title">' + sheetTitleFor(set.label) + ' &mdash; Answer Key</div>' +
         '<div class="sheet-meta"><span>&nbsp;</span><span>Date: ' + todayStr + '</span></div>' +
         '<div class="answers" style="column-count:' + cols + ';">' + items + '</div>' +
       '</div>'
     );
   }
 
+  function renderVersionTabs() {
+    els.versionTabs.innerHTML = '';
+    if (problemSets.length <= 1) { els.versionTabs.style.display = 'none'; return; }
+    els.versionTabs.style.display = '';
+    problemSets.forEach(function (set, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'secondary' + (i === currentVersionIndex ? ' active' : '');
+      b.textContent = set.label;
+      b.addEventListener('click', function () { currentVersionIndex = i; renderVersionTabs(); renderPreview(); });
+      els.versionTabs.appendChild(b);
+    });
+  }
+
   function renderPreview() {
-    els.previewArea.innerHTML = view === 'worksheet' ? worksheetHtml() : answersHtml();
-    els.previewNote.textContent = view === 'worksheet'
-      ? 'Worksheet preview — ' + problems.length + ' problems.'
-      : 'Answer key preview — matches the current worksheet exactly.';
+    var set = problemSets[currentVersionIndex];
+    els.previewArea.innerHTML = view === 'worksheet' ? worksheetHtml(set) : answersHtml(set);
+    els.previewNote.textContent = (view === 'worksheet'
+      ? 'Worksheet preview — ' + set.problems.length + ' problems.'
+      : 'Answer key preview — matches the current worksheet exactly.') +
+      (problemSets.length > 1 ? ' (' + set.label + ', ' + problemSets.length + ' versions total.)' : '');
+    els.printBtn.textContent = problemSets.length > 1
+      ? 'Print all ' + problemSets.length + ' versions'
+      : 'Print (both pages)';
   }
 
   function readFormIntoSettings() {
@@ -287,17 +319,30 @@
     settings.sheetTitle = els.sheetTitle.value;
     settings.problemCount = Math.max(5, Math.min(100, parseInt(els.problemCount.value, 10) || 30));
     settings.columns = Math.max(1, Math.min(6, parseInt(els.columns.value, 10) || 3));
+    settings.versions = Math.max(1, Math.min(6, parseInt(els.versionCount.value, 10) || 1));
   }
 
   function generate() {
     readFormIntoSettings();
     persist();
-    problems = MathDrillGenerate.generateProblems(effectiveTemplate(settings.templateKey), settings.problemCount);
+    var template = effectiveTemplate(settings.templateKey);
+    problemSets = [];
+    for (var i = 0; i < settings.versions; i++) {
+      problemSets.push({
+        label: settings.versions > 1 ? 'Version ' + String.fromCharCode(65 + i) : null,
+        problems: MathDrillGenerate.generateProblems(template, settings.problemCount)
+      });
+    }
+    currentVersionIndex = 0;
+    renderVersionTabs();
     renderPreview();
   }
 
   function buildPrintArea() {
-    document.getElementById('printArea').innerHTML = worksheetHtml() + answersHtml();
+    var html = problemSets.map(function (set) {
+      return worksheetHtml(set) + answersHtml(set);
+    }).join('');
+    document.getElementById('printArea').innerHTML = html;
   }
 
   /* ---------- settings export / import ---------- */
@@ -326,6 +371,7 @@
     els.sheetTitle.value = typeof obj.sheetTitle === 'string' ? obj.sheetTitle : '';
     els.problemCount.value = obj.problemCount;
     els.columns.value = obj.columns;
+    els.versionCount.value = Math.max(1, Math.min(6, parseInt(obj.versions, 10) || 1));
     settings.rangesByTemplate = (obj.rangesByTemplate && typeof obj.rangesByTemplate === 'object') ? obj.rangesByTemplate : {};
     loadRangeInputs();
     generate();
@@ -356,6 +402,7 @@
   els.sheetTitle.addEventListener('input', function () { readFormIntoSettings(); persist(); renderPreview(); });
   els.problemCount.addEventListener('change', generate);
   els.columns.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
+  els.versionCount.addEventListener('change', generate);
 
   ['operand1Min','operand1Max','operand2Min','operand2Max'].forEach(function (id) {
     els[id].addEventListener('change', function () { readRangeInputs(); generate(); });
@@ -398,6 +445,7 @@
   els.sheetTitle.value = settings.sheetTitle;
   els.problemCount.value = settings.problemCount;
   els.columns.value = settings.columns;
+  els.versionCount.value = settings.versions || 1;
   loadRangeInputs();
   generate();
 })();

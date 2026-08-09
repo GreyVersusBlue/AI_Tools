@@ -36,6 +36,9 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
+  .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+
   .layout { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
@@ -69,6 +72,10 @@
     border-radius: 7px; padding: .6rem 1.1rem; width: 100%;
   }
   button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: #a3372b; border-color: #a3372b; }
+  button.danger:hover { background: #a3372b; color: #fff; }
   .btnRow { display: flex; gap: .6rem; }
   .btnRow button { width: auto; flex: 1 1 0; }
 
@@ -98,8 +105,20 @@
     </div>
   </div>
 
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <label style="margin:0;font-weight:600;font-size:.85rem;">Preset:</label>
+    <select id="presetSwitch"></select>
+    <button type="button" class="secondary" style="width:auto;" id="newPresetBtn">New preset</button>
+    <button type="button" class="danger" style="width:auto;" id="deletePresetBtn">Delete</button>
+  </div>
+
   <div class="layout">
     <div class="editor">
+      <div class="card">
+        <label for="presetName">Preset name</label>
+        <input type="text" id="presetName" placeholder="e.g. Algebra 1 graphing">
+      </div>
+
       <div class="card">
         <div class="mode-tabs">
           <div class="mode-tab active" data-mode="graph">Graph paper</div>
@@ -215,35 +234,49 @@
   'use strict';
 
   var els = {};
-  ['orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
+  ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
+   'orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
    'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery',
    'printBtn','downloadPngBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var settings = {
-    mode: 'graph',
-    orientation: 'portrait',
-    gridStyle: 'square',
-    gridSizePreset: '0.25',
-    gridSizeCustom: 4,
-    exactCount: false,
-    exactCols: 10,
-    exactRows: 10,
-    boldCenter: false,
-    nlMin: 0, nlMax: 20, nlInterval: 1, nlLabelEvery: 1, nlCopies: 1,
-    nlIndependent: false, nlRows: [],
-    planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
-    planeInterval: 1, planeLabelEvery: 5
-  };
+  var settings = null;
 
-  function loadSaved() {
-    var saved = GraphPaperStore.load();
-    if (saved) Object.keys(settings).forEach(function (k) { if (saved[k] !== undefined) settings[k] = saved[k]; });
+  function defaultSettings(name) {
+    return {
+      name: name,
+      mode: 'graph',
+      orientation: 'portrait',
+      gridStyle: 'square',
+      gridSizePreset: '0.25',
+      gridSizeCustom: 4,
+      exactCount: false,
+      exactCols: 10,
+      exactRows: 10,
+      boldCenter: false,
+      nlMin: 0, nlMax: 20, nlInterval: 1, nlLabelEvery: 1, nlCopies: 1,
+      nlIndependent: false, nlRows: [],
+      planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
+      planeInterval: 1, planeLabelEvery: 5
+    };
   }
-  function persist() { GraphPaperStore.save(settings); }
+
+  function persist() { if (settings) GraphPaperStore.savePreset(settings.name, settings); }
+
+  function refreshSwitcher() {
+    var names = GraphPaperStore.listPresets();
+    els.presetSwitch.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (settings && n === settings.name) opt.selected = true;
+      els.presetSwitch.appendChild(opt);
+    });
+  }
 
   function applySettingsToForm() {
+    els.presetName.value = settings.name;
     els.orientation.value = settings.orientation;
     els.gridStyle.value = settings.gridStyle;
     var isSquare = settings.gridStyle === 'square';
@@ -268,6 +301,9 @@
     els.planeXMin.value = settings.planeXMin; els.planeXMax.value = settings.planeXMax;
     els.planeYMin.value = settings.planeYMin; els.planeYMax.value = settings.planeYMax;
     els.planeInterval.value = settings.planeInterval; els.planeLabelEvery.value = settings.planeLabelEvery;
+
+    Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.toggle('active', t.dataset.mode === settings.mode); });
+    Array.prototype.slice.call(document.querySelectorAll('.mode-panel')).forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + settings.mode); });
   }
 
   function readFormIntoSettings() {
@@ -384,7 +420,52 @@
     els.previewArea.innerHTML = result.svg;
   }
 
+  /* ---------- lifecycle ---------- */
+  function newPreset(name) {
+    settings = defaultSettings(name);
+    GraphPaperStore.setCurrentName(name);
+    applySettingsToForm();
+    refreshSwitcher();
+    els.toolbar.style.display = '';
+    render();
+  }
+
+  function loadPresetByName(name) {
+    var loaded = GraphPaperStore.loadPreset(name);
+    if (!loaded) return;
+    settings = loaded;
+    if (!settings.name) settings.name = name;
+    if (!settings.nlRows) settings.nlRows = [];
+    GraphPaperStore.setCurrentName(name);
+    applySettingsToForm();
+    refreshSwitcher();
+    els.toolbar.style.display = '';
+    render();
+  }
+
   /* ---------- wiring ---------- */
+  els.presetName.addEventListener('change', function () {
+    if (!settings) return;
+    var oldName = settings.name;
+    var newName = els.presetName.value.trim() || oldName;
+    if (newName !== oldName) { GraphPaperStore.deletePreset(oldName); settings.name = newName; }
+    persist(); refreshSwitcher();
+  });
+  els.presetSwitch.addEventListener('change', function () { loadPresetByName(els.presetSwitch.value); });
+  els.newPresetBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new preset:', 'New Preset');
+    if (!name) return;
+    newPreset(name.trim());
+  });
+  els.deletePresetBtn.addEventListener('click', function () {
+    if (!settings) return;
+    if (!confirm('Delete "' + settings.name + '" completely? This can’t be undone.')) return;
+    GraphPaperStore.deletePreset(settings.name);
+    var remaining = GraphPaperStore.listPresets();
+    if (remaining.length) loadPresetByName(remaining[0]);
+    else newPreset('My Settings');
+  });
+
   Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (tab) {
     tab.addEventListener('click', function () {
       Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.remove('active'); });
@@ -471,13 +552,15 @@
   els.downloadPngBtn.addEventListener('click', downloadPng);
 
   /* ---------- boot ---------- */
-  loadSaved();
-  applySettingsToForm();
-  if (settings.mode !== 'graph') {
-    document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.mode === settings.mode); });
-    document.querySelectorAll('.mode-panel').forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + settings.mode); });
+  GraphPaperStore.migrateLegacyIfNeeded();
+  var current = GraphPaperStore.getCurrentName();
+  if (current && GraphPaperStore.loadPreset(current)) {
+    loadPresetByName(current);
+  } else {
+    var existing = GraphPaperStore.listPresets();
+    if (existing.length) loadPresetByName(existing[0]);
+    else newPreset('My Settings');
   }
-  render();
 })();
 </script>
 <script>
