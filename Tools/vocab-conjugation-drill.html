@@ -76,6 +76,23 @@
   .check-row .answer { color: var(--accent-2); font-style: italic; margin-left: auto; }
   .check-row .answer.hidden { visibility: hidden; }
 
+  /* ---- listen (text-to-speech) ---- */
+  .listen-btn {
+    background: none; border: 1px solid var(--line-strong); color: var(--accent-2);
+    border-radius: 5px; padding: .1rem .4rem; font-size: .85rem; line-height: 1.4; cursor: pointer; flex-shrink: 0;
+  }
+  .listen-btn:hover { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .listen-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .listen-btn:disabled:hover { background: none; color: var(--accent-2); }
+  .forms-grid .form-field { position: relative; }
+  .forms-grid .form-field .field-row { display: flex; gap: .3rem; align-items: center; }
+  .forms-grid .form-field .field-row input { margin-bottom: 0; }
+  .conj-entry .row2 .field-row { display: flex; gap: .3rem; align-items: center; margin-bottom: .5rem; }
+  .conj-entry .row2 .field-row input { margin-bottom: 0; }
+  .tts-lang-row { display: flex; align-items: center; gap: .5rem; }
+  .tts-lang-row label { margin: 0; white-space: nowrap; }
+  .tts-lang-row select { width: auto; margin: 0; }
+
   /* ---- shuffle toggle ---- */
   .check-toggle { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .85rem; margin: 0 0 .8rem; cursor: pointer; }
   .check-toggle input { width: auto; margin: 0; }
@@ -148,6 +165,10 @@
     <select id="setSwitch"></select>
     <button class="secondary" id="newSetBtn">New set</button>
     <button class="danger" id="deleteSetBtn">Delete</button>
+    <span class="tts-lang-row">
+      <label for="ttsLangSelect">Pronunciation:</label>
+      <select id="ttsLangSelect"></select>
+    </span>
   </div>
 
   <div class="card">
@@ -241,10 +262,48 @@
   ['toolbar','setSwitch','newSetBtn','deleteSetBtn','setName',
    'vocabEditor','conjugationEditor','vocabInput',
    'personsList','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
-   'printBtn','previewArea','previewNote','sheetNav'
+   'printBtn','previewArea','previewNote','sheetNav','ttsLangSelect'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_PERSONS = ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'];
+
+  var TTS_LANGS = [
+    { code: 'es-ES', label: 'Spanish' }, { code: 'fr-FR', label: 'French' },
+    { code: 'de-DE', label: 'German' }, { code: 'it-IT', label: 'Italian' },
+    { code: 'pt-PT', label: 'Portuguese' }, { code: 'la', label: 'Latin' },
+    { code: 'en-US', label: 'English' }, { code: 'zh-CN', label: 'Mandarin Chinese' },
+    { code: 'ja-JP', label: 'Japanese' }, { code: 'ko-KR', label: 'Korean' },
+    { code: 'ru-RU', label: 'Russian' }, { code: 'ar-SA', label: 'Arabic' },
+    { code: 'hi-IN', label: 'Hindi' }, { code: 'nl-NL', label: 'Dutch' },
+    { code: 'el-GR', label: 'Greek' }, { code: 'he-IL', label: 'Hebrew' },
+    { code: 'vi-VN', label: 'Vietnamese' }, { code: 'pl-PL', label: 'Polish' },
+    { code: 'tr-TR', label: 'Turkish' }, { code: 'sv-SE', label: 'Swedish' }
+  ];
+  var ttsSupported = 'speechSynthesis' in window;
+
+  function speak(text) {
+    if (!ttsSupported || !text) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = (state && state.ttsLang) || 'es-ES';
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* no-op if speech synthesis is unavailable/blocked */ }
+  }
+
+  function listenButtonHtml(extraAttrs) {
+    return '<button type="button" class="listen-btn" title="Listen" aria-label="Listen"' +
+      (ttsSupported ? '' : ' disabled') + (extraAttrs || '') + '>&#128266;</button>';
+  }
+
+  function populateTtsLangSelect() {
+    if (els.ttsLangSelect.options.length) return;
+    TTS_LANGS.forEach(function (l) {
+      var opt = document.createElement('option');
+      opt.value = l.code; opt.textContent = l.label;
+      els.ttsLangSelect.appendChild(opt);
+    });
+  }
 
   var state = null;
   // { name, mode: 'vocab'|'conjugation', vocabText, persons: [str,...],
@@ -334,15 +393,22 @@
 
       var row2 = document.createElement('div');
       row2.className = 'row2';
+      var infFieldRow = document.createElement('div');
+      infFieldRow.className = 'field-row';
       var infInput = document.createElement('input');
       infInput.type = 'text'; infInput.value = entry.infinitive; infInput.placeholder = 'Infinitive (e.g. hablar)';
-      infInput.style.marginBottom = '.5rem';
       infInput.addEventListener('input', function () { entry.infinitive = infInput.value; renderPreview(); });
+      var infListenBtn = document.createElement('button');
+      infListenBtn.type = 'button'; infListenBtn.className = 'listen-btn'; infListenBtn.title = 'Listen';
+      infListenBtn.setAttribute('aria-label', 'Listen'); infListenBtn.disabled = !ttsSupported;
+      infListenBtn.innerHTML = '&#128266;';
+      infListenBtn.addEventListener('click', function () { speak(entry.infinitive); });
+      infFieldRow.appendChild(infInput); infFieldRow.appendChild(infListenBtn);
       var tenseInput = document.createElement('input');
       tenseInput.type = 'text'; tenseInput.value = entry.tense; tenseInput.placeholder = 'Tense (e.g. Present)';
       tenseInput.style.marginBottom = '.5rem';
       tenseInput.addEventListener('input', function () { entry.tense = tenseInput.value; renderPreview(); });
-      row2.appendChild(infInput); row2.appendChild(tenseInput);
+      row2.appendChild(infFieldRow); row2.appendChild(tenseInput);
       block.appendChild(row2);
 
       var grid = document.createElement('div');
@@ -353,10 +419,18 @@
         var plabel = document.createElement('div');
         plabel.className = 'plabel';
         plabel.textContent = person || ('Row ' + (pi + 1));
+        var fieldRow = document.createElement('div');
+        fieldRow.className = 'field-row';
         var input = document.createElement('input');
         input.type = 'text'; input.value = entry.forms[pi] || ''; input.placeholder = 'Conjugated form';
         input.addEventListener('input', function () { entry.forms[pi] = input.value; renderPreview(); });
-        field.appendChild(plabel); field.appendChild(input);
+        var listenBtn = document.createElement('button');
+        listenBtn.type = 'button'; listenBtn.className = 'listen-btn'; listenBtn.title = 'Listen';
+        listenBtn.setAttribute('aria-label', 'Listen'); listenBtn.disabled = !ttsSupported;
+        listenBtn.innerHTML = '&#128266;';
+        listenBtn.addEventListener('click', function () { speak(entry.forms[pi]); });
+        fieldRow.appendChild(input); fieldRow.appendChild(listenBtn);
+        field.appendChild(plabel); field.appendChild(fieldRow);
         grid.appendChild(field);
       });
       block.appendChild(grid);
@@ -402,16 +476,24 @@
       var revealed = !!checkRevealed[i];
       return '<div class="check-row" data-idx="' + i + '">' +
         '<span class="num">' + (i + 1) + '.</span>' +
+        listenButtonHtml(' data-word="' + escapeHtml(item.word) + '"') +
         '<span class="word">' + escapeHtml(item.word) + '</span>' +
         '<span class="answer' + (revealed ? '' : ' hidden') + '">' + escapeHtml(item.translation) + '</span>' +
       '</div>';
     }).join('') || '<p class="empty-note">Add some words to preview.</p>';
 
     Array.prototype.forEach.call(els.previewArea.querySelectorAll('.check-row'), function (row) {
-      row.addEventListener('click', function () {
+      row.addEventListener('click', function (evt) {
+        if (evt.target.closest('.listen-btn')) return;
         var idx = row.getAttribute('data-idx');
         checkRevealed[idx] = !checkRevealed[idx];
         renderVocabOnScreenCheck(items);
+      });
+    });
+    Array.prototype.forEach.call(els.previewArea.querySelectorAll('.listen-btn'), function (btn) {
+      btn.addEventListener('click', function (evt) {
+        evt.stopPropagation();
+        speak(btn.getAttribute('data-word'));
       });
     });
   }
@@ -508,6 +590,8 @@
     els.vocabInput.value = state.vocabText;
     els.vocabShuffle.checked = !!state.shuffleVocab;
     els.conjShuffle.checked = !!state.shuffleConjugation;
+    populateTtsLangSelect();
+    els.ttsLangSelect.value = state.ttsLang;
     switchModeUI();
     renderConjugationEditor();
     checkRevealed = {};
@@ -518,7 +602,7 @@
   /* ---------- lifecycle ---------- */
   function newSet(name) {
     state = { name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [],
-      shuffleVocab: false, shuffleConjugation: false };
+      shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES' };
     Store.save(name, state);
     renderAll();
   }
@@ -532,6 +616,7 @@
     if (!state.mode) state.mode = 'vocab';
     if (typeof state.shuffleVocab !== 'boolean') state.shuffleVocab = false;
     if (typeof state.shuffleConjugation !== 'boolean') state.shuffleConjugation = false;
+    if (!state.ttsLang) state.ttsLang = 'es-ES';
     renderAll();
   }
 
@@ -566,6 +651,11 @@
 
   els.conjShuffle.addEventListener('change', function () {
     state.shuffleConjugation = els.conjShuffle.checked;
+    save();
+  });
+
+  els.ttsLangSelect.addEventListener('change', function () {
+    state.ttsLang = els.ttsLangSelect.value;
     save();
   });
 

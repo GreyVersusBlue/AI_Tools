@@ -98,10 +98,10 @@ console.log('seating chart — pure logic\n');
       {
         name: '  Honors GT  ',
         students: [
-          { id: 'a', name: 'Ada Lovelace' },
+          { id: 'a', name: 'Ada Lovelace', photo: 'data:image/jpeg;base64,AAAA' },
           { id: 'b', name: '   ' },                       // no name: dropped
           { name: 'Marco Polo' },                          // no id: generated
-          { id: 'x', name: 'Zheng He' },
+          { id: 'x', name: 'Zheng He', photo: 'https://evil.example/x.png' },  // not a data: URL: dropped
         ],
         apart: [['a', 'gone'], ['a', 'a'], ['a', 'x'], ['a', 'x']],
         together: [['a', 'x']],                            // also in apart: dropped
@@ -119,8 +119,10 @@ console.log('seating chart — pure logic\n');
   eq(s.sections.length, 1, 'repair drops a non-object section');
   eq(s.sections[0].name, 'Honors GT', 'repair trims the section name');
   eq(s.sections[0].students.length, 3, 'repair drops a nameless student');
-  ok(s.sections[0].students.every(st => st.id && typeof st.note === 'string' && typeof st.flag === 'boolean'),
-    'repair fills id, note and flag on every student');
+  ok(s.sections[0].students.every(st => st.id && typeof st.note === 'string' && typeof st.flag === 'boolean' && typeof st.photo === 'string'),
+    'repair fills id, note, flag and photo on every student');
+  eq(s.sections[0].students.find(st => st.id === 'a').photo, 'data:image/jpeg;base64,AAAA', 'repair keeps a real data: URL photo');
+  eq(s.sections[0].students.find(st => st.id === 'x').photo, '', 'repair drops a photo that is not a data: URL');
   eq(s.sections[0].apart.length, 1, 'repair drops pairs pointing at removed students and dedupes');
   eq(s.sections[0].together.length, 0, 'repair drops a pair that is both apart and together');
   eq(s.active, s.sections[0].id, 'repair repoints an active id that goes nowhere');

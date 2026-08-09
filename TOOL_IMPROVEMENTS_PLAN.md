@@ -72,9 +72,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen, named/saved custom countdown-duration presets, a running/paused timer that survives a page reload or tab-close, and a one-click fullscreen toggle (button or `F` key) so it fills the whole projector screen without browser chrome.
 
 ### Command Center (`Tools/command-center-dashboard.html`)
-**Current state:** A single projector-friendly page combining a basic countdown timer, a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), a no-repeats random-caller against a saved Name Picker roster with a per-student "exclude for today" toggle (session/day-scoped, never touching the saved roster) for skipping an absent student, and a read-only Hall Pass Log "currently out" count (refreshed periodically) with a link to the full log.
-**Suggested improvements:**
-- The timer here is a stripped-down duplicate of Classroom Timer's countdown mode with no visual progress ring and only one beep sound; giving it feature parity (or at least a sound-choice control) would make this a real replacement for the standalone tool on one page.
+**Current state:** A single projector-friendly page combining a countdown timer (progress ring, chime/bell/buzzer sound choice with a test button — same synthesized tones as Classroom Timer), a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), a no-repeats random-caller against a saved Name Picker roster with a per-student "exclude for today" toggle (session/day-scoped, never touching the saved roster) for skipping an absent student, and a read-only Hall Pass Log "currently out" count (refreshed periodically) with a link to the full log.
 
 ### Field Trip Permission Slip Generator (`Tools/field-trip-permission-slip.html`)
 **Current state:** A trip-details form (destination, dates, cost, what-to-bring, chaperone/emergency info) that saves multiple named trip templates to localStorage and generates a live-previewed, printable permission slip in single/batch (roster-driven)/blank-copies modes, with a "collected" tracker (returned/paid checkboxes per student), a QR code on each printed slip encoding the trip name/date/destination, and JSON export/import of a trip's saved fields.
@@ -121,7 +119,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
 **Current state:** Three modes (graph paper, number line, coordinate plane) rendered as true-to-scale SVG with fine control over grid size/exact row-column counts/intervals/labels, settings saved to localStorage, print-at-100%-scale output, and a "Download PNG" button next to Print for posting a sheet directly to Google Classroom/Schoology.
 **Suggested improvements:**
-- Let number-line "copies on one page" use independent min/max/interval per copy (e.g., three different-range number lines stacked for a differentiated worksheet) instead of identical copies.
 - Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
 
 ### Formula Reference Sheet Builder (`Tools/formula-sheet-builder.html`)
@@ -184,10 +181,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import, URL normalization, and a dedicated `.csv` file-picker alongside the paste box), flags entries whose link/text duplicates another entry's (non-blocking, before printing), and prints a QR grid, a plain reference sheet, or copies every entry's link to the clipboard as a list.
 
 ### Digital Escape Room / Puzzle Lock Builder (`Tools/escape-room-builder.html`)
-**Current state:** Builds a linear or branching chain of QR-code puzzle stations (clue, accepted answers, hint, next-station routing) encoded into a shared player link, with a live chain preview, printable per-station QR codes, a separate answer key, and a "randomize starting station" toggle so each station's own printed code can be its own valid entry point for physical rotations where teams start simultaneously at different stations.
+**Current state:** Builds a linear or branching chain of QR-code puzzle stations (clue, accepted answers, hint, next-station routing) encoded into a shared player link, with a live chain preview, printable per-station QR codes, a separate answer key, a "randomize starting station" toggle so each station's own printed code can be its own valid entry point for physical rotations where teams start simultaneously at different stations, and an optional whole-room countdown timer baked into the player link that shows live on the student's lock screen.
 **Suggested improvements:**
 - Add a same-network "teacher monitor" view using the toolkit's existing `_shared/webrtc-pair.js`/BroadcastChannel pattern, so a teacher's own screen can see live pings of which station each device has reached — currently there's no way to know how far any group has gotten short of walking around.
-- Add an optional whole-room countdown timer (a client-side setting baked into the player link) that displays in the student's lock screen, a common escape-room mechanic that's currently absent.
 - Allow an optional image per station clue (the way Timeline Builder attaches downscaled photos to events), useful for picture-based puzzles rather than text-only clues.
 
 ### Silent Reading Log Tracker (`Tools/ssr-log-tracker.html`)
@@ -199,21 +195,17 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Tracks one or more editable required documents (e.g. "Lab Safety Contract" plus "Chemical Handling") with a separate signed/unsigned status per student per document (each with date and a shared optional note), showing a live "N of M fully signed" count with a per-document breakdown, a due-date urgency banner with a "download reminder" `.ics` calendar file, a "show missing only" list filter, a bulk "mark all as signed" action, and printable full/missing-only reports.
 
 ### Exit Ticket / Bell Ringer Generator (`Tools/exit-ticket-generator.html`)
-**Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display with an optional think-time countdown (off/30s/1min/2min, with a WebAudio chime at zero), a custom-prompt box, a persistent "My Prompts" bank a teacher can build and blend into (or draw from exclusively) the rotation, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips.
+**Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display with an optional think-time countdown (off/30s/1min/2min, with a WebAudio chime at zero), a custom-prompt box, a persistent "My Prompts" bank a teacher can build and blend into (or draw from exclusively) the rotation, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips — either the same prompt repeated on every slip, or a "different prompt on each slip" mode that draws distinct prompts from the active category/My Prompts pool (with a "new set" reshuffle button), useful for handing one prompt per table group.
 **Suggested improvements:**
-- Support printing a sheet where each slip carries a different prompt (e.g., one per table group) instead of the same prompt repeated to fill the page.
 - Add an optional small QR code on the printed slip linking to a digital response form, reusing the QR-generation approach already used elsewhere in this toolkit.
 
 ### Number Talks / Mental Math Routine Board (`Tools/number-talks-board.html`)
 **Current state:** Reveals a number string one expression at a time from a grade-banded prompt bank (or a custom prompt), with an ephemeral, session-only strategy-sharing board and session history that both disappear on reload — a "Save this session" button exports the day's number talks plus strategy cards as a text file on demand without changing that session-only design, and a teacher-only "show the answer" reveal (computed client-side, control-panel only, never on the projector stage).
 **Suggested improvements:**
 - Let a teacher favorite/save their own custom number strings into a small persistent personal bank, rather than only pulling from the built-in category lists or a one-off custom entry that isn't remembered.
-- Add a print-friendly handout of the current number string for an absent student or as a written record.
 
 ### Timeline Builder (`Tools/timeline-builder.html`)
-**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style) with both a scrolling on-screen view (with auto-scaled decade/century/millennium gridlines and year labels for a sense of scale, plus optional background era/period shading bands for overlapping historical periods), a separate paginated print layout, and JSON export/import of a timeline file.
-**Suggested improvements:**
-- Add the parallel/comparison timeline track the tool's own UI already flags as unsupported, so two related timelines (e.g., a country's history vs. world history) can be viewed stacked against the same year axis.
+**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style, and optional parallel/comparison tracks stacked on one shared year axis) with both a scrolling on-screen view (with auto-scaled decade/century/millennium gridlines and year labels for a sense of scale, plus optional background era/period shading bands for overlapping historical periods), a separate paginated print layout, and JSON export/import of a timeline file.
 
 ### Blank Map Generator (`Tools/blank-map-generator.html`)
 **Current state:** A very mature tool already covering Wikimedia Commons map search/upload, pan/zoom, draggable labels/markers/shaded regions/lines with a full auto-generated and reorderable legend, compass rose, calibrated lat/long grid and scale bar, locator inset, batch coordinate placement, undo/redo, student-handout text-hiding mode, tiled poster printing, offline map caching, multi-project management, and project export/import as a downloadable JSON file (for handing a finished annotated map to another teacher or device) — so only modest, genuinely new additions are suggested here.
@@ -228,32 +220,27 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Math Fact Drill Sheet Generator (`Tools/math-drill-generator.html`)
 **Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
 **Suggested improvements:**
-- Add per-template operand range controls (min/max inputs) instead of the hardcoded ranges in `mdg-templates.js` — a 3rd grader drilling addition to 5 and a 5th grader drilling to 100 currently get the same fixed 1–12 range.
 - Add a "generate a set of N distinct sheets" option that prints several different randomized versions back-to-back (e.g., Version A/B/C), useful for preventing copying during in-class timed drills.
 - Add an optional timed-fluency header (a blank "Start time / End time" or "Target: ___ seconds" line) since the sheet is explicitly framed as a drill tool but has no fluency-tracking element today.
 - Add fact-family-focused templates (e.g., "×6 facts only," "÷ by 7 only") as extra entries in `mdg-templates.js`, since the generator architecture already supports adding templates with no UI changes.
 
 ### Vocabulary Flashcard & Word Wall Generator (`Tools/vocab-flashcard-generator.html`)
-**Current state:** Turns a pasted "term: definition" list into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
+**Current state:** Turns a pasted "term: definition" list (or a tab-separated/CSV paste straight from a spreadsheet column) into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
 **Suggested improvements:**
-- Add tab-separated/CSV paste support in `parseWordList` (from `vfg-layout.js`) so teachers can paste directly from a Google Sheet or Excel column instead of manually typing `term: definition` on each line.
 - Add an on-screen self-quiz/flip mode (click a card to reveal the definition) similar to the reveal-on-click pattern already used in `vocab-conjugation-drill.html`, since today preview is print-only, not usable directly with a student at a screen.
 - Add auto-shrinking font size for long definitions on fixed-size cards to prevent text overflow/clipping when a definition runs long relative to the card dimensions chosen.
 
 ### Vocab & Conjugation Drill Generator (`Tools/vocab-conjugation-drill.html`)
-**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets and a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order.
+**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets, a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order, and a "Listen" button per word/verb form using the browser's built-in text-to-speech with a language selector.
 **Suggested improvements:**
-- Add a "Listen" button per vocab word/verb form using the browser's built-in `speechSynthesis` API (no server or API key needed) with a language selector, since this is explicitly a "for any language" tool but currently has no pronunciation support at all.
 - Add quick-start person-label presets (Spanish/French/German/Latin pronoun sets) as buttons above the person-row editor, since today every new set starts from the same Spanish default persons and must be manually retyped for other languages.
 - Add JSON export/import of a drill set so language teachers on the same team can share a built conjugation table instead of re-entering every verb form.
 - Add an option to print vocab and conjugation sections together in a single packet, since the two modes currently produce fully separate print outputs even when saved under the same set name.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
-**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), and a fullscreen toggle (button or `F` key) for the projector "stage" display.
+**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), a fullscreen toggle (button or `F` key) for the projector "stage" display, a "My Prompts" panel where a teacher can add their own prompts (grade band, genre) blended into the random pool alongside the built-in 200, and a Roster Assignment Sheet panel that takes a pasted (or Name-Picker-roster-loaded) class list, tolerantly parsed the same way as the roster tools elsewhere in the toolkit, and randomly pairs each student with a distinct prompt from the active grade-band/genre filters for a printable one-page assignment sheet.
 **Suggested improvements:**
 - Add a "print this prompt" option that renders the current prompt as a single large poster-style page, for classrooms that post the daily prompt physically rather than only projecting it.
-- Allow teachers to add their own custom prompts into the rotation (stored in localStorage, blended into the random pool) instead of being limited strictly to the built-in 200.
-- Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.
 
 ### Immersion Roleplay Scenario Generator (`Tools/roleplay-scenario-generator.html`)
 **Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories with two-role setups, fill-in vocabulary scaffolding cards saved per scenario, shuffle/prev/next navigation, and printable single or multi-scenario handout sets.

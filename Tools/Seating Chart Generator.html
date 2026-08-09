@@ -24,6 +24,7 @@
 <script>window.A11Y_NATIVE_THEME = true;</script>
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
+<script src="seating-chart/scg-photo.js"></script>
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -142,6 +143,14 @@
   .stu.flagged{border-color:var(--gold); box-shadow:inset 3px 0 0 var(--gold);}
   .stu .nm{flex:1; font-size:13.5px; font-weight:500;}
   .stu .note{font-size:11.5px; opacity:0.65; font-style:italic;}
+  .thumb{
+    width:22px; height:22px; border-radius:50%; object-fit:cover; display:block;
+    border:1px solid var(--line); background:var(--paper);
+  }
+  .thumb-placeholder{
+    width:22px; height:22px; display:block; border-radius:50%;
+    border:1px dashed var(--line-strong, var(--line));
+  }
   .icon-btn{
     border:none; background:none; cursor:pointer; font-size:14px; line-height:1;
     color:color-mix(in srgb, var(--ink) 55%, transparent); padding:3px; border-radius:0;
@@ -230,6 +239,11 @@
     font:inherit; font-size:13px; font-weight:600; line-height:1.15; color:var(--ink);
     background:none; border:none; padding:2px 3px; margin:0; border-radius:0;
     cursor:grab; max-width:100%;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .desk .seat .photo{
+    width:26px; height:26px; border-radius:50%; object-fit:cover;
+    border:1px solid var(--blue-soft); pointer-events:none;
   }
   .desk.empty .seat{font-size:11.5px; font-weight:500; color:color-mix(in srgb, var(--ink) 40%, transparent); cursor:pointer;}
   .desk .selnote{position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
@@ -392,9 +406,12 @@
           <button class="btn sm ghost" onclick="sortRoster()">Sort A&ndash;Z</button>
         </div>
         <div class="roster" id="rosterList"></div>
+        <input type="file" id="photoFile" accept="image/*" style="display:none;">
         <p class="hint">Paste straight from a spreadsheet: extra columns, row numbers and
           duplicates are dropped. Click the flag to mark a student who needs a specific spot.
-          Click the pencil for a note.</p>
+          Click the pencil for a note. Click the circle to add a photo &mdash; useful for a
+          substitute matching faces to names. Photos are downscaled before saving and stay in
+          this browser like everything else.</p>
         <p class="hint"><b>Notes stay with the chart</b> in this browser and inside any file you
           export, and they never appear on the printed page. Keep them short and practical
           &mdash; &ldquo;front row, vision&rdquo; rather than anything from a medical or IEP
@@ -696,7 +713,7 @@ function addNames(){
     return;
   }
   pushUndo();
-  names.forEach(nm => sec().students.push({ id: uid(), name: nm, note: '', flag: false }));
+  names.forEach(nm => sec().students.push({ id: uid(), name: nm, note: '', flag: false, photo: '' }));
   box.value = ''; renderAll();
   say(`Added ${names.length}${duplicates.length ? `, skipped ${duplicates.length} already on the roster` : ''}.`, 'good');
 }
@@ -718,6 +735,24 @@ function editNote(id){
     'Keep it practical, not clinical.', st.note || '');
   if (n !== null){ pushUndo(); st.note = n.trim(); renderAll(); }
 }
+let photoTargetId = null;
+function choosePhoto(id){ photoTargetId = id; el('photoFile').click(); }
+function removePhoto(id){ pushUndo(); const st = studentById(id); if (st){ st.photo = ''; renderAll(); } }
+el('photoFile').addEventListener('change', function (){
+  const input = el('photoFile');
+  const file = input.files && input.files[0];
+  const id = photoTargetId;
+  photoTargetId = null;
+  if (!file || !id) { input.value = ''; return; }
+  window.SeatingPhoto.downscaleImage(file).then(dataUrl => {
+    const st = studentById(id);
+    if (st){ pushUndo(); st.photo = dataUrl; renderAll(); }
+    input.value = '';
+  }).catch(() => {
+    say('Could not read that image file.', 'bad');
+    input.value = '';
+  });
+});
 function sortRoster(){
   pushUndo();
   sec().students.sort((a, b) => a.name.localeCompare(b.name));
@@ -730,7 +765,13 @@ function renderRoster(){
     const row = document.createElement('div');
     row.className = 'stu' + (st.flag ? ' flagged' : '');
     row.innerHTML = `
+      <button type="button" class="icon-btn" style="padding:0;" title="${st.photo ? 'Change' : 'Add'} photo for ${esc(st.name)}"
+              aria-label="${st.photo ? 'Change' : 'Add'} photo for ${esc(st.name)}" onclick="choosePhoto('${st.id}')">
+        ${st.photo ? `<img class="thumb" src="${esc(st.photo)}" alt="">` : `<span class="thumb-placeholder" aria-hidden="true"></span>`}
+      </button>
       <span class="nm">${esc(st.name)}${st.note ? ` <span class="note">(${esc(st.note)})</span>` : ''}</span>
+      ${st.photo ? `<button class="icon-btn" title="Remove photo for ${esc(st.name)}"
+              aria-label="Remove photo for ${esc(st.name)}" onclick="removePhoto('${st.id}')">&#8998;</button>` : ''}
       <button class="icon-btn ${st.flag ? 'on' : ''}" title="Flag ${esc(st.name)} for a specific spot"
               aria-label="Flag ${esc(st.name)} for a specific spot" aria-pressed="${st.flag}"
               onclick="toggleFlag('${st.id}')">&#9873;</button>
@@ -886,7 +927,8 @@ function renderFloor(){
       : `Seat ${i + 1} of ${total}, empty`;
     node.innerHTML =
         `<button class="seat" data-id="${d.id}" aria-label="${esc(label)}"${st ? ' draggable="true"' : ''}>`
-      +   (st ? esc(st.name) : 'empty')
+      +   (st && st.photo ? `<img class="photo" src="${esc(st.photo)}" alt="">` : '')
+      +   `<span>${st ? esc(st.name) : 'empty'}</span>`
       + `</button>`
       + `<span class="selnote">moving</span>`
       + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : ``)
@@ -1179,7 +1221,9 @@ function deskNodeForPrint(d, i, total, s){
   const label = st
     ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
     : `Seat ${i + 1} of ${total}, empty`;
-  node.innerHTML = `<span class="seat" aria-label="${esc(label)}">${st ? esc(st.name) : 'empty'}</span>`
+  node.innerHTML = `<span class="seat" aria-label="${esc(label)}">`
+    + (st && st.photo ? `<img class="photo" src="${esc(st.photo)}" alt="">` : '')
+    + `<span>${st ? esc(st.name) : 'empty'}</span></span>`
     + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : '');
   return node;
 }
@@ -1365,6 +1409,7 @@ function boot(){
 Object.assign(window, {
   addSection, duplicateSection, renameSection, deleteSection,
   addNames, sortRoster, setLastFirst, toggleFlag, editNote, removeStudent,
+  choosePhoto, removePhoto,
   loadRosterHub,
   addPair, removePair,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,

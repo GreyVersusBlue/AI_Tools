@@ -72,14 +72,24 @@
   .presets button { flex: 1; min-width: 3.4rem; }
   .custom-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .9rem; }
   .custom-row input { margin-bottom: 0; }
+  .ring-wrap { position: relative; width: min(72%, 230px); aspect-ratio: 1; margin: .3rem auto .9rem; }
+  .progress-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--line); stroke-width: 9; }
+  .ring-fg { fill: none; stroke: var(--accent-2); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset .15s linear; }
+  .ring-fg.warn { stroke: var(--err); }
+  .stage-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
   .timer-display {
     text-align: center; font-family: Consolas, monospace; font-weight: 700;
-    font-size: clamp(3rem, 11vw, 5.4rem); line-height: 1; margin: .4rem 0 .8rem; letter-spacing: .02em;
+    font-size: clamp(2.1rem, 7vw, 3rem); line-height: 1; letter-spacing: .02em;
   }
   .timer-display.warn { color: var(--err); }
   .timer-display.done { animation: pulse 1s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-  .timer-controls { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; }
+  .timer-controls { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-bottom: .8rem; }
+  .sound-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .sound-row select { width: auto; flex: 1; margin-bottom: 0; }
+  .sound-row .small { flex: 0 0 auto; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
   /* ── Today ─────────────────────────────────────────────────────────── */
   .today-date { font-size: 1.2rem; font-weight: 700; margin-bottom: .1rem; }
@@ -131,10 +141,28 @@
         <input type="number" id="customMinutes" min="1" max="180" placeholder="Minutes" style="flex:1;">
         <button type="button" class="secondary" id="customSetBtn">Set</button>
       </div>
-      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="ring-wrap" id="ringWrap">
+        <svg class="progress-ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-bg" cx="100" cy="100" r="90"></circle>
+          <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="90"></circle>
+        </svg>
+        <div class="stage-center">
+          <div class="timer-display" id="timerDisplay">00:00</div>
+        </div>
+      </div>
       <div class="timer-controls">
         <button type="button" id="startPauseBtn">Start</button>
         <button type="button" class="secondary" id="resetBtn">Reset</button>
+      </div>
+      <div class="sound-row">
+        <label for="soundChoice" class="sr-only">Alert sound</label>
+        <select id="soundChoice">
+          <option value="chime">Chime</option>
+          <option value="bell">Bell</option>
+          <option value="buzzer">Buzzer</option>
+          <option value="none">None</option>
+        </select>
+        <button type="button" class="secondary small" id="soundTestBtn">Test</button>
       </div>
     </div>
 
@@ -195,12 +223,26 @@
   var startPauseBtn = document.getElementById('startPauseBtn');
   var resetBtn = document.getElementById('resetBtn');
   var customMinutes = document.getElementById('customMinutes');
+  var ringFg = document.getElementById('ringFg');
+  var soundChoice = document.getElementById('soundChoice');
+  var soundTestBtn = document.getElementById('soundTestBtn');
+
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 90;
+  ringFg.style.strokeDasharray = String(RING_CIRCUMFERENCE);
 
   var totalSeconds = (settings.timerMinutes || 5) * 60;
   var remaining = totalSeconds;
   var running = false;
   var tickHandle = null;
   var audioCtx = null;
+  var Sounds = null;
+  import('./classroom-timer/ct-sounds.js').then(function (m) { Sounds = m; }).catch(function () { /* fall back to beep() */ });
+
+  soundChoice.value = settings.soundChoice || 'chime';
+  soundChoice.addEventListener('change', function () {
+    settings.soundChoice = soundChoice.value;
+    saveSettings(settings);
+  });
 
   function beep() {
     try {
@@ -214,6 +256,18 @@
       osc.start(); osc.stop(audioCtx.currentTime + 0.6);
     } catch (e) { /* audio unavailable — silent is fine */ }
   }
+  function playAlert() {
+    if (Sounds && soundChoice.value !== 'none') {
+      Sounds.unlock();
+      Sounds.play(soundChoice.value, 0.7);
+    } else if (!Sounds && soundChoice.value !== 'none') {
+      beep();
+    }
+  }
+  soundTestBtn.addEventListener('click', function () {
+    if (Sounds) { Sounds.unlock(); Sounds.play(soundChoice.value === 'none' ? 'chime' : soundChoice.value, 0.7); }
+    else beep();
+  });
 
   function formatTime(sec) {
     sec = Math.max(0, Math.round(sec));
@@ -222,8 +276,12 @@
   }
   function renderTimer() {
     timerDisplay.textContent = formatTime(remaining);
-    timerDisplay.classList.toggle('warn', remaining > 0 && remaining <= 30);
+    var warn = remaining > 0 && remaining <= 30;
+    timerDisplay.classList.toggle('warn', warn);
     timerDisplay.classList.toggle('done', remaining === 0);
+    ringFg.classList.toggle('warn', warn || remaining === 0);
+    var fraction = totalSeconds > 0 ? remaining / totalSeconds : 0;
+    ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - fraction));
   }
   function setMinutes(min) {
     min = Math.max(1, Math.min(180, Math.round(min) || 1));
@@ -240,13 +298,14 @@
       remaining = 0;
       renderTimer();
       pauseTimer();
-      beep();
+      playAlert();
       return;
     }
     renderTimer();
   }
   function startTimer() {
     if (remaining <= 0) { remaining = totalSeconds; }
+    if (Sounds) Sounds.unlock();
     running = true;
     startPauseBtn.textContent = 'Pause';
     tickHandle = setInterval(tick, 1000);
