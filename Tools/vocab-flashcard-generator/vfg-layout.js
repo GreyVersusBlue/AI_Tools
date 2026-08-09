@@ -39,6 +39,19 @@
     return mirrored;
   }
 
+  /**
+   * Return a shuffled COPY of items (Fisher-Yates), leaving the input
+   * array untouched so the caller's saved order is never mutated.
+   */
+  function shuffleItems(items) {
+    var copy = items.slice();
+    for (var i = copy.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
+    }
+    return copy;
+  }
+
   function pageSize(orientation) {
     return orientation === 'landscape' ? { w: 11, h: 8.5 } : { w: 8.5, h: 11 };
   }
@@ -57,6 +70,7 @@
   global.VocabLayout = {
     parseWordList: parseWordList,
     paginate: paginate,
+    shuffleItems: shuffleItems,
     mirrorPageRows: mirrorPageRows,
     pageSize: pageSize,
     computeCardSizeIn: computeCardSizeIn

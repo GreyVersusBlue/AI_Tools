@@ -141,6 +141,12 @@
           <div class="mode-tab" data-mode="wordwall">Word wall cards</div>
         </div>
 
+        <div class="row2">
+          <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+            <input type="checkbox" id="shuffleOrder" style="width:auto;margin:0;"> Shuffle order
+          </label>
+        </div>
+
         <div id="flashOptions">
           <div class="row2">
             <div><label for="flashCols">Columns</label><input type="text" id="flashCols" value="2"></div>
@@ -188,11 +194,11 @@
 
   var els = {};
   ['toolbar','listSwitch','newListBtn','deleteListBtn','listName','wordInput',
-   'flashOptions','wallOptions','flashCols','flashRows','wallPerPage','wallShowDef',
+   'flashOptions','wallOptions','flashCols','flashRows','wallPerPage','wallShowDef','shuffleOrder',
    'printBtn','previewArea','previewNote','printNote','sheetView'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef }
+  var state = null; // { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef, shuffle }
   var currentPreviewIndex = 0;
   var currentPreviewSide = 'front';
 
@@ -221,6 +227,7 @@
     state.flashRows = Math.max(1, parseInt(els.flashRows.value, 10) || 4);
     state.wallPerPage = parseInt(els.wallPerPage.value, 10) || 2;
     state.wallShowDef = els.wallShowDef.checked;
+    state.shuffle = els.shuffleOrder.checked;
   }
 
   function flashCardHtml(item) {
@@ -277,6 +284,7 @@
     refreshSwitcher();
 
     var items = VocabLayout.parseWordList(state.words);
+    if (state.shuffle) items = VocabLayout.shuffleItems(items);
     els.sheetView.innerHTML = '';
 
     if (!items.length) {
@@ -332,6 +340,7 @@
 
   function buildPrintArea() {
     var items = VocabLayout.parseWordList(state.words);
+    if (state.shuffle) items = VocabLayout.shuffleItems(items);
     var html;
     if (state.mode === 'flashcards') {
       var built = buildFlashPages(items);
@@ -344,7 +353,7 @@
 
   /* ---------- lifecycle ---------- */
   function newList(name) {
-    state = { name: name, words: '', mode: 'flashcards', flashCols: 2, flashRows: 4, wallPerPage: 2, wallShowDef: true };
+    state = { name: name, words: '', mode: 'flashcards', flashCols: 2, flashRows: 4, wallPerPage: 2, wallShowDef: true, shuffle: false };
     VocabStore.setCurrentName(name);
     applyStateToForm();
     refreshSwitcher();
@@ -369,6 +378,7 @@
     els.flashRows.value = state.flashRows;
     els.wallPerPage.value = state.wallPerPage;
     els.wallShowDef.checked = state.wallShowDef;
+    els.shuffleOrder.checked = !!state.shuffle;
     document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.mode === state.mode); });
     els.flashOptions.style.display = state.mode === 'flashcards' ? '' : 'none';
     els.wallOptions.style.display = state.mode === 'wordwall' ? '' : 'none';
@@ -388,6 +398,7 @@
   els.flashRows.addEventListener('input', renderPreview);
   els.wallPerPage.addEventListener('change', renderPreview);
   els.wallShowDef.addEventListener('change', renderPreview);
+  els.shuffleOrder.addEventListener('change', renderPreview);
 
   document.querySelectorAll('.mode-tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
