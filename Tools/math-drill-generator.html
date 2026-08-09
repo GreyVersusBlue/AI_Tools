@@ -136,6 +136,14 @@
           <div><label for="columns">Columns</label><input type="number" id="columns" value="3" min="1" max="6"></div>
         </div>
 
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="timedFluency" style="width:auto;margin:0;"> Add timed-fluency header
+        </label>
+        <div id="fluencyTargetRow" style="display:none;">
+          <label for="fluencyTargetSeconds">Target time (seconds, optional)</label>
+          <input type="number" id="fluencyTargetSeconds" min="1" max="3600" placeholder="e.g. 60">
+        </div>
+
         <button type="button" id="generateBtn">Generate new sheet</button>
 
         <div class="toggle-row">
@@ -175,10 +183,12 @@
   ['templateKey','sheetTitle','problemCount','columns','generateBtn',
    'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote',
    'exportSettingsBtn','importSettingsBtn','importSettingsFile',
-   'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn'
+   'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn',
+   'timedFluency','fluencyTargetRow','fluencyTargetSeconds'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, rangesByTemplate: {} };
+  var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, rangesByTemplate: {},
+    timedFluency: false, fluencyTargetSeconds: '' };
   var problems = [];
   var view = 'worksheet';
   var todayStr = new Date().toLocaleDateString();
@@ -246,6 +256,16 @@
     });
   }
 
+  function fluencyHeaderHtml() {
+    if (!settings.timedFluency) return '';
+    var target = parseInt(settings.fluencyTargetSeconds, 10);
+    var targetHtml = (isFinite(target) && target > 0)
+      ? '<span>Target: ' + target + ' seconds</span>'
+      : '<span>Target: _____ seconds</span>';
+    return '<div class="sheet-meta"><span>Start time: <span class="fill-line">&nbsp;</span></span>' +
+      '<span>End time: <span class="fill-line">&nbsp;</span></span>' + targetHtml + '</div>';
+  }
+
   function worksheetHtml() {
     var cols = settings.columns;
     var items = problems.map(function (p, i) {
@@ -256,6 +276,7 @@
       '<div class="sheet">' +
         '<div class="sheet-title">' + escapeHtml(settings.sheetTitle || MathDrillTemplates.byKey(settings.templateKey).label) + '</div>' +
         '<div class="sheet-meta"><span>Name: <span class="fill-line">&nbsp;</span></span><span>Date: ' + todayStr + '</span></div>' +
+        fluencyHeaderHtml() +
         '<div class="problems" style="column-count:' + cols + ';">' + items + '</div>' +
       '</div>'
     );
@@ -287,6 +308,8 @@
     settings.sheetTitle = els.sheetTitle.value;
     settings.problemCount = Math.max(5, Math.min(100, parseInt(els.problemCount.value, 10) || 30));
     settings.columns = Math.max(1, Math.min(6, parseInt(els.columns.value, 10) || 3));
+    settings.timedFluency = els.timedFluency.checked;
+    settings.fluencyTargetSeconds = els.fluencyTargetSeconds.value;
   }
 
   function generate() {
@@ -327,6 +350,9 @@
     els.problemCount.value = obj.problemCount;
     els.columns.value = obj.columns;
     settings.rangesByTemplate = (obj.rangesByTemplate && typeof obj.rangesByTemplate === 'object') ? obj.rangesByTemplate : {};
+    els.timedFluency.checked = !!obj.timedFluency;
+    els.fluencyTargetRow.style.display = els.timedFluency.checked ? '' : 'none';
+    els.fluencyTargetSeconds.value = typeof obj.fluencyTargetSeconds === 'string' || typeof obj.fluencyTargetSeconds === 'number' ? obj.fluencyTargetSeconds : '';
     loadRangeInputs();
     generate();
   }
@@ -366,6 +392,12 @@
     generate();
   });
 
+  els.timedFluency.addEventListener('change', function () {
+    els.fluencyTargetRow.style.display = els.timedFluency.checked ? '' : 'none';
+    readFormIntoSettings(); persist(); renderPreview();
+  });
+  els.fluencyTargetSeconds.addEventListener('input', function () { readFormIntoSettings(); persist(); renderPreview(); });
+
   els.viewWorksheetBtn.addEventListener('click', function () {
     view = 'worksheet';
     els.viewWorksheetBtn.classList.add('active');
@@ -398,6 +430,9 @@
   els.sheetTitle.value = settings.sheetTitle;
   els.problemCount.value = settings.problemCount;
   els.columns.value = settings.columns;
+  els.timedFluency.checked = !!settings.timedFluency;
+  els.fluencyTargetRow.style.display = els.timedFluency.checked ? '' : 'none';
+  els.fluencyTargetSeconds.value = settings.fluencyTargetSeconds || '';
   loadRangeInputs();
   generate();
 })();
