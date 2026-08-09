@@ -34,14 +34,57 @@
     return String(r);
   }
 
+  function dotEl(x, y, r) {
+    return '<circle cx="' + x.toFixed(4) + '" cy="' + y.toFixed(4) + '" r="' + r + '" fill="#1a1a1a"/>';
+  }
+
+  // Every line in a family sharing one direction sits at a fixed perpendicular
+  // distance from the origin; walking the corners of the target rectangle
+  // through that projection gives the k-range to cover it, and Liang-Barsky-
+  // style t-clipping trims each infinite line down to the segment actually
+  // inside the rectangle (needed for the two slanted isometric line families).
+  function clippedLinesForAngle(angleDeg, spacing, w, h) {
+    var theta = angleDeg * Math.PI / 180;
+    var ux = Math.cos(theta), uy = Math.sin(theta);
+    var nx = -Math.sin(theta), ny = Math.cos(theta);
+    var corners = [[0, 0], [w, 0], [0, h], [w, h]];
+    var projs = corners.map(function (c) { return c[0] * nx + c[1] * ny; });
+    var dMin = Math.min.apply(null, projs), dMax = Math.max.apply(null, projs);
+    var startK = Math.ceil(dMin / spacing), endK = Math.floor(dMax / spacing);
+    var lines = [];
+    for (var k = startK; k <= endK; k++) {
+      var d = k * spacing;
+      var px = d * nx, py = d * ny;
+      var tMin = -Infinity, tMax = Infinity;
+      if (Math.abs(ux) > 1e-9) {
+        var t1 = (0 - px) / ux, t2 = (w - px) / ux;
+        tMin = Math.max(tMin, Math.min(t1, t2));
+        tMax = Math.min(tMax, Math.max(t1, t2));
+      } else if (px < -1e-9 || px > w + 1e-9) {
+        continue;
+      }
+      if (Math.abs(uy) > 1e-9) {
+        var t3 = (0 - py) / uy, t4 = (h - py) / uy;
+        tMin = Math.max(tMin, Math.min(t3, t4));
+        tMax = Math.min(tMax, Math.max(t3, t4));
+      } else if (py < -1e-9 || py > h + 1e-9) {
+        continue;
+      }
+      if (tMin > tMax) continue;
+      lines.push([px + tMin * ux, py + tMin * uy, px + tMax * ux, py + tMax * uy]);
+    }
+    return lines;
+  }
+
   /* ---------- Graph paper ---------- */
   // opts: { orientation, cellSize (inches, used when mode='fill'),
   //         mode: 'fill' | 'exact', cols, rows (used when mode='exact'),
-  //         boldCenter }
+  //         boldCenter, style: 'square' | 'dot' | 'isometric' (default 'square') }
   function renderGraphPaper(opts) {
     var page = pageSize(opts.orientation);
     var usableW = page.w - MARGIN * 2;
     var usableH = page.h - MARGIN * 2;
+    var style = opts.style || 'square';
     var cellSize, cols, rows;
 
     if (opts.mode === 'exact') {
@@ -60,16 +103,35 @@
     var offsetY = MARGIN + (usableH - gridH) / 2;
 
     var parts = [];
-    var midCol = cols / 2, midRow = rows / 2;
-    for (var c = 0; c <= cols; c++) {
-      var x = offsetX + c * cellSize;
-      var isBold = opts.boldCenter && Math.abs(c - midCol) < 1e-6;
-      parts.push(lineEl(x, offsetY, x, offsetY + gridH, isBold ? BOLD : THIN));
-    }
-    for (var r = 0; r <= rows; r++) {
-      var y = offsetY + r * cellSize;
-      var isBoldR = opts.boldCenter && Math.abs(r - midRow) < 1e-6;
-      parts.push(lineEl(offsetX, y, offsetX + gridW, y, isBoldR ? BOLD : THIN));
+
+    if (style === 'isometric') {
+      // Three line families 60 degrees apart, all at the same perpendicular
+      // spacing (a triangle's height), tile the page with equilateral
+      // triangles whose side length is cellSize.
+      var perpSpacing = cellSize * (Math.sqrt(3) / 2);
+      [90, 30, 150].forEach(function (angle) {
+        clippedLinesForAngle(angle, perpSpacing, gridW, gridH).forEach(function (seg) {
+          parts.push(lineEl(offsetX + seg[0], offsetY + seg[1], offsetX + seg[2], offsetY + seg[3], THIN));
+        });
+      });
+    } else if (style === 'dot') {
+      for (var dc = 0; dc <= cols; dc++) {
+        for (var dr = 0; dr <= rows; dr++) {
+          parts.push(dotEl(offsetX + dc * cellSize, offsetY + dr * cellSize, 0.012));
+        }
+      }
+    } else {
+      var midCol = cols / 2, midRow = rows / 2;
+      for (var c = 0; c <= cols; c++) {
+        var x = offsetX + c * cellSize;
+        var isBold = opts.boldCenter && Math.abs(c - midCol) < 1e-6;
+        parts.push(lineEl(x, offsetY, x, offsetY + gridH, isBold ? BOLD : THIN));
+      }
+      for (var r = 0; r <= rows; r++) {
+        var y = offsetY + r * cellSize;
+        var isBoldR = opts.boldCenter && Math.abs(r - midRow) < 1e-6;
+        parts.push(lineEl(offsetX, y, offsetX + gridW, y, isBoldR ? BOLD : THIN));
+      }
     }
 
     return { svg: svgWrap(page.w, page.h, parts.join('')), cols: cols, rows: rows, cellSize: cellSize };

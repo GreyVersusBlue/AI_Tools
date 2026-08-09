@@ -110,6 +110,13 @@
 
         <!-- ===== Graph paper panel ===== -->
         <div class="mode-panel active" id="panel-graph">
+          <label for="gridStyle">Grid style</label>
+          <select id="gridStyle">
+            <option value="square">Square grid</option>
+            <option value="dot">Dot grid</option>
+            <option value="isometric">Isometric grid</option>
+          </select>
+
           <label for="gridSizePreset">Grid size</label>
           <select id="gridSizePreset">
             <option value="0.25">1/4 inch squares</option>
@@ -119,7 +126,7 @@
           </select>
           <input type="number" id="gridSizeCustom" min="1" max="20" step="0.5" value="4" style="display:none;" placeholder="Squares per inch">
 
-          <div class="checkline">
+          <div class="checkline" id="exactCountLine">
             <input type="checkbox" id="exactCount">
             <label style="margin:0;" for="exactCount">Use an exact number of rows/columns instead (auto-sized to fit the page)</label>
           </div>
@@ -128,7 +135,7 @@
             <div><label for="exactRows">Rows</label><input type="number" id="exactRows" min="1" max="80" value="10"></div>
           </div>
 
-          <div class="checkline">
+          <div class="checkline" id="boldCenterLine">
             <input type="checkbox" id="boldCenter">
             <label style="margin:0;" for="boldCenter">Bold axis lines through the center</label>
           </div>
@@ -191,7 +198,7 @@
   'use strict';
 
   var els = {};
-  ['orientation','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
+  ['orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
    'nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery',
    'printBtn','previewArea'
@@ -200,6 +207,7 @@
   var settings = {
     mode: 'graph',
     orientation: 'portrait',
+    gridStyle: 'square',
     gridSizePreset: '0.25',
     gridSizeCustom: 4,
     exactCount: false,
@@ -219,12 +227,16 @@
 
   function applySettingsToForm() {
     els.orientation.value = settings.orientation;
+    els.gridStyle.value = settings.gridStyle;
+    var isSquare = settings.gridStyle === 'square';
+    els.exactCountLine.style.display = isSquare ? '' : 'none';
+    els.boldCenterLine.style.display = isSquare ? '' : 'none';
     var preset = ['0.25', '0.5', '0.3937'].indexOf(String(settings.gridSizePreset)) !== -1 ? String(settings.gridSizePreset) : 'custom';
     els.gridSizePreset.value = preset;
     els.gridSizeCustom.value = settings.gridSizeCustom;
     els.gridSizeCustom.style.display = preset === 'custom' ? '' : 'none';
     els.exactCount.checked = settings.exactCount;
-    els.exactCountFields.style.display = settings.exactCount ? '' : 'none';
+    els.exactCountFields.style.display = (isSquare && settings.exactCount) ? '' : 'none';
     els.exactCols.value = settings.exactCols;
     els.exactRows.value = settings.exactRows;
     els.boldCenter.checked = settings.boldCenter;
@@ -239,6 +251,7 @@
 
   function readFormIntoSettings() {
     settings.orientation = els.orientation.value;
+    settings.gridStyle = els.gridStyle.value;
     var preset = els.gridSizePreset.value;
     settings.gridSizePreset = preset;
     settings.gridSizeCustom = parseFloat(els.gridSizeCustom.value) || 4;
@@ -274,7 +287,8 @@
     if (settings.mode === 'graph') {
       result = window.GraphPaperRender.renderGraphPaper({
         orientation: settings.orientation,
-        mode: settings.exactCount ? 'exact' : 'fill',
+        style: settings.gridStyle,
+        mode: (settings.gridStyle === 'square' && settings.exactCount) ? 'exact' : 'fill',
         cellSize: gridSizeInches(),
         cols: settings.exactCols,
         rows: settings.exactRows,
@@ -315,7 +329,14 @@
     render();
   });
   els.exactCount.addEventListener('change', function () {
-    els.exactCountFields.style.display = els.exactCount.checked ? '' : 'none';
+    els.exactCountFields.style.display = (els.gridStyle.value === 'square' && els.exactCount.checked) ? '' : 'none';
+    render();
+  });
+  els.gridStyle.addEventListener('change', function () {
+    var isSquare = els.gridStyle.value === 'square';
+    els.exactCountLine.style.display = isSquare ? '' : 'none';
+    els.boldCenterLine.style.display = isSquare ? '' : 'none';
+    els.exactCountFields.style.display = (isSquare && els.exactCount.checked) ? '' : 'none';
     render();
   });
 

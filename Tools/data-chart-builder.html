@@ -158,6 +158,10 @@
             <select id="scatter-y-col"></select>
           </div>
         </div>
+        <div class="option-row">
+          <input type="checkbox" id="show-trendline">
+          <label class="option-label" for="show-trendline">Show trendline (linear regression)</label>
+        </div>
       </div>
     </div>
 
@@ -176,6 +180,10 @@
       <div class="control-group">
         <label for="chart-title">Chart title</label>
         <input type="text" id="chart-title" placeholder="e.g. Reaction Time vs. Temperature" maxlength="80">
+      </div>
+      <div class="control-group" id="y-axis-label-group">
+        <label for="y-axis-label">Y-axis label</label>
+        <input type="text" id="y-axis-label" placeholder="Defaults to the column name" maxlength="60">
       </div>
       <div class="option-row">
         <input type="checkbox" id="show-values" checked>
@@ -219,8 +227,8 @@
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
-   'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'options-card', 'chart-title',
-   'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg'
+   'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
+   'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -367,7 +375,9 @@
   els.valueColsList.addEventListener('change', scheduleRender);
   els.scatterXCol.addEventListener('change', scheduleRender);
   els.scatterYCol.addEventListener('change', scheduleRender);
+  els.showTrendline.addEventListener('change', scheduleRender);
   els.chartTitle.addEventListener('input', scheduleRender);
+  els.yAxisLabel.addEventListener('input', scheduleRender);
   els.showValues.addEventListener('change', function () { saveSettings(); scheduleRender(); });
   els.sortValues.addEventListener('change', scheduleRender);
   document.querySelectorAll('input[name="chart-type"]').forEach(function (r) {
@@ -384,6 +394,7 @@
     document.getElementById('value-cols-group').style.display = isScatter ? 'none' : 'block';
     els.scatterColsGroup.style.display = isScatter ? 'block' : 'none';
     els.sortRow.style.display = (isScatter || isPie) ? 'none' : 'flex';
+    els.yAxisLabelGroup.style.display = isPie ? 'none' : 'block';
   }
 
   function scheduleRender() { clearTimeout(debounceTimer); debounceTimer = setTimeout(render, 100); }
@@ -517,6 +528,14 @@
     return parts.join('');
   }
 
+  function drawYAxisLabel(defaultLabel) {
+    var text = els.yAxisLabel.value.trim() || defaultLabel;
+    if (!text) return '';
+    var plotH = H - PAD.top - PAD.bottom;
+    var x = 14, y = PAD.top + plotH / 2;
+    return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="10.5" fill="#5b6b78" transform="rotate(-90 ' + x + ' ' + y + ')">' + escapeXML(text) + '</text>';
+  }
+
   function formatNum(v) {
     if (Math.abs(v) >= 1000) return (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k';
     return Math.round(v * 100) / 100 + '';
@@ -530,7 +549,7 @@
     var groupPad = slot * 0.18;
     var barW = (slot - groupPad * 2) / built.series.length;
 
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories)];
+    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories), drawYAxisLabel(built.series[0] ? built.series[0].label : '')];
     built.categories.forEach(function (cat, i) {
       built.series.forEach(function (s, si) {
         var val = s.values[i];
@@ -554,7 +573,7 @@
     var n = built.categories.length;
     var slot = plotW / Math.max(n - 1, 1);
 
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories)];
+    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories), drawYAxisLabel(built.series[0] ? built.series[0].label : '')];
     built.series.forEach(function (s) {
       var pts = s.values.map(function (v, i) {
         var x = n === 1 ? PAD.left + plotW / 2 : PAD.left + slot * i;
@@ -607,6 +626,21 @@
     return parts.join('');
   }
 
+  function linearRegression(points) {
+    var n = points.length;
+    var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
+    points.forEach(function (p) {
+      sumX += p.x; sumY += p.y; sumXY += p.x * p.y; sumXX += p.x * p.x; sumYY += p.y * p.y;
+    });
+    var denom = n * sumXX - sumX * sumX;
+    if (n < 2 || denom === 0) return null;
+    var slope = (n * sumXY - sumX * sumY) / denom;
+    var intercept = (sumY - slope * sumX) / n;
+    var corrDenom = Math.sqrt((n * sumXX - sumX * sumX) * (n * sumYY - sumY * sumY));
+    var r = corrDenom === 0 ? 0 : (n * sumXY - sumX * sumY) / corrDenom;
+    return { slope: slope, intercept: intercept, r2: r * r };
+  }
+
   function drawScatterChart(sc) {
     var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
     var xs = sc.points.map(function (p) { return p.x; }), ys = sc.points.map(function (p) { return p.y; });
@@ -614,13 +648,27 @@
     var maxY = niceMax(Math.max.apply(null, ys.concat([0])) * 1.15);
     var minX = Math.min.apply(null, xs.concat([0]));
     var xRange = maxX - Math.min(minX, 0) || 1;
+    var xOrigin = Math.min(minX, 0);
 
-    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxY, null)];
+    function toX(v) { return PAD.left + ((v - xOrigin) / xRange) * plotW; }
+    function toY(v) { return PAD.top + plotH - (v / maxY) * plotH; }
+
+    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxY, null), drawYAxisLabel(sc.yLabel)];
     parts.push('<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#5b6b78">' + escapeXML(sc.xLabel) + '</text>');
+
+    var trend = null;
+    if (els.showTrendline.checked) trend = linearRegression(sc.points);
+    if (trend) {
+      var lineX1 = xOrigin, lineX2 = maxX;
+      var lineY1 = trend.slope * lineX1 + trend.intercept;
+      var lineY2 = trend.slope * lineX2 + trend.intercept;
+      parts.push('<line x1="' + toX(lineX1).toFixed(1) + '" y1="' + toY(lineY1).toFixed(1) + '" x2="' + toX(lineX2).toFixed(1) + '" y2="' + toY(lineY2).toFixed(1) + '" stroke="' + PALETTE_HEX[4] + '" stroke-width="2" stroke-dasharray="5,4"/>');
+      var eq = 'y = ' + round2(trend.slope) + 'x ' + (trend.intercept >= 0 ? '+ ' : '- ') + round2(Math.abs(trend.intercept)) + '  (R² = ' + round2(trend.r2) + ')';
+      parts.push('<text x="' + (W - PAD.right) + '" y="' + (PAD.top - 6) + '" text-anchor="end" font-size="10" fill="' + PALETTE_HEX[4] + '">' + escapeXML(eq) + '</text>');
+    }
+
     sc.points.forEach(function (p) {
-      var x = PAD.left + ((p.x - Math.min(minX, 0)) / xRange) * plotW;
-      var y = PAD.top + plotH - (p.y / maxY) * plotH;
-      parts.push('<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4" fill="' + PALETTE_HEX[0] + '" opacity="0.75"/>');
+      parts.push('<circle cx="' + toX(p.x).toFixed(1) + '" cy="' + toY(p.y).toFixed(1) + '" r="4" fill="' + PALETTE_HEX[0] + '" opacity="0.75"/>');
     });
     parts.push('</svg>');
     return parts.join('');

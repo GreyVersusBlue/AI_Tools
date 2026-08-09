@@ -62,12 +62,15 @@
   .entries-table th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 0 .35rem .35rem; }
   .entries-table td { padding: .25rem .3rem; vertical-align: top; }
   .entries-table td.num-cell { color: var(--muted); font-family: Consolas, monospace; font-size: .8rem; text-align: center; padding-top: .7rem; width: 1.7rem; }
-  .entries-table td.remove-cell { width: 2rem; text-align: center; }
+  .entries-table td.actions-cell { width: auto; text-align: center; white-space: nowrap; padding-top: .35rem; }
   .entries-table input { margin-bottom: 0; font-size: .85rem; padding: .45rem .55rem; }
-  .remove-row-btn {
+  .remove-row-btn, .move-row-btn {
     background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
-    width: 1.7rem; height: 1.7rem; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
+    width: 1.7rem; height: 1.7rem; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer; margin-left: .25rem;
   }
+  .move-row-btn:first-child { margin-left: 0; }
+  .move-row-btn:hover:not(:disabled) { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .move-row-btn:disabled { opacity: .35; cursor: not-allowed; }
   .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
 
   button {
@@ -365,12 +368,17 @@
 
   // ── Row editor ────────────────────────────────────────────────────────────
   function renderRows() {
+    var n = state.entries.length;
     els.entriesBody.innerHTML = state.entries.map(function (row, i) {
       return '<tr data-idx="' + i + '">' +
         '<td class="num-cell">' + (i + 1) + '</td>' +
         '<td><input type="text" class="f-name" value="' + escapeAttr(row.name) + '" placeholder="Student / group ' + (i + 1) + '"></td>' +
         '<td><input type="text" class="f-value" value="' + escapeAttr(row.value) + '" placeholder="docs.google.com/... or plain text"></td>' +
-        '<td class="remove-cell"><button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove entry">&#10005;</button></td>' +
+        '<td class="actions-cell">' +
+          '<button type="button" class="move-row-btn" data-move-up="' + i + '" title="Move up" ' + (i === 0 ? 'disabled' : '') + '>&#8593;</button>' +
+          '<button type="button" class="move-row-btn" data-move-down="' + i + '" title="Move down" ' + (i === n - 1 ? 'disabled' : '') + '>&#8595;</button>' +
+          '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove entry">&#10005;</button>' +
+        '</td>' +
         '</tr>';
     }).join('');
   }
@@ -386,13 +394,41 @@
   });
 
   els.entriesBody.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-remove]');
-    if (!btn) return;
-    state.entries.splice(parseInt(btn.dataset.remove, 10), 1);
-    ensureAtLeastOneRow();
-    renderRows();
-    save();
-    scheduleRender();
+    var removeBtn = e.target.closest('[data-remove]');
+    if (removeBtn) {
+      state.entries.splice(parseInt(removeBtn.dataset.remove, 10), 1);
+      ensureAtLeastOneRow();
+      renderRows();
+      save();
+      scheduleRender();
+      return;
+    }
+    var upBtn = e.target.closest('[data-move-up]');
+    if (upBtn) {
+      var upIdx = parseInt(upBtn.dataset.moveUp, 10);
+      if (upIdx > 0) {
+        var tmp = state.entries[upIdx - 1];
+        state.entries[upIdx - 1] = state.entries[upIdx];
+        state.entries[upIdx] = tmp;
+        renderRows();
+        save();
+        scheduleRender();
+      }
+      return;
+    }
+    var downBtn = e.target.closest('[data-move-down]');
+    if (downBtn) {
+      var downIdx = parseInt(downBtn.dataset.moveDown, 10);
+      if (downIdx < state.entries.length - 1) {
+        var tmp2 = state.entries[downIdx + 1];
+        state.entries[downIdx + 1] = state.entries[downIdx];
+        state.entries[downIdx] = tmp2;
+        renderRows();
+        save();
+        scheduleRender();
+      }
+      return;
+    }
   });
 
   els.addRowBtn.addEventListener('click', function () {
