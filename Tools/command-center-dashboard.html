@@ -94,7 +94,10 @@
   .roster-list { list-style: none; margin: .6rem 0 0; padding: 0; max-height: 220px; overflow-y: auto; border-top: 1px dashed var(--line); }
   .roster-list li { padding: .35rem .1rem; border-bottom: 1px dashed var(--line); font-size: .86rem; display: flex; justify-content: space-between; }
   .roster-list li.picked { color: var(--muted); text-decoration: line-through; }
+  .roster-list li.excluded { opacity: .5; text-decoration: line-through; }
   .roster-count { font-size: .78rem; color: var(--muted); margin: .5rem 0 0; }
+  .exclude-toggle { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+  .exclude-toggle input { margin: 0; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 1.6rem; text-align: center; }
 </style>
@@ -310,12 +313,27 @@
 
   var currentRoster = [];
   var pickedSet = {};
+  var excludedSet = {};
+  var EXCLUDE_KEY_PREFIX = 'gvb-command-center:excluded:';
 
   function loadRosters() {
     try {
       var v = JSON.parse(localStorage.getItem('np_rosters') || '{}');
       return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
     } catch (e) { return {}; }
+  }
+
+  function excludeKey(rosterName) {
+    return EXCLUDE_KEY_PREFIX + localISODate(new Date()) + ':' + rosterName;
+  }
+  function loadExcluded(rosterName) {
+    try {
+      var v = JSON.parse(sessionStorage.getItem(excludeKey(rosterName)) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
+  }
+  function saveExcluded(rosterName) {
+    try { sessionStorage.setItem(excludeKey(rosterName), JSON.stringify(excludedSet)); } catch (e) { /* ignore */ }
   }
 
   function populateRosterSelect() {
@@ -336,11 +354,27 @@
       return;
     }
     rosterListEl.innerHTML = currentRoster.map(function (n) {
-      return '<li class="' + (pickedSet[n] ? 'picked' : '') + '">' + escapeHtml(n) + (pickedSet[n] ? '<span>done</span>' : '') + '</li>';
+      var isExcluded = !!excludedSet[n];
+      var cls = (pickedSet[n] ? 'picked ' : '') + (isExcluded ? 'excluded' : '');
+      return '<li class="' + cls + '">' +
+        '<label class="exclude-toggle"><input type="checkbox" data-name="' + escapeHtml(n) + '"' + (isExcluded ? ' checked' : '') + '> ' + escapeHtml(n) + '</label>' +
+        (pickedSet[n] ? '<span>done</span>' : '') +
+        '</li>';
     }).join('');
     var picked = Object.keys(pickedSet).length;
-    rosterCountEl.textContent = picked + ' of ' + currentRoster.length + ' picked this round';
+    var excludedCount = Object.keys(excludedSet).length;
+    rosterCountEl.textContent = picked + ' of ' + currentRoster.length + ' picked this round' +
+      (excludedCount ? ' · ' + excludedCount + ' excluded today' : '');
   }
+
+  rosterListEl.addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || !t.matches('input[type="checkbox"][data-name]')) return;
+    var name = t.dataset.name;
+    if (t.checked) excludedSet[name] = true; else delete excludedSet[name];
+    saveExcluded(settings.rosterName);
+    renderRosterList();
+  });
 
   function loadRoster(name) {
     var rosters = loadRosters();
@@ -348,6 +382,7 @@
     if (!Array.isArray(list)) return;
     currentRoster = list.slice();
     pickedSet = {};
+    excludedSet = loadExcluded(name);
     pickedNameEl.textContent = '—';
     pickBtn.disabled = !currentRoster.length;
     resetPicksBtn.disabled = !currentRoster.length;
@@ -361,8 +396,10 @@
   });
 
   pickBtn.addEventListener('click', function () {
-    var remainingNames = currentRoster.filter(function (n) { return !pickedSet[n]; });
-    if (!remainingNames.length) { pickedSet = {}; remainingNames = currentRoster.slice(); }
+    var pool = currentRoster.filter(function (n) { return !excludedSet[n]; });
+    if (!pool.length) { pickedNameEl.textContent = '—'; return; }
+    var remainingNames = pool.filter(function (n) { return !pickedSet[n]; });
+    if (!remainingNames.length) { pickedSet = {}; remainingNames = pool.slice(); }
     var choice = remainingNames[Math.floor(Math.random() * remainingNames.length)];
     pickedSet[choice] = true;
     pickedNameEl.textContent = choice;
