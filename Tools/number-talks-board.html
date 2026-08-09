@@ -237,7 +237,17 @@
     </div>
   </div>
 
-  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. The category filter and your &ldquo;My Number Talks&rdquo; bank are remembered between visits; any student first names you jot on the strategy board, and the session history, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
+  <div class="card">
+    <div class="card-title">
+      <span>String History Log (this term)</span>
+      <button class="link-btn" type="button" id="clearStringHistoryBtn">Clear log</button>
+    </div>
+    <div class="hint" id="stringHistoryHint">Every string drawn or used on this device, oldest reload and all &mdash; unlike the session list above, this one survives a reload. A fresh pull avoids whatever's most recent in this log, so repeats stay rare across the whole term. Clear it at the start of a new term to start avoiding repeats from scratch.</div>
+    <ol class="history-list" id="stringHistoryList"></ol>
+    <div class="hint" id="stringHistoryEmptyHint" style="margin:0;">Nothing logged yet &mdash; it fills in as you draw or use number talks.</div>
+  </div>
+
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. The category filter, your &ldquo;My Number Talks&rdquo; bank, and the string history log are remembered between visits; any student first names you jot on the strategy board, and the session list above, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
 
 </div>
 
@@ -249,10 +259,13 @@
 
   var STORAGE_KEY = 'gvb-number-talks:settings';
   var BANK_KEY = 'gvb-number-talks:myBank';
+  var STRING_HISTORY_KEY = 'gvb-number-talks:stringHistory';
   var MINE_KEY = 'mine';
   var HISTORY_LIMIT = 20;
-  var AVOID_REPEAT_WINDOW = 8;
+  var AVOID_REPEAT_WINDOW = 15;
   var BANK_LIMIT = 200;
+  var STRING_HISTORY_LIMIT = 300;
+  var STRING_HISTORY_DISPLAY_LIMIT = 40;
 
   /* ---------- the bank ---------- */
   /* Each prompt is a category key plus an ordered list of 1-4 related
@@ -350,7 +363,7 @@
   var myBank = [];         // [{id, category, exprs}]  the teacher's own saved favorites — persists in localStorage
   var strategies = [];    // [{id, name, text}]  (in-memory only, session-only)
   var strategyIdCounter = 0;
-  var recentTexts = [];   // avoid immediate repeats
+  var stringHistory = []; // [{text, category, ts}]  persists across reloads/sessions for this term
   var answerKeyVisible = false; // teacher-only reveal toggle; resets on each new prompt
 
   var els = {};
@@ -358,7 +371,8 @@
    'customInput', 'useCustomBtn', 'saveToBankBtn', 'bankList', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
    'historyList', 'historyEmptyHint', 'exportSessionBtn',
    'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn',
-   'printRow', 'printHandoutBtn', 'printArea'
+   'printRow', 'printHandoutBtn', 'printArea',
+   'stringHistoryList', 'stringHistoryEmptyHint', 'clearStringHistoryBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   /* ---------- persistence (settings only) ---------- */
@@ -406,6 +420,52 @@
     catch (e) { /* private browsing / storage full */ }
   }
 
+  /* ---------- persistence (persistent "String History Log") ----------
+     Every string drawn or used, most-recent first, kept across reloads so
+     a fresh pull this term can avoid whatever was just used — unlike the
+     session-only history list above, which is intentionally ephemeral. */
+  function loadStringHistory() {
+    try {
+      var raw = localStorage.getItem(STRING_HISTORY_KEY);
+      if (!raw) return;
+      var saved = JSON.parse(raw);
+      if (!Array.isArray(saved)) return;
+      stringHistory = saved.filter(function (h) {
+        return h && typeof h === 'object' && typeof h.text === 'string' && h.text;
+      }).map(function (h) {
+        return { text: h.text, category: typeof h.category === 'string' ? h.category : 'custom', ts: typeof h.ts === 'number' ? h.ts : Date.now() };
+      }).slice(0, STRING_HISTORY_LIMIT);
+    } catch (e) { /* ignore corrupt storage */ }
+  }
+  function saveStringHistory() {
+    try { localStorage.setItem(STRING_HISTORY_KEY, JSON.stringify(stringHistory)); }
+    catch (e) { /* private browsing / storage full */ }
+  }
+  function logStringUsed(category, exprs) {
+    stringHistory.unshift({ text: promptText(exprs), category: category, ts: Date.now() });
+    stringHistory = stringHistory.slice(0, STRING_HISTORY_LIMIT);
+    saveStringHistory();
+    renderStringHistory();
+  }
+  function clearStringHistory() {
+    if (!confirm('Clear the string history log? A fresh pull will no longer avoid anything used before now.')) return;
+    stringHistory = [];
+    saveStringHistory();
+    renderStringHistory();
+  }
+  function renderStringHistory() {
+    if (!stringHistory.length) {
+      els.stringHistoryList.innerHTML = '';
+      els.stringHistoryEmptyHint.style.display = '';
+      return;
+    }
+    els.stringHistoryEmptyHint.style.display = 'none';
+    els.stringHistoryList.innerHTML = stringHistory.slice(0, STRING_HISTORY_DISPLAY_LIMIT).map(function (h) {
+      var date = new Date(h.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return '<li><span class="h-cat">' + escapeHtml(categoryLabel(h.category)) + ' &middot; ' + escapeHtml(date) + ':</span> ' + escapeHtml(h.text) + '</li>';
+    }).join('');
+  }
+
   /* ---------- category select ---------- */
   function buildCategorySelect() {
     var allOpt = document.createElement('option');
@@ -449,7 +509,8 @@
   function nextPrompt() {
     var items = pool();
     if (!items.length) return;
-    var candidates = items.filter(function (i) { return recentTexts.indexOf(promptText(i.exprs)) === -1; });
+    var recent = stringHistory.slice(0, AVOID_REPEAT_WINDOW).map(function (h) { return h.text; });
+    var candidates = items.filter(function (i) { return recent.indexOf(promptText(i.exprs)) === -1; });
     if (!candidates.length) candidates = items;
     var pick = candidates[Math.floor(Math.random() * candidates.length)];
     setCurrent(pick.category, pick.exprs.slice());
@@ -525,8 +586,7 @@
   function setCurrent(category, exprs) {
     current = { category: category, exprs: exprs, revealed: 1 };
 
-    recentTexts.unshift(promptText(exprs));
-    recentTexts = recentTexts.slice(0, AVOID_REPEAT_WINDOW);
+    logStringUsed(category, exprs);
 
     history.unshift({ category: category, text: promptText(exprs) });
     history = history.slice(0, HISTORY_LIMIT);
@@ -879,6 +939,7 @@
   els.clearBoardBtn.addEventListener('click', clearBoard);
   els.exportSessionBtn.addEventListener('click', exportSession);
   els.printHandoutBtn.addEventListener('click', printHandout);
+  els.clearStringHistoryBtn.addEventListener('click', clearStringHistory);
   els.toggleAnswerBtn.addEventListener('click', function () {
     answerKeyVisible = !answerKeyVisible;
     renderAnswerKey();
@@ -887,12 +948,14 @@
   /* ---------- boot ---------- */
   loadSettings();
   loadMyBank();
+  loadStringHistory();
   buildCategorySelect();
   renderStage();
   renderHistory();
   renderStrategies();
   renderAnswerKey();
   renderMyBank();
+  renderStringHistory();
 })();
 </script>
 <script>

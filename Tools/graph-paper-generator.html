@@ -124,6 +124,7 @@
           <div class="mode-tab active" data-mode="graph">Graph paper</div>
           <div class="mode-tab" data-mode="numberline">Number line</div>
           <div class="mode-tab" data-mode="plane">Coordinate plane</div>
+          <div class="mode-tab" data-mode="isometric">Isometric</div>
         </div>
 
         <label for="orientation">Page orientation</label>
@@ -210,6 +211,24 @@
           </div>
         </div>
 
+        <!-- ===== Isometric panel ===== -->
+        <div class="mode-panel" id="panel-isometric">
+          <label for="isoStyle">Style</label>
+          <select id="isoStyle">
+            <option value="dot">Isometric dot grid</option>
+            <option value="line">Isometric line grid</option>
+          </select>
+
+          <label for="isoSizePreset">Triangle side length</label>
+          <select id="isoSizePreset">
+            <option value="0.25">1/4 inch</option>
+            <option value="0.5">1/2 inch</option>
+            <option value="0.3937">1 cm</option>
+            <option value="custom">Custom (triangles per inch)</option>
+          </select>
+          <input type="number" id="isoSizeCustom" min="1" max="20" step="0.5" value="2" style="display:none;" placeholder="Triangles per inch">
+        </div>
+
         <div class="btnRow">
           <button type="button" id="printBtn">Print</button>
           <button type="button" id="downloadPngBtn">Download PNG</button>
@@ -238,6 +257,7 @@
    'orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
    'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery',
+   'isoStyle','isoSizePreset','isoSizeCustom',
    'printBtn','downloadPngBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -258,7 +278,8 @@
       nlMin: 0, nlMax: 20, nlInterval: 1, nlLabelEvery: 1, nlCopies: 1,
       nlIndependent: false, nlRows: [],
       planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
-      planeInterval: 1, planeLabelEvery: 5
+      planeInterval: 1, planeLabelEvery: 5,
+      isoStyle: 'dot', isoSizePreset: '0.5', isoSizeCustom: 2
     };
   }
 
@@ -302,6 +323,12 @@
     els.planeYMin.value = settings.planeYMin; els.planeYMax.value = settings.planeYMax;
     els.planeInterval.value = settings.planeInterval; els.planeLabelEvery.value = settings.planeLabelEvery;
 
+    els.isoStyle.value = settings.isoStyle;
+    var isoPreset = ['0.25', '0.5', '0.3937'].indexOf(String(settings.isoSizePreset)) !== -1 ? String(settings.isoSizePreset) : 'custom';
+    els.isoSizePreset.value = isoPreset;
+    els.isoSizeCustom.value = settings.isoSizeCustom;
+    els.isoSizeCustom.style.display = isoPreset === 'custom' ? '' : 'none';
+
     Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.toggle('active', t.dataset.mode === settings.mode); });
     Array.prototype.slice.call(document.querySelectorAll('.mode-panel')).forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + settings.mode); });
   }
@@ -331,6 +358,11 @@
     settings.planeYMax = parseFloat(els.planeYMax.value) || 0;
     settings.planeInterval = parseFloat(els.planeInterval.value) || 1;
     settings.planeLabelEvery = parseInt(els.planeLabelEvery.value, 10) || 1;
+
+    settings.isoStyle = els.isoStyle.value;
+    var isoPreset = els.isoSizePreset.value;
+    settings.isoSizePreset = isoPreset;
+    settings.isoSizeCustom = parseFloat(els.isoSizeCustom.value) || 2;
   }
 
   function toggleNumberLineRangeUI() {
@@ -378,6 +410,10 @@
     return settings.gridSizePreset === 'custom' ? (1 / settings.gridSizeCustom) : parseFloat(settings.gridSizePreset);
   }
 
+  function isoSizeInches() {
+    return settings.isoSizePreset === 'custom' ? (1 / settings.isoSizeCustom) : parseFloat(settings.isoSizePreset);
+  }
+
   function render() {
     readFormIntoSettings();
     persist();
@@ -408,13 +444,20 @@
           interval: settings.nlInterval, labelEvery: settings.nlLabelEvery, copies: settings.nlCopies
         });
       }
-    } else {
+    } else if (settings.mode === 'plane') {
       result = window.GraphPaperRender.renderCoordinatePlane({
         orientation: settings.orientation,
         quadrants: settings.planeQuadrants,
         xMin: settings.planeXMin, xMax: settings.planeXMax,
         yMin: settings.planeYMin, yMax: settings.planeYMax,
         interval: settings.planeInterval, labelEvery: settings.planeLabelEvery
+      });
+    } else {
+      result = window.GraphPaperRender.renderGraphPaper({
+        orientation: settings.orientation,
+        style: settings.isoStyle === 'dot' ? 'isometricDot' : 'isometric',
+        mode: 'fill',
+        cellSize: isoSizeInches()
       });
     }
     els.previewArea.innerHTML = result.svg;
@@ -436,6 +479,9 @@
     settings = loaded;
     if (!settings.name) settings.name = name;
     if (!settings.nlRows) settings.nlRows = [];
+    if (!settings.isoStyle) settings.isoStyle = 'dot';
+    if (!settings.isoSizePreset) settings.isoSizePreset = '0.5';
+    if (!settings.isoSizeCustom) settings.isoSizeCustom = 2;
     GraphPaperStore.setCurrentName(name);
     applySettingsToForm();
     refreshSwitcher();
@@ -479,6 +525,10 @@
 
   els.gridSizePreset.addEventListener('change', function () {
     els.gridSizeCustom.style.display = els.gridSizePreset.value === 'custom' ? '' : 'none';
+    render();
+  });
+  els.isoSizePreset.addEventListener('change', function () {
+    els.isoSizeCustom.style.display = els.isoSizePreset.value === 'custom' ? '' : 'none';
     render();
   });
   els.exactCount.addEventListener('change', function () {

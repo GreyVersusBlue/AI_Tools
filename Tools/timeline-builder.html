@@ -244,6 +244,7 @@
       <div class="view-toggle">
         <button type="button" class="secondary active" id="viewScreenBtn">On-screen (scrolling)</button>
         <button type="button" class="secondary" id="viewPrintBtn">Print layout preview</button>
+        <button type="button" class="secondary" id="viewCompareBtn">Compare two timelines</button>
       </div>
       <div id="screenView">
         <div class="timeline-scroll">
@@ -252,6 +253,15 @@
       </div>
       <div id="printPreview" style="display:none;">
         <div class="print-view" id="printViewInner"></div>
+      </div>
+      <div id="compareView" style="display:none;">
+        <div class="toolbar" style="margin-bottom:.8rem;">
+          <label style="margin:0;font-weight:600;font-size:.85rem;" for="compareSelect">Compare with:</label>
+          <select id="compareSelect"><option value="">Choose a saved timeline&hellip;</option></select>
+        </div>
+        <div class="timeline-scroll">
+          <div class="timeline-canvas" id="compareCanvas"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -277,8 +287,8 @@
    'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evDisplayDate','evDescription','evPhoto',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
    'saveEventBtn','cancelEditBtn','eventList','printBtn',
-   'viewScreenBtn','viewPrintBtn','screenView','printPreview',
-   'timelineCanvas','printViewInner'
+   'viewScreenBtn','viewPrintBtn','viewCompareBtn','screenView','printPreview','compareView',
+   'timelineCanvas','printViewInner','compareSelect','compareCanvas'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, title, lineStyle, compactLabels, events: [...], eras: [...], tracks: [{id,name}] }
@@ -563,27 +573,33 @@
     return t ? t.name : state.tracks[0].name;
   }
 
-  function renderScreenTimeline() {
-    var canvas = els.timelineCanvas;
+  // Shared renderer for one canvas element from a { events, eras, tracks,
+  // compactLabels } bundle — tracks may carry their own `.lineStyle`
+  // (used by the compare view, where the two timelines being compared can
+  // each have a different line style); tracks without one fall back to
+  // `defaultLineStyle`. Used for both the normal single-timeline screen
+  // view and the two-timeline compare view, which just hands it a merged
+  // set of tracks/events/eras sharing one combined year axis.
+  function renderTimelineCanvas(canvas, data, defaultLineStyle, emptyMessage) {
     canvas.innerHTML = '';
-    if (!state.events.length && !state.eras.length) {
-      canvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">Add events to see them on the timeline.</p>';
+    if (!data.events.length && !data.eras.length) {
+      canvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">' + emptyMessage + '</p>';
       canvas.style.height = '';
       return;
     }
-    var range = TimelineLayout.yearRangeOf(state.events.concat(state.eras));
+    var range = TimelineLayout.yearRangeOf(data.events.concat(data.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
-    var masterLayout = TimelineLayout.computeLayout(state.events, pxPerYear, 70, range);
+    var masterLayout = TimelineLayout.computeLayout(data.events, pxPerYear, 70, range);
     var sharedRange = { min: masterLayout.minYear, max: masterLayout.maxYear };
-    var showTrackLabels = state.tracks.length > 1;
+    var showTrackLabels = data.tracks.length > 1;
 
     canvas.style.width = masterLayout.totalWidth + 'px';
-    canvas.style.height = (state.tracks.length * LANE_REM) + 'rem';
+    canvas.style.height = (data.tracks.length * LANE_REM) + 'rem';
 
     // Era bands are appended first so they sit behind the gridlines, line,
     // markers, and labels appended below (later DOM siblings paint on top).
     // They span the full multi-lane height via CSS top:0/bottom:0.
-    var eraBands = TimelineLayout.computeEraBands(state.eras, sharedRange.min, sharedRange.max, pxPerYear, 70);
+    var eraBands = TimelineLayout.computeEraBands(data.eras, sharedRange.min, sharedRange.max, pxPerYear, 70);
     eraBands.forEach(function (b) {
       var band = document.createElement('div');
       band.className = 'era-band';
@@ -616,7 +632,7 @@
     // Each track gets its own lane, stacked vertically, sharing the same
     // x-axis (pxPerYear/sharedRange) so events on different tracks that
     // happened in the same year still line up in the same column.
-    state.tracks.forEach(function (track, laneIndex) {
+    data.tracks.forEach(function (track, laneIndex) {
       var lane = document.createElement('div');
       lane.className = 'track-lane';
       lane.style.top = (laneIndex * LANE_REM) + 'rem';
@@ -629,14 +645,15 @@
         lane.appendChild(laneLabel);
       }
 
+      var lineStyle = track.lineStyle || defaultLineStyle;
       var lineEl = document.createElement('div');
-      lineEl.className = 'timeline-line ' + (state.lineStyle !== 'solid' ? state.lineStyle : '');
+      lineEl.className = 'timeline-line ' + (lineStyle !== 'solid' ? lineStyle : '');
       lineEl.style.width = masterLayout.totalWidth + 'px';
       lane.appendChild(lineEl);
 
-      var trackEvents = state.events.filter(function (e) { return e.track === track.id; });
+      var trackEvents = data.events.filter(function (e) { return e.track === track.id; });
       var trackLayout = TimelineLayout.computeLayout(trackEvents, pxPerYear, 70, sharedRange);
-      var positioned = state.compactLabels ?
+      var positioned = data.compactLabels ?
         TimelineLayout.assignLabelSides(trackLayout.positioned, 100) :
         trackLayout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
 
@@ -666,6 +683,73 @@
       canvas.appendChild(lane);
     });
   }
+
+  function renderScreenTimeline() {
+    renderTimelineCanvas(els.timelineCanvas, {
+      events: state.events, eras: state.eras, tracks: state.tracks, compactLabels: state.compactLabels
+    }, state.lineStyle, 'Add events to see them on the timeline.');
+  }
+
+  /* ---------- compare two saved timelines side by side ---------- */
+  function ensureTracksForCompare(other) {
+    if (!Array.isArray(other.tracks) || !other.tracks.length) other.tracks = [{ id: 0, name: 'Track A' }];
+    var validIds = other.tracks.map(function (t) { return t.id; });
+    (other.events || []).forEach(function (ev) {
+      if (validIds.indexOf(ev.track) === -1) ev.track = other.tracks[0].id;
+    });
+  }
+
+  function populateCompareSelect() {
+    var names = TimelineStore.listTimelines().filter(function (n) { return !state || n !== state.name; });
+    els.compareSelect.innerHTML = '<option value="">Choose a saved timeline&hellip;</option>' +
+      names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>'; }).join('');
+    if (state && state.compareWith && names.indexOf(state.compareWith) !== -1) {
+      els.compareSelect.value = state.compareWith;
+    } else if (state) {
+      state.compareWith = null;
+    }
+  }
+
+  function renderCompareView() {
+    if (!state || !state.compareWith) {
+      els.compareCanvas.innerHTML = '';
+      els.compareCanvas.style.height = '';
+      els.compareCanvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">Choose a saved timeline above to view it alongside this one, aligned on the same year axis.</p>';
+      return;
+    }
+    var other = TimelineStore.loadTimeline(state.compareWith);
+    if (!other) {
+      els.compareCanvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">That saved timeline could not be loaded.</p>';
+      return;
+    }
+    if (!Array.isArray(other.eras)) other.eras = [];
+    ensureTracksForCompare(other);
+
+    var nameA = state.title || state.name;
+    var nameB = other.title || other.name;
+    var aTracks = state.tracks.map(function (t) {
+      return { id: 'A' + t.id, name: nameA + (state.tracks.length > 1 ? ' — ' + t.name : ''), lineStyle: state.lineStyle };
+    });
+    var bTracks = other.tracks.map(function (t) {
+      return { id: 'B' + t.id, name: nameB + (other.tracks.length > 1 ? ' — ' + t.name : ''), lineStyle: other.lineStyle || 'solid' };
+    });
+    var aEvents = state.events.map(function (e) { return Object.assign({}, e, { track: 'A' + e.track }); });
+    var bEvents = other.events.map(function (e) { return Object.assign({}, e, { track: 'B' + e.track }); });
+
+    renderTimelineCanvas(els.compareCanvas, {
+      events: aEvents.concat(bEvents),
+      eras: state.eras.concat(other.eras),
+      tracks: aTracks.concat(bTracks),
+      compactLabels: state.compactLabels || !!other.compactLabels
+    }, state.lineStyle, 'Neither timeline has any events yet.');
+  }
+
+  els.compareSelect.addEventListener('change', function () {
+    if (!state) return;
+    state.compareWith = els.compareSelect.value || null;
+    save();
+    renderCompareView();
+  });
 
   function printEventsHtml() {
     var sorted = state.events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
@@ -703,11 +787,13 @@
     renderEraList();
     renderScreenTimeline();
     renderPrintPreview();
+    populateCompareSelect();
+    renderCompareView();
   }
 
   /* ---------- lifecycle ---------- */
   function newTimeline(name) {
-    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [], eras: [], tracks: [{ id: 0, name: 'Track A' }] };
+    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [], eras: [], tracks: [{ id: 0, name: 'Track A' }], compareWith: null };
     trackIdCounter = 1;
     TimelineStore.setCurrentName(name);
     resetForm();
@@ -734,6 +820,7 @@
     if (!loaded) return;
     state = loaded;
     if (!Array.isArray(state.eras)) state.eras = []; // backward-compat: older saved timelines predate eras
+    if (state.compareWith === undefined) state.compareWith = null; // backward-compat: older saved timelines predate compare mode
     ensureTracks(state);
     TimelineStore.setCurrentName(name);
     resetForm();
@@ -825,7 +912,8 @@
         compactLabels: !!decoded.compactLabels,
         events: decoded.events,
         eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
-        tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [] // backward-compat: older exports predate tracks
+        tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [], // backward-compat: older exports predate tracks
+        compareWith: null // never import another timeline's selection — the imported name may not even exist here
       };
       var maxId = 0;
       state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
@@ -843,14 +931,20 @@
     reader.readAsText(file);
   });
 
-  els.viewScreenBtn.addEventListener('click', function () {
-    els.viewScreenBtn.classList.add('active'); els.viewPrintBtn.classList.remove('active');
-    els.screenView.style.display = ''; els.printPreview.style.display = 'none';
-  });
-  els.viewPrintBtn.addEventListener('click', function () {
-    els.viewPrintBtn.classList.add('active'); els.viewScreenBtn.classList.remove('active');
-    els.screenView.style.display = 'none'; els.printPreview.style.display = '';
-    renderPrintPreview();
+  function setActiveView(name) {
+    els.viewScreenBtn.classList.toggle('active', name === 'screen');
+    els.viewPrintBtn.classList.toggle('active', name === 'print');
+    els.viewCompareBtn.classList.toggle('active', name === 'compare');
+    els.screenView.style.display = name === 'screen' ? '' : 'none';
+    els.printPreview.style.display = name === 'print' ? '' : 'none';
+    els.compareView.style.display = name === 'compare' ? '' : 'none';
+  }
+  els.viewScreenBtn.addEventListener('click', function () { setActiveView('screen'); });
+  els.viewPrintBtn.addEventListener('click', function () { setActiveView('print'); renderPrintPreview(); });
+  els.viewCompareBtn.addEventListener('click', function () {
+    setActiveView('compare');
+    populateCompareSelect();
+    renderCompareView();
   });
 
   els.printBtn.addEventListener('click', function () {
