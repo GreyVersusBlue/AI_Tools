@@ -35,8 +35,10 @@ export const MAX_SCORE = 100;
 export const QUARTERS = 4;
 
 // Cutoffs are the true .5 boundaries, compared against a normalised value.
-const LETTER_CUTOFFS = [['A', 89.5], ['B', 79.5], ['C', 69.5], ['D', 59.5]];
-const QP_CUTOFFS     = [['A', 3.5],  ['B', 2.5],  ['C', 1.5],  ['D', 0.5]];
+// Exported so callers (the "borderline grade" flag in final_grade_checker.html)
+// can measure distance to a boundary without re-declaring these numbers.
+export const LETTER_CUTOFFS = [['A', 89.5], ['B', 79.5], ['C', 69.5], ['D', 59.5]];
+export const QP_CUTOFFS     = [['A', 3.5],  ['B', 2.5],  ['C', 1.5],  ['D', 0.5]];
 
 const QP_VALUE = { A: 4, B: 3, C: 2, D: 1, F: 0 };
 export const RANK = { A: 4, B: 3, C: 2, D: 1, F: 0 };

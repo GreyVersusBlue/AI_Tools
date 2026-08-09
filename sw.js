@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -112,6 +112,7 @@ const PRECACHE_URLS = [
   "Tools/name-picker/fonts/outfit-latin-ext-600-normal.woff2",
   "Tools/name-picker/fonts/outfit-latin-ext-700-normal.woff2",
   "Tools/name-picker/fonts/press-start-2p-latin-400-normal.woff2",
+  "Tools/name-picker/lib/qrcode.js",
   "Tools/name-picker/np-pick.js",
   "Tools/name-picker/np-store.js",
   "Tools/novel-study-circles-manager.html",

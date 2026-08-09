@@ -58,6 +58,8 @@
   .import-status.ok   { color: var(--color-success); opacity: 1; font-weight: 600; }
   .import-status.warn { color: var(--color-warn); opacity: 1; font-weight: 600; }
   .import-status.err  { color: var(--color-danger); opacity: 1; font-weight: 600; }
+  .import-textarea.drag-over { outline: 2px dashed var(--color-accent); outline-offset: 2px; }
+  .pending-note.borderline-note { opacity: 1; font-style: normal; font-weight: 700; color: var(--color-warn); }
 
   .student-card { margin-bottom: var(--space-4); padding: var(--space-4) var(--space-6); }
   .card-top { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
@@ -149,6 +151,7 @@
       <button class="btn btn-secondary btn-danger" id="clear-all-btn" type="button">Clear All</button>
       <button class="btn btn-secondary btn-green" id="export-excel-btn" type="button">Export Excel</button>
       <button class="btn btn-secondary btn-red"   id="export-pdf-btn"   type="button">Export PDF</button>
+      <button class="btn btn-secondary" id="share-pdf-btn" type="button" style="display:none;">Share PDF</button>
       <button class="btn btn-secondary" id="print-btn" type="button">Print</button>
     </div>
     <p class="privacy-note">
@@ -160,10 +163,12 @@
   <div class="card blueprint import-panel no-print">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h2><label for="import-area">Paste Grade Export</label></h2>
-    <p id="import-help">Paste rows directly from your grade system. Each row should have a student ID, name, section, grade level, and four quarter grades like <code>C(73.28)</code>. The system average column at the end is ignored. Paste with tabs between columns so an empty quarter stays in its own column.</p>
-    <textarea class="input import-textarea" id="import-area" aria-describedby="import-help" placeholder="Paste your grade data here, then click Import..."></textarea>
+    <p id="import-help">Paste rows directly from your grade system. Each row should have a student ID, name, section, grade level, and four quarter grades like <code>C(73.28)</code>. The system average column at the end is ignored. Paste with tabs between columns so an empty quarter stays in its own column — or drop a <code>.csv</code>/<code>.xlsx</code> export onto this box, or choose one below.</p>
+    <textarea class="input import-textarea" id="import-area" aria-describedby="import-help" placeholder="Paste your grade data here, then click Import... (or drop a .csv/.xlsx file here)"></textarea>
     <div class="import-actions">
       <button class="btn btn-primary" id="import-btn" type="button">Import</button>
+      <button class="btn btn-secondary" id="import-file-btn" type="button">📁 Choose a file (.csv/.xlsx)</button>
+      <input type="file" id="import-file" accept=".csv,.txt,.xlsx,.xls" style="display:none;">
       <button class="btn btn-secondary" id="clear-paste-btn" type="button">Clear paste area</button>
       <div class="import-status" id="import-status" role="status" aria-live="polite"></div>
     </div>
@@ -199,8 +204,26 @@
 // final-grade-checker/grade-math.test.mjs can import it and check it against
 // hand-worked cases. Do not reimplement any of it here.
 import {
-  getLetter, calcFinals, parsePastedData,
+  getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
+  isGradeCell, Q1_COLUMN, QUARTERS,
 } from './final-grade-checker/grade-math.mjs';
+
+/** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
+ * own LETTER_CUTOFFS/QP_CUTOFFS), or null if it's not within `margin`. A student this
+ * close to a cutoff is one rounding correction away from a different final letter. */
+function borderlineInfo(value, cutoffs, margin) {
+  margin = margin === undefined ? 0.3 : margin;
+  let nearest = null, dist = Infinity;
+  for (const [letter, cutoff] of cutoffs) {
+    const d = Math.abs(value - cutoff);
+    if (d < dist) { dist = d; nearest = { letter, cutoff }; }
+  }
+  if (!nearest || dist > margin) return null;
+  return { letter: nearest.letter, distance: dist, direction: value >= nearest.cutoff ? 'above' : 'below' };
+}
+function borderlineLabel(info) {
+  return `⚠ Borderline — ${info.distance.toFixed(2)} ${info.direction} the ${info.letter} cutoff`;
+}
 
 function gradeClass(l) { return l ? 'grade-'+l : 'grade-empty'; }
 const letterColor = {A:'var(--color-success)',B:'var(--color-accent-800)',C:'var(--color-warn)',D:'var(--color-caution)',F:'var(--color-danger)'};
@@ -262,7 +285,7 @@ async function withLibs(which, btn, run) {
   btn.disabled = true; btn.textContent = 'Working…';
   try {
     await loadLibs(which);
-    run();
+    await run();
   } catch (err) {
     console.error(err);
     alert(`Export failed: ${err.message}\n\nThe export libraries live in Tools/final-grade-checker/libs/. If this page was opened straight from a folder rather than from the website, that is the likely cause.`);
@@ -319,7 +342,10 @@ function exportExcel() {
 }
 
 // ── Export: PDF ──────────────────────────────────────────────
-function exportPDF() {
+// buildPdfDoc() builds the document without saving it, so exportPDF() (save
+// to disk) and sharePDF() (hand the same bytes to navigator.share) don't
+// duplicate the ~150 lines of table/legend styling below.
+function buildPdfDoc() {
   const students = exportableStudents();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
@@ -488,7 +514,28 @@ function exportPDF() {
     doc.text('A student missing any quarter shows no final grade; all four are required.', 40, finalY + 30);
   }
 
-  doc.save('final_grades.pdf');
+  return doc;
+}
+
+function exportPDF() {
+  buildPdfDoc().save('final_grades.pdf');
+}
+
+/** Shares the PDF as a file via the Web Share API (e.g. AirDrop/Mail on an
+ * iPad), falling back to a normal download wherever file-sharing isn't
+ * supported — desktop browsers, or a share sheet that only takes text/links. */
+async function sharePDF() {
+  const doc = buildPdfDoc();
+  const file = new File([doc.output('blob')], 'final_grades.pdf', { type: 'application/pdf' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Final Grades' });
+    } catch (err) {
+      if (err.name !== 'AbortError') doc.save('final_grades.pdf');
+    }
+  } else {
+    doc.save('final_grades.pdf');
+  }
 }
 
 // ── State ────────────────────────────────────────────────────
@@ -575,19 +622,21 @@ function buildImportCard(student, i) {
   let qpHtml = '', avgHtml = '', finalHtml = '';
   if (f) {
     const qpWin = f.winner === 'QP', avgWin = !qpWin;
+    const qpBorderline = borderlineInfo(f.avgQP, QP_CUTOFFS);
+    const avgBorderline = borderlineInfo(f.pctAvg, LETTER_CUTOFFS);
     qpHtml = `<div class="result-box${qpWin?' winner':''}">
       <div class="result-label">Quality Points</div>
       <div class="result-row">
         <div class="result-pct">avg ${f.avgQP.toFixed(2)} pts</div>
         <div class="result-letter" style="color:${letterColor[f.qpFinal]||'inherit'}">${f.qpFinal}</div>
-      </div>${qpWin?'<div class="winner-tag">★ Use this</div>':''}
+      </div>${qpWin?'<div class="winner-tag">★ Use this</div>':''}${qpBorderline?`<div class="pending-note borderline-note">${borderlineLabel(qpBorderline)}</div>`:''}
     </div>`;
     avgHtml = `<div class="result-box${avgWin?' winner':''}">
       <div class="result-label">Pct. Average</div>
       <div class="result-row">
         <div class="result-pct">${f.pctAvg.toFixed(2)}%</div>
         <div class="result-letter" style="color:${letterColor[f.pctFinal]||'inherit'}">${f.pctFinal}</div>
-      </div>${avgWin?'<div class="winner-tag">★ Use this</div>':''}
+      </div>${avgWin?'<div class="winner-tag">★ Use this</div>':''}${avgBorderline?`<div class="pending-note borderline-note">${borderlineLabel(avgBorderline)}</div>`:''}
     </div>`;
     finalHtml = `<div class="final-line">
       <span class="final-label">Final</span>
@@ -805,9 +854,9 @@ function updateManual(id) {
 
   if (!f) {
     qpAvgEl.textContent='—'; qpLetEl.textContent='—'; qpLetEl.style.opacity='0.4';
-    qpNoteEl.textContent=filledCount>0?'Enter all 4 quarters':'';
+    qpNoteEl.textContent=filledCount>0?'Enter all 4 quarters':''; qpNoteEl.className='pending-note';
     avgPctEl.textContent='—'; avgLetEl.textContent='—'; avgLetEl.style.opacity='0.4';
-    avgNoteEl.textContent=filledCount>0?'Enter all 4 quarters':'';
+    avgNoteEl.textContent=filledCount>0?'Enter all 4 quarters':''; avgNoteEl.className='pending-note';
     finalLine.classList.add('pending');
     finalLetEl.textContent = filledCount>0 ? 'no grade' : '—';
     finalLetEl.style.color = '';
@@ -817,10 +866,14 @@ function updateManual(id) {
 
   qpAvgEl.textContent='avg '+f.avgQP.toFixed(2)+' pts';
   qpLetEl.textContent=f.qpFinal; qpLetEl.style.opacity='1'; qpLetEl.style.color=letterColor[f.qpFinal]||'inherit';
-  qpNoteEl.textContent='';
+  const qpBorderline = borderlineInfo(f.avgQP, QP_CUTOFFS);
+  qpNoteEl.textContent = qpBorderline ? borderlineLabel(qpBorderline) : '';
+  qpNoteEl.className = 'pending-note' + (qpBorderline ? ' borderline-note' : '');
   avgPctEl.textContent=f.pctAvg.toFixed(2)+'%';
   avgLetEl.textContent=f.pctFinal; avgLetEl.style.opacity='1'; avgLetEl.style.color=letterColor[f.pctFinal]||'inherit';
-  avgNoteEl.textContent='';
+  const avgBorderline = borderlineInfo(f.pctAvg, LETTER_CUTOFFS);
+  avgNoteEl.textContent = avgBorderline ? borderlineLabel(avgBorderline) : '';
+  avgNoteEl.className = 'pending-note' + (avgBorderline ? ' borderline-note' : '');
 
   const winnerBox = f.winner==='QP' ? qpBox : avgBox;
   winnerBox.classList.add('winner');
@@ -857,6 +910,88 @@ on('print-btn', () => window.print());
 on('export-excel-btn', e => withLibs('excel', e.currentTarget, exportExcel));
 on('export-pdf-btn',   e => withLibs('pdf',   e.currentTarget, exportPDF));
 on('add-student-btn', addManualStudent);
+
+if (navigator.share) {
+  document.getElementById('share-pdf-btn').style.display = '';
+  on('share-pdf-btn', e => withLibs('pdf', e.currentTarget, sharePDF));
+}
+
+// ── Import: drop or choose a .csv/.xlsx file ────────────────
+// TAC exports often come down as a file, not clipboard-friendly text. Both
+// formats get turned into the same tab-separated text parsePastedData()
+// already reads, rather than teaching it a second input shape.
+
+/** Minimal RFC4180 CSV parser — quote-aware, so a "Last, First" name field
+ * (a real TAC habit) doesn't get sliced into two columns on its comma. */
+function parseCsvText(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c === '\r') { /* CRLF — \n handles the line break */ }
+    else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function rowsToTsv(rows) {
+  return rows.map(r => r.map(c => String(c ?? '').trim()).join('\t')).join('\n');
+}
+
+/** A file export (unlike a screen-copied paste) usually carries a header row.
+ * Drop it only when every quarter-window cell in row 1 is non-numeric text
+ * that also isn't a `B(84.00)`-style grade cell — a real grade row, even with
+ * bare numbers instead of letter-wrapped ones, never matches that. */
+function stripHeaderRow(rows) {
+  if (rows.length < 2) return rows;
+  const windowCells = rows[0].slice(Q1_COLUMN, Q1_COLUMN + QUARTERS);
+  const looksLikeHeader = windowCells.length === QUARTERS &&
+    windowCells.every(c => !isGradeCell(c) && isNaN(parseFloat(c)));
+  return looksLikeHeader ? rows.slice(1) : rows;
+}
+
+async function handleImportFile(file) {
+  const lower = file.name.toLowerCase();
+  setStatus(`Reading ${file.name}…`, '');
+  try {
+    let rows;
+    if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+      await loadLibs('excel');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+    } else {
+      rows = parseCsvText(await file.text());
+    }
+    document.getElementById('import-area').value = rowsToTsv(stripHeaderRow(rows));
+    doImport();
+  } catch (err) {
+    console.error(err);
+    setStatus(`Could not read ${file.name}: ${err.message}`, 'err');
+  }
+}
+
+const importArea = document.getElementById('import-area');
+['dragenter', 'dragover'].forEach(evt => importArea.addEventListener(evt, e => { e.preventDefault(); importArea.classList.add('drag-over'); }));
+['dragleave', 'drop'].forEach(evt => importArea.addEventListener(evt, e => { e.preventDefault(); importArea.classList.remove('drag-over'); }));
+importArea.addEventListener('drop', e => {
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) handleImportFile(file);
+});
+on('import-file-btn', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) handleImportFile(file);
+});
 
 // ── Boot ─────────────────────────────────────────────────────
 currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores:[null,null,null,null] }));

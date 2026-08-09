@@ -65,23 +65,13 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A reusable year-at-a-glance calendar builder with a custom legend of day types (each with a color + print-safe pattern), a day-editor drawer for labels/lesson notes/other notes, an ICS (.ics) export of tagged days for subscribing from a phone or Outlook/Google calendar, an opt-in "copy lesson pacing to next year" step (shifting `lesson` notes by a chosen number of weekdays) when starting a new year from a template, a "jump to month" control, JSON backup export/import, and print/PDF support via `window.print()`.
 
 ### Sub Plan Builder (`Tools/Sub Plan Builder.html`)
-**Current state:** A form that saves "standing details" (periods, phone numbers, behavior-expectations text, etc.) to localStorage, takes a fresh freeform lesson plan each time (with a `**bold**` markdown convention and same-vs-per-period notes), and assembles it all into a downloadable .docx via a hand-built OOXML/JSZip generator — the student-notes box is deliberately never persisted.
-**Suggested improvements:**
-- Add a "save today's plan as a dated history entry" option (opt-in, since student notes must stay unpersisted) so a teacher can reopen last Tuesday's sub plan as a starting point instead of retyping overview/schedule text from scratch each time.
-- Add a plain-text/PDF "quick copy" fallback alongside the .docx download — right now the only output format is Word, and a teacher without Word (or on a phone) has no way to get a readable copy of the plan.
-- Let a saved plan (minus student notes) be exported as JSON and re-imported, mirroring the pattern already used by School Calendar Visualizer's backup/import, so standing details can be moved to a new device without going through the site-wide Backup & Restore tool.
+**Current state:** A form that saves "standing details" (periods, phone numbers, behavior-expectations text, etc.) to localStorage — exportable/importable as its own JSON file — takes a fresh freeform lesson plan each time (with a `**bold**` markdown convention and same-vs-per-period notes, optionally saved as a dated history entry teachers can reload as a starting point), assembles it all into a downloadable .docx via a hand-built OOXML/JSZip generator, and offers a plain-text "quick copy" modal (copy to clipboard, or print/save as PDF) for a teacher without Word or on a phone — the student-notes box is deliberately never persisted anywhere, including history and the quick-copy view being generated fresh from the live form rather than a saved snapshot.
 
 ### Sub Binder / Day Bundle Generator (`Tools/sub-binder-generator.html`)
-**Current state:** A read-only aggregator that pulls the standing details saved by Sub Plan Builder and the current section from Seating Chart Generator into one page, adds a small freeform "today's lesson" box of its own, and prints both as a two-page packet.
-**Suggested improvements:**
-- Let the bundle also pull in the day's School Calendar Visualizer entry (day type/lesson pacing note), the same way Command Center already does, so the printed packet shows any half-day/pep-rally/schedule-change flag instead of just standing details and seating.
-- Add a "combine multiple sections" mode so a teacher with more than one class period can print one packet containing every section's seating chart instead of only the currently-selected one.
-- Add an explicit "refresh" affordance to re-pull the latest Sub Plan Builder / Seating Chart data without a full page reload, so it's obvious the bundle isn't showing stale data from an earlier visit.
+**Current state:** A read-only aggregator that pulls the standing details saved by Sub Plan Builder, today's School Calendar Visualizer entry (day-type badges + lesson/pacing note, same pattern as Command Center), and the current section from Seating Chart Generator into one page, adds a small freeform "today's lesson" box of its own, offers a "print every section" toggle for a teacher with more than one class period, an explicit "Refresh data" button to re-pull all three sources without a full page reload, and prints the whole thing as a multi-page packet (one page per included seating section).
 
 ### Classroom Timer (`Tools/Classroom Timer.html`)
-**Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen, named/saved custom countdown-duration presets, and a running/paused timer that survives a page reload or tab-close.
-**Suggested improvements:**
-- Add a full-screen / "presentation mode" toggle (Fullscreen API) so the timer fills the whole projector screen without browser chrome, without requiring the teacher to manually fullscreen the browser tab.
+**Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen, named/saved custom countdown-duration presets, a running/paused timer that survives a page reload or tab-close, and a one-click fullscreen toggle (button or `F` key) so it fills the whole projector screen without browser chrome.
 
 ### Command Center (`Tools/command-center-dashboard.html`)
 **Current state:** A single projector-friendly page combining a basic countdown timer, a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), and a no-repeats random-caller against a saved Name Picker roster.
@@ -104,11 +94,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Grading & Data
 
 ### Final Grade Checker (`Tools/final_grade_checker.html`)
-**Current state:** A privacy-first (nothing saved) tool that lets a teacher enter grades manually (starting with 5 student rows, with add/remove-row controls) or paste a TAC export, then computes the final grade both by quality-point average and by percentage average, highlights the higher per county policy, and exports to Excel/PDF or print.
-**Suggested improvements:**
-- Accept a dropped `.csv`/`.xlsx` file in addition to pasted text, reusing the already-loaded SheetJS library for export — many TAC exports come down as files rather than clipboard-friendly text.
-- Add a "borderline grade" flag (e.g., within 0.3 points of the next letter) on the QP/percentage boxes, since the tool already treats the exact 0.5 rounding boundary as policy-critical.
-- Offer a Web Share API button next to Export PDF so a finished report can be shared directly to Mail/Files on an iPad instead of only downloading.
+**Current state:** A privacy-first (nothing saved) tool that lets a teacher enter grades manually (starting with 5 student rows, with add/remove-row controls), paste a TAC export, or drop/choose a `.csv`/`.xlsx` file (header row auto-detected and dropped, reusing the same SheetJS library already loaded for Excel export), then computes the final grade both by quality-point average and by percentage average, flags either as "borderline" when within 0.3 points of the next letter's cutoff, highlights the higher per county policy, and exports to Excel/PDF/print or shares the PDF directly via the Web Share API where supported (e.g. to Mail/Files on an iPad).
 
 ### Grade Distribution Visualizer (`Tools/grade-distribution-visualizer.html`)
 **Current state:** A tolerant score-paste parser feeds class-wide stats (mean/median/mode/stdev/Q1/Q3/IQR), an outlier callout for scores more than 2 standard deviations from the mean, an editable-cutoff letter-grade breakdown with a stacked bar, a bucketed histogram, a side-by-side comparison view against another saved assignment, with multiple named assignments saved to localStorage, a print view, and PNG/SVG download of both charts.
@@ -137,10 +123,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add an optional "N images per page" contact-sheet/grid layout for handing out thumbnail overviews.
 
 ### Word Doc Merger (`Tools/docx-merger.html`)
-**Current state:** Client-side OOXML merger (via JSZip + raw XML manipulation) that combines up to 80+ `.docx` files in a drag-reorderable list, with optional page breaks and filename headings (choices persisted to localStorage), and per-file error skipping.
-**Suggested improvements:**
-- Add an optional auto-generated table of contents page (using the inserted headings as entries) at the front of the merged document.
-- Show an estimated total page/section count before merging for very large batches, so a teacher can sanity-check the file count before waiting on 80 files.
+**Current state:** Client-side OOXML merger (via JSZip + raw XML manipulation) that combines up to 80+ `.docx` files in a drag-reorderable list, with optional page breaks, filename headings, and an optional auto-generated table-of-contents page built from those headings (a Word field the teacher updates with F9 after opening, since there's no in-browser page-layout engine to pre-fill numbers) — choices persisted to localStorage — plus a running total-pages estimate (read from each file's own saved `docProps/app.xml` page count) shown before merging, and per-file error skipping.
 
 ### Certificate & Award Maker (`Tools/certificate-award-maker.html`)
 **Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview, and browser print-to-PDF, with the last-used settings saved to localStorage.
@@ -169,10 +152,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Rosters, Randomizers & Games
 
 ### Name Picker (`Tools/Name Picker.html`)
-**Current state:** A projector-friendly random student picker with three draw modes (Jump/Disappear/Slot Machine), a rarity/gacha system with Hall of Fame and achievement toasts, saved rosters, cold-call prompts, a synthesized-audio soundboard, absent/lucky-student toggles, tournament and retro-mode easter eggs, tolerant roster paste parsing (strips row numbers, extra tab-separated spreadsheet columns, trailing commas), and full JSON backup/erase controls, all built on `np_rosters` in localStorage.
-**Suggested improvements:**
-- Add a "Share roster" link/QR code (using the site's existing `_shared/state-link.js` pattern already wired into Seating Chart and Bracket Generator) so a co-teacher can load the same class list and prompt set without retyping — today the only way to move a roster elsewhere is JSON export/import of the whole app state.
-- Add a printable "today's picks" report (formatted list of who was picked, in what order, with prompts) — currently the only output is a plain-text history export, with no print-styled report to hand a substitute or keep as a participation record.
+**Current state:** A projector-friendly random student picker with three draw modes (Jump/Disappear/Slot Machine), a rarity/gacha system with Hall of Fame and achievement toasts, saved rosters (each shareable as a link/QR code via `_shared/state-link.js`, importing as a new roster on the receiving end), cold-call prompts (now recorded per pick so a printable "today's picks" report can list who was picked, in what order, with the prompt each one got — alongside the existing plain-text history export), a synthesized-audio soundboard, absent/lucky-student toggles, tournament and retro-mode easter eggs, tolerant roster paste parsing (strips row numbers, extra tab-separated spreadsheet columns, trailing commas), and full JSON backup/erase controls, all built on `np_rosters` in localStorage.
 
 ### Seating Chart Generator (`Tools/Seating Chart Generator.html`)
 **Current state:** A drag-and-drop desk layout builder with multiple sections, roster import, flag/note per student, keep-apart/put-together constraint solving, keyboard-accessible desk controls, undo, a cold-call picker, trimmed/scaled print output, and JSON export/import plus single-section link sharing.
