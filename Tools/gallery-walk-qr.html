@@ -123,6 +123,12 @@
   .preview-card .badge { font-family: Consolas, monospace; font-size: .68rem; color: var(--muted); letter-spacing: .04em; }
   .preview-card .p-name { font-size: .92rem; font-weight: 700; color: var(--ink); margin: .1rem 0 .15rem; overflow-wrap: anywhere; }
   .preview-card .p-content { font-size: .74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .reaction-btn {
+    flex-shrink: 0; display: flex; align-items: center; gap: .3rem; background: #fff; color: var(--ink);
+    border: 1px solid var(--line-strong); border-radius: 20px; padding: .35rem .7rem; font-size: .9rem; font-weight: 700;
+  }
+  .reaction-btn:hover { background: #fdf3e3; border-color: #e0b876; color: var(--ink); }
+  .reaction-btn .reaction-count { font-size: .82rem; color: var(--muted); font-weight: 700; min-width: 1ch; text-align: left; }
 
   .ref-list { width: 100%; border-collapse: collapse; font-size: .85rem; }
   .ref-list th, .ref-list td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
@@ -251,6 +257,13 @@
           <input type="checkbox" id="showNumber" checked>
           <label class="option-label" for="showNumber">Show entry number above the name</label>
         </div>
+        <div class="option-row">
+          <input type="checkbox" id="enableReactions">
+          <label class="option-label" for="enableReactions">Enable per-piece reactions &mdash; a star button on each preview card, tallied on this device only (nothing synced)</label>
+        </div>
+        <div class="btn-row" id="reactionsResetRow" style="display:none;">
+          <button type="button" class="danger" id="resetReactionsBtn">Reset all reaction counts</button>
+        </div>
         <div id="dupWarning"></div>
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print QR Codes</button>
@@ -286,7 +299,7 @@
 <div class="print-only ref-sheet" id="printRefArea">
   <h2 id="refSheetTitle">Gallery Walk Reference Sheet</h2>
   <table>
-    <thead><tr><th>#</th><th>Name / title</th><th>Link or text</th></tr></thead>
+    <thead><tr><th>#</th><th>Name / title</th><th>Link or text</th><th id="printRefReactHead" style="display:none;">Reactions</th></tr></thead>
     <tbody id="printRefBody"></tbody>
   </table>
 </div>
@@ -302,7 +315,8 @@
    'entriesBody', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
    'importCsvBtn', 'importCsvInput',
    'rosterHubSelect', 'rosterHubLoadBtn',
-   'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning',
+   'cardsPerPage', 'ecLevel', 'showNumber', 'enableReactions', 'reactionsResetRow', 'resetReactionsBtn',
+   'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
    'refSheetTitle', 'previewNote', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
@@ -355,7 +369,7 @@
   }
 
   function newSet(name) {
-    state = { name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true };
+    state = { name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true, reactionsEnabled: false };
     applyStateToForm();
     refreshSwitcher();
     els.toolbar.style.display = '';
@@ -368,6 +382,7 @@
     var loaded = store.sets[name];
     if (!loaded) return;
     if (!Array.isArray(loaded.entries)) loaded.entries = [];
+    if (typeof loaded.reactionsEnabled !== 'boolean') loaded.reactionsEnabled = false;
     state = loaded;
     ensureAtLeastOneRow();
     applyStateToForm();
@@ -380,6 +395,8 @@
     els.cardsPerPage.value = state.cardsPerPage || '4';
     els.ecLevel.value = state.ecLevel || 'Q';
     els.showNumber.checked = state.showNumber !== false;
+    els.enableReactions.checked = !!state.reactionsEnabled;
+    els.reactionsResetRow.style.display = state.reactionsEnabled ? '' : 'none';
     renderRows();
   }
 
@@ -650,7 +667,11 @@
         card.className = 'preview-card';
         card.innerHTML = '<canvas></canvas><div class="meta"><div class="badge">ENTRY ' + (n + 1) + '</div>' +
           '<div class="p-name">' + escapeHtml(e.name) + '</div>' +
-          '<div class="p-content">' + escapeHtml(e.content) + '</div></div>';
+          '<div class="p-content">' + escapeHtml(e.content) + '</div></div>' +
+          (state.reactionsEnabled
+            ? '<button type="button" class="reaction-btn" data-react-idx="' + e.idx + '" title="Give this piece a reaction">' +
+                '&#11088; <span class="reaction-count">' + (state.entries[e.idx].reactionCount || 0) + '</span></button>'
+            : '');
         els.cardsPreview.appendChild(card);
         drawQR(card.querySelector('canvas'), qr, 200);
       } catch (err) {
@@ -668,11 +689,41 @@
     els.copyLinksBtn.disabled = false;
   }
 
+  // Tapping a reaction just bumps that entry's count in place — no full
+  // re-render, so it doesn't scroll/flicker the preview mid-gallery-walk.
+  els.cardsPreview.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-react-idx]');
+    if (!btn) return;
+    var idx = parseInt(btn.dataset.reactIdx, 10);
+    var entry = state.entries[idx];
+    if (!entry) return;
+    entry.reactionCount = (entry.reactionCount || 0) + 1;
+    save();
+    var countEl = btn.querySelector('.reaction-count');
+    if (countEl) countEl.textContent = entry.reactionCount;
+  });
+
+  els.enableReactions.addEventListener('change', function () {
+    state.reactionsEnabled = els.enableReactions.checked;
+    els.reactionsResetRow.style.display = state.reactionsEnabled ? '' : 'none';
+    save();
+    scheduleRender();
+  });
+
+  els.resetReactionsBtn.addEventListener('click', function () {
+    if (!confirm('Reset all reaction counts to zero for "' + state.name + '"? This can’t be undone.')) return;
+    state.entries.forEach(function (e) { e.reactionCount = 0; });
+    save();
+    scheduleRender();
+  });
+
   function renderRefPreview(valid) {
     if (!valid.length) { els.refPreview.innerHTML = '<p class="empty-hint">Nothing to reference yet.</p>'; return; }
-    els.refPreview.innerHTML = '<table class="ref-list"><thead><tr><th>#</th><th>Name / title</th><th>Link or text</th></tr></thead><tbody>' +
+    var reactCol = state.reactionsEnabled ? '<th>&#11088;</th>' : '';
+    els.refPreview.innerHTML = '<table class="ref-list"><thead><tr><th>#</th><th>Name / title</th><th>Link or text</th>' + reactCol + '</tr></thead><tbody>' +
       valid.map(function (e, n) {
-        return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(e.name) + '</td><td class="ref-url">' + escapeHtml(e.content) + '</td></tr>';
+        var reactCell = state.reactionsEnabled ? '<td>' + (state.entries[e.idx].reactionCount || 0) + '</td>' : '';
+        return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(e.name) + '</td><td class="ref-url">' + escapeHtml(e.content) + '</td>' + reactCell + '</tr>';
       }).join('') + '</tbody></table>';
   }
 
@@ -697,8 +748,10 @@
   function buildPrintRef() {
     var valid = validEntries();
     els.refSheetTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Reference Sheet';
+    document.getElementById('printRefReactHead').style.display = state.reactionsEnabled ? '' : 'none';
     els.printRefBody.innerHTML = valid.map(function (e, n) {
-      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(e.name) + '</td><td>' + escapeHtml(e.content) + '</td></tr>';
+      var reactCell = state.reactionsEnabled ? '<td>' + (state.entries[e.idx].reactionCount || 0) + '</td>' : '';
+      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(e.name) + '</td><td>' + escapeHtml(e.content) + '</td>' + reactCell + '</tr>';
     }).join('');
   }
 

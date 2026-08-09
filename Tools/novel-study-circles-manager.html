@@ -109,6 +109,12 @@
   table.history-table th, table.history-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--line); }
   table.history-table th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; }
   .table-wrap { overflow-x: auto; }
+  .vocab-block { margin-bottom: .8rem; }
+  .vocab-block:last-child { margin-bottom: 0; }
+  .vocab-block .vocab-heading { margin: 0 0 .3rem; font-weight: 700; color: var(--accent); font-size: .82rem; }
+  .vocab-block ul { margin: 0; padding-left: 1.2rem; font-size: .85rem; }
+  .vocab-block ul li { margin-bottom: .15rem; }
+  .vocab-block .word { font-weight: 700; }
   .meeting-entry { border: 1px solid var(--line); border-radius: 8px; margin-bottom: .6rem; overflow: hidden; }
   .meeting-entry summary { cursor: pointer; padding: .6rem .8rem; font-size: .86rem; background: #f4f3ee; list-style: none; display: flex; justify-content: space-between; gap: .8rem; flex-wrap: wrap; align-items: baseline; }
   .meeting-entry summary::-webkit-details-marker { display: none; }
@@ -219,6 +225,9 @@
         <label for="meetingDate">Meeting date</label>
         <input type="date" id="meetingDate">
         <div id="checkpointInputs" class="checkpoint-inputs"></div>
+        <label for="meetingVocab">Vocabulary words this meeting (optional)</label>
+        <p class="hint">One word per line. Add a definition after a colon if you want one: <code>austerity: extreme plainness</code>.</p>
+        <textarea id="meetingVocab" placeholder="austerity: extreme and rigid economy&#10;utilitarian" spellcheck="false" style="min-height:5rem;"></textarea>
         <div class="btn-row">
           <button type="button" id="logMeetingBtn">Assign roles &amp; log meeting</button>
         </div>
@@ -245,6 +254,13 @@
         <div class="card-title">Meeting History</div>
         <div id="meetingHistory"><p class="empty-hint">No meetings logged yet.</p></div>
       </div>
+
+      <div class="card">
+        <div class="card-title">Vocabulary Log</div>
+        <p class="hint">Every word logged with a meeting, grouped by that meeting's chapter checkpoint &mdash; a running glossary for the whole novel study.</p>
+        <div id="vocabLog"><p class="empty-hint">No vocabulary logged yet.</p></div>
+        <button type="button" class="secondary" id="printVocabBtn" style="margin-top:.6rem;">Print vocabulary list</button>
+      </div>
     </div>
   </div>
 
@@ -266,6 +282,17 @@
   <div id="printLogMeetings"></div>
 </div>
 
+<div class="print-only" id="printVocabArea">
+  <h2 id="printVocabTitle">Vocabulary Log</h2>
+  <p class="p-sub" id="printVocabSub"></p>
+  <div class="table-wrap">
+    <table class="history-table">
+      <thead><tr><th>Checkpoint</th><th>Word</th><th>Definition</th></tr></thead>
+      <tbody id="printVocabBody"></tbody>
+    </table>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -280,10 +307,11 @@
    'namesInput', 'rosterHubSelect', 'rosterHubLoadBtn',
    'splitValueLabel', 'splitValue', 'splitBtn', 'groupEditList',
    'roleList', 'addRoleBtn',
-   'meetingDate', 'checkpointInputs', 'logMeetingBtn', 'printBtn', 'printLogBtn', 'resetHistoryBtn', 'historyHint',
-   'resultsArea', 'meetingHistory', 'msg',
+   'meetingDate', 'checkpointInputs', 'meetingVocab', 'logMeetingBtn', 'printBtn', 'printLogBtn', 'resetHistoryBtn', 'historyHint',
+   'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'msg',
    'printArea', 'printTitle', 'printSub', 'printGroups',
-   'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings'
+   'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings',
+   'printVocabArea', 'printVocabTitle', 'printVocabSub', 'printVocabBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.nameCount = document.getElementById('name-count');
 
@@ -294,7 +322,7 @@
   //   roles: [roleName, ...],
   //   together: bool,
   //   history: { studentName: [roleName,...] } (oldest first, fairness memory),
-  //   meetings: [ { id, date, together, wholeClassCheckpoint,
+  //   meetings: [ { id, date, together, wholeClassCheckpoint, vocab: [{word, definition}],
   //                 groups: [ { id, label, checkpoint, assignment: [{name, role}] } ] } ] (newest first)
   // }
   var state = null;
@@ -349,6 +377,21 @@
       .filter(function (name) { return name.length > 0; });
   }
   function studentNames() { return parseNames(els.namesInput.value); }
+
+  // ── Parsing vocabulary lines: "word" or "word: definition" / "word - definition" ──
+  function parseVocabLines(text) {
+    return text.split('\n')
+      .map(function (line) { return line.trim(); })
+      .filter(Boolean)
+      .map(function (line) {
+        var idx = line.indexOf(':');
+        var skip = 1;
+        if (idx === -1) { idx = line.indexOf(' - '); skip = 3; }
+        if (idx === -1) return { word: line, definition: '' };
+        return { word: line.slice(0, idx).trim(), definition: line.slice(idx + skip).trim() };
+      })
+      .filter(function (v) { return v.word; });
+  }
 
   // ── Read-only reuse of the shared roster list (Class Roster Hub / Name
   // Picker both save here under 'np_rosters') — separate storage from novel-study-circles.
@@ -616,6 +659,7 @@
       date: date,
       together: state.together,
       wholeClassCheckpoint: wholeClassCheckpoint,
+      vocab: parseVocabLines(els.meetingVocab.value),
       groups: meetingGroups
     };
 
@@ -626,6 +670,7 @@
     renderResults();
     renderMeetingHistory();
     renderHistoryHint();
+    renderVocabLog();
   }
 
   els.logMeetingBtn.addEventListener('click', logMeeting);
@@ -663,6 +708,36 @@
 
   function groupsGridHtml(meeting) {
     return '<div class="groups-grid">' + groupCardsHtml(meeting.groups) + '</div>';
+  }
+
+  // The label used to identify a meeting's chapter checkpoint wherever vocab
+  // is grouped by it — falls back to the date when there's no whole-class
+  // checkpoint text (e.g. per-group pacing, where checkpoints differ by group).
+  function meetingCheckpointLabel(m) {
+    return (m.together && m.wholeClassCheckpoint) ? m.wholeClassCheckpoint : m.date;
+  }
+
+  function vocabListHtml(vocab) {
+    return '<ul>' + vocab.map(function (v) {
+      return '<li><span class="word">' + escapeHtml(v.word) + '</span>' +
+        (v.definition ? ' &mdash; ' + escapeHtml(v.definition) : '') + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function vocabBlockHtml(m) {
+    if (!m.vocab || !m.vocab.length) return '';
+    return '<div class="vocab-block"><p class="vocab-heading">' + escapeHtml(m.date) +
+      (meetingCheckpointLabel(m) !== m.date ? ' &middot; ' + escapeHtml(meetingCheckpointLabel(m)) : '') +
+      '</p>' + vocabListHtml(m.vocab) + '</div>';
+  }
+
+  function renderVocabLog() {
+    var withVocab = (state.meetings || []).filter(function (m) { return m.vocab && m.vocab.length; });
+    if (!withVocab.length) {
+      els.vocabLog.innerHTML = '<p class="empty-hint">No vocabulary logged yet.</p>';
+      return;
+    }
+    els.vocabLog.innerHTML = withVocab.map(vocabBlockHtml).join('');
   }
 
   function renderResults() {
@@ -705,6 +780,7 @@
         '<summary><b>' + summaryBits[0] + '</b><span>' + (summaryBits[1] || '') + '</span></summary>' +
         '<div class="meeting-body">' +
         '<div class="table-wrap"><table class="history-table"><thead><tr><th>Group</th><th>Checkpoint</th><th>Roles</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        (m.vocab && m.vocab.length ? '<div style="margin-top:.7rem;">' + vocabListHtml(m.vocab) + '</div>' : '') +
         '<button type="button" class="danger small del-meeting" data-del-meeting="' + m.id + '">Delete this meeting</button>' +
         '</div></details>';
     }).join('');
@@ -730,7 +806,7 @@
     if (state.bookTitle) subBits.push(state.bookTitle);
     if (meeting.together && meeting.wholeClassCheckpoint) subBits.push('Checkpoint: ' + meeting.wholeClassCheckpoint);
     els.printSub.textContent = subBits.join(' · ');
-    els.printGroups.innerHTML = groupCardsHtml(meeting.groups);
+    els.printGroups.innerHTML = groupCardsHtml(meeting.groups) + vocabBlockHtml(meeting);
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printArea.classList.add('active');
     window.print();
@@ -745,7 +821,8 @@
     if (meeting.together && meeting.wholeClassCheckpoint) subBits.push('Checkpoint: ' + escapeHtml(meeting.wholeClassCheckpoint));
     else if (!meeting.together) subBits.push('Per-group pacing');
     return '<div class="print-meeting"><h3>' + subBits.join(' &middot; ') + '</h3>' +
-      '<div class="groups-grid">' + groupCardsHtml(meeting.groups) + '</div></div>';
+      '<div class="groups-grid">' + groupCardsHtml(meeting.groups) + '</div>' +
+      (meeting.vocab && meeting.vocab.length ? vocabListHtml(meeting.vocab) : '') + '</div>';
   }
 
   els.printLogBtn.addEventListener('click', function () {
@@ -761,6 +838,28 @@
     els.printLogMeetings.innerHTML = chronological.map(meetingLogSectionHtml).join('');
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printLogArea.classList.add('active');
+    window.print();
+  });
+
+  els.printVocabBtn.addEventListener('click', function () {
+    var withVocab = (state.meetings || []).filter(function (m) { return m.vocab && m.vocab.length; });
+    if (!withVocab.length) { showMsg('Log some vocabulary words with a meeting before printing.'); return; }
+    els.printVocabTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Vocabulary Log';
+    var subBits = [];
+    if (state.bookTitle) subBits.push(state.bookTitle);
+    var wordCount = withVocab.reduce(function (n, m) { return n + m.vocab.length; }, 0);
+    subBits.push(wordCount + ' word' + (wordCount === 1 ? '' : 's'));
+    els.printVocabSub.textContent = subBits.join(' · ');
+    // state.meetings is stored newest-first; print in chronological order.
+    var chronological = withVocab.slice().reverse();
+    els.printVocabBody.innerHTML = chronological.map(function (m) {
+      var checkpoint = escapeHtml(meetingCheckpointLabel(m));
+      return m.vocab.map(function (v) {
+        return '<tr><td>' + checkpoint + '</td><td>' + escapeHtml(v.word) + '</td><td>' + escapeHtml(v.definition) + '</td></tr>';
+      }).join('');
+    }).join('');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printVocabArea.classList.add('active');
     window.print();
   });
 
@@ -795,9 +894,11 @@
     renderGroupEditList();
     renderCheckpointInputs();
     els.meetingDate.value = todayStr();
+    els.meetingVocab.value = '';
     renderResults();
     renderMeetingHistory();
     renderHistoryHint();
+    renderVocabLog();
   }
 
   function newProject(name) {
