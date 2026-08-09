@@ -92,9 +92,20 @@
   color:var(--br-forest);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s}
 #app-browser .btn-print:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
 #app-browser .btn-dl{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-forest);background:var(--br-forest);
-  color:#fff;padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s;margin-left:auto;flex:none}
+  color:#fff;padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s;flex:none}
 #app-browser .btn-dl:hover{background:var(--br-forest-2);border-color:var(--br-forest-2)}
-@media(max-width:620px){#app-browser .btn-dl{margin-left:0;width:100%}}
+@media(max-width:620px){#app-browser .btn-dl{width:100%}}
+/* ── R62: copy-link / share buttons + staleness banner ── */
+#app-browser .idhead-actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:10px}
+#app-browser .btn-copy{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-gold-soft);background:#fff;
+  color:var(--br-forest);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s;flex:none}
+#app-browser .btn-copy:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
+#app-browser .btn-copy:disabled{opacity:.65;cursor:default}
+@media(max-width:620px){#app-browser .idhead-actions{margin-left:0;width:100%}
+  #app-browser .idhead-actions>*{width:100%}}
+#app-browser .stale-banner{display:none;margin:22px 6px 0;padding:14px 18px;border-radius:12px;
+  background:#fdf3d9;border:1px solid #eecf7a;color:#7a5c14;font-size:14px;font-weight:600;line-height:1.5;text-align:center}
+#app-browser .stale-banner.show{display:block}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
 #app-browser .br-empty .big{font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--br-forest);margin-bottom:8px}
@@ -206,8 +217,8 @@
 #app-browser .offmap b{color:var(--br-forest)}
 @media(max-width:620px){#app-browser .mini-side{flex:1 1 100%}}
 @media print{
-  #app-browser .toolbar,#app-browser .btn-print,#app-browser .btn-dl,#app-browser .br-menu,
-  #app-browser .overview,#app-browser .footnote,#btn-toggle-app,#btn-open-schedule-browser{display:none!important}
+  #app-browser .toolbar,#app-browser .btn-print,#app-browser .btn-dl,#app-browser .btn-copy,#app-browser .br-menu,
+  #app-browser .overview,#app-browser .footnote,#app-browser .stale-banner,#btn-toggle-app,#btn-open-schedule-browser{display:none!important}
   #app-browser .mast,#app-browser .panel{box-shadow:none;border-radius:0;border:none}
   #app-browser .tcard,#app-browser .gchip{cursor:default}
   #app-browser .br-view{display:none!important}#app-browser .br-view.show{display:block!important}
@@ -279,12 +290,16 @@ html,body{margin:0;padding:0;background:#f4f7f4}
         <div id="br-view" class="br-view"></div>
       </div>
     </div>
+    <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <p class="footnote">Published July 15, 2026 from the School Layout Visualizer v60. This file is a read-only snapshot — republish to update.</p>
   </div>
 </div>
 <script>
 'use strict';
 /* Published by the Movement Visualizer — read-only schedule snapshot. */
+/* ── R62: how many days past publishedOn before the "may be stale" banner
+   shows. Adjust this one number to change the warning threshold. ── */
+const BR_STALE_DAYS = 60;
 const PUBLISHED_DATA = {"school":"EMS","publishedOn":"2026-07-15","dept":{"ELA":{"c":"#2563eb","name":"English / ELA"},"MATH":{"c":"#c2520f","name":"Mathematics"},"SCI":{"c":"#0d7c69","name":"Science"},"SS":{"c":"#7c3aa8","name":"Social Studies"},"SCI/SS":{"c":"#71641f","name":"Science / Social Studies"}},"order":{"ELA":0,"MATH":1,"SCI":2,"SS":3,"SCI/SS":4},"teachers":{"Almer":{"dept":"SCI","room":"a208","plan":"A2 / B2","sec":["6-11","6-10","7-1","7-3","7-4","7-2"],"A":["6-11","Planning","6-10","7-1"],"B":["7-3","Planning","7-4","7-2"],"co":["Hoeflich","Keen","Michie","RA","Sisk","Smith"]},"Horichs":{"dept":"SCI","room":"a209","plan":"A2 / B2","sec":["7-7","7-5","7-6","7-10","7-8","7-9"],"A":["7-7","Planning","7-5","7-6"],"B":["7-10","Planning","7-8","7-9"],"co":["Cavey","Love","Moore","Oddis","RA","Seabolt"]},"Tissue":{"dept":"SCI","room":"a108","plan":"A1 / B1","sec":["Academic 8-3","Honors GT 8-1","Algebra GT 8-2","Honors 8-5","Academic 8-5","Academic 8-6"],"A":["Planning","Academic 8-3","Honors GT 8-1","Algebra GT 8-2"],"B":["Planning","Honors 8-5","Academic 8-5","Academic 8-6"],"co":["Barrett","Harris","Hyman","Kelley","RA","Rogers"]},"Byrd":{"dept":"SCI","room":"a109","plan":"A2 / B1","sec":["7-11","Academic 8-1","Academic 8-2","Academic 8-4","Honors GT 8-3","Algebra GT 8-4"],"A":["7-11","Planning","Academic 8-1","Academic 8-2"],"B":["Planning","Academic 8-4","Honors GT 8-3","Algebra GT 8-4"],"co":["Mielke","Pfister","RA","Schwaber","Vogg","Worthy"]},"RA":{"dept":"ELA","room":"Related Arts","plan":"A3","sec":["Honors 8-5","7-11","6-11"],"A":["Honors 8-5","7-11","Planning","6-11"],"B":["Honors 8-5","7-11","Planning","6-11"],"co":["Almer","Barrett","Byrd","Harris","Hoeflich","Keen","Mielke","Pfister","Rogers","Sisk","Tissue","Vogg"]},"Michie":{"dept":"ELA","room":"a207","plan":"A2","sec":["7-2","7-3","7-4"],"A":["7-2","Planning","7-3","7-4"],"B":["7-2","Planning","7-3","7-4"],"co":["Almer","RA","Sisk","Smith"]},"Harris":{"dept":"SS","room":"a107","plan":"A1 / B1","sec":["Honors 8-5","Academic 8-5","Academic 8-6","Academic 8-3","Honors GT 8-1","Algebra GT 8-2"],"A":["Planning","Honors 8-5","Academic 8-5","Academic 8-6"],"B":["Planning","Academic 8-3","Honors GT 8-1","Algebra GT 8-2"],"co":["Barrett","Hyman","Kelley","RA","Rogers","Tissue"]},"Moore":{"dept":"SS","room":"a210","plan":"A2 / B2","sec":["7-10","7-8","7-9","7-7","7-5","7-6"],"A":["7-10","Planning","7-8","7-9"],"B":["7-7","Planning","7-5","7-6"],"co":["Cavey","Horichs","Love","Oddis","RA","Seabolt"]},"Kelley":{"dept":"ELA","room":"a110","plan":"A1","sec":["Honors GT 8-1","Algebra GT 8-2","Academic 8-3"],"A":["Planning","Honors GT 8-1","Algebra GT 8-2","Academic 8-3"],"B":["Planning","Honors GT 8-1","Algebra GT 8-2","Academic 8-3"],"co":["Harris","Hyman","RA","Tissue"]},"Smith":{"dept":"MATH","room":"a206","plan":"A2","sec":["7-4","7-2","7-3"],"A":["7-4","Planning","7-2","7-3"],"B":["7-4","Planning","7-2","7-3"],"co":["Almer","Michie","RA","Sisk"]},"Schwaber":{"dept":"ELA","room":"a106","plan":"A1","sec":["Honors GT 8-3","Algebra GT 8-4","Academic 8-4"],"A":["Planning","Honors GT 8-3","Algebra GT 8-4","Academic 8-4"],"B":["Planning","Honors GT 8-3","Algebra GT 8-4","Academic 8-4"],"co":["Byrd","Mielke","RA","Worthy"]},"Love":{"dept":"ELA","room":"a211","plan":"A2","sec":["7-8","7-9","7-10"],"A":["7-8","Planning","7-9","7-10"],"B":["7-8","Planning","7-9","7-10"],"co":["Horichs","Moore","RA","Seabolt"]},"Hyman":{"dept":"MATH","room":"a111","plan":"A1","sec":["Algebra GT 8-2","Academic 8-3","Honors GT 8-1"],"A":["Planning","Algebra GT 8-2","Academic 8-3","Honors GT 8-1"],"B":["Planning","Algebra GT 8-2","Academic 8-3","Honors GT 8-1"],"co":["Harris","Kelley","RA","Tissue"]},"Cavey":{"dept":"MATH","room":"a204","plan":"A2","sec":["7-6","7-7","7-5"],"A":["7-6","Planning","7-7","7-5"],"B":["7-6","Planning","7-7","7-5"],"co":["Horichs","Moore","Oddis","RA"]},"Worthy":{"dept":"MATH","room":"a104","plan":"A1","sec":["Algebra GT 8-4","Academic 8-4","Honors GT 8-3"],"A":["Planning","Algebra GT 8-4","Academic 8-4","Honors GT 8-3"],"B":["Planning","Algebra GT 8-4","Academic 8-4","Honors GT 8-3"],"co":["Byrd","Mielke","RA","Schwaber"]},"Seabolt":{"dept":"MATH","room":"a212","plan":"A2","sec":["7-9","7-10","7-8"],"A":["7-9","Planning","7-10","7-8"],"B":["7-9","Planning","7-10","7-8"],"co":["Horichs","Love","Moore","RA"]},"Barrett":{"dept":"ELA","room":"a112","plan":"A1","sec":["Academic 8-5","Academic 8-6","Honors 8-5"],"A":["Planning","Academic 8-5","Academic 8-6","Honors 8-5"],"B":["Planning","Academic 8-5","Academic 8-6","Honors 8-5"],"co":["Harris","RA","Rogers","Tissue"]},"Hirsh":{"dept":"SCI","room":"e102","plan":"A4 / B4","sec":["6-6","6-4","6-5","6-9","6-7","6-8"],"A":["6-6","6-4","6-5","Planning"],"B":["6-9","6-7","6-8","Planning"],"co":["Lawson","Merritt","Piechowiak","RA","Sparks","Young"]},"Oddis":{"dept":"ELA","room":"a202","plan":"A2","sec":["7-5","7-6","7-7"],"A":["7-5","Planning","7-6","7-7"],"B":["7-5","Planning","7-6","7-7"],"co":["Cavey","Horichs","Moore","RA"]},"Mielke":{"dept":"SS","room":"a103","plan":"A1 / B2","sec":["Academic 8-4","Honors GT 8-3","Algebra GT 8-4","7-11","Academic 8-1","Academic 8-2"],"A":["Planning","Academic 8-4","Honors GT 8-3","Algebra GT 8-4"],"B":["7-11","Planning","Academic 8-1","Academic 8-2"],"co":["Byrd","Pfister","RA","Schwaber","Vogg","Worthy"]},"Vogg":{"dept":"MATH","room":"a213","plan":"A1","sec":["Academic 8-2","7-11","Academic 8-1"],"A":["Planning","Academic 8-2","7-11","Academic 8-1"],"B":["Planning","Academic 8-2","7-11","Academic 8-1"],"co":["Byrd","Mielke","Pfister","RA"]},"Rogers":{"dept":"MATH","room":"a113","plan":"A1","sec":["Academic 8-6","Honors 8-5","Academic 8-5"],"A":["Planning","Academic 8-6","Honors 8-5","Academic 8-5"],"B":["Planning","Academic 8-6","Honors 8-5","Academic 8-5"],"co":["Barrett","Harris","RA","Tissue"]},"Saglimbeni":{"dept":"ELA","room":"c204","plan":"A4","sec":["6-1","6-2","6-3"],"A":["6-1","6-2","6-3","Planning"],"B":["6-1","6-2","6-3","Planning"],"co":["Davidson","Grisham","RA"]},"Sparks":{"dept":"ELA","room":"c203","plan":"A4","sec":["6-7","6-8","6-9"],"A":["6-7","6-8","6-9","Planning"],"B":["6-7","6-8","6-9","Planning"],"co":["Hirsh","Merritt","Piechowiak","RA"]},"Merritt":{"dept":"MATH","room":"c202","plan":"A4","sec":["6-8","6-9","6-7"],"A":["6-8","6-9","6-7","Planning"],"B":["6-8","6-9","6-7","Planning"],"co":["Hirsh","Piechowiak","RA","Sparks"]},"Sisk":{"dept":"SS","room":"c201","plan":"A2 / B2","sec":["7-3","7-4","7-2","6-11","6-10","7-1"],"A":["7-3","Planning","7-4","7-2"],"B":["6-11","Planning","6-10","7-1"],"co":["Almer","Hoeflich","Keen","Michie","RA","Smith"]},"Pfister":{"dept":"ELA","room":"a201","plan":"A1","sec":["Academic 8-1","Academic 8-2","7-11"],"A":["Planning","Academic 8-1","Academic 8-2","7-11"],"B":["Planning","Academic 8-1","Academic 8-2","7-11"],"co":["Byrd","Mielke","RA","Vogg"]},"Davidson":{"dept":"SCI/SS","room":"c205","plan":"A4","sec":["6-2","6-3","6-1"],"A":["6-2","6-3","6-1","Planning"],"B":["6-2","6-3","6-1","Planning"],"co":["Grisham","RA","Saglimbeni"]},"Grisham":{"dept":"SCI","room":"c206","plan":"A4","sec":["6-3","6-1","6-2"],"A":["6-3","6-1","6-2","Planning"],"B":["6-3","6-1","6-2","Planning"],"co":["Davidson","RA","Saglimbeni"]},"Lawson":{"dept":"ELA","room":"c207","plan":"A4","sec":["6-4","6-5","6-6"],"A":["6-4","6-5","6-6","Planning"],"B":["6-4","6-5","6-6","Planning"],"co":["Hirsh","Piechowiak","RA","Young"]},"Young":{"dept":"MATH","room":"c208","plan":"A4","sec":["6-5","6-6","6-4"],"A":["6-5","6-6","6-4","Planning"],"B":["6-5","6-6","6-4","Planning"],"co":["Hirsh","Lawson","Piechowiak","RA"]},"Piechowiak":{"dept":"SS","room":"c209","plan":"A4 / B4","sec":["6-9","6-7","6-8","6-6","6-4","6-5"],"A":["6-9","6-7","6-8","Planning"],"B":["6-6","6-4","6-5","Planning"],"co":["Hirsh","Lawson","Merritt","RA","Sparks","Young"]},"Hoeflich":{"dept":"MATH","room":"c210","plan":"A4","sec":["6-10","6-11","7-1"],"A":["6-10","6-11","7-1","Planning"],"B":["6-10","6-11","7-1","Planning"],"co":["Almer","Keen","RA","Sisk"]},"Keen":{"dept":"ELA","room":"b201","plan":"A4","sec":["7-1","6-10","6-11"],"A":["7-1","6-10","6-11","Planning"],"B":["7-1","6-10","6-11","Planning"],"co":["Almer","Hoeflich","RA","Sisk"]}},"sections":{"6-1":["Saglimbeni","Grisham","Davidson","RA"],"6-2":["Davidson","Saglimbeni","Grisham","RA"],"6-3":["Grisham","Davidson","Saglimbeni","RA"],"6-4":["Lawson","Hirsh","Young","RA","Piechowiak"],"6-5":["Young","Lawson","Hirsh","RA","Piechowiak"],"6-6":["Hirsh","Young","Lawson","RA","Piechowiak"],"6-7":["Sparks","Piechowiak","Merritt","RA","Hirsh"],"6-8":["Merritt","Sparks","Piechowiak","RA","Hirsh"],"6-9":["Piechowiak","Merritt","Sparks","RA","Hirsh"],"6-10":["Hoeflich","Keen","Almer","RA","Sisk"],"6-11":["Almer","Hoeflich","Keen","RA","Sisk"],"7-1":["Keen","RA","Hoeflich","Almer","Sisk"],"7-2":["Michie","RA","Smith","Sisk","Almer"],"7-3":["Sisk","RA","Michie","Smith","Almer"],"7-4":["Smith","RA","Sisk","Michie","Almer"],"7-5":["Oddis","RA","Horichs","Cavey","Moore"],"7-6":["Cavey","RA","Oddis","Horichs","Moore"],"7-7":["Horichs","RA","Cavey","Oddis","Moore"],"7-8":["Love","RA","Moore","Seabolt","Horichs"],"7-9":["Seabolt","RA","Love","Moore","Horichs"],"7-10":["Moore","RA","Seabolt","Love","Horichs"],"7-11":["Byrd","RA","Vogg","Pfister","Mielke"],"Academic 8-1":["RA","Pfister","Byrd","Vogg","Mielke"],"Academic 8-2":["RA","Vogg","Pfister","Byrd","Mielke"],"Honors GT 8-1":["RA","Kelley","Tissue","Hyman","Harris"],"Algebra GT 8-2":["RA","Hyman","Kelley","Tissue","Harris"],"Academic 8-3":["RA","Tissue","Hyman","Kelley","Harris"],"Honors GT 8-3":["RA","Schwaber","Mielke","Worthy","Byrd"],"Algebra GT 8-4":["RA","Worthy","Schwaber","Mielke","Byrd"],"Academic 8-4":["RA","Mielke","Worthy","Schwaber","Byrd"],"Academic 8-5":["RA","Barrett","Harris","Rogers","Tissue"],"Academic 8-6":["RA","Rogers","Barrett","Harris","Tissue"],"Honors 8-5":["RA","Harris","Rogers","Barrett","Tissue"]},"room2teacher":{"a208":"Almer","a209":"Horichs","a108":"Tissue","a109":"Byrd","Related Arts":"RA","a207":"Michie","a107":"Harris","a210":"Moore","a110":"Kelley","a206":"Smith","a106":"Schwaber","a211":"Love","a111":"Hyman","a204":"Cavey","a104":"Worthy","a212":"Seabolt","a112":"Barrett","e102":"Hirsh","a202":"Oddis","a103":"Mielke","a213":"Vogg","a113":"Rogers","c204":"Saglimbeni","c203":"Sparks","c202":"Merritt","c201":"Sisk","a201":"Pfister","c205":"Davidson","c206":"Grisham","c207":"Lawson","c208":"Young","c209":"Piechowiak","c210":"Hoeflich","b201":"Keen"},"groupRooms":{"6-1":{"A":["c204","c206","c205","Related Arts"],"B":["c204","c206","c205","Related Arts"]},"6-2":{"A":["c205","c204","c206","Related Arts"],"B":["c205","c204","c206","Related Arts"]},"6-3":{"A":["c206","c205","c204","Related Arts"],"B":["c206","c205","c204","Related Arts"]},"6-4":{"A":["c207","e102","c208","Related Arts"],"B":["c207","c209","c208","Related Arts"]},"6-5":{"A":["c208","c207","e102","Related Arts"],"B":["c208","c207","c209","Related Arts"]},"6-6":{"A":["e102","c208","c207","Related Arts"],"B":["c209","c208","c207","Related Arts"]},"6-7":{"A":["c203","c209","c202","Related Arts"],"B":["c203","e102","c202","Related Arts"]},"6-8":{"A":["c202","c203","c209","Related Arts"],"B":["c202","c203","e102","Related Arts"]},"6-9":{"A":["c209","c202","c203","Related Arts"],"B":["e102","c202","c203","Related Arts"]},"6-10":{"A":["c210","b201","a208","Related Arts"],"B":["c210","b201","c201","Related Arts"]},"6-11":{"A":["a208","c210","b201","Related Arts"],"B":["c201","c210","b201","Related Arts"]},"7-1":{"A":["b201","Related Arts","c210","a208"],"B":["b201","Related Arts","c210","c201"]},"7-2":{"A":["a207","Related Arts","a206","c201"],"B":["a207","Related Arts","a206","a208"]},"7-3":{"A":["c201","Related Arts","a207","a206"],"B":["a208","Related Arts","a207","a206"]},"7-4":{"A":["a206","Related Arts","c201","a207"],"B":["a206","Related Arts","a208","a207"]},"7-5":{"A":["a202","Related Arts","a209","a204"],"B":["a202","Related Arts","a210","a204"]},"7-6":{"A":["a204","Related Arts","a202","a209"],"B":["a204","Related Arts","a202","a210"]},"7-7":{"A":["a209","Related Arts","a204","a202"],"B":["a210","Related Arts","a204","a202"]},"7-8":{"A":["a211","Related Arts","a210","a212"],"B":["a211","Related Arts","a209","a212"]},"7-9":{"A":["a212","Related Arts","a211","a210"],"B":["a212","Related Arts","a211","a209"]},"7-10":{"A":["a210","Related Arts","a212","a211"],"B":["a209","Related Arts","a212","a211"]},"7-11":{"A":["a109","Related Arts","a213","a201"],"B":["a103","Related Arts","a213","a201"]},"Academic 8-1":{"A":["Related Arts","a201","a109","a213"],"B":["Related Arts","a201","a103","a213"]},"Academic 8-2":{"A":["Related Arts","a213","a201","a109"],"B":["Related Arts","a213","a201","a103"]},"Honors GT 8-1":{"A":["Related Arts","a110","a108","a111"],"B":["Related Arts","a110","a107","a111"]},"Algebra GT 8-2":{"A":["Related Arts","a111","a110","a108"],"B":["Related Arts","a111","a110","a107"]},"Academic 8-3":{"A":["Related Arts","a108","a111","a110"],"B":["Related Arts","a107","a111","a110"]},"Honors GT 8-3":{"A":["Related Arts","a106","a103","a104"],"B":["Related Arts","a106","a109","a104"]},"Algebra GT 8-4":{"A":["Related Arts","a104","a106","a103"],"B":["Related Arts","a104","a106","a109"]},"Academic 8-4":{"A":["Related Arts","a103","a104","a106"],"B":["Related Arts","a109","a104","a106"]},"Academic 8-5":{"A":["Related Arts","a112","a107","a113"],"B":["Related Arts","a112","a108","a113"]},"Academic 8-6":{"A":["Related Arts","a113","a112","a107"],"B":["Related Arts","a113","a112","a108"]},"Honors 8-5":{"A":["Related Arts","a107","a113","a112"],"B":["Related Arts","a108","a113","a112"]}},"modCount":4,"modLabel":"block","bell":{"A":["8:30–10:00","10:00–11:30","11:30–1:30","1:30–3:00"],"B":["8:30–10:00","10:00–11:30","11:30–1:30","1:30–3:00"]},"geometry":{"floors":[{"id":"floor_0","label":"Floor 1","cols":50,"rows":30,"hall":[[9,2],[10,2],[11,2],[12,2],[13,2],[14,2],[15,2],[9,3],[8,4],[9,4],[10,4],[11,4],[12,4],[13,4],[14,4],[15,4],[26,4],[27,4],[28,4],[29,4],[30,4],[31,4],[37,4],[38,4],[39,4],[40,4],[41,4],[42,4],[9,5],[26,5],[30,5],[37,5],[41,5],[9,6],[10,6],[11,6],[12,6],[13,6],[14,6],[15,6],[26,6],[30,6],[37,6],[41,6],[26,7],[30,7],[37,7],[41,7],[26,8],[27,8],[28,8],[29,8],[30,8],[37,8],[38,8],[39,8],[40,8],[41,8],[26,9],[30,9],[37,9],[41,9],[26,10],[30,10],[37,10],[41,10],[26,11],[30,11],[37,11],[41,11],[3,12],[26,12],[30,12],[37,12],[41,12],[3,13],[4,13],[5,13],[26,13],[30,13],[31,13],[37,13],[41,13],[42,13],[5,14],[6,14],[7,14],[8,14],[9,14],[10,14],[11,14],[12,14],[13,14],[14,14],[15,14],[16,14],[17,14],[18,14],[19,14],[20,14],[21,14],[22,14],[23,14],[24,14],[25,14],[26,14],[27,14],[28,14],[29,14],[30,14],[35,14],[36,14],[37,14],[38,14],[39,14],[40,14],[41,14],[5,15],[16,15],[17,15],[18,15],[19,15],[20,15],[21,15],[22,15],[23,15],[24,15],[25,15],[26,15],[27,15],[28,15],[29,15],[30,15],[35,15],[36,15],[37,15],[38,15],[39,15],[40,15],[41,15],[5,16],[16,16],[17,16],[20,16],[21,16],[5,17],[16,17],[17,17],[20,17],[21,17],[5,18],[6,18],[7,18],[8,18],[9,18],[10,18],[11,18],[12,18],[13,18],[14,18],[15,18],[16,18],[17,18],[20,18],[21,18]],"stair":[[16,2],[16,4],[32,4],[43,4],[16,6],[5,12],[32,13],[43,13],[34,15],[19,16]],"rooms":[{"rn":"a208","dept":"SCI","teacher":"Almer","cells":[[24,2],[25,2],[26,2],[27,2],[24,3],[25,3],[26,3],[27,3]]},{"rn":"a209","dept":"SCI","teacher":"Horichs","cells":[[29,2],[30,2],[31,2],[32,2],[29,3],[30,3],[31,3],[32,3]]},{"rn":"a108","dept":"SCI","teacher":"Tissue","cells":[[35,2],[36,2],[37,2],[38,2],[35,3],[36,3],[37,3],[38,3]]},{"rn":"a109","dept":"SCI","teacher":"Byrd","cells":[[40,2],[41,2],[42,2],[43,2],[40,3],[41,3],[42,3],[43,3]]},{"rn":"Related Arts","dept":null,"teacher":"RA","cells":[[5,3],[6,3],[7,3],[5,4],[6,4],[7,4],[5,5],[6,5],[7,5]]},{"rn":"a207","dept":"ELA","teacher":"Michie","cells":[[24,4],[25,4],[24,5],[25,5]]},{"rn":"a107","dept":"SS","teacher":"Harris","cells":[[35,4],[36,4],[35,5],[36,5]]},{"rn":"a210","dept":"SS","teacher":"Moore","cells":[[31,5],[32,5],[31,6],[32,6]]},{"rn":"a110","dept":"ELA","teacher":"Kelley","cells":[[42,5],[43,5],[42,6],[43,6]]},{"rn":"a206","dept":"MATH","teacher":"Smith","cells":[[24,6],[25,6],[24,7],[25,7]]},{"rn":"a106","dept":"ELA","teacher":"Schwaber","cells":[[35,6],[36,6],[35,7],[36,7]]},{"rn":"a211","dept":"ELA","teacher":"Love","cells":[[31,7],[32,7],[31,8],[32,8]]},{"rn":"a111","dept":"MATH","teacher":"Hyman","cells":[[42,7],[43,7],[42,8],[43,8]]},{"rn":"a204","dept":"MATH","teacher":"Cavey","cells":[[24,8],[25,8],[24,9],[25,9]]},{"rn":"a104","dept":"MATH","teacher":"Worthy","cells":[[35,8],[36,8],[35,9],[36,9]]},{"rn":"a212","dept":"MATH","teacher":"Seabolt","cells":[[31,9],[32,9],[31,10],[32,10]]},{"rn":"a112","dept":"ELA","teacher":"Barrett","cells":[[42,9],[43,9],[42,10],[43,10]]},{"rn":"e102","dept":"SCI","teacher":"Hirsh","cells":[[2,10],[3,10],[2,11],[3,11]]},{"rn":"a202","dept":"ELA","teacher":"Oddis","cells":[[24,10],[25,10],[24,11],[25,11]]},{"rn":"a103","dept":"SS","teacher":"Mielke","cells":[[35,10],[36,10],[35,11],[36,11]]},{"rn":"a213","dept":"MATH","teacher":"Vogg","cells":[[31,11],[32,11],[31,12],[32,12]]},{"rn":"a113","dept":"MATH","teacher":"Rogers","cells":[[42,11],[43,11],[42,12],[43,12]]},{"rn":"c204","dept":"ELA","teacher":"Saglimbeni","cells":[[6,12],[7,12],[6,13],[7,13]]},{"rn":"c203","dept":"ELA","teacher":"Sparks","cells":[[8,12],[9,12],[8,13],[9,13]]},{"rn":"c202","dept":"MATH","teacher":"Merritt","cells":[[10,12],[11,12],[10,13],[11,13]]},{"rn":"c201","dept":"SS","teacher":"Sisk","cells":[[12,12],[13,12],[14,12],[15,12],[12,13],[13,13],[14,13],[15,13]]},{"rn":"a201","dept":"ELA","teacher":"Pfister","cells":[[24,12],[25,12],[24,13],[25,13]]},{"rn":"c205","dept":"SCI/SS","teacher":"Davidson","cells":[[3,14],[4,14],[3,15],[4,15],[3,16],[4,16],[3,17],[4,17]]},{"rn":"c206","dept":"SCI","teacher":"Grisham","cells":[[2,19],[3,19],[4,19],[5,19],[2,20],[3,20],[4,20],[5,20]]},{"rn":"c207","dept":"ELA","teacher":"Lawson","cells":[[6,19],[7,19],[6,20],[7,20]]},{"rn":"c208","dept":"MATH","teacher":"Young","cells":[[8,19],[9,19],[8,20],[9,20]]},{"rn":"c209","dept":"SS","teacher":"Piechowiak","cells":[[10,19],[11,19],[10,20],[11,20]]},{"rn":"c210","dept":"MATH","teacher":"Hoeflich","cells":[[12,19],[13,19],[14,19],[15,19],[12,20],[13,20],[14,20],[15,20]]},{"rn":"b201","dept":"ELA","teacher":"Keen","cells":[[18,19],[19,19],[20,19],[21,19],[18,20],[19,20],[20,20],[21,20]]}]}]}};
 let BR_DEPT = PUBLISHED_DATA.dept, BR_ORDER = PUBLISHED_DATA.order;
 const BR_LEGACY_SHORT = {"ELA":"ELA","MATH":"Math","SCI":"Science","SS":"Soc Studies","SCI/SS":"Sci / SS"};
@@ -314,6 +329,98 @@ function brJsAttr(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+/* ── R62: direct links to one teacher/group ── */
+function brBuildLinkURL(kind, key) {
+  const url = new URL(location.origin + location.pathname);
+  url.search = '';
+  url.searchParams.set(kind, key);
+  return url.toString();
+}
+function brFlashBtn(btn, label, ms) {
+  if (!btn) return;
+  if (!btn.dataset.origLabel) btn.dataset.origLabel = btn.textContent;
+  btn.textContent = label;
+  btn.disabled = true;
+  clearTimeout(btn._brFlashT);
+  btn._brFlashT = setTimeout(() => { btn.textContent = btn.dataset.origLabel; btn.disabled = false; }, ms || 1700);
+}
+function brCopyFallback(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (e) { return false; }
+}
+function brCopyLink(kind, key, btn) {
+  const url = brBuildLinkURL(kind, key);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => brFlashBtn(btn, 'Link copied!'))
+      .catch(() => brFlashBtn(btn, brCopyFallback(url) ? 'Link copied!' : 'Copy failed'));
+  } else {
+    brFlashBtn(btn, brCopyFallback(url) ? 'Link copied!' : 'Copy failed');
+  }
+}
+function brShareLink(kind, key) {
+  if (typeof navigator.share !== 'function') return;
+  const url = brBuildLinkURL(kind, key);
+  const title = kind === 'teacher' ? (key + ' — Teacher Schedule') : ('Class ' + key + ' — Schedule');
+  navigator.share({ title, url }).catch(() => {});
+}
+function brShareButtonsHTML(kind, key) {
+  const attr = brJsAttr(key);
+  const shareBtn = (typeof navigator.share === 'function')
+    ? `<button class="btn-copy" onclick="brShareLink('${kind}','${attr}')">Share…</button>`
+    : '';
+  return `<button class="btn-copy" onclick="brCopyLink('${kind}','${attr}',this)">Copy link</button>${shareBtn}`;
+}
+function brFindKeyCI(map, want) {
+  if (!want) return null;
+  if (Object.prototype.hasOwnProperty.call(map, want)) return want;
+  const lower = want.toLowerCase();
+  return Object.keys(map).find(k => k.toLowerCase() === lower) || null;
+}
+function brApplyDeepLink() {
+  let params;
+  try { params = new URLSearchParams(location.search); } catch (e) { return; }
+  const tp = params.get('teacher');
+  if (tp) {
+    const key = brFindKeyCI(BR_TEACHERS, tp);
+    if (key) { brJumpTeacher(key); return; }
+  }
+  const gp = params.get('group');
+  if (gp) {
+    const key = brFindKeyCI(BR_SECTIONS, gp);
+    if (key) { brJumpGroup(key); return; }
+  }
+}
+
+/* ── R62: "may be stale" banner, driven by PUBLISHED_DATA.publishedOn (see
+   BR_STALE_DAYS above). If a future export of this file has no publishedOn
+   field, this quietly does nothing rather than throwing. ── */
+function brFormatDateLong(d) {
+  try { return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch (e) { return d.toISOString().slice(0, 10); }
+}
+function brCheckStaleness() {
+  const el = document.getElementById('br-stale-banner');
+  if (!el) return;
+  const raw = PUBLISHED_DATA && PUBLISHED_DATA.publishedOn;
+  if (!raw) return;
+  const pub = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw + 'T00:00:00' : raw);
+  if (isNaN(pub.getTime())) return;
+  const days = Math.floor((Date.now() - pub.getTime()) / 86400000);
+  if (days <= BR_STALE_DAYS) return;
+  el.textContent = 'This schedule was published on ' + brFormatDateLong(pub) + ' — ' + days + ' days ago. '
+    + 'It may be out of date — check with the office or ask for a fresh export if anything looks off.';
+  el.classList.add('show');
+}
+
 let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];
 let brGrpDay = 'A', brMapFloorIdx = 0;
 function brBuildOpts() {
@@ -431,7 +538,10 @@ function brRenderTeacher(n) {
    <div class="idhead">
      <div class="ibadge" style="background:${col}">${brEscHtml(n[0])}</div>
      <div><h2>${brEscHtml(n)}</h2><div class="role" style="color:${col}">${brEscHtml(deptLabel)} · Room ${brEscHtml(t.room)}</div></div>
-     <button class="btn-dl" onclick="brDownloadTeacherSchedule('${brJsAttr(n)}')">Download schedule (PNG)</button>
+     <div class="idhead-actions">
+       <button class="btn-dl" onclick="brDownloadTeacherSchedule('${brJsAttr(n)}')">Download schedule (PNG)</button>
+       ${brShareButtonsHTML('teacher', n)}
+     </div>
    </div>
    <p class="factline">Teaches <b>${t.sec.length} class${t.sec.length!==1?'es':''}</b>. Planning is <b>${BR_MOD_LABEL} ${t.plan}</b>.
      ${split?'A&nbsp;days and B&nbsp;days are different — both are shown below.':'A&nbsp;days and B&nbsp;days are the same.'}</p>
@@ -576,6 +686,7 @@ function brRenderGroup(sec) {
    <div class="idhead">
      <div class="ibadge" style="background:#0c4b31">${brEscHtml(grade)}</div>
      <div><h2>Class ${brEscHtml(sec)}</h2><div class="role" style="color:#62756a">Grade ${brEscHtml(grade)} · ${list.length} teacher${list.length!==1?'s':''}</div></div>
+     <div class="idhead-actions">${brShareButtonsHTML('group', sec)}</div>
    </div>
    <h3 class="block-title">Who teaches class ${brEscHtml(sec)}</h3>
    <p class="hint">Tap a name to open that teacher's full schedule.</p>
@@ -753,6 +864,8 @@ if (!Object.keys(BR_TEACHERS).length) {
   document.getElementById('br-empty-title').textContent = 'No schedule data in this file.';
   document.getElementById('br-empty-sub').textContent = 'Ask the publisher to re-export after adding rooms and groups.';
 }
+brApplyDeepLink();
+brCheckStaleness();
 </script>
 <script>
 if ('serviceWorker' in navigator) {

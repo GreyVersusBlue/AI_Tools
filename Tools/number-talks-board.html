@@ -113,6 +113,21 @@
   }
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 1.6rem 1rem; }
 
+  /* ── My Number Talks (personal bank — persists via localStorage) ──── */
+  .bank-list { list-style: none; margin: 0; padding: 0; }
+  .bank-list li { display: flex; justify-content: space-between; align-items: center; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--line); }
+  .bank-list li:last-child { border-bottom: none; }
+  .bank-item-main { flex: 1; min-width: 0; }
+  .bank-item-text { font-family: Consolas, "Courier New", monospace; font-weight: 700; font-size: .92rem; }
+  .bank-item-cat { display: block; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; margin-top: .1rem; }
+  .bank-item-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+  .bank-use-btn {
+    background: #fff; color: var(--accent-2); border: 1px solid var(--line-strong);
+    border-radius: 6px; font-size: .78rem; font-weight: 700; padding: .35rem .7rem; cursor: pointer;
+  }
+  .bank-use-btn:hover { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .bank-empty { font-size: .85rem; color: var(--muted); margin: 0; }
+
   /* ── Session history ─────────────────────────────────────────────── */
   .history-list { margin: 0; padding-left: 1.3rem; color: var(--muted); font-size: .88rem; }
   .history-list li { margin-bottom: .35rem; }
@@ -188,7 +203,14 @@
     <textarea class="custom-input" id="customInput" placeholder="8 + 5&#10;18 + 5&#10;28 + 5" spellcheck="false"></textarea>
     <div class="btn-row" style="margin-top:0;">
       <button type="button" class="secondary" id="useCustomBtn">Use this prompt</button>
+      <button type="button" class="link-btn" id="saveToBankBtn">&#9733; Save to my bank</button>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>My Number Talks</span></div>
+    <div class="hint">Your own saved favorites &mdash; unlike the session history below, these stay on this device across visits. Star a prompt above to add one, or choose &ldquo;My Number Talks (only)&rdquo; from the category dropdown to draw from them at random.</div>
+    <div id="bankList"></div>
   </div>
 
   <div class="card">
@@ -215,7 +237,7 @@
     </div>
   </div>
 
-  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Only the category filter is remembered between visits; any student first names you jot on the strategy board, and the session history, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. The category filter and your &ldquo;My Number Talks&rdquo; bank are remembered between visits; any student first names you jot on the strategy board, and the session history, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
 
 </div>
 
@@ -226,8 +248,11 @@
   'use strict';
 
   var STORAGE_KEY = 'gvb-number-talks:settings';
+  var BANK_KEY = 'gvb-number-talks:myBank';
+  var MINE_KEY = 'mine';
   var HISTORY_LIMIT = 20;
   var AVOID_REPEAT_WINDOW = 8;
+  var BANK_LIMIT = 200;
 
   /* ---------- the bank ---------- */
   /* Each prompt is a category key plus an ordered list of 1-4 related
@@ -322,6 +347,7 @@
   var settings = { category: 'all' };
   var current = null;     // { category, exprs, revealed }
   var history = [];       // [{category, text}]  (in-memory only, session-only)
+  var myBank = [];         // [{id, category, exprs}]  the teacher's own saved favorites — persists in localStorage
   var strategies = [];    // [{id, name, text}]  (in-memory only, session-only)
   var strategyIdCounter = 0;
   var recentTexts = [];   // avoid immediate repeats
@@ -329,7 +355,7 @@
 
   var els = {};
   ['categorySelect', 'nextPromptBtn', 'stage', 'metaRow', 'revealRow', 'revealBtn', 'revealAllBtn',
-   'customInput', 'useCustomBtn', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
+   'customInput', 'useCustomBtn', 'saveToBankBtn', 'bankList', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
    'historyList', 'historyEmptyHint', 'exportSessionBtn',
    'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn',
    'printRow', 'printHandoutBtn', 'printArea'
@@ -342,7 +368,7 @@
       if (!raw) return;
       var saved = JSON.parse(raw);
       if (!saved || typeof saved !== 'object') return;
-      var validKeys = CATEGORIES.map(function (c) { return c.key; });
+      var validKeys = CATEGORIES.map(function (c) { return c.key; }).concat([MINE_KEY]);
       if (saved.category === 'all' || validKeys.indexOf(saved.category) !== -1) {
         settings.category = saved.category;
       }
@@ -350,6 +376,33 @@
   }
   function saveSettings() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); }
+    catch (e) { /* private browsing / storage full */ }
+  }
+
+  /* ---------- persistence (personal "My Number Talks" bank) ----------
+     Separate, persistent store — intentionally NOT part of the session-only
+     history/strategy board above, which stays ephemeral by design. */
+  function loadMyBank() {
+    try {
+      var raw = localStorage.getItem(BANK_KEY);
+      if (!raw) return;
+      var saved = JSON.parse(raw);
+      if (!Array.isArray(saved)) return;
+      myBank = saved.filter(function (b) {
+        return b && typeof b === 'object' && typeof b.id === 'string' &&
+          Array.isArray(b.exprs) && b.exprs.length &&
+          b.exprs.every(function (e) { return typeof e === 'string' && e.trim(); });
+      }).map(function (b) {
+        return {
+          id: b.id,
+          category: typeof b.category === 'string' && b.category ? b.category : 'custom',
+          exprs: b.exprs.slice(0, 4)
+        };
+      }).slice(0, BANK_LIMIT);
+    } catch (e) { /* ignore corrupt storage */ }
+  }
+  function saveMyBank() {
+    try { localStorage.setItem(BANK_KEY, JSON.stringify(myBank)); }
     catch (e) { /* private browsing / storage full */ }
   }
 
@@ -363,16 +416,23 @@
       opt.value = c.key; opt.textContent = c.label;
       els.categorySelect.appendChild(opt);
     });
+    var mineOpt = document.createElement('option');
+    mineOpt.value = MINE_KEY; mineOpt.textContent = 'My Number Talks (only)';
+    els.categorySelect.appendChild(mineOpt);
     els.categorySelect.value = settings.category;
   }
 
   function categoryLabel(key) {
+    if (key === MINE_KEY) return 'My Number Talks';
     if (key === 'all' || key === 'custom') return key === 'custom' ? 'Custom prompt' : 'All categories';
     var c = CATEGORIES.filter(function (x) { return x.key === key; })[0];
     return c ? c.label : key;
   }
 
   function pool() {
+    if (settings.category === MINE_KEY) {
+      return myBank.map(function (b) { return { category: b.category, exprs: b.exprs }; });
+    }
     var keys = settings.category === 'all' ? CATEGORIES.map(function (c) { return c.key; }) : [settings.category];
     var items = [];
     keys.forEach(function (key) {
@@ -395,14 +455,72 @@
     setCurrent(pick.category, pick.exprs.slice());
   }
 
-  function useCustom() {
-    var lines = els.customInput.value.split('\n')
+  function parseCustomLines() {
+    return els.customInput.value.split('\n')
       .map(function (l) { return l.trim(); })
       .filter(Boolean)
       .slice(0, 4);
+  }
+
+  function useCustom() {
+    var lines = parseCustomLines();
     if (!lines.length) return;
     setCurrent('custom', lines);
   }
+
+  /* ---------- personal "My Number Talks" bank ----------
+     A small persistent store of the teacher's own favorite/custom number
+     strings, kept separate from the intentionally session-only history
+     and strategy board above. Saved via the star button next to the
+     custom-prompt box; browsed/drawn from via the "My Number Talks (only)"
+     category and the list rendered below. */
+  function nextBankId() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  function saveCustomToBank() {
+    var lines = parseCustomLines();
+    if (!lines.length) return;
+    var cat = (settings.category !== 'all' && settings.category !== MINE_KEY) ? settings.category : 'custom';
+    myBank.unshift({ id: nextBankId(), category: cat, exprs: lines });
+    myBank = myBank.slice(0, BANK_LIMIT);
+    saveMyBank();
+    renderMyBank();
+  }
+
+  function removeFromBank(id) {
+    myBank = myBank.filter(function (b) { return b.id !== id; });
+    saveMyBank();
+    renderMyBank();
+  }
+
+  function renderMyBank() {
+    if (!myBank.length) {
+      els.bankList.innerHTML = '<p class="bank-empty">No saved number talks yet &mdash; type one above and click &ldquo;Save to my bank&rdquo;.</p>';
+      return;
+    }
+    els.bankList.innerHTML = '<ul class="bank-list">' + myBank.map(function (b) {
+      return '<li>' +
+        '<div class="bank-item-main">' +
+          '<span class="bank-item-text">' + escapeHtml(promptText(b.exprs)) + '</span>' +
+          '<span class="bank-item-cat">' + escapeHtml(categoryLabel(b.category)) + '</span>' +
+        '</div>' +
+        '<div class="bank-item-actions">' +
+          '<button type="button" class="bank-use-btn" data-use-bank="' + escapeAttr(b.id) + '">Use</button>' +
+          '<button type="button" class="remove-row-btn" data-remove-bank="' + escapeAttr(b.id) + '" title="Remove from my bank">&#10005;</button>' +
+        '</div>' +
+      '</li>';
+    }).join('') + '</ul>';
+  }
+
+  els.bankList.addEventListener('click', function (e) {
+    var useBtn = e.target.closest('[data-use-bank]');
+    if (useBtn) {
+      var item = myBank.filter(function (b) { return b.id === useBtn.dataset.useBank; })[0];
+      if (item) setCurrent(item.category, item.exprs.slice());
+      return;
+    }
+    var removeBtn = e.target.closest('[data-remove-bank]');
+    if (removeBtn) removeFromBank(removeBtn.dataset.removeBank);
+  });
 
   function setCurrent(category, exprs) {
     current = { category: category, exprs: exprs, revealed: 1 };
@@ -756,6 +874,7 @@
   els.revealBtn.addEventListener('click', revealNext);
   els.revealAllBtn.addEventListener('click', revealAll);
   els.useCustomBtn.addEventListener('click', useCustom);
+  els.saveToBankBtn.addEventListener('click', saveCustomToBank);
   els.addStrategyBtn.addEventListener('click', addStrategyCard);
   els.clearBoardBtn.addEventListener('click', clearBoard);
   els.exportSessionBtn.addEventListener('click', exportSession);
@@ -767,11 +886,13 @@
 
   /* ---------- boot ---------- */
   loadSettings();
+  loadMyBank();
   buildCategorySelect();
   renderStage();
   renderHistory();
   renderStrategies();
   renderAnswerKey();
+  renderMyBank();
 })();
 </script>
 <script>

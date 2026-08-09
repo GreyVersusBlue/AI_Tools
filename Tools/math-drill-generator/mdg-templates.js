@@ -31,6 +31,26 @@
     }
   ];
 
+  /* Fact-family templates: narrower drills that pin one factor/divisor to a
+     single digit (2-12) instead of letting it range, e.g. "x6 Facts Only"
+     only ever produces 6 x b. Generated in a loop to avoid 22 near-identical
+     literals, but each pushed entry has the exact same shape as the static
+     templates above (key/label/operation/operand1/operand2), so
+     mdg-generate.js and the UI need no changes to support them. For
+     multiply, operand1 is pinned (operand2 still ranges 1-12); for divide,
+     operand2 is pinned since it doubles as the divisor (operand1 still
+     ranges 1-12 as the quotient). */
+  for (var digit = 2; digit <= 12; digit++) {
+    TEMPLATES.push({
+      key: 'mult' + digit, label: '×' + digit + ' Facts Only', operation: 'multiply',
+      operand1: { min: digit, max: digit }, operand2: { min: 1, max: 12 }
+    });
+    TEMPLATES.push({
+      key: 'div' + digit, label: '÷ by ' + digit + ' Facts Only', operation: 'divide',
+      operand1: { min: 1, max: 12 }, operand2: { min: digit, max: digit }
+    });
+  }
+
   function byKey(key) {
     for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].key === key) return TEMPLATES[i];
     return TEMPLATES[0];

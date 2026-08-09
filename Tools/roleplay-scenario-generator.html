@@ -64,6 +64,8 @@
   }
   .stage h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin: 0 0 .6rem; }
   .stage .setup { font-size: clamp(1rem, 2vw, 1.15rem); max-width: 48rem; margin: 0 0 1.2rem; }
+  .role-assign-row { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-bottom: .7rem; }
+  .role-assign-row .hint { color: var(--muted); font-size: .82rem; margin: 0; }
   .roles-row { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1.4rem; }
   .role-badge {
     background: var(--accent); color: #fff; border-radius: 8px; padding: .6rem 1.1rem;
@@ -445,6 +447,8 @@
   var currentId = localStorage.getItem(CURRENT_KEY);
   if (!currentId || !SCENARIO_BY_ID[currentId]) currentId = null;
 
+  var roleFlips = {}; // scenarioId -> bool; true means Partner 1/2 are swapped between Role A/B (in-memory only, not persisted)
+
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -505,12 +509,20 @@
     var s = SCENARIO_BY_ID[currentId];
     var arr = fillsFor(s.id);
 
+    var flipped = !!roleFlips[s.id];
+
     var html = '<span class="cat-tag">' + escapeHtml(categoryLabel(s.category)) + '</span>' +
       '<h2>' + escapeHtml(s.title) + '</h2>' +
       '<p class="setup">' + escapeHtml(s.setup) + '</p>' +
+      '<div class="role-assign-row">' +
+        '<button type="button" class="secondary small" id="assignRolesBtn">&#127922; Randomly assign roles</button>' +
+        '<p class="hint">Let chance decide which partner plays Role A vs. Role B</p>' +
+      '</div>' +
       '<div class="roles-row">' +
         s.roles.map(function (r, i) {
-          return '<div class="role-badge"><span class="who">Partner ' + (i === 0 ? 'A' : 'B') + '</span>' + escapeHtml(r) + '</div>';
+          var roleLetter = i === 0 ? 'A' : 'B';
+          var partnerNum = flipped ? (i === 0 ? 2 : 1) : (i === 0 ? 1 : 2);
+          return '<div class="role-badge"><span class="who">Partner ' + partnerNum + ': Role ' + roleLetter + '</span>' + escapeHtml(r) + '</div>';
         }).join('') +
       '</div>' +
       '<p class="scaff-heading">Vocabulary scaffolding &mdash; fill in the target-language phrases for each</p>' +
@@ -524,6 +536,14 @@
       '</div>';
 
     els.stage.innerHTML = html;
+
+    var assignBtn = els.stage.querySelector('#assignRolesBtn');
+    if (assignBtn) {
+      assignBtn.addEventListener('click', function () {
+        roleFlips[s.id] = Math.random() < 0.5;
+        renderStage();
+      });
+    }
 
     Array.prototype.forEach.call(els.stage.querySelectorAll('.fill-input'), function (ta) {
       ta.addEventListener('input', function () {
