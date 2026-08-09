@@ -109,7 +109,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Image → PDF Assembler (`Tools/image-to-pdf.html`)
 **Current state:** Drag-and-drop image queue (PNG/JPG/WEBP/SVG) with numeric/alphabetical/custom-drag sort, page-size/orientation/quality controls, a per-image 90° rotate control (pre-rotated onto canvas before embedding, so page-fit math uses the rotated dimensions), and client-side PDF assembly via jsPDF with a progress bar.
 **Suggested improvements:**
-- Persist the last-used page size/orientation/quality choices to localStorage so a teacher assembling several packets in a row doesn't reset options each time.
+- 🔒 **CLAIMED (2026-08-09)** — Persist the last-used page size/orientation/quality choices to localStorage so a teacher assembling several packets in a row doesn't reset options each time.
 - Add an optional "N images per page" contact-sheet/grid layout for handing out thumbnail overviews.
 
 ### Word Doc Merger (`Tools/docx-merger.html`)
@@ -118,7 +118,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Certificate & Award Maker (`Tools/certificate-award-maker.html`)
 **Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview (with a batch thumbnail grid view alongside the one-at-a-time preview), and browser print-to-PDF, with the last-used settings saved to localStorage.
 **Suggested improvements:**
-- Support an optional small logo/image upload (stored as a data URL) to place on the certificate, for a school crest or class mascot.
+- 🔒 **CLAIMED (2026-08-09)** — Support an optional small logo/image upload (stored as a data URL) to place on the certificate, for a school crest or class mascot.
 - Save multiple named presets (theme + border + signature combos) the way Rubric Builder and Formula Sheet Builder save multiple named documents, since today there's only one persisted settings object.
 
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
@@ -167,7 +167,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### PE Tournament & Station Rotation (`Tools/pe-tournament-stations.html`)
 **Current state:** Combines a persisted countdown rotation timer that auto-advances groups through named stations (with a WebAudio two-tone alarm chime, muteable, when it hits zero) with a single-elimination bracket (fed from the groups or a custom list), and prints a combined station schedule + bracket summary.
 **Suggested improvements:**
-- Add a fullscreen/kiosk toggle for the timer stage — the countdown is already large and responsive, but a one-click Fullscreen API call would make it readable across a whole gym without a teacher-only device in the way.
+- 🔒 **CLAIMED (2026-08-09)** — Add a fullscreen/kiosk toggle for the timer stage — the countdown is already large and responsive, but a one-click Fullscreen API call would make it readable across a whole gym without a teacher-only device in the way.
 - Add printable per-station activity cards (one station per slip, large text) separate from the combined schedule table — useful to physically tape up at each station, which the current single-table print output isn't formatted for.
 
 ### Novel Study / Reading Circles Manager (`Tools/novel-study-circles-manager.html`)
@@ -186,7 +186,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### QR Scavenger Hunt Builder (`Tools/qr-scavenger-hunt-builder.html`)
 **Current state:** Lets a teacher type or paste a list of stations (label, QR content, private answer-key note), then print a grid of station QR codes at a chosen density plus a separate answer key, with the current single hunt autosaved to localStorage, move-up/move-down row reordering, an auto-prepended `https://` on bare-looking links, and a plain CSV export of the station list for the teacher's own records.
 **Suggested improvements:**
-- Support multiple named, saved hunts with a switcher (like Gallery Walk QR and Escape Room Builder already do) — right now there's only one flat autosave, so starting a new hunt overwrites the last one.
+- 🔒 **CLAIMED (2026-08-09)** — Support multiple named, saved hunts with a switcher (like Gallery Walk QR and Escape Room Builder already do) — right now there's only one flat autosave, so starting a new hunt overwrites the last one.
 
 ### Gallery Walk QR Codes (`Tools/gallery-walk-qr.html`)
 **Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import, URL normalization, and a dedicated `.csv` file-picker alongside the paste box), and prints a QR grid, a plain reference sheet, or copies every entry's link to the clipboard as a list.
@@ -262,7 +262,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
 **Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a session-only "recently shown" history list, and a fullscreen toggle (button or `F` key) for the projector "stage" display.
 **Suggested improvements:**
-- Persist the shown-prompt history to localStorage (with a date) instead of resetting on every reload, so a teacher can check what was assigned to a class earlier in the week without having kept the tab open.
+- 🔒 **CLAIMED (2026-08-09)** — Persist the shown-prompt history to localStorage (with a date) instead of resetting on every reload, so a teacher can check what was assigned to a class earlier in the week without having kept the tab open.
 - Add a "print this prompt" option that renders the current prompt as a single large poster-style page, for classrooms that post the daily prompt physically rather than only projecting it.
 - Allow teachers to add their own custom prompts into the rotation (stored in localStorage, blended into the random pool) instead of being limited strictly to the built-in 200.
 - Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.
@@ -292,3 +292,10 @@ This document doesn't have a "done" checkbox convention — when a bullet gets b
 in the same commit (or edit it down if only part of it shipped), the same way `IDEAS_BACKLOG.md` entries are
 removed once graduated. If a new gap gets noticed later, add a bullet under the matching tool's section rather than
 starting a separate list.
+
+**Claiming a bullet when working in parallel:** if more than one chat/session might be picking bullets from this
+doc at the same time, prefix the exact bullet you're about to build with `🔒 **CLAIMED (YYYY-MM-DD)**` (the date
+you claimed it) and push that tagging-only commit to `main` by itself, *before* writing any implementation code —
+so other sessions pull the claim before picking their own bullets. When you finish (or abandon) the feature, that
+same commit that deletes/edits down the bullet removes the tag with it. A claim more than a day or two old with no
+corresponding commit landed on `main` is safe to treat as stale and pick up.
