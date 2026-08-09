@@ -5,6 +5,7 @@
 
   var KEY = 'gvb-writing-prompts:settings';
   var HISTORY_KEY = 'gvb-writing-prompts:history';
+  var CUSTOM_KEY = 'gvb-writing-prompts:custom';
 
   function load() {
     var json = localStorage.getItem(KEY);
@@ -32,5 +33,21 @@
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }
 
-  global.WritingPromptStore = { load: load, save: save, loadHistory: loadHistory, saveHistory: saveHistory };
+  function loadCustom() {
+    var json = localStorage.getItem(CUSTOM_KEY);
+    if (json == null) return [];
+    try {
+      var value = JSON.parse(json);
+      return Array.isArray(value) ? value : [];
+    } catch (e) { return []; }
+  }
+
+  function saveCustom(list) {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+  }
+
+  global.WritingPromptStore = {
+    load: load, save: save, loadHistory: loadHistory, saveHistory: saveHistory,
+    loadCustom: loadCustom, saveCustom: saveCustom
+  };
 })(window);

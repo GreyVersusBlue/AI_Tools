@@ -4,12 +4,60 @@
 (function (global) {
   'use strict';
 
+  /**
+   * Minimal single-line CSV field split (handles double-quoted fields,
+   * including an escaped "" for a literal quote). Good enough for a
+   * pasted spreadsheet column — not a full multi-line RFC 4180 parser.
+   */
+  function splitCsvLine(line) {
+    var fields = [];
+    var cur = '';
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; }
+          else inQuotes = false;
+        } else cur += ch;
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        fields.push(cur); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    fields.push(cur);
+    return fields;
+  }
+
+  /**
+   * Accepts the original "term: definition" per-line format, or a pasted
+   * spreadsheet column: tab-separated (the clipboard format Google Sheets/
+   * Excel use for a copied range) or comma-separated (a pasted .csv).
+   * Extra columns beyond the first two are dropped, matching the tolerant
+   * paste parsing used elsewhere in this toolkit.
+   */
   function parseWordList(text) {
-    return String(text || '').split('\n').map(function (line) {
-      var idx = line.indexOf(':');
-      if (idx === -1) return null;
-      var term = line.slice(0, idx).trim();
-      var definition = line.slice(idx + 1).trim();
+    return String(text || '').replace(/\r\n/g, '\n').split('\n').map(function (line) {
+      if (!line.trim()) return null;
+      var term, definition;
+      if (line.indexOf('\t') !== -1) {
+        var tabParts = line.split('\t');
+        term = (tabParts[0] || '').trim();
+        definition = (tabParts[1] || '').trim();
+      } else if (line.indexOf(':') !== -1) {
+        var idx = line.indexOf(':');
+        term = line.slice(0, idx).trim();
+        definition = line.slice(idx + 1).trim();
+      } else if (line.indexOf(',') !== -1) {
+        var csvFields = splitCsvLine(line);
+        term = (csvFields[0] || '').trim();
+        definition = (csvFields[1] || '').trim();
+      } else {
+        return null;
+      }
       if (!term) return null;
       return { term: term, definition: definition };
     }).filter(Boolean);

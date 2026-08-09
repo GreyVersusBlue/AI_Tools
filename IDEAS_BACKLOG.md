@@ -108,11 +108,6 @@ whatever rank fits.
 | Novel Study / Reading Circles Manager | "Print full meeting log" option covering every logged meeting | 2026-08-09 |
 | Gallery Walk QR Codes | Flag duplicate links/text across entries before printing | 2026-08-09 |
 | Silent Reading Log Tracker | "Days logged this week" streak indicator per student | 2026-08-09 |
-| Vocab & Conjugation Drill Generator | "Listen" button per word/verb form | 2026-08-09 |
-| Writing Prompt Generator | Add your own prompts to the rotation | 2026-08-09 |
-| Vocabulary Flashcard & Word Wall Generator | Paste straight from a spreadsheet | 2026-08-09 |
-| Timeline Builder | Parallel/comparison timeline track | 2026-08-09 |
-| Digital Escape Room / Puzzle Lock Builder | Optional whole-room countdown | 2026-08-09 |
 
 ## Platform-Wide — Big Swings
 

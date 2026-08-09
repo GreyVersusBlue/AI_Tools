@@ -52,7 +52,7 @@
   .card-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .8rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
-  input[type="text"], select, textarea {
+  input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
@@ -242,6 +242,14 @@
           <label class="option-label" for="randomizeStart">Randomize starting station for each printed/shared link</label>
         </div>
         <div class="hint">For physical rotations where several teams start at different stations at once: turns each station's own code into its own entry point, so a team that starts by scanning Station 4 begins the chain right there instead of being told to go find Station 1 first. Leave off if everyone starts together at Station 1.</div>
+        <div class="option-row">
+          <input type="checkbox" id="countdownEnabled">
+          <label class="option-label" for="countdownEnabled">Whole-room countdown timer on the student's lock screen</label>
+        </div>
+        <div class="row2" id="countdownMinutesRow" style="display:none;">
+          <div><label for="countdownMinutes">Minutes</label><input type="number" id="countdownMinutes" min="1" value="20"></div>
+        </div>
+        <div class="hint">Baked into the player link/QR code. Since there's no shared server clock, each device's countdown starts the moment that student first opens their own link, not a synced room-wide start &mdash; it counts down live, then shows &ldquo;Time&rsquo;s up!&rdquo; without blocking their progress.</div>
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print Station QR Codes</button>
           <button class="secondary" id="printAnswersBtn" disabled type="button">Print Answer Key</button>
@@ -288,7 +296,8 @@
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'chainPreview', 'stationsList', 'addStationBtn',
    'playerLink', 'copyLinkBtn',
-   'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart', 'printCodesBtn', 'printAnswersBtn',
+   'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart',
+   'countdownEnabled', 'countdownMinutes', 'countdownMinutesRow', 'printCodesBtn', 'printAnswersBtn',
    'cards-preview', 'answerPreview', 'printQrArea', 'printQrGrid', 'printAnswerArea', 'printAnswerBody',
    'answerSheetTitle', 'previewNote', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
@@ -350,6 +359,7 @@
       name: name, roomId: makeRoomId(),
       stations: [{ clue: '', answers: '', hint: '', next: null }],
       cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
+      countdownEnabled: false, countdownMinutes: 20,
     };
     applyStateToForm();
     refreshSwitcher();
@@ -377,6 +387,9 @@
     els.ecLevel.value = state.ecLevel || 'Q';
     els.showNumber.checked = state.showNumber !== false;
     els.randomizeStart.checked = !!state.randomizeStart;
+    els.countdownEnabled.checked = !!state.countdownEnabled;
+    els.countdownMinutes.value = state.countdownMinutes || 20;
+    els.countdownMinutesRow.style.display = state.countdownEnabled ? '' : 'none';
     renderStations();
   }
 
@@ -489,7 +502,7 @@
   function buildRoomPayload(valid) {
     var idxMap = {};
     valid.forEach(function (s, n) { idxMap[s.idx] = n; });
-    return {
+    var room = {
       id: state.roomId,
       title: state.name || 'Escape Room',
       stations: valid.map(function (s) {
@@ -499,6 +512,13 @@
         return { clue: s.clue, answers: s.answers, hint: s.hint || '', next: next };
       }),
     };
+    // Omitted entirely unless enabled, so the link is byte-for-byte the same
+    // as before when this option is off (matches the randomizeStart pattern).
+    if (state.countdownEnabled) {
+      var minutes = Math.max(1, parseInt(state.countdownMinutes, 10) || 20);
+      room.timerMinutes = minutes;
+    }
+    return room;
   }
 
   // ── Room encoding — base64(encodeURIComponent(JSON)) via btoa(unescape(...)),
@@ -681,9 +701,21 @@
     }
   });
 
-  [els.cardsPerPage, els.ecLevel, els.showNumber, els.randomizeStart].forEach(function (el) {
-    el.addEventListener('change', function () { save(); scheduleRender(); });
+  function syncOptionFields() {
+    state.cardsPerPage = els.cardsPerPage.value;
+    state.ecLevel = els.ecLevel.value;
+    state.showNumber = els.showNumber.checked;
+    state.randomizeStart = els.randomizeStart.checked;
+    state.countdownEnabled = els.countdownEnabled.checked;
+    state.countdownMinutes = Math.max(1, parseInt(els.countdownMinutes.value, 10) || 20);
+    els.countdownMinutesRow.style.display = state.countdownEnabled ? '' : 'none';
+    save();
+    scheduleRender();
+  }
+  [els.cardsPerPage, els.ecLevel, els.showNumber, els.randomizeStart, els.countdownEnabled, els.countdownMinutes].forEach(function (el) {
+    el.addEventListener('change', syncOptionFields);
   });
+  els.countdownMinutes.addEventListener('input', syncOptionFields);
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }
   function clearMsg() { els.msg.textContent = ''; els.msg.className = ''; }

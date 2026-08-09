@@ -189,10 +189,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - 🔒 **CLAIMED (2026-08-09)** — Flag duplicate links/text across entries (a common paste-mistake when copying the same folder link for two students) before printing.
 
 ### Digital Escape Room / Puzzle Lock Builder (`Tools/escape-room-builder.html`)
-**Current state:** Builds a linear or branching chain of QR-code puzzle stations (clue, accepted answers, hint, next-station routing) encoded into a shared player link, with a live chain preview, printable per-station QR codes, a separate answer key, and a "randomize starting station" toggle so each station's own printed code can be its own valid entry point for physical rotations where teams start simultaneously at different stations.
+**Current state:** Builds a linear or branching chain of QR-code puzzle stations (clue, accepted answers, hint, next-station routing) encoded into a shared player link, with a live chain preview, printable per-station QR codes, a separate answer key, a "randomize starting station" toggle so each station's own printed code can be its own valid entry point for physical rotations where teams start simultaneously at different stations, and an optional whole-room countdown timer baked into the player link that shows live on the student's lock screen.
 **Suggested improvements:**
 - Add a same-network "teacher monitor" view using the toolkit's existing `_shared/webrtc-pair.js`/BroadcastChannel pattern, so a teacher's own screen can see live pings of which station each device has reached — currently there's no way to know how far any group has gotten short of walking around.
-- 🔒 **CLAIMED (2026-08-09)** — Add an optional whole-room countdown timer (a client-side setting baked into the player link) that displays in the student's lock screen, a common escape-room mechanic that's currently absent.
 - Allow an optional image per station clue (the way Timeline Builder attaches downscaled photos to events), useful for picture-based puzzles rather than text-only clues.
 
 ### Silent Reading Log Tracker (`Tools/ssr-log-tracker.html`)
@@ -217,9 +216,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add a print-friendly handout of the current number string for an absent student or as a written record.
 
 ### Timeline Builder (`Tools/timeline-builder.html`)
-**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style) with both a scrolling on-screen view (with auto-scaled decade/century/millennium gridlines and year labels for a sense of scale, plus optional background era/period shading bands for overlapping historical periods), a separate paginated print layout, and JSON export/import of a timeline file.
-**Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Add the parallel/comparison timeline track the tool's own UI already flags as unsupported, so two related timelines (e.g., a country's history vs. world history) can be viewed stacked against the same year axis.
+**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style, and optional parallel/comparison tracks stacked on one shared year axis) with both a scrolling on-screen view (with auto-scaled decade/century/millennium gridlines and year labels for a sense of scale, plus optional background era/period shading bands for overlapping historical periods), a separate paginated print layout, and JSON export/import of a timeline file.
 
 ### Blank Map Generator (`Tools/blank-map-generator.html`)
 **Current state:** A very mature tool already covering Wikimedia Commons map search/upload, pan/zoom, draggable labels/markers/shaded regions/lines with a full auto-generated and reorderable legend, compass rose, calibrated lat/long grid and scale bar, locator inset, batch coordinate placement, undo/redo, student-handout text-hiding mode, tiled poster printing, offline map caching, multi-project management, and project export/import as a downloadable JSON file (for handing a finished annotated map to another teacher or device) — so only modest, genuinely new additions are suggested here.
@@ -240,25 +237,22 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add fact-family-focused templates (e.g., "×6 facts only," "÷ by 7 only") as extra entries in `mdg-templates.js`, since the generator architecture already supports adding templates with no UI changes.
 
 ### Vocabulary Flashcard & Word Wall Generator (`Tools/vocab-flashcard-generator.html`)
-**Current state:** Turns a pasted "term: definition" list into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
+**Current state:** Turns a pasted "term: definition" list (or a tab-separated/CSV paste straight from a spreadsheet column) into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Add tab-separated/CSV paste support in `parseWordList` (from `vfg-layout.js`) so teachers can paste directly from a Google Sheet or Excel column instead of manually typing `term: definition` on each line.
 - Add an on-screen self-quiz/flip mode (click a card to reveal the definition) similar to the reveal-on-click pattern already used in `vocab-conjugation-drill.html`, since today preview is print-only, not usable directly with a student at a screen.
 - Add auto-shrinking font size for long definitions on fixed-size cards to prevent text overflow/clipping when a definition runs long relative to the card dimensions chosen.
 
 ### Vocab & Conjugation Drill Generator (`Tools/vocab-conjugation-drill.html`)
-**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets and a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order.
+**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets, a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order, and a "Listen" button per word/verb form using the browser's built-in text-to-speech with a language selector.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Add a "Listen" button per vocab word/verb form using the browser's built-in `speechSynthesis` API (no server or API key needed) with a language selector, since this is explicitly a "for any language" tool but currently has no pronunciation support at all.
 - Add quick-start person-label presets (Spanish/French/German/Latin pronoun sets) as buttons above the person-row editor, since today every new set starts from the same Spanish default persons and must be manually retyped for other languages.
 - Add JSON export/import of a drill set so language teachers on the same team can share a built conjugation table instead of re-entering every verb form.
 - Add an option to print vocab and conjugation sections together in a single packet, since the two modes currently produce fully separate print outputs even when saved under the same set name.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
-**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), and a fullscreen toggle (button or `F` key) for the projector "stage" display.
+**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), a fullscreen toggle (button or `F` key) for the projector "stage" display, and a "My Prompts" panel where a teacher can add their own prompts (grade band, genre) blended into the random pool alongside the built-in 200.
 **Suggested improvements:**
 - Add a "print this prompt" option that renders the current prompt as a single large poster-style page, for classrooms that post the daily prompt physically rather than only projecting it.
-- 🔒 **CLAIMED (2026-08-09)** — Allow teachers to add their own custom prompts into the rotation (stored in localStorage, blended into the random pool) instead of being limited strictly to the built-in 200.
 - Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.
 
 ### Immersion Roleplay Scenario Generator (`Tools/roleplay-scenario-generator.html`)
