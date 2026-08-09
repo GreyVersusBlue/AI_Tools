@@ -259,6 +259,26 @@ body.retro-mode .rarity-banner{border-radius:0 !important;font-size:0.7em !impor
 .tournament-tile.absent-tile{opacity:0.3;filter:grayscale(0.8);}
 .tournament-tile.absent-tile::after{content:'ABSENT';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);background:rgba(220,38,38,0.85);color:#fff;font-family:'Bungee',sans-serif;font-size:0.6em;padding:3px 8px;border-radius:4px;letter-spacing:1px;}
 
+/* === TEAM DRAFT MODE — captains alternate picking students from the roster === */
+.draft-board{position:absolute;inset:0;display:flex;flex-direction:column;padding:20px 24px;overflow-y:auto;}
+.draft-setup{max-width:520px;margin:auto;text-align:center;}
+.draft-setup h2{font-family:'Bungee',sans-serif;font-size:2em;color:var(--accent2);margin-bottom:10px;}
+.draft-setup p{opacity:0.75;margin-bottom:18px;}
+.draft-team-inputs{display:flex;flex-direction:column;gap:8px;margin:14px 0 18px;}
+.draft-team-inputs input{width:100%;text-align:center;}
+.draft-teams-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.draft-team-card{flex:1;min-width:150px;background:var(--name-bg);border-radius:10px;padding:12px 14px;border:2px solid transparent;}
+.draft-team-card.active-turn{border-color:var(--accent2);box-shadow:0 0 18px var(--accent2);}
+.draft-team-card h4{font-family:'Bungee',sans-serif;color:var(--accent2);font-size:0.95em;margin-bottom:6px;}
+.draft-team-card .draft-team-picks{font-size:0.88em;line-height:1.5;opacity:0.9;}
+.draft-reconfigure{display:flex;justify-content:center;margin-bottom:14px;}
+.draft-remaining-label{font-family:'Bungee',sans-serif;color:var(--accent2);text-align:center;margin-bottom:12px;font-size:1.1em;}
+.draft-remaining{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+.draft-tile{background:var(--name-bg);color:var(--name-text);border-radius:8px;padding:10px 16px;font-family:'Outfit',inherit;font-weight:700;font-size:1em;cursor:pointer;border:2px solid var(--accent);}
+.draft-tile:hover{background:var(--accent);transform:translateY(-2px);}
+.draft-complete{text-align:center;margin-top:20px;}
+.draft-complete h3{font-family:'Bungee',sans-serif;color:var(--winner);font-size:1.6em;margin-bottom:14px;}
+
 /* === SOUNDBOARD === */
 .soundboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;margin-top:12px;}
 .soundboard-btn{background:linear-gradient(135deg,var(--name-bg),var(--surface));color:var(--name-text);border:2px solid var(--accent);border-radius:12px;padding:14px 8px;font-family:'Outfit',inherit;font-weight:700;font-size:0.78em;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:transform 0.12s,box-shadow 0.12s,border-color 0.12s;text-align:center;line-height:1.1;}
@@ -372,6 +392,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   .slot-name{height:96px;font-size:1.4em;}
   .soundboard-grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
   .census{grid-template-columns:repeat(2,1fr);}
+  .draft-board{padding:14px 12px;}
+  .draft-teams-bar{gap:8px;}
+  .draft-team-card{min-width:calc(50% - 4px);}
+  .draft-tile{padding:8px 12px;font-size:0.9em;}
   /* Tap targets. The header and footer controls measured 31–35px tall on a 375px
      viewport, which is a miss for a thumb reaching up mid-lesson. 40px minimum. */
   .header button,.header select,.footer button,.roster-item-actions button,.panel-close{min-height:40px;}
@@ -405,7 +429,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   <div class="header">
     <div class="title">🎯 NAME PICKER</div>
     <div class="controls">
-      <div class="control-group"><span>MODE:</span><select id="mode"><option value="jump">Jump (Press Your Luck)</option><option value="disappear">Disappear</option><option value="slot">🎰 Slot Machine</option></select></div>
+      <div class="control-group"><span>MODE:</span><select id="mode"><option value="jump">Jump (Press Your Luck)</option><option value="disappear">Disappear</option><option value="slot">🎰 Slot Machine</option><option value="draft">🧑‍🤝‍🧑 Team Draft</option></select></div>
       <div class="control-group"><span>THEME:</span><select id="theme"><option value="default">Press Your Luck</option><option value="classroom">Classroom Light</option><option value="medieval">Medieval</option><option value="ancient-china">Ancient China</option><option value="byzantine">Byzantine</option><option value="space">Space</option><option value="forest">Forest</option><option value="ocean">Ocean</option><option value="sunset">Sunset</option><option value="halloween">Halloween</option><option value="patriotic">Stars &amp; Stripes</option></select></div>
       <div class="control-group"><span>SPEED:</span><input type="range" id="speed" min="40" max="500" value="130"><span class="speed-display" id="speedVal">130ms</span></div>
       <button class="crazy-toggle" id="crazyBtn">🔥 LET'S GO CRAZY</button>

@@ -270,6 +270,7 @@ html,body{margin:0;padding:0;background:#f4f7f4}
         <div class="mode" role="tablist">
           <button id="br-mTeacher" class="on" onclick="brSetMode('teacher')">By Teacher</button>
           <button id="br-mGroup"   onclick="brSetMode('group')">By Student Group</button>
+          <button id="br-mCompare" onclick="brSetMode('compare')">Common Planning</button>
           <button id="br-mMap"     onclick="brSetMode('map')">Building Map</button>
         </div>
         <div class="br-field" id="br-searchField">
@@ -423,8 +424,9 @@ function brCheckStaleness() {
 
 let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];
 let brGrpDay = 'A', brMapFloorIdx = 0;
+let brCompareSel = [];
 function brBuildOpts() {
-  if (brMode === 'teacher') {
+  if (brMode === 'teacher' || brMode === 'compare') {
     brOpts = Object.keys(BR_TEACHERS).map(n => ({
       key:n, label:n, dept:BR_TEACHERS[n].dept,
       tag:BR_TEACHERS[n].room,
@@ -450,7 +452,7 @@ function brRenderMenu(filter='') {
   shown.forEach((o,i) => {
     if (o.grp !== lastG) { html += `<div class="grp">${o.grp}</div>`; lastG=o.grp; }
     const dot = `<span class="br-dot" style="background:${o.dept?brDColor(o.dept):'#0c4b31'}"></span>`;
-    html += `<div class="opt${i===brActiveIdx?' active':''}" onmousedown="brChoose('${o.key}')">${dot}<span>${o.label}</span><span class="tag">${o.tag}</span></div>`;
+    html += `<div class="opt${i===brActiveIdx?' active':''}" onmousedown="brMenuPick('${o.key}')">${dot}<span>${o.label}</span><span class="tag">${o.tag}</span></div>`;
   });
   m.innerHTML = html || '<div class="opt" style="color:#62756a">No matches</div>';
   m._shown = shown;
@@ -468,9 +470,11 @@ function brOnKey(e) {
   const m=document.getElementById('br-menu'); const sh=m._shown||[];
   if (e.key==='ArrowDown') { e.preventDefault(); brActiveIdx=Math.min(brActiveIdx+1,sh.length-1); brRenderMenu(document.getElementById('br-search').value); }
   else if (e.key==='ArrowUp')  { e.preventDefault(); brActiveIdx=Math.max(brActiveIdx-1,0); brRenderMenu(document.getElementById('br-search').value); }
-  else if (e.key==='Enter')    { e.preventDefault(); if(sh[brActiveIdx])brChoose(sh[brActiveIdx].key); else if(sh.length===1)brChoose(sh[0].key); }
+  else if (e.key==='Enter')    { e.preventDefault(); if(sh[brActiveIdx])brMenuPick(sh[brActiveIdx].key); else if(sh.length===1)brMenuPick(sh[0].key); }
   else if (e.key==='Escape')   { brCloseMenu(); }
 }
+
+function brMenuPick(key) { if (brMode==='compare') brCompareAdd(key); else brChoose(key); }
 
 function brWireDocClick() {
   document.addEventListener('click', e => {
@@ -482,6 +486,7 @@ function brSetMode(mo) {
   brMode=mo; brCurrent=null;
   document.getElementById('br-mTeacher').classList.toggle('on', mo==='teacher');
   document.getElementById('br-mGroup').classList.toggle('on',   mo==='group');
+  document.getElementById('br-mCompare').classList.toggle('on', mo==='compare');
   document.getElementById('br-mMap').classList.toggle('on',     mo==='map');
   const sf = document.getElementById('br-searchField');
   if (mo==='map') {
@@ -492,11 +497,21 @@ function brSetMode(mo) {
     return;
   }
   sf.style.display='';
+  if (mo==='compare') {
+    document.getElementById('br-searchLabel').textContent='Add a teacher';
+    document.getElementById('br-search').placeholder='Type a name to add…';
+    document.getElementById('br-search').value='';
+    brBuildOpts();
+    brRenderCompareView();
+    return;
+  }
   document.getElementById('br-searchLabel').textContent = mo==='teacher'?'Find a teacher':'Find a student group';
   document.getElementById('br-search').placeholder = mo==='teacher'?'Type a name…':'Type a class, like 7-5…';
   document.getElementById('br-search').value='';
   document.getElementById('br-view').classList.remove('show');
   document.getElementById('br-empty').style.display='';
+  document.getElementById('br-empty-title').textContent='Pick a name to see a schedule.';
+  document.getElementById('br-empty-sub').innerHTML='Or switch to <b>By Student Group</b> to see every teacher a class shares.';
   brBuildOpts(); brRenderMenu();
 }
 
@@ -700,6 +715,92 @@ function brRenderGroup(sec) {
    </table></div>
    ${brGroupMapHTML(sec)}
    ${brOverviewHTML()}`;
+}
+
+/* ── R63: common planning finder — pick two or more teachers and see which
+   period(s), if any, are free for every one of them ── */
+function brCompareAdd(key) {
+  if (!BR_TEACHERS[key]) return;
+  if (!brCompareSel.includes(key)) brCompareSel.push(key);
+  document.getElementById('br-search').value='';
+  brCloseMenu();
+  brRenderCompareView();
+}
+function brCompareRemove(key) {
+  brCompareSel = brCompareSel.filter(n => n !== key);
+  brRenderCompareView();
+}
+function brCompareChipsHTML() {
+  if (!brCompareSel.length) return '';
+  return `<div class="cmp-chips">${brCompareSel.map(n=>{
+    const t=BR_TEACHERS[n]; const c=t?brDColor(t.dept):'#0c4b31';
+    return `<span class="cmp-chip" style="border-color:${c}"><span class="br-dot" style="background:${c}"></span>${brEscHtml(n)}<button aria-label="Remove ${brEscHtml(n)}" onclick="brCompareRemove('${brJsAttr(n)}')">×</button></span>`;
+  }).join('')}</div>`;
+}
+function brCompareFreeIdxs(day) {
+  const out=[];
+  for (let i=0;i<BR_MODCOUNT;i++) {
+    const allFree = brCompareSel.every(n => {
+      const t=BR_TEACHERS[n]; if (!t) return false;
+      const sec=(day==='B'?t.B:t.A)[i];
+      return !sec || sec==='Planning';
+    });
+    if (allFree) out.push(i);
+  }
+  return out;
+}
+function brCompareSummaryHTML(freeA, freeB) {
+  const label = i => `${BR_MOD_LABEL} ${i+1}`;
+  if (!freeA.length && !freeB.length) {
+    return `<p class="factline">No common planning period for these <b>${brCompareSel.length} teachers</b>.</p>`;
+  }
+  const partA = freeA.length ? freeA.map(label).join(', ') : 'none';
+  const partB = freeB.length ? freeB.map(label).join(', ') : 'none';
+  return `<p class="factline">Common planning found — A&nbsp;Day: <b>${partA}</b> · B&nbsp;Day: <b>${partB}</b>.</p>`;
+}
+function brCompareDayCard(day, freeIdxs) {
+  const bell = BR_BELL ? (day==='B'?BR_BELL.B:BR_BELL.A) : null;
+  let rows='';
+  for (let i=0;i<BR_MODCOUNT;i++) {
+    const isCommon = freeIdxs.includes(i);
+    const time = bell ? (bell[i]||'') : '';
+    const who = brCompareSel.map(n=>{
+      const t=BR_TEACHERS[n]; if (!t) return '';
+      const sec=(day==='B'?t.B:t.A)[i]; const plan=!sec||sec==='Planning';
+      return `<div class="cwho${plan?' free':''}"><b>${brEscHtml(n)}</b> — ${plan?'Planning':'Class '+brEscHtml(sec)}</div>`;
+    }).join('');
+    rows += `<div class="blockrow${isCommon?' common':''}"><div class="bk"><span class="n">${i+1}</span><span class="t">${BR_MOD_LABEL}</span>${time?`<span class="bt">${time}</span>`:''}</div><div class="cell">${who}</div></div>`;
+  }
+  return `<div class="daycard${day==='B'?' B':''}"><h3>${day==='A'?'A&nbsp;Day':'B&nbsp;Day'}</h3>${rows}</div>`;
+}
+function brCompareHTML() {
+  const freeA = brCompareFreeIdxs('A'), freeB = brCompareFreeIdxs('B');
+  return `
+   <div class="idhead">
+     <div class="ibadge" style="background:#0c4b31">${brCompareSel.length}</div>
+     <div><h2>Common Planning</h2><div class="role" style="color:#62756a">${brCompareSel.length} teachers selected</div></div>
+   </div>
+   ${brCompareChipsHTML()}
+   ${brCompareSummaryHTML(freeA, freeB)}
+   <p class="hint">Rows highlighted below are free for every teacher listed. Search above to add more, or use × on a chip to drop one.</p>
+   <div class="days">${brCompareDayCard('A',freeA)}${brCompareDayCard('B',freeB)}</div>
+   ${brOverviewHTML()}`;
+}
+function brRenderCompareView() {
+  const empty = document.getElementById('br-empty'), view = document.getElementById('br-view');
+  if (brCompareSel.length < 2) {
+    view.classList.remove('show');
+    empty.style.display='';
+    document.getElementById('br-empty-title').textContent = 'Pick two or more teachers to compare.';
+    document.getElementById('br-empty-sub').innerHTML = brCompareSel.length
+      ? `${brCompareChipsHTML()}Pick at least one more teacher above.`
+      : 'Search above and add teachers to find a shared planning period.';
+    return;
+  }
+  empty.style.display='none';
+  view.classList.remove('show'); void view.offsetWidth;
+  view.innerHTML = brCompareHTML();
+  view.classList.add('show');
 }
 
 function brOverviewHTML() {
