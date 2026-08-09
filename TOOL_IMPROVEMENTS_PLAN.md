@@ -194,27 +194,22 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Subject-Specific Content Generators
 
 ### Math Fact Drill Sheet Generator (`Tools/math-drill-generator.html`)
-**Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) plus 22 narrower fact-family templates (e.g. "×6 Facts Only," "÷ by 7 Facts Only," for digits 2–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
-**Suggested improvements:**
+**Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) plus 22 narrower fact-family templates (e.g. "×6 Facts Only," "÷ by 7 Facts Only," for digits 2–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, an optional "generate N distinct versions" mode (Version A/B/C…), an optional timed-fluency header (blank Start/End time plus an optional target-seconds value), and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
 
 ### Vocabulary Flashcard & Word Wall Generator (`Tools/vocab-flashcard-generator.html`)
-**Current state:** Turns a pasted "term: definition" list (or a tab-separated/CSV paste straight from a spreadsheet column) into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
-**Suggested improvements:**
+**Current state:** Turns a pasted "term: definition" list (or a tab-separated/CSV paste straight from a spreadsheet column) into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), a "Shuffle order" toggle so printed card order isn't always the exact textarea order, and auto-shrinking definition text (with a floor) so a long definition doesn't clip or overflow on a fixed-size card.
 
 ### Vocab & Conjugation Drill Generator (`Tools/vocab-conjugation-drill.html`)
-**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets, a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order, and a "Listen" button per word/verb form using the browser's built-in text-to-speech with a language selector.
-**Suggested improvements:**
+**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets (portable via JSON export/import so a team can share a built set), a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order, and a "Listen" button per word/verb form using the browser's built-in text-to-speech with a language selector.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
 **Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), a fullscreen toggle (button or `F` key) for the projector "stage" display, a "My Prompts" panel where a teacher can add their own prompts (grade band, genre) blended into the random pool alongside the built-in 200, and a Roster Assignment Sheet panel that takes a pasted (or Name-Picker-roster-loaded) class list, tolerantly parsed the same way as the roster tools elsewhere in the toolkit, and randomly pairs each student with a distinct prompt from the active grade-band/genre filters for a printable one-page assignment sheet, plus a "print poster" option that renders the current prompt as a single large poster-style page for classrooms that post the daily prompt physically rather than only projecting it.
 
 ### Immersion Roleplay Scenario Generator (`Tools/roleplay-scenario-generator.html`)
-**Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories with two-role setups, fill-in vocabulary scaffolding cards saved per scenario, shuffle/prev/next navigation, a "randomly assign roles" button for fairness when partners are deciding who plays which role, and printable single or multi-scenario handout sets.
-**Suggested improvements:**
+**Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories plus teacher-added custom scenarios merged into the same pool, each tagged with a Novice/Intermediate/Advanced proficiency level alongside the existing category filter, with two-role setups, fill-in vocabulary scaffolding cards saved per class/session (so switching classes doesn't overwrite another class's answers), shuffle/prev/next navigation, a "randomly assign roles" button for fairness when partners are deciding who plays which role, the shared read-aloud/accessibility helper, and printable single or multi-scenario handout sets.
 
 ### Primary Source Analysis Worksheet Generator (`Tools/primary-source-analysis-generator.html`)
 **Current state:** Lets a teacher describe or paste a primary source and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions for each framework step, plus a matching answer-key view populated from the teacher's own per-step notes, across multiple saved worksheets.
-**Suggested improvements:**
 
 ---
 ## Picking one up
