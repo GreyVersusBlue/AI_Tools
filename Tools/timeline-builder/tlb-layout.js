@@ -72,6 +72,39 @@
   }
 
   /**
+   * Picks a "clean" gridline interval (in years) based on the timeline's
+   * total span, so a short span gets decade lines, a multi-century span
+   * gets century lines, and an ancient-history span gets millennium lines.
+   */
+  function gridlineInterval(span) {
+    if (span <= 200) return 10;
+    if (span <= 400) return 25;
+    if (span <= 1000) return 50;
+    if (span <= 3000) return 100;
+    if (span <= 10000) return 500;
+    return 1000;
+  }
+
+  /**
+   * Computes fixed gridline positions along the same x-axis as computeLayout
+   * (same pad + (year - minYear) * pxPerYear mapping), at every clean
+   * multiple of the auto-picked interval that falls within [minYear, maxYear].
+   * Kept as a separate pass rather than folded into computeLayout since
+   * gridlines depend only on the year range, not on individual events.
+   */
+  function computeGridlines(minYear, maxYear, pxPerYear, padding) {
+    var pad = padding == null ? 60 : padding;
+    var span = Math.max(1, maxYear - minYear);
+    var interval = gridlineInterval(span);
+    var start = Math.ceil(minYear / interval) * interval;
+    var lines = [];
+    for (var year = start; year <= maxYear; year += interval) {
+      lines.push({ year: year, x: pad + (year - minYear) * pxPerYear, label: formatYear(year) });
+    }
+    return lines;
+  }
+
+  /**
    * Assigns alternating above/below placement to reduce label collisions
    * when "compact" mode is on and events are close together. Two events
    * within `thresholdPx` of each other on the x-axis alternate sides.
@@ -96,6 +129,8 @@
     yearRangeOf: yearRangeOf,
     autoPxPerYear: autoPxPerYear,
     computeLayout: computeLayout,
+    gridlineInterval: gridlineInterval,
+    computeGridlines: computeGridlines,
     assignLabelSides: assignLabelSides
   };
 })(typeof window !== 'undefined' ? window : global);
