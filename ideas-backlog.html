@@ -93,6 +93,11 @@
     font-family:var(--mono);font-weight:700;font-size:.85rem;color:var(--accent);
     margin-right:.55rem;
   }
+  .claimed{
+    font-family:var(--mono);font-weight:700;font-size:.72rem;letter-spacing:.03em;color:var(--pen);
+    margin-right:.5rem;
+  }
+  .idea .badge.claimed-badge{color:var(--pen);border-color:var(--pen);}
 
   footer{
     margin-top:2.6rem;padding-top:1.2rem;border-top:1px solid var(--line-strong);
@@ -156,7 +161,8 @@
   </p>
   <p class="pitch" style="margin-bottom:.8rem;color:var(--dim);">
     The number on each idea is its rank in one priority order across this whole list, 1 = most important, no ties
-    &mdash; so &ldquo;work on the next 10&rdquo; just means the 10 lowest numbers.
+    &mdash; so &ldquo;work on the next 10&rdquo; means the 10 lowest-numbered rows that aren&rsquo;t already tagged
+    <span class="claimed">&#128274; CLAIMED</span>.
   </p>
 
   <div class="idea" id="vcd-listen-button">
@@ -350,6 +356,28 @@
   <div class="idea" id="erb-image-per-clue">
     <span class="name"><span class="rank">48</span>Optional image per clue</span><span class="badge">Escape Room Builder</span>
     <span class="pitch">Let a station carry a photo, the way Timeline Builder attaches photos to events, for picture-based puzzles instead of text-only clues.</span>
+  </div>
+
+  <h2>Currently Claimed &mdash; In Progress Elsewhere</h2>
+  <p class="pitch" style="margin-bottom:.8rem;color:var(--dim);">
+    These didn&rsquo;t make the ranked list above because a parallel session has already claimed them in
+    <code>TOOL_IMPROVEMENTS_PLAN.md</code> &mdash; listed here so nobody duplicates the work.
+  </p>
+
+  <div class="idea">
+    <span class="name"><span class="claimed">&#128274; 2026-08-09</span>Surface the current Hall Pass Log &ldquo;currently out&rdquo; count on the dashboard</span><span class="badge claimed-badge">Command Center</span>
+  </div>
+  <div class="idea">
+    <span class="name"><span class="claimed">&#128274; 2026-08-09</span>&ldquo;Duplicate section&rdquo; action (copies a desk layout, not the roster)</span><span class="badge claimed-badge">Seating Chart Generator</span>
+  </div>
+  <div class="idea">
+    <span class="name"><span class="claimed">&#128274; 2026-08-09</span>&ldquo;Print full meeting log&rdquo; option covering every logged meeting</span><span class="badge claimed-badge">Novel Study / Reading Circles Manager</span>
+  </div>
+  <div class="idea">
+    <span class="name"><span class="claimed">&#128274; 2026-08-09</span>Flag duplicate links/text across entries before printing</span><span class="badge claimed-badge">Gallery Walk QR Codes</span>
+  </div>
+  <div class="idea">
+    <span class="name"><span class="claimed">&#128274; 2026-08-09</span>&ldquo;Days logged this week&rdquo; streak indicator per student</span><span class="badge claimed-badge">Silent Reading Log Tracker</span>
   </div>
 
   <h2>Platform-Wide &mdash; Big Swings</h2>

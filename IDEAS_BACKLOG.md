@@ -43,8 +43,10 @@ Claude sessions pick bullets from (including its 🔒 claim tags), so check ther
 version.
 
 **Rank** is a single priority order across this whole table, 1 = most important, no ties. It's what makes "work on
-the next 10 most important ideas" a well-defined request — take the 10 lowest-numbered rows. See "Working this
-ranked list" under [Picking one up](#picking-one-up) for how to keep the numbering contiguous as rows get removed.
+the next 10 most important ideas" a well-defined request — take the 10 lowest-numbered *unclaimed* rows, skipping
+any row already tagged 🔒 **CLAIMED**. See "Working the ranked Existing Tools list" under
+[Picking one up](#picking-one-up) for the renumbering rule and how to claim rows so multiple chats can work this
+list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
@@ -97,6 +99,21 @@ ranked list" under [Picking one up](#picking-one-up) for how to keep the numberi
 | 47 | Digital Escape Room / Puzzle Lock Builder<br>`Tools/escape-room-builder.html` | Live "teacher monitor" view | Show which station each team has reached in real time on the teacher's own screen, using the toolkit's existing WebRTC/QR pairing pattern, instead of having to walk the room to check. |
 | 48 | Digital Escape Room / Puzzle Lock Builder<br>`Tools/escape-room-builder.html` | Optional image per clue | Let a station carry a photo, the way Timeline Builder attaches photos to events, for picture-based puzzles instead of text-only clues. |
 
+### Currently claimed (in progress elsewhere)
+
+These didn't make the ranked table above because a parallel session has already claimed them in
+`TOOL_IMPROVEMENTS_PLAN.md` — listed here so nobody duplicates the work. If a claim goes stale (a day or two with
+nothing landed on `main`), it's fair game: reclaim it in the plan file and add it back to the ranked list above at
+whatever rank fits.
+
+| Tool | Idea | Claimed |
+|---|---|---|
+| Command Center | Surface the current Hall Pass Log "currently out" count on the dashboard | 2026-08-09 |
+| Seating Chart Generator | "Duplicate section" action (copies a desk layout, not the roster) | 2026-08-09 |
+| Novel Study / Reading Circles Manager | "Print full meeting log" option covering every logged meeting | 2026-08-09 |
+| Gallery Walk QR Codes | Flag duplicate links/text across entries before printing | 2026-08-09 |
+| Silent Reading Log Tracker | "Days logged this week" streak indicator per student | 2026-08-09 |
+
 ## Platform-Wide — Big Swings
 
 Cross-cutting infrastructure ideas, not new standalone tools — they'd touch the landing page or several existing
@@ -130,3 +147,18 @@ don't: **Rank must stay a contiguous 1..N sequence with no gaps and no ties.**
   old #11 becomes new #1, old #12 becomes new #2, and so on.
 - If you're adding a newly-noticed enhancement idea rather than removing one, insert it at whatever rank reflects
   its priority and bump every row at or below that rank down by one to keep the sequence contiguous.
+
+**Claiming rows to run chats in parallel:** ranks never change when something gets claimed — only when it ships or
+is removed. To claim a batch:
+
+1. Pick your batch from the lowest-numbered *unclaimed* rows (skip any row already tagged 🔒 CLAIMED — it doesn't
+   count toward your N).
+2. Prefix each claimed row's Idea cell with `🔒 **CLAIMED (YYYY-MM-DD)**` (today's date) — e.g.
+   `🔒 **CLAIMED (2026-08-10)** — Custom operand ranges` — in both `IDEAS_BACKLOG.md` and `ideas-backlog.html`
+   (wrap the idea name in `<span class="claimed">🔒 CLAIMED (YYYY-MM-DD)</span>` there, right before the name text).
+3. Push that tagging-only commit to `main` by itself, *before* writing any implementation code, so other sessions
+   pull the claim before picking their own batch.
+4. When you finish (or abandon) a row, the same commit that removes/renumbers it (per the rule above) removes the
+   claim tag with it. If you abandon it without shipping, just strip the tag instead and leave the row at its rank.
+5. A claim more than a day or two old with no corresponding commit landed on `main` is stale — safe to treat as
+   abandoned and reclaim.
