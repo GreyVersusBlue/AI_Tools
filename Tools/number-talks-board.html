@@ -51,6 +51,10 @@
   .controls { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; margin-bottom: 1.1rem; }
   .controls select { min-width: 15rem; }
 
+  /* Teacher-only answer hint — control panel only, never on .stage or in exports */
+  .answer-key-row { margin: .5rem 0 0; }
+  .answer-key-text { display: block; margin-top: .3rem; font-family: Consolas, "Courier New", monospace; font-size: .82rem; color: var(--muted); }
+
   button {
     font-family: inherit; font-size: .92rem; font-weight: 700; cursor: pointer;
     background: var(--accent); color: #fff; border: 1px solid var(--accent);
@@ -139,6 +143,10 @@
       </div>
     </div>
     <div class="hint" style="margin-bottom:0;">Pick a category, then press &ldquo;New number talk&rdquo; to draw a prompt from the bank &mdash; or type your own below.</div>
+    <div class="answer-key-row" id="answerKeyRow" style="display:none;">
+      <button type="button" class="link-btn" id="toggleAnswerBtn">Show answer (teacher only)</button>
+      <span class="answer-key-text" id="answerKeyText" hidden></span>
+    </div>
   </div>
 
   <div class="stage" id="stage">
@@ -293,11 +301,13 @@
   var strategies = [];    // [{id, name, text}]  (in-memory only, session-only)
   var strategyIdCounter = 0;
   var recentTexts = [];   // avoid immediate repeats
+  var answerKeyVisible = false; // teacher-only reveal toggle; resets on each new prompt
 
   var els = {};
   ['categorySelect', 'nextPromptBtn', 'stage', 'metaRow', 'revealRow', 'revealBtn', 'revealAllBtn',
    'customInput', 'useCustomBtn', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
-   'historyList', 'historyEmptyHint', 'exportSessionBtn'
+   'historyList', 'historyEmptyHint', 'exportSessionBtn',
+   'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   /* ---------- persistence (settings only) ---------- */
@@ -378,8 +388,148 @@
     history.unshift({ category: category, text: promptText(exprs) });
     history = history.slice(0, HISTORY_LIMIT);
 
+    answerKeyVisible = false; // keep the answer tucked away for the next prompt
     renderStage();
     renderHistory();
+    renderAnswerKey();
+  }
+
+  /* ---------- teacher-only answer evaluator ----------
+     Safe, scoped evaluator for the exact arithmetic forms this bank uses:
+     +, -, x/×/*, ÷// between numbers (incl. decimals, fractions like 1/2,
+     negatives, and parentheses), plus a special-cased "N% of M" phrase.
+     No eval() — a small hand-rolled tokenizer + recursive-descent parser.
+     Anything outside those forms (word problems, "as a percent", etc.)
+     fails to parse and returns null so nothing is shown. */
+  function tokenizeExpr(raw) {
+    var str = raw.replace(/\s+/g, '');
+    if (!str) return null;
+    if (!/^[\d.+\-x×*÷/()]+$/.test(str)) return null;
+    var tokens = [];
+    var i = 0;
+    while (i < str.length) {
+      var c = str[i];
+      if (c >= '0' && c <= '9' || c === '.') {
+        var j = i;
+        while (j < str.length && (str[j] >= '0' && str[j] <= '9' || str[j] === '.')) j++;
+        var numStr = str.slice(i, j);
+        if (!/^\d+(\.\d+)?$/.test(numStr)) return null;
+        tokens.push({ type: 'num', value: parseFloat(numStr) });
+        i = j;
+      } else if (c === '+' || c === '-') {
+        tokens.push({ type: 'op', value: c }); i++;
+      } else if (c === 'x' || c === '×' || c === '*') {
+        tokens.push({ type: 'op', value: '*' }); i++;
+      } else if (c === '÷' || c === '/') {
+        tokens.push({ type: 'op', value: '/' }); i++;
+      } else if (c === '(' || c === ')') {
+        tokens.push({ type: c === '(' ? 'lparen' : 'rparen' }); i++;
+      } else {
+        return null;
+      }
+    }
+    return tokens;
+  }
+
+  function parseExprTokens(tokens) {
+    var pos = 0;
+    function peek() { return tokens[pos]; }
+    function next() { return tokens[pos++]; }
+
+    function parseExpression() {
+      var value = parseTerm();
+      if (value === null) return null;
+      while (peek() && peek().type === 'op' && (peek().value === '+' || peek().value === '-')) {
+        var op = next().value;
+        var rhs = parseTerm();
+        if (rhs === null) return null;
+        value = op === '+' ? value + rhs : value - rhs;
+      }
+      return value;
+    }
+    function parseTerm() {
+      var value = parseFactor();
+      if (value === null) return null;
+      while (peek() && peek().type === 'op' && (peek().value === '*' || peek().value === '/')) {
+        var op = next().value;
+        var rhs = parseFactor();
+        if (rhs === null) return null;
+        if (op === '/') {
+          if (rhs === 0) return null;
+          value = value / rhs;
+        } else {
+          value = value * rhs;
+        }
+      }
+      return value;
+    }
+    function parseFactor() {
+      var tok = peek();
+      if (!tok) return null;
+      if (tok.type === 'op' && tok.value === '-') { next(); var v1 = parseFactor(); return v1 === null ? null : -v1; }
+      if (tok.type === 'op' && tok.value === '+') { next(); return parseFactor(); }
+      if (tok.type === 'lparen') {
+        next();
+        var v = parseExpression();
+        if (v === null) return null;
+        var closing = next();
+        if (!closing || closing.type !== 'rparen') return null;
+        return v;
+      }
+      if (tok.type === 'num') { next(); return tok.value; }
+      return null;
+    }
+
+    var result = parseExpression();
+    if (result === null || pos !== tokens.length || !isFinite(result)) return null;
+    return result;
+  }
+
+  function formatAnswer(n) {
+    var rounded = Math.round(n * 10000) / 10000;
+    return String(rounded);
+  }
+
+  function computeAnswer(raw) {
+    if (typeof raw !== 'string') return null;
+    var str = raw.trim();
+    if (!str) return null;
+    try {
+      var percentOf = str.match(/^(-?\d+(?:\.\d+)?)\s*%\s*of\s*(-?\d+(?:\.\d+)?)$/i);
+      if (percentOf) {
+        var n = parseFloat(percentOf[1]), of = parseFloat(percentOf[2]);
+        if (!isFinite(n) || !isFinite(of)) return null;
+        return formatAnswer((n / 100) * of);
+      }
+      var tokens = tokenizeExpr(str);
+      if (!tokens || !tokens.length) return null;
+      var result = parseExprTokens(tokens);
+      if (result === null || !isFinite(result)) return null;
+      return formatAnswer(result);
+    } catch (e) {
+      return null; // never let a malformed prompt throw — fail quietly
+    }
+  }
+
+  function renderAnswerKey() {
+    if (!current) {
+      els.answerKeyRow.style.display = 'none';
+      answerKeyVisible = false;
+      return;
+    }
+    var parts = current.exprs.map(function (e) {
+      var ans = computeAnswer(e);
+      return ans === null ? null : (e + ' = ' + ans);
+    }).filter(function (p) { return p !== null; });
+    if (!parts.length) {
+      els.answerKeyRow.style.display = 'none';
+      answerKeyVisible = false;
+      return;
+    }
+    els.answerKeyRow.style.display = '';
+    els.answerKeyText.textContent = parts.join('   ·   ');
+    els.answerKeyText.hidden = !answerKeyVisible;
+    els.toggleAnswerBtn.textContent = answerKeyVisible ? 'Hide answer (teacher only)' : 'Show answer (teacher only)';
   }
 
   /* ---------- stage / reveal ---------- */
@@ -560,6 +710,10 @@
   els.addStrategyBtn.addEventListener('click', addStrategyCard);
   els.clearBoardBtn.addEventListener('click', clearBoard);
   els.exportSessionBtn.addEventListener('click', exportSession);
+  els.toggleAnswerBtn.addEventListener('click', function () {
+    answerKeyVisible = !answerKeyVisible;
+    renderAnswerKey();
+  });
 
   /* ---------- boot ---------- */
   loadSettings();
@@ -567,6 +721,7 @@
   renderStage();
   renderHistory();
   renderStrategies();
+  renderAnswerKey();
 })();
 </script>
 <script>
