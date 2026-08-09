@@ -42,6 +42,11 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.4rem;
   }
   header p { color: var(--text-dim); font-size: 0.875rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; width: 100%; max-width: 1160px; margin-bottom: 1.25rem; }
+  .toolbar label { margin: 0; font-weight: 600; font-size: 0.8rem; color: var(--text-dim); }
+  .toolbar select { width: auto; min-width: 200px; }
+
   .layout { display: flex; gap: 1.25rem; width: 100%; max-width: 1160px; align-items: flex-start; flex-wrap: wrap; }
   .col-left { flex: 1 1 480px; min-width: 320px; display: flex; flex-direction: column; gap: 1.25rem; }
   .col-right { flex: 1 1 440px; min-width: 320px; position: sticky; top: 1.5rem; }
@@ -55,6 +60,7 @@
   textarea:focus, select:focus, input:focus { outline: none; border-color: var(--accent); }
   textarea { min-height: 90px; resize: vertical; font-family: var(--mono); font-size: 0.78rem; line-height: 1.5; }
   .hint { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.5rem; line-height: 1.45; }
+  #hunt-name { margin-bottom: 0.4rem; }
 
   .stations-table { width: 100%; border-collapse: collapse; }
   .stations-table th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 0 0.4rem 0.4rem; }
@@ -77,6 +83,8 @@
   .btn-primary { background: linear-gradient(120deg, var(--accent), var(--accent2)); color: white; }
   .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
   .btn-link { background: transparent; color: var(--accent2); padding: 0.3rem 0; font-size: 0.78rem; text-decoration: underline; }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
 
   .import-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-top: 0.9rem; display: none; }
   .import-box.open { display: block; }
@@ -151,11 +159,20 @@
   <p>Type in your stations, get a printable sheet of QR codes and a separate answer key — nothing leaves your browser</p>
 </header>
 
+<div class="toolbar" id="hunt-toolbar" style="display:none;">
+  <label for="hunt-switch">Saved hunt:</label>
+  <select id="hunt-switch"></select>
+  <button class="btn-secondary" id="new-hunt-btn" type="button">New hunt</button>
+  <button class="btn-danger" id="delete-hunt-btn" type="button">Delete</button>
+</div>
+
 <div class="layout">
   <div class="col-left">
 
     <div class="card">
-      <div class="card-title">
+      <label for="hunt-name">Hunt name</label>
+      <input type="text" id="hunt-name" placeholder="e.g. Library Scavenger Hunt">
+      <div class="card-title" style="margin-top:0.9rem;">
         <span>1 · Stations</span>
         <button class="btn-link" id="toggle-import" type="button">Paste from a spreadsheet instead</button>
       </div>
@@ -236,47 +253,123 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = 'qr-scavenger-hunt-settings';
+  var STORAGE_KEY = 'qr-scavenger-hunt-sets';
+  var LEGACY_STORAGE_KEY = 'qr-scavenger-hunt-settings'; // single global blob, before named hunts existed
 
   var els = {};
-  ['stations-body', 'add-row-btn', 'toggle-import', 'import-box', 'import-text', 'import-btn',
+  ['hunt-toolbar', 'hunt-switch', 'new-hunt-btn', 'delete-hunt-btn', 'hunt-name',
+   'stations-body', 'add-row-btn', 'toggle-import', 'import-box', 'import-text', 'import-btn',
    'cards-per-page', 'ec-level', 'show-number', 'print-stations-btn', 'print-answers-btn', 'export-csv-btn',
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
-  var stations = []; // [{label, content, note}]
-  var rowSeq = 0;
+  // state = { name, stations: [{label, content, note}], cardsPerPage, ecLevel, showNumber }
+  var state = null;
 
-  // ── Persisted stations + settings (this can include external links, same
+  // ── Persisted hunts, keyed by name (this can include external links, same
   // trust level as any other locally-saved tool state in this toolkit) ─────
-  function loadSettings() {
+  function loadStore() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
+      if (!raw) return { current: null, sets: {} };
       var s = JSON.parse(raw);
-      if (Array.isArray(s.stations)) stations = s.stations;
-      if (s.cardsPerPage) els.cardsPerPage.value = s.cardsPerPage;
-      if (s.ecLevel) els.ecLevel.value = s.ecLevel;
-      if (s.showNumber === false) els.showNumber.checked = false;
-    } catch (e) { /* ignore corrupt/blocked storage */ }
+      if (!s || typeof s !== 'object') return { current: null, sets: {} };
+      if (!s.sets || typeof s.sets !== 'object') s.sets = {};
+      return s;
+    } catch (e) { return { current: null, sets: {} }; }
   }
-  function saveSettings() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        stations: stations, cardsPerPage: els.cardsPerPage.value,
-        ecLevel: els.ecLevel.value, showNumber: els.showNumber.checked,
-      }));
-    } catch (e) { /* private browsing / storage full — silently skip */ }
+  function saveStore(store) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+  function save() {
+    if (!state) return;
+    var store = loadStore();
+    store.sets[state.name] = state;
+    store.current = state.name;
+    saveStore(store);
+  }
+  function listNames() {
+    var store = loadStore();
+    return Object.keys(store.sets).sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  /** A teacher who already had the single old `qr-scavenger-hunt-settings`
+      blob saved gets it carried forward as a named hunt ("My Hunt") instead
+      of silently losing their in-progress hunt the first time this page
+      loads after the multi-hunt rewrite. Runs once — if any named hunt
+      already exists, there's nothing to migrate. */
+  function migrateLegacySettings() {
+    var store = loadStore();
+    if (Object.keys(store.sets).length) return;
+    var raw;
+    try { raw = localStorage.getItem(LEGACY_STORAGE_KEY); } catch (e) { raw = null; }
+    if (!raw) return;
+    var legacy;
+    try { legacy = JSON.parse(raw); } catch (e) { legacy = null; }
+    if (!legacy) return;
+    var name = 'My Hunt';
+    var hunt = {
+      name: name,
+      stations: Array.isArray(legacy.stations) ? legacy.stations : [],
+      cardsPerPage: legacy.cardsPerPage || '4',
+      ecLevel: legacy.ecLevel || 'Q',
+      showNumber: legacy.showNumber !== false,
+    };
+    store.sets[name] = hunt;
+    store.current = name;
+    saveStore(store);
+    try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (e) { /* ignore */ }
+  }
+
+  function refreshSwitcher() {
+    var names = listNames();
+    els.huntSwitch.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (state && n === state.name) opt.selected = true;
+      els.huntSwitch.appendChild(opt);
+    });
   }
 
   // ── Row editor ───────────────────────────────────────────────────────────
   function ensureAtLeastOneRow() {
-    if (!stations.length) stations.push({ label: '', content: '', note: '' });
+    if (!state.stations.length) state.stations.push({ label: '', content: '', note: '' });
+  }
+
+  function newHunt(name) {
+    state = { name: name, stations: [{ label: '', content: '', note: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true };
+    applyStateToForm();
+    refreshSwitcher();
+    els.huntToolbar.style.display = '';
+    save();
+    scheduleRender();
+  }
+
+  function loadHuntByName(name) {
+    var store = loadStore();
+    var loaded = store.sets[name];
+    if (!loaded) return;
+    if (!Array.isArray(loaded.stations)) loaded.stations = [];
+    state = loaded;
+    ensureAtLeastOneRow();
+    applyStateToForm();
+    refreshSwitcher();
+    scheduleRender();
+  }
+
+  function applyStateToForm() {
+    els.huntName.value = state.name;
+    els.cardsPerPage.value = state.cardsPerPage || '4';
+    els.ecLevel.value = state.ecLevel || 'Q';
+    els.showNumber.checked = state.showNumber !== false;
+    renderRows();
   }
 
   function renderRows() {
-    els.stationsBody.innerHTML = stations.map(function (s, i) {
+    els.stationsBody.innerHTML = state.stations.map(function (s, i) {
       return '<tr data-idx="' + i + '">' +
         '<td class="num-cell">' + (i + 1) + '</td>' +
         '<td><input type="text" class="f-label" value="' + escapeAttr(s.label) + '" placeholder="Station ' + (i + 1) + '"></td>' +
@@ -284,7 +377,7 @@
         '<td><input type="text" class="f-note" value="' + escapeAttr(s.note) + '" placeholder="For your eyes only"></td>' +
         '<td class="actions-cell"><div class="row-actions">' +
           '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
-          '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
+          '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
           '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button>' +
         '</div></td>' +
         '</tr>';
@@ -295,10 +388,10 @@
     var tr = e.target.closest('tr');
     if (!tr) return;
     var i = parseInt(tr.dataset.idx, 10);
-    if (e.target.classList.contains('f-label')) stations[i].label = e.target.value;
-    else if (e.target.classList.contains('f-content')) stations[i].content = e.target.value;
-    else if (e.target.classList.contains('f-note')) stations[i].note = e.target.value;
-    saveSettings();
+    if (e.target.classList.contains('f-label')) state.stations[i].label = e.target.value;
+    else if (e.target.classList.contains('f-content')) state.stations[i].content = e.target.value;
+    else if (e.target.classList.contains('f-note')) state.stations[i].note = e.target.value;
+    save();
     scheduleRender();
   });
 
@@ -309,26 +402,26 @@
       var tr = moveBtn.closest('tr');
       var i = parseInt(tr.dataset.idx, 10);
       var j = i + parseInt(moveBtn.dataset.move, 10);
-      if (j < 0 || j >= stations.length) return;
-      var tmp = stations[i];
-      stations[i] = stations[j];
-      stations[j] = tmp;
+      if (j < 0 || j >= state.stations.length) return;
+      var tmp = state.stations[i];
+      state.stations[i] = state.stations[j];
+      state.stations[j] = tmp;
       renderRows();
-      saveSettings();
+      save();
       scheduleRender();
     } else if (removeBtn) {
-      stations.splice(parseInt(removeBtn.dataset.remove, 10), 1);
+      state.stations.splice(parseInt(removeBtn.dataset.remove, 10), 1);
       ensureAtLeastOneRow();
       renderRows();
-      saveSettings();
+      save();
       scheduleRender();
     }
   });
 
   els.addRowBtn.addEventListener('click', function () {
-    stations.push({ label: '', content: '', note: '' });
+    state.stations.push({ label: '', content: '', note: '' });
     renderRows();
-    saveSettings();
+    save();
   });
 
   // ── Bulk paste import ────────────────────────────────────────────────────
@@ -346,11 +439,11 @@
       return { label: parts[0] || '', content: parts[1] || '', note: parts[2] || '' };
     });
     // Replace a single still-empty starter row rather than leaving it dangling.
-    if (stations.length === 1 && !stations[0].label && !stations[0].content && !stations[0].note) stations = [];
-    stations = stations.concat(added);
+    if (state.stations.length === 1 && !state.stations[0].label && !state.stations[0].content && !state.stations[0].note) state.stations = [];
+    state.stations = state.stations.concat(added);
     els.importText.value = '';
     renderRows();
-    saveSettings();
+    save();
     scheduleRender();
     clearMsg();
   });
@@ -400,7 +493,7 @@
   }
 
   function validStations() {
-    return stations
+    return state.stations
       .map(function (s, i) { return { idx: i, label: (s.label || '').trim() || ('Station ' + (i + 1)), content: normalizeContent(s.content), note: (s.note || '').trim() }; })
       .filter(function (s) { return s.content.length > 0; });
   }
@@ -489,7 +582,13 @@
   });
 
   [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
-    el.addEventListener('change', function () { saveSettings(); scheduleRender(); });
+    el.addEventListener('change', function () {
+      state.cardsPerPage = els.cardsPerPage.value;
+      state.ecLevel = els.ecLevel.value;
+      state.showNumber = els.showNumber.checked;
+      save();
+      scheduleRender();
+    });
   });
 
   // ── CSV export (raw typed values, for the teacher's own records) ────────
@@ -500,7 +599,7 @@
   }
 
   els.exportCsvBtn.addEventListener('click', function () {
-    var rows = [['Label', 'Content', 'Note']].concat(stations.map(function (s) {
+    var rows = [['Label', 'Content', 'Note']].concat(state.stations.map(function (s) {
       return [s.label, s.content, s.note];
     }));
     var csv = rows.map(function (row) { return row.map(csvField).join(','); }).join('\r\n');
@@ -521,11 +620,72 @@
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
 
+  // ── Hunt (saved set) lifecycle ───────────────────────────────────────────
+  els.huntName.addEventListener('change', function () {
+    if (!state) return;
+    var oldName = state.name;
+    var newName = els.huntName.value.trim() || oldName;
+    if (newName !== oldName) {
+      var store = loadStore();
+      if (Object.prototype.hasOwnProperty.call(store.sets, newName)) {
+        alert('A hunt named "' + newName + '" already exists. Choose a different name, or delete that hunt first.');
+        els.huntName.value = oldName;
+        return;
+      }
+      delete store.sets[oldName];
+      state.name = newName;
+      store.sets[newName] = state;
+      store.current = newName;
+      saveStore(store);
+      refreshSwitcher();
+    }
+  });
+
+  els.huntSwitch.addEventListener('change', function () { loadHuntByName(els.huntSwitch.value); });
+
+  els.newHuntBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new hunt:', 'New Hunt');
+    if (!name) return;
+    name = name.trim();
+    if (!name) return;
+    if (Object.prototype.hasOwnProperty.call(loadStore().sets, name)) {
+      alert('A hunt named "' + name + '" already exists. Choose a different name, or delete that hunt first.');
+      return;
+    }
+    newHunt(name);
+  });
+
+  els.deleteHuntBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    var store = loadStore();
+    delete store.sets[state.name];
+    var remaining = Object.keys(store.sets);
+    if (remaining.length) {
+      store.current = remaining[0];
+      saveStore(store);
+      loadHuntByName(remaining[0]);
+    } else {
+      saveStore(store);
+      newHunt('New Hunt');
+    }
+  });
+
   // ── Init ─────────────────────────────────────────────────────────────────
-  loadSettings();
-  ensureAtLeastOneRow();
-  renderRows();
-  render();
+  migrateLegacySettings();
+  var initialStore = loadStore();
+  if (initialStore.current && initialStore.sets[initialStore.current]) {
+    loadHuntByName(initialStore.current);
+    els.huntToolbar.style.display = '';
+  } else {
+    var existingNames = Object.keys(initialStore.sets);
+    if (existingNames.length) {
+      loadHuntByName(existingNames[0]);
+      els.huntToolbar.style.display = '';
+    } else {
+      newHunt('My Hunt');
+    }
+  }
 
 })();
 </script>
