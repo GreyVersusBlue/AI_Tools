@@ -63,6 +63,10 @@
   }
   textarea:focus, select:focus, input:focus { outline: none; border-color: var(--accent); }
   textarea { min-height: 140px; resize: vertical; font-family: var(--mono); font-size: 0.8rem; line-height: 1.5; }
+  textarea#data-input.drag-over { border-color: var(--accent); border-style: dashed; background: rgba(108, 142, 245, 0.1); }
+  .file-drop-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+  .btn-file { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.8rem; font-size: 0.78rem; }
+  .file-drop-row .hint { margin: 0; }
   .control-group { margin-bottom: 1rem; }
   .control-group:last-child { margin-bottom: 0; }
   .hint { font-size: 0.76rem; color: var(--text-dim); margin-top: 0.5rem; line-height: 1.45; }
@@ -125,6 +129,11 @@
       <div class="control-group">
         <label for="data-input">Tab- or comma-separated — copy straight out of Excel, Sheets, or a table</label>
         <textarea id="data-input" placeholder="Trial	Temperature (C)	Reaction Time (s)&#10;1	20	45&#10;2	30	31&#10;3	40	22" spellcheck="false"></textarea>
+        <div class="file-drop-row">
+          <button type="button" class="btn-file" id="btn-choose-file">Choose a file…</button>
+          <input type="file" id="file-input" accept=".csv,.tsv,text/csv,text/tab-separated-values" style="display:none;">
+          <p class="hint">or drag a .csv / .tsv file onto the box above</p>
+        </div>
       </div>
       <div class="option-row">
         <input type="checkbox" id="has-headers" checked>
@@ -228,7 +237,8 @@
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
    'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
-   'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg'
+   'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
+   'btn-choose-file', 'file-input'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -371,6 +381,41 @@
 
   els.dataInput.addEventListener('input', scheduleParse);
   els.hasHeaders.addEventListener('change', function () { saveSettings(); handleParse(); });
+
+  // ── File input / drag-and-drop (alternative to copy-paste) ───────────────
+  els.dataInput.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    els.dataInput.classList.add('drag-over');
+  });
+  els.dataInput.addEventListener('dragleave', function () {
+    els.dataInput.classList.remove('drag-over');
+  });
+  els.dataInput.addEventListener('drop', function (e) {
+    e.preventDefault();
+    els.dataInput.classList.remove('drag-over');
+    var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) loadFileIntoTextarea(file);
+  });
+  els.btnChooseFile.addEventListener('click', function () { els.fileInput.click(); });
+  els.fileInput.addEventListener('change', function () {
+    var file = els.fileInput.files && els.fileInput.files[0];
+    if (file) loadFileIntoTextarea(file);
+    els.fileInput.value = '';
+  });
+
+  function loadFileIntoTextarea(file) {
+    if (!/\.(csv|tsv)$/i.test(file.name || '')) {
+      showMsg('Please choose a .csv or .tsv file.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      els.dataInput.value = String(e.target.result || '');
+      handleParse();
+    };
+    reader.onerror = function () { showMsg('Could not read that file.'); };
+    reader.readAsText(file);
+  }
   els.categoryCol.addEventListener('change', scheduleRender);
   els.valueColsList.addEventListener('change', scheduleRender);
   els.scatterXCol.addEventListener('change', scheduleRender);
