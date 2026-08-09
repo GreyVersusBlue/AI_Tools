@@ -83,6 +83,12 @@
   .entry-form .btn-row { display: flex; gap: .5rem; }
   .entry-form .btn-row button { width: auto; }
 
+  .book-progress { margin-bottom: 1rem; }
+  .book-progress-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
+  .book-progress-list li { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .4rem .6rem; }
+  .book-progress-list label { display: flex; align-items: center; gap: .5rem; font-weight: 500; font-size: .86rem; margin: 0; cursor: pointer; }
+  .book-progress-list input[type="checkbox"] { width: auto; margin: 0; }
+
   table { width: 100%; border-collapse: collapse; font-size: .86rem; }
   table th, table td { text-align: left; padding: .5rem .55rem; border-bottom: 1px solid var(--line); }
   table th { color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; }
@@ -176,6 +182,11 @@
           </div>
         </form>
 
+        <div class="book-progress" id="bookProgress" style="display:none;">
+          <div class="card-title" style="margin-bottom:.4rem;">Books</div>
+          <ul class="book-progress-list" id="bookProgressList"></ul>
+        </div>
+
         <div class="table-wrap">
           <table class="log-table" id="logTable">
             <thead>
@@ -215,6 +226,7 @@
           <tr>
             <th data-sort="name">Student <span class="arrow"></span></th>
             <th data-sort="book">Current book <span class="arrow"></span></th>
+            <th data-sort="finishedCount">Books completed <span class="arrow"></span></th>
             <th data-sort="pages">Total pages <span class="arrow"></span></th>
             <th data-sort="minutes">Total minutes <span class="arrow"></span></th>
           </tr>
@@ -248,13 +260,16 @@
     'logCard', 'activeStudentName', 'printStudentBtn',
     'entryForm', 'entryDate', 'entryBook', 'entryPages', 'entryMinutes',
     'addEntryBtn', 'cancelEditBtn',
+    'bookProgress', 'bookProgressList',
     'logTable', 'logTableBody', 'noEntriesHint', 'noStudentCard',
     'printSummaryBtn', 'filterFrom', 'filterTo', 'clearFilterBtn',
     'summaryTable', 'summaryTableBody', 'noSummaryHint', 'exportCsvBtn',
     'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] } }
+  // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
+  //           finished: { studentName: [bookKey, ...] } } — bookKey is the trimmed,
+  //           lowercased book title, matching the grouping key used by withSessionPages.
   var state = null;
   var activeStudent = null;
   var editingEntryId = null;
@@ -294,7 +309,7 @@
   function saveCurrentState() {
     if (!state) return;
     var all = readAllSections();
-    all[state.name] = { roster: state.roster, logs: state.logs };
+    all[state.name] = { roster: state.roster, logs: state.logs, finished: state.finished };
     writeAllSections(all);
   }
   function deleteSectionData(name) {
@@ -329,7 +344,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, roster: [], logs: {} };
+    state = { name: name, roster: [], logs: {}, finished: {} };
     activeStudent = null;
     editingEntryId = null;
     setCurrentName(name);
@@ -345,7 +360,7 @@
   function loadSection(name) {
     var data = loadSectionData(name);
     if (!data) return;
-    state = { name: name, roster: data.roster || [], logs: data.logs || {} };
+    state = { name: name, roster: data.roster || [], logs: data.logs || {}, finished: data.finished || {} };
     activeStudent = (state.roster.indexOf(activeStudent) !== -1) ? activeStudent : null;
     editingEntryId = null;
     setCurrentName(name);
@@ -480,6 +495,13 @@
     });
   }
 
+  // Normalizes a book title (trimmed, case-insensitive) into the key used to
+  // group log entries by book — shared by session-page grouping and the
+  // finished-book flags so both agree on what counts as "the same book".
+  function bookKey(book) {
+    return (book || '').trim().toLowerCase();
+  }
+
   // Computes "pages read this session" for each entry from the running
   // "pages read to" number. Tracks the last known page per book (matched by
   // trimmed, case-insensitive title) as we walk the entries chronologically;
@@ -490,13 +512,44 @@
     var lastByBook = {};
     var sessionById = {};
     asc.forEach(function (e) {
-      var key = (e.book || '').trim().toLowerCase();
+      var key = bookKey(e.book);
       var prior = lastByBook.hasOwnProperty(key) ? lastByBook[key] : 0;
       var delta = e.pagesTo - prior;
       sessionById[e.id] = delta > 0 ? delta : 0;
       lastByBook[key] = Math.max(prior, e.pagesTo);
     });
     return sessionById;
+  }
+
+  // Unique books logged for a student, in first-logged order, keyed the same
+  // way as withSessionPages so the "mark finished" checkboxes line up with
+  // whichever entries share a title.
+  function studentBookList(entries) {
+    var asc = sortedAscending(entries);
+    var seen = {}, list = [];
+    asc.forEach(function (e) {
+      var key = bookKey(e.book);
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      list.push({ key: key, title: e.book });
+    });
+    return list;
+  }
+
+  function studentFinished(name) {
+    return (state.finished && state.finished[name]) || [];
+  }
+
+  function isBookFinished(name, key) {
+    return studentFinished(name).indexOf(key) !== -1;
+  }
+
+  function setBookFinished(name, key, finished) {
+    if (!state.finished) state.finished = {};
+    var list = state.finished[name] || (state.finished[name] = []);
+    var idx = list.indexOf(key);
+    if (finished && idx === -1) list.push(key);
+    if (!finished && idx !== -1) list.splice(idx, 1);
   }
 
   function renderActiveStudent() {
@@ -509,8 +562,32 @@
     els.noStudentCard.style.display = 'none';
     els.activeStudentName.textContent = activeStudent;
     resetForm();
+    renderBookProgress();
     renderLogTable();
   }
+
+  function renderBookProgress() {
+    var books = studentBookList(studentEntries(activeStudent));
+    els.bookProgress.style.display = books.length ? '' : 'none';
+    els.bookProgressList.innerHTML = '';
+    books.forEach(function (b) {
+      var finished = isBookFinished(activeStudent, b.key);
+      var li = document.createElement('li');
+      li.innerHTML = '<label><input type="checkbox" data-book-key="' + escapeHtml(b.key) + '"' +
+        (finished ? ' checked' : '') + '> ' + escapeHtml(b.title) +
+        (finished ? ' <span class="hint" style="margin:0;">&mdash; finished</span>' : '') + '</label>';
+      els.bookProgressList.appendChild(li);
+    });
+  }
+
+  els.bookProgressList.addEventListener('change', function (ev) {
+    var cb = ev.target.closest('input[type="checkbox"][data-book-key]');
+    if (!cb || !activeStudent) return;
+    setBookFinished(activeStudent, cb.dataset.bookKey, cb.checked);
+    saveCurrentState();
+    renderBookProgress();
+    renderSummaryTable();
+  });
 
   function renderLogTable() {
     var entries = studentEntries(activeStudent);
@@ -628,6 +705,7 @@
       return {
         name: name,
         book: latest ? latest.book : '',
+        finishedCount: studentFinished(name).length,
         pages: totalPages,
         minutes: totalMinutes
       };
@@ -651,6 +729,7 @@
       tr.innerHTML =
         '<td>' + escapeHtml(r.name) + '</td>' +
         '<td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
+        '<td class="num">' + r.finishedCount + '</td>' +
         '<td class="num">' + r.pages + '</td>' +
         '<td class="num">' + r.minutes + '</td>';
       els.summaryTableBody.appendChild(tr);
@@ -760,13 +839,13 @@
       (from && to ? ' ' : '') + (to ? ('to ' + escapeHtml(to)) : '')) : '';
     var body = rows.map(function (r) {
       return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
-        '<td>' + r.pages + '</td><td>' + r.minutes + '</td></tr>';
+        '<td>' + r.finishedCount + '</td><td>' + r.pages + '</td><td>' + r.minutes + '</td></tr>';
     }).join('');
     els.printArea.innerHTML =
       '<div class="print-title">Class Summary &mdash; ' + escapeHtml(state.name) + '</div>' +
       '<div class="print-sub">Printed ' + escapeHtml(todayStr()) + rangeNote + '</div>' +
-      '<table><thead><tr><th>Student</th><th>Current book</th><th>Total pages</th><th>Total minutes</th></tr></thead>' +
-      '<tbody>' + (body || '<tr><td colspan="4">No students yet.</td></tr>') + '</tbody></table>';
+      '<table><thead><tr><th>Student</th><th>Current book</th><th>Books completed</th><th>Total pages</th><th>Total minutes</th></tr></thead>' +
+      '<tbody>' + (body || '<tr><td colspan="5">No students yet.</td></tr>') + '</tbody></table>';
     window.print();
   }
 
