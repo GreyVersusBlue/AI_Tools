@@ -89,11 +89,11 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Hall Pass Log | "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
-| 2 | Class Roster Hub | Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
-| 3 | Command Center | Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
-| 4 | Escape Room Builder | Printable story-intro cover page | A one-page prop/cover sheet to set the scene before students start scanning stations. |
-| 5 | Math Fact Drill Sheet Generator | One-click leveled set | Generate a matching easy/medium/hard set of sheets together in one pass, for quick differentiation. |
+| 1 | Hall Pass Log | 🔒 **CLAIMED (2026-08-09)** — "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
+| 2 | Class Roster Hub | 🔒 **CLAIMED (2026-08-09)** — Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
+| 3 | Command Center | 🔒 **CLAIMED (2026-08-09)** — Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
+| 4 | Escape Room Builder | 🔒 **CLAIMED (2026-08-09)** — Printable story-intro cover page | A one-page prop/cover sheet to set the scene before students start scanning stations. |
+| 5 | Math Fact Drill Sheet Generator | 🔒 **CLAIMED (2026-08-09)** — One-click leveled set | Generate a matching easy/medium/hard set of sheets together in one pass, for quick differentiation. |
 | 6 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
 | 7 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
 | 8 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
