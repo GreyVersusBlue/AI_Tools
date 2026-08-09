@@ -223,6 +223,10 @@
       <button class="btn-primary" id="generate-btn" disabled>🎲 Make Groups</button>
       <button class="btn-secondary" id="regenerate-btn" disabled>🔀 Reshuffle</button>
     </div>
+    <p class="hint" id="pair-history-hint"></p>
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn-secondary btn-small" id="reset-pair-history-btn">Reset pairing memory</button>
+    </div>
     <div id="msg"></div>
   </div>
 
@@ -275,6 +279,8 @@
     togetherList: document.getElementById('together-list'),
     generateBtn: document.getElementById('generate-btn'),
     regenerateBtn: document.getElementById('regenerate-btn'),
+    pairHistoryHint: document.getElementById('pair-history-hint'),
+    resetPairHistoryBtn: document.getElementById('reset-pair-history-btn'),
     warnArea: document.getElementById('warn-area'),
     results: document.getElementById('results'),
     exportRow: document.getElementById('export-row'),
@@ -315,7 +321,13 @@
   function getCurrentConfigName() { return localStorage.getItem(CURRENT_KEY); }
 
   function defaultConfig(name) {
-    return { name: name, names: '', mode: 'count', splitValue: 4, balance: false, keepApart: [], keepTogether: [] };
+    return {
+      name: name, names: '', mode: 'count', splitValue: 4, balance: false, keepApart: [], keepTogether: [],
+      // Recent-pairing memory: pairHistory maps a sorted "nameA␟name B"
+      // key to the generation number (pairGen) they were last grouped
+      // together, so reshuffles can bias away from repeating that pairing.
+      pairHistory: {}, pairGen: 0
+    };
   }
 
   /** A teacher who already had the single old `gtg-settings` blob saved gets
@@ -373,6 +385,7 @@
     onNamesChanged();
     renderPairList();
     renderTogetherList();
+    renderPairHistoryHint();
   }
 
   function newConfig(name) {
@@ -388,6 +401,8 @@
     state = loaded;
     if (!Array.isArray(state.keepApart)) state.keepApart = [];
     if (!Array.isArray(state.keepTogether)) state.keepTogether = [];
+    if (!state.pairHistory || typeof state.pairHistory !== 'object') state.pairHistory = {};
+    if (typeof state.pairGen !== 'number') state.pairGen = 0;
     localStorage.setItem(CURRENT_KEY, name);
     refreshConfigSwitcher();
     applyStateToForm();
@@ -622,6 +637,7 @@
     resolveConstraints(groups);
     var violations = findApartViolations(groups);
     var togetherViolations = findTogetherViolations(groups);
+    recordPairHistory(groups);
     return { groups: groups, violations: violations, togetherViolations: togetherViolations };
   }
 
@@ -648,22 +664,103 @@
     });
   }
 
-  function totalViolationCount(groups) {
-    return findApartViolations(groups).length + findTogetherViolations(groups).length;
+  // ── Recent-pairing memory ────────────────────────────────────────────────
+  // state.pairHistory maps a sorted "nameA␟nameB" key to the generation
+  // number (state.pairGen) in which that pair last shared a group. Each
+  // shuffle bumps pairGen and records every co-membership at the new
+  // generation. Only the most recent couple of generations matter for the
+  // bias, so entries older than that window are pruned right away — this
+  // keeps storage bounded instead of accumulating every pairing ever seen.
+  var PAIR_MEMORY_WINDOW = 2; // "immediately preceding 1-2 shuffles"
+
+  function pairKey(a, b) {
+    return a < b ? a + '␟' + b : b + '␟' + a;
   }
 
-  // Randomized local search over BOTH constraint kinds at once: repeatedly
-  // swap a student between two groups, keeping the swap only if the combined
-  // apart+together violation count doesn't get worse. Best-effort — some
+  // Lower is better/rarer. A pair grouped together last shuffle scores much
+  // worse than one grouped together two shuffles ago; anything older (or
+  // never) scores 0, same spirit as the role-fairness recency score in
+  // lab-group-role-randomizer.html.
+  function pairRecencyPenalty(a, b) {
+    if (!state || !state.pairHistory) return 0;
+    var lastGen = state.pairHistory[pairKey(a, b)];
+    if (!lastGen) return 0;
+    var gap = ((state.pairGen || 0) + 1) - lastGen;
+    if (gap <= 1) return 1000;
+    if (gap === 2) return 100;
+    return 0;
+  }
+
+  function totalPairPenalty(groups) {
+    var total = 0;
+    groups.forEach(function (group) {
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) {
+          total += pairRecencyPenalty(group[i].name, group[j].name);
+        }
+      }
+    });
+    return total;
+  }
+
+  // Pairs currently sharing a group that were also recently paired — treated
+  // like a soft "keep apart" violation for the local search below.
+  function findRecentPairViolations(groups) {
+    var result = [];
+    groups.forEach(function (group) {
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) {
+          if (pairRecencyPenalty(group[i].name, group[j].name) > 0) result.push([group[i].name, group[j].name]);
+        }
+      }
+    });
+    return result;
+  }
+
+  function recordPairHistory(groups) {
+    if (!state) return;
+    var newGen = (state.pairGen || 0) + 1;
+    state.pairGen = newGen;
+    if (!state.pairHistory) state.pairHistory = {};
+    groups.forEach(function (group) {
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) {
+          state.pairHistory[pairKey(group[i].name, group[j].name)] = newGen;
+        }
+      }
+    });
+    var cutoff = newGen - PAIR_MEMORY_WINDOW;
+    Object.keys(state.pairHistory).forEach(function (key) {
+      if (state.pairHistory[key] < cutoff) delete state.pairHistory[key];
+    });
+  }
+
+  // Hard constraints (apart/together) always dominate the score; the recent-
+  // pairing bias only breaks ties among solutions that satisfy them equally,
+  // so it never causes an explicit keep-apart/keep-together rule to be
+  // sacrificed just to avoid a repeat pairing.
+  var HARD_CONSTRAINT_WEIGHT = 100000;
+  function totalScore(groups) {
+    return (findApartViolations(groups).length + findTogetherViolations(groups).length) * HARD_CONSTRAINT_WEIGHT +
+      totalPairPenalty(groups);
+  }
+
+  // Randomized local search over constraint kinds AND recent-pairing bias at
+  // once: repeatedly swap a student between two groups, keeping the swap
+  // only if the combined score doesn't get worse. Best-effort — some
   // constraint sets (e.g. 5 people who must all avoid each other, split into
-  // 2 groups) simply cannot all be satisfied.
+  // 2 groups) simply cannot all be satisfied, and a small roster with large
+  // groups may make some repeat pairing unavoidable; the loop just settles
+  // for whatever it found within its attempt budget.
   function resolveConstraints(groups) {
-    if ((!keepApart.length && !keepTogether.length) || groups.length < 2) return;
+    var hasPairBias = !!(state && state.pairHistory && Object.keys(state.pairHistory).length);
+    if ((!keepApart.length && !keepTogether.length && !hasPairBias) || groups.length < 2) return;
     var attempts = 0, maxAttempts = 800;
-    var bestCount = totalViolationCount(groups);
-    while (bestCount > 0 && attempts < maxAttempts) {
+    var bestScore = totalScore(groups);
+    while (bestScore > 0 && attempts < maxAttempts) {
       attempts++;
       var allViolations = findApartViolations(groups).concat(findTogetherViolations(groups));
+      if (hasPairBias) allViolations = allViolations.concat(findRecentPairViolations(groups));
       if (!allViolations.length) break;
       var offender = allViolations[Math.floor(Math.random() * allViolations.length)];
       var groupIdx = groupIndexOf(groups, offender[0]);
@@ -671,17 +768,18 @@
       var sameGroupIdx = fromArr.findIndex(function (s) { return s.name === offender[1]; });
 
       if (sameGroupIdx !== -1) {
-        // An apart-violation: offender[1] shares offender[0]'s group — swap
-        // it out for a random student in a different group.
+        // offender[1] shares offender[0]'s group but shouldn't (a keep-apart
+        // violation, or two students recently paired) — swap it out for a
+        // random student in a different group.
         var otherIdx = Math.floor(Math.random() * groups.length);
         if (otherIdx === groupIdx || !groups[otherIdx].length) continue;
         var toArr = groups[otherIdx];
         var swapInIdx = Math.floor(Math.random() * toArr.length);
         var a = fromArr[sameGroupIdx], b = toArr[swapInIdx];
         fromArr[sameGroupIdx] = b; toArr[swapInIdx] = a;
-        var newCount = totalViolationCount(groups);
-        if (newCount > bestCount) { fromArr[sameGroupIdx] = a; toArr[swapInIdx] = b; }
-        else { bestCount = newCount; }
+        var newScore = totalScore(groups);
+        if (newScore > bestScore) { fromArr[sameGroupIdx] = a; toArr[swapInIdx] = b; }
+        else { bestScore = newScore; }
       } else {
         // A together-violation: offender[1] is in a different group — move
         // it into offender[0]'s group by swapping with a random member there.
@@ -692,9 +790,9 @@
         var swapInIdx2 = Math.floor(Math.random() * fromArr.length);
         var a2 = fromArr[swapInIdx2], b2 = togetherArr[moveIdx];
         fromArr[swapInIdx2] = b2; togetherArr[moveIdx] = a2;
-        var newCount2 = totalViolationCount(groups);
-        if (newCount2 > bestCount) { fromArr[swapInIdx2] = a2; togetherArr[moveIdx] = b2; }
-        else { bestCount = newCount2; }
+        var newScore2 = totalScore(groups);
+        if (newScore2 > bestScore) { fromArr[swapInIdx2] = a2; togetherArr[moveIdx] = b2; }
+        else { bestScore = newScore2; }
       }
     }
   }
@@ -739,14 +837,35 @@
     els.regenerateBtn.disabled = false;
   }
 
+  function renderPairHistoryHint() {
+    var count = state && state.pairHistory ? Object.keys(state.pairHistory).length : 0;
+    els.pairHistoryHint.textContent = count
+      ? 'Remembering ' + count + ' recent pairing' + (count === 1 ? '' : 's') + ' from the last shuffle or two, so reshuffles bias away from repeating them.'
+      : 'No pairing memory yet for this class — shuffle once to start avoiding repeat pairings.';
+  }
+
+  els.resetPairHistoryBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Clear pairing memory for "' + state.name + '"? The next shuffle won\'t try to avoid repeating any pairing.')) return;
+    state.pairHistory = {};
+    state.pairGen = 0;
+    saveCurrentConfig();
+    renderPairHistoryHint();
+    showMsg('Pairing memory reset for this class.');
+  });
+
   els.generateBtn.addEventListener('click', function () {
     if (students.length < 2) return;
     clearMsg();
     renderResults(makeGroups());
+    saveCurrentConfig();
+    renderPairHistoryHint();
   });
   els.regenerateBtn.addEventListener('click', function () {
     clearMsg();
     renderResults(makeGroups());
+    saveCurrentConfig();
+    renderPairHistoryHint();
   });
 
   // ── Export ───────────────────────────────────────────────────────────────

@@ -63,6 +63,11 @@
     padding: .55rem .7rem;
   }
   textarea { min-height: 140px; resize: vertical; }
+  #setupCard select {
+    font-family: inherit; font-size: .95rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .55rem .7rem;
+  }
   .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin-top: .8rem; }
   .row > div { flex: 1 1 220px; }
   .checkline { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .85rem; }
@@ -87,6 +92,10 @@
   .toolbar .spacer { flex: 1 1 auto; }
 
   .bracket-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 .9rem; }
+  .bracket-subtitle {
+    font-size: .95rem; font-weight: 700; margin: 1.4rem 0 .6rem; color: var(--accent-2);
+  }
+  .bracket-subtitle:first-child { margin-top: 0; }
   .champion-banner {
     display: none; background: #fff9e8; border: 1px solid #e5c56a; color: #6b5410;
     border-radius: 8px; padding: .8rem 1rem; font-weight: 700; margin-bottom: 1rem;
@@ -143,7 +152,11 @@
   .qr-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 260px; }
 
   @media print {
-    .toolbar, .card, .back-link, footer.note, .app-header .back-link { display: none !important; }
+    /* #bracketCard also carries the shared .card styling class, but it must
+       stay visible when printing — it's the element the whole print/QR/share
+       feature set exists to put on paper. Only #setupCard (the input form)
+       should disappear here. */
+    .toolbar, #setupCard, .back-link, footer.note, .app-header .back-link { display: none !important; }
     body { padding: 0; background: #fff; }
     .bracket { overflow: visible; }
     .champion-banner { display: block !important; }
@@ -186,6 +199,17 @@
         <label for="contestants">Names or teams</label>
         <p class="hint">One per line, or separated by commas. Byes are added automatically if the count isn't a power of 2.</p>
         <textarea id="contestants" placeholder="Team A&#10;Team B&#10;Team C&#10;Team D"></textarea>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="bracketType">Bracket type</label>
+        <p class="hint">Double elimination adds a losers bracket — a team isn't out until it loses twice.</p>
+        <select id="bracketType">
+          <option value="single" selected>Single elimination</option>
+          <option value="double">Double elimination</option>
+        </select>
       </div>
     </div>
 
@@ -239,6 +263,7 @@
     setupCard: document.getElementById('setupCard'),
     bracketName: document.getElementById('bracketName'),
     contestants: document.getElementById('contestants'),
+    bracketType: document.getElementById('bracketType'),
     seedRandom: document.getElementById('seedRandom'),
     generateBtn: document.getElementById('generateBtn'),
     bracketCard: document.getElementById('bracketCard'),
@@ -341,12 +366,176 @@
     }
   }
 
+  /* ---------- double-elimination ----------
+     The winners bracket (state.slots / state.winnerSide) is built and
+     auto-advanced with the exact same buildBracket()/autoAdvance() code as
+     single-elimination — a double-elim bracket's WB is just a single-elim
+     bracket that additionally feeds its losers somewhere instead of
+     dropping them.
+
+     The losers bracket (state.loserSlots) is a second sequence of "round
+     population" arrays, same shape convention as state.slots (round[r] is
+     paired up 2-at-a-time into round[r+1]'s winners), with one twist: LB
+     rounds come in pairs per WB round they drain (call the pair's shared
+     index i, 1-based):
+       - "round A" (0-based index 2i-2): population = the previous round
+         B's winners forwarded 1:1 (or, for i=1, the WB round-1 losers
+         themselves) — a plain elimination round between LB survivors.
+       - "round B" (0-based index 2i-1): population = round A's winners
+         interleaved with the freshly-dropped losers of WB round (i+1) —
+         a "drop round". Round A's winner for match m lands at the EVEN
+         slot 2m (the odd slot 2m+1 is the incoming WB loser); a round B
+         winner instead lands directly at slot m of the next round A,
+         since round A never interleaves.
+     The final loserSlots entry (length 1) is the LB-champion holder, same
+     "champion holder" convention state.slots already uses for the WB.
+
+     Worked example, 8 entrants (K=3 WB rounds, size 8):
+       WB: R1 4 matches -> R2 2 matches -> Final 1 match -> WB champion.
+       LB round A(i=1) [lb0, 4 slots]: the 4 WB-R1 losers, paired into 2
+         matches -> 2 winners.
+       LB round B(i=1) [lb1, 4 slots]: those 2 winners at slots 0,2 + the
+         2 WB-R2 losers at slots 1,3 -> 2 matches -> 2 winners.
+       LB round A(i=2) [lb2, 2 slots]: those 2 winners, paired -> 1 match
+         -> 1 winner.
+       LB round B(i=2) [lb3, 2 slots]: that winner at slot 0 + the WB
+         Final's loser at slot 1 -> 1 match -> the LB champion.
+     This matches the standard published 8-team double-elim bracket. */
+  function buildDoubleElimBracket(name, names, doShuffle) {
+    var base = buildBracket(name, names, doShuffle);
+    var wbRounds = base.slots;
+    var K = wbRounds.length - 1; // number of real WB match-rounds
+
+    var loserSlots = [];
+    for (var i = 1; i <= K - 1; i++) {
+      var matchesI = wbRounds[0].length / Math.pow(2, i + 1);
+      loserSlots.push(new Array(2 * matchesI).fill(false)); // round A
+      loserSlots.push(new Array(2 * matchesI).fill(false)); // round B
+    }
+    loserSlots.push(new Array(1).fill(false)); // LB champion holder
+
+    return {
+      name: name,
+      type: 'double',
+      slots: wbRounds,
+      winnerSide: base.winnerSide,
+      loserSlots: loserSlots,
+      loserWinnerSide: {},
+      grandFinal: { p: [false, false], m1Winner: null, needsReset: false, m2Winner: null, champion: null },
+      scores: {}
+    };
+  }
+
+  /* Mirrors autoAdvance()'s bye-skipping, but for a double-elim bracket:
+     runs the ordinary WB auto-advance first, then (a) drops each newly
+     decided WB match's loser into its losers-bracket slot, and (b) chases
+     byes/forwarding through the losers bracket the same way autoAdvance()
+     chases them through the winners bracket. A `null` WB loser (a bye —
+     nobody really played that match) is dropped into the LB as `null` too,
+     so it flows through as a bye there as well instead of stalling the
+     bracket. */
+  function autoAdvanceDouble(s) {
+    autoAdvance(s);
+
+    var wb = s.slots;
+    var K = wb.length - 1;
+    var lb = s.loserSlots;
+    if (K < 1) return;
+
+    function wbLoserAt(wbRoundIdx, m) {
+      var next = wb[wbRoundIdx + 1];
+      if (next[m] === false) return false; // that WB match isn't decided yet
+      var winSide = s.winnerSide[(wbRoundIdx + 1) + '_' + m];
+      var loserSide = (winSide === m * 2) ? (m * 2 + 1) : (m * 2);
+      return wb[wbRoundIdx][loserSide]; // a name, or null if that side was a bye
+    }
+
+    if (K === 1) {
+      // Only one WB match total: no losers-bracket games are ever played,
+      // the sole loser goes straight through to the LB-champion holder.
+      if (lb[0][0] === false) {
+        var solo = wbLoserAt(0, 0);
+        if (solo !== false) lb[0][0] = solo;
+      }
+      return;
+    }
+
+    var changed = true;
+    while (changed) {
+      changed = false;
+
+      // Seed LB round A of i=1 directly from the WB round-1 losers.
+      for (var m0 = 0; m0 < lb[0].length; m0++) {
+        if (lb[0][m0] === false) {
+          var loser0 = wbLoserAt(0, m0);
+          if (loser0 !== false) { lb[0][m0] = loser0; changed = true; }
+        }
+      }
+
+      // Drop WB round-(i+1) losers into every "round B" array's odd slots.
+      for (var r = 1; r < lb.length - 1; r += 2) {
+        var i = (r + 1) / 2;
+        var roundB = lb[r];
+        for (var mB = 0; mB < roundB.length / 2; mB++) {
+          if (roundB[mB * 2 + 1] === false) {
+            var loserB = wbLoserAt(i, mB);
+            if (loserB !== false) { roundB[mB * 2 + 1] = loserB; changed = true; }
+          }
+        }
+      }
+
+      // Chase byes within the LB and forward already-decided matches.
+      for (var r2 = 0; r2 < lb.length - 1; r2++) {
+        var pop = lb[r2];
+        var nextArr = lb[r2 + 1];
+        var isRoundA = (r2 % 2 === 0);
+        var matches = pop.length / 2;
+        for (var m2 = 0; m2 < matches; m2++) {
+          var target = isRoundA ? m2 * 2 : m2;
+          if (nextArr[target] !== false) continue;
+          var a = pop[m2 * 2];
+          var b = pop[m2 * 2 + 1];
+          if (a === false || b === false) continue; // still waiting on an earlier round/drop
+          if (a === null && b === null) {
+            nextArr[target] = null; // cascading bye — nobody real reaches this slot
+            changed = true;
+          } else if (a === null) {
+            nextArr[target] = b;
+            s.loserWinnerSide[r2 + '_' + m2] = m2 * 2 + 1;
+            changed = true;
+          } else if (b === null) {
+            nextArr[target] = a;
+            s.loserWinnerSide[r2 + '_' + m2] = m2 * 2;
+            changed = true;
+          }
+          // both real names: this is a live match, needs a click
+        }
+      }
+    }
+  }
+
   function save() {
     if (!state) return;
     BracketStore.saveBracket(state.name, state);
   }
 
+  /* render() dispatches to the single- or double-elimination renderer based
+     on state.type. Brackets saved before double-elim existed have no `type`
+     field at all, so `undefined` (falls through to renderSingle) keeps
+     every already-saved single-elim bracket working unchanged. */
   function render() {
+    if (!state) return;
+    if (state.type === 'double') { renderDouble(); return; }
+    renderSingle();
+  }
+
+  function renderBlank() {
+    if (!state) return;
+    if (state.type === 'double') { renderBlankDouble(); return; }
+    renderBlankSingle();
+  }
+
+  function renderSingle() {
     if (!state) return;
     autoAdvance(state);
     save();
@@ -456,7 +645,7 @@
      actually been decided in `state` — a printable prediction sheet, not a
      view of live progress. Doesn't touch `state` itself, so the live view is
      one plain render() call away once printing is done. */
-  function renderBlank() {
+  function renderBlankSingle() {
     if (!state) return;
     els.bracketTitle.textContent = state.name;
     els.bracketView.innerHTML = '';
@@ -509,6 +698,477 @@
     els.championBanner.classList.remove('show');
   }
 
+  /* ---------- double-elimination rendering ----------
+     Same match/slot classes and click-to-advance convention as the
+     single-elim renderer above, laid out as three stacked `.bracket` rows
+     (Winners Bracket / Losers Bracket / Grand Final) under one
+     `.bracket-subtitle` heading each, inside the same #bracketView element
+     — so the existing print CSS (which just targets `.bracket`/`.card`
+     generically) covers all three without any new print rules. */
+  function renderDouble() {
+    if (!state) return;
+    autoAdvanceDouble(state);
+    save();
+    refreshSwitcher();
+
+    els.setupCard.style.display = 'none';
+    els.bracketCard.style.display = '';
+    els.toolbar.style.display = '';
+    els.bracketTitle.textContent = state.name;
+
+    els.bracketView.innerHTML = '';
+
+    var wb = state.slots;
+    var wbTotal = wb.length;
+    var lb = state.loserSlots;
+    var lbTotal = lb.length;
+
+    // ---- Winners bracket ----
+    var wbHeading = document.createElement('p');
+    wbHeading.className = 'bracket-subtitle';
+    wbHeading.textContent = 'Winners Bracket';
+    els.bracketView.appendChild(wbHeading);
+
+    var wbBox = document.createElement('div');
+    wbBox.className = 'bracket';
+    wb.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = (r === wbTotal - 1) ? 'WB Champion' : 'Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === wbTotal - 1) {
+        var champ = round[0];
+        var slot = document.createElement('div');
+        slot.className = 'slot ' + (champ ? 'slot-winner' : 'slot-empty');
+        slot.textContent = champ || 'TBD';
+        var wrapMatch = document.createElement('div');
+        wrapMatch.className = 'match';
+        wrapMatch.appendChild(slot);
+        col.appendChild(wrapMatch);
+      } else {
+        var next = wb[r + 1];
+        for (var m = 0; m < next.length; m++) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          [0, 1].forEach(function (side) {
+            var idx = m * 2 + side;
+            var contestant = round[idx];
+            var decidedWinner = next[m];
+            var slotEl = document.createElement('div');
+
+            if (contestant === null) {
+              slotEl.textContent = 'BYE';
+              slotEl.className = 'slot slot-bye';
+            } else if (contestant === false) {
+              slotEl.textContent = 'TBD';
+              slotEl.className = 'slot slot-empty';
+            } else if (decidedWinner !== false) {
+              slotEl.textContent = contestant;
+              slotEl.className = 'slot slot-decided' + (state.winnerSide[(r + 1) + '_' + m] === idx ? ' slot-winner' : '');
+            } else {
+              slotEl.textContent = contestant;
+              slotEl.className = 'slot';
+              slotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx) {
+                return function () {
+                  state.slots[roundIdx + 1][matchIdx] = name;
+                  state.winnerSide[(roundIdx + 1) + '_' + matchIdx] = sourceIdx;
+                  render();
+                };
+              })(r, m, contestant, idx));
+            }
+            matchWrap.appendChild(slotEl);
+          });
+
+          var isByeMatch = round[m * 2] === null || round[m * 2 + 1] === null;
+          if (!isByeMatch) {
+            var scoreKey = 'w' + r + '_' + m;
+            var scoreInput = document.createElement('input');
+            scoreInput.type = 'text';
+            scoreInput.className = 'match-score';
+            scoreInput.placeholder = 'Score (optional)';
+            scoreInput.value = (state.scores && state.scores[scoreKey]) || '';
+            scoreInput.addEventListener('change', (function (key) {
+              return function (e) {
+                if (!state.scores) state.scores = {};
+                var v = e.target.value.trim();
+                if (v) state.scores[key] = v; else delete state.scores[key];
+                save();
+              };
+            })(scoreKey));
+            matchWrap.appendChild(scoreInput);
+          }
+
+          col.appendChild(matchWrap);
+        }
+      }
+
+      wbBox.appendChild(col);
+    });
+    els.bracketView.appendChild(wbBox);
+
+    // ---- Losers bracket ----
+    var lbHeading = document.createElement('p');
+    lbHeading.className = 'bracket-subtitle';
+    lbHeading.textContent = 'Losers Bracket';
+    els.bracketView.appendChild(lbHeading);
+
+    var lbBox = document.createElement('div');
+    lbBox.className = 'bracket';
+    lb.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = (r === lbTotal - 1) ? 'LB Champion' : 'LB Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === lbTotal - 1) {
+        var lchamp = round[0];
+        var lslot = document.createElement('div');
+        lslot.className = 'slot ' + (lchamp ? 'slot-winner' : 'slot-empty');
+        lslot.textContent = lchamp || 'TBD';
+        var lwrapMatch = document.createElement('div');
+        lwrapMatch.className = 'match';
+        lwrapMatch.appendChild(lslot);
+        col.appendChild(lwrapMatch);
+      } else {
+        // Round A (even index): a plain-elimination round, winner forwards
+        // to slot 2m of the next round. Round B (odd index): a drop round
+        // mixed with a fresh WB loser, winner forwards directly to slot m.
+        var isRoundA = (r % 2 === 0);
+        var matchesInRound = round.length / 2;
+        for (var lm = 0; lm < matchesInRound; lm++) {
+          var lMatchWrap = document.createElement('div');
+          lMatchWrap.className = 'match';
+          var targetPos = isRoundA ? lm * 2 : lm;
+          var lDecided = state.loserWinnerSide[r + '_' + lm] !== undefined;
+          [0, 1].forEach(function (side) {
+            var lidx = lm * 2 + side;
+            var lcontestant = round[lidx];
+            var lslotEl = document.createElement('div');
+            if (lcontestant === null) {
+              lslotEl.textContent = 'BYE';
+              lslotEl.className = 'slot slot-bye';
+            } else if (lcontestant === false) {
+              lslotEl.textContent = 'TBD';
+              lslotEl.className = 'slot slot-empty';
+            } else if (lDecided) {
+              lslotEl.textContent = lcontestant;
+              lslotEl.className = 'slot slot-decided' + (state.loserWinnerSide[r + '_' + lm] === lidx ? ' slot-winner' : '');
+            } else {
+              lslotEl.textContent = lcontestant;
+              lslotEl.className = 'slot';
+              lslotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx, target) {
+                return function () {
+                  state.loserSlots[roundIdx + 1][target] = name;
+                  state.loserWinnerSide[roundIdx + '_' + matchIdx] = sourceIdx;
+                  render();
+                };
+              })(r, lm, lcontestant, lidx, targetPos));
+            }
+            lMatchWrap.appendChild(lslotEl);
+          });
+
+          var lIsByeMatch = round[lm * 2] === null || round[lm * 2 + 1] === null;
+          if (!lIsByeMatch) {
+            var lScoreKey = 'l' + r + '_' + lm;
+            var lScoreInput = document.createElement('input');
+            lScoreInput.type = 'text';
+            lScoreInput.className = 'match-score';
+            lScoreInput.placeholder = 'Score (optional)';
+            lScoreInput.value = (state.scores && state.scores[lScoreKey]) || '';
+            lScoreInput.addEventListener('change', (function (key) {
+              return function (e) {
+                if (!state.scores) state.scores = {};
+                var v = e.target.value.trim();
+                if (v) state.scores[key] = v; else delete state.scores[key];
+                save();
+              };
+            })(lScoreKey));
+            lMatchWrap.appendChild(lScoreInput);
+          }
+
+          col.appendChild(lMatchWrap);
+        }
+      }
+
+      lbBox.appendChild(col);
+    });
+    els.bracketView.appendChild(lbBox);
+
+    // ---- Grand Final ----
+    var gfHeading = document.createElement('p');
+    gfHeading.className = 'bracket-subtitle';
+    gfHeading.textContent = 'Grand Final';
+    els.bracketView.appendChild(gfHeading);
+
+    var gf = state.grandFinal;
+    // Once each bracket's champion holder is decided, wire them into the
+    // grand final's two participant slots (only once — these never change
+    // again after being set).
+    var wbChamp = wb[wbTotal - 1][0];
+    var lbChamp = lb[lbTotal - 1][0];
+    if (wbChamp && gf.p[0] === false) gf.p[0] = wbChamp;
+    if (lbChamp && gf.p[1] === false) gf.p[1] = lbChamp;
+
+    function buildGrandFinalMatch(gameIdx) {
+      var matchWrap = document.createElement('div');
+      matchWrap.className = 'match';
+      var winnerIdx = gameIdx === 0 ? gf.m1Winner : gf.m2Winner;
+      var canPlay = gf.p[0] !== false && gf.p[1] !== false && (gameIdx === 0 || gf.needsReset);
+      [0, 1].forEach(function (side) {
+        var pname = gf.p[side];
+        var slotEl = document.createElement('div');
+        if (pname === false) {
+          slotEl.textContent = 'TBD';
+          slotEl.className = 'slot slot-empty';
+        } else if (winnerIdx !== null) {
+          slotEl.textContent = pname;
+          slotEl.className = 'slot slot-decided' + (winnerIdx === side ? ' slot-winner' : '');
+        } else if (canPlay) {
+          slotEl.textContent = pname;
+          slotEl.className = 'slot';
+          slotEl.addEventListener('click', (function (game, sideIdx) {
+            return function () {
+              if (game === 0) {
+                gf.m1Winner = sideIdx;
+                if (sideIdx === 1) gf.needsReset = true; // LB side won game 1 — bracket reset
+                else gf.champion = gf.p[0]; // WB side won game 1 — tournament over
+              } else {
+                gf.m2Winner = sideIdx;
+                gf.champion = gf.p[sideIdx];
+              }
+              render();
+            };
+          })(gameIdx, side));
+        } else {
+          slotEl.textContent = pname;
+          slotEl.className = 'slot slot-empty';
+        }
+        matchWrap.appendChild(slotEl);
+      });
+
+      var gScoreKey = 'g' + gameIdx;
+      var gScoreInput = document.createElement('input');
+      gScoreInput.type = 'text';
+      gScoreInput.className = 'match-score';
+      gScoreInput.placeholder = 'Score (optional)';
+      gScoreInput.value = (state.scores && state.scores[gScoreKey]) || '';
+      gScoreInput.addEventListener('change', function (e) {
+        if (!state.scores) state.scores = {};
+        var v = e.target.value.trim();
+        if (v) state.scores[gScoreKey] = v; else delete state.scores[gScoreKey];
+        save();
+      });
+      matchWrap.appendChild(gScoreInput);
+
+      return matchWrap;
+    }
+
+    var gfBox = document.createElement('div');
+    gfBox.className = 'bracket';
+
+    var gfCol = document.createElement('div');
+    gfCol.className = 'round';
+    var gfLabel = document.createElement('div');
+    gfLabel.className = 'round-label';
+    gfLabel.textContent = 'Match 1';
+    gfCol.appendChild(gfLabel);
+    gfCol.appendChild(buildGrandFinalMatch(0));
+    gfBox.appendChild(gfCol);
+
+    if (gf.needsReset) {
+      var gfCol2 = document.createElement('div');
+      gfCol2.className = 'round';
+      var gfLabel2 = document.createElement('div');
+      gfLabel2.className = 'round-label';
+      gfLabel2.textContent = 'Bracket Reset';
+      gfCol2.appendChild(gfLabel2);
+      gfCol2.appendChild(buildGrandFinalMatch(1));
+      gfBox.appendChild(gfCol2);
+    }
+
+    var champCol = document.createElement('div');
+    champCol.className = 'round';
+    var champLabel = document.createElement('div');
+    champLabel.className = 'round-label';
+    champLabel.textContent = 'Champion';
+    champCol.appendChild(champLabel);
+    var champWrap = document.createElement('div');
+    champWrap.className = 'match';
+    var champSlot = document.createElement('div');
+    champSlot.className = 'slot ' + (gf.champion ? 'slot-winner' : 'slot-empty');
+    champSlot.textContent = gf.champion || 'TBD';
+    champWrap.appendChild(champSlot);
+    champCol.appendChild(champWrap);
+    gfBox.appendChild(champCol);
+
+    els.bracketView.appendChild(gfBox);
+
+    if (gf.champion) {
+      els.championBanner.textContent = '🏆 Champion: ' + gf.champion;
+      els.championBanner.classList.add('show');
+    } else {
+      els.championBanner.classList.remove('show');
+    }
+  }
+
+  /* Blank/print counterpart of renderDouble(): WB round 0 (the starting
+     matchups/byes) filled in exactly like renderBlankSingle(), every later
+     WB round blank, and the entire losers bracket + grand final blank —
+     none of it can be predicted before round 0 is played. */
+  function renderBlankDouble() {
+    if (!state) return;
+    els.bracketTitle.textContent = state.name;
+    els.bracketView.innerHTML = '';
+
+    var wb = state.slots;
+    var wbTotal = wb.length;
+    var lb = state.loserSlots;
+    var lbTotal = lb.length;
+
+    var wbHeading = document.createElement('p');
+    wbHeading.className = 'bracket-subtitle';
+    wbHeading.textContent = 'Winners Bracket';
+    els.bracketView.appendChild(wbHeading);
+
+    var wbBox = document.createElement('div');
+    wbBox.className = 'bracket';
+    wb.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = (r === wbTotal - 1) ? 'WB Champion' : 'Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === wbTotal - 1) {
+        var slot = document.createElement('div');
+        slot.className = 'slot slot-empty';
+        slot.textContent = 'TBD';
+        var wrapMatch = document.createElement('div');
+        wrapMatch.className = 'match';
+        wrapMatch.appendChild(slot);
+        col.appendChild(wrapMatch);
+      } else {
+        var next = wb[r + 1];
+        for (var m = 0; m < next.length; m++) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          [0, 1].forEach(function (side) {
+            var idx = m * 2 + side;
+            var contestant = r === 0 ? round[idx] : false;
+            var slotEl = document.createElement('div');
+            if (contestant === null) {
+              slotEl.textContent = 'BYE';
+              slotEl.className = 'slot slot-bye';
+            } else if (contestant === false) {
+              slotEl.textContent = 'TBD';
+              slotEl.className = 'slot slot-empty';
+            } else {
+              slotEl.textContent = contestant;
+              slotEl.className = 'slot';
+            }
+            matchWrap.appendChild(slotEl);
+          });
+          col.appendChild(matchWrap);
+        }
+      }
+      wbBox.appendChild(col);
+    });
+    els.bracketView.appendChild(wbBox);
+
+    var lbHeading = document.createElement('p');
+    lbHeading.className = 'bracket-subtitle';
+    lbHeading.textContent = 'Losers Bracket';
+    els.bracketView.appendChild(lbHeading);
+
+    var lbBox = document.createElement('div');
+    lbBox.className = 'bracket';
+    lb.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = (r === lbTotal - 1) ? 'LB Champion' : 'LB Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === lbTotal - 1) {
+        var lslot = document.createElement('div');
+        lslot.className = 'slot slot-empty';
+        lslot.textContent = 'TBD';
+        var lwrapMatch = document.createElement('div');
+        lwrapMatch.className = 'match';
+        lwrapMatch.appendChild(lslot);
+        col.appendChild(lwrapMatch);
+      } else {
+        var matchesInRound = round.length / 2;
+        for (var lm = 0; lm < matchesInRound; lm++) {
+          var lMatchWrap = document.createElement('div');
+          lMatchWrap.className = 'match';
+          [0, 1].forEach(function () {
+            var slotEl = document.createElement('div');
+            slotEl.textContent = 'TBD';
+            slotEl.className = 'slot slot-empty';
+            lMatchWrap.appendChild(slotEl);
+          });
+          col.appendChild(lMatchWrap);
+        }
+      }
+      lbBox.appendChild(col);
+    });
+    els.bracketView.appendChild(lbBox);
+
+    var gfHeading = document.createElement('p');
+    gfHeading.className = 'bracket-subtitle';
+    gfHeading.textContent = 'Grand Final';
+    els.bracketView.appendChild(gfHeading);
+
+    var gfBox = document.createElement('div');
+    gfBox.className = 'bracket';
+
+    var gfCol = document.createElement('div');
+    gfCol.className = 'round';
+    var gfLabel = document.createElement('div');
+    gfLabel.className = 'round-label';
+    gfLabel.textContent = 'Match 1';
+    gfCol.appendChild(gfLabel);
+    var gfMatch = document.createElement('div');
+    gfMatch.className = 'match';
+    [0, 1].forEach(function () {
+      var slotEl = document.createElement('div');
+      slotEl.textContent = 'TBD';
+      slotEl.className = 'slot slot-empty';
+      gfMatch.appendChild(slotEl);
+    });
+    gfCol.appendChild(gfMatch);
+    gfBox.appendChild(gfCol);
+
+    var champCol = document.createElement('div');
+    champCol.className = 'round';
+    var champLabel = document.createElement('div');
+    champLabel.className = 'round-label';
+    champLabel.textContent = 'Champion';
+    champCol.appendChild(champLabel);
+    var champWrap = document.createElement('div');
+    champWrap.className = 'match';
+    var champSlot = document.createElement('div');
+    champSlot.className = 'slot slot-empty';
+    champSlot.textContent = 'TBD';
+    champWrap.appendChild(champSlot);
+    champCol.appendChild(champWrap);
+    gfBox.appendChild(champCol);
+
+    els.bracketView.appendChild(gfBox);
+
+    els.championBanner.classList.remove('show');
+  }
+
   function refreshSwitcher() {
     var names = BracketStore.listBrackets();
     els.bracketSwitch.innerHTML = '';
@@ -526,6 +1186,10 @@
     state = loaded;
     if (!state.winnerSide) state.winnerSide = {}; // brackets saved before this field existed
     if (!state.scores) state.scores = {}; // brackets saved before this field existed
+    if (state.type === 'double') {
+      if (!state.loserWinnerSide) state.loserWinnerSide = {};
+      if (!state.grandFinal) state.grandFinal = { p: [false, false], m1Winner: null, needsReset: false, m2Winner: null, champion: null };
+    }
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -539,6 +1203,7 @@
     els.championBanner.classList.remove('show');
     els.bracketName.value = '';
     els.contestants.value = '';
+    els.bracketType.value = 'single';
     refreshSwitcher();
   }
 
@@ -549,7 +1214,9 @@
       return;
     }
     var name = els.bracketName.value.trim() || ('Bracket ' + new Date().toISOString().slice(0, 10));
-    state = buildBracket(name, names, els.seedRandom.checked);
+    state = (els.bracketType.value === 'double')
+      ? buildDoubleElimBracket(name, names, els.seedRandom.checked)
+      : buildBracket(name, names, els.seedRandom.checked);
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -565,7 +1232,10 @@
     if (!state) return;
     if (!confirm('Clear all picks in "' + state.name + '" and start the bracket over with the same contestants?')) return;
     var round0 = state.slots[0];
-    var rebuilt = buildBracket(state.name, round0.filter(function (n) { return n != null; }), false);
+    var entrants = round0.filter(function (n) { return n != null; });
+    var rebuilt = (state.type === 'double')
+      ? buildDoubleElimBracket(state.name, entrants, false)
+      : buildBracket(state.name, entrants, false);
     // preserve original (unshuffled) slot order, including existing byes
     rebuilt.slots[0] = round0.slice();
     state = rebuilt;
@@ -674,6 +1344,14 @@
       winnerSide: (decoded.winnerSide && typeof decoded.winnerSide === 'object') ? decoded.winnerSide : {},
       scores: (decoded.scores && typeof decoded.scores === 'object') ? decoded.scores : {}
     };
+    if (decoded.type === 'double') {
+      state.type = 'double';
+      state.loserSlots = Array.isArray(decoded.loserSlots) ? decoded.loserSlots : [];
+      state.loserWinnerSide = (decoded.loserWinnerSide && typeof decoded.loserWinnerSide === 'object') ? decoded.loserWinnerSide : {};
+      state.grandFinal = (decoded.grandFinal && typeof decoded.grandFinal === 'object')
+        ? decoded.grandFinal
+        : { p: [false, false], m1Winner: null, needsReset: false, m2Winner: null, champion: null };
+    }
     BracketStore.saveBracket(name, state);
     render();
     return true;

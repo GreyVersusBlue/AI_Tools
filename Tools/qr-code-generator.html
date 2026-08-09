@@ -442,6 +442,49 @@
   }
   .recent-remove:hover { background: var(--danger); border-color: var(--danger); color: #fff; opacity: 1; }
 
+  /* Single vs Bulk mode — one pane of each pair is hidden via the body class */
+  body:not(.mode-bulk) .bulk-only { display: none; }
+  body.mode-bulk .single-only { display: none; }
+
+  #bulk-hint { margin-bottom: 0.75rem; }
+
+  #bulk-status {
+    font-size: 0.76rem;
+    color: var(--text-dim);
+    margin-top: 0.6rem;
+  }
+
+  /* On-screen bulk grid preview (the print-only copy uses the same item markup) */
+  .bulk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    width: 100%;
+    max-height: 65vh;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+
+  .bulk-item {
+    background: #fff;
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .bulk-item img { width: 100%; height: auto; display: block; image-rendering: pixelated; }
+  .bulk-item-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #1a1d27;
+    text-align: center;
+    word-break: break-word;
+  }
+  .bulk-item-error { background: rgba(248, 113, 113, 0.12); }
+  .bulk-item-error .bulk-item-label { color: var(--danger); }
+
   .print-only { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -451,6 +494,16 @@
       align-items: center; justify-content: center; background: #fff;
     }
     #print-img { max-width: 80%; max-height: 80%; }
+
+    /* Bulk grid print — swapped in via the .print-bulk body class set right
+       before window.print(), and removed again on the `afterprint` event. */
+    body.print-bulk #print-area { display: none !important; }
+    body.print-bulk #print-area-bulk, body.print-bulk #print-area-bulk * { visibility: visible; }
+    body.print-bulk #print-area-bulk {
+      display: grid !important; position: static; inset: auto;
+      gap: 14px; padding: 10px; background: #fff;
+    }
+    .bulk-item { break-inside: avoid; page-break-inside: avoid; }
   }
 </style>
 </head>
@@ -467,21 +520,54 @@
     <!-- Content -->
     <div class="card">
       <div class="card-title">1 · Content</div>
-      <div class="control-group">
-        <label for="template-type">Quick-fill template</label>
-        <select id="template-type">
-          <option value="">Plain text / link</option>
-          <option value="wifi">Wi-Fi network</option>
-          <option value="vcard">Contact card (vCard)</option>
-          <option value="tel">Phone number</option>
-          <option value="mailto">Email</option>
-        </select>
+
+      <div class="toggle-group">
+        <input type="radio" name="app-mode" id="mode-single" value="single" checked>
+        <label for="mode-single">Single code</label>
+        <input type="radio" name="app-mode" id="mode-bulk" value="bulk">
+        <label for="mode-bulk">Bulk (grid)</label>
       </div>
-      <div id="template-fields"></div>
-      <div class="control-group">
-        <label for="qr-text">Link or text to encode</label>
-        <textarea id="qr-text" placeholder="https://carrollk12.schoology.com/..." spellcheck="false"></textarea>
-        <div id="char-count">0 characters</div>
+
+      <div class="single-only" id="single-content-pane">
+        <div class="control-group">
+          <label for="template-type">Quick-fill template</label>
+          <select id="template-type">
+            <option value="">Plain text / link</option>
+            <option value="wifi">Wi-Fi network</option>
+            <option value="vcard">Contact card (vCard)</option>
+            <option value="tel">Phone number</option>
+            <option value="mailto">Email</option>
+          </select>
+        </div>
+        <div id="template-fields"></div>
+        <div class="control-group">
+          <label for="qr-text">Link or text to encode</label>
+          <textarea id="qr-text" placeholder="https://carrollk12.schoology.com/..." spellcheck="false"></textarea>
+          <div id="char-count">0 characters</div>
+        </div>
+      </div>
+
+      <div class="bulk-only" id="bulk-content-pane">
+        <div class="control-group">
+          <label for="bulk-text">One code per line</label>
+          <textarea id="bulk-text" spellcheck="false" style="min-height: 160px;" placeholder="Station 1, https://example.com/station1&#10;Station 2, https://example.com/station2&#10;Station 3, https://example.com/station3"></textarea>
+          <div class="hint" id="bulk-hint">Each line becomes one code: <strong>label, link or text</strong> (comma- or tab-separated, matching how a spreadsheet column pastes in). No delimiter on a line? The whole line is used as both the label and the QR content.</div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <label for="bulk-cols">Grid columns</label>
+            <select id="bulk-cols">
+              <option value="2">2 per row</option>
+              <option value="3" selected>3 per row</option>
+              <option value="4">4 per row</option>
+              <option value="5">5 per row</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" type="button" id="btn-bulk-generate">Generate grid</button>
+        </div>
+        <div id="bulk-status"></div>
       </div>
     </div>
 
@@ -571,7 +657,7 @@
   </div>
 
   <div class="col-right">
-    <div class="card preview-wrap">
+    <div class="card preview-wrap single-only">
       <div class="card-title" style="align-self:flex-start;">4 · Preview &amp; Download</div>
       <div id="qr-stage"><canvas id="qr-canvas" width="400" height="400"></canvas></div>
       <div class="scan-badge pending" id="scan-badge">Type something above to generate a code</div>
@@ -591,7 +677,15 @@
       <div id="msg"></div>
     </div>
 
-    <div class="card">
+    <div class="card preview-wrap bulk-only" id="bulk-preview-card">
+      <div class="card-title" style="align-self:flex-start;">4 · Preview &amp; Print</div>
+      <div id="bulk-grid" class="bulk-grid"></div>
+      <div class="btn-row" style="width:100%;">
+        <button class="btn-secondary" id="btn-bulk-print" disabled>Print grid</button>
+      </div>
+    </div>
+
+    <div class="card single-only">
       <div class="card-title">Recently generated</div>
       <div id="recent-list" class="recent-list"></div>
     </div>
@@ -615,6 +709,8 @@
 <div class="print-only" id="print-area">
   <img id="print-img" alt="QR code">
 </div>
+
+<div class="print-only" id="print-area-bulk"></div>
 
 <script>
 (function () {
@@ -656,6 +752,13 @@
     recentList: document.getElementById('recent-list'),
     printImg: document.getElementById('print-img'),
     msg: document.getElementById('msg'),
+    bulkText: document.getElementById('bulk-text'),
+    bulkCols: document.getElementById('bulk-cols'),
+    btnBulkGenerate: document.getElementById('btn-bulk-generate'),
+    bulkStatus: document.getElementById('bulk-status'),
+    bulkGrid: document.getElementById('bulk-grid'),
+    btnBulkPrint: document.getElementById('btn-bulk-print'),
+    printAreaBulk: document.getElementById('print-area-bulk'),
   };
 
   var ctx = els.canvas.getContext('2d');
@@ -911,6 +1014,13 @@
   els.overlayTextInput.addEventListener('input', scheduleRender);
   document.querySelectorAll('input[name="overlay-type"]').forEach(function (r) {
     r.addEventListener('change', function () { syncOverlayPanes(); scheduleRender(); });
+  });
+
+  // ── Single vs Bulk mode ──────────────────────────────────────────────────
+  document.querySelectorAll('input[name="app-mode"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      document.body.classList.toggle('mode-bulk', document.getElementById('mode-bulk').checked);
+    });
   });
 
   // ── QR generation + rendering ────────────────────────────────────────────
@@ -1191,6 +1301,132 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  // ── Bulk mode ────────────────────────────────────────────────────────────
+  // Reuses the exact same buildQR()/drawQR() path as single mode (same
+  // encoding, same effective error-correction level, same overlay), just
+  // drawn once per pasted line onto one shared scratch canvas instead of a
+  // fresh canvas per code — the QR content differs line to line, so there's
+  // nothing to cache, but reusing one canvas keeps a 100+ line paste from
+  // piling up dozens of extra canvas elements. Rendering happens in small
+  // chunks via setTimeout so the tab stays responsive on a big paste instead
+  // of blocking the main thread for the whole batch in one synchronous pass.
+  var BULK_MAX = 400;
+  var BULK_CHUNK = 8;
+  var BULK_QR_PX = 300; // fixed print-friendly resolution, independent of the single-mode size slider
+  var bulkScratch = document.createElement('canvas');
+  var bulkRunToken = 0; // bumped on every new run so a stale chunked loop bails out
+
+  function splitBulkLine(line) {
+    var delim = line.indexOf('\t') !== -1 ? '\t' : ',';
+    var idx = line.indexOf(delim);
+    if (idx === -1) return { label: line, content: line };
+    var label = line.slice(0, idx).trim();
+    var content = line.slice(idx + 1).trim();
+    if (!label) label = content;
+    if (!content) content = label;
+    return { label: label, content: content };
+  }
+
+  function parseBulkLines(raw) {
+    return raw.split(/\r?\n/)
+      .map(function (line) { return line.trim(); })
+      .filter(function (line) { return line.length > 0; })
+      .map(splitBulkLine);
+  }
+
+  function bulkItemEl(label, dataURL, isError, errMessage) {
+    var div = document.createElement('div');
+    div.className = 'bulk-item' + (isError ? ' bulk-item-error' : '');
+    if (!isError) {
+      var img = document.createElement('img');
+      img.src = dataURL;
+      img.alt = 'QR code for ' + label;
+      div.appendChild(img);
+    }
+    var caption = document.createElement('div');
+    caption.className = 'bulk-item-label';
+    caption.textContent = isError ? (label + ' — ' + errMessage) : label;
+    div.appendChild(caption);
+    return div;
+  }
+
+  function showBulkMsg(text) { els.bulkStatus.textContent = text; }
+
+  function generateBulkGrid() {
+    var entries = parseBulkLines(els.bulkText.value);
+    if (!entries.length) { showBulkMsg('Paste at least one line first — one label and link/text per line.'); return; }
+    if (entries.length > BULK_MAX) {
+      showBulkMsg('That’s ' + entries.length + ' lines — bulk mode supports up to ' + BULK_MAX + ' at a time. Trim the list and try again.');
+      return;
+    }
+
+    var myRun = ++bulkRunToken;
+    els.bulkGrid.innerHTML = '';
+    els.printAreaBulk.innerHTML = '';
+    els.btnBulkPrint.disabled = true;
+    showBulkMsg('Generating 0 / ' + entries.length + '…');
+
+    var cols = parseInt(els.bulkCols.value, 10) || 3;
+    els.bulkGrid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    els.printAreaBulk.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+
+    var overlayType = getOverlayType();
+    var opts = {
+      fg: els.fg.value,
+      bg: els.bg.value,
+      overlayType: overlayType,
+      overlayText: els.overlayTextInput.value.trim(),
+      overlayPct: parseInt(els.overlaySize.value, 10),
+    };
+    var ecLevel = effectiveEcLevel();
+
+    var i = 0;
+    var errors = 0;
+
+    function step() {
+      if (myRun !== bulkRunToken) return; // a newer run superseded this one
+      var end = Math.min(i + BULK_CHUNK, entries.length);
+      var screenFrag = document.createDocumentFragment();
+      var printFrag = document.createDocumentFragment();
+      for (; i < end; i++) {
+        var entry = entries[i];
+        try {
+          var qr = buildQR(entry.content, ecLevel);
+          drawQR(bulkScratch, qr, BULK_QR_PX, opts);
+          var dataURL = bulkScratch.toDataURL('image/png');
+          screenFrag.appendChild(bulkItemEl(entry.label, dataURL, false));
+          printFrag.appendChild(bulkItemEl(entry.label, dataURL, false));
+        } catch (err) {
+          errors++;
+          screenFrag.appendChild(bulkItemEl(entry.label, null, true, err.message));
+        }
+      }
+      els.bulkGrid.appendChild(screenFrag);
+      els.printAreaBulk.appendChild(printFrag);
+      showBulkMsg('Generating ' + i + ' / ' + entries.length + '…');
+      if (i < entries.length) {
+        setTimeout(step, 0);
+      } else {
+        var ok = entries.length - errors;
+        showBulkMsg(ok + ' code' + (ok === 1 ? '' : 's') + ' generated' + (errors ? ', ' + errors + ' failed (shown in red below)' : '') + '.');
+        els.btnBulkPrint.disabled = ok === 0;
+      }
+    }
+    step();
+  }
+
+  els.btnBulkGenerate.addEventListener('click', generateBulkGrid);
+
+  els.btnBulkPrint.addEventListener('click', function () {
+    if (!els.printAreaBulk.children.length) return;
+    document.body.classList.add('print-bulk');
+    window.print();
+  });
+
+  window.addEventListener('afterprint', function () {
+    document.body.classList.remove('print-bulk');
+  });
 
   // ── Recently generated codes ─────────────────────────────────────────────
   var RECENT_KEY = 'qr-code-generator-recent';

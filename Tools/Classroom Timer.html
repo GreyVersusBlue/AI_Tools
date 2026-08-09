@@ -126,6 +126,25 @@
   }
   #subDisplay { font-size: 0.95rem; color: var(--color-dim); min-height: 1.2em; }
 
+  /* ---------- silent "flash at zero" cue — a companion to the audio alert for
+     testing rooms / hearing-impaired students. Opt-in (off by default) via the
+     "Flash at zero" checkbox in the Alert Sound card. Fixed so it still covers
+     the screen in fullscreen/projector mode, and pointer-events: none so it
+     never blocks the controls underneath it. */
+  .zero-flash-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow: inset 0 0 0 16px var(--color-danger);
+  }
+  .zero-flash-overlay.active { animation: zeroFlashPulse 1s ease-in-out infinite; }
+  @keyframes zeroFlashPulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
   .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
   .controls button { font-size: 1.05rem; font-weight: 600; padding: 0.65rem 1.6rem; min-width: 110px; }
   .btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
@@ -228,6 +247,7 @@
 </style>
 </head>
 <body>
+<div class="zero-flash-overlay" id="zeroFlashOverlay" aria-hidden="true"></div>
 <div class="container">
 
   <header class="app-header">
@@ -378,6 +398,10 @@
       <span class="mute-check">
         <input type="checkbox" id="soundMute">
         <label for="soundMute">Mute</label>
+      </span>
+      <span class="mute-check">
+        <input type="checkbox" id="flashZero">
+        <label for="flashZero">Flash at zero</label>
       </span>
       <button type="button" id="soundTest">Test sound</button>
     </div>

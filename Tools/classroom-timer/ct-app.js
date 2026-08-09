@@ -10,6 +10,9 @@ import * as Sounds from './ct-sounds.js';
 const RING_R = 90;
 const RING_C = 2 * Math.PI * RING_R;
 const COUNTDOWN_LIKE = new Set(['countdown', 'transition', 'roundrobin']);
+// How long the silent "flash at zero" visual cue stays on screen once triggered
+// (companion to the audio alert — see startZeroFlash()/stopZeroFlash() below).
+const ZERO_FLASH_MS = 4000;
 
 let prefs = load();
 let mode = prefs.activeTab;
@@ -69,6 +72,24 @@ function flashDisplay() {
   els.timeDisplay.classList.remove('flash');
   void els.timeDisplay.offsetWidth; // restart the CSS animation
   els.timeDisplay.classList.add('flash');
+}
+
+let zeroFlashTimer = null;
+
+/** Silent alternative/companion to the audio alert — a flashing border over
+    the whole screen (so it still reads in fullscreen/projector mode) for
+    testing rooms or hearing-impaired students. Opt-in via the "Flash at
+    zero" checkbox; off does nothing, matching the pre-existing behavior. */
+function startZeroFlash() {
+  if (!prefs.sound.flashEnabled || !els.zeroFlashOverlay) return;
+  els.zeroFlashOverlay.classList.add('active');
+  if (zeroFlashTimer) clearTimeout(zeroFlashTimer);
+  zeroFlashTimer = setTimeout(stopZeroFlash, ZERO_FLASH_MS);
+}
+
+function stopZeroFlash() {
+  if (zeroFlashTimer) { clearTimeout(zeroFlashTimer); zeroFlashTimer = null; }
+  if (els.zeroFlashOverlay) els.zeroFlashOverlay.classList.remove('active');
 }
 
 function renderLaps() {
@@ -138,6 +159,7 @@ function syncRunningPersistence() {
 }
 
 function resetPhaseForMode() {
+  stopZeroFlash();
   phase = { status: 'idle', laps: [] };
   // Random Interval hides its numeric countdown so the cue is a genuine
   // surprise — the progress ring draining toward empty would leak the same
@@ -180,6 +202,7 @@ function switchMode(newMode) {
 function onPhaseZero() {
   Sounds.play(prefs.sound.choice, effectiveVolume());
   flashDisplay();
+  startZeroFlash();
   if (mode === 'roundrobin') {
     if (phase.station < phase.stations) {
       phase.station += 1;
@@ -212,6 +235,7 @@ function onPhaseZero() {
 function onRandomFire() {
   Sounds.play(prefs.sound.choice, effectiveVolume());
   flashDisplay();
+  startZeroFlash();
   const firedAt = phase.targetMs;
   phase.status = 'done';
   stopTicking();
@@ -239,6 +263,7 @@ function tick() {
 }
 
 function onStart() {
+  stopZeroFlash();
   Sounds.unlock();
   if (mode === 'countdown' || mode === 'transition') {
     phase.totalMs = getConfiguredMs(mode);
@@ -435,6 +460,7 @@ function initSoundPanel() {
   els.soundChoice.value = prefs.sound.choice;
   els.soundVolume.value = prefs.sound.volume;
   els.soundMute.checked = prefs.sound.muted;
+  els.flashZero.checked = prefs.sound.flashEnabled;
   els.soundChoice.addEventListener('change', () => {
     prefs = save({ sound: { ...prefs.sound, choice: els.soundChoice.value } });
   });
@@ -443,6 +469,10 @@ function initSoundPanel() {
   });
   els.soundMute.addEventListener('change', () => {
     prefs = save({ sound: { ...prefs.sound, muted: els.soundMute.checked } });
+  });
+  els.flashZero.addEventListener('change', () => {
+    prefs = save({ sound: { ...prefs.sound, flashEnabled: els.flashZero.checked } });
+    if (!els.flashZero.checked) stopZeroFlash();
   });
   els.soundTest.addEventListener('click', () => {
     Sounds.unlock();
@@ -499,6 +529,8 @@ function cacheEls() {
   els.soundVolume = q('soundVolume');
   els.soundMute = q('soundMute');
   els.soundTest = q('soundTest');
+  els.flashZero = q('flashZero');
+  els.zeroFlashOverlay = q('zeroFlashOverlay');
 }
 
 /** Paints the display from a restored `phase` without waiting for the next
