@@ -113,14 +113,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 
 ### Certificate & Award Maker (`Tools/certificate-award-maker.html`)
 **Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview (with a batch thumbnail grid view alongside the one-at-a-time preview) with an optional small logo/crest upload (downscaled to a data URL) shown on the certificate, and browser print-to-PDF, with the last-used settings saved to localStorage.
-**Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Save multiple named presets (theme + border + signature combos) the way Rubric Builder and Formula Sheet Builder save multiple named documents, since today there's only one persisted settings object.
-
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
 **Current state:** Three modes (graph paper, number line, coordinate plane) rendered as true-to-scale SVG with fine control over grid size/exact row-column counts/intervals/labels, settings saved to localStorage, print-at-100%-scale output, and a "Download PNG" button next to Print for posting a sheet directly to Google Classroom/Schoology.
-**Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
-
 ### Formula Reference Sheet Builder (`Tools/formula-sheet-builder.html`)
 **Current state:** Topic templates (geometry, linear equations, quadratics, stats) or a blank sheet, with add/reorder/remove formula rows, an optional small inline diagram/image per formula item (downscaled and stored as a data URL), multiple named saved sheets with JSON export/import for backup or sharing, a column-count control (1/2/3), and a one-page print preview.
 
@@ -164,9 +158,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 
 ### Novel Study / Reading Circles Manager (`Tools/novel-study-circles-manager.html`)
 **Current state:** Splits a roster into reading circles, assigns discussion roles each meeting using the same recency-fairness algorithm as the Lab Group tool, logs chapter checkpoints per meeting (whole-class or per-group pacing), prints either the latest meeting's role sheet or the full chronological meeting log, and supports JSON export/import of the whole project (groups, meeting history, checkpoints, role-fairness history) — import adds the file as a new project rather than touching any existing one.
-**Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Add an optional numeric chapter/page field alongside the free-text checkpoint, so groups' progress can be shown as a simple at-a-glance comparison — currently checkpoints are free text, which can't be compared programmatically to flag a group falling behind.
-
 ---
 
 ## QR Codes & Trackers
@@ -196,9 +187,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 
 ### Exit Ticket / Bell Ringer Generator (`Tools/exit-ticket-generator.html`)
 **Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display with an optional think-time countdown (off/30s/1min/2min, with a WebAudio chime at zero), a custom-prompt box, a persistent "My Prompts" bank a teacher can build and blend into (or draw from exclusively) the rotation, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips — either the same prompt repeated on every slip, or a "different prompt on each slip" mode that draws distinct prompts from the active category/My Prompts pool (with a "new set" reshuffle button), useful for handing one prompt per table group.
-**Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Add an optional small QR code on the printed slip linking to a digital response form, reusing the QR-generation approach already used elsewhere in this toolkit.
-
 ### Number Talks / Mental Math Routine Board (`Tools/number-talks-board.html`)
 **Current state:** Reveals a number string one expression at a time from a grade-banded prompt bank (or a custom prompt), with an ephemeral, session-only strategy-sharing board and session history that both disappear on reload — a "Save this session" button exports the day's number talks plus strategy cards as a text file on demand without changing that session-only design, and a teacher-only "show the answer" reveal (computed client-side, control-panel only, never on the projector stage).
 **Suggested improvements:**
@@ -220,22 +208,18 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Math Fact Drill Sheet Generator (`Tools/math-drill-generator.html`)
 **Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Add a "generate a set of N distinct sheets" option that prints several different randomized versions back-to-back (e.g., Version A/B/C), useful for preventing copying during in-class timed drills.
 - 🔒 **CLAIMED (2026-08-09)** Add an optional timed-fluency header (a blank "Start time / End time" or "Target: ___ seconds" line) since the sheet is explicitly framed as a drill tool but has no fluency-tracking element today.
 - Add fact-family-focused templates (e.g., "×6 facts only," "÷ by 7 only") as extra entries in `mdg-templates.js`, since the generator architecture already supports adding templates with no UI changes.
 
 ### Vocabulary Flashcard & Word Wall Generator (`Tools/vocab-flashcard-generator.html`)
 **Current state:** Turns a pasted "term: definition" list (or a tab-separated/CSV paste straight from a spreadsheet column) into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists (portable via JSON export/import), and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Add an on-screen self-quiz/flip mode (click a card to reveal the definition) similar to the reveal-on-click pattern already used in `vocab-conjugation-drill.html`, since today preview is print-only, not usable directly with a student at a screen.
 - 🔒 **CLAIMED (2026-08-09)** Add auto-shrinking font size for long definitions on fixed-size cards to prevent text overflow/clipping when a definition runs long relative to the card dimensions chosen.
 
 ### Vocab & Conjugation Drill Generator (`Tools/vocab-conjugation-drill.html`)
 **Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets, a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order, and a "Listen" button per word/verb form using the browser's built-in text-to-speech with a language selector.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Add quick-start person-label presets (Spanish/French/German/Latin pronoun sets) as buttons above the person-row editor, since today every new set starts from the same Spanish default persons and must be manually retyped for other languages.
 - 🔒 **CLAIMED (2026-08-09)** Add JSON export/import of a drill set so language teachers on the same team can share a built conjugation table instead of re-entering every verb form.
-- 🔒 **CLAIMED (2026-08-09)** Add an option to print vocab and conjugation sections together in a single packet, since the two modes currently produce fully separate print outputs even when saved under the same set name.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
 **Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), a fullscreen toggle (button or `F` key) for the projector "stage" display, a "My Prompts" panel where a teacher can add their own prompts (grade band, genre) blended into the random pool alongside the built-in 200, and a Roster Assignment Sheet panel that takes a pasted (or Name-Picker-roster-loaded) class list, tolerantly parsed the same way as the roster tools elsewhere in the toolkit, and randomly pairs each student with a distinct prompt from the active grade-band/genre filters for a printable one-page assignment sheet.
@@ -245,7 +229,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Immersion Roleplay Scenario Generator (`Tools/roleplay-scenario-generator.html`)
 **Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories with two-role setups, fill-in vocabulary scaffolding cards saved per scenario, shuffle/prev/next navigation, and printable single or multi-scenario handout sets.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** Let teachers add their own custom scenarios (title, roles, setup, scaffolding phrases) saved to localStorage and merged into the shuffle/print pool, since the 34 scenarios are currently hardcoded with no extension point.
 - 🔒 **CLAIMED (2026-08-09)** Add a proficiency-level tag/filter (e.g., Novice/Intermediate/Advanced) to the existing category filter, since right now all scenarios are treated as equally appropriate for any class level.
 - 🔒 **CLAIMED (2026-08-09)** Store scaffolding fill-ins per named "class/session" rather than only per scenario id, so switching between class periods doesn't overwrite one class's filled-in target-language phrases with another's.
 - Add a "randomly assign role A/B" button for accountability/fairness when partners are deciding who plays which role, since roles are currently just displayed, not randomized.
@@ -255,7 +238,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Lets a teacher describe or paste a primary source and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions for each framework step, plus a matching answer-key view populated from the teacher's own per-step notes, across multiple saved worksheets.
 **Suggested improvements:**
 - 🔒 **CLAIMED (2026-08-09)** Support embedding a local image as a data URI (via a file input + `FileReader`) in addition to the current external Image URL field, so the source image doesn't depend on it already being hosted somewhere online.
-- 🔒 **CLAIMED (2026-08-09)** Add one or two more frameworks (e.g., APPARTS for text sources, or a simplified "5 W's" for younger/EL students) alongside the existing OPTIC/SOAPSTone pair, since the frameworks are already a clean, extensible data structure.
 - 🔒 **CLAIMED (2026-08-09)** Let teachers add an optional custom follow-up question per step (appended after the built-in guiding questions) instead of being limited strictly to the fixed question sets baked into each framework.
 - 🔒 **CLAIMED (2026-08-09)** Make the number of blank answer lines per step configurable instead of the current fixed count, since some steps warrant more space than others.
 - 🔒 **CLAIMED (2026-08-09)** Add JSON export/import of a saved worksheet so a department can share a built worksheet (source + framework + teacher notes) between colleagues without re-entering everything.
