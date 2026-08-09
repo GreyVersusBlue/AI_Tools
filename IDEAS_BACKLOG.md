@@ -8,39 +8,50 @@ Reminder: coming soon means not right now.
 
 ## General / Classroom Logistics
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Parent/Guardian Contact Log | Log a call, email, or note home per student — date, method, and outcome — for quick reference before a conference or a difficult phone call. |
 
 ## Math
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Virtual Manipulatives Board | A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever's on the board. |
 
 ## English / Language Arts
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Daily Editing / DOL Warm-Up Generator | A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank. |
 
 ## Science
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Lab Report Template Builder | Build a reusable lab report template — hypothesis, materials, procedure, data table, and conclusion prompts — from a topic starter or from scratch, and print a fillable packet for each lab. |
 
 ## Social Studies
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| DBQ / Source Packet Builder | Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source — pairs with the Primary Source Analysis Worksheet Generator. |
 
 ## World Language
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Classroom Label Maker (Target Language) | Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a text-to-speech pronunciation clip, plus a plain reference sheet of the whole label set. |
 
 ## Arts & PE
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Art Critique Worksheet Generator | A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student — pairs with Gallery Walk QR Codes. |
 
 ## Existing Tools — Enhancement Ideas
 
 These are improvements to tools that are already built and live on the site, not new standalone tools — so none of
-these get an `index.html` "coming soon" row. This mirrors the open, unclaimed suggestions from
-[`TOOL_IMPROVEMENTS_PLAN.md`](TOOL_IMPROVEMENTS_PLAN.md) in a friendlier read; that file stays the working list
-Claude sessions pick bullets from (including its 🔒 claim tags), so check there for the most current, most granular
-version.
+these get an `index.html` "coming soon" row.
 
 **Rank** is a single priority order across this whole table, 1 = most important, no ties. It's what makes "work on
 the next 10 most important ideas" a well-defined request — take the 10 lowest-numbered *unclaimed* rows, skipping
@@ -50,15 +61,22 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| 1 | Final Grade Checker | "What do I need on the final?" calculator | Given a target letter grade or percentage, solve for the score needed on a specified remaining assignment/exam, alongside the existing forward calculation. |
+| 2 | Rubric Builder | Score-a-student mode | Click a point value per criterion for a specific student against a saved rubric and get a live computed total, instead of only printing a blank rubric. |
+| 3 | Seating Chart Generator | Per-student photo thumbnail | An optional photo (loaded from a local file, stored as a data URL) shown on the desk — useful for a substitute matching faces to names, and stays fully local. |
+| 4 | Bracket / Tournament Generator | Double-elimination mode | A second bracket type alongside the existing single-elimination one, with the same click-to-advance and print support. |
+| 5 | Data Table → Chart Builder | Box-and-whisker chart type | A fifth chart type alongside bar/line/pie/scatter, useful for showing score/measurement spread in a lab report. |
+| 6 | Grade Distribution Visualizer | Compare more than one saved assignment at once | Extend the existing side-by-side comparison (currently limited to one other saved assignment) to several at a time, for tracking a trend across a unit. |
+| 7 | Group / Team Generator | Recent-pairing memory | Remember the last shuffle or two so a reshuffle avoids repeating the same pairing back-to-back — the same fairness idea the Lab Group & Role Randomizer already uses for roles. |
+| 8 | QR Code Generator | Bulk mode | Turn a pasted list (one label + link/text per line) into a printable grid of QR codes in one pass, instead of one code at a time. |
+| 9 | Certificate & Award Maker | Optional QR code on the certificate | Link to a congratulatory note, video, or portfolio page, reusing the QR pattern already on the Field Trip Permission Slip. |
+| 10 | Classroom Timer | Silent low-time visual cue | A flashing border/background at zero alongside the existing audio alert, for testing rooms or hearing-impaired students. |
+| 11 | Vocabulary Flashcard & Word Wall Generator | Optional example-sentence line | A third field per card (beyond term/definition) printed smaller under the definition. |
+| 12 | Silent Reading (SSR) Log Tracker | Weekly pages/minutes goal | An optional weekly goal per class, shown as a simple progress indicator next to each student's summary row. |
 
 ### Currently claimed (in progress elsewhere)
 
 Nothing claimed right now — every row that was here has shipped (or graduated back to the ranked table above).
-This section fills back in whenever a parallel session claims a row in `TOOL_IMPROVEMENTS_PLAN.md`; if a claim
-goes stale (a day or two with nothing landed on `main`), it's fair game to reclaim in the plan file and add back to
-the ranked list above at whatever rank fits.
 
 ## Platform-Wide — Big Swings
 
