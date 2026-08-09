@@ -3,9 +3,10 @@
    unit-tested before any UI touches them.
 
    Scope decisions (flagged per the build spec):
-   - Single track only for now — no side-by-side parallel timelines yet.
-     Adding a `track` field to events and rendering multiple lanes later
-     wouldn't require reworking this layout math, just repeating it per lane.
+   - Multiple parallel/comparison tracks are supported by repeating this same
+     layout math once per track (each event carries a `track` id; the caller
+     filters state.events per track and calls computeLayout with a shared
+     `rangeOverride` so every lane lines up on one common year axis).
    - Date precision: every event needs a numeric `yearStart` (negative for
      BCE) so events can always be sorted/positioned even when the display
      text is an approximate era. `displayDate` overrides the auto-formatted

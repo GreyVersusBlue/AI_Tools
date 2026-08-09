@@ -70,10 +70,18 @@
   .home-link { display: block; text-align: center; font-size: .76rem; color: var(--muted); text-decoration: none; margin-top: 1.2rem; }
   .home-link:hover { color: var(--accent-2); }
   .stars { text-align: center; letter-spacing: .3rem; font-size: 1.4rem; margin-bottom: .6rem; }
+  .timer-banner {
+    text-align: center; font-family: Consolas, monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: .03em;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: .6rem 1rem; margin-bottom: .8rem; color: var(--accent);
+  }
+  .timer-banner.low { color: var(--err); border-color: var(--err); }
+  .timer-banner.done { color: #fff; background: var(--err); border-color: var(--err); }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="timer-banner" id="timerBanner" style="display:none;"></div>
   <div class="card" id="card">
     <p class="error-card">Loading…</p>
   </div>
@@ -160,6 +168,45 @@
 
   var progress = loadProgress();
 
+  // ── Whole-room countdown (optional, baked into the link via `timerMinutes`) ─
+  // There's no server/shared clock in this static toolkit, so each device's
+  // countdown starts the moment that device first opens its own link, not a
+  // synced room-wide start — a documented, deliberate approximation, not a bug.
+  var timerBanner = document.getElementById('timerBanner');
+  var timerInterval = null;
+
+  function formatCountdown(totalSeconds) {
+    var s = Math.max(0, Math.round(totalSeconds));
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function setupTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    var minutes = Number(room.timerMinutes);
+    if (!minutes || !isFinite(minutes) || minutes <= 0) { timerBanner.style.display = 'none'; return; }
+    if (!progress.startedAt) { progress.startedAt = Date.now(); saveProgress(progress); }
+    timerBanner.style.display = '';
+    timerBanner.classList.remove('done');
+    function tick() {
+      var remainingSec = minutes * 60 - (Date.now() - progress.startedAt) / 1000;
+      if (remainingSec <= 0) {
+        timerBanner.textContent = '⏰ Time’s up!';
+        timerBanner.classList.remove('low');
+        timerBanner.classList.add('done');
+        clearInterval(timerInterval);
+        timerInterval = null;
+        return;
+      }
+      timerBanner.classList.toggle('low', remainingSec <= 60);
+      timerBanner.textContent = '⏱ ' + formatCountdown(remainingSec) + ' remaining';
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+  setupTimer();
+
   function render() {
     if (progress.current === 'done') {
       renderDone();
@@ -197,6 +244,7 @@
       if (!confirm('Reset your progress on this escape room and start over from Station 1?')) return;
       progress = { current: 0, misses: {} };
       saveProgress(progress);
+      setupTimer();
       render();
     });
   }

@@ -85,6 +85,10 @@
   .era-list .row-item .swatch { width: 1.4rem; height: 1.4rem; border-radius: 4px; flex-shrink: 0; border: 1px solid var(--line-strong); }
   .era-list .btns { display: flex; gap: .3rem; flex-shrink: 0; }
 
+  .track-list .row-item { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
+  .track-list .row-item input[type="text"] { margin-bottom: 0; flex: 1; }
+  .track-list .row-item button { flex-shrink: 0; }
+
   .photo-preview { display: flex; align-items: center; gap: .6rem; margin-bottom: .8rem; }
   .photo-preview img { width: 3.5rem; height: 3.5rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
 
@@ -102,6 +106,11 @@
   .grid-label { position: absolute; top: calc(50% + .3rem); transform: translateX(-50%); font-size: .68rem; color: var(--muted); white-space: nowrap; }
   .era-band { position: absolute; top: 0; bottom: 0; opacity: .28; border-radius: 3px; pointer-events: none; }
   .era-label { position: absolute; top: .35rem; font-size: .68rem; font-weight: 700; color: var(--ink); background: rgba(255,255,255,.8); padding: .05rem .4rem; border-radius: 3px; white-space: nowrap; pointer-events: none; }
+  .track-lane { position: absolute; left: 0; width: 100%; }
+  .track-lane-label {
+    position: sticky; left: .4rem; top: .3rem; display: inline-block; font-size: .68rem; font-weight: 700;
+    color: #fff; background: var(--accent); border-radius: 4px; padding: .15rem .5rem; z-index: 2;
+  }
   .marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); transform: translate(-50%, -50%); }
   .marker-bar { position: absolute; top: 50%; height: 6px; background: var(--accent-2); opacity: .55; transform: translateY(-50%); border-radius: 3px; }
   .event-label { position: absolute; width: 9rem; text-align: center; font-size: .78rem; transform: translateX(-50%); }
@@ -118,6 +127,10 @@
   .print-event::before { content: ''; position: absolute; left: -8px; top: 1.3rem; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); }
   .print-event img { width: 4.5rem; height: 4.5rem; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
   .print-event .pe-date { font-weight: 700; color: var(--accent); font-size: .82rem; }
+  .print-event .pe-track {
+    font-family: Consolas, monospace; font-size: .68rem; color: var(--accent-2);
+    border: 1px solid var(--line-strong); border-radius: 4px; padding: .05rem .35rem; margin-left: .4rem;
+  }
   .print-event .pe-title { font-weight: 700; font-size: 1.05rem; }
   .print-event .pe-desc { font-size: .88rem; color: var(--muted); margin-top: .2rem; }
 
@@ -176,7 +189,11 @@
             </select>
           </div>
         </div>
-        <p class="hint">Single timeline track for now — comparing two timelines side by side isn't supported yet.</p>
+
+        <label style="margin-bottom:.3rem;">Timeline tracks</label>
+        <p class="hint">Add a second (or more) track to compare related timelines stacked on the same year axis &mdash; e.g. a country's history vs. world history.</p>
+        <div class="track-list" id="trackList"></div>
+        <button type="button" class="secondary" id="addTrackBtn">+ Add track</button>
       </div>
 
       <div class="card">
@@ -197,6 +214,10 @@
 
       <div class="card">
         <label style="margin-bottom:.6rem;">Add / edit an event</label>
+        <div id="evTrackRow" style="display:none;">
+          <label for="evTrack">Track</label>
+          <select id="evTrack"></select>
+        </div>
         <input type="text" id="evTitle" placeholder="Event title">
         <div class="row2">
           <div><input type="number" id="evYearStart" placeholder="Year (negative = BCE)"></div>
@@ -251,20 +272,23 @@
   ['toolbar','timelineSwitch','newTimelineBtn','deleteTimelineBtn',
    'exportTimelineBtn','importTimelineBtn','importTimelineFile',
    'timelineName','timelineTitle','lineStyle','compactLabels',
+   'trackList','addTrackBtn',
    'eraLabel','eraYearStart','eraYearEnd','eraColor','saveEraBtn','cancelEraEditBtn','eraList',
-   'evTitle','evYearStart','evYearEnd','evDisplayDate','evDescription','evPhoto',
+   'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evDisplayDate','evDescription','evPhoto',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
    'saveEventBtn','cancelEditBtn','eventList','printBtn',
    'viewScreenBtn','viewPrintBtn','screenView','printPreview',
    'timelineCanvas','printViewInner'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, title, lineStyle, compactLabels, events: [...], eras: [...] }
+  var state = null; // { name, title, lineStyle, compactLabels, events: [...], eras: [...], tracks: [{id,name}] }
   var editingId = null;
   var pendingPhoto = null; // data URL staged for the event being added/edited
   var idCounter = 1;
   var editingEraId = null;
   var eraIdCounter = 1;
+  var trackIdCounter = 1; // track 0 always exists by default, so new tracks start at 1
+  var LANE_REM = 9; // height of one track's lane, matches the original single-track canvas height
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -301,6 +325,7 @@
   function resetForm() {
     editingId = null;
     pendingPhoto = null;
+    if (state && state.tracks.length) els.evTrack.value = String(state.tracks[0].id);
     els.evTitle.value = '';
     els.evYearStart.value = '';
     els.evYearEnd.value = '';
@@ -315,6 +340,7 @@
   function loadEventIntoForm(ev) {
     editingId = ev.id;
     pendingPhoto = ev.photo || null;
+    els.evTrack.value = String(ev.track != null ? ev.track : state.tracks[0].id);
     els.evTitle.value = ev.title;
     els.evYearStart.value = ev.yearStart;
     els.evYearEnd.value = ev.yearEnd != null ? ev.yearEnd : '';
@@ -355,6 +381,7 @@
 
     var ev = {
       id: editingId || (idCounter++),
+      track: els.evTrackRow.style.display === 'none' ? state.tracks[0].id : (parseInt(els.evTrack.value, 10) || state.tracks[0].id),
       title: title,
       yearStart: yearStart,
       yearEnd: (yearEnd != null && !isNaN(yearEnd)) ? yearEnd : null,
@@ -422,6 +449,57 @@
 
   els.cancelEraEditBtn.addEventListener('click', resetEraForm);
 
+  /* ---------- tracks (parallel/comparison timelines) ---------- */
+  function renderTrackList() {
+    els.trackList.innerHTML = '';
+    state.tracks.forEach(function (track, i) {
+      var row = document.createElement('div');
+      row.className = 'row-item';
+      var input = document.createElement('input');
+      input.type = 'text'; input.value = track.name; input.placeholder = 'Track name';
+      input.addEventListener('input', function () {
+        track.name = input.value;
+        save();
+        updateEvTrackOptions();
+        renderScreenTimeline();
+        renderPrintPreview();
+      });
+      row.appendChild(input);
+      if (state.tracks.length > 1) {
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button'; removeBtn.className = 'danger small'; removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', function () {
+          if (!confirm('Remove "' + track.name + '"? Its events move to the first remaining track.')) return;
+          state.tracks.splice(i, 1);
+          var fallbackId = state.tracks[0].id;
+          state.events.forEach(function (ev) { if (ev.track === track.id) ev.track = fallbackId; });
+          renderAll();
+        });
+        row.appendChild(removeBtn);
+      }
+      els.trackList.appendChild(row);
+    });
+  }
+
+  function updateEvTrackOptions() {
+    var prevValue = els.evTrack.value;
+    els.evTrack.innerHTML = '';
+    state.tracks.forEach(function (track) {
+      var opt = document.createElement('option');
+      opt.value = String(track.id); opt.textContent = track.name;
+      els.evTrack.appendChild(opt);
+    });
+    var stillValid = state.tracks.some(function (t) { return String(t.id) === prevValue; });
+    if (stillValid) els.evTrack.value = prevValue;
+    els.evTrackRow.style.display = state.tracks.length > 1 ? '' : 'none';
+  }
+
+  els.addTrackBtn.addEventListener('click', function () {
+    var label = 'Track ' + String.fromCharCode(65 + state.tracks.length);
+    state.tracks.push({ id: trackIdCounter++, name: label });
+    renderAll();
+  });
+
   /* ---------- rendering ---------- */
   function renderEventList() {
     var sorted = state.events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
@@ -430,9 +508,10 @@
       var row = document.createElement('div');
       row.className = 'row-item';
       var thumb = ev.photo ? '<img class="thumb" src="' + ev.photo + '" alt="">' : '';
+      var trackTag = state.tracks.length > 1 ? ' &middot; ' + escapeHtml(trackName(ev.track)) : '';
       row.innerHTML = thumb +
         '<div class="info"><div class="t">' + escapeHtml(ev.title) + '</div>' +
-        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + '</div></div>';
+        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + '</div></div>';
       var btns = document.createElement('div');
       btns.className = 'btns';
       var editBtn = document.createElement('button');
@@ -479,23 +558,32 @@
     });
   }
 
+  function trackName(trackId) {
+    var t = state.tracks.filter(function (tr) { return tr.id === trackId; })[0];
+    return t ? t.name : state.tracks[0].name;
+  }
+
   function renderScreenTimeline() {
     var canvas = els.timelineCanvas;
     canvas.innerHTML = '';
     if (!state.events.length && !state.eras.length) {
       canvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">Add events to see them on the timeline.</p>';
+      canvas.style.height = '';
       return;
     }
     var range = TimelineLayout.yearRangeOf(state.events.concat(state.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
-    var layout = TimelineLayout.computeLayout(state.events, pxPerYear, 70, range);
-    var positioned = state.compactLabels ? TimelineLayout.assignLabelSides(layout.positioned, 100) : layout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
+    var masterLayout = TimelineLayout.computeLayout(state.events, pxPerYear, 70, range);
+    var sharedRange = { min: masterLayout.minYear, max: masterLayout.maxYear };
+    var showTrackLabels = state.tracks.length > 1;
 
-    canvas.style.width = layout.totalWidth + 'px';
+    canvas.style.width = masterLayout.totalWidth + 'px';
+    canvas.style.height = (state.tracks.length * LANE_REM) + 'rem';
 
     // Era bands are appended first so they sit behind the gridlines, line,
     // markers, and labels appended below (later DOM siblings paint on top).
-    var eraBands = TimelineLayout.computeEraBands(state.eras, layout.minYear, layout.maxYear, pxPerYear, 70);
+    // They span the full multi-lane height via CSS top:0/bottom:0.
+    var eraBands = TimelineLayout.computeEraBands(state.eras, sharedRange.min, sharedRange.max, pxPerYear, 70);
     eraBands.forEach(function (b) {
       var band = document.createElement('div');
       band.className = 'era-band';
@@ -511,7 +599,7 @@
       canvas.appendChild(eraLabel);
     });
 
-    var gridlines = TimelineLayout.computeGridlines(layout.minYear, layout.maxYear, pxPerYear, 70);
+    var gridlines = TimelineLayout.computeGridlines(sharedRange.min, sharedRange.max, pxPerYear, 70);
     gridlines.forEach(function (g) {
       var gridLine = document.createElement('div');
       gridLine.className = 'grid-line';
@@ -525,41 +613,68 @@
       canvas.appendChild(gridLabel);
     });
 
-    var lineEl = document.createElement('div');
-    lineEl.className = 'timeline-line ' + (state.lineStyle !== 'solid' ? state.lineStyle : '');
-    lineEl.style.width = layout.totalWidth + 'px';
-    canvas.appendChild(lineEl);
+    // Each track gets its own lane, stacked vertically, sharing the same
+    // x-axis (pxPerYear/sharedRange) so events on different tracks that
+    // happened in the same year still line up in the same column.
+    state.tracks.forEach(function (track, laneIndex) {
+      var lane = document.createElement('div');
+      lane.className = 'track-lane';
+      lane.style.top = (laneIndex * LANE_REM) + 'rem';
+      lane.style.height = LANE_REM + 'rem';
 
-    positioned.forEach(function (p) {
-      if (p.width > 0) {
-        var bar = document.createElement('div');
-        bar.className = 'marker-bar';
-        bar.style.left = p.x + 'px';
-        bar.style.width = p.width + 'px';
-        canvas.appendChild(bar);
+      if (showTrackLabels) {
+        var laneLabel = document.createElement('div');
+        laneLabel.className = 'track-lane-label';
+        laneLabel.textContent = track.name;
+        lane.appendChild(laneLabel);
       }
-      var marker = document.createElement('div');
-      marker.className = 'marker';
-      marker.style.left = p.x + 'px';
-      canvas.appendChild(marker);
 
-      var label = document.createElement('div');
-      label.className = 'event-label ' + p.side;
-      label.style.left = p.x + 'px';
-      label.innerHTML =
-        '<div class="lbl-date">' + escapeHtml(p.label) + '</div>' +
-        '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>' +
-        (p.event.photo ? '<img src="' + p.event.photo + '" alt="">' : '');
-      canvas.appendChild(label);
+      var lineEl = document.createElement('div');
+      lineEl.className = 'timeline-line ' + (state.lineStyle !== 'solid' ? state.lineStyle : '');
+      lineEl.style.width = masterLayout.totalWidth + 'px';
+      lane.appendChild(lineEl);
+
+      var trackEvents = state.events.filter(function (e) { return e.track === track.id; });
+      var trackLayout = TimelineLayout.computeLayout(trackEvents, pxPerYear, 70, sharedRange);
+      var positioned = state.compactLabels ?
+        TimelineLayout.assignLabelSides(trackLayout.positioned, 100) :
+        trackLayout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
+
+      positioned.forEach(function (p) {
+        if (p.width > 0) {
+          var bar = document.createElement('div');
+          bar.className = 'marker-bar';
+          bar.style.left = p.x + 'px';
+          bar.style.width = p.width + 'px';
+          lane.appendChild(bar);
+        }
+        var marker = document.createElement('div');
+        marker.className = 'marker';
+        marker.style.left = p.x + 'px';
+        lane.appendChild(marker);
+
+        var label = document.createElement('div');
+        label.className = 'event-label ' + p.side;
+        label.style.left = p.x + 'px';
+        label.innerHTML =
+          '<div class="lbl-date">' + escapeHtml(p.label) + '</div>' +
+          '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>' +
+          (p.event.photo ? '<img src="' + p.event.photo + '" alt="">' : '');
+        lane.appendChild(label);
+      });
+
+      canvas.appendChild(lane);
     });
   }
 
   function printEventsHtml() {
     var sorted = state.events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
+    var showTrackTag = state.tracks.length > 1;
     return sorted.map(function (ev) {
       return '<div class="print-event ' + (state.lineStyle !== 'solid' ? state.lineStyle : '') + '">' +
         (ev.photo ? '<img src="' + ev.photo + '" alt="">' : '') +
-        '<div><div class="pe-date">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + '</div>' +
+        '<div><div class="pe-date">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) +
+        (showTrackTag ? '<span class="pe-track">' + escapeHtml(trackName(ev.track)) + '</span>' : '') + '</div>' +
         '<div class="pe-title">' + escapeHtml(ev.title) + '</div>' +
         (ev.description ? '<div class="pe-desc">' + escapeHtml(ev.description) + '</div>' : '') +
         '</div></div>';
@@ -582,6 +697,8 @@
     els.timelineTitle.value = state.title;
     els.lineStyle.value = state.lineStyle;
     els.compactLabels.value = String(state.compactLabels);
+    renderTrackList();
+    updateEvTrackOptions();
     renderEventList();
     renderEraList();
     renderScreenTimeline();
@@ -590,11 +707,26 @@
 
   /* ---------- lifecycle ---------- */
   function newTimeline(name) {
-    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [], eras: [] };
+    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [], eras: [], tracks: [{ id: 0, name: 'Track A' }] };
+    trackIdCounter = 1;
     TimelineStore.setCurrentName(name);
     resetForm();
     resetEraForm();
     renderAll();
+  }
+
+  /** Backward-compat: older saved/imported timelines predate the tracks
+      field entirely, so give them one default track and pin every event to it. */
+  function ensureTracks(st) {
+    if (!Array.isArray(st.tracks) || !st.tracks.length) st.tracks = [{ id: 0, name: 'Track A' }];
+    var defaultTrackId = st.tracks[0].id;
+    var validIds = st.tracks.map(function (t) { return t.id; });
+    st.events.forEach(function (ev) {
+      if (validIds.indexOf(ev.track) === -1) ev.track = defaultTrackId;
+    });
+    var maxTrackId = 0;
+    st.tracks.forEach(function (t) { if (typeof t.id === 'number' && t.id > maxTrackId) maxTrackId = t.id; });
+    trackIdCounter = Math.max(trackIdCounter, maxTrackId + 1);
   }
 
   function loadTimelineByName(name) {
@@ -602,6 +734,7 @@
     if (!loaded) return;
     state = loaded;
     if (!Array.isArray(state.eras)) state.eras = []; // backward-compat: older saved timelines predate eras
+    ensureTracks(state);
     TimelineStore.setCurrentName(name);
     resetForm();
     resetEraForm();
@@ -691,7 +824,8 @@
         lineStyle: decoded.lineStyle || 'solid',
         compactLabels: !!decoded.compactLabels,
         events: decoded.events,
-        eras: Array.isArray(decoded.eras) ? decoded.eras : [] // backward-compat: older exports predate eras
+        eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
+        tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [] // backward-compat: older exports predate tracks
       };
       var maxId = 0;
       state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
@@ -699,6 +833,7 @@
       var maxEraId = 0;
       state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
       eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
+      ensureTracks(state);
       TimelineStore.setCurrentName(name);
       resetForm();
       resetEraForm();
