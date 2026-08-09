@@ -50,21 +50,8 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Immersion Roleplay Scenario Generator<br>`Tools/roleplay-scenario-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Proficiency-level tag/filter | Add Novice/Intermediate/Advanced tagging alongside the existing category filter. |
-| 2 | Immersion Roleplay Scenario Generator<br>`Tools/roleplay-scenario-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Per-class scaffolding | Save filled-in scaffolding phrases per class/session instead of per scenario, so switching classes doesn't overwrite one class's answers with another's. |
-| 3 | Vocab & Conjugation Drill Generator<br>`Tools/vocab-conjugation-drill.html` | 🔒 **CLAIMED (2026-08-09)** — Share a drill set between teachers | Add JSON export/import so language teachers on the same team can share a built conjugation table. |
-| 4 | Primary Source Analysis Worksheet Generator<br>`Tools/primary-source-analysis-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Share a built worksheet | Add JSON export/import so a department can share a worksheet (source + framework + notes) between colleagues. |
-| 5 | Primary Source Analysis Worksheet Generator<br>`Tools/primary-source-analysis-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Custom follow-up question per step | Let a teacher add their own question after the built-in guiding questions. |
-| 6 | Primary Source Analysis Worksheet Generator<br>`Tools/primary-source-analysis-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Configurable answer space | Make the number of blank answer lines per step adjustable instead of fixed. |
-| 7 | Primary Source Analysis Worksheet Generator<br>`Tools/primary-source-analysis-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Upload a local image | Support attaching a source image from a file instead of only an external image URL. |
-| 8 | Vocabulary Flashcard & Word Wall Generator<br>`Tools/vocab-flashcard-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Auto-shrinking text for long definitions | Prevent overflow/clipping on fixed-size cards when a definition runs long. |
-| 9 | Math Fact Drill Sheet Generator<br>`Tools/math-drill-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Optional timed-fluency header | Add a blank "Start time / End time" or "Target: ___ seconds" line, since the tool is framed as a drill tool but has no fluency-tracking element today. |
-| 10 | Immersion Roleplay Scenario Generator<br>`Tools/roleplay-scenario-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Read-aloud accessibility | Wire up the shared accessibility helper already used by sibling tools (vocab/conjugation drill, writing prompt generator) so the stage content gets the same treatment. |
-| 11 | School Layout Visualizer<br>`Tools/schedule-visualizer.html` | 🔒 **CLAIMED (2026-08-09)** — Trace over a real floor plan | Import a photo or scan of the school's actual floor plan as a low-opacity background to trace over, instead of placing every room from a blank grid. |
-| 12 | School Layout Visualizer<br>`Tools/schedule-visualizer.html` | 🔒 **CLAIMED (2026-08-09)** — Hand off an in-progress layout | Reuse the same QR/WebRTC pairing already used by Classroom Timer so two staff can co-edit the blueprint on separate devices over Wi-Fi, instead of manual JSON export/import. |
-| 13 | School Layout Visualizer<br>`Tools/schedule-visualizer.html` | 🔒 **CLAIMED (2026-08-09)** — Copy publish HTML to clipboard | Let the "Publish for Teachers" step copy the generated file straight to the clipboard, so publishing doesn't need a local download-then-upload round trip through GitHub's web editor. |
-| 14 | Digital Escape Room / Puzzle Lock Builder<br>`Tools/escape-room-builder.html` | 🔒 **CLAIMED (2026-08-09)** — Live "teacher monitor" view | Show which station each team has reached in real time on the teacher's own screen, using the toolkit's existing WebRTC/QR pairing pattern, instead of having to walk the room to check. |
-| 15 | Digital Escape Room / Puzzle Lock Builder<br>`Tools/escape-room-builder.html` | 🔒 **CLAIMED (2026-08-09)** — Optional image per clue | Let a station carry a photo, the way Timeline Builder attaches photos to events, for picture-based puzzles instead of text-only clues. |
+
+No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
 
 ### Currently claimed (in progress elsewhere)
 

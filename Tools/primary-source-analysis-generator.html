@@ -65,6 +65,7 @@
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
   button.danger:hover { background: var(--err); color: #fff; }
   button.full { width: 100%; margin-bottom: .5rem; }
+  button.small { padding: .3rem .6rem; font-size: .78rem; }
 
   /* ---- framework picker ---- */
   .fw-options { display: flex; flex-direction: column; gap: .6rem; margin-bottom: .3rem; }
@@ -178,6 +179,9 @@
     <select id="sheetSwitch"></select>
     <button class="secondary" id="newSheetBtn">New worksheet</button>
     <button class="danger" id="deleteSheetBtn">Delete</button>
+    <button class="secondary" id="exportSheetBtn">Export worksheet</button>
+    <button class="secondary" id="importSheetBtn">Import worksheet</button>
+    <input type="file" id="importSheetFile" accept="application/json,.json" style="display:none;">
   </div>
 
   <div class="layout">
@@ -207,11 +211,22 @@
         <label for="imageUrl">Image URL (optional)</label>
         <p class="hint">If the image is hosted somewhere online, paste its link and it will appear on the worksheet. Leave blank to rely on the description only.</p>
         <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
+
+        <label for="imageFile">Or upload an image from your computer (optional)</label>
+        <p class="hint">Embeds the file directly in this worksheet's saved data &mdash; no hosting needed. Takes priority over the Image URL above if both are set.</p>
+        <input type="file" id="imageFile" accept="image/*">
+        <div id="imageFilePreviewWrap" style="display:none;margin:-.3rem 0 .8rem;">
+          <img id="imageFilePreview" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
+          <button type="button" class="secondary small" id="clearImageFileBtn" style="margin-top:.4rem;">Remove uploaded image</button>
+        </div>
       </div>
 
       <div class="card">
         <div class="card-title">Framework</div>
         <div class="fw-options" id="fwOptions"></div>
+        <label for="answerLines" style="margin-top:.8rem;">Answer space per step</label>
+        <p class="hint">Number of blank lines printed under each step's questions on the student worksheet.</p>
+        <input type="text" id="answerLines" inputmode="numeric" style="max-width:6rem;margin-bottom:0;">
       </div>
 
       <div class="card">
@@ -423,9 +438,10 @@
   /* ---------- elements ---------- */
   var els = {};
   [
-    'toolbar', 'sheetSwitch', 'newSheetBtn', 'deleteSheetBtn',
+    'toolbar', 'sheetSwitch', 'newSheetBtn', 'deleteSheetBtn', 'exportSheetBtn', 'importSheetBtn', 'importSheetFile',
     'sheetName', 'sourceTitle', 'sourceType', 'sourceDescription', 'sourceText', 'imageUrl',
-    'fwOptions', 'notesEditor',
+    'imageFile', 'imageFilePreviewWrap', 'imageFilePreview', 'clearImageFileBtn',
+    'fwOptions', 'notesEditor', 'answerLines',
     'previewArea', 'printBlankBtn', 'printKeyBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -454,9 +470,17 @@
       sourceDescription: '',
       sourceText: '',
       imageUrl: '',
+      imageDataUrl: '',
       framework: 'optic',
-      notes: {}
+      notes: {},
+      customQuestions: {},
+      answerLines: 4
     };
+  }
+
+  function answerLineCount() {
+    var n = parseInt(state.answerLines, 10);
+    return (isFinite(n) && n > 0) ? Math.min(n, 20) : 4;
   }
 
   function save() {
@@ -540,6 +564,19 @@
       });
       block.appendChild(qs);
 
+      var customInput = document.createElement('input');
+      customInput.type = 'text';
+      customInput.style.marginLeft = '2.1rem';
+      customInput.style.width = 'calc(100% - 2.1rem)';
+      customInput.placeholder = 'Your own follow-up question for ' + step.label + ' (optional, printed after the questions above)';
+      customInput.value = (state.customQuestions && state.customQuestions[step.key]) || '';
+      customInput.addEventListener('input', function () {
+        if (!state.customQuestions) state.customQuestions = {};
+        state.customQuestions[step.key] = customInput.value;
+        renderPreview();
+      });
+      block.appendChild(customInput);
+
       var ta = document.createElement('textarea');
       ta.placeholder = 'Teacher notes / model answer for ' + step.label + ' (shown only on the answer key)';
       ta.value = (state.notes && state.notes[step.key]) || '';
@@ -561,8 +598,9 @@
     if (state.sourceTitle) parts.push('<div><span class="meta-k">Source:</span> ' + escapeHtml(state.sourceTitle) + '</div>');
     parts.push('<div><span class="meta-k">Type:</span> ' + escapeHtml(sourceTypeLabel(state.sourceType)) + '</div>');
     parts.push('</div>');
-    if (state.imageUrl) {
-      parts.push('<div class="source-image-wrap"><img class="source-image" src="' + escapeHtml(state.imageUrl) + '" alt="' + escapeHtml(state.sourceTitle || 'Primary source image') + '" onerror="this.style.display=\'none\'"></div>');
+    var imgSrc = state.imageDataUrl || state.imageUrl;
+    if (imgSrc) {
+      parts.push('<div class="source-image-wrap"><img class="source-image" src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(state.sourceTitle || 'Primary source image') + '" onerror="this.style.display=\'none\'"></div>');
     }
     if (state.sourceDescription) {
       parts.push('<div class="source-desc"><span class="meta-k">Description:</span> ' + nlToBr(state.sourceDescription) + '</div>');
@@ -578,13 +616,15 @@
 
   function stepBlockHtml(step, mode) {
     var qHtml = step.questions.map(function (q) { return '<p class="step-q">' + escapeHtml(q) + '</p>'; }).join('');
+    var customQ = (state.customQuestions && state.customQuestions[step.key]) || '';
+    if (customQ) qHtml += '<p class="step-q">' + escapeHtml(customQ) + '</p>';
     var bodyHtml;
     if (mode === 'key') {
       var noteText = (state.notes && state.notes[step.key]) || '';
       bodyHtml = '<div class="step-answer key' + (noteText ? '' : ' empty') + '">' +
         (noteText ? nlToBr(noteText) : 'No teacher notes added for this step yet.') + '</div>';
     } else {
-      bodyHtml = '<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', 4) + '</div>';
+      bodyHtml = '<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', answerLineCount()) + '</div>';
     }
     return (
       '<div class="step-block">' +
@@ -629,6 +669,14 @@
     els.sourceDescription.value = state.sourceDescription || '';
     els.sourceText.value = state.sourceText || '';
     els.imageUrl.value = state.imageUrl || '';
+    els.imageFile.value = '';
+    if (state.imageDataUrl) {
+      els.imageFilePreview.src = state.imageDataUrl;
+      els.imageFilePreviewWrap.style.display = '';
+    } else {
+      els.imageFilePreviewWrap.style.display = 'none';
+    }
+    els.answerLines.value = state.answerLines || 4;
     renderFrameworkPicker();
     renderNotesEditor();
   }
@@ -653,7 +701,10 @@
     state = loaded;
     if (!state.framework) state.framework = 'optic';
     if (!state.notes) state.notes = {};
+    if (!state.customQuestions) state.customQuestions = {};
     if (!state.sourceType) state.sourceType = 'photo';
+    if (!state.imageDataUrl) state.imageDataUrl = '';
+    if (!state.answerLines) state.answerLines = 4;
     Store.setCurrentName(name);
     renderAll();
   }
@@ -671,6 +722,31 @@
   bindTextField('imageUrl', 'imageUrl');
   els.sourceType.addEventListener('change', function () {
     state.sourceType = els.sourceType.value;
+    renderPreview();
+  });
+
+  els.answerLines.addEventListener('input', function () {
+    state.answerLines = els.answerLines.value;
+    renderPreview();
+  });
+
+  els.imageFile.addEventListener('change', function () {
+    var file = els.imageFile.files && els.imageFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      state.imageDataUrl = reader.result;
+      els.imageFilePreview.src = state.imageDataUrl;
+      els.imageFilePreviewWrap.style.display = '';
+      renderPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  els.clearImageFileBtn.addEventListener('click', function () {
+    state.imageDataUrl = '';
+    els.imageFile.value = '';
+    els.imageFilePreviewWrap.style.display = 'none';
     renderPreview();
   });
 
@@ -700,6 +776,58 @@
     var remaining = Store.list();
     if (remaining.length) loadSheetByName(remaining[0]);
     else newSheet('New Worksheet');
+  });
+
+  /* ---------- share a worksheet (export / import) ---------- */
+  function isPlausibleWorksheet(obj) {
+    return !!obj && typeof obj === 'object' &&
+      typeof obj.name === 'string' &&
+      (obj.framework === 'optic' || obj.framework === 'soapstone') &&
+      typeof obj.notes === 'object';
+  }
+
+  function exportSheet() {
+    save();
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (state.name || 'worksheet').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importSheetFromFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try { parsed = JSON.parse(reader.result); } catch (e) { parsed = null; }
+      if (!isPlausibleWorksheet(parsed)) {
+        alert('That file doesn\'t look like a worksheet exported from this tool.');
+      } else {
+        var name = parsed.name;
+        var existing = Store.list();
+        while (existing.indexOf(name) !== -1) name = name + ' (imported)';
+        parsed.name = name;
+        Store.save(name, parsed);
+        loadSheetByName(name);
+      }
+      els.importSheetFile.value = '';
+    };
+    reader.onerror = function () {
+      alert('Could not read that file.');
+      els.importSheetFile.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  els.exportSheetBtn.addEventListener('click', exportSheet);
+  els.importSheetBtn.addEventListener('click', function () { els.importSheetFile.click(); });
+  els.importSheetFile.addEventListener('change', function () {
+    var file = els.importSheetFile.files && els.importSheetFile.files[0];
+    if (file) importSheetFromFile(file);
   });
 
   Array.prototype.slice.call(document.querySelectorAll('.view-tab')).forEach(function (tab) {
