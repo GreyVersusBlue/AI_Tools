@@ -94,6 +94,17 @@
   .history li { margin-bottom: .35rem; }
   .history .h-tag { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-2); margin-right: .4rem; }
 
+  /* ── My Prompts bank ─────────────────────────────────────────────── */
+  .bank-add-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .7rem; }
+  .bank-add-row input[type="text"] { flex: 1; min-width: 14rem; }
+  .bank-list { list-style: none; margin: 0; padding: 0; }
+  .bank-list li { display: flex; justify-content: space-between; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .bank-list li:last-child { border-bottom: none; }
+  .bank-item-text { flex: 1; }
+  .bank-remove-btn { background: transparent; color: var(--err); border: none; font-weight: 700; cursor: pointer; padding: 0 .3rem; font-size: 1.1rem; line-height: 1; }
+  .bank-remove-btn:hover { color: #7a241c; }
+  .bank-empty { color: var(--muted); font-size: .85rem; margin: 0; }
+
   /* ── Printable handout tab ───────────────────────────────────────── */
   .handout-prompt-display {
     font-size: 1.05rem; font-weight: 700; background: #eaf1f6; border: 1px solid #c9dce6;
@@ -172,6 +183,7 @@
         <label for="categorySelect" style="margin-bottom:.2rem;">Category</label>
         <select id="categorySelect"></select>
       </div>
+      <label class="check-inline" for="includeMineCheck"><input type="checkbox" id="includeMineCheck"> Also include My Prompts</label>
       <button type="button" id="shuffleBtn">&#128256; Shuffle / Next Prompt</button>
     </div>
 
@@ -184,6 +196,17 @@
       <label for="customPrompt">Or write your own prompt</label>
       <textarea id="customPrompt" rows="2" placeholder="Type a custom prompt, then click &ldquo;Use This Prompt.&rdquo;"></textarea>
       <button type="button" class="secondary" id="useCustomBtn">Use This Prompt</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>My Prompts</span></div>
+      <label for="newBankPrompt">Save a class-specific prompt to reuse anytime</label>
+      <div class="bank-add-row">
+        <input type="text" id="newBankPrompt" placeholder="e.g. What's one thing from today's lab you'd redo?">
+        <button type="button" class="secondary" id="addBankBtn">Add</button>
+      </div>
+      <div id="bankList"></div>
+      <p class="hint">Saved prompts stay on this device across visits. Check &ldquo;Also include My Prompts&rdquo; above, or pick &ldquo;My Prompts (only)&rdquo; from the category list, to draw from them.</p>
     </div>
 
     <div class="history">
@@ -240,12 +263,14 @@
   'use strict';
 
   var STORAGE_KEY = 'gvb-exit-ticket:settings';
+  var CUSTOM_BANK_KEY = 'gvb-exit-ticket:customPrompts';
   var HISTORY_LIMIT = 10;
   var AVOID_REPEAT_WINDOW = 8;
+  var MINE_KEY = 'mine';
 
   var els = {};
-  ['categorySelect', 'shuffleBtn', 'stage', 'promptText', 'metaRow',
-   'customPrompt', 'useCustomBtn', 'historyList',
+  ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow',
+   'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -369,9 +394,10 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
+  var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
 
   // ── Persistence ──────────────────────────────────────────────────────────
   function loadSettings() {
@@ -389,11 +415,26 @@
   function applySavedSettings() {
     var saved = loadSettings();
     if (!saved) return;
-    var validCats = ['all'].concat(CATEGORIES.map(function (c) { return c.key; }));
+    var validCats = ['all', MINE_KEY].concat(CATEGORIES.map(function (c) { return c.key; }));
     if (validCats.indexOf(saved.category) !== -1) settings.category = saved.category;
     if (saved.perPage === 2 || saved.perPage === 4) settings.perPage = saved.perPage;
     if (typeof saved.showName === 'boolean') settings.showName = saved.showName;
     if (typeof saved.showDate === 'boolean') settings.showDate = saved.showDate;
+    if (typeof saved.includeMine === 'boolean') settings.includeMine = saved.includeMine;
+  }
+
+  function loadCustomBank() {
+    try {
+      var raw = localStorage.getItem(CUSTOM_BANK_KEY);
+      if (!raw) return [];
+      var v = JSON.parse(raw);
+      if (!Array.isArray(v)) return [];
+      return v.filter(function (p) { return p && typeof p.text === 'string' && p.id != null; });
+    } catch (e) { return []; }
+  }
+  function saveCustomBank() {
+    try { localStorage.setItem(CUSTOM_BANK_KEY, JSON.stringify(customBank)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -404,6 +445,7 @@
   }
   function categoryLabel(key) {
     if (key === 'custom') return 'Custom';
+    if (key === MINE_KEY) return 'My Prompts';
     var c = CATEGORIES.filter(function (x) { return x.key === key; })[0];
     return c ? c.label : key;
   }
@@ -423,12 +465,23 @@
       opt.value = c.key; opt.textContent = c.label;
       els.categorySelect.appendChild(opt);
     });
+    var mineOpt = document.createElement('option');
+    mineOpt.value = MINE_KEY; mineOpt.textContent = 'My Prompts (only)';
+    els.categorySelect.appendChild(mineOpt);
     els.categorySelect.value = settings.category;
   }
 
+  function customBankAsPromptItems() {
+    return customBank.map(function (p) { return { cat: MINE_KEY, text: p.text }; });
+  }
+
   function pool() {
-    if (settings.category === 'all') return PROMPTS;
-    return PROMPTS.filter(function (p) { return p.cat === settings.category; });
+    if (settings.category === MINE_KEY) return customBankAsPromptItems();
+    var base = settings.category === 'all'
+      ? PROMPTS.slice()
+      : PROMPTS.filter(function (p) { return p.cat === settings.category; });
+    if (settings.includeMine && customBank.length) base = base.concat(customBankAsPromptItems());
+    return base;
   }
 
   // ── Prompt & Display ─────────────────────────────────────────────────────
@@ -494,8 +547,47 @@
     saveSettings();
     pickPrompt();
   });
+  els.includeMineCheck.addEventListener('change', function () {
+    settings.includeMine = els.includeMineCheck.checked;
+    saveSettings();
+    pickPrompt();
+  });
   els.shuffleBtn.addEventListener('click', pickPrompt);
   els.useCustomBtn.addEventListener('click', useCustomPrompt);
+
+  // ── My Prompts bank ──────────────────────────────────────────────────────
+  function addBankPrompt() {
+    var val = els.newBankPrompt.value.trim();
+    if (!val) return;
+    customBank.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), text: val });
+    saveCustomBank();
+    els.newBankPrompt.value = '';
+    renderBankList();
+  }
+  function removeBankPrompt(id) {
+    customBank = customBank.filter(function (p) { return p.id !== id; });
+    saveCustomBank();
+    renderBankList();
+  }
+  function renderBankList() {
+    if (!customBank.length) {
+      els.bankList.innerHTML = '<p class="bank-empty">No saved prompts yet &mdash; add one above.</p>';
+      return;
+    }
+    els.bankList.innerHTML = '<ul class="bank-list">' + customBank.map(function (p) {
+      return '<li><span class="bank-item-text">' + escapeHtml(p.text) + '</span>' +
+        '<button type="button" class="bank-remove-btn" data-id="' + escapeHtml(p.id) + '" title="Remove this prompt" aria-label="Remove this prompt">&times;</button></li>';
+    }).join('') + '</ul>';
+  }
+  els.addBankBtn.addEventListener('click', addBankPrompt);
+  els.newBankPrompt.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addBankPrompt(); }
+  });
+  els.bankList.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.bank-remove-btn') : null;
+    if (!btn) return;
+    removeBankPrompt(btn.getAttribute('data-id'));
+  });
 
   // ── Printable handout ─────────────────────────────────────────────────────
   function renderHandoutPromptDisplay() {
@@ -576,9 +668,12 @@
   els.gotoBankBtn.addEventListener('click', function () { switchTab('bank'); });
 
   // ── Boot ─────────────────────────────────────────────────────────────────
+  customBank = loadCustomBank();
+  renderBankList();
   buildCategorySelect();
   applySavedSettings();
   els.categorySelect.value = settings.category;
+  els.includeMineCheck.checked = settings.includeMine;
   els.perPageSelect.value = String(settings.perPage);
   els.showNameCheck.checked = settings.showName;
   els.showDateCheck.checked = settings.showDate;

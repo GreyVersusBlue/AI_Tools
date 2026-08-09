@@ -240,6 +240,7 @@
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print QR Codes</button>
           <button class="secondary" id="printRefBtn" disabled type="button">Print Reference Sheet</button>
+          <button class="secondary" id="copyLinksBtn" disabled type="button">Copy all links</button>
         </div>
         <div class="hint">The reference sheet is just your own lookup list (name &rarr; link) &mdash; there's nothing secret on it, unlike an answer key, so it's fine to keep with the QR pages if that's handy.</div>
       </div>
@@ -285,7 +286,7 @@
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'entriesBody', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
    'rosterHubSelect', 'rosterHubLoadBtn',
-   'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn',
+   'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn', 'copyLinksBtn',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
    'refSheetTitle', 'previewNote', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
@@ -535,6 +536,7 @@
       els.cardsPreview.innerHTML = '<p class="empty-hint">Add at least one entry with a link or text to see a preview.</p>';
       els.printCodesBtn.disabled = true;
       els.printRefBtn.disabled = true;
+      els.copyLinksBtn.disabled = true;
       els.previewNote.textContent = 'Live preview.';
       return;
     }
@@ -563,6 +565,7 @@
     els.previewNote.textContent = valid.length + ' QR code' + (valid.length === 1 ? '' : 's') + ' ready.';
     els.printCodesBtn.disabled = false;
     els.printRefBtn.disabled = false;
+    els.copyLinksBtn.disabled = false;
   }
 
   function renderRefPreview(valid) {
@@ -615,6 +618,38 @@
     buildPrintRef();
     printSection(els.printRefArea);
   });
+
+  els.copyLinksBtn.addEventListener('click', function () {
+    var valid = validEntries();
+    if (!valid.length) return;
+    var text = valid.map(function (e) { return e.name + ': ' + e.content; }).join('\n');
+    copyToClipboard(text, els.copyLinksBtn);
+  });
+
+  // ── Clipboard copy, with a document.execCommand fallback for browsers/ ──
+  //    contexts where the async Clipboard API isn't available ─────────────
+  function copyToClipboard(text, btn) {
+    var original = btn.textContent;
+    function flashCopied() {
+      btn.textContent = 'Copied!';
+      setTimeout(function () { btn.textContent = original; }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(flashCopied).catch(function () { fallbackCopy(text, flashCopied); });
+    } else {
+      fallbackCopy(text, flashCopied);
+    }
+  }
+  function fallbackCopy(text, cb) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); if (cb) cb(); } catch (e) { /* clipboard unavailable — nothing more we can do */ }
+    document.body.removeChild(ta);
+  }
 
   [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
     el.addEventListener('change', function () { save(); scheduleRender(); });

@@ -76,6 +76,10 @@
   .check-row .answer { color: var(--accent-2); font-style: italic; margin-left: auto; }
   .check-row .answer.hidden { visibility: hidden; }
 
+  /* ---- shuffle toggle ---- */
+  .check-toggle { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .85rem; margin: 0 0 .8rem; cursor: pointer; }
+  .check-toggle input { width: auto; margin: 0; }
+
   /* ---- person labels editor ---- */
   .person-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .4rem; }
   .person-row input { margin-bottom: 0; }
@@ -164,6 +168,7 @@
           <label for="vocabInput">Words (one per line, "word: translation")</label>
           <p class="hint">Example: la mesa: the table &mdash; any language, this doesn&rsquo;t auto-translate anything.</p>
           <textarea id="vocabInput" placeholder="la mesa: the table&#10;el libro: the book"></textarea>
+          <label class="check-toggle"><input type="checkbox" id="vocabShuffle"> Shuffle order when printing</label>
         </div>
       </div>
 
@@ -180,6 +185,7 @@
           <div id="conjList"></div>
           <p class="hint" id="emptyConjHint" style="display:none;">No verbs yet &mdash; add one below.</p>
           <button type="button" class="secondary full" id="addConjBtn">+ Add verb / tense</button>
+          <label class="check-toggle" style="margin-top:.6rem;"><input type="checkbox" id="conjShuffle"> Shuffle verb order when printing</label>
         </div>
       </div>
 
@@ -234,7 +240,7 @@
   var els = {};
   ['toolbar','setSwitch','newSetBtn','deleteSetBtn','setName',
    'vocabEditor','conjugationEditor','vocabInput',
-   'personsList','addPersonBtn','conjList','emptyConjHint','addConjBtn',
+   'personsList','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
    'printBtn','previewArea','previewNote','sheetNav'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -254,6 +260,15 @@
     });
   }
   function nextId() { return 'c' + (idCounter++); }
+
+  function shuffleCopy(arr) {
+    var copy = arr.slice();
+    for (var i = copy.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
+    }
+    return copy;
+  }
 
   function parseVocab(text) {
     var out = [];
@@ -416,12 +431,13 @@
     '</div>';
   }
 
-  function conjugationPages(filled) {
-    if (!state.conjugations.length) return [];
+  function conjugationPages(filled, list) {
+    var conjList = list || state.conjugations;
+    if (!conjList.length) return [];
     var perPage = 4;
     var pages = [];
-    for (var i = 0; i < state.conjugations.length; i += perPage) {
-      pages.push(state.conjugations.slice(i, i + perPage));
+    for (var i = 0; i < conjList.length; i += perPage) {
+      pages.push(conjList.slice(i, i + perPage));
     }
     return pages.map(function (group) {
       return '<div class="page">' +
@@ -490,6 +506,8 @@
     els.toolbar.style.display = '';
     els.setName.value = state.name;
     els.vocabInput.value = state.vocabText;
+    els.vocabShuffle.checked = !!state.shuffleVocab;
+    els.conjShuffle.checked = !!state.shuffleConjugation;
     switchModeUI();
     renderConjugationEditor();
     checkRevealed = {};
@@ -499,7 +517,8 @@
 
   /* ---------- lifecycle ---------- */
   function newSet(name) {
-    state = { name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [] };
+    state = { name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [],
+      shuffleVocab: false, shuffleConjugation: false };
     Store.save(name, state);
     renderAll();
   }
@@ -511,6 +530,8 @@
     if (!state.persons || !state.persons.length) state.persons = DEFAULT_PERSONS.slice();
     if (!state.conjugations) state.conjugations = [];
     if (!state.mode) state.mode = 'vocab';
+    if (typeof state.shuffleVocab !== 'boolean') state.shuffleVocab = false;
+    if (typeof state.shuffleConjugation !== 'boolean') state.shuffleConjugation = false;
     renderAll();
   }
 
@@ -536,6 +557,16 @@
       currentPage = 0;
       renderPreview();
     });
+  });
+
+  els.vocabShuffle.addEventListener('change', function () {
+    state.shuffleVocab = els.vocabShuffle.checked;
+    save();
+  });
+
+  els.conjShuffle.addEventListener('change', function () {
+    state.shuffleConjugation = els.conjShuffle.checked;
+    save();
   });
 
   els.addPersonBtn.addEventListener('click', function () {
@@ -571,9 +602,11 @@
     var html;
     if (state.mode === 'vocab') {
       var items = parseVocab(state.vocabText);
+      if (state.shuffleVocab) items = shuffleCopy(items);
       html = vocabDrillPages(items, false) + vocabDrillPages(items, true);
     } else {
-      html = conjugationPages(false).join('') + conjugationPages(true).join('');
+      var conjList = state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations;
+      html = conjugationPages(false, conjList).join('') + conjugationPages(true, conjList).join('');
     }
     document.getElementById('printArea').innerHTML = html;
     window.print();

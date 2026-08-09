@@ -91,6 +91,8 @@
   .timeline-line { position: absolute; top: 50%; left: 0; height: 0; border-top: 3px solid var(--accent); transform: translateY(-50%); }
   .timeline-line.dashed { border-top-style: dashed; }
   .timeline-line.dotted { border-top-style: dotted; }
+  .grid-line { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--line); }
+  .grid-label { position: absolute; top: calc(50% + .3rem); transform: translateX(-50%); font-size: .68rem; color: var(--muted); white-space: nowrap; }
   .marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--accent); transform: translate(-50%, -50%); }
   .marker-bar { position: absolute; top: 50%; height: 6px; background: var(--accent-2); opacity: .55; transform: translateY(-50%); border-radius: 3px; }
   .event-label { position: absolute; width: 9rem; text-align: center; font-size: .78rem; transform: translateX(-50%); }
@@ -387,6 +389,20 @@
     var positioned = state.compactLabels ? TimelineLayout.assignLabelSides(layout.positioned, 100) : layout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
 
     canvas.style.width = layout.totalWidth + 'px';
+
+    var gridlines = TimelineLayout.computeGridlines(layout.minYear, layout.maxYear, pxPerYear, 70);
+    gridlines.forEach(function (g) {
+      var gridLine = document.createElement('div');
+      gridLine.className = 'grid-line';
+      gridLine.style.left = g.x + 'px';
+      canvas.appendChild(gridLine);
+
+      var gridLabel = document.createElement('div');
+      gridLabel.className = 'grid-label';
+      gridLabel.style.left = g.x + 'px';
+      gridLabel.textContent = g.label;
+      canvas.appendChild(gridLabel);
+    });
 
     var lineEl = document.createElement('div');
     lineEl.className = 'timeline-line ' + (state.lineStyle !== 'solid' ? state.lineStyle : '');

@@ -60,10 +60,14 @@
   .stations-table th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 0 0.4rem 0.4rem; }
   .stations-table td { padding: 0.3rem 0.3rem; vertical-align: top; }
   .stations-table td.num-cell { color: var(--text-dim); font-family: var(--mono); font-size: 0.8rem; text-align: center; padding-top: 0.65rem; width: 1.8rem; }
-  .stations-table td.remove-cell { width: 2rem; text-align: center; }
+  .stations-table td.actions-cell { width: 5.4rem; text-align: center; }
   .stations-table input { font-size: 0.82rem; padding: 0.45rem 0.6rem; }
-  .remove-row-btn { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 1.8rem; height: 1.8rem; border-radius: 4px; font-size: 0.85rem; padding: 0; }
+  .row-actions { display: flex; gap: 0.25rem; justify-content: center; }
+  .remove-row-btn, .move-row-btn { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 1.6rem; height: 1.6rem; border-radius: 4px; font-size: 0.75rem; padding: 0; }
+  .remove-row-btn { width: 1.8rem; height: 1.8rem; font-size: 0.85rem; }
   .remove-row-btn:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .move-row-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+  .move-row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   button { cursor: pointer; font-family: inherit; font-size: 0.875rem; font-weight: 600; border-radius: 8px; padding: 0.6rem 1.1rem; border: none; transition: opacity 0.15s, transform 0.1s; }
   button:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
@@ -170,6 +174,7 @@
           <button class="btn-primary" id="import-btn" type="button">Add These Stations</button>
         </div>
       </div>
+      <div class="hint">A QR content value that looks like a bare web address (like "example.com/clue") gets "https://" added automatically. Anything that doesn't look like a link is encoded as plain text as-is.</div>
     </div>
 
     <div class="card">
@@ -276,7 +281,11 @@
         '<td><input type="text" class="f-label" value="' + escapeAttr(s.label) + '" placeholder="Station ' + (i + 1) + '"></td>' +
         '<td><input type="text" class="f-content" value="' + escapeAttr(s.content) + '" placeholder="https://... or clue text"></td>' +
         '<td><input type="text" class="f-note" value="' + escapeAttr(s.note) + '" placeholder="For your eyes only"></td>' +
-        '<td class="remove-cell"><button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button></td>' +
+        '<td class="actions-cell"><div class="row-actions">' +
+          '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
+          '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
+          '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button>' +
+        '</div></td>' +
         '</tr>';
     }).join('');
   }
@@ -293,13 +302,26 @@
   });
 
   els.stationsBody.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-remove]');
-    if (!btn) return;
-    stations.splice(parseInt(btn.dataset.remove, 10), 1);
-    ensureAtLeastOneRow();
-    renderRows();
-    saveSettings();
-    scheduleRender();
+    var moveBtn = e.target.closest('[data-move]');
+    var removeBtn = e.target.closest('[data-remove]');
+    if (moveBtn) {
+      var tr = moveBtn.closest('tr');
+      var i = parseInt(tr.dataset.idx, 10);
+      var j = i + parseInt(moveBtn.dataset.move, 10);
+      if (j < 0 || j >= stations.length) return;
+      var tmp = stations[i];
+      stations[i] = stations[j];
+      stations[j] = tmp;
+      renderRows();
+      saveSettings();
+      scheduleRender();
+    } else if (removeBtn) {
+      stations.splice(parseInt(removeBtn.dataset.remove, 10), 1);
+      ensureAtLeastOneRow();
+      renderRows();
+      saveSettings();
+      scheduleRender();
+    }
   });
 
   els.addRowBtn.addEventListener('click', function () {
@@ -359,9 +381,26 @@
     }
   }
 
+  // ── Content normalization ────────────────────────────────────────────────
+  // A URL-looking value missing its scheme gets "https://" prepended; a
+  // scheme it already has (https:, mailto:, tel:, ...) is left alone; and
+  // anything that doesn't look like a link/address is encoded as literal
+  // text as-is, so this also works for plain clue text.
+  function looksLikeUrl(v) {
+    if (/\s/.test(v)) return false;
+    return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:[0-9]+)?([\/?#][^\s]*)?$/i.test(v);
+  }
+  function normalizeContent(raw) {
+    var v = (raw || '').trim();
+    if (!v) return '';
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v)) return v; // already has a scheme (https:, mailto:, tel:, ...)
+    if (looksLikeUrl(v)) return 'https://' + v;
+    return v; // plain text — encoded as typed
+  }
+
   function validStations() {
     return stations
-      .map(function (s, i) { return { idx: i, label: (s.label || '').trim() || ('Station ' + (i + 1)), content: (s.content || '').trim(), note: (s.note || '').trim() }; })
+      .map(function (s, i) { return { idx: i, label: (s.label || '').trim() || ('Station ' + (i + 1)), content: normalizeContent(s.content), note: (s.note || '').trim() }; })
       .filter(function (s) { return s.content.length > 0; });
   }
 

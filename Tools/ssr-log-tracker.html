@@ -198,7 +198,10 @@
   <div class="card">
     <div class="log-header">
       <div class="card-title" style="margin:0;">Class summary</div>
-      <button type="button" class="secondary small" id="printSummaryBtn">Print class summary</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button type="button" class="secondary small" id="exportCsvBtn">Export CSV</button>
+        <button type="button" class="secondary small" id="printSummaryBtn">Print class summary</button>
+      </div>
     </div>
     <div class="summary-filter" style="margin-bottom:.9rem;">
       <label>From <input type="date" id="filterFrom"></label>
@@ -247,7 +250,7 @@
     'addEntryBtn', 'cancelEditBtn',
     'logTable', 'logTableBody', 'noEntriesHint', 'noStudentCard',
     'printSummaryBtn', 'filterFrom', 'filterTo', 'clearFilterBtn',
-    'summaryTable', 'summaryTableBody', 'noSummaryHint',
+    'summaryTable', 'summaryTableBody', 'noSummaryHint', 'exportCsvBtn',
     'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -674,6 +677,51 @@
     els.filterTo.value = '';
     renderSummaryTable();
   });
+
+  /* ---------- CSV export ---------- */
+  // Standard CSV escaping: wrap a field in quotes (doubling any internal
+  // quotes) whenever it contains a comma, quote, or newline.
+  function csvField(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function slugify(name) {
+    return String(name || '').trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'class';
+  }
+
+  function exportCsv() {
+    if (!state) return;
+    var header = ['Student', 'Date', 'Book', 'Pages Read To', 'Minutes', 'Pages This Session'];
+    var rows = [];
+    state.roster.forEach(function (name) {
+      var filtered = studentEntries(name).filter(function (e) { return inRange(e.date); });
+      var asc = sortedAscending(filtered);
+      var sessionById = withSessionPages(filtered);
+      asc.forEach(function (e) {
+        rows.push([
+          name, e.date, e.book, e.pagesTo,
+          (e.minutes != null && e.minutes !== '' ? e.minutes : ''),
+          sessionById[e.id] || 0
+        ]);
+      });
+    });
+    var csv = [header].concat(rows).map(function (r) {
+      return r.map(csvField).join(',');
+    }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = slugify(state.name) + '-reading-log-' + todayStr() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+  }
+
+  els.exportCsvBtn.addEventListener('click', exportCsv);
 
   /* ---------- printing ---------- */
   function printStudentLog() {

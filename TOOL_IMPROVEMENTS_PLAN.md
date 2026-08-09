@@ -74,10 +74,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A projector-friendly timer with five modes (countdown, transition, random-interval surprise, stopwatch with laps, round-robin stations), configurable alert sounds, a WebRTC/QR-based "mirror to a device" feature that pushes the live display to a second screen, named/saved custom countdown-duration presets, a running/paused timer that survives a page reload or tab-close, and a one-click fullscreen toggle (button or `F` key) so it fills the whole projector screen without browser chrome.
 
 ### Command Center (`Tools/command-center-dashboard.html`)
-**Current state:** A single projector-friendly page combining a basic countdown timer, a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), and a no-repeats random-caller against a saved Name Picker roster.
+**Current state:** A single projector-friendly page combining a basic countdown timer, a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), and a no-repeats random-caller against a saved Name Picker roster, with a per-student "exclude for today" toggle (session/day-scoped, never touching the saved roster) for skipping an absent student.
 **Suggested improvements:**
 - The timer here is a stripped-down duplicate of Classroom Timer's countdown mode with no visual progress ring and only one beep sound; giving it feature parity (or at least a sound-choice control) would make this a real replacement for the standalone tool on one page.
-- Add a manual "exclude for today" toggle per roster student (e.g. skip a student who is absent) — right now the "no repeats" picker can only draw from the full saved roster, with no way to exclude someone for the day without editing the source roster in Class Roster Hub.
 - Surface a link/section for the current Hall Pass Log "currently out" count on this same dashboard, since a teacher running the room from here would otherwise need to switch tabs to see who's out of the room.
 
 ### Field Trip Permission Slip Generator (`Tools/field-trip-permission-slip.html`)
@@ -100,10 +99,9 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A tolerant score-paste parser feeds class-wide stats (mean/median/mode/stdev/Q1/Q3/IQR), an outlier callout for scores more than 2 standard deviations from the mean, an editable-cutoff letter-grade breakdown with a stacked bar, a bucketed histogram, a side-by-side comparison view against another saved assignment, with multiple named assignments saved to localStorage, a print view, and PNG/SVG download of both charts.
 
 ### Data Table → Chart Builder (`Tools/data-chart-builder.html`)
-**Current state:** Paste-a-table tool that auto-detects numeric columns, builds hand-drawn SVG bar/line/pie/scatter charts with summary stats, and downloads PNG/SVG — only UI preferences persist to localStorage, not the pasted data itself.
+**Current state:** Paste-a-table tool that auto-detects numeric columns, builds hand-drawn SVG bar/line/pie/scatter charts with summary stats, and downloads PNG/SVG, with drag-and-drop or file-picker `.csv`/`.tsv` import as an alternative to pasting — only UI preferences persist to localStorage, not the pasted data itself.
 **Suggested improvements:**
 - Let a dataset be saved with a name to localStorage (like the Grade Distribution Visualizer's assignment list) so a student can return to a chart without re-pasting the table.
-- Support a file input (drag a `.csv` onto the textarea) as an alternative to copy-paste, since some lab data comes from an exported file rather than a spreadsheet selection.
 
 ### Rubric Builder (`Tools/rubric-builder.html`)
 **Current state:** Template-or-scratch rubric builder with fully editable performance levels, criteria (each with an optional point-weight multiplier), a live one-page landscape print preview, multiple named rubrics in localStorage, a working URL-based share link via `_shared/state-link.js`, JSON export/import of a single rubric, and a "Duplicate" action.
@@ -123,16 +121,14 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Client-side OOXML merger (via JSZip + raw XML manipulation) that combines up to 80+ `.docx` files in a drag-reorderable list, with optional page breaks, filename headings, and an optional auto-generated table-of-contents page built from those headings (a Word field the teacher updates with F9 after opening, since there's no in-browser page-layout engine to pre-fill numbers) — choices persisted to localStorage — plus a running total-pages estimate (read from each file's own saved `docProps/app.xml` page count) shown before merging, and per-file error skipping.
 
 ### Certificate & Award Maker (`Tools/certificate-award-maker.html`)
-**Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview, and browser print-to-PDF, with the last-used settings saved to localStorage.
+**Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview (with a batch thumbnail grid view alongside the one-at-a-time preview), and browser print-to-PDF, with the last-used settings saved to localStorage.
 **Suggested improvements:**
-- Add a batch thumbnail grid so a teacher can eyeball all the certificates before printing, instead of the preview only ever showing "certificate 1 of N."
 - Support an optional small logo/image upload (stored as a data URL) to place on the certificate, for a school crest or class mascot.
 - Save multiple named presets (theme + border + signature combos) the way Rubric Builder and Formula Sheet Builder save multiple named documents, since today there's only one persisted settings object.
 
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
-**Current state:** Three modes (graph paper, number line, coordinate plane) rendered as true-to-scale SVG with fine control over grid size/exact row-column counts/intervals/labels, settings saved to localStorage, and print-at-100%-scale output.
+**Current state:** Three modes (graph paper, number line, coordinate plane) rendered as true-to-scale SVG with fine control over grid size/exact row-column counts/intervals/labels, settings saved to localStorage, print-at-100%-scale output, and a "Download PNG" button next to Print for posting a sheet directly to Google Classroom/Schoology.
 **Suggested improvements:**
-- Add a "download as PNG/PDF" option next to Print, so the sheet can be posted to Google Classroom/Schoology directly rather than only printed.
 - Let number-line "copies on one page" use independent min/max/interval per copy (e.g., three different-range number lines stacked for a differentiated worksheet) instead of identical copies.
 - Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
 
@@ -196,18 +192,15 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Generates a single QR code from typed text/a link — or a quick-fill template for a Wi-Fi network, vCard contact, phone number, or email — with adjustable size, colors, error-correction level, an optional center logo or short-text overlay, a "recently generated" list of the last 10 codes, and a live camera-based test scan (via `_shared/qr-scan.js`) alongside the synthetic canvas decode check, before enabling PNG/SVG download or direct printing.
 
 ### QR Scavenger Hunt Builder (`Tools/qr-scavenger-hunt-builder.html`)
-**Current state:** Lets a teacher type or paste a list of stations (label, QR content, private answer-key note), then print a grid of station QR codes at a chosen density plus a separate answer key, with the current single hunt autosaved to localStorage.
+**Current state:** Lets a teacher type or paste a list of stations (label, QR content, private answer-key note), then print a grid of station QR codes at a chosen density plus a separate answer key, with the current single hunt autosaved to localStorage, move-up/move-down row reordering, and an auto-prepended `https://` on bare-looking links.
 **Suggested improvements:**
 - Support multiple named, saved hunts with a switcher (like Gallery Walk QR and Escape Room Builder already do) — right now there's only one flat autosave, so starting a new hunt overwrites the last one.
-- Add move-up/move-down reordering for stations — Escape Room Builder's station list has this, but here the only row actions are add/remove.
-- Auto-prepend `https://` to bare-looking links the way Gallery Walk QR does, since this tool currently encodes exactly what's typed and a missing scheme silently produces a dead link.
 - Add a plain CSV export of the station list (label/content/note) for a teacher's own records, separate from the printed answer key.
 
 ### Gallery Walk QR Codes (`Tools/gallery-walk-qr.html`)
-**Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import and URL normalization), and prints a QR grid plus a plain reference sheet.
+**Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import and URL normalization), and prints a QR grid, a plain reference sheet, or copies every entry's link to the clipboard as a list.
 **Suggested improvements:**
 - Flag duplicate links/text across entries (a common paste-mistake when copying the same folder link for two students) before printing.
-- Add a "copy all links" button that puts every entry's link on the clipboard as a list, handy for pasting into an LMS announcement alongside the printed codes.
 - Accept a dedicated `.csv` file-picker in addition to the existing paste box, to spare teachers a manual copy-paste from Excel/Sheets.
 
 ### Digital Escape Room / Puzzle Lock Builder (`Tools/escape-room-builder.html`)
@@ -219,9 +212,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Offer a "randomize starting station" toggle for physical rotations where multiple teams start at different stations simultaneously to avoid a bottleneck at Station 1.
 
 ### Silent Reading Log Tracker (`Tools/ssr-log-tracker.html`)
-**Current state:** Tracks per-class rosters and per-student reading log entries (date/book/pages-to/minutes), auto-computing pages-read-per-session, with a sortable, date-filterable class summary and printable per-student or class-summary reports.
+**Current state:** Tracks per-class rosters and per-student reading log entries (date/book/pages-to/minutes), auto-computing pages-read-per-session, with a sortable, date-filterable class summary, printable per-student or class-summary reports, and a CSV export of the (currently filtered) class log for gradebook import or archiving.
 **Suggested improvements:**
-- Add a plain CSV export of a class's log data for gradebook import or end-of-year archiving, since printing is currently the only way to get data out.
 - Add a "mark finished" flag per book so the class summary can show a running books-completed count per student, not just current book/total pages — a metric this data already supports but doesn't surface.
 - Add an optional weekly pages/minutes goal per class, shown as a simple progress indicator next to each student's summary row.
 - Add a lightweight "days logged this week" streak indicator per student to flag kids who've gone quiet, since the summary currently only totals pages/minutes, not entry frequency.
@@ -230,32 +222,28 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Tracks one or more editable required documents (e.g. "Lab Safety Contract" plus "Chemical Handling") with a separate signed/unsigned status per student per document (each with date and a shared optional note), showing a live "N of M fully signed" count with a per-document breakdown, a due-date urgency banner with a "download reminder" `.ics` calendar file, a "show missing only" list filter, a bulk "mark all as signed" action, and printable full/missing-only reports.
 
 ### Exit Ticket / Bell Ringer Generator (`Tools/exit-ticket-generator.html`)
-**Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display, a custom-prompt box, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips.
+**Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display, a custom-prompt box, a persistent "My Prompts" bank a teacher can build and blend into (or draw from exclusively) the rotation, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips.
 **Suggested improvements:**
-- Let a teacher build and save their own persistent prompt bank (beyond the one-off custom textarea, which isn't remembered), so recurring class-specific prompts don't need retyping each time.
 - Support printing a sheet where each slip carries a different prompt (e.g., one per table group) instead of the same prompt repeated to fill the page.
 - Add an optional small QR code on the printed slip linking to a digital response form, reusing the QR-generation approach already used elsewhere in this toolkit.
 - Add an optional think-time countdown on the projector stage before the prompt is revealed or before it's collected.
 
 ### Number Talks / Mental Math Routine Board (`Tools/number-talks-board.html`)
-**Current state:** Reveals a number string one expression at a time from a grade-banded prompt bank (or a custom prompt), with an ephemeral, session-only strategy-sharing board and session history that both disappear on reload.
+**Current state:** Reveals a number string one expression at a time from a grade-banded prompt bank (or a custom prompt), with an ephemeral, session-only strategy-sharing board and session history that both disappear on reload — a "Save this session" button exports the day's number talks plus strategy cards as a text file on demand, without changing that session-only design.
 **Suggested improvements:**
-- Add a "save this session" export (text or CSV download of the day's number talks plus any strategy cards) before the page reload wipes them, since the tool currently states this data is intentionally session-only with no way to keep a copy.
 - Let a teacher favorite/save their own custom number strings into a small persistent personal bank, rather than only pulling from the built-in category lists or a one-off custom entry that isn't remembered.
 - Add a print-friendly handout of the current number string for an absent student or as a written record.
 - Add a quiet, teacher-only "show the answer" hint (computed client-side from the known expressions) visible only on the control panel, not the projector stage.
 
 ### Timeline Builder (`Tools/timeline-builder.html`)
-**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style) with both a scrolling on-screen view, a separate paginated print layout, and JSON export/import of a timeline file.
+**Current state:** Builds a named, saved timeline of events (exact years, BCE via negative numbers, optional end-year ranges, optional photo, line style) with both a scrolling on-screen view (with auto-scaled decade/century/millennium gridlines and year labels for a sense of scale), a separate paginated print layout, and JSON export/import of a timeline file.
 **Suggested improvements:**
 - Add the parallel/comparison timeline track the tool's own UI already flags as unsupported, so two related timelines (e.g., a country's history vs. world history) can be viewed stacked against the same year axis.
 - Add background era/period shading bands (e.g., a colored band labeled "Renaissance" spanning a range of years) distinct from the existing single-event range bars, for showing overlapping historical periods.
-- Add fixed decade/century gridlines with labels on the on-screen scrolling view for a sense of scale, which the current auto-spaced layout doesn't provide.
 
 ### Blank Map Generator (`Tools/blank-map-generator.html`)
-**Current state:** A very mature tool already covering Wikimedia Commons map search/upload, pan/zoom, draggable labels/markers/shaded regions/lines with a full auto-generated and reorderable legend, compass rose, calibrated lat/long grid and scale bar, locator inset, batch coordinate placement, undo/redo, student-handout text-hiding mode, tiled poster printing, offline map caching, and multi-project management — so only modest, genuinely new additions are suggested here.
+**Current state:** A very mature tool already covering Wikimedia Commons map search/upload, pan/zoom, draggable labels/markers/shaded regions/lines with a full auto-generated and reorderable legend, compass rose, calibrated lat/long grid and scale bar, locator inset, batch coordinate placement, undo/redo, student-handout text-hiding mode, tiled poster printing, offline map caching, multi-project management, and project export/import as a downloadable JSON file (for handing a finished annotated map to another teacher or device) — so only modest, genuinely new additions are suggested here.
 **Suggested improvements:**
-- Add project export/import as a downloadable JSON file — projects currently live only in one browser's localStorage, so there's no way to hand a finished annotated map to another teacher or move it to a different device/computer.
 - Add a point-to-point distance-measuring tool (click two spots on a calibrated map to read the straight-line real-world distance) — distinct from the existing fixed-length reference scale bar, which shows a unit reference but not an actual measured distance between chosen points.
 - Add a "duplicate project" action to spin off a per-class or per-period variant from a finished map without hand-recreating every label, marker, and region from scratch.
 
@@ -264,37 +252,33 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Subject-Specific Content Generators
 
 ### Math Fact Drill Sheet Generator (`Tools/math-drill-generator.html`)
-**Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) with configurable problem count and column count, live worksheet/answer-key preview, and a combined print of both.
+**Current state:** Generates randomized addition/subtraction/multiplication/division/mixed fact sheets from five fixed templates (add/sub 1–12/1–20, mult/div 1–12) with configurable problem count and column count, live worksheet/answer-key preview, a combined print of both, and JSON export/import of the current settings (template, title, count, columns) so a colleague can be handed an identical sheet configuration.
 **Suggested improvements:**
 - Add per-template operand range controls (min/max inputs) instead of the hardcoded ranges in `mdg-templates.js` — a 3rd grader drilling addition to 5 and a 5th grader drilling to 100 currently get the same fixed 1–12 range.
 - Add a "generate a set of N distinct sheets" option that prints several different randomized versions back-to-back (e.g., Version A/B/C), useful for preventing copying during in-class timed drills.
 - Add an optional timed-fluency header (a blank "Start time / End time" or "Target: ___ seconds" line) since the sheet is explicitly framed as a drill tool but has no fluency-tracking element today.
-- Add JSON export/import of the current settings (template, title, count, columns) so a teacher can hand a colleague an identical sheet configuration without re-typing it.
 - Add fact-family-focused templates (e.g., "×6 facts only," "÷ by 7 only") as extra entries in `mdg-templates.js`, since the generator architecture already supports adding templates with no UI changes.
 
 ### Vocabulary Flashcard & Word Wall Generator (`Tools/vocab-flashcard-generator.html`)
-**Current state:** Turns a pasted "term: definition" list into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists.
+**Current state:** Turns a pasted "term: definition" list into printable double-sided flashcards (mirrored backs for duplex printing, configurable rows/columns) or word-wall cards (1/2/4 per page), with multiple named saved lists and a "Shuffle order" toggle so printed card order isn't always the exact textarea order.
 **Suggested improvements:**
 - Add tab-separated/CSV paste support in `parseWordList` (from `vfg-layout.js`) so teachers can paste directly from a Google Sheet or Excel column instead of manually typing `term: definition` on each line.
-- Add a "Shuffle order" toggle before pagination so printed card order isn't always the exact textarea order — useful for word-wall placement variety and for reducing predictability in flashcard drilling.
 - Add JSON export/import of a saved list so a list built by one teacher can be shared to another device/teacher without retyping (the tool already supports multiple named lists locally, just not portably).
 - Add an on-screen self-quiz/flip mode (click a card to reveal the definition) similar to the reveal-on-click pattern already used in `vocab-conjugation-drill.html`, since today preview is print-only, not usable directly with a student at a screen.
 - Add auto-shrinking font size for long definitions on fixed-size cards to prevent text overflow/clipping when a definition runs long relative to the card dimensions chosen.
 
 ### Vocab & Conjugation Drill Generator (`Tools/vocab-conjugation-drill.html`)
-**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets.
+**Current state:** Two modes in one tool — a vocabulary quiz drill (word:translation pairs with click-to-reveal self-check and printable worksheet+key) and a conjugation drill (editable person/subject rows shared across verbs, per-verb form grids, printable blank+key pages) — with multiple named saved drill sets and a per-mode shuffle-order toggle so printed vocab/conjugation order isn't always the exact entry order.
 **Suggested improvements:**
 - Add a "Listen" button per vocab word/verb form using the browser's built-in `speechSynthesis` API (no server or API key needed) with a language selector, since this is explicitly a "for any language" tool but currently has no pronunciation support at all.
-- Add a shuffle-order option for the printed vocab drill and conjugation cards so two students sitting together don't see identical item order (currently always prints in the exact entry order).
 - Add quick-start person-label presets (Spanish/French/German/Latin pronoun sets) as buttons above the person-row editor, since today every new set starts from the same Spanish default persons and must be manually retyped for other languages.
 - Add JSON export/import of a drill set so language teachers on the same team can share a built conjugation table instead of re-entering every verb form.
 - Add an option to print vocab and conjugation sections together in a single packet, since the two modes currently produce fully separate print outputs even when saved under the same set name.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
-**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, and a session-only "recently shown" history list.
+**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a session-only "recently shown" history list, and a fullscreen toggle (button or `F` key) for the projector "stage" display.
 **Suggested improvements:**
 - Persist the shown-prompt history to localStorage (with a date) instead of resetting on every reload, so a teacher can check what was assigned to a class earlier in the week without having kept the tab open.
-- Add a fullscreen toggle button (`element.requestFullscreen()`) for the projector "stage" display, since the tool is explicitly built for big-screen display but has no one-click fullscreen affordance today.
 - Add a "print this prompt" option that renders the current prompt as a single large poster-style page, for classrooms that post the daily prompt physically rather than only projecting it.
 - Allow teachers to add their own custom prompts into the rotation (stored in localStorage, blended into the random pool) instead of being limited strictly to the built-in 200.
 - Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.

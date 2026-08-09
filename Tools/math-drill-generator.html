@@ -126,6 +126,12 @@
         </div>
 
         <button type="button" id="printBtn">Print (both pages)</button>
+
+        <div class="row2">
+          <button type="button" class="secondary" id="exportSettingsBtn">Export settings</button>
+          <button type="button" class="secondary" id="importSettingsBtn">Import settings</button>
+        </div>
+        <input type="file" id="importSettingsFile" accept="application/json,.json" style="display:none;">
       </div>
     </div>
 
@@ -149,7 +155,8 @@
 
   var els = {};
   ['templateKey','sheetTitle','problemCount','columns','generateBtn',
-   'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote'
+   'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote',
+   'exportSettingsBtn','importSettingsBtn','importSettingsFile'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3 };
@@ -231,6 +238,54 @@
     document.getElementById('printArea').innerHTML = worksheetHtml() + answersHtml();
   }
 
+  /* ---------- settings export / import ---------- */
+  function isPlausibleSettings(obj) {
+    return !!obj && typeof obj === 'object' &&
+      typeof obj.templateKey === 'string' &&
+      (typeof obj.problemCount === 'number' || typeof obj.problemCount === 'string') &&
+      (typeof obj.columns === 'number' || typeof obj.columns === 'string');
+  }
+
+  function exportSettings() {
+    readFormIntoSettings();
+    var blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'math-drill-settings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function applyImportedSettings(obj) {
+    els.templateKey.value = MathDrillTemplates.byKey(obj.templateKey).key;
+    els.sheetTitle.value = typeof obj.sheetTitle === 'string' ? obj.sheetTitle : '';
+    els.problemCount.value = obj.problemCount;
+    els.columns.value = obj.columns;
+    generate();
+  }
+
+  function importSettingsFromFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try { parsed = JSON.parse(reader.result); } catch (e) { parsed = null; }
+      if (!isPlausibleSettings(parsed)) {
+        alert('That file doesn\'t look like a math drill settings file.');
+      } else {
+        applyImportedSettings(parsed);
+      }
+      els.importSettingsFile.value = '';
+    };
+    reader.onerror = function () {
+      alert('Could not read that file.');
+      els.importSettingsFile.value = '';
+    };
+    reader.readAsText(file);
+  }
+
   /* ---------- wiring ---------- */
   els.generateBtn.addEventListener('click', generate);
   els.templateKey.addEventListener('change', generate);
@@ -254,6 +309,13 @@
   els.printBtn.addEventListener('click', function () {
     buildPrintArea();
     window.print();
+  });
+
+  els.exportSettingsBtn.addEventListener('click', exportSettings);
+  els.importSettingsBtn.addEventListener('click', function () { els.importSettingsFile.click(); });
+  els.importSettingsFile.addEventListener('change', function () {
+    var file = els.importSettingsFile.files && els.importSettingsFile.files[0];
+    if (file) importSettingsFromFile(file);
   });
 
   /* ---------- boot ---------- */

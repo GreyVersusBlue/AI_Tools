@@ -75,6 +75,13 @@
   }
   .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
 
+  .view-toggle { display: flex; gap: .4rem; margin-bottom: .8rem; }
+  .view-tab {
+    padding: .35rem .8rem; border: 1px solid var(--line-strong);
+    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .78rem; color: var(--muted);
+  }
+  .view-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
     background: var(--accent); color: #fff; border: 1px solid var(--accent);
@@ -104,6 +111,21 @@
   .cert-reason { font-size: 1.05rem; max-width: 80%; margin: 0 auto 1.4rem; }
   .cert-footer { display: flex; justify-content: space-between; width: 100%; margin-top: auto; font-size: .85rem; }
   .cert-footer .line { border-top: 1px solid #99968c; padding-top: .3rem; min-width: 10rem; }
+
+  /* ---- batch grid (thumbnail) view ---- */
+  .thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .9rem; }
+  .thumb-inner {
+    position: relative; width: 100%; aspect-ratio: 1100 / 850; overflow: hidden;
+    background: #fff; border-radius: 4px; box-shadow: 0 1px 6px rgba(0,0,0,.22);
+  }
+  .thumb-inner .cert {
+    position: absolute; top: 0; left: 0; width: 1100px; max-width: none;
+    margin: 0; box-shadow: none; transform-origin: top left;
+  }
+  .thumb-label {
+    font-size: .72rem; color: var(--muted); text-align: center; margin: .35rem 0 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 
   /* theme skins */
   .theme-playful { color: #e0459b; font-family: "Trebuchet MS", "Segoe UI", sans-serif; background: linear-gradient(135deg, #fff8f0, #fff); }
@@ -199,6 +221,10 @@
     </div>
 
     <div class="preview-wrap">
+      <div class="view-toggle" id="viewToggle" style="display:none;">
+        <div class="view-tab active" data-view="single">Single view</div>
+        <div class="view-tab" data-view="grid">Grid view</div>
+      </div>
       <p class="preview-note" id="previewNote">Live preview &mdash; this is exactly what prints.</p>
       <div id="previewArea"></div>
     </div>
@@ -227,8 +253,12 @@
   var els = {};
   ['themeSwatches','borderSwatches','singleFields','batchFields','studentName','batchNames',
    'awardTitle','awardTitleCustom','reason','certDate','signature','printBtn',
-   'previewArea','previewNote'
+   'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  // Which batch preview the teacher is looking at right now — not persisted,
+  // it's a display choice rather than a certificate setting.
+  var viewMode = 'single';
 
   // toISOString() renders in UTC, which rolls to tomorrow's date in the evening
   // for any timezone behind UTC (all of North America) — use the local date.
@@ -342,22 +372,68 @@
     });
   }
 
+  /* ---------- batch thumbnail grid ---------- */
+  // Reuses certificateHtml() — the exact same markup the single preview and
+  // print use — just laid out small so a teacher can eyeball the whole class
+  // at once. Each thumbnail's .cert is rendered at full (1100px) size, then
+  // scaled down with a CSS transform so text/border proportions match the
+  // full-size preview instead of relying on font sizes that don't shrink
+  // with a smaller container.
+  function renderGrid(entries) {
+    els.previewArea.innerHTML =
+      '<div class="thumb-grid">' +
+        entries.map(function (e) {
+          return (
+            '<div class="thumb-cell">' +
+              '<div class="thumb-inner">' + certificateHtml(e.name, e.title) + '</div>' +
+              '<div class="thumb-label">' + escapeHtml(e.name) + '</div>' +
+            '</div>'
+          );
+        }).join('') +
+      '</div>';
+    scaleThumbs();
+  }
+
+  function scaleThumbs() {
+    Array.prototype.slice.call(els.previewArea.querySelectorAll('.thumb-inner')).forEach(function (inner) {
+      var cert = inner.querySelector('.cert');
+      if (!cert) return;
+      cert.style.transform = 'scale(' + (inner.clientWidth / 1100) + ')';
+    });
+  }
+
+  function updateViewTabs() {
+    Array.prototype.slice.call(document.querySelectorAll('.view-tab')).forEach(function (tab) {
+      tab.classList.toggle('active', tab.dataset.view === viewMode);
+    });
+  }
+
   /* ---------- render ---------- */
   function renderAll() {
     persist();
 
     if (settings.mode === 'single') {
+      els.viewToggle.style.display = 'none';
       els.previewArea.innerHTML = certificateHtml(settings.studentName || 'Student Name');
       els.previewNote.textContent = 'Live preview — this is exactly what prints.';
+      return;
+    }
+
+    var entries = batchEntriesList();
+    var canGrid = entries.length > 1;
+    els.viewToggle.style.display = canGrid ? 'flex' : 'none';
+    if (!canGrid && viewMode === 'grid') viewMode = 'single'; // grid stops making sense with 0-1 names
+    updateViewTabs();
+
+    if (!entries.length) {
+      els.previewArea.innerHTML = certificateHtml('Student Name');
+      els.previewNote.textContent = 'Add names on the left to preview the batch. Showing a sample.';
+    } else if (canGrid && viewMode === 'grid') {
+      renderGrid(entries);
+      els.previewNote.textContent = 'Showing all ' + entries.length + ' certificates. Printing makes one page per name.';
     } else {
-      var entries = batchEntriesList();
-      if (!entries.length) {
-        els.previewArea.innerHTML = certificateHtml('Student Name');
-        els.previewNote.textContent = 'Add names on the left to preview the batch. Showing a sample.';
-      } else {
-        els.previewArea.innerHTML = certificateHtml(entries[0].name, entries[0].title);
-        els.previewNote.textContent = 'Showing certificate 1 of ' + entries.length + '. Printing makes one page per name.';
-      }
+      els.previewArea.innerHTML = certificateHtml(entries[0].name, entries[0].title);
+      els.previewNote.textContent = 'Showing certificate 1 of ' + entries.length + '. Printing makes one page per name.';
     }
   }
 
@@ -383,6 +459,24 @@
       els.batchFields.style.display = settings.mode === 'batch' ? '' : 'none';
       renderAll();
     });
+  });
+
+  Array.prototype.slice.call(document.querySelectorAll('.view-tab')).forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      viewMode = tab.dataset.view;
+      renderAll();
+    });
+  });
+
+  // The thumbnail scale is computed from each cell's actual rendered width,
+  // so a window resize (which reflows the grid's auto-fill columns) needs to
+  // recompute it — the certificate markup itself doesn't need to change.
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (settings.mode === 'batch' && viewMode === 'grid') scaleThumbs();
+    }, 120);
   });
 
   els.studentName.addEventListener('input', function () { settings.studentName = els.studentName.value; renderAll(); });

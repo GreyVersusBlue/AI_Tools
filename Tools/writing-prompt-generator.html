@@ -36,6 +36,13 @@
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
+  .header-actions { display: flex; align-items: center; }
+  .fs-btn {
+    font-size: .85rem; font-weight: 700; padding: .5rem .9rem; border-radius: 7px;
+    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+  }
+  .fs-btn:hover { color: var(--accent-2); border-color: var(--accent-2); background: #fff; }
+
   .controls { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin-bottom: 1.2rem; }
   .band-tabs, .genre-select { display: flex; gap: .4rem; flex-wrap: wrap; }
   .pill {
@@ -56,6 +63,7 @@
   }
   .stage .prompt-text { font-size: clamp(1.4rem, 4vw, 2.1rem); font-weight: 600; max-width: 44rem; }
   .stage .empty { color: var(--muted); font-size: 1.1rem; }
+  .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
 
   .meta-row { display: flex; justify-content: center; gap: .5rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
   .meta-row .tag {
@@ -89,6 +97,9 @@
     <div>
       <a class="back-link" href="../index.html">&larr; Toolkit</a>
       <h1>Writing Prompt Generator</h1>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="fs-btn" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
     </div>
   </div>
 
@@ -126,7 +137,7 @@
   'use strict';
 
   var els = {};
-  ['bandTabs','genreSelect','stage','metaRow','generateBtn','historyList'].forEach(function (id) {
+  ['bandTabs','genreSelect','stage','metaRow','generateBtn','historyList','fullscreenBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -225,6 +236,16 @@
     });
   }
 
+  function updateFullscreenLabel() {
+    var active = document.fullscreenElement === els.stage;
+    els.fullscreenBtn.innerHTML = active ? '&#10530; Exit Fullscreen' : '&#9970; Fullscreen';
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (els.stage.requestFullscreen) els.stage.requestFullscreen();
+  }
+
   /* ---------- wiring ---------- */
   Array.prototype.slice.call(els.bandTabs.querySelectorAll('.pill')).forEach(function (p) {
     p.addEventListener('click', function () {
@@ -244,10 +265,19 @@
 
   els.generateBtn.addEventListener('click', generate);
 
+  els.fullscreenBtn.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', updateFullscreenLabel);
+
   document.addEventListener('keydown', function (e) {
     if (e.code === 'Space' && document.activeElement.tagName !== 'SELECT') {
       e.preventDefault();
       generate();
+      return;
+    }
+    if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+      toggleFullscreen();
     }
   });
 
