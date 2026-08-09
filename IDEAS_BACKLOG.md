@@ -89,29 +89,19 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Vocabulary Flashcard & Word Wall Generator | Optional example-sentence line | A third field per card (beyond term/definition) printed smaller under the definition. |
-| 2 | Silent Reading (SSR) Log Tracker | Weekly pages/minutes goal | An optional weekly goal per class, shown as a simple progress indicator next to each student's summary row. |
-| 3 | Name Picker | Team draft mode | Two captains alternate picking students live from the roster, instead of only fully-random draws. |
-| 4 | Schedule Browser | Common planning period finder | Pick two or more teachers and highlight the period(s) where they're all free. |
-| 5 | Sub Plan Builder | Read-aloud on the quick-copy view | Wire the sitewide text-to-speech helper into the plain-text quick-copy modal, for a sub who'd rather listen than read. |
-| 6 | School Calendar Visualizer | Whole-year-at-a-glance print mode | A single-page print layout showing all twelve months at once, alongside the existing month-by-month print. |
-| 7 | Quiz / Review Game Board | Lightning round mode | A timed-answer variant with a visible per-question countdown, for a faster-paced review day. |
-| 8 | Exit Ticket / Bell Ringer Generator | Quick-tally formative check mode | A big-button 1–4 self-report scale students tap, tallied live on the projector, alongside the existing prompt bank. |
-| 9 | Field Trip Permission Slip Generator | Running headcount/amount-collected summary | A live total next to the existing per-student collected/paid tracker. |
-| 10 | QR Scavenger Hunt Builder | Built-in timer/leaderboard | An optional team-race timer and leaderboard for station-to-station hunts. |
-| 11 | Hall Pass Log | "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
-| 12 | Class Roster Hub | Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
-| 13 | Command Center | Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
-| 14 | Escape Room Builder | Printable story-intro cover page | A one-page prop/cover sheet to set the scene before students start scanning stations. |
-| 15 | Math Fact Drill Sheet Generator | One-click leveled set | Generate a matching easy/medium/hard set of sheets together in one pass, for quick differentiation. |
-| 16 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
-| 17 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
-| 18 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
-| 19 | Lab Group & Role Randomizer | Printable table-tent per group | A foldable name-card showing today's group and roles, to set out at each lab station. |
-| 20 | Timeline Builder | Side-by-side compare mode | View two saved timelines together for teaching concurrent history threads. |
-| 21 | Vocab & Conjugation Drill Generator | Fill-in-the-blank quiz mode | A lighter, faster quiz format alongside the existing full conjugation-grid drill. |
-| 22 | Gallery Walk QR Codes | Per-piece reaction tap | An optional star/emoji reaction button per entry, tallied for the artist — fully local per device, nothing synced. |
-| 23 | Blank Map Generator | Self-check quiz mode | Hide the labels until clicked, so a finished map can double as a self-check study tool instead of only a static handout. |
+| 1 | Hall Pass Log | "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
+| 2 | Class Roster Hub | Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
+| 3 | Command Center | Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
+| 4 | Escape Room Builder | Printable story-intro cover page | A one-page prop/cover sheet to set the scene before students start scanning stations. |
+| 5 | Math Fact Drill Sheet Generator | One-click leveled set | Generate a matching easy/medium/hard set of sheets together in one pass, for quick differentiation. |
+| 6 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
+| 7 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
+| 8 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
+| 9 | Lab Group & Role Randomizer | Printable table-tent per group | A foldable name-card showing today's group and roles, to set out at each lab station. |
+| 10 | Timeline Builder | Side-by-side compare mode | View two saved timelines together for teaching concurrent history threads. |
+| 11 | Vocab & Conjugation Drill Generator | Fill-in-the-blank quiz mode | A lighter, faster quiz format alongside the existing full conjugation-grid drill. |
+| 12 | Gallery Walk QR Codes | Per-piece reaction tap | An optional star/emoji reaction button per entry, tallied for the artist — fully local per device, nothing synced. |
+| 13 | Blank Map Generator | Self-check quiz mode | Hide the labels until clicked, so a finished map can double as a self-check study tool instead of only a static handout. |
 
 ### Currently claimed (in progress elsewhere)
 

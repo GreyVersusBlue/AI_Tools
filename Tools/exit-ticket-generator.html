@@ -113,6 +113,25 @@
   .bank-remove-btn:hover { color: #7a241c; }
   .bank-empty { color: var(--muted); font-size: .85rem; margin: 0; }
 
+  /* ── Quick Tally tab ─────────────────────────────────────────────── */
+  .tally-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin-bottom: 1.2rem; }
+  @media (max-width: 620px) { .tally-grid { grid-template-columns: repeat(2, 1fr); } }
+  .tally-btn {
+    font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: .35rem;
+    background: var(--card); color: var(--ink); border: 2px solid var(--line-strong); border-radius: 12px;
+    padding: 1.5rem .6rem; cursor: pointer;
+  }
+  .tally-btn:hover { background: #eaf1f6; border-color: var(--accent-2); }
+  .tally-btn .tally-num { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 800; color: var(--accent); line-height: 1; }
+  .tally-btn .tally-label { font-size: .82rem; font-weight: 600; color: var(--muted); text-align: center; }
+
+  .tally-results { margin-bottom: 1rem; }
+  .tally-row { display: flex; align-items: center; gap: .7rem; margin-bottom: .55rem; }
+  .tally-row-num { width: 1.6rem; flex-shrink: 0; font-weight: 800; font-size: 1.15rem; color: var(--accent); }
+  .tally-bar-track { flex: 1; background: #eceae1; border-radius: 7px; height: 1.7rem; overflow: hidden; }
+  .tally-bar-fill { height: 100%; background: var(--accent-2); border-radius: 7px 0 0 7px; transition: width .2s ease; }
+  .tally-row-count { width: 2.8rem; flex-shrink: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
   /* ── Printable handout tab ───────────────────────────────────────── */
   .handout-prompt-display {
     font-size: 1.05rem; font-weight: 700; background: #eaf1f6; border: 1px solid #c9dce6;
@@ -187,6 +206,7 @@
 
   <div class="tab-bar">
     <button type="button" class="tab-btn active" data-tab="bank">Prompt &amp; Display</button>
+    <button type="button" class="tab-btn" data-tab="tally">Quick Tally</button>
     <button type="button" class="tab-btn" data-tab="handout">Printable Handout</button>
   </div>
 
@@ -235,6 +255,27 @@
     <div class="history">
       <h2>Shown earlier today (this session)</h2>
       <ol id="historyList"></ol>
+    </div>
+  </section>
+
+  <section class="tab-panel" id="panel-tally">
+    <div class="card">
+      <div class="card-title"><span>Quick Tally</span></div>
+      <p class="hint">Project this tab and have students tap the number that matches how they feel right now &mdash; a fast, anonymous whole-class pulse check. Works on a shared classroom device or as a front-of-room tap-in.</p>
+    </div>
+
+    <div class="tally-grid" id="tallyGrid">
+      <button type="button" class="tally-btn" data-value="1"><span class="tally-num">1</span><span class="tally-label">Totally lost</span></button>
+      <button type="button" class="tally-btn" data-value="2"><span class="tally-num">2</span><span class="tally-label">Still shaky</span></button>
+      <button type="button" class="tally-btn" data-value="3"><span class="tally-num">3</span><span class="tally-label">Mostly get it</span></button>
+      <button type="button" class="tally-btn" data-value="4"><span class="tally-num">4</span><span class="tally-label">Got it!</span></button>
+    </div>
+
+    <div class="tally-results" id="tallyResults"></div>
+
+    <div class="controls" style="justify-content: space-between;">
+      <p class="hint" id="tallyTotal" style="margin:0;">0 responses</p>
+      <button type="button" class="secondary" id="tallyResetBtn">Reset Tally</button>
     </div>
   </section>
 
@@ -306,6 +347,7 @@
 
   var STORAGE_KEY = 'gvb-exit-ticket:settings';
   var CUSTOM_BANK_KEY = 'gvb-exit-ticket:customPrompts';
+  var TALLY_KEY = 'gvb-exit-ticket:tally';
   var HISTORY_LIMIT = 10;
   var AVOID_REPEAT_WINDOW = 8;
   var MINE_KEY = 'mine';
@@ -316,7 +358,8 @@
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
-   'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput'
+   'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
+   'tallyGrid', 'tallyResults', 'tallyTotal', 'tallyResetBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var THINK_TIME_OPTIONS = [0, 30, 60, 120];
@@ -447,6 +490,7 @@
   var thinkTimerInterval = null;
   var thinkTimeRemaining = 0;
   var differentSlipPrompts = []; // texts, one per slip, when settings.slipMode === 'different'
+  var tally = [0, 0, 0, 0]; // taps for options 1-4
 
   // ── Persistence ──────────────────────────────────────────────────────────
   function loadSettings() {
@@ -487,6 +531,20 @@
   }
   function saveCustomBank() {
     try { localStorage.setItem(CUSTOM_BANK_KEY, JSON.stringify(customBank)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function loadTally() {
+    try {
+      var raw = localStorage.getItem(TALLY_KEY);
+      if (!raw) return [0, 0, 0, 0];
+      var v = JSON.parse(raw);
+      if (!Array.isArray(v) || v.length !== 4) return [0, 0, 0, 0];
+      return v.map(function (n) { return (typeof n === 'number' && n >= 0) ? n : 0; });
+    } catch (e) { return [0, 0, 0, 0]; }
+  }
+  function saveTally() {
+    try { localStorage.setItem(TALLY_KEY, JSON.stringify(tally)); }
     catch (e) { /* private browsing / storage full — silently skip */ }
   }
 
@@ -696,6 +754,39 @@
     removeBankPrompt(btn.getAttribute('data-id'));
   });
 
+  // ── Quick Tally ──────────────────────────────────────────────────────────
+  function renderTally() {
+    var total = tally.reduce(function (a, b) { return a + b; }, 0);
+    var max = Math.max.apply(null, tally.concat([1]));
+    els.tallyResults.innerHTML = tally.map(function (count, i) {
+      var pct = max ? Math.round(count / max * 100) : 0;
+      return '<div class="tally-row">' +
+        '<span class="tally-row-num">' + (i + 1) + '</span>' +
+        '<div class="tally-bar-track"><div class="tally-bar-fill" style="width:' + pct + '%;"></div></div>' +
+        '<span class="tally-row-count">' + count + '</span>' +
+      '</div>';
+    }).join('');
+    els.tallyTotal.textContent = total + (total === 1 ? ' response' : ' responses');
+  }
+  function bumpTally(value) {
+    var idx = value - 1;
+    if (idx < 0 || idx > 3) return;
+    tally[idx]++;
+    saveTally();
+    renderTally();
+  }
+  function resetTally() {
+    tally = [0, 0, 0, 0];
+    saveTally();
+    renderTally();
+  }
+  els.tallyGrid.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.tally-btn') : null;
+    if (!btn) return;
+    bumpTally(parseInt(btn.getAttribute('data-value'), 10));
+  });
+  els.tallyResetBtn.addEventListener('click', resetTally);
+
   // ── Printable handout ─────────────────────────────────────────────────────
   function renderHandoutPromptDisplay() {
     if (settings.slipMode === 'different') {
@@ -858,6 +949,7 @@
       btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     document.getElementById('panel-bank').classList.toggle('active', tab === 'bank');
+    document.getElementById('panel-tally').classList.toggle('active', tab === 'tally');
     document.getElementById('panel-handout').classList.toggle('active', tab === 'handout');
   }
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
@@ -868,6 +960,8 @@
   // ── Boot ─────────────────────────────────────────────────────────────────
   customBank = loadCustomBank();
   renderBankList();
+  tally = loadTally();
+  renderTally();
   buildCategorySelect();
   applySavedSettings();
   els.categorySelect.value = settings.category;

@@ -259,6 +259,26 @@ body.retro-mode .rarity-banner{border-radius:0 !important;font-size:0.7em !impor
 .tournament-tile.absent-tile{opacity:0.3;filter:grayscale(0.8);}
 .tournament-tile.absent-tile::after{content:'ABSENT';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);background:rgba(220,38,38,0.85);color:#fff;font-family:'Bungee',sans-serif;font-size:0.6em;padding:3px 8px;border-radius:4px;letter-spacing:1px;}
 
+/* === TEAM DRAFT MODE — captains alternate picking students from the roster === */
+.draft-board{position:absolute;inset:0;display:flex;flex-direction:column;padding:20px 24px;overflow-y:auto;}
+.draft-setup{max-width:520px;margin:auto;text-align:center;}
+.draft-setup h2{font-family:'Bungee',sans-serif;font-size:2em;color:var(--accent2);margin-bottom:10px;}
+.draft-setup p{opacity:0.75;margin-bottom:18px;}
+.draft-team-inputs{display:flex;flex-direction:column;gap:8px;margin:14px 0 18px;}
+.draft-team-inputs input{width:100%;text-align:center;}
+.draft-teams-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.draft-team-card{flex:1;min-width:150px;background:var(--name-bg);border-radius:10px;padding:12px 14px;border:2px solid transparent;}
+.draft-team-card.active-turn{border-color:var(--accent2);box-shadow:0 0 18px var(--accent2);}
+.draft-team-card h4{font-family:'Bungee',sans-serif;color:var(--accent2);font-size:0.95em;margin-bottom:6px;}
+.draft-team-card .draft-team-picks{font-size:0.88em;line-height:1.5;opacity:0.9;}
+.draft-reconfigure{display:flex;justify-content:center;margin-bottom:14px;}
+.draft-remaining-label{font-family:'Bungee',sans-serif;color:var(--accent2);text-align:center;margin-bottom:12px;font-size:1.1em;}
+.draft-remaining{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+.draft-tile{background:var(--name-bg);color:var(--name-text);border-radius:8px;padding:10px 16px;font-family:'Outfit',inherit;font-weight:700;font-size:1em;cursor:pointer;border:2px solid var(--accent);}
+.draft-tile:hover{background:var(--accent);transform:translateY(-2px);}
+.draft-complete{text-align:center;margin-top:20px;}
+.draft-complete h3{font-family:'Bungee',sans-serif;color:var(--winner);font-size:1.6em;margin-bottom:14px;}
+
 /* === SOUNDBOARD === */
 .soundboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;margin-top:12px;}
 .soundboard-btn{background:linear-gradient(135deg,var(--name-bg),var(--surface));color:var(--name-text);border:2px solid var(--accent);border-radius:12px;padding:14px 8px;font-family:'Outfit',inherit;font-weight:700;font-size:0.78em;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:transform 0.12s,box-shadow 0.12s,border-color 0.12s;text-align:center;line-height:1.1;}
@@ -372,6 +392,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   .slot-name{height:96px;font-size:1.4em;}
   .soundboard-grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
   .census{grid-template-columns:repeat(2,1fr);}
+  .draft-board{padding:14px 12px;}
+  .draft-teams-bar{gap:8px;}
+  .draft-team-card{min-width:calc(50% - 4px);}
+  .draft-tile{padding:8px 12px;font-size:0.9em;}
   /* Tap targets. The header and footer controls measured 31–35px tall on a 375px
      viewport, which is a miss for a thumb reaching up mid-lesson. 40px minimum. */
   .header button,.header select,.footer button,.roster-item-actions button,.panel-close{min-height:40px;}
@@ -405,7 +429,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   <div class="header">
     <div class="title">🎯 NAME PICKER</div>
     <div class="controls">
-      <div class="control-group"><span>MODE:</span><select id="mode"><option value="jump">Jump (Press Your Luck)</option><option value="disappear">Disappear</option><option value="slot">🎰 Slot Machine</option></select></div>
+      <div class="control-group"><span>MODE:</span><select id="mode"><option value="jump">Jump (Press Your Luck)</option><option value="disappear">Disappear</option><option value="slot">🎰 Slot Machine</option><option value="draft">🧑‍🤝‍🧑 Team Draft</option></select></div>
       <div class="control-group"><span>THEME:</span><select id="theme"><option value="default">Press Your Luck</option><option value="classroom">Classroom Light</option><option value="medieval">Medieval</option><option value="ancient-china">Ancient China</option><option value="byzantine">Byzantine</option><option value="space">Space</option><option value="forest">Forest</option><option value="ocean">Ocean</option><option value="sunset">Sunset</option><option value="halloween">Halloween</option><option value="patriotic">Stars &amp; Stripes</option></select></div>
       <div class="control-group"><span>SPEED:</span><input type="range" id="speed" min="40" max="500" value="130"><span class="speed-display" id="speedVal">130ms</span></div>
       <button class="crazy-toggle" id="crazyBtn">🔥 LET'S GO CRAZY</button>
@@ -614,6 +638,9 @@ let names=[],originalNames=[],history=[],nameCards=[],isRolling=false,mode='jump
 
 /* === New feature state === */
 let absentSet=new Set(),hallOfFame=[],retroUnlocked=false,retroActive=false,tournamentMode=false,suddenDeath=false,luckyStudent=null,luckyDate=null,konamiBuffer=[],achievementsShown=new Set(),chaosParticleTimer=null,sessionMythicCount=0;
+
+/* === New feature state: Team Draft mode === */
+let draftTeams=[],draftTurnIndex=0,draftStarted=false,draftTeamCount=2;
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
 
 const themes={
@@ -658,10 +685,12 @@ function rollRarity(luckyBonus=false){
 }
 
 function scatterNames(){
+  if(mode==='draft'){renderDraftBoard();return;}
   if(tournamentMode){renderTournamentGrid();return;}
   const board=document.getElementById('board');
   board.querySelectorAll('.name-card').forEach(el=>el.remove());
   board.querySelectorAll('.tournament-grid').forEach(el=>el.remove());
+  board.querySelectorAll('.draft-board').forEach(el=>el.remove());
   nameCards=[];
   const emptyState=document.getElementById('emptyState');
   const visibleNames=names.filter(n=>!absentSet.has(n));
@@ -938,6 +967,7 @@ function chooseWinner(cards){
 
 function pickName(){
   if(isRolling||names.length===0)return;
+  if(mode==='draft')return;
   const activeNames=names.filter(n=>!absentSet.has(n));
   if(activeNames.length===0){alert('All students are marked absent. Toggle some back as present in the Stats tab.');return;}
   const multi=parseInt(document.getElementById('multiPickCount').value,10)||1;
@@ -1375,6 +1405,9 @@ function loadNamesFromInput(){
   absentSet=new Set();
   sessionMythicCount=0;
   achievementsShown.clear();
+  /* A new roster invalidates any in-progress draft — its picks name students who
+     may no longer be on the list. */
+  draftTeams=[];draftStarted=false;draftTurnIndex=0;
   /* A new roster is a new class period. Nobody carries a turn over from the last
      one, so the rotation starts clean. */
   rotation=freshRotation();
@@ -1536,6 +1569,7 @@ function renderTournamentGrid(){
   const board=document.getElementById('board');
   board.querySelectorAll('.name-card').forEach(el=>el.remove());
   board.querySelectorAll('.tournament-grid').forEach(el=>el.remove());
+  board.querySelectorAll('.draft-board').forEach(el=>el.remove());
   board.querySelectorAll('.all-absent-msg').forEach(el=>el.remove());
   nameCards=[];
   const emptyState=document.getElementById('emptyState');
@@ -1622,6 +1656,149 @@ function selectTournamentWinner(winnerCard){
     document.getElementById('tRoll').onclick=()=>{cleanup();winnerCard.el.classList.remove('winner-tile');if(coldCall){winnerCard.active=false;winnerCard.el.classList.add('eliminated');names=names.filter(n=>n!==winnerCard.name);}finishRolling();setTimeout(pickName,250);};
     document.getElementById('tRemoveRoll').onclick=()=>{cleanup();winnerCard.active=false;winnerCard.el.classList.add('eliminated');names=names.filter(n=>n!==winnerCard.name);finishRolling();setTimeout(pickName,250);};
   },700);
+}
+
+/* =====================================================================
+   TEAM DRAFT MODE — captains alternate picking students from the roster,
+   instead of a fully-random draw. `names`/`originalNames` are left untouched
+   (drafting is non-destructive, same as marking someone absent); the pool of
+   who is still undrafted is always derived from draftTeams' picks so far.
+   ===================================================================== */
+function draftRemaining(){
+  const picked=new Set(draftTeams.flatMap(t=>t.picks));
+  return names.filter(n=>!picked.has(n)&&!absentSet.has(n));
+}
+function resetDraft(){
+  draftTeams.forEach(t=>t.picks=[]);
+  draftTurnIndex=0;
+  scatterNames();
+}
+function reconfigureDraft(){
+  draftStarted=false;
+  scatterNames();
+}
+function startDraft(){
+  const countInput=document.getElementById('draftTeamCount');
+  const n=Math.max(2,Math.min(12,parseInt(countInput.value,10)||2));
+  const nameInputs=document.querySelectorAll('.draft-team-name-input');
+  draftTeamCount=n;
+  draftTeams=Array.from({length:n},(_,i)=>({name:(nameInputs[i]&&nameInputs[i].value.trim())||`Team ${i+1}`,picks:[]}));
+  draftTurnIndex=0;
+  draftStarted=true;
+  scatterNames();
+}
+function draftPick(name){
+  if(!draftStarted||!draftTeams.length)return;
+  const remaining=draftRemaining();
+  if(!remaining.includes(name))return;
+  const team=draftTeams[draftTurnIndex];
+  team.picks.push(name);
+  playBeep(500+Math.random()*200,90,'square',0.09);
+  if(draftRemaining().length>0){
+    draftTurnIndex=(draftTurnIndex+1)%draftTeams.length;
+  }else{
+    playWinSound(null);showConfetti();if(crazyMode)fireworkShow();
+  }
+  scatterNames();
+}
+function printDraftReport(){
+  if(!draftTeams.length)return;
+  document.getElementById('printReportTitle').textContent='Team Draft Results';
+  document.getElementById('printReportSub').textContent=`${new Date().toLocaleDateString()} · ${draftTeams.length} teams`;
+  document.querySelector('#printReportTable thead').innerHTML='<tr><th>Team</th><th>Size</th><th>Members</th></tr>';
+  document.getElementById('printReportBody').innerHTML=draftTeams.map(t=>
+    `<tr><td>${escapeHtml(t.name)}</td><td>${t.picks.length}</td><td>${t.picks.map(escapeHtml).join(', ')}</td></tr>`
+  ).join('');
+  window.print();
+}
+function exportDraftReport(){
+  if(!draftTeams.length)return;
+  const text=draftTeams.map(t=>`${t.name} (${t.picks.length})\n${t.picks.map(n=>'  - '+n).join('\n')}`).join('\n\n');
+  const blob=new Blob([text],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`team-draft-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function draftSetupHTML(){
+  const rows=[];
+  for(let i=0;i<draftTeamCount;i++){
+    const existing=(draftTeams[i]&&draftTeams[i].name)||`Team ${i+1}`;
+    rows.push(`<input type="text" class="draft-team-name-input" data-team-idx="${i}" value="${escapeHtml(existing)}" maxlength="40">`);
+  }
+  const ready=names.filter(n=>!absentSet.has(n)).length>0;
+  return `<div class="draft-setup">
+    <h2>🧑‍🤝‍🧑 TEAM DRAFT</h2>
+    <p>Set up teams below, then captains take turns clicking a student on the board to draft them.</p>
+    <div class="option-row" style="justify-content:center;border-bottom:none;"><span class="option-label" style="flex:0;">Number of teams:</span><input type="number" id="draftTeamCount" value="${draftTeamCount}" min="2" max="12" style="width:70px;"></div>
+    <div class="draft-team-inputs">${rows.join('')}</div>
+    <button class="btn-primary" id="draftStartBtn" ${ready?'':'disabled'}>🏁 Start Draft</button>
+    ${ready?'':'<p class="muted-text">Load a roster first (⚙️ Roster).</p>'}
+  </div>`;
+}
+function draftActiveHTML(){
+  const remaining=draftRemaining();
+  const complete=remaining.length===0;
+  const teamsHtml=draftTeams.map((t,i)=>{
+    const isTurn=!complete&&i===draftTurnIndex;
+    return `<div class="draft-team-card${isTurn?' active-turn':''}">
+      <h4>${isTurn?'👉 ':''}${escapeHtml(t.name)} <small>(${t.picks.length})</small></h4>
+      <div class="draft-team-picks">${t.picks.length?t.picks.map(escapeHtml).join(', '):'<span style="opacity:0.6;">No picks yet</span>'}</div>
+    </div>`;
+  }).join('');
+  const remainingHtml=complete?'':`<div class="draft-remaining-label">👉 ${escapeHtml(draftTeams[draftTurnIndex].name)}'s turn — click a student to draft them</div>
+    <div class="draft-remaining">${remaining.map(n=>`<button class="draft-tile" data-draft-pick="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}</div>`;
+  const doneHtml=complete?`<div class="draft-complete"><h3>🎉 Draft complete!</h3><div class="button-row" style="justify-content:center;"><button id="draftPrintBtn">🖨️ Print Rosters</button><button id="draftExportBtn">⬇️ Export</button><button id="draftRestartBtn">↺ New Draft (Same Teams)</button></div></div>`:'';
+  return `<div class="draft-reconfigure"><button id="draftReconfigureBtn">⚙️ Reconfigure Teams</button></div><div class="draft-teams-bar">${teamsHtml}</div>${remainingHtml}${doneHtml}`;
+}
+function bindDraftSetupEvents(){
+  document.getElementById('draftTeamCount').addEventListener('change',(e)=>{
+    const inputs=document.querySelectorAll('.draft-team-name-input');
+    inputs.forEach((inp,i)=>{if(draftTeams[i])draftTeams[i].name=inp.value;else draftTeams[i]={name:inp.value,picks:[]};});
+    draftTeamCount=Math.max(2,Math.min(12,parseInt(e.target.value,10)||2));
+    scatterNames();
+  });
+  document.querySelectorAll('.draft-team-name-input').forEach((inp,i)=>{
+    inp.addEventListener('input',()=>{if(!draftTeams[i])draftTeams[i]={name:inp.value,picks:[]};else draftTeams[i].name=inp.value;});
+  });
+  const startBtn=document.getElementById('draftStartBtn');
+  if(startBtn)startBtn.addEventListener('click',startDraft);
+}
+function bindDraftActiveEvents(){
+  document.querySelectorAll('[data-draft-pick]').forEach(btn=>{
+    btn.addEventListener('click',()=>draftPick(btn.dataset.draftPick));
+  });
+  const reconfigureBtn=document.getElementById('draftReconfigureBtn');
+  if(reconfigureBtn)reconfigureBtn.addEventListener('click',reconfigureDraft);
+  const printBtn=document.getElementById('draftPrintBtn');
+  if(printBtn)printBtn.addEventListener('click',printDraftReport);
+  const exportBtn=document.getElementById('draftExportBtn');
+  if(exportBtn)exportBtn.addEventListener('click',exportDraftReport);
+  const restartBtn=document.getElementById('draftRestartBtn');
+  if(restartBtn)restartBtn.addEventListener('click',resetDraft);
+}
+function renderDraftBoard(){
+  const board=document.getElementById('board');
+  board.querySelectorAll('.name-card').forEach(el=>el.remove());
+  board.querySelectorAll('.tournament-grid').forEach(el=>el.remove());
+  board.querySelectorAll('.draft-board').forEach(el=>el.remove());
+  board.querySelectorAll('.all-absent-msg').forEach(el=>el.remove());
+  nameCards=[];
+  const emptyState=document.getElementById('emptyState');
+  if(emptyState)emptyState.style.display='none';
+  const wrap=document.createElement('div');
+  wrap.className='draft-board';
+  if(draftStarted){
+    wrap.innerHTML=draftActiveHTML();
+    board.appendChild(wrap);
+    bindDraftActiveEvents();
+  }else{
+    wrap.innerHTML=draftSetupHTML();
+    board.appendChild(wrap);
+    bindDraftSetupEvents();
+  }
+  updateCountDisplay();
 }
 
 /* =====================================================================
@@ -1972,6 +2149,7 @@ function eraseStudentData(){
   store.clearStudentData();
   names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
+  draftTeams=[];draftStarted=false;draftTurnIndex=0;
   rotation=freshRotation();
   document.getElementById('namesInput').value='';
   scatterNames();updateStatsUI();updateHistoryUI();updateHofTicker();updateRosterUI();updateDataTab();
@@ -1984,6 +2162,7 @@ function eraseEverything(){
   opts={...OPTION_DEFAULTS};
   names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];prompts=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
+  draftTeams=[];draftStarted=false;draftTurnIndex=0;
   retroUnlocked=false;retroActive=false;crazyMode=false;
   rotation=freshRotation();
   document.body.classList.remove('retro-mode','crazy-active','sudden-death');
@@ -2054,7 +2233,7 @@ for(const id of [...Object.values(OPTION_BOXES),...Object.values(OPTION_FIELDS)]
   if(el)el.addEventListener('change',persistOptions);
 }
 
-document.getElementById('mode').addEventListener('change',(e)=>{mode=e.target.value;});
+document.getElementById('mode').addEventListener('change',(e)=>{mode=e.target.value;if(!isRolling)scatterNames();});
 document.getElementById('theme').addEventListener('change',(e)=>applyTheme(e.target.value));
 document.getElementById('speed').addEventListener('input',(e)=>{speed=parseInt(e.target.value,10);document.getElementById('speedVal').textContent=speed+'ms';});
 document.getElementById('speed').addEventListener('change',persistOptions);
@@ -2063,7 +2242,10 @@ document.getElementById('pickBtn').addEventListener('click',pickName);
 /* Reset Board puts everyone back on the board, so it starts the rotation round
    over too. Without that, students restored by a reset would sit at the back of
    the current round until it refilled. */
-document.getElementById('resetBtn').addEventListener('click',()=>{names=originalNames.slice();rotation=freshRotation();scatterNames();});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(mode==='draft'){resetDraft();return;}
+  names=originalNames.slice();rotation=freshRotation();scatterNames();
+});
 document.getElementById('shuffleBtn').addEventListener('click',()=>{if(!isRolling)scatterNames();});
 document.getElementById('settingsBtn').addEventListener('click',()=>{document.getElementById('settingsPanel').classList.add('open');updateStatsUI();});
 document.getElementById('emptyStateBtn').addEventListener('click',()=>{document.getElementById('settingsPanel').classList.add('open');setTimeout(()=>document.getElementById('namesInput').focus(),350);});
@@ -2084,6 +2266,8 @@ document.getElementById('exportHistory').addEventListener('click',()=>{
 });
 document.getElementById('printHistory').addEventListener('click',()=>{
   if(!history.length){alert('No picks yet today to print.');return;}
+  document.getElementById('printReportTitle').textContent="Today's Picks";
+  document.querySelector('#printReportTable thead').innerHTML='<tr><th>#</th><th>Time</th><th>Name</th><th>Prompt</th></tr>';
   document.getElementById('printReportSub').textContent=`${new Date().toLocaleDateString()} · ${history.length} pick${history.length===1?'':'s'}`;
   document.getElementById('printReportBody').innerHTML=history.map((h,i)=>
     `<tr><td>${i+1}</td><td>${escapeHtml(h.time)}</td><td>${escapeHtml(h.name)}</td><td>${h.prompt?escapeHtml(h.prompt):''}</td></tr>`

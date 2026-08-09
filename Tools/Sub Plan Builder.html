@@ -750,6 +750,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   function openQuickCopyModal() {
     const text = buildPlainTextPlan();
+    const speechSupported = 'speechSynthesis' in window;
     const overlay = document.createElement('div');
     overlay.className = 'qc-overlay';
     overlay.innerHTML = `
@@ -760,13 +761,53 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
           <textarea readonly id="qcText"></textarea>
         </div>
         <div class="qc-modal-actions">
+          ${speechSupported ? '<button type="button" id="qcRead">🔊 Read aloud</button>' : ''}
           <button type="button" id="qcPrint">🖨️ Print / Save as PDF</button>
           <button type="button" class="primary" id="qcCopy">📋 Copy to clipboard</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
     el('qcText').value = text;
-    const cleanup = () => { overlay.remove(); document.removeEventListener('keydown', escHandler); };
+
+    let utterance = null;
+    let syncTimer = null;
+    const speechState = () => {
+      if (!speechSupported) return 'unsupported';
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) return 'speaking';
+      if (window.speechSynthesis.paused) return 'paused';
+      return 'idle';
+    };
+    const syncReadBtn = () => {
+      if (!speechSupported) return;
+      const state = speechState();
+      el('qcRead').textContent = state === 'speaking' ? '⏸️ Pause' : (state === 'paused' ? '▶️ Resume' : '🔊 Read aloud');
+    };
+    const readToggle = () => {
+      const state = speechState();
+      if (state === 'speaking') {
+        window.speechSynthesis.pause();
+      } else if (state === 'paused') {
+        window.speechSynthesis.resume();
+      } else {
+        window.speechSynthesis.cancel();
+        utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = syncReadBtn;
+        utterance.onerror = syncReadBtn;
+        window.speechSynthesis.speak(utterance);
+      }
+      setTimeout(syncReadBtn, 30);
+    };
+    if (speechSupported) {
+      el('qcRead').addEventListener('click', readToggle);
+      syncTimer = setInterval(syncReadBtn, 400);
+    }
+
+    const cleanup = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+      if (syncTimer) clearInterval(syncTimer);
+      if (speechSupported) window.speechSynthesis.cancel();
+    };
     const escHandler = (e) => { if (e.key === 'Escape') cleanup(); };
     document.addEventListener('keydown', escHandler);
     overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) cleanup(); });

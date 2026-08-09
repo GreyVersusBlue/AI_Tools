@@ -41,7 +41,9 @@
   h1 { font-size: 1.6rem; margin: 0 0 4px; border-bottom: 3px solid var(--accent); padding-bottom: 10px; }
   .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.92rem; }
 
-  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; align-items: center; }
+  .print-mode { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: var(--muted); }
+  .print-mode label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
   button {
     font-family: inherit; font-size: 0.85rem; padding: 8px 13px; border-radius: 6px;
     border: 1px solid var(--line); background: #fff; cursor: pointer; color: var(--ink);
@@ -99,6 +101,20 @@
   .pat-cross    { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.7) 0 1.5px, transparent 1.5px 4px), repeating-linear-gradient(-45deg, rgba(255,255,255,.7) 0 1.5px, transparent 1.5px 4px); }
   .pat-stripe   { background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 5px); }
 
+  /* --- whole-year print grid --- */
+  .year-grid { display: none; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .ymonth { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
+  .ymonth h4 { margin: 0; padding: 3px 0; background: var(--accent); color: #fff; font-size: 0.66rem; text-align: center; }
+  .ymonth .yweekdays, .ymonth .yweeks { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .ymonth .yweekdays div { font-size: 0.5rem; font-weight: 700; text-align: center; color: var(--muted); }
+  .yday {
+    min-height: 18px; text-align: center; font-size: 0.5rem; line-height: 1.1;
+    border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 1px 0;
+  }
+  .yday.empty { visibility: hidden; }
+  .ydots { display: flex; justify-content: center; gap: 1px; margin-top: 1px; }
+  .ydot { width: 4px; height: 4px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,.35); }
+
   /* --- day editor drawer --- */
   #drawer {
     position: fixed; top: 0; right: -340px; width: 320px; height: 100%; background: var(--card);
@@ -121,6 +137,11 @@
     .month { border: 1px solid #999; }
     .month h3 { background: #eee !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .day:hover { background: none; }
+
+    body.print-year .months { display: none; }
+    body.print-year .year-grid { display: grid; }
+    .ymonth { border: 1px solid #999; }
+    .ymonth h4 { background: #eee !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -142,6 +163,10 @@
     <input type="file" id="fileImport" accept="application/json" hidden>
     <button id="btnExportIcs">Export Calendar (.ics)</button>
     <select id="jumpMonth" title="Jump to month"></select>
+    <span class="print-mode">
+      <label><input type="radio" name="printMode" value="month" checked> Month-by-month</label>
+      <label><input type="radio" name="printMode" value="year"> Whole year</label>
+    </span>
     <button id="btnPrint" class="primary">Print / Save PDF</button>
   </div>
 
@@ -167,6 +192,7 @@
 
   <h1 id="printTitle" style="display:none;"></h1>
   <div class="months" id="months"></div>
+  <div class="year-grid" id="yearGrid"></div>
 </div>
 
 <div id="drawer">
@@ -309,7 +335,53 @@ function renderMonths() {
   });
 }
 
-function render() { renderLegend(); renderMonths(); syncMeta(); renderJumpControl(); }
+function renderYearGrid() {
+  const wrap = document.getElementById("yearGrid");
+  wrap.innerHTML = "";
+  const list = monthsBetween(cal.meta.start, cal.meta.end);
+  const startDate = new Date(cal.meta.start + "T00:00:00");
+  const endDate = new Date(cal.meta.end + "T00:00:00");
+
+  list.forEach(({ y, m }) => {
+    const monthEl = document.createElement("div");
+    monthEl.className = "ymonth";
+    monthEl.innerHTML = `<h4>${MONTH_NAMES[m]} ${y}</h4>
+      <div class="yweekdays">${WEEKDAYS.map(w => `<div>${w[0]}</div>`).join("")}</div>
+      <div class="yweeks"></div>`;
+    wrap.appendChild(monthEl);
+
+    const grid = monthEl.querySelector(".yweeks");
+    const first = new Date(y, m, 1);
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const leadBlanks = first.getDay();
+
+    for (let i = 0; i < leadBlanks; i++) {
+      grid.appendChild(document.createElement("div")).className = "yday empty";
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateISO = iso(y, m, d);
+      const thisDate = new Date(y, m, d);
+      const cell = document.createElement("div");
+      if (thisDate < startDate || thisDate > endDate) {
+        cell.className = "yday empty";
+        grid.appendChild(cell);
+        continue;
+      }
+      cell.className = "yday";
+      const entry = cal.days[dateISO];
+      const dots = (entry && entry.types.length)
+        ? `<div class="ydots">${entry.types.map(id => {
+            const t = typeById(id);
+            return t ? `<div class="ydot pat-${t.pattern}" style="background-color:${t.color}" title="${escapeAttr(t.label)}"></div>` : "";
+          }).join("")}</div>`
+        : "";
+      cell.innerHTML = `${d}${dots}`;
+      grid.appendChild(cell);
+    }
+  });
+}
+
+function render() { renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); renderJumpControl(); }
 
 function syncMeta() {
   document.getElementById("metaLabel").value = cal.meta.yearLabel;
@@ -524,6 +596,12 @@ document.getElementById("btnExportIcs").addEventListener("click", () => {
   a.download = `school-calendar-${cal.meta.start}-to-${cal.meta.end}.ics`;
   a.click();
   URL.revokeObjectURL(url);
+});
+
+document.querySelectorAll('input[name="printMode"]').forEach(el => {
+  el.addEventListener("change", e => {
+    document.body.classList.toggle("print-year", e.target.value === "year");
+  });
 });
 
 document.getElementById("btnPrint").addEventListener("click", () => window.print());
