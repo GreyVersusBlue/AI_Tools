@@ -179,9 +179,13 @@
     <div class="card-title"><span>Number talks used this session</span></div>
     <ol class="history-list" id="historyList"></ol>
     <div class="hint" id="historyEmptyHint" style="margin:0;">Nothing yet &mdash; this list resets when you reload the page.</div>
+    <div class="hint" style="margin-top:.7rem;">Want to keep a copy? Nothing here is saved automatically &mdash; download it before you reload or close the tab.</div>
+    <div class="btn-row" style="margin-top:0;">
+      <button type="button" class="secondary" id="exportSessionBtn">Save this session</button>
+    </div>
   </div>
 
-  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Only the category filter is remembered between visits; any student first names you jot on the strategy board, and the session history, disappear the moment you reload.</footer>
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Only the category filter is remembered between visits; any student first names you jot on the strategy board, and the session history, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
 
 </div>
 
@@ -293,7 +297,7 @@
   var els = {};
   ['categorySelect', 'nextPromptBtn', 'stage', 'metaRow', 'revealRow', 'revealBtn', 'revealAllBtn',
    'customInput', 'useCustomBtn', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
-   'historyList', 'historyEmptyHint'
+   'historyList', 'historyEmptyHint', 'exportSessionBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   /* ---------- persistence (settings only) ---------- */
@@ -491,6 +495,59 @@
   }
   function escapeAttr(s) { return escapeHtml(s); }
 
+  /* ---------- session export (on demand only — never auto-saved) ---------- */
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function isoDateStamp() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function buildSessionExportText() {
+    var lines = [];
+    var now = new Date();
+    lines.push('Number Talks Session Export');
+    lines.push('Date: ' + now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+    lines.push('Category filter: ' + categoryLabel(settings.category));
+    lines.push('');
+    lines.push('NUMBER STRINGS SHOWN THIS SESSION');
+    lines.push('----------------------------------');
+    if (!history.length) {
+      lines.push('(none yet)');
+    } else {
+      history.slice().reverse().forEach(function (h, i) {
+        lines.push((i + 1) + '. [' + categoryLabel(h.category) + '] ' + h.text);
+      });
+    }
+    lines.push('');
+    lines.push('STRATEGY BOARD (at time of export)');
+    lines.push('----------------------------------');
+    if (!strategies.length) {
+      lines.push('(no strategy cards added)');
+    } else {
+      strategies.forEach(function (s, i) {
+        var name = s.name && s.name.trim() ? s.name.trim() : 'Student ' + (i + 1);
+        var text = s.text && s.text.trim() ? s.text.trim() : '(no notes entered)';
+        lines.push(name + ': ' + text);
+      });
+    }
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  function exportSession() {
+    var text = buildSessionExportText();
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'number-talks-session-' + isoDateStamp() + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
   /* ---------- wiring ---------- */
   els.categorySelect.addEventListener('change', function () {
     settings.category = els.categorySelect.value;
@@ -502,6 +559,7 @@
   els.useCustomBtn.addEventListener('click', useCustom);
   els.addStrategyBtn.addEventListener('click', addStrategyCard);
   els.clearBoardBtn.addEventListener('click', clearBoard);
+  els.exportSessionBtn.addEventListener('click', exportSession);
 
   /* ---------- boot ---------- */
   loadSettings();
