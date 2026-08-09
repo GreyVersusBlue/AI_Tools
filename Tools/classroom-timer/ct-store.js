@@ -19,7 +19,7 @@ const DEFAULTS = {
   transition: { minutes: 2, seconds: 0 },
   random: { minMinutes: 3, maxMinutes: 8 },
   roundrobin: { minutes: 2, seconds: 0, stations: 5, loop: false },
-  sound: { choice: 'chime', volume: 0.7, muted: false },
+  sound: { choice: 'chime', volume: 0.7, muted: false, flashEnabled: false },
   customPresets: []
 };
 
@@ -59,6 +59,7 @@ function sanitize(raw) {
     if (SOUNDS.includes(raw.sound.choice)) out.sound.choice = raw.sound.choice;
     out.sound.volume = clamp(raw.sound.volume, 0, 1, out.sound.volume);
     out.sound.muted = !!raw.sound.muted;
+    out.sound.flashEnabled = !!raw.sound.flashEnabled;
   }
   if (Array.isArray(raw.customPresets)) {
     out.customPresets = raw.customPresets
