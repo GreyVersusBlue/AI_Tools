@@ -50,7 +50,7 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Writing Prompt Generator<br>`Tools/writing-prompt-generator.html` | Roster-paste, one prompt per student | Randomly pair each pasted name with a distinct prompt and print a one-page assignment sheet for independent writing stations. |
+| 1 | Writing Prompt Generator<br>`Tools/writing-prompt-generator.html` | 🔒 **CLAIMED (2026-08-09)** — Roster-paste, one prompt per student | Randomly pair each pasted name with a distinct prompt and print a one-page assignment sheet for independent writing stations. |
 | 2 | Vocabulary Flashcard & Word Wall Generator<br>`Tools/vocab-flashcard-generator.html` | On-screen self-quiz/flip mode | Add a click-to-reveal quiz mode, like the one already in the conjugation drill tool, so cards are usable directly with a student at a screen and not just for printing. |
 | 3 | Vocab & Conjugation Drill Generator<br>`Tools/vocab-conjugation-drill.html` | Print vocab + conjugation together | Let both sections print as a single packet instead of two fully separate outputs. |
 | 4 | Vocab & Conjugation Drill Generator<br>`Tools/vocab-conjugation-drill.html` | Quick-start pronoun presets | Add one-click Spanish/French/German/Latin person-label sets instead of retyping them from the same Spanish default every time. |

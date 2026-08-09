@@ -246,7 +246,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), a fullscreen toggle (button or `F` key) for the projector "stage" display, and a "My Prompts" panel where a teacher can add their own prompts (grade band, genre) blended into the random pool alongside the built-in 200.
 **Suggested improvements:**
 - Add a "print this prompt" option that renders the current prompt as a single large poster-style page, for classrooms that post the daily prompt physically rather than only projecting it.
-- Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.
+- 🔒 **CLAIMED (2026-08-09)** — Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.
 
 ### Immersion Roleplay Scenario Generator (`Tools/roleplay-scenario-generator.html`)
 **Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories with two-role setups, fill-in vocabulary scaffolding cards saved per scenario, shuffle/prev/next navigation, and printable single or multi-scenario handout sets.
