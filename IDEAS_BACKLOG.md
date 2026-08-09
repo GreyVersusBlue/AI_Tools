@@ -8,39 +8,78 @@ Reminder: coming soon means not right now.
 
 ## General / Classroom Logistics
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Parent/Guardian Contact Log | Log a call, email, or note home per student — date, method, and outcome — for quick reference before a conference or a difficult phone call. |
+| Duty Roster Builder | Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board. |
+| Sub Note / Feedback Slip Generator | A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow. |
+| Staff Directory / Quick-Reference Builder | Build a printable staff directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |
+| Testing Accommodations Reference Card Generator | Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local, like the Final Grade Checker. |
 
 ## Math
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Virtual Manipulatives Board | A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever's on the board. |
+| Word Problem Warm-Up Generator | Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet. |
+| Unit Conversion Reference Chart Builder | A printable customary/metric conversion chart, customizable by unit set — the measurement-focused cousin of the Formula Reference Sheet Builder. |
+| Math "Find the Mistake" Warm-Up Generator | Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet. |
+| Fraction–Decimal–Percent Conversion Drill Generator | A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key. |
 
 ## English / Language Arts
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Daily Editing / DOL Warm-Up Generator | A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank. |
+| Peer Feedback / Editing Checklist Generator | Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student. |
+| Book Tasting Menu Generator | Turn a stack of book blurbs into a printable "menu" or table tents for a book-tasting activity, so students can browse titles before choosing one. |
+| Grammar Mad Libs Generator | Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal. |
+| Story Elements / Plot Diagram Builder | Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference. |
 
 ## Science
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Lab Report Template Builder | Build a reusable lab report template — hypothesis, materials, procedure, data table, and conclusion prompts — from a topic starter or from scratch, and print a fillable packet for each lab. |
+| Science Safety Symbol & Equipment Label Maker | Printable hazard and equipment labels for lab storage, bins, and stations — pairs with the Lab Safety Contract Tracker. |
+| Scientific Method / Experiment Design Planner | A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder. |
+| Science Fair Project Tracker | Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report. |
+| Dichotomous Key Builder | Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key. |
 
 ## Social Studies
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| DBQ / Source Packet Builder | Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source — pairs with the Primary Source Analysis Worksheet Generator. |
+| Historical Figure / Country Trading Card Maker | Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list. |
+| Current Events Discussion Guide Generator | Turn a pasted news article into a printable discussion guide (summary box, vocabulary, guiding questions). |
+| Government/Civics Simulation Role Card Generator | Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points. |
+| Geography Bee / Map Skills Quiz Generator | A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator. |
 
 ## World Language
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Classroom Label Maker (Target Language) | Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a text-to-speech pronunciation clip, plus a plain reference sheet of the whole label set. |
+| Verb Conjugation Reference Poster Generator | A printable large-format wall poster of conjugation patterns — a visual reference to hang up, distinct from the drill worksheets. |
+| Cultural Trivia Card Generator | Printable trivia cards about target-language countries and cultures, for warm-ups or feeding into the Quiz / Review Game Board. |
+| Picture-Prompt Speaking/Writing Task Generator | A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable. |
+| Cognates & False Friends Reference List Builder | Build and print a reference list of cognates and false friends for whatever language you teach. |
 
 ## Arts & PE
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Art Critique Worksheet Generator | A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student — pairs with Gallery Walk QR Codes. |
+| Fitness & Skill Assessment Tracker | Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report. |
+| Student Art Portfolio Label & QR Tag Maker | Printable labels and QR tags for physical student art portfolios, each code linking to a photo or description — pairs with Gallery Walk QR Codes. |
+| Music Sight-Reading / Rhythm Warm-Up Generator | Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class. |
+| PE Warm-Up Circuit Card Generator | Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins. |
 
 ## Existing Tools — Enhancement Ideas
 
 These are improvements to tools that are already built and live on the site, not new standalone tools — so none of
-these get an `index.html` "coming soon" row. This mirrors the open, unclaimed suggestions from
-[`TOOL_IMPROVEMENTS_PLAN.md`](TOOL_IMPROVEMENTS_PLAN.md) in a friendlier read; that file stays the working list
-Claude sessions pick bullets from (including its 🔒 claim tags), so check there for the most current, most granular
-version.
+these get an `index.html` "coming soon" row.
 
 **Rank** is a single priority order across this whole table, 1 = most important, no ties. It's what makes "work on
 the next 10 most important ideas" a well-defined request — take the 10 lowest-numbered *unclaimed* rows, skipping
@@ -50,15 +89,43 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| 1 | Final Grade Checker | "What do I need on the final?" calculator | Given a target letter grade or percentage, solve for the score needed on a specified remaining assignment/exam, alongside the existing forward calculation. |
+| 2 | Rubric Builder | Score-a-student mode | Click a point value per criterion for a specific student against a saved rubric and get a live computed total, instead of only printing a blank rubric. |
+| 3 | Seating Chart Generator | Per-student photo thumbnail | An optional photo (loaded from a local file, stored as a data URL) shown on the desk — useful for a substitute matching faces to names, and stays fully local. |
+| 4 | Bracket / Tournament Generator | Double-elimination mode | A second bracket type alongside the existing single-elimination one, with the same click-to-advance and print support. |
+| 5 | Data Table → Chart Builder | Box-and-whisker chart type | A fifth chart type alongside bar/line/pie/scatter, useful for showing score/measurement spread in a lab report. |
+| 6 | Grade Distribution Visualizer | Compare more than one saved assignment at once | Extend the existing side-by-side comparison (currently limited to one other saved assignment) to several at a time, for tracking a trend across a unit. |
+| 7 | Group / Team Generator | Recent-pairing memory | Remember the last shuffle or two so a reshuffle avoids repeating the same pairing back-to-back — the same fairness idea the Lab Group & Role Randomizer already uses for roles. |
+| 8 | QR Code Generator | Bulk mode | Turn a pasted list (one label + link/text per line) into a printable grid of QR codes in one pass, instead of one code at a time. |
+| 9 | Certificate & Award Maker | Optional QR code on the certificate | Link to a congratulatory note, video, or portfolio page, reusing the QR pattern already on the Field Trip Permission Slip. |
+| 10 | Classroom Timer | Silent low-time visual cue | A flashing border/background at zero alongside the existing audio alert, for testing rooms or hearing-impaired students. |
+| 11 | Vocabulary Flashcard & Word Wall Generator | Optional example-sentence line | A third field per card (beyond term/definition) printed smaller under the definition. |
+| 12 | Silent Reading (SSR) Log Tracker | Weekly pages/minutes goal | An optional weekly goal per class, shown as a simple progress indicator next to each student's summary row. |
+| 13 | Name Picker | Team draft mode | Two captains alternate picking students live from the roster, instead of only fully-random draws. |
+| 14 | Schedule Browser | Common planning period finder | Pick two or more teachers and highlight the period(s) where they're all free. |
+| 15 | Sub Plan Builder | Read-aloud on the quick-copy view | Wire the sitewide text-to-speech helper into the plain-text quick-copy modal, for a sub who'd rather listen than read. |
+| 16 | School Calendar Visualizer | Whole-year-at-a-glance print mode | A single-page print layout showing all twelve months at once, alongside the existing month-by-month print. |
+| 17 | Quiz / Review Game Board | Lightning round mode | A timed-answer variant with a visible per-question countdown, for a faster-paced review day. |
+| 18 | Exit Ticket / Bell Ringer Generator | Quick-tally formative check mode | A big-button 1–4 self-report scale students tap, tallied live on the projector, alongside the existing prompt bank. |
+| 19 | Field Trip Permission Slip Generator | Running headcount/amount-collected summary | A live total next to the existing per-student collected/paid tracker. |
+| 20 | QR Scavenger Hunt Builder | Built-in timer/leaderboard | An optional team-race timer and leaderboard for station-to-station hunts. |
+| 21 | Hall Pass Log | "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
+| 22 | Class Roster Hub | Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
+| 23 | Command Center | Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
+| 24 | Escape Room Builder | Printable story-intro cover page | A one-page prop/cover sheet to set the scene before students start scanning stations. |
+| 25 | Math Fact Drill Sheet Generator | One-click leveled set | Generate a matching easy/medium/hard set of sheets together in one pass, for quick differentiation. |
+| 26 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
+| 27 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
+| 28 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
+| 29 | Lab Group & Role Randomizer | Printable table-tent per group | A foldable name-card showing today's group and roles, to set out at each lab station. |
+| 30 | Timeline Builder | Side-by-side compare mode | View two saved timelines together for teaching concurrent history threads. |
+| 31 | Vocab & Conjugation Drill Generator | Fill-in-the-blank quiz mode | A lighter, faster quiz format alongside the existing full conjugation-grid drill. |
+| 32 | Gallery Walk QR Codes | Per-piece reaction tap | An optional star/emoji reaction button per entry, tallied for the artist — fully local per device, nothing synced. |
+| 33 | Blank Map Generator | Self-check quiz mode | Hide the labels until clicked, so a finished map can double as a self-check study tool instead of only a static handout. |
 
 ### Currently claimed (in progress elsewhere)
 
 Nothing claimed right now — every row that was here has shipped (or graduated back to the ranked table above).
-This section fills back in whenever a parallel session claims a row in `TOOL_IMPROVEMENTS_PLAN.md`; if a claim
-goes stale (a day or two with nothing landed on `main`), it's fair game to reclaim in the plan file and add back to
-the ranked list above at whatever rank fits.
 
 ## Platform-Wide — Big Swings
 
@@ -68,7 +135,12 @@ no `index.html` "coming soon" row for these, since there's no single new tool pa
 all still within GitHub Pages' static-hosting limits (no server, no accounts, no database) — several lean on
 browser APIs the toolkit doesn't use yet.
 
-No open ideas on the list right now — everything collected so far has shipped. Add new ones here as they come up.
+| Idea | What it would do |
+|---|---|
+| Bulk CSV Roster Import Hub | Upload a full set of class rosters once and have every roster-consuming tool on the site pick them up, instead of pasting the same list into each tool separately. |
+| Custom Theme / Branding Pass | Let a school set an accent color and logo once (saved locally) and have it carry across every tool for a school-specific reskin. |
+| Voice Command / Speech-to-Text Input | Wire the browser's Web Speech API into compatible tools (calling a name, logging a behavior point) for hands-free operation. |
+| Printable "Cheat Sheet" Bundle Export | Combine chosen printable outputs from several tools (seating chart, sub plan, hall pass log) into one exported packet, generalizing the Sub Binder's approach to any tool combination. |
 
 ## Picking one up
 
