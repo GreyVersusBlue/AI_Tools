@@ -154,6 +154,18 @@
   #regionChipLayer { position: absolute; inset: 0; pointer-events: none; }
   #lineSvg { position: absolute; top: 0; left: 0; pointer-events: none; }
   #lineChipLayer { position: absolute; inset: 0; pointer-events: none; }
+  #measureSvg { position: absolute; top: 0; left: 0; pointer-events: none; }
+  #measureChipLayer { position: absolute; inset: 0; pointer-events: none; }
+  .measure-readout {
+    position: absolute; transform: translate(-50%, -100%); margin-top: -8px; display: flex; align-items: center;
+    gap: 6px; background: rgba(255,255,255,.94); border: 1px solid var(--err); border-radius: 6px;
+    padding: 4px 8px; font-size: 0.78rem; font-weight: 600; color: var(--ink); pointer-events: auto;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25); z-index: 6; white-space: nowrap;
+  }
+  .measure-readout .measure-clear {
+    border: none; background: transparent; color: var(--err); font-size: 14px; line-height: 1; padding: 0;
+    cursor: pointer;
+  }
   .lineArrowLabel { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--ink); }
   .lineArrowLabel input { margin: 0; }
   .rgn-del {
@@ -332,6 +344,7 @@
     <select id="projectSwitcher" class="styleSelect"></select>
     <button id="btnNewProject" class="small">+ New Project</button>
     <button id="btnRenameProject" class="small">Rename</button>
+    <button id="btnDuplicateProject" class="small" title="Make an independent copy of this project — e.g. a per-class/per-period variant — under a new name">Duplicate</button>
     <button id="btnDeleteProject" class="small">Delete</button>
     <button id="btnExportProject" class="small">Export&hellip;</button>
     <button id="btnImportProject" class="small">Import&hellip;</button>
@@ -417,6 +430,7 @@
         <option value="km">km</option>
         <option value="mi">mi</option>
       </select>
+      <button id="btnMeasure" class="small toggle" title="Click two points on the map to measure the real-world straight-line distance between them">Measure Distance</button>
       <button id="btnStudentMode" class="small toggle" title="Hide label and legend text for a printable student handout. Toggle off to see the labeled teacher/answer-key version.">Student Handout Mode</button>
     </div>
     <div id="calibratePanel" class="card no-print" hidden>
@@ -479,9 +493,11 @@
         <div id="gridLayer"></div>
         <svg id="regionSvg" aria-hidden="true"></svg>
         <svg id="lineSvg" aria-hidden="true"></svg>
+        <svg id="measureSvg" aria-hidden="true"></svg>
       </div>
       <div id="regionChipLayer"></div>
       <div id="lineChipLayer"></div>
+      <div id="measureChipLayer"></div>
       <div id="labelLayer"></div>
       <div id="markerLayer"></div>
       <div id="legendPanel" hidden></div>
@@ -527,7 +543,7 @@ import {
   createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg,
   REGION_PATTERNS, DEFAULT_REGION_PATTERN,
 } from './blank-map-generator/bmg-regions.js';
-import { createLineLayer, LINE_COLORS, lineColorHex, lineSwatchSvg } from './blank-map-generator/bmg-lines.js';
+import { createLineLayer, createMeasureLayer, LINE_COLORS, lineColorHex, lineSwatchSvg } from './blank-map-generator/bmg-lines.js';
 import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
@@ -537,7 +553,7 @@ const store = createStore();
 let project = store.getActiveProject();
 let currentObjectUrl = null;
 let currentSize = { width: 0, height: 0 };
-let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region'
+let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region' | 'line' | 'measure'
 let downPt = null;
 let currentSearchQuery = '';
 let searchContinueParams = null;
@@ -561,6 +577,7 @@ const viewer = createViewer(viewport, stage, {
     markerLayer.reposition();
     regionLayer.reposition();
     lineLayer.reposition();
+    measureLayer.reposition();
     locator.updateRect();
     renderScaleBar();
   },
@@ -581,6 +598,11 @@ const regionLayer = createRegionLayer(el('regionSvg'), el('regionChipLayer'), vi
 const lineLayer = createLineLayer(el('lineSvg'), el('lineChipLayer'), viewer, {
   onChange(lines) { project.lines = lines; save(); renderLegend(); },
 });
+
+// Distance measuring is a read-only, non-persisted tool (see bmg-lines.js's
+// createMeasureLayer) — it has no onChange/project field of its own, unlike
+// every other layer above.
+const measureLayer = createMeasureLayer(el('measureSvg'), el('measureChipLayer'), viewer);
 
 const legendPanel = createLegendPanel(el('legendPanel'), {
   onMarkerTextChange(key, text) { project.legendText[key] = text; save(); },
@@ -900,6 +922,7 @@ el('btnScaleBar').addEventListener('click', () => {
 el('scaleBarUnitSelect').addEventListener('change', () => {
   project.scaleBarUnit = el('scaleBarUnitSelect').value;
   renderScaleBar();
+  measureLayer.setUnit(project.scaleBarUnit); // the measuring tool reports in the same unit as the scale bar
   save();
 });
 el('btnGrid').addEventListener('click', () => {
@@ -936,6 +959,7 @@ el('btnApplyCalibration').addEventListener('click', () => {
   save();
   renderGrid();
   renderScaleBar();
+  measureLayer.setCalibration(candidate);
   el('calibratePanel').hidden = true;
 });
 
@@ -949,6 +973,8 @@ el('btnClearCalibration').addEventListener('click', () => {
   save();
   renderGrid();
   renderScaleBar();
+  measureLayer.setCalibration(null);
+  if (placeMode === 'measure') setPlaceMode('none');
   el('calibratePanel').hidden = true;
 });
 
@@ -1041,6 +1067,7 @@ const PLACE_HINTS = {
   marker: 'Click the map to place a marker &middot; Esc to stop',
   region: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the shape',
   line: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the line',
+  measure: 'Click two points to measure the distance between them &middot; click again to start a new measurement &middot; Esc clears',
 };
 
 // Regions (closed, min 3 points) and lines (open, min 2 points) share the
@@ -1056,12 +1083,14 @@ function activeDraftLayer() {
 function setPlaceMode(mode) {
   if (placeMode === 'region' && mode !== 'region') regionLayer.cancelDraft();
   if (placeMode === 'line' && mode !== 'line') lineLayer.cancelDraft();
+  if (placeMode === 'measure' && mode !== 'measure') measureLayer.reset();
   placeMode = mode;
   viewport.classList.toggle('adding', mode !== 'none');
   el('btnAddLabel').classList.toggle('active', mode === 'label');
   el('btnAddMarker').classList.toggle('active', mode === 'marker');
   el('btnAddRegion').classList.toggle('active', mode === 'region');
   el('btnAddLine').classList.toggle('active', mode === 'line');
+  el('btnMeasure').classList.toggle('active', mode === 'measure');
   el('markerStyleSelect').hidden = mode !== 'marker';
   el('markerColorSelect').hidden = mode !== 'marker';
   el('markerSizeSelect').hidden = mode !== 'marker';
@@ -1092,6 +1121,10 @@ el('btnAddLabel').addEventListener('click', () => setPlaceMode(placeMode === 'la
 el('btnAddMarker').addEventListener('click', () => setPlaceMode(placeMode === 'marker' ? 'none' : 'marker'));
 el('btnAddRegion').addEventListener('click', () => setPlaceMode(placeMode === 'region' ? 'none' : 'region'));
 el('btnAddLine').addEventListener('click', () => setPlaceMode(placeMode === 'line' ? 'none' : 'line'));
+el('btnMeasure').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
+  setPlaceMode(placeMode === 'measure' ? 'none' : 'measure');
+});
 el('btnFinishRegion').addEventListener('click', finishShape);
 el('btnCancelRegion').addEventListener('click', () => { activeDraftLayer()?.layer.cancelDraft(); updateShapeButtons(); });
 
@@ -1109,6 +1142,7 @@ document.addEventListener('keydown', e => {
   const active = activeDraftLayer();
   if (e.key === 'Escape') {
     if (active && active.layer.draftPointCount() > 0) { active.layer.cancelDraft(); updateShapeButtons(); }
+    else if (placeMode === 'measure' && measureLayer.pointCount() > 0) measureLayer.reset();
     else if (placeMode !== 'none') setPlaceMode('none');
     return;
   }
@@ -1171,6 +1205,8 @@ viewport.addEventListener('pointerup', e => {
     if (!lineLayer.isDrafting()) lineLayer.startDraft(el('lineColorSelect').value, el('lineStyleSelect').value, el('lineArrowCheck').checked);
     lineLayer.addDraftPoint(stagePt.x, stagePt.y);
     updateShapeButtons();
+  } else if (placeMode === 'measure') {
+    measureLayer.addPoint(stagePt.x, stagePt.y);
   }
 });
 
@@ -1356,6 +1392,7 @@ function displayMap(record) {
     regionLayer.setRegions(project.regions);
     lineLayer.setSize(w, h);
     lineLayer.setLines(project.lines);
+    measureLayer.setSize(w, h);
     renderGrid();
     locator.updateRect();
   };
@@ -1411,6 +1448,12 @@ function displayMap(record) {
   el('scaleBarUnitSelect').hidden = !project.scaleBarEnabled;
   if (project.scaleBarEnabled) ensureOverlayPos(el('scaleBar'), 'scaleBarPos');
   renderScaleBar();
+  // The measuring tool reports in the same calibration/unit as the scale
+  // bar — re-sync both whenever a (possibly different) project's map loads,
+  // since setPlaceMode('none') above already cleared any in-progress
+  // measurement from whatever was showing before.
+  measureLayer.setCalibration(project.calibration);
+  measureLayer.setUnit(project.scaleBarUnit || 'km');
   save();
   renderAttribution(record);
   refreshRecent();
@@ -2064,6 +2107,7 @@ function showEmptyMapState(mapMissing) {
   markerLayer.setMarkers([]);
   regionLayer.setRegions([]);
   lineLayer.setLines([]);
+  measureLayer.setCalibration(null);
   el('legendPanel').hidden = true;
   el('compassRose').hidden = true;
   el('btnCompass').classList.remove('active');
@@ -2114,6 +2158,15 @@ el('btnRenameProject').addEventListener('click', () => {
   if (name === null || !name.trim()) return;
   store.renameProject(store.getActiveId(), name.trim());
   refreshProjectSwitcher();
+});
+
+el('btnDuplicateProject').addEventListener('click', () => {
+  const current = store.listProjects().find(p => p.id === store.getActiveId());
+  const defaultName = `${current ? current.name : 'Untitled map'} copy`;
+  const name = prompt('Name this duplicated map project:', defaultName);
+  if (name === null) return;
+  store.duplicateProject(store.getActiveId(), name.trim() || defaultName);
+  loadActiveProjectIntoUI();
 });
 
 el('btnDeleteProject').addEventListener('click', () => {
