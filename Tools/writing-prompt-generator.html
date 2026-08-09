@@ -42,6 +42,7 @@
     background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
   }
   .fs-btn:hover { color: var(--accent-2); border-color: var(--accent-2); background: #fff; }
+  .fs-btn:disabled { opacity: .45; cursor: not-allowed; }
 
   .controls { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin-bottom: 1.2rem; }
   .band-tabs, .genre-select { display: flex; gap: .4rem; flex-wrap: wrap; }
@@ -149,7 +150,7 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; text-align: center; }
 
-  /* ── Print roster assignment sheet ────────────────────────────────────── */
+  /* ── Print roster assignment sheet / prompt poster ────────────────────── */
   .print-only { display: none; }
   @media print {
     body { background: #fff; color: #000; padding: 0; }
@@ -161,6 +162,22 @@
     .print-only li { margin-bottom: .9rem; page-break-inside: avoid; }
     .print-only .rsl-name { font-weight: 700; }
     .print-only .rsl-prompt { display: block; margin-top: .15rem; }
+
+    /* poster: one prompt, as large as the page allows, for taping to a wall */
+    #posterPrintArea.active {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; height: 100%; padding: 0; text-align: center;
+    }
+    .poster-inner { width: 100%; }
+    .poster-text {
+      font-size: 60pt; font-weight: 800; line-height: 1.15; margin: 0 0 .5in;
+      word-wrap: break-word;
+    }
+    .poster-meta {
+      font-size: 16pt; letter-spacing: .08em; text-transform: uppercase; color: #444;
+    }
+    .poster-meta span { margin: 0 .35in; }
+
     @page { size: letter portrait; margin: 0.5in; }
   }
 </style>
@@ -176,6 +193,7 @@
       <h1>Writing Prompt Generator</h1>
     </div>
     <div class="header-actions">
+      <button type="button" class="fs-btn" id="printPosterBtn" title="Print the current prompt as a wall poster" disabled>&#128424; Print poster</button>
       <button type="button" class="fs-btn" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
     </div>
   </div>
@@ -249,6 +267,7 @@
 
 </div>
 
+<div class="print-only" id="posterPrintArea"></div>
 <div class="print-only" id="rosterPrintArea"></div>
 
 <script>
@@ -257,6 +276,7 @@
 
   var els = {};
   ['bandTabs','genreSelect','stage','metaRow','generateBtn','historyList','fullscreenBtn',
+   'printPosterBtn','posterPrintArea',
    'includeCustomToggle','togglePromptsBtn','myPromptsPanel','customPromptText','customPromptBand',
    'customPromptGenre','addCustomPromptBtn','customPromptsList',
    'rosterLoadSelect','rosterNamesInput','rosterCount','buildRosterSheetBtn','printRosterSheetBtn',
@@ -270,6 +290,7 @@
   var customPrompts = []; // {id, text, band: 'ms'|'hs'|'both', genre} — teacher-added, persisted across sessions
   var HISTORY_LIMIT = 200; // keep a school-year's worth of entries without growing unbounded
   var AVOID_REPEAT_WINDOW = 6;
+  var currentPrompt = null; // {band, genre, text, date} — the prompt currently on the stage, for the poster print
   var rosterAssignments = []; // {name, band, genre, text} — built on demand, not persisted
   var NP_ROSTERS_KEY = 'np_rosters';
 
@@ -429,10 +450,12 @@
     history = history.slice(0, HISTORY_LIMIT);
     persistHistory();
 
+    currentPrompt = pick;
     els.stage.innerHTML = '<p class="prompt-text">' + escapeHtml(pick.text) + '</p>';
     els.metaRow.innerHTML =
       '<span class="tag">' + (pick.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
       '<span class="tag">' + escapeHtml(genreLabel(pick.genre)) + '</span>';
+    els.printPosterBtn.disabled = false;
 
     renderHistory();
   }
@@ -441,6 +464,18 @@
     els.historyList.innerHTML = history.map(function (h) {
       return '<li><span class="hist-date">' + escapeHtml(h.date) + '</span>' + escapeHtml(h.text) + '</li>';
     }).join('');
+  }
+
+  function renderPosterPrintArea() {
+    if (!currentPrompt) { els.posterPrintArea.innerHTML = ''; return; }
+    els.posterPrintArea.innerHTML =
+      '<div class="poster-inner">' +
+        '<p class="poster-text">' + escapeHtml(currentPrompt.text) + '</p>' +
+        '<p class="poster-meta">' +
+          '<span>' + (currentPrompt.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
+          '<span>' + escapeHtml(genreLabel(currentPrompt.genre)) + '</span>' +
+        '</p>' +
+      '</div>';
   }
 
   /* ---------- Roster Assignment Sheet ---------- */
@@ -610,8 +645,15 @@
     els.rosterPrintArea.classList.add('active');
     window.print();
   });
+  els.printPosterBtn.addEventListener('click', function () {
+    if (!currentPrompt) return;
+    renderPosterPrintArea();
+    els.posterPrintArea.classList.add('active');
+    window.print();
+  });
   window.addEventListener('afterprint', function () {
     els.rosterPrintArea.classList.remove('active');
+    els.posterPrintArea.classList.remove('active');
   });
 
   els.fullscreenBtn.addEventListener('click', toggleFullscreen);
