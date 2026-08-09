@@ -73,6 +73,18 @@
   .move-row-btn:disabled { opacity: .35; cursor: not-allowed; }
   .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
 
+  tr.dup-row { background: #fbf2e6; }
+  .dup-badge {
+    display: inline-block; margin-top: .25rem; font-size: .68rem; font-weight: 700;
+    color: #8a5a00; background: #fbe7c6; border: 1px solid #e0b876; border-radius: 4px;
+    padding: .1rem .35rem; letter-spacing: .01em; white-space: nowrap;
+  }
+  #dupWarning {
+    font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; margin-bottom: .7rem;
+    background: #fbe7c6; color: #8a5a00; border: 1px solid #e0b876; display: none;
+  }
+  #dupWarning.show { display: block; }
+
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
     background: var(--accent); color: #fff; border: 1px solid var(--accent);
@@ -239,6 +251,7 @@
           <input type="checkbox" id="showNumber" checked>
           <label class="option-label" for="showNumber">Show entry number above the name</label>
         </div>
+        <div id="dupWarning"></div>
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print QR Codes</button>
           <button class="secondary" id="printRefBtn" disabled type="button">Print Reference Sheet</button>
@@ -289,7 +302,7 @@
    'entriesBody', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
    'importCsvBtn', 'importCsvInput',
    'rosterHubSelect', 'rosterHubLoadBtn',
-   'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn', 'copyLinksBtn',
+   'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
    'refSheetTitle', 'previewNote', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
@@ -385,6 +398,46 @@
         '</td>' +
         '</tr>';
     }).join('');
+    updateDupIndicators();
+  }
+
+  // Toggles the per-row duplicate badge/highlight in place, without rebuilding
+  // the row inputs — called after full row rebuilds and on every keystroke,
+  // so typing a duplicate doesn't steal focus or move the caret.
+  function updateDupIndicators() {
+    var dupes = duplicateContentSet();
+    Array.prototype.forEach.call(els.entriesBody.querySelectorAll('tr'), function (tr) {
+      var i = parseInt(tr.dataset.idx, 10);
+      var isDup = !!dupes[normalizeContent(state.entries[i].value)];
+      tr.classList.toggle('dup-row', isDup);
+      var valueCell = tr.querySelector('.f-value').parentNode;
+      var badge = valueCell.querySelector('.dup-badge');
+      if (isDup && !badge) {
+        badge = document.createElement('div');
+        badge.className = 'dup-badge';
+        badge.title = 'This link/text matches another entry in this gallery';
+        badge.innerHTML = '&#9888; Duplicate link';
+        valueCell.appendChild(badge);
+      } else if (!isDup && badge) {
+        valueCell.removeChild(badge);
+      }
+    });
+    updateDupWarning(dupes);
+  }
+
+  // Short summary warning above the print buttons, so it's visible without
+  // scrolling through every row.
+  function updateDupWarning(dupes) {
+    var groups = Object.keys(dupes).length;
+    if (!groups) {
+      els.dupWarning.className = '';
+      els.dupWarning.textContent = '';
+      return;
+    }
+    var affected = state.entries.filter(function (e) { return dupes[normalizeContent(e.value)]; }).length;
+    els.dupWarning.className = 'show';
+    els.dupWarning.textContent = '⚠ ' + affected + ' entries share the same link/text as another entry' +
+      (groups > 1 ? ' (' + groups + ' different links repeated)' : '') + ' — double-check before printing.';
   }
 
   els.entriesBody.addEventListener('input', function (e) {
@@ -394,6 +447,7 @@
     if (e.target.classList.contains('f-name')) state.entries[i].name = e.target.value;
     else if (e.target.classList.contains('f-value')) state.entries[i].value = e.target.value;
     save();
+    if (e.target.classList.contains('f-value')) updateDupIndicators();
     scheduleRender();
   });
 
@@ -508,6 +562,22 @@
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v)) return v; // already has a scheme (https:, mailto:, tel:, ...)
     if (looksLikeUrl(v)) return 'https://' + v;
     return v; // plain text — encoded as typed
+  }
+
+  // Flags entries whose normalized content exactly matches another entry's
+  // in the current gallery — reuses normalizeContent so a row is only ever
+  // compared using the same value the QR/print steps encode. Blank content
+  // never counts as a duplicate of another blank one.
+  function duplicateContentSet() {
+    var counts = {};
+    state.entries.forEach(function (e) {
+      var c = normalizeContent(e.value);
+      if (!c) return;
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    var dupes = {};
+    Object.keys(counts).forEach(function (c) { if (counts[c] > 1) dupes[c] = true; });
+    return dupes;
   }
 
   function validEntries() {
