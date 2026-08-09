@@ -88,18 +88,10 @@ list in parallel without colliding.
 
 ### Currently claimed (in progress elsewhere)
 
-These didn't make the ranked table above because a parallel session has already claimed them in
-`TOOL_IMPROVEMENTS_PLAN.md` — listed here so nobody duplicates the work. If a claim goes stale (a day or two with
-nothing landed on `main`), it's fair game: reclaim it in the plan file and add it back to the ranked list above at
-whatever rank fits.
-
-| Tool | Idea | Claimed |
-|---|---|---|
-| Command Center | Surface the current Hall Pass Log "currently out" count on the dashboard | 2026-08-09 |
-| Seating Chart Generator | "Duplicate section" action (copies a desk layout, not the roster) | 2026-08-09 |
-| Novel Study / Reading Circles Manager | "Print full meeting log" option covering every logged meeting | 2026-08-09 |
-| Gallery Walk QR Codes | Flag duplicate links/text across entries before printing | 2026-08-09 |
-| Silent Reading Log Tracker | "Days logged this week" streak indicator per student | 2026-08-09 |
+Nothing claimed right now — every row that was here has shipped (or graduated back to the ranked table above).
+This section fills back in whenever a parallel session claims a row in `TOOL_IMPROVEMENTS_PLAN.md`; if a claim
+goes stale (a day or two with nothing landed on `main`), it's fair game to reclaim in the plan file and add back to
+the ranked list above at whatever rank fits.
 
 ## Platform-Wide — Big Swings
 

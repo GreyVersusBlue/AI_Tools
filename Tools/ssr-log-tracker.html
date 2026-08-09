@@ -96,6 +96,7 @@
   .summary-table th { cursor: pointer; user-select: none; }
   .summary-table th:hover { color: var(--accent-2); }
   .summary-table th .arrow { opacity: .6; font-size: .7rem; }
+  .summary-table td.days-low { color: var(--err); font-weight: 700; }
   .row-actions { display: flex; gap: .4rem; justify-content: flex-end; }
   .table-wrap { overflow-x: auto; }
 
@@ -229,7 +230,7 @@
       <label>From <input type="date" id="filterFrom"></label>
       <label>To <input type="date" id="filterTo"></label>
       <button type="button" class="secondary small" id="clearFilterBtn">Clear filter</button>
-      <span class="hint" style="margin:0;">Date filter applies to totals only, not the current-book column.</span>
+      <span class="hint" style="margin:0;">Date filter applies to totals only, not the current-book or days-logged-this-week columns.</span>
     </div>
     <div class="summary-filter" style="margin-bottom:.9rem;">
       <label>Weekly goal <input type="number" id="goalPages" min="0" step="1" placeholder="pages"></label>
@@ -244,6 +245,7 @@
             <th data-sort="name">Student <span class="arrow"></span></th>
             <th data-sort="book">Current book <span class="arrow"></span></th>
             <th data-sort="finishedCount">Books completed <span class="arrow"></span></th>
+            <th data-sort="daysThisWeek">Days logged this week <span class="arrow"></span></th>
             <th data-sort="pages">Total pages <span class="arrow"></span></th>
             <th data-sort="minutes">Total minutes <span class="arrow"></span></th>
             <th data-sort="weekPages" class="goal-col">This week <span class="arrow"></span></th>
@@ -302,11 +304,14 @@
     });
   }
 
-  function todayStr() {
-    var d = new Date();
+  function toDateStr(d) {
     var m = String(d.getMonth() + 1).padStart(2, '0');
     var day = String(d.getDate()).padStart(2, '0');
     return d.getFullYear() + '-' + m + '-' + day;
+  }
+
+  function todayStr() {
+    return toDateStr(new Date());
   }
 
   function makeId() {
@@ -745,6 +750,24 @@
     return true;
   }
 
+  // Distinct calendar days, in the rolling 7-day window ending today (today
+  // minus 6 days through today), on which a student has at least one log
+  // entry. This is always the actual current week, independent of the
+  // summary table's from/to date filter — it answers "has this kid read
+  // lately," not "how many days fall within whatever range is filtered."
+  var LOW_DAYS_THRESHOLD = 3; // fewer than half the week flags a student
+
+  function daysLoggedThisWeek(name) {
+    var weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 6);
+    var start = toDateStr(weekAgo), end = todayStr();
+    var seen = {};
+    studentEntries(name).forEach(function (e) {
+      if (e.date >= start && e.date <= end) seen[e.date] = true;
+    });
+    return Object.keys(seen).length;
+  }
+
   function summaryRows() {
     var week = currentWeekRange();
     return state.roster.map(function (name) {
@@ -772,6 +795,7 @@
         name: name,
         book: latest ? latest.book : '',
         finishedCount: studentFinished(name).length,
+        daysThisWeek: daysLoggedThisWeek(name),
         pages: totalPages,
         minutes: totalMinutes,
         weekPages: weekPages,
@@ -819,6 +843,7 @@
         '<td>' + escapeHtml(r.name) + '</td>' +
         '<td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
         '<td class="num">' + r.finishedCount + '</td>' +
+        '<td class="num' + (r.daysThisWeek < LOW_DAYS_THRESHOLD ? ' days-low' : '') + '">' + r.daysThisWeek + '</td>' +
         '<td class="num">' + r.pages + '</td>' +
         '<td class="num">' + r.minutes + '</td>' +
         '<td class="goal-col">' + (hasGoal ? goalCellHtml(r) : '') + '</td>';
@@ -929,13 +954,13 @@
       (from && to ? ' ' : '') + (to ? ('to ' + escapeHtml(to)) : '')) : '';
     var body = rows.map(function (r) {
       return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
-        '<td>' + r.finishedCount + '</td><td>' + r.pages + '</td><td>' + r.minutes + '</td></tr>';
+        '<td>' + r.finishedCount + '</td><td>' + r.daysThisWeek + '</td><td>' + r.pages + '</td><td>' + r.minutes + '</td></tr>';
     }).join('');
     els.printArea.innerHTML =
       '<div class="print-title">Class Summary &mdash; ' + escapeHtml(state.name) + '</div>' +
       '<div class="print-sub">Printed ' + escapeHtml(todayStr()) + rangeNote + '</div>' +
-      '<table><thead><tr><th>Student</th><th>Current book</th><th>Books completed</th><th>Total pages</th><th>Total minutes</th></tr></thead>' +
-      '<tbody>' + (body || '<tr><td colspan="5">No students yet.</td></tr>') + '</tbody></table>';
+      '<table><thead><tr><th>Student</th><th>Current book</th><th>Books completed</th><th>Days logged this week</th><th>Total pages</th><th>Total minutes</th></tr></thead>' +
+      '<tbody>' + (body || '<tr><td colspan="6">No students yet.</td></tr>') + '</tbody></table>';
     window.print();
   }
 

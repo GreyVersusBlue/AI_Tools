@@ -384,6 +384,8 @@
         <div class="row tight">
           <input type="text" id="newSectionName" placeholder="New section name" aria-label="New section name">
           <button class="btn sm ghost" onclick="addSection()">Add</button>
+          <button class="btn sm ghost" onclick="duplicateSection()"
+                  title="Copy this section's desk layout into a new, empty section">Duplicate</button>
           <button class="btn sm danger" onclick="renameSection()">Rename</button>
           <button class="btn sm danger" onclick="deleteSection()">Delete</button>
         </div>
@@ -651,6 +653,25 @@ function deleteSection(){
   pushUndo();
   state.sections = state.sections.filter(s => s.id !== state.active);
   state.active = state.sections[0].id; renderAll();
+}
+/** Same room, next period: copy the active section's desk layout (positions,
+    rotation, locked state) into a brand-new section, but leave the roster and
+    seat assignments empty — that's the one part of a chart a new class period
+    never shares. Naming follows the "(copy)"/"(copy) 2" convention already used
+    for duplicate rosters and configs elsewhere in this suite. */
+function duplicateSection(){
+  const src = sec();
+  const base = src.name + ' (copy)';
+  const taken = new Set(state.sections.map(s => s.name));
+  let name = base, n = 2;
+  while (taken.has(name)){ name = base + ' ' + n; n++; }
+  pushUndo();
+  const copy = newSection(name);
+  copy.desks = src.desks.map(d => ({ id: uid(), x: d.x, y: d.y, rot: d.rot, locked: d.locked }));
+  state.sections.push(copy);
+  state.active = copy.id;
+  renderAll();
+  say(`Duplicated the layout as "${name}". Roster and seats start empty.`, 'good');
 }
 
 /* ============================================================
@@ -1386,7 +1407,7 @@ function boot(){
 // The inline handlers in the markup need these on the window; a module's scope is
 // its own. Kept explicit rather than clever so a missing one is a visible name.
 Object.assign(window, {
-  addSection, renameSection, deleteSection,
+  addSection, duplicateSection, renameSection, deleteSection,
   addNames, sortRoster, setLastFirst, toggleFlag, editNote, removeStudent,
   choosePhoto, removePhoto,
   loadRosterHub,
