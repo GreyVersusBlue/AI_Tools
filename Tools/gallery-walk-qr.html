@@ -206,6 +206,8 @@
           <textarea id="importText" placeholder="Ava R.	docs.google.com/document/d/abc123&#10;Marco T., drive.google.com/drive/folders/xyz&#10;Table 3, See the printed instructions taped to the desk"></textarea>
           <div class="btn-row">
             <button id="importBtn" type="button">Add these entries</button>
+            <button class="secondary" id="importCsvBtn" type="button">Choose CSV file&hellip;</button>
+            <input type="file" id="importCsvInput" accept=".csv,text/csv" style="display:none;">
           </div>
         </div>
         <div class="hint">A link missing "https://" (like "docs.google.com/...") gets it added automatically. Anything that doesn't look like a link or address is encoded as plain text as-is &mdash; handy for pointing at instructions instead of a URL.</div>
@@ -285,6 +287,7 @@
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'entriesBody', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
+   'importCsvBtn', 'importCsvInput',
    'rosterHubSelect', 'rosterHubLoadBtn',
    'cardsPerPage', 'ecLevel', 'showNumber', 'printCodesBtn', 'printRefBtn', 'copyLinksBtn',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
@@ -443,9 +446,11 @@
     els.importBox.classList.toggle('open');
   });
 
-  els.importBtn.addEventListener('click', function () {
-    var text = els.importText.value;
-    if (!text.trim()) return;
+  // Shared by the paste textarea and the CSV file picker below — one entry
+  // per line, name then link/text separated by a tab or a comma. Returns
+  // false (no-op) for blank/empty input.
+  function importEntriesFromText(text) {
+    if (!text || !text.trim()) return false;
     var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
     var added = lines.map(function (line) {
       var delim = line.indexOf('\t') !== -1 ? '\t' : ',';
@@ -456,11 +461,36 @@
     // Replace a single still-empty starter row rather than leaving it dangling.
     if (state.entries.length === 1 && !state.entries[0].name && !state.entries[0].value) state.entries = [];
     state.entries = state.entries.concat(added);
-    els.importText.value = '';
     renderRows();
     save();
     scheduleRender();
     clearMsg();
+    return true;
+  }
+
+  els.importBtn.addEventListener('click', function () {
+    if (importEntriesFromText(els.importText.value)) els.importText.value = '';
+  });
+
+  // ── CSV file import — reads the file text and hands it to the exact same
+  //    line-parser above; no separate CSV parsing logic. ─────────────────────
+  els.importCsvBtn.addEventListener('click', function () { els.importCsvInput.click(); });
+
+  els.importCsvInput.addEventListener('change', function () {
+    var file = els.importCsvInput.files && els.importCsvInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      if (!importEntriesFromText(String(reader.result || ''))) {
+        showMsg('That CSV file looked empty.');
+      }
+      els.importCsvInput.value = '';
+    };
+    reader.onerror = function () {
+      showMsg('Could not read that file. Try again, or paste the list instead.');
+      els.importCsvInput.value = '';
+    };
+    reader.readAsText(file);
   });
 
   // ── Content normalization ────────────────────────────────────────────────
