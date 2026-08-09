@@ -89,16 +89,16 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Vocabulary Flashcard & Word Wall Generator | Optional example-sentence line | A third field per card (beyond term/definition) printed smaller under the definition. |
-| 2 | Silent Reading (SSR) Log Tracker | Weekly pages/minutes goal | An optional weekly goal per class, shown as a simple progress indicator next to each student's summary row. |
-| 3 | Name Picker | Team draft mode | Two captains alternate picking students live from the roster, instead of only fully-random draws. |
-| 4 | Schedule Browser | Common planning period finder | Pick two or more teachers and highlight the period(s) where they're all free. |
-| 5 | Sub Plan Builder | Read-aloud on the quick-copy view | Wire the sitewide text-to-speech helper into the plain-text quick-copy modal, for a sub who'd rather listen than read. |
-| 6 | School Calendar Visualizer | Whole-year-at-a-glance print mode | A single-page print layout showing all twelve months at once, alongside the existing month-by-month print. |
-| 7 | Quiz / Review Game Board | Lightning round mode | A timed-answer variant with a visible per-question countdown, for a faster-paced review day. |
-| 8 | Exit Ticket / Bell Ringer Generator | Quick-tally formative check mode | A big-button 1–4 self-report scale students tap, tallied live on the projector, alongside the existing prompt bank. |
-| 9 | Field Trip Permission Slip Generator | Running headcount/amount-collected summary | A live total next to the existing per-student collected/paid tracker. |
-| 10 | QR Scavenger Hunt Builder | Built-in timer/leaderboard | An optional team-race timer and leaderboard for station-to-station hunts. |
+| 1 | Vocabulary Flashcard & Word Wall Generator | 🔒 **CLAIMED (2026-08-09)** — Optional example-sentence line | A third field per card (beyond term/definition) printed smaller under the definition. |
+| 2 | Silent Reading (SSR) Log Tracker | 🔒 **CLAIMED (2026-08-09)** — Weekly pages/minutes goal | An optional weekly goal per class, shown as a simple progress indicator next to each student's summary row. |
+| 3 | Name Picker | 🔒 **CLAIMED (2026-08-09)** — Team draft mode | Two captains alternate picking students live from the roster, instead of only fully-random draws. |
+| 4 | Schedule Browser | 🔒 **CLAIMED (2026-08-09)** — Common planning period finder | Pick two or more teachers and highlight the period(s) where they're all free. |
+| 5 | Sub Plan Builder | 🔒 **CLAIMED (2026-08-09)** — Read-aloud on the quick-copy view | Wire the sitewide text-to-speech helper into the plain-text quick-copy modal, for a sub who'd rather listen than read. |
+| 6 | School Calendar Visualizer | 🔒 **CLAIMED (2026-08-09)** — Whole-year-at-a-glance print mode | A single-page print layout showing all twelve months at once, alongside the existing month-by-month print. |
+| 7 | Quiz / Review Game Board | 🔒 **CLAIMED (2026-08-09)** — Lightning round mode | A timed-answer variant with a visible per-question countdown, for a faster-paced review day. |
+| 8 | Exit Ticket / Bell Ringer Generator | 🔒 **CLAIMED (2026-08-09)** — Quick-tally formative check mode | A big-button 1–4 self-report scale students tap, tallied live on the projector, alongside the existing prompt bank. |
+| 9 | Field Trip Permission Slip Generator | 🔒 **CLAIMED (2026-08-09)** — Running headcount/amount-collected summary | A live total next to the existing per-student collected/paid tracker. |
+| 10 | QR Scavenger Hunt Builder | 🔒 **CLAIMED (2026-08-09)** — Built-in timer/leaderboard | An optional team-race timer and leaderboard for station-to-station hunts. |
 | 11 | Hall Pass Log | "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
 | 12 | Class Roster Hub | Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
 | 13 | Command Center | Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
@@ -115,7 +115,8 @@ list in parallel without colliding.
 
 ### Currently claimed (in progress elsewhere)
 
-Nothing claimed right now — every row that was here has shipped (or graduated back to the ranked table above).
+Ranks 1–10 above are claimed as of 2026-08-09 and in progress in this session's branch
+(`claude/ideas-backlog-top-10-3jzyhk`).
 
 ## Platform-Wide — Big Swings
 
