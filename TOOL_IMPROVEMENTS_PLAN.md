@@ -107,18 +107,16 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ## Printing, Documents & AI Helpers
 
 ### Image → PDF Assembler (`Tools/image-to-pdf.html`)
-**Current state:** Drag-and-drop image queue (PNG/JPG/WEBP/SVG) with numeric/alphabetical/custom-drag sort, page-size/orientation/quality controls, a per-image 90° rotate control (pre-rotated onto canvas before embedding, so page-fit math uses the rotated dimensions), and client-side PDF assembly via jsPDF with a progress bar.
+**Current state:** Drag-and-drop image queue (PNG/JPG/WEBP/SVG) with numeric/alphabetical/custom-drag sort, page-size/orientation/quality controls (persisted to localStorage, so assembling several packets in a row doesn't reset them each time), a per-image 90° rotate control (pre-rotated onto canvas before embedding, so page-fit math uses the rotated dimensions), and client-side PDF assembly via jsPDF with a progress bar.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Persist the last-used page size/orientation/quality choices to localStorage so a teacher assembling several packets in a row doesn't reset options each time.
 - Add an optional "N images per page" contact-sheet/grid layout for handing out thumbnail overviews.
 
 ### Word Doc Merger (`Tools/docx-merger.html`)
 **Current state:** Client-side OOXML merger (via JSZip + raw XML manipulation) that combines up to 80+ `.docx` files in a drag-reorderable list, with optional page breaks, filename headings, and an optional auto-generated table-of-contents page built from those headings (a Word field the teacher updates with F9 after opening, since there's no in-browser page-layout engine to pre-fill numbers) — choices persisted to localStorage — plus a running total-pages estimate (read from each file's own saved `docProps/app.xml` page count) shown before merging, and per-file error skipping.
 
 ### Certificate & Award Maker (`Tools/certificate-award-maker.html`)
-**Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview (with a batch thumbnail grid view alongside the one-at-a-time preview), and browser print-to-PDF, with the last-used settings saved to localStorage.
+**Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview (with a batch thumbnail grid view alongside the one-at-a-time preview) with an optional small logo/crest upload (downscaled to a data URL) shown on the certificate, and browser print-to-PDF, with the last-used settings saved to localStorage.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Support an optional small logo/image upload (stored as a data URL) to place on the certificate, for a school crest or class mascot.
 - Save multiple named presets (theme + border + signature combos) the way Rubric Builder and Formula Sheet Builder save multiple named documents, since today there's only one persisted settings object.
 
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
@@ -165,9 +163,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** A Jeopardy-style board built manually or imported from an Excel file (Category/Points/Question/Answer columns via a bundled xlsx parser), with a scoreboard, click-to-reveal overlay, an optional "Daily Double" toggle that doubles one random unused clue's points (redrawable on demand), a printable answer key, multiple saved boards with JSON export/import, and print output.
 
 ### PE Tournament & Station Rotation (`Tools/pe-tournament-stations.html`)
-**Current state:** Combines a persisted countdown rotation timer that auto-advances groups through named stations (with a WebAudio two-tone alarm chime, muteable, when it hits zero) with a single-elimination bracket (fed from the groups or a custom list), and prints a combined station schedule + bracket summary.
+**Current state:** Combines a persisted countdown rotation timer (with a fullscreen/kiosk toggle, button or `F` key, and a WebAudio two-tone alarm chime, muteable, when it hits zero) that auto-advances groups through named stations with a single-elimination bracket (fed from the groups or a custom list), and prints a combined station schedule + bracket summary.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Add a fullscreen/kiosk toggle for the timer stage — the countdown is already large and responsive, but a one-click Fullscreen API call would make it readable across a whole gym without a teacher-only device in the way.
 - Add printable per-station activity cards (one station per slip, large text) separate from the combined schedule table — useful to physically tape up at each station, which the current single-table print output isn't formatted for.
 
 ### Novel Study / Reading Circles Manager (`Tools/novel-study-circles-manager.html`)
@@ -184,9 +181,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Generates a single QR code from typed text/a link — or a quick-fill template for a Wi-Fi network, vCard contact, phone number, or email — with adjustable size, colors, error-correction level, an optional center logo or short-text overlay, a "recently generated" list of the last 10 codes, and a live camera-based test scan (via `_shared/qr-scan.js`) alongside the synthetic canvas decode check, before enabling PNG/SVG download or direct printing.
 
 ### QR Scavenger Hunt Builder (`Tools/qr-scavenger-hunt-builder.html`)
-**Current state:** Lets a teacher type or paste a list of stations (label, QR content, private answer-key note), then print a grid of station QR codes at a chosen density plus a separate answer key, with the current single hunt autosaved to localStorage, move-up/move-down row reordering, an auto-prepended `https://` on bare-looking links, and a plain CSV export of the station list for the teacher's own records.
-**Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Support multiple named, saved hunts with a switcher (like Gallery Walk QR and Escape Room Builder already do) — right now there's only one flat autosave, so starting a new hunt overwrites the last one.
+**Current state:** Lets a teacher type or paste a list of stations (label, QR content, private answer-key note) into any of several named, switchable saved hunts (existing single-hunt data is migrated once into "My Hunt"), then print a grid of station QR codes at a chosen density plus a separate answer key, with move-up/move-down row reordering, an auto-prepended `https://` on bare-looking links, and a plain CSV export of the station list for the teacher's own records.
 
 ### Gallery Walk QR Codes (`Tools/gallery-walk-qr.html`)
 **Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import, URL normalization, and a dedicated `.csv` file-picker alongside the paste box), and prints a QR grid, a plain reference sheet, or copies every entry's link to the clipboard as a list.
@@ -260,9 +255,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 - Add an option to print vocab and conjugation sections together in a single packet, since the two modes currently produce fully separate print outputs even when saved under the same set name.
 
 ### Writing Prompt Generator (`Tools/writing-prompt-generator.html`)
-**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a session-only "recently shown" history list, and a fullscreen toggle (button or `F` key) for the projector "stage" display.
+**Current state:** Displays one randomly chosen prompt at a time from a pool of 200 (100 MS/100 HS across 5 genres) with grade-band and genre filters, a repeat-avoidance window, a dated prompt history persisted across reloads (capped at 200 entries), and a fullscreen toggle (button or `F` key) for the projector "stage" display.
 **Suggested improvements:**
-- 🔒 **CLAIMED (2026-08-09)** — Persist the shown-prompt history to localStorage (with a date) instead of resetting on every reload, so a teacher can check what was assigned to a class earlier in the week without having kept the tab open.
 - Add a "print this prompt" option that renders the current prompt as a single large poster-style page, for classrooms that post the daily prompt physically rather than only projecting it.
 - Allow teachers to add their own custom prompts into the rotation (stored in localStorage, blended into the random pool) instead of being limited strictly to the built-in 200.
 - Add a roster-paste feature that randomly pairs each pasted student name with a distinct prompt and prints a one-page assignment sheet — handy for independent writing stations where students shouldn't all get the same prompt.
