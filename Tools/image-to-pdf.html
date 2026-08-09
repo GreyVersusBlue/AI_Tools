@@ -85,6 +85,7 @@
   #file-list li:last-child { border-bottom: none; }
   #file-list li:hover { background: var(--color-surface); }
   #file-list .seq { opacity: 0.5; min-width: 2.5rem; text-align: right; }
+  #file-list .thumb { width: 2.4rem; height: 2.4rem; object-fit: cover; border: 1px solid var(--color-divider); flex-shrink: 0; background: #fff; }
   #file-list .type-badge { font-size: 10px; padding: 1px 5px; font-weight: 700; text-transform: uppercase; }
   .badge-png { background: var(--color-accent-100); color: var(--color-accent-800); }
   .badge-svg { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
@@ -293,7 +294,7 @@
 
     const existingNames = new Set(loadedFiles.map(e => e.file.name));
     const newOnes = valid.filter(f => !existingNames.has(f.name));
-    newOnes.forEach(f => loadedFiles.push({ id: nextId++, file: f }));
+    newOnes.forEach(f => loadedFiles.push({ id: nextId++, file: f, thumbUrl: URL.createObjectURL(f) }));
 
     if (invalid.length > 0) {
       const lines = invalid.slice(0, 5).map(f => rejectionReason(f.name));
@@ -342,6 +343,7 @@
   function removeFile(id) {
     const i = indexOfId(id);
     if (i === -1) return;
+    URL.revokeObjectURL(loadedFiles[i].thumbUrl);
     loadedFiles.splice(i, 1);
     renderList();
   }
@@ -377,7 +379,7 @@
     const isCustom = getSortMode() === 'custom';
 
     ordered.forEach((entry, i) => {
-      const { id, file } = entry;
+      const { id, file, thumbUrl } = entry;
       const li = document.createElement('li');
       const ext = badgeExt(file.name);
       const safeName = escapeHtml(file.name);
@@ -386,6 +388,7 @@
 
       li.innerHTML = `
         <span class="seq">${i + 1}</span>
+        <img class="thumb" src="${thumbUrl}" alt="" loading="lazy">
         <span class="type-badge badge-${ext}">${ext.toUpperCase()}</span>
         <span class="filename">${safeName}</span>
         <span class="row-actions">
@@ -422,6 +425,7 @@
 
   // ── Clear ──────────────────────────────────────────────────────────────────
   btnClear.addEventListener('click', () => {
+    loadedFiles.forEach(e => URL.revokeObjectURL(e.thumbUrl));
     loadedFiles = [];
     fileInput.value = '';
     renderList();

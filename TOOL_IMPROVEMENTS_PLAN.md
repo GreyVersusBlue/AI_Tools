@@ -102,10 +102,8 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Data Table → Chart Builder (`Tools/data-chart-builder.html`)
 **Current state:** Paste-a-table tool that auto-detects numeric columns, builds hand-drawn SVG bar/line/pie/scatter charts with summary stats, and downloads PNG/SVG — only UI preferences persist to localStorage, not the pasted data itself.
 **Suggested improvements:**
-- Add a linear regression/trendline option for scatter charts (simple client-side least-squares fit) — a common ask when this is used for lab reports.
 - Let a dataset be saved with a name to localStorage (like the Grade Distribution Visualizer's assignment list) so a student can return to a chart without re-pasting the table.
 - Support a file input (drag a `.csv` onto the textarea) as an alternative to copy-paste, since some lab data comes from an exported file rather than a spreadsheet selection.
-- Add a custom Y-axis label field independent of the column header, since right now the axis title is always just the source column name.
 
 ### Rubric Builder (`Tools/rubric-builder.html`)
 **Current state:** Template-or-scratch rubric builder with fully editable performance levels, criteria (each with an optional point-weight multiplier), a live one-page landscape print preview, multiple named rubrics in localStorage, a working URL-based share link via `_shared/state-link.js`, JSON export/import of a single rubric, and a "Duplicate" action.
@@ -117,7 +115,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Image → PDF Assembler (`Tools/image-to-pdf.html`)
 **Current state:** Drag-and-drop image queue (PNG/JPG/WEBP/SVG) with numeric/alphabetical/custom-drag sort, page-size/orientation/quality controls, and client-side PDF assembly via jsPDF with a progress bar.
 **Suggested improvements:**
-- Show a small thumbnail next to each file-list row (cheap with `URL.createObjectURL`) instead of just a filename and type badge — much easier to confirm order when photos aren't numbered.
 - Add a per-image 90°/180° rotate control before assembly, since EXIF auto-rotation only helps JPEGs and phone photos are frequently still sideways after that.
 - Persist the last-used page size/orientation/quality choices to localStorage so a teacher assembling several packets in a row doesn't reset options each time.
 - Add an optional "N images per page" contact-sheet/grid layout for handing out thumbnail overviews.
@@ -128,7 +125,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Certificate & Award Maker (`Tools/certificate-award-maker.html`)
 **Current state:** Five color/font themes crossed with multiple SVG border styles, single or whole-class batch mode from a newline-separated name list, live preview, and browser print-to-PDF, with the last-used settings saved to localStorage.
 **Suggested improvements:**
-- Let batch mode accept "Name, Award Title" pairs (falling back to the shared title when omitted) instead of forcing every student in a batch onto the same award title.
 - Add a batch thumbnail grid so a teacher can eyeball all the certificates before printing, instead of the preview only ever showing "certificate 1 of N."
 - Support an optional small logo/image upload (stored as a data URL) to place on the certificate, for a school crest or class mascot.
 - Save multiple named presets (theme + border + signature combos) the way Rubric Builder and Formula Sheet Builder save multiple named documents, since today there's only one persisted settings object.
@@ -136,7 +132,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Graph Paper & Number Line Generator (`Tools/graph-paper-generator.html`)
 **Current state:** Three modes (graph paper, number line, coordinate plane) rendered as true-to-scale SVG with fine control over grid size/exact row-column counts/intervals/labels, settings saved to localStorage, and print-at-100%-scale output.
 **Suggested improvements:**
-- Add dot-grid and isometric grid modes alongside the square-grid graph paper — both are common classroom requests this tool doesn't cover yet.
 - Add a "download as PNG/PDF" option next to Print, so the sheet can be posted to Google Classroom/Schoology directly rather than only printed.
 - Let number-line "copies on one page" use independent min/max/interval per copy (e.g., three different-range number lines stacked for a differentiated worksheet) instead of identical copies.
 - Save more than one named preset (e.g., "Algebra 1 graphing" vs "6th grade fractions") since currently only a single global settings object persists.
@@ -211,7 +206,6 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Gallery Walk QR Codes (`Tools/gallery-walk-qr.html`)
 **Current state:** Manages multiple named "galleries" of student-work entries (name + link/text, with roster-hub name import and URL normalization), and prints a QR grid plus a plain reference sheet.
 **Suggested improvements:**
-- Add move-up/move-down reordering for entries — currently rows can only be added or removed, so fixing the order after a bulk paste means deleting and re-adding.
 - Flag duplicate links/text across entries (a common paste-mistake when copying the same folder link for two students) before printing.
 - Add a "copy all links" button that puts every entry's link on the clipboard as a list, handy for pasting into an LMS announcement alongside the printed codes.
 - Accept a dedicated `.csv` file-picker in addition to the existing paste box, to spare teachers a manual copy-paste from Excel/Sheets.

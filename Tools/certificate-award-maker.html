@@ -170,8 +170,8 @@
         </div>
         <div id="batchFields" style="display:none;">
           <label for="batchNames">Student names (one per line)</label>
-          <p class="hint">Every name gets its own certificate with the same settings below.</p>
-          <textarea id="batchNames" placeholder="Jordan Smith&#10;Alex Rivera&#10;Sam Okafor"></textarea>
+          <p class="hint">Every name gets its own certificate with the same settings below. Add a comma and a title after a name (e.g. "Alex Rivera, Most Improved") to give just that student a different award instead of the shared one.</p>
+          <textarea id="batchNames" placeholder="Jordan Smith&#10;Alex Rivera, Most Improved&#10;Sam Okafor"></textarea>
         </div>
 
         <label for="awardTitle">Award title</label>
@@ -315,14 +315,14 @@
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  function certificateHtml(name) {
+  function certificateHtml(name, title) {
     var w = 1100, h = 850;
     return (
       '<div class="cert theme-' + settings.theme + '">' +
         CertificateBorders.borderSvg(settings.border, w, h) +
         '<div class="cert-kicker">This certificate is proudly presented to</div>' +
         '<div class="cert-name">' + escapeHtml(name) + '</div>' +
-        '<div class="cert-title">' + escapeHtml(effectiveTitle()) + '</div>' +
+        '<div class="cert-title">' + escapeHtml(title || effectiveTitle()) + '</div>' +
         (settings.reason ? '<div class="cert-reason">' + escapeHtml(settings.reason) + '</div>' : '') +
         '<div class="cert-footer">' +
           '<div class="line">' + escapeHtml(formattedDate()) + '</div>' +
@@ -332,8 +332,14 @@
     );
   }
 
-  function batchNamesList() {
-    return settings.batchNames.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  // Each line is "Name" or "Name, Award Title" — the per-line title (if any)
+  // overrides the shared awardTitle just for that one certificate.
+  function batchEntriesList() {
+    return settings.batchNames.split('\n').map(function (s) { return s.trim(); }).filter(Boolean).map(function (line) {
+      var idx = line.indexOf(',');
+      if (idx === -1) return { name: line, title: null };
+      return { name: line.slice(0, idx).trim(), title: line.slice(idx + 1).trim() || null };
+    });
   }
 
   /* ---------- render ---------- */
@@ -344,13 +350,13 @@
       els.previewArea.innerHTML = certificateHtml(settings.studentName || 'Student Name');
       els.previewNote.textContent = 'Live preview — this is exactly what prints.';
     } else {
-      var names = batchNamesList();
-      if (!names.length) {
+      var entries = batchEntriesList();
+      if (!entries.length) {
         els.previewArea.innerHTML = certificateHtml('Student Name');
         els.previewNote.textContent = 'Add names on the left to preview the batch. Showing a sample.';
       } else {
-        els.previewArea.innerHTML = certificateHtml(names[0]);
-        els.previewNote.textContent = 'Showing certificate 1 of ' + names.length + '. Printing makes one page per name.';
+        els.previewArea.innerHTML = certificateHtml(entries[0].name, entries[0].title);
+        els.previewNote.textContent = 'Showing certificate 1 of ' + entries.length + '. Printing makes one page per name.';
       }
     }
   }
@@ -360,9 +366,9 @@
     if (settings.mode === 'single') {
       html = certificateHtml(settings.studentName || 'Student Name');
     } else {
-      var names = batchNamesList();
-      if (!names.length) names = [settings.studentName || 'Student Name'];
-      html = names.map(certificateHtml).join('');
+      var entries = batchEntriesList();
+      if (!entries.length) entries = [{ name: settings.studentName || 'Student Name', title: null }];
+      html = entries.map(function (e) { return certificateHtml(e.name, e.title); }).join('');
     }
     document.getElementById('printArea').innerHTML = html;
   }
