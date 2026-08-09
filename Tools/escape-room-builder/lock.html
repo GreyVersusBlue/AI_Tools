@@ -186,6 +186,103 @@
 
   var progress = loadProgress();
 
+  // ── R61: "Connect to teacher monitor" — one WebRTC data-channel pairing
+  // per browser session (see monitor.html on the teacher's side). Lives in
+  // module scope, not localStorage/progress, because the connection itself
+  // can't survive a page reload without a server — it only persists across
+  // in-page render() calls, which covers the common case (one shared link,
+  // no re-scanning between stations). Re-scanning a fresh per-station
+  // printed code reloads the page and drops the connection; the teacher
+  // reconnects that device the same way.
+  var monitorChannel = null;
+  var monitorPendingPc = null;
+
+  function monitorBoxHtml() {
+    return '<button type="button" class="monitor-toggle" id="monitorToggle">📡 Connect to teacher monitor</button>' +
+      '<div class="monitor-box" id="monitorBox">' +
+        (monitorChannel && monitorChannel.readyState === 'open'
+          ? '<p class="monitor-status connected">✓ Connected — your progress is visible on the teacher\'s screen.</p>'
+          : '<p>Paste the code your teacher is showing on their monitor screen:</p>' +
+            '<textarea id="monitorOfferInput" placeholder="Paste the teacher\'s code here…"></textarea>' +
+            '<button type="button" id="monitorConnectBtn">Generate Reply Code</button>' +
+            '<div id="monitorReplyWrap" style="display:none;margin-top:.6rem;">' +
+              '<p>Show this reply code back to your teacher:</p>' +
+              '<canvas id="monitorAnswerQr"></canvas>' +
+              '<textarea id="monitorAnswerText" readonly></textarea>' +
+            '</div>' +
+            '<p class="monitor-status" id="monitorStatus"></p>') +
+      '</div>';
+  }
+
+  function sendMonitorUpdate() {
+    if (!monitorChannel || monitorChannel.readyState !== 'open') return;
+    var done = progress.current === 'done';
+    try {
+      monitorChannel.send(JSON.stringify({
+        station: done ? room.stations.length : progress.current,
+        total: room.stations.length,
+        done: done,
+      }));
+    } catch (e) { /* channel not ready — next render()'s call will retry */ }
+  }
+
+  function wireMonitorBox() {
+    var toggle = document.getElementById('monitorToggle');
+    var box = document.getElementById('monitorBox');
+    if (!toggle || !box) return;
+    toggle.addEventListener('click', function () { box.classList.toggle('open'); });
+
+    var connectBtn = document.getElementById('monitorConnectBtn');
+    if (!connectBtn) return; // already connected — nothing more to wire
+    connectBtn.addEventListener('click', function () {
+      var offerPayload = document.getElementById('monitorOfferInput').value.trim();
+      if (!offerPayload) return;
+      var statusEl = document.getElementById('monitorStatus');
+      statusEl.textContent = 'Generating reply code…';
+      window.WebRTCPair.createAnswer(offerPayload, function (channel) {
+        monitorChannel = channel;
+        channel.addEventListener('open', function () {
+          statusEl.textContent = 'Connected!';
+          sendMonitorUpdate();
+        });
+        channel.addEventListener('close', function () { monitorChannel = null; });
+      }).then(function (result) {
+        monitorPendingPc = result.pc;
+        document.getElementById('monitorAnswerText').value = result.answerPayload;
+        drawLockQR(document.getElementById('monitorAnswerQr'), result.answerPayload);
+        document.getElementById('monitorReplyWrap').style.display = '';
+        statusEl.textContent = 'Show this code to your teacher, then wait…';
+      }).catch(function (e) {
+        statusEl.textContent = e.message || 'That code didn’t look right — ask your teacher for a fresh one.';
+      });
+    });
+  }
+
+  // Same drawing approach as Tools/classroom-timer/ct-mirror.js's drawQR.
+  function drawLockQR(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount();
+    var quiet = 4;
+    var total = count + quiet * 2;
+    var px = 6;
+    var size = total * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16222e';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          var x0 = Math.round((quiet + c) * px), x1 = Math.round((quiet + c + 1) * px);
+          var y0 = Math.round((quiet + r) * px), y1 = Math.round((quiet + r + 1) * px);
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+      }
+    }
+  }
+
   // ── Whole-room countdown (optional, baked into the link via `timerMinutes`) ─
   // There's no server/shared clock in this static toolkit, so each device's
   // countdown starts the moment that device first opens its own link, not a
@@ -257,7 +354,10 @@
       '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
       '<div class="done-icon">🎉</div>' +
       '<p class="done-text"><strong>You escaped!</strong><br>Every station solved. Great work.</p>' +
-      '<button type="button" class="secondary" id="resetBtn">Restart this room</button>';
+      '<button type="button" class="secondary" id="resetBtn">Restart this room</button>' +
+      monitorBoxHtml();
+    wireMonitorBox();
+    sendMonitorUpdate();
     document.getElementById('resetBtn').addEventListener('click', function () {
       if (!confirm('Reset your progress on this escape room and start over from Station 1?')) return;
       progress = { current: 0, misses: {} };
@@ -285,7 +385,11 @@
       '<div class="feedback" id="feedback"></div>' +
       (station.hint ? '<div class="hint-box' + (showHintNow ? ' show' : '') + '" id="hintBox">💡 Hint: ' + escapeHtml(station.hint) + '</div>' : '') +
       (station.hint && !showHintNow ? '<button type="button" class="secondary" id="hintBtn">Show a hint</button>' : '') +
-      '<p class="progress-note">Progress is saved on this device — re-scanning this code won’t lose your place.</p>';
+      '<p class="progress-note">Progress is saved on this device — re-scanning this code won’t lose your place.</p>' +
+      monitorBoxHtml();
+
+    wireMonitorBox();
+    sendMonitorUpdate();
 
     var form = document.getElementById('answerForm');
     var input = document.getElementById('answerInput');
