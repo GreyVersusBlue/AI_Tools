@@ -110,6 +110,24 @@
         <label for="templateKey">Template</label>
         <select id="templateKey"></select>
 
+        <div class="row2">
+          <div>
+            <label for="operand1Min">Operand 1 range</label>
+            <div class="row2" style="margin-bottom:0;">
+              <input type="number" id="operand1Min" min="0" max="999" aria-label="Operand 1 minimum">
+              <input type="number" id="operand1Max" min="0" max="999" aria-label="Operand 1 maximum">
+            </div>
+          </div>
+          <div>
+            <label for="operand2Min">Operand 2 range</label>
+            <div class="row2" style="margin-bottom:0;">
+              <input type="number" id="operand2Min" min="0" max="999" aria-label="Operand 2 minimum">
+              <input type="number" id="operand2Max" min="0" max="999" aria-label="Operand 2 maximum">
+            </div>
+          </div>
+        </div>
+        <button type="button" class="secondary" id="resetRangeBtn" style="margin-bottom:.8rem;">Reset range to template default</button>
+
         <label for="sheetTitle">Sheet title (optional)</label>
         <input type="text" id="sheetTitle" placeholder="e.g. Multiplication Facts — Period 3">
 
@@ -156,10 +174,11 @@
   var els = {};
   ['templateKey','sheetTitle','problemCount','columns','generateBtn',
    'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote',
-   'exportSettingsBtn','importSettingsBtn','importSettingsFile'
+   'exportSettingsBtn','importSettingsBtn','importSettingsFile',
+   'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3 };
+  var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, rangesByTemplate: {} };
   var problems = [];
   var view = 'worksheet';
   var todayStr = new Date().toLocaleDateString();
@@ -176,6 +195,49 @@
       opt.value = t.key; opt.textContent = t.label;
       els.templateKey.appendChild(opt);
     });
+  }
+
+  /** The template with its operand ranges overridden by any saved custom range for that template key. */
+  function effectiveTemplate(key) {
+    var base = MathDrillTemplates.byKey(key);
+    var custom = settings.rangesByTemplate[key];
+    if (!custom) return base;
+    return {
+      key: base.key, label: base.label, operation: base.operation,
+      operand1: custom.operand1 || base.operand1,
+      operand2: custom.operand2 || base.operand2
+    };
+  }
+
+  function clampRange(min, max, fallback, minFloor) {
+    min = parseInt(min, 10); max = parseInt(max, 10);
+    if (isNaN(min)) min = fallback.min;
+    if (isNaN(max)) max = fallback.max;
+    min = Math.max(minFloor, Math.min(999, min));
+    max = Math.max(minFloor, Math.min(999, max));
+    if (max < min) max = min;
+    return { min: min, max: max };
+  }
+
+  /** Populate the operand-range inputs from the current template's saved custom range (or its default). */
+  function loadRangeInputs() {
+    var t = effectiveTemplate(els.templateKey.value);
+    els.operand1Min.value = t.operand1.min;
+    els.operand1Max.value = t.operand1.max;
+    els.operand2Min.value = t.operand2.min;
+    els.operand2Max.value = t.operand2.max;
+  }
+
+  /** Read the operand-range inputs into settings.rangesByTemplate for the current template. */
+  function readRangeInputs() {
+    var key = els.templateKey.value;
+    var base = MathDrillTemplates.byKey(key);
+    // Operand 2 doubles as the divisor for division/mixed templates, so it can never bottom out at 0.
+    var op1 = clampRange(els.operand1Min.value, els.operand1Max.value, base.operand1, 0);
+    var op2 = clampRange(els.operand2Min.value, els.operand2Max.value, base.operand2, 1);
+    settings.rangesByTemplate[key] = { operand1: op1, operand2: op2 };
+    els.operand1Min.value = op1.min; els.operand1Max.value = op1.max;
+    els.operand2Min.value = op2.min; els.operand2Max.value = op2.max;
   }
 
   function escapeHtml(s) {
@@ -230,7 +292,7 @@
   function generate() {
     readFormIntoSettings();
     persist();
-    problems = MathDrillGenerate.generateProblems(MathDrillTemplates.byKey(settings.templateKey), settings.problemCount);
+    problems = MathDrillGenerate.generateProblems(effectiveTemplate(settings.templateKey), settings.problemCount);
     renderPreview();
   }
 
@@ -264,6 +326,8 @@
     els.sheetTitle.value = typeof obj.sheetTitle === 'string' ? obj.sheetTitle : '';
     els.problemCount.value = obj.problemCount;
     els.columns.value = obj.columns;
+    settings.rangesByTemplate = (obj.rangesByTemplate && typeof obj.rangesByTemplate === 'object') ? obj.rangesByTemplate : {};
+    loadRangeInputs();
     generate();
   }
 
@@ -288,10 +352,19 @@
 
   /* ---------- wiring ---------- */
   els.generateBtn.addEventListener('click', generate);
-  els.templateKey.addEventListener('change', generate);
+  els.templateKey.addEventListener('change', function () { loadRangeInputs(); generate(); });
   els.sheetTitle.addEventListener('input', function () { readFormIntoSettings(); persist(); renderPreview(); });
   els.problemCount.addEventListener('change', generate);
   els.columns.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
+
+  ['operand1Min','operand1Max','operand2Min','operand2Max'].forEach(function (id) {
+    els[id].addEventListener('change', function () { readRangeInputs(); generate(); });
+  });
+  els.resetRangeBtn.addEventListener('click', function () {
+    delete settings.rangesByTemplate[els.templateKey.value];
+    loadRangeInputs();
+    generate();
+  });
 
   els.viewWorksheetBtn.addEventListener('click', function () {
     view = 'worksheet';
@@ -325,6 +398,7 @@
   els.sheetTitle.value = settings.sheetTitle;
   els.problemCount.value = settings.problemCount;
   els.columns.value = settings.columns;
+  loadRangeInputs();
   generate();
 })();
 </script>

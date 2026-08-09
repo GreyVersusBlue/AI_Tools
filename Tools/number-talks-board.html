@@ -119,6 +119,24 @@
   .history-list .h-cat { color: var(--accent-2); font-weight: 600; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  #printArea { display: none; }
+  .print-title { font-size: 1.5rem; font-weight: 800; margin-bottom: .15rem; }
+  .print-sub { color: #555; font-size: .9rem; margin-bottom: .8rem; }
+  .print-meta { display: flex; gap: 1.4rem; font-size: .9rem; color: #444; margin-bottom: 1.4rem; }
+  .print-meta .fill-line { border-bottom: 1px solid #999; display: inline-block; min-width: 6rem; }
+  .print-exprs { display: flex; flex-direction: column; gap: 1.3rem; margin-bottom: 1.8rem; }
+  .print-expr { font-family: Consolas, "Courier New", monospace; font-size: 1.6rem; font-weight: 700; }
+  .print-num { color: #777; font-size: 1rem; margin-right: .5rem; font-weight: 600; }
+  .print-workspace-label { font-size: .95rem; font-weight: 700; margin-bottom: .3rem; }
+  .print-workspace { border: 1px solid #999; border-radius: 4px; height: 2.6in; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.5in; }
+    @page { size: letter portrait; margin: 0.4in; }
+  }
 </style>
 </head>
 <body>
@@ -160,6 +178,10 @@
     <button type="button" class="secondary" id="revealAllBtn">Reveal all</button>
   </div>
 
+  <div class="btn-row" id="printRow" style="display:none;justify-content:center;margin-bottom:1.4rem;">
+    <button type="button" class="secondary" id="printHandoutBtn">Print handout of this number talk</button>
+  </div>
+
   <div class="card">
     <div class="card-title"><span>Or type your own prompt</span></div>
     <div class="hint">One expression per line. One line makes a single computation (e.g. <code>27 x 4</code>); 2&ndash;4 related lines make a number string revealed one at a time (e.g. <code>8 + 5</code> / <code>18 + 5</code> / <code>28 + 5</code>).</div>
@@ -196,6 +218,8 @@
   <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Only the category filter is remembered between visits; any student first names you jot on the strategy board, and the session history, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
 
 </div>
+
+<div id="printArea"></div>
 
 <script>
 (function () {
@@ -307,7 +331,8 @@
   ['categorySelect', 'nextPromptBtn', 'stage', 'metaRow', 'revealRow', 'revealBtn', 'revealAllBtn',
    'customInput', 'useCustomBtn', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
    'historyList', 'historyEmptyHint', 'exportSessionBtn',
-   'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn'
+   'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn',
+   'printRow', 'printHandoutBtn', 'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   /* ---------- persistence (settings only) ---------- */
@@ -538,8 +563,10 @@
       els.stage.innerHTML = '<p class="empty">Press &ldquo;New number talk&rdquo; to reveal a prompt.</p>';
       els.metaRow.innerHTML = '';
       els.revealRow.style.display = 'none';
+      els.printRow.style.display = 'none';
       return;
     }
+    els.printRow.style.display = '';
     var shown = current.exprs.slice(0, current.revealed);
     var lines = shown.map(function (e) { return '<div class="expr-line">' + escapeHtml(e) + '</div>'; }).join('');
     var caption = current.exprs.length > 1
@@ -685,6 +712,28 @@
     return lines.join('\n');
   }
 
+  /* ---------- printable handout ----------
+     A clean paper copy of the current string, for an absent student or as a
+     written record — deliberately shows every expression (not just what's
+     been revealed live) and, like the projector stage, never the answer key. */
+  function printHandout() {
+    if (!current) return;
+    var lines = current.exprs.map(function (e, i) {
+      return '<div class="print-expr">' +
+        (current.exprs.length > 1 ? '<span class="print-num">' + (i + 1) + '.</span>' : '') +
+        escapeHtml(e) + '</div>';
+    }).join('');
+    els.printArea.innerHTML =
+      '<div class="print-title">Number Talk</div>' +
+      '<div class="print-sub">' + escapeHtml(categoryLabel(current.category)) + ' &middot; ' +
+        escapeHtml(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })) + '</div>' +
+      '<div class="print-meta"><span>Name: <span class="fill-line">&nbsp;</span></span></div>' +
+      '<div class="print-exprs">' + lines + '</div>' +
+      '<div class="print-workspace-label">Show your thinking:</div>' +
+      '<div class="print-workspace"></div>';
+    window.print();
+  }
+
   function exportSession() {
     var text = buildSessionExportText();
     var blob = new Blob([text], { type: 'text/plain' });
@@ -710,6 +759,7 @@
   els.addStrategyBtn.addEventListener('click', addStrategyCard);
   els.clearBoardBtn.addEventListener('click', clearBoard);
   els.exportSessionBtn.addEventListener('click', exportSession);
+  els.printHandoutBtn.addEventListener('click', printHandout);
   els.toggleAnswerBtn.addEventListener('click', function () {
     answerKeyVisible = !answerKeyVisible;
     renderAnswerKey();

@@ -138,40 +138,54 @@
   }
 
   /* ---------- Number line ---------- */
-  // opts: { orientation, min, max, interval, labelEvery, copies }
+  // opts: { orientation, min, max, interval, labelEvery, copies } for identical copies, or
+  //       { orientation, rows: [{min,max,interval,labelEvery}, ...] } to give each copy its
+  //       own range — the two shapes are mutually exclusive; rows wins if both are present.
   function renderNumberLine(opts) {
     var page = pageSize(opts.orientation);
     var usableW = page.w - MARGIN * 2;
     var usableH = page.h - MARGIN * 2;
-    // A typed 0, negative, or non-numeric interval must not survive as a tiny
-    // positive one (Math.max(1e-6, -1) is still 1e-6) — that turns a normal
-    // range into tens of millions of ticks and hangs the tab.
-    var interval = Math.abs(opts.interval) || 1;
-    var min = opts.min, max = opts.max;
-    if (!(max > min)) max = min + interval; // zero/inverted range → one tick, not NaN/Infinity
-    var labelEvery = Math.max(1, Math.round(opts.labelEvery));
-    var copies = Math.max(1, Math.round(opts.copies));
-    var tickCount = Math.min(2000, Math.max(1, Math.round((max - min) / interval)));
 
-    var spacing = usableH / copies;
+    var rows;
+    if (Array.isArray(opts.rows) && opts.rows.length) {
+      rows = opts.rows.map(function (r) {
+        // Same guard as the uniform path below: a typed 0/negative/non-numeric interval
+        // must not survive as a tiny positive one, which would hang the tab on millions of ticks.
+        var interval = Math.abs(r.interval) || 1;
+        var min = r.min, max = r.max;
+        if (!(max > min)) max = min + interval;
+        return { min: min, max: max, interval: interval, labelEvery: Math.max(1, Math.round(r.labelEvery) || 1) };
+      });
+    } else {
+      var uInterval = Math.abs(opts.interval) || 1;
+      var uMin = opts.min, uMax = opts.max;
+      if (!(uMax > uMin)) uMax = uMin + uInterval; // zero/inverted range → one tick, not NaN/Infinity
+      var uLabelEvery = Math.max(1, Math.round(opts.labelEvery));
+      var copies = Math.max(1, Math.round(opts.copies));
+      rows = [];
+      for (var c = 0; c < copies; c++) rows.push({ min: uMin, max: uMax, interval: uInterval, labelEvery: uLabelEvery });
+    }
+
+    var spacing = usableH / rows.length;
     var parts = [];
-    for (var i = 0; i < copies; i++) {
+    rows.forEach(function (row, i) {
       var yCenter = MARGIN + spacing * i + spacing / 2;
       var x0 = MARGIN, x1 = MARGIN + usableW;
+      var tickCount = Math.min(2000, Math.max(1, Math.round((row.max - row.min) / row.interval)));
       parts.push(lineEl(x0, yCenter, x1, yCenter, BOLD));
       // arrowheads
       parts.push('<path d="M ' + x0.toFixed(4) + ' ' + yCenter.toFixed(4) + ' l 0.12 -0.06 l 0 0.12 z" fill="#1a1a1a"/>');
       parts.push('<path d="M ' + x1.toFixed(4) + ' ' + yCenter.toFixed(4) + ' l -0.12 -0.06 l 0 0.12 z" fill="#1a1a1a"/>');
       for (var t = 0; t <= tickCount; t++) {
-        var value = min + t * interval;
-        var x = x0 + ((value - min) / (max - min)) * usableW;
+        var value = row.min + t * row.interval;
+        var x = x0 + ((value - row.min) / (row.max - row.min)) * usableW;
         parts.push(lineEl(x, yCenter - 0.09, x, yCenter + 0.09, THIN * 1.6));
-        if (t % labelEvery === 0) {
+        if (t % row.labelEvery === 0) {
           parts.push(textEl(x, yCenter + 0.28, formatNum(value)));
         }
       }
-    }
-    return { svg: svgWrap(page.w, page.h, parts.join('')), tickCount: tickCount + 1 };
+    });
+    return { svg: svgWrap(page.w, page.h, parts.join('')), tickCount: rows.length };
   }
 
   /* ---------- Coordinate plane ---------- */

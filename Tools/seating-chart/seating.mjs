@@ -42,7 +42,7 @@ export function newSection(name, rng = Math.random) {
   return {
     id: uid(rng),
     name,
-    students: [],   // { id, name, note, flag }
+    students: [],   // { id, name, note, flag, photo }
     apart: [],      // [ [studentId, studentId] ]
     together: [],
     desks: [],      // { id, x, y, rot, locked }
@@ -130,6 +130,10 @@ function repairSection(s, index, rng) {
       name: str(st.name).trim(),
       note: str(st.note),
       flag: bool(st.flag),
+      // Only ever a data: URL this tool generated itself (see scg-photo.js) —
+      // anything else (a bare http(s) URL, garbage) is dropped rather than
+      // trusted into an <img src>.
+      photo: str(st.photo).slice(0, 11) === 'data:image/' ? str(st.photo) : '',
     }));
   const studentIds = new Set(students.map(st => st.id));
 
