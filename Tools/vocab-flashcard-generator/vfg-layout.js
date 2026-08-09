@@ -36,30 +36,40 @@
    * Accepts the original "term: definition" per-line format, or a pasted
    * spreadsheet column: tab-separated (the clipboard format Google Sheets/
    * Excel use for a copied range) or comma-separated (a pasted .csv).
-   * Extra columns beyond the first two are dropped, matching the tolerant
-   * paste parsing used elsewhere in this toolkit.
+   * A third field, an optional example sentence, comes from a third
+   * tab/comma column, or from "| example sentence" tacked onto the
+   * definition in the colon format. Extra columns beyond the first three
+   * are dropped, matching the tolerant paste parsing used elsewhere in
+   * this toolkit.
    */
   function parseWordList(text) {
     return String(text || '').replace(/\r\n/g, '\n').split('\n').map(function (line) {
       if (!line.trim()) return null;
-      var term, definition;
+      var term, definition, example = '';
       if (line.indexOf('\t') !== -1) {
         var tabParts = line.split('\t');
         term = (tabParts[0] || '').trim();
         definition = (tabParts[1] || '').trim();
+        example = (tabParts[2] || '').trim();
       } else if (line.indexOf(':') !== -1) {
         var idx = line.indexOf(':');
         term = line.slice(0, idx).trim();
         definition = line.slice(idx + 1).trim();
+        var pipeIdx = definition.indexOf('|');
+        if (pipeIdx !== -1) {
+          example = definition.slice(pipeIdx + 1).trim();
+          definition = definition.slice(0, pipeIdx).trim();
+        }
       } else if (line.indexOf(',') !== -1) {
         var csvFields = splitCsvLine(line);
         term = (csvFields[0] || '').trim();
         definition = (csvFields[1] || '').trim();
+        example = (csvFields[2] || '').trim();
       } else {
         return null;
       }
       if (!term) return null;
-      return { term: term, definition: definition };
+      return { term: term, definition: definition, example: example };
     }).filter(Boolean);
   }
 
