@@ -50,12 +50,28 @@
    * yearStart. Point events get an x coordinate; range events (yearEnd set)
    * get x + width. `padding` is extra px on each end so the first/last
    * marker isn't flush against the container edge.
+   *
+   * `rangeOverride` (optional {min, max}) lets a caller force the min/max
+   * year the layout is computed against instead of deriving it from
+   * `events` alone — used so era bands that extend beyond the events'
+   * own year range still share one consistent axis with the markers,
+   * gridlines, and total canvas width instead of drifting out of sync.
    */
-  function computeLayout(events, pxPerYear, padding) {
+  function computeLayout(events, pxPerYear, padding, rangeOverride) {
     var pad = padding == null ? 60 : padding;
-    if (!events.length) return { positioned: [], totalWidth: pad * 2, minYear: 0, maxYear: 0 };
+    if (!events.length) {
+      if (rangeOverride) {
+        var emptySpan = Math.max(0, rangeOverride.max - rangeOverride.min);
+        return {
+          positioned: [],
+          totalWidth: Math.max(pad * 2 + emptySpan * pxPerYear, pad * 2 + 1),
+          minYear: rangeOverride.min, maxYear: rangeOverride.max
+        };
+      }
+      return { positioned: [], totalWidth: pad * 2, minYear: 0, maxYear: 0 };
+    }
 
-    var range = yearRangeOf(events);
+    var range = rangeOverride || yearRangeOf(events);
     var sorted = events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
 
     var positioned = sorted.map(function (e) {
@@ -105,6 +121,26 @@
   }
 
   /**
+   * Computes background era/period band positions along the same x-axis as
+   * computeLayout/computeGridlines (same pad + (year - minYear) * pxPerYear
+   * mapping). Eras use the same {yearStart, yearEnd} field names as events
+   * so a caller can fold them straight into yearRangeOf() when sizing the
+   * shared axis. Bands are clamped to [minYear, maxYear] so an era that
+   * runs past the edge of that range still renders (clipped) rather than
+   * disappearing or skewing the rest of the layout.
+   */
+  function computeEraBands(eras, minYear, maxYear, pxPerYear, padding) {
+    var pad = padding == null ? 60 : padding;
+    return (eras || []).map(function (era) {
+      var lo = Math.min(era.yearStart, era.yearEnd);
+      var hi = Math.max(era.yearStart, era.yearEnd);
+      var start = Math.max(minYear, lo);
+      var end = Math.min(maxYear, hi);
+      return { era: era, x: pad + (start - minYear) * pxPerYear, width: Math.max(2, (end - start) * pxPerYear) };
+    });
+  }
+
+  /**
    * Assigns alternating above/below placement to reduce label collisions
    * when "compact" mode is on and events are close together. Two events
    * within `thresholdPx` of each other on the x-axis alternate sides.
@@ -131,6 +167,7 @@
     computeLayout: computeLayout,
     gridlineInterval: gridlineInterval,
     computeGridlines: computeGridlines,
+    computeEraBands: computeEraBands,
     assignLabelSides: assignLabelSides
   };
 })(typeof window !== 'undefined' ? window : global);
