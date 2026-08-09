@@ -237,6 +237,7 @@
     </div>
     <div class="header-actions">
       <span class="mirror-live-badge" id="mirrorLiveBadge"><span class="dot" aria-hidden="true"></span>Mirroring</span>
+      <button type="button" id="fullscreenBtn" title="Toggle fullscreen (F)">⛶ Fullscreen</button>
       <button type="button" id="mirrorBtn">Mirror to a device</button>
     </div>
   </header>
@@ -539,6 +540,26 @@ function renderConnected() {
     closeModal();
   });
 }
+</script>
+<script>
+(function () {
+  var btn = document.getElementById('fullscreenBtn');
+  function updateLabel() {
+    btn.textContent = document.fullscreenElement ? '⤢ Exit Fullscreen' : '⛶ Fullscreen';
+  }
+  btn.addEventListener('click', function () {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+  document.addEventListener('fullscreenchange', updateLabel);
+  document.addEventListener('keydown', function (e) {
+    if (e.key.toLowerCase() !== 'f' || e.ctrlKey || e.metaKey || e.altKey) return;
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+})();
 </script>
 <script>
 if ('serviceWorker' in navigator) {

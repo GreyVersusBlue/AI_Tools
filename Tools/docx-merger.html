@@ -121,6 +121,7 @@
   </div>
 
   <p class="count-line" id="countLine"></p>
+  <p class="count-line" id="pageEstimateLine"></p>
   <ul id="fileList"></ul>
 </div>
 
@@ -136,6 +137,12 @@
     <input type="checkbox" id="optHeading" checked>
     <span>Add the file name as a heading before each section
       <span class="hint">Handy for knowing where one file ends and the next begins — especially useful with a lot of files.</span>
+    </span>
+  </label>
+  <label id="optTocLabel">
+    <input type="checkbox" id="optToc">
+    <span>Add a table of contents page at the front
+      <span class="hint">Lists each file's heading. Requires the file-name headings above; opens in Word ready for you to right-click and "Update Field" to fill in page numbers.</span>
     </span>
   </label>
   <div class="outname">
@@ -197,22 +204,32 @@
   const OPTIONS_KEY = 'docx-merger-options';
   const optPageBreak = document.getElementById('optPageBreak');
   const optHeading = document.getElementById('optHeading');
+  const optToc = document.getElementById('optToc');
+  const optTocLabel = document.getElementById('optTocLabel');
   (function loadOptionPrefs() {
     let raw;
     try { raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}'); } catch (e) { raw = {}; }
     if (typeof raw.pageBreak === 'boolean') optPageBreak.checked = raw.pageBreak;
     if (typeof raw.heading === 'boolean') optHeading.checked = raw.heading;
+    if (typeof raw.toc === 'boolean') optToc.checked = raw.toc;
   })();
   function saveOptionPrefs() {
     try {
       localStorage.setItem(OPTIONS_KEY, JSON.stringify({
         pageBreak: optPageBreak.checked,
-        heading: optHeading.checked
+        heading: optHeading.checked,
+        toc: optToc.checked
       }));
     } catch (e) { /* storage full/blocked */ }
   }
+  function syncTocAvailability() {
+    optToc.disabled = !optHeading.checked;
+    optTocLabel.style.opacity = optHeading.checked ? '' : '0.5';
+  }
   optPageBreak.addEventListener('change', saveOptionPrefs);
-  optHeading.addEventListener('change', saveOptionPrefs);
+  optHeading.addEventListener('change', () => { syncTocAvailability(); saveOptionPrefs(); });
+  optToc.addEventListener('change', saveOptionPrefs);
+  syncTocAvailability();
 
   dropzone.addEventListener('click', () => fileInput.click());
   ['dragenter','dragover'].forEach(evt =>
@@ -227,6 +244,42 @@
     const incoming = Array.from(fileListLike).filter(f => /\.docx$/i.test(f.name));
     incoming.forEach(f => filesArr.push({ file: f, name: f.name, size: f.size }));
     render();
+    updatePageEstimate();
+  }
+
+  const pageEstimateLine = document.getElementById('pageEstimateLine');
+  let pageEstimateToken = 0;
+
+  // Word saves a last-known page count in docProps/app.xml on every save — reading
+  // just that small entry (not the whole document) lets us sum a real estimate
+  // across 80+ files fast, instead of guessing from file size.
+  async function updatePageEstimate() {
+    const token = ++pageEstimateToken;
+    if (!filesArr.length) { pageEstimateLine.textContent = ''; return; }
+    pageEstimateLine.textContent = 'Estimating total pages…';
+    let totalPages = 0, knownCount = 0;
+    for (const entry of filesArr) {
+      try {
+        const buf = await entry.file.arrayBuffer();
+        const zip = await JSZip.loadAsync(buf);
+        const appXml = zip.file('docProps/app.xml');
+        if (appXml) {
+          const str = await appXml.async('string');
+          const m = str.match(/<Pages>(\d+)<\/Pages>/);
+          if (m) { totalPages += parseInt(m[1], 10); knownCount++; }
+        }
+      } catch (e) { /* unreadable file — merge step will report it */ }
+      if (token !== pageEstimateToken) return; // file list changed mid-estimate
+    }
+    if (token !== pageEstimateToken) return;
+    if (knownCount === 0) {
+      pageEstimateLine.textContent = '';
+    } else if (knownCount === filesArr.length) {
+      pageEstimateLine.textContent = `~${totalPages} page${totalPages === 1 ? '' : 's'} total, estimated from each file's saved page count`;
+    } else {
+      const missing = filesArr.length - knownCount;
+      pageEstimateLine.textContent = `~${totalPages}+ pages total (page count unavailable for ${missing} file${missing === 1 ? '' : 's'})`;
+    }
   }
 
   function fmtSize(bytes) {
@@ -288,7 +341,7 @@
         const act = btn.dataset.act;
         if (act === 'up' && i > 0) { [filesArr[i-1], filesArr[i]] = [filesArr[i], filesArr[i-1]]; render(); }
         if (act === 'down' && i < filesArr.length - 1) { [filesArr[i+1], filesArr[i]] = [filesArr[i], filesArr[i+1]]; render(); }
-        if (act === 'remove') { filesArr.splice(i, 1); render(); }
+        if (act === 'remove') { filesArr.splice(i, 1); render(); updatePageEstimate(); }
       });
     });
   }
@@ -312,6 +365,7 @@
     downloadArea.style.display = 'none';
     statusEl.textContent = '';
     render();
+    updatePageEstimate();
   });
 
   // ---------- MERGE LOGIC ----------
@@ -359,6 +413,54 @@
     t.textContent = text.replace(/\.docx$/i, '');
     r.appendChild(t);
     p.appendChild(r);
+    return p;
+  }
+
+  function createTocHeadingParagraph(doc) {
+    const p = wEl(doc, 'w:p');
+    const pPr = wEl(doc, 'w:pPr');
+    const pStyle = wEl(doc, 'w:pStyle');
+    pStyle.setAttributeNS(W_NS, 'w:val', 'Heading1');
+    pPr.appendChild(pStyle);
+    p.appendChild(pPr);
+    const r = wEl(doc, 'w:r');
+    const t = wEl(doc, 'w:t');
+    t.textContent = 'Table of Contents';
+    r.appendChild(t);
+    p.appendChild(r);
+    return p;
+  }
+
+  function createTocFieldParagraph(doc) {
+    const p = wEl(doc, 'w:p');
+    const fldCharEl = (type, dirty) => {
+      const r = wEl(doc, 'w:r');
+      const fld = wEl(doc, 'w:fldChar');
+      fld.setAttributeNS(W_NS, 'w:fldCharType', type);
+      if (dirty) fld.setAttributeNS(W_NS, 'w:dirty', 'true');
+      r.appendChild(fld);
+      return r;
+    };
+    const instrRun = () => {
+      const r = wEl(doc, 'w:r');
+      const instr = wEl(doc, 'w:instrText');
+      instr.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+      instr.textContent = ' TOC \\o "2-2" \\h \\z \\u ';
+      r.appendChild(instr);
+      return r;
+    };
+    const textRun = (text) => {
+      const r = wEl(doc, 'w:r');
+      const t = wEl(doc, 'w:t');
+      t.textContent = text;
+      r.appendChild(t);
+      return r;
+    };
+    p.appendChild(fldCharEl('begin', true));
+    p.appendChild(instrRun());
+    p.appendChild(fldCharEl('separate', false));
+    p.appendChild(textRun('Right-click here and choose "Update Field" to build the table of contents.'));
+    p.appendChild(fldCharEl('end', false));
     return p;
   }
 
@@ -580,6 +682,13 @@
 
     if (addHeadings) {
       baseBody.insertBefore(createHeadingParagraph(baseDoc, baseName), baseBody.firstChild);
+    }
+
+    const addToc = addHeadings && document.getElementById('optToc').checked;
+    if (addToc) {
+      [createTocHeadingParagraph(baseDoc), createTocFieldParagraph(baseDoc), createPageBreakParagraph(baseDoc)]
+        .reverse()
+        .forEach(node => baseBody.insertBefore(node, baseBody.firstChild));
     }
 
     const remaining = filesArr.filter((_, i) => i !== baseIndex && !failedBeforeBase.has(i));

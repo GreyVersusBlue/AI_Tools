@@ -163,6 +163,24 @@
   details.limits summary { cursor: pointer; color: var(--accent-dark); font-weight: 600; font-size: 0.85rem; }
   details.limits ul { margin: 8px 0 0 18px; padding: 0; font-size: 0.82rem; color: var(--muted); }
   details.limits li { margin-bottom: 4px; }
+
+  .history-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.86rem; }
+  .history-row:last-child { border-bottom: none; }
+  .history-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .qc-overlay { position: fixed; inset: 0; background: rgba(20, 20, 20, 0.55); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+  .qc-modal { background: #fff; border-radius: 8px; max-width: 620px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .qc-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .qc-modal-head h3 { margin: 0; font-size: 1rem; color: var(--accent-dark); }
+  .qc-modal-body { padding: 14px 18px; overflow-y: auto; }
+  .qc-modal-body textarea { width: 100%; min-height: 320px; font-family: ui-monospace, "SFMono-Regular", monospace; font-size: 0.8rem; }
+  .qc-modal-actions { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); justify-content: flex-end; flex-wrap: wrap; }
+
+  #quickPrintArea { display: none; }
+  @media print {
+    body > *:not(#quickPrintArea) { display: none !important; }
+    #quickPrintArea { display: block !important; white-space: pre-wrap; font-family: Georgia, serif; padding: 0.4in; color: #000; }
+  }
 </style>
 </head>
 <body>
@@ -229,6 +247,21 @@
     <input type="text" id="signOffName" placeholder="Devon Moore">
 
     <p class="save-note" id="saveNote">&nbsp;</p>
+
+    <div class="toggle-row" style="margin-top:14px;">
+      <button type="button" class="small" id="exportSettings">⬇ Export standing details (JSON)</button>
+      <button type="button" class="small" id="importSettingsBtn">⬆ Import standing details (JSON)</button>
+      <input type="file" id="importSettingsFile" accept="application/json" style="display:none;">
+    </div>
+    <p class="field-hint">Moves everything in this section — never the Student Notes box below, since that's never saved anywhere — to another computer or a colleague.</p>
+  </div>
+</details>
+
+<details class="card" id="historyCard">
+  <summary>Recent plans <span class="opt">— reopen an earlier day's plan as a starting point</span></summary>
+  <div class="inner">
+    <p class="hint">Loading a saved entry fills in the title, overview, schedule, and period notes below — never the Student Notes box, since that box is intentionally never saved.</p>
+    <div id="historyList"></div>
   </div>
 </details>
 
@@ -272,6 +305,11 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   <label for="materialsNote">Materials / where to find things <span class="opt">(optional)</span></label>
   <textarea id="materialsNote" rows="2" placeholder="Worksheets are stapled on my desk. Video link is on the Schoology page."></textarea>
+
+  <div class="toggle-row">
+    <input type="checkbox" id="saveToHistory">
+    <label for="saveToHistory">Also save this plan as a dated history entry <span class="opt" style="font-weight:400;">(everything above except Student Notes)</span></label>
+  </div>
 </div>
 
 <div class="card warn">
@@ -282,6 +320,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
 <div id="generateArea">
   <button class="primary" id="btnGenerate">Generate Word document</button>
+  <button id="btnQuickCopy">📋 Quick text copy / print</button>
   <div id="status"></div>
   <div id="downloadArea">
     <a id="downloadLink" download="">
@@ -289,6 +328,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     </a>
   </div>
 </div>
+
+<pre id="quickPrintArea"></pre>
 
 <details class="limits">
   <summary>Good to know</summary>
@@ -467,6 +508,46 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     scheduleSave();
   });
 
+  // ---------- Standing details: JSON export/import ----------
+  // Moves everything the "Standing details" card saves — never Student Notes,
+  // which never touches localStorage in the first place — to another device.
+
+  el('exportSettings').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sub-plan-standing-details.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  el('importSettingsBtn').addEventListener('click', () => el('importSettingsFile').click());
+  el('importSettingsFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.periods)) throw new Error('bad shape');
+        settings = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), parsed);
+        nextPeriodId = Math.max(0, ...settings.periods.map(p =>
+          (typeof p._id === 'string' && /^p\d+$/.test(p._id)) ? parseInt(p._id.slice(1), 10) + 1 : 0), nextPeriodId);
+        assignMissingPeriodIds(settings.periods);
+        applySettingsToForm();
+        renderPerPeriodBlocks();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        saveNote.textContent = 'Imported.';
+        saveNote.classList.add('saved');
+        setTimeout(() => { saveNote.textContent = ' '; saveNote.classList.remove('saved'); }, 1500);
+      } catch (err) {
+        alert('That file does not look like a valid standing-details export.');
+      }
+    };
+    reader.readAsText(file);
+  });
+
   // ---------- Today's plan: per-period blocks ----------
 
   const samePeriodsBox = el('samePeriods');
@@ -499,6 +580,209 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   renderPerPeriodBlocks();
 
   el('planDate').valueAsDate = new Date();
+
+  // ---------- Dated plan history (opt-in; never includes Student Notes) ----------
+
+  const HISTORY_KEY = 'subPlanBuilder.history.v1';
+  const MAX_HISTORY = 30;
+
+  function loadHistoryEntries() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+
+  function saveCurrentPlanToHistory() {
+    const dateVal = el('planDate').value;
+    if (!dateVal) return;
+    const entry = {
+      date: dateVal,
+      lessonTitle: el('lessonTitle').value,
+      announcement: el('announcement').value,
+      overviewText: el('overviewText').value,
+      scheduleText: el('scheduleText').value,
+      samePeriods: samePeriodsBox.checked,
+      sharedPeriodNotes: el('sharedPeriodNotes').value,
+      perPeriodValues: Object.assign({}, perPeriodValues),
+      materialsNote: el('materialsNote').value
+    };
+    // Re-saving the same date replaces that day's entry rather than duplicating it.
+    let entries = loadHistoryEntries().filter(en => en.date !== dateVal);
+    entries.unshift(entry);
+    if (entries.length > MAX_HISTORY) entries = entries.slice(0, MAX_HISTORY);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch (e) { /* storage full/blocked */ }
+    renderHistoryList();
+  }
+
+  function renderHistoryList() {
+    const listEl = el('historyList');
+    const entries = loadHistoryEntries();
+    if (!entries.length) { listEl.innerHTML = '<p class="hint" style="margin:0;">No saved plans yet — check "Also save this plan as a dated history entry" below when you generate one.</p>'; return; }
+    listEl.innerHTML = entries.map((en, i) => {
+      const dateDisplay = en.date ? new Date(en.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '(no date)';
+      const title = en.lessonTitle ? ' — ' + escapeAttr(en.lessonTitle) : '';
+      return `<div class="history-row">
+        <span>${escapeAttr(dateDisplay)}${title}</span>
+        <span class="actions"><button type="button" class="small" data-load-history="${i}">Load</button><button type="button" class="small danger" data-delete-history="${i}">✕</button></span>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('[data-load-history]').forEach(btn => btn.addEventListener('click', () => loadHistoryEntry(+btn.dataset.loadHistory)));
+    listEl.querySelectorAll('[data-delete-history]').forEach(btn => btn.addEventListener('click', () => deleteHistoryEntry(+btn.dataset.deleteHistory)));
+  }
+
+  function loadHistoryEntry(i) {
+    const en = loadHistoryEntries()[i];
+    if (!en) return;
+    if (!confirm("Load this saved plan as a starting point? This replaces the current Today's plan fields below (Student Notes is left untouched).")) return;
+    el('lessonTitle').value = en.lessonTitle || '';
+    el('announcement').value = en.announcement || '';
+    el('overviewText').value = en.overviewText || '';
+    el('scheduleText').value = en.scheduleText || '';
+    samePeriodsBox.checked = en.samePeriods !== false;
+    el('sharedPeriodNotes').value = en.sharedPeriodNotes || '';
+    perPeriodValues = Object.assign({}, en.perPeriodValues || {});
+    el('materialsNote').value = en.materialsNote || '';
+    renderPerPeriodBlocks();
+  }
+
+  function deleteHistoryEntry(i) {
+    const entries = loadHistoryEntries();
+    entries.splice(i, 1);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch (e) { /* storage full/blocked */ }
+    renderHistoryList();
+  }
+
+  renderHistoryList();
+
+  // ---------- Quick text copy / print fallback ----------
+  // A teacher without Word, or on a phone, still gets a readable copy of the
+  // plan — the same content as the .docx, as plain text to copy or print.
+
+  function stripBold(line) {
+    return line.replace(/\*\*(.+?)\*\*/g, '$1');
+  }
+
+  function linesOf(text) {
+    return String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  }
+
+  function buildPlainTextPlan() {
+    const lines = [];
+    const teacherName = el('teacherName').value.trim() || 'Devon Moore';
+    const signOff = el('signOffName').value.trim() || teacherName;
+    const dateVal = el('planDate').value;
+    const dateDisplay = dateVal ? new Date(dateVal + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '[Insert Date]';
+    const lessonTitle = el('lessonTitle').value.trim();
+
+    lines.push('SUBSTITUTE PLAN' + (lessonTitle ? ' – ' + lessonTitle : ''));
+    lines.push('Teacher: ' + teacherName);
+    lines.push('Date: ' + dateDisplay);
+
+    const announcement = el('announcement').value.trim();
+    if (announcement) { lines.push(''); linesOf(announcement).forEach(l => lines.push(stripBold(l).toUpperCase())); }
+
+    const overview = el('overviewText').value.trim();
+    if (overview) { lines.push(''); lines.push('OVERVIEW'); linesOf(overview).forEach(l => lines.push(stripBold(l))); }
+
+    const schedule = el('scheduleText').value.trim();
+    if (schedule) { lines.push(''); lines.push('CLASS SCHEDULE & TIMING'); linesOf(schedule).forEach(l => lines.push('- ' + stripBold(l))); }
+
+    const periods = settings.periods.filter(p => (p.label || '').trim());
+    if (periods.length) {
+      lines.push('');
+      lines.push('PERIOD-SPECIFIC DETAILS');
+      const same = samePeriodsBox.checked;
+      const sharedNotes = el('sharedPeriodNotes').value.trim();
+      periods.forEach(p => {
+        lines.push('Period ' + p.label + (p.time ? ' (' + p.time + ')' : ''));
+        const notes = same ? sharedNotes : (perPeriodValues[p._id] || '');
+        linesOf(notes).forEach(l => lines.push('  - ' + stripBold(l)));
+      });
+    }
+
+    lines.push('');
+    lines.push('IMPORTANT NOTES');
+    const materials = el('materialsNote').value.trim();
+    if (materials) linesOf(materials).forEach(l => lines.push(stripBold(l)));
+    const attendanceText = el('attendanceText').value.trim();
+    if (attendanceText) lines.push('Attendance: ' + attendanceText);
+    lines.push('Resources:');
+    if (el('rosterLocation').value.trim()) lines.push('  - Rosters / seating charts: ' + el('rosterLocation').value.trim());
+    if (el('absenceLocation').value.trim()) lines.push('  - Absence slips: ' + el('absenceLocation').value.trim());
+    if (el('emergencyLocation').value.trim()) lines.push('  - Substitute / emergency folder: ' + el('emergencyLocation').value.trim());
+    lines.push('  - Please review the IEP/504 accommodation grid for extra time, assistance, etc.');
+
+    lines.push('');
+    lines.push('BEHAVIOR EXPECTATIONS');
+    const variant = settings.behaviorVariant;
+    const behaviorText = variant === 'custom' ? (settings.behaviorCustom || '') : (BEHAVIOR_TEXT[variant] || BEHAVIOR_TEXT.long);
+    linesOf(behaviorText).forEach(l => lines.push(stripBold(l)));
+    const nLines = Math.max(0, parseInt(settings.referralLines, 10) || 0);
+    if (nLines > 0) {
+      lines.push('');
+      for (let i = 0; i < nLines; i++) lines.push('Student Name: _______________________   Period: _______   Reason: _______________________');
+    }
+
+    lines.push('');
+    lines.push('EMERGENCY CONTACTS');
+    lines.push('  - Main Office: press 0 and hit "Call"');
+    if (el('phoneNurse').value.trim()) lines.push('  - Nurse: ' + el('phoneNurse').value.trim());
+    if (el('phoneCounseling').value.trim()) lines.push('  - Counseling: ' + el('phoneCounseling').value.trim());
+    if (el('phoneSupport').value.trim()) lines.push('  - Support Room: ' + el('phoneSupport').value.trim());
+    if (el('phoneOther').value.trim()) lines.push('  - Other numbers: ' + el('phoneOther').value.trim());
+    if (settings.includeCallingOut) lines.push('  - Calling out of the building: dial 9, then the number you want to call.');
+
+    const studentNotes = el('studentNotes').value.trim();
+    if (studentNotes) {
+      lines.push('');
+      lines.push('STUDENT NOTES & CONCERNS');
+      linesOf(studentNotes).forEach(l => lines.push('  - ' + stripBold(l)));
+    }
+
+    lines.push('');
+    lines.push('Questions? Call the main office.');
+    lines.push('Thank you for covering!');
+    lines.push(signOff);
+
+    return lines.join('\n');
+  }
+
+  function openQuickCopyModal() {
+    const text = buildPlainTextPlan();
+    const overlay = document.createElement('div');
+    overlay.className = 'qc-overlay';
+    overlay.innerHTML = `
+      <div class="qc-modal">
+        <div class="qc-modal-head"><h3>Quick text copy</h3><button type="button" class="small" id="qcClose">✕</button></div>
+        <div class="qc-modal-body">
+          <p class="field-hint" style="margin-top:0;">A plain-text version of the plan above — handy without Word, or on a phone. Copy it, or print/save it as a PDF.</p>
+          <textarea readonly id="qcText"></textarea>
+        </div>
+        <div class="qc-modal-actions">
+          <button type="button" id="qcPrint">🖨️ Print / Save as PDF</button>
+          <button type="button" class="primary" id="qcCopy">📋 Copy to clipboard</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    el('qcText').value = text;
+    const cleanup = () => { overlay.remove(); document.removeEventListener('keydown', escHandler); };
+    const escHandler = (e) => { if (e.key === 'Escape') cleanup(); };
+    document.addEventListener('keydown', escHandler);
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) cleanup(); });
+    el('qcClose').addEventListener('click', cleanup);
+    el('qcCopy').addEventListener('click', async () => {
+      const btn = el('qcCopy');
+      try { await navigator.clipboard.writeText(text); btn.textContent = '✓ Copied!'; }
+      catch (e) { el('qcText').select(); document.execCommand('copy'); }
+    });
+    el('qcPrint').addEventListener('click', () => {
+      el('quickPrintArea').textContent = text;
+      window.print();
+    });
+  }
+
+  el('btnQuickCopy').addEventListener('click', openQuickCopyModal);
 
   // ---------- DOCX generation ----------
 
@@ -780,6 +1064,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       downloadArea.style.display = 'block';
       statusEl.className = 'ok';
       statusEl.textContent = 'Done — your sub plan is ready.';
+      if (el('saveToHistory').checked) saveCurrentPlanToHistory();
     } catch (e) {
       statusEl.className = 'err';
       statusEl.textContent = 'Something went wrong: ' + e.message;

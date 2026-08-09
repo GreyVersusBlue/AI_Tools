@@ -75,6 +75,14 @@
   table.seating .flagged { color: var(--err); font-weight: 700; }
   table.seating .note { color: var(--muted); font-size: .82rem; }
 
+  .day-badges { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+  .day-badge { display: inline-block; padding: .3rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; color: #fff; }
+  .today-note { background: #f4f3ee; border-radius: 8px; padding: .7rem .8rem; font-size: .88rem; white-space: pre-wrap; }
+  .today-note-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .3rem; }
+
+  .checkbox-row { display: flex; align-items: center; gap: .45rem; font-size: .85rem; margin: .3rem 0 .6rem; }
+  .checkbox-row input { margin: 0; }
+
   .links-row { display: flex; gap: .6rem; flex-wrap: wrap; }
   .links-row a {
     display: inline-block; padding: .5rem .9rem; border: 1px solid var(--line-strong); border-radius: 7px;
@@ -112,6 +120,11 @@
   </div>
 
   <div class="card">
+    <div class="card-title"><span>Today</span><a href="School%20Calendar%20Visualizer.html">Edit calendar</a></div>
+    <div id="todayCalBody"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title"><span>Standing details</span><a href="Sub%20Plan%20Builder.html">Edit in Sub Plan Builder</a></div>
     <div id="standingBody"></div>
   </div>
@@ -125,6 +138,10 @@
   <div class="card">
     <div class="card-title"><span>Seating</span><a href="Seating%20Chart%20Generator.html">Edit in Seating Chart Generator</a></div>
     <select id="seatingSelect" style="display:none;"></select>
+    <label class="checkbox-row" id="combineRow" style="display:none;">
+      <input type="checkbox" id="combineSections">
+      <span>Print every section&rsquo;s seating chart, not just the one shown below</span>
+    </label>
     <div id="seatingBody"></div>
   </div>
 
@@ -138,10 +155,11 @@
   </div>
 
   <div class="btn-row">
+    <button type="button" id="refreshBtn" class="secondary">&#8635; Refresh data</button>
     <button type="button" id="printBtn">Print bundle</button>
   </div>
 
-  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Reads the standing details saved in Sub Plan Builder and the chart saved in Seating Chart Generator; edit either there and come back to re-print.</footer>
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. Reads the standing details saved in Sub Plan Builder, today&rsquo;s entry from the School Calendar Visualizer, and the chart saved in Seating Chart Generator; edit any of them elsewhere, then click &ldquo;Refresh data&rdquo; here (or just reload) to pull in the latest.</footer>
 
 </div>
 
@@ -149,16 +167,14 @@
   <div class="page">
     <h2 id="printTitle1">Sub Binder</h2>
     <p class="p-sub" id="printSub1"></p>
+    <h3>Today</h3>
+    <div id="printToday"></div>
     <h3>Standing details</h3>
     <div id="printStanding"></div>
     <h3>Today&rsquo;s lesson</h3>
     <div class="lesson-block" id="printLesson"></div>
   </div>
-  <div class="page">
-    <h2 id="printTitle2">Seating Chart</h2>
-    <p class="p-sub" id="printSub2"></p>
-    <div id="printSeating"></div>
-  </div>
+  <!-- One or more seating pages get appended here as .page.seating-page just before printing. -->
 </div>
 
 <script>
@@ -237,6 +253,50 @@
   }
   renderStandingCard();
 
+  /* ==================== Today (School Calendar Visualizer) ==================== */
+  function localISODate(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function loadCalendar() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem('scv_calendar_v1') || 'null');
+      return (parsed && parsed.dayTypes && parsed.days) ? parsed : null;
+    } catch (e) { return null; }
+  }
+
+  var calCache = loadCalendar();
+
+  function todayCalEntry() {
+    if (!calCache) return null;
+    return calCache.days[localISODate(new Date())] || null;
+  }
+
+  function todayCalHtml() {
+    if (!calCache) {
+      return '<p class="empty-hint">No school calendar saved yet. Set one up in the <a href="School%20Calendar%20Visualizer.html">School Calendar Visualizer</a> to see today&rsquo;s day type and pacing note here.</p>';
+    }
+    var entry = todayCalEntry();
+    var badgesHtml = '';
+    if (entry && Array.isArray(entry.types) && entry.types.length) {
+      badgesHtml = '<div class="day-badges">' + entry.types.map(function (id) {
+        var t = calCache.dayTypes.find(function (dt) { return dt.id === id; });
+        if (!t) return '';
+        return '<span class="day-badge" style="background:' + escapeHtml(t.color || '#555') + ';">' + escapeHtml(t.label || t.abbr || 'Tagged') + '</span>';
+      }).join('') + '</div>';
+    }
+    var noteText = entry && (entry.lesson || entry.note) ? [entry.lesson, entry.note].filter(Boolean).join('\n\n') : '';
+    var noteHtml = noteText
+      ? '<div class="today-note-label">Lesson / pacing note</div><div class="today-note">' + escapeHtml(noteText) + '</div>'
+      : '<p class="empty-hint">Nothing tagged for today &mdash; a regular day, or nothing entered yet.</p>';
+    return badgesHtml + noteHtml;
+  }
+
+  function renderTodayCard() {
+    document.getElementById('todayCalBody').innerHTML = todayCalHtml();
+  }
+  renderTodayCard();
+
   /* ==================== Today's lesson (lightly persisted) ==================== */
   var lessonInput = document.getElementById('lessonInput');
   try { lessonInput.value = localStorage.getItem(LESSON_KEY) || ''; } catch (e) { /* ignore */ }
@@ -258,6 +318,8 @@
   var seatingState = loadSeatingState();
   var seatingSelect = document.getElementById('seatingSelect');
   var seatingBody = document.getElementById('seatingBody');
+  var combineRow = document.getElementById('combineRow');
+  var combineSections = document.getElementById('combineSections');
 
   function seatingRowsFor(section) {
     var students = Array.isArray(section.students) ? section.students : [];
@@ -304,10 +366,13 @@
   function renderSeatingCard() {
     if (!seatingState || !seatingState.sections.length) {
       seatingSelect.style.display = 'none';
+      combineRow.style.display = 'none';
       seatingBody.innerHTML = '<p class="empty-hint">No seating chart saved yet. Build one in <a href="Seating%20Chart%20Generator.html">Seating Chart Generator</a> and it&rsquo;ll show up here automatically.</p>';
       return;
     }
-    seatingSelect.style.display = seatingState.sections.length > 1 ? '' : 'none';
+    var multi = seatingState.sections.length > 1;
+    seatingSelect.style.display = multi ? '' : 'none';
+    combineRow.style.display = multi ? 'flex' : 'none';
     seatingSelect.innerHTML = seatingState.sections.map(function (s) {
       return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.name) + '</option>';
     }).join('');
@@ -321,24 +386,58 @@
   renderSeatingCard();
 
   /* ==================== Print ==================== */
+  function seatingPageHtml(section, today) {
+    return '<div class="page seating-page">' +
+      '<h2>Seating Chart' + (section ? ' — ' + escapeHtml(section.name) : '') + '</h2>' +
+      '<p class="p-sub">' + escapeHtml(today) + '</p>' +
+      (section ? tableHtmlFor(section) : '<p>No seating chart saved.</p>') +
+      '</div>';
+  }
+
   document.getElementById('printBtn').addEventListener('click', function () {
     var today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     var teacherName = standingCache && standingCache.teacherName ? standingCache.teacherName : '';
 
     document.getElementById('printTitle1').textContent = 'Sub Binder' + (teacherName ? ' — ' + teacherName : '');
     document.getElementById('printSub1').textContent = today;
+    document.getElementById('printToday').innerHTML = todayCalHtml();
     document.getElementById('printStanding').innerHTML = standingCache
       ? renderStandingHtml(standingCache)
       : '<p>No standing details saved.</p>';
     document.getElementById('printLesson').textContent = lessonInput.value.trim() || '(nothing entered)';
 
-    var section = seatingState ? (seatingState.sections.find(function (s) { return s.id === seatingSelect.value; }) || seatingState.sections[0]) : null;
-    document.getElementById('printTitle2').textContent = 'Seating Chart' + (section ? ' — ' + section.name : '');
-    document.getElementById('printSub2').textContent = today;
-    document.getElementById('printSeating').innerHTML = section ? tableHtmlFor(section) : '<p>No seating chart saved.</p>';
+    var printArea = document.getElementById('printArea');
+    // Re-run every print: drop whatever seating pages the previous print appended.
+    Array.prototype.slice.call(printArea.querySelectorAll('.page.seating-page')).forEach(function (p) { p.remove(); });
 
-    document.getElementById('printArea').classList.add('active');
+    var pagesHtml;
+    if (!seatingState || !seatingState.sections.length) {
+      pagesHtml = seatingPageHtml(null, today);
+    } else if (combineSections.checked && seatingState.sections.length > 1) {
+      pagesHtml = seatingState.sections.map(function (s) { return seatingPageHtml(s, today); }).join('');
+    } else {
+      var section = seatingState.sections.find(function (s) { return s.id === seatingSelect.value; }) || seatingState.sections[0];
+      pagesHtml = seatingPageHtml(section, today);
+    }
+    printArea.insertAdjacentHTML('beforeend', pagesHtml);
+
+    printArea.classList.add('active');
     window.print();
+  });
+
+  /* ==================== Refresh (re-pull without a page reload) ==================== */
+  document.getElementById('refreshBtn').addEventListener('click', function () {
+    standingCache = loadStanding();
+    renderStandingCard();
+    calCache = loadCalendar();
+    renderTodayCard();
+    seatingState = loadSeatingState();
+    renderSeatingCard();
+
+    var btn = document.getElementById('refreshBtn');
+    var original = btn.textContent;
+    btn.textContent = '✓ Refreshed';
+    setTimeout(function () { btn.textContent = original; }, 1200);
   });
 })();
 </script>
