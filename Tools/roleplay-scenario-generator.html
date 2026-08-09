@@ -60,6 +60,7 @@
     text-transform: uppercase; color: var(--accent-2); border: 1px solid var(--line-strong);
     border-radius: 4px; padding: .2rem .55rem; margin-bottom: .7rem;
   }
+  .stage .cat-tag.level-tag { color: var(--err); border-color: var(--err); }
   .stage h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); margin: 0 0 .6rem; }
   .stage .setup { font-size: clamp(1rem, 2vw, 1.15rem); max-width: 48rem; margin: 0 0 1.2rem; }
   .roles-row { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1.4rem; }
@@ -119,6 +120,8 @@
     @page { size: letter portrait; margin: 0.2in; }
   }
 </style>
+<link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/a11y.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -134,11 +137,23 @@
   <div class="toolbar">
     <label style="margin:0;font-weight:600;font-size:.85rem;">Category:</label>
     <select id="categorySelect"></select>
+    <label style="margin:0;font-weight:600;font-size:.85rem;">Level:</label>
+    <select id="levelSelect"></select>
     <label style="margin:0;font-weight:600;font-size:.85rem;">Scenario:</label>
     <select id="scenarioSelect"></select>
     <div class="spacer"></div>
     <button type="button" class="secondary small" id="prevBtn">&larr; Prev</button>
     <button type="button" class="secondary small" id="nextBtn">Next &rarr;</button>
+  </div>
+
+  <div class="toolbar">
+    <label style="margin:0;font-weight:600;font-size:.85rem;">Class/session:</label>
+    <select id="classSelect"></select>
+    <button type="button" class="secondary small" id="addClassBtn">+ New class&hellip;</button>
+    <button type="button" class="secondary small" id="renameClassBtn">Rename</button>
+    <button type="button" class="secondary small" id="deleteClassBtn">Delete</button>
+    <div class="spacer"></div>
+    <p class="hint" style="margin:0;color:var(--muted);font-size:.8rem;">Scaffolding fill-ins are saved separately per class, so switching classes won&rsquo;t overwrite another class&rsquo;s answers.</p>
   </div>
 
   <div class="generate-row">
@@ -158,7 +173,7 @@
     </div>
   </div>
 
-  <div class="stage" id="stage"></div>
+  <div class="stage" id="stage" data-a11y-read></div>
 
   <footer class="note">
     Runs entirely in your browser &mdash; nothing is uploaded, and no student data is collected. Scenario prompts are in English (teacher-facing); fill in each scaffolding card with the actual target-language phrases you want students to use.
@@ -174,7 +189,9 @@
 
   var FILLS_KEY = 'gvb-roleplay:fills';
   var FILTER_KEY = 'gvb-roleplay:filter';
+  var LEVEL_FILTER_KEY = 'gvb-roleplay:levelFilter';
   var CURRENT_KEY = 'gvb-roleplay:current';
+  var CURRENT_CLASS_KEY = 'gvb-roleplay:currentClass';
 
   var CATEGORIES = [
     { key: 'food', label: 'Food & Dining' },
@@ -187,166 +204,172 @@
   ];
 
   var SCENARIOS = [
-    { id: 'f1', category: 'food', title: 'Ordering at a Café', roles: ['Customer', 'Barista'],
+    { id: 'f1', category: 'food', level: 'novice', title: 'Ordering at a Café', roles: ['Customer', 'Barista'],
       setup: "You're at a café and want to order a coffee and a pastry, but the barista is out of your first choice pastry.",
       phrases: ["Greet the barista and say what you'd like to order", 'Ask what pastries or drinks are available today',
         'React to your first choice being sold out and choose something else', "Ask the price and whether it's for here or to go",
         'Say thank you and pay'] },
-    { id: 'f2', category: 'food', title: 'Reserving a Table', roles: ['Customer', 'Host / Hostess'],
+    { id: 'f2', category: 'food', level: 'intermediate', title: 'Reserving a Table', roles: ['Customer', 'Host / Hostess'],
       setup: "You're calling a restaurant to reserve a table for a group of four this weekend.",
       phrases: ["Greet the host and explain you'd like to make a reservation", 'Give the day, time, and number of people in your party',
         'Ask about a specific seating request (window table, outdoor patio, high chair)', 'Confirm the reservation details and spell your name if needed',
         'Say goodbye and thank them'] },
-    { id: 'f3', category: 'food', title: 'Fast Food Counter', roles: ['Customer', 'Cashier'],
+    { id: 'f3', category: 'food', level: 'novice', title: 'Fast Food Counter', roles: ['Customer', 'Cashier'],
       setup: "You're ordering a combo meal at a fast food counter and want to customize it (no onions, extra sauce, swap the drink).",
       phrases: ['Order your main item and side', 'Ask to customize or substitute part of the order',
         "Respond to being asked 'for here or to go?'", 'Ask for a specific size or upgrade', 'Pay and collect your order'] },
-    { id: 'f4', category: 'food', title: 'Wrong Dish Delivered', roles: ['Diner', 'Server'],
+    { id: 'f4', category: 'food', level: 'intermediate', title: 'Wrong Dish Delivered', roles: ['Diner', 'Server'],
       setup: "The server just brought you the wrong dish at a restaurant, and it's actually something you're allergic to.",
       phrases: ["Politely explain this isn't what you ordered", 'Mention your allergy or dietary restriction',
         'Ask how long the correct dish will take', 'Accept or decline an offered discount or free item', 'Thank the server for fixing it'] },
-    { id: 'f5', category: 'food', title: 'At the Deli Counter', roles: ['Customer', 'Deli Clerk'],
+    { id: 'f5', category: 'food', level: 'intermediate', title: 'At the Deli Counter', roles: ['Customer', 'Deli Clerk'],
       setup: "You're at a grocery store deli counter ordering sliced meat and cheese by weight for a party.",
       phrases: ['Ask for a specific amount (grams, pounds, slices) of an item', 'Ask the clerk to slice it thicker or thinner',
         'Ask if they have a specific type or brand', 'Ask for a recommendation for a get-together', 'Confirm the total and say thanks'] },
-    { id: 'f6', category: 'food', title: 'Splitting the Bill', roles: ['Friend A', 'Friend B'],
+    { id: 'f6', category: 'food', level: 'intermediate', title: 'Splitting the Bill', roles: ['Friend A', 'Friend B'],
       setup: 'You and a friend just finished dinner and need to figure out how to split the bill fairly since you ordered different amounts.',
       phrases: ['Suggest a way to split the bill (evenly, by item, etc.)', 'Point out what you each ordered',
         'Negotiate who pays the tip or tax', 'Agree on a final amount', 'Thank each other for the meal'] },
 
-    { id: 't1', category: 'travel', title: 'Lost, Looking for a Museum', roles: ['Tourist', 'Local Resident'],
+    { id: 't1', category: 'travel', level: 'novice', title: 'Lost, Looking for a Museum', roles: ['Tourist', 'Local Resident'],
       setup: "You're a tourist who is lost and trying to find a famous museum a few blocks away.",
       phrases: ['Politely stop someone and ask for help', "Explain where you're trying to go",
         'Ask for landmarks or street names to watch for', 'Ask how long it will take on foot', 'Thank them for the directions'] },
-    { id: 't2', category: 'travel', title: 'Finding a Pharmacy', roles: ['Visitor', 'Passerby'],
+    { id: 't2', category: 'travel', level: 'novice', title: 'Finding a Pharmacy', roles: ['Visitor', 'Passerby'],
       setup: 'You have a headache and need to find the nearest pharmacy in an unfamiliar neighborhood.',
       phrases: ["Ask if there's a pharmacy nearby", 'Ask for directions (turn left, go straight, cross the street)',
         "Ask if it's open right now", 'Ask how far away it is', 'Say thank you and goodbye'] },
-    { id: 't3', category: 'travel', title: 'Taking a Taxi', roles: ['Passenger', 'Taxi Driver'],
+    { id: 't3', category: 'travel', level: 'intermediate', title: 'Taking a Taxi', roles: ['Passenger', 'Taxi Driver'],
       setup: 'You need to get to the airport and are negotiating the destination and fare with a taxi driver.',
       phrases: ['Tell the driver your destination', 'Ask roughly how much the ride will cost',
         'Ask how long the trip will take', 'Make small talk about traffic or the route', 'Pay and say goodbye'] },
-    { id: 't4', category: 'travel', title: 'Buying a Train Ticket', roles: ['Traveler', 'Ticket Agent'],
+    { id: 't4', category: 'travel', level: 'intermediate', title: 'Buying a Train Ticket', roles: ['Traveler', 'Ticket Agent'],
       setup: "You're at a train station buying a ticket to another city and aren't sure which train to take.",
       phrases: ['Ask for a ticket to a specific destination', 'Ask about departure times and platforms',
         'Ask about one-way vs. round-trip prices', 'Ask which seat or class options are available', 'Confirm the ticket and say thanks'] },
-    { id: 't5', category: 'travel', title: 'Delayed Flight at the Airport', roles: ['Traveler', 'Airline Agent'],
+    { id: 't5', category: 'travel', level: 'advanced', title: 'Delayed Flight at the Airport', roles: ['Traveler', 'Airline Agent'],
       setup: 'Your flight has been delayed and you need to find out about rebooking or a hotel voucher.',
       phrases: ['Explain the situation and ask what happened', 'Ask about rebooking options',
         'Ask about compensation (meal voucher, hotel, refund)', "Ask how you'll be notified of updates", 'Thank the agent for their help'] },
-    { id: 't6', category: 'travel', title: 'Which Bus to Take', roles: ['Rider', 'Stranger at the Stop'],
+    { id: 't6', category: 'travel', level: 'novice', title: 'Which Bus to Take', roles: ['Rider', 'Stranger at the Stop'],
       setup: "You're not sure which bus or subway line goes downtown, so you ask a stranger waiting at the stop.",
       phrases: ['Politely ask if this is the right stop for downtown', 'Ask how frequently the bus or train comes',
         'Ask how many stops until your destination', 'Ask how much the fare costs', 'Thank them for the help'] },
 
-    { id: 's1', category: 'shopping', title: 'Wrong Size at a Clothing Store', roles: ['Shopper', 'Sales Associate'],
+    { id: 's1', category: 'shopping', level: 'novice', title: 'Wrong Size at a Clothing Store', roles: ['Shopper', 'Sales Associate'],
       setup: "You tried on a jacket but it's the wrong size, and you'd like a different one.",
       phrases: ["Explain the size doesn't fit", 'Ask if they have it in a different size or color',
         'Ask where the fitting room is', "Ask about the price or if it's on sale", "Decide to buy it or say you'll keep looking"] },
-    { id: 's2', category: 'shopping', title: 'Bargaining at a Market', roles: ['Shopper', 'Market Vendor'],
+    { id: 's2', category: 'shopping', level: 'intermediate', title: 'Bargaining at a Market', roles: ['Shopper', 'Market Vendor'],
       setup: "You're at an outdoor market and want to negotiate the price of a handmade item.",
       phrases: ['Ask how much an item costs', 'Say the price is too high and offer a lower amount',
         'Ask if there is a discount for buying more than one', 'Agree on a final price', 'Thank the vendor and say goodbye'] },
-    { id: 's3', category: 'shopping', title: 'Returning an Item', roles: ['Customer', 'Store Clerk'],
+    { id: 's3', category: 'shopping', level: 'intermediate', title: 'Returning an Item', roles: ['Customer', 'Store Clerk'],
       setup: "You bought a pair of shoes last week but they don't fit, and you want to return or exchange them.",
       phrases: ["Explain why you're returning the item", 'Show your receipt and ask about the return policy',
         'Ask for a refund or an exchange', 'Ask how long the refund will take to process', 'Thank the clerk'] },
-    { id: 's4', category: 'shopping', title: 'Finding the Perfect Gift', roles: ['Shopper', 'Sales Associate'],
+    { id: 's4', category: 'shopping', level: 'novice', title: 'Finding the Perfect Gift', roles: ['Shopper', 'Sales Associate'],
       setup: "You need help finding a birthday gift for a family member and aren't sure what to get.",
       phrases: ['Explain who the gift is for and their interests', 'Ask for a recommendation',
         'Ask about the price range of a few options', 'Ask if they offer gift wrapping', 'Decide what to buy and pay'] },
-    { id: 's5', category: 'shopping', title: 'At the Pharmacy Counter', roles: ['Customer', 'Pharmacist'],
+    { id: 's5', category: 'shopping', level: 'intermediate', title: 'At the Pharmacy Counter', roles: ['Customer', 'Pharmacist'],
       setup: 'You have a minor cold and want the pharmacist’s recommendation for medicine.',
       phrases: ['Describe your symptoms', 'Ask for a recommendation for medicine',
         'Ask about dosage and how often to take it', 'Ask about side effects or interactions', 'Pay and say thank you'] },
-    { id: 's6', category: 'shopping', title: 'Buying Souvenirs', roles: ['Tourist', 'Shop Owner'],
+    { id: 's6', category: 'shopping', level: 'novice', title: 'Buying Souvenirs', roles: ['Tourist', 'Shop Owner'],
       setup: "You're picking out souvenirs to bring home and want to know prices for a few different items.",
       phrases: ['Ask the price of a few different souvenirs', 'Ask where an item was made',
         'Ask if they can ship it or if it is fragile to pack', 'Ask for a bag or box to carry things', 'Pay and say thank you'] },
 
-    { id: 'l1', category: 'lodging', title: 'Checking In With an Issue', roles: ['Guest', 'Front Desk Clerk'],
+    { id: 'l1', category: 'lodging', level: 'advanced', title: 'Checking In With an Issue', roles: ['Guest', 'Front Desk Clerk'],
       setup: "You arrive at a hotel to check in, but there's a problem with your reservation (wrong dates, no record found).",
       phrases: ['Give your name and confirmation number', 'Explain the problem with the reservation',
         'Ask what the clerk can do to fix it', 'Ask about room details (floor, view, bed type)', "Thank them once it's resolved"] },
-    { id: 'l2', category: 'lodging', title: 'Asking About Hotel Amenities', roles: ['Guest', 'Front Desk Clerk'],
+    { id: 'l2', category: 'lodging', level: 'novice', title: 'Asking About Hotel Amenities', roles: ['Guest', 'Front Desk Clerk'],
       setup: "You want to know what's included at the hotel: wifi password, breakfast hours, pool access.",
       phrases: ['Ask for the wifi network and password', 'Ask what time breakfast is served and where',
         'Ask about the pool, gym, or other amenities', 'Ask what time checkout is', 'Thank the clerk for the information'] },
-    { id: 'l3', category: 'lodging', title: 'Requesting a Room Change', roles: ['Guest', 'Front Desk Clerk'],
+    { id: 'l3', category: 'lodging', level: 'intermediate', title: 'Requesting a Room Change', roles: ['Guest', 'Front Desk Clerk'],
       setup: "Your room is very noisy (construction, hallway traffic) and you'd like to switch rooms.",
       phrases: ['Explain the problem with your current room', 'Ask if a quieter room is available',
         'Ask if there will be an extra charge', 'Ask how soon you can move', 'Thank them for accommodating you'] },
-    { id: 'l4', category: 'lodging', title: 'Checking Out With a Billing Question', roles: ['Guest', 'Front Desk Clerk'],
+    { id: 'l4', category: 'lodging', level: 'advanced', title: 'Checking Out With a Billing Question', roles: ['Guest', 'Front Desk Clerk'],
       setup: "You're checking out of the hotel, but there's an unfamiliar charge on your bill you want explained.",
       phrases: ['Ask for your final bill', "Point out the charge you don't recognize",
         'Ask them to explain or remove the charge', "Ask how you'll be refunded if needed", 'Say goodbye and thank them for your stay'] },
-    { id: 'l5', category: 'lodging', title: 'Asking the Concierge for Recommendations', roles: ['Guest', 'Concierge'],
+    { id: 'l5', category: 'lodging', level: 'novice', title: 'Asking the Concierge for Recommendations', roles: ['Guest', 'Concierge'],
       setup: 'You want local recommendations for a good restaurant and something fun to do nearby.',
       phrases: ['Ask for a restaurant recommendation nearby', 'Ask about a fun activity or sight to see',
         'Ask how to get there (walking, taxi, public transit)', 'Ask if you need a reservation', 'Thank the concierge for their help'] },
 
-    { id: 'h1', category: 'health', title: "At the Doctor's Office", roles: ['Patient', 'Doctor'],
+    { id: 'h1', category: 'health', level: 'intermediate', title: "At the Doctor's Office", roles: ['Patient', 'Doctor'],
       setup: "You're describing symptoms of a cold or flu to a doctor during an appointment.",
       phrases: ["Describe how you're feeling and since when", 'Answer questions about your symptoms',
         'Ask what might be causing it', 'Ask about treatment or medicine', 'Ask when you should follow up'] },
-    { id: 'h2', category: 'health', title: 'Medicine for a Cold', roles: ['Customer', 'Pharmacist'],
+    { id: 'h2', category: 'health', level: 'novice', title: 'Medicine for a Cold', roles: ['Customer', 'Pharmacist'],
       setup: 'You need to explain your symptoms to a pharmacist and ask what medicine to take for a cold.',
       phrases: ['Describe your symptoms (cough, congestion, sore throat)', 'Ask for a medicine recommendation',
         'Ask how much to take and how often', 'Ask if it is safe to take with other medicine', 'Thank the pharmacist'] },
-    { id: 'h3', category: 'health', title: 'A Minor Injury', roles: ['Injured Person', 'Friend / Helper'],
+    { id: 'h3', category: 'health', level: 'intermediate', title: 'A Minor Injury', roles: ['Injured Person', 'Friend / Helper'],
       setup: 'You just twisted your ankle while out and a friend is helping you figure out what to do.',
       phrases: ['Explain what happened and how it hurts', 'Ask if you should see a doctor or rest it',
         'Ask for help getting somewhere safe', 'Talk about how to treat it (ice, elevate, wrap it)', 'Thank your friend for helping'] },
-    { id: 'h4', category: 'health', title: 'Reporting a Lost Passport', roles: ['Traveler', 'Police Officer'],
+    { id: 'h4', category: 'health', level: 'advanced', title: 'Reporting a Lost Passport', roles: ['Traveler', 'Police Officer'],
       setup: "You've lost your wallet or passport while traveling and need to file a report.",
       phrases: ["Explain what happened and what's missing", 'Describe when and where you last had it',
         'Answer questions to fill out the report', 'Ask what to do next (embassy, replacement)', 'Thank the officer for their help'] },
-    { id: 'h5', category: 'health', title: 'At the Dentist', roles: ['Patient', 'Dentist'],
+    { id: 'h5', category: 'health', level: 'intermediate', title: 'At the Dentist', roles: ['Patient', 'Dentist'],
       setup: 'You have a toothache and are explaining the pain to your dentist during a visit.',
       phrases: ['Describe the pain and where it hurts', 'Answer questions about when it started',
         "Ask what's wrong and what needs to be done", 'Ask about the cost or how long treatment will take', 'Ask how to care for it afterward'] },
 
-    { id: 'so1', category: 'social', title: 'Meeting a New Neighbor', roles: ['You', 'New Neighbor'],
+    { id: 'so1', category: 'social', level: 'novice', title: 'Meeting a New Neighbor', roles: ['You', 'New Neighbor'],
       setup: 'A new neighbor just moved in next door and you are introducing yourself for the first time.',
       phrases: ['Introduce yourself and welcome them', 'Ask where they moved from',
         'Offer help or information about the neighborhood', 'Make small talk about the weather or area', 'Say goodbye and invite them to reach out'] },
-    { id: 'so2', category: 'social', title: 'Small Talk in Line', roles: ['Person A', 'Person B'],
+    { id: 'so2', category: 'social', level: 'novice', title: 'Small Talk in Line', roles: ['Person A', 'Person B'],
       setup: "You're waiting in a long line and strike up small talk with the person next to you.",
       phrases: ['Comment on the long wait', "Ask what they're here for",
         'Make small talk about your day or plans', 'Ask a follow-up question about what they said', 'Say it was nice talking and say goodbye'] },
-    { id: 'so3', category: 'social', title: 'Making Weekend Plans', roles: ['Friend A', 'Friend B'],
+    { id: 'so3', category: 'social', level: 'novice', title: 'Making Weekend Plans', roles: ['Friend A', 'Friend B'],
       setup: "You're texting or talking with a friend to plan something fun to do this weekend.",
       phrases: ['Suggest an activity for the weekend', 'Ask what day and time works',
         'Suggest where to meet', 'Ask if anyone else should be invited', 'Confirm the plan'] },
-    { id: 'so4', category: 'social', title: 'Introducing Yourself at a Party', roles: ['You', 'New Acquaintance'],
+    { id: 'so4', category: 'social', level: 'novice', title: 'Introducing Yourself at a Party', roles: ['You', 'New Acquaintance'],
       setup: "You don't know anyone at a party and introduce yourself to someone standing nearby.",
       phrases: ['Introduce yourself and say how you know the host', 'Ask their name and how they know the host',
         'Ask what they do or where they are from', 'Find something in common to talk about', 'Exchange contact info or say it was nice to meet them'] },
-    { id: 'so5', category: 'social', title: 'Catching Up With an Old Friend', roles: ['Friend A', 'Friend B'],
+    { id: 'so5', category: 'social', level: 'intermediate', title: 'Catching Up With an Old Friend', roles: ['Friend A', 'Friend B'],
       setup: "You run into an old friend you haven't seen in years and catch up on what's new.",
       phrases: ['Express surprise and happiness at seeing them', "Ask what they've been up to",
         "Share what's new in your own life", 'Ask about mutual friends or family', 'Suggest getting together again soon'] },
 
-    { id: 'sc1', category: 'school', title: 'Asking a Teacher for Help', roles: ['Student', 'Teacher'],
+    { id: 'sc1', category: 'school', level: 'novice', title: 'Asking a Teacher for Help', roles: ['Student', 'Teacher'],
       setup: "You're confused about an assignment and ask your teacher for clarification after class.",
       phrases: ["Explain which part of the assignment is confusing", 'Ask the teacher to explain it a different way',
         'Ask about the due date or requirements', 'Ask if you can get extra help or resources', 'Thank the teacher for their time'] },
-    { id: 'sc2', category: 'school', title: 'A Job Interview', roles: ['Candidate', 'Interviewer'],
+    { id: 'sc2', category: 'school', level: 'advanced', title: 'A Job Interview', roles: ['Candidate', 'Interviewer'],
       setup: "You're in a job interview answering basic questions about your experience and skills.",
       phrases: ['Introduce yourself and your background', 'Describe relevant experience or skills',
         'Answer why you want the job', 'Ask a question about the role or company', 'Thank the interviewer for their time'] },
-    { id: 'sc3', category: 'school', title: 'Group Project Partner', roles: ['Classmate A', 'Classmate B'],
+    { id: 'sc3', category: 'school', level: 'novice', title: 'Group Project Partner', roles: ['Classmate A', 'Classmate B'],
       setup: "You're asking a classmate to work together on a group project and dividing up the tasks.",
       phrases: ['Suggest working together on the project', 'Propose how to split up the tasks',
         'Suggest a time and place to meet', 'Ask about their strengths or preferences', 'Confirm next steps'] },
-    { id: 'sc4', category: 'school', title: 'Calling in Sick', roles: ['Employee / Student', 'Manager / Teacher'],
+    { id: 'sc4', category: 'school', level: 'novice', title: 'Calling in Sick', roles: ['Employee / Student', 'Manager / Teacher'],
       setup: "You're not feeling well and need to call in sick to work or school.",
       phrases: ["Explain that you're not feeling well", "Say you won't be able to come in today",
         'Ask what you need to do to catch up or make up work', 'Ask if you need a note', 'Thank them for understanding'] },
-    { id: 'sc5', category: 'school', title: 'Negotiating a Schedule Change', roles: ['Employee', 'Manager'],
+    { id: 'sc5', category: 'school', level: 'advanced', title: 'Negotiating a Schedule Change', roles: ['Employee', 'Manager'],
       setup: 'You need to ask your manager to change your work schedule for an upcoming personal commitment.',
       phrases: ['Explain what you need and why', 'Propose a specific schedule change',
         'Ask if someone else can cover your shift', 'Discuss possible alternatives', 'Thank your manager for considering it'] }
+  ];
+
+  var LEVELS = [
+    { key: 'novice', label: 'Novice' },
+    { key: 'intermediate', label: 'Intermediate' },
+    { key: 'advanced', label: 'Advanced' }
   ];
 
   var SCENARIO_BY_ID = {};
@@ -357,25 +380,54 @@
     try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
   }
 
-  var fills = safeParse(localStorage.getItem(FILLS_KEY), {}); // { scenarioId: [text, ...] }
-  function saveFills() { localStorage.setItem(FILLS_KEY, JSON.stringify(fills)); }
+  // fillsByClass: { className: { scenarioId: [text, ...] } }
+  var fillsByClass = safeParse(localStorage.getItem(FILLS_KEY), null);
+  if (!fillsByClass || typeof fillsByClass !== 'object' || Array.isArray(fillsByClass)) {
+    fillsByClass = {};
+  }
+  // one-time migration from the old flat "per scenario only" shape (no class dimension)
+  var looksLegacyFlat = Object.keys(fillsByClass).some(function (k) {
+    return Array.isArray(fillsByClass[k]);
+  });
+  if (looksLegacyFlat) {
+    fillsByClass = { 'My Class': fillsByClass };
+  }
+
+  var classes = Object.keys(fillsByClass);
+  if (!classes.length) {
+    fillsByClass['My Class'] = {};
+    classes = ['My Class'];
+  }
+
+  var currentClass = localStorage.getItem(CURRENT_CLASS_KEY);
+  if (!currentClass || classes.indexOf(currentClass) === -1) currentClass = classes[0];
+
+  function saveFills() { localStorage.setItem(FILLS_KEY, JSON.stringify(fillsByClass)); }
+  function saveCurrentClass() { localStorage.setItem(CURRENT_CLASS_KEY, currentClass); }
+
   function fillsFor(id) {
     var scenario = SCENARIO_BY_ID[id];
-    var arr = fills[id];
+    var bucket = fillsByClass[currentClass];
+    if (!bucket) bucket = fillsByClass[currentClass] = {};
+    var arr = bucket[id];
     if (!Array.isArray(arr)) arr = [];
     while (arr.length < scenario.phrases.length) arr.push('');
-    fills[id] = arr;
+    bucket[id] = arr;
     return arr;
   }
 
   var els = {};
-  ['categorySelect', 'scenarioSelect', 'prevBtn', 'nextBtn', 'shuffleBtn', 'printCurrentBtn',
+  ['categorySelect', 'levelSelect', 'scenarioSelect', 'prevBtn', 'nextBtn', 'shuffleBtn', 'printCurrentBtn',
    'toggleSetBtn', 'setPanel', 'setList', 'setSelectAllBtn', 'setSelectNoneBtn', 'printSetBtn',
+   'classSelect', 'addClassBtn', 'renameClassBtn', 'deleteClassBtn',
    'stage', 'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var filter = localStorage.getItem(FILTER_KEY) || 'all';
   if (filter !== 'all' && !CATEGORIES.some(function (c) { return c.key === filter; })) filter = 'all';
+
+  var levelFilter = localStorage.getItem(LEVEL_FILTER_KEY) || 'all';
+  if (levelFilter !== 'all' && !LEVELS.some(function (l) { return l.key === levelFilter; })) levelFilter = 'all';
 
   var currentId = localStorage.getItem(CURRENT_KEY);
   if (!currentId || !SCENARIO_BY_ID[currentId]) currentId = null;
@@ -391,9 +443,17 @@
     return c ? c.label : key;
   }
 
+  function levelLabel(key) {
+    var l = LEVELS.filter(function (x) { return x.key === key; })[0];
+    return l ? l.label : key;
+  }
+
   function filteredList() {
-    if (filter === 'all') return SCENARIOS;
-    return SCENARIOS.filter(function (s) { return s.category === filter; });
+    return SCENARIOS.filter(function (s) {
+      if (filter !== 'all' && s.category !== filter) return false;
+      if (levelFilter !== 'all' && s.level !== levelFilter) return false;
+      return true;
+    });
   }
 
   function setCurrent(id) {
@@ -414,12 +474,35 @@
     els.categorySelect.value = filter;
   }
 
+  function buildLevelSelect() {
+    els.levelSelect.innerHTML = '';
+    var allOpt = document.createElement('option');
+    allOpt.value = 'all'; allOpt.textContent = 'All levels';
+    els.levelSelect.appendChild(allOpt);
+    LEVELS.forEach(function (l) {
+      var opt = document.createElement('option');
+      opt.value = l.key; opt.textContent = l.label;
+      els.levelSelect.appendChild(opt);
+    });
+    els.levelSelect.value = levelFilter;
+  }
+
+  function buildClassSelect() {
+    els.classSelect.innerHTML = '';
+    classes.forEach(function (name) {
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      els.classSelect.appendChild(opt);
+    });
+    els.classSelect.value = currentClass;
+  }
+
   function buildScenarioSelect() {
     var list = filteredList();
     els.scenarioSelect.innerHTML = '';
     list.forEach(function (s) {
       var opt = document.createElement('option');
-      opt.value = s.id; opt.textContent = categoryLabel(s.category) + ' — ' + s.title;
+      opt.value = s.id; opt.textContent = categoryLabel(s.category) + ' (' + levelLabel(s.level) + ') — ' + s.title;
       els.scenarioSelect.appendChild(opt);
     });
     if (list.length) {
@@ -439,7 +522,8 @@
     var s = SCENARIO_BY_ID[currentId];
     var arr = fillsFor(s.id);
 
-    var html = '<span class="cat-tag">' + escapeHtml(categoryLabel(s.category)) + '</span>' +
+    var html = '<span class="cat-tag">' + escapeHtml(categoryLabel(s.category)) + '</span> ' +
+      '<span class="cat-tag level-tag">' + escapeHtml(levelLabel(s.level)) + '</span>' +
       '<h2>' + escapeHtml(s.title) + '</h2>' +
       '<p class="setup">' + escapeHtml(s.setup) + '</p>' +
       '<div class="roles-row">' +
@@ -470,6 +554,8 @@
 
   function renderAll() {
     buildCategorySelect();
+    buildLevelSelect();
+    buildClassSelect();
     buildScenarioSelect();
     renderStage();
     if (els.setPanel.style.display !== 'none') renderSetList();
@@ -554,6 +640,62 @@
     var list = filteredList();
     if (list.length) setCurrent(list[0].id);
     setSelection = {};
+    renderAll();
+  });
+
+  els.levelSelect.addEventListener('change', function () {
+    levelFilter = els.levelSelect.value;
+    localStorage.setItem(LEVEL_FILTER_KEY, levelFilter);
+    var list = filteredList();
+    if (list.length) setCurrent(list[0].id);
+    setSelection = {};
+    renderAll();
+  });
+
+  els.classSelect.addEventListener('change', function () {
+    currentClass = els.classSelect.value;
+    saveCurrentClass();
+    renderStage();
+  });
+
+  els.addClassBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the new class/session:');
+    if (name == null) return;
+    name = name.trim();
+    if (!name) return;
+    if (classes.indexOf(name) === -1) {
+      classes.push(name);
+      fillsByClass[name] = {};
+    }
+    currentClass = name;
+    saveCurrentClass();
+    saveFills();
+    renderAll();
+  });
+
+  els.renameClassBtn.addEventListener('click', function () {
+    var name = window.prompt('Rename "' + currentClass + '" to:', currentClass);
+    if (name == null) return;
+    name = name.trim();
+    if (!name || name === currentClass) return;
+    if (classes.indexOf(name) !== -1) { window.alert('A class with that name already exists.'); return; }
+    fillsByClass[name] = fillsByClass[currentClass];
+    delete fillsByClass[currentClass];
+    classes = classes.map(function (c) { return c === currentClass ? name : c; });
+    currentClass = name;
+    saveCurrentClass();
+    saveFills();
+    renderAll();
+  });
+
+  els.deleteClassBtn.addEventListener('click', function () {
+    if (classes.length <= 1) { window.alert("Can't delete the only class/session."); return; }
+    if (!window.confirm('Delete "' + currentClass + '" and its saved scaffolding fill-ins?')) return;
+    delete fillsByClass[currentClass];
+    classes = classes.filter(function (c) { return c !== currentClass; });
+    currentClass = classes[0];
+    saveCurrentClass();
+    saveFills();
     renderAll();
   });
 
