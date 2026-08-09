@@ -257,6 +257,17 @@
           </div>
         </div>
       </div>
+      <div style="margin-bottom:.9rem;">
+        <label for="slipModeSelect">Prompts on this page</label>
+        <select id="slipModeSelect" style="width:100%;">
+          <option value="same">Same prompt on every slip</option>
+          <option value="different">A different prompt on each slip</option>
+        </select>
+      </div>
+      <div id="differentSlipRow" style="margin-bottom:.9rem;" hidden>
+        <button type="button" class="secondary" id="reshuffleSlipsBtn">&#128256; New set of prompts</button>
+        <p class="hint">Draws distinct prompts from whatever category / My Prompts settings are active on the Prompt &amp; Display tab &mdash; handy for handing one prompt per table group instead of the whole class getting the same one.</p>
+      </div>
       <button type="button" id="printBtn">Print Handout</button>
       <p class="hint">Cut along the dashed lines after printing. 2-per-page gives half-sheets; 4-per-page gives quarter-sheets.</p>
     </div>
@@ -290,7 +301,7 @@
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
-   'thinkTimeSelect', 'thinkTimer'
+   'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var THINK_TIME_OPTIONS = [0, 30, 60, 120];
@@ -414,12 +425,13 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0 };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same' };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
   var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
   var thinkTimerInterval = null;
   var thinkTimeRemaining = 0;
+  var differentSlipPrompts = []; // texts, one per slip, when settings.slipMode === 'different'
 
   // ── Persistence ──────────────────────────────────────────────────────────
   function loadSettings() {
@@ -444,6 +456,7 @@
     if (typeof saved.showDate === 'boolean') settings.showDate = saved.showDate;
     if (typeof saved.includeMine === 'boolean') settings.includeMine = saved.includeMine;
     if (THINK_TIME_OPTIONS.indexOf(saved.thinkTime) !== -1) settings.thinkTime = saved.thinkTime;
+    if (saved.slipMode === 'same' || saved.slipMode === 'different') settings.slipMode = saved.slipMode;
   }
 
   function loadCustomBank() {
@@ -668,7 +681,29 @@
 
   // ── Printable handout ─────────────────────────────────────────────────────
   function renderHandoutPromptDisplay() {
+    if (settings.slipMode === 'different') {
+      els.handoutPromptDisplay.textContent = 'Each slip on this page gets a different prompt — see the preview below.';
+      return;
+    }
     els.handoutPromptDisplay.textContent = currentPrompt.text || 'Press Shuffle to get a prompt.';
+  }
+
+  function pickDistinctSlipPrompts(n) {
+    var items = pool();
+    if (!items.length) return [];
+    var shuffled = items.map(function (p) { return p.text; });
+    for (var i = shuffled.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+    }
+    var result = [];
+    for (var k = 0; k < n; k++) result.push(shuffled[k % shuffled.length]);
+    return result;
+  }
+
+  function refreshDifferentSlipPrompts() {
+    differentSlipPrompts = pickDistinctSlipPrompts(settings.perPage);
+    renderHandout();
   }
 
   function slipHtml(text) {
@@ -687,10 +722,18 @@
   }
 
   function buildHandoutHtml() {
-    var text = currentPrompt.text || 'Type or pick a prompt in the Prompt & Display tab.';
     var perPage = settings.perPage;
     var cols = perPage === 4 ? 2 : 1;
-    var slips = repeatHtml(slipHtml(text), perPage);
+    var slips;
+    if (settings.slipMode === 'different') {
+      var texts = differentSlipPrompts;
+      slips = texts.length
+        ? texts.map(function (t) { return slipHtml(t); }).join('')
+        : repeatHtml(slipHtml('No prompts available for this category yet — add one in My Prompts or pick a different category.'), perPage);
+    } else {
+      var text = currentPrompt.text || 'Type or pick a prompt in the Prompt & Display tab.';
+      slips = repeatHtml(slipHtml(text), perPage);
+    }
     return (
       '<div class="slip-page">' +
         '<div class="slip-grid pp' + perPage + '" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(2,1fr);">' +
@@ -709,7 +752,8 @@
   els.perPageSelect.addEventListener('change', function () {
     settings.perPage = parseInt(els.perPageSelect.value, 10) === 4 ? 4 : 2;
     saveSettings();
-    renderHandout();
+    if (settings.slipMode === 'different') refreshDifferentSlipPrompts();
+    else renderHandout();
   });
   els.showNameCheck.addEventListener('change', function () {
     settings.showName = els.showNameCheck.checked;
@@ -721,6 +765,15 @@
     saveSettings();
     renderHandout();
   });
+  els.slipModeSelect.addEventListener('change', function () {
+    settings.slipMode = els.slipModeSelect.value === 'different' ? 'different' : 'same';
+    saveSettings();
+    els.differentSlipRow.hidden = settings.slipMode !== 'different';
+    renderHandoutPromptDisplay();
+    if (settings.slipMode === 'different') refreshDifferentSlipPrompts();
+    else renderHandout();
+  });
+  els.reshuffleSlipsBtn.addEventListener('click', refreshDifferentSlipPrompts);
 
   els.printBtn.addEventListener('click', function () {
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
@@ -755,9 +808,11 @@
   els.showNameCheck.checked = settings.showName;
   els.showDateCheck.checked = settings.showDate;
   els.thinkTimeSelect.value = String(settings.thinkTime);
+  els.slipModeSelect.value = settings.slipMode;
+  els.differentSlipRow.hidden = settings.slipMode !== 'different';
 
   pickPrompt();
-  renderHandout();
+  if (settings.slipMode === 'different') refreshDifferentSlipPrompts();
 })();
 </script>
 <script>
