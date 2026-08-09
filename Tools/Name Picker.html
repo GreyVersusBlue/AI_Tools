@@ -638,6 +638,9 @@ let names=[],originalNames=[],history=[],nameCards=[],isRolling=false,mode='jump
 
 /* === New feature state === */
 let absentSet=new Set(),hallOfFame=[],retroUnlocked=false,retroActive=false,tournamentMode=false,suddenDeath=false,luckyStudent=null,luckyDate=null,konamiBuffer=[],achievementsShown=new Set(),chaosParticleTimer=null,sessionMythicCount=0;
+
+/* === New feature state: Team Draft mode === */
+let draftTeams=[],draftTurnIndex=0,draftStarted=false,draftTeamCount=2;
 const KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
 
 const themes={
@@ -682,10 +685,12 @@ function rollRarity(luckyBonus=false){
 }
 
 function scatterNames(){
+  if(mode==='draft'){renderDraftBoard();return;}
   if(tournamentMode){renderTournamentGrid();return;}
   const board=document.getElementById('board');
   board.querySelectorAll('.name-card').forEach(el=>el.remove());
   board.querySelectorAll('.tournament-grid').forEach(el=>el.remove());
+  board.querySelectorAll('.draft-board').forEach(el=>el.remove());
   nameCards=[];
   const emptyState=document.getElementById('emptyState');
   const visibleNames=names.filter(n=>!absentSet.has(n));
@@ -962,6 +967,7 @@ function chooseWinner(cards){
 
 function pickName(){
   if(isRolling||names.length===0)return;
+  if(mode==='draft')return;
   const activeNames=names.filter(n=>!absentSet.has(n));
   if(activeNames.length===0){alert('All students are marked absent. Toggle some back as present in the Stats tab.');return;}
   const multi=parseInt(document.getElementById('multiPickCount').value,10)||1;
@@ -1399,6 +1405,9 @@ function loadNamesFromInput(){
   absentSet=new Set();
   sessionMythicCount=0;
   achievementsShown.clear();
+  /* A new roster invalidates any in-progress draft — its picks name students who
+     may no longer be on the list. */
+  draftTeams=[];draftStarted=false;draftTurnIndex=0;
   /* A new roster is a new class period. Nobody carries a turn over from the last
      one, so the rotation starts clean. */
   rotation=freshRotation();
@@ -1560,6 +1569,7 @@ function renderTournamentGrid(){
   const board=document.getElementById('board');
   board.querySelectorAll('.name-card').forEach(el=>el.remove());
   board.querySelectorAll('.tournament-grid').forEach(el=>el.remove());
+  board.querySelectorAll('.draft-board').forEach(el=>el.remove());
   board.querySelectorAll('.all-absent-msg').forEach(el=>el.remove());
   nameCards=[];
   const emptyState=document.getElementById('emptyState');
@@ -1996,6 +2006,7 @@ function eraseStudentData(){
   store.clearStudentData();
   names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
+  draftTeams=[];draftStarted=false;draftTurnIndex=0;
   rotation=freshRotation();
   document.getElementById('namesInput').value='';
   scatterNames();updateStatsUI();updateHistoryUI();updateHofTicker();updateRosterUI();updateDataTab();
@@ -2008,6 +2019,7 @@ function eraseEverything(){
   opts={...OPTION_DEFAULTS};
   names=[];originalNames=[];history=[];statsCache={};hallOfFame=[];prompts=[];
   absentSet=new Set();luckyStudent=null;luckyDate=null;
+  draftTeams=[];draftStarted=false;draftTurnIndex=0;
   retroUnlocked=false;retroActive=false;crazyMode=false;
   rotation=freshRotation();
   document.body.classList.remove('retro-mode','crazy-active','sudden-death');
@@ -2078,7 +2090,7 @@ for(const id of [...Object.values(OPTION_BOXES),...Object.values(OPTION_FIELDS)]
   if(el)el.addEventListener('change',persistOptions);
 }
 
-document.getElementById('mode').addEventListener('change',(e)=>{mode=e.target.value;});
+document.getElementById('mode').addEventListener('change',(e)=>{mode=e.target.value;if(!isRolling)scatterNames();});
 document.getElementById('theme').addEventListener('change',(e)=>applyTheme(e.target.value));
 document.getElementById('speed').addEventListener('input',(e)=>{speed=parseInt(e.target.value,10);document.getElementById('speedVal').textContent=speed+'ms';});
 document.getElementById('speed').addEventListener('change',persistOptions);
@@ -2087,7 +2099,10 @@ document.getElementById('pickBtn').addEventListener('click',pickName);
 /* Reset Board puts everyone back on the board, so it starts the rotation round
    over too. Without that, students restored by a reset would sit at the back of
    the current round until it refilled. */
-document.getElementById('resetBtn').addEventListener('click',()=>{names=originalNames.slice();rotation=freshRotation();scatterNames();});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(mode==='draft'){resetDraft();return;}
+  names=originalNames.slice();rotation=freshRotation();scatterNames();
+});
 document.getElementById('shuffleBtn').addEventListener('click',()=>{if(!isRolling)scatterNames();});
 document.getElementById('settingsBtn').addEventListener('click',()=>{document.getElementById('settingsPanel').classList.add('open');updateStatsUI();});
 document.getElementById('emptyStateBtn').addEventListener('click',()=>{document.getElementById('settingsPanel').classList.add('open');setTimeout(()=>document.getElementById('namesInput').focus(),350);});
