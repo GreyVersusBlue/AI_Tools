@@ -50,8 +50,8 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Command Center<br>`Tools/command-center-dashboard.html` | Real feature parity for the built-in timer | It's currently a stripped-down duplicate of Classroom Timer's countdown (no progress ring, only one sound); bring it closer to parity so it can be a real replacement instead of a second, weaker timer. |
-| 2 | Exit Ticket / Bell Ringer Generator<br>`Tools/exit-ticket-generator.html` | A different prompt per printed slip | Let a printed sheet carry a different prompt on each slip (e.g., one per table group) instead of repeating the same prompt to fill the page. |
+| 1 | Command Center<br>`Tools/command-center-dashboard.html` | 🔒 **CLAIMED (2026-08-09)** — Real feature parity for the built-in timer | It's currently a stripped-down duplicate of Classroom Timer's countdown (no progress ring, only one sound); bring it closer to parity so it can be a real replacement instead of a second, weaker timer. |
+| 2 | Exit Ticket / Bell Ringer Generator<br>`Tools/exit-ticket-generator.html` | 🔒 **CLAIMED (2026-08-09)** — A different prompt per printed slip | Let a printed sheet carry a different prompt on each slip (e.g., one per table group) instead of repeating the same prompt to fill the page. |
 | 3 | Writing Prompt Generator<br>`Tools/writing-prompt-generator.html` | Roster-paste, one prompt per student | Randomly pair each pasted name with a distinct prompt and print a one-page assignment sheet for independent writing stations. |
 | 4 | Vocabulary Flashcard & Word Wall Generator<br>`Tools/vocab-flashcard-generator.html` | On-screen self-quiz/flip mode | Add a click-to-reveal quiz mode, like the one already in the conjugation drill tool, so cards are usable directly with a student at a screen and not just for printing. |
 | 5 | Vocab & Conjugation Drill Generator<br>`Tools/vocab-conjugation-drill.html` | Print vocab + conjugation together | Let both sections print as a single packet instead of two fully separate outputs. |

@@ -74,7 +74,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Command Center (`Tools/command-center-dashboard.html`)
 **Current state:** A single projector-friendly page combining a basic countdown timer, a read-only view of today's School Calendar Visualizer entry (day-type badges + lesson/pacing note), and a no-repeats random-caller against a saved Name Picker roster, with a per-student "exclude for today" toggle (session/day-scoped, never touching the saved roster) for skipping an absent student.
 **Suggested improvements:**
-- The timer here is a stripped-down duplicate of Classroom Timer's countdown mode with no visual progress ring and only one beep sound; giving it feature parity (or at least a sound-choice control) would make this a real replacement for the standalone tool on one page.
+- 🔒 **CLAIMED (2026-08-09)** — The timer here is a stripped-down duplicate of Classroom Timer's countdown mode with no visual progress ring and only one beep sound; giving it feature parity (or at least a sound-choice control) would make this a real replacement for the standalone tool on one page.
 - 🔒 **CLAIMED (2026-08-09)** — Surface a link/section for the current Hall Pass Log "currently out" count on this same dashboard, since a teacher running the room from here would otherwise need to switch tabs to see who's out of the room.
 
 ### Field Trip Permission Slip Generator (`Tools/field-trip-permission-slip.html`)
@@ -203,7 +203,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 ### Exit Ticket / Bell Ringer Generator (`Tools/exit-ticket-generator.html`)
 **Current state:** Ships a ~96-prompt bank across six categories with shuffle-avoiding-repeats, a projector-style display with an optional think-time countdown (off/30s/1min/2min, with a WebAudio chime at zero), a custom-prompt box, a persistent "My Prompts" bank a teacher can build and blend into (or draw from exclusively) the rotation, and a separate printable-handout tab that turns the currently-shown prompt into 2- or 4-per-page cut slips.
 **Suggested improvements:**
-- Support printing a sheet where each slip carries a different prompt (e.g., one per table group) instead of the same prompt repeated to fill the page.
+- 🔒 **CLAIMED (2026-08-09)** — Support printing a sheet where each slip carries a different prompt (e.g., one per table group) instead of the same prompt repeated to fill the page.
 - Add an optional small QR code on the printed slip linking to a digital response form, reusing the QR-generation approach already used elsewhere in this toolkit.
 
 ### Number Talks / Mental Math Routine Board (`Tools/number-talks-board.html`)
