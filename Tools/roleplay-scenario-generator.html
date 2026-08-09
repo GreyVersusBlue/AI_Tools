@@ -50,6 +50,8 @@
   button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
   button.small { padding: .3rem .6rem; font-size: .78rem; }
   button.big { font-size: 1.02rem; padding: .8rem 1.6rem; }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
 
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -96,6 +98,22 @@
   .set-list .sl-cat { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; width: 6.5rem; }
   .set-list .sl-title { font-weight: 600; }
   .set-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .add-panel label { display: block; font-weight: 600; font-size: .82rem; margin: .7rem 0 .3rem; }
+  .add-panel label:first-of-type { margin-top: 0; }
+  .add-panel .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  .add-panel input[type="text"], .add-panel select, .add-panel textarea {
+    width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .5rem .6rem; margin-bottom: .3rem;
+  }
+  .add-panel textarea { min-height: 4.5rem; resize: vertical; }
+  .add-panel .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .custom-row { display: flex; align-items: baseline; gap: .5rem; padding: .35rem 0; border-bottom: 1px dashed var(--line); }
+  .custom-row:last-child { border-bottom: none; }
+  .custom-row .sl-cat { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; width: 6.5rem; }
+  .custom-row .sl-title { font-weight: 600; flex: 1; }
+  .custom-row button { width: auto; margin: 0; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; text-align: center; }
 
@@ -147,6 +165,7 @@
     <button type="button" class="big" id="shuffleBtn">Shuffle a new scenario</button>
     <button type="button" class="secondary big" id="printCurrentBtn">Print this scenario</button>
     <button type="button" class="secondary big" id="toggleSetBtn">Build a handout set&hellip;</button>
+    <button type="button" class="secondary big" id="toggleAddBtn">Add your own scenario&hellip;</button>
   </div>
 
   <div class="set-panel" id="setPanel" style="display:none;">
@@ -158,6 +177,37 @@
       <button type="button" class="secondary small" id="setSelectNoneBtn">Select none</button>
       <button type="button" id="printSetBtn">Print selected handouts</button>
     </div>
+  </div>
+
+  <div class="set-panel add-panel" id="addPanel" style="display:none;">
+    <h3>Add your own scenario</h3>
+    <p class="hint">Saved in this browser and merged into the category filter, shuffle, and print pool right alongside the built-in scenarios.</p>
+
+    <label for="addTitle">Title</label>
+    <input type="text" id="addTitle" placeholder="e.g. Returning a Rental Car">
+
+    <label for="addCategory">Category</label>
+    <select id="addCategory"></select>
+
+    <div class="row2">
+      <div><label for="addRoleA">Role A</label><input type="text" id="addRoleA" placeholder="e.g. Customer"></div>
+      <div><label for="addRoleB">Role B</label><input type="text" id="addRoleB" placeholder="e.g. Clerk"></div>
+    </div>
+
+    <label for="addSetup">Setup</label>
+    <textarea id="addSetup" placeholder="Describe the situation both partners are acting out&hellip;"></textarea>
+
+    <label for="addPhrases">Vocabulary scaffolding prompts (one per line)</label>
+    <p class="hint">Each line becomes one fill-in card, same as the built-in scenarios.</p>
+    <textarea id="addPhrases" placeholder="Greet the clerk and explain the issue&#10;Ask about a late fee or extra charge"></textarea>
+
+    <div class="set-actions">
+      <button type="button" id="saveCustomBtn">Save scenario</button>
+      <button type="button" class="secondary" id="cancelCustomBtn">Clear form</button>
+    </div>
+
+    <p class="hint" style="margin-top:1rem;">Your saved scenarios (this browser only):</p>
+    <div class="set-list" id="customList"></div>
   </div>
 
   <div class="stage" id="stage"></div>
@@ -177,6 +227,7 @@
   var FILLS_KEY = 'gvb-roleplay:fills';
   var FILTER_KEY = 'gvb-roleplay:filter';
   var CURRENT_KEY = 'gvb-roleplay:current';
+  var CUSTOM_KEY = 'gvb-roleplay:custom';
 
   var CATEGORIES = [
     { key: 'food', label: 'Food & Dining' },
@@ -351,13 +402,25 @@
         'Ask if someone else can cover your shift', 'Discuss possible alternatives', 'Thank your manager for considering it'] }
   ];
 
-  var SCENARIO_BY_ID = {};
-  SCENARIOS.forEach(function (s) { SCENARIO_BY_ID[s.id] = s; });
-
   function safeParse(json, fallback) {
     if (json == null) return fallback;
     try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
   }
+
+  // Teacher-added scenarios (title, roles, setup, scaffolding phrases), same
+  // shape as the built-in SCENARIOS, merged into one shuffle/print/filter pool.
+  var customScenarios = safeParse(localStorage.getItem(CUSTOM_KEY), []);
+  if (!Array.isArray(customScenarios)) customScenarios = [];
+  function saveCustomScenarios() { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customScenarios)); }
+
+  var ALL_SCENARIOS = [];
+  var SCENARIO_BY_ID = {};
+  function rebuildScenarioIndex() {
+    ALL_SCENARIOS = SCENARIOS.concat(customScenarios);
+    SCENARIO_BY_ID = {};
+    ALL_SCENARIOS.forEach(function (s) { SCENARIO_BY_ID[s.id] = s; });
+  }
+  rebuildScenarioIndex();
 
   var fills = safeParse(localStorage.getItem(FILLS_KEY), {}); // { scenarioId: [text, ...] }
   function saveFills() { localStorage.setItem(FILLS_KEY, JSON.stringify(fills)); }
@@ -373,6 +436,8 @@
   var els = {};
   ['categorySelect', 'scenarioSelect', 'prevBtn', 'nextBtn', 'shuffleBtn', 'printCurrentBtn',
    'toggleSetBtn', 'setPanel', 'setList', 'setSelectAllBtn', 'setSelectNoneBtn', 'printSetBtn',
+   'toggleAddBtn', 'addPanel', 'addTitle', 'addCategory', 'addRoleA', 'addRoleB', 'addSetup', 'addPhrases',
+   'saveCustomBtn', 'cancelCustomBtn', 'customList',
    'stage', 'printArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -396,13 +461,14 @@
   }
 
   function filteredList() {
-    if (filter === 'all') return SCENARIOS;
-    return SCENARIOS.filter(function (s) { return s.category === filter; });
+    if (filter === 'all') return ALL_SCENARIOS;
+    return ALL_SCENARIOS.filter(function (s) { return s.category === filter; });
   }
 
   function setCurrent(id) {
     currentId = id;
-    localStorage.setItem(CURRENT_KEY, id);
+    if (id) localStorage.setItem(CURRENT_KEY, id);
+    else localStorage.removeItem(CURRENT_KEY);
   }
 
   function buildCategorySelect() {
@@ -493,6 +559,7 @@
     buildScenarioSelect();
     renderStage();
     if (els.setPanel.style.display !== 'none') renderSetList();
+    if (els.addPanel.style.display !== 'none') renderCustomList();
   }
 
   function goToOffset(offset) {
@@ -535,6 +602,88 @@
         setSelection[cb.getAttribute('data-id')] = cb.checked;
       });
     });
+  }
+
+  /* ---------- custom scenario editor ---------- */
+  function buildAddCategorySelect() {
+    els.addCategory.innerHTML = '';
+    CATEGORIES.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.key; opt.textContent = c.label;
+      els.addCategory.appendChild(opt);
+    });
+    els.addCategory.value = (filter !== 'all' ? filter : CATEGORIES[0].key);
+  }
+
+  function renderCustomList() {
+    if (!customScenarios.length) {
+      els.customList.innerHTML = '<p class="empty-note" style="padding:1rem;">None yet &mdash; scenarios you save appear here.</p>';
+      return;
+    }
+    els.customList.innerHTML = customScenarios.map(function (s) {
+      return '<div class="custom-row" data-id="' + s.id + '">' +
+        '<span class="sl-cat">' + escapeHtml(categoryLabel(s.category)) + '</span>' +
+        '<span class="sl-title">' + escapeHtml(s.title) + '</span>' +
+        '<button type="button" class="danger small custom-delete" data-id="' + s.id + '">Delete</button>' +
+      '</div>';
+    }).join('');
+    Array.prototype.forEach.call(els.customList.querySelectorAll('.custom-delete'), function (btn) {
+      btn.addEventListener('click', function () { deleteCustomScenario(btn.getAttribute('data-id')); });
+    });
+  }
+
+  function clearAddForm() {
+    els.addTitle.value = '';
+    els.addRoleA.value = '';
+    els.addRoleB.value = '';
+    els.addSetup.value = '';
+    els.addPhrases.value = '';
+    buildAddCategorySelect();
+  }
+
+  function saveNewCustomScenario() {
+    var title = els.addTitle.value.trim();
+    var setup = els.addSetup.value.trim();
+    var phrases = els.addPhrases.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    if (!title || !setup || !phrases.length) {
+      alert('Please fill in a title, a setup, and at least one scaffolding phrase.');
+      return;
+    }
+    var scenario = {
+      id: 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      category: els.addCategory.value,
+      title: title,
+      roles: [els.addRoleA.value.trim() || 'Person A', els.addRoleB.value.trim() || 'Person B'],
+      setup: setup,
+      phrases: phrases,
+      custom: true
+    };
+    customScenarios.push(scenario);
+    saveCustomScenarios();
+    rebuildScenarioIndex();
+    clearAddForm();
+    renderCustomList();
+
+    filter = 'all';
+    localStorage.setItem(FILTER_KEY, filter);
+    setCurrent(scenario.id);
+    renderAll();
+  }
+
+  function deleteCustomScenario(id) {
+    var s = SCENARIO_BY_ID[id];
+    if (!s || !confirm('Delete "' + s.title + '" completely? This can’t be undone.')) return;
+    customScenarios = customScenarios.filter(function (c) { return c.id !== id; });
+    saveCustomScenarios();
+    rebuildScenarioIndex();
+    delete fills[id];
+    saveFills();
+    if (currentId === id) {
+      var list = filteredList();
+      setCurrent(list.length ? list[0].id : null);
+    }
+    renderCustomList();
+    renderAll();
   }
 
   /* ---------- print ---------- */
@@ -595,6 +744,14 @@
     els.setPanel.style.display = showing ? 'none' : '';
     if (!showing) renderSetList();
   });
+
+  els.toggleAddBtn.addEventListener('click', function () {
+    var showing = els.addPanel.style.display !== 'none';
+    els.addPanel.style.display = showing ? 'none' : '';
+    if (!showing) { buildAddCategorySelect(); renderCustomList(); }
+  });
+  els.saveCustomBtn.addEventListener('click', saveNewCustomScenario);
+  els.cancelCustomBtn.addEventListener('click', clearAddForm);
 
   els.setSelectAllBtn.addEventListener('click', function () {
     filteredList().forEach(function (s) { setSelection[s.id] = true; });
