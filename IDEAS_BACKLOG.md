@@ -89,16 +89,16 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Final Grade Checker | "What do I need on the final?" calculator | Given a target letter grade or percentage, solve for the score needed on a specified remaining assignment/exam, alongside the existing forward calculation. |
-| 2 | Rubric Builder | Score-a-student mode | Click a point value per criterion for a specific student against a saved rubric and get a live computed total, instead of only printing a blank rubric. |
-| 3 | Seating Chart Generator | Per-student photo thumbnail | An optional photo (loaded from a local file, stored as a data URL) shown on the desk — useful for a substitute matching faces to names, and stays fully local. |
-| 4 | Bracket / Tournament Generator | Double-elimination mode | A second bracket type alongside the existing single-elimination one, with the same click-to-advance and print support. |
-| 5 | Data Table → Chart Builder | Box-and-whisker chart type | A fifth chart type alongside bar/line/pie/scatter, useful for showing score/measurement spread in a lab report. |
-| 6 | Grade Distribution Visualizer | Compare more than one saved assignment at once | Extend the existing side-by-side comparison (currently limited to one other saved assignment) to several at a time, for tracking a trend across a unit. |
-| 7 | Group / Team Generator | Recent-pairing memory | Remember the last shuffle or two so a reshuffle avoids repeating the same pairing back-to-back — the same fairness idea the Lab Group & Role Randomizer already uses for roles. |
-| 8 | QR Code Generator | Bulk mode | Turn a pasted list (one label + link/text per line) into a printable grid of QR codes in one pass, instead of one code at a time. |
-| 9 | Certificate & Award Maker | Optional QR code on the certificate | Link to a congratulatory note, video, or portfolio page, reusing the QR pattern already on the Field Trip Permission Slip. |
-| 10 | Classroom Timer | Silent low-time visual cue | A flashing border/background at zero alongside the existing audio alert, for testing rooms or hearing-impaired students. |
+| 1 | Final Grade Checker | 🔒 **CLAIMED (2026-08-09)** — "What do I need on the final?" calculator | Given a target letter grade or percentage, solve for the score needed on a specified remaining assignment/exam, alongside the existing forward calculation. |
+| 2 | Rubric Builder | 🔒 **CLAIMED (2026-08-09)** — Score-a-student mode | Click a point value per criterion for a specific student against a saved rubric and get a live computed total, instead of only printing a blank rubric. |
+| 3 | Seating Chart Generator | 🔒 **CLAIMED (2026-08-09)** — Per-student photo thumbnail | An optional photo (loaded from a local file, stored as a data URL) shown on the desk — useful for a substitute matching faces to names, and stays fully local. |
+| 4 | Bracket / Tournament Generator | 🔒 **CLAIMED (2026-08-09)** — Double-elimination mode | A second bracket type alongside the existing single-elimination one, with the same click-to-advance and print support. |
+| 5 | Data Table → Chart Builder | 🔒 **CLAIMED (2026-08-09)** — Box-and-whisker chart type | A fifth chart type alongside bar/line/pie/scatter, useful for showing score/measurement spread in a lab report. |
+| 6 | Grade Distribution Visualizer | 🔒 **CLAIMED (2026-08-09)** — Compare more than one saved assignment at once | Extend the existing side-by-side comparison (currently limited to one other saved assignment) to several at a time, for tracking a trend across a unit. |
+| 7 | Group / Team Generator | 🔒 **CLAIMED (2026-08-09)** — Recent-pairing memory | Remember the last shuffle or two so a reshuffle avoids repeating the same pairing back-to-back — the same fairness idea the Lab Group & Role Randomizer already uses for roles. |
+| 8 | QR Code Generator | 🔒 **CLAIMED (2026-08-09)** — Bulk mode | Turn a pasted list (one label + link/text per line) into a printable grid of QR codes in one pass, instead of one code at a time. |
+| 9 | Certificate & Award Maker | 🔒 **CLAIMED (2026-08-09)** — Optional QR code on the certificate | Link to a congratulatory note, video, or portfolio page, reusing the QR pattern already on the Field Trip Permission Slip. |
+| 10 | Classroom Timer | 🔒 **CLAIMED (2026-08-09)** — Silent low-time visual cue | A flashing border/background at zero alongside the existing audio alert, for testing rooms or hearing-impaired students. |
 | 11 | Vocabulary Flashcard & Word Wall Generator | Optional example-sentence line | A third field per card (beyond term/definition) printed smaller under the definition. |
 | 12 | Silent Reading (SSR) Log Tracker | Weekly pages/minutes goal | An optional weekly goal per class, shown as a simple progress indicator next to each student's summary row. |
 | 13 | Name Picker | Team draft mode | Two captains alternate picking students live from the roster, instead of only fully-random draws. |
