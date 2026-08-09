@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape Room — Teacher Monitor</title>
+<meta name="description" content="Live view of which station each team has reached, paired device-by-device over WebRTC.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='15' width='14' height='11' rx='2' fill='%232A6DB0'/%3E%3Cpath d='M12 15v-4a4 4 0 0 1 8 0v4' fill='none' stroke='%23C43A2F' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='1.8' fill='%23F6F7F9'/%3E%3C/svg%3E">
+<script src="../../_shared/webrtc-pair.js"></script>
+<script src="../../_shared/qr-scan.js"></script>
+<script src="lib/qrcode.js"></script>
+<script src="lib/jsqr.js"></script>
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f6b3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 60px; line-height: 1.45;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 .2rem; }
+  p.tagline { color: var(--muted); font-size: .88rem; margin: 0 0 1.2rem; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card-title { font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .8rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+
+  .roster { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .roster th, .roster td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: middle; }
+  .roster th { background: #f1f0ea; font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  .roster .bar-wrap { background: #eeece3; border-radius: 999px; height: 10px; width: 160px; overflow: hidden; }
+  .roster .bar-fill { background: var(--accent-2); height: 100%; }
+  .roster .status-done { color: var(--good); font-weight: 700; }
+  .roster .status-disconnected { color: var(--muted); }
+  .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 1.6rem 1rem; }
+
+  .pairing-box { display: none; margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--line); }
+  .pairing-box.active { display: block; }
+  .pairing-step { font-size: .86rem; color: var(--muted); margin: 0 0 .5rem; }
+  .pairing-step strong { color: var(--ink); }
+  canvas.qr { display: block; margin: 0 auto .6rem; max-width: 220px; width: 100%; }
+  textarea.code-box {
+    width: 100%; font-family: Consolas, monospace; font-size: .74rem; min-height: 3.4rem;
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .5rem .6rem;
+  }
+  .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .5rem 0; }
+  video.scan-video { width: 100%; max-width: 320px; border-radius: 8px; display: none; margin: .5rem auto; background: #000; }
+  video.scan-video.active { display: block; }
+  .status-line { font-size: .82rem; color: var(--muted); margin-top: .5rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="../escape-room-builder.html">&larr; Back to Escape Room Builder</a>
+  <h1>Teacher Monitor</h1>
+  <p class="tagline">Pair each team's device once (same Wi-Fi, no server) and watch which station they've reached — no need to walk the room to check.</p>
+
+  <div class="card">
+    <div class="card-title">Connected Devices</div>
+    <table class="roster" id="rosterTable" style="display:none;">
+      <thead><tr><th>Device</th><th>Progress</th><th>Status</th></tr></thead>
+      <tbody id="rosterBody"></tbody>
+    </table>
+    <p class="empty-hint" id="rosterEmpty">No devices connected yet. Add one below for each team.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Add a Device</div>
+    <p class="pairing-step">Have the team open their escape room link, tap <strong>Connect to teacher monitor</strong> near the bottom of their clue screen, and follow the same two steps there.</p>
+    <div class="btn-row">
+      <button id="addDeviceBtn" type="button">+ Add a Device</button>
+    </div>
+
+    <div class="pairing-box" id="pairingBox">
+      <p class="pairing-step">1. Show this code to the team — they scan it (or read it aloud) and paste it into their own <strong>Connect to teacher monitor</strong> box.</p>
+      <canvas class="qr" id="offerQr"></canvas>
+      <textarea class="code-box" id="offerText" readonly></textarea>
+      <div class="btn-row">
+        <button class="secondary" id="copyOfferBtn" type="button">Copy Code</button>
+      </div>
+      <p class="pairing-step">2. Scan (or paste) the reply code their device shows back:</p>
+      <div class="btn-row">
+        <button class="secondary" id="scanAnswerBtn" type="button">Scan With Camera</button>
+      </div>
+      <video class="scan-video" id="scanVideo" playsinline muted></video>
+      <textarea class="code-box" id="answerInput" placeholder="…or paste the reply code here"></textarea>
+      <div class="btn-row">
+        <button id="connectDeviceBtn" type="button">Connect</button>
+        <button class="secondary" id="cancelPairingBtn" type="button">Cancel</button>
+      </div>
+      <p class="status-line" id="pairingStatus"></p>
+    </div>
+  </div>
+
+  <footer style="color:var(--muted);font-size:.82rem;margin-top:2rem;">
+    Runs entirely in your browser over a direct device-to-device connection &mdash; nothing is uploaded, and no student data leaves this Wi-Fi network. Each pairing is independent, so leaving or closing this page disconnects every device; reconnect the same way if you reopen it. A team that scans a fresh station-specific printed code (the &ldquo;randomize starting station&rdquo; mode) reloads their page and will need to reconnect too, since that starts a new browser session on their end.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var els = {};
+  ['rosterTable', 'rosterBody', 'rosterEmpty', 'addDeviceBtn', 'pairingBox', 'offerQr', 'offerText',
+   'copyOfferBtn', 'scanAnswerBtn', 'scanVideo', 'answerInput', 'connectDeviceBtn', 'cancelPairingBtn', 'pairingStatus'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var devices = []; // { id, pc, channel, station, total, done, connected }
+  var nextDeviceId = 1;
+  var pendingPc = null;
+  var scanHandle = null;
+
+  function renderRoster() {
+    if (!devices.length) {
+      els.rosterTable.style.display = 'none';
+      els.rosterEmpty.style.display = '';
+      return;
+    }
+    els.rosterTable.style.display = '';
+    els.rosterEmpty.style.display = 'none';
+    els.rosterBody.innerHTML = devices.map(function (d) {
+      var pct = (d.total > 0) ? Math.round(((d.done ? d.total : d.station) / d.total) * 100) : 0;
+      var statusHtml = !d.connected
+        ? '<span class="status-disconnected">Disconnected</span>'
+        : (d.done ? '<span class="status-done">🏁 Finished!</span>' : 'In progress');
+      var progressText = d.total > 0 ? ('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : '—';
+      return '<tr><td>Device ' + d.id + '</td><td>' + progressText +
+        '<div class="bar-wrap"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
+        '<td>' + statusHtml + '</td></tr>';
+    }).join('');
+  }
+
+  function resetPairingBox() {
+    els.pairingBox.classList.remove('active');
+    els.offerText.value = '';
+    els.answerInput.value = '';
+    els.pairingStatus.textContent = '';
+    stopScan();
+    pendingPc = null;
+  }
+
+  function startAddDevice() {
+    els.pairingBox.classList.add('active');
+    els.pairingStatus.textContent = 'Creating pairing code…';
+    window.WebRTCPair.createOffer('sv-monitor').then(function (result) {
+      pendingPc = result;
+      els.offerText.value = result.offerPayload;
+      window.drawMonitorQR(els.offerQr, result.offerPayload);
+      els.pairingStatus.textContent = 'Waiting for the reply code…';
+    }).catch(function (e) {
+      els.pairingStatus.textContent = 'Could not start pairing: ' + e.message;
+    });
+  }
+
+  function connectDevice() {
+    var answerPayload = els.answerInput.value.trim();
+    if (!pendingPc || !answerPayload) return;
+    els.pairingStatus.textContent = 'Connecting…';
+    window.WebRTCPair.applyAnswer(pendingPc.pc, answerPayload).then(function () {
+      var device = { id: nextDeviceId++, pc: pendingPc.pc, channel: pendingPc.channel, station: 0, total: 0, done: false, connected: false };
+      devices.push(device);
+      device.channel.addEventListener('open', function () {
+        device.connected = true;
+        renderRoster();
+      });
+      device.channel.addEventListener('close', function () {
+        device.connected = false;
+        renderRoster();
+      });
+      device.channel.addEventListener('message', function (e) {
+        var msg;
+        try { msg = JSON.parse(e.data); } catch (err) { return; }
+        device.station = msg.station || 0;
+        device.total = msg.total || 0;
+        device.done = !!msg.done;
+        renderRoster();
+      });
+      renderRoster();
+      resetPairingBox();
+    }).catch(function (e) {
+      els.pairingStatus.textContent = e.message || 'Could not read that reply code.';
+    });
+  }
+
+  function stopScan() {
+    if (scanHandle) { scanHandle.stop(); scanHandle = null; }
+    els.scanVideo.classList.remove('active');
+  }
+
+  function startScan() {
+    stopScan();
+    els.scanVideo.classList.add('active');
+    scanHandle = window.QRScan.scanQRFromCamera(els.scanVideo, {
+      onResult: function (text) {
+        els.answerInput.value = text;
+        stopScan();
+        els.pairingStatus.textContent = 'Reply code scanned — click Connect.';
+      },
+      onError: function (err) {
+        els.pairingStatus.textContent = 'Camera unavailable: ' + err.message;
+        stopScan();
+      },
+    });
+  }
+
+  els.addDeviceBtn.addEventListener('click', startAddDevice);
+  els.cancelPairingBtn.addEventListener('click', resetPairingBox);
+  els.connectDeviceBtn.addEventListener('click', connectDevice);
+  els.scanAnswerBtn.addEventListener('click', startScan);
+  els.copyOfferBtn.addEventListener('click', function () {
+    if (!els.offerText.value) return;
+    els.offerText.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(els.offerText.value);
+    } else {
+      document.execCommand('copy');
+    }
+    els.pairingStatus.textContent = 'Code copied.';
+  });
+
+  renderRoster();
+})();
+</script>
+<script>
+// Draws `text` as a QR code onto `canvas`, sized off the actual module count
+// (same approach as Tools/classroom-timer/ct-mirror.js's drawQR, since an
+// SDP-sized payload's module count varies a little from one offer to the
+// next). Exposed as a global since this page has no module bundler.
+window.drawMonitorQR = function (canvas, text) {
+  var qr = window.qrcode(0, 'L');
+  qr.addData(text);
+  qr.make();
+  var count = qr.getModuleCount();
+  var quiet = 4;
+  var total = count + quiet * 2;
+  var px = 8;
+  var size = total * px;
+  canvas.width = size;
+  canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#16222e';
+  for (var r = 0; r < count; r++) {
+    for (var c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) {
+        var x0 = Math.round((quiet + c) * px), x1 = Math.round((quiet + c + 1) * px);
+        var y0 = Math.round((quiet + r) * px), y1 = Math.round((quiet + r + 1) * px);
+        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      }
+    }
+  }
+};
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

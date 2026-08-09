@@ -8,6 +8,7 @@
 // constant, tappable size.
 
 import { PALETTE, colorHex } from "./bmg-colors.js";
+import { computeDistance } from "./bmg-latlong.js";
 
 export const LINE_COLORS = PALETTE;
 export const lineColorHex = colorHex;
@@ -196,4 +197,117 @@ export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange } = {}) {
     setSize, setLines, getLines, startDraft, addDraftPoint, popLastDraftPoint,
     cancelDraft, finishDraft, isDrafting, draftPointCount, remove, reposition,
   };
+}
+
+// --- Point-to-point distance measuring --------------------------------
+// A lightweight two-click tool, structurally a stripped-down sibling of
+// createLineLayer() above (same SVG-in-#stage + screen-space chip split,
+// same reposition() convention) but capped at two points and never
+// persisted to project data: unlike a drawn line, a measurement isn't an
+// annotation a teacher is building up — it's a one-off "how far is it from
+// here to there" question, answered fresh each time from whatever the map's
+// calibration says (via bmg-latlong.js's computeDistance(), which itself
+// just reuses the exact same toLatLon() math the lat/long readout and grid
+// already rely on — nothing here re-derives its own calibration).
+export function createMeasureLayer(svgEl, chipLayerEl, viewer) {
+  let points = []; // 0, 1 (waiting for 2nd click), or 2 (measured) stage points
+  let calibration = null;
+  let imgW = 0, imgH = 0;
+  let unit = "km";
+  let result = null; // computeDistance()'s return value once 2 points are set, else null
+  let readoutNode = null;
+
+  function recompute() {
+    result = points.length === 2
+      ? computeDistance(calibration, imgW, imgH, points[0].x, points[0].y, points[1].x, points[1].y, unit)
+      : null;
+  }
+
+  function setSize(w, h) { imgW = w; imgH = h; recompute(); renderChip(); }
+  function setCalibration(c) { calibration = c; recompute(); renderChip(); }
+  function setUnit(u) { unit = u; recompute(); renderChip(); }
+
+  function isActive() { return points.length > 0; }
+  function pointCount() { return points.length; }
+  function getResult() { return result; }
+
+  /** Places the next click's point. A completed (2-point) measurement is cleared first, so a third click always starts a fresh measurement instead of adding a third point to the old one. */
+  function addPoint(x, y) {
+    if (points.length >= 2) points = [];
+    points.push({ x, y });
+    recompute();
+    renderAll();
+  }
+
+  function reset() {
+    points = [];
+    result = null;
+    renderAll();
+  }
+
+  function renderAll() {
+    renderSvg();
+    renderChip();
+  }
+
+  function renderSvg() {
+    svgEl.innerHTML = "";
+    if (!points.length) return;
+    if (points.length === 2) {
+      const line = document.createElementNS(SVG_NS, "line");
+      line.setAttribute("x1", points[0].x);
+      line.setAttribute("y1", points[0].y);
+      line.setAttribute("x2", points[1].x);
+      line.setAttribute("y2", points[1].y);
+      line.setAttribute("stroke", "#a3372b");
+      line.setAttribute("stroke-width", "2.5");
+      line.setAttribute("stroke-dasharray", "8 5");
+      svgEl.appendChild(line);
+    }
+    points.forEach(p => {
+      const dot = document.createElementNS(SVG_NS, "circle");
+      dot.setAttribute("cx", p.x);
+      dot.setAttribute("cy", p.y);
+      dot.setAttribute("r", 5);
+      dot.setAttribute("fill", "#a3372b");
+      dot.setAttribute("stroke", "#fff");
+      dot.setAttribute("stroke-width", "2");
+      svgEl.appendChild(dot);
+    });
+  }
+
+  function ensureReadoutNode() {
+    if (readoutNode) return readoutNode;
+    readoutNode = document.createElement("div");
+    readoutNode.className = "measure-readout";
+    readoutNode.setAttribute("data-no-pan", "");
+    readoutNode.innerHTML = `<span class="measure-readout-text"></span><button type="button" class="measure-clear" title="Clear measurement">&times;</button>`;
+    readoutNode.querySelector(".measure-clear").addEventListener("click", e => { e.stopPropagation(); reset(); });
+    chipLayerEl.appendChild(readoutNode);
+    return readoutNode;
+  }
+
+  function renderChip() {
+    if (!points.length) {
+      if (readoutNode) { readoutNode.remove(); readoutNode = null; }
+      return;
+    }
+    const node = ensureReadoutNode();
+    node.querySelector(".measure-readout-text").textContent = points.length < 2
+      ? "Click a second point…"
+      : (result ? result.label : "Map isn't calibrated.");
+    reposition();
+  }
+
+  function reposition() {
+    if (!readoutNode || !points.length) return;
+    const anchor = points.length === 2
+      ? { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 }
+      : points[0];
+    const pt = viewer.stageToScreen(anchor.x, anchor.y);
+    readoutNode.style.left = `${pt.x}px`;
+    readoutNode.style.top = `${pt.y}px`;
+  }
+
+  return { setSize, setCalibration, setUnit, addPoint, reset, isActive, pointCount, getResult, reposition };
 }

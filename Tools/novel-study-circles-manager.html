@@ -99,6 +99,11 @@
   .checkpoint-inputs { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .3rem; }
   .checkpoint-inputs .cp-row label { font-size: .78rem; margin-bottom: .2rem; }
   .checkpoint-inputs .cp-row input { margin-bottom: 0; }
+  .checkpoint-inputs .cp-fields { display: flex; gap: .5rem; }
+  .checkpoint-inputs .cp-fields input[type="text"] { flex: 1; }
+  .checkpoint-inputs .cp-fields input[type="number"] { width: 6rem; flex-shrink: 0; }
+  .checkpoint .cp-num, table.history-table .cp-num { color: var(--muted); font-weight: 600; }
+  .checkpoint .behind-flag, table.history-table .behind-flag { color: var(--err); font-weight: 700; }
 
   table.history-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
   table.history-table th, table.history-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--line); }
@@ -132,6 +137,8 @@
     .print-only .group-card { border: 1px solid #999; break-inside: avoid; }
     .print-only .group-card h3 { color: #000; }
     .print-only .group-card .checkpoint { color: #000; }
+    .print-only .group-card .checkpoint .cp-num { color: #444; }
+    .print-only .group-card .checkpoint .behind-flag { color: #a3372b; }
     .print-only .group-card li .role { color: #000; }
     .print-only .group-card li .role.member { color: #444; }
   }
@@ -504,7 +511,10 @@
     } else {
       els.checkpointInputs.innerHTML = state.groups.map(function (g) {
         return '<div class="cp-row"><label for="cp-' + g.id + '">' + escapeHtml(g.label) + ' checkpoint</label>' +
-          '<input type="text" id="cp-' + g.id + '" data-cp-group="' + g.id + '" placeholder="e.g. pages 40-55"></div>';
+          '<div class="cp-fields">' +
+          '<input type="text" id="cp-' + g.id + '" data-cp-group="' + g.id + '" placeholder="e.g. pages 40-55">' +
+          '<input type="number" id="cp-num-' + g.id + '" data-cp-num-group="' + g.id + '" placeholder="# (optional)" step="0.5">' +
+          '</div></div>';
       }).join('');
     }
   }
@@ -587,10 +597,16 @@
             var el = document.querySelector('[data-cp-group="' + g.id + '"]');
             return el ? el.value.trim() : '';
           })();
+      var checkpointNum = state.together ? null : (function () {
+        var el = document.querySelector('[data-cp-num-group="' + g.id + '"]');
+        var v = el ? parseFloat(el.value) : NaN;
+        return isNaN(v) ? null : v;
+      })();
       return {
         id: g.id,
         label: g.label,
         checkpoint: checkpoint,
+        checkpointNum: checkpointNum,
         assignment: g.members.map(function (name) { return { name: name, role: assignment[name] }; })
       };
     });
@@ -621,9 +637,21 @@
 
   // Shared per-group-card renderer — used for the on-screen "latest meeting"
   // results, the single-meeting print sheet, and the full meeting log print.
+  // Flags a group as "behind" when it has a numeric checkpoint and at least
+  // one other group in the same meeting has logged a higher one — only
+  // meaningful in per-group pacing mode, where checkpoints can differ.
   function groupCardsHtml(groups) {
+    var nums = groups.map(function (g) { return g.checkpointNum; }).filter(function (n) { return n != null; });
+    var maxNum = nums.length >= 2 ? Math.max.apply(null, nums) : null;
     return groups.map(function (g) {
-      var cpHtml = g.checkpoint ? '<p class="checkpoint">' + escapeHtml(g.checkpoint) + '</p>' : '';
+      var behind = maxNum != null && g.checkpointNum != null && g.checkpointNum < maxNum;
+      var cpHtml = (g.checkpoint || g.checkpointNum != null)
+        ? '<p class="checkpoint">' +
+            (g.checkpoint ? escapeHtml(g.checkpoint) : '') +
+            (g.checkpointNum != null ? ' <span class="cp-num">#' + g.checkpointNum + '</span>' : '') +
+            (behind ? ' <span class="behind-flag">&#9888; behind</span>' : '') +
+          '</p>'
+        : '';
       return '<div class="group-card"><h3>' + escapeHtml(g.label) + '</h3>' + cpHtml + '<ul>' +
         g.assignment.map(function (s) {
           var roleText = s.role || MEMBER_LABEL;
@@ -662,9 +690,16 @@
       var summaryBits = [escapeHtml(m.date)];
       if (m.together && m.wholeClassCheckpoint) summaryBits.push(escapeHtml(m.wholeClassCheckpoint));
       else if (!m.together) summaryBits.push('per-group pacing');
+      var mNums = m.groups.map(function (g) { return g.checkpointNum; }).filter(function (n) { return n != null; });
+      var mMaxNum = mNums.length >= 2 ? Math.max.apply(null, mNums) : null;
       var rows = m.groups.map(function (g) {
         var roleLines = g.assignment.map(function (s) { return escapeHtml(s.name) + ' &mdash; ' + escapeHtml(s.role || MEMBER_LABEL); }).join('<br>');
-        return '<tr><td>' + escapeHtml(g.label) + '</td><td>' + (g.checkpoint ? escapeHtml(g.checkpoint) : '&mdash;') + '</td><td>' + roleLines + '</td></tr>';
+        var behind = mMaxNum != null && g.checkpointNum != null && g.checkpointNum < mMaxNum;
+        var cpText = (g.checkpoint ? escapeHtml(g.checkpoint) : '') +
+          (g.checkpointNum != null ? ' <span class="cp-num">#' + g.checkpointNum + '</span>' : '') +
+          (behind ? ' <span class="behind-flag">&#9888;</span>' : '');
+        if (!cpText.trim()) cpText = '&mdash;';
+        return '<tr><td>' + escapeHtml(g.label) + '</td><td>' + cpText + '</td><td>' + roleLines + '</td></tr>';
       }).join('');
       return '<details class="meeting-entry"' + (i === 0 ? ' open' : '') + '>' +
         '<summary><b>' + summaryBits[0] + '</b><span>' + (summaryBits[1] || '') + '</span></summary>' +

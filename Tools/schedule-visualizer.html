@@ -34,6 +34,18 @@
        files with no folder next to them, so they carry their fonts inline.
        Generated: node Tools/schedule/fonts/build-published-fonts.mjs -->
   <script src="schedule/fonts/published-fonts.js" defer></script>
+  <!-- R61: "Hand off an in-progress layout" — WebRTC/QR device pairing, same
+       vendored libs as Tools/classroom-timer's mirror feature (each tool
+       keeps its own copy per this site's convention; see
+       Tools/schedule-visualizer/lib/). -->
+  <script src="../_shared/webrtc-pair.js" defer></script>
+  <script src="../_shared/qr-scan.js" defer></script>
+  <script src="schedule-visualizer/lib/qrcode.js" defer></script>
+  <script src="schedule-visualizer/lib/jsqr.js" defer></script>
+  <script type="module">
+    import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
+    window.SVHandoff = { drawQR, startHost, startJoin };
+  </script>
   <style>
     :root {
       --navy-950: #0b1221; --navy-900: #0f1a2e; --navy-800: #162240;
@@ -299,6 +311,15 @@
     }
     #btn-add-floor:hover { border-color: var(--accent); color: var(--accent-dk); background: var(--accent-lt); }
     #btn-add-floor svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
+    #btn-trace-image {
+      display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3);
+      height: 26px; border-radius: var(--r-sm); border: 1.5px dashed var(--slate-300);
+      background: var(--white); font-family: var(--font-ui); font-size: 12px;
+      font-weight: 500; color: var(--slate-500); cursor: pointer; white-space: nowrap;
+      transition: all 0.12s; flex-shrink: 0;
+    }
+    #btn-trace-image:hover { border-color: var(--accent); color: var(--accent-dk); background: var(--accent-lt); }
+    #btn-trace-image svg { width: 13px; height: 13px; stroke: currentColor; fill: none; }
 
     /* ── LEFT SIDEBAR ── */
     #bp-sidebar {
@@ -2815,6 +2836,12 @@
           </svg>
           Add Floor
         </button>
+        <button id="btn-trace-image" title="Trace over a real floor plan photo/scan on this floor" onclick="openTraceImageModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+          </svg>
+          Trace Image
+        </button>
         <!-- R43: Cross-floor staircase pairing banner -->
         <div id="floor-pairing-banner">
           <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4453,6 +4480,30 @@
           </div>
         </div>
 
+        <!-- R61: Hand off an in-progress layout to another device -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+            Hand Off to Another Device
+          </h3>
+          <div class="form-row">
+            <div class="form-label-group">
+              <label class="form-label">Wi-Fi Device Pairing</label>
+              <p class="form-hint">Send the current full project straight to another laptop over the same Wi-Fi — a QR/code pairing, same idea as Classroom Timer's "Mirror to a device" — instead of exporting a file and importing it there by hand.</p>
+            </div>
+            <div class="settings-backup-grid">
+              <button class="backup-btn accent" id="btn-handoff-send" type="button" title="Send this project to another device">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                Send to Another Device
+              </button>
+              <button class="backup-btn" id="btn-handoff-receive" type="button" title="Receive a project from another device">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Receive from Another Device
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- R39: Project Snapshots -->
         <div class="settings-section" id="settings-snapshots-section">
           <h3 class="settings-section-title">
@@ -4706,6 +4757,115 @@
   </div>
 </div>
 
+<!-- R61: TRACE IMAGE MODAL -->
+<div class="modal-overlay" id="trace-image-modal" role="dialog" aria-modal="true" aria-labelledby="trace-image-title">
+  <div class="modal-card" style="max-width:420px;">
+    <div class="modal-head">
+      <div class="modal-head-icon" style="background:#eff6ff;">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#2563eb;" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      </div>
+      <div class="modal-head-text">
+        <div class="modal-eyebrow">Blueprint</div>
+        <div class="modal-title" id="trace-image-title">Trace Over a Real Floor Plan</div>
+      </div>
+      <button class="modal-close" id="trace-image-x" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--slate-600);margin-bottom:var(--sp-4);">
+        Import a photo or scan of the current floor's real layout as a faint background to trace room shapes over,
+        instead of placing every room from a blank grid. Applies only to this floor.
+      </p>
+      <div style="margin-bottom:var(--sp-4);">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Image File</label>
+        <input type="file" id="trace-image-file" accept="image/*" style="width:100%;">
+      </div>
+      <div id="trace-image-controls" style="display:none;">
+        <div style="margin-bottom:var(--sp-4);">
+          <label style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">
+            <span>Opacity</span><span id="trace-image-opacity-val">35%</span>
+          </label>
+          <input type="range" id="trace-image-opacity" min="5" max="90" value="35" style="width:100%;">
+        </div>
+        <div style="margin-bottom:var(--sp-4);">
+          <label style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">
+            <span>Scale</span><span id="trace-image-scale-val">100%</span>
+          </label>
+          <input type="range" id="trace-image-scale" min="10" max="300" value="100" style="width:100%;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-4);">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Offset X (px)</label>
+            <input type="number" id="trace-image-offset-x" class="rp-input" value="0" style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--slate-500);margin-bottom:var(--sp-2);letter-spacing:0.05em;text-transform:uppercase;">Offset Y (px)</label>
+            <input type="number" id="trace-image-offset-y" class="rp-input" value="0" style="width:100%;">
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-bottom:var(--sp-2);">Nudge and scale the photo so its walls line up with the grid, then place tiles on top of it.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn" id="trace-image-remove" type="button">Remove Image</button>
+      <button class="modal-btn primary" id="trace-image-done" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- R61: HAND-OFF (WebRTC device pairing) MODAL -->
+<div class="modal-overlay" id="handoff-modal" role="dialog" aria-modal="true" aria-labelledby="handoff-title">
+  <div class="modal-card" style="max-width:440px;">
+    <div class="modal-head">
+      <div class="modal-head-icon" style="background:#eff6ff;">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#2563eb;" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+      </div>
+      <div class="modal-head-text">
+        <div class="modal-eyebrow">Settings</div>
+        <div class="modal-title" id="handoff-title">Hand Off Layout</div>
+      </div>
+      <button class="modal-close" id="handoff-x" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Step: sending device shows its offer code -->
+      <div id="handoff-step-offer" style="display:none;">
+        <p style="font-size:13px;color:var(--slate-600);margin-bottom:var(--sp-3);">1. On the <strong>other device</strong>, open this same tool, go to Settings, and choose <strong>Receive from Another Device</strong>. Scan or paste this code there.</p>
+        <canvas id="handoff-offer-qr" style="display:block;margin:0 auto var(--sp-3);max-width:100%;"></canvas>
+        <div style="margin-bottom:var(--sp-3);">
+          <textarea id="handoff-offer-text" class="rp-input" readonly rows="3" style="width:100%;font-family:monospace;font-size:11px;"></textarea>
+          <button class="modal-btn" id="handoff-offer-copy" type="button" style="margin-top:var(--sp-2);">Copy Code</button>
+        </div>
+        <p style="font-size:13px;color:var(--slate-600);margin-bottom:var(--sp-2);">2. Paste the reply code the other device shows you:</p>
+        <textarea id="handoff-answer-input" class="rp-input" rows="3" placeholder="Paste the other device's reply code here…" style="width:100%;font-family:monospace;font-size:11px;"></textarea>
+        <button class="modal-btn primary" id="handoff-apply-answer" type="button" style="margin-top:var(--sp-2);">Connect &amp; Send Project</button>
+        <p id="handoff-offer-status" style="font-size:12px;color:var(--slate-500);margin-top:var(--sp-3);"></p>
+      </div>
+
+      <!-- Step: receiving device pastes an offer, then shows its answer -->
+      <div id="handoff-step-join" style="display:none;">
+        <p style="font-size:13px;color:var(--slate-600);margin-bottom:var(--sp-2);">1. Paste the code shown on the <strong>sending device</strong>:</p>
+        <textarea id="handoff-offer-input" class="rp-input" rows="3" placeholder="Paste the other device's code here…" style="width:100%;font-family:monospace;font-size:11px;"></textarea>
+        <button class="modal-btn primary" id="handoff-create-answer" type="button" style="margin:var(--sp-2) 0 var(--sp-3);">Generate Reply Code</button>
+        <div id="handoff-join-answer-wrap" style="display:none;">
+          <p style="font-size:13px;color:var(--slate-600);margin-bottom:var(--sp-3);">2. Show or send this reply code back to the sending device:</p>
+          <canvas id="handoff-answer-qr" style="display:block;margin:0 auto var(--sp-3);max-width:100%;"></canvas>
+          <textarea id="handoff-answer-text" class="rp-input" readonly rows="3" style="width:100%;font-family:monospace;font-size:11px;"></textarea>
+          <button class="modal-btn" id="handoff-answer-copy" type="button" style="margin-top:var(--sp-2);">Copy Code</button>
+        </div>
+        <p id="handoff-join-status" style="font-size:12px;color:var(--slate-500);margin-top:var(--sp-3);"></p>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn" id="handoff-cancel" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
   <div class="modal-card">
     <div class="modal-head">
@@ -4864,7 +5024,7 @@ const AppState = {
     heatExcludeZones: [], // [ {id, col, row, cols, rows, label}, ... ]
     // ── Round 31: Multi-floor architecture ──
     floors: [
-      { id: 'floor_0', label: 'Floor 1', gridData: null, gridCols: 30, gridRows: 20, heatExcludeZones: [] },
+      { id: 'floor_0', label: 'Floor 1', gridData: null, gridCols: 30, gridRows: 20, heatExcludeZones: [], traceImage: null },
     ],
     activeFloorIdx:  0,
     crossFloorPairs: [], // [ { a:{floorId,col,row}, b:{floorId,col,row} }, ... ] — source of truth for pairs
@@ -5344,6 +5504,7 @@ function serializeBlueprint() {
       gridRows:         f.gridRows,
       cells,
       heatExcludeZones: JSON.parse(JSON.stringify(f.heatExcludeZones || [])),
+      traceImage:       f.traceImage ? { ...f.traceImage } : null,
     };
   });
 
@@ -5429,6 +5590,7 @@ function applyBlueprintData(data) {
       gridRows:         sf.gridRows || 20,
       gridData:         null,
       heatExcludeZones: JSON.parse(JSON.stringify(sf.heatExcludeZones || [])),
+      traceImage:       sf.traceImage ? { ...sf.traceImage } : null,
     };
     initFloorGridData(floor);
     for (const entry of (sf.cells || [])) {
@@ -5878,6 +6040,7 @@ const FloorManager = {
       gridCols:         current.gridCols,
       gridRows:         current.gridRows,
       heatExcludeZones: [],
+      traceImage:       null,
     };
     initFloorGridData(newFloor);
     beginAction();
@@ -6236,6 +6399,34 @@ function resizeCanvas(cols, rows, clearTiles) {
 /* ==============================================
    CANVAS — RENDERING
 =============================================== */
+/* R61: Trace-image underlay — cache decoded <img> elements by dataUrl so
+   renderCanvas() (called on nearly every interaction) doesn't re-decode. */
+const _traceImageCache = new Map();
+function getTraceImageEl(dataUrl) {
+  if (!dataUrl) return null;
+  let img = _traceImageCache.get(dataUrl);
+  if (!img) {
+    img = new Image();
+    img.onload = () => renderCanvas();
+    img.src = dataUrl;
+    _traceImageCache.set(dataUrl, img);
+  }
+  return img;
+}
+
+function drawTraceImage() {
+  const floor = getActiveFloorData();
+  const t = floor && floor.traceImage;
+  if (!t || !t.dataUrl) return;
+  const img = getTraceImageEl(t.dataUrl);
+  if (!img.complete || !img.naturalWidth) return;
+  const scale = (typeof t.scale === 'number' && t.scale > 0) ? t.scale : 1;
+  ctx.save();
+  ctx.globalAlpha = (typeof t.opacity === 'number') ? t.opacity : 0.35;
+  ctx.drawImage(img, t.offsetX || 0, t.offsetY || 0, img.naturalWidth * scale, img.naturalHeight * scale);
+  ctx.restore();
+}
+
 function renderCanvas() {
   if (!ctx) return;
   const { gridCols, gridRows } = AppState.blueprint;
@@ -6246,6 +6437,10 @@ function renderCanvas() {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, W, H);
+
+  // R61: Trace-image underlay — a low-opacity photo/scan of the real floor
+  // plan to trace room shapes over, drawn beneath the grid and tiles.
+  drawTraceImage();
 
   // Draw tiles
   for (let r = 0; r < gridRows; r++) {
@@ -7622,6 +7817,235 @@ function initCorridorLabelModal() {
   document.getElementById('corridor-label-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); applyCorridorLabelToSelection(); }
     if (e.key === 'Escape') { e.preventDefault(); closeModal('corridor-label-modal'); }
+  });
+}
+
+/* ==============================================
+   R61: TRACE IMAGE — real floor plan underlay
+=============================================== */
+const TRACE_IMAGE_MAX_DIMENSION = 1600; // px, long edge — enough detail to trace walls from
+
+/** Downscale an uploaded photo/scan to a data URL sized for localStorage. */
+function downscaleTraceImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that image file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not decode that image file.'));
+      img.onload = () => {
+        const scale = Math.min(1, TRACE_IMAGE_MAX_DIMENSION / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function openTraceImageModal() {
+  const floor = getActiveFloorData();
+  const t = floor.traceImage;
+  document.getElementById('trace-image-file').value = '';
+  document.getElementById('trace-image-controls').style.display = t ? '' : 'none';
+  document.getElementById('trace-image-opacity').value = Math.round((t ? t.opacity : 0.35) * 100);
+  document.getElementById('trace-image-opacity-val').textContent = Math.round((t ? t.opacity : 0.35) * 100) + '%';
+  document.getElementById('trace-image-scale').value = Math.round((t ? t.scale : 1) * 100);
+  document.getElementById('trace-image-scale-val').textContent = Math.round((t ? t.scale : 1) * 100) + '%';
+  document.getElementById('trace-image-offset-x').value = t ? (t.offsetX || 0) : 0;
+  document.getElementById('trace-image-offset-y').value = t ? (t.offsetY || 0) : 0;
+  openModal('trace-image-modal');
+}
+
+function ensureTraceImage() {
+  const floor = getActiveFloorData();
+  if (!floor.traceImage) floor.traceImage = { dataUrl: '', opacity: 0.35, scale: 1, offsetX: 0, offsetY: 0 };
+  return floor.traceImage;
+}
+
+/** Wire the trace-image modal controls. */
+function initTraceImageModal() {
+  document.getElementById('trace-image-x')?.addEventListener('click', () => closeModal('trace-image-modal'));
+  document.getElementById('trace-image-done')?.addEventListener('click', () => closeModal('trace-image-modal'));
+
+  document.getElementById('trace-image-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await downscaleTraceImage(file);
+      const t = ensureTraceImage();
+      t.dataUrl = dataUrl;
+      document.getElementById('trace-image-controls').style.display = '';
+      renderCanvas();
+      scheduleBlueprintAutosave();
+      showToast('Floor plan image added — adjust opacity/scale to line it up.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Could not load that image.', 'error');
+    }
+  });
+
+  document.getElementById('trace-image-opacity')?.addEventListener('input', (e) => {
+    const t = ensureTraceImage();
+    t.opacity = Math.max(0.05, Math.min(0.9, Number(e.target.value) / 100));
+    document.getElementById('trace-image-opacity-val').textContent = Math.round(t.opacity * 100) + '%';
+    renderCanvas();
+    scheduleBlueprintAutosave();
+  });
+
+  document.getElementById('trace-image-scale')?.addEventListener('input', (e) => {
+    const t = ensureTraceImage();
+    t.scale = Math.max(0.1, Math.min(3, Number(e.target.value) / 100));
+    document.getElementById('trace-image-scale-val').textContent = Math.round(t.scale * 100) + '%';
+    renderCanvas();
+    scheduleBlueprintAutosave();
+  });
+
+  document.getElementById('trace-image-offset-x')?.addEventListener('input', (e) => {
+    const t = ensureTraceImage();
+    t.offsetX = Number(e.target.value) || 0;
+    renderCanvas();
+    scheduleBlueprintAutosave();
+  });
+
+  document.getElementById('trace-image-offset-y')?.addEventListener('input', (e) => {
+    const t = ensureTraceImage();
+    t.offsetY = Number(e.target.value) || 0;
+    renderCanvas();
+    scheduleBlueprintAutosave();
+  });
+
+  document.getElementById('trace-image-remove')?.addEventListener('click', () => {
+    const floor = getActiveFloorData();
+    floor.traceImage = null;
+    document.getElementById('trace-image-controls').style.display = 'none';
+    renderCanvas();
+    scheduleBlueprintAutosave();
+    showToast('Trace image removed.', 'info');
+  });
+}
+
+/* ==============================================
+   R61: HAND OFF AN IN-PROGRESS LAYOUT (WebRTC pairing)
+=============================================== */
+let _handoffHost = null;
+let _handoffJoin = null;
+
+function resetHandoffModal() {
+  _handoffHost = null;
+  _handoffJoin = null;
+  document.getElementById('handoff-step-offer').style.display = 'none';
+  document.getElementById('handoff-step-join').style.display = 'none';
+  document.getElementById('handoff-join-answer-wrap').style.display = 'none';
+  document.getElementById('handoff-offer-status').textContent = '';
+  document.getElementById('handoff-join-status').textContent = '';
+  document.getElementById('handoff-answer-input').value = '';
+  document.getElementById('handoff-offer-input').value = '';
+}
+
+function startHandoffSend() {
+  document.getElementById('handoff-step-offer').style.display = '';
+  document.getElementById('handoff-offer-status').textContent = 'Creating pairing code…';
+  window.SVHandoff.startHost().then((host) => {
+    _handoffHost = host;
+    document.getElementById('handoff-offer-text').value = host.offerPayload;
+    window.SVHandoff.drawQR(document.getElementById('handoff-offer-qr'), host.offerPayload);
+    document.getElementById('handoff-offer-status').textContent = 'Waiting for the other device’s reply code…';
+    host.onOpen(() => {
+      document.getElementById('handoff-offer-status').textContent = 'Connected — sending project…';
+      try {
+        host.sendProject(serializeFullProject());
+        document.getElementById('handoff-offer-status').textContent = 'Project sent. The other device will show a confirmation once it applies it.';
+      } catch (e) {
+        document.getElementById('handoff-offer-status').textContent = 'Send failed: ' + e.message;
+      }
+    });
+    host.onClose(() => {
+      document.getElementById('handoff-offer-status').textContent = 'Connection closed.';
+    });
+  }).catch((e) => {
+    document.getElementById('handoff-offer-status').textContent = 'Could not start pairing: ' + e.message;
+  });
+}
+
+function applyHandoffAnswer() {
+  const answerPayload = document.getElementById('handoff-answer-input').value.trim();
+  if (!_handoffHost || !answerPayload) return;
+  document.getElementById('handoff-offer-status').textContent = 'Connecting…';
+  _handoffHost.applyAnswer(answerPayload).catch((e) => {
+    document.getElementById('handoff-offer-status').textContent = e.message || 'Could not read that reply code.';
+  });
+}
+
+function startHandoffReceive() {
+  document.getElementById('handoff-step-join').style.display = '';
+}
+
+function createHandoffAnswer() {
+  const offerPayload = document.getElementById('handoff-offer-input').value.trim();
+  if (!offerPayload) return;
+  document.getElementById('handoff-join-status').textContent = 'Generating reply code…';
+  window.SVHandoff.startJoin(offerPayload, {
+    onProgress: (i, total) => {
+      document.getElementById('handoff-join-status').textContent = `Receiving project… (${i}/${total})`;
+    },
+    onComplete: (payload) => {
+      document.getElementById('handoff-join-status').textContent = 'Project received.';
+      if (!confirm('Replace the current project on THIS device with the one just received? This cannot be undone.')) {
+        document.getElementById('handoff-join-status').textContent = 'Project received but not applied (cancelled).';
+        return;
+      }
+      try {
+        applyFullProject(payload);
+        showToast('Project received and applied.', 'success');
+        closeModal('handoff-modal');
+      } catch (e) {
+        document.getElementById('handoff-join-status').textContent = 'Could not apply received project: ' + e.message;
+      }
+    },
+    onError: (e) => {
+      document.getElementById('handoff-join-status').textContent = 'Transfer failed: ' + e.message;
+    },
+  }).then((join) => {
+    _handoffJoin = join;
+    document.getElementById('handoff-answer-text').value = join.answerPayload;
+    window.SVHandoff.drawQR(document.getElementById('handoff-answer-qr'), join.answerPayload);
+    document.getElementById('handoff-join-answer-wrap').style.display = '';
+    document.getElementById('handoff-join-status').textContent = 'Show this reply code back to the sending device, then wait for the project to arrive…';
+    join.onOpen(() => {
+      document.getElementById('handoff-join-status').textContent = 'Connected — waiting for the project…';
+    });
+  }).catch((e) => {
+    document.getElementById('handoff-join-status').textContent = e.message || 'Could not read that code.';
+  });
+}
+
+function initHandoffModal() {
+  document.getElementById('btn-handoff-send')?.addEventListener('click', () => {
+    resetHandoffModal();
+    openModal('handoff-modal');
+    startHandoffSend();
+  });
+  document.getElementById('btn-handoff-receive')?.addEventListener('click', () => {
+    resetHandoffModal();
+    openModal('handoff-modal');
+    startHandoffReceive();
+  });
+  document.getElementById('handoff-x')?.addEventListener('click', () => closeModal('handoff-modal'));
+  document.getElementById('handoff-cancel')?.addEventListener('click', () => closeModal('handoff-modal'));
+  document.getElementById('handoff-apply-answer')?.addEventListener('click', applyHandoffAnswer);
+  document.getElementById('handoff-create-answer')?.addEventListener('click', createHandoffAnswer);
+  document.getElementById('handoff-offer-copy')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('handoff-offer-text').value)
+      .then(() => showToast('Code copied.', 'success'));
+  });
+  document.getElementById('handoff-answer-copy')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('handoff-answer-text').value)
+      .then(() => showToast('Code copied.', 'success'));
   });
 }
 
@@ -16431,6 +16855,8 @@ function init() {
   initVizModule();
   initOnboardingAndHelp();
   initCorridorLabelModal();
+  initTraceImageModal();
+  initHandoffModal();
   initFullProjectIO();
   initPanelToggles();
   initSnapshotManager(); // R39
@@ -17794,6 +18220,7 @@ window.wiComputeDiff    = wiComputeDiff;
         </div>
         <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
         <button class="btn-print" id="br-publish-btn" onclick="brPublish()" title="Export a standalone, read-only Schedule Browser file to share with staff">Publish for Teachers</button>
+        <button class="btn-print" id="br-publish-copy-btn" onclick="brCopyPublishedHTML()" title="Copy the generated Schedule Browser HTML to the clipboard, to paste directly into GitHub's web file editor">Copy Publish HTML</button>
       </div>
       <div class="stage">
         <div id="br-empty" class="br-empty">
@@ -18927,6 +19354,23 @@ function brPublish() {
     console.error('[Browser] publish failed:', e);
     if (typeof showToast === 'function') showToast('Publish failed: ' + e.message, 'error');
     else alert('Publish failed: ' + e.message);
+  }
+}
+
+function brCopyPublishedHTML() {
+  try {
+    const html = brBuildPublishedHTML();
+    navigator.clipboard.writeText(html).then(() => {
+      if (typeof showToast === 'function') showToast('Publish HTML copied to clipboard', 'success');
+    }, (e) => {
+      console.error('[Browser] copy failed:', e);
+      if (typeof showToast === 'function') showToast('Copy failed: ' + e.message, 'error');
+      else alert('Copy failed: ' + e.message);
+    });
+  } catch (e) {
+    console.error('[Browser] copy failed:', e);
+    if (typeof showToast === 'function') showToast('Copy failed: ' + e.message, 'error');
+    else alert('Copy failed: ' + e.message);
   }
 }
 

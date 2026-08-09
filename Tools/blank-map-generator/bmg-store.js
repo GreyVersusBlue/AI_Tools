@@ -192,6 +192,32 @@ export function createStore() {
     return getActiveProject();
   }
 
+  /**
+   * Creates an independent copy of an existing project under a new name and
+   * activates it. Every content field (labels, markers, regions, lines,
+   * legend text/order, calibration, view, overlay positions, etc.) is
+   * deep-cloned via a JSON round-trip — the same cheap deep-clone trick the
+   * main script's own undo/redo history already relies on, and safe here
+   * for the same reason: every one of those fields is plain JSON-
+   * serializable data, so the clone shares no array/object with the
+   * original and editing either project afterward can never mutate the
+   * other. `mapId` is copied as a plain string, not cloned data — it only
+   * *names* an entry in the shared, immutable offline map cache
+   * (bmg-map-cache.js), so both projects legitimately and safely keep
+   * pointing at the same cached map image. Returns the duplicate's data, or
+   * null if `id` doesn't match any project.
+   */
+  function duplicateProject(id, name) {
+    const source = workspace.projects.find(e => e.id === id);
+    if (!source) return null;
+    const dupId = newId();
+    const clonedData = JSON.parse(JSON.stringify(source.data));
+    workspace.projects.push({ id: dupId, name: name || `${source.name} copy`, updatedAt: Date.now(), data: clonedData });
+    workspace.activeId = dupId;
+    saveWorkspace();
+    return getActiveProject();
+  }
+
   /** Deletes a project; if it was active, activates another (creating a fresh one if it was the last). Returns the now-active project's data. */
   function deleteProject(id) {
     workspace.projects = workspace.projects.filter(e => e.id !== id);
@@ -208,7 +234,7 @@ export function createStore() {
 
   return {
     getActiveProject, setActiveProject, listProjects, getActiveId,
-    createProject, switchProject, renameProject, deleteProject, importProject,
+    createProject, switchProject, renameProject, deleteProject, importProject, duplicateProject,
     get isMemoryOnly() { return blocked; },
   };
 }

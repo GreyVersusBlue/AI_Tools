@@ -7,6 +7,8 @@
 <meta name="description" content="Scan a station code, solve the clue, unlock the next one.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='15' width='14' height='11' rx='2' fill='%232A6DB0'/%3E%3Cpath d='M12 15v-4a4 4 0 0 1 8 0v4' fill='none' stroke='%23C43A2F' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='1.8' fill='%23F6F7F9'/%3E%3C/svg%3E">
+<script src="../../_shared/webrtc-pair.js"></script>
+<script src="lib/qrcode.js"></script>
 <style>
   :root {
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
@@ -36,6 +38,7 @@
     padding: 1.1rem 1.1rem; margin-bottom: 1.2rem; font-size: 1.15rem; line-height: 1.55;
     white-space: pre-line; overflow-wrap: anywhere;
   }
+  .clue-image { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; margin-bottom: .8rem; background: #fff; }
   label { display: block; font-weight: 600; font-size: .88rem; margin-bottom: .4rem; }
   input[type="text"] {
     width: 100%; font-family: inherit; font-size: 1.15rem; color: var(--ink);
@@ -77,6 +80,21 @@
   }
   .timer-banner.low { color: var(--err); border-color: var(--err); }
   .timer-banner.done { color: #fff; background: var(--err); border-color: var(--err); }
+  .monitor-toggle {
+    display: block; width: 100%; background: none; border: none; color: var(--muted);
+    font-size: .78rem; text-align: center; margin-top: 1rem; padding: .3rem; cursor: pointer;
+  }
+  .monitor-toggle:hover { color: var(--accent-2); }
+  .monitor-box { display: none; margin-top: .6rem; padding-top: .8rem; border-top: 1px dashed var(--line); }
+  .monitor-box.open { display: block; }
+  .monitor-box p { font-size: .8rem; color: var(--muted); margin: 0 0 .5rem; }
+  .monitor-box textarea {
+    width: 100%; font-family: Consolas, monospace; font-size: .7rem; min-height: 3rem;
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .5rem .6rem; margin-bottom: .5rem;
+  }
+  .monitor-box canvas { display: block; margin: 0 auto .5rem; max-width: 180px; width: 100%; }
+  .monitor-status { font-size: .78rem; color: var(--muted); }
+  .monitor-status.connected { color: var(--good); }
 </style>
 </head>
 <body>
@@ -257,6 +275,7 @@
     card.innerHTML =
       '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
       '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + '</span>' +
+      (station.image ? '<img class="clue-image" src="' + escapeHtml(station.image) + '" alt="Clue image">' : '') +
       '<div class="clue-box">' + escapeHtml(station.clue || '(no clue text)') + '</div>' +
       '<form id="answerForm" autocomplete="off">' +
         '<label for="answerInput">Your answer</label>' +

@@ -361,6 +361,64 @@
           'What specific words, phrases, or images reveal that tone?'
         ] }
       ]
+    },
+    apparts: {
+      key: 'apparts',
+      fullName: 'APPARTS',
+      when: 'Best for text sources — a more detailed alternative to SOAPSTone for speeches, letters, and documents.',
+      steps: [
+        { key: 'author', letter: 'A', label: 'Author', questions: [
+          'Who created this source? What do you know about their identity, background, or role?',
+          'What point of view or bias might this person bring to the source?'
+        ] },
+        { key: 'place-time', letter: 'P', label: 'Place and Time', questions: [
+          'Where and when was this source created?',
+          'What was happening in that place and time that helps explain why it was made?'
+        ] },
+        { key: 'prior-knowledge', letter: 'A', label: 'Prior Knowledge', questions: [
+          'What do you already know about the topic, event, or time period this source is about?',
+          'How does that background knowledge help you understand the source?'
+        ] },
+        { key: 'audience', letter: 'A', label: 'Audience', questions: [
+          'Who was this source originally created for?',
+          'How might that intended audience have shaped its content, tone, or word choice?'
+        ] },
+        { key: 'reason', letter: 'R', label: 'Reason', questions: [
+          'Why was this source created? What was the creator trying to accomplish?',
+          'What event or need prompted them to create it?'
+        ] },
+        { key: 'main-idea', letter: 'T', label: 'The Main Idea', questions: [
+          'What is the main idea or message of this source, in one or two sentences?',
+          'What details in the source support that main idea?'
+        ] },
+        { key: 'significance', letter: 'S', label: 'Significance', questions: [
+          'Why does this source matter to someone studying this topic or time period?',
+          'What does it reveal that other sources might not?'
+        ] }
+      ]
+    },
+    fivew: {
+      key: 'fivew',
+      fullName: "5 W's",
+      when: 'A simplified framework for younger or English-learner students — works for almost any source.',
+      steps: [
+        { key: 'who', letter: 'W', label: 'Who', questions: [
+          'Who made this source, or who is it about?'
+        ] },
+        { key: 'what', letter: 'W', label: 'What', questions: [
+          'What is this source? What does it show, say, or describe?'
+        ] },
+        { key: 'when', letter: 'W', label: 'When', questions: [
+          'When was this made, or when did the event in it happen?'
+        ] },
+        { key: 'where', letter: 'W', label: 'Where', questions: [
+          'Where was this made, or where did it happen?'
+        ] },
+        { key: 'why', letter: 'W', label: 'Why', questions: [
+          'Why do you think this was made?',
+          'Why does it matter, or what can we learn from it?'
+        ] }
+      ]
     }
   };
 
@@ -453,7 +511,7 @@
   /* ---------- framework picker (rebuilt on state change) ---------- */
   function renderFrameworkPicker() {
     els.fwOptions.innerHTML = '';
-    ['optic', 'soapstone'].forEach(function (key) {
+    Object.keys(FRAMEWORKS).forEach(function (key) {
       var fw = FRAMEWORKS[key];
       var wrap = document.createElement('label');
       wrap.className = 'fw-option' + (state.framework === key ? ' active' : '');
@@ -470,7 +528,7 @@
       var textWrap = document.createElement('div');
       var nameEl = document.createElement('div');
       nameEl.className = 'fw-name';
-      nameEl.textContent = fw.fullName + (key === 'optic' ? ' — Overview, Parts, Title, Interpretation, Conclusion' : ' — Speaker, Occasion, Audience, Purpose, Subject, Tone');
+      nameEl.textContent = fw.fullName + ' — ' + fw.steps.map(function (s) { return s.label; }).join(', ');
       var descEl = document.createElement('div');
       descEl.className = 'fw-desc';
       descEl.textContent = fw.when;

@@ -63,10 +63,11 @@ export function fromLatLon(calibration, imgW, imgH, lat, lon) {
   };
 }
 
-// Mean Earth radius in km, used only for the scale bar's rough real-world
-// distance estimate — same "best-effort" accuracy tier as the rest of this
-// file's projection math.
-const KM_PER_DEG = (Math.PI / 180) * 6371;
+// Mean Earth radius in km, used both for the scale bar's rough real-world
+// distance estimate and the point-to-point distance measurer below — same
+// "best-effort" accuracy tier as the rest of this file's projection math.
+const EARTH_RADIUS_KM = 6371;
+const KM_PER_DEG = (Math.PI / 180) * EARTH_RADIUS_KM;
 const MI_PER_KM = 0.621371;
 
 /**
@@ -121,6 +122,43 @@ export function computeScaleBar(calibration, imgW, imgH, viewStageY, scale, unit
   if (!niceUnits) return null;
   const niceMeters = (unit === "mi" ? niceUnits / MI_PER_KM : niceUnits) * 1000;
   return { widthPx: niceMeters / metersPerScreenPx, label: formatScaleLabel(niceUnits, unit) };
+}
+
+// Great-circle (haversine) distance between two lat/lon points, in km.
+// Unlike the scale bar above — which estimates a *local*, flat
+// meters-per-pixel rate at one latitude, accurate enough for a short
+// reference bar — two arbitrary clicked points can be far enough apart
+// (or far enough apart in latitude) that a flat approximation would drift,
+// so the distance-measuring tool goes through each point's actual lat/lon
+// instead and measures along the globe the standard way.
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const a = sinDLat * sinDLat + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * sinDLon * sinDLon;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/**
+ * Straight-line real-world distance between two stage (map-pixel) points —
+ * the measuring tool's core math. Reuses toLatLon() (the exact same
+ * calibration conversion the mouse's lat/long readout, the grid, and batch
+ * marker placement all already go through) to turn each clicked point into
+ * a real coordinate, then formatScaleLabel()'s "km"/"mi" conversion and
+ * nice rounding, so a measured result always reads in the same units and
+ * style as the scale bar. Returns null if the map isn't calibrated (or
+ * either dimension is missing), same convention as computeScaleBar/
+ * computeGraticule above, so callers can just show nothing.
+ */
+export function computeDistance(calibration, imgW, imgH, stageX1, stageY1, stageX2, stageY2, unit = "km") {
+  if (!isCalibrated(calibration) || !imgW || !imgH) return null;
+  const from = toLatLon(calibration, imgW, imgH, stageX1, stageY1);
+  const to = toLatLon(calibration, imgW, imgH, stageX2, stageY2);
+  const km = haversineKm(from.lat, from.lon, to.lat, to.lon);
+  const distance = unit === "mi" ? km * MI_PER_KM : km;
+  return { km, distance, unit, label: formatScaleLabel(distance, unit), from, to };
 }
 
 const NICE_STEPS = [90, 60, 45, 30, 20, 15, 10, 5, 2, 1, 0.5, 0.25, 0.1];
