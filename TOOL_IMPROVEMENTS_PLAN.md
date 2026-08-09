@@ -209,7 +209,7 @@ or anything that assumes a backend this repo doesn't and can't have on GitHub Pa
 **Current state:** Provides 34 preset English-language dialogue scenarios across 7 real-life categories plus teacher-added custom scenarios merged into the same pool, each tagged with a Novice/Intermediate/Advanced proficiency level alongside the existing category filter, with two-role setups, fill-in vocabulary scaffolding cards saved per class/session (so switching classes doesn't overwrite another class's answers), shuffle/prev/next navigation, a "randomly assign roles" button for fairness when partners are deciding who plays which role, the shared read-aloud/accessibility helper, and printable single or multi-scenario handout sets.
 
 ### Primary Source Analysis Worksheet Generator (`Tools/primary-source-analysis-generator.html`)
-**Current state:** Lets a teacher describe or paste a primary source and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions for each framework step, plus a matching answer-key view populated from the teacher's own per-step notes, across multiple saved worksheets.
+**Current state:** Lets a teacher describe or paste a primary source (with an optional locally-uploaded image, embedded as a data URI, alongside the external Image URL field) and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions for each framework step plus an optional teacher-added custom follow-up question per step, a configurable number of blank answer lines per step, and a matching answer-key view populated from the teacher's own per-step notes, across multiple saved worksheets portable via JSON export/import.
 
 ---
 ## Picking one up
