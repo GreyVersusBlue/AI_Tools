@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 5 (PR #TBD): five Quick Wins shipped.**
+**2026-08-10 — Round 5 (PR #56): five Quick Wins shipped.**
 
 - **Done — Added to the README.** Both this tool and `qr-code-generator.html`
   (also missing) got a row in the README tools table. Neither was missing

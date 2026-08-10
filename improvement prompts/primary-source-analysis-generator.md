@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 5 (PR #TBD): four Quick Wins shipped, plus one
+**2026-08-10 — Round 5 (PR #56): four Quick Wins shipped, plus one
 pre-existing bug fixed.** Found that **APPARTS and 5 W's frameworks already
 existed** in the source (this file was stale on that point) — this round
 added two more: **HIPP** (Historical Context / Intended Audience / Purpose /

@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 5 (PR #TBD): five Quick Wins shipped.** All changes were
+**2026-08-10 — Round 5 (PR #56): five Quick Wins shipped.** All changes were
 additive to `settings` (new fields default sensibly for old saved settings)
 and to `MathDrillGenerate.generateProblems()`, which now takes an optional
 third `options` argument instead of changing its existing signature.
