@@ -188,7 +188,7 @@ loading it from cdnjs (P5).
 
 **45 of 46 tools done. 1 to go.**
 
-### Rounds 9 and 10 — 2026-08-10 — PRs #64 and PENDING_PR
+### Rounds 9 and 10 — 2026-08-10 — PRs #64 and #65
 
 The last tool on the list, and the only one to get two rounds in this pass —
 both at Devon's direct request rather than by picking from the list below.
