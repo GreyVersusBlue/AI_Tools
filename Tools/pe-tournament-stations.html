@@ -112,6 +112,18 @@
   .stage-controls button.danger:hover { background: var(--err); color: #fff; border-color: var(--err); }
   .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
 
+  @keyframes stageFlash { 0% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } 25% { box-shadow: inset 0 0 0 2000px rgba(255,255,255,.4); } 100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); } }
+  .stage.flash { animation: stageFlash .65s ease-out; }
+
+  .stage.hicontrast { background: #000; }
+  .stage.hicontrast .stage-sub, .stage.hicontrast .stage-status { color: #ffd400; opacity: 1; }
+  .stage.hicontrast .stage-time { color: #fff; }
+  .stage.hicontrast .station-tile { background: #111; border-color: #333; border-left-color: #ffd400; }
+  .stage.hicontrast .station-tile h3 { color: #ffd400; }
+  .stage.hicontrast .station-tile .activity, .stage.hicontrast .station-tile .next-line { color: #ccc; }
+  .stage.hicontrast .station-chip { background: #222; border-color: #ffd400; color: #ffd400; }
+  .stage.hicontrast .stage-controls button.secondary { background: rgba(255,255,255,.08); border-color: #555; }
+
   .station-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .7rem; margin-top: .5rem; }
   .station-tile {
     background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent-2);
@@ -122,6 +134,62 @@
   .station-tile .groups-here { display: flex; flex-wrap: wrap; gap: .35rem; }
   .station-chip { background: #eef4f9; border: 1px solid var(--accent-2); color: var(--accent-2); border-radius: 999px; padding: .2rem .6rem; font-size: .8rem; font-weight: 700; }
   .station-tile .none-here { font-size: .78rem; color: var(--muted); font-style: italic; }
+  .station-tile .next-line { font-size: .74rem; color: var(--muted); margin-top: .4rem; padding-top: .35rem; border-top: 1px dashed var(--line); }
+  .station-tile .next-line strong { color: var(--accent-2); }
+
+  .stage:fullscreen .stage-time { font-size: clamp(6rem, 20vw, 15rem); }
+  .stage:fullscreen .stage-sub { font-size: clamp(1.4rem, 3vw, 2.4rem); }
+  .stage:fullscreen .stage-status { font-size: clamp(1rem, 2vw, 1.6rem); }
+  .stage:fullscreen .stage-controls button { font-size: clamp(1rem, 1.6vw, 1.4rem); padding: .8rem 1.6rem; }
+  .stage:fullscreen .station-tiles { gap: 1.2rem; }
+  .stage:fullscreen .station-tile { padding: 1.2rem 1.4rem; }
+  .stage:fullscreen .station-tile h3 { font-size: clamp(1.5rem, 3.4vw, 3rem); }
+  .stage:fullscreen .station-tile .activity { font-size: clamp(.9rem, 1.6vw, 1.3rem); }
+  .stage:fullscreen .station-chip { font-size: clamp(1.05rem, 2vw, 1.7rem); padding: .4rem 1.1rem; }
+  .stage:fullscreen .station-tile .next-line { font-size: clamp(.85rem, 1.4vw, 1.15rem); }
+
+  /* ── Station template picker ──────────────────────────────────────── */
+  .station-row { border-bottom: 1px dashed var(--line); padding-bottom: .6rem; margin-bottom: .6rem; }
+  .station-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .station-meta-row select, .station-meta-row input { margin-bottom: 0; }
+  .station-scored-check { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0 !important; }
+  .station-scored-check input { width: auto; margin: 0; }
+
+  /* ── Fitness / skill score capture ────────────────────────────────── */
+  .score-station { border-bottom: 1px solid var(--line); padding-bottom: .8rem; margin-bottom: .8rem; }
+  .score-station:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .score-station h3 { margin: 0 0 .5rem; font-size: .95rem; color: var(--accent); }
+  .score-unit { color: var(--muted); font-weight: 400; font-size: .8rem; }
+  .score-group { background: #f7f6f2; border: 1px solid var(--line); border-radius: 7px; padding: .55rem .7rem; margin-bottom: .5rem; }
+  .score-group-here { border-color: var(--accent-2); background: #eef4f9; }
+  .score-group-title { font-weight: 700; font-size: .82rem; margin-bottom: .4rem; }
+  .here-badge { background: var(--accent-2); color: #fff; border-radius: 999px; padding: .1rem .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-left: .3rem; }
+  .score-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; }
+  .score-row:last-child { margin-bottom: 0; }
+  .score-name { flex: 1 1 auto; font-size: .85rem; }
+  .score-input { width: 6.5rem; margin-bottom: 0; flex: 0 0 auto; }
+
+  /* ── Remote control window (?remote=1) ────────────────────────────── */
+  .remote-view { display: none; }
+  body.remote-mode .wrap, body.remote-mode footer.note { display: none; }
+  body.remote-mode .remote-view { display: flex; }
+  .remote-view {
+    position: fixed; inset: 0; background: var(--accent); color: #fff;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 1.4rem; text-align: center; overflow-y: auto;
+  }
+  .remote-inner { width: 100%; max-width: 480px; }
+  .remote-title { font-size: 1.1rem; font-weight: 700; opacity: .85; margin-bottom: .3rem; }
+  .remote-conn { font-size: .82rem; opacity: .75; margin-bottom: 1rem; }
+  .remote-sub { font-size: 1.1rem; opacity: .85; margin-bottom: .2rem; }
+  .remote-time { font-family: Consolas, 'SFMono-Regular', ui-monospace, monospace; font-size: clamp(3.5rem, 22vw, 6rem); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; margin-bottom: .3rem; }
+  .remote-status { font-size: .95rem; opacity: .8; min-height: 1.2em; margin-bottom: 1.1rem; }
+  .remote-controls { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.3rem; }
+  .remote-controls button { font-size: 1.15rem; padding: 1rem 1.4rem; min-width: 130px; flex: 1 1 130px; }
+  .remote-controls button.secondary { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
+  .remote-controls button.danger { background: rgba(255,255,255,.12); color: #ffd8d0; border-color: #e08a7a; }
+  .remote-tiles { text-align: left; font-size: .85rem; }
+  .remote-tile { background: rgba(255,255,255,.08); border-radius: 6px; padding: .5rem .7rem; margin-bottom: .5rem; }
 
   /* ── Bracket (matches Bracket / Tournament Generator styling) ─────── */
   .champion-banner { display: none; background: #fff9e8; border: 1px solid #e5c56a; color: #6b5410; border-radius: 8px; padding: .8rem 1rem; font-weight: 700; margin-bottom: 1rem; }
@@ -167,6 +235,8 @@
     #printCardsArea .card-number { font-size: 1.3rem; letter-spacing: .12em; text-transform: uppercase; color: #666; margin: 0 0 .8rem; }
     #printCardsArea .card-station-name { font-size: clamp(3rem, 11vw, 6.5rem); font-weight: 800; line-height: 1.05; margin: 0 0 1.1rem; word-break: break-word; }
     #printCardsArea .card-activity { font-size: clamp(1.3rem, 4vw, 2.2rem); color: #333; line-height: 1.35; margin: 0; max-width: 90%; }
+    #printCardsArea .card-equipment { font-size: clamp(.95rem, 2.4vw, 1.3rem); color: #666; margin: .8rem 0 0; max-width: 90%; }
+    #printCardsArea .card-scored-tag { font-size: 1rem; color: #a3372b; margin: .6rem 0 0; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
     #printCardsArea .card-empty-msg { font-size: 1.2rem; color: #555; }
   }
 </style>
@@ -199,7 +269,17 @@
 
   <div class="card">
     <div class="card-title"><span>Stations</span><button class="link-btn" id="addStationBtn" type="button">+ Add station</button></div>
-    <p class="hint">Name each station and (optionally) describe the activity. Order here is the rotation order.</p>
+    <p class="hint">Name each station and (optionally) describe the activity, equipment, and whether it's a scored station. Order here is the rotation order.</p>
+    <div class="field-inline">
+      <div style="flex:1 1 260px;">
+        <label for="templateSelect">Start from a shipped template</label>
+        <select id="templateSelect"></select>
+      </div>
+      <div style="flex:0 0 auto;">
+        <button class="secondary" id="loadTemplateBtn" type="button">Load template</button>
+      </div>
+    </div>
+    <p class="hint" id="templateHint"></p>
     <div id="stationsList"></div>
   </div>
 
@@ -236,7 +316,11 @@
     <p class="hint">Time each group spends at a station before the group at the last station wraps back to the first.</p>
     <div class="checkline">
       <input type="checkbox" id="soundToggle" checked>
-      <label style="margin:0;" for="soundToggle">Play a sound when the timer hits 0:00</label>
+      <label style="margin:0;" for="soundToggle">Play a sound when the timer hits 0:00 (plus a quiet 30-second warning)</label>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="hiContrastToggle">
+      <label style="margin:0;" for="hiContrastToggle">High-contrast gym display (bigger text, black background) &mdash; best combined with Fullscreen</label>
     </div>
   </div>
 
@@ -251,8 +335,15 @@
       <button id="rotateNowBtn" class="secondary" type="button">Rotate now</button>
       <button id="resetRotationBtn" class="danger" type="button">Reset</button>
       <button id="fullscreenBtn" class="secondary" type="button" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
+      <button id="openRemoteBtn" class="secondary" type="button">Open remote control</button>
     </div>
     <div class="station-tiles" id="stationTiles"></div>
+  </div>
+
+  <div class="card" id="scoresCard" style="display:none;">
+    <div class="card-title"><span>Fitness / skill scores</span><button class="link-btn" id="printScoresBtn" type="button">Print class record</button></div>
+    <p class="hint">Mark a station as &ldquo;Scored&rdquo; in the Stations list above, then record each student's result here as the rotation runs. Scores are saved with this unit.</p>
+    <div id="scoresList"></div>
   </div>
 
   <div class="card">
@@ -292,6 +383,24 @@
 
 </div>
 
+<div class="remote-view" id="remoteView">
+  <div class="remote-inner">
+    <div class="remote-title" id="remoteTitle">PE Rotation Remote</div>
+    <div class="remote-conn" id="remoteConn">Connecting to the display&hellip;</div>
+    <div class="remote-sub" id="remoteSub">Rotation 1</div>
+    <div class="remote-time" id="remoteTime">--:--</div>
+    <div class="remote-status" id="remoteStatus"></div>
+    <div class="remote-controls">
+      <button id="remoteStartBtn" type="button">Start</button>
+      <button id="remotePauseBtn" class="secondary" type="button" hidden>Pause</button>
+      <button id="remoteResumeBtn" type="button" hidden>Resume</button>
+      <button id="remoteRotateBtn" class="secondary" type="button">Rotate now</button>
+      <button id="remoteResetBtn" class="danger" type="button">Reset</button>
+    </div>
+    <div class="remote-tiles" id="remoteTiles"></div>
+  </div>
+</div>
+
 <div class="print-only" id="printArea">
   <h2 id="printTitle">PE Tournament &amp; Station Rotation</h2>
   <p class="p-sub" id="printSub"></p>
@@ -303,6 +412,12 @@
 
 <div class="print-only" id="printCardsArea"></div>
 
+<div class="print-only" id="printScoresArea">
+  <h2 id="printScoresTitle">Fitness / Skill Score Record</h2>
+  <p class="p-sub" id="printScoresSub"></p>
+  <div id="printScoresWrap"></div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -312,14 +427,23 @@
 
   var els = {};
   ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'printBtn', 'printCardsBtn',
-   'projectName', 'addStationBtn', 'stationsList',
+   'projectName', 'addStationBtn', 'stationsList', 'templateSelect', 'loadTemplateBtn', 'templateHint',
    'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
-   'rotMinutes', 'rotSeconds', 'soundToggle',
-   'stage', 'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'fullscreenBtn', 'stationTiles',
+   'rotMinutes', 'rotSeconds', 'soundToggle', 'hiContrastToggle',
+   'stage', 'stageSub', 'stageTime', 'stageStatus', 'startBtn', 'pauseBtn', 'resumeBtn', 'rotateNowBtn', 'resetRotationBtn', 'fullscreenBtn', 'openRemoteBtn', 'stationTiles',
+   'scoresCard', 'scoresList', 'printScoresBtn',
    'bracketSource', 'bracketCustomWrap', 'bracketEntrants', 'bracketSeedRandom', 'generateBracketBtn', 'resetBracketBtn', 'msg',
    'championBanner', 'bracketCard', 'bracketTitle', 'bracketView',
-   'printArea', 'printTitle', 'printSub', 'printScheduleWrap', 'printBracketWrap', 'printCardsArea'
+   'printArea', 'printTitle', 'printSub', 'printScheduleWrap', 'printBracketWrap', 'printCardsArea',
+   'printScoresArea', 'printScoresTitle', 'printScoresSub', 'printScoresWrap',
+   'remoteView', 'remoteConn', 'remoteSub', 'remoteTime', 'remoteStatus', 'remoteTiles',
+   'remoteStartBtn', 'remotePauseBtn', 'remoteResumeBtn', 'remoteRotateBtn', 'remoteResetBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var isRemote = (function () {
+    try { return new URLSearchParams(window.location.search).get('remote') === '1'; }
+    catch (e) { return false; }
+  })();
 
   // state = { name, roster, stations:[{id,name,activity}], groups:[{id,name,members}],
   //           rotation:{minutes,seconds,count,running,paused,endAt,remainingMs},
@@ -328,6 +452,47 @@
   var idCounter = 0;
 
   function uid(prefix) { idCounter++; return prefix + '_' + Date.now().toString(36) + idCounter; }
+
+  /* ---------- shipped station templates ---------- */
+  var STATION_TEMPLATES = [
+    { id: 'fitness-circuit', name: 'Fitness Circuit (8 stations)', stations: [
+      { name: 'Jumping Jacks', activity: 'Continuous jumping jacks for the full station time.', equipment: 'None' },
+      { name: 'Push-Ups', activity: 'Standard or modified (knees down) push-ups; rest as needed within the station time.', equipment: 'Mats' },
+      { name: 'Plank Hold', activity: 'Hold a forearm plank with a flat back; drop to knees and reset if form breaks down.', equipment: 'Mats' },
+      { name: 'Mountain Climbers', activity: 'Continuous mountain climbers at a controlled, steady pace.', equipment: 'Mats' },
+      { name: 'Bodyweight Squats', activity: 'Squat to a comfortable depth, chest up, then stand; repeat for the station time.', equipment: 'None' },
+      { name: 'High Knees', activity: 'Run in place bringing knees up to hip height, moving down a marked lane and back.', equipment: 'Cones to mark a lane' },
+      { name: 'Burpees', activity: 'Squat, kick back to a plank, return, and jump — at your own pace for the station time.', equipment: 'Mats' },
+      { name: 'Rest / Water', activity: 'Catch your breath and get water. No equipment set-up needed.', equipment: 'Water bottles' }
+    ] },
+    { id: 'volleyball', name: 'Volleyball Skills Circuit', stations: [
+      { name: 'Forearm Bump (Pass)', activity: 'Partner or wall passing — platform arms, contact the ball on the forearms, redirect it upward.', equipment: 'Volleyballs (or trainer balls), a wall' },
+      { name: 'Overhead Set', activity: 'Set the ball with fingertips above the forehead to a partner or a wall target.', equipment: 'Volleyballs, a wall or partner' },
+      { name: 'Underhand Serve', activity: 'Serve from behind a line toward a target zone or over a lowered net.', equipment: 'Volleyballs, a net or floor target' },
+      { name: 'Spike Approach & Arm Swing', activity: 'Practice the three-step approach and arm swing against a soft toss or off a box.', equipment: 'Volleyballs, a box or line marked with tape' },
+      { name: 'Digging / Defense', activity: 'Partner tosses a ball for the student to dig with a low platform.', equipment: 'Volleyballs' },
+      { name: 'Rotation & Positioning Walkthrough', activity: 'Walk through the six rotation positions on a marked half-court.', equipment: 'Cones marking court positions' }
+    ] },
+    { id: 'striking-fielding', name: 'Striking & Fielding Circuit', stations: [
+      { name: 'Batting Tee', activity: 'Hit off a tee toward a net or open field area, focusing on a level swing.', equipment: 'Bat, tee, softballs/whiffle balls, a net' },
+      { name: 'Fielding Grounders', activity: 'Field rolled or bounced grounders and make an accurate throw to a target.', equipment: 'Balls, gloves, cones marking a target' },
+      { name: 'Base Running', activity: 'Practice running through first base and rounding bases at game speed.', equipment: 'Bases or cones' },
+      { name: 'Pitching / Throwing Accuracy', activity: 'Throw at a wall target or into a hoop from a marked distance.', equipment: 'Balls, a target (hoop or taped wall zone)' }
+    ] },
+    { id: 'cooperative', name: 'Cooperative Games Circuit', stations: [
+      { name: 'Parachute Popcorn', activity: 'Group shakes the parachute to bounce foam balls without letting them fall off.', equipment: 'Parachute, foam balls' },
+      { name: 'Partner Balance Challenge', activity: 'Partners work through a sequence of balance poses together, holding each for a count.', equipment: 'Mats (optional)' },
+      { name: 'Cup Stacking Relay', activity: 'Teams race to stack and unstack a pyramid of cups in relay order.', equipment: 'Stacking cups, a table' },
+      { name: 'Trust Walk', activity: 'One partner is blindfolded and verbally guided through a cone path by the other.', equipment: 'Blindfolds, cones' }
+    ] },
+    { id: 'fitness-testing', name: 'Fitness Testing Battery (scored)', stations: [
+      { name: 'PACER', activity: 'Progressive Aerobic Cardiovascular Endurance Run — run between two lines 20m apart, keeping pace with the audio beeps for as long as possible.', equipment: 'Cones (2 lines, 20m apart), PACER audio track or a stopwatch and a caller', scored: true, scoreUnit: 'laps' },
+      { name: 'Curl-Ups', activity: 'Complete as many controlled curl-ups as possible in the station time, feet flat, knees bent.', equipment: 'Mats', scored: true, scoreUnit: 'reps' },
+      { name: 'Push-Ups', activity: 'Complete as many push-ups as possible in the station time; knees-down is a valid modification.', equipment: 'Mats', scored: true, scoreUnit: 'reps' },
+      { name: 'Sit-and-Reach', activity: 'Reach forward along the box or taped line as far as possible; hold the farthest point for one second.', equipment: 'Sit-and-reach box, or a ruler taped to the floor', scored: true, scoreUnit: 'inches' },
+      { name: 'Rest / Record', activity: 'Catch your breath and record scores from the last station on your card before rotating.', equipment: 'Pencils, score cards', scored: false }
+    ] }
+  ];
 
   /* ---------- persistence ---------- */
   function loadStore() {
@@ -359,7 +524,14 @@
     if (typeof s.name !== 'string' || !s.name) s.name = 'New Unit';
     if (typeof s.roster !== 'string') s.roster = '';
     if (!Array.isArray(s.stations)) s.stations = [];
-    s.stations.forEach(function (st) { if (!st.id) st.id = uid('st'); if (typeof st.name !== 'string') st.name = ''; if (typeof st.activity !== 'string') st.activity = ''; });
+    s.stations.forEach(function (st) {
+      if (!st.id) st.id = uid('st');
+      if (typeof st.name !== 'string') st.name = '';
+      if (typeof st.activity !== 'string') st.activity = '';
+      if (typeof st.equipment !== 'string') st.equipment = '';
+      st.scored = !!st.scored;
+      if (typeof st.scoreUnit !== 'string') st.scoreUnit = '';
+    });
     if (!Array.isArray(s.groups)) s.groups = [];
     s.groups.forEach(function (g) { if (!g.id) g.id = uid('grp'); if (typeof g.name !== 'string') g.name = ''; if (typeof g.members !== 'string') g.members = ''; });
     if (!s.rotation || typeof s.rotation !== 'object') s.rotation = {};
@@ -373,6 +545,11 @@
     if (typeof r.remainingMs !== 'number') r.remainingMs = null;
     if (r.running && typeof r.endAt !== 'number') r.running = false;
     s.soundEnabled = s.soundEnabled !== false;
+    s.highContrast = !!s.highContrast;
+    if (!s.scores || typeof s.scores !== 'object') s.scores = {};
+    Object.keys(s.scores).forEach(function (stId) {
+      if (!s.scores[stId] || typeof s.scores[stId] !== 'object') s.scores[stId] = {};
+    });
     if (s.bracketSource !== 'groups') s.bracketSource = 'custom';
     if (typeof s.bracketEntrants !== 'string') s.bracketEntrants = '';
     s.bracketSeedRandom = s.bracketSeedRandom !== false;
@@ -425,38 +602,85 @@
   /* ---------- stations editor ---------- */
   function renderStationsEditor() {
     if (!state.stations.length) {
-      els.stationsList.innerHTML = '<p class="empty-hint">No stations yet — add at least one.</p>';
+      els.stationsList.innerHTML = '<p class="empty-hint">No stations yet — add at least one, or load a template above.</p>';
       return;
     }
     els.stationsList.innerHTML = state.stations.map(function (st, i) {
-      return '<div class="row-line" data-id="' + escapeAttr(st.id) + '">' +
+      return '<div class="station-row" data-id="' + escapeAttr(st.id) + '">' +
+        '<div class="row-line">' +
         '<div class="grow" style="flex:0 0 30%;"><input type="text" class="st-name" placeholder="Station ' + (i + 1) + ' name" value="' + escapeAttr(st.name) + '"></div>' +
         '<div class="grow"><input type="text" class="st-activity" placeholder="Activity (e.g. jump rope)" value="' + escapeAttr(st.activity) + '"></div>' +
         '<button type="button" class="remove-row-btn" data-remove-station="' + escapeAttr(st.id) + '" title="Remove station">&#10005;</button>' +
+        '</div>' +
+        '<div class="row-line station-meta-row">' +
+        '<div class="grow"><input type="text" class="st-equipment" placeholder="Equipment (optional)" value="' + escapeAttr(st.equipment) + '"></div>' +
+        '<label class="checkline station-scored-check"><input type="checkbox" class="st-scored"' + (st.scored ? ' checked' : '') + '> Scored station</label>' +
+        '<div style="flex:0 0 9rem;"><input type="text" class="st-unit" placeholder="unit e.g. reps" value="' + escapeAttr(st.scoreUnit) + '"' + (st.scored ? '' : ' disabled') + '></div>' +
+        '</div>' +
         '</div>';
     }).join('');
   }
 
   els.stationsList.addEventListener('input', function (e) {
-    var row = e.target.closest('.row-line');
+    var row = e.target.closest('.station-row');
     if (!row) return;
     var st = state.stations.filter(function (s) { return s.id === row.dataset.id; })[0];
     if (!st) return;
     if (e.target.classList.contains('st-name')) st.name = e.target.value;
     else if (e.target.classList.contains('st-activity')) st.activity = e.target.value;
+    else if (e.target.classList.contains('st-equipment')) st.equipment = e.target.value;
+    else if (e.target.classList.contains('st-unit')) st.scoreUnit = e.target.value;
+    else return;
     save();
     renderStage();
+  });
+  els.stationsList.addEventListener('change', function (e) {
+    var row = e.target.closest('.station-row');
+    if (!row) return;
+    var st = state.stations.filter(function (s) { return s.id === row.dataset.id; })[0];
+    if (!st) return;
+    if (e.target.classList.contains('st-scored')) {
+      st.scored = e.target.checked;
+      var unitInput = row.querySelector('.st-unit');
+      if (unitInput) unitInput.disabled = !st.scored;
+      save();
+      renderStage();
+    }
   });
   els.stationsList.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-remove-station]');
     if (!btn) return;
-    state.stations = state.stations.filter(function (s) { return s.id !== btn.dataset.removeStation; });
+    var removedId = btn.dataset.removeStation;
+    state.stations = state.stations.filter(function (s) { return s.id !== removedId; });
+    delete state.scores[removedId];
     renderStationsEditor();
     save();
     renderStage();
   });
   els.addStationBtn.addEventListener('click', function () {
-    state.stations.push({ id: uid('st'), name: 'Station ' + (state.stations.length + 1), activity: '' });
+    state.stations.push({ id: uid('st'), name: 'Station ' + (state.stations.length + 1), activity: '', equipment: '', scored: false, scoreUnit: '' });
+    renderStationsEditor();
+    save();
+    renderStage();
+  });
+
+  /* ---------- station templates ---------- */
+  function renderTemplateOptions() {
+    els.templateSelect.innerHTML = '<option value="">&mdash; choose a template &mdash;</option>' +
+      STATION_TEMPLATES.map(function (t) { return '<option value="' + escapeAttr(t.id) + '">' + escapeHtml(t.name) + '</option>'; }).join('');
+  }
+  els.templateSelect.addEventListener('change', function () {
+    var t = STATION_TEMPLATES.filter(function (x) { return x.id === els.templateSelect.value; })[0];
+    els.templateHint.textContent = t ? (t.stations.length + ' stations, real activities and equipment lists included — loading replaces the current station list.') : '';
+  });
+  els.loadTemplateBtn.addEventListener('click', function () {
+    var t = STATION_TEMPLATES.filter(function (x) { return x.id === els.templateSelect.value; })[0];
+    if (!t) { showMsg('Choose a template first.'); return; }
+    if (state.stations.length && !confirm('Replace the current ' + state.stations.length + ' station(s) with the "' + t.name + '" template (' + t.stations.length + ' stations)?')) return;
+    state.stations = t.stations.map(function (st) {
+      return { id: uid('st'), name: st.name, activity: st.activity || '', equipment: st.equipment || '', scored: !!st.scored, scoreUnit: st.scoreUnit || '' };
+    });
+    clearMsg();
     renderStationsEditor();
     save();
     renderStage();
@@ -549,23 +773,65 @@
     if (!ctx) return;
     try {
       var now = ctx.currentTime;
-      playTone(ctx, 880, now, 0.16, 0.18);
-      playTone(ctx, 1175, now + 0.18, 0.2, 0.18);
+      for (var i = 0; i < 3; i++) {
+        var t = now + i * 0.55;
+        playTone(ctx, 880, t, 0.22, 0.28);
+        playTone(ctx, 1175, t + 0.24, 0.26, 0.28);
+      }
     } catch (e) { /* ignore — sound is a nice-to-have, never block the rotation */ }
+  }
+
+  var warnedForEndAt = null;
+  function playWarningTone() {
+    if (!state.soundEnabled) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    try {
+      var now = ctx.currentTime;
+      playTone(ctx, 660, now, 0.12, 0.14);
+      playTone(ctx, 660, now + 0.18, 0.12, 0.14);
+    } catch (e) { /* ignore */ }
+  }
+  function maybePlayWarning() {
+    var r = state.rotation;
+    if (!r.running || !r.endAt) return;
+    var remaining = r.endAt - Date.now();
+    if (remaining > 0 && remaining <= 30000 && warnedForEndAt !== r.endAt) {
+      warnedForEndAt = r.endAt;
+      playWarningTone();
+    }
+  }
+  function playRotateNowTone() {
+    if (!state.soundEnabled) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    try { playTone(ctx, 988, ctx.currentTime, 0.12, 0.16); } catch (e) { /* ignore */ }
+  }
+  function flashStage() {
+    els.stage.classList.remove('flash');
+    void els.stage.offsetWidth;
+    els.stage.classList.add('flash');
+    setTimeout(function () { els.stage.classList.remove('flash'); }, 650);
   }
 
   els.soundToggle.addEventListener('change', function () {
     state.soundEnabled = els.soundToggle.checked;
     save();
   });
+  els.hiContrastToggle.addEventListener('change', function () {
+    state.highContrast = els.hiContrastToggle.checked;
+    els.stage.classList.toggle('hicontrast', state.highContrast);
+    save();
+  });
 
   /* ---------- rotation timer / stage ---------- */
-  function computeAssignment() {
+  function computeAssignment(countOverride) {
     var s = state.stations.length;
     var map = [];
     for (var i = 0; i < s; i++) map.push([]);
     if (s === 0) return map;
-    var count = ((state.rotation.count % s) + s) % s;
+    var baseCount = typeof countOverride === 'number' ? countOverride : state.rotation.count;
+    var count = ((baseCount % s) + s) % s;
     state.groups.forEach(function (g, gi) {
       var idx = (gi + count) % s;
       map[idx].push(g);
@@ -583,21 +849,74 @@
   function renderStage() {
     els.stageSub.textContent = 'Rotation ' + (state.rotation.count + 1);
     var map = computeAssignment();
+    var nextMap = state.stations.length > 1 ? computeAssignment(state.rotation.count + 1) : map;
     if (!state.stations.length) {
       els.stationTiles.innerHTML = '<p class="empty-hint" style="color:#e8e6de;">Add stations above to start a rotation.</p>';
     } else {
       els.stationTiles.innerHTML = state.stations.map(function (st, i) {
         var here = map[i] || [];
+        var upNext = nextMap[i] || [];
         var chips = here.length
           ? '<div class="groups-here">' + here.map(function (g) { return '<span class="station-chip">' + escapeHtml(g.name || 'Group') + '</span>'; }).join('') + '</div>'
           : '<div class="none-here">No group here right now</div>';
+        var nextLine = state.stations.length > 1
+          ? '<div class="next-line">Next: <strong>' + (upNext.length ? upNext.map(function (g) { return escapeHtml(g.name || 'Group'); }).join(', ') : '&mdash;') + '</strong></div>'
+          : '';
         return '<div class="station-tile"><h3>' + escapeHtml(st.name || ('Station ' + (i + 1))) + '</h3>' +
-          '<div class="activity">' + (st.activity ? escapeHtml(st.activity) : '&nbsp;') + '</div>' + chips + '</div>';
+          '<div class="activity">' + (st.activity ? escapeHtml(st.activity) : '&nbsp;') + '</div>' + chips + nextLine + '</div>';
       }).join('');
     }
     updateStageButtons();
     tickDisplay();
+    renderScoresCard();
+    broadcastState();
   }
+
+  /* ---------- fitness / skill score capture ---------- */
+  function renderScoresCard() {
+    var scored = state.stations.filter(function (st) { return st.scored; });
+    if (!scored.length) {
+      els.scoresCard.style.display = 'none';
+      return;
+    }
+    els.scoresCard.style.display = '';
+    var map = computeAssignment();
+    els.scoresList.innerHTML = scored.map(function (st) {
+      var stIdx = state.stations.indexOf(st);
+      var hereGroupIds = (map[stIdx] || []).map(function (g) { return g.id; });
+      var groupsHtml;
+      if (!state.groups.length) {
+        groupsHtml = '<p class="empty-hint">Add groups above to record scores.</p>';
+      } else {
+        groupsHtml = state.groups.map(function (g) {
+          var members = parseNames(g.members);
+          var isHere = hereGroupIds.indexOf(g.id) !== -1;
+          var rows = members.length
+            ? members.map(function (name) {
+                var stored = state.scores[st.id] || {};
+                var val = stored[name] != null ? stored[name] : '';
+                return '<div class="score-row"><span class="score-name">' + escapeHtml(name) + '</span>' +
+                  '<input type="text" inputmode="decimal" class="score-input" data-station="' + escapeAttr(st.id) + '" data-student="' + escapeAttr(name) + '" value="' + escapeAttr(val) + '" placeholder="' + escapeAttr(st.scoreUnit || 'score') + '"></div>';
+              }).join('')
+            : '<p class="empty-hint">No members in this group yet.</p>';
+          return '<div class="score-group' + (isHere ? ' score-group-here' : '') + '"><div class="score-group-title">' + escapeHtml(g.name || 'Group') + (isHere ? '<span class="here-badge">here now</span>' : '') + '</div>' + rows + '</div>';
+        }).join('');
+      }
+      return '<div class="score-station"><h3>' + escapeHtml(st.name || 'Station') + (st.scoreUnit ? ' <span class="score-unit">(' + escapeHtml(st.scoreUnit) + ')</span>' : '') + '</h3>' + groupsHtml + '</div>';
+    }).join('');
+  }
+
+  els.scoresList.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('score-input')) return;
+    var stationId = e.target.dataset.station;
+    var student = e.target.dataset.student;
+    if (!stationId || !student) return;
+    if (!state.scores[stationId]) state.scores[stationId] = {};
+    var v = e.target.value;
+    if (v === '') delete state.scores[stationId][student];
+    else state.scores[stationId][student] = v;
+    save();
+  });
 
   function tickDisplay() {
     var r = state.rotation;
@@ -618,9 +937,11 @@
   }
 
   function tick() {
+    if (isRemote) return;
     if (!state) return;
     var r = state.rotation;
     if (!r.running || !r.endAt) { tickDisplay(); return; }
+    maybePlayWarning();
     var remaining = r.endAt - Date.now();
     var guard = 0;
     var changed = false;
@@ -632,11 +953,11 @@
       guard++;
       changed = true;
     }
-    if (changed) { playRotationAlarm(); save(); renderStage(); }
-    else { tickDisplay(); }
+    if (changed) { playRotationAlarm(); flashStage(); save(); renderStage(); }
+    else { tickDisplay(); broadcastState(); }
   }
 
-  els.startBtn.addEventListener('click', function () {
+  function doStart() {
     if (!state.stations.length) { showMsg('Add at least one station before starting the rotation.'); return; }
     var totalMs = getRotationMs();
     if (totalMs <= 0) { showMsg('Set a rotation time greater than 0.'); return; }
@@ -649,8 +970,8 @@
     r.remainingMs = null;
     save();
     renderStage();
-  });
-  els.pauseBtn.addEventListener('click', function () {
+  }
+  function doPause() {
     var r = state.rotation;
     if (!r.running) return;
     r.remainingMs = Math.max(0, r.endAt - Date.now());
@@ -659,8 +980,8 @@
     r.endAt = null;
     save();
     renderStage();
-  });
-  els.resumeBtn.addEventListener('click', function () {
+  }
+  function doResume() {
     var r = state.rotation;
     if (!r.paused) return;
     ensureAudio();
@@ -670,27 +991,38 @@
     r.remainingMs = null;
     save();
     renderStage();
-  });
-  els.rotateNowBtn.addEventListener('click', function () {
+  }
+  function doRotateNow() {
     if (!state.stations.length) return;
     var r = state.rotation;
     r.count = r.count + 1;
     var totalMs = getRotationMs();
     if (r.running) r.endAt = Date.now() + totalMs;
     else if (r.paused) r.remainingMs = totalMs;
+    flashStage();
+    playRotateNowTone();
     save();
     renderStage();
-  });
-  els.resetRotationBtn.addEventListener('click', function () {
-    if (!confirm('Reset the rotation back to the starting positions?')) return;
+  }
+  function doReset() {
     var r = state.rotation;
     r.count = 0;
     r.running = false;
     r.paused = false;
     r.endAt = null;
     r.remainingMs = null;
+    warnedForEndAt = null;
     save();
     renderStage();
+  }
+
+  els.startBtn.addEventListener('click', doStart);
+  els.pauseBtn.addEventListener('click', doPause);
+  els.resumeBtn.addEventListener('click', doResume);
+  els.rotateNowBtn.addEventListener('click', doRotateNow);
+  els.resetRotationBtn.addEventListener('click', function () {
+    if (!confirm('Reset the rotation back to the starting positions?')) return;
+    doReset();
   });
 
   els.rotMinutes.addEventListener('change', function () { state.rotation.minutes = Math.max(0, parseInt(els.rotMinutes.value, 10) || 0); save(); tickDisplay(); });
@@ -716,6 +1048,91 @@
       toggleFullscreen();
     }
   });
+
+  /* ---------- remote control (phone/second window) via BroadcastChannel ----------
+     BroadcastChannel only reaches other tabs/windows in the *same browser on the
+     same device* — it cannot bridge a phone to a laptop over wifi without a
+     backend. This is a same-device "second screen" remote (e.g. a small control
+     window on the same machine driving the fullscreen display), not yet a true
+     phone-to-separate-display remote. See the improvement notes for the tradeoff. */
+  var CHANNEL_NAME = 'pe-tournament-stations-remote';
+  var bc = null;
+  try { if ('BroadcastChannel' in window) bc = new BroadcastChannel(CHANNEL_NAME); } catch (e) { bc = null; }
+
+  function broadcastState() {
+    if (!bc || isRemote || !state) return;
+    var map = computeAssignment();
+    var nextMap = state.stations.length > 1 ? computeAssignment(state.rotation.count + 1) : map;
+    var tiles = state.stations.map(function (st, i) {
+      return {
+        name: st.name || ('Station ' + (i + 1)),
+        here: (map[i] || []).map(function (g) { return g.name || 'Group'; }),
+        next: (nextMap[i] || []).map(function (g) { return g.name || 'Group'; })
+      };
+    });
+    try {
+      bc.postMessage({
+        type: 'state', unit: state.name,
+        sub: els.stageSub.textContent, time: els.stageTime.textContent, status: els.stageStatus.textContent,
+        running: state.rotation.running, paused: state.rotation.paused, tiles: tiles
+      });
+    } catch (e) { /* ignore — remote sync is a bonus feature */ }
+  }
+
+  if (bc && !isRemote) {
+    bc.onmessage = function (e) {
+      var msg = e && e.data;
+      if (!msg || !state) return;
+      if (msg.type === 'hello') { broadcastState(); return; }
+      if (msg.type !== 'cmd') return;
+      if (msg.cmd === 'start') doStart();
+      else if (msg.cmd === 'pause') doPause();
+      else if (msg.cmd === 'resume') doResume();
+      else if (msg.cmd === 'rotate') doRotateNow();
+      else if (msg.cmd === 'reset') doReset();
+    };
+  }
+
+  if (els.openRemoteBtn) {
+    els.openRemoteBtn.addEventListener('click', function () {
+      var base = window.location.href.split('?')[0].split('#')[0];
+      var win = window.open(base + '?remote=1', 'pe-tournament-remote', 'width=420,height=760');
+      if (!win) showMsg('Your browser blocked the remote control popup — allow popups for this page and try again.', 'info');
+      else showMsg('Remote control opened in a new window. It mirrors and controls this display as long as both stay open in the same browser.', 'info');
+    });
+  }
+
+  if (isRemote && bc) {
+    var remoteConnected = false;
+    bc.onmessage = function (e) {
+      var msg = e && e.data;
+      if (!msg || msg.type !== 'state') return;
+      remoteConnected = true;
+      els.remoteConn.textContent = 'Connected — ' + (msg.unit || 'unit');
+      els.remoteSub.textContent = msg.sub || '';
+      els.remoteTime.textContent = msg.time || '--:--';
+      els.remoteStatus.textContent = msg.status || '';
+      els.remoteStartBtn.hidden = msg.running || msg.paused;
+      els.remotePauseBtn.hidden = !msg.running;
+      els.remoteResumeBtn.hidden = !msg.paused;
+      els.remoteTiles.innerHTML = (msg.tiles || []).map(function (t) {
+        return '<div class="remote-tile"><strong>' + escapeHtml(t.name) + '</strong><br>Here: ' + (t.here.length ? t.here.map(escapeHtml).join(', ') : '&mdash;') + '<br>Next: ' + (t.next.length ? t.next.map(escapeHtml).join(', ') : '&mdash;') + '</div>';
+      }).join('');
+    };
+    els.remoteStartBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'start' }); });
+    els.remotePauseBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'pause' }); });
+    els.remoteResumeBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'resume' }); });
+    els.remoteRotateBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'rotate' }); });
+    els.remoteResetBtn.addEventListener('click', function () {
+      if (confirm('Reset the rotation on the display?')) bc.postMessage({ type: 'cmd', cmd: 'reset' });
+    });
+    bc.postMessage({ type: 'hello' });
+    setTimeout(function () {
+      if (!remoteConnected) els.remoteConn.textContent = 'Waiting for a display window to be open in this same browser…';
+    }, 1500);
+  } else if (isRemote && !bc) {
+    els.remoteConn.textContent = 'This browser does not support the remote control feature (BroadcastChannel is unavailable). Try an up-to-date Chrome, Edge, Firefox, or Safari.';
+  }
 
   /* ---------- bracket (same algorithm as Bracket / Tournament Generator) ---------- */
   function nextPowerOf2(n) {
@@ -964,10 +1381,12 @@
     return state.stations.map(function (st, i) {
       var name = st.name ? escapeHtml(st.name) : ('Station ' + (i + 1));
       var activity = st.activity ? '<p class="card-activity">' + escapeHtml(st.activity) + '</p>' : '';
+      var equipment = st.equipment ? '<p class="card-equipment">Equipment: ' + escapeHtml(st.equipment) + '</p>' : '';
+      var scoredTag = st.scored ? '<p class="card-scored-tag">Scored station' + (st.scoreUnit ? ' &mdash; record ' + escapeHtml(st.scoreUnit) : '') + '</p>' : '';
       return '<div class="card-page">' +
         '<div class="card-number">Station ' + (i + 1) + '</div>' +
         '<h2 class="card-station-name">' + name + '</h2>' +
-        activity +
+        activity + equipment + scoredTag +
         '</div>';
     }).join('');
   }
@@ -976,6 +1395,38 @@
     els.printCardsArea.innerHTML = buildPrintCards();
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printCardsArea.classList.add('active');
+    window.print();
+  });
+
+  /* ---------- print: fitness / skill class score record ---------- */
+  function buildPrintScores() {
+    var scored = state.stations.filter(function (st) { return st.scored; });
+    if (!scored.length) return '<p>No scored stations set up.</p>';
+    var students = [];
+    state.groups.forEach(function (g) {
+      parseNames(g.members).forEach(function (n) { if (students.indexOf(n) === -1) students.push(n); });
+    });
+    if (!students.length) return '<p>No students in groups yet.</p>';
+    var html = '<table><thead><tr><th>Student</th>' +
+      scored.map(function (st) { return '<th>' + escapeHtml(st.name || 'Station') + (st.scoreUnit ? ' (' + escapeHtml(st.scoreUnit) + ')' : '') + '</th>'; }).join('') +
+      '</tr></thead><tbody>';
+    students.forEach(function (name) {
+      html += '<tr><td>' + escapeHtml(name) + '</td>' + scored.map(function (st) {
+        var stored = state.scores[st.id] || {};
+        var v = stored[name] != null ? stored[name] : '';
+        return '<td>' + escapeHtml(v) + '</td>';
+      }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  els.printScoresBtn.addEventListener('click', function () {
+    els.printScoresTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Fitness / Skill Score Record';
+    els.printScoresSub.textContent = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+    els.printScoresWrap.innerHTML = buildPrintScores();
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printScoresArea.classList.add('active');
     window.print();
   });
 
@@ -999,6 +1450,10 @@
     els.rotMinutes.value = state.rotation.minutes;
     els.rotSeconds.value = state.rotation.seconds;
     els.soundToggle.checked = state.soundEnabled;
+    els.hiContrastToggle.checked = state.highContrast;
+    els.stage.classList.toggle('hicontrast', state.highContrast);
+    els.templateSelect.value = '';
+    els.templateHint.textContent = '';
     renderStationsEditor();
     renderGroupsEditor();
     syncBracketSourceUI();
@@ -1064,6 +1519,11 @@
 
   /* ---------- boot ---------- */
   (function boot() {
+    if (isRemote) {
+      document.body.classList.add('remote-mode');
+      return;
+    }
+    renderTemplateOptions();
     var initial = loadStore();
     if (initial.current && initial.projects[initial.current]) {
       loadProjectByName(initial.current);
