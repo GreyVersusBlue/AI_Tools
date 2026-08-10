@@ -59,11 +59,22 @@
   .toggle-group input[type="radio"] { display: none; }
   .toggle-group input[type="radio"]:checked + label { background: var(--accent); color: #fff; }
 
-  .role-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
-  .role-row input[type="text"] { margin-bottom: 0; flex: 1; }
+  .role-row { margin-bottom: .6rem; padding-bottom: .55rem; border-bottom: 1px dashed var(--line); }
+  .role-row:last-child { border-bottom: none; }
+  .role-row-main { display: flex; gap: .5rem; align-items: center; margin-bottom: .35rem; }
+  .role-row-main input[type="text"] { margin-bottom: 0; flex: 1; }
   .role-row .x { flex-shrink: 0; background: #fff; border: 1px solid var(--line-strong); color: var(--muted); width: 2rem; height: 2rem; border-radius: 6px; font-size: .85rem; padding: 0; }
   .role-row .x:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .role-row .role-desc { margin-bottom: 0; font-size: .8rem; }
   .role-list { margin-bottom: .6rem; }
+
+  .station-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+  .station-row input[type="text"] { margin-bottom: 0; }
+  .station-row input.station-name { flex: 0 0 32%; }
+  .station-row input.station-equip { flex: 1; }
+  .station-row .x { flex-shrink: 0; background: #fff; border: 1px solid var(--line-strong); color: var(--muted); width: 2rem; height: 2rem; border-radius: 6px; font-size: .85rem; padding: 0; }
+  .station-row .x:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .station-list { margin-bottom: .6rem; }
 
   .pair-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .6rem; }
   .pair-row select { flex: 1; margin-bottom: 0; }
@@ -105,6 +116,11 @@
   .group-card li .name { color: var(--ink); }
   .group-card li .role { color: var(--accent-2); font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; text-align: right; white-space: nowrap; }
   .group-card li .role.member { color: var(--muted); font-weight: 600; }
+  .group-card .group-station { font-size: .78rem; color: var(--muted); margin: -.3rem 0 .65rem; padding-bottom: .55rem; border-bottom: 1px dashed var(--line); }
+  .group-card .group-station strong { color: var(--accent-2); }
+  .checkout-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .7rem; padding-top: .6rem; border-top: 1px dashed var(--line); font-size: .78rem; color: var(--muted); }
+  .checkout-row .checkout-status { flex: 1; }
+  .checkout-row button { width: auto; margin: 0; }
 
   #msg { font-size: .82rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-bottom: .8rem; white-space: pre-line; }
   #msg.show { display: block; background: #f9e9e6; color: var(--err); border: 1px solid #e3bdb5; }
@@ -122,10 +138,14 @@
   .tent-fold { border-top: 1px dashed #999; position: relative; }
   .tent-fold::after { content: '\2702 fold here'; position: absolute; left: 50%; top: -.55rem; transform: translateX(-50%); background: #fff; font-size: .68rem; color: var(--muted); padding: 0 .4rem; }
   .tent-group { font-size: 1.6rem; font-weight: 800; color: var(--accent); margin-bottom: .6rem; }
-  .tent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
-  .tent-list li { display: flex; justify-content: space-between; gap: .8rem; font-size: 1rem; }
+  .tent-station { font-size: .95rem; font-weight: 700; color: var(--accent-2); margin: -.3rem 0 .7rem; }
+  .tent-station .equip { display: block; font-weight: 500; color: var(--muted); font-size: .8rem; margin-top: .15rem; }
+  .tent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+  .tent-list li { display: flex; flex-direction: column; gap: .1rem; font-size: 1rem; }
+  .tent-list .t-name-row { display: flex; justify-content: space-between; gap: .8rem; }
   .tent-list .t-role { color: var(--accent-2); font-weight: 700; text-transform: uppercase; font-size: .78rem; letter-spacing: .03em; }
   .tent-list .t-role.member { color: var(--muted); }
+  .tent-list .t-role-desc { text-align: right; font-size: .72rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
 
   @media print {
     body { background: #fff; padding: 0; }
@@ -138,13 +158,19 @@
     .group-card h3 { color: #000; }
     .group-card li .role { color: #000; }
     .group-card li .role.member { color: #444; }
+    .group-card .group-station { color: #333; }
+    .group-card .group-station strong { color: #000; }
+    .checkout-row { display: none !important; }
 
     .tent-card { border: none; break-after: page; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 9in; margin: 0; }
     .tent-card:last-child { break-after: auto; }
     .tent-half { padding: 2rem 1rem; }
     .tent-group { color: #000; }
+    .tent-station { color: #000; }
+    .tent-station .equip { color: #333; }
     .tent-list .t-role { color: #000; }
     .tent-list .t-role.member { color: #444; }
+    .tent-list .t-role-desc { color: #333; }
   }
 </style>
 </head>
@@ -208,7 +234,14 @@
       </div>
 
       <div class="card">
-        <div class="card-title">4 &middot; Keep Apart (optional)</div>
+        <div class="card-title">4 &middot; Stations &amp; Equipment (optional)</div>
+        <p class="hint">Give each group a station and its equipment set — "I have 7 microscopes" is the real constraint, not just "groups of 4." Leave this empty to skip station assignment. If there are fewer stations than groups, some groups will share.</p>
+        <div class="station-list" id="stationList"></div>
+        <button type="button" class="secondary small" id="addStationBtn" style="width:100%;">+ Add station</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">5 &middot; Keep Apart (optional)</div>
         <div class="pair-row">
           <select id="pairA"><option value="">Select a name&hellip;</option></select>
           <span style="color:var(--muted);font-size:.8rem;">&amp;</span>
@@ -220,9 +253,12 @@
       </div>
 
       <div class="card">
-        <div class="card-title">5 &middot; Shuffle</div>
+        <div class="card-title">6 &middot; Shuffle</div>
         <div class="btn-row">
           <button type="button" id="shuffleBtn">Shuffle groups &amp; roles</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="secondary" id="undoBtn" disabled>Undo last shuffle</button>
         </div>
         <div class="btn-row">
           <button type="button" class="secondary" id="printBtn">Print</button>
@@ -230,6 +266,9 @@
         </div>
         <div class="btn-row">
           <button type="button" class="secondary" id="printTentsBtn">Print table tents</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="secondary" id="printCheckoutBtn">Print equipment checkout sheet</button>
         </div>
         <div class="btn-row">
           <button type="button" class="danger" id="resetHistoryBtn">Reset role history</button>
@@ -260,22 +299,37 @@
 
   var STORE_KEY = 'lgrr_rosters';
   var CURRENT_KEY = 'lgrr_current';
-  var DEFAULT_ROLES = ['Recorder', 'Materials Manager', 'Safety Officer', 'Reporter/Presenter'];
+  var DEFAULT_ROLES = [
+    { name: 'Recorder', description: 'Write down every measurement and observation; read it back to the group before moving on.' },
+    { name: 'Materials Manager', description: 'Collect, distribute, and return all lab materials and equipment for the group.' },
+    { name: 'Safety Officer', description: 'Watch for safety issues, make sure PPE is worn, and know where the safety equipment is.' },
+    { name: 'Reporter/Presenter', description: "Summarize the group's results and present findings to the class." }
+  ];
   var MEMBER_LABEL = 'Team Member';
+
+  // Snapshot of the state needed to undo the most recent shuffle. Kept out of
+  // `state` (and so out of localStorage/export) on purpose — undo is a
+  // same-session convenience, not part of a roster's saved data.
+  var undoSnapshot = null;
 
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'deleteRosterBtn', 'exportRosterBtn', 'importRosterBtn', 'importRosterFile',
    'rosterName', 'namesInput', 'nameCount',
    'splitValueLabel', 'splitValue', 'roleList', 'addRoleBtn',
+   'stationList', 'addStationBtn',
    'pairA', 'pairB', 'addPairBtn', 'pairList',
-   'shuffleBtn', 'printBtn', 'printHistoryBtn', 'printTentsBtn', 'resetHistoryBtn',
+   'shuffleBtn', 'undoBtn', 'printBtn', 'printHistoryBtn', 'printTentsBtn', 'printCheckoutBtn', 'resetHistoryBtn',
    'historyHint', 'resultsArea', 'warnArea', 'printTitle', 'msg', 'rosterHubSelect', 'rosterHubLoadBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.printTitle = document.getElementById('print-title');
   els.nameCount = document.getElementById('name-count');
   els.msg = document.getElementById('msg');
 
-  // state: { name, students: "raw text", roles: [..], mode: 'count'|'size', splitValue, history: { studentName: [roleName,...] (most recent last) }, lastGroups: [...] }
+  // state: { name, students: "raw text", roles: [{name, description}, ...],
+  //   stations: [{name, equipment}, ...], mode: 'count'|'size', splitValue,
+  //   history: { studentName: [roleName,...] (most recent last) },
+  //   lastGroups: [{ station: {name, equipment}|null, members: [{name, role}] }, ...],
+  //   checkoutLog: [{ outAt: iso|null, inAt: iso|null }, ...] parallel to lastGroups }
   var state = null;
 
   function escapeHtml(s) {
@@ -385,20 +439,31 @@
   });
 
   // ── Role list editor ────────────────────────────────────────────────────
+  // Each role is { name, description }. The description is optional and only
+  // ever shown on the printed table tents — it's the difference between a
+  // tent that says "Recorder" and one that says what a Recorder actually does.
   function renderRoleList() {
     els.roleList.innerHTML = state.roles.map(function (role, i) {
       return '<div class="role-row">' +
-        '<input type="text" data-role-idx="' + i + '" value="' + escapeHtml(role).replace(/"/g, '&quot;') + '">' +
-        '<button type="button" class="x" data-remove-role="' + i + '" title="Remove role">&#10005;</button>' +
+        '<div class="role-row-main">' +
+          '<input type="text" data-role-idx="' + i + '" data-role-field="name" value="' + escapeHtml(role.name).replace(/"/g, '&quot;') + '">' +
+          '<button type="button" class="x" data-remove-role="' + i + '" title="Remove role">&#10005;</button>' +
+        '</div>' +
+        '<input type="text" class="role-desc" data-role-idx="' + i + '" data-role-field="description" placeholder="Optional: what this role does (prints on tents)" value="' + escapeHtml(role.description || '').replace(/"/g, '&quot;') + '">' +
         '</div>';
     }).join('');
+  }
+
+  function roleDescription(name) {
+    var match = (state.roles || []).filter(function (r) { return r.name === name; })[0];
+    return match ? (match.description || '') : '';
   }
 
   els.roleList.addEventListener('input', function (e) {
     var input = e.target.closest('[data-role-idx]');
     if (!input) return;
     var idx = parseInt(input.dataset.roleIdx, 10);
-    state.roles[idx] = input.value;
+    state.roles[idx][input.dataset.roleField] = input.value;
     saveCurrent();
   });
 
@@ -412,10 +477,50 @@
   });
 
   els.addRoleBtn.addEventListener('click', function () {
-    state.roles.push('New Role');
+    state.roles.push({ name: 'New Role', description: '' });
     renderRoleList();
     saveCurrent();
-    var inputs = els.roleList.querySelectorAll('input[type="text"]');
+    var inputs = els.roleList.querySelectorAll('input[data-role-field="name"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
+  // ── Station / equipment list editor ─────────────────────────────────────
+  // Each station is { name, equipment }. Optional — an empty list means the
+  // tool only assigns groups and roles, no stations.
+  function renderStationList() {
+    var stations = state.stations || [];
+    els.stationList.innerHTML = stations.map(function (st, i) {
+      return '<div class="station-row">' +
+        '<input type="text" class="station-name" data-station-idx="' + i + '" data-station-field="name" placeholder="Station name" value="' + escapeHtml(st.name).replace(/"/g, '&quot;') + '">' +
+        '<input type="text" class="station-equip" data-station-idx="' + i + '" data-station-field="equipment" placeholder="Equipment (e.g. microscope, slides)" value="' + escapeHtml(st.equipment || '').replace(/"/g, '&quot;') + '">' +
+        '<button type="button" class="x" data-remove-station="' + i + '" title="Remove station">&#10005;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.stationList.addEventListener('input', function (e) {
+    var input = e.target.closest('[data-station-idx]');
+    if (!input) return;
+    var idx = parseInt(input.dataset.stationIdx, 10);
+    state.stations[idx][input.dataset.stationField] = input.value;
+    saveCurrent();
+  });
+
+  els.stationList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-station]');
+    if (!btn) return;
+    var idx = parseInt(btn.dataset.removeStation, 10);
+    state.stations.splice(idx, 1);
+    renderStationList();
+    saveCurrent();
+  });
+
+  els.addStationBtn.addEventListener('click', function () {
+    if (!state.stations) state.stations = [];
+    state.stations.push({ name: 'Station ' + (state.stations.length + 1), equipment: '' });
+    renderStationList();
+    saveCurrent();
+    var inputs = els.stationList.querySelectorAll('input[data-station-field="name"]');
     if (inputs.length) inputs[inputs.length - 1].focus();
   });
 
@@ -560,36 +665,79 @@
     if (state.history[name].length > 30) state.history[name].shift();
   }
 
+  // Assigns a station to each group. Shuffles the station order and cycles
+  // through it so every station gets used as evenly as possible; if there
+  // are fewer stations than groups, some groups necessarily share one.
+  function assignStationsToGroups(groupCount) {
+    var stations = (state.stations || []).filter(function (s) { return (s.name || '').trim(); });
+    if (!stations.length) return { assignments: groupCount ? new Array(groupCount).fill(null) : [], shortage: false };
+    var order = shuffle(stations);
+    var assignments = [];
+    for (var i = 0; i < groupCount; i++) assignments.push(order[i % order.length]);
+    return { assignments: assignments, shortage: stations.length < groupCount };
+  }
+
+  function deepClone(obj) {
+    return obj === undefined ? obj : JSON.parse(JSON.stringify(obj));
+  }
+
   function shuffleAll() {
     var names = studentNames();
     if (names.length < 1) { showMsg('Add at least one student name first.'); return; }
-    var roles = state.roles.map(function (r) { return r.trim(); }).filter(Boolean);
-    if (!roles.length) { showMsg('Add at least one role first.'); return; }
+    var roleNames = (state.roles || []).map(function (r) { return (r.name || '').trim(); }).filter(Boolean);
+    if (!roleNames.length) { showMsg('Add at least one role first.'); return; }
+
+    undoSnapshot = { lastGroups: deepClone(state.lastGroups), history: deepClone(state.history), checkoutLog: deepClone(state.checkoutLog) };
 
     var groups = makeGroups(names);
     var violations = findApartViolations(groups);
-    var result = groups.map(function (members) {
-      var assignment = assignRolesForGroup(members, roles);
+    var stationInfo = assignStationsToGroups(groups.length);
+    var result = groups.map(function (members, i) {
+      var assignment = assignRolesForGroup(members, roleNames);
       members.forEach(function (name) { recordHistory(name, assignment[name]); });
-      return members.map(function (name) { return { name: name, role: assignment[name] }; });
+      return {
+        station: stationInfo.assignments[i] || null,
+        members: members.map(function (name) { return { name: name, role: assignment[name] }; })
+      };
     });
 
     state.lastGroups = result;
+    state.checkoutLog = result.map(function () { return { outAt: null, inAt: null }; });
     saveCurrent();
     clearMsg();
+    var warnings = [];
     if (violations.length) {
-      els.warnArea.innerHTML = '<div class="warn-box">⚠ Could not keep ' + violations.length +
+      warnings.push('⚠ Could not keep ' + violations.length +
         ' pair' + (violations.length === 1 ? '' : 's') + ' apart with this group count: ' +
         violations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') +
-        '. Try more groups, or fewer keep-apart constraints.</div>';
-    } else {
-      els.warnArea.innerHTML = '';
+        '. Try more groups, or fewer keep-apart constraints.');
     }
+    if (stationInfo.shortage) {
+      warnings.push('⚠ Fewer stations than groups — some groups are sharing a station and its equipment.');
+    }
+    els.warnArea.innerHTML = warnings.length ? warnings.map(function (w) { return '<div class="warn-box">' + w + '</div>'; }).join('') : '';
     renderResults(result);
     renderHistoryHint();
+    els.undoBtn.disabled = false;
   }
 
   els.shuffleBtn.addEventListener('click', shuffleAll);
+
+  els.undoBtn.addEventListener('click', function () {
+    if (!undoSnapshot) return;
+    state.lastGroups = undoSnapshot.lastGroups;
+    state.history = undoSnapshot.history || {};
+    state.checkoutLog = undoSnapshot.checkoutLog || [];
+    undoSnapshot = null;
+    saveCurrent();
+    var violations = state.lastGroups ? findApartViolations(state.lastGroups.map(function (g) { return g.members.map(function (m) { return m.name; }); })) : [];
+    els.warnArea.innerHTML = violations.length ? '<div class="warn-box">⚠ This restored grouping still leaves ' + violations.length +
+      ' keep-apart pair' + (violations.length === 1 ? '' : 's') + ' together.</div>' : '';
+    renderResults(state.lastGroups);
+    renderHistoryHint();
+    els.undoBtn.disabled = true;
+    showMsg('Restored the previous groups and roles.', true);
+  });
 
   els.resetHistoryBtn.addEventListener('click', function () {
     if (!confirm('Clear role history for "' + state.name + '"? Everyone will look brand-new to the fairness algorithm.')) return;
@@ -607,20 +755,59 @@
   }
 
   // ── Rendering ────────────────────────────────────────────────────────────
+  function formatTime(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function stationLineHtml(station) {
+    if (!station) return '';
+    return '<div class="group-station"><strong>' + escapeHtml(station.name) + '</strong>' +
+      (station.equipment ? ' &mdash; ' + escapeHtml(station.equipment) : '') + '</div>';
+  }
+
+  function checkoutRowHtml(groupIdx, station) {
+    if (!station) return '';
+    var log = (state.checkoutLog && state.checkoutLog[groupIdx]) || { outAt: null, inAt: null };
+    var status, action, label;
+    if (log.inAt) { status = 'Returned ' + formatTime(log.inAt); action = ''; label = ''; }
+    else if (log.outAt) { status = 'Checked out ' + formatTime(log.outAt); action = 'return'; label = 'Mark returned'; }
+    else { status = 'Not checked out yet'; action = 'checkout'; label = 'Mark checked out'; }
+    var btn = action ? '<button type="button" class="secondary small" data-checkout-idx="' + groupIdx + '" data-checkout-action="' + action + '">' + label + '</button>' : '';
+    return '<div class="checkout-row"><span class="checkout-status">' + escapeHtml(status) + '</span>' + btn + '</div>';
+  }
+
   function renderResults(result) {
     if (!result || !result.length) {
       els.resultsArea.innerHTML = '<p class="empty-hint">Add a roster on the left, then click "Shuffle groups &amp; roles."</p>';
       return;
     }
     els.resultsArea.innerHTML = '<div class="groups-grid">' + result.map(function (group, i) {
-      return '<div class="group-card"><h3>Group ' + (i + 1) + '</h3><ul>' +
-        group.map(function (s) {
+      return '<div class="group-card"><h3>Group ' + (i + 1) + '</h3>' +
+        stationLineHtml(group.station) +
+        '<ul>' + group.members.map(function (s) {
           var roleText = s.role || MEMBER_LABEL;
           var cls = s.role ? 'role' : 'role member';
           return '<li><span class="name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
-        }).join('') + '</ul></div>';
+        }).join('') + '</ul>' +
+        checkoutRowHtml(i, group.station) +
+        '</div>';
     }).join('') + '</div>';
   }
+
+  els.resultsArea.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-checkout-idx]');
+    if (!btn) return;
+    var idx = parseInt(btn.dataset.checkoutIdx, 10);
+    if (!state.checkoutLog) state.checkoutLog = [];
+    if (!state.checkoutLog[idx]) state.checkoutLog[idx] = { outAt: null, inAt: null };
+    var now = new Date().toISOString();
+    if (btn.dataset.checkoutAction === 'checkout') state.checkoutLog[idx].outAt = now;
+    else if (btn.dataset.checkoutAction === 'return') state.checkoutLog[idx].inAt = now;
+    saveCurrent();
+    renderResults(state.lastGroups);
+  });
 
   els.printBtn.addEventListener('click', function () {
     if (!state.lastGroups || !state.lastGroups.length) { showMsg('Shuffle groups before printing.'); return; }
@@ -633,12 +820,20 @@
   // folding the sheet along the middle dashed line makes it stand up like a
   // tent with upright text on both faces — set one out at each lab station.
   function tentPanelHtml(group, groupNum) {
-    var rows = group.map(function (s) {
+    var stationHtml = '';
+    if (group.station) {
+      stationHtml = '<div class="tent-station">' + escapeHtml(group.station.name) +
+        (group.station.equipment ? '<span class="equip">' + escapeHtml(group.station.equipment) + '</span>' : '') +
+        '</div>';
+    }
+    var rows = group.members.map(function (s) {
       var roleText = s.role || MEMBER_LABEL;
       var cls = s.role ? 't-role' : 't-role member';
-      return '<li><span class="t-name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
+      var desc = s.role ? roleDescription(s.role) : '';
+      return '<li><span class="t-name-row"><span class="t-name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></span>' +
+        (desc ? '<span class="t-role-desc">' + escapeHtml(desc) + '</span>' : '') + '</li>';
     }).join('');
-    return '<div class="tent-group">Group ' + groupNum + '</div><ul class="tent-list">' + rows + '</ul>';
+    return '<div class="tent-group">Group ' + groupNum + '</div>' + stationHtml + '<ul class="tent-list">' + rows + '</ul>';
   }
 
   function tentsHtml(result) {
@@ -659,6 +854,34 @@
     els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Lab Group Table Tents — ' + new Date().toLocaleDateString();
     els.warnArea.innerHTML = '';
     els.resultsArea.innerHTML = tentsHtml(state.lastGroups);
+    window.print(); // blocks until the dialog closes, so this restores the live view right after
+    els.resultsArea.innerHTML = savedResultsHtml;
+    els.warnArea.innerHTML = savedWarnHtml;
+  });
+
+  // ── Equipment checkout sheet (one row per group with a station) ──────────
+  function checkoutSheetHtml() {
+    var rows = (state.lastGroups || []).map(function (group, i) {
+      if (!group.station) return '';
+      var log = (state.checkoutLog && state.checkoutLog[i]) || { outAt: null, inAt: null };
+      var out = log.outAt ? formatTime(log.outAt) : '________';
+      var back = log.inAt ? formatTime(log.inAt) : '________';
+      return '<tr><td>Group ' + (i + 1) + '</td><td>' + escapeHtml(group.station.name) + '</td>' +
+        '<td>' + escapeHtml(group.station.equipment || '') + '</td><td>' + out + '</td><td>' + back + '</td></tr>';
+    }).filter(Boolean).join('');
+    if (!rows) return '<p class="empty-hint">No stations assigned to the current groups. Add stations and shuffle before printing a checkout sheet.</p>';
+    return '<table class="history-table"><thead><tr><th>Group</th><th>Station</th><th>Equipment</th><th>Checked out</th><th>Returned</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>';
+  }
+
+  els.printCheckoutBtn.addEventListener('click', function () {
+    if (!state.lastGroups || !state.lastGroups.length) { showMsg('Shuffle groups before printing a checkout sheet.'); return; }
+    if (!state.lastGroups.some(function (g) { return g.station; })) { showMsg('No stations assigned — add stations and shuffle first.'); return; }
+    var savedResultsHtml = els.resultsArea.innerHTML;
+    var savedWarnHtml = els.warnArea.innerHTML;
+    els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Equipment Checkout Sheet — ' + new Date().toLocaleDateString();
+    els.warnArea.innerHTML = '';
+    els.resultsArea.innerHTML = checkoutSheetHtml();
     window.print(); // blocks until the dialog closes, so this restores the live view right after
     els.resultsArea.innerHTML = savedResultsHtml;
     els.warnArea.innerHTML = savedWarnHtml;
@@ -781,25 +1004,65 @@
     els.splitValue.value = state.splitValue || 4;
     syncSplitLabel();
     renderRoleList();
+    renderStationList();
     onNamesChanged(false);
     renderPairList();
     els.warnArea.innerHTML = '';
     renderResults(state.lastGroups);
     renderHistoryHint();
+    undoSnapshot = null;
+    els.undoBtn.disabled = true;
+  }
+
+  /** Roles used to be a plain array of strings; normalize either shape into
+      { name, description }. */
+  function normalizeRoles(roles) {
+    if (!Array.isArray(roles) || !roles.length) return DEFAULT_ROLES.map(function (r) { return { name: r.name, description: r.description }; });
+    return roles.map(function (r) {
+      if (typeof r === 'string') return { name: r, description: '' };
+      return { name: (r && r.name) || '', description: (r && r.description) || '' };
+    });
+  }
+
+  function normalizeStations(stations) {
+    if (!Array.isArray(stations)) return [];
+    return stations.map(function (s) {
+      if (typeof s === 'string') return { name: s, equipment: '' };
+      return { name: (s && s.name) || '', equipment: (s && s.equipment) || '' };
+    });
+  }
+
+  /** lastGroups used to be an array of arrays of {name, role}; normalize into
+      an array of { station, members } so older saved/exported rosters still load. */
+  function normalizeLastGroups(lastGroups) {
+    if (!Array.isArray(lastGroups)) return null;
+    return lastGroups.map(function (g) {
+      if (Array.isArray(g)) return { station: null, members: g };
+      return { station: (g && g.station) || null, members: (g && Array.isArray(g.members)) ? g.members : [] };
+    });
   }
 
   /** Backfills defaults for a roster object loaded from anywhere (this
       browser's storage, a JSON import) so every field a older/partial
       record might be missing still has a safe value. */
   function normalizeRosterData(loaded, name) {
+    var lastGroups = normalizeLastGroups(loaded.lastGroups);
+    var checkoutLog = Array.isArray(loaded.checkoutLog) ? loaded.checkoutLog : [];
+    if (lastGroups) {
+      checkoutLog = lastGroups.map(function (g, i) { return checkoutLog[i] || { outAt: null, inAt: null }; });
+    } else {
+      checkoutLog = [];
+    }
     return {
       name: name,
       students: (typeof loaded.students === 'string') ? loaded.students : '',
-      roles: (Array.isArray(loaded.roles) && loaded.roles.length) ? loaded.roles : DEFAULT_ROLES.slice(),
+      roles: normalizeRoles(loaded.roles),
+      stations: normalizeStations(loaded.stations),
       mode: loaded.mode === 'size' ? 'size' : 'count',
       splitValue: loaded.splitValue || 4,
       history: (loaded.history && typeof loaded.history === 'object') ? loaded.history : {},
-      lastGroups: loaded.lastGroups || null,
+      lastGroups: lastGroups,
+      checkoutLog: checkoutLog,
       keepApart: Array.isArray(loaded.keepApart) ? loaded.keepApart : []
     };
   }
