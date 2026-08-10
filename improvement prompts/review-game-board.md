@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 5 (PR #TBD): four Quick Wins shipped, one of which
+**2026-08-10 — Round 5 (PR #56): four Quick Wins shipped, one of which
 replaced an existing mechanic rather than adding to it.**
 
 - **Done — Undo the last score change (P11).** A generic undo stack (not

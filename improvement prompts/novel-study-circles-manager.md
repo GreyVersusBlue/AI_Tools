@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 5 (PR #TBD): three Quick Wins shipped.** `state.roles`
+**2026-08-10 — Round 5 (PR #56): three Quick Wins shipped.** `state.roles`
 changed shape from `[string, ...]` to `[{name, prompts}, ...]`; a
 `normalizeRoles()` helper migrates old string-shaped roles (including ones
 inside a JSON import) on load, so existing saved projects and old exports
