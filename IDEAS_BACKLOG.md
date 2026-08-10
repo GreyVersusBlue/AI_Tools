@@ -10,7 +10,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Parent/Guardian Contact Log | Log a call, email, or note home per student — date, method, and outcome — for quick reference before a conference or a difficult phone call. |
 | Duty Roster Builder | Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board. |
 | Sub Note / Feedback Slip Generator | A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow. |
 | Staff Directory / Quick-Reference Builder | Build a printable staff directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |

@@ -56,6 +56,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Tournament Bracket & Station Rotation | `Tools/pe-tournament-stations.html` | A station rotation timer with named stations and groups, plus a tournament bracket for PE units. |
 | Prompt Builder | `Tools/prompt-builder.html` | Answer a guided form about what you're building — audience, tone, format, guardrails — and get a ready-to-use prompt for whatever AI assistant you use, with task presets, prompt history, and a shareable link. |
 | QR Code Generator | `Tools/qr-code-generator.html` | Turn a link or short text into a printable QR code, with an optional logo in the center. |
+| Parent/Guardian Contact Log | `Tools/parent-contact-log.html` | Log a call, email, or note home per student — date, method, and outcome — with a per-student contact count and a printable history, for quick reference before a conference or a difficult phone call. |
 
 ## Using these
 
