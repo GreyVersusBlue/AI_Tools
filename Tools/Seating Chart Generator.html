@@ -122,6 +122,7 @@
   .btn.sm{padding:5px 9px; font-size:12.5px;}
   .btn.danger{background:var(--card);color:var(--warn);border-color:color-mix(in srgb, var(--warn) 35%, transparent);}
   .btn.danger:hover{background:var(--color-danger-bg);}
+  .btn.ghost.on{background:var(--gold); border-color:var(--gold); color:#fff;}
   .row{display:flex; gap:8px; flex-wrap:wrap;}
   .row.tight{gap:6px;}
 
@@ -175,6 +176,20 @@
   .privacy p:last-child{margin-bottom:0;}
   .privacy code{background:var(--card); border:1px solid var(--teal-soft); border-radius:0; padding:0 3px;}
   .privacy.blocked{background:var(--color-danger-bg); border-color:color-mix(in srgb, var(--warn) 35%, transparent); color:var(--color-danger); opacity:1;}
+
+  /* ---------- storage-usage readout (P12) ---------- */
+  .storage{margin-top:10px; font-size:11.5px; opacity:0.85;}
+  .storage .bar{height:6px; background:var(--line); border-radius:0; margin-top:5px; overflow:hidden;}
+  .storage .fill{height:100%; background:var(--teal); width:0%;}
+  .storage.warn .fill{background:var(--gold);}
+  .storage.crit .fill{background:var(--warn);}
+  .storage.crit{color:var(--warn); font-weight:600;}
+
+  /* ---------- layouts (MF2) ---------- */
+  .layout-row{display:flex; align-items:center; gap:6px; background:var(--card);
+    border:1px solid var(--line); padding:5px 8px; font-size:13px; margin-bottom:5px;}
+  .layout-row.active{border-left:3px solid var(--teal); font-weight:600;}
+  .layout-row .ln{flex:1;}
 
   /* ---------- main / floor ---------- */
   .main{flex:1; display:flex; flex-direction:column; min-width:0; height:100vh;}
@@ -250,6 +265,23 @@
     background:var(--gold); color:#fff; font-size:9px; font-weight:700; padding:1px 6px; border-radius:0; display:none;}
   .desk.selected .selnote{display:block;}
   .desk.selected{box-shadow:0 0 0 3px var(--gold);}
+
+  /* Seat numbers: a sibling of .seat, not inside it, so a screen reader (and
+     anything that reads a seat's textContent) still sees just the name. */
+  .desk .seatnum{
+    position:absolute; bottom:-8px; right:-6px; background:var(--blue); color:#fff;
+    font-size:9px; font-weight:700; padding:1px 6px; border-radius:0; display:none; z-index:4;
+  }
+  .floor.numbered .desk .seatnum{display:block;}
+
+  /* Mirror view (student's-eye vs teacher's-eye): flip the whole layer, then
+     flip every piece of legible content back so text and photos stay upright.
+     Positions mirror around the layer's own box; content does not. */
+  .desk-layer.mirrored .seat,
+  .desk-layer.mirrored .seatnum,
+  .desk-layer.mirrored .lockbadge,
+  .desk-layer.mirrored .selnote,
+  .desk-layer.mirrored .desk-ctrls{ transform:scaleX(-1); }
 
   /* unassigned pool */
   .pool-wrap{border-top:1px solid var(--line); background:var(--card); padding:12px 22px; max-height:160px; overflow-y:auto;}
@@ -338,17 +370,41 @@
     .desk-ctrls,.selnote,.lockbadge{display:none !important;}
     .print-head{display:block !important;}
     body,.desk,.desk .seat,.print-head p{background:#fff; color:#000 !important;}
+    .seatnum{background:#fff !important; color:#000 !important; border:1px solid #000;}
     /* Print-all mode swaps the live single-section floor for a stack of static
        per-section snapshots (built in preparePrintAll()) so nothing here has to
        duplicate the trim/scale math above — see printLayoutFor() in the script. */
     body.printing-all .app{display:none !important;}
     body.printing-all #printAllWrap{display:block;}
     #printAllWrap .print-page + .print-page{page-break-before:always;}
+
+    /* Quick Win: print with names and/or photos off — a blank chart for a
+       seating quiz, or just a photo-free version for a sub. Applied as a body
+       class right before printing (applyPrintClasses() in the script) rather
+       than touched on screen, so the live floor never loses its labels. */
+    body.print-hide-names .desk .seat > span:last-child{display:none;}
+    body.print-hide-photos .desk .seat .photo{display:none;}
+    /* Print blank: a one-off, regardless of the persisted toggles above —
+       no names, no photos, seat numbers forced on since they're the only
+       thing left to write against. */
+    body.printing-blank .desk .seat > span:last-child{display:none;}
+    body.printing-blank .desk .seat .photo{display:none;}
+    body.printing-blank .seatnum{display:block !important;}
+
+    .print-extra{display:block; margin-top:16px; page-break-inside:avoid;}
+    .print-extra:empty{display:none; margin-top:0;}
+    .print-extra h3{font-family: var(--font-heading); font-size:14px; color:var(--blue); margin:0 0 5px;}
+    .print-extra ul{margin:0 0 10px; padding-left:18px; font-size:12px; line-height:1.5;}
+    .print-violations{border:1px solid #000; padding:8px 12px; margin-bottom:10px;}
+    .print-notes ul{columns:2; column-gap:22px;}
+    .sub-export-flag{display:none;}
+    body.printing-sub .sub-export-flag{display:block; text-align:center; font-size:10.5px; opacity:0.7; margin-top:2px;}
   }
   .print-head{display:none; text-align:center; margin:0 0 10px;}
   .print-head h2{font-family: var(--font-heading); font-size:20px; color:var(--blue);}
   .print-head p{margin:2px 0 0; font-size:11px; opacity:0.65; letter-spacing:.3px;}
   #printAllWrap{display:none;}
+  .print-extra{display:none;}
 </style>
 </head>
 <body>
@@ -392,6 +448,20 @@
       </div>
 
       <div class="block">
+        <h2>Layouts <span class="count" id="layoutCount">0</span></h2>
+        <div id="layoutList"></div>
+        <div class="row tight" style="margin-top:2px;">
+          <input type="text" id="newLayoutName" placeholder="Name this arrangement (e.g. Testing rows)" aria-label="New layout name">
+          <button class="btn sm teal" onclick="saveLayout()">Save current as&hellip;</button>
+        </div>
+        <p class="hint">Save the desks and seats on the floor right now as a named layout &mdash;
+          &ldquo;Testing rows&rdquo;, &ldquo;Group pods&rdquo;, &ldquo;Discussion circle&rdquo;
+          &mdash; then switch between them any time. <b>Switching replaces the floor</b> with the
+          saved layout, so save first if you want to keep what's there. The roster and Keep
+          Apart / Put Together rules are shared by every layout in this section.</p>
+      </div>
+
+      <div class="block">
         <h2>Roster <span class="count" id="rosterCount">0</span></h2>
         <div class="row tight">
           <select id="rosterHubSelect" aria-label="Load a saved roster"><option value="">Load a saved roster&hellip;</option></select>
@@ -407,15 +477,22 @@
         </div>
         <div class="roster" id="rosterList"></div>
         <input type="file" id="photoFile" accept="image/*" style="display:none;">
+        <input type="file" id="bulkPhotoFile" accept="image/*" multiple style="display:none;">
+        <div class="row tight" style="margin-top:8px;">
+          <button class="btn sm ghost" onclick="chooseBulkPhotos()">Bulk photo import&hellip;</button>
+        </div>
         <p class="hint">Paste straight from a spreadsheet: extra columns, row numbers and
           duplicates are dropped. Click the flag to mark a student who needs a specific spot.
           Click the pencil for a note. Click the circle to add a photo &mdash; useful for a
-          substitute matching faces to names. Photos are downscaled before saving and stay in
-          this browser like everything else.</p>
+          substitute matching faces to names. <b>Bulk photo import</b> matches a whole folder of
+          image files to roster names by filename in one go (&ldquo;Ada Lovelace.jpg&rdquo;,
+          &ldquo;lovelace_ada_2.png&rdquo; and similar all match). Photos are downscaled before
+          saving and stay in this browser like everything else.</p>
         <p class="hint"><b>Notes stay with the chart</b> in this browser and inside any file you
           export, and they never appear on the printed page. Keep them short and practical
           &mdash; &ldquo;front row, vision&rdquo; rather than anything from a medical or IEP
           document.</p>
+        <div class="storage" id="storageBox"></div>
       </div>
 
       <div class="block">
@@ -483,8 +560,26 @@
       <div class="sep"></div>
       <div class="grp">
         <button class="btn sm ghost" id="zoomBtn" onclick="toggleZoom()" title="Fit the room to the window, or show it full size">Actual size</button>
+        <button class="btn sm ghost" id="mirrorBtn" onclick="toggleMirror()"
+                title="Flip the floor left/right to see it the way students facing the front do">Mirror view</button>
+        <button class="btn sm ghost" id="numberBtn" onclick="toggleNumbered()"
+                title="Show a seat number on every desk, on screen and on paper">Seat numbers</button>
+      </div>
+      <div class="sep"></div>
+      <div class="grp">
+        <span class="status">Print:</span>
+        <label class="check" style="margin:0;"><input type="checkbox" id="printNamesChk" onchange="setPrintOpt('printNames', this.checked)"> Names</label>
+        <label class="check" style="margin:0;"><input type="checkbox" id="printPhotosChk" onchange="setPrintOpt('printPhotos', this.checked)"> Photos</label>
+        <label class="check" style="margin:0;"><input type="checkbox" id="printViolChk" onchange="setPrintOpt('printViolations', this.checked)"> Conflicts</label>
+      </div>
+      <div class="sep"></div>
+      <div class="grp">
         <button class="btn sm ghost" onclick="printChart()">Print</button>
         <button class="btn sm ghost" onclick="printAllSections()" title="One class period per printed page">Print all sections</button>
+        <button class="btn sm ghost" onclick="printBlankChart()"
+                title="Print with no names or photos, seat numbers forced on — for a seating quiz or a sub to fill in">Print blank</button>
+        <button class="btn sm ghost" onclick="printSubExport()"
+                title="One page: this section's chart, plus notes and keep-apart rules, ready to hand a substitute">Sub export</button>
       </div>
       <div class="sep"></div>
       <span class="grp" id="saveBar"></span>
@@ -503,6 +598,7 @@
           <div class="desk-layer" id="deskLayer"></div>
         </div>
       </div>
+      <div class="print-extra" id="printExtra"></div>
     </div>
 
     <div class="pool-wrap">
@@ -541,9 +637,10 @@
 
 <script type="module">
 import {
-  ROOM, snap, freshState, newSection, createSeatingSlot, repairState,
+  ROOM, snap, freshState, newSection, newLayout, createSeatingSlot, repairState,
   assignSeats, checkConstraints, pickNext, parseRoster,
   gridDesks, rowDesks, nextSpot, contentBox,
+  storageReport, matchPhotoFilenames,
 } from './seating-chart/seating.mjs';
 import { mountSaveBar, defaultStorage } from '../assets/js/gvb-save.js';
 const { getParam, decodeState, clearParam, mountShareControl } = window.StateLink;
@@ -573,6 +670,9 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 function sec(){ return state.sections.find(s => s.id === state.active) || state.sections[0]; }
 function studentById(id){ return sec().students.find(s => s.id === id); }
 function nameOf(id){ const s = studentById(id); return s ? s.name : '(removed)'; }
+/** Same lookup, but scoped to a specific section rather than the active one —
+    print-all and the sub export walk every section, not just sec(). */
+function nameIn(section, id){ const s = section.students.find(x => x.id === id); return s ? s.name : '(removed)'; }
 
 /** Every change funnels through here, so nothing can be changed without being saved. */
 let erasing = false;
@@ -601,6 +701,30 @@ function applyZoom(){
 }
 function toggleZoom(){ state.zoom = state.zoom === 'full' ? 'fit' : 'full'; applyZoom(); touch(); }
 window.addEventListener('resize', () => { if (state.zoom !== 'full') applyZoom(); });
+
+/* ---- mirror view / numbered seats — screen and print share one toggle each ---- */
+function toggleMirror(){ state.mirror = !state.mirror; renderFloor(); refreshToggleButtons(); touch(); }
+function toggleNumbered(){ state.numbered = !state.numbered; refreshToggleButtons(); el('floor').classList.toggle('numbered', state.numbered); touch(); }
+function refreshToggleButtons(){
+  const m = el('mirrorBtn'), n = el('numberBtn');
+  if (m) m.classList.toggle('on', !!state.mirror);
+  if (n) n.classList.toggle('on', !!state.numbered);
+}
+/** translate() alone for a normal render, scaleX(-1) folded in when mirrored —
+    combined in one string because setting the layer's transform twice (once
+    for mirror, once for print trimming) would just overwrite itself. */
+function layerTransform(tx, ty, mirror){
+  return (mirror ? 'scaleX(-1) ' : '') + `translate(${tx}px, ${ty}px)`;
+}
+
+function setPrintOpt(key, on){ state[key] = !!on; touch(); }
+function applyPrintClasses(){
+  document.body.classList.toggle('print-hide-names', !state.printNames);
+  document.body.classList.toggle('print-hide-photos', !state.printPhotos);
+}
+function clearPrintClasses(){
+  document.body.classList.remove('print-hide-names', 'print-hide-photos', 'printing-blank', 'printing-sub');
+}
 
 let pickedSet = new Set(), pickedSection = null, lastPicked = null;
 function pickStudent(){
@@ -672,6 +796,80 @@ function duplicateSection(){
   state.active = copy.id;
   renderAll();
   say(`Duplicated the layout as "${name}". Roster and seats start empty.`, 'good');
+}
+
+/* ============================================================
+   Layouts (MF2) — several named desk+seat arrangements per section, sharing
+   the one roster and the one set of Keep Apart / Put Together rules. What's
+   in s.desks/s.assign is always "the current arrangement"; a saved layout is
+   a snapshot of that pair, switched in and out wholesale.
+============================================================ */
+function renderLayouts(){
+  const s = sec();
+  el('layoutCount').textContent = s.layouts.length;
+  const list = el('layoutList');
+  list.innerHTML = '';
+  if (!s.layouts.length){
+    list.innerHTML = '<p class="hint" style="margin:0;">No saved layouts yet for this section.</p>';
+    return;
+  }
+  s.layouts.forEach(l => {
+    const row = document.createElement('div');
+    row.className = 'layout-row';
+    row.innerHTML = `
+      <span class="ln">${esc(l.name)}</span>
+      <button class="icon-btn" title="Switch the floor to &quot;${esc(l.name)}&quot;" aria-label="Switch to layout ${esc(l.name)}" onclick="loadLayout('${l.id}')">&#8635;</button>
+      <button class="icon-btn" title="Rename &quot;${esc(l.name)}&quot;" aria-label="Rename layout ${esc(l.name)}" onclick="renameLayout('${l.id}')">&#9998;</button>
+      <button class="icon-btn" title="Delete &quot;${esc(l.name)}&quot;" aria-label="Delete layout ${esc(l.name)}" onclick="deleteLayout('${l.id}')">&times;</button>`;
+    list.appendChild(row);
+  });
+}
+function saveLayout(){
+  const inp = el('newLayoutName');
+  const name = (inp.value || '').trim() || `Layout ${sec().layouts.length + 1}`;
+  const s = sec();
+  if (!s.desks.length){ say('Nothing on the floor to save yet.', 'bad'); return; }
+  pushUndo();
+  s.layouts.push(newLayout(name, s.desks, s.assign));
+  inp.value = '';
+  renderAll();
+  say(`Saved the current arrangement as "${name}".`, 'good');
+}
+function renameLayout(id){
+  const s = sec();
+  const l = s.layouts.find(x => x.id === id);
+  if (!l) return;
+  const name = prompt('Rename this layout:', l.name);
+  if (name && name.trim()){ pushUndo(); l.name = name.trim(); renderAll(); }
+}
+function deleteLayout(id){
+  const s = sec();
+  const l = s.layouts.find(x => x.id === id);
+  if (!l) return;
+  if (!confirm(`Delete the "${l.name}" layout? The floor's current arrangement is not affected.`)) return;
+  pushUndo();
+  s.layouts = s.layouts.filter(x => x.id !== id);
+  renderAll();
+}
+/** Replaces the floor with a saved layout. The roster may have changed since
+    it was saved, so the assign is re-cleaned against the students who still
+    exist rather than trusted as-is. */
+function loadLayout(id){
+  const s = sec();
+  const l = s.layouts.find(x => x.id === id);
+  if (!l) return;
+  pushUndo();
+  const studentIds = new Set(s.students.map(st => st.id));
+  s.desks = l.desks.map(d => ({ ...d }));
+  const deskIds = new Set(s.desks.map(d => d.id));
+  const assign = {};
+  for (const [deskId, sid] of Object.entries(l.assign)) {
+    if (deskIds.has(deskId) && studentIds.has(sid)) assign[deskId] = sid;
+  }
+  s.assign = assign;
+  selectedStudent = null;
+  renderAll();
+  say(`Switched to the "${l.name}" layout.`, 'good');
 }
 
 /* ============================================================
@@ -753,6 +951,38 @@ el('photoFile').addEventListener('change', function (){
     input.value = '';
   });
 });
+/** Bulk photo import (Quick Win): a whole batch of image files matched to
+    roster names by filename in one pass, instead of the circle-by-circle
+    flow above. One undo entry for the whole batch, same as any other bulk
+    change to the roster. */
+function chooseBulkPhotos(){ el('bulkPhotoFile').click(); }
+el('bulkPhotoFile').addEventListener('change', function (){
+  const input = el('bulkPhotoFile');
+  const files = input.files ? [...input.files] : [];
+  if (!files.length){ input.value = ''; return; }
+  const s = sec();
+  const { matches, unmatched } = matchPhotoFilenames(files.map(f => f.name), s.students);
+  if (!matches.length){
+    say(`None of those filenames matched a name on the roster. ${unmatched.length} file(s) left unmatched.`, 'bad');
+    input.value = '';
+    return;
+  }
+  pushUndo();
+  const byName = new Map(files.map(f => [f.name, f]));
+  Promise.all(matches.map(m => {
+    const file = byName.get(m.filename);
+    if (!file) return Promise.resolve();
+    return window.SeatingPhoto.downscaleImage(file).then(dataUrl => {
+      const st = s.students.find(x => x.id === m.studentId);
+      if (st) st.photo = dataUrl;
+    }).catch(() => { /* one bad file in a batch shouldn't stop the rest */ });
+  })).then(() => {
+    renderAll();
+    say(`Matched ${matches.length} photo${matches.length === 1 ? '' : 's'} to students by filename`
+      + (unmatched.length ? `, ${unmatched.length} file(s) left unmatched.` : '.'), 'good');
+    input.value = '';
+  });
+});
 function sortRoster(){
   pushUndo();
   sec().students.sort((a, b) => a.name.localeCompare(b.name));
@@ -783,6 +1013,27 @@ function renderRoster(){
   });
   el('rosterCount').textContent = sec().students.length;
   el('lastFirst').checked = !!state.lastFirst;
+}
+
+/* ---- storage-usage readout (P12) ----
+   Photos are base64 text inside the one localStorage key this tool writes,
+   with no server-side limit to fall back on — the failure mode without this
+   is a silent write failure that loses a period's work. Measured against the
+   ~5MB most browsers cap a single origin's localStorage at. */
+function renderStorage(){
+  const box = el('storageBox');
+  if (!box) return;
+  const report = storageReport(state);
+  const kb = Math.round(report.totalBytes / 1024);
+  const quotaKb = Math.round(report.quotaBytes / 1024);
+  const pct = Math.min(100, report.pct * 100);
+  box.className = 'storage' + (report.pct > 0.85 ? ' crit' : report.pct > 0.6 ? ' warn' : '');
+  const photoLine = report.photoCount
+    ? ` &mdash; ${report.photoCount} photo${report.photoCount === 1 ? '' : 's'} (~${Math.round(report.photoBytes / 1024)} KB)`
+    : '';
+  box.innerHTML = `<div>${kb.toLocaleString()} KB of ~${quotaKb.toLocaleString()} KB used (${pct.toFixed(1)}%)${photoLine}</div>`
+    + `<div class="bar"><div class="fill" style="width:${pct}%;"></div></div>`
+    + (report.pct > 0.85 ? `<div>Getting close to what this browser will hold. Photos are the biggest thing here — remove a few, or use <b>Save to file</b> and start a fresh browser profile.</div>` : '');
 }
 
 /* ============================================================
@@ -910,6 +1161,10 @@ function reportConstraints(r){
 function renderFloor(){
   const layer = el('deskLayer');
   layer.innerHTML = '';
+  layer.className = 'desk-layer' + (state.mirror ? ' mirrored' : '');
+  layer.style.transform = state.mirror ? 'scaleX(-1)' : '';
+  const floorEl = el('floor');
+  if (floorEl) floorEl.classList.toggle('numbered', !!state.numbered);
   const s = sec();
   const total = s.desks.length;
   s.desks.forEach((d, i) => {
@@ -932,6 +1187,7 @@ function renderFloor(){
       + `</button>`
       + `<span class="selnote">moving</span>`
       + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : ``)
+      + `<span class="seatnum" aria-hidden="true">${i + 1}</span>`
       + `<span class="desk-ctrls">`
       +   `<button class="desk-ctrl" data-act="rot" tabindex="-1" title="Rotate desk (R)" aria-hidden="true">&#8635;</button>`
       +   `<button class="desk-ctrl ${d.locked ? 'on' : ''}" data-act="lock" tabindex="-1" title="Pin this seat so Shuffle keeps it (P)" aria-hidden="true">&#9679;</button>`
@@ -1006,6 +1262,13 @@ function deskPointerDown(ev, id, node){
   if (ev.target.closest('.desk-ctrl')) return;
   if (ev.target.closest('.seat') && sec().assign[id]) return;   // that's a student drag
   if (ev.button !== 0) return;
+  // The drag math below maps screen pixels to room pixels assuming an
+  // unmirrored floor. Mirror view flips that mapping, so free-dragging a desk
+  // while mirrored would move it opposite the pointer. Tap-to-place, drag-drop
+  // assignment, keyboard nudging and the desk buttons all still work — they
+  // don't do their own coordinate math, the browser's hit-testing does — this
+  // guard only turns off picking a desk up and dragging it by hand.
+  if (state.mirror) return;
   const d = sec().desks.find(x => x.id === id);
   const floorRect = el('floor').getBoundingClientRect();
   moving = {
@@ -1169,6 +1432,32 @@ function printMetaLine(s){
     + (unseated ? ` · ${unseated} not seated` : '');
 }
 
+/** Plain-English rule conflicts for a printed page — the on-screen version
+    (reportConstraints) is a status-bar sentence; this is a list a substitute
+    can act on. Returns '' when the section has nothing to report, so callers
+    can append it unconditionally and rely on .print-extra:empty to hide it. */
+function violationsHTML(section, report){
+  if (report.apartOK && report.togetherOK) return '';
+  const rows = [];
+  report.apartBroken.forEach(([a, b]) =>
+    rows.push(`<li>${esc(nameIn(section, a))} and ${esc(nameIn(section, b))} are seated next to each other, but should be kept apart.</li>`));
+  report.togetherBroken.forEach(([a, b]) =>
+    rows.push(`<li>${esc(nameIn(section, a))} and ${esc(nameIn(section, b))} should sit together, but are not seated next to each other.</li>`));
+  if (!rows.length) return '';
+  return `<div class="print-violations"><h3>Seating rule conflicts</h3><ul>${rows.join('')}</ul></div>`;
+}
+/** Per-student notes for the sub export only — the regular chart print never
+    shows these (see the CSS note by .desk .seat above): a note is the most
+    sensitive thing on this screen, and a printed chart gets left on a desk.
+    The sub export is the one place that is explicitly, on purpose, for
+    someone else to read them. */
+function notesHTML(section){
+  const withNotes = section.students.filter(st => st.note && st.note.trim());
+  if (!withNotes.length) return '';
+  const rows = withNotes.map(st => `<li><b>${esc(st.name)}</b> &mdash; ${esc(st.note.trim())}</li>`).join('');
+  return `<div class="print-notes"><h3>Notes</h3><ul>${rows}</ul></div>`;
+}
+
 function preparePrint(){
   const s = sec();
   const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks);
@@ -1179,13 +1468,24 @@ function preparePrint(){
   if (!printRestore) printRestore = { floorW: floor.style.width, floorH: floor.style.height, layer: layer.style.transform };
   floor.style.width = w + 'px';
   floor.style.height = h + 'px';
-  layer.style.transform = `translate(${-box.x + pad}px, ${-box.y + topRoom}px)`;
+  layer.style.transform = layerTransform(-box.x + pad, -box.y + topRoom, state.mirror);
   document.documentElement.style.setProperty('--fscale', String(fit));
   wrap.style.width = (w * fit) + 'px';
   wrap.style.height = (h * fit) + 'px';
 
   el('printTitle').textContent = s.name;
   el('printMeta').textContent = printMetaLine(s);
+
+  // Blank print stays properly nameless: a rule conflict would name the two
+  // students it's about, so it's the one mode that never gets the extras.
+  const extra = el('printExtra');
+  if (printMode === 'blank') extra.innerHTML = '';
+  else if (printMode === 'sub') {
+    extra.innerHTML = `<p class="sub-export-flag">For the substitute &mdash; includes student notes, not shown on a normal print.</p>`
+      + violationsHTML(s, checkConstraints(s)) + notesHTML(s);
+  } else {
+    extra.innerHTML = state.printViolations ? violationsHTML(s, checkConstraints(s)) : '';
+  }
 }
 function restoreAfterPrint(){
   if (printRestore){
@@ -1211,7 +1511,7 @@ function restoreAfterPrint(){
    mean juggling as many beforeprint/afterprint round trips as there are
    sections. #printAllWrap and the CSS it comes with (body.printing-all) are
    what actually put these pages on paper instead of the live one. */
-function deskNodeForPrint(d, i, total, s){
+function deskNodeForPrint(d, i, total, s, opts){
   const sid = s.assign[d.id];
   const st = sid ? s.students.find(x => x.id === sid) : null;
   const node = document.createElement('div');
@@ -1221,13 +1521,21 @@ function deskNodeForPrint(d, i, total, s){
   const label = st
     ? `Seat ${i + 1} of ${total}, ${st.name}${st.flag ? ', flagged' : ''}${d.locked ? ', pinned' : ''}`
     : `Seat ${i + 1} of ${total}, empty`;
+  const hideText = opts.showNames === false;
+  const showPhoto = st && opts.showPhotos !== false && st.photo;
+  const text = hideText ? '' : (st ? esc(st.name) : 'empty');
   node.innerHTML = `<span class="seat" aria-label="${esc(label)}">`
-    + (st && st.photo ? `<img class="photo" src="${esc(st.photo)}" alt="">` : '')
-    + `<span>${st ? esc(st.name) : 'empty'}</span></span>`
-    + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : '');
+    + (showPhoto ? `<img class="photo" src="${esc(st.photo)}" alt="">` : '')
+    + `<span>${text}</span></span>`
+    + (d.locked ? `<span class="lockbadge" aria-hidden="true">pinned</span>` : '')
+    + `<span class="seatnum" aria-hidden="true">${i + 1}</span>`;
   return node;
 }
-function buildPrintPage(s){
+/** One printed page for one section: the trimmed, scaled floor, plus an
+    optional rule-conflicts block. `opts`: showNames, showPhotos, mirror,
+    showViolations — all default true except mirror, so a plain call prints
+    exactly what "Print all sections" always has. */
+function buildPrintPage(s, opts = {}){
   const { box, pad, topRoom, w, h, fit } = printLayoutFor(s.desks);
 
   const page = document.createElement('div');
@@ -1244,7 +1552,7 @@ function buildPrintPage(s){
   wrap.style.height = (h * fit) + 'px';
 
   const floor = document.createElement('div');
-  floor.className = 'floor';
+  floor.className = 'floor' + (opts.numbered ? ' numbered' : '');
   floor.style.width = w + 'px';
   floor.style.height = h + 'px';
   floor.style.transform = `scale(${fit})`;
@@ -1255,38 +1563,62 @@ function buildPrintPage(s){
   front.innerHTML = 'FRONT OF ROOM &nbsp;&middot;&nbsp; BOARD';
   floor.appendChild(front);
 
+  const mirror = !!opts.mirror;
   const layer = document.createElement('div');
-  layer.className = 'desk-layer';
-  layer.style.transform = `translate(${-box.x + pad}px, ${-box.y + topRoom}px)`;
+  layer.className = 'desk-layer' + (mirror ? ' mirrored' : '');
+  layer.style.transform = layerTransform(-box.x + pad, -box.y + topRoom, mirror);
   const total = s.desks.length;
-  s.desks.forEach((d, i) => layer.appendChild(deskNodeForPrint(d, i, total, s)));
+  s.desks.forEach((d, i) => layer.appendChild(deskNodeForPrint(d, i, total, s, opts)));
   floor.appendChild(layer);
 
   wrap.appendChild(floor);
   page.appendChild(wrap);
+
+  if (opts.showViolations){
+    const v = violationsHTML(s, checkConstraints(s));
+    if (v){ const div = document.createElement('div'); div.className = 'print-extra'; div.innerHTML = v; page.appendChild(div); }
+  }
   return page;
 }
 function preparePrintAll(){
   document.body.classList.add('printing-all');
   const wrap = el('printAllWrap');
   wrap.innerHTML = '';
-  state.sections.forEach(s => wrap.appendChild(buildPrintPage(s)));
+  const opts = { showNames: state.printNames, showPhotos: state.printPhotos, numbered: state.numbered, mirror: state.mirror, showViolations: state.printViolations };
+  state.sections.forEach(s => wrap.appendChild(buildPrintPage(s, opts)));
 }
 function restoreAfterPrintAll(){
   document.body.classList.remove('printing-all');
   el('printAllWrap').innerHTML = '';
 }
 
-// Covers both the toolbar button and Ctrl+P. printMode picks which of the two
-// preparation paths above runs, and always resets to 'single' afterward so a
-// stray Ctrl+P following "Print all sections" doesn't inherit that mode.
-window.addEventListener('beforeprint', () => { if (printMode === 'all') preparePrintAll(); else preparePrint(); });
+// Covers both the toolbar button and Ctrl+P. printMode picks which of four
+// preparation paths runs, and always resets to 'single' afterward so a stray
+// Ctrl+P following one of the others doesn't inherit its mode.
+//   'single' — the toolbar Print button / Ctrl+P: the live floor, names and
+//              photos following the persisted checkboxes.
+//   'all'    — Print all sections: one static snapshot per section, same
+//              persisted checkboxes.
+//   'blank'  — Print blank: the live floor with names/photos forced off and
+//              seat numbers forced on, regardless of the persisted checkboxes.
+//   'sub'    — Sub export: the live floor with names/photos forced ON
+//              (a sub needs them) plus notes and rule conflicts appended.
+window.addEventListener('beforeprint', () => {
+  if (printMode === 'all'){ preparePrintAll(); return; }
+  preparePrint();
+  if (printMode === 'blank') document.body.classList.add('printing-blank');
+  else if (printMode === 'sub') document.body.classList.add('printing-sub');
+  else applyPrintClasses();
+});
 window.addEventListener('afterprint', () => {
-  if (printMode === 'all') restoreAfterPrintAll(); else restoreAfterPrint();
+  if (printMode === 'all') restoreAfterPrintAll();
+  else { restoreAfterPrint(); clearPrintClasses(); el('printExtra').innerHTML = ''; }
   printMode = 'single';
 });
 function printChart(){ printMode = 'single'; window.print(); }
 function printAllSections(){ printMode = 'all'; window.print(); }
+function printBlankChart(){ printMode = 'blank'; window.print(); }
+function printSubExport(){ printMode = 'sub'; window.print(); }
 
 /* ============================================================
    Util + boot
@@ -1296,12 +1628,22 @@ function esc(s){ return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<':
 function renderAll(){
   renderSections();
   renderRoster();
+  renderLayouts();
   fillSelect('apartA'); fillSelect('apartB'); fillSelect('togA'); fillSelect('togB');
   renderPairs();
   renderFloor();
   renderPool();
   refreshStatus();
+  renderStorage();
+  syncPrintOptionInputs();
+  refreshToggleButtons();
   touch();
+}
+function syncPrintOptionInputs(){
+  const names = el('printNamesChk'), photos = el('printPhotosChk'), viol = el('printViolChk');
+  if (names) names.checked = state.printNames !== false;
+  if (photos) photos.checked = state.printPhotos !== false;
+  if (viol) viol.checked = state.printViolations !== false;
 }
 
 document.addEventListener('keydown', e => {
@@ -1408,12 +1750,14 @@ function boot(){
 // its own. Kept explicit rather than clever so a missing one is a visible name.
 Object.assign(window, {
   addSection, duplicateSection, renameSection, deleteSection,
+  saveLayout, loadLayout, renameLayout, deleteLayout,
   addNames, sortRoster, setLastFirst, toggleFlag, editNote, removeStudent,
-  choosePhoto, removePhoto,
+  choosePhoto, removePhoto, chooseBulkPhotos,
   loadRosterHub,
   addPair, removePair,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
-  autoAssign, undo, pickStudent, toggleZoom, printChart, printAllSections,
+  autoAssign, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered,
+  printChart, printAllSections, printBlankChart, printSubExport, setPrintOpt,
   poolDragOver, poolDragLeave, poolDrop, poolClick,
 });
 
