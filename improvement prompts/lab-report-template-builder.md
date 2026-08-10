@@ -1,4 +1,4 @@
-# Improvement Prompts — Lab Report Template Builder
+# Improvement Prompts — 065 — Lab Report Template Builder
 
 **Tool file:** `Tools/lab-report-template-builder.html`
 **Support folder:** none yet — everything is inline in the one file.

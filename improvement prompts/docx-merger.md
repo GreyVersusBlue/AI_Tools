@@ -1,4 +1,4 @@
-# Improvement Prompts — Word Doc Merger
+# Improvement Prompts — 031 — Word Doc Merger
 
 **Tool file:** `Tools/docx-merger.html`
 **Support folder:** none — single file (loads JSZip from cdnjs)

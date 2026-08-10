@@ -1,4 +1,4 @@
-# Improvement Prompts — Novel Study / Reading Circles Manager
+# Improvement Prompts — 027 — Novel Study / Reading Circles Manager
 
 **Tool file:** `Tools/novel-study-circles-manager.html`
 **Support folder:** none — single file

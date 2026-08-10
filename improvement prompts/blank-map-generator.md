@@ -1,4 +1,4 @@
-# Improvement Prompts — Blank Map Generator
+# Improvement Prompts — 046 — Blank Map Generator
 
 **Tool file:** `Tools/blank-map-generator.html`
 **Support folder:** `Tools/blank-map-generator/` — `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-label-sets.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-viewer.js`

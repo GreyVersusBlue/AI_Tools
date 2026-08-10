@@ -1,4 +1,4 @@
-# Improvement Prompts — Science Safety Symbol & Equipment Label Maker
+# Improvement Prompts — 074 — Science Safety Symbol & Equipment Label Maker
 
 **Tool file:** `Tools/science-safety-label-maker.html`
 **Support folder:** none yet — everything is inline in the one file.

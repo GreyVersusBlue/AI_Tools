@@ -1,4 +1,4 @@
-# Improvement Prompts — Rubric Builder
+# Improvement Prompts — 003 — Rubric Builder
 
 **Tool file:** `Tools/rubric-builder.html`
 **Support folder:** `Tools/rubric-builder/` — `rb-store.js`, `rb-templates.js`

@@ -1,4 +1,4 @@
-# Improvement Prompts — Digital Hall Pass / Sign-Out Log
+# Improvement Prompts — 001 — Digital Hall Pass / Sign-Out Log
 
 **Tool file:** `Tools/hall-pass-log.html`
 **Support folder:** none — single file

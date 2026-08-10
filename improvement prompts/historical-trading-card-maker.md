@@ -1,4 +1,4 @@
-# Improvement Prompts — Historical Figure / Country Trading Card Maker
+# Improvement Prompts — 064 — Historical Figure / Country Trading Card Maker
 
 **Tool file:** `Tools/historical-trading-card-maker.html`
 **Support folder:** none yet — everything is inline in the one file.

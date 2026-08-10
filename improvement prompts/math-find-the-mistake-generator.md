@@ -1,4 +1,4 @@
-# Improvement Prompts — Math "Find the Mistake" Warm-Up Generator
+# Improvement Prompts — 066 — Math "Find the Mistake" Warm-Up Generator
 
 **Tool file:** `Tools/math-find-the-mistake-generator.html`
 **Support folder:** none yet — everything is inline in the one file.

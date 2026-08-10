@@ -1,4 +1,4 @@
-# Improvement Prompts — Gallery Walk QR Codes
+# Improvement Prompts — 017 — Gallery Walk QR Codes
 
 **Tool file:** `Tools/gallery-walk-qr.html`
 **Support folder:** `Tools/gallery-walk-qr/` — `lib/qrcode.js`

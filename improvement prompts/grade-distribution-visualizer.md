@@ -1,4 +1,4 @@
-# Improvement Prompts — Grade Distribution Visualizer
+# Improvement Prompts — 037 — Grade Distribution Visualizer
 
 **Tool file:** `Tools/grade-distribution-visualizer.html`
 **Support folder:** none — single file

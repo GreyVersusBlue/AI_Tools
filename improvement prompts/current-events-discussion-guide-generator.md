@@ -1,4 +1,4 @@
-# Improvement Prompts — Current Events Discussion Guide Generator
+# Improvement Prompts — 054 — Current Events Discussion Guide Generator
 
 **Tool file:** `Tools/current-events-discussion-guide-generator.html`
 **Support folder:** none yet — everything is inline in the one file.

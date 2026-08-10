@@ -1,4 +1,4 @@
-# Improvement Prompts — Graph Paper & Number Line Generator
+# Improvement Prompts — 012 — Graph Paper & Number Line Generator
 
 **Tool file:** `Tools/graph-paper-generator.html`
 **Support folder:** `Tools/graph-paper-generator/` — `gpg-render.js`, `gpg-store.js`

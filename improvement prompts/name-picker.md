@@ -1,4 +1,4 @@
-# Improvement Prompts — Name Picker
+# Improvement Prompts — 007 — Name Picker
 
 **Tool file:** `Tools/Name Picker.html`
 **Support folder:** `Tools/name-picker/` — `np-store.js`, `np-pick.js`, fonts, tests, `lib/qrcode.js`

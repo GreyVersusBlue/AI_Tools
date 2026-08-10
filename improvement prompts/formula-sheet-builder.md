@@ -1,4 +1,4 @@
-# Improvement Prompts — Formula Reference Sheet Builder
+# Improvement Prompts — 041 — Formula Reference Sheet Builder
 
 **Tool file:** `Tools/formula-sheet-builder.html`
 **Support folder:** `Tools/formula-sheet-builder/` — `fsb-store.js`, `fsb-templates.js`

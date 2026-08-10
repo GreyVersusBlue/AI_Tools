@@ -1,4 +1,4 @@
-# Improvement Prompts — Field Trip Permission Slip Generator
+# Improvement Prompts — 043 — Field Trip Permission Slip Generator
 
 **Tool file:** `Tools/field-trip-permission-slip.html`
 **Support folder:** `Tools/field-trip-permission-slip/` — `lib/qrcode.js`

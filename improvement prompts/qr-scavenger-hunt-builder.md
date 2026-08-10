@@ -1,4 +1,4 @@
-# Improvement Prompts — QR Scavenger Hunt Builder
+# Improvement Prompts — 018 — QR Scavenger Hunt Builder
 
 **Tool file:** `Tools/qr-scavenger-hunt-builder.html`
 **Support folder:** `Tools/qr-scavenger-hunt-builder/` — `lib/qrcode.js`
