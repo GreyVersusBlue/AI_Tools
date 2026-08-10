@@ -10,7 +10,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Sub Note / Feedback Slip Generator | A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow. |
 | Testing Accommodations Reference Card Generator | Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local, like the Final Grade Checker. |
 
 ## Math
