@@ -47,6 +47,53 @@
   }
 
   /**
+   * Normalizes a year to a 0..1 position within [minYear, maxYear] for a
+   * given scale mode.
+   *
+   * 'linear' (default, existing behavior) is the plain proportional
+   * mapping: equal years always get equal pixels, everywhere on the axis.
+   *
+   * 'compressed' gives progressively more room to years near maxYear (the
+   * recent end) and compresses years near minYear (the ancient end), via a
+   * log1p transform of `e` = "years before the end of the range" — years
+   * ago, in other words. A raw `Math.log(year)` was *not* used for this:
+   * `year` itself crosses zero and goes negative for BCE dates, where a log
+   * is undefined or discontinuous, so the transform is deliberately anchored
+   * to a nonnegative "distance from the recent end" instead, which works
+   * identically whether that end is 2020 CE or 200 BCE.
+   *
+   * This is a strictly increasing function of `year` for any span > 0 (e
+   * strictly decreases as year increases, log1p is strictly increasing, so
+   * the composition is strictly increasing) — meaning distinct years always
+   * produce distinct, correctly-ordered positions under compression exactly
+   * as they do under linear scaling. Compression changes *spacing*; it can
+   * never change *order*.
+   */
+  function yearToUnit(year, minYear, maxYear, scaleMode) {
+    var span = maxYear - minYear;
+    if (span <= 0) return 0;
+    if (scaleMode !== 'compressed') return (year - minYear) / span;
+    var e = Math.min(span, Math.max(0, maxYear - year));
+    var logSpan = Math.log1p(span);
+    if (logSpan <= 0) return 0;
+    return (logSpan - Math.log1p(e)) / logSpan;
+  }
+
+  /**
+   * Maps a year to an x pixel coordinate along [minYear, maxYear], using
+   * `yearToUnit` so computeLayout/computeGridlines/computeEraBands always
+   * agree on where a given year falls, in either scale mode. The usable
+   * pixel width (`(maxYear - minYear) * pxPerYear`) is the same regardless
+   * of scale mode — compression redistributes pixels *within* that width
+   * rather than changing the overall canvas size, so switching scale modes
+   * doesn't also resize the scroll area out from under the reader.
+   */
+  function yearToX(year, minYear, maxYear, pxPerYear, padding, scaleMode) {
+    var usableWidth = Math.max(0, maxYear - minYear) * pxPerYear;
+    return padding + yearToUnit(year, minYear, maxYear, scaleMode) * usableWidth;
+  }
+
+  /**
    * Position every event along the horizontal axis. Events are sorted by
    * yearStart. Point events get an x coordinate; range events (yearEnd set)
    * get x + width. `padding` is extra px on each end so the first/last
@@ -57,9 +104,15 @@
    * `events` alone — used so era bands that extend beyond the events'
    * own year range still share one consistent axis with the markers,
    * gridlines, and total canvas width instead of drifting out of sync.
+   *
+   * `scaleMode` (optional, 'linear' | 'compressed') — defaults to 'linear'
+   * (today's plain proportional behavior) whenever omitted, so every
+   * existing caller and every already-saved timeline renders exactly as it
+   * always has unless a caller opts into 'compressed'.
    */
-  function computeLayout(events, pxPerYear, padding, rangeOverride) {
+  function computeLayout(events, pxPerYear, padding, rangeOverride, scaleMode) {
     var pad = padding == null ? 60 : padding;
+    var mode = scaleMode === 'compressed' ? 'compressed' : 'linear';
     if (!events.length) {
       if (rangeOverride) {
         var emptySpan = Math.max(0, rangeOverride.max - rangeOverride.min);
@@ -76,8 +129,12 @@
     var sorted = events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
 
     var positioned = sorted.map(function (e) {
-      var x = pad + (e.yearStart - range.min) * pxPerYear;
-      var width = e.yearEnd != null ? Math.max(2, (e.yearEnd - e.yearStart) * pxPerYear) : 0;
+      var x = yearToX(e.yearStart, range.min, range.max, pxPerYear, pad, mode);
+      var width = 0;
+      if (e.yearEnd != null) {
+        var xEnd = yearToX(e.yearEnd, range.min, range.max, pxPerYear, pad, mode);
+        width = Math.max(2, xEnd - x);
+      }
       return {
         event: e, x: x, width: width,
         label: formatDateLabel(e)
@@ -104,40 +161,61 @@
 
   /**
    * Computes fixed gridline positions along the same x-axis as computeLayout
-   * (same pad + (year - minYear) * pxPerYear mapping), at every clean
-   * multiple of the auto-picked interval that falls within [minYear, maxYear].
-   * Kept as a separate pass rather than folded into computeLayout since
-   * gridlines depend only on the year range, not on individual events.
+   * (same yearToX mapping), at every clean multiple of the auto-picked
+   * interval that falls within [minYear, maxYear]. Kept as a separate pass
+   * rather than folded into computeLayout since gridlines depend only on
+   * the year range, not on individual events.
+   *
+   * `scaleMode` ('linear' | 'compressed', defaults to 'linear') — in
+   * 'compressed' mode the same fixed year-interval that reads fine under
+   * linear scaling would otherwise crowd together into unreadable clumps of
+   * labels toward the compressed (ancient) end of the axis, where pixels
+   * per year keep shrinking. So in compressed mode only, candidate ticks
+   * that would land within `minGapPx` of the previous rendered tick are
+   * skipped — thinning out exactly the region that's compressed, while the
+   * expanded recent end (where consecutive ticks are naturally further
+   * apart already) keeps its full density. Linear mode's tick selection is
+   * untouched — same ticks, same positions, as before this existed.
    */
-  function computeGridlines(minYear, maxYear, pxPerYear, padding) {
+  function computeGridlines(minYear, maxYear, pxPerYear, padding, scaleMode) {
     var pad = padding == null ? 60 : padding;
     var span = Math.max(1, maxYear - minYear);
     var interval = gridlineInterval(span);
     var start = Math.ceil(minYear / interval) * interval;
+    var mode = scaleMode === 'compressed' ? 'compressed' : 'linear';
+    var minGapPx = mode === 'compressed' ? 30 : 0;
     var lines = [];
+    var lastX = null;
     for (var year = start; year <= maxYear; year += interval) {
-      lines.push({ year: year, x: pad + (year - minYear) * pxPerYear, label: formatYear(year) });
+      var x = yearToX(year, minYear, maxYear, pxPerYear, pad, mode);
+      if (minGapPx && lastX !== null && (x - lastX) < minGapPx) continue;
+      lines.push({ year: year, x: x, label: formatYear(year) });
+      lastX = x;
     }
     return lines;
   }
 
   /**
    * Computes background era/period band positions along the same x-axis as
-   * computeLayout/computeGridlines (same pad + (year - minYear) * pxPerYear
-   * mapping). Eras use the same {yearStart, yearEnd} field names as events
-   * so a caller can fold them straight into yearRangeOf() when sizing the
-   * shared axis. Bands are clamped to [minYear, maxYear] so an era that
-   * runs past the edge of that range still renders (clipped) rather than
-   * disappearing or skewing the rest of the layout.
+   * computeLayout/computeGridlines (same yearToX mapping). Eras use the
+   * same {yearStart, yearEnd} field names as events so a caller can fold
+   * them straight into yearRangeOf() when sizing the shared axis. Bands are
+   * clamped to [minYear, maxYear] so an era that runs past the edge of that
+   * range still renders (clipped) rather than disappearing or skewing the
+   * rest of the layout. `scaleMode` defaults to 'linear', same as
+   * computeLayout/computeGridlines.
    */
-  function computeEraBands(eras, minYear, maxYear, pxPerYear, padding) {
+  function computeEraBands(eras, minYear, maxYear, pxPerYear, padding, scaleMode) {
     var pad = padding == null ? 60 : padding;
+    var mode = scaleMode === 'compressed' ? 'compressed' : 'linear';
     return (eras || []).map(function (era) {
       var lo = Math.min(era.yearStart, era.yearEnd);
       var hi = Math.max(era.yearStart, era.yearEnd);
       var start = Math.max(minYear, lo);
       var end = Math.min(maxYear, hi);
-      return { era: era, x: pad + (start - minYear) * pxPerYear, width: Math.max(2, (end - start) * pxPerYear) };
+      var x = yearToX(start, minYear, maxYear, pxPerYear, pad, mode);
+      var xEnd = yearToX(end, minYear, maxYear, pxPerYear, pad, mode);
+      return { era: era, x: x, width: Math.max(2, xEnd - x) };
     });
   }
 
@@ -201,6 +279,8 @@
     formatDateLabel: formatDateLabel,
     yearRangeOf: yearRangeOf,
     autoPxPerYear: autoPxPerYear,
+    yearToUnit: yearToUnit,
+    yearToX: yearToX,
     computeLayout: computeLayout,
     gridlineInterval: gridlineInterval,
     computeGridlines: computeGridlines,

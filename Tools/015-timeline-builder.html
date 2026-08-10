@@ -53,6 +53,8 @@
   }
   textarea { min-height: 3.5rem; resize: vertical; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .7rem; }
+  @media (max-width: 500px) { .row3 { grid-template-columns: 1fr; } }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -179,7 +181,7 @@
         <label for="timelineTitle">Displayed title</label>
         <input type="text" id="timelineTitle" placeholder="e.g. Causes of World War I">
 
-        <div class="row2">
+        <div class="row3">
           <div>
             <label for="lineStyle">Line style</label>
             <select id="lineStyle">
@@ -195,7 +197,18 @@
               <option value="true">Compact (alternating)</option>
             </select>
           </div>
+          <div>
+            <label for="scaleMode">Scale</label>
+            <select id="scaleMode">
+              <option value="linear">Linear</option>
+              <option value="compressed">Compressed (recent gets more room)</option>
+            </select>
+          </div>
         </div>
+        <p class="hint">Compressed scale gives recent events more room and
+          squeezes ancient history closer together, instead of every year
+          getting equal space &mdash; useful for a timeline spanning
+          millennia.</p>
 
         <label style="margin-bottom:.3rem;">Timeline tracks</label>
         <p class="hint">Add a second (or more) track to compare related timelines stacked on the same year axis &mdash; e.g. a country's history vs. world history.</p>
@@ -299,7 +312,7 @@
   var els = {};
   ['toolbar','timelineSwitch','newTimelineBtn','deleteTimelineBtn',
    'exportTimelineBtn','importTimelineBtn','importTimelineFile',
-   'timelineName','timelineTitle','lineStyle','compactLabels',
+   'timelineName','timelineTitle','lineStyle','compactLabels','scaleMode',
    'trackList','addTrackBtn',
    'eraLabel','eraYearStart','eraYearEnd','eraColor','saveEraBtn','cancelEraEditBtn','eraList',
    'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evCategory','categoryOptions','evDisplayDate','evDescription','evPhoto',
@@ -309,7 +322,7 @@
    'timelineCanvas','screenLegend','printViewInner','compareSelect','compareCanvas','compareLegend'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, title, lineStyle, compactLabels, events: [...], eras: [...], tracks: [{id,name}] }
+  var state = null; // { name, title, lineStyle, compactLabels, scaleMode, events: [...], eras: [...], tracks: [{id,name}] }
   var editingId = null;
   var pendingPhoto = null; // data URL staged for the event being added/edited
   var idCounter = 1;
@@ -596,12 +609,20 @@
   }
 
   // Shared renderer for one canvas element from a { events, eras, tracks,
-  // compactLabels } bundle — tracks may carry their own `.lineStyle`
-  // (used by the compare view, where the two timelines being compared can
-  // each have a different line style); tracks without one fall back to
-  // `defaultLineStyle`. Used for both the normal single-timeline screen
-  // view and the two-timeline compare view, which just hands it a merged
-  // set of tracks/events/eras sharing one combined year axis.
+  // compactLabels, scaleMode } bundle — tracks may carry their own
+  // `.lineStyle` (used by the compare view, where the two timelines being
+  // compared can each have a different line style); tracks without one fall
+  // back to `defaultLineStyle`. Used for both the normal single-timeline
+  // screen view and the two-timeline compare view, which just hands it a
+  // merged set of tracks/events/eras sharing one combined year axis.
+  // `scaleMode` ('linear' | 'compressed', defaults to 'linear' when absent)
+  // is likewise shared across both views via this one function — there is
+  // only one position-layout call site in this file (this one), unlike
+  // buildCategoryColorMap's three, so wiring the scale-mode toggle in here
+  // covers screen + compare in one place. The print layout (printEventsHtml
+  // below) never calls computeLayout/computeGridlines/computeEraBands at
+  // all — it's a plain top-to-bottom list, not positioned by year — so
+  // there's nothing there for scale mode to apply to.
   function renderTimelineCanvas(canvas, data, defaultLineStyle, emptyMessage) {
     canvas.innerHTML = '';
     if (!data.events.length && !data.eras.length) {
@@ -609,10 +630,11 @@
       canvas.style.height = '';
       return;
     }
+    var scaleMode = data.scaleMode === 'compressed' ? 'compressed' : 'linear';
     var catColorMap = TimelineLayout.buildCategoryColorMap(data.events);
     var range = TimelineLayout.yearRangeOf(data.events.concat(data.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
-    var masterLayout = TimelineLayout.computeLayout(data.events, pxPerYear, 70, range);
+    var masterLayout = TimelineLayout.computeLayout(data.events, pxPerYear, 70, range, scaleMode);
     var sharedRange = { min: masterLayout.minYear, max: masterLayout.maxYear };
     var showTrackLabels = data.tracks.length > 1;
 
@@ -622,7 +644,7 @@
     // Era bands are appended first so they sit behind the gridlines, line,
     // markers, and labels appended below (later DOM siblings paint on top).
     // They span the full multi-lane height via CSS top:0/bottom:0.
-    var eraBands = TimelineLayout.computeEraBands(data.eras, sharedRange.min, sharedRange.max, pxPerYear, 70);
+    var eraBands = TimelineLayout.computeEraBands(data.eras, sharedRange.min, sharedRange.max, pxPerYear, 70, scaleMode);
     eraBands.forEach(function (b) {
       var band = document.createElement('div');
       band.className = 'era-band';
@@ -638,7 +660,7 @@
       canvas.appendChild(eraLabel);
     });
 
-    var gridlines = TimelineLayout.computeGridlines(sharedRange.min, sharedRange.max, pxPerYear, 70);
+    var gridlines = TimelineLayout.computeGridlines(sharedRange.min, sharedRange.max, pxPerYear, 70, scaleMode);
     gridlines.forEach(function (g) {
       var gridLine = document.createElement('div');
       gridLine.className = 'grid-line';
@@ -675,7 +697,7 @@
       lane.appendChild(lineEl);
 
       var trackEvents = data.events.filter(function (e) { return e.track === track.id; });
-      var trackLayout = TimelineLayout.computeLayout(trackEvents, pxPerYear, 70, sharedRange);
+      var trackLayout = TimelineLayout.computeLayout(trackEvents, pxPerYear, 70, sharedRange, scaleMode);
       var positioned = data.compactLabels ?
         TimelineLayout.assignLabelSides(trackLayout.positioned, 100) :
         trackLayout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
@@ -726,7 +748,7 @@
 
   function renderScreenTimeline() {
     renderTimelineCanvas(els.timelineCanvas, {
-      events: state.events, eras: state.eras, tracks: state.tracks, compactLabels: state.compactLabels
+      events: state.events, eras: state.eras, tracks: state.tracks, compactLabels: state.compactLabels, scaleMode: state.scaleMode
     }, state.lineStyle, 'Add events to see them on the timeline.');
     els.screenLegend.innerHTML = legendHtml(state.events);
   }
@@ -783,7 +805,8 @@
       events: aEvents.concat(bEvents),
       eras: state.eras.concat(other.eras),
       tracks: aTracks.concat(bTracks),
-      compactLabels: state.compactLabels || !!other.compactLabels
+      compactLabels: state.compactLabels || !!other.compactLabels,
+      scaleMode: state.scaleMode // the timeline being edited drives the shared axis mode for the comparison
     }, state.lineStyle, 'Neither timeline has any events yet.');
     els.compareLegend.innerHTML = legendHtml(aEvents.concat(bEvents));
   }
@@ -836,6 +859,7 @@
     els.timelineTitle.value = state.title;
     els.lineStyle.value = state.lineStyle;
     els.compactLabels.value = String(state.compactLabels);
+    els.scaleMode.value = state.scaleMode;
     renderTrackList();
     updateEvTrackOptions();
     populateCategoryOptions();
@@ -849,7 +873,7 @@
 
   /* ---------- lifecycle ---------- */
   function newTimeline(name) {
-    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, events: [], eras: [], tracks: [{ id: 0, name: 'Track A' }], compareWith: null };
+    state = { name: name, title: '', lineStyle: 'solid', compactLabels: false, scaleMode: 'linear', events: [], eras: [], tracks: [{ id: 0, name: 'Track A' }], compareWith: null };
     trackIdCounter = 1;
     TimelineStore.setCurrentName(name);
     resetForm();
@@ -877,6 +901,7 @@
     state = loaded;
     if (!Array.isArray(state.eras)) state.eras = []; // backward-compat: older saved timelines predate eras
     if (state.compareWith === undefined) state.compareWith = null; // backward-compat: older saved timelines predate compare mode
+    if (state.scaleMode !== 'compressed') state.scaleMode = 'linear'; // backward-compat: older saved timelines predate scale mode; always default to linear so nothing changes appearance on its own
     ensureTracks(state);
     TimelineStore.setCurrentName(name);
     resetForm();
@@ -895,6 +920,7 @@
   els.timelineTitle.addEventListener('input', function () { if (state) { state.title = els.timelineTitle.value; save(); renderPrintPreview(); } });
   els.lineStyle.addEventListener('change', function () { state.lineStyle = els.lineStyle.value; renderAll(); });
   els.compactLabels.addEventListener('change', function () { state.compactLabels = els.compactLabels.value === 'true'; renderAll(); });
+  els.scaleMode.addEventListener('change', function () { state.scaleMode = els.scaleMode.value === 'compressed' ? 'compressed' : 'linear'; renderAll(); });
 
   els.timelineSwitch.addEventListener('change', function () { loadTimelineByName(els.timelineSwitch.value); });
   els.newTimelineBtn.addEventListener('click', function () {
@@ -966,6 +992,7 @@
         title: decoded.title || '',
         lineStyle: decoded.lineStyle || 'solid',
         compactLabels: !!decoded.compactLabels,
+        scaleMode: decoded.scaleMode === 'compressed' ? 'compressed' : 'linear', // backward-compat: older exports predate scale mode
         events: decoded.events,
         eras: Array.isArray(decoded.eras) ? decoded.eras : [], // backward-compat: older exports predate eras
         tracks: Array.isArray(decoded.tracks) ? decoded.tracks : [], // backward-compat: older exports predate tracks
