@@ -52,7 +52,6 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Music Sight-Reading / Rhythm Warm-Up Generator | Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class. |
 | PE Warm-Up Circuit Card Generator | Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins. |
 
 ## Existing Tools — Enhancement Ideas

@@ -89,6 +89,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Cognates & False Friends Reference List Builder | `Tools/cognates-false-friends-builder.html` | Spanish and French starter examples (or build from scratch) split into true cognates and false friends, printed as a two-section reference sheet. |
 | Fitness & Skill Assessment Tracker | `Tools/fitness-skill-assessment-tracker.html` | Save a roster, add time- or count-based fitness-test events, enter results in a per-student grid with live class average/range stats, and print a report. |
 | Student Art Portfolio Label & QR Tag Maker | `Tools/art-portfolio-label-maker.html` | Add a title, photo, and artist statement per piece; print portfolio labels with a thumbnail and a QR code carrying the statement text itself, no hosting needed. |
+| Music Sight-Reading / Rhythm Warm-Up Generator | `Tools/music-sightreading-generator.html` | Randomized rhythm patterns (4/4, 3/4, or 2/4) or randomized pitch sight-reading on a real treble/bass staff, for a projector display or printed handout. |
 
 ## Using these
 

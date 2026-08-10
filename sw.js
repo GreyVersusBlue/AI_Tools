@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v40';
+const CACHE_VERSION = 'v41';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -129,6 +129,7 @@ const PRECACHE_URLS = [
   "Tools/math-drill-generator/mdg-store.js",
   "Tools/math-drill-generator/mdg-templates.js",
   "Tools/math-find-the-mistake-generator.html",
+  "Tools/music-sightreading-generator.html",
   "Tools/name-picker/fonts/bungee-latin-400-normal.woff2",
   "Tools/name-picker/fonts/bungee-latin-ext-400-normal.woff2",
   "Tools/name-picker/fonts/outfit-latin-400-normal.woff2",
