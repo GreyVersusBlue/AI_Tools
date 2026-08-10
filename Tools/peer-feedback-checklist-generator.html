@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peer Feedback / Editing Checklist Generator</title>
+<meta name="description" content="Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/peer-feedback-checklist-generator.html">
+<meta property="og:title" content="Peer Feedback / Editing Checklist Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Peer Feedback / Editing Checklist Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 16l4 4 10-11' fill='none' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .layout { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 1.4rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="number"], select {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .7rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  button.full { width: 100%; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .category { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
+  .category-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+  .category-head input[type="text"] { margin-bottom: 0; font-weight: 700; }
+  .item-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+  .item-row input[type="text"] { margin-bottom: 0; }
+  .item-row .drag-handle { color: var(--muted); font-size: .8rem; flex-shrink: 0; }
+  .add-item-btn { margin-top: .3rem; }
+
+  #printArea { display: none; }
+  .half-sheet {
+    border: 1px dashed var(--line-strong); border-radius: 8px; padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+  }
+  .half-sheet h3 { margin: 0 0 .2rem; font-size: 1.15rem; }
+  .half-sheet .names { font-size: .82rem; color: var(--muted); margin-bottom: .6rem; }
+  .half-sheet .pf-cat { margin-bottom: .5rem; }
+  .half-sheet .pf-cat h4 { margin: 0 0 .2rem; font-size: .88rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-2); }
+  .half-sheet .pf-item { font-size: .86rem; margin-bottom: .15rem; }
+  .half-sheet .box { display: inline-block; width: .8rem; height: .8rem; border: 1px solid var(--ink); margin-right: .4rem; vertical-align: middle; }
+  .half-sheet .comments-line { border-bottom: 1px solid var(--line-strong); display: block; height: 1.1rem; margin-top: .3rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .half-sheet { border: none; height: 47vh; overflow: hidden; page-break-inside: avoid; border-bottom: 1px dashed #999; }
+    .half-sheet:nth-child(2n) { page-break-after: always; border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Peer Feedback / Editing Checklist Generator</h1>
+      <p class="sub">Build a checklist for a specific assignment, then print a half-sheet per student.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print checklists</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>Start from a template</h2>
+        <select id="templateSelect">
+          <option value="narrative">Narrative Writing</option>
+          <option value="argumentative">Argumentative / Persuasive</option>
+          <option value="informative">Informative / Expository</option>
+          <option value="blank">Blank / General</option>
+        </select>
+        <button class="secondary full" id="loadTemplateBtn">Load template (replaces current checklist)</button>
+      </div>
+
+      <div class="card">
+        <h2>Assignment</h2>
+        <label for="assignmentName">Assignment title</label>
+        <input type="text" id="assignmentName" placeholder="e.g. Personal Narrative Draft 1">
+        <label for="copyCount">How many copies to print</label>
+        <input type="number" id="copyCount" value="6" min="1" max="60">
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Checklist categories</h2>
+        <div id="categoriesWrap"></div>
+        <button class="secondary" id="addCategoryBtn">+ Add category</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'pfc_checklist_v1';
+
+  var TEMPLATES = {
+    narrative: {
+      name: 'Personal Narrative',
+      categories: [
+        { name: 'Story Elements', items: ['Has a clear beginning, middle, and end', 'Characters and setting are introduced clearly', 'There is a clear problem or turning point'] },
+        { name: 'Language & Style', items: ['Uses descriptive or sensory details', 'Sentences vary in length and structure', 'Dialogue (if used) is punctuated correctly'] },
+        { name: 'Grammar & Mechanics', items: ['Complete sentences, no run-ons or fragments', 'Correct capitalization and punctuation', 'Spelling has been checked'] }
+      ]
+    },
+    argumentative: {
+      name: 'Argumentative / Persuasive Essay',
+      categories: [
+        { name: 'Argument & Evidence', items: ['States a clear claim or thesis', 'Gives at least two pieces of evidence or support', 'Addresses a counterargument'] },
+        { name: 'Structure & Organization', items: ['Introduction has a clear hook and states the claim', 'Body paragraphs are organized logically', 'Conclusion restates the claim and wraps up'] },
+        { name: 'Grammar & Mechanics', items: ['Complete sentences, no run-ons or fragments', 'Correct capitalization and punctuation', 'Spelling has been checked'] }
+      ]
+    },
+    informative: {
+      name: 'Informative / Expository Writing',
+      categories: [
+        { name: 'Content & Accuracy', items: ['Topic or focus is clearly stated', 'Facts and details support the topic', 'Includes at least one interesting example'] },
+        { name: 'Structure & Organization', items: ['Ideas are in a logical order', 'Transitions connect ideas smoothly', 'Strong introduction and conclusion'] },
+        { name: 'Grammar & Mechanics', items: ['Complete sentences, no run-ons or fragments', 'Correct capitalization and punctuation', 'Spelling has been checked'] }
+      ]
+    },
+    blank: {
+      name: 'General Peer Feedback',
+      categories: [
+        { name: 'Content', items: ['The main idea is clear', 'Ideas are supported with details or examples'] },
+        { name: 'Organization', items: ['Writing is organized in a logical order', 'Has a clear beginning and ending'] },
+        { name: 'Grammar & Mechanics', items: ['Complete sentences', 'Punctuation and capitalization are correct'] }
+      ]
+    }
+  };
+
+  var els = {};
+  ['templateSelect', 'loadTemplateBtn', 'assignmentName', 'copyCount', 'categoriesWrap',
+   'addCategoryBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = { assignmentName: '', copyCount: 6, categories: [] };
+
+  function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.categories)) state = saved;
+    } catch (e) { /* ignore */ }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function fromTemplate(key) {
+    var t = TEMPLATES[key];
+    state.categories = t.categories.map(function (c) {
+      return { id: uid(), name: c.name, items: c.items.map(function (text) { return { id: uid(), text: text }; }) };
+    });
+  }
+
+  function renderCategories() {
+    els.categoriesWrap.innerHTML = state.categories.map(function (cat) {
+      var itemsHtml = cat.items.map(function (item) {
+        return '<div class="item-row" data-cat="' + cat.id + '" data-item="' + item.id + '">' +
+          '<span class="drag-handle">&bull;</span>' +
+          '<input type="text" data-field="item" value="' + escapeAttr(item.text) + '">' +
+          '<button type="button" class="danger small" data-del-item="' + item.id + '" data-cat-del="' + cat.id + '">&times;</button>' +
+          '</div>';
+      }).join('');
+      return '<div class="category" data-cat-id="' + cat.id + '">' +
+        '<div class="category-head">' +
+          '<input type="text" data-field="catname" data-cat="' + cat.id + '" value="' + escapeAttr(cat.name) + '">' +
+          '<button type="button" class="danger small" data-del-cat="' + cat.id + '">Remove category</button>' +
+        '</div>' +
+        itemsHtml +
+        '<button type="button" class="secondary small add-item-btn" data-add-item="' + cat.id + '">+ Add item</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.loadTemplateBtn.addEventListener('click', function () {
+    if (state.categories.length && !confirm('Replace the current checklist with this template?')) return;
+    fromTemplate(els.templateSelect.value);
+    save();
+    renderCategories();
+  });
+
+  els.addCategoryBtn.addEventListener('click', function () {
+    state.categories.push({ id: uid(), name: 'New Category', items: [{ id: uid(), text: 'New checklist item' }] });
+    save();
+    renderCategories();
+  });
+
+  els.categoriesWrap.addEventListener('input', function (ev) {
+    var field = ev.target.getAttribute('data-field');
+    if (field === 'catname') {
+      var catId = ev.target.getAttribute('data-cat');
+      var cat = state.categories.find(function (c) { return c.id === catId; });
+      if (cat) cat.name = ev.target.value;
+      save();
+    } else if (field === 'item') {
+      var row = ev.target.closest('.item-row');
+      var cId = row.getAttribute('data-cat'), iId = row.getAttribute('data-item');
+      var cat2 = state.categories.find(function (c) { return c.id === cId; });
+      var item = cat2 && cat2.items.find(function (i) { return i.id === iId; });
+      if (item) item.text = ev.target.value;
+      save();
+    }
+  });
+
+  els.categoriesWrap.addEventListener('click', function (ev) {
+    var addCatId = ev.target.getAttribute('data-add-item');
+    var delCatId = ev.target.getAttribute('data-del-cat');
+    var delItemId = ev.target.getAttribute('data-del-item');
+    if (addCatId) {
+      var cat = state.categories.find(function (c) { return c.id === addCatId; });
+      if (cat) cat.items.push({ id: uid(), text: 'New checklist item' });
+      save(); renderCategories();
+    } else if (delCatId) {
+      state.categories = state.categories.filter(function (c) { return c.id !== delCatId; });
+      save(); renderCategories();
+    } else if (delItemId) {
+      var catDelId = ev.target.getAttribute('data-cat-del');
+      var cat3 = state.categories.find(function (c) { return c.id === catDelId; });
+      if (cat3) cat3.items = cat3.items.filter(function (i) { return i.id !== delItemId; });
+      save(); renderCategories();
+    }
+  });
+
+  els.assignmentName.addEventListener('input', function () { state.assignmentName = els.assignmentName.value; save(); });
+  els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
+
+  function halfSheetHtml() {
+    var title = state.assignmentName.trim() ? escapeHtml(state.assignmentName.trim()) : 'Peer Feedback Checklist';
+    var cats = state.categories.map(function (cat) {
+      var items = cat.items.map(function (item) {
+        return '<div class="pf-item"><span class="box"></span>' + escapeHtml(item.text) + '</div>';
+      }).join('');
+      return '<div class="pf-cat"><h4>' + escapeHtml(cat.name) + '</h4>' + items + '</div>';
+    }).join('');
+    return '<div class="half-sheet"><h3>' + title + '</h3>' +
+      '<div class="names">Author: _____________________ &nbsp; Reviewer: _____________________</div>' +
+      cats + '<div class="pf-cat"><h4>Comments</h4><span class="comments-line"></span><span class="comments-line"></span></div>' +
+      '</div>';
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.categories.length) { alert('Load a template or add a category first.'); return; }
+    var count = Math.max(1, Math.min(60, state.copyCount || 6));
+    var html = '';
+    for (var i = 0; i < count; i++) html += halfSheetHtml();
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.assignmentName.value = state.assignmentName || '';
+  els.copyCount.value = state.copyCount || 6;
+  if (!state.categories.length) fromTemplate('narrative');
+  renderCategories();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
