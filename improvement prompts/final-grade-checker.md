@@ -120,7 +120,7 @@ Visualizer, rubric-scored input, progress reports).
   by 4 points", "if this assignment is worth 50 instead of 100" — recomputed
   across the class instantly, with a before/after distribution. *(Not
   attempted this round.)*
-- **Skipped — deferred.** **Grade-window awareness** (P7). If `school-calendar-visualizer.html`
+- **Skipped — deferred.** **Grade-window awareness** (P7). If `School Calendar Visualizer.html`
   knows when the quarter ends, "remaining quarter" stops being a manual input.
   *(Not attempted this round.)*
 - **Skipped — deferred.** **Hand off to Grade Distribution Visualizer** (P7). These two tools consume
