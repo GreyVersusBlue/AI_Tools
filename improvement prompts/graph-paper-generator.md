@@ -88,20 +88,25 @@ the labelled/header/faded square-grid case and the 4-plane case.
 
 ## Quick Wins
 
-- **Labelled axes and gridline numbering** as an option — a coordinate plane
-  students can actually plot on without counting squares.
-- **A title/name/date header block** on the sheet.
+- **Done —** **Labelled axes and gridline numbering** as an option — a coordinate plane
+  students can actually plot on without counting squares. *(Shipped Round 3
+  as "Number the gridlines" — an opt-in labelled-Nth-line option for square
+  graph paper.)*
+- **Done —** **A title/name/date header block** on the sheet. *(Shipped Round 3, shared
+  across all four modes via `gpg-render.js`'s `headerBlockHeight`/`headerSvg`.)*
 - **Print-margin verification.** "True to scale" is the tool's core promise
   and it depends on the browser not scaling to fit; a printed calibration
   ruler on a test page would let a teacher confirm it once per printer.
 - **More grid types**: hexagonal, polar, log/semi-log, engineering (5 squares
   per inch), Cornell-notes ruling, handwriting lines with a dashed midline,
   storyboard boxes, music staff.
-- **Multiple small planes per page** (four coordinate planes on one sheet) —
+- **Done —** **Multiple small planes per page** (four coordinate planes on one sheet) —
   the most common actual worksheet format, and only number lines support
-  per-page multiples today.
-- **Faded / light-grey gridlines** so student pencil work stands out, and an
-  ink-saving mode.
+  per-page multiples today. *(Shipped Round 3 as `PLANE_LAYOUTS` — 1/2/4/6
+  planes per page.)*
+- **Done —** **Faded / light-grey gridlines** so student pencil work stands out, and an
+  ink-saving mode. *(Shipped Round 3 as the "lighter gridlines" ink-saving
+  toggle.)*
 
 ## Major Features
 

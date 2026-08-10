@@ -9,6 +9,12 @@
 > tempting unbuilt ideas. Every tool's file is full of unbuilt ideas; that is
 > what they are for.
 >
+> Multiple agent sessions work this list concurrently, often on the same
+> calendar day — a date alone doesn't tell you who's doing what. **Claim a
+> tool before you build it** (see "How to use this file" below) so a
+> concurrent session can see, at a glance, which tools are already spoken
+> for and by which session, not just which ones shipped yesterday.
+>
 > When the "Not yet touched" list is empty, that is the signal to **reset**:
 > move every tool back to "Not yet touched", start a new round-number series,
 > and begin the second pass. Devon may also reset it early, or move a specific
@@ -16,15 +22,64 @@
 
 ## How to use this file
 
-1. Read this file first and pick from **Not yet touched**.
-2. Do the work; update that tool's own `improvement prompts/<tool>.md` with
+1. Read this file first. Pick from **Not yet touched** — skip anything
+   already listed in **Currently claimed**, even if no PR exists for it yet.
+2. **Claim it before you build.** Add a row per tool to **Currently
+   claimed**: the tool name, your session code, the UTC timestamp, and your
+   branch name (see "Claiming a tool" below for exactly how). Commit and
+   push that claim-only change by itself, before writing any implementation
+   code, so a concurrent session sees your claim before picking its own
+   batch.
+3. Do the work; update that tool's own `improvement prompts/<tool>.md` with
    what shipped, what was hard, and where the next round should pick up.
-3. Move the tool from **Not yet touched** to **Already done**, in the table
-   for your round, with the PR number.
-4. Do **not** edit `_platform-themes.md` — it is read-only reference material
+4. When you finish: remove the tool's row from **Currently claimed** and
+   from **Not yet touched**, and add it to **Already done**, in the table
+   for your round — header the round like
+   `### Pass N — Round M — <timestamp UTC> — session <code> — PR #NN`
+   (see the Pass 2 example under "Not yet touched" below) so the round
+   itself carries the same session code and time-stamped identity its claim
+   did.
+5. Abandoning a claim without shipping? Delete its row from **Currently
+   claimed** and leave the tool in **Not yet touched** — don't leave a dead
+   claim sitting there for the next session to trip over.
+6. Do **not** edit `_platform-themes.md` — it is read-only reference material
    shared by parallel sessions.
 
-Only the round tables and the two lists below change. Keep the format.
+Only the claim table, the round tables, and the two lists below change. Keep
+the format.
+
+### Claiming a tool
+
+Every session working this repo is already on its own branch named
+`claude/<something>-<code>`, where `<code>` is a short random suffix unique
+to that session/branch (for example `claude/tools-touched-review-maptjt` →
+session code `maptjt`). That code is the agent code — no need to invent a
+separate identifier, just read it off your own branch name. If you haven't
+created your branch yet, do that first.
+
+To claim a tool, add a row to the **Currently claimed** table, one row per
+tool, filling in the four columns like this:
+
+```
+| <Tool Name> | `<code>` | <output of `date -u +"%Y-%m-%d %H:%M UTC"`> | `<full branch name>` |
+```
+
+Push that row by itself before starting implementation work. A claim more
+than **~6 hours old with no matching PR** is stale — safe to treat as
+abandoned and reclaim (say so in your commit message if you do; sessions can
+stall or get interrupted, this isn't an accusation).
+
+---
+
+## Currently claimed (in progress)
+
+Nothing claimed right now. When you claim a tool per "Claiming a tool"
+above, add its row here; when the round ships, the row moves down to
+**Already done** and is deleted from here.
+
+| Tool | Session | Claimed at (UTC) | Branch |
+|---|---|---|---|
+| *(none)* | | | |
 
 ---
 
@@ -32,6 +87,14 @@ Only the round tables and the two lists below change. Keep the format.
 
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
+
+### Pass 1 — complete (46/46 tools, Rounds 1–10, PRs #51–#65)
+
+Every round below predates the claim system above — all ten rounds landed
+the same calendar day (2026-08-10) from several concurrent sessions, which
+is exactly the ambiguity the claim table and the `session <code>` round
+header now exist to prevent. Left as-is for history; do not renumber or
+backfill session codes onto these.
 
 ### Round 1 — 2026-08-10 — PR #51
 
@@ -204,11 +267,31 @@ where the next one should pick up.
 |---|---|
 | Blank Map Generator | `blank-map-generator.md` |
 
-**46 of 46 tools done.** The list below is empty — per the instructions at
-the top of this file, that is the signal to reset for a second pass: move
-every tool back to "Not yet touched" and start a new round-number series.
-That reset is deliberately left for Devon or the next session to make, so
-it isn't done silently inside a tool round.
+**46 of 46 tools done.** Pass 1 complete.
+
+### Pass 2 — reset 2026-08-10
+
+Per the instructions at the top of this file, an empty "Not yet touched"
+list is the signal to reset: every tool has been moved back below, and
+round numbering starts over as **Pass 2, Round 1**. Round headers from here
+on should carry a timestamp and session code, per "How to use this file"
+above — e.g. `` ### Pass 2 — Round 1 — 2026-08-11 03:14 UTC — session `abc123` — PR #NN `` —
+not just a bare date, so that several rounds landing the same calendar day
+(as happened throughout Pass 1) stay distinguishable at a glance. The next
+round entry gets appended directly below this note.
+
+10 new tools were also added straight from the Ideas Backlog since Pass 1
+started (Art Critique Worksheet Generator, Current Events Discussion Guide
+Generator, Daily Editing/DOL Warm-Up Generator, Lab Report Template
+Builder, Parent/Guardian Contact Log, Peer Feedback/Editing Checklist
+Generator, Staff Directory/Quick-Reference Builder, Unit Conversion
+Reference Chart Builder, Verb Conjugation Reference Poster Generator, Word
+Problem Warm-Up Generator). Each already has its own `improvement
+prompts/<tool>.md` with a first-build Status, but none of the ten are in
+the "Not yet touched" list below yet — Devon wants to fold them into the
+round system deliberately rather than mixed in silently with this reset.
+Leave them out until told otherwise; more may be coming from the backlog
+before that happens.
 
 ---
 
@@ -216,9 +299,55 @@ it isn't done silently inside a tool round.
 
 Pick from here. No particular order is implied — group them however makes
 sense for a round (by subject, by shared machinery, by print-heavy vs
-data-heavy), and say why in the PR.
+data-heavy), and say why in the PR. Skip anything already listed in
+**Currently claimed**.
 
-- *(empty — see the reset note above)*
+- Digital Hall Pass / Sign-Out Log — `hall-pass-log.md`
+- Group / Team Generator — `group-team-generator.md`
+- Rubric Builder — `rubric-builder.md`
+- Classroom Timer — `classroom-timer.md`
+- Seating Chart Generator — `seating-chart-generator.md`
+- Class Roster Hub — `class-roster-hub.md`
+- Name Picker — `name-picker.md`
+- Behavior & Points Tracker — `behavior-points-tracker.md`
+- Backup & Restore — `backup-restore.md`
+- Command Center — `command-center-dashboard.md`
+- Image → PDF Assembler — `image-to-pdf.md`
+- Graph Paper & Number Line Generator — `graph-paper-generator.md`
+- Lab Safety Contract Tracker — `lab-safety-contract-tracker.md`
+- Immersion Roleplay Scenario Generator — `roleplay-scenario-generator.md`
+- Timeline Builder — `timeline-builder.md`
+- QR Code Generator — `qr-code-generator.md`
+- Gallery Walk QR Codes — `gallery-walk-qr.md`
+- QR Scavenger Hunt Builder — `qr-scavenger-hunt-builder.md`
+- Digital Escape Room / Puzzle Lock Builder — `escape-room-builder.md`
+- Bracket / Tournament Generator — `bracket-tournament-generator.md`
+- Tournament Bracket & Station Rotation (PE) — `pe-tournament-stations.md`
+- Lab Group & Role Randomizer — `lab-group-role-randomizer.md`
+- Exit Ticket / Bell Ringer Generator — `exit-ticket-generator.md`
+- Number Talks / Mental Math Routine Board — `number-talks-board.md`
+- Writing Prompt Generator — `writing-prompt-generator.md`
+- Math Fact Drill Sheet Generator — `math-drill-generator.md`
+- Novel Study / Reading Circles Manager — `novel-study-circles-manager.md`
+- Primary Source Analysis Worksheet Generator — `primary-source-analysis-generator.md`
+- Prompt Builder — `prompt-builder.md`
+- Quiz / Review Game Board — `review-game-board.md`
+- Word Doc Merger — `docx-merger.md`
+- School Calendar Visualizer — `school-calendar-visualizer.md`
+- Silent Reading (SSR) Log Tracker — `ssr-log-tracker.md`
+- East Middle Schedule Browser — `schedule-browser.md`
+- School Layout Visualizer — `schedule-visualizer.md`
+- Final Grade Checker — `final-grade-checker.md`
+- Grade Distribution Visualizer — `grade-distribution-visualizer.md`
+- Data Table → Chart Builder — `data-chart-builder.md`
+- Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
+- Vocabulary Flashcard & Word Wall Generator — `vocab-flashcard-generator.md`
+- Formula Reference Sheet Builder — `formula-sheet-builder.md`
+- Certificate & Award Maker — `certificate-award-maker.md`
+- Field Trip Permission Slip Generator — `field-trip-permission-slip.md`
+- Sub Plan Builder — `sub-plan-builder.md`
+- Sub Binder / Day Bundle Generator — `sub-binder-generator.md`
+- Blank Map Generator — `blank-map-generator.md`
 
 ---
 
