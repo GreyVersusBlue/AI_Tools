@@ -9,58 +9,182 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Quick Wins and the two scoped Major Features implemented.**
+All seven Quick Wins and the two Major Features called out for this round
+(grouping strategies as first-class modes; a printable group sheet) are done.
+Roles-in-tool, group history visualization, seating-aware grouping,
+project-team mode, and the Moonshot were explicitly skipped per this round's
+scope — see the "Skip" note at the end of each of those items below.
+
+What changed, concretely:
+- The old single `balance-skill` checkbox became a **Grouping strategy**
+  select with four explicit modes (random / balanced / heterogeneous /
+  homogeneous), each a distinct algorithm (see `assignRandom`,
+  `assignBalanced`, `assignHeterogeneous`, `assignHomogeneous`) rather than
+  one boolean. Old saved configs migrate `balance: true` → `strategy:
+  'balanced'` automatically.
+- Odd-number handling is now an explicit "If the class doesn't divide
+  evenly" select (`oddMode`: extra / floater / pair), implemented as a
+  post-processing pass (`applyOddHandling`) that pops the overflow beyond
+  the smallest unlocked group into a floater list or a standalone bonus
+  group — it runs after assignment and before constraint resolution, so
+  every strategy gets it for free.
+- A **"Why this grouping"** panel (`buildExplanation`/`renderExplanation`)
+  surfaces the strategy used, which constraints were honored or broken,
+  whether any recent pairing repeated, and how the remainder was handled —
+  built directly from the existing `totalScore`/violation-finder machinery,
+  not a separate re-implementation.
+- **Locking**: each rendered group gets a Lock toggle; Reshuffle (not "Make
+  Groups", which is always a clean slate) respects locked groups exactly —
+  `resolveConstraints` now takes a `lockedIdx` set and refuses to touch a
+  locked group as either the swap source or destination, so a lock is a real
+  guarantee, not just a suggestion the local search might override to fix a
+  constraint elsewhere. A lock referencing a student who went absent or was
+  removed from the roster is detected (`locksAreValid`) and the tool falls
+  back to a full reshuffle rather than crashing or silently corrupting state.
+- **Absent-today** checkboxes appear once names are parsed; they exclude a
+  student from grouping only (roster text and keep-apart/together
+  definitions are untouched), persisted as `state.absentNames` and pruned
+  automatically when a name is edited out of the roster.
+- **Undo** is single-level (`snapshotForUndo`/undo button): it restores not
+  just the previous group arrangement but also `pairHistory`/`pairGen`,
+  since the pairing-memory mutation is otherwise irreversible and would
+  otherwise silently contaminate future shuffles with a shuffle the teacher
+  chose to discard.
+- **Group naming**: numbered / Table N / color-team / custom-list presets
+  (`groupLabel`), used consistently in on-screen rendering, copy-as-text,
+  table tents, and group sheets.
+- **Table tents**: mirrors `lab-group-role-randomizer.html`'s
+  `tentPanelHtml`/`tentsHtml` fold-card approach exactly (same print CSS
+  structure), adapted to show group names + skill instead of roles.
+- **Group sheets**: one page per group (`groupSheetHtml`) with the group
+  name, a blank table/station line, the member list, and a lined task/notes
+  box — plus a trailing page for floaters if any exist.
+
+Real tradeoffs and things a future round should know about:
+- **Heterogeneous vs. balanced are deliberately different algorithms**, not
+  just two names for the same snake draft: balanced equalizes group
+  *averages* (snake draft over the full sorted list); heterogeneous splits
+  the roster into thirds by skill and round-robins each third separately,
+  guaranteeing every group draws from the top/middle/bottom rather than just
+  landing on similar averages. Worth double-checking with a real teacher
+  whether this distinction reads as intended in the UI copy — it's subtle.
+- **Locked reshuffle re-derives group count from the previous result**, not
+  from the count/size fields, by design (that's what "reshuffle the rest"
+  means) — but this means changing the split-count field while a lock is
+  active has no effect until the teacher does a fresh "Make Groups". This
+  isn't stated explicitly in the UI; a future round could disable/gray the
+  split fields while any group is locked, or add a hint.
+- The **pair-mode bonus group** and **floater list** are recomputed fresh on
+  every generation (they are never "locked" as a concept, only regular
+  groups can be locked) — this is intentional and matches how a teacher
+  would use it, but wasn't stress-tested against many repeated
+  lock+reshuffle cycles combined with odd-number remainders; the logic is
+  self-correcting by construction (see code comments in `applyOddHandling`)
+  but a future round doing heavy interactive QA should specifically hammer
+  on lock → reshuffle → lock differently → reshuffle again with an uneven
+  roster.
+- **Skip — roles in this tool**: per this round's explicit scope, not
+  attempted; still belongs as shared-engine cross-tool work (see P7 below).
+- **Skip — group history visualization across the year**: not attempted;
+  the pairing-memory data (`pairHistory`) still only looks back
+  `PAIR_MEMORY_WINDOW` (2) generations by design, it does not accumulate a
+  full-year history, so this would need a real design decision about
+  whether/how to retain older data before a visualization is meaningful.
+- **Skip — seating-aware grouping**: not attempted; depends on Seating Chart
+  Generator's data per P7, out of scope here.
+- **Skip — project-team mode**: not attempted; a persistent multi-day team
+  concept is a different data model than this tool's current
+  generate-and-print-per-period design.
+- **Skip — Moonshot**: not attempted, as instructed.
 
 ## What it does today
 
 - Split by **group count** or **group size**; load a saved `np_rosters` roster
-- **Skill balancing** (`avgSkill`, `totalScore`) with per-student skill values
+- Exclude **absent students** for today's grouping only, without editing the
+  roster text
+- **Four explicit grouping strategies** — random, balanced by skill, deliberately
+  heterogeneous, and homogeneous by readiness (`assignRandom`, `assignBalanced`,
+  `assignHeterogeneous`, `assignHomogeneous`) — plus an explicit choice for how
+  an uneven remainder is handled (extra student per group, floaters, or a
+  standalone small group)
 - **Keep Apart** and **Put Together** constraints with violation reporting
   (`findApartViolations`, `findTogetherViolations`)
 - **Pairing memory** — penalizes recently-paired students
   (`pairRecencyPenalty`, `recordPairHistory`, `findRecentPairViolations`),
   with a reset. This is the tool's best idea.
+- A **"Why this grouping" explanation** built from the same scoring
+  machinery, plus **locking** a group so Reshuffle only touches the rest,
+  and a single-level **Undo** that also rolls back the pairing-memory
+  mutation
+- **Group naming** (numbered, Table N, color teams, or a custom list),
+  carried through to on-screen display, copy-as-text, **printable table
+  tents**, and a **printable group sheet** (one page per group with a
+  table/station line and a task/notes box)
 - Multiple saved class configs (`gtg:list` / `gtg:current`), reshuffle, copy
   as text, print
 
 ## Quick Wins
 
-- **Show why a grouping was chosen.** The scoring machinery
+- **Done (2026-08-10) — Show why a grouping was chosen.** The scoring machinery
   (`totalScore`, `totalPairPenalty`) already exists; surfacing "this grouping
   breaks one keep-apart constraint and repeats two pairs" makes the teacher
-  trust it or reshuffle deliberately.
-- **Lock a group and reshuffle the rest** — the most common real interaction
-  and currently impossible.
-- **Absent students excluded in one tap**, rather than edited out of the list.
-- **Name the groups** (Table 1, Red Team, or by topic) and print them that way.
-- **Print table tents** — `lab-group-role-randomizer.html` already generates
-  them (`tentsHtml`, `tentPanelHtml`) and this tool doesn't (P7).
-- **Odd-number handling as a stated choice**: one group of 5, or a floater, or
-  a pair — currently implicit.
-- **Undo the last shuffle** (P11).
+  trust it or reshuffle deliberately. Implemented as `buildExplanation` /
+  `renderExplanation`, shown above the group list on every generate/reshuffle.
+- **Done (2026-08-10) — Lock a group and reshuffle the rest** — the most common
+  real interaction and currently impossible. Each group card has a Lock
+  toggle; `resolveConstraints` now refuses to touch a locked group as either
+  swap source or destination.
+- **Done (2026-08-10) — Absent students excluded in one tap**, rather than
+  edited out of the list. A checklist appears under the roster once names are
+  parsed; `state.absentNames` excludes them from grouping only.
+- **Done (2026-08-10) — Name the groups** (Table 1, Red Team, or by topic) and
+  print them that way. A naming-style select (numbered / Table N / color
+  teams / custom list) drives `groupLabel`, used everywhere a group name
+  appears.
+- **Done (2026-08-10) — Print table tents** — `lab-group-role-randomizer.html`
+  already generates them (`tentsHtml`, `tentPanelHtml`) and this tool didn't
+  (P7). Mirrored the same fold-card structure and print CSS here.
+- **Done (2026-08-10) — Odd-number handling as a stated choice**: one group of
+  5, or a floater, or a pair — was implicit, now an explicit "If the class
+  doesn't divide evenly" select (`applyOddHandling`).
+- **Done (2026-08-10) — Undo the last shuffle** (P11). Single-level undo that
+  also rolls back the `pairHistory`/`pairGen` mutation from the shuffle being
+  undone, not just the group arrangement.
 
 ## Major Features
 
-- **Grouping strategies as first-class modes.** Random, balanced by skill,
-  heterogeneous (deliberately mixed), homogeneous (by readiness, for
-  differentiation), by interest, by student choice with constraints. "Group
-  the four strongest together" and "spread them evenly" are opposite requests
-  that both come up weekly, and only one is supported.
+- **Done (2026-08-10) — Grouping strategies as first-class modes.** Random,
+  balanced by skill, heterogeneous (deliberately mixed), and homogeneous (by
+  readiness, for differentiation) are now explicit, switchable modes
+  (`assignRandom`/`assignBalanced`/`assignHeterogeneous`/`assignHomogeneous`).
+  By-interest and by-student-choice-with-constraints were **not** attempted —
+  they need a data model (interests, choices) this tool doesn't have yet;
+  left as a follow-up.
 - **Roles built in** (P7). `lab-group-role-randomizer.html` assigns roles with
   a recency memory; `novel-study-circles-manager.html` does the same for
   reading circles. Three tools implement group-formation and two implement
-  role rotation. One engine should serve all of them.
+  role rotation. One engine should serve all of them. **Skip (2026-08-10)** —
+  explicitly out of scope for this round per the cross-tool consolidation
+  note; still open for a dedicated round.
 - **Group history across the year.** "Everyone has worked with everyone at
   least once" is a real goal and the pair history already tracks the data
-  needed to visualize and drive it.
+  needed to visualize and drive it. **Skip (2026-08-10)** — out of scope for
+  this round; note that `pairHistory` currently only retains
+  `PAIR_MEMORY_WINDOW` (2) generations, so a real "across the year" view
+  would need a retention-policy decision first.
 - **Seating-aware grouping** (P7). Groups that are physically possible given
   the seating chart — four students who sit near each other — versus groups
-  that require a room reshuffle.
+  that require a room reshuffle. **Skip (2026-08-10)** — depends on Seating
+  Chart Generator's data, out of scope for this round.
 - **Project-team mode.** Longer-lived teams with names, a shared task list,
-  and a printable team contract, rather than a one-period grouping.
-- **Group sheet worth printing.** Names, roles, table number, task, and a
-  place for the group's output — one page, ready to hand out.
+  and a printable team contract, rather than a one-period grouping. **Skip
+  (2026-08-10)** — out of scope for this round; a persistent multi-day team
+  is a different data model than this tool's per-period generate/print flow.
+- **Done (2026-08-10) — Group sheet worth printing.** Names, table number,
+  task, and a place for the group's output — one page per group, ready to
+  hand out (`groupSheetHtml`). Roles were intentionally left out per the
+  "roles built in" skip above.
 
 ## Moonshot / North Star
 
@@ -79,7 +203,11 @@ every tool on the site that forms groups, using the same memory.
 - **P2 (shared roster)** — already reads `np_rosters`; needs stable IDs so
   pair history survives a roster edit.
 - **P11 (undo)** — a reshuffle destroys the previous grouping irrecoverably.
-- **P6 (print quality)** — table tents and group sheets.
+  **Resolved (2026-08-10)** for the single-most-recent shuffle via a one-level
+  undo button; no multi-step history stack.
+- **P6 (print quality)** — table tents and group sheets. **Addressed
+  (2026-08-10)** — both are implemented, mirroring
+  `lab-group-role-randomizer.html`'s existing print approach.
 
 ## Open Questions
 

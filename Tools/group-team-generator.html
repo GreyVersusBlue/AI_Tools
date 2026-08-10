@@ -81,12 +81,6 @@
   .toggle-group input[type="radio"] { display: none; }
   .toggle-group input[type="radio"]:checked + label { background: var(--accent); color: white; }
 
-  .option-row { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.5rem 0; }
-  .option-row input[type="checkbox"] { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-  .option-row input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.4; }
-  .option-label { flex: 1; font-size: 0.85rem; color: var(--text); cursor: pointer; }
-  .option-label small { display: block; color: var(--text-dim); font-size: 0.76rem; margin-top: 2px; }
-
   button {
     cursor: pointer; font-family: inherit; font-size: 0.875rem; font-weight: 600; border-radius: 8px;
     padding: 0.6rem 1.1rem; border: none; transition: opacity 0.15s, transform 0.1s;
@@ -117,11 +111,44 @@
   .empty-hint { font-size: 0.82rem; color: var(--text-dim); text-align: center; padding: 2rem 1rem; }
   .groups-wrap { display: flex; flex-direction: column; gap: 0.75rem; }
   .group-card { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 0.75rem 0.9rem; }
-  .group-card h3 { font-size: 0.82rem; font-weight: 700; color: var(--accent2); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: baseline; }
-  .group-card h3 .avg { font-size: 0.7rem; color: var(--text-dim); font-weight: 500; }
+  .group-card.locked { border-left-color: var(--warn); }
+  .group-card h3 { font-size: 0.82rem; font-weight: 700; color: var(--accent2); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .group-card h3 .avg { font-size: 0.7rem; color: var(--text-dim); font-weight: 500; margin-left: 0.5rem; }
   .group-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
   .group-card li { font-size: 0.85rem; display: flex; justify-content: space-between; gap: 0.5rem; }
   .group-card li .skill { color: var(--text-dim); font-size: 0.75rem; font-family: var(--mono); }
+
+  .lock-btn { flex-shrink: 0; background: transparent; border: 1px solid var(--border); color: var(--text-dim); font-size: 0.68rem; font-weight: 600; padding: 0.2rem 0.45rem; border-radius: 5px; }
+  .lock-btn.locked { color: var(--warn); border-color: var(--warn); }
+
+  .floater-box { background: var(--surface2); border: 1px dashed var(--text-dim); border-radius: 8px; padding: 0.65rem 0.9rem; font-size: 0.82rem; color: var(--text-dim); margin-top: 0.75rem; }
+
+  .absent-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+  .absent-item { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.55rem; font-size: 0.78rem; color: var(--text); cursor: pointer; user-select: none; }
+  .absent-item input { accent-color: var(--accent); cursor: pointer; }
+  .absent-item.is-absent { opacity: 0.55; text-decoration: line-through; border-color: var(--danger); }
+
+  .explain-box { font-size: 0.78rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(108, 142, 245, 0.08); color: var(--text); border: 1px solid rgba(108, 142, 245, 0.28); line-height: 1.5; }
+  .explain-box ul { margin: 0.4rem 0 0 1.1rem; }
+  .explain-box li { margin-bottom: 0.2rem; }
+
+  .tent-sheet { display: flex; flex-direction: column; }
+  .tent-card { border: 1px dashed var(--border); margin-bottom: 0.6rem; border-radius: 6px; }
+  .tent-half { padding: 1.4rem 1rem; text-align: center; }
+  .tent-half.tent-flip { transform: rotate(180deg); }
+  .tent-fold { border-top: 1px dashed var(--border); position: relative; }
+  .tent-fold::after { content: '\2702 fold here'; position: absolute; left: 50%; top: -0.55rem; transform: translateX(-50%); background: var(--surface); font-size: 0.68rem; color: var(--text-dim); padding: 0 0.4rem; }
+  .tent-groupname { font-size: 1.6rem; font-weight: 800; color: var(--accent2); margin-bottom: 0.6rem; }
+  .tent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+  .tent-list li { display: flex; justify-content: center; gap: 0.6rem; font-size: 1rem; }
+  .tent-list .t-skill { color: var(--text-dim); font-family: var(--mono); font-size: 0.85rem; }
+
+  .sheet-page { border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.4rem; margin-bottom: 1rem; }
+  .sheet-page h2 { font-size: 1.4rem; margin-bottom: 0.3rem; }
+  .sheet-table-line { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.9rem; }
+  .sheet-names { list-style: none; margin: 0 0 1.1rem; padding: 0; }
+  .sheet-names li { font-size: 0.95rem; padding: 0.25rem 0; border-bottom: 1px dashed var(--border); }
+  .sheet-task-box { border: 1px solid var(--border); border-radius: 6px; min-height: 2.4in; padding: 0.6rem 0.75rem; font-size: 0.8rem; color: var(--text-dim); }
 
   .warn-box { font-size: 0.78rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(251, 191, 36, 0.1); color: var(--warn); border: 1px solid rgba(251, 191, 36, 0.3); line-height: 1.5; }
   #msg { font-size: 0.78rem; padding: 0.55rem 0.75rem; border-radius: 6px; display: none; margin-top: 0.75rem; width: 100%; white-space: pre-line; }
@@ -142,7 +169,19 @@
     .group-card { border: 1px solid #999; break-inside: avoid; margin-bottom: 0.5rem; }
     .group-card h3 { color: #000; }
     .group-card li .skill { color: #555; }
+    .lock-btn, #results-heading { display: none !important; }
+    .floater-box { border: 1px dashed #999; color: #333; }
     #print-title { display: block !important; font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; }
+
+    .tent-card { border: none; break-after: page; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 9in; margin: 0; }
+    .tent-card:last-child { break-after: auto; }
+    .tent-half { padding: 2rem 1rem; }
+    .tent-groupname { color: #000; }
+    .tent-fold::after { background: #fff; }
+
+    .sheet-page { border: 1px solid #999; break-after: page; break-inside: avoid; }
+    .sheet-page:last-child { break-after: auto; }
+    .sheet-task-box { border: 1px solid #999; color: #333; }
   }
 </style>
 </head>
@@ -175,6 +214,10 @@
         <textarea id="names-input" placeholder="Aiden Smith&#10;Brooklyn Jones, 4&#10;Charlie Patel, 2&#10;..." spellcheck="false"></textarea>
         <div id="name-count">0 names</div>
       </div>
+      <div class="control-group" id="absent-wrap" style="display:none;">
+        <label>Mark absent today <span style="font-weight:400;">(excluded from grouping only — stays on the roster)</span></label>
+        <div class="absent-list" id="absent-list"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -189,9 +232,23 @@
         <label for="split-value" id="split-value-label">Number of groups</label>
         <input type="number" id="split-value" min="2" max="40" value="4">
       </div>
-      <div class="option-row">
-        <input type="checkbox" id="balance-skill" disabled>
-        <label class="option-label" for="balance-skill">Balance skill levels across groups<small>Distributes high/low ratings evenly instead of pure random. Needs a rating on at least one name above.</small></label>
+      <div class="control-group">
+        <label for="strategy-select">Grouping strategy</label>
+        <select id="strategy-select">
+          <option value="random">Random</option>
+          <option value="balanced">Balanced by skill (equal group averages)</option>
+          <option value="heterogeneous">Heterogeneous (deliberately mixed ability)</option>
+          <option value="homogeneous">Homogeneous (grouped by readiness)</option>
+        </select>
+        <div class="hint" id="strategy-hint"></div>
+      </div>
+      <div class="control-group">
+        <label for="odd-mode-select">If the class doesn't divide evenly</label>
+        <select id="odd-mode-select">
+          <option value="extra">Let one or more groups take an extra student</option>
+          <option value="floater">Leave the leftover student(s) as floaters</option>
+          <option value="pair">Put the leftover students in their own small group</option>
+        </select>
       </div>
     </div>
 
@@ -219,9 +276,27 @@
       <div class="pair-list" id="together-list"></div>
     </div>
 
+    <div class="card">
+      <div class="card-title">5 · Group Names (optional)</div>
+      <div class="control-group">
+        <label for="naming-select">Naming style</label>
+        <select id="naming-select">
+          <option value="number">Group 1, Group 2, &hellip;</option>
+          <option value="table">Table 1, Table 2, &hellip;</option>
+          <option value="color">Color teams (Red Team, Blue Team&hellip;)</option>
+          <option value="custom">Custom names</option>
+        </select>
+      </div>
+      <div class="control-group" id="custom-names-wrap" style="display:none;">
+        <label for="custom-names-input">One name per line, in order</label>
+        <textarea id="custom-names-input" placeholder="Red Team&#10;Blue Team&#10;Green Team&#10;..." spellcheck="false" style="min-height:90px;"></textarea>
+      </div>
+    </div>
+
     <div class="btn-row" style="margin-top:0;">
       <button class="btn-primary" id="generate-btn" disabled>🎲 Make Groups</button>
       <button class="btn-secondary" id="regenerate-btn" disabled>🔀 Reshuffle</button>
+      <button class="btn-secondary" id="undo-btn" disabled>↩️ Undo</button>
     </div>
     <p class="hint" id="pair-history-hint"></p>
     <div class="btn-row" style="margin-top:0;">
@@ -233,13 +308,16 @@
   <div class="col-right">
     <div class="card">
       <div class="card-title" id="print-title" style="display:none;"></div>
-      <div class="card-title" style="align-self:flex-start;">Groups</div>
+      <div class="card-title" id="results-heading" style="align-self:flex-start;">Groups</div>
+      <div id="explain-area"></div>
       <div id="warn-area"></div>
       <div id="results">
         <p class="empty-hint">Add names on the left, then click "Make Groups."</p>
       </div>
       <div class="btn-row" id="export-row" style="display:none;">
         <button class="btn-secondary" id="print-btn">🖨️ Print</button>
+        <button class="btn-secondary" id="print-tents-btn">🪧 Print Table Tents</button>
+        <button class="btn-secondary" id="print-sheets-btn">📄 Print Group Sheets</button>
         <button class="btn-secondary" id="copy-btn">📋 Copy as Text</button>
       </div>
     </div>
@@ -266,9 +344,16 @@
     loadRosterBtn: document.getElementById('load-roster-btn'),
     namesInput: document.getElementById('names-input'),
     nameCount: document.getElementById('name-count'),
+    absentWrap: document.getElementById('absent-wrap'),
+    absentList: document.getElementById('absent-list'),
     splitValueLabel: document.getElementById('split-value-label'),
     splitValue: document.getElementById('split-value'),
-    balanceSkill: document.getElementById('balance-skill'),
+    strategySelect: document.getElementById('strategy-select'),
+    strategyHint: document.getElementById('strategy-hint'),
+    oddModeSelect: document.getElementById('odd-mode-select'),
+    namingSelect: document.getElementById('naming-select'),
+    customNamesWrap: document.getElementById('custom-names-wrap'),
+    customNamesInput: document.getElementById('custom-names-input'),
     pairA: document.getElementById('pair-a'),
     pairB: document.getElementById('pair-b'),
     addPairBtn: document.getElementById('add-pair-btn'),
@@ -279,12 +364,16 @@
     togetherList: document.getElementById('together-list'),
     generateBtn: document.getElementById('generate-btn'),
     regenerateBtn: document.getElementById('regenerate-btn'),
+    undoBtn: document.getElementById('undo-btn'),
     pairHistoryHint: document.getElementById('pair-history-hint'),
     resetPairHistoryBtn: document.getElementById('reset-pair-history-btn'),
+    explainArea: document.getElementById('explain-area'),
     warnArea: document.getElementById('warn-area'),
     results: document.getElementById('results'),
     exportRow: document.getElementById('export-row'),
     printBtn: document.getElementById('print-btn'),
+    printTentsBtn: document.getElementById('print-tents-btn'),
+    printSheetsBtn: document.getElementById('print-sheets-btn'),
     copyBtn: document.getElementById('copy-btn'),
     printTitle: document.getElementById('print-title'),
     msg: document.getElementById('msg'),
@@ -294,7 +383,16 @@
   var keepApart = [];       // [[nameA, nameB]]
   var keepTogether = [];    // [[nameA, nameB]]
   var lastGroups = null;    // last generated result, for reshuffle/export
-  var state = null;         // { name, names, mode, splitValue, balance, keepApart, keepTogether }
+  var lockedFlags = [];     // parallel to lastGroups.groups — true means "leave this group alone on reshuffle"
+  var undoSnapshot = null;  // single-level undo of the last shuffle (groups + pairHistory + locks)
+  var state = null;         // { name, names, mode, splitValue, strategy, oddMode, namingMode, customNames, absentNames, keepApart, keepTogether }
+  var COLOR_TEAM_NAMES = ['Red', 'Blue', 'Green', 'Gold', 'Purple', 'Orange', 'Teal', 'Pink', 'Silver', 'Sapphire'];
+  var STRATEGY_LABELS = {
+    random: 'Random',
+    balanced: 'Balanced by skill (equal group averages)',
+    heterogeneous: 'Heterogeneous (deliberately mixed ability)',
+    homogeneous: 'Homogeneous (grouped by readiness)'
+  };
 
   // ── Named, saved configurations (one per class/period) ──────────────────
   function safeParse(json, fallback) {
@@ -323,6 +421,11 @@
   function defaultConfig(name) {
     return {
       name: name, names: '', mode: 'count', splitValue: 4, balance: false, keepApart: [], keepTogether: [],
+      // strategy replaces the old boolean `balance` flag with a named mode;
+      // oddMode is the explicit choice for how a remainder is handled;
+      // namingMode/customNames drive the printed/exported group labels;
+      // absentNames excludes roster members from today's grouping only.
+      strategy: 'random', oddMode: 'extra', namingMode: 'number', customNames: '', absentNames: [],
       // Recent-pairing memory: pairHistory maps a sorted "nameA␟name B"
       // key to the generation number (pairGen) they were last grouped
       // together, so reshuffles can bias away from repeating that pairing.
@@ -345,7 +448,7 @@
     if (typeof legacy.names === 'string') cfg.names = legacy.names;
     if (legacy.mode) cfg.mode = legacy.mode;
     if (legacy.splitValue) cfg.splitValue = legacy.splitValue;
-    if (legacy.balance) cfg.balance = true;
+    if (legacy.balance) { cfg.balance = true; cfg.strategy = 'balanced'; }
     if (Array.isArray(legacy.keepApart)) cfg.keepApart = legacy.keepApart;
     saveConfig(cfg.name, cfg);
     try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (e) { /* ignore */ }
@@ -368,9 +471,13 @@
     state.names = els.namesInput.value;
     state.mode = document.getElementById('mode-size').checked ? 'size' : 'count';
     state.splitValue = els.splitValue.value;
-    state.balance = els.balanceSkill.checked;
+    state.strategy = els.strategySelect.value;
+    state.oddMode = els.oddModeSelect.value;
+    state.namingMode = els.namingSelect.value;
+    state.customNames = els.customNamesInput.value;
     state.keepApart = keepApart;
     state.keepTogether = keepTogether;
+    if (!Array.isArray(state.absentNames)) state.absentNames = [];
     saveConfig(state.name, state);
   }
 
@@ -378,7 +485,15 @@
     els.namesInput.value = state.names || '';
     document.getElementById(state.mode === 'size' ? 'mode-size' : 'mode-count').checked = true;
     els.splitValue.value = state.splitValue || 4;
-    els.balanceSkill.checked = !!state.balance;
+    if (!state.strategy) state.strategy = state.balance ? 'balanced' : 'random';
+    els.strategySelect.value = state.strategy;
+    if (!state.oddMode) state.oddMode = 'extra';
+    els.oddModeSelect.value = state.oddMode;
+    if (!state.namingMode) state.namingMode = 'number';
+    els.namingSelect.value = state.namingMode;
+    els.customNamesInput.value = state.customNames || '';
+    els.customNamesWrap.style.display = state.namingMode === 'custom' ? '' : 'none';
+    if (!Array.isArray(state.absentNames)) state.absentNames = [];
     keepApart = Array.isArray(state.keepApart) ? state.keepApart : [];
     keepTogether = Array.isArray(state.keepTogether) ? state.keepTogether : [];
     syncSplitLabel();
@@ -386,6 +501,7 @@
     renderPairList();
     renderTogetherList();
     renderPairHistoryHint();
+    clearTransientGroupState();
   }
 
   function newConfig(name) {
@@ -401,8 +517,13 @@
     state = loaded;
     if (!Array.isArray(state.keepApart)) state.keepApart = [];
     if (!Array.isArray(state.keepTogether)) state.keepTogether = [];
+    if (!Array.isArray(state.absentNames)) state.absentNames = [];
     if (!state.pairHistory || typeof state.pairHistory !== 'object') state.pairHistory = {};
     if (typeof state.pairGen !== 'number') state.pairGen = 0;
+    if (!state.strategy) state.strategy = state.balance ? 'balanced' : 'random';
+    if (!state.oddMode) state.oddMode = 'extra';
+    if (!state.namingMode) state.namingMode = 'number';
+    if (typeof state.customNames !== 'string') state.customNames = '';
     localStorage.setItem(CURRENT_KEY, name);
     refreshConfigSwitcher();
     applyStateToForm();
@@ -501,16 +622,104 @@
 
   function onNamesChanged() {
     students = parseNames(els.namesInput.value);
-    els.nameCount.textContent = students.length + ' name' + (students.length === 1 ? '' : 's');
-    var hasSkills = students.some(function (s) { return s.skill !== null; });
-    els.balanceSkill.disabled = !hasSkills;
-    if (!hasSkills) els.balanceSkill.checked = false;
-    els.generateBtn.disabled = students.length < 2;
+    if (state && Array.isArray(state.absentNames)) {
+      var currentNames = {};
+      students.forEach(function (s) { currentNames[s.name] = true; });
+      state.absentNames = state.absentNames.filter(function (n) { return currentNames[n]; });
+    }
+    var absentCount = students.length - getActiveStudents().length;
+    els.nameCount.textContent = students.length + ' name' + (students.length === 1 ? '' : 's') +
+      (absentCount ? ' · ' + absentCount + ' absent today' : '');
+    syncStrategyAvailability();
+    renderAbsentList();
+    els.generateBtn.disabled = getActiveStudents().length < 2;
     populatePairSelects();
     saveCurrentConfig();
   }
 
   els.namesInput.addEventListener('input', onNamesChanged);
+
+  // ── Excluding absent students without touching the roster text ──────────
+  function getActiveStudents() {
+    var absentSet = {};
+    (state && state.absentNames || []).forEach(function (n) { absentSet[n] = true; });
+    return students.filter(function (s) { return !absentSet[s.name]; });
+  }
+
+  function renderAbsentList() {
+    if (!students.length) {
+      els.absentWrap.style.display = 'none';
+      els.absentList.innerHTML = '';
+      return;
+    }
+    els.absentWrap.style.display = '';
+    var absentSet = {};
+    (state && state.absentNames || []).forEach(function (n) { absentSet[n] = true; });
+    els.absentList.innerHTML = students.map(function (s) {
+      var isAbsent = !!absentSet[s.name];
+      return '<label class="absent-item' + (isAbsent ? ' is-absent' : '') + '"><input type="checkbox" data-absent="' +
+        escapeAttr(s.name) + '"' + (isAbsent ? ' checked' : '') + '>' + escapeHtml(s.name) + '</label>';
+    }).join('');
+  }
+
+  els.absentList.addEventListener('change', function (e) {
+    var cb = e.target.closest('[data-absent]');
+    if (!cb || !state) return;
+    if (!Array.isArray(state.absentNames)) state.absentNames = [];
+    var name = cb.dataset.absent;
+    var idx = state.absentNames.indexOf(name);
+    if (cb.checked) { if (idx === -1) state.absentNames.push(name); }
+    else if (idx !== -1) { state.absentNames.splice(idx, 1); }
+    cb.closest('.absent-item').classList.toggle('is-absent', cb.checked);
+    var absentCount = students.length - getActiveStudents().length;
+    els.nameCount.textContent = students.length + ' name' + (students.length === 1 ? '' : 's') +
+      (absentCount ? ' · ' + absentCount + ' absent today' : '');
+    els.generateBtn.disabled = getActiveStudents().length < 2;
+    clearTransientGroupState();
+    saveCurrentConfig();
+  });
+
+  // ── Grouping strategy: only skill-aware modes need a rating on the roster ─
+  function syncStrategyAvailability() {
+    var hasSkills = students.some(function (s) { return s.skill !== null; });
+    Array.prototype.forEach.call(els.strategySelect.options, function (opt) {
+      if (opt.value === 'random') return;
+      opt.disabled = !hasSkills;
+    });
+    if (!hasSkills && els.strategySelect.value !== 'random') els.strategySelect.value = 'random';
+    els.strategyHint.textContent = hasSkills
+      ? 'Balanced keeps every group’s average skill equal; heterogeneous deliberately mixes ability levels within each group; homogeneous groups similar-readiness students together for targeted instruction.'
+      : 'Add a skill rating (", 1-5") to at least one name above to unlock the skill-based strategies.';
+  }
+
+  els.strategySelect.addEventListener('change', saveCurrentConfig);
+  els.oddModeSelect.addEventListener('change', saveCurrentConfig);
+
+  // ── Group naming ──────────────────────────────────────────────────────────
+  function groupLabel(i) {
+    var mode = state ? state.namingMode : 'number';
+    if (mode === 'table') return 'Table ' + (i + 1);
+    if (mode === 'color') {
+      var cycle = Math.floor(i / COLOR_TEAM_NAMES.length) + 1;
+      var label = COLOR_TEAM_NAMES[i % COLOR_TEAM_NAMES.length] + ' Team';
+      return cycle > 1 ? label + ' ' + cycle : label;
+    }
+    if (mode === 'custom') {
+      var lines = ((state && state.customNames) || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+      if (lines[i]) return lines[i];
+    }
+    return 'Group ' + (i + 1);
+  }
+
+  els.namingSelect.addEventListener('change', function () {
+    els.customNamesWrap.style.display = els.namingSelect.value === 'custom' ? '' : 'none';
+    saveCurrentConfig();
+    if (lastGroups) renderResults(lastGroups);
+  });
+  els.customNamesInput.addEventListener('input', function () {
+    saveCurrentConfig();
+    if (lastGroups) renderResults(lastGroups);
+  });
 
   // ── Keep-apart / keep-together constraint pairs ──────────────────────────
   function populatePairSelects() {
@@ -591,7 +800,6 @@
     r.addEventListener('change', function () { syncSplitLabel(); saveCurrentConfig(); });
   });
   els.splitValue.addEventListener('input', saveCurrentConfig);
-  els.balanceSkill.addEventListener('change', saveCurrentConfig);
 
   function groupCountFor(n) {
     var isSize = document.getElementById('mode-size').checked;
@@ -610,35 +818,154 @@
     return a;
   }
 
-  // ── Grouping algorithm ───────────────────────────────────────────────────
-  // Returns { groups: [[student,...]], violations: [[nameA,nameB],...] }
-  function makeGroups() {
-    var k = groupCountFor(students.length);
-    var balance = !els.balanceSkill.disabled && els.balanceSkill.checked;
-    var groups = [];
-    for (var i = 0; i < k; i++) groups.push([]);
+  // ── Grouping strategies ──────────────────────────────────────────────────
+  // Each strategy fills only the group indices listed in targetIdx, leaving
+  // any other (locked) groups in the array untouched.
+  function assignRandom(pool, groups, targetIdx) {
+    var k = targetIdx.length;
+    var shuffled = shuffle(pool);
+    shuffled.forEach(function (s, idx) { groups[targetIdx[idx % k]].push(s); });
+  }
 
-    if (balance) {
-      // Snake draft by skill (missing ratings treated as a neutral 3) so
-      // groups end up with a similar skill mix rather than a similar skill sum.
-      var pool = shuffle(students).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
-      var dir = 1, g = 0;
-      pool.forEach(function (s) {
-        groups[g].push(s);
-        g += dir;
-        if (g === k) { g = k - 1; dir = -1; }
-        else if (g < 0) { g = 0; dir = 1; }
+  // Snake draft by skill (missing ratings treated as a neutral 3) so every
+  // group ends up with a similar *average* skill rather than a similar mix.
+  function assignBalanced(pool, groups, targetIdx) {
+    var k = targetIdx.length;
+    var sorted = shuffle(pool).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
+    var dir = 1, gi = 0;
+    sorted.forEach(function (s) {
+      groups[targetIdx[gi]].push(s);
+      gi += dir;
+      if (gi === k) { gi = k - 1; dir = -1; }
+      else if (gi < 0) { gi = 0; dir = 1; }
+    });
+  }
+
+  // Splits the pool into thirds by skill, then round-robins each tier across
+  // every group separately — deliberately guaranteeing each group draws from
+  // the top, middle, and bottom of the roster, rather than just equalizing
+  // averages the way the snake draft above does.
+  function assignHeterogeneous(pool, groups, targetIdx) {
+    var k = targetIdx.length;
+    var sorted = shuffle(pool).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
+    var n = sorted.length;
+    var t1 = Math.ceil(n / 3), t2 = Math.ceil((n - t1) / 2) + t1;
+    var tiers = [shuffle(sorted.slice(0, t1)), shuffle(sorted.slice(t1, t2)), shuffle(sorted.slice(t2))];
+    tiers.forEach(function (tier) {
+      var gi = 0;
+      tier.forEach(function (s) { groups[targetIdx[gi % k]].push(s); gi++; });
+    });
+  }
+
+  // Sorts by skill and slices into contiguous chunks — one group is entirely
+  // the strongest students, the next entirely the next tier, and so on. Used
+  // for differentiation, where each group gets a targeted lesson.
+  function assignHomogeneous(pool, groups, targetIdx) {
+    var k = targetIdx.length;
+    var sorted = shuffle(pool).sort(function (a, b) { return (b.skill || 3) - (a.skill || 3); });
+    var base = Math.floor(sorted.length / k), extra = sorted.length % k, idx = 0;
+    for (var i = 0; i < k; i++) {
+      var size = base + (i < extra ? 1 : 0);
+      for (var j = 0; j < size; j++) { groups[targetIdx[i]].push(sorted[idx]); idx++; }
+    }
+  }
+
+  function assignPool(pool, groups, targetIdx, strategy) {
+    if (!targetIdx.length) return;
+    if (strategy === 'balanced') assignBalanced(pool, groups, targetIdx);
+    else if (strategy === 'heterogeneous') assignHeterogeneous(pool, groups, targetIdx);
+    else if (strategy === 'homogeneous') assignHomogeneous(pool, groups, targetIdx);
+    else assignRandom(pool, groups, targetIdx);
+  }
+
+  function getStrategy() {
+    var hasSkills = students.some(function (s) { return s.skill !== null; });
+    return hasSkills ? els.strategySelect.value : 'random';
+  }
+
+  // ── Odd-number handling ──────────────────────────────────────────────────
+  // Pops the overflow beyond the smallest group among targetIdx so every
+  // strategy's default "some groups get one extra" outcome can be turned
+  // into an explicit floater list or a standalone leftover group instead.
+  function applyOddHandling(groups, targetIdx, oddMode) {
+    if (!targetIdx.length || oddMode === 'extra') return { floaters: [], fallbackNote: null, bonusGroupSize: 0 };
+    var sizes = targetIdx.map(function (i) { return groups[i].length; });
+    var minSize = Math.min.apply(null, sizes);
+    var floaters = [];
+    targetIdx.forEach(function (i) {
+      while (groups[i].length > minSize) floaters.push(groups[i].pop());
+    });
+    if (oddMode === 'pair') {
+      if (floaters.length >= 2) { groups.push(floaters); return { floaters: [], fallbackNote: null, bonusGroupSize: floaters.length }; }
+      if (floaters.length === 1) return { floaters: floaters, fallbackNote: 'Only one student was left over, so they were kept as a floater — a pair needs at least two.', bonusGroupSize: 0 };
+    }
+    return { floaters: floaters, fallbackNote: null, bonusGroupSize: 0 };
+  }
+
+  // ── Grouping algorithm ───────────────────────────────────────────────────
+  // opts.lockedFlags: booleans parallel to the previous lastGroups.groups —
+  // true keeps that group exactly as-is and only reshuffles the rest.
+  // Returns { groups, violations, togetherViolations, repeatViolations, floaters, meta }
+  function makeGroups(opts) {
+    opts = opts || {};
+    var activeStudents = getActiveStudents();
+    var strategy = getStrategy();
+    var oddMode = els.oddModeSelect.value;
+    var groups, targetIdx, lockedCount = 0, reshuffledCount, usedLocks = false, lockedIdxSet = {};
+
+    var lockedFlagsIn = opts.lockedFlags;
+    if (lockedFlagsIn && lastGroups && lockedFlagsIn.length === lastGroups.groups.length &&
+        lockedFlagsIn.some(Boolean) && locksAreValid(lockedFlagsIn, activeStudents)) {
+      usedLocks = true;
+      groups = lastGroups.groups.map(function (g) { return g.slice(); });
+      targetIdx = [];
+      var lockedNames = {};
+      groups.forEach(function (g, i) {
+        if (lockedFlagsIn[i]) { lockedCount++; lockedIdxSet[i] = true; g.forEach(function (s) { lockedNames[s.name] = true; }); }
+        else { targetIdx.push(i); groups[i] = []; }
       });
+      var pool = activeStudents.filter(function (s) { return !lockedNames[s.name]; });
+      reshuffledCount = pool.length;
+      assignPool(pool, groups, targetIdx, strategy);
     } else {
-      var shuffled = shuffle(students);
-      shuffled.forEach(function (s, idx) { groups[idx % k].push(s); });
+      var k = groupCountFor(activeStudents.length);
+      groups = [];
+      for (var i = 0; i < k; i++) groups.push([]);
+      targetIdx = groups.map(function (_, idx) { return idx; });
+      assignPool(activeStudents, groups, targetIdx, strategy);
+      reshuffledCount = activeStudents.length;
     }
 
-    resolveConstraints(groups);
+    var oddResult = applyOddHandling(groups, targetIdx, oddMode);
+
+    resolveConstraints(groups, lockedIdxSet);
     var violations = findApartViolations(groups);
     var togetherViolations = findTogetherViolations(groups);
+    var repeatViolations = findRecentPairViolations(groups);
     recordPairHistory(groups);
-    return { groups: groups, violations: violations, togetherViolations: togetherViolations };
+
+    return {
+      groups: groups,
+      violations: violations,
+      togetherViolations: togetherViolations,
+      repeatViolations: repeatViolations,
+      floaters: oddResult.floaters,
+      meta: {
+        strategy: strategy, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
+        usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: targetIdx.length,
+        fallbackNote: oddResult.fallbackNote, bonusGroupSize: oddResult.bonusGroupSize
+      }
+    };
+  }
+
+  function locksAreValid(lockedFlagsIn, activeStudents) {
+    var activeNames = {};
+    activeStudents.forEach(function (s) { activeNames[s.name] = true; });
+    var ok = true;
+    lastGroups.groups.forEach(function (g, i) {
+      if (lockedFlagsIn[i]) g.forEach(function (s) { if (!activeNames[s.name]) ok = false; });
+    });
+    return ok;
   }
 
   function groupIndexOf(groups, name) {
@@ -752,9 +1079,11 @@
   // 2 groups) simply cannot all be satisfied, and a small roster with large
   // groups may make some repeat pairing unavoidable; the loop just settles
   // for whatever it found within its attempt budget.
-  function resolveConstraints(groups) {
+  function resolveConstraints(groups, lockedIdx) {
+    lockedIdx = lockedIdx || {};
     var hasPairBias = !!(state && state.pairHistory && Object.keys(state.pairHistory).length);
-    if ((!keepApart.length && !keepTogether.length && !hasPairBias) || groups.length < 2) return;
+    var unlockedCount = groups.filter(function (_, i) { return !lockedIdx[i]; }).length;
+    if ((!keepApart.length && !keepTogether.length && !hasPairBias) || unlockedCount < 2) return;
     var attempts = 0, maxAttempts = 800;
     var bestScore = totalScore(groups);
     while (bestScore > 0 && attempts < maxAttempts) {
@@ -764,15 +1093,18 @@
       if (!allViolations.length) break;
       var offender = allViolations[Math.floor(Math.random() * allViolations.length)];
       var groupIdx = groupIndexOf(groups, offender[0]);
+      if (groupIdx === -1 || lockedIdx[groupIdx]) continue;
       var fromArr = groups[groupIdx];
       var sameGroupIdx = fromArr.findIndex(function (s) { return s.name === offender[1]; });
 
       if (sameGroupIdx !== -1) {
         // offender[1] shares offender[0]'s group but shouldn't (a keep-apart
         // violation, or two students recently paired) — swap it out for a
-        // random student in a different group.
-        var otherIdx = Math.floor(Math.random() * groups.length);
-        if (otherIdx === groupIdx || !groups[otherIdx].length) continue;
+        // random student in a different, unlocked group.
+        var candidates = [];
+        for (var oi = 0; oi < groups.length; oi++) { if (oi !== groupIdx && !lockedIdx[oi] && groups[oi].length) candidates.push(oi); }
+        if (!candidates.length) continue;
+        var otherIdx = candidates[Math.floor(Math.random() * candidates.length)];
         var toArr = groups[otherIdx];
         var swapInIdx = Math.floor(Math.random() * toArr.length);
         var a = fromArr[sameGroupIdx], b = toArr[swapInIdx];
@@ -784,7 +1116,7 @@
         // A together-violation: offender[1] is in a different group — move
         // it into offender[0]'s group by swapping with a random member there.
         var otherGroupIdx = groupIndexOf(groups, offender[1]);
-        if (otherGroupIdx === -1) continue;
+        if (otherGroupIdx === -1 || lockedIdx[otherGroupIdx]) continue;
         var togetherArr = groups[otherGroupIdx];
         var moveIdx = togetherArr.findIndex(function (s) { return s.name === offender[1]; });
         var swapInIdx2 = Math.floor(Math.random() * fromArr.length);
@@ -804,38 +1136,111 @@
     return (sum / rated.length).toFixed(1);
   }
 
+  function pairsText(pairs) {
+    return pairs.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ');
+  }
+
+  // ── "Why this grouping" explanation ─────────────────────────────────────
+  // Turns the same scoring machinery used to resolve constraints into a
+  // plain-English account of what the shuffle optimized and what it had to
+  // compromise, so a teacher can trust it or reshuffle deliberately.
+  function buildExplanation(result) {
+    var lines = [];
+    lines.push('Strategy: ' + (STRATEGY_LABELS[result.meta.strategy] || 'Random') + '.');
+    if (result.meta.usedLocks) {
+      lines.push(result.meta.lockedCount + ' group' + (result.meta.lockedCount === 1 ? '' : 's') +
+        ' locked and left unchanged — only ' + result.meta.reshuffledCount + ' student' +
+        (result.meta.reshuffledCount === 1 ? '' : 's') + ' reshuffled.');
+    }
+    if (keepApart.length) {
+      lines.push(result.violations.length
+        ? 'Breaks ' + result.violations.length + ' keep-apart constraint' + (result.violations.length === 1 ? '' : 's') + ': ' + pairsText(result.violations) + '.'
+        : 'All ' + keepApart.length + ' keep-apart constraint' + (keepApart.length === 1 ? '' : 's') + ' honored.');
+    }
+    if (keepTogether.length) {
+      lines.push(result.togetherViolations.length
+        ? 'Could not keep ' + result.togetherViolations.length + ' pair' + (result.togetherViolations.length === 1 ? '' : 's') + ' together: ' + pairsText(result.togetherViolations) + '.'
+        : 'All ' + keepTogether.length + ' keep-together constraint' + (keepTogether.length === 1 ? '' : 's') + ' honored.');
+    }
+    var hasPairHistory = !!(state && state.pairHistory && Object.keys(state.pairHistory).length);
+    if (hasPairHistory) {
+      lines.push(result.repeatViolations.length
+        ? 'Repeats ' + result.repeatViolations.length + ' recent pairing' + (result.repeatViolations.length === 1 ? '' : 's') + ' from the last shuffle or two: ' + pairsText(result.repeatViolations) + '.'
+        : 'No recently-paired students ended up together again.');
+    }
+    if (result.meta.bonusGroupSize) {
+      lines.push('The ' + result.meta.bonusGroupSize + ' leftover student' + (result.meta.bonusGroupSize === 1 ? '' : 's') +
+        ' formed a separate small group instead of enlarging the others.');
+    } else if (result.floaters && result.floaters.length) {
+      lines.push(result.floaters.length + ' student' + (result.floaters.length === 1 ? '' : 's') + ' left as floater' +
+        (result.floaters.length === 1 ? '' : 's') + ' today, not assigned to a group: ' +
+        result.floaters.map(function (s) { return escapeHtml(s.name); }).join(', ') + '.');
+    } else if (result.meta.groupCountTarget && result.meta.reshuffledCount % result.meta.groupCountTarget !== 0) {
+      lines.push('The class doesn\'t divide evenly, so one or more groups have an extra student.');
+    }
+    if (result.meta.fallbackNote) lines.push(result.meta.fallbackNote);
+    return lines;
+  }
+
+  function renderExplanation(result) {
+    els.explainArea.innerHTML = '<div class="explain-box"><strong>Why this grouping:</strong><ul>' +
+      buildExplanation(result).map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul></div>';
+  }
+
   // ── Rendering ────────────────────────────────────────────────────────────
   function renderResults(result) {
     lastGroups = result;
-    var balance = !els.balanceSkill.disabled && els.balanceSkill.checked;
+    if (lockedFlags.length !== result.groups.length) {
+      lockedFlags = result.groups.map(function (_, i) { return lockedFlags[i] || false; });
+    }
+    var showAvg = students.some(function (s) { return s.skill !== null; });
 
     var warnParts = [];
     if (result.violations.length) {
       warnParts.push('⚠ Could not keep ' + result.violations.length +
-        ' pair' + (result.violations.length === 1 ? '' : 's') + ' apart: ' +
-        result.violations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') + '.');
+        ' pair' + (result.violations.length === 1 ? '' : 's') + ' apart: ' + pairsText(result.violations) + '.');
     }
     if (result.togetherViolations && result.togetherViolations.length) {
       warnParts.push('⚠ Could not keep ' + result.togetherViolations.length +
-        ' pair' + (result.togetherViolations.length === 1 ? '' : 's') + ' together: ' +
-        result.togetherViolations.map(function (p) { return escapeHtml(p[0]) + ' &amp; ' + escapeHtml(p[1]); }).join(', ') + '.');
+        ' pair' + (result.togetherViolations.length === 1 ? '' : 's') + ' together: ' + pairsText(result.togetherViolations) + '.');
     }
     els.warnArea.innerHTML = warnParts.length
       ? '<div class="warn-box">' + warnParts.join(' ') + ' Try a different group count, or fewer constraints.</div>'
       : '';
 
-    els.results.innerHTML = '<div class="groups-wrap">' + result.groups.map(function (group, i) {
-      var avg = balance ? avgSkill(group) : null;
-      return '<div class="group-card"><h3>Group ' + (i + 1) +
-        (avg !== null ? '<span class="avg">avg skill ' + avg + '</span>' : '') +
-        '</h3><ul>' + group.map(function (s) {
+    renderExplanation(result);
+
+    var cardsHtml = result.groups.map(function (group, i) {
+      var avg = showAvg ? avgSkill(group) : null;
+      var locked = !!lockedFlags[i];
+      var label = groupLabel(i);
+      return '<div class="group-card' + (locked ? ' locked' : '') + '"><h3><span>' + escapeHtml(label) +
+        (avg !== null ? '<span class="avg">avg skill ' + avg + '</span>' : '') + '</span>' +
+        '<button type="button" class="lock-btn' + (locked ? ' locked' : '') + '" data-lock="' + i + '" title="' +
+        (locked ? 'Unlock this group' : 'Lock this group so reshuffle leaves it alone') + '">' +
+        (locked ? '🔒 Locked' : '🔓 Lock') + '</button></h3><ul>' + group.map(function (s) {
           return '<li><span>' + escapeHtml(s.name) + '</span>' + (s.skill !== null ? '<span class="skill">' + s.skill + '</span>' : '') + '</li>';
         }).join('') + '</ul></div>';
-    }).join('') + '</div>';
+    }).join('');
+
+    var floaterHtml = (result.floaters && result.floaters.length)
+      ? '<div class="floater-box"><strong>Floater' + (result.floaters.length === 1 ? '' : 's') + ' (not assigned to a group):</strong> ' +
+        result.floaters.map(function (s) { return escapeHtml(s.name); }).join(', ') + '</div>'
+      : '';
+
+    els.results.innerHTML = '<div class="groups-wrap">' + cardsHtml + '</div>' + floaterHtml;
 
     els.exportRow.style.display = 'flex';
     els.regenerateBtn.disabled = false;
   }
+
+  els.results.addEventListener('click', function (e) {
+    var lockBtn = e.target.closest('[data-lock]');
+    if (!lockBtn) return;
+    var idx = parseInt(lockBtn.dataset.lock, 10);
+    lockedFlags[idx] = !lockedFlags[idx];
+    if (lastGroups) renderResults(lastGroups);
+  });
 
   function renderPairHistoryHint() {
     var count = state && state.pairHistory ? Object.keys(state.pairHistory).length : 0;
@@ -854,26 +1259,74 @@
     showMsg('Pairing memory reset for this class.');
   });
 
+  // ── Transient per-shuffle state (locks, undo) ────────────────────────────
+  function clearTransientGroupState() {
+    lastGroups = null;
+    lockedFlags = [];
+    undoSnapshot = null;
+    els.regenerateBtn.disabled = true;
+    els.undoBtn.disabled = true;
+    els.exportRow.style.display = 'none';
+    els.explainArea.innerHTML = '';
+    els.warnArea.innerHTML = '';
+    els.results.innerHTML = '<p class="empty-hint">Add names on the left, then click "Make Groups."</p>';
+  }
+
+  function snapshotForUndo() {
+    if (!lastGroups) return null;
+    return {
+      lastGroups: JSON.parse(JSON.stringify(lastGroups)),
+      pairHistory: state && state.pairHistory ? JSON.parse(JSON.stringify(state.pairHistory)) : {},
+      pairGen: state ? (state.pairGen || 0) : 0,
+      lockedFlags: lockedFlags.slice()
+    };
+  }
+
   els.generateBtn.addEventListener('click', function () {
-    if (students.length < 2) return;
+    if (getActiveStudents().length < 2) return;
     clearMsg();
+    undoSnapshot = snapshotForUndo();
+    lockedFlags = [];
     renderResults(makeGroups());
+    els.undoBtn.disabled = !undoSnapshot;
     saveCurrentConfig();
     renderPairHistoryHint();
   });
   els.regenerateBtn.addEventListener('click', function () {
     clearMsg();
-    renderResults(makeGroups());
+    undoSnapshot = snapshotForUndo();
+    var result = makeGroups({ lockedFlags: lockedFlags });
+    // A lock request that turned out invalid (e.g. a locked member went
+    // absent) silently falls back to a full reshuffle inside makeGroups —
+    // clear the stale flags so the new groups aren't mislabeled as locked.
+    if (!result.meta.usedLocks && lockedFlags.some(Boolean)) lockedFlags = [];
+    renderResults(result);
+    els.undoBtn.disabled = !undoSnapshot;
     saveCurrentConfig();
     renderPairHistoryHint();
+  });
+  els.undoBtn.addEventListener('click', function () {
+    if (!undoSnapshot) return;
+    if (state) { state.pairHistory = undoSnapshot.pairHistory; state.pairGen = undoSnapshot.pairGen; }
+    lockedFlags = undoSnapshot.lockedFlags.slice();
+    renderResults(undoSnapshot.lastGroups);
+    undoSnapshot = null;
+    els.undoBtn.disabled = true;
+    saveCurrentConfig();
+    renderPairHistoryHint();
+    showMsg('Reverted to the previous shuffle.');
   });
 
   // ── Export ───────────────────────────────────────────────────────────────
   function groupsAsText() {
     if (!lastGroups) return '';
-    return lastGroups.groups.map(function (group, i) {
-      return 'Group ' + (i + 1) + '\n' + group.map(function (s) { return '  ' + s.name; }).join('\n');
+    var text = lastGroups.groups.map(function (group, i) {
+      return groupLabel(i) + '\n' + group.map(function (s) { return '  ' + s.name; }).join('\n');
     }).join('\n\n');
+    if (lastGroups.floaters && lastGroups.floaters.length) {
+      text += '\n\nFloaters (not assigned)\n' + lastGroups.floaters.map(function (s) { return '  ' + s.name; }).join('\n');
+    }
+    return text;
   }
 
   els.copyBtn.addEventListener('click', function () {
@@ -889,6 +1342,60 @@
   els.printBtn.addEventListener('click', function () {
     els.printTitle.textContent = 'Groups — ' + new Date().toLocaleDateString();
     window.print();
+  });
+
+  // ── Printable table tents (mirrors lab-group-role-randomizer.html) ──────
+  // Each card prints the same panel twice, the top copy rotated 180°, so
+  // folding the sheet along the middle dashed line makes it stand up like a
+  // tent with upright text on both faces — set one out at each group's table.
+  function tentPanelHtml(group, label) {
+    var rows = group.map(function (s) {
+      return '<li><span>' + escapeHtml(s.name) + '</span>' + (s.skill !== null ? '<span class="t-skill">' + s.skill + '</span>' : '') + '</li>';
+    }).join('');
+    return '<div class="tent-groupname">' + escapeHtml(label) + '</div><ul class="tent-list">' + rows + '</ul>';
+  }
+
+  function tentsHtml(result) {
+    return '<div class="tent-sheet">' + result.groups.map(function (group, i) {
+      var panel = tentPanelHtml(group, groupLabel(i));
+      return '<div class="tent-card"><div class="tent-half tent-flip">' + panel + '</div>' +
+        '<div class="tent-fold"></div><div class="tent-half">' + panel + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  // ── Group sheets: one printable page per group with room for the task ───
+  function groupSheetHtml(result) {
+    var pages = result.groups.map(function (group, i) {
+      return '<div class="sheet-page"><h2>' + escapeHtml(groupLabel(i)) + '</h2>' +
+        '<div class="sheet-table-line">Table / Station: ______________</div>' +
+        '<ul class="sheet-names">' + group.map(function (s) { return '<li>' + escapeHtml(s.name) + '</li>'; }).join('') + '</ul>' +
+        '<div class="sheet-task-box"><strong>Task / Notes:</strong></div></div>';
+    });
+    if (result.floaters && result.floaters.length) {
+      pages.push('<div class="sheet-page"><h2>Floaters</h2><ul class="sheet-names">' +
+        result.floaters.map(function (s) { return '<li>' + escapeHtml(s.name) + '</li>'; }).join('') + '</ul></div>');
+    }
+    return pages.join('');
+  }
+
+  function printAlternateView(title, buildHtml) {
+    if (!lastGroups || !lastGroups.groups.length) { showMsg('Make groups before printing.'); return; }
+    var savedResults = els.results.innerHTML, savedWarn = els.warnArea.innerHTML, savedExplain = els.explainArea.innerHTML;
+    els.printTitle.textContent = title + ' — ' + new Date().toLocaleDateString();
+    els.warnArea.innerHTML = '';
+    els.explainArea.innerHTML = '';
+    els.results.innerHTML = buildHtml(lastGroups);
+    window.print(); // blocks until the dialog closes, so this restores the live view right after
+    els.results.innerHTML = savedResults;
+    els.warnArea.innerHTML = savedWarn;
+    els.explainArea.innerHTML = savedExplain;
+  }
+
+  els.printTentsBtn.addEventListener('click', function () {
+    printAlternateView('Table Tents', tentsHtml);
+  });
+  els.printSheetsBtn.addEventListener('click', function () {
+    printAlternateView('Group Sheets', groupSheetHtml);
   });
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }
