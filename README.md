@@ -58,6 +58,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | QR Code Generator | `Tools/qr-code-generator.html` | Turn a link or short text into a printable QR code, with an optional logo in the center. |
 | Parent/Guardian Contact Log | `Tools/parent-contact-log.html` | Log a call, email, or note home per student — date, method, and outcome — with a per-student contact count and a printable history, for quick reference before a conference or a difficult phone call. |
 | Staff Directory / Quick-Reference Builder | `Tools/staff-directory-builder.html` | Add staff one at a time or paste a whole list from a spreadsheet, sort and search, print a clean one-page directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |
+| Word Problem Warm-Up Generator | `Tools/word-problem-warmup-generator.html` | Randomized word problems by operation and grade band, projected one at a time with a reveal-answer button or printed as a worksheet with a matching answer key. |
 
 ## Using these
 
