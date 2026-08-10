@@ -21,7 +21,7 @@
   :root {
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
     --line: #dcdad2; --line-strong: #c3c0b6;
-    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f; --paid: #9c6c11;
   }
   * { box-sizing: border-box; }
   body {
@@ -96,6 +96,7 @@
     width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
   .doc-remove-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .doc-fee { flex: 0 0 6.5rem; width: 6.5rem; margin-bottom: 0 !important; }
   .doc-body { min-height: unset; font-family: inherit; font-size: .82rem; margin-bottom: 1.1rem; }
 
   /* ── Student rows ─────────────────────────────────────────────────── */
@@ -115,6 +116,8 @@
   .status-toggle:hover { border-color: var(--accent-2); color: var(--ink); }
   .status-toggle.is-signed { background: var(--good); border-color: var(--good); color: #fff; }
   .status-toggle.is-signed:hover { background: #276b43; border-color: #276b43; }
+  .status-toggle.is-paid { background: var(--paid); border-color: var(--paid); color: #fff; }
+  .status-toggle.is-paid:hover { background: #7d5809; border-color: #7d5809; }
   .s-date { width: auto; flex-shrink: 0; max-width: 9.5rem; margin-bottom: 0; font-size: .82rem; padding: .4rem .5rem; }
   .s-note { flex: 1 1 180px; min-width: 140px; margin-bottom: 0; font-size: .82rem; padding: .4rem .55rem; }
   .s-note::placeholder { color: #a9a79d; }
@@ -159,6 +162,7 @@
     .slip-name { font-size: 1.15rem; font-weight: 700; margin: 0; }
     .slip-need { font-size: .88rem; margin: 0; }
     .slip-due { font-size: .88rem; font-weight: 700; color: #a3372b; margin: 0; }
+    .slip-owes { font-size: .88rem; font-weight: 700; color: #9c6c11; margin: 0; }
     .slip-note { font-size: .82rem; color: #555; margin: auto 0 0; }
   }
 </style>
@@ -215,7 +219,7 @@
       </div>
     </div>
     <div id="docsEditor"></div>
-    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms. The form text prints on the blank copy — leave it empty to print just a title and signature lines.</p>
+    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms. The form text prints on the blank copy — leave it empty to print just a title and signature lines. If a document has a fee, set it and a paid/unpaid toggle appears for that document per student &mdash; leave the fee blank for documents that don&rsquo;t collect money.</p>
   </div>
 
   <div class="card">
@@ -313,9 +317,23 @@
   function nextDocId() { docIdCounter++; return 'doc' + Date.now() + docIdCounter; }
   function defaultDocuments() {
     return [{
-      id: nextDocId(), label: 'Lab Safety Contract',
+      id: nextDocId(), label: 'Lab Safety Contract', fee: '',
       body: 'I have read and understand the laboratory safety rules for this class. I agree to follow all safety procedures, wear required safety equipment, and report any accidents or unsafe conditions to my teacher immediately. I understand that failure to follow these rules may result in removal from lab activities.'
     }];
+  }
+
+  /** A document's fee as a number; blank/0/garbage all mean "no fee" so the
+      paid/unpaid UI stays hidden unless a teacher deliberately sets one. */
+  function feeAmount(doc) {
+    var n = parseFloat(doc && doc.fee);
+    return (isFinite(n) && n > 0) ? n : 0;
+  }
+  function docHasFee(doc) { return feeAmount(doc) > 0; }
+  function feeDocs() { return state.documents.filter(docHasFee); }
+  function anyFee() { return feeDocs().length > 0; }
+  function formatMoney(n) {
+    var whole = Math.round(n * 100) % 100 === 0;
+    return '$' + (whole ? String(Math.round(n)) : n.toFixed(2));
   }
 
   function escapeHtml(s) {
@@ -382,23 +400,38 @@
       mutates state, so it's safe to call from render code. */
   function getDoc(name, docId) {
     var c = state.contracts[name];
-    return (c && c.docs && c.docs[docId]) || { signed: false, date: '' };
+    var d = (c && c.docs && c.docs[docId]);
+    return d ? { signed: !!d.signed, date: d.date || '', paid: !!d.paid } : { signed: false, date: '', paid: false };
   }
   function setDocSigned(name, docId, signed) {
     var c = state.contracts[name] || (state.contracts[name] = defaultContract());
     if (!c.docs) c.docs = {};
-    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '' });
+    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '', paid: false });
     d.signed = signed;
     if (signed && !d.date) d.date = todayStr();
   }
   function setDocDate(name, docId, dateVal) {
     var c = state.contracts[name] || (state.contracts[name] = defaultContract());
     if (!c.docs) c.docs = {};
-    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '' });
+    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '', paid: false });
     d.date = dateVal;
+  }
+  function setDocPaid(name, docId, paid) {
+    var c = state.contracts[name] || (state.contracts[name] = defaultContract());
+    if (!c.docs) c.docs = {};
+    var d = c.docs[docId] || (c.docs[docId] = { signed: false, date: '', paid: false });
+    d.paid = paid;
   }
   function isFullySigned(name) {
     return state.documents.every(function (d) { return getDoc(name, d.id).signed; });
+  }
+  /** "Fully paid" only looks at documents that actually carry a fee — a
+      student with zero fee-bearing documents counts as paid by definition,
+      so callers don't need a separate anyFee() guard everywhere. */
+  function isFullyPaid(name) {
+    var fd = feeDocs();
+    if (!fd.length) return true;
+    return fd.every(function (d) { return getDoc(name, d.id).paid; });
   }
 
   /** Converts contract records saved before multi-document support existed
@@ -481,7 +514,10 @@
       roster: data.roster || [],
       contracts: data.contracts || {}
     };
-    state.documents.forEach(function (d) { if (typeof d.body !== 'string') d.body = ''; });
+    state.documents.forEach(function (d) {
+      if (typeof d.body !== 'string') d.body = '';
+      if (typeof d.fee !== 'string' && typeof d.fee !== 'number') d.fee = '';
+    });
     migrateContracts();
     setCurrentName(name);
     applyStateToForm();
@@ -503,6 +539,7 @@
     els.docsEditor.innerHTML = state.documents.map(function (d) {
       return '<div class="doc-row" data-id="' + escapeAttr(d.id) + '">' +
         '<input type="text" class="doc-label" value="' + escapeAttr(d.label) + '">' +
+        '<input type="text" inputmode="decimal" class="doc-fee" data-fee-for="' + escapeAttr(d.id) + '" value="' + escapeAttr(d.fee || '') + '" placeholder="Fee $ (optional)" aria-label="Fee for ' + escapeAttr(d.label) + '">' +
         (state.documents.length > 1
           ? '<button type="button" class="doc-remove-btn" data-remove-doc="' + escapeAttr(d.id) + '" title="Remove document">&#10005;</button>'
           : '') +
@@ -517,6 +554,14 @@
       if (!bodyDoc) return;
       bodyDoc.body = e.target.value;
       saveCurrentState();
+      return;
+    }
+    if (e.target.classList.contains('doc-fee')) {
+      var feeDoc = state.documents.filter(function (d) { return d.id === e.target.dataset.feeFor; })[0];
+      if (!feeDoc) return;
+      feeDoc.fee = e.target.value;
+      saveCurrentState();
+      renderAll(); // fee crossing the >0 threshold shows/hides paid toggles & summary
       return;
     }
     var row = e.target.closest('.doc-row');
@@ -540,7 +585,7 @@
 
   els.addDocBtn.addEventListener('click', function () {
     if (!state) return;
-    state.documents.push({ id: nextDocId(), label: 'New Document', body: '' });
+    state.documents.push({ id: nextDocId(), label: 'New Document', body: '', fee: '' });
     renderDocsEditor();
     saveCurrentState();
     renderAll();
@@ -648,11 +693,17 @@
       row.dataset.name = name;
       var docsHtml = state.documents.map(function (docDef) {
         var d = getDoc(name, docDef.id);
+        var payBtn = docHasFee(docDef)
+          ? '<button type="button" class="status-toggle paid-toggle' + (d.paid ? ' is-paid' : '') + '" data-paid-toggle="' + escapeAttr(name) + '" data-doc="' + escapeAttr(docDef.id) + '" title="' + escapeAttr(formatMoney(feeAmount(docDef))) + ' fee for ' + escapeAttr(docDef.label) + '">' +
+              (d.paid ? '✓ Paid' : 'Unpaid') +
+            '</button>'
+          : '';
         return '<span class="doc-group">' +
           '<button type="button" class="status-toggle' + (d.signed ? ' is-signed' : '') + '" data-toggle="' + escapeAttr(name) + '" data-doc="' + escapeAttr(docDef.id) + '">' +
             (d.signed ? '✓ ' + escapeHtml(docDef.label) : escapeHtml(docDef.label)) +
           '</button>' +
           '<input type="date" class="s-date" data-date="' + escapeAttr(name) + '" data-doc="' + escapeAttr(docDef.id) + '" value="' + escapeAttr(d.date || '') + '" aria-label="Date received — ' + escapeAttr(docDef.label) + ' for ' + escapeAttr(name) + '">' +
+          payBtn +
           '</span>';
       }).join('');
       row.innerHTML =
@@ -664,6 +715,15 @@
   }
 
   els.studentRows.addEventListener('click', function (ev) {
+    var payBtn = ev.target.closest('[data-paid-toggle]');
+    if (payBtn) {
+      var pName = payBtn.dataset.paidToggle;
+      var pDocId = payBtn.dataset.doc;
+      setDocPaid(pName, pDocId, !getDoc(pName, pDocId).paid);
+      saveCurrentState();
+      renderAll();
+      return;
+    }
     var btn = ev.target.closest('[data-toggle]');
     if (!btn) return;
     var name = btn.dataset.toggle;
@@ -711,17 +771,21 @@
   /* ---------- summary ---------- */
   function summaryData() {
     var total = state.roster.length;
-    var signed = 0;
+    var signed = 0, paid = 0;
     var missing = [];
+    var hasFee = anyFee();
     state.roster.forEach(function (name) {
       if (isFullySigned(name)) signed++;
       else missing.push(name);
+      if (hasFee && isFullyPaid(name)) paid++;
     });
     var perDoc = state.documents.map(function (d) {
       var count = state.roster.filter(function (name) { return getDoc(name, d.id).signed; }).length;
-      return { id: d.id, label: d.label, count: count };
+      var withFee = docHasFee(d);
+      var paidCount = withFee ? state.roster.filter(function (name) { return getDoc(name, d.id).paid; }).length : null;
+      return { id: d.id, label: d.label, count: count, fee: feeAmount(d), paidCount: paidCount };
     });
-    return { total: total, signed: signed, missing: missing, perDoc: perDoc };
+    return { total: total, signed: signed, paid: paid, hasFee: hasFee, missing: missing, perDoc: perDoc };
   }
 
   function daysUntil(iso) {
@@ -735,11 +799,23 @@
     els.noRosterHint.style.display = data.total ? 'none' : '';
     els.missingWrap.style.display = data.total ? '' : 'none';
 
-    els.summaryCount.textContent = data.signed + ' of ' + data.total + (state.documents.length > 1 ? ' fully signed' : ' signed');
+    var summaryText = data.signed + ' of ' + data.total + (state.documents.length > 1 ? ' fully signed' : ' signed');
+    if (data.hasFee && data.total) {
+      var fd = feeDocs();
+      var feeBit = fd.length === 1
+        ? (formatMoney(feeAmount(fd[0])) + ' each')
+        : (formatMoney(fd.reduce(function (sum, d) { return sum + feeAmount(d); }, 0)) + ' total');
+      summaryText += ' · ' + data.paid + ' of ' + data.total + (fd.length > 1 ? ' fully paid' : ' paid') + ' (' + feeBit + ')';
+    }
+    els.summaryCount.textContent = summaryText;
 
     if (state.documents.length > 1 && data.total) {
       els.docBreakdown.innerHTML = data.perDoc.map(function (d) {
-        return '<span class="doc-breakdown-chip">' + escapeHtml(d.label) + ': ' + d.count + '/' + data.total + '</span>';
+        var bit = '<span class="doc-breakdown-chip">' + escapeHtml(d.label) + ': ' + d.count + '/' + data.total + '</span>';
+        if (d.paidCount !== null) {
+          bit += '<span class="doc-breakdown-chip">' + escapeHtml(d.label) + ' paid: ' + d.paidCount + '/' + data.total + ' (' + formatMoney(d.fee) + ' ea)</span>';
+        }
+        return bit;
       }).join('');
       els.docBreakdown.style.display = '';
     } else {
@@ -805,33 +881,54 @@
       var c = state.contracts[name] || defaultContract();
       var docCells = state.documents.map(function (docDef) {
         var d = getDoc(name, docDef.id);
-        return '<td class="' + (d.signed ? 'status-yes' : 'status-no') + '">' +
-          (d.signed ? ('Yes' + (d.date ? ' (' + escapeHtml(formatDate(d.date)) + ')' : '')) : 'No') + '</td>';
+        var text = d.signed ? ('Yes' + (d.date ? ' (' + escapeHtml(formatDate(d.date)) + ')' : '')) : 'No';
+        if (docHasFee(docDef)) text += d.paid ? ' · Paid' : ' · Unpaid';
+        return '<td class="' + (d.signed ? 'status-yes' : 'status-no') + '">' + text + '</td>';
       }).join('');
       return '<tr><td>' + escapeHtml(name) + '</td>' + docCells + '<td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
     }).join('');
     activatePrint(els.printFullArea);
   });
 
+  /** Fee-bearing documents a student hasn't paid for yet, as a display
+      label — used by both the missing-list print and the reminder slips so
+      "what's owed" and "what's outstanding" show up in the same glance. */
+  function unpaidLabelsFor(name) {
+    return state.documents.filter(function (d) { return docHasFee(d) && !getDoc(name, d.id).paid; })
+      .map(function (d) { return d.label; });
+  }
+  function unpaidAmountFor(name) {
+    return state.documents.filter(function (d) { return docHasFee(d) && !getDoc(name, d.id).paid; })
+      .reduce(function (sum, d) { return sum + feeAmount(d); }, 0);
+  }
+
   els.printMissingBtn.addEventListener('click', function () {
     if (!state) return;
     var data = summaryData();
     var multiDoc = state.documents.length > 1;
+    var hasFee = anyFee();
     els.printMissingTitle.textContent = state.name + ' — Missing Lab Safety Contracts';
     var dueBit = state.dueDate ? (' · Needed before ' + formatDate(state.dueDate)) : '';
     els.printMissingSub.textContent = 'Printed ' + formatDate(todayStr()) + dueBit + ' · ' +
       data.missing.length + ' of ' + data.total + ' still missing' + (multiDoc ? ' at least one document' : '');
-    document.querySelector('#printMissingArea table thead tr').innerHTML =
-      multiDoc ? '<th>Student</th><th>Missing</th><th>Note</th>' : '<th>Student</th><th>Note</th>';
+    var headCells = '<th>Student</th>' + (multiDoc ? '<th>Missing</th>' : '') + (hasFee ? '<th>Unpaid</th>' : '') + '<th>Note</th>';
+    document.querySelector('#printMissingArea table thead tr').innerHTML = headCells;
+    var colCount = 2 + (multiDoc ? 1 : 0) + (hasFee ? 1 : 0);
     els.printMissingBody.innerHTML = (data.missing.length ? data.missing.map(function (name) {
       var c = state.contracts[name] || defaultContract();
+      var cells = '<td>' + escapeHtml(name) + '</td>';
       if (multiDoc) {
         var missingLabels = state.documents.filter(function (d) { return !getDoc(name, d.id).signed; })
           .map(function (d) { return d.label; }).join(', ');
-        return '<tr><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(missingLabels) + '</td><td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
+        cells += '<td>' + escapeHtml(missingLabels) + '</td>';
       }
-      return '<tr><td>' + escapeHtml(name) + '</td><td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
-    }).join('') : ('<tr><td colspan="' + (multiDoc ? 3 : 2) + '">Everyone has turned theirs in.</td></tr>'));
+      if (hasFee) {
+        var unpaidLabels = unpaidLabelsFor(name);
+        cells += '<td>' + (unpaidLabels.length ? escapeHtml(unpaidLabels.join(', ') + ' — ' + formatMoney(unpaidAmountFor(name))) : '—') + '</td>';
+      }
+      cells += '<td>' + (c.note ? escapeHtml(c.note) : '') + '</td>';
+      return '<tr>' + cells + '</tr>';
+    }).join('') : ('<tr><td colspan="' + colCount + '">Everyone has turned theirs in.</td></tr>'));
     activatePrint(els.printMissingArea);
   });
 
@@ -877,9 +974,11 @@
       var needLabel = multiDoc
         ? state.documents.filter(function (d) { return !getDoc(name, d.id).signed; }).map(function (d) { return d.label; }).join(', ')
         : state.documents[0].label;
+      var owedAmt = unpaidAmountFor(name);
       return '<div class="slip">' +
         '<p class="slip-name">' + escapeHtml(name) + '</p>' +
         '<p class="slip-need">Still needed: ' + escapeHtml(needLabel) + '</p>' +
+        (owedAmt > 0 ? '<p class="slip-owes">Fee due: ' + escapeHtml(formatMoney(owedAmt)) + '</p>' : '') +
         (dueBit ? '<p class="slip-due">Needed before: ' + escapeHtml(dueBit) + '</p>' : '') +
         '<p class="slip-note">Please return this to ' + escapeHtml(state.name) + '.</p>' +
       '</div>';
