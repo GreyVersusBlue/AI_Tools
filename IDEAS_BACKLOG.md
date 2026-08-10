@@ -38,7 +38,6 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Historical Figure / Country Trading Card Maker | Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list. |
 | Government/Civics Simulation Role Card Generator | Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points. |
 | Geography Bee / Map Skills Quiz Generator | A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator. |
 

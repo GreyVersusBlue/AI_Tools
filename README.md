@@ -80,6 +80,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Science Fair Project Tracker | `Tools/science-fair-project-tracker.html` | Six editable milestones with due dates, a per-student checkbox grid with a live progress percentage, and a printable report with a "still missing, by milestone" chase-list. |
 | Dichotomous Key Builder | `Tools/dichotomous-key-builder.html` | Numbered couplets branching to another step or a final answer, with example specimens tagged per result, printed as a shuffled classification worksheet plus a matching answer key. |
 | DBQ / Source Packet Builder | `Tools/dbq-source-packet-builder.html` | Add text or image sources with a citation and source-specific guiding questions, plus a shared question set, printed as one packet with a cover page and one source per page. |
+| Historical Figure / Country Trading Card Maker | `Tools/historical-trading-card-maker.html` | Batch-add cards with a photo/flag image, label:value stats, and back-of-card facts, printed as matching card-front and card-back grids. |
 
 ## Using these
 
