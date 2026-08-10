@@ -90,3 +90,98 @@ printed debrief for every team at the end.
 - What's the device reality — one per team, one per student, or none? The
   answer changes whether self-check-in or paper answer sheets is the primary
   path.
+
+## Round 3 update — 2026-08-10
+
+Implemented three of the Major Features in one pass, all self-contained to
+this tool (escape-room-builder untouched, no shared library, no CDN
+additions):
+
+- **Question types beyond text.** Each station now has a Type: Open-ended
+  (the original behavior, unchanged), Multiple choice (2–6 editable options,
+  one marked correct), Numeric answer (a target number plus a ± tolerance,
+  covers both "numeric" and "count the X"), or Photo proof (a reminder type —
+  see tradeoffs below). The Build table gained a Type column; picking
+  Multiple choice or Numeric opens an inline editor row under that station.
+  The type flows through to the live preview badge, the printed station card
+  (choices are printed on the card itself so the team can read the question
+  off the wall), the answer key (a new "Answer / Type" column spells out the
+  correct choice or numeric target/tolerance), and CSV export.
+- **Team self-check-in by code**, addressing P9. Each team gets an
+  auto-generated 4-character code (ambiguous characters like 0/O/1/I excluded)
+  shown next to its name with a regenerate button, and a new "Print Team
+  Cards" button prints one card per team with a QR encoding that code. Live
+  Run gained a "Team Check-In" panel: pick the current station once, then
+  type or scan a team's code and press Enter (or tap Check In). Open-ended
+  and Photo-proof stations mark the team in immediately; Multiple-choice and
+  Numeric stations open a small inline panel to capture and validate the
+  team's answer (wrong answers increment an attempt counter and let them
+  retry, right answers mark it solved) before recording anything. This is
+  the same text-input-plus-Enter shape a USB HID QR/barcode "keyboard wedge"
+  scanner produces, so a school that owns one can scan team badges instead of
+  typing, with no camera code or new vendored library needed.
+- **Richer live-run feedback.** Team Progress now shows each team's next
+  unsolved station by name ("Next up: Station 4 — Mascot Statue") or "All
+  stations complete!", and a station button turns amber (not just grey/green)
+  once a team has an incorrect attempt recorded on it, without yet being
+  solved. The Leaderboard now ranks by *correct* stations (not just
+  "reached") and gained a "Heading to" column showing each team's next
+  target, so a glance at the projector says where every team should be.
+
+### Data model / compatibility
+
+Stations gained `qType`, `choices`, `correctChoice`, `numericAnswer`,
+`tolerance` (all defaulted through `ensureStationDefaults`, so hunts saved
+before this round load with every station as plain Open-ended). Team marks
+changed shape from a bare timestamp number to `{at, correct, attempts}`;
+`ensureRun()` upgrades old numeric marks in place on load, and teams saved
+before this round get a code generated the first time the hunt is opened
+after this update. Both migrations were exercised directly (a hand-built
+legacy blob in localStorage, loaded and checked) rather than assumed.
+
+### Tradeoffs / deliberately skipped
+
+- **No cross-device sync.** This is a static, backend-free, localStorage-only
+  tool, so a team's own phone cannot push progress to the teacher's laptop
+  live — there is no server to relay it through. "Self-check-in" here means
+  the *workflow* is check-yourself-in-by-code rather than
+  teacher-hunts-you-down-in-a-grid, run from one shared device (the teacher's,
+  or a helper's at a manned station), not that eight separate phones stay in
+  sync with the projector. That's the honest ceiling without adding a backend,
+  which is out of scope for this toolkit.
+- **Photo proof is a label, not a capture.** It changes the printed
+  instruction and the check-in copy ("don't forget to check their photo!")
+  but doesn't take, upload, or store a picture — avoided deliberately to keep
+  localStorage light and to not need camera-permission handling that a
+  headless sandbox can't meaningfully verify anyway. A future round could
+  attach an optional `<input type="file" accept="image/*" capture>` photo to
+  a mark for the post-hunt debrief, sized down before storing.
+- **Not implemented this round, left for next**: randomized/rotated station
+  order per team, a hint system with a time penalty, a printed no-device team
+  answer sheet, undo on "Clear all progress", pulling questions from other
+  toolkit tools, the annotated floor-plan map, and the post-hunt debrief
+  print. The new `qType`/answer data model gives the debrief print and the
+  no-device answer sheet a real foundation now (the actual question text and
+  choices are structured data, not just a QR payload), so those are the
+  natural next pickups. Any merge with `escape-room-builder` should be
+  planned jointly — this round only widened the gap between the two tools'
+  station data shapes.
+
+### Testing performed
+
+`node --check` on both extracted `<script>` blocks (clean). Playwright
+(Chromium, headless, `file://`) end-to-end: built a hunt with one station of
+each type; confirmed the preview, printed station cards (choices/tolerance/
+photo instructions appear), answer key, and CSV export all reflect type and
+answer data correctly; ran the check-in flow through text, multiple-choice
+(wrong then right), and numeric (out-of-tolerance then in-tolerance) stations
+via both Enter-to-submit and the Check In button, plus an unknown-code
+rejection; checked the leaderboard and per-team progress text after all of
+the above; printed team check-in cards and confirmed the QR/code appear;
+confirmed the manual station-button grid still works alongside check-in;
+confirmed a hand-built legacy save (numeric marks, no team codes) migrates
+cleanly on load; confirmed choice-editor min (2) and max (6) bounds and that
+removing the correct choice re-indexes correctly; confirmed state survives a
+full page reload; watched for console/page errors throughout (none seen).
+No manual code-review fallback was needed — Playwright with the pre-installed
+Chromium worked directly.
