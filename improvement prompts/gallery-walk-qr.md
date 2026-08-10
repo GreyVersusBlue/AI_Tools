@@ -1,7 +1,7 @@
 # Improvement Prompts — Gallery Walk QR Codes
 
 **Tool file:** `Tools/gallery-walk-qr.html`
-**Support folder:** `Tools/gallery-walk-qr/` (if present)
+**Support folder:** `Tools/gallery-walk-qr/` — `lib/qrcode.js`
 
 **Current description (from README):** Batch-generate QR codes linking to student work for a gallery walk, printed in a configurable grid, plus a plain-text reference sheet for you.
 
@@ -9,14 +9,80 @@
 
 ## Status
 
-Placeholder — not yet reviewed. This file will hold pie-in-the-sky
-improvement ideas, feature proposals, and planning notes for this tool,
-gathered during a future review pass.
+Reviewed — structural read of the source. Ideas below are deliberately
+ambitious and are **not** scoped to a single session.
 
-## Improvement Ideas
+## What it does today
 
-_(Nothing here yet — to be filled in during the review round.)_
+- Entry rows (label + link), added manually, pasted in bulk
+  (`importEntriesFromText`), imported from CSV, or seeded with names from a
+  saved `np_rosters` roster
+- Reorder, duplicate detection (`updateDupIndicators`, `updateDupWarning`),
+  URL validation (`looksLikeUrl`)
+- Print QR codes at 1–8 per page with selectable error correction
+- Print a separate **reference sheet** mapping codes to labels
+- Copy all links; multiple saved galleries (`gallery-walk-qr-sets`)
+- **Reaction counts** with a reset — the beginnings of a feedback mechanism
+
+## Quick Wins
+
+- **Peer feedback slips.** The reaction counter hints at it; what a gallery
+  walk actually needs is a printable feedback slip per station — two stars and
+  a wish, a rubric row, a sticky-note prompt — that students fill in and leave.
+- **Station numbering and a walking order**, so 28 students don't all start at
+  station 1. Print a per-student route card.
+- **QR code + label + a blank comment area on one card**, rather than a grid of
+  bare codes — the card is the thing that gets taped next to the work.
+- **Test-scan each code before printing** — `_shared/qr-scan.js` and a
+  vendored `jsqr.js` already exist elsewhere on the site (P7); a broken batch
+  of thirty printed codes is an expensive mistake.
+- **Short-link display** under each code so a student without a camera can
+  type it.
+- **Undo / confirm on "Reset all reaction counts"** and on Delete gallery (P11).
+
+## Major Features
+
+- **Feedback collection without a server.** Students scan, leave a comment on
+  their own device, and it returns to the teacher's browser via
+  `webrtc-pair.js` (P9) or as a scannable response code. The reaction counter
+  is a placeholder for this; the real version is the feature.
+- **Works when the work isn't online.** The current model assumes each piece
+  of student work has a URL. Most classroom work is on paper or on a
+  Chromebook that isn't publicly shared. A mode where the QR encodes the
+  *prompt and the rubric* rather than a link — or where the station card is
+  just a printed card with a feedback area — would make the tool usable far
+  more often.
+- **Rotation timing** (P7). A gallery walk is a timed rotation; the timer and
+  station-rotation logic already exist in `Classroom Timer.html` and
+  `pe-tournament-stations.html`.
+- **Aggregate the feedback.** Once comments come back, print a per-student
+  packet of the feedback their work received — the part of a gallery walk that
+  usually never happens because collating sticky notes is tedious.
+- **Reuse for anything QR-and-stations shaped** — museum-style exhibits,
+  science fair judging, book tasting stations. This tool,
+  `qr-scavenger-hunt-builder.html`, and `escape-room-builder.html` are three
+  variations on the same primitive.
+
+## Moonshot / North Star
+
+**A gallery walk where the feedback survives the period.** Print the station
+cards, run the rotation on a timer, let students leave feedback on paper or on
+their own device with no accounts, and end with a printed packet for each
+student showing what their classmates actually said about their work — which
+is the entire pedagogical point and almost never happens.
+
+## Platform themes that matter here
+
+- **P9 (device pairing)** — feedback collection is the standout unbuilt idea.
+- **P7 (cross-tool)** — shares primitives with two other QR tools and needs
+  the rotation timer.
+- **P2 (shared roster)** — already reads `np_rosters` for seeding names.
+- **P6 (print quality)** — station cards get taped to walls and scanned;
+  size and error correction are functional choices.
 
 ## Open Questions
 
-_(Nothing here yet.)_
+- Is the "student work has a URL" assumption right for this classroom? If
+  most work is on paper, the tool's centre of gravity should shift to the
+  card-and-feedback model.
+- Should the three QR tools share one station/card/print engine?
