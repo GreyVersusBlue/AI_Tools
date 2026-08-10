@@ -87,8 +87,8 @@
   .recentItem img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; background: #f2f0ea; }
 
   #viewport {
-    position: relative; height: 62vh; min-height: 340px; border: 1px solid var(--line); border-radius: 8px;
-    overflow: hidden; background: #eef0ec; touch-action: none; cursor: grab;
+    position: relative; height: 62vh; min-height: 340px; max-width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden; background: #eef0ec; touch-action: none; cursor: grab; margin: 0 auto;
   }
   #viewport.dragging { cursor: grabbing; }
   #viewport.adding { cursor: crosshair; }
@@ -206,6 +206,16 @@
   }
 
   .viewerToolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  /* A bare `display: flex` outranks the browser's own [hidden] rule, so any
+     flex-displayed element that gets hidden by attribute needs saying so
+     explicitly — otherwise the quiz bar shows with quiz mode off, and the
+     line Arrowhead checkbox shows when no line is being drawn. */
+  .viewerToolbar[hidden], .lineArrowLabel[hidden] { display: none; }
+  .pageFormatLabel { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+  .customRatioControls { display: flex; align-items: center; gap: 10px; }
+  #customRatioControls[hidden] { display: none; }
+  .customRatioControls label { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+  .customRatioControls input[type=range] { width: 100px; }
   .zoomReadout { font-size: 0.78rem; color: var(--muted); min-width: 46px; text-align: center; }
   .spacer { flex: 1; }
   button.toggle.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
@@ -251,6 +261,28 @@
   #scaleBar .scalebar-label {
     font-size: 0.72rem; color: var(--ink); background: rgba(255,255,255,.88);
     padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  }
+
+  /* Shared row layout for the tool's drop-down panels (calibrate, batch
+     place, label sets, worksheet) — same shape as #calibratePanel's own
+     .calibRow, lifted out so the newer panels don't each restate it. */
+  .panelRow { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-top: 10px; }
+  .panelRow label { display: flex; flex-direction: column; gap: 3px; font-size: 0.76rem; font-weight: 600; color: var(--muted); }
+  .panelRow label.wide { flex: 1; min-width: 220px; }
+  .panelRow label.checkLabel { flex-direction: row; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--ink); font-weight: 400; }
+  .panelRow input[type=text] { min-width: 180px; }
+
+  .quizCount { font-size: 0.82rem; font-weight: 600; color: var(--accent); }
+
+  /* Projector mode for the self-check quiz: bumps on-screen label text to a
+     size that reads from the back of the room. !important because a colored
+     label sets its own font-size inline (bmg-labels.js applyStyle()), which
+     a plain class rule would lose to. Screen-only, like quiz mode itself. */
+  @media screen {
+    body.quiz-projector .bmg-label .lbl-text {
+      font-size: 1.4rem !important; padding: 4px 12px;
+    }
+    body.quiz-projector .bmg-label .lbl-dot { width: 20px; height: 20px; }
   }
 
   #batchPanel textarea {
@@ -332,10 +364,34 @@
   .tiledLegendClone .legend-row { margin-bottom: 12px; gap: 10px; }
   .tiledLegendClone .legend-icon svg { width: 26px; height: 26px; }
 
+  /* Single-page print/PDF export: a canvas-rasterized snapshot of exactly
+     the map area (see printMap() / buildExportCanvas() / getPhysicalPageInches()
+     in the module script below), never a screenshot of this interactive page.
+     #printExportStage stays empty and hidden until printMap() fills it with
+     one <img> right before calling window.print(); afterprint empties it
+     again. Sized via a dynamically-injected @page rule (see setPrintPageSize())
+     matching the page format selected above the map. */
+  #printExportStage { display: none; }
+  #printExportStage img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+  /* Worksheet printing is multi-page (a worksheet page per version, each
+     optionally followed by its answer key), so it can't use the single
+     fixed-position stage above — it uses the same flowed, one-image-per-
+     page structure the tiled poster print already prints correctly. */
+  #worksheetPages { display: none; }
+  .worksheetPage { page-break-after: always; }
+  .worksheetPage:last-child { page-break-after: auto; }
+  .worksheetPage img { display: block; width: 100%; height: auto; }
+
   @media print {
+    body.printing-worksheet .wrap { display: none !important; }
+    body.printing-worksheet #worksheetPages { display: block; }
+    body.printing-map-export .wrap { display: none !important; }
+    body.printing-map-export #printExportStage {
+      display: block !important; position: fixed; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+    }
     .card.search-card, .card.recent-card, .viewerToolbar, .storage-warn, .no-print { display: none !important; }
     #calibratePanel, #latLonReadout, .rgn-del { display: none !important; }
-    #viewport { height: 90vh; }
     body.tiled-printing .card { display: none !important; }
     body.tiled-printing #tiledPrintPages { display: block; }
     .tiledPage { page-break-after: always; }
@@ -400,6 +456,8 @@
       <button id="btnUndo" class="icon" title="Undo (Ctrl+Z)" disabled>&#8630;</button>
       <button id="btnRedo" class="icon" title="Redo (Ctrl+Shift+Z)" disabled>&#8631;</button>
       <button id="btnAddLabel" class="small toggle">+ Add Label</button>
+      <button id="btnLabelSets" class="small" title="Drop a ready-made list of places (the 13 colonies, the 50 states, the countries of Europe…) onto this map at once, or reuse a list you saved yourself">Label Sets&hellip;</button>
+      <button id="btnTidyLabels" class="small" title="Nudge overlapping labels apart until they're all readable, keeping each as close to where it was as the crowding allows">Tidy Labels</button>
       <button id="btnAddMarker" class="small toggle">+ Add Marker</button>
       <select id="markerStyleSelect" class="styleSelect" hidden>
         <option value="pin">Pin</option>
@@ -415,6 +473,7 @@
       <select id="regionColorSelect" class="styleSelect" hidden></select>
       <select id="regionPatternSelect" class="styleSelect" hidden></select>
       <button id="btnAddLine" class="small toggle">+ Draw Line</button>
+      <select id="lineTypeSelect" class="styleSelect" hidden title="Picks the colour, dash style and arrowhead conventionally used for that kind of feature, and writes its caption into the key for you"></select>
       <select id="lineColorSelect" class="styleSelect" hidden></select>
       <select id="lineStyleSelect" class="styleSelect" hidden>
         <option value="solid">Solid</option>
@@ -427,8 +486,11 @@
       <span id="placeHint" class="toolHint" hidden></span>
       <span class="spacer"></span>
       <button id="btnClearCache" class="small">Clear cached maps</button>
+      <label id="grayscaleSafeWrap" class="lineArrowLabel" title="Shaded regions set to a solid fill print/export with a hatch or dot pattern instead, so different-colored regions stay tellable apart on a black-and-white printer"><input type="checkbox" id="grayscaleSafeCheck" checked data-no-pan> Grayscale-safe fills</label>
       <button id="btnDownloadPng" class="small">Download PNG</button>
-      <button id="btnPrint" class="small primary">Print / Save PDF</button>
+      <button id="btnPrint" class="small primary" title="Prints exactly the map area, sized to the page shape selected below — not a screenshot of this web page">Print Map</button>
+      <button id="btnSavePdf" class="small primary" title="Builds a real PDF sized exactly to the page shape selected below">Save PDF</button>
+      <button id="btnWorksheet" class="small primary" title="Turn this map into a numbered fill-in-the-blank worksheet, with a word bank and a matching answer key">Worksheet&hellip;</button>
       <button id="btnTiledPrint" class="small">Tiled Print&hellip;</button>
     </div>
     <div class="viewerToolbar no-print">
@@ -444,6 +506,32 @@
       <button id="btnMeasure" class="small toggle" title="Click two points on the map to measure the real-world straight-line distance between them">Measure Distance</button>
       <button id="btnStudentMode" class="small toggle" title="Hide label and legend text for a printable student handout. Toggle off to see the labeled teacher/answer-key version.">Student Handout Mode</button>
       <button id="btnQuizMode" class="small toggle" title="Hide every label's text until it's clicked, so this finished map doubles as a click-to-reveal self-check study tool. Screen only — never affects printing.">Self-Check Quiz Mode</button>
+      <span id="toolMsg" class="toolHint" hidden></span>
+    </div>
+    <div id="quizBar" class="viewerToolbar no-print" hidden>
+      <span id="quizProgress" class="quizCount">0 of 0 revealed</span>
+      <button id="btnQuizReveal" class="small primary">Reveal next</button>
+      <button id="btnQuizGot" class="small" title="Tally one for the class — the running score is for a projected whole-class review">Class got it &#10003;</button>
+      <button id="btnQuizMissed" class="small" title="Tally a miss — worth coming back to before the test">Missed &#10007;</button>
+      <span id="quizScore" class="quizCount"></span>
+      <button id="btnQuizRevealAll" class="small">Reveal all</button>
+      <button id="btnQuizNewRound" class="small">New round</button>
+      <label class="lineArrowLabel" title="Bump label text up to a size that reads from the back of the room"><input type="checkbox" id="quizBigText" data-no-pan> Projector text</label>
+    </div>
+    <div class="viewerToolbar no-print">
+      <span class="pageFormatLabel">Page shape</span>
+      <select id="pageFormatSelect" class="styleSelect">
+        <option value="letter">US Letter 8.5 &times; 11 (printing)</option>
+        <option value="widescreen">Widescreen 16:9 (PowerPoint)</option>
+        <option value="custom">Custom ratio</option>
+      </select>
+      <button id="btnFlipOrientation" class="small toggle" title="Swap width and height">Flip &#8646;</button>
+      <div id="customRatioControls" class="customRatioControls" hidden>
+        <label>Width <input type="range" id="customRatioW" min="1" max="20" step="1" data-no-pan></label>
+        <label>Height <input type="range" id="customRatioH" min="1" max="20" step="1" data-no-pan></label>
+        <span id="customRatioReadout" class="zoomReadout"></span>
+      </div>
+      <span class="hint" style="margin:0;">Sets the shape of the preview below, and of everything Print / Save PDF / Download PNG produce.</span>
     </div>
     <div id="calibratePanel" class="card no-print" hidden>
       <h2>Map coordinates</h2>
@@ -481,6 +569,70 @@
         <button id="btnBatchPlaceClose" class="small">Close</button>
       </div>
       <div id="batchStatus" class="status" hidden></div>
+    </div>
+    <div id="labelSetPanel" class="card no-print" hidden>
+      <h2>Label sets</h2>
+      <p class="hint">
+        Drops a whole list of places onto this map at once, at their real coordinates &mdash; so the 13 colonies, the
+        50 states, or the countries of Europe don't have to be typed out again for every new map.
+        Requires the map's coordinates to be set first (see &ldquo;Set Map Coordinates&hellip;&rdquo; above).
+        The built-in coordinates are approximate label anchors, not survey points: expect to drag a few.
+      </p>
+      <div class="panelRow">
+        <label>Set
+          <select id="labelSetSelect" class="styleSelect" data-no-pan></select>
+        </label>
+        <button id="btnPlaceLabelSet" class="small primary">Place these labels</button>
+        <button id="btnSaveLabelSet" class="small" title="Save this map's labels, by latitude/longitude, as a reusable set of your own">Save current labels as a set&hellip;</button>
+        <button id="btnDeleteLabelSet" class="small" hidden>Delete this saved set</button>
+        <button id="btnLabelSetClose" class="small">Close</button>
+      </div>
+      <div class="panelRow">
+        <label class="checkLabel"><input type="checkbox" id="labelSetSkipOff" checked data-no-pan> Skip places outside this map</label>
+        <label class="checkLabel"><input type="checkbox" id="labelSetTidy" checked data-no-pan> Spread out overlapping labels afterwards</label>
+        <label class="checkLabel"><input type="checkbox" id="labelSetMarkers" data-no-pan> Also place a marker at each place</label>
+      </div>
+      <p id="labelSetHint" class="hint"></p>
+      <div id="labelSetStatus" class="status" hidden></div>
+    </div>
+    <div id="worksheetPanel" class="card no-print" hidden>
+      <h2>Numbered worksheet &amp; answer key</h2>
+      <p class="hint">
+        Turns this map into the standard social-studies labeling worksheet: every text label on the map becomes a
+        numbered circle, with a numbered answer line for each one beside or below the map, an optional shuffled
+        word bank, and a matching answer key. Ask for more than one version and each gets its own numbering and
+        word-bank order &mdash; one map, a whole set of non-copyable papers.
+      </p>
+      <div class="panelRow">
+        <label class="wide">Title <input type="text" id="wsTitle" data-no-pan placeholder="e.g. The Thirteen Colonies"></label>
+        <label class="wide">Instructions <input type="text" id="wsInstructions" data-no-pan></label>
+      </div>
+      <div class="panelRow">
+        <label>Answer lines
+          <select id="wsPlacement" class="styleSelect" data-no-pan>
+            <option value="beside">Beside the map</option>
+            <option value="below">Below the map</option>
+          </select>
+        </label>
+        <label>Versions
+          <select id="wsVersions" class="styleSelect" data-no-pan>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label class="checkLabel"><input type="checkbox" id="wsNameLine" checked data-no-pan> Name / date line</label>
+        <label class="checkLabel"><input type="checkbox" id="wsWordBank" checked data-no-pan> Word bank</label>
+        <label class="checkLabel"><input type="checkbox" id="wsAnswerKey" checked data-no-pan> Answer key page</label>
+        <label class="checkLabel"><input type="checkbox" id="wsCredit" checked data-no-pan> Map credit line</label>
+      </div>
+      <div class="panelRow">
+        <button id="btnWorksheetPrint" class="small primary">Print Worksheet</button>
+        <button id="btnWorksheetPdf" class="small primary">Save Worksheet PDF</button>
+        <button id="btnWorksheetClose" class="small">Close</button>
+      </div>
+      <div id="worksheetStatus" class="status" hidden></div>
     </div>
     <div id="tiledPrintPanel" class="card no-print" hidden>
       <h2>Tiled poster print</h2>
@@ -541,6 +693,10 @@
   </div>
 </div>
 
+<div id="printExportStage" aria-hidden="true"></div>
+<div id="worksheetPages" aria-hidden="true"></div>
+
+<script src="blank-map-generator/lib/jspdf.umd.min.js"></script>
 <script type="module">
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
@@ -555,7 +711,11 @@ import {
   createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg,
   REGION_PATTERNS, DEFAULT_REGION_PATTERN,
 } from './blank-map-generator/bmg-regions.js';
-import { createLineLayer, createMeasureLayer, LINE_COLORS, lineColorHex, lineSwatchSvg } from './blank-map-generator/bmg-lines.js';
+import {
+  createLineLayer, createMeasureLayer, LINE_COLORS, lineColorHex, lineSwatchSvg,
+  LINE_TYPES, findLineType,
+} from './blank-map-generator/bmg-lines.js';
+import { BUILT_IN_LABEL_SETS, findBuiltInSet } from './blank-map-generator/bmg-label-sets.js';
 import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
@@ -564,6 +724,7 @@ import * as cache from './blank-map-generator/bmg-map-cache.js';
 const store = createStore();
 let project = store.getActiveProject();
 let currentObjectUrl = null;
+let currentRecord = null; // the cached map record on screen — its title/licence feed the worksheet credit line
 let currentSize = { width: 0, height: 0 };
 let placeMode = 'none'; // 'none' | 'label' | 'marker' | 'region' | 'line' | 'measure'
 let downPt = null;
@@ -597,6 +758,7 @@ const viewer = createViewer(viewport, stage, {
 
 const labelLayer = createLabelLayer(el('labelLayer'), viewer, {
   onChange(labels) { project.labels = labels; save(); },
+  onQuizChange(progress) { renderQuizBar(progress); },
 });
 
 const markerLayer = createMarkerLayer(el('markerLayer'), viewer, {
@@ -682,6 +844,34 @@ el('markerColorSelect').value = DEFAULT_MARKER_COLOR;
 el('markerSizeSelect').innerHTML = MARKER_SIZES.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
 el('markerSizeSelect').value = DEFAULT_MARKER_SIZE;
 el('lineColorSelect').innerHTML = LINE_COLORS.map(c => `<option value="${c.key}">${c.name}</option>`).join('');
+el('lineTypeSelect').innerHTML = LINE_TYPES.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+
+// --- Semantic line types ------------------------------------------------
+// Picking "River" or "Trade route" before drawing sets the colour, dash
+// style and arrowhead that kind of feature is conventionally drawn with,
+// and (once the line is finished) writes that type's caption into the key
+// if that legend row doesn't have one yet — so the legend writes itself
+// with the right words instead of the teacher captioning "blue solid" by
+// hand on every map. The three style controls stay visible and editable
+// afterwards: a type is a starting point, not a lock.
+el('lineTypeSelect').addEventListener('change', () => {
+  const type = findLineType(el('lineTypeSelect').value);
+  if (!type || !type.color) return;
+  el('lineColorSelect').value = type.color;
+  el('lineStyleSelect').value = type.style;
+  el('lineArrowCheck').checked = !!type.arrow;
+});
+
+/** Captions a just-finished line's legend row from its type, unless that row already says something. */
+function applyLineTypeCaption(line) {
+  const type = findLineType(line && line.type);
+  if (!type || !type.caption) return;
+  const key = lineLegendKey(line.color, line.style);
+  if (project.lineLegendText[key]) return;
+  project.lineLegendText[key] = type.caption;
+  save();
+  renderLegend();
+}
 
 function renderLegend() {
   legendPanel.render({
@@ -919,10 +1109,69 @@ function setStudentModeEnabled(on) {
 // project, since it's a study-session toggle rather than part of the map's
 // design. Always starts back off whenever a map/project loads (see
 // displayMap() and showEmptyMapState()).
+//
+// Quiz mode is now driven from a bar of its own (#quizBar) as well as by
+// clicking individual labels, which is what makes it usable on a projector
+// for whole-class review rather than only as a one-student study view:
+// "Reveal next" picks a still-hidden label at random so the teacher never
+// has to hunt for one, the counter shows how far through the map the class
+// is, and the ✓/✗ tally keeps score on the board. Both the score and which
+// labels are revealed are session-only — a new round starts clean.
+let quizScore = { got: 0, missed: 0 };
+
 function setQuizModeEnabled(on) {
   labelLayer.setQuizMode(on);
   el('btnQuizMode').classList.toggle('active', on);
+  el('quizBar').hidden = !on;
+  quizScore = { got: 0, missed: 0 };
+  if (!on) {
+    el('quizBigText').checked = false;
+    document.body.classList.remove('quiz-projector');
+  }
+  renderQuizBar(labelLayer.getQuizProgress());
 }
+
+function renderQuizBar({ revealed, total } = { revealed: 0, total: 0 }) {
+  el('quizProgress').textContent = `${revealed} of ${total} revealed`;
+  el('quizScore').textContent = (quizScore.got || quizScore.missed)
+    ? `Score: ${quizScore.got} ✓ / ${quizScore.missed} ✗`
+    : '';
+  el('btnQuizReveal').disabled = revealed >= total;
+}
+
+el('btnQuizReveal').addEventListener('click', () => labelLayer.revealNext());
+el('btnQuizRevealAll').addEventListener('click', () => labelLayer.revealAll());
+el('btnQuizNewRound').addEventListener('click', () => {
+  quizScore = { got: 0, missed: 0 };
+  labelLayer.hideAll();
+});
+el('btnQuizGot').addEventListener('click', () => { quizScore.got++; renderQuizBar(labelLayer.getQuizProgress()); });
+el('btnQuizMissed').addEventListener('click', () => { quizScore.missed++; renderQuizBar(labelLayer.getQuizProgress()); });
+el('quizBigText').addEventListener('change', () => {
+  document.body.classList.toggle('quiz-projector', el('quizBigText').checked);
+  labelLayer.reposition();
+});
+
+// --- Transient toolbar message ------------------------------------------
+// For actions whose result is a count rather than a visible panel ("nudged
+// 7 labels apart", "placed 13 of 13"), where an alert() would be far too
+// heavy for something the user can just look at and confirm.
+let toolMsgTimer = null;
+function showToolMsg(text) {
+  const box = el('toolMsg');
+  box.textContent = text;
+  box.hidden = false;
+  clearTimeout(toolMsgTimer);
+  toolMsgTimer = setTimeout(() => { box.hidden = true; }, 4000);
+}
+
+el('btnTidyLabels').addEventListener('click', () => {
+  if (!currentSize.width) return;
+  const moved = labelLayer.tidyOverlaps(); // saves through its own onChange when anything actually moves
+  showToolMsg(moved
+    ? `Nudged ${moved} label${moved === 1 ? '' : 's'} apart — Ctrl+Z puts them back.`
+    : 'No labels were overlapping.');
+});
 
 function setScaleBarEnabled(on) {
   project.scaleBarEnabled = on;
@@ -1065,6 +1314,220 @@ el('btnBatchPlaceGo').addEventListener('click', () => {
   if (placed) el('batchCoordsInput').value = '';
 });
 
+// --- Reusable label sets -------------------------------------------------
+// A saved list of "place name + latitude/longitude" dropped onto whichever
+// map is open, so the 13 colonies (or the 50 states, or the countries of
+// Europe) are one click rather than an afternoon of typing. Placement runs
+// through exactly the same fromLatLon() + labelLayer.addAt() path the batch
+// coordinate paste above uses — the only new thing here is where the list
+// comes from: bmg-label-sets.js's built-ins, or a set the teacher saved
+// from a map they'd already labeled and corrected by hand (kept on the
+// workspace, so it's available to every project).
+
+const SAVED_SET_PREFIX = 'saved:';
+
+function selectedLabelSet() {
+  const value = el('labelSetSelect').value;
+  if (value.startsWith(SAVED_SET_PREFIX)) {
+    return store.listLabelSets().find(s => s.id === value.slice(SAVED_SET_PREFIX.length)) || null;
+  }
+  return findBuiltInSet(value);
+}
+
+function refreshLabelSetSelect(keepValue) {
+  const saved = store.listLabelSets();
+  const builtInOpts = BUILT_IN_LABEL_SETS
+    .map(s => `<option value="${s.key}">${escapeHtml(s.name)} (${s.places.length})</option>`).join('');
+  const savedOpts = saved
+    .map(s => `<option value="${SAVED_SET_PREFIX}${s.id}">${escapeHtml(s.name)} (${s.places.length})</option>`).join('');
+  el('labelSetSelect').innerHTML =
+    `<optgroup label="Built in">${builtInOpts}</optgroup>` +
+    (savedOpts ? `<optgroup label="Saved by you">${savedOpts}</optgroup>` : '');
+  if (keepValue) el('labelSetSelect').value = keepValue;
+  if (!el('labelSetSelect').value) el('labelSetSelect').selectedIndex = 0;
+  syncLabelSetPanel();
+}
+
+function syncLabelSetPanel() {
+  const set = selectedLabelSet();
+  el('labelSetHint').textContent = set ? (set.hint || `${set.places.length} places, saved from one of your maps.`) : '';
+  el('btnDeleteLabelSet').hidden = !el('labelSetSelect').value.startsWith(SAVED_SET_PREFIX);
+}
+
+function setLabelSetStatus(msg, isErr) {
+  const box = el('labelSetStatus');
+  if (!msg) { box.hidden = true; return; }
+  box.hidden = false;
+  box.className = 'status' + (isErr ? ' err' : '');
+  box.textContent = msg;
+}
+
+el('btnLabelSets').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
+  const open = el('labelSetPanel').hidden;
+  el('labelSetPanel').hidden = !open;
+  if (open) { refreshLabelSetSelect(el('labelSetSelect').value); setLabelSetStatus(''); }
+});
+el('btnLabelSetClose').addEventListener('click', () => { el('labelSetPanel').hidden = true; });
+el('labelSetSelect').addEventListener('change', syncLabelSetPanel);
+
+el('btnPlaceLabelSet').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration) || !currentSize.width) { openCalibratePanel(); return; }
+  const set = selectedLabelSet();
+  if (!set) return;
+  const skipOff = el('labelSetSkipOff').checked;
+  const withMarkers = el('labelSetMarkers').checked;
+  const style = el('markerStyleSelect').value;
+  const color = el('markerColorSelect').value;
+  const size = el('markerSizeSelect').value;
+  const scale = viewer.getView().scale;
+  let placed = 0, skipped = 0;
+
+  set.places.forEach(p => {
+    const pt = fromLatLon(project.calibration, currentSize.width, currentSize.height, p.lat, p.lon);
+    const offMap = pt.x < 0 || pt.x > currentSize.width || pt.y < 0 || pt.y > currentSize.height;
+    if (offMap && skipOff) { skipped++; return; }
+    let labelX = pt.x;
+    if (withMarkers) {
+      markerLayer.addAt(pt.x, pt.y, style, color, size);
+      labelX = pt.x + (markerSizePx(size) / 2 + 4) / scale;
+    }
+    labelLayer.addAt(labelX, pt.y, p.name);
+    placed++;
+  });
+
+  // labelLayer.addAt() deliberately doesn't save (the normal add-a-label
+  // flow defers that until the text is typed), so sync once here — same as
+  // the batch coordinate paste does.
+  project.labels = labelLayer.getLabels();
+  save();
+  let tidied = 0;
+  if (el('labelSetTidy').checked && placed > 1) tidied = labelLayer.tidyOverlaps();
+
+  let msg = `Placed ${placed} label${placed === 1 ? '' : 's'} from "${set.name}".`;
+  if (skipped) msg += ` Skipped ${skipped} that fell outside this map's calibrated bounds.`;
+  if (tidied) msg += ` Nudged ${tidied} apart so they're readable.`;
+  setLabelSetStatus(msg, false);
+});
+
+el('btnSaveLabelSet').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration) || !currentSize.width) { openCalibratePanel(); return; }
+  const places = project.labels
+    .filter(l => l.text)
+    .map(l => {
+      const { lat, lon } = toLatLon(project.calibration, currentSize.width, currentSize.height, l.x, l.y);
+      return { name: l.text, lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
+    });
+  if (!places.length) { setLabelSetStatus('This map has no text labels to save yet.', true); return; }
+  const name = prompt(`Save these ${places.length} labels as a reusable set named:`, 'My places');
+  if (name === null) return;
+  const saved = store.saveLabelSet(name.trim() || 'My places', places);
+  refreshLabelSetSelect(`${SAVED_SET_PREFIX}${saved.id}`);
+  setLabelSetStatus(`Saved "${saved.name}" — ${places.length} places, ready to drop onto any calibrated map.`, false);
+});
+
+el('btnDeleteLabelSet').addEventListener('click', () => {
+  const value = el('labelSetSelect').value;
+  if (!value.startsWith(SAVED_SET_PREFIX)) return;
+  const set = selectedLabelSet();
+  if (!set || !confirm(`Delete the saved label set "${set.name}"? Labels already placed on maps aren't affected.`)) return;
+  store.deleteLabelSet(set.id);
+  refreshLabelSetSelect();
+  setLabelSetStatus(`Deleted "${set.name}".`, false);
+});
+
+// --- Page shape / aspect ratio ------------------------------------------
+// The viewer preview, and everything Print/Save PDF/Download PNG produce,
+// share one "page format" (width:height ratio) so the on-screen preview is
+// a true WYSIWYG of the export — see applyViewportSize(), which resizes
+// #viewport itself to that ratio (rather than a CSS aspect-ratio) so the
+// print/PDF export code can read the map's exact on-screen pixel rect and
+// trust it already matches the physical page shape.
+const PAGE_PRESETS = {
+  letter: { w: 8.5, h: 11 },
+  widescreen: { w: 16, h: 9 },
+};
+const DEFAULT_PAGE_FORMAT = { type: 'letter', flipped: false, customW: 4, customH: 3 };
+
+/** Returns the current project's page width:height ratio as plain numbers (not necessarily inches — see getPhysicalPageInches for the export page size derived from this). */
+function getPageRatio() {
+  const f = project.pageFormat || DEFAULT_PAGE_FORMAT;
+  let w, h;
+  if (f.type === 'custom') { w = f.customW || 1; h = f.customH || 1; }
+  else { const preset = PAGE_PRESETS[f.type] || PAGE_PRESETS.letter; w = preset.w; h = preset.h; }
+  if (f.flipped) [w, h] = [h, w];
+  return { w, h };
+}
+
+/** Resizes #viewport (in real pixels, not CSS aspect-ratio) to match the current page ratio, as large as fits the card's width and a sensible viewport-height cap, then refits the map into the new shape. */
+function applyViewportSize() {
+  const { w: rw, h: rh } = getPageRatio();
+  viewport.style.width = '100%';
+  const availW = viewport.getBoundingClientRect().width || viewport.parentElement.clientWidth || 600;
+  const maxH = Math.max(280, Math.round(window.innerHeight * 0.62));
+  let w = availW, h = availW * rh / rw;
+  if (h > maxH) { h = maxH; w = maxH * rw / rh; }
+  viewport.style.width = `${Math.max(240, Math.round(w))}px`;
+  viewport.style.height = `${Math.max(200, Math.round(h))}px`;
+  if (currentSize.width) viewer.fit(currentSize.width, currentSize.height);
+}
+
+function updateCustomRatioReadout() {
+  el('customRatioReadout').textContent = `${el('customRatioW').value} : ${el('customRatioH').value}`;
+}
+
+function syncPageFormatControls() {
+  const f = project.pageFormat || DEFAULT_PAGE_FORMAT;
+  el('pageFormatSelect').value = f.type;
+  el('customRatioControls').hidden = f.type !== 'custom';
+  el('customRatioW').value = f.customW;
+  el('customRatioH').value = f.customH;
+  updateCustomRatioReadout();
+  el('btnFlipOrientation').classList.toggle('active', !!f.flipped);
+}
+
+function applyPageFormat() {
+  syncPageFormatControls();
+  applyViewportSize();
+  save();
+}
+
+el('pageFormatSelect').addEventListener('change', () => {
+  // Reset orientation on a preset switch — "US Letter 8.5x11" should always
+  // mean portrait and "Widescreen 16:9" should always mean landscape unless
+  // the user explicitly hits Flip again, regardless of what was flipped
+  // while a *different* format was selected.
+  project.pageFormat = { ...(project.pageFormat || DEFAULT_PAGE_FORMAT), type: el('pageFormatSelect').value, flipped: false };
+  applyPageFormat();
+});
+el('btnFlipOrientation').addEventListener('click', () => {
+  project.pageFormat = { ...(project.pageFormat || DEFAULT_PAGE_FORMAT), flipped: !(project.pageFormat || DEFAULT_PAGE_FORMAT).flipped };
+  applyPageFormat();
+});
+el('customRatioW').addEventListener('input', () => {
+  project.pageFormat.customW = parseInt(el('customRatioW').value, 10);
+  updateCustomRatioReadout();
+  applyViewportSize();
+});
+el('customRatioH').addEventListener('input', () => {
+  project.pageFormat.customH = parseInt(el('customRatioH').value, 10);
+  updateCustomRatioReadout();
+  applyViewportSize();
+});
+el('customRatioW').addEventListener('change', save);
+el('customRatioH').addEventListener('change', save);
+
+el('grayscaleSafeCheck').addEventListener('change', () => {
+  project.grayscaleSafePrint = el('grayscaleSafeCheck').checked;
+  save();
+});
+
+let viewportResizeRAF = null;
+window.addEventListener('resize', () => {
+  if (viewportResizeRAF) return;
+  viewportResizeRAF = requestAnimationFrame(() => { viewportResizeRAF = null; applyViewportSize(); });
+});
+
 viewport.addEventListener('pointermove', e => {
   const box = el('latLonReadout');
   if (!isCalibrated(project.calibration) || !currentSize.width) { box.hidden = true; return; }
@@ -1118,6 +1581,7 @@ function setPlaceMode(mode) {
   el('markerSizeSelect').hidden = mode !== 'marker';
   el('regionColorSelect').hidden = mode !== 'region';
   el('regionPatternSelect').hidden = mode !== 'region';
+  el('lineTypeSelect').hidden = mode !== 'line';
   el('lineColorSelect').hidden = mode !== 'line';
   el('lineStyleSelect').hidden = mode !== 'line';
   el('lineArrowWrap').hidden = mode !== 'line';
@@ -1135,7 +1599,10 @@ function updateShapeButtons() {
 
 function finishShape() {
   const active = activeDraftLayer();
-  if (active && active.layer.draftPointCount() >= active.minPoints) active.layer.finishDraft();
+  if (active && active.layer.draftPointCount() >= active.minPoints) {
+    const created = active.layer.finishDraft();
+    if (placeMode === 'line') applyLineTypeCaption(created);
+  }
   updateShapeButtons();
 }
 
@@ -1172,6 +1639,16 @@ document.addEventListener('keydown', e => {
 
   const tag = document.activeElement?.tagName;
   const inTextField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+  // Ctrl/Cmd+P normally hands the browser's print dialog the raw interactive
+  // page (which is exactly the "print screen of the web page" problem this
+  // tool used to have — see printMap()). Route it through the same
+  // map-only export the Print Map button uses instead of letting it through.
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p' && !inTextField) {
+    e.preventDefault();
+    printMap();
+    return;
+  }
 
   // Ctrl/Cmd+Z to undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo — skipped
   // while focus is in a text field so the browser's own native undo for
@@ -1224,7 +1701,12 @@ viewport.addEventListener('pointerup', e => {
     regionLayer.addDraftPoint(stagePt.x, stagePt.y);
     updateShapeButtons();
   } else if (placeMode === 'line') {
-    if (!lineLayer.isDrafting()) lineLayer.startDraft(el('lineColorSelect').value, el('lineStyleSelect').value, el('lineArrowCheck').checked);
+    if (!lineLayer.isDrafting()) {
+      lineLayer.startDraft(
+        el('lineColorSelect').value, el('lineStyleSelect').value,
+        el('lineArrowCheck').checked, el('lineTypeSelect').value
+      );
+    }
     lineLayer.addDraftPoint(stagePt.x, stagePt.y);
     updateShapeButtons();
   } else if (placeMode === 'measure') {
@@ -1420,6 +1902,7 @@ function displayMap(record) {
   };
   mapImg.src = currentObjectUrl;
   mapImg.hidden = false;
+  currentRecord = record;
   el('viewerEmpty').hidden = true;
   locator.setImage(currentObjectUrl, record.width, record.height);
 
@@ -1439,6 +1922,8 @@ function displayMap(record) {
   el('calibratePanel').hidden = true;
   el('btnGrid').classList.remove('active');
   el('batchPanel').hidden = true;
+  el('labelSetPanel').hidden = true;
+  el('worksheetPanel').hidden = true;
   if (!isSameMap) {
     project.labels = [];
     project.markers = [];
@@ -1547,7 +2032,8 @@ el('btnFit').addEventListener('click', () => {
 });
 el('btnUndo').addEventListener('click', undo);
 el('btnRedo').addEventListener('click', redo);
-el('btnPrint').addEventListener('click', () => window.print());
+el('btnPrint').addEventListener('click', printMap);
+el('btnSavePdf').addEventListener('click', savePdf);
 el('btnDownloadPng').addEventListener('click', downloadPng);
 el('btnTiledPrint').addEventListener('click', () => {
   if (!currentSize.width) return;
@@ -1593,6 +2079,35 @@ function pngRoundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+// --- Grayscale-safe export fills ----------------------------------------
+// Shaded regions distinguish themselves by color alone unless a fill
+// pattern is picked — fine on a color screen or color printer, but two
+// regions in different colors of similar luminance (e.g. red vs. green)
+// can print as the same shade of gray. When "Grayscale-safe fills" is on,
+// export (print/PDF/PNG — anything through drawMapContent/drawPngLegend)
+// substitutes an actual hatch/dots pattern for any region still on the
+// "Solid" fill, so the printed page keeps a second (shape-based) way to
+// tell them apart. The live on-screen SVG regions (bmg-regions.js) are
+// untouched — this only affects the rasterized export.
+
+/** Assigns each distinct color used by a "solid"-pattern region an alternating hatch/dots pattern, in the order those colors first appear — so with two solid-shaded colors on one map, they render as visibly different patterns instead of both falling back to the same one. */
+function buildGrayscalePatternMap() {
+  const map = new Map();
+  const cycle = ['hatch', 'dots'];
+  let i = 0;
+  project.regions.forEach(r => {
+    if ((r.pattern || 'solid') !== 'solid' || map.has(r.color)) return;
+    map.set(r.color, cycle[i % cycle.length]);
+    i++;
+  });
+  return map;
+}
+
+function effectiveRegionPattern(r, grayscaleMap) {
+  if (!project.grayscaleSafePrint || (r.pattern || 'solid') !== 'solid') return r.pattern;
+  return grayscaleMap.get(r.color) || 'hatch';
 }
 
 // Small canvas.createPattern() tile for a region's hatch/dots fill in PNG
@@ -1659,25 +2174,14 @@ function drawPngGridLabel(ctx, text, x, y) {
   ctx.fillText(text, x + 4, y + 11);
 }
 
-function drawPngLabel(ctx, label, px, py, hideText) {
-  if (!label.text) return;
-  const dotColor = label.color ? labelColorHex(label.color) : '#2e6b8f';
+/** Draws a label's white text box with its left edge at `boxX`, vertically centred on `centerY` — the on-map look shared by ordinary labels and by an answer key's numbered ones. `hideText` keeps the empty box (Student Handout Mode's fill-in-the-blank). */
+function drawPngTextBox(ctx, label, boxX, centerY, hideText) {
   const textColor = label.color ? labelColorHex(label.color) : '#1f2430';
   const fontPx = labelFontSizePx(label.size);
-  const dotR = 7;
-  ctx.beginPath();
-  ctx.arc(px, py, dotR, 0, Math.PI * 2);
-  ctx.fillStyle = dotColor;
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#fff';
-  ctx.stroke();
-
   ctx.font = `${label.italic ? 'italic ' : ''}${label.bold ? '700' : '400'} ${fontPx}px "Segoe UI", Georgia, serif`;
   const padX = 7, padY = 4, textH = fontPx;
   const textW = ctx.measureText(label.text).width;
-  const boxX = px + dotR + 5;
-  const boxY = py - (textH + padY * 2) / 2;
+  const boxY = centerY - (textH + padY * 2) / 2;
   pngRoundRect(ctx, boxX, boxY, textW + padX * 2, textH + padY * 2, 4);
   ctx.fillStyle = '#fff';
   ctx.fill();
@@ -1686,8 +2190,22 @@ function drawPngLabel(ctx, label, px, py, hideText) {
   ctx.stroke();
   if (!hideText) {
     ctx.fillStyle = textColor;
-    ctx.fillText(label.text, boxX + padX, py + fontPx / 3);
+    ctx.fillText(label.text, boxX + padX, centerY + fontPx / 3);
   }
+}
+
+function drawPngLabel(ctx, label, px, py, hideText) {
+  if (!label.text) return;
+  const dotColor = label.color ? labelColorHex(label.color) : '#2e6b8f';
+  const dotR = 7;
+  ctx.beginPath();
+  ctx.arc(px, py, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = dotColor;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#fff';
+  ctx.stroke();
+  drawPngTextBox(ctx, label, px + dotR + 5, py, hideText);
 }
 
 /** Sorts drawable legend row descriptors per project.legendOrder, same rule bmg-legend.js's on-screen panel uses: explicitly-ordered keys first (in that order), anything new/unordered keeps its natural relative position after them. */
@@ -1727,6 +2245,7 @@ async function drawPngLegend(ctx) {
     lineGroups.push({ color: l.color, style: l.style });
   });
   if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length) return;
+  const grayscaleMap = buildGrayscalePatternMap();
   const hideText = !!project.studentBlankMode;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
@@ -1762,7 +2281,12 @@ async function drawPngLegend(ctx) {
       fallback = `(#${data.number})`;
       textVal = project.legendText[key];
     } else if (kind === 'region') {
-      img = await svgToImage(regionSwatchSvg(data.color, iconSize, data.pattern));
+      // The legend text lookup key above stays on the region's real,
+      // user-chosen pattern (regionLegendKey) — only the drawn swatch
+      // substitutes the grayscale-safe pattern, so a caption typed while
+      // "Solid" was picked isn't orphaned under a different key once this
+      // toggle kicks in.
+      img = await svgToImage(regionSwatchSvg(data.color, iconSize, effectiveRegionPattern(data, grayscaleMap)));
       fallback = `(${key})`;
       textVal = project.regionLegendText[key];
     } else {
@@ -1803,7 +2327,8 @@ async function drawPngLocator(ctx, cssW, cssH) {
   ctx.strokeRect(rx, ry, rw, rh);
 }
 
-function drawPngScaleBar(ctx, cssH) {
+/** `posOverride` is for renders whose canvas isn't the on-screen viewport (the worksheet's map panel), where the bar's dragged screen position would be meaningless or off-canvas. */
+function drawPngScaleBar(ctx, cssH, posOverride) {
   if (!project.scaleBarEnabled || !isCalibrated(project.calibration)) return;
   const view = viewer.getView();
   const centerStageY = (cssH / 2 - view.y) / view.scale;
@@ -1812,7 +2337,7 @@ function drawPngScaleBar(ctx, cssH) {
     centerStageY, view.scale, project.scaleBarUnit || 'km'
   );
   if (!result) return;
-  const pos = project.scaleBarPos || { x: 10, y: cssH - 66 };
+  const pos = posOverride || project.scaleBarPos || { x: 10, y: cssH - 66 };
   const barY = pos.y + 14;
   ctx.fillStyle = '#1f3550';
   ctx.fillRect(pos.x, barY, result.widthPx, 6);
@@ -1856,7 +2381,12 @@ async function drawPngCompassFixed(ctx, cssW) {
 // below, which (except the scale bar) reads real on-screen DOM element
 // positions relative to the actual #viewport — meaningless for a poster
 // canvas representing a different virtual view. See printTiledPages().
-async function drawMapContent(ctx, cssW, cssH) {
+// `opts.labelNumbers` (a Map of label id -> worksheet number) switches the
+// label layer from "text in a box" to "numbered circle", which is what
+// turns a finished map into a fill-in-the-blank worksheet; with
+// `opts.showAnswers` the same numbered circles keep their text, which is
+// the answer key. Both are export-only — nothing on screen changes.
+async function drawMapContent(ctx, cssW, cssH, opts = {}) {
   ctx.fillStyle = '#eef0ec';
   ctx.fillRect(0, 0, cssW, cssH);
 
@@ -1885,14 +2415,16 @@ async function drawMapContent(ctx, cssW, cssH) {
     });
   }
 
+  const grayscaleMap = buildGrayscalePatternMap();
   project.regions.forEach(r => {
     const hex = regionColorHex(r.color);
+    const pattern = effectiveRegionPattern(r, grayscaleMap);
     const pts = r.points.map(p => viewer.stageToScreen(p.x, p.y));
     ctx.beginPath();
     pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
     ctx.closePath();
-    ctx.fillStyle = (r.pattern && r.pattern !== 'solid')
-      ? regionFillPatternTile(ctx, hex, r.pattern)
+    ctx.fillStyle = (pattern && pattern !== 'solid')
+      ? regionFillPatternTile(ctx, hex, pattern)
       : hexToRgba(hex, 0.32);
     ctx.fill();
     ctx.strokeStyle = hex;
@@ -1928,18 +2460,42 @@ async function drawMapContent(ctx, cssW, cssH) {
 
   project.labels.forEach(l => {
     const pt = viewer.stageToScreen(l.x, l.y);
-    drawPngLabel(ctx, l, pt.x, pt.y, project.studentBlankMode);
+    if (opts.labelNumbers && opts.labelNumbers.has(l.id)) {
+      drawWorksheetNumber(ctx, opts.labelNumbers.get(l.id), pt.x, pt.y, opts.showAnswers ? l : null);
+    } else {
+      drawPngLabel(ctx, l, pt.x, pt.y, project.studentBlankMode);
+    }
   });
 }
 
-async function renderMapCanvas(cssW, cssH, dpr = 1) {
+/** Draws one worksheet blank: a numbered circle where the label sits, plus (on an answer key) the label's own text beside it. */
+function drawWorksheetNumber(ctx, number, px, py, answerLabel) {
+  const r = 11;
+  ctx.beginPath();
+  ctx.arc(px, py, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#1f3550';
+  ctx.stroke();
+  ctx.fillStyle = '#1f3550';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), px, py + 0.5);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  if (answerLabel) drawPngTextBox(ctx, { ...answerLabel, size: 'small' }, px + r + 4, py, false);
+}
+
+async function renderMapCanvas(cssW, cssH, dpr = 1, opts = {}) {
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  await drawMapContent(ctx, cssW, cssH);
+  await drawMapContent(ctx, cssW, cssH, opts);
 
   await drawPngLegend(ctx);
   await drawPngCompass(ctx);
@@ -1980,23 +2536,536 @@ async function downloadPng() {
   }
 }
 
-// Printing uses more vertical space than the on-screen viewport (see the
-// @media print rule for #viewport). Refit to that larger area right before
-// printing so the map fills the page instead of printing at its on-screen
-// size with blank space below, then restore the working view afterward.
-let viewBeforePrint = null;
-window.addEventListener('beforeprint', () => {
-  if (!currentSize.width) return;
-  viewBeforePrint = viewer.getView();
-  viewer.fit(currentSize.width, currentSize.height);
-});
 window.addEventListener('afterprint', () => {
-  if (viewBeforePrint) { viewer.setView(viewBeforePrint); viewBeforePrint = null; }
   if (document.body.classList.contains('tiled-printing')) {
     document.body.classList.remove('tiled-printing');
     el('tiledPrintPages').innerHTML = '';
   }
+  if (document.body.classList.contains('printing-map-export')) {
+    document.body.classList.remove('printing-map-export');
+    el('printExportStage').innerHTML = '';
+  }
+  if (document.body.classList.contains('printing-worksheet')) {
+    document.body.classList.remove('printing-worksheet');
+    el('worksheetPages').innerHTML = '';
+  }
 });
+
+// --- Single-page Print / Save PDF export --------------------------------
+// Both reuse renderMapCanvas() (the same canvas rasterizer the PNG export
+// above and the tiled poster print below use) rather than ever handing the
+// browser the live interactive page to screenshot. Because #viewport is
+// itself kept sized to the selected page ratio (see applyViewportSize()),
+// its on-screen CSS pixel rect already has the right *shape* — export just
+// asks renderMapCanvas for a higher pixel density (dpr) of that same rect
+// for print-quality output, exactly like buildPngBlob() does at a fixed
+// dpr=2, just scaled to the physical page size chosen.
+
+/** The physical export page size, in inches, for the current page ratio — the longer edge is fixed at 11in (a size any standard printer/PDF viewer handles), so a literal 8.5:11 ratio comes out as exact US Letter. */
+function getPhysicalPageInches() {
+  const { w: rw, h: rh } = getPageRatio();
+  const longEdge = 11;
+  return rw >= rh
+    ? { w: longEdge, h: longEdge * rh / rw }
+    : { w: longEdge * rw / rh, h: longEdge };
+}
+
+async function buildExportCanvas(dpiTarget) {
+  const { w: pageWIn } = getPhysicalPageInches();
+  const vpRect = viewport.getBoundingClientRect();
+  const dpr = Math.max(1, (dpiTarget * pageWIn) / vpRect.width);
+  return renderMapCanvas(vpRect.width, vpRect.height, dpr);
+}
+
+function setPrintPageSize(wIn, hIn) {
+  let styleEl = el('printPageSizeStyle');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'printPageSizeStyle';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `@page { size: ${wIn}in ${hIn}in; margin: 0; }`;
+}
+
+async function withBusyButton(btn, busyLabel, fn) {
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = busyLabel;
+  try {
+    await fn();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+const PRINT_DPI = 200;
+
+async function printMap() {
+  if (!currentSize.width) return;
+  await withBusyButton(el('btnPrint'), 'Preparing…', async () => {
+    try {
+      const { w: pageWIn, h: pageHIn } = getPhysicalPageInches();
+      const canvas = await buildExportCanvas(PRINT_DPI);
+      const stage = el('printExportStage');
+      stage.innerHTML = '';
+      const img = document.createElement('img');
+      img.alt = '';
+      const loaded = new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+      img.src = canvas.toDataURL('image/png');
+      stage.appendChild(img);
+      setPrintPageSize(pageWIn, pageHIn);
+      await loaded;
+      document.body.classList.add('printing-map-export');
+      window.print();
+    } catch (err) {
+      alert(`Couldn't prepare the map for printing (${err.message}).`);
+    }
+  });
+}
+
+async function savePdf() {
+  if (!currentSize.width) return;
+  await withBusyButton(el('btnSavePdf'), 'Building PDF…', async () => {
+    try {
+      const { w: pageWIn, h: pageHIn } = getPhysicalPageInches();
+      const canvas = await buildExportCanvas(PRINT_DPI);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: pageWIn >= pageHIn ? 'l' : 'p',
+        unit: 'in',
+        format: [pageWIn, pageHIn],
+        compress: true,
+      });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageWIn, pageHIn);
+      const name = (project.mapId || 'blank-map').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'blank-map';
+      pdf.save(`${name}.pdf`);
+    } catch (err) {
+      alert(`Couldn't build the PDF (${err.message}).`);
+    }
+  });
+}
+
+// --- Numbered worksheet & answer key ------------------------------------
+// The single most common map assignment in a social studies classroom is a
+// map with numbered blanks and a numbered answer list beside it, plus an
+// answer key for the teacher. Everything needed for that was already here —
+// the labels carry the answers, the canvas renderer already rasterizes the
+// map, jsPDF is already vendored — but the tool could only print the map
+// itself, so the numbering and the answer lines were being done by hand.
+//
+// A worksheet page is laid out and drawn entirely on one canvas (the map is
+// rendered by the same drawMapContent() path everything else uses and then
+// composited into its rectangle), so **print and PDF share one layout** —
+// there's no second HTML/PDF implementation to drift apart. Layout units
+// are hundredths of an inch (WS_UNITS_PER_IN), so every measurement below
+// is physical page space, and the canvas is simply rasterized at whatever
+// pixel density the output wants.
+
+const WS_UNITS_PER_IN = 100;
+const WS_LIST_GAP = 14;
+
+/** Small seeded PRNG, so "version 3" is the same shuffle every time it's generated — reprinting a lost copy gives the same paper back. */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffled(list, seed) {
+  const out = list.slice();
+  const rand = mulberry32(seed);
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** The labels that become numbered blanks — every label carrying text. */
+function worksheetLabels() {
+  return project.labels.filter(l => l.text);
+}
+
+/** Numbering for one version: version 1 numbers top-to-bottom, left-to-right (how a student reads a map); later versions shuffle, so two students side by side can't copy numbers across. */
+function worksheetItems(version) {
+  const ordered = worksheetLabels().slice().sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const list = version > 1 ? shuffled(ordered, version * 9973) : ordered;
+  return list.map((label, i) => ({ number: i + 1, label }));
+}
+
+/**
+ * Renders the current map into an arbitrary-sized box, keeping whatever is
+ * on screen visible: the viewport's visible stage region is re-fitted into
+ * the target box (same trick the tiled poster print uses to point the
+ * viewer at a virtual window), so a worksheet's map panel isn't limited to
+ * the page's own aspect ratio. Draws the map furniture that makes sense on
+ * a worksheet — compass and scale bar at fixed offsets — but not the
+ * legend, since a numbered worksheet's key *is* the answer list.
+ */
+async function renderWorksheetMapCanvas(boxW, boxH, dpr, opts) {
+  const originalView = viewer.getView();
+  const vpRect = viewport.getBoundingClientRect();
+  const topLeft = viewer.screenToStage(vpRect.left, vpRect.top);
+  const bottomRight = viewer.screenToStage(vpRect.right, vpRect.bottom);
+  const regionW = Math.max(1, bottomRight.x - topLeft.x);
+  const regionH = Math.max(1, bottomRight.y - topLeft.y);
+  const scale = Math.min(boxW / regionW, boxH / regionH);
+  viewer.setView({
+    scale,
+    x: (boxW - regionW * scale) / 2 - topLeft.x * scale,
+    y: (boxH - regionH * scale) / 2 - topLeft.y * scale,
+  });
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(boxW * dpr);
+    canvas.height = Math.round(boxH * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    await drawMapContent(ctx, boxW, boxH, opts);
+    await drawPngCompassFixed(ctx, boxW);
+    drawPngScaleBar(ctx, boxH, { x: 10, y: boxH - 40 });
+    return canvas;
+  } finally {
+    viewer.setView(originalView);
+  }
+}
+
+/** Picks a column count and line height that fits `count` answer lines inside `box`, widening/tightening only as far as it has to. */
+function planAnswerList(box, count, preferredColumns) {
+  let columns = preferredColumns;
+  let lineH = 22;
+  while (columns < 6 && Math.ceil(count / columns) * lineH > box.h) columns++;
+  while (lineH > 13 && Math.ceil(count / columns) * lineH > box.h) lineH -= 1;
+  return { columns, lineH };
+}
+
+function drawAnswerLines(ctx, box, items, showAnswers, plan) {
+  const { columns, lineH } = plan;
+  const colW = (box.w - (columns - 1) * 10) / columns;
+  const perCol = Math.ceil(items.length / columns);
+  const fontPx = colW < 130 ? 11 : 13;
+  items.forEach((item, i) => {
+    const col = Math.floor(i / perCol);
+    const row = i % perCol;
+    const x = box.x + col * (colW + 10);
+    const y = box.y + (row + 1) * lineH;
+    ctx.font = `bold ${fontPx}px sans-serif`;
+    ctx.fillStyle = '#1f3550';
+    const numText = `${item.number}.`;
+    ctx.fillText(numText, x, y);
+    const numW = ctx.measureText(numText).width + 5;
+    ctx.strokeStyle = '#9a978d';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x + numW, y + 3.5);
+    ctx.lineTo(x + colW - 6, y + 3.5);
+    ctx.stroke();
+    if (showAnswers) {
+      ctx.font = `${fontPx}px sans-serif`;
+      ctx.fillStyle = '#1f2430';
+      ctx.fillText(item.label.text, x + numW + 2, y);
+    }
+  });
+}
+
+/** Word bank geometry — needed before the map is laid out, since the bank takes space off the top of the content area. */
+function planWordBank(ctx, width, words) {
+  ctx.font = '13px sans-serif';
+  const widest = words.reduce((max, w) => Math.max(max, ctx.measureText(w).width), 0);
+  const columns = Math.max(2, Math.min(6, Math.floor(width / Math.max(70, widest + 26))));
+  const rows = Math.ceil(words.length / columns);
+  return { columns, rows, height: 22 + rows * 17 + 10 };
+}
+
+function drawWordBank(ctx, box, words, plan) {
+  pngRoundRect(ctx, box.x, box.y, box.w, plan.height, 6);
+  ctx.fillStyle = '#f7f6f1';
+  ctx.fill();
+  ctx.strokeStyle = '#c9c6bc';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#1f3550';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillText('WORD BANK', box.x + 10, box.y + 15);
+  const colW = (box.w - 20) / plan.columns;
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = '#1f2430';
+  words.forEach((word, i) => {
+    const col = i % plan.columns;
+    const row = Math.floor(i / plan.columns);
+    ctx.fillText(word, box.x + 10 + col * colW, box.y + 34 + row * 17);
+  });
+}
+
+/** The Commons title/licence line for the map on screen, so a handed-out worksheet carries its own credit. */
+function worksheetCreditLine() {
+  if (!currentRecord) return '';
+  const a = currentRecord.attribution || {};
+  return [`Map: ${currentRecord.title}`, a.artist, a.license].filter(Boolean).join(' · ');
+}
+
+/**
+ * Draws one complete worksheet (or answer key) page onto a canvas sized to
+ * the selected page format, at `dpi` pixels per inch.
+ */
+async function renderWorksheetPage({ version, versions, showAnswers, settings, dpi }) {
+  const U = WS_UNITS_PER_IN;
+  const { w: pageWIn, h: pageHIn } = getPhysicalPageInches();
+  const W = pageWIn * U, H = pageHIn * U;
+  const dpr = dpi / U;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textBaseline = 'alphabetic';
+
+  const margin = 0.5 * U;
+  const contentW = W - margin * 2;
+  const items = worksheetItems(version);
+  let y = margin;
+
+  // Header: title, the ANSWER KEY / version stamp, instructions, name line.
+  ctx.fillStyle = '#1f3550';
+  ctx.font = 'bold 22px "Segoe UI", Georgia, serif';
+  ctx.fillText(settings.title || 'Map Labeling', margin, y + 20);
+  const stamp = [showAnswers ? 'ANSWER KEY' : '', versions > 1 ? `Version ${version}` : ''].filter(Boolean).join(' · ');
+  if (stamp) {
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = showAnswers ? '#a3372b' : '#6b6a63';
+    ctx.textAlign = 'right';
+    ctx.fillText(stamp, W - margin, y + 20);
+    ctx.textAlign = 'left';
+  }
+  y += 30;
+  if (settings.instructions) {
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#4a4941';
+    ctx.fillText(settings.instructions, margin, y + 11);
+    y += 20;
+  }
+  if (settings.nameLine && !showAnswers) {
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#1f2430';
+    ctx.fillText('Name', margin, y + 12);
+    ctx.strokeStyle = '#9a978d';
+    ctx.lineWidth = 0.8;
+    const nameStart = margin + ctx.measureText('Name').width + 6;
+    ctx.beginPath();
+    ctx.moveTo(nameStart, y + 15);
+    ctx.lineTo(margin + contentW * 0.62, y + 15);
+    ctx.moveTo(margin + contentW * 0.72, y + 15);
+    ctx.lineTo(W - margin, y + 15);
+    ctx.stroke();
+    ctx.fillText('Date', margin + contentW * 0.66, y + 12);
+    y += 24;
+  }
+  y += 6;
+
+  const creditText = settings.credit ? worksheetCreditLine() : '';
+  const contentBottom = H - margin - (creditText ? 16 : 0);
+
+  // Word bank sits directly under the header, full width, so both the map
+  // panel and the answer lines below it work with what's left.
+  if (settings.wordBank && items.length) {
+    const words = shuffled(items.map(i => i.label.text), version * 7717 + 13);
+    const plan = planWordBank(ctx, contentW, words);
+    drawWordBank(ctx, { x: margin, y, w: contentW }, words, plan);
+    y += plan.height + 12;
+  }
+
+  // Map panel + answer lines: side by side on a portrait page, stacked when
+  // the teacher picked "below" (or when the page is wider than it is tall,
+  // where a full-width map reads much better).
+  // The map panel is shaped to match what's on screen (the visible region
+  // is exactly the viewport, so its aspect ratio is the viewport's), then
+  // made as large as the answer list will allow. Sizing it to the whole
+  // leftover rectangle instead would letterbox the map inside a tall narrow
+  // panel and waste most of the page on blank paper.
+  const vpRect = viewport.getBoundingClientRect();
+  const mapAspect = vpRect.height ? vpRect.width / vpRect.height : 1;
+  const areaH = contentBottom - y;
+  let mapBox, listBox, plan;
+  if (settings.listPlacement === 'below') {
+    const wantedListH = Math.min(areaH * 0.45, 26 + Math.ceil(items.length / 3) * 22);
+    const mapH = Math.max(areaH * 0.4, Math.min(areaH - wantedListH - WS_LIST_GAP, contentW / mapAspect));
+    const mapW = Math.min(contentW, mapH * mapAspect);
+    mapBox = { x: margin + (contentW - mapW) / 2, y, w: mapW, h: mapH };
+    listBox = { x: margin, y: y + mapH + WS_LIST_GAP, w: contentW, h: areaH - mapH - WS_LIST_GAP };
+    plan = planAnswerList(listBox, items.length, 3);
+  } else {
+    const minListW = Math.min(contentW * 0.32, 2.1 * WS_UNITS_PER_IN);
+    const mapW = Math.max(contentW * 0.45, Math.min(contentW - minListW - WS_LIST_GAP, areaH * mapAspect));
+    const mapH = Math.min(areaH, mapW / mapAspect);
+    mapBox = { x: margin, y, w: mapW, h: mapH };
+    listBox = { x: margin + mapW + WS_LIST_GAP, y, w: contentW - mapW - WS_LIST_GAP, h: areaH };
+    plan = planAnswerList(listBox, items.length, 1);
+  }
+
+  if (currentSize.width && mapBox.w > 20 && mapBox.h > 20) {
+    const labelNumbers = new Map(items.map(i => [i.label.id, i.number]));
+    const mapCanvas = await renderWorksheetMapCanvas(mapBox.w, mapBox.h, dpr, { labelNumbers, showAnswers });
+    ctx.drawImage(mapCanvas, mapBox.x, mapBox.y, mapBox.w, mapBox.h);
+    ctx.strokeStyle = '#c9c6bc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h);
+  }
+
+  drawAnswerLines(ctx, listBox, items, showAnswers, plan);
+
+  if (creditText) {
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#6b6a63';
+    ctx.fillText(creditText, margin, H - margin + 8);
+  }
+  return canvas;
+}
+
+/** Every page of the worksheet run: one worksheet page per version, each optionally followed by its own answer key. */
+async function buildWorksheetCanvases(settings, dpi) {
+  const pages = [];
+  for (let version = 1; version <= settings.versions; version++) {
+    pages.push(await renderWorksheetPage({ version, versions: settings.versions, showAnswers: false, settings, dpi }));
+    if (settings.answerKey) {
+      pages.push(await renderWorksheetPage({ version, versions: settings.versions, showAnswers: true, settings, dpi }));
+    }
+  }
+  return pages;
+}
+
+function readWorksheetSettings() {
+  return {
+    title: el('wsTitle').value.trim(),
+    instructions: el('wsInstructions').value.trim(),
+    nameLine: el('wsNameLine').checked,
+    wordBank: el('wsWordBank').checked,
+    answerKey: el('wsAnswerKey').checked,
+    credit: el('wsCredit').checked,
+    listPlacement: el('wsPlacement').value,
+    versions: parseInt(el('wsVersions').value, 10) || 1,
+  };
+}
+
+function saveWorksheetSettings() {
+  project.worksheet = readWorksheetSettings();
+  save();
+}
+
+function syncWorksheetControls() {
+  const w = project.worksheet || {};
+  const currentProject = store.listProjects().find(p => p.id === store.getActiveId());
+  el('wsTitle').value = w.title || (currentProject ? currentProject.name : '');
+  el('wsInstructions').value = w.instructions != null ? w.instructions : 'Write the name of each numbered place on the lines.';
+  el('wsNameLine').checked = w.nameLine !== false;
+  el('wsWordBank').checked = w.wordBank !== false;
+  el('wsAnswerKey').checked = w.answerKey !== false;
+  el('wsCredit').checked = w.credit !== false;
+  el('wsPlacement').value = w.listPlacement || 'beside';
+  el('wsVersions').value = String(w.versions || 1);
+}
+
+function setWorksheetStatus(msg, isErr) {
+  const box = el('worksheetStatus');
+  if (!msg) { box.hidden = true; return; }
+  box.hidden = false;
+  box.className = 'status' + (isErr ? ' err' : '');
+  box.innerHTML = msg;
+}
+
+el('btnWorksheet').addEventListener('click', () => {
+  if (!currentSize.width) return;
+  const open = el('worksheetPanel').hidden;
+  el('worksheetPanel').hidden = !open;
+  if (!open) return;
+  syncWorksheetControls();
+  setWorksheetStatus(worksheetLabels().length
+    ? ''
+    : 'This map has no text labels yet — add the labels students will fill in, then come back.', !worksheetLabels().length);
+});
+el('btnWorksheetClose').addEventListener('click', () => { el('worksheetPanel').hidden = true; });
+['wsTitle', 'wsInstructions', 'wsNameLine', 'wsWordBank', 'wsAnswerKey', 'wsCredit', 'wsPlacement', 'wsVersions']
+  .forEach(id => el(id).addEventListener('change', saveWorksheetSettings));
+
+/** Guard shared by both worksheet exports: there's nothing to number without labels. */
+function worksheetReady() {
+  if (!currentSize.width) return false;
+  if (!worksheetLabels().length) {
+    setWorksheetStatus('Add at least one text label to the map first — those labels are what become the numbered blanks.', true);
+    return false;
+  }
+  return true;
+}
+
+async function printWorksheet() {
+  if (!worksheetReady()) return;
+  const settings = readWorksheetSettings();
+  await withBusyButton(el('btnWorksheetPrint'), 'Preparing…', async () => {
+    try {
+      const { w: pageWIn, h: pageHIn } = getPhysicalPageInches();
+      const pages = await buildWorksheetCanvases(settings, PRINT_DPI);
+      const container = el('worksheetPages');
+      container.innerHTML = '';
+      pages.forEach(canvas => {
+        const page = document.createElement('div');
+        page.className = 'worksheetPage';
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = canvas.toDataURL('image/png');
+        page.appendChild(img);
+        container.appendChild(page);
+      });
+      // Same reason as the tiled print's own wait: img.decode() has been
+      // seen to hang on freshly-built data: URLs, and printing before the
+      // images have loaded prints blank pages.
+      await Promise.all([...container.querySelectorAll('img')].map(img => img.complete
+        ? Promise.resolve()
+        : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; })));
+      setPrintPageSize(pageWIn, pageHIn);
+      document.body.classList.add('printing-worksheet');
+      window.print();
+      setWorksheetStatus(`Sent ${pages.length} page${pages.length === 1 ? '' : 's'} to the printer.`);
+    } catch (err) {
+      setWorksheetStatus(`Couldn't build the worksheet (${escapeHtml(err.message)}).`, true);
+    }
+  });
+}
+
+async function saveWorksheetPdf() {
+  if (!worksheetReady()) return;
+  const settings = readWorksheetSettings();
+  await withBusyButton(el('btnWorksheetPdf'), 'Building PDF…', async () => {
+    try {
+      const { w: pageWIn, h: pageHIn } = getPhysicalPageInches();
+      const pages = await buildWorksheetCanvases(settings, PRINT_DPI);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: pageWIn >= pageHIn ? 'l' : 'p',
+        unit: 'in',
+        format: [pageWIn, pageHIn],
+        compress: true,
+      });
+      pages.forEach((canvas, i) => {
+        if (i) pdf.addPage([pageWIn, pageHIn], pageWIn >= pageHIn ? 'l' : 'p');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageWIn, pageHIn);
+      });
+      const base = sanitizeProjectFilename(settings.title || (project.mapId || 'map'));
+      pdf.save(`${base}-worksheet.pdf`);
+      setWorksheetStatus(`Saved a ${pages.length}-page PDF.`);
+    } catch (err) {
+      setWorksheetStatus(`Couldn't build the worksheet PDF (${escapeHtml(err.message)}).`, true);
+    }
+  });
+}
+
+el('btnWorksheetPrint').addEventListener('click', printWorksheet);
+el('btnWorksheetPdf').addEventListener('click', saveWorksheetPdf);
 
 // --- Tiled poster print -------------------------------------------------
 // Rasterizes the region currently centered in the viewport at the CURRENT
@@ -2145,7 +3214,10 @@ function showEmptyMapState(mapMissing) {
   el('btnScaleBar').classList.remove('active');
   el('scaleBarUnitSelect').hidden = true;
   el('batchPanel').hidden = true;
+  el('labelSetPanel').hidden = true;
+  el('worksheetPanel').hidden = true;
   el('attribution').innerHTML = '';
+  currentRecord = null;
   resetHistory();
 }
 
@@ -2153,6 +3225,11 @@ function showEmptyMapState(mapMissing) {
 async function loadActiveProjectIntoUI() {
   project = store.getActiveProject();
   refreshProjectSwitcher();
+  syncPageFormatControls();
+  applyViewportSize();
+  el('grayscaleSafeCheck').checked = project.grayscaleSafePrint !== false;
+  syncWorksheetControls();
+  refreshLabelSetSelect();
   if (project.mapId) {
     const cached = await cache.getCachedMap(project.mapId).catch(() => null);
     if (cached) { displayMap(cached); return; }
