@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitness &amp; Skill Assessment Tracker</title>
+<meta name="description" content="Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/fitness-skill-assessment-tracker.html">
+<meta property="og:title" content="Fitness &amp; Skill Assessment Tracker — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fitness &amp; Skill Assessment Tracker — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 20l6-8 5 5 7-11' fill='none' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], select, textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+  .event-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: .5rem; align-items: center; margin-bottom: .3rem; }
+  .event-row input, .event-row select { margin-bottom: 0; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  table.grid-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  table.grid-table th, table.grid-table td { border: 1px solid var(--line); padding: .35rem .45rem; text-align: center; }
+  table.grid-table th { background: #eef1f4; font-size: .72rem; color: var(--muted); }
+  table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
+  table.grid-table input[type="text"] { width: 4.5rem; margin: 0; text-align: center; padding: .25rem; font-size: .82rem; }
+  table.grid-table tfoot td { font-weight: 700; background: #fbfbf9; font-size: .76rem; }
+
+  #printArea { display: none; }
+  .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
+  .print-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
+  table.print-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  table.print-table th, table.print-table td { border: 1px solid #999; padding: .35rem .5rem; text-align: center; }
+  table.print-table th { background: #eee; }
+  table.print-table td:first-child, table.print-table th:first-child { text-align: left; font-weight: 700; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Fitness &amp; Skill Assessment Tracker</h1>
+      <p class="sub">Track fitness-test results per student across the year, with simple class stats.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print report</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Students</h2>
+    <label for="rosterInput">Student names, one per line</label>
+    <textarea id="rosterInput" placeholder="Alex Johnson&#10;Bailey Smith"></textarea>
+    <button class="secondary" id="saveRosterBtn">Save roster</button>
+  </div>
+
+  <div class="card">
+    <h2>Test events</h2>
+    <p class="hint">Add one event per test date/attempt (e.g. "Mile Run &mdash; Fall", "Push-ups &mdash; Spring Retest").</p>
+    <div id="eventsWrap"></div>
+    <button class="secondary small" id="addEventBtn">+ Add test event</button>
+  </div>
+
+  <div class="card">
+    <h2>Results</h2>
+    <div style="overflow-x:auto;">
+      <table class="grid-table" id="resultsTable"></table>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'fsat_tracker_v1';
+
+  var els = {};
+  ['rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var state = { roster: [], events: [], results: {} };
+
+  function uid() { return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.roster)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.events || !state.events.length) {
+      state.events = [
+        { id: uid(), name: 'Mile Run', type: 'time' },
+        { id: uid(), name: 'Push-ups', type: 'count' },
+        { id: uid(), name: 'Sit-ups', type: 'count' }
+      ];
+    }
+    if (!state.results) state.results = {};
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function resultKey(name, eventId) { return name + '|' + eventId; }
+
+  function renderEvents() {
+    els.eventsWrap.innerHTML = state.events.map(function (ev) {
+      return '<div class="event-row" data-id="' + ev.id + '">' +
+        '<input type="text" data-ename="' + ev.id + '" value="' + escapeAttr(ev.name) + '" placeholder="Event name">' +
+        '<select data-etype="' + ev.id + '"><option value="count"' + (ev.type === 'count' ? ' selected' : '') + '>Count (higher = better)</option>' +
+        '<option value="time"' + (ev.type === 'time' ? ' selected' : '') + '>Time (e.g. mm:ss)</option></select>' +
+        '<button type="button" class="danger small" data-del-event="' + ev.id + '">&times;</button></div>';
+    }).join('');
+  }
+  els.eventsWrap.addEventListener('input', function (ev) {
+    var nameId = ev.target.getAttribute('data-ename');
+    if (nameId) {
+      var e = state.events.find(function (x) { return x.id === nameId; });
+      if (e) e.name = ev.target.value;
+      save(); renderResultsTable();
+    }
+  });
+  els.eventsWrap.addEventListener('change', function (ev) {
+    var typeId = ev.target.getAttribute('data-etype');
+    if (typeId) {
+      var e = state.events.find(function (x) { return x.id === typeId; });
+      if (e) e.type = ev.target.value;
+      save(); renderResultsTable();
+    }
+  });
+  els.eventsWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-event');
+    if (!id) return;
+    state.events = state.events.filter(function (e) { return e.id !== id; });
+    save(); renderEvents(); renderResultsTable();
+  });
+  els.addEventBtn.addEventListener('click', function () {
+    state.events.push({ id: uid(), name: 'New event', type: 'count' });
+    save(); renderEvents(); renderResultsTable();
+  });
+
+  els.saveRosterBtn.addEventListener('click', function () {
+    var names = els.rosterInput.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var seen = {}; var unique = [];
+    names.forEach(function (n) { if (!seen[n]) { seen[n] = true; unique.push(n); } });
+    state.roster = unique;
+    save(); renderResultsTable();
+  });
+
+  function computeStats(eventId, type) {
+    if (type !== 'count') return null;
+    var values = state.roster.map(function (name) {
+      var v = state.results[resultKey(name, eventId)];
+      return v && !isNaN(parseFloat(v)) ? parseFloat(v) : null;
+    }).filter(function (v) { return v !== null; });
+    if (!values.length) return { avg: '—', min: '—', max: '—' };
+    var sum = values.reduce(function (a, b) { return a + b; }, 0);
+    return {
+      avg: (sum / values.length).toFixed(1),
+      min: Math.min.apply(null, values),
+      max: Math.max.apply(null, values)
+    };
+  }
+
+  function buildStatsRowHtml() {
+    return '<tr><td>Class average / range</td>' + state.events.map(function (ev) {
+      var stats = computeStats(ev.id, ev.type);
+      if (!stats) return '<td>&mdash;</td>';
+      return '<td>avg ' + stats.avg + '<br>(' + stats.min + '&ndash;' + stats.max + ')</td>';
+    }).join('') + '</tr>';
+  }
+
+  function renderResultsTable() {
+    if (!state.roster.length) {
+      els.resultsTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
+      return;
+    }
+    var head = '<tr><th>Student</th>' + state.events.map(function (ev) { return '<th>' + escapeHtml(ev.name) + '</th>'; }).join('') + '</tr>';
+    var rows = state.roster.map(function (name) {
+      var cells = state.events.map(function (ev) {
+        var key = resultKey(name, ev.id);
+        var val = state.results[key] || '';
+        return '<td><input type="text" data-student="' + escapeAttr(name) + '" data-event="' + ev.id + '" value="' + escapeAttr(val) + '" placeholder="' + (ev.type === 'time' ? 'mm:ss' : '#') + '"></td>';
+      }).join('');
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
+    }).join('');
+    els.resultsTable.innerHTML = '<thead>' + head + '</thead><tbody>' + rows + '</tbody><tfoot>' + buildStatsRowHtml() + '</tfoot>';
+  }
+
+  function refreshStatsRow() {
+    var tfoot = els.resultsTable.querySelector('tfoot');
+    if (tfoot) tfoot.innerHTML = buildStatsRowHtml();
+  }
+
+  els.resultsTable.addEventListener('input', function (ev) {
+    var student = ev.target.getAttribute('data-student');
+    var eventId = ev.target.getAttribute('data-event');
+    if (!student || !eventId) return;
+    state.results[resultKey(student, eventId)] = ev.target.value;
+    save();
+    refreshStatsRow();
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.roster.length) { alert('Save a roster first.'); return; }
+    var head = '<tr><th>Student</th>' + state.events.map(function (ev) { return '<th>' + escapeHtml(ev.name) + '</th>'; }).join('') + '</tr>';
+    var rows = state.roster.map(function (name) {
+      var cells = state.events.map(function (ev) {
+        return '<td>' + escapeHtml(state.results[resultKey(name, ev.id)] || '') + '</td>';
+      }).join('');
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
+    }).join('');
+    var printArea = document.getElementById('printArea');
+    printArea.innerHTML = '<h1 class="print-title">Fitness &amp; Skill Assessment Report</h1>' +
+      '<p class="print-sub">Printed ' + new Date().toLocaleDateString() + '</p>' +
+      '<table class="print-table"><thead>' + head + '</thead><tbody>' + rows + buildStatsRowHtml() + '</tbody></table>';
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.rosterInput.value = state.roster.join('\n');
+  renderEvents();
+  renderResultsTable();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

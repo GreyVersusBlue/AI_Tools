@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v38';
+const CACHE_VERSION = 'v39';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -101,6 +101,7 @@ const PRECACHE_URLS = [
   "Tools/final-grade-checker/libs/jspdf.umd.min.js",
   "Tools/final-grade-checker/libs/xlsx.full.min.js",
   "Tools/final_grade_checker.html",
+  "Tools/fitness-skill-assessment-tracker.html",
   "Tools/fraction-decimal-percent-drill-generator.html",
   "Tools/formula-sheet-builder.html",
   "Tools/formula-sheet-builder/fsb-store.js",

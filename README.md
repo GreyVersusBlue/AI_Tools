@@ -87,6 +87,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Cultural Trivia Card Generator | `Tools/cultural-trivia-card-generator.html` | A 30-question built-in bank across Hispanic World, Francophone World, and Global Culture categories, filterable, projected one at a time or printed as matching front/back trivia cards. |
 | Picture-Prompt Speaking/Writing Task Generator | `Tools/picture-prompt-generator.html` | Upload images, pair each with a random editable task prompt, step through no-repeats-until-cycled for a projector display, or print a set of image + prompt cards. |
 | Cognates & False Friends Reference List Builder | `Tools/cognates-false-friends-builder.html` | Spanish and French starter examples (or build from scratch) split into true cognates and false friends, printed as a two-section reference sheet. |
+| Fitness & Skill Assessment Tracker | `Tools/fitness-skill-assessment-tracker.html` | Save a roster, add time- or count-based fitness-test events, enter results in a per-student grid with live class average/range stats, and print a report. |
 
 ## Using these
 

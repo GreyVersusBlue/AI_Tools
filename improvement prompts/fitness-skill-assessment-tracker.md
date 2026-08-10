@@ -1,0 +1,108 @@
+# Improvement Prompts — Fitness & Skill Assessment Tracker
+
+**Tool file:** `Tools/fitness-skill-assessment-tracker.html`
+**Support folder:** none yet — everything is inline in the one file.
+
+**Current description (from README):** Save a roster, add time- or count-based
+fitness-test events, enter results in a per-student grid with live class
+average/range stats, and print a report.
+
+---
+
+## Status
+
+**2026-08-11 — First build.** Shipped as a basic, functioning MVP from
+the Ideas Backlog. Paste-a-roster textarea, an editable list of test events
+(each named freely, typed as either "count, higher is better" or "time"),
+and a per-student × per-event results grid with autosave to `localStorage`
+(`fsat_tracker_v1`). A live class average/min/max row sits under the grid
+for count-type events. Print produces a clean report table.
+
+Caught and fixed one real bug during smoke testing, not just a test
+artifact: the grid's `change` listener originally called a full
+`renderResultsTable()` re-render (rebuilding every `<input>` in the table)
+any time a result cell lost focus with a changed value. That destroys and
+recreates the exact cell a person is about to click into next, which in
+Playwright showed up as a second student's result silently failing to
+save. Fixed by having `change` refresh only the stats footer via a new
+`refreshStatsRow()` instead of rebuilding the whole table body — real
+users tabbing or clicking quickly between result cells were at risk of
+the same lost-input behavior, not just the automated test. Verified with
+a headless Chromium smoke test: 3-student roster, added a 4th event,
+filled results across multiple students and events in sequence, confirmed
+every value persisted in `localStorage`, confirmed live stats recompute
+correctly, and confirmed print output matches saved data — no console
+errors.
+
+Nothing below has been started.
+
+## What it does today
+
+- Paste-a-roster textarea (one name per line, de-duplicated)
+- Editable test events list: name + type (count or time), add/delete
+- Results grid: one row per student, one column per event, free-text cells
+- Live class average/min/max for count-type events (time-type shows
+  &mdash; since raw mm:ss strings aren't parsed into a sortable number today)
+- Print: report table matching the on-screen grid plus the stats row
+
+## Quick Wins
+
+- **Parse time-type results** (mm:ss or seconds) so average/min/max/"most
+  improved" stats work for time events too, not just counts — the single
+  biggest functionality gap since two of the three default events (Mile
+  Run) are time-based and get no stats today.
+- **Per-student trend across two dates**: if the same event name is
+  reused across a Fall and Spring entry, show a simple improved/declined
+  indicator per student — turns "a snapshot" into "a year of progress."
+- **CSV export** of the full results grid, for a gradebook or district PE
+  reporting requirement that wants raw numbers, not just a printed table.
+- **Sortable results table** (click a column header to sort by that
+  event's results) for quickly finding the fastest/slowest in a projected
+  view during class.
+
+## Major Features
+
+- **Standards/benchmark bands per event** (e.g. Presidential Fitness
+  thresholds) so a result cell shows pass/fail or a percentile alongside
+  the raw number, not just the raw number.
+- **Multiple saved rosters/classes**, matching the multi-save convention
+  used by most builder tools in this round — one flat roster per browser
+  right now, so a PE teacher with 6 class periods can't keep them
+  separate.
+- **Retest workflow**: duplicate an existing event as "<name> — Retest"
+  in one click, pre-filling nothing but keeping the same type, instead of
+  manually adding and renaming a new event every time.
+- **Individual student report cards**: a print view that's one page per
+  student across all events and dates, instead of only the single
+  whole-class grid view, for handing back to students/parents.
+
+## Moonshot / North Star
+
+**A full-year, standards-aware fitness and skill tracker that turns a
+list of numbers into a visible trend per student and per class, with
+zero setup beyond pasting a roster.** Time-value parsing and stats close
+the biggest functional gap in what exists today; benchmark bands and
+trend indicators are what would make this genuinely useful for PE
+reporting requirements instead of just a spreadsheet substitute.
+
+## Platform themes that matter here
+
+- **P7 (cross-tool)** — CSV export and multi-roster support echo patterns
+  already proven elsewhere in the toolkit (Staff Directory Builder's bulk
+  import, several tools' named-save conventions).
+- **P12 (data integrity)** — the full-table-rebuild-on-change bug found
+  during this build is a good example of a broader pattern worth a sweep:
+  any tool with a "rebuild the whole list/table on every change" listener
+  is at risk of destroying in-flight user interaction the same way; worth
+  auditing similar tools for the same shape of bug.
+
+## Open Questions
+
+- Should time-type results be entered as free text (mm:ss, forgiving of
+  typos) with parsing/validation on blur, or as two separate minute/second
+  number inputs — trading a little more visual complexity for guaranteed-
+  parseable data from the start?
+- Is per-student report cards a feature that belongs in this tool, or
+  would it fit better as a shared "printable report card" pattern reused
+  across several data-collecting tools (this one, Science Fair Project
+  Tracker, Duty Roster Builder) rather than reimplemented per tool?
