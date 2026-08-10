@@ -84,6 +84,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Government/Civics Simulation Role Card Generator | `Tools/civics-role-card-generator.html` | Three starter templates (Mock Trial, Debate, Legislative Simulation) or build from scratch, each role with an editable position and talking points list, printed as a card grid. |
 | Geography Bee / Map Skills Quiz Generator | `Tools/geography-bee-quiz-generator.html` | A 30-question built-in bank across capitals, landmarks, and map-reading skills, filterable by category, projected one at a time or printed as a quiz with an answer key. |
 | Classroom Label Maker (Target Language) | `Tools/classroom-label-maker.html` | Paste a target-word/English vocabulary list and print small labels each with a QR code linking to a browser-text-to-speech pronunciation page, plus a plain reference sheet. |
+| Cultural Trivia Card Generator | `Tools/cultural-trivia-card-generator.html` | A 30-question built-in bank across Hispanic World, Francophone World, and Global Culture categories, filterable, projected one at a time or printed as matching front/back trivia cards. |
 
 ## Using these
 
