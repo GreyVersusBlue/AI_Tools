@@ -444,6 +444,7 @@
       <span id="placeHint" class="toolHint" hidden></span>
       <span class="spacer"></span>
       <button id="btnClearCache" class="small">Clear cached maps</button>
+      <label id="grayscaleSafeWrap" class="lineArrowLabel" title="Shaded regions set to a solid fill print/export with a hatch or dot pattern instead, so different-colored regions stay tellable apart on a black-and-white printer"><input type="checkbox" id="grayscaleSafeCheck" checked data-no-pan> Grayscale-safe fills</label>
       <button id="btnDownloadPng" class="small">Download PNG</button>
       <button id="btnPrint" class="small primary" title="Prints exactly the map area, sized to the page shape selected below — not a screenshot of this web page">Print Map</button>
       <button id="btnSavePdf" class="small primary" title="Builds a real PDF sized exactly to the page shape selected below">Save PDF</button>
@@ -1182,6 +1183,11 @@ el('customRatioH').addEventListener('input', () => {
 el('customRatioW').addEventListener('change', save);
 el('customRatioH').addEventListener('change', save);
 
+el('grayscaleSafeCheck').addEventListener('change', () => {
+  project.grayscaleSafePrint = el('grayscaleSafeCheck').checked;
+  save();
+});
+
 let viewportResizeRAF = null;
 window.addEventListener('resize', () => {
   if (viewportResizeRAF) return;
@@ -1729,6 +1735,35 @@ function pngRoundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// --- Grayscale-safe export fills ----------------------------------------
+// Shaded regions distinguish themselves by color alone unless a fill
+// pattern is picked — fine on a color screen or color printer, but two
+// regions in different colors of similar luminance (e.g. red vs. green)
+// can print as the same shade of gray. When "Grayscale-safe fills" is on,
+// export (print/PDF/PNG — anything through drawMapContent/drawPngLegend)
+// substitutes an actual hatch/dots pattern for any region still on the
+// "Solid" fill, so the printed page keeps a second (shape-based) way to
+// tell them apart. The live on-screen SVG regions (bmg-regions.js) are
+// untouched — this only affects the rasterized export.
+
+/** Assigns each distinct color used by a "solid"-pattern region an alternating hatch/dots pattern, in the order those colors first appear — so with two solid-shaded colors on one map, they render as visibly different patterns instead of both falling back to the same one. */
+function buildGrayscalePatternMap() {
+  const map = new Map();
+  const cycle = ['hatch', 'dots'];
+  let i = 0;
+  project.regions.forEach(r => {
+    if ((r.pattern || 'solid') !== 'solid' || map.has(r.color)) return;
+    map.set(r.color, cycle[i % cycle.length]);
+    i++;
+  });
+  return map;
+}
+
+function effectiveRegionPattern(r, grayscaleMap) {
+  if (!project.grayscaleSafePrint || (r.pattern || 'solid') !== 'solid') return r.pattern;
+  return grayscaleMap.get(r.color) || 'hatch';
+}
+
 // Small canvas.createPattern() tile for a region's hatch/dots fill in PNG
 // export — mirrors bmg-regions.js's live SVG <pattern> defs (a light
 // background wash plus the differentiator shape), cached per color+pattern
@@ -1861,6 +1896,7 @@ async function drawPngLegend(ctx) {
     lineGroups.push({ color: l.color, style: l.style });
   });
   if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length) return;
+  const grayscaleMap = buildGrayscalePatternMap();
   const hideText = !!project.studentBlankMode;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
@@ -1896,7 +1932,12 @@ async function drawPngLegend(ctx) {
       fallback = `(#${data.number})`;
       textVal = project.legendText[key];
     } else if (kind === 'region') {
-      img = await svgToImage(regionSwatchSvg(data.color, iconSize, data.pattern));
+      // The legend text lookup key above stays on the region's real,
+      // user-chosen pattern (regionLegendKey) — only the drawn swatch
+      // substitutes the grayscale-safe pattern, so a caption typed while
+      // "Solid" was picked isn't orphaned under a different key once this
+      // toggle kicks in.
+      img = await svgToImage(regionSwatchSvg(data.color, iconSize, effectiveRegionPattern(data, grayscaleMap)));
       fallback = `(${key})`;
       textVal = project.regionLegendText[key];
     } else {
@@ -2019,14 +2060,16 @@ async function drawMapContent(ctx, cssW, cssH) {
     });
   }
 
+  const grayscaleMap = buildGrayscalePatternMap();
   project.regions.forEach(r => {
     const hex = regionColorHex(r.color);
+    const pattern = effectiveRegionPattern(r, grayscaleMap);
     const pts = r.points.map(p => viewer.stageToScreen(p.x, p.y));
     ctx.beginPath();
     pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
     ctx.closePath();
-    ctx.fillStyle = (r.pattern && r.pattern !== 'solid')
-      ? regionFillPatternTile(ctx, hex, r.pattern)
+    ctx.fillStyle = (pattern && pattern !== 'solid')
+      ? regionFillPatternTile(ctx, hex, pattern)
       : hexToRgba(hex, 0.32);
     ctx.fill();
     ctx.strokeStyle = hex;
@@ -2377,6 +2420,7 @@ async function loadActiveProjectIntoUI() {
   refreshProjectSwitcher();
   syncPageFormatControls();
   applyViewportSize();
+  el('grayscaleSafeCheck').checked = project.grayscaleSafePrint !== false;
   if (project.mapId) {
     const cached = await cache.getCachedMap(project.mapId).catch(() => null);
     if (cached) { displayMap(cached); return; }

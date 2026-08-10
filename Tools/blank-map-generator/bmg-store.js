@@ -31,6 +31,7 @@ function blankProjectData() {
     scaleBarEnabled: false, scaleBarUnit: "km", scaleBarPos: null,
     legendOrder: [],
     pageFormat: { type: "letter", flipped: false, customW: 4, customH: 3 },
+    grayscaleSafePrint: true,
   };
 }
 
@@ -64,6 +65,7 @@ function normalizeProjectData(p) {
   if (typeof p.pageFormat.flipped !== "boolean") p.pageFormat.flipped = false;
   if (!Number.isFinite(p.pageFormat.customW) || p.pageFormat.customW <= 0) p.pageFormat.customW = 4;
   if (!Number.isFinite(p.pageFormat.customH) || p.pageFormat.customH <= 0) p.pageFormat.customH = 3;
+  if (typeof p.grayscaleSafePrint !== "boolean") p.grayscaleSafePrint = true;
   if (Array.isArray(p.regions)) {
     p.regions = p.regions.map(r => ({ pattern: "solid", ...r }));
   }
