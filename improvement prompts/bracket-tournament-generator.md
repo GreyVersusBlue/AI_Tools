@@ -53,8 +53,10 @@ ambitious and are **not** scoped to a single session.
 - **Academic tournament mode.** Bracketed review — pairs of students compete
   on questions drawn from `review-game-board.html`'s question bank, with the
   bracket advancing on answers rather than clicks.
-- **Live student-facing view** (P9/P3). Project the bracket, or hand students
-  a link/QR to see the current standings on their own device.
+- **Live projected standings.** A read-only display view of the bracket
+  driven from the teacher's machine, optionally on a second screen, with the
+  current match called out and the scoreboard large enough to read from the
+  back of the room (P9 — second display, not student devices).
 - **Bracket history and repeat matchups.** Across a unit, avoid pairing the
   same two teams twice — the same "recency memory" idea that
   `lab-group-role-randomizer.html` and `group-team-generator.html` already
@@ -70,14 +72,26 @@ projector board, printed score sheets, and a record at the end — for a PE
 unit, a review game, a debate tournament, or a chess club, with the same
 engine underneath.
 
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-device standings view.** A link or QR letting students follow the
+  bracket on their own devices. Projecting it covers this.
+
 ## Platform themes that matter here
 
 - **P2 (shared roster)** — the most obvious gap; nothing here reads
   `np_rosters` today.
 - **P7 (cross-tool)** — overlaps `pe-tournament-stations.html` and Name
   Picker's Tournament mode; three implementations of one idea currently exist.
-- **P3 (share links)** — already adopts `state-link.js`; extend to a
-  student-facing read-only view.
+- **P3 (share links)** — already adopts `state-link.js`; the useful extension
+  is sending a bracket to a colleague (a co-teacher, the PE department)
+  rather than to students.
 - **P6 (print quality)** — a 32-entry bracket that fits legibly on one sheet
   is a genuine layout problem.
 

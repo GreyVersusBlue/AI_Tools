@@ -66,10 +66,10 @@ session.
 - **Choropleth from a data table.** Paste "state, value" and shade
   accordingly — directly reusing the parsing already in
   `data-chart-builder.html` (P7).
-- **Student-facing interactive mode.** With `state-link.js` or a QR code
-  (P3), hand students a link that opens the map in quiz mode on their own
-  device, with nothing stored anywhere. Pairs with the QR tools already on
-  the site.
+- **Projected quiz mode.** Run Self-Check Quiz Mode on the projector as a
+  whole-class review — reveal labels one at a time, keep score on the board,
+  and cycle through several randomized versions. Teacher-driven, and it makes
+  the existing quiz mode useful without any student hardware.
 - **Map + timeline pairing** (P7). `timeline-builder.html` covers *when*;
   this covers *where*. A combined print — timeline along the bottom, map
   above, events pinned to both — would be a genuinely distinctive artifact.
@@ -81,10 +81,22 @@ session.
 
 **A social studies map studio that runs on a Chromebook with the wifi off.**
 Vector base maps, layered time slices, data-driven shading, student handouts
-with answer keys, poster-size tiled printing, and a link a student can open on
-a phone — all offline, all local, all free. There is no product in this space
-that is both classroom-appropriate and privacy-respecting; this tool is
-already most of the way to being it.
+with answer keys, poster-size tiled printing, and a projected quiz mode for
+whole-class review — all offline, all local, all free. There is no product in
+this space that is both classroom-appropriate and privacy-respecting; this
+tool is already most of the way to being it.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-device quiz mode.** Hand students a link or QR that opens the map
+  in Self-Check Quiz Mode on their own device. The projected version above
+  covers the same teaching purpose without putting students on the site.
 
 ## Platform themes that matter here
 
@@ -92,7 +104,8 @@ already most of the way to being it.
   site has; `bmg-map-cache.js` is the reference implementation to copy.
 - **P6 (print quality)** — tiled poster printing is the site's most advanced
   print feature and worth generalizing.
-- **P3 (share links)** — student handouts by link/QR.
+- **P3 (share links)** — sending a map project to a colleague; student
+  handouts are printed, not linked.
 - **P11 (undo)** — has undo *and* redo; the only tool that does.
 - **P15 (first run)** — "Recently used" is good; a shipped sample project
   would be better.

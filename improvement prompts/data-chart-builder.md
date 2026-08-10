@@ -43,7 +43,8 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Student-facing worksheet output.** Print the chart with a blank axis for
+- **Printed worksheet output** (teacher-generated handout, not a
+  student-operated mode). Print the chart with a blank axis for
   students to complete, or print the data table with a blank grid — turning a
   charting tool into a worksheet generator, which is the classroom shape of
   this need (P6).
@@ -69,6 +70,19 @@ class survey, census data, a table off a website — and move fluidly between
 seeing it, questioning it, annotating it, and printing it as either a finished
 figure or a student worksheet. Every chart is exportable, every stat is
 explained in words a 12-year-old can read, and nothing is uploaded anywhere.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-operated charting.** Students pasting their own lab data into the
+  tool on their own devices. The tool is for the teacher building figures and
+  worksheets; a student needing to chart lab data should be doing it in
+  whatever the class already uses.
 
 ## Platform themes that matter here
 

@@ -57,9 +57,9 @@ the most room to grow of any content tool on the site.
   sources by unit, so building a worksheet starts from a source rather than a
   blank paste. Combined with `blank-map-generator.html`'s Wikimedia search,
   there's a precedent for finding public-domain material in-browser (P7).
-- **Student-facing digital version** (P3). A link or QR that opens the source
-  and the questions on a student device, with responses staying local — for
-  the day the copier is broken.
+- **Projected analysis mode.** The source shown large with the framework's
+  questions revealed one at a time, for working through a document together
+  as a class — the no-copier fallback, driven from the teacher's machine.
 - **Corroboration exercises.** Two sources on the same event, side by side,
   with "where do they agree, where do they conflict, why" — the actual
   historical thinking skill, and a natural extension of a two-source packet.
@@ -75,9 +75,21 @@ the most room to grow of any content tool on the site.
 text, image, cartoon, map, photograph — pick the analysis framework, and get a
 scaffolded student worksheet with line numbers and vocabulary support, a
 reading-support variant, a teacher key with sample responses, a multi-source
-DBQ packet when you want one, and a student-device version when the copier is
-down. With the source's date and place flowing into the class timeline and
-map.
+DBQ packet when you want one, and a projected walk-through version for the day
+the copier is down. With the source's date and place flowing into the class
+timeline and map.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-device worksheet.** A link or QR opening the source and questions
+  on a student device with responses staying local. The projected analysis
+  mode above covers the no-copier case.
 
 ## Platform themes that matter here
 
@@ -87,7 +99,7 @@ map.
   `localStorage`.
 - **P6 (print quality)** — line-numbered text, image detail callouts, and a
   worksheet that leaves the right amount of writing space.
-- **P3 (share links)** — a student-device version.
+- **P3 (share links)** — sharing a worksheet with a colleague or a co-teacher.
 
 ## Open Questions
 

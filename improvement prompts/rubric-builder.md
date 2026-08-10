@@ -46,9 +46,9 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Student-facing rubric.** A print or link (P3) version in student-friendly
+- **A student-readable printed rubric.** A print version in student-friendly
   language, ideally with an "I can" phrasing per level, plus a self-assessment
-  column students fill in before submitting. Self-assessment against the rubric
+  column students fill in on paper before submitting. Self-assessment against the rubric
   is one of the highest-effect-size practices there is and needs exactly this
   artifact.
 - **Peer review mode.** The same rubric, reduced, as a peer feedback form —
@@ -76,13 +76,25 @@ bank; each student gets a printed scored rubric with real comments; the class
 data shows which criterion to reteach; and the scores flow into the gradebook
 tools without being typed twice.
 
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Rubric delivered to students by link** (rather than printed), and
+  on-screen student self-assessment. The printed student-readable rubric with
+  a self-assessment column covers the same practice on paper.
+
 ## Platform themes that matter here
 
 - **P2 (shared roster)** — the clearest gap; scoring mode needs it most.
 - **P7 (cross-tool)** — scores should feed the grade tools; the peer-review
   backlog item belongs here.
-- **P3 (share links)** — already adopts `state-link.js`; the student-facing
-  rubric is the natural use.
+- **P3 (share links)** — already adopts `state-link.js`; the natural use is
+  sharing a rubric with a co-teacher or a department.
 - **P6 (print quality)** — a landscape rubric table that doesn't split rows
   across pages is a real layout problem.
 

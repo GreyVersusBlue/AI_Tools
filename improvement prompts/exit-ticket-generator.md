@@ -41,17 +41,17 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Digital collection without a server.** Hand out a QR/link (P3), students
-  type a response on their device, and it comes back to the teacher's browser
-  over `webrtc-pair.js` (P9) or as a scannable code — a live response board
-  with nothing stored anywhere but the two browsers. This is the feature that
-  would make the tool a daily habit, and it's the most distinctive thing this
-  site could build with the pairing module it already has.
-- **A real response board.** Collected or hand-tallied responses displayed
-  anonymously for discussion — the "show me the class's thinking" move that
-  makes exit tickets pedagogically worthwhile.
-- **Sorting and triage.** Mark responses as got-it / almost / reteach as you
-  read them, and print the reteach list for tomorrow.
+- **Paper triage that's actually fast.** The teacher reads the paper slips
+  and taps each student got-it / almost / reteach on a class grid, then
+  prints the reteach list for tomorrow and the small-group split. The
+  reading is unavoidable; the sorting, counting, and list-making are what
+  currently eat the prep period.
+- **A projected discussion board the teacher types into.** Transcribe two or
+  three anonymous responses onto the projector for a whole-class
+  conversation — the "show me the class's thinking" move — driven entirely
+  from the teacher's machine.
+- **Tally by response category**, not just a raw count, so the existing Quick
+  Tally can capture "12 got it, 9 partial, 7 confused" and chart it over time.
 - **Bell-ringer sequences.** A prompt per day for a week or a unit, planned in
   advance and advanced automatically by date, rather than shuffled each
   morning.
@@ -66,15 +66,31 @@ ambitious and are **not** scoped to a single session.
 ## Moonshot / North Star
 
 **Formative assessment that closes the loop in one class period.** Show the
-prompt, give think time, collect responses on student devices with no
-accounts, see the class's thinking anonymously on the projector, sort it into
-got-it and reteach while students pack up, and print tomorrow's small-group
-list on the way out — all local, all private, all in under five minutes.
+prompt, run the think time, collect the paper slips, and then triage a class
+set in the time it takes students to pack up — tapping got-it / almost /
+reteach down a grid, projecting two anonymous responses for a thirty-second
+whole-class discussion, and printing tomorrow's small-group list on the way
+out. All local, all private, all from the teacher's machine.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Digital response collection.** A QR/link students type a response into on
+  their own device, returned to the teacher's browser over `webrtc-pair.js`.
+  Technically the most distinctive thing the site could build with the pairing
+  module, and out of scope regardless. Paper slips plus the fast triage grid
+  above are the teacher-facing answer.
+- **Live student response board** fed by those submissions.
 
 ## Platform themes that matter here
 
-- **P9 (device pairing)** — the response-collection idea is the standout, and
-  the module already exists.
+- **P9 (device pairing)** — teacher-side only: a phone remote for advancing
+  prompts and running think time while circulating.
 - **P2 (shared roster)** — named class sets and per-student triage.
 - **P7 (cross-tool)** — the prompt-bank/display/handout trio it shares with
   Number Talks and Writing Prompt Generator.
@@ -82,8 +98,8 @@ list on the way out — all local, all private, all in under five minutes.
 
 ## Open Questions
 
-- Is collecting student responses — even locally and ephemerally — something
-  Devon wants this site doing at all? It crosses from "teacher's tool" into
-  "student-facing", which is a meaningful line and worth an explicit decision.
+- ~~Is collecting student responses something this site should do?~~
+  **Answered: no.** The site is teacher-facing; students aren't intended users.
+  Paper collection plus fast teacher-side triage is the direction.
 - Should the three prompt-bank tools merge into one with modes, or stay
   separate and share a library?

@@ -42,10 +42,11 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Feedback collection without a server.** Students scan, leave a comment on
-  their own device, and it returns to the teacher's browser via
-  `webrtc-pair.js` (P9) or as a scannable response code. The reaction counter
-  is a placeholder for this; the real version is the feature.
+- **Printed feedback slips as the collection mechanism.** Rather than
+  collecting digitally, print a pad of feedback slips per station that
+  students fill in by hand and leave behind — then give the teacher a fast
+  way to tally and redistribute them. Paper is the right medium here anyway:
+  it keeps the walk moving and doesn't require a device per student.
 - **Works when the work isn't online.** The current model assumes each piece
   of student work has a URL. Most classroom work is on paper or on a
   Chromebook that isn't publicly shared. A mode where the QR encodes the
@@ -66,14 +67,31 @@ ambitious and are **not** scoped to a single session.
 ## Moonshot / North Star
 
 **A gallery walk where the feedback survives the period.** Print the station
-cards, run the rotation on a timer, let students leave feedback on paper or on
-their own device with no accounts, and end with a printed packet for each
-student showing what their classmates actually said about their work — which
-is the entire pedagogical point and almost never happens.
+cards and a pad of feedback slips, run the rotation on a timer, and end with a
+printed packet for each student showing what their classmates actually said
+about their work — which is the entire pedagogical point and almost never
+happens, because collating the slips by hand is what kills it.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-device feedback.** Students scan, comment on their own device, and
+  the comments return to the teacher's browser. The printed feedback slips
+  above serve the same purpose.
+
+Note: this tool's existing design already assumes students scan the printed
+codes to reach the linked work. That's shipped behaviour, not something being
+reclassified here.
 
 ## Platform themes that matter here
 
-- **P9 (device pairing)** — feedback collection is the standout unbuilt idea.
+- **P9 (device pairing)** — teacher-side only: a phone remote for driving the
+  rotation timer while walking the room.
 - **P7 (cross-tool)** — shares primitives with two other QR tools and needs
   the rotation timer.
 - **P2 (shared roster)** — already reads `np_rosters` for seeding names.

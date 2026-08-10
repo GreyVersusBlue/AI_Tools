@@ -54,10 +54,10 @@ ambitious and are **not** scoped to a single session.
   each hold vocabulary in their own format. One entered word list should
   produce flashcards, word wall cards, drills, a roleplay scaffold, and review
   game questions. This is the clearest content-reuse win on the site.
-- **Spaced repetition for students.** A share link (P3) opens the set on a
-  student device with a simple review schedule, progress stored locally on
-  their machine. That's the mechanism that actually builds vocabulary, and it
-  requires no server.
+- **Spaced-repetition scheduling for printed drills.** The tool tracks which
+  items the class has seen and when, and weights each new printed drill
+  toward the words that are due for review — the retrieval-practice benefit,
+  delivered on paper by the teacher.
 - **Conjugation pattern engine.** Given a verb and its type, generate the
   regular conjugation automatically and let the teacher correct the
   irregulars — rather than typing every form of every verb. For Spanish and
@@ -76,17 +76,29 @@ ambitious and are **not** scoped to a single session.
 
 **One word list, every practice format, in any language.** Type the vocabulary
 once and get flashcards, word wall cards, printed drills in both directions
-with answer keys, a conjugation table with the irregulars highlighted,
-listening practice with real audio, a spaced-repetition review on the
-student's own device, and review game questions — for Spanish, French, Latin,
-ASL glossing, or a language the tool has never heard of, because the teacher
-supplies the words and the person labels.
+with answer keys, a conjugation table with the irregulars highlighted, a
+projected listening exercise with real audio, printed drills automatically
+weighted toward the words due for review, and review game questions — for
+Spanish, French, Latin, ASL glossing, or a language the tool has never heard
+of, because the teacher supplies the words and the person labels.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-device spaced repetition.** A share link opening the set on a
+  student's own device with a review schedule stored locally. Scheduling the
+  *printed* drills instead keeps the retrieval-practice benefit teacher-side.
 
 ## Platform themes that matter here
 
 - **P7 (cross-tool)** — a shared vocabulary store serving four tools is the
   headline opportunity.
-- **P3 (share links)** — student-side spaced repetition with no accounts.
+- **P3 (share links)** — sharing a drill set with another language teacher.
 - **P4 (accessibility)** — TTS is already here; it's an accessibility asset
   worth extending across the site.
 - **P6 (print quality)** — drills and answer keys.
