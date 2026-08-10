@@ -10,7 +10,8 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Testing Accommodations Reference Card Generator | Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local, like the Final Grade Checker. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Math
 

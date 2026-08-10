@@ -68,6 +68,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Art Critique Worksheet Generator | `Tools/art-critique-worksheet-generator.html` | A four-step describe/analyze/interpret/judge critique worksheet with editable prompts and follow-up questions per step, printed as repeated half-sheets for a gallery walk or artwork critique. |
 | Duty Roster Builder | `Tools/duty-roster-builder.html` | Editable duty locations and staff list, a round-robin auto-fill across the week, and a printable Monday–Friday grid for the workroom board. |
 | Sub Note / Feedback Slip Generator | `Tools/sub-note-feedback-slip-generator.html` | An editable list of prompts, each printed with blank lines, as repeated half-sheets a substitute fills out by hand before leaving for the day. |
+| Testing Accommodations Reference Card Generator | `Tools/testing-accommodations-card-generator.html` | A roster × accommodation-type grid with a per-student note field, printed as small reference cards — entirely local. |
 
 ## Using these
 
