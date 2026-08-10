@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Word Doc Merger | `j6ok2v` | 2026-08-10 23:49 UTC | `claude/tools-031-035-improvements-j6ok2v` |
+| School Calendar Visualizer | `j6ok2v` | 2026-08-10 23:49 UTC | `claude/tools-031-035-improvements-j6ok2v` |
+| Silent Reading (SSR) Log Tracker | `j6ok2v` | 2026-08-10 23:49 UTC | `claude/tools-031-035-improvements-j6ok2v` |
+| East Middle Schedule Browser | `j6ok2v` | 2026-08-10 23:49 UTC | `claude/tools-031-035-improvements-j6ok2v` |
+| School Layout Visualizer | `j6ok2v` | 2026-08-10 23:49 UTC | `claude/tools-031-035-improvements-j6ok2v` |
 
 ---
 
