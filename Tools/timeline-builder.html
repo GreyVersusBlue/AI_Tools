@@ -134,6 +134,13 @@
   .print-event .pe-title { font-weight: 700; font-size: 1.05rem; }
   .print-event .pe-desc { font-size: .88rem; color: var(--muted); margin-top: .2rem; }
 
+  .legend-row { display: flex; flex-wrap: wrap; gap: .4rem 1rem; justify-content: center; padding: .8rem 0 0; font-size: .78rem; }
+  .legend-row:empty { display: none; }
+  .legend-item { display: flex; align-items: center; gap: .4rem; }
+  .legend-swatch { width: .8rem; height: .8rem; border-radius: 50%; flex-shrink: 0; }
+  .print-view .legend-row { padding-top: 1rem; border-top: 1px solid var(--line); margin-top: .5rem; }
+  .fill-blank { display: inline-block; min-width: 8rem; border-bottom: 1px solid #999; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   @media print {
@@ -223,6 +230,9 @@
           <div><input type="number" id="evYearStart" placeholder="Year (negative = BCE)"></div>
           <div><input type="number" id="evYearEnd" placeholder="End year (optional)"></div>
         </div>
+        <input type="text" id="evCategory" list="categoryOptions" placeholder="Category (optional), e.g. Political, Cultural, Technological">
+        <datalist id="categoryOptions"></datalist>
+        <p class="hint" style="margin-top:-.6rem;">Events sharing a category are colored the same on the timeline, with a legend below it.</p>
         <input type="text" id="evDisplayDate" placeholder="Display label override (optional), e.g. Late Bronze Age">
         <textarea id="evDescription" placeholder="Short description (optional)"></textarea>
         <input type="file" id="evPhoto" accept="image/*">
@@ -237,6 +247,12 @@
         <div class="event-list" id="eventList"></div>
       </div>
 
+      <label for="printMode" style="margin-top:.6rem;">Print mode</label>
+      <select id="printMode">
+        <option value="full">Full (dates &amp; titles)</option>
+        <option value="blankTitles">Blank titles &mdash; student fills in what happened</option>
+        <option value="blankDates">Blank dates &mdash; student fills in when</option>
+      </select>
       <button type="button" id="printBtn">Print</button>
     </div>
 
@@ -250,6 +266,7 @@
         <div class="timeline-scroll">
           <div class="timeline-canvas" id="timelineCanvas"></div>
         </div>
+        <div class="legend-row" id="screenLegend"></div>
       </div>
       <div id="printPreview" style="display:none;">
         <div class="print-view" id="printViewInner"></div>
@@ -262,6 +279,7 @@
         <div class="timeline-scroll">
           <div class="timeline-canvas" id="compareCanvas"></div>
         </div>
+        <div class="legend-row" id="compareLegend"></div>
       </div>
     </div>
   </div>
@@ -284,11 +302,11 @@
    'timelineName','timelineTitle','lineStyle','compactLabels',
    'trackList','addTrackBtn',
    'eraLabel','eraYearStart','eraYearEnd','eraColor','saveEraBtn','cancelEraEditBtn','eraList',
-   'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evDisplayDate','evDescription','evPhoto',
+   'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evCategory','categoryOptions','evDisplayDate','evDescription','evPhoto',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
-   'saveEventBtn','cancelEditBtn','eventList','printBtn',
+   'saveEventBtn','cancelEditBtn','eventList','printMode','printBtn',
    'viewScreenBtn','viewPrintBtn','viewCompareBtn','screenView','printPreview','compareView',
-   'timelineCanvas','printViewInner','compareSelect','compareCanvas'
+   'timelineCanvas','screenLegend','printViewInner','compareSelect','compareCanvas','compareLegend'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, title, lineStyle, compactLabels, events: [...], eras: [...], tracks: [{id,name}] }
@@ -339,6 +357,7 @@
     els.evTitle.value = '';
     els.evYearStart.value = '';
     els.evYearEnd.value = '';
+    els.evCategory.value = '';
     els.evDisplayDate.value = '';
     els.evDescription.value = '';
     els.evPhoto.value = '';
@@ -354,6 +373,7 @@
     els.evTitle.value = ev.title;
     els.evYearStart.value = ev.yearStart;
     els.evYearEnd.value = ev.yearEnd != null ? ev.yearEnd : '';
+    els.evCategory.value = ev.category || '';
     els.evDisplayDate.value = ev.displayDate || '';
     els.evDescription.value = ev.description || '';
     if (ev.photo) {
@@ -395,6 +415,7 @@
       title: title,
       yearStart: yearStart,
       yearEnd: (yearEnd != null && !isNaN(yearEnd)) ? yearEnd : null,
+      category: els.evCategory.value.trim() || null,
       displayDate: els.evDisplayDate.value.trim() || null,
       description: els.evDescription.value.trim(),
       photo: pendingPhoto
@@ -519,9 +540,10 @@
       row.className = 'row-item';
       var thumb = ev.photo ? '<img class="thumb" src="' + ev.photo + '" alt="">' : '';
       var trackTag = state.tracks.length > 1 ? ' &middot; ' + escapeHtml(trackName(ev.track)) : '';
+      var catTag = ev.category ? ' &middot; ' + escapeHtml(ev.category) : '';
       row.innerHTML = thumb +
         '<div class="info"><div class="t">' + escapeHtml(ev.title) + '</div>' +
-        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + '</div></div>';
+        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + catTag + '</div></div>';
       var btns = document.createElement('div');
       btns.className = 'btns';
       var editBtn = document.createElement('button');
@@ -587,6 +609,7 @@
       canvas.style.height = '';
       return;
     }
+    var catColorMap = TimelineLayout.buildCategoryColorMap(data.events);
     var range = TimelineLayout.yearRangeOf(data.events.concat(data.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
     var masterLayout = TimelineLayout.computeLayout(data.events, pxPerYear, 70, range);
@@ -658,23 +681,26 @@
         trackLayout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
 
       positioned.forEach(function (p) {
+        var catColor = catColorMap[(p.event.category || '').trim()] || null;
         if (p.width > 0) {
           var bar = document.createElement('div');
           bar.className = 'marker-bar';
           bar.style.left = p.x + 'px';
           bar.style.width = p.width + 'px';
+          if (catColor) bar.style.background = catColor;
           lane.appendChild(bar);
         }
         var marker = document.createElement('div');
         marker.className = 'marker';
         marker.style.left = p.x + 'px';
+        if (catColor) { marker.style.background = catColor; marker.style.boxShadow = '0 0 0 1px ' + catColor; }
         lane.appendChild(marker);
 
         var label = document.createElement('div');
         label.className = 'event-label ' + p.side;
         label.style.left = p.x + 'px';
         label.innerHTML =
-          '<div class="lbl-date">' + escapeHtml(p.label) + '</div>' +
+          '<div class="lbl-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + escapeHtml(p.label) + '</div>' +
           '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>' +
           (p.event.photo ? '<img src="' + p.event.photo + '" alt="">' : '');
         lane.appendChild(label);
@@ -684,10 +710,25 @@
     });
   }
 
+  function legendHtml(events) {
+    var map = TimelineLayout.buildCategoryColorMap(events);
+    var categories = TimelineLayout.collectCategories(events);
+    if (!categories.length) return '';
+    return categories.map(function (c) {
+      return '<span class="legend-item"><span class="legend-swatch" style="background:' + map[c] + ';"></span>' + escapeHtml(c) + '</span>';
+    }).join('');
+  }
+
+  function populateCategoryOptions() {
+    var categories = TimelineLayout.collectCategories(state.events);
+    els.categoryOptions.innerHTML = categories.map(function (c) { return '<option value="' + escapeHtml(c) + '">'; }).join('');
+  }
+
   function renderScreenTimeline() {
     renderTimelineCanvas(els.timelineCanvas, {
       events: state.events, eras: state.eras, tracks: state.tracks, compactLabels: state.compactLabels
     }, state.lineStyle, 'Add events to see them on the timeline.');
+    els.screenLegend.innerHTML = legendHtml(state.events);
   }
 
   /* ---------- compare two saved timelines side by side ---------- */
@@ -715,11 +756,13 @@
       els.compareCanvas.innerHTML = '';
       els.compareCanvas.style.height = '';
       els.compareCanvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">Choose a saved timeline above to view it alongside this one, aligned on the same year axis.</p>';
+      els.compareLegend.innerHTML = '';
       return;
     }
     var other = TimelineStore.loadTimeline(state.compareWith);
     if (!other) {
       els.compareCanvas.innerHTML = '<p style="color:var(--muted);text-align:center;padding-top:3rem;">That saved timeline could not be loaded.</p>';
+      els.compareLegend.innerHTML = '';
       return;
     }
     if (!Array.isArray(other.eras)) other.eras = [];
@@ -742,6 +785,7 @@
       tracks: aTracks.concat(bTracks),
       compactLabels: state.compactLabels || !!other.compactLabels
     }, state.lineStyle, 'Neither timeline has any events yet.');
+    els.compareLegend.innerHTML = legendHtml(aEvents.concat(bEvents));
   }
 
   els.compareSelect.addEventListener('change', function () {
@@ -751,26 +795,37 @@
     renderCompareView();
   });
 
-  function printEventsHtml() {
+  // mode: 'full' | 'blankTitles' (student fills in what happened, date stays)
+  //       | 'blankDates' (student fills in when, title stays) — the standard
+  //       fill-in-the-timeline worksheet, generated from the same event data
+  //       instead of needing a separate blank sheet built by hand.
+  function printEventsHtml(mode) {
     var sorted = state.events.slice().sort(function (a, b) { return a.yearStart - b.yearStart; });
     var showTrackTag = state.tracks.length > 1;
+    var catColorMap = TimelineLayout.buildCategoryColorMap(state.events);
     return sorted.map(function (ev) {
-      return '<div class="print-event ' + (state.lineStyle !== 'solid' ? state.lineStyle : '') + '">' +
-        (ev.photo ? '<img src="' + ev.photo + '" alt="">' : '') +
-        '<div><div class="pe-date">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) +
+      var catColor = catColorMap[(ev.category || '').trim()] || null;
+      var borderStyle = catColor ? 'border-left-color:' + catColor + ';' : '';
+      var dateHtml = mode === 'blankDates' ? '<span class="fill-blank">&nbsp;</span>' : escapeHtml(TimelineLayout.formatDateLabel(ev));
+      var titleHtml = mode === 'blankTitles' ? '<span class="fill-blank">&nbsp;</span>' : escapeHtml(ev.title);
+      var descHtml = (mode === 'full' && ev.description) ? '<div class="pe-desc">' + escapeHtml(ev.description) + '</div>' : '';
+      return '<div class="print-event ' + (state.lineStyle !== 'solid' ? state.lineStyle : '') + '" style="' + borderStyle + '">' +
+        (mode === 'full' && ev.photo ? '<img src="' + ev.photo + '" alt="">' : '') +
+        '<div><div class="pe-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + dateHtml +
         (showTrackTag ? '<span class="pe-track">' + escapeHtml(trackName(ev.track)) + '</span>' : '') + '</div>' +
-        '<div class="pe-title">' + escapeHtml(ev.title) + '</div>' +
-        (ev.description ? '<div class="pe-desc">' + escapeHtml(ev.description) + '</div>' : '') +
+        '<div class="pe-title">' + titleHtml + '</div>' +
+        descHtml +
         '</div></div>';
     }).join('');
   }
 
-  function printViewHtml() {
-    return '<h2 style="margin-top:0;">' + escapeHtml(state.title || state.name) + '</h2>' + printEventsHtml();
+  function printViewHtml(mode) {
+    return '<h2 style="margin-top:0;">' + escapeHtml(state.title || state.name) + '</h2>' + printEventsHtml(mode || 'full') +
+      '<div class="legend-row">' + legendHtml(state.events) + '</div>';
   }
 
   function renderPrintPreview() {
-    els.printViewInner.innerHTML = printViewHtml();
+    els.printViewInner.innerHTML = printViewHtml(els.printMode.value);
   }
 
   function renderAll() {
@@ -783,6 +838,7 @@
     els.compactLabels.value = String(state.compactLabels);
     renderTrackList();
     updateEvTrackOptions();
+    populateCategoryOptions();
     renderEventList();
     renderEraList();
     renderScreenTimeline();
@@ -947,8 +1003,10 @@
     renderCompareView();
   });
 
+  els.printMode.addEventListener('change', renderPrintPreview);
+
   els.printBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = '<div class="print-view">' + printViewHtml() + '</div>';
+    document.getElementById('printArea').innerHTML = '<div class="print-view">' + printViewHtml(els.printMode.value) + '</div>';
     window.print();
   });
 

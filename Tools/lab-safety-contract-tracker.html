@@ -96,6 +96,7 @@
     width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
   }
   .doc-remove-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .doc-body { min-height: unset; font-family: inherit; font-size: .82rem; margin-bottom: 1.1rem; }
 
   /* ── Student rows ─────────────────────────────────────────────────── */
   .student-rows { display: flex; flex-direction: column; gap: .5rem; }
@@ -136,6 +137,29 @@
     .print-only td.status-yes { font-weight: 700; }
     .print-only td.status-no { font-weight: 700; color: #a3372b; }
     @page { size: letter portrait; margin: 0.4in; }
+  }
+
+  /* ── Blank form print (one signable copy per student) ────────────────── */
+  @media print {
+    .form-page { page-break-after: always; padding-top: .4in; }
+    .form-page:last-child { page-break-after: auto; }
+    .form-page h2 { font-size: 1.3rem; margin-bottom: .5rem; }
+    .form-page .form-body { white-space: pre-wrap; font-size: .95rem; line-height: 1.6; margin-bottom: 2rem; }
+    .form-sig-block { margin-top: 1.5rem; }
+    .sig-line { font-size: .95rem; margin: 1.3rem 0 0; }
+    .fill { display: inline-block; min-width: 3.2in; border-bottom: 1px solid #000; height: 1.05em; margin-left: .3rem; }
+    .fill.short { min-width: 1.4in; }
+  }
+
+  /* ── Reminder slips (quarter-sheet cut-apart) ─────────────────────────── */
+  @media print {
+    .slips-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; page-break-after: always; min-height: 9.6in; }
+    .slips-grid:last-child { page-break-after: auto; }
+    .slip { border: 1px dashed #999; padding: .5in .4in; box-sizing: border-box; display: flex; flex-direction: column; gap: .35rem; }
+    .slip-name { font-size: 1.15rem; font-weight: 700; margin: 0; }
+    .slip-need { font-size: .88rem; margin: 0; }
+    .slip-due { font-size: .88rem; font-weight: 700; color: #a3372b; margin: 0; }
+    .slip-note { font-size: .82rem; color: #555; margin: auto 0 0; }
   }
 </style>
 </head>
@@ -183,9 +207,15 @@
   </div>
 
   <div class="card">
-    <div class="card-title"><span>Required documents</span><button class="secondary small" id="addDocBtn" type="button">+ Add document</button></div>
+    <div class="card-title">
+      <span>Required documents</span>
+      <div class="btn-row">
+        <button class="secondary small" id="printFormsBtn" type="button">Print blank forms</button>
+        <button class="secondary small" id="addDocBtn" type="button">+ Add document</button>
+      </div>
+    </div>
     <div id="docsEditor"></div>
-    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms.</p>
+    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms. The form text prints on the blank copy — leave it empty to print just a title and signature lines.</p>
   </div>
 
   <div class="card">
@@ -215,6 +245,7 @@
         <button type="button" class="secondary small" id="markAllSignedBtn">Mark all as signed</button>
         <button type="button" class="secondary small" id="printFullBtn">Print full report</button>
         <button type="button" class="secondary small" id="printMissingBtn">Print missing list</button>
+        <button type="button" class="secondary small" id="printSlipsBtn">Print reminder slips</button>
       </div>
     </div>
     <p class="hint">Tap a student's status pill to mark today's date as signed &mdash; tap again to undo. Use the date field to backdate, and the note field for things like "needs updated parent signature."</p>
@@ -245,6 +276,14 @@
   </table>
 </div>
 
+<div class="print-only" id="printFormsArea">
+  <div id="printFormsBody"></div>
+</div>
+
+<div class="print-only" id="printSlipsArea">
+  <div id="printSlipsBody"></div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -258,12 +297,13 @@
     'toolbar', 'sectionSwitch', 'newSectionBtn', 'deleteSectionBtn',
     'sectionName', 'dueDate',
     'rosterHubSelect', 'rosterHubLoadBtn', 'rosterInput', 'saveRosterBtn', 'rosterCount',
-    'docsEditor', 'addDocBtn',
+    'docsEditor', 'addDocBtn', 'printFormsBtn',
     'summaryCount', 'docBreakdown', 'dueNote', 'downloadReminderBtn', 'missingWrap', 'allSignedHint', 'missingList', 'noRosterHint',
     'studentRows', 'noStudentsHint', 'allCaughtUpHint', 'missingOnlyToggle', 'markAllSignedBtn',
-    'printFullBtn', 'printMissingBtn',
+    'printFullBtn', 'printMissingBtn', 'printSlipsBtn',
     'printFullArea', 'printFullTitle', 'printFullSub', 'printFullBody',
-    'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody'
+    'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody',
+    'printFormsArea', 'printFormsBody', 'printSlipsArea', 'printSlipsBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, dueDate, documents: [{id,label}], roster: [names...],
@@ -271,7 +311,12 @@
   var state = null;
   var docIdCounter = 0;
   function nextDocId() { docIdCounter++; return 'doc' + Date.now() + docIdCounter; }
-  function defaultDocuments() { return [{ id: nextDocId(), label: 'Lab Safety Contract' }]; }
+  function defaultDocuments() {
+    return [{
+      id: nextDocId(), label: 'Lab Safety Contract',
+      body: 'I have read and understand the laboratory safety rules for this class. I agree to follow all safety procedures, wear required safety equipment, and report any accidents or unsafe conditions to my teacher immediately. I understand that failure to follow these rules may result in removal from lab activities.'
+    }];
+  }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -373,12 +418,44 @@
   }
 
   /* ---------- section lifecycle ---------- */
+  // Handles both the current {docs:{...}} shape and the pre-multi-document
+  // {signed,date} shape a not-yet-loaded section may still be stored in —
+  // same mapping migrateContracts() does, but read-only for a label.
+  function normalizedDocsFor(contractRecord, documents) {
+    if (!contractRecord) return {};
+    if (contractRecord.docs && typeof contractRecord.docs === 'object') return contractRecord.docs;
+    if (documents.length && typeof contractRecord.signed === 'boolean') {
+      var out = {};
+      out[documents[0].id] = { signed: !!contractRecord.signed };
+      return out;
+    }
+    return {};
+  }
+
+  // "N/M (P%)" suffix so the class switcher shows which sections are behind
+  // without having to switch into each one.
+  function sectionProgressLabel(data) {
+    if (!data || !Array.isArray(data.roster) || !data.roster.length) return '';
+    var documents = Array.isArray(data.documents) ? data.documents : [];
+    if (!documents.length) return '';
+    var contracts = data.contracts || {};
+    var signed = 0;
+    data.roster.forEach(function (name) {
+      var docsMap = normalizedDocsFor(contracts[name], documents);
+      var full = documents.every(function (d) { return docsMap[d.id] && docsMap[d.id].signed; });
+      if (full) signed++;
+    });
+    var pct = Math.round((signed / data.roster.length) * 100);
+    return ' — ' + signed + '/' + data.roster.length + ' (' + pct + '%)';
+  }
+
   function refreshSectionSwitch() {
     var names = listSections();
     els.sectionSwitch.innerHTML = '';
     names.forEach(function (n) {
       var opt = document.createElement('option');
-      opt.value = n; opt.textContent = n;
+      var data = (state && n === state.name) ? state : loadSectionData(n);
+      opt.value = n; opt.textContent = n + sectionProgressLabel(data);
       if (state && n === state.name) opt.selected = true;
       els.sectionSwitch.appendChild(opt);
     });
@@ -404,6 +481,7 @@
       roster: data.roster || [],
       contracts: data.contracts || {}
     };
+    state.documents.forEach(function (d) { if (typeof d.body !== 'string') d.body = ''; });
     migrateContracts();
     setCurrentName(name);
     applyStateToForm();
@@ -428,11 +506,19 @@
         (state.documents.length > 1
           ? '<button type="button" class="doc-remove-btn" data-remove-doc="' + escapeAttr(d.id) + '" title="Remove document">&#10005;</button>'
           : '') +
-        '</div>';
+        '</div>' +
+        '<textarea class="doc-body" data-body-for="' + escapeAttr(d.id) + '" rows="2" placeholder="Form text printed on the blank copy (optional)">' + escapeHtml(d.body || '') + '</textarea>';
     }).join('');
   }
 
   els.docsEditor.addEventListener('input', function (e) {
+    if (e.target.classList.contains('doc-body')) {
+      var bodyDoc = state.documents.filter(function (d) { return d.id === e.target.dataset.bodyFor; })[0];
+      if (!bodyDoc) return;
+      bodyDoc.body = e.target.value;
+      saveCurrentState();
+      return;
+    }
     var row = e.target.closest('.doc-row');
     if (!row) return;
     var doc = state.documents.filter(function (d) { return d.id === row.dataset.id; })[0];
@@ -454,7 +540,7 @@
 
   els.addDocBtn.addEventListener('click', function () {
     if (!state) return;
-    state.documents.push({ id: nextDocId(), label: 'New Document' });
+    state.documents.push({ id: nextDocId(), label: 'New Document', body: '' });
     renderDocsEditor();
     saveCurrentState();
     renderAll();
@@ -698,6 +784,7 @@
   function renderAll() {
     renderStudentRows();
     renderSummary();
+    refreshSectionSwitch();
   }
 
   /* ---------- printing ---------- */
@@ -746,6 +833,61 @@
       return '<tr><td>' + escapeHtml(name) + '</td><td>' + (c.note ? escapeHtml(c.note) : '') + '</td></tr>';
     }).join('') : ('<tr><td colspan="' + (multiDoc ? 3 : 2) + '">Everyone has turned theirs in.</td></tr>'));
     activatePrint(els.printMissingArea);
+  });
+
+  /* ---------- print blank forms (one signable copy per document) ---------- */
+  function buildFormHtml(doc) {
+    return '<div class="form-page">' +
+      '<h2>' + escapeHtml(doc.label) + '</h2>' +
+      (doc.body ? '<p class="form-body">' + escapeHtml(doc.body) + '</p>' : '') +
+      '<div class="form-sig-block">' +
+        '<p class="sig-line">Student name (print): <span class="fill"></span></p>' +
+        '<p class="sig-line">Student signature: <span class="fill"></span> Date: <span class="fill short"></span></p>' +
+        '<p class="sig-line">Parent/guardian signature: <span class="fill"></span> Date: <span class="fill short"></span></p>' +
+      '</div>' +
+    '</div>';
+  }
+
+  els.printFormsBtn.addEventListener('click', function () {
+    if (!state || !state.documents.length) return;
+    var doc = state.documents[0];
+    if (state.documents.length > 1) {
+      var choice = prompt('Which document should the blank forms be for?\n' +
+        state.documents.map(function (d, i) { return (i + 1) + '. ' + d.label; }).join('\n'), '1');
+      if (choice === null) return;
+      var idx = parseInt(choice, 10) - 1;
+      if (!(idx >= 0 && idx < state.documents.length)) { alert('Not a valid choice.'); return; }
+      doc = state.documents[idx];
+    }
+    var copies = Math.max(1, state.roster.length || 1);
+    var html = '';
+    for (var i = 0; i < copies; i++) html += buildFormHtml(doc);
+    els.printFormsBody.innerHTML = html;
+    activatePrint(els.printFormsArea);
+  });
+
+  /* ---------- print reminder slips (quarter-sheet, cut-apart, for the missing list) ---------- */
+  els.printSlipsBtn.addEventListener('click', function () {
+    if (!state) return;
+    var data = summaryData();
+    if (!data.missing.length) { alert('Everyone has turned theirs in — nothing to print.'); return; }
+    var dueBit = state.dueDate ? formatDate(state.dueDate) : '';
+    var multiDoc = state.documents.length > 1;
+    var slips = data.missing.map(function (name) {
+      var needLabel = multiDoc
+        ? state.documents.filter(function (d) { return !getDoc(name, d.id).signed; }).map(function (d) { return d.label; }).join(', ')
+        : state.documents[0].label;
+      return '<div class="slip">' +
+        '<p class="slip-name">' + escapeHtml(name) + '</p>' +
+        '<p class="slip-need">Still needed: ' + escapeHtml(needLabel) + '</p>' +
+        (dueBit ? '<p class="slip-due">Needed before: ' + escapeHtml(dueBit) + '</p>' : '') +
+        '<p class="slip-note">Please return this to ' + escapeHtml(state.name) + '.</p>' +
+      '</div>';
+    });
+    var pages = '';
+    for (var i = 0; i < slips.length; i += 4) pages += '<div class="slips-grid">' + slips.slice(i, i + 4).join('') + '</div>';
+    els.printSlipsBody.innerHTML = pages;
+    activatePrint(els.printSlipsArea);
   });
 
   /* ---------- lab-day reminder (.ics) ---------- */

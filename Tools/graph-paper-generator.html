@@ -133,6 +133,22 @@
           <option value="landscape">Landscape</option>
         </select>
 
+        <div class="checkline">
+          <input type="checkbox" id="faded">
+          <label style="margin:0;" for="faded">Ink-saving mode (lighter gridlines)</label>
+        </div>
+
+        <div class="checkline">
+          <input type="checkbox" id="headerOn">
+          <label style="margin:0;" for="headerOn">Add a header (title / name / date)</label>
+        </div>
+        <div id="headerFields" style="display:none;">
+          <label for="headerTitle">Title</label>
+          <input type="text" id="headerTitle" placeholder="e.g. Unit 4 Warmup">
+          <div class="checkline"><input type="checkbox" id="headerShowName"><label style="margin:0;" for="headerShowName">Name line</label></div>
+          <div class="checkline"><input type="checkbox" id="headerShowDate"><label style="margin:0;" for="headerShowDate">Date line</label></div>
+        </div>
+
         <!-- ===== Graph paper panel ===== -->
         <div class="mode-panel active" id="panel-graph">
           <label for="gridStyle">Grid style</label>
@@ -163,6 +179,15 @@
           <div class="checkline" id="boldCenterLine">
             <input type="checkbox" id="boldCenter">
             <label style="margin:0;" for="boldCenter">Bold axis lines through the center</label>
+          </div>
+
+          <div class="checkline" id="labelAxesLine">
+            <input type="checkbox" id="labelAxes">
+            <label style="margin:0;" for="labelAxes">Number the gridlines (so students can plot without counting)</label>
+          </div>
+          <div id="labelAxesFields" style="display:none;">
+            <label for="labelInterval">Label every Nth line</label>
+            <input type="number" id="labelInterval" min="1" step="1" value="5">
           </div>
         </div>
 
@@ -209,6 +234,15 @@
             <div><label for="planeInterval">Gridline interval</label><input type="number" id="planeInterval" value="1" min="0.5" step="0.5"></div>
             <div><label for="planeLabelEvery">Label every Nth line</label><input type="number" id="planeLabelEvery" value="5" min="1" step="1"></div>
           </div>
+
+          <label for="planeCopies">Planes per page</label>
+          <p class="hint">Small multiples of the same range — the standard "four coordinate planes on one sheet" worksheet.</p>
+          <select id="planeCopies">
+            <option value="1">1 (full page)</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
+          </select>
         </div>
 
         <!-- ===== Isometric panel ===== -->
@@ -255,9 +289,11 @@
   var els = {};
   ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
    'orientation','gridStyle','exactCountLine','boldCenterLine','gridSizePreset','gridSizeCustom','exactCount','exactCountFields','exactCols','exactRows','boldCenter',
+   'labelAxesLine','labelAxes','labelAxesFields','labelInterval',
    'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
-   'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery',
+   'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery','planeCopies',
    'isoStyle','isoSizePreset','isoSizeCustom',
+   'faded','headerOn','headerFields','headerTitle','headerShowName','headerShowDate',
    'printBtn','downloadPngBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -275,11 +311,13 @@
       exactCols: 10,
       exactRows: 10,
       boldCenter: false,
+      labelAxes: false, labelInterval: 5,
       nlMin: 0, nlMax: 20, nlInterval: 1, nlLabelEvery: 1, nlCopies: 1,
       nlIndependent: false, nlRows: [],
       planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
-      planeInterval: 1, planeLabelEvery: 5,
-      isoStyle: 'dot', isoSizePreset: '0.5', isoSizeCustom: 2
+      planeInterval: 1, planeLabelEvery: 5, planeCopies: 1,
+      isoStyle: 'dot', isoSizePreset: '0.5', isoSizeCustom: 2,
+      faded: false, headerOn: false, headerTitle: '', headerShowName: false, headerShowDate: false
     };
   }
 
@@ -312,6 +350,17 @@
     els.exactCols.value = settings.exactCols;
     els.exactRows.value = settings.exactRows;
     els.boldCenter.checked = settings.boldCenter;
+    els.labelAxesLine.style.display = isSquare ? '' : 'none';
+    els.labelAxes.checked = settings.labelAxes;
+    els.labelAxesFields.style.display = (isSquare && settings.labelAxes) ? '' : 'none';
+    els.labelInterval.value = settings.labelInterval;
+    els.faded.checked = settings.faded;
+    els.headerOn.checked = settings.headerOn;
+    els.headerFields.style.display = settings.headerOn ? '' : 'none';
+    els.headerTitle.value = settings.headerTitle;
+    els.headerShowName.checked = settings.headerShowName;
+    els.headerShowDate.checked = settings.headerShowDate;
+    els.planeCopies.value = settings.planeCopies;
     els.nlMin.value = settings.nlMin; els.nlMax.value = settings.nlMax;
     els.nlInterval.value = settings.nlInterval; els.nlLabelEvery.value = settings.nlLabelEvery;
     els.nlCopies.value = settings.nlCopies;
@@ -343,6 +392,14 @@
     settings.exactCols = parseInt(els.exactCols.value, 10) || 1;
     settings.exactRows = parseInt(els.exactRows.value, 10) || 1;
     settings.boldCenter = els.boldCenter.checked;
+    settings.labelAxes = els.labelAxes.checked;
+    settings.labelInterval = Math.max(1, parseInt(els.labelInterval.value, 10) || 5);
+    settings.faded = els.faded.checked;
+    settings.headerOn = els.headerOn.checked;
+    settings.headerTitle = els.headerTitle.value;
+    settings.headerShowName = els.headerShowName.checked;
+    settings.headerShowDate = els.headerShowDate.checked;
+    settings.planeCopies = parseInt(els.planeCopies.value, 10) || 1;
 
     settings.nlMin = parseFloat(els.nlMin.value) || 0;
     settings.nlMax = parseFloat(els.nlMax.value) || 0;
@@ -414,6 +471,11 @@
     return settings.isoSizePreset === 'custom' ? (1 / settings.isoSizeCustom) : parseFloat(settings.isoSizePreset);
   }
 
+  function headerOpt() {
+    if (!settings.headerOn) return null;
+    return { title: settings.headerTitle, showName: settings.headerShowName, showDate: settings.headerShowDate };
+  }
+
   function render() {
     readFormIntoSettings();
     persist();
@@ -427,7 +489,11 @@
         cellSize: gridSizeInches(),
         cols: settings.exactCols,
         rows: settings.exactRows,
-        boldCenter: settings.boldCenter
+        boldCenter: settings.boldCenter,
+        labelAxes: settings.gridStyle === 'square' && settings.labelAxes,
+        labelInterval: settings.labelInterval,
+        faded: settings.faded,
+        header: headerOpt()
       });
     } else if (settings.mode === 'numberline') {
       if (settings.nlIndependent) {
@@ -435,13 +501,17 @@
           orientation: settings.orientation,
           rows: settings.nlRows.map(function (r) {
             return { min: r.min, max: r.max, interval: r.interval, labelEvery: settings.nlLabelEvery };
-          })
+          }),
+          faded: settings.faded,
+          header: headerOpt()
         });
       } else {
         result = window.GraphPaperRender.renderNumberLine({
           orientation: settings.orientation,
           min: settings.nlMin, max: settings.nlMax,
-          interval: settings.nlInterval, labelEvery: settings.nlLabelEvery, copies: settings.nlCopies
+          interval: settings.nlInterval, labelEvery: settings.nlLabelEvery, copies: settings.nlCopies,
+          faded: settings.faded,
+          header: headerOpt()
         });
       }
     } else if (settings.mode === 'plane') {
@@ -450,14 +520,19 @@
         quadrants: settings.planeQuadrants,
         xMin: settings.planeXMin, xMax: settings.planeXMax,
         yMin: settings.planeYMin, yMax: settings.planeYMax,
-        interval: settings.planeInterval, labelEvery: settings.planeLabelEvery
+        interval: settings.planeInterval, labelEvery: settings.planeLabelEvery,
+        copies: settings.planeCopies,
+        faded: settings.faded,
+        header: headerOpt()
       });
     } else {
       result = window.GraphPaperRender.renderGraphPaper({
         orientation: settings.orientation,
         style: settings.isoStyle === 'dot' ? 'isometricDot' : 'isometric',
         mode: 'fill',
-        cellSize: isoSizeInches()
+        cellSize: isoSizeInches(),
+        faded: settings.faded,
+        header: headerOpt()
       });
     }
     els.previewArea.innerHTML = result.svg;
@@ -540,6 +615,16 @@
     els.exactCountLine.style.display = isSquare ? '' : 'none';
     els.boldCenterLine.style.display = isSquare ? '' : 'none';
     els.exactCountFields.style.display = (isSquare && els.exactCount.checked) ? '' : 'none';
+    els.labelAxesLine.style.display = isSquare ? '' : 'none';
+    els.labelAxesFields.style.display = (isSquare && els.labelAxes.checked) ? '' : 'none';
+    render();
+  });
+  els.labelAxes.addEventListener('change', function () {
+    els.labelAxesFields.style.display = els.labelAxes.checked ? '' : 'none';
+    render();
+  });
+  els.headerOn.addEventListener('change', function () {
+    els.headerFields.style.display = els.headerOn.checked ? '' : 'none';
     render();
   });
 

@@ -99,6 +99,7 @@ const PRECACHE_URLS = [
   "Tools/group-team-generator.html",
   "Tools/hall-pass-log.html",
   "Tools/image-to-pdf.html",
+  "Tools/image-to-pdf/lib/jspdf.umd.min.js",
   "Tools/lab-group-role-randomizer.html",
   "Tools/lab-safety-contract-tracker.html",
   "Tools/math-drill-generator.html",
