@@ -66,6 +66,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Current Events Discussion Guide Generator | `Tools/current-events-discussion-guide-generator.html` | Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide. |
 | Verb Conjugation Reference Poster Generator | `Tools/verb-conjugation-poster-generator.html` | Spanish, French, or blank starter templates of verb-group conjugation panels with editable subject/person labels, printed as a large-font wall poster. |
 | Art Critique Worksheet Generator | `Tools/art-critique-worksheet-generator.html` | A four-step describe/analyze/interpret/judge critique worksheet with editable prompts and follow-up questions per step, printed as repeated half-sheets for a gallery walk or artwork critique. |
+| Duty Roster Builder | `Tools/duty-roster-builder.html` | Editable duty locations and staff list, a round-robin auto-fill across the week, and a printable Monday–Friday grid for the workroom board. |
 
 ## Using these
 
