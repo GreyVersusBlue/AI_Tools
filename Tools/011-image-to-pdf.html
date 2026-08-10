@@ -215,6 +215,11 @@
     </div>
 
     <div class="control-group">
+      <label>Target output size (MB, optional)</label>
+      <input class="input" type="number" id="target-size" min="0.5" step="0.5" placeholder="off">
+    </div>
+
+    <div class="control-group">
       <label>Output filename</label>
       <input class="input" type="text" id="filename" value="assembled.pdf" placeholder="assembled.pdf">
     </div>
@@ -298,6 +303,7 @@
   const pageSizeSel  = document.getElementById('page-size');
   const qualitySel   = document.getElementById('quality');
   const gridDensitySel = document.getElementById('grid-density');
+  const targetSizeInput = document.getElementById('target-size');
 
   (function loadSettingsPrefs() {
     let raw;
@@ -318,6 +324,8 @@
     if (typeof raw.pageNumbers === 'boolean') {
       document.getElementById('opt-pagenum').checked = raw.pageNumbers;
     }
+    // Deliberately NOT persisted: targetSize. A forgotten target quietly
+    // downgrading every future PDF's quality is worse than re-typing it.
   })();
 
   function saveSettingsPrefs() {
@@ -617,40 +625,44 @@
   // through canvas (at near-lossless quality) so EXIF rotation is respected, and
   // WEBP always goes through canvas since jsPDF has no WEBP encoder. See
   // processRaster() for the reasoning.
+  //
+  // "compact" and "min" are two extra tiers below "standard", used only by the
+  // target-file-size feature (see buildAtQuality/generatePDF below) when the
+  // user's chosen quality — even at "Standard" — still doesn't fit their
+  // target. They are deliberately not offered in the Quality dropdown: picking
+  // them by hand would just be "Standard, but worse," which isn't a choice
+  // worth surfacing outside of "I need this under N MB."
   const QUALITY_PRESETS = {
     standard: { maxDim: 1600, q: 0.72 },
     high:     { maxDim: 2400, q: 0.85 },
     original: null,
+    compact:  { maxDim: 1100, q: 0.55 },
+    min:      { maxDim: 850,  q: 0.40 },
+  };
+
+  // Largest-file to smallest-file. The target-size retry loop starts at
+  // whatever the user picked in the Quality dropdown and walks rightward from
+  // there — it only ever steps down, never up past what was explicitly chosen.
+  const QUALITY_LADDER = ['original', 'high', 'standard', 'compact', 'min'];
+  const QUALITY_LABELS = {
+    original: 'Original', high: 'High', standard: 'Standard',
+    compact: 'Compact (auto)', min: 'Minimum (auto)'
   };
 
   // ── Generate PDF ───────────────────────────────────────────────────────────
   btnGen.addEventListener('click', generatePDF);
 
-  async function generatePDF() {
-    clearMsg();
-    const ordered     = getOrderedEntries();
-    const pageMode    = document.getElementById('page-size').value;
-    const orient      = document.querySelector('input[name="orient"]:checked').value;
-    const quality     = document.getElementById('quality').value;
-    const gridDensity = parseInt(document.getElementById('grid-density').value, 10) || 1;
-    let   outName     = document.getElementById('filename').value.trim() || 'assembled.pdf';
-    if (!/\.pdf$/i.test(outName)) outName += '.pdf';
-
-    const headerText   = headerTextInput.value.trim();
-    const pageNumEnabled = optPagenum.checked;
-    const wantTitlePage = optTitlepage.checked;
-    const titleText    = titlepageTitle.value.trim();
-    const subtitleText = titlepageSubtitle.value.trim();
-    const hasTitlePage = wantTitlePage && (titleText || subtitleText);
-    const anyCaptions  = ordered.some(e => e.caption && e.caption.trim());
+  // Builds one complete PDF at a single quality tier and returns it plus the
+  // bookkeeping generatePDF() needs (page count, skipped files, output blob).
+  // Pulled out of generatePDF so the target-size feature can call it more than
+  // once — at progressively cheaper quality tiers — without duplicating the
+  // ~150 lines of layout math for the one-per-page and contact-sheet paths.
+  async function buildAtQuality(ordered, opts, qualityMode, progressPrefix) {
+    const { pageMode, orient, gridDensity, headerText, pageNumEnabled,
+            wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions } = opts;
     const HEADER_BAND_MM  = headerText ? 10 : 0;
     const FOOTER_BAND_MM  = pageNumEnabled ? 8 : 0;
     const CAPTION_BAND_MM = 10;
-
-    btnGen.disabled = true;
-    btnClear.disabled = true;
-    progressWrap.classList.add('visible');
-    setProgress(0, `Preparing 0 / ${ordered.length}…`);
 
     // jsPDF is loaded from the vendored copy as window.jspdf
     const { jsPDF } = window.jspdf;
@@ -713,7 +725,7 @@
       sourceBytes += file.size;
       const isSVG = /\.svg$/i.test(file.name);
 
-      setProgress(Math.round(i / ordered.length * 100), `Processing ${i + 1} / ${ordered.length}: ${file.name}`);
+      setProgress(Math.round(i / ordered.length * 100), `${progressPrefix}Processing ${i + 1} / ${ordered.length}: ${file.name}`);
       // Yield to UI
       await new Promise(r => setTimeout(r, 0));
 
@@ -727,7 +739,7 @@
           pxW = svg.w;
           pxH = svg.h;
         } else {
-          const raster = await processRaster(file, extOf(file.name), quality);
+          const raster = await processRaster(file, extOf(file.name), qualityMode);
           embedDataURL = raster.dataURL;
           embedFormat  = raster.format;
           pxW = raster.naturalW;
@@ -739,7 +751,7 @@
         // image in place, so the rotated pixels (and swapped dimensions for
         // 90°/270°) are what get embedded and what the page-fit math below sees.
         if (rotation) {
-          const jpegQuality = QUALITY_PRESETS[quality] ? QUALITY_PRESETS[quality].q : 0.95;
+          const jpegQuality = QUALITY_PRESETS[qualityMode] ? QUALITY_PRESETS[qualityMode].q : 0.95;
           const rotated = await rotateForEmbed(embedDataURL, embedFormat, rotation, jpegQuality);
           embedDataURL = rotated.dataURL;
           pxW = rotated.w;
@@ -828,11 +840,7 @@
     }
 
     if (!pdf || placedCount === 0) {
-      showMsg('Nothing could be generated:\n' + skipped.join('\n'), 'error');
-      setProgress(0, 'Failed.');
-      btnGen.disabled = false;
-      btnClear.disabled = false;
-      return;
+      return { pdf: null, blob: null, pdfPageCount: 0, skipped, placedCount: 0, sourceBytes };
     }
 
     // Running header and "Page N of M" footer, applied as a pass over every
@@ -854,18 +862,106 @@
       }
     }
 
+    const blob = pdf.output('blob');
+    return { pdf, blob, pdfPageCount, skipped, placedCount, sourceBytes };
+  }
+
+  async function generatePDF() {
+    clearMsg();
+    const ordered     = getOrderedEntries();
+    const pageMode    = document.getElementById('page-size').value;
+    const orient      = document.querySelector('input[name="orient"]:checked').value;
+    const startQuality = document.getElementById('quality').value;
+    const gridDensity = parseInt(document.getElementById('grid-density').value, 10) || 1;
+    let   outName     = document.getElementById('filename').value.trim() || 'assembled.pdf';
+    if (!/\.pdf$/i.test(outName)) outName += '.pdf';
+
+    const headerText   = headerTextInput.value.trim();
+    const pageNumEnabled = optPagenum.checked;
+    const wantTitlePage = optTitlepage.checked;
+    const titleText    = titlepageTitle.value.trim();
+    const subtitleText = titlepageSubtitle.value.trim();
+    const hasTitlePage = wantTitlePage && (titleText || subtitleText);
+    const anyCaptions  = ordered.some(e => e.caption && e.caption.trim());
+
+    // Target output size: blank/0/invalid = feature off, exactly as documented.
+    const targetSizeMB = parseFloat(targetSizeInput.value);
+    const targetBytes  = (targetSizeMB > 0) ? targetSizeMB * 1024 * 1024 : 0;
+
+    btnGen.disabled = true;
+    btnClear.disabled = true;
+    progressWrap.classList.add('visible');
+    setProgress(0, `Preparing 0 / ${ordered.length}…`);
+
+    const opts = { pageMode, orient, gridDensity, headerText, pageNumEnabled,
+                   wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions };
+
+    // Quality tiers to try, in order. With no target set, only the user's own
+    // choice is tried — the ladder only kicks in when a target is given, and
+    // it never goes above what the user picked (see QUALITY_LADDER comment).
+    let startIdx = QUALITY_LADDER.indexOf(startQuality);
+    if (startIdx === -1) startIdx = QUALITY_LADDER.indexOf('standard');
+    const attemptQualities = targetBytes > 0 ? QUALITY_LADDER.slice(startIdx) : [startQuality];
+
+    let result = null;
+    let usedQuality = startQuality;
+    const attempts = []; // [{quality, bytes}] — every tier actually tried, for the final report
+
+    for (let a = 0; a < attemptQualities.length; a++) {
+      const qualityMode = attemptQualities[a];
+      const prefix = attemptQualities.length > 1
+        ? `Attempt ${a + 1}/${attemptQualities.length} (${QUALITY_LABELS[qualityMode]} quality): `
+        : '';
+      result = await buildAtQuality(ordered, opts, qualityMode, prefix);
+      usedQuality = qualityMode;
+
+      if (!result.pdf || result.placedCount === 0) break; // nothing embedded — no point retrying at a different quality
+      attempts.push({ quality: qualityMode, bytes: result.blob.size });
+
+      if (targetBytes <= 0 || result.blob.size <= targetBytes) break; // no target, or target met — done
+      // Otherwise fall through and try the next (smaller) tier, if any is left.
+    }
+
+    // Exposed for the smoke test (and anyone debugging in devtools) — not
+    // read by the UI itself.
+    window.__imgToPdfLastRun = { attempts, targetBytes, targetSizeMB, finalQuality: usedQuality };
+
+    if (!result || !result.pdf || result.placedCount === 0) {
+      const skippedList = result ? result.skipped : [];
+      showMsg('Nothing could be generated:\n' + skippedList.join('\n'), 'error');
+      setProgress(0, 'Failed.');
+      btnGen.disabled = false;
+      btnClear.disabled = false;
+      return;
+    }
+
     setProgress(100, 'Finalizing…');
     await new Promise(r => setTimeout(r, 50));
 
-    const blob = pdf.output('blob');
+    const { pdf, blob, pdfPageCount, skipped, sourceBytes } = result;
     downloadBlob(blob, outName);
 
+    const mb = blob.size / (1024 * 1024);
     const kb = Math.round(blob.size / 1024);
     const srcKb = Math.round(sourceBytes / 1024);
     setProgress(100, `✓ Done! Saved as "${outName}"`);
     let text = `PDF saved: ${outName} — ${pdfPageCount} page(s), ${kb} KB (source images totaled ${srcKb} KB)`;
+
+    let hadTargetShortfall = false;
+    if (targetBytes > 0) {
+      const metTarget = blob.size <= targetBytes;
+      if (metTarget && attempts.length > 1) {
+        text += ` — downgraded to ${QUALITY_LABELS[usedQuality]} quality to fit the ${targetSizeMB} MB target.`;
+      } else if (metTarget) {
+        text += ` — within target size (${targetSizeMB} MB).`;
+      } else {
+        hadTargetShortfall = true;
+        text += ` — could not reach the ${targetSizeMB} MB target even at ${QUALITY_LABELS[usedQuality]} quality (lowest tried); final size ${mb.toFixed(1)} MB.`;
+      }
+    }
+
     if (skipped.length > 0) text += `\nSkipped ${skipped.length}: ${skipped.join('; ')}`;
-    showMsg(text, skipped.length > 0 ? 'warn' : 'info');
+    showMsg(text, (skipped.length > 0 || hadTargetShortfall) ? 'warn' : 'info');
 
     btnGen.disabled = false;
     btnClear.disabled = false;
