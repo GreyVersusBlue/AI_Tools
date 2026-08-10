@@ -457,7 +457,7 @@ was touched.
 list — each still has substantial Major Features/Moonshot items open in its
 own file — so none moved to `stable tools/` this round.
 
-### Pass 2 — Round 1 — 2026-08-10 23:49 UTC — session `yjj7k6` — PR pending
+### Pass 2 — Round 1 — 2026-08-10 23:49 UTC — session `yjj7k6` — PR #72
 
 Bounded follow-ups on five of the ten tools assigned to this session (001,
 004, 005, 007, 008 are left for a future round from the same session or
