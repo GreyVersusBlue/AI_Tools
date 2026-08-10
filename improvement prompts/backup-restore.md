@@ -9,8 +9,121 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — The versioned format, merge restore, IndexedDB coverage, and
+the year-end archive-and-clear workflow all shipped**, along with the quota
+readout, named backups, file verification, the harder first-run nag, and
+selective export. Verified with a 39-check Playwright pass over the page plus
+a separate 13-check IndexedDB round-trip that seeds a real `Blob`, backs it
+up, deletes the database and restores it byte-for-byte.
+
+What shipped, against the backlog below:
+
+- **Versioned, self-describing backup format (Major Feature, P8)** — files now
+  carry `format: "aspermylessonplan-backup"`, `formatVersion: 2`, an optional
+  `label`, and a `meta` block describing its own contents (item count, byte
+  count, per-tool group with its kind). **Every backup ever downloaded from
+  the old build still restores**: `readEnvelope()` recognises a file with no
+  version stamp by its `source` string, treats it as version 1, and hands back
+  the same shape. A file written by a *newer* version than this page
+  understands is accepted with a stated warning rather than refused.
+- **Merge restore (Major Feature)** — three modes, chosen before restoring:
+  **Replace** (the old behaviour), **Add only what is missing** (keeps this
+  computer's copy of everything and brings in only what is not here — the safe
+  answer for school-desktop-plus-home-laptop), and **Combine, file wins on a
+  clash**. Merging is record-level, not key-level, for the two named-record
+  shapes this site uses (`{name: data}` and `{sets: {name: data}}`), so two
+  machines with different rosters end up with the union rather than one
+  clobbering the other. The `.sets` wrapper's `current` pointer is kept from
+  *this* machine unless it points at a record that no longer exists.
+- **IndexedDB coverage (Quick Win — the correctness one)** — the page now
+  enumerates IndexedDB, lists every database, store and record count in the
+  scan table, and can export and rebuild them, including object-store schema
+  (keyPath, autoIncrement, indexes) and `Blob`/`ArrayBuffer`/`Date` values,
+  which JSON cannot hold and which are tagged and rebuilt on the way back.
+  Databases are **unchecked by default**, with the reason stated in the row:
+  the only one on this site today is the Blank Map Generator's image cache,
+  which re-downloads on demand and would balloon the file for data that costs
+  nothing to lose. Where a browser refuses to list its databases
+  (`indexedDB.databases()` is not universal) the page **says so in the scan
+  table** instead of quietly omitting them — a backup that silently drops data
+  is the failure this was about.
+- **Archive-and-clear for a school year (Major Feature, P14)** — one button
+  that downloads a full archive and *then* clears student data, keeping every
+  rubric, template, calendar and setting. It shows exactly which tools fall on
+  each side of that line before you press it, and asks a second time after the
+  file has downloaded, because that is the irreversible half. Pairs with Class
+  Roster Hub's own "start a new school year".
+- **Student data vs settings, per key (the enabling classification)** — the
+  scan table now has one row per tool *and kind*, so "Name Picker — student
+  data" and "Name Picker — settings & templates" are separately selectable.
+  That one change is what makes selective export, the year-end clear, and the
+  restore preview all exact instead of approximate.
+- **Selective export (Quick Win)** — "Only student data" / "Only settings &
+  templates" / "Select everything" one-click filters over that classification.
+- **Quota readout (Quick Win, P12)** — bytes used against the ~5 MB
+  `localStorage` ceiling with a meter, the three biggest consumers named, and
+  a warning above 70%. `navigator.storage.estimate()` is reported *separately*
+  underneath rather than merged, because it measures a different thing (it
+  includes IndexedDB, cached images and the offline copy of the site).
+- **Verify a backup without restoring (Quick Win)** — dropping a file in now
+  produces a report before anything is armed: format version, when it was
+  taken, its label, what it contains, its size, and flags for the things worth
+  knowing (no version stamp and no mention of this site; an item count that
+  disagrees with the contents; values that are not text). It ends with
+  "Nothing has been changed yet" in green, because the whole problem with
+  restore is that it asks for trust.
+- **Named backups (Quick Win)** — a label field, sanitised into the filename,
+  with a live filename preview.
+- **Backup age nag with teeth (Quick Win)** — the never-backed-up state is now
+  a red, bold banner that names the amount at risk: "You have never downloaded
+  a backup, and there is 412 KB of work saved in this browser across 23 items."
+
+**Challenges hit:**
+
+- **Merging cannot be done blindly on any object.** The first cut merged every
+  key that parsed as an object, which would have silently corrupted settings
+  blobs — a flat `{sound: true, speed: 130}` is not a set of named records, and
+  merging it name-by-name produces nonsense. `parseNamedMap` now requires every
+  value in the object to itself be an object before treating it as a record
+  set, and falls back to a whole-key decision otherwise.
+- **`indexedDB.databases()` is not universally supported.** Rather than
+  pretend, the page detects the gap and states it in the UI. This is the one
+  place where the tool cannot keep its promise, and saying so is the only
+  honest option.
+- Blobs cost roughly 33% extra as base64 and the whole file is held in memory
+  as a JSON string. Fine for the map cache; a tool that put a hundred photos
+  in IndexedDB would need streaming, which this format cannot do.
+- The 5 MB `localStorage` figure is a convention, not something the browser
+  reports. It is used only to draw a meter and warn early, never to block.
+- The year-end clear only ever removes keys it has explicitly been told are
+  student data. Anything unrecognised is classified as settings and is never
+  touched — the conservative direction, but it does mean **`STUDENT_KEYS` has
+  to be updated when a new tool starts storing student names**, or that tool's
+  data will survive a year-end clear.
+
+**Where the next round should pick up:**
+
+1. **Direct device-to-device transfer (Major, P9)** — the standout unbuilt
+   idea and now the obvious next one: the envelope format is versioned and
+   self-describing, so `_shared/webrtc-pair.js` has a well-defined payload to
+   carry. Moving a year of work from the old laptop to the new one without
+   producing a file at all.
+2. **Scheduled reminder (Major)** — still unbuilt. The banner nags when you
+   visit; nothing brings you here.
+3. **Per-tool restore from the tool itself (Major)** — a shared mountable
+   control. `readEnvelope` and `combineValue` are the reusable pieces; they
+   currently live inside this page and would need extracting to `_shared/`.
+4. **Per-record conflict resolution** — the three modes are whole-file. "Keep
+   the newer of each" is impossible without per-record timestamps, which no
+   tool writes; that is a P8 convention question worth deciding before
+   building anything on it.
+5. **Keep `STUDENT_KEYS` and `KNOWN_GROUPS` current.** Both grew this round
+   (Class Roster Hub, Hall Pass, Novel Circles, Command Center and a dozen
+   others were missing from the group list entirely and were showing up as
+   "Other saved data"). This is the maintenance cost of the friendlier answer
+   to the first Open Question below — worth it, but real.
+6. The **encrypted-backup question** below is untouched and still needs
+   Devon's call.
 
 ## What it does today
 
