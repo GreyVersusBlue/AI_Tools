@@ -430,7 +430,7 @@ Verb Conjugation Reference Poster Generator (`079-verb-conjugation-poster-genera
 Virtual Manipulatives Board (`080-virtual-manipulatives-board.md`) ·
 Word Problem Warm-Up Generator (`081-word-problem-warmup-generator.md`)
 
-### Pass 2 — Round 1 — 2026-08-10 23:40 UTC — session `v19h3x` — no PR opened this round
+### Pass 2 — Round 1 — 2026-08-10 23:40 UTC — session `v19h3x` — PR #71
 
 Ten tools, all print-heavy or QR/bracket-primitive tools that had each
 already had a Pass 1 round (see their own files' Round 3/4 history) — this
@@ -438,8 +438,7 @@ round picked up specifically where each file's own "Where the next round
 should pick up" notes left off, one scoped improvement (or two, where both
 were small) per tool, each independently verified via `node --check` and a
 headless Playwright pass before being committed. No tool outside this list
-was touched; no PR was opened this round (not requested this session) — the
-work is committed straight to this branch.
+was touched.
 
 | Tool | File | What shipped |
 |---|---|---|
