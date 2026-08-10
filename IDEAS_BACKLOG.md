@@ -45,7 +45,8 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Cognates & False Friends Reference List Builder | Build and print a reference list of cognates and false friends for whatever language you teach. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Arts & PE
 
