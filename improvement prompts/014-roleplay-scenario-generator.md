@@ -79,6 +79,94 @@ present.
   `039-vocab-conjugation-drill.html`, and `040-vocab-flashcard-generator.html` rather
   than letting each tool keep growing its own.
 
+### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+- **Audio via `speechSynthesis`.** A small "&#128266; Speak" button now sits
+  next to every vocabulary fill-in textarea, every new sentence-frame
+  textarea, and every useful-phrases textarea. Clicking one reads that
+  field's current value aloud with `window.speechSynthesis`, ported from the
+  same pattern already used in `039-vocab-conjugation-drill.html` (cancel any
+  in-flight utterance, wrap `speak()` in try/catch so a blocked or missing
+  API never throws). A "Pronunciation" language `<select>` (the same
+  ~20-language BCP-47 list as the conjugation drill tool: es-ES, fr-FR,
+  de-DE, it-IT, pt-PT, la, en-US, zh-CN, ja-JP, ko-KR, ru-RU, ar-SA, hi-IN,
+  nl-NL, el-GR, he-IL, vi-VN, pl-PL, tr-TR, sv-SE) sits in the class toolbar
+  row and is saved **per class** in a new `ttsLangByClass` object
+  (`gvb-roleplay:ttsLang`), parallel to `fillsByClass`/`rosterByClass`, so
+  switching classes switches the speak voice along with the roster and
+  fill-ins. Rename/Delete class now also move or clear this new store, same
+  as the existing per-class stores. If `'speechSynthesis' in window` is
+  false, the language `<select>` and every "Speak" button render `disabled`
+  rather than the click throwing.
+- **Sentence-frame layer.** Each vocabulary scaffolding card now has a second,
+  optional "Sentence frame" textarea beneath the existing vocabulary
+  textarea — teacher-authored, target-language, with a `___` blank marker
+  (e.g. "Je voudrais ___, s'il vous plaît."). Stored in a new
+  `framesByClass` object (`gvb-roleplay:frames`), same
+  `{ className: { scenarioId: [text, ...] } }` shape as `fillsByClass`, so it
+  rides along with the same per-class/per-scenario indexing and array-length
+  padding logic (`framesFor()` mirrors `fillsFor()`). Empty by default —
+  existing scenarios and existing saved classes show a blank frame field and
+  nothing else changes. Renders on the stage and, only when a frame has text
+  (skipped entirely when blank, matching how empty vocab fills already print
+  as a blank line), in both `handoutHtml()` (the plain print handout) and
+  `roleCardHtml()` (the per-student role cards), styled as an italic line
+  above the vocabulary fill-in row via a new `.h-frame` print rule. Custom
+  scenario deletion now also purges that scenario's entries out of
+  `framesByClass` for every class, matching the existing `fillsByClass`
+  cleanup.
+
+Verified in a headless Chromium (Playwright) run: (1) filled in a vocab
+field, a sentence-frame field, and a useful-phrase field, set the
+pronunciation language to es-ES, clicked each of the three "Speak" buttons,
+and captured the actual `speechSynthesis.speak()` calls — each fired with
+the correct text and `lang: "es-ES"`, with zero console/page errors; (2)
+reloaded and confirmed both the vocab and sentence-frame text persisted;
+(3) confirmed "Print this scenario" produces a `.h-frame` block containing
+the sentence-frame text in the print output; (4) seeded `localStorage`
+directly with a Round-3-shaped legacy class (`gvb-roleplay:fills`,
+`:usefulFills`, `:roster`, `:current`, `:currentClass` present, but
+deliberately **no** `gvb-roleplay:frames` and **no** `gvb-roleplay:ttsLang`
+keys at all — simulating a class saved before this round) and reloaded:
+the app booted with zero errors, the existing scenario/vocab/useful-phrase
+fills all rendered correctly, the new sentence-frame field rendered empty,
+and the pronunciation select defaulted to `es-ES`.
+
+#### Challenges (Pass 2 — Round 1)
+
+- Deciding whether "Speak" buttons belonged on the sentence-frame field too,
+  since the two Quick Wins were listed as separate items and the ask only
+  explicitly named the vocabulary fields and the useful-phrases box. Added
+  it anyway — a sentence frame is target-language text a student needs to
+  hear just as much as the vocabulary word, and the marginal cost was one
+  more `speakBtnHtml()` call using the same generic click-dispatch handler
+  keyed by `data-kind`. Worth revisiting if a future round wants the frame
+  row visually/functionally quieter than the vocabulary row it scaffolds.
+- The per-class TTS language store adds a fourth parallel `...ByClass`
+  object (after fills, roster, useful-fills) alongside a fifth for frames —
+  the rename/delete class handlers are now five near-identical
+  move-or-delete blocks in a row. This further strengthens the case (see the
+  Open Question below) for consolidating all of this class-scoped state
+  into one object keyed by class name instead of five separate
+  `localStorage` keys that must each be threaded through rename/delete by
+  hand.
+
+#### Where the next round should pick up (Pass 2 — Round 1)
+
+- **Difficulty variants of one scenario** and **success criteria /
+  self-assessment strip** (Quick Wins) are still open and independent of
+  everything shipped this round.
+- **Undo on Delete custom scenario** (P11, Quick Win) is still open.
+- The **Assessment layer**, **culture and context notes**, **chain scenarios
+  into a unit**, and **convergence with the other language tool** (Major
+  Features) are all still open; audio was the one Major Feature this round
+  picked up.
+- Now that both this tool and `039-vocab-conjugation-drill.html` have their
+  own copy of the same ~20-entry TTS language list and the same
+  `speak()`/try-catch pattern, the case for a shared `_shared/tts.js` (voice
+  list + speak helper) alongside the existing `_shared/a11y.js` is
+  concrete, not hypothetical — two tools already duplicate it verbatim.
+
 ## What it does today
 
 - Scenario bank browsable by **category** and **level**, with prev/next and
