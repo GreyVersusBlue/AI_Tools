@@ -76,6 +76,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Grammar Mad Libs Generator | `Tools/grammar-mad-libs-generator.html` | Four built-in story templates (or write your own with {tag} placeholders), a "fill randomly" demo reveal, and a printable worksheet with a word-bank suggestion box per blank type. |
 | Story Elements / Plot Diagram Builder | `Tools/plot-diagram-builder.html` | A five-stage plot-mountain diagram (exposition through resolution) alongside a characters/setting/conflict/theme summary, printable or projectable as one shared reference. |
 | Science Safety Symbol & Equipment Label Maker | `Tools/science-safety-label-maker.html` | Ten hazard/equipment icons, custom label text and copy counts, printed as a grid of storage-bin labels. |
+| Scientific Method / Experiment Design Planner | `Tools/experiment-design-planner.html` | A guided pre-lab worksheet — testable question, If/then/because hypothesis, variables, materials, and procedure — printable as a fillable planning packet. |
 
 ## Using these
 
