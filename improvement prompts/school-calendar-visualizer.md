@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 6 (PR #TBD): five Quick Wins shipped.** `scv-seed.js`'s
+**2026-08-10 — Round 6 (PR #58): five Quick Wins shipped.** `scv-seed.js`'s
 `DEFAULT_DAY_TYPES` gained a `noSchool` boolean (set on `holiday` and
 `workday`, unset elsewhere); every other change lives in the tool's own
 `<script type="module">`.

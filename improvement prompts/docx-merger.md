@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 6 (PR #TBD): P5 fixed, plus three Quick Wins.**
+**2026-08-10 — Round 6 (PR #58): P5 fixed, plus three Quick Wins.**
 
 - **Done — Vendor JSZip locally (P5).** cdnjs was unreachable in this
   session's own sandboxed network (blocked by egress policy — the exact
