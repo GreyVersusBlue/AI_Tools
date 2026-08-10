@@ -134,6 +134,28 @@ it down.
 
 **33 of 46 tools done. 13 to go.**
 
+### Round 7 — 2026-08-10 — PR #60
+
+A linked pair: the published schedule browser and the 19,400-line tool that
+generates it. Found, along the way, that the two had already drifted apart —
+`schedule-browser.html` carries real features
+(PNG download, share links, staleness banner, Common Planning/Compare mode)
+that don't exist in `schedule-visualizer.html`'s publisher at all, and the
+publisher's own function list was missing two helpers its stringified
+functions actually call, which would throw a `ReferenceError` on the browser's
+two core views the moment anyone published fresh. The second bug — the crash
+— got fixed this round; the first — the feature drift — was judged too large
+to port safely into a file this size in one sitting and is documented in
+detail instead, with four Quick Wins shipped by hand to the real,
+currently-shipped `schedule-browser.html` in the meantime.
+
+| Tool | File |
+|---|---|
+| East Middle Schedule Browser | `schedule-browser.md` |
+| School Layout Visualizer | `schedule-visualizer.md` |
+
+**35 of 46 tools done. 11 to go.**
+
 ---
 
 ## Not yet touched
@@ -149,8 +171,6 @@ data-heavy), and say why in the PR.
 - Final Grade Checker — `final-grade-checker.md`
 - Formula Reference Sheet Builder — `formula-sheet-builder.md`
 - Grade Distribution Visualizer — `grade-distribution-visualizer.md`
-- East Middle Schedule Browser — `schedule-browser.md`
-- School Layout Visualizer — `schedule-visualizer.md`
 - Sub Binder / Day Bundle Generator — `sub-binder-generator.md`
 - Sub Plan Builder — `sub-plan-builder.md`
 - Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
@@ -215,3 +235,13 @@ lands naturally inside a tool you are already working on, take it.
   Any future "phone as remote" work (P9) needs a different mechanism (e.g.
   WebRTC pairing, as `schedule-visualizer.html` already uses) for true
   cross-device control.
+- **Generated-output drift is a real failure mode, not just a theoretical
+  one.** Round 7 found that `schedule-visualizer.html`'s "Publish" button
+  would produce a broken `schedule-browser.html` (undefined `escHtml`/
+  `escJsAttr` — fixed) and, separately, one missing three real feature
+  generations' worth of code (R61–R63: PNG download, share links, staleness
+  banner, Compare mode — documented but not ported, too large for one
+  round). If another tool on this site generates a second artifact from a
+  first (a template, a published snapshot, an exported format), it's worth
+  checking whether the two have quietly diverged the same way before
+  assuming the generator is still the source of truth.
