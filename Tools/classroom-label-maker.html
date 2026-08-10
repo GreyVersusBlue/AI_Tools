@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Label Maker (Target Language)</title>
+<meta name="description" content="Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a pronunciation clip, plus a plain reference sheet.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/classroom-label-maker.html">
+<meta property="og:title" content="Classroom Label Maker (Target Language) — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a pronunciation clip, plus a plain reference sheet.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Classroom Label Maker (Target Language) — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a pronunciation clip, plus a plain reference sheet.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='10' width='20' height='12' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 12l10 6 10-6' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<script src="classroom-label-maker/lib/qrcode.js"></script>
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], textarea, select {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 6rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  table.word-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  table.word-table th, table.word-table td { border: 1px solid var(--line); padding: .4rem .5rem; text-align: left; }
+  table.word-table th { background: #eef1f4; font-size: .74rem; color: var(--muted); }
+
+  #printArea { display: none; }
+  .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
+  .label-card { border: 1.5px dashed #333; border-radius: 6px; padding: .15in; display: flex; align-items: center; gap: .12in; height: 1.4in; }
+  .label-card canvas { width: .9in; height: .9in; flex-shrink: 0; }
+  .label-card .ltext .target { font-weight: 700; font-size: 1.1rem; }
+  .label-card .ltext .english { font-size: .78rem; color: #555; }
+  .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: .4rem .6rem; text-align: left; }
+  .ref-sheet th { background: #eee; }
+  .section-label { font-size: .8rem; color: var(--muted); margin: .3in 0 .1in; text-transform: uppercase; letter-spacing: .05em; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .ref-sheet { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Classroom Label Maker (Target Language)</h1>
+      <p class="sub">Label real objects in the target language &mdash; each with a QR code that speaks the word aloud.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print labels + reference sheet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="langSelect">Target language (for pronunciation)</label>
+    <select id="langSelect">
+      <option value="es-ES">Spanish (es-ES)</option>
+      <option value="fr-FR">French (fr-FR)</option>
+      <option value="de-DE">German (de-DE)</option>
+      <option value="it-IT">Italian (it-IT)</option>
+      <option value="pt-BR">Portuguese (pt-BR)</option>
+      <option value="zh-CN">Mandarin Chinese (zh-CN)</option>
+      <option value="ja-JP">Japanese (ja-JP)</option>
+      <option value="ko-KR">Korean (ko-KR)</option>
+      <option value="ar-SA">Arabic (ar-SA)</option>
+      <option value="ru-RU">Russian (ru-RU)</option>
+    </select>
+    <p class="hint">The QR code's pronunciation page only works when this site is opened from its live hosted address (not a local file) &mdash; the phone scanning the code needs a real web address to reach.</p>
+  </div>
+
+  <div class="card">
+    <label for="wordInput">Vocabulary, one per line: target word: English</label>
+    <textarea id="wordInput" placeholder="la mesa: the table&#10;la silla: the chair&#10;la ventana: the window"></textarea>
+    <button class="secondary" id="saveWordsBtn">Save list</button>
+  </div>
+
+  <div class="card">
+    <h2>Words (<span id="wordCount">0</span>)</h2>
+    <table class="word-table" id="wordTable"></table>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'clm_words_v1';
+  var LANG_KEY = 'clm_lang_v1';
+
+  var els = {};
+  ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'printArea'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var words = [];
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function load() {
+    try { words = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { words = []; }
+    if (!Array.isArray(words)) words = [];
+    try { els.langSelect.value = localStorage.getItem(LANG_KEY) || 'es-ES'; } catch (e) { /* ignore */ }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(words)); } catch (e) { /* storage full/blocked */ }
+  }
+  els.langSelect.addEventListener('change', function () {
+    try { localStorage.setItem(LANG_KEY, els.langSelect.value); } catch (e) { /* ignore */ }
+  });
+
+  els.saveWordsBtn.addEventListener('click', function () {
+    words = els.wordInput.value.split('\n').map(function (line) {
+      var idx = line.indexOf(':');
+      if (idx === -1) return null;
+      var target = line.slice(0, idx).trim();
+      var english = line.slice(idx + 1).trim();
+      if (!target) return null;
+      return { target: target, english: english };
+    }).filter(Boolean);
+    save();
+    renderTable();
+  });
+
+  function renderTable() {
+    els.wordCount.textContent = words.length;
+    var head = '<tr><th>Target word</th><th>English</th></tr>';
+    var rows = words.map(function (w) {
+      return '<tr><td>' + escapeHtml(w.target) + '</td><td>' + escapeHtml(w.english) + '</td></tr>';
+    }).join('');
+    els.wordTable.innerHTML = head + rows;
+  }
+
+  function buildQR(text) {
+    var qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr;
+  }
+  function drawQR(canvas, qr, size) {
+    var count = qr.getModuleCount();
+    var quietModules = 2;
+    var totalModules = count + quietModules * 2;
+    var px = size / totalModules;
+    canvas.width = size; canvas.height = size;
+    var c = canvas.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, size, size);
+    c.fillStyle = '#000';
+    for (var r = 0; r < count; r++) {
+      for (var col = 0; col < count; col++) {
+        if (qr.isDark(r, col)) {
+          var x = (quietModules + col) * px, y = (quietModules + r) * px;
+          c.fillRect(Math.floor(x), Math.floor(y), Math.ceil(px) + 1, Math.ceil(px) + 1);
+        }
+      }
+    }
+  }
+
+  function speakUrl(target, lang) {
+    var base = new URL('classroom-label-maker/speak.html', location.href);
+    base.searchParams.set('text', target);
+    base.searchParams.set('lang', lang);
+    return base.href;
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    if (!words.length) { alert('Save a word list first.'); return; }
+    var lang = els.langSelect.value;
+    var labelsHtml = '<div class="label-grid" id="labelGrid">' + words.map(function (w, i) {
+      return '<div class="label-card"><canvas id="qr-' + i + '"></canvas><div class="ltext">' +
+        '<div class="target">' + escapeHtml(w.target) + '</div><div class="english">' + escapeHtml(w.english) + '</div></div></div>';
+    }).join('') + '</div>';
+    var refRows = words.map(function (w) { return '<tr><td>' + escapeHtml(w.target) + '</td><td>' + escapeHtml(w.english) + '</td></tr>'; }).join('');
+    els.printArea.innerHTML = labelsHtml +
+      '<div class="ref-sheet"><h2>Reference Sheet</h2><table><thead><tr><th>Target word</th><th>English</th></tr></thead><tbody>' + refRows + '</tbody></table></div>';
+
+    words.forEach(function (w, i) {
+      var canvas = document.getElementById('qr-' + i);
+      var qr = buildQR(speakUrl(w.target, lang));
+      drawQR(canvas, qr, 200);
+    });
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.wordInput.value = words.map(function (w) { return w.target + ': ' + w.english; }).join('\n');
+  renderTable();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
