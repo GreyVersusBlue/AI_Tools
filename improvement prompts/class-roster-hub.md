@@ -9,10 +9,121 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session. This tool is small but
-strategically the most important one on the site: it owns the shared data
-that 15 other tools read.
+**2026-08-10 — The student record schema, the dependency guardrail, sections,
+and year rollover all shipped.** This was the round that turned the tool from
+"a textarea that writes `np_rosters`" into something that behaves like a
+system of record. Nothing about `np_rosters` changed shape — see the schema
+note below, which is the most important decision in this round.
+
+What shipped, against the backlog below:
+
+- **The student record schema (Major Feature)** — new `crh_students_v1` key:
+  `{ version: 1, rosters: { "<roster name>": { meta, students: [...],
+  orphans: [...] } } }`, where a student is `{ id, name, preferred, say }`.
+  Stable IDs, preferred name ("goes by"), and pronunciation ("say it"), with
+  a version stamp so a future migration has something to branch on (P8).
+- **Resolved the open question about where the record lives: a sidecar key,
+  not an in-place migration of `np_rosters`.** Fifteen tools read
+  `np_rosters` and every one of them expects `{ "Period 3": ["Aiden Smith",
+  …] }` — an array of plain strings. Changing that shape in place would break
+  all fifteen simultaneously, on a teacher's machine, with no way to roll
+  back. So `np_rosters` stays byte-compatible and remains the authority on
+  *who is on the roster*; the sidecar hangs detail off those names and is
+  re-synced against them on every load and save. A tool that never learns
+  about the sidecar keeps working forever. The cost is real and worth naming:
+  identity is still keyed on the name string at the boundary, so the stable
+  IDs only buy continuity *inside this tool* until other tools opt in. That
+  opt-in is the next big step, not this one.
+- **A real roster editor (Quick Win, and the biggest usability change)** —
+  per-student rows with inline rename, up/down reorder, remove, archive,
+  tick-to-select, plus sort A–Z and sort-by-last-name. The old textarea is
+  still there as a "Paste / bulk edit" tab, and the two stay in sync. IDs and
+  details follow a student through reorders, sorts, and edits.
+- **Duplicate and near-duplicate detection (Quick Win)** — flags exact
+  repeats, blank rows, and the case that actually breaks downstream history:
+  `"Smith, John"` sitting beside `"John Smith"`. Detection is a sorted-token
+  key, so it catches the name-order swap and stray punctuation/whitespace in
+  one rule. Each finding gets a one-click fix.
+- **Column mapping on import (Quick Win, P13)** — `firstCellOf` is gone.
+  Files and pasted spreadsheet regions now open a mapping dialog: header-row
+  detection, name-in-one-column or first+last-in-two-columns, a live preview
+  of the first five rows showing exactly what each will import as, and
+  add-vs-replace. When there is no header it guesses the name column by
+  picking the one with the most letters (IDs and periods are digits).
+- **Last, First ↔ First Last normalization (Quick Win)** — a checked-by-default
+  option in the import dialog, and quoted `"Vance, Marcus"` cells keep their
+  comma through parsing so the flip works.
+- **Sections and periods as first-class (Major Feature)** — period, course,
+  and school year per roster, stored in the sidecar's `meta`. The saved-roster
+  list groups by school year and sorts by period, and the printed pages are
+  headed with them.
+- **Show what depends on this roster (Major Feature)** — a live scan of
+  `localStorage` for other tools' payloads containing these students' names,
+  shown as "Behavior & Points Tracker — 22 of 28 students", and surfaced
+  *inside the delete confirmation* so the guardrail lands where the damage
+  would. Rather than teach this tool fifteen schemas it searches each tool's
+  saved JSON for the names; that is a heuristic, not a join, and it is
+  labelled as a warning rather than a report.
+- **Year rollover (Major Feature, P14)** — "Start a new school year" files
+  every roster under a year label in `crh_archive_v1` and hands back the same
+  classes, same periods, same courses, with empty student lists. Past years
+  and individually archived rosters are both restorable.
+- **Archive a roster rather than delete it (Quick Win, P11)** — a roster can
+  now leave every other tool's roster list without its names being destroyed.
+- **Bulk operations (Major Feature, partial)** — move ticked students to
+  another roster (or to a brand-new one, which is how you split a list), and
+  merge another roster's names in without touching the source.
+- **Roster stats (Quick Win)** — students, archived, how many carry details,
+  last saved.
+- **Load a sample class (P15)** — 26 names, so the tool opens as something
+  you can immediately print instead of an empty form.
+
+**Challenges hit:**
+
+- The two-pane editor (rows vs. textarea) was the only genuinely tricky part.
+  The first cut re-read the textarea every time the list tab became active,
+  which silently wiped any list built by import or sample data. It needed an
+  explicit `activeTab` and a `keepStudents` flag on `setTab` for callers that
+  have just built the list themselves. Worth remembering if anyone adds a
+  third way to populate the list.
+- Keeping a student's details attached through a rename is only possible up
+  to a point. Reorders, sorts, and case fixes are handled by ID; retyping a
+  name in the textarea is not, so records whose names vanish park in an
+  `orphans` list (capped at 120) and are re-matched by sorted-token key if
+  the name comes back — including in the other name order. It recovers the
+  common case without pretending to be a real identity system.
+- The dependency scan is a substring search over other tools' raw JSON. It
+  can false-positive on a very short or very common name, so names under
+  three characters are skipped and outsized payloads are ignored. Making it
+  exact would mean teaching this tool every other tool's schema, which is the
+  coupling the sidecar decision was specifically trying to avoid.
+- Verified with a 30-check Playwright pass over the real file (sample load,
+  save shape, sidecar IDs through reorder, near-duplicate detect+fix,
+  dependency scan, delete guardrail, both import modes, student archive and
+  restore, move, merge, roster archive and restore, year rollover, all three
+  print formats). The site has no test dependency and this round did not add
+  one — the script lives outside the repo.
+
+**Where the next round should pick up:**
+
+1. **Get one consuming tool onto the sidecar.** The schema exists and nothing
+   reads it yet. Name Picker is the obvious first: show "goes by" on the
+   drawn card and the pronunciation underneath. That is the proof that the
+   sidecar is worth having, and it defines the read-side helper the other
+   fourteen tools would copy.
+2. **Roster transfer between devices (P9)** — QR sharing is per-roster and
+   now carries `meta`; all-rosters-at-once over `webrtc-pair.js` is the
+   school-to-home move and is still unbuilt.
+3. **Apply a rename across all tools** — the last unbuilt bullet under Bulk
+   operations, and the one that would make the dependency scan actionable
+   rather than only informative.
+4. **The remaining print formats** — the numbered list, blank checklist, and
+   blank name grid are in; a seating-quiz variant that actually matches the
+   Seating Chart layout would need to read `seating-chart-v1` (P7).
+5. **Photos and flags are still deliberately unbuilt** — see Open Questions;
+   they need the storage-quota answer (P12) and an explicit decision about
+   what belongs on this device at all, which is Devon's call, not an
+   implementation detail.
 
 ## What it does today
 

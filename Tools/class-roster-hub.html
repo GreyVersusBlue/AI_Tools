@@ -24,6 +24,7 @@
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
     --line: #dcdad2; --line-strong: #c3c0b6;
     --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f;
+    --warn-bg: #fdf5e6; --warn-line: #e6d3a8; --warn-ink: #7a5a12;
   }
   * { box-sizing: border-box; }
   body {
@@ -31,7 +32,7 @@
     background: var(--paper); color: var(--ink); margin: 0;
     padding: 24px 20px 100px; line-height: 1.45;
   }
-  .wrap { max-width: 1100px; margin: 0 auto; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
   .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header p.sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 62ch; }
@@ -40,25 +41,28 @@
 
   .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
   .toolbar label { font-weight: 600; font-size: .85rem; margin: 0; }
-  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); width: auto; margin: 0; }
 
-  .layout { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: 1.4rem; align-items: start; }
-  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); gap: 1.4rem; align-items: start; }
+  @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
 
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
   .card-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .8rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.45; }
-  input[type="text"], select, textarea {
+  input[type="text"], input[type="number"], select, textarea {
     width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .5rem .6rem; margin-bottom: .8rem;
   }
   textarea { min-height: 14rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
-  #nameCount { font-size: .76rem; color: var(--muted); margin: -.55rem 0 .6rem; text-align: right; }
+  #nameCount { font-size: .76rem; color: var(--muted); margin: .1rem 0 .6rem; text-align: right; }
 
   .name-row { display: flex; gap: .5rem; }
   .name-row input[type="text"] { flex: 1; }
+
+  .meta-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 .7rem; }
+  .meta-row .f label { font-size: .74rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -71,7 +75,12 @@
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
   button.danger:hover { background: var(--err); color: #fff; }
   button.small { padding: .4rem .7rem; font-size: .8rem; }
-  .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  button.tiny { padding: .18rem .4rem; font-size: .74rem; line-height: 1.1; }
+  .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+  .tabs { display: flex; gap: .3rem; margin-bottom: .7rem; }
+  .tabs button { background: #fff; color: var(--muted); border: 1px solid var(--line); border-radius: 7px 7px 0 0; border-bottom-color: transparent; padding: .38rem .8rem; font-size: .82rem; }
+  .tabs button[aria-selected="true"] { color: var(--accent); background: #eef3f7; border-color: var(--line-strong); }
 
   #msg { font-size: .82rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-bottom: .8rem; white-space: pre-line; }
   #msg.show { display: block; background: #f9e9e6; color: var(--err); border: 1px solid #e3bdb5; }
@@ -79,18 +88,48 @@
 
   .roster-list { list-style: none; margin: 0; padding: 0; }
   .roster-list li {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: .5rem 0; border-top: 1px dashed var(--line); font-size: .88rem;
+    display: flex; justify-content: space-between; align-items: baseline; gap: .6rem;
+    padding: .5rem 0; border-top: 1px dashed var(--line); font-size: .88rem; cursor: pointer;
   }
   .roster-list li:first-child { border-top: none; }
   .roster-list li b { color: var(--accent); }
-  .roster-list .n { color: var(--muted); font-size: .8rem; }
+  .roster-list li.current b { text-decoration: underline; }
+  .roster-list .n { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+  .roster-group-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: .8rem 0 .1rem; }
+  .roster-group-title:first-child { margin-top: 0; }
 
   .used-by { list-style: none; margin: 0; padding: 0; font-size: .87rem; }
   .used-by li { padding: .35rem 0; border-top: 1px dashed var(--line); }
   .used-by li:first-child { border-top: none; }
   .used-by a { color: var(--accent-2); }
   .used-by .n { color: var(--muted); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
+  .stat { background: #f6f5f0; border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; }
+  .stat .v { font-size: 1.25rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .stat .k { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* Student row editor */
+  .stu-head, .stu-row { display: grid; grid-template-columns: 1.6rem 1.6rem minmax(0,1fr) 2.6rem 5.4rem; gap: .35rem; align-items: center; }
+  .stu-head { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 0 0 .3rem; }
+  body.show-details .stu-head, body.show-details .stu-row { grid-template-columns: 1.6rem 1.6rem minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.9fr) 2.6rem 5.4rem; }
+  .stu-list { max-height: 460px; overflow-y: auto; padding-right: .2rem; }
+  .stu-row { padding: .16rem 0; border-top: 1px dashed var(--line); }
+  .stu-row:first-child { border-top: none; }
+  .stu-row input[type="text"] { margin: 0; padding: .3rem .4rem; font-size: .86rem; }
+  .stu-row .idx { font-size: .74rem; color: var(--muted); text-align: right; }
+  .detail-cell { display: none; }
+  body.show-details .detail-cell { display: block; }
+  .stu-row .move { display: flex; gap: .12rem; }
+  .stu-row .move button { padding: .1rem .28rem; font-size: .7rem; }
+  .stu-row .acts { display: flex; gap: .22rem; justify-content: flex-end; }
+  .stu-row.dupe input[type="text"] { border-color: var(--warn-line); background: var(--warn-bg); }
+
+  .issues { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: .7rem .85rem; margin-bottom: .8rem; font-size: .84rem; color: var(--warn-ink); }
+  .issues h4 { margin: 0 0 .35rem; font-size: .8rem; }
+  .issues ul { margin: .2rem 0 0; padding-left: 1.1rem; }
+  .issues li { margin-bottom: .3rem; }
+  .issues button { margin-left: .4rem; }
 
   .archive-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
   .archive-col { flex: 1; min-width: 180px; }
@@ -104,29 +143,54 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
-  .qr-overlay {
+  .overlay {
     position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.5);
     display: flex; align-items: center; justify-content: center; padding: 1rem;
   }
-  .qr-overlay[hidden] { display: none; }
-  .qr-modal {
+  .overlay[hidden] { display: none; }
+  .modal {
     background: #fff; border-radius: 10px; border: 1px solid var(--line);
-    padding: 1.2rem; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    padding: 1.2rem; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto;
   }
-  .qr-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: .8rem; font-weight: 700; }
-  .qr-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
-  .qr-close:hover { color: var(--err); }
+  .modal.narrow { max-width: 340px; text-align: center; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: .8rem; font-weight: 700; }
+  .modal-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
+  .modal-close:hover { color: var(--err); }
   #qrCanvas { display: block; width: 260px; height: 260px; margin: 0 auto; image-rendering: pixelated; }
   .qr-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 260px; }
+
+  .preview-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin-bottom: .8rem; }
+  .preview-table th, .preview-table td { border: 1px solid var(--line); padding: .3rem .45rem; text-align: left; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-table th { background: #f1f0ea; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .preview-table select { margin: 0; font-size: .78rem; padding: .25rem; }
+  .map-row { display: flex; gap: .8rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: .6rem; }
+  .map-row .f { min-width: 150px; }
+  .map-row .f select { margin-bottom: 0; }
+  .check { display: flex; align-items: center; gap: .4rem; font-size: .84rem; font-weight: 600; margin-bottom: .5rem; }
+  .check input { margin: 0; }
+
+  .dep-list { list-style: none; margin: 0 0 .8rem; padding: 0; font-size: .86rem; }
+  .dep-list li { padding: .4rem 0; border-top: 1px dashed var(--line); display: flex; justify-content: space-between; gap: .8rem; }
+  .dep-list li:first-child { border-top: none; }
+  .dep-list .n { color: var(--muted); font-size: .8rem; white-space: nowrap; }
 
   .print-only { display: none; }
   @media print {
     body { background: #fff; color: #000; padding: 0; }
     .wrap > *:not(.print-only) { display: none !important; }
+    .overlay { display: none !important; }
     .print-only.active { display: block; }
     .print-only h2 { font-size: 1.2rem; margin-bottom: .2rem; }
     .print-only .p-sub { color: #555; font-size: .85rem; margin-bottom: .9rem; }
     .print-only ol { font-size: 1rem; line-height: 1.9; padding-left: 1.4rem; }
+    .p-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+    .p-table th, .p-table td { border: 1px solid #666; padding: .35rem .4rem; }
+    .p-table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+    .p-table td.nm { width: 40%; }
+    .p-table tr { page-break-inside: avoid; }
+    .p-grid { display: grid; gap: .25rem; }
+    .p-grid .box { border: 1px solid #666; height: 3.1rem; padding: .15rem .25rem; font-size: .7rem; color: #666; page-break-inside: avoid; }
   }
 </style>
 </head>
@@ -142,23 +206,79 @@
   </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
-    <label>Roster:</label>
+    <label for="rosterSwitch">Roster:</label>
     <select id="rosterSwitch"></select>
     <button class="secondary small" id="newRosterBtn" type="button">New roster</button>
     <button class="secondary small" id="duplicateRosterBtn" type="button">Duplicate</button>
+    <button class="secondary small" id="archiveRosterBtn" type="button">Archive</button>
     <button class="danger small" id="deleteRosterBtn" type="button">Delete</button>
     <span id="shareBar"></span>
     <button class="secondary small" id="qrBtn" type="button">QR code</button>
   </div>
 
-  <div class="qr-overlay" id="qrOverlay" hidden>
-    <div class="qr-modal" role="dialog" aria-modal="true" aria-label="Roster QR code">
-      <div class="qr-modal-head">
+  <div class="overlay" id="qrOverlay" hidden>
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-label="Roster QR code">
+      <div class="modal-head">
         <span>Scan to import this roster</span>
-        <button type="button" class="qr-close" id="qrCloseBtn" aria-label="Close">&times;</button>
+        <button type="button" class="modal-close" id="qrCloseBtn" aria-label="Close">&times;</button>
       </div>
       <canvas id="qrCanvas"></canvas>
       <p class="qr-hint">Scanning imports a new copy of this roster on the other device &mdash; it won&rsquo;t stay in sync after that.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="importOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Import roster from a file">
+      <div class="modal-head">
+        <span id="importTitle">Import names</span>
+        <button type="button" class="modal-close" id="importCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <p class="hint" id="importHint">Pick which column holds the name. A gradebook export usually has an ID column first, then Last and First in separate columns.</p>
+      <label class="check"><input type="checkbox" id="importHasHeader"> First row is a header row</label>
+      <div class="map-row">
+        <div class="f">
+          <label for="mapMode">Name is&hellip;</label>
+          <select id="mapMode">
+            <option value="one">in one column</option>
+            <option value="two">split across two columns</option>
+          </select>
+        </div>
+        <div class="f" id="mapOneWrap">
+          <label for="mapNameCol">Name column</label>
+          <select id="mapNameCol"></select>
+        </div>
+        <div class="f" id="mapFirstWrap" style="display:none;">
+          <label for="mapFirstCol">First-name column</label>
+          <select id="mapFirstCol"></select>
+        </div>
+        <div class="f" id="mapLastWrap" style="display:none;">
+          <label for="mapLastCol">Last-name column</label>
+          <select id="mapLastCol"></select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="importFlip" checked> Rewrite &ldquo;Smith, John&rdquo; as &ldquo;John Smith&rdquo;</label>
+      <label class="check"><input type="checkbox" id="importReplace"> Replace the current list instead of adding to it</label>
+      <div id="importPreviewWrap"></div>
+      <p class="hint" id="importSummary"></p>
+      <div class="btn-row">
+        <button type="button" id="importConfirmBtn">Import these names</button>
+        <button type="button" class="secondary" id="importCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="confirmOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-head">
+        <span id="confirmTitle">Are you sure?</span>
+        <button type="button" class="modal-close" id="confirmCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <p class="hint" id="confirmBody"></p>
+      <div id="confirmDeps"></div>
+      <div class="btn-row">
+        <button type="button" id="confirmOkBtn">Continue</button>
+        <button type="button" class="secondary" id="confirmCancelBtn">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -175,18 +295,78 @@
           <button class="secondary small" id="renameBtn" type="button">Rename</button>
         </div>
 
-        <label for="namesInput">Students &mdash; one name per line</label>
-        <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
+        <div class="meta-row">
+          <div class="f">
+            <label for="metaPeriod">Period / block</label>
+            <input type="text" id="metaPeriod" placeholder="e.g. 3">
+          </div>
+          <div class="f">
+            <label for="metaSubject">Course</label>
+            <input type="text" id="metaSubject" placeholder="e.g. Earth Science">
+          </div>
+          <div class="f">
+            <label for="metaTerm">School year</label>
+            <input type="text" id="metaTerm" placeholder="e.g. 2026&ndash;27">
+          </div>
+        </div>
+        <p class="hint">Period and course are used here to group your rosters and to head the printed pages. Other tools still see the roster by its name.</p>
+
+        <div class="tabs" role="tablist">
+          <button type="button" id="tabList" role="tab" aria-selected="true">Student list</button>
+          <button type="button" id="tabText" role="tab" aria-selected="false">Paste / bulk edit</button>
+        </div>
+
+        <div id="listPane">
+          <div class="btn-row" style="margin-bottom:.5rem;">
+            <button class="secondary small" id="addStudentBtn" type="button">+ Add student</button>
+            <button class="secondary small" id="sortAzBtn" type="button">Sort A&ndash;Z</button>
+            <button class="secondary small" id="sortLastBtn" type="button">Sort by last name</button>
+            <label class="check" style="margin:0 0 0 auto;"><input type="checkbox" id="showDetails"> Preferred name &amp; pronunciation</label>
+          </div>
+          <div class="stu-head" aria-hidden="true">
+            <span></span><span></span><span>Name</span>
+            <span class="detail-cell">Goes by</span><span class="detail-cell">Say it</span>
+            <span></span><span></span>
+          </div>
+          <div class="stu-list" id="stuList"></div>
+        </div>
+
+        <div id="textPane" style="display:none;">
+          <label for="namesInput">Students &mdash; one name per line</label>
+          <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
+        </div>
+
         <div id="nameCount">0 names</div>
+        <div id="issuesBox"></div>
 
         <div class="btn-row" style="margin-bottom:.8rem;">
           <button class="secondary small" id="importCsvBtn" type="button">Import from file&hellip;</button>
-          <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none;">
+          <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none;">
+          <button class="secondary small" id="sampleBtn" type="button">Load a sample class</button>
         </div>
 
         <div class="btn-row">
           <button id="saveBtn" type="button">Save roster</button>
-          <button class="secondary" id="printBtn" type="button">Print class list</button>
+          <select id="printFormat" style="width:auto;margin:0;">
+            <option value="numbered">Numbered class list</option>
+            <option value="checklist">Blank checklist</option>
+            <option value="blank">Blank name grid (seating quiz)</option>
+          </select>
+          <button class="secondary" id="printBtn" type="button">Print</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Move or merge students</div>
+        <p class="hint">Tick students in the list above to move them to another roster &mdash; mid-year section changes, or splitting one big list into two. Merging pulls another roster&rsquo;s names into this one without touching the original.</p>
+        <div class="btn-row" style="margin-bottom:.6rem;">
+          <select id="moveTarget" style="width:auto;margin:0;max-width:260px;"></select>
+          <button class="secondary small" id="moveBtn" type="button">Move ticked students</button>
+          <span class="n" id="selCount" style="font-size:.8rem;color:var(--muted);"></span>
+        </div>
+        <div class="btn-row">
+          <select id="mergeSource" style="width:auto;margin:0;max-width:260px;"></select>
+          <button class="secondary small" id="mergeBtn" type="button">Merge into this roster</button>
         </div>
       </div>
 
@@ -195,13 +375,9 @@
         <p class="hint">Archiving moves a student out of the active roster &mdash; and out of Name Picker, random grouping, and every other tool that loads this roster &mdash; without erasing their name from anywhere they already have history (points, hall passes, reading logs). Restore them any time.</p>
         <div class="archive-grid">
           <div class="archive-col">
-            <h4>Active</h4>
-            <ul class="archive-list" id="activeStudentList"></ul>
-          </div>
-          <div class="archive-col">
             <h4>Archived</h4>
             <ul class="archive-list" id="archivedStudentList"></ul>
-            <p class="empty-hint" id="archivedEmptyHint" style="display:none;padding:.6rem 0;">No archived students.</p>
+            <p class="empty-hint" id="archivedEmptyHint" style="display:none;padding:.6rem 0;">No archived students &mdash; use the &ldquo;Arch&rdquo; button on any row above.</p>
           </div>
         </div>
       </div>
@@ -223,9 +399,27 @@
 
     <div class="viewer">
       <div class="card">
+        <div class="card-title">This roster</div>
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="card-title" style="margin-bottom:.4rem;">Other tools holding data on these students</div>
+        <ul class="dep-list" id="depList"></ul>
+        <p class="hint" id="depHint" style="margin-bottom:0;"></p>
+      </div>
+
+      <div class="card">
         <div class="card-title">All saved rosters</div>
         <ul class="roster-list" id="allRosters"></ul>
         <p class="empty-hint" id="emptyHint" style="display:none;">No rosters saved yet &mdash; add one on the left.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Archived rosters &amp; past years</div>
+        <p class="hint">Archiving a roster takes it out of every other tool&rsquo;s roster list without deleting the names. Starting a new year archives them all at once and hands you back the same set of empty classes.</p>
+        <div class="btn-row" style="margin-bottom:.7rem;">
+          <button class="secondary small" id="rolloverBtn" type="button">Start a new school year&hellip;</button>
+        </div>
+        <ul class="archive-list" id="archiveList" style="max-height:300px;"></ul>
+        <p class="empty-hint" id="archiveEmptyHint" style="padding:.6rem 0;">Nothing archived yet.</p>
       </div>
     </div>
   </div>
@@ -237,31 +431,56 @@
 <div class="print-only" id="printArea">
   <h2 id="printTitle">Class List</h2>
   <p class="p-sub" id="printSub"></p>
-  <ol id="printList"></ol>
+  <div id="printBody"></div>
 </div>
 
 <script>
 (function () {
   'use strict';
 
-  var STORE_KEY = 'np_rosters'; // shared with Name Picker and every tool that reuses its saved rosters
-  var ARCHIVE_KEY = 'crh_archived_students'; // { [rosterName]: [name, name, ...] } — this tool only
+  var STORE_KEY = 'np_rosters';                  // shared with Name Picker and every tool that reuses its saved rosters
+  var ARCHIVE_KEY = 'crh_archived_students';     // { [rosterName]: [name, name, ...] } — this tool only
+  var RECORDS_KEY = 'crh_students_v1';           // richer per-student records, kept beside np_rosters (see note below)
+  var ROSTER_ARCHIVE_KEY = 'crh_archive_v1';     // archived rosters + past school years
   var MAX_NAME = 120, MAX_ROSTER = 400, MAX_ROSTERS = 60; // mirrors Name Picker's own ceilings
+  var MAX_ORPHANS = 120;
+
+  /* Why the richer student record lives in its own key instead of inside
+     np_rosters: fifteen other tools on this site read np_rosters and every one
+     of them expects `{ "Period 3": ["Aiden Smith", ...] }` — an array of plain
+     strings. Changing that shape in place would break all of them at once, on
+     a teacher's machine, with no server-side rollback. So np_rosters stays
+     exactly as it is and remains the source of truth for *who is on the
+     roster*; crh_students_v1 hangs extra detail (stable id, preferred name,
+     pronunciation) off those names and is re-synced against them on every
+     load and save. Any tool that never learns about the sidecar keeps working
+     forever; any tool that wants the detail can opt in. */
 
   var els = {};
-  ['toolbar', 'rosterSwitch', 'newRosterBtn', 'duplicateRosterBtn', 'deleteRosterBtn', 'rosterName', 'renameBtn',
-   'namesInput', 'nameCount', 'saveBtn', 'printBtn', 'allRosters', 'emptyHint', 'msg',
-   'shareBar', 'qrBtn', 'qrOverlay', 'qrCloseBtn', 'qrCanvas', 'importCsvBtn', 'csvFileInput',
-   'activeStudentList', 'archivedStudentList', 'archivedEmptyHint'
+  ['toolbar', 'rosterSwitch', 'newRosterBtn', 'duplicateRosterBtn', 'archiveRosterBtn', 'deleteRosterBtn',
+   'rosterName', 'renameBtn', 'metaPeriod', 'metaSubject', 'metaTerm',
+   'tabList', 'tabText', 'listPane', 'textPane', 'stuList', 'addStudentBtn', 'sortAzBtn', 'sortLastBtn', 'showDetails',
+   'namesInput', 'nameCount', 'issuesBox', 'saveBtn', 'printBtn', 'printFormat', 'allRosters', 'emptyHint', 'msg',
+   'shareBar', 'qrBtn', 'qrOverlay', 'qrCloseBtn', 'qrCanvas', 'importCsvBtn', 'csvFileInput', 'sampleBtn',
+   'archivedStudentList', 'archivedEmptyHint', 'statGrid', 'depList', 'depHint',
+   'moveTarget', 'moveBtn', 'selCount', 'mergeSource', 'mergeBtn',
+   'rolloverBtn', 'archiveList', 'archiveEmptyHint',
+   'importOverlay', 'importCloseBtn', 'importCancelBtn', 'importConfirmBtn', 'importHasHeader', 'importFlip',
+   'importReplace', 'mapMode', 'mapNameCol', 'mapFirstCol', 'mapLastCol', 'mapOneWrap', 'mapFirstWrap', 'mapLastWrap',
+   'importPreviewWrap', 'importSummary',
+   'confirmOverlay', 'confirmCloseBtn', 'confirmCancelBtn', 'confirmOkBtn', 'confirmTitle', 'confirmBody', 'confirmDeps'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentName = null;
+  var students = [];      // [{ id, name, preferred, say, sel }] — the working copy for the open roster
+  var meta = {};          // { period, subject, term, created, updated }
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
   // ── Storage (plain JSON, same shape Name Picker and other tools already read) ──
   function loadAll() {
@@ -271,26 +490,120 @@
     } catch (e) { return {}; }
   }
   function saveAll(all) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); }
-    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); return true; }
+    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); return false; }
+  }
+  function readJson(key, fallback) {
+    try {
+      var v = JSON.parse(localStorage.getItem(key) || 'null');
+      return (v && typeof v === 'object') ? v : fallback;
+    } catch (e) { return fallback; }
+  }
+  function writeJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); return false; }
   }
 
-  // ── Archived (withdrawn) students, kept separately from the active roster ──
-  // so removing someone from Name Picker / grouping tools never touches the
-  // logs those other tools already have on that name.
-  function loadArchive() {
-    try {
-      var v = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '{}');
-      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
-    } catch (e) { return {}; }
-  }
-  function saveArchive(archive) {
-    try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive)); }
-    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); }
-  }
+  function loadArchive() { return readJson(ARCHIVE_KEY, {}); }
+  function saveArchive(a) { return writeJson(ARCHIVE_KEY, a); }
   function archivedFor(name) {
     var archive = loadArchive();
     return Array.isArray(archive[name]) ? archive[name] : [];
+  }
+
+  // ── Student records sidecar ───────────────────────────────────────────────
+  function loadRecords() {
+    var db = readJson(RECORDS_KEY, null);
+    if (!db || db.version !== 1 || !db.rosters || typeof db.rosters !== 'object') {
+      db = { version: 1, rosters: {} };
+    }
+    return db;
+  }
+  function saveRecords(db) { return writeJson(RECORDS_KEY, db); }
+
+  function newId() {
+    return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  function normKey(s) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+  /** Order- and punctuation-insensitive key, so "Smith, John" and "John Smith"
+      land in the same bucket — that swap is the single most common way one
+      student ends up as two in downstream tools. */
+  function tokenKey(s) {
+    return normKey(s).replace(/[.,;]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+  }
+
+  /** Reconciles the sidecar records for one roster against the authoritative
+      list of names in np_rosters. Names keep their record (and id) across
+      reorders; a name that disappears parks in `orphans` so re-adding it — or
+      re-typing it in the other name order — gets its details back. */
+  function syncRecords(rosterName, names) {
+    var db = loadRecords();
+    var entry = db.rosters[rosterName] || { meta: {}, students: [], orphans: [] };
+    if (!Array.isArray(entry.students)) entry.students = [];
+    if (!Array.isArray(entry.orphans)) entry.orphans = [];
+
+    var byName = {}, byToken = {};
+    entry.students.concat(entry.orphans).forEach(function (r) {
+      if (!r || typeof r.name !== 'string') return;
+      byName[normKey(r.name)] = r;
+      var t = tokenKey(r.name);
+      if (!byToken[t]) byToken[t] = r;
+    });
+
+    var used = {};
+    var out = names.map(function (n) {
+      var rec = byName[normKey(n)] || byToken[tokenKey(n)];
+      if (rec && !used[rec.id]) {
+        used[rec.id] = true;
+        return { id: rec.id, name: n, preferred: rec.preferred || '', say: rec.say || '' };
+      }
+      return { id: newId(), name: n, preferred: '', say: '' };
+    });
+
+    var kept = {};
+    out.forEach(function (r) { kept[r.id] = true; });
+    var orphans = entry.students.concat(entry.orphans).filter(function (r) {
+      return r && r.id && !kept[r.id] && (r.preferred || r.say);
+    });
+    // de-dupe orphans by id, newest first, capped so this never grows without bound
+    var seenOrphan = {};
+    orphans = orphans.filter(function (r) {
+      if (seenOrphan[r.id]) return false;
+      seenOrphan[r.id] = true;
+      return true;
+    }).slice(0, MAX_ORPHANS);
+
+    entry.students = out;
+    entry.orphans = orphans;
+    db.rosters[rosterName] = entry;
+    saveRecords(db);
+    return entry;
+  }
+
+  function recordsFor(rosterName) {
+    var db = loadRecords();
+    var entry = db.rosters[rosterName];
+    return (entry && Array.isArray(entry.students)) ? entry : { meta: {}, students: [], orphans: [] };
+  }
+
+  function writeStudents(rosterName, list, rosterMeta) {
+    var db = loadRecords();
+    var entry = db.rosters[rosterName] || { meta: {}, students: [], orphans: [] };
+    entry.students = list.map(function (s) {
+      return { id: s.id, name: s.name, preferred: s.preferred || '', say: s.say || '' };
+    });
+    entry.meta = rosterMeta || entry.meta || {};
+    db.rosters[rosterName] = entry;
+    saveRecords(db);
+  }
+
+  function renameRecordRoster(from, to) {
+    var db = loadRecords();
+    if (db.rosters[from]) { db.rosters[to] = db.rosters[from]; delete db.rosters[from]; saveRecords(db); }
+  }
+  function dropRecordRoster(name) {
+    var db = loadRecords();
+    if (db.rosters[name]) { delete db.rosters[name]; saveRecords(db); }
   }
 
   // ── Tolerant name parsing (dedupe case-insensitively, cap lengths) ──────────
@@ -298,8 +611,8 @@
     var seen = {};
     var out = [];
     var truncatedNames = 0;
-    text.split('\n').forEach(function (line) {
-      var name = line.trim();
+    String(text || '').split('\n').forEach(function (line) {
+      var name = line.replace(/\s+/g, ' ').trim();
       if (!name) return;
       if (name.length > MAX_NAME) { name = name.slice(0, MAX_NAME); truncatedNames++; }
       var key = name.toLowerCase();
@@ -312,56 +625,420 @@
     return { names: out, truncatedNames: truncatedNames, truncatedList: truncatedList };
   }
 
-  // ── CSV/spreadsheet file import ──────────────────────────────────────────
-  var CSV_HEADER_WORDS = ['name', 'names', 'student', 'student name', 'full name'];
+  function currentNames() {
+    return students.map(function (s) { return s.name; }).filter(Boolean);
+  }
 
-  /** Pulls just the first cell out of one CSV/TSV row — a quoted first cell
-      (so a "Last, First"-style name keeps its internal comma) takes priority,
-      otherwise splits on the first tab or comma. Good enough for the common
-      case of a name column plus an ID/grade/etc. column after it. */
-  function firstCellOf(line) {
-    var t = line.trim();
-    if (!t) return '';
-    if (t[0] === '"') {
-      var end = t.indexOf('"', 1);
-      while (end !== -1 && t[end + 1] === '"') end = t.indexOf('"', end + 2);
-      if (end !== -1) return t.slice(1, end).replace(/""/g, '"').trim();
+  // ── Duplicate / near-duplicate detection ──────────────────────────────────
+  /** Exact repeats are already collapsed on save, so what's left to catch is
+      the pair a computer sees as two people and a teacher sees as one:
+      "Smith, John" beside "John Smith", or a stray double space. */
+  function findIssues(list) {
+    var byExact = {}, byToken = {};
+    list.forEach(function (s, i) {
+      if (!s.name) return;
+      var k = normKey(s.name);
+      (byExact[k] = byExact[k] || []).push(i);
+      var t = tokenKey(s.name);
+      (byToken[t] = byToken[t] || []).push(i);
+    });
+    var issues = [];
+    Object.keys(byExact).forEach(function (k) {
+      if (byExact[k].length > 1) issues.push({ kind: 'exact', rows: byExact[k] });
+    });
+    Object.keys(byToken).forEach(function (t) {
+      var rows = byToken[t];
+      if (rows.length < 2) return;
+      var distinct = {};
+      rows.forEach(function (i) { distinct[normKey(list[i].name)] = true; });
+      if (Object.keys(distinct).length > 1) issues.push({ kind: 'near', rows: rows });
+    });
+    var blanks = [];
+    list.forEach(function (s, i) { if (!String(s.name || '').trim()) blanks.push(i); });
+    if (blanks.length) issues.push({ kind: 'blank', rows: blanks });
+    return issues;
+  }
+
+  function renderIssues() {
+    var issues = findIssues(students);
+    var flagged = {};
+    issues.forEach(function (is) { is.rows.forEach(function (i) { flagged[i] = true; }); });
+    Array.prototype.forEach.call(els.stuList.children, function (row, i) {
+      row.classList.toggle('dupe', !!flagged[i]);
+    });
+    if (!issues.length) { els.issuesBox.innerHTML = ''; return; }
+    var html = '<div class="issues"><h4>' + plural(issues.length, 'thing') + ' worth a look before you save</h4><ul>';
+    issues.forEach(function (is, n) {
+      var names = is.rows.map(function (i) { return '“' + escapeHtml(students[i].name || '(blank)') + '”'; }).join(' and ');
+      if (is.kind === 'exact') {
+        html += '<li>' + names + ' are the same name twice.<button type="button" class="secondary tiny" data-issue-fix="' + n + '">Keep one</button></li>';
+      } else if (is.kind === 'near') {
+        html += '<li>' + names + ' look like the same student written two ways — downstream tools will treat them as two people.' +
+                '<button type="button" class="secondary tiny" data-issue-fix="' + n + '">Keep the first</button></li>';
+      } else {
+        html += '<li>' + plural(is.rows.length, 'row') + ' with no name yet.<button type="button" class="secondary tiny" data-issue-fix="' + n + '">Remove</button></li>';
+      }
+    });
+    html += '</ul></div>';
+    els.issuesBox.innerHTML = html;
+    els.issuesBox.querySelectorAll('[data-issue-fix]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var is = issues[Number(btn.getAttribute('data-issue-fix'))];
+        if (!is) return;
+        var drop = is.kind === 'blank' ? is.rows.slice() : is.rows.slice(1);
+        drop.sort(function (a, b) { return b - a; }).forEach(function (i) { students.splice(i, 1); });
+        renderStudents();
+      });
+    });
+  }
+
+  // ── Student row editor ────────────────────────────────────────────────────
+  function renderStudents() {
+    if (!students.length) {
+      els.stuList.innerHTML = '<p class="hint" style="margin:.6rem 0;">No students yet — add one, paste a list on the other tab, or import a file.</p>';
+    } else {
+      els.stuList.innerHTML = students.map(function (s, i) {
+        return '<div class="stu-row" data-i="' + i + '">' +
+          '<input type="checkbox" class="pick" data-i="' + i + '" aria-label="Select ' + escapeHtml(s.name) + '"' + (s.sel ? ' checked' : '') + '>' +
+          '<span class="idx">' + (i + 1) + '</span>' +
+          '<input type="text" class="nm" data-i="' + i + '" value="' + escapeHtml(s.name) + '" aria-label="Student name">' +
+          '<input type="text" class="pf detail-cell" data-i="' + i + '" value="' + escapeHtml(s.preferred) + '" placeholder="goes by" aria-label="Preferred name">' +
+          '<input type="text" class="sy detail-cell" data-i="' + i + '" value="' + escapeHtml(s.say) + '" placeholder="say it" aria-label="Pronunciation">' +
+          '<span class="move"><button type="button" class="secondary" data-up="' + i + '" aria-label="Move up">&uarr;</button>' +
+          '<button type="button" class="secondary" data-down="' + i + '" aria-label="Move down">&darr;</button></span>' +
+          '<span class="acts"><button type="button" class="secondary tiny" data-arch="' + i + '">Arch</button>' +
+          '<button type="button" class="danger tiny" data-del="' + i + '" aria-label="Remove">&times;</button></span>' +
+          '</div>';
+      }).join('');
     }
-    if (t.indexOf('\t') !== -1) return t.split('\t')[0].trim();
-    if (t.indexOf(',') !== -1) return t.split(',')[0].trim();
-    return t;
+    updateNameCount();
+    renderIssues();
+    updateSelCount();
+    syncTextarea();
   }
 
-  function namesFromFileText(text) {
-    return String(text || '').split(/\r?\n/).map(firstCellOf).filter(Boolean);
+  function syncTextarea() {
+    if (activeTab === 'list') els.namesInput.value = currentNames().join('\n');
   }
+
+  function updateNameCount() {
+    var n = currentNames().length;
+    var arch = currentName ? archivedFor(currentName).length : 0;
+    els.nameCount.textContent = plural(n, 'name') + (arch ? ' · ' + arch + ' archived' : '');
+  }
+
+  function updateSelCount() {
+    var n = students.filter(function (s) { return s.sel; }).length;
+    els.selCount.textContent = n ? plural(n, 'student') + ' ticked' : '';
+  }
+
+  els.stuList.addEventListener('input', function (e) {
+    var t = e.target, i = Number(t.getAttribute('data-i'));
+    if (isNaN(i) || !students[i]) return;
+    if (t.classList.contains('nm')) { students[i].name = t.value; renderIssues(); updateNameCount(); }
+    else if (t.classList.contains('pf')) students[i].preferred = t.value;
+    else if (t.classList.contains('sy')) students[i].say = t.value;
+  });
+
+  els.stuList.addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t.classList.contains('pick')) return;
+    var i = Number(t.getAttribute('data-i'));
+    if (students[i]) { students[i].sel = t.checked; updateSelCount(); }
+  });
+
+  els.stuList.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var up = btn.getAttribute('data-up'), down = btn.getAttribute('data-down');
+    var del = btn.getAttribute('data-del'), arch = btn.getAttribute('data-arch');
+    if (up !== null) {
+      var i = Number(up);
+      if (i > 0) { students.splice(i - 1, 0, students.splice(i, 1)[0]); renderStudents(); }
+    } else if (down !== null) {
+      var j = Number(down);
+      if (j < students.length - 1) { students.splice(j + 1, 0, students.splice(j, 1)[0]); renderStudents(); }
+    } else if (del !== null) {
+      students.splice(Number(del), 1);
+      renderStudents();
+    } else if (arch !== null) {
+      archiveStudent(Number(arch));
+    }
+  });
+
+  els.addStudentBtn.addEventListener('click', function () {
+    students.push({ id: newId(), name: '', preferred: '', say: '', sel: false });
+    renderStudents();
+    var last = els.stuList.querySelector('.stu-row:last-child .nm');
+    if (last) last.focus();
+  });
+
+  function lastNameOf(n) {
+    var t = String(n || '').trim();
+    if (t.indexOf(',') !== -1) return normKey(t.split(',')[0]);
+    var parts = normKey(t).split(' ');
+    return parts[parts.length - 1] || '';
+  }
+  els.sortAzBtn.addEventListener('click', function () {
+    students.sort(function (a, b) { return normKey(a.name).localeCompare(normKey(b.name)); });
+    renderStudents();
+  });
+  els.sortLastBtn.addEventListener('click', function () {
+    students.sort(function (a, b) {
+      return lastNameOf(a.name).localeCompare(lastNameOf(b.name)) || normKey(a.name).localeCompare(normKey(b.name));
+    });
+    renderStudents();
+  });
+
+  els.showDetails.addEventListener('change', function () {
+    document.body.classList.toggle('show-details', els.showDetails.checked);
+  });
+
+  // ── Tabs: row editor vs. bulk textarea ───────────────────────────────────
+  var activeTab = 'list';
+  /** `keepStudents` is for the callers that have just built the student list
+      themselves (import, sample data, opening a roster) — without it, coming
+      back to the list tab would re-read the stale textarea and undo them. */
+  function setTab(which, keepStudents) {
+    var isList = which === 'list';
+    if (isList && activeTab === 'text' && !keepStudents) {
+      adoptNames(parseNames(els.namesInput.value).names);
+    } else if (!isList) {
+      els.namesInput.value = currentNames().join('\n');
+    }
+    activeTab = which;
+    els.tabList.setAttribute('aria-selected', String(isList));
+    els.tabText.setAttribute('aria-selected', String(!isList));
+    els.listPane.style.display = isList ? '' : 'none';
+    els.textPane.style.display = isList ? 'none' : '';
+    if (isList) renderStudents();
+  }
+  els.tabList.addEventListener('click', function () { setTab('list'); });
+  els.tabText.addEventListener('click', function () { setTab('text'); });
+  els.namesInput.addEventListener('input', function () {
+    var n = parseNames(els.namesInput.value).names.length;
+    els.nameCount.textContent = plural(n, 'name');
+  });
+
+  /** Rebuilds the working student list from a flat array of names, carrying
+      over preferred name / pronunciation for anyone already in the list. */
+  function adoptNames(names) {
+    var byName = {}, byToken = {};
+    students.forEach(function (s) {
+      byName[normKey(s.name)] = s;
+      if (!byToken[tokenKey(s.name)]) byToken[tokenKey(s.name)] = s;
+    });
+    var used = {};
+    students = names.map(function (n) {
+      var prev = byName[normKey(n)] || byToken[tokenKey(n)];
+      if (prev && !used[prev.id]) {
+        used[prev.id] = true;
+        return { id: prev.id, name: n, preferred: prev.preferred, say: prev.say, sel: false };
+      }
+      return { id: newId(), name: n, preferred: '', say: '', sel: false };
+    });
+  }
+
+  // ── CSV / spreadsheet import with column mapping ─────────────────────────
+  var HEADER_WORDS = ['name', 'names', 'student', 'student name', 'full name', 'last', 'first', 'last name',
+                      'first name', 'id', 'student id', 'period', 'grade', 'email'];
+
+  /** Splits one delimited line into cells. Handles quoted cells (so a
+      "Last, First" cell keeps its comma) and picks tab over comma when the
+      line has tabs — which is what pasting a spreadsheet region gives you. */
+  function splitCells(line, delim) {
+    var out = [], cur = '', inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (inQ) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') inQ = false;
+        else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === delim) { out.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+
+  function parseTable(text) {
+    var lines = String(text || '').split(/\r?\n/).filter(function (l) { return l.trim() !== ''; });
+    if (!lines.length) return { rows: [], cols: 0 };
+    var delim = lines[0].indexOf('\t') !== -1 ? '\t' : (lines[0].indexOf(',') !== -1 ? ',' : '\t');
+    var rows = lines.map(function (l) { return splitCells(l, delim); });
+    var cols = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    rows.forEach(function (r) { while (r.length < cols) r.push(''); });
+    return { rows: rows, cols: cols };
+  }
+
+  function looksLikeHeader(row) {
+    var hits = row.filter(function (c) { return HEADER_WORDS.indexOf(normKey(c)) !== -1; }).length;
+    return hits >= Math.max(1, Math.ceil(row.length / 3));
+  }
+
+  /** "Smith, John" → "John Smith". Leaves anything without a comma alone. */
+  function flipLastFirst(name) {
+    var t = String(name || '').trim();
+    var i = t.indexOf(',');
+    if (i === -1) return t;
+    var last = t.slice(0, i).trim(), rest = t.slice(i + 1).trim();
+    if (!last || !rest) return t.replace(',', ' ').replace(/\s+/g, ' ').trim();
+    return (rest + ' ' + last).replace(/\s+/g, ' ').trim();
+  }
+
+  var importTable = null;
+
+  function guessColumn(rows, header, words) {
+    if (header) {
+      for (var c = 0; c < rows[0].length; c++) {
+        if (words.indexOf(normKey(rows[0][c])) !== -1) return c;
+      }
+    }
+    return -1;
+  }
+
+  function openImportModal(text, sourceLabel) {
+    var t = parseTable(text);
+    if (!t.rows.length) { showMsg('Could not find anything to import in that file.'); return; }
+    importTable = t;
+    var header = looksLikeHeader(t.rows[0]);
+    els.importHasHeader.checked = header;
+    document.getElementById('importTitle').textContent = 'Import names' + (sourceLabel ? ' from ' + sourceLabel : '');
+
+    var opts = '';
+    for (var c = 0; c < t.cols; c++) {
+      var label = header ? (t.rows[0][c] || 'Column ' + (c + 1)) : 'Column ' + (c + 1);
+      opts += '<option value="' + c + '">' + escapeHtml(label) + '</option>';
+    }
+    els.mapNameCol.innerHTML = opts;
+    els.mapFirstCol.innerHTML = opts;
+    els.mapLastCol.innerHTML = opts;
+
+    var nameCol = guessColumn(t.rows, header, ['name', 'names', 'student', 'student name', 'full name']);
+    var firstCol = guessColumn(t.rows, header, ['first', 'first name', 'firstname']);
+    var lastCol = guessColumn(t.rows, header, ['last', 'last name', 'lastname', 'surname']);
+
+    if (nameCol === -1 && firstCol !== -1 && lastCol !== -1) {
+      els.mapMode.value = 'two';
+      els.mapFirstCol.value = String(firstCol);
+      els.mapLastCol.value = String(lastCol);
+    } else {
+      els.mapMode.value = 'one';
+      els.mapNameCol.value = String(nameCol === -1 ? widestTextColumn(t) : nameCol);
+    }
+    syncMapMode();
+    renderImportPreview();
+    els.importOverlay.hidden = false;
+  }
+
+  /** With no header to go on, the column with the most letters-and-spaces in
+      it is almost always the name column — IDs and periods are digits. */
+  function widestTextColumn(t) {
+    var best = 0, bestScore = -1;
+    for (var c = 0; c < t.cols; c++) {
+      var score = 0;
+      t.rows.slice(0, 12).forEach(function (r) {
+        var v = String(r[c] || '');
+        if (/[a-z]/i.test(v)) score += v.replace(/[^a-z ]/gi, '').length;
+      });
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    return best;
+  }
+
+  function syncMapMode() {
+    var two = els.mapMode.value === 'two';
+    els.mapOneWrap.style.display = two ? 'none' : '';
+    els.mapFirstWrap.style.display = two ? '' : 'none';
+    els.mapLastWrap.style.display = two ? '' : 'none';
+  }
+
+  function importedNames() {
+    if (!importTable) return [];
+    var rows = importTable.rows.slice(els.importHasHeader.checked ? 1 : 0);
+    var two = els.mapMode.value === 'two';
+    var nameCol = Number(els.mapNameCol.value) || 0;
+    var firstCol = Number(els.mapFirstCol.value) || 0;
+    var lastCol = Number(els.mapLastCol.value) || 0;
+    return rows.map(function (r) {
+      var v = two ? ((r[firstCol] || '') + ' ' + (r[lastCol] || '')) : (r[nameCol] || '');
+      v = v.replace(/\s+/g, ' ').trim();
+      if (!two && els.importFlip.checked) v = flipLastFirst(v);
+      return v;
+    }).filter(Boolean);
+  }
+
+  function renderImportPreview() {
+    if (!importTable) return;
+    var header = els.importHasHeader.checked;
+    var body = importTable.rows.slice(header ? 1 : 0, (header ? 1 : 0) + 5);
+    var names = importedNames();
+    var html = '<table class="preview-table"><thead><tr>';
+    for (var c = 0; c < importTable.cols; c++) {
+      html += '<th>' + escapeHtml(header ? (importTable.rows[0][c] || 'Column ' + (c + 1)) : 'Column ' + (c + 1)) + '</th>';
+    }
+    html += '<th>&rarr; Imported as</th></tr></thead><tbody>';
+    body.forEach(function (r, i) {
+      html += '<tr>';
+      for (var c = 0; c < importTable.cols; c++) html += '<td>' + escapeHtml(r[c] || '') + '</td>';
+      html += '<td><b>' + escapeHtml(names[i] || '—') + '</b></td></tr>';
+    });
+    html += '</tbody></table>';
+    els.importPreviewWrap.innerHTML = html;
+    els.importSummary.textContent = plural(names.length, 'name') + ' will be imported.';
+  }
+
+  ['change', 'input'].forEach(function (ev) {
+    [els.importHasHeader, els.importFlip, els.mapNameCol, els.mapFirstCol, els.mapLastCol].forEach(function (el) {
+      el.addEventListener(ev, renderImportPreview);
+    });
+  });
+  els.mapMode.addEventListener('change', function () { syncMapMode(); renderImportPreview(); });
+
+  function closeImport() { els.importOverlay.hidden = true; importTable = null; }
+  els.importCloseBtn.addEventListener('click', closeImport);
+  els.importCancelBtn.addEventListener('click', closeImport);
+
+  els.importConfirmBtn.addEventListener('click', function () {
+    var names = importedNames();
+    if (!names.length) { showMsg('No names came out of that mapping — try a different column.'); return; }
+    var base = els.importReplace.checked ? [] : currentNames();
+    var merged = parseNames(base.concat(names).join('\n'));
+    adoptNames(merged.names);
+    closeImport();
+    setTab('list', true);
+    showMsg('Imported ' + plural(names.length, 'name') + ' — review the list, then Save roster.', true);
+  });
 
   els.importCsvBtn.addEventListener('click', function () { els.csvFileInput.click(); });
-
   els.csvFileInput.addEventListener('change', function () {
     var file = els.csvFileInput.files[0];
     els.csvFileInput.value = '';
     if (!file) return;
     var reader = new FileReader();
-    reader.onload = function () {
-      var rows = namesFromFileText(reader.result);
-      var skippedHeader = false;
-      if (rows.length && CSV_HEADER_WORDS.indexOf(rows[0].toLowerCase()) !== -1) {
-        rows.shift();
-        skippedHeader = true;
-      }
-      if (!rows.length) { showMsg('Could not find any names in that file.'); return; }
-      var existing = els.namesInput.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
-      els.namesInput.value = existing.concat(rows).join('\n');
-      updateNameCount();
-      showMsg(
-        'Imported ' + rows.length + ' name' + (rows.length === 1 ? '' : 's') + ' from "' + file.name + '"' +
-        (skippedHeader ? ' (header row skipped)' : '') + ' — review the list, then Save roster.',
-        true
-      );
-    };
+    reader.onload = function () { openImportModal(reader.result, '"' + file.name + '"'); };
     reader.onerror = function () { showMsg('Could not read that file.'); };
     reader.readAsText(file);
+  });
+
+  // A pasted spreadsheet region lands in the same mapping dialog as a file.
+  els.namesInput.addEventListener('paste', function (e) {
+    var text = e.clipboardData && e.clipboardData.getData('text/plain');
+    if (!text || text.indexOf('\t') === -1) return; // plain one-name-per-line paste stays plain
+    e.preventDefault();
+    openImportModal(text, 'the pasted table');
+  });
+
+  var SAMPLE = ['Aiden Brooks', 'Bella Nguyen', 'Caleb Ortiz', 'Divya Patel', 'Eli Thompson', 'Faith Okonkwo',
+                'Gabriel Ruiz', 'Hannah Kim', 'Isaiah Freeman', 'Jasmine Cole', 'Kai Nakamura', 'Lena Vasquez',
+                'Marcus Bell', 'Nora Sullivan', 'Omar Haddad', 'Priya Raman', 'Quentin Moore', 'Rosa Delgado',
+                'Samuel Wright', 'Tessa Lindqvist', 'Uriel Castro', 'Violet Chen', 'Wyatt Jennings', 'Ximena Flores',
+                'Yusuf Rahman', 'Zoe Callahan'];
+  els.sampleBtn.addEventListener('click', function () {
+    adoptNames(SAMPLE.slice());
+    setTab('list', true);
+    showMsg('Loaded a sample class of ' + SAMPLE.length + ' students — save it, or clear it out and type your own.', true);
   });
 
   function showMsg(text, ok) {
@@ -370,13 +1047,116 @@
   }
   function clearMsg() { els.msg.textContent = ''; els.msg.className = ''; }
 
+  // ── Dependency scan: which other tools hold data on these students ────────
+  /* Every tool here stores its own thing in its own shape, so rather than
+     teach this tool fifteen schemas, it looks for the students' names inside
+     each tool's saved payload. It's a guardrail, not a database join — a name
+     that shows up is enough to warn a teacher before they delete a roster. */
+  var TOOL_KEYS = [
+    { re: /^behavior-points-tracker-sections$/, label: 'Behavior & Points Tracker', href: 'behavior-points-tracker.html' },
+    { re: /^hall-pass-log-sections$/, label: 'Digital Hall Pass / Sign-Out Log', href: 'hall-pass-log.html' },
+    { re: /^sslt_/, label: 'Silent Reading (SSR) Log Tracker', href: 'ssr-log-tracker.html' },
+    { re: /^lsct_/, label: 'Lab Safety Contract Tracker', href: 'lab-safety-contract-tracker.html' },
+    { re: /^lgrr_/, label: 'Lab Group & Role Randomizer', href: 'lab-group-role-randomizer.html' },
+    { re: /^gallery-walk-qr-sets$/, label: 'Gallery Walk QR Codes', href: 'gallery-walk-qr.html' },
+    { re: /^gtg[:\-]/, label: 'Group / Team Generator', href: 'group-team-generator.html' },
+    { re: /^novel-study-circles/, label: 'Novel Study / Reading Circles Manager', href: 'novel-study-circles-manager.html' },
+    { re: /^seating-chart/, label: 'Seating Chart Generator', href: 'Seating Chart Generator.html' },
+    { re: /^gvb-field-trip[:\-]/, label: 'Field Trip Permission Slip Generator', href: 'field-trip-permission-slip.html' },
+    { re: /^gvb-certificate-maker[:\-]/, label: 'Certificate & Award Maker', href: 'certificate-award-maker.html' },
+    { re: /^gvb-command-center[:\-]/, label: 'Command Center', href: 'command-center-dashboard.html' },
+    { re: /^gvb-rubric-builder[:\-]/, label: 'Rubric Builder', href: 'rubric-builder.html' },
+    { re: /^gvb-exit-ticket[:\-]/, label: 'Exit Ticket / Bell Ringer Generator', href: 'exit-ticket-generator.html' },
+    { re: /^gvb-review-board[:\-]/, label: 'Quiz / Review Game Board', href: 'review-game-board.html' },
+    { re: /^pe-tournament-stations$/, label: 'Tournament Bracket & Station Rotation', href: 'pe-tournament-stations.html' },
+    { re: /^gvb-bracket[:\-]/, label: 'Bracket / Tournament Generator', href: 'bracket-tournament-generator.html' }
+  ];
+  var OWN_KEYS = [STORE_KEY, ARCHIVE_KEY, RECORDS_KEY, ROSTER_ARCHIVE_KEY];
+
+  function scanDependencies(names) {
+    var found = {};
+    var needles = names.map(function (n) { return normKey(n); }).filter(function (n) { return n.length > 2; });
+    if (!needles.length) return [];
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    } catch (e) { return []; }
+
+    keys.forEach(function (key) {
+      if (!key || OWN_KEYS.indexOf(key) !== -1) return;
+      var tool = null;
+      for (var t = 0; t < TOOL_KEYS.length; t++) { if (TOOL_KEYS[t].re.test(key)) { tool = TOOL_KEYS[t]; break; } }
+      if (!tool) return;
+      var raw;
+      try { raw = localStorage.getItem(key) || ''; } catch (e) { return; }
+      if (raw.length > 900000) return; // don't grind on an outsized payload
+      var hay = raw.toLowerCase();
+      var hits = 0;
+      needles.forEach(function (n) { if (hay.indexOf(n) !== -1) hits++; });
+      if (!hits) return;
+      var slot = found[tool.label] || (found[tool.label] = { label: tool.label, href: tool.href, hits: 0 });
+      if (hits > slot.hits) slot.hits = hits;
+    });
+    return Object.keys(found).map(function (k) { return found[k]; })
+      .sort(function (a, b) { return b.hits - a.hits; });
+  }
+
+  function renderDependencies() {
+    var names = currentNames();
+    var deps = names.length ? scanDependencies(names) : [];
+    if (!deps.length) {
+      els.depList.innerHTML = '<li><span class="n">No other tool has data on these students yet.</span></li>';
+      els.depHint.textContent = names.length
+        ? 'Once you use this roster in Behavior Points, Hall Pass, SSR Log and the rest, they show up here — and this tool warns you before a delete or rename orphans that data.'
+        : '';
+      return;
+    }
+    els.depList.innerHTML = deps.map(function (d) {
+      return '<li><a href="' + d.href + '">' + escapeHtml(d.label) + '</a>' +
+             '<span class="n">' + d.hits + ' of ' + names.length + ' students</span></li>';
+    }).join('');
+    els.depHint.textContent = 'Those tools key their history to the student’s name. Renaming a student here does not rename them there.';
+  }
+
+  // ── Confirm modal with dependency context ────────────────────────────────
+  var confirmAction = null;
+  function askConfirm(title, body, deps, onOk) {
+    els.confirmTitle.textContent = title;
+    els.confirmBody.textContent = body;
+    if (deps && deps.length) {
+      els.confirmDeps.innerHTML = '<ul class="dep-list">' + deps.map(function (d) {
+        return '<li><span>' + escapeHtml(d.label) + '</span><span class="n">' + plural(d.hits, 'student') + ' with data</span></li>';
+      }).join('') + '</ul>';
+    } else {
+      els.confirmDeps.innerHTML = '';
+    }
+    confirmAction = onOk;
+    els.confirmOverlay.hidden = false;
+  }
+  function closeConfirm() { els.confirmOverlay.hidden = true; confirmAction = null; }
+  els.confirmCloseBtn.addEventListener('click', closeConfirm);
+  els.confirmCancelBtn.addEventListener('click', closeConfirm);
+  els.confirmOkBtn.addEventListener('click', function () {
+    var fn = confirmAction;
+    closeConfirm();
+    if (fn) fn();
+  });
+
   // ── Roster switcher + summary list ──────────────────────────────────────────
   function refreshSwitcher() {
     var all = loadAll();
+    var db = loadRecords();
     var names = Object.keys(all);
     els.rosterSwitch.innerHTML = names.map(function (n) {
       return '<option value="' + escapeHtml(n) + '"' + (n === currentName ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
     }).join('');
+
+    var targets = names.filter(function (n) { return n !== currentName; });
+    var targetOpts = targets.length
+      ? targets.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>'; }).join('')
+      : '<option value="">(no other roster)</option>';
+    els.moveTarget.innerHTML = '<option value="">Move to a new roster&hellip;</option>' + targetOpts;
+    els.mergeSource.innerHTML = targets.length ? targetOpts : '<option value="">(no other roster)</option>';
 
     if (!names.length) {
       els.allRosters.innerHTML = '';
@@ -384,10 +1164,48 @@
       return;
     }
     els.emptyHint.style.display = 'none';
-    els.allRosters.innerHTML = names.map(function (n) {
-      var count = Array.isArray(all[n]) ? all[n].length : 0;
-      return '<li><b>' + escapeHtml(n) + '</b><span class="n">' + count + ' student' + (count === 1 ? '' : 's') + '</span></li>';
-    }).join('');
+
+    // group by school year, then list period-first so a set of sections reads in order
+    var groups = {};
+    names.forEach(function (n) {
+      var m = (db.rosters[n] && db.rosters[n].meta) || {};
+      var g = (m.term || '').trim() || 'No school year set';
+      (groups[g] = groups[g] || []).push({ name: n, meta: m, count: Array.isArray(all[n]) ? all[n].length : 0 });
+    });
+    var order = Object.keys(groups).sort(function (a, b) {
+      if (a === 'No school year set') return 1;
+      if (b === 'No school year set') return -1;
+      return b.localeCompare(a);
+    });
+    var html = '';
+    order.forEach(function (g) {
+      if (order.length > 1) html += '<li class="roster-group-title" style="cursor:default;border:none;">' + escapeHtml(g) + '</li>';
+      groups[g].sort(function (a, b) {
+        var pa = parseInt(a.meta.period, 10), pb = parseInt(b.meta.period, 10);
+        if (!isNaN(pa) && !isNaN(pb) && pa !== pb) return pa - pb;
+        return a.name.localeCompare(b.name);
+      }).forEach(function (r) {
+        var bits = [];
+        if (r.meta.period) bits.push('Per. ' + r.meta.period);
+        if (r.meta.subject) bits.push(r.meta.subject);
+        bits.push(plural(r.count, 'student'));
+        html += '<li' + (r.name === currentName ? ' class="current"' : '') + '><b>' + escapeHtml(r.name) + '</b>' +
+                '<span class="n">' + escapeHtml(bits.join(' · ')) + '</span></li>';
+      });
+    });
+    els.allRosters.innerHTML = html;
+  }
+
+  function renderStats() {
+    var n = currentNames().length;
+    var arch = currentName ? archivedFor(currentName).length : 0;
+    var edited = meta.updated ? new Date(meta.updated).toLocaleDateString() : '—';
+    var withDetail = students.filter(function (s) { return s.preferred || s.say; }).length;
+    els.statGrid.innerHTML =
+      '<div class="stat"><div class="v">' + n + '</div><div class="k">Students</div></div>' +
+      '<div class="stat"><div class="v">' + arch + '</div><div class="k">Archived</div></div>' +
+      '<div class="stat"><div class="v">' + withDetail + '</div><div class="k">With details</div></div>' +
+      '<div class="stat"><div class="v" style="font-size:.95rem;padding:.25rem 0;">' + escapeHtml(edited) + '</div><div class="k">Last saved</div></div>';
   }
 
   function loadRosterByName(name) {
@@ -395,34 +1213,40 @@
     var list = all[name];
     if (!Array.isArray(list)) return;
     currentName = name;
+    var entry = syncRecords(name, list);
+    meta = entry.meta || {};
+    students = entry.students.map(function (s) {
+      return { id: s.id, name: s.name, preferred: s.preferred || '', say: s.say || '', sel: false };
+    });
     els.rosterName.value = name;
-    els.namesInput.value = list.join('\n');
+    els.metaPeriod.value = meta.period || '';
+    els.metaSubject.value = meta.subject || '';
+    els.metaTerm.value = meta.term || '';
     els.toolbar.style.display = '';
-    updateNameCount();
-    renderActiveList();
+    setTab('list', true); // keepStudents: loadRosterByName just built the list from storage
     renderArchivedList();
     refreshSwitcher();
+    renderStats();
+    renderDependencies();
     clearMsg();
   }
 
-  function updateNameCount() {
-    var n = parseNames(els.namesInput.value).names.length;
-    els.nameCount.textContent = n + ' name' + (n === 1 ? '' : 's');
-  }
-  els.namesInput.addEventListener('input', function () { updateNameCount(); renderActiveList(); });
-
-  // ── Active / archived student lists ─────────────────────────────────────
-  function renderActiveList() {
-    var names = parseNames(els.namesInput.value).names;
-    if (!names.length) {
-      els.activeStudentList.innerHTML = '<li style="border-top:none;"><span class="n">No active students.</span></li>';
-      return;
-    }
-    els.activeStudentList.innerHTML = names.map(function (n) {
-      return '<li><span>' + escapeHtml(n) + '</span><button type="button" class="secondary small" data-archive="' + escapeHtml(n) + '">Archive</button></li>';
-    }).join('');
+  function clearEditor() {
+    currentName = null;
+    students = [];
+    meta = {};
+    els.rosterName.value = '';
+    els.namesInput.value = '';
+    els.metaPeriod.value = els.metaSubject.value = els.metaTerm.value = '';
+    els.toolbar.style.display = 'none';
+    renderStudents();
+    renderArchivedList();
+    refreshSwitcher();
+    renderStats();
+    renderDependencies();
   }
 
+  // ── Archived (withdrawn) students ────────────────────────────────────────
   function renderArchivedList() {
     var names = currentName ? archivedFor(currentName) : [];
     if (!names.length) {
@@ -436,17 +1260,17 @@
     }).join('');
   }
 
-  function archiveStudent(name) {
+  function archiveStudent(index) {
+    var s = students[index];
+    if (!s || !s.name.trim()) { students.splice(index, 1); renderStudents(); return; }
     if (!currentName) { showMsg('Save this roster first, then archive a student.'); return; }
-    var parsed = parseNames(els.namesInput.value);
-    var idx = parsed.names.indexOf(name);
-    if (idx === -1) return;
-    parsed.names.splice(idx, 1);
-    els.namesInput.value = parsed.names.join('\n');
+    var name = s.name;
+    students.splice(index, 1);
 
     var all = loadAll();
-    all[currentName] = parsed.names;
+    all[currentName] = currentNames();
     saveAll(all);
+    writeStudents(currentName, students, meta);
 
     var archive = loadArchive();
     var list = Array.isArray(archive[currentName]) ? archive[currentName] : [];
@@ -454,10 +1278,10 @@
     archive[currentName] = list;
     saveArchive(archive);
 
-    updateNameCount();
-    renderActiveList();
+    renderStudents();
     renderArchivedList();
     refreshSwitcher();
+    renderStats();
     showMsg('Archived "' + name + '" — off the active roster, restorable any time.', true);
   }
 
@@ -471,26 +1295,20 @@
     if (list.length) archive[currentName] = list; else delete archive[currentName];
     saveArchive(archive);
 
-    var parsed = parseNames(els.namesInput.value);
-    if (parsed.names.indexOf(name) === -1) parsed.names.push(name);
-    els.namesInput.value = parsed.names.join('\n');
-
+    if (currentNames().map(normKey).indexOf(normKey(name)) === -1) {
+      students.push({ id: newId(), name: name, preferred: '', say: '', sel: false });
+    }
     var all = loadAll();
-    all[currentName] = parsed.names;
+    all[currentName] = currentNames();
     saveAll(all);
+    writeStudents(currentName, students, meta);
 
-    updateNameCount();
-    renderActiveList();
+    renderStudents();
     renderArchivedList();
     refreshSwitcher();
+    renderStats();
     showMsg('Restored "' + name + '" to the active roster.', true);
   }
-
-  els.activeStudentList.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-archive]');
-    if (!btn) return;
-    archiveStudent(btn.getAttribute('data-archive'));
-  });
 
   els.archivedStudentList.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-restore]');
@@ -500,12 +1318,16 @@
 
   els.rosterSwitch.addEventListener('change', function () { loadRosterByName(els.rosterSwitch.value); });
 
+  // ── Roster-level actions ─────────────────────────────────────────────────
+  function atRosterLimit(all) {
+    if (Object.keys(all).length < MAX_ROSTERS) return false;
+    showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters. Archive or delete one before adding another.');
+    return true;
+  }
+
   els.newRosterBtn.addEventListener('click', function () {
     var all = loadAll();
-    if (Object.keys(all).length >= MAX_ROSTERS) {
-      showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters. Delete one before adding another.');
-      return;
-    }
+    if (atRosterLimit(all)) return;
     var name = prompt('Name for the new roster:', 'New Roster');
     if (!name) return;
     name = name.trim().slice(0, 80);
@@ -518,41 +1340,42 @@
   els.duplicateRosterBtn.addEventListener('click', function () {
     if (!currentName) { showMsg('Save a roster first, then duplicate it.'); return; }
     var all = loadAll();
-    if (Object.keys(all).length >= MAX_ROSTERS) {
-      showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters. Delete one before adding another.');
-      return;
-    }
+    if (atRosterLimit(all)) return;
     var base = currentName + ' (copy)';
     var newName = base, n = 2;
     while (all[newName]) { newName = base + ' ' + n; n++; }
-    all[newName] = parseNames(els.namesInput.value).names;
+    all[newName] = currentNames();
     saveAll(all);
+    writeStudents(newName, students.map(function (s) { return { id: newId(), name: s.name, preferred: s.preferred, say: s.say }; }),
+                  { period: meta.period || '', subject: meta.subject || '', term: meta.term || '', updated: Date.now() });
     loadRosterByName(newName);
     showMsg('Duplicated as "' + newName + '".', true);
   });
 
   els.deleteRosterBtn.addEventListener('click', function () {
     if (!currentName) return;
-    if (!confirm('Delete "' + currentName + '" completely? This can’t be undone, and any tool that had it loaded keeps its own copy until it re-loads.')) return;
-    var all = loadAll();
-    delete all[currentName];
-    saveAll(all);
-    var archive = loadArchive();
-    delete archive[currentName];
-    saveArchive(archive);
-    var remaining = Object.keys(all);
-    currentName = null;
-    if (remaining.length) {
-      loadRosterByName(remaining[0]);
-    } else {
-      els.rosterName.value = '';
-      els.namesInput.value = '';
-      els.toolbar.style.display = 'none';
-      updateNameCount();
-      renderActiveList();
-      renderArchivedList();
-      refreshSwitcher();
-    }
+    var deps = scanDependencies(currentNames());
+    var name = currentName;
+    askConfirm(
+      'Delete "' + name + '"?',
+      deps.length
+        ? 'This erases the roster here and in every tool that loads rosters from here. These tools already hold data keyed to these students — that data stays behind but nothing will be pointing at it. Archiving instead keeps the names.'
+        : 'This erases the roster here and in every tool that loads rosters from here. It can’t be undone. Archiving instead keeps the names.',
+      deps,
+      function () {
+        var all = loadAll();
+        delete all[name];
+        saveAll(all);
+        var archive = loadArchive();
+        delete archive[name];
+        saveArchive(archive);
+        dropRecordRoster(name);
+        var remaining = Object.keys(all);
+        currentName = null;
+        if (remaining.length) loadRosterByName(remaining[0]); else clearEditor();
+        showMsg('Deleted "' + name + '".', true);
+      }
+    );
   });
 
   els.renameBtn.addEventListener('click', function () {
@@ -562,52 +1385,338 @@
     if (newName === currentName) return;
     var all = loadAll();
     if (all[newName] && !confirm('"' + newName + '" already exists and will be overwritten. Continue?')) return;
-    all[newName] = all[currentName] || [];
-    delete all[currentName];
+    var from = currentName;
+    all[newName] = all[from] || [];
+    delete all[from];
     saveAll(all);
     var archive = loadArchive();
-    if (archive[currentName]) { archive[newName] = archive[currentName]; delete archive[currentName]; saveArchive(archive); }
+    if (archive[from]) { archive[newName] = archive[from]; delete archive[from]; saveArchive(archive); }
+    renameRecordRoster(from, newName);
     currentName = newName;
     renderArchivedList();
     refreshSwitcher();
-    showMsg('Renamed to "' + newName + '".', true);
+    showMsg('Renamed to "' + newName + '". Tools that already loaded this roster keep their own copy under the old name until you re-load it there.', true);
   });
 
-  els.saveBtn.addEventListener('click', function () {
+  function readMetaFromForm() {
+    return {
+      period: els.metaPeriod.value.trim().slice(0, 20),
+      subject: els.metaSubject.value.trim().slice(0, 60),
+      term: els.metaTerm.value.trim().slice(0, 20),
+      created: meta.created || Date.now(),
+      updated: Date.now()
+    };
+  }
+
+  function saveRoster(quiet) {
+    if (activeTab === 'text') adoptNames(parseNames(els.namesInput.value).names);
     var all = loadAll();
     var name = (els.rosterName.value || '').trim().slice(0, 80) || 'New Roster';
-    if (!all[name] && Object.keys(all).length >= MAX_ROSTERS) {
-      showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters. Delete one before adding another.');
-      return;
-    }
-    var parsed = parseNames(els.namesInput.value);
+    if (!all[name] && atRosterLimit(all)) return false;
+    var parsed = parseNames(currentNames().join('\n'));
+    adoptNames(parsed.names);
     all[name] = parsed.names;
-    saveAll(all);
+    if (!saveAll(all)) return false;
+    meta = readMetaFromForm();
+    writeStudents(name, students, meta);
     currentName = name;
     els.rosterName.value = name;
     els.toolbar.style.display = '';
     refreshSwitcher();
-    updateNameCount();
-    renderActiveList();
+    renderStudents();
     renderArchivedList();
+    renderStats();
+    renderDependencies();
 
-    var warnings = [];
-    if (parsed.truncatedNames) warnings.push(parsed.truncatedNames + ' name' + (parsed.truncatedNames === 1 ? '' : 's') + ' shortened to ' + MAX_NAME + ' characters');
-    if (parsed.truncatedList) warnings.push('list capped at ' + MAX_ROSTER + ' students');
-    showMsg(
-      'Saved "' + name + '" with ' + parsed.names.length + ' student' + (parsed.names.length === 1 ? '' : 's') + '.' +
-      (warnings.length ? ' (' + warnings.join('; ') + '.)' : ''),
-      true
+    if (!quiet) {
+      var warnings = [];
+      if (parsed.truncatedNames) warnings.push(plural(parsed.truncatedNames, 'name') + ' shortened to ' + MAX_NAME + ' characters');
+      if (parsed.truncatedList) warnings.push('list capped at ' + MAX_ROSTER + ' students');
+      showMsg('Saved "' + name + '" with ' + plural(parsed.names.length, 'student') + '.' +
+              (warnings.length ? ' (' + warnings.join('; ') + '.)' : ''), true);
+    }
+    return true;
+  }
+  els.saveBtn.addEventListener('click', function () { saveRoster(false); });
+
+  // ── Move / merge ─────────────────────────────────────────────────────────
+  els.moveBtn.addEventListener('click', function () {
+    var picked = students.filter(function (s) { return s.sel && s.name.trim(); });
+    if (!picked.length) { showMsg('Tick the students you want to move first.'); return; }
+    if (!currentName) { showMsg('Save this roster first.'); return; }
+    var all = loadAll();
+    var target = els.moveTarget.value;
+    if (!target) {
+      if (atRosterLimit(all)) return;
+      target = prompt('Name for the new roster these ' + plural(picked.length, 'student') + ' move to:', currentName + ' (B)');
+      if (!target) return;
+      target = target.trim().slice(0, 80);
+      if (!target) return;
+    }
+    var existing = Array.isArray(all[target]) ? all[target] : [];
+    var targetNames = parseNames(existing.concat(picked.map(function (s) { return s.name; })).join('\n')).names;
+    all[target] = targetNames;
+
+    // carry each student's details across to the destination roster
+    var db = loadRecords();
+    var tEntry = db.rosters[target] || { meta: {}, students: [], orphans: [] };
+    picked.forEach(function (s) {
+      if (!tEntry.students.some(function (r) { return normKey(r.name) === normKey(s.name); })) {
+        tEntry.students.push({ id: s.id, name: s.name, preferred: s.preferred, say: s.say });
+      }
+    });
+    tEntry.students = targetNames.map(function (n) {
+      return tEntry.students.filter(function (r) { return normKey(r.name) === normKey(n); })[0] ||
+             { id: newId(), name: n, preferred: '', say: '' };
+    });
+    db.rosters[target] = tEntry;
+    saveRecords(db);
+
+    students = students.filter(function (s) { return !s.sel; });
+    all[currentName] = currentNames();
+    saveAll(all);
+    writeStudents(currentName, students, meta);
+    renderStudents();
+    refreshSwitcher();
+    renderStats();
+    showMsg('Moved ' + plural(picked.length, 'student') + ' to "' + target + '". Their history in other tools stays under their name, wherever it was logged.', true);
+  });
+
+  els.mergeBtn.addEventListener('click', function () {
+    var source = els.mergeSource.value;
+    if (!source) { showMsg('There’s no other roster to merge from yet.'); return; }
+    var all = loadAll();
+    var incoming = Array.isArray(all[source]) ? all[source] : [];
+    if (!incoming.length) { showMsg('"' + source + '" has no students in it.'); return; }
+    var before = currentNames().length;
+    var merged = parseNames(currentNames().concat(incoming).join('\n')).names;
+    adoptNames(merged);
+    renderStudents();
+    showMsg('Pulled in ' + plural(merged.length - before, 'new student') + ' from "' + source + '" (duplicates skipped). "' + source + '" is untouched — save this roster to keep the merge.', true);
+  });
+
+  // ── Roster archive + year rollover ───────────────────────────────────────
+  function loadRosterArchive() {
+    var db = readJson(ROSTER_ARCHIVE_KEY, null);
+    if (!db || db.version !== 1) db = { version: 1, rosters: [], years: [] };
+    if (!Array.isArray(db.rosters)) db.rosters = [];
+    if (!Array.isArray(db.years)) db.years = [];
+    return db;
+  }
+  function saveRosterArchive(db) { return writeJson(ROSTER_ARCHIVE_KEY, db); }
+
+  function snapshotRoster(name) {
+    var all = loadAll();
+    return {
+      name: name,
+      names: Array.isArray(all[name]) ? all[name].slice() : [],
+      meta: (loadRecords().rosters[name] || {}).meta || {},
+      students: ((loadRecords().rosters[name] || {}).students || []).slice(),
+      archivedStudents: archivedFor(name).slice(),
+      archivedAt: Date.now()
+    };
+  }
+
+  function removeRoster(name) {
+    var all = loadAll();
+    delete all[name];
+    saveAll(all);
+    var archive = loadArchive();
+    delete archive[name];
+    saveArchive(archive);
+    dropRecordRoster(name);
+  }
+
+  function restoreSnapshot(snap, suffix) {
+    var all = loadAll();
+    if (Object.keys(all).length >= MAX_ROSTERS) { showMsg('You’ve hit the limit of ' + MAX_ROSTERS + ' saved rosters.'); return null; }
+    var base = snap.name + (suffix || '');
+    var name = base, n = 2;
+    while (all[name]) { name = base + ' (' + n + ')'; n++; }
+    all[name] = snap.names.slice();
+    saveAll(all);
+    var db = loadRecords();
+    db.rosters[name] = { meta: snap.meta || {}, students: (snap.students || []).slice(), orphans: [] };
+    saveRecords(db);
+    if (snap.archivedStudents && snap.archivedStudents.length) {
+      var archive = loadArchive();
+      archive[name] = snap.archivedStudents.slice();
+      saveArchive(archive);
+    }
+    return name;
+  }
+
+  els.archiveRosterBtn.addEventListener('click', function () {
+    if (!currentName) return;
+    saveRoster(true); // so the snapshot carries whatever is on screen, not the last save
+    var name = currentName;
+    askConfirm(
+      'Archive "' + name + '"?',
+      'It disappears from Name Picker and every other tool’s roster list, but the names, periods, and details are kept here and can be restored any time.',
+      [],
+      function () {
+        var db = loadRosterArchive();
+        db.rosters.unshift(snapshotRoster(name));
+        saveRosterArchive(db);
+        removeRoster(name);
+        var remaining = Object.keys(loadAll());
+        currentName = null;
+        if (remaining.length) loadRosterByName(remaining[0]); else clearEditor();
+        renderRosterArchive();
+        showMsg('Archived "' + name + '".', true);
+      }
     );
   });
 
+  els.rolloverBtn.addEventListener('click', function () {
+    if (currentName) saveRoster(true); // don't archive a stale copy of the open roster
+    var all = loadAll();
+    var names = Object.keys(all);
+    if (!names.length) { showMsg('There are no rosters to roll over yet.'); return; }
+    var guessLabel = (meta.term || '').trim() || String(new Date().getFullYear() - 1) + '–' + String(new Date().getFullYear()).slice(2);
+    var label = prompt('Label for the year you’re closing out:', guessLabel);
+    if (!label) return;
+    label = label.trim().slice(0, 40);
+    if (!label) return;
+    var nextTerm = prompt('School year for the fresh classes (leave blank to skip):', '');
+    askConfirm(
+      'Start a new school year?',
+      'All ' + plural(names.length, 'roster') + ' get filed under "' + label + '". You keep the same class names, periods, and courses — with empty student lists ready for your new sections. Every other tool will see the same rosters with nobody in them.',
+      [],
+      function () {
+        var db = loadRosterArchive();
+        var snaps = names.map(snapshotRoster);
+        db.years.unshift({ id: 'y' + Date.now().toString(36), label: label, archivedAt: Date.now(), rosters: snaps });
+        saveRosterArchive(db);
+
+        var fresh = {};
+        var recs = loadRecords();
+        names.forEach(function (n) {
+          fresh[n] = [];
+          var m = (recs.rosters[n] || {}).meta || {};
+          recs.rosters[n] = {
+            meta: { period: m.period || '', subject: m.subject || '', term: (nextTerm || '').trim().slice(0, 20), created: Date.now(), updated: Date.now() },
+            students: [], orphans: []
+          };
+        });
+        saveAll(fresh);
+        saveRecords(recs);
+        saveArchive({});
+
+        currentName = null;
+        loadRosterByName(names[0]);
+        renderRosterArchive();
+        showMsg('Filed ' + plural(names.length, 'roster') + ' under "' + label + '" and cleared the student lists. Last year’s names are in "Archived rosters & past years" below.', true);
+      }
+    );
+  });
+
+  function renderRosterArchive() {
+    var db = loadRosterArchive();
+    var rows = [];
+    db.rosters.forEach(function (r, i) {
+      rows.push('<li><span>' + escapeHtml(r.name) + ' <span class="n">— ' + plural((r.names || []).length, 'student') +
+                ', archived ' + escapeHtml(new Date(r.archivedAt).toLocaleDateString()) + '</span></span>' +
+                '<span><button type="button" class="secondary small" data-restore-roster="' + i + '">Restore</button> ' +
+                '<button type="button" class="danger small" data-drop-roster="' + i + '">Delete</button></span></li>');
+    });
+    db.years.forEach(function (y, i) {
+      var total = (y.rosters || []).reduce(function (m, r) { return m + (r.names || []).length; }, 0);
+      rows.push('<li><span><b>' + escapeHtml(y.label) + '</b> <span class="n">— ' + plural((y.rosters || []).length, 'roster') +
+                ', ' + plural(total, 'student') + '</span></span>' +
+                '<span><button type="button" class="secondary small" data-restore-year="' + i + '">Restore all</button> ' +
+                '<button type="button" class="danger small" data-drop-year="' + i + '">Delete</button></span></li>');
+    });
+    els.archiveList.innerHTML = rows.join('');
+    els.archiveEmptyHint.style.display = rows.length ? 'none' : '';
+  }
+
+  els.archiveList.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var db = loadRosterArchive();
+    var rr = btn.getAttribute('data-restore-roster'), dr = btn.getAttribute('data-drop-roster');
+    var ry = btn.getAttribute('data-restore-year'), dy = btn.getAttribute('data-drop-year');
+    if (rr !== null) {
+      var snap = db.rosters[Number(rr)];
+      if (!snap) return;
+      var name = restoreSnapshot(snap, '');
+      if (!name) return;
+      db.rosters.splice(Number(rr), 1);
+      saveRosterArchive(db);
+      loadRosterByName(name);
+      renderRosterArchive();
+      showMsg('Restored "' + name + '".', true);
+    } else if (dr !== null) {
+      var gone = db.rosters[Number(dr)];
+      if (!gone) return;
+      askConfirm('Delete the archived "' + gone.name + '"?', 'This throws the names away for good.', [], function () {
+        var d = loadRosterArchive();
+        d.rosters.splice(Number(dr), 1);
+        saveRosterArchive(d);
+        renderRosterArchive();
+      });
+    } else if (ry !== null) {
+      var year = db.years[Number(ry)];
+      if (!year) return;
+      askConfirm('Restore every roster from "' + year.label + '"?',
+        'They come back alongside your current rosters, with "(' + year.label + ')" on the end of each name so nothing is overwritten.', [], function () {
+        var restored = 0;
+        (year.rosters || []).forEach(function (snap) { if (restoreSnapshot(snap, ' (' + year.label + ')')) restored++; });
+        refreshSwitcher();
+        renderRosterArchive();
+        showMsg('Restored ' + plural(restored, 'roster') + ' from "' + year.label + '".', true);
+      });
+    } else if (dy !== null) {
+      var y2 = db.years[Number(dy)];
+      if (!y2) return;
+      askConfirm('Delete the archive for "' + y2.label + '"?', 'All ' + plural((y2.rosters || []).length, 'roster') + ' filed under that year are thrown away for good.', [], function () {
+        var d = loadRosterArchive();
+        d.years.splice(Number(dy), 1);
+        saveRosterArchive(d);
+        renderRosterArchive();
+      });
+    }
+  });
+
+  // ── Print ────────────────────────────────────────────────────────────────
+  function printHeaderLine(count) {
+    var bits = [];
+    if (meta.period) bits.push('Period ' + meta.period);
+    if (meta.subject) bits.push(meta.subject);
+    if (meta.term) bits.push(meta.term);
+    bits.push(new Date().toLocaleDateString());
+    bits.push(plural(count, 'student'));
+    return bits.join(' · ');
+  }
+
   els.printBtn.addEventListener('click', function () {
-    var parsed = parseNames(els.namesInput.value);
-    if (!parsed.names.length) { showMsg('Nothing to print yet — add some names first.'); return; }
+    if (activeTab === 'text') { adoptNames(parseNames(els.namesInput.value).names); renderStudents(); }
+    var names = currentNames();
+    if (!names.length) { showMsg('Nothing to print yet — add some names first.'); return; }
+    var format = els.printFormat.value;
     document.getElementById('printTitle').textContent = (currentName || els.rosterName.value || 'Class List');
-    document.getElementById('printSub').textContent = new Date().toLocaleDateString() + ' · ' + parsed.names.length + ' student' + (parsed.names.length === 1 ? '' : 's');
+    document.getElementById('printSub').textContent = printHeaderLine(names.length);
+
+    var body = '';
+    if (format === 'numbered') {
+      body = '<ol>' + names.map(function (n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('') + '</ol>';
+    } else if (format === 'checklist') {
+      var cols = 6;
+      body = '<table class="p-table"><thead><tr><th>#</th><th class="nm">Student</th>' +
+             new Array(cols + 1).join('<th></th>') + '</tr></thead><tbody>' +
+             names.map(function (n, i) {
+               return '<tr><td>' + (i + 1) + '</td><td class="nm">' + escapeHtml(n) + '</td>' +
+                      new Array(cols + 1).join('<td></td>') + '</tr>';
+             }).join('') + '</tbody></table>';
+    } else {
+      var per = 3;
+      body = '<div class="p-grid" style="grid-template-columns:repeat(' + per + ',1fr);">' +
+             names.map(function (n, i) { return '<div class="box">' + (i + 1) + '.</div>'; }).join('') +
+             '</div>';
+    }
+    document.getElementById('printBody').innerHTML = body;
     document.getElementById('printArea').classList.add('active');
-    document.getElementById('printList').innerHTML = parsed.names.map(function (n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('');
     window.print();
   });
 
@@ -623,7 +1732,7 @@
     param: 'roster',
     label: 'Share this roster',
     getState: function () {
-      return currentName ? { name: currentName, names: parseNames(els.namesInput.value).names } : null;
+      return currentName ? { name: currentName, names: currentNames(), meta: meta } : null;
     },
     onMessage: function (text) { alert(text); }
   });
@@ -652,7 +1761,7 @@
 
   els.qrBtn.addEventListener('click', function () {
     if (!currentName) { showMsg('Save a roster first, then share it.'); return; }
-    var url = StateLink.buildShareUrl('roster', { name: currentName, names: parseNames(els.namesInput.value).names });
+    var url = StateLink.buildShareUrl('roster', { name: currentName, names: currentNames(), meta: meta });
     try {
       drawShareQr(els.qrCanvas, url);
     } catch (e) {
@@ -663,7 +1772,12 @@
   });
   els.qrCloseBtn.addEventListener('click', function () { els.qrOverlay.hidden = true; });
   els.qrOverlay.addEventListener('mousedown', function (e) { if (e.target === els.qrOverlay) els.qrOverlay.hidden = true; });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.qrOverlay.hidden) els.qrOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!els.qrOverlay.hidden) els.qrOverlay.hidden = true;
+    if (!els.importOverlay.hidden) closeImport();
+    if (!els.confirmOverlay.hidden) closeConfirm();
+  });
 
   function looksLikeRosterPayload(obj) {
     return !!obj && typeof obj === 'object' && typeof obj.name === 'string' && Array.isArray(obj.names);
@@ -699,13 +1813,23 @@
     var parsed = parseNames(decoded.names.join('\n'));
     all[name] = parsed.names;
     saveAll(all);
+    if (decoded.meta && typeof decoded.meta === 'object') {
+      var db = loadRecords();
+      db.rosters[name] = {
+        meta: { period: decoded.meta.period || '', subject: decoded.meta.subject || '', term: decoded.meta.term || '', created: Date.now(), updated: Date.now() },
+        students: [], orphans: []
+      };
+      saveRecords(db);
+    }
     loadRosterByName(name);
+    renderRosterArchive();
     showMsg('Imported shared roster as "' + name + '".', true);
     return true;
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────
   (function init() {
+    renderRosterArchive();
     if (importSharedRosterFromUrl()) return;
     var all = loadAll();
     var names = Object.keys(all);
@@ -713,10 +1837,7 @@
     if (names.length) {
       loadRosterByName(names[0]);
     } else {
-      els.toolbar.style.display = 'none';
-      updateNameCount();
-      renderActiveList();
-      renderArchivedList();
+      clearEditor();
     }
   })();
 })();

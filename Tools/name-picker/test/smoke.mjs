@@ -22,6 +22,8 @@ import {
 import {
   shuffle, freshRotation, fairPick, uniformPick, pickMany, makeGroups, leastPicked
 } from "../np-pick.js";
+import { report, overdue, summaryLine, daysBetween, shiftDay, dayKey } from "../np-equity.js";
+import { DETAILS_KEY, loadDetails, parseDetails, lookupDetail, displayName } from "../np-details.js";
 
 let pass = 0, fail = 0;
 function assert(cond, msg) {
@@ -109,7 +111,7 @@ console.log("name-picker smoke\n");
   assert(store.get("luckyEnabled") === true, "np_lucky_enabled '1' decodes to true");
   assert(store.get("retroActive") === false, "np_retro_active '0' decodes to false");
   assert(store.get("retroUnlocked") === true, "the retro unlock survives — it is an earned thing");
-  assert(KEYS.length === 13, "twelve original keys plus np_options");
+  assert(KEYS.length === 14, "twelve original keys plus np_options plus np_absent");
   assert(KEYS.filter(d => LEGACY_DISK[d.key] !== undefined).length === 12,
          "all twelve original keys are covered by a descriptor");
 }
@@ -406,7 +408,7 @@ console.log("name-picker smoke\n");
   assert(before.tracked === 24, "census counts students with pick counts");
 
   const cleared = store.clearStudentData();
-  assert(cleared.length === 6, "six keys hold student names: rosters, current, lucky, stats, history, hof");
+  assert(cleared.length === 7, "seven keys hold student names: rosters, current, lucky, absent, stats, history, hof");
   assert(cleared.includes("lucky"), "np_lucky counts as student data — it stores a name");
 
   const after = store.census();
@@ -614,6 +616,171 @@ console.log("name-picker smoke\n");
          "leastPicked finds everyone tied at the bottom");
   assert(leastPicked(["Never Called"], {})[0] === "Never Called", "a student with no count at all is due");
   assert(leastPicked([], {}).length === 0, "no roster, nobody due");
+}
+
+/* =====================================================================
+   The two additive fields on np_history, and np_absent.
+
+   `prompt` is the regression that matters: the page has always written it and
+   the repair silently dropped it, so a question attached to a pick never
+   survived a reload. `date` is new, and every entry written before it existed
+   has none — the equity view has to treat that as unknown, not as today.
+   ===================================================================== */
+{
+  const store = createStore({ storage: stubStorage() });
+  store.set("history", [
+    { name: "Aiden Alvarez", time: "09:15 AM" },                                        // pre-date entry
+    { name: "Rosa Reyes", time: "09:17 AM", date: "2026-08-10", prompt: "Read aloud" },
+    { name: "Zoe Zaman", time: "09:19 AM", date: "not-a-date", prompt: "  " }
+  ]);
+  const back = store.get("history");
+  assert(back.length === 3, "every history entry survives the round trip");
+  assert(back[0].date === undefined, "an entry written before dates existed keeps no date");
+  assert(back[1].date === "2026-08-10", "a valid date is kept");
+  assert(back[1].prompt === "Read aloud", "the prompt attached to a pick survives a reload");
+  assert(back[2].date === undefined, "a malformed date is dropped rather than trusted");
+  assert(back[2].prompt === undefined, "a blank prompt is not stored");
+
+  const longPrompt = "x".repeat(500);
+  store.set("history", [{ name: "Aiden Alvarez", time: "09:15 AM", prompt: longPrompt }]);
+  assert(store.get("history")[0].prompt.length === 300, "an outsized prompt is capped, not dropped");
+}
+
+{
+  const store = createStore({ storage: stubStorage() });
+  assert(store.get("absent").names.length === 0 && store.get("absent").date === "",
+         "np_absent starts empty");
+  store.set("absent", { date: "2026-08-10", names: ["Rosa Reyes", "Rosa Reyes", "  ", "Zoe Zaman"] });
+  const a = store.get("absent");
+  assert(a.date === "2026-08-10", "the absence date is kept");
+  assert(a.names.length === 2, "absent names are de-duplicated and blanks dropped");
+
+  store.set("absent", { date: "yesterday", names: ["Rosa Reyes"] });
+  assert(store.get("absent").date === "", "a malformed date reads as no date, so the list is treated as stale");
+
+  const withNames = createStore({ storage: stubStorage() });
+  withNames.set("absent", { date: "2026-08-10", names: ["Rosa Reyes"] });
+  assert(withNames.clearStudentData().includes("absent"), "erasing student data erases the absent list");
+}
+
+/* =====================================================================
+   The equity report — the numbers a teacher would be asked to defend.
+
+   Dates are passed in rather than read off the clock, so the "not called in
+   three weeks" boundary is checked here instead of three weeks from now.
+   ===================================================================== */
+{
+  const TODAY = "2026-08-10";
+  const roster = ["Aiden Alvarez", "Brooklyn Bell", "Rosa Reyes", "Zoe Zaman"];
+  const history = [
+    { name: "Aiden Alvarez", time: "09:00 AM", date: "2026-08-10" },
+    { name: "Aiden Alvarez", time: "09:05 AM", date: "2026-08-10", prompt: "Read aloud" },
+    { name: "Aiden Alvarez", time: "09:10 AM", date: "2026-08-09" },
+    { name: "Brooklyn Bell", time: "09:15 AM", date: "2026-08-02" },   // 8 days ago
+    { name: "Rosa Reyes",    time: "09:20 AM", date: "2026-07-01" },   // 40 days ago
+    { name: "Ghost Student", time: "09:25 AM", date: "2026-08-10" },   // no longer on the roster
+    { name: "Zoe Zaman",     time: "09:30 AM" }                        // pre-dates the date field
+  ];
+  const stats = { "Aiden Alvarez": 12, "Brooklyn Bell": 3, "Rosa Reyes": 1, "Zoe Zaman": 5 };
+
+  const week = report(roster, history, stats, { days: 7, today: TODAY });
+  assert(week.roster === 4, "the report covers everyone on the roster, not everyone in the log");
+  assert(week.windowTotal === 4, "picks inside the window are counted, including students since removed");
+  assert(week.undated === 1, "entries with no date are counted separately, not assumed to be today");
+
+  const byName = Object.fromEntries(week.rows.map(r => [r.name, r]));
+  assert(byName["Aiden Alvarez"].count === 3, "three picks this week");
+  assert(byName["Aiden Alvarez"].daysSince === 0, "called today reads as 0 days since");
+  assert(byName["Aiden Alvarez"].withPrompt === 1, "prompts asked are counted");
+  assert(byName["Aiden Alvarez"].lifetime === 12, "lifetime comes from np_stats, not the capped history");
+  assert(byName["Brooklyn Bell"].count === 0, "a pick 8 days ago is outside a 7-day window ending today");
+  assert(byName["Brooklyn Bell"].daysSince === 8, "…but still sets days-since-last-called");
+  assert(byName["Rosa Reyes"].daysSince === 40, "a pick 40 days ago is 40 days since");
+  assert(byName["Zoe Zaman"].daysSince === null, "an undated pick leaves the student as never-called-on-record");
+
+  assert(week.rows[0].name === "Zoe Zaman", "never-called sorts to the top");
+  assert(week.rows[1].name === "Rosa Reyes", "then the longest-overdue student");
+  assert(week.rows[week.rows.length - 1].name === "Aiden Alvarez", "the most-called student sorts last");
+
+  const twoWeeks = report(roster, history, stats, { days: 14, today: TODAY });
+  assert(twoWeeks.windowTotal === 5, "widening the window picks up Brooklyn's pick 8 days ago");
+  assert(Math.abs(twoWeeks.evenShare - 1.25) < 1e-9, "even share is picks ÷ roster size");
+  assert(twoWeeks.rows.find(r => r.name === "Aiden Alvarez").versusEven > 0,
+         "an over-called student is above an even share");
+
+  const all = report(roster, history, stats, { days: 0, today: TODAY });
+  assert(all.from === null && all.windowTotal === 6, "days:0 means every dated pick on record");
+
+  assert(overdue(week.rows, 21).length === 2, "never-called plus 40-days-ago are both overdue at 21 days");
+  assert(overdue(week.rows, 5).map(r => r.name).includes("Brooklyn Bell"), "8 days is overdue at a 5-day threshold");
+
+  assert(report([], history, stats, { today: TODAY }).rows.length === 0, "no roster, no rows");
+  assert(summaryLine(report([], [], {}, { today: TODAY })) === "No roster loaded.",
+         "the summary line says so plainly when there is nothing to report");
+  assert(/never called/.test(summaryLine(week)), "the summary line names the never-called count");
+
+  assert(daysBetween("2026-08-01", "2026-08-10") === 9, "daysBetween counts whole days forward");
+  assert(daysBetween("nonsense", "2026-08-10") === null, "an unparsable date gives null, not NaN");
+  assert(shiftDay("2026-03-01", -1) === "2026-02-28", "shiftDay crosses a month boundary");
+  assert(dayKey(new Date(2026, 0, 5)) === "2026-01-05", "dayKey pads to YYYY-MM-DD");
+}
+
+/* =====================================================================
+   Reading Class Roster Hub's sidecar — the other side of the decision to
+   leave np_rosters alone. Every path here has to survive the sidecar being
+   absent, truncated, or shaped like something else entirely, because most
+   teachers will never have opened that tool.
+   ===================================================================== */
+{
+  const SIDECAR = JSON.stringify({
+    version: 1,
+    rosters: {
+      "Period 3": {
+        meta: { period: "3" },
+        students: [
+          { id: "s1", name: "Aiden Alvarez", preferred: "AJ", say: "AY-den" },
+          { id: "s2", name: "Yusuf Yilmaz", preferred: "", say: "yoo-SOOF" },
+          { id: "s3", name: "Rosa Reyes", preferred: "", say: "" },
+          { id: "s4", name: "Sam Sandoval", preferred: "Sammy", say: "" }
+        ]
+      },
+      "Period 5": {
+        meta: {},
+        students: [{ id: "s9", name: "Sam Sandoval", preferred: "Sandy", say: "" }]
+      }
+    }
+  });
+  const store = stubStorage({ [DETAILS_KEY]: SIDECAR });
+  const parsed = loadDetails(store);
+
+  assert(parsed.order.length === 2, "both rosters with details are indexed");
+  assert(lookupDetail(parsed, "Aiden Alvarez", "Period 3").preferred === "AJ", "preferred name found");
+  assert(lookupDetail(parsed, "  aiden   alvarez ", "Period 3").say === "AY-den",
+         "matching ignores case and stray whitespace");
+  assert(lookupDetail(parsed, "Rosa Reyes", "Period 3") === null,
+         "a student with neither field is not carried at all");
+  assert(lookupDetail(parsed, "Nobody Here", "Period 3") === null, "an unknown name gives null");
+  assert(lookupDetail(parsed, "Sam Sandoval", "Period 5").preferred === "Sandy",
+         "the current roster wins when two classes disagree");
+  assert(lookupDetail(parsed, "Sam Sandoval", "Not A Roster").preferred === "Sammy",
+         "with no roster match it falls back to whichever roster knows the name");
+
+  const shown = displayName("Aiden Alvarez", lookupDetail(parsed, "Aiden Alvarez", "Period 3"));
+  assert(shown.big === "AJ" && shown.sub === "Aiden Alvarez" && shown.say === "AY-den",
+         "the preferred name becomes the big name and the roster name the subtitle");
+  const plain = displayName("Rosa Reyes", null);
+  assert(plain.big === "Rosa Reyes" && plain.sub === "" && plain.say === "",
+         "with no detail on file, nothing changes about how the name is shown");
+  const sameName = displayName("Rosa Reyes", { preferred: "rosa reyes", say: "" });
+  assert(sameName.sub === "", "a preferred name equal to the roster name does not print twice");
+
+  assert(loadDetails(stubStorage()).order.length === 0, "no sidecar at all reads as no details");
+  assert(loadDetails(stubStorage({ [DETAILS_KEY]: '{"version":1,"rosters":' })).order.length === 0,
+         "a truncated sidecar reads as no details rather than throwing");
+  assert(parseDetails('{"version":1,"rosters":{"P1":{"students":"nope"}}}').order.length === 0,
+         "a roster whose students are not an array is skipped");
+  assert(loadDetails({ getItem() { throw new Error("blocked"); } }).order.length === 0,
+         "storage that throws on read is survivable");
 }
 
 console.log(`\nname-picker: ${pass} passed, ${fail} failed`);
