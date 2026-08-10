@@ -138,6 +138,22 @@
   .conj-card td.form-cell.blank-cell { border-bottom: 1px solid #444; min-width: 3rem; }
 
   .empty-note { color: var(--muted); text-align: center; padding: 3rem; font-style: italic; }
+
+  /* ---- conjugation quiz mode (interactive fill-in-the-blank) ---- */
+  .btn-row { display: flex; gap: .6rem; }
+  .btn-row button { flex: 1; }
+  .quiz-wrap { background: #fff; border-radius: 10px; padding: 1.2rem 1.4rem; max-width: 34rem; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,.14); }
+  .quiz-head { display: flex; align-items: center; gap: .5rem; font-size: 1.3rem; font-weight: 700; margin-bottom: .2rem; }
+  .quiz-progress { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; }
+  .quiz-row { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; border-bottom: 1px dashed var(--line); }
+  .quiz-row:last-of-type { border-bottom: none; }
+  .quiz-row .quiz-person { width: 40%; flex-shrink: 0; color: var(--muted); font-size: .88rem; }
+  .quiz-row .quiz-input { margin-bottom: 0; flex: 1; }
+  .quiz-row .quiz-mark { flex-shrink: 0; font-size: .85rem; font-weight: 700; white-space: nowrap; }
+  .quiz-row.correct .quiz-mark { color: #2f7d4f; }
+  .quiz-row.incorrect .quiz-mark { color: var(--err); }
+  .quiz-row.correct .quiz-input { border-color: #2f7d4f; }
+  .quiz-row.incorrect .quiz-input { border-color: var(--err); }
   .sheet-nav { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1rem; }
   .sheet-nav button.secondary { width: auto; margin: 0; }
 
@@ -334,6 +350,12 @@
   var checkRevealed = {};
   var currentPage = 0;
   var currentSide = 'blank';
+  var conjView = 'grid'; // 'grid' (printable pages) | 'quiz' (interactive fill-in-the-blank, on screen only)
+  var quizOrder = [];    // ordered list of conjugation ids for the current quiz session
+  var quizIndex = 0;
+  var quizAnswers = {};  // personIndex -> typed string, for the verb currently on screen
+  var quizChecked = false;
+  var quizScore = { correct: 0, total: 0 };
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -565,6 +587,106 @@
     });
   }
 
+  /* ---------- conjugation quiz mode (interactive, on-screen only) ----------
+     A lighter, faster alternative to the printable grid above: one verb at
+     a time, type the conjugated form for each person, then check — no
+     printing, no answer-key page, just quick self-testing. */
+  function buildQuizOrder() {
+    var list = state.conjugations.map(function (c) { return c.id; });
+    quizOrder = state.shuffleConjugation ? shuffleCopy(list) : list;
+    quizIndex = 0;
+    quizAnswers = {};
+    quizChecked = false;
+  }
+
+  function currentQuizEntry() {
+    var id = quizOrder[quizIndex];
+    return state.conjugations.filter(function (c) { return c.id === id; })[0] || null;
+  }
+
+  function checkQuizAnswers() {
+    if (quizChecked) return;
+    var entry = currentQuizEntry();
+    if (!entry) return;
+    var correctCount = 0;
+    state.persons.forEach(function (person, pi) {
+      var typed = (quizAnswers[pi] || '').trim().toLowerCase();
+      var correct = (entry.forms[pi] || '').trim().toLowerCase();
+      if (typed && typed === correct) correctCount++;
+    });
+    quizScore.correct += correctCount;
+    quizScore.total += state.persons.length;
+    quizChecked = true;
+    renderPreview();
+  }
+
+  function nextQuizVerb() {
+    quizIndex = (quizIndex + 1) % quizOrder.length;
+    quizAnswers = {};
+    quizChecked = false;
+    renderPreview();
+  }
+
+  function restartQuiz() {
+    quizScore = { correct: 0, total: 0 };
+    buildQuizOrder();
+    renderPreview();
+  }
+
+  function renderConjugationQuiz() {
+    if (!quizOrder.length) buildQuizOrder();
+    var entry = currentQuizEntry();
+    if (!entry) { buildQuizOrder(); entry = currentQuizEntry(); }
+    if (!entry) {
+      els.previewArea.innerHTML = '<p class="empty-note">Add a verb to quiz on.</p>';
+      return;
+    }
+    var rows = state.persons.map(function (person, pi) {
+      var typed = quizAnswers[pi] || '';
+      var correctAnswer = entry.forms[pi] || '';
+      var isCorrect = quizChecked && typed.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+      var rowClass = quizChecked ? (isCorrect ? ' correct' : ' incorrect') : '';
+      return '<div class="quiz-row' + rowClass + '">' +
+        '<span class="quiz-person">' + escapeHtml(person || ('Row ' + (pi + 1))) + '</span>' +
+        '<input type="text" class="quiz-input" data-pi="' + pi + '" value="' + escapeHtml(typed) + '"' +
+          (quizChecked ? ' disabled' : '') + ' placeholder="Conjugated form" autocomplete="off">' +
+        (quizChecked ? '<span class="quiz-mark">' + (isCorrect ? '&#10003;' : '&#10007; ' + escapeHtml(correctAnswer)) + '</span>' : '') +
+      '</div>';
+    }).join('');
+
+    els.previewArea.innerHTML =
+      '<div class="quiz-wrap">' +
+        '<div class="quiz-head">' +
+          '<span>' + escapeHtml(entry.infinitive || 'Untitled verb') + (entry.tense ? ' &mdash; ' + escapeHtml(entry.tense) : '') + '</span>' +
+          listenButtonHtml(' data-word="' + escapeHtml(entry.infinitive) + '"') +
+        '</div>' +
+        '<div class="quiz-progress">Verb ' + (quizIndex + 1) + ' of ' + quizOrder.length +
+          (quizScore.total ? ' &middot; Score: ' + quizScore.correct + ' / ' + quizScore.total : '') + '</div>' +
+        rows +
+        '<div class="btn-row" style="margin-top:.8rem;">' +
+          (quizChecked
+            ? '<button type="button" id="quizNextBtn">Next verb</button>'
+            : '<button type="button" id="quizCheckBtn">Check answers</button>') +
+          '<button type="button" class="secondary" id="quizRestartBtn">Restart quiz</button>' +
+        '</div>' +
+      '</div>';
+
+    Array.prototype.forEach.call(els.previewArea.querySelectorAll('.quiz-input'), function (input) {
+      var pi = input.getAttribute('data-pi');
+      input.addEventListener('input', function () { quizAnswers[pi] = input.value; });
+      input.addEventListener('keydown', function (evt) {
+        if (evt.key === 'Enter') checkQuizAnswers();
+      });
+    });
+    var listenBtn = els.previewArea.querySelector('.quiz-head .listen-btn');
+    if (listenBtn) listenBtn.addEventListener('click', function () { speak(entry.infinitive); });
+    var checkBtn = document.getElementById('quizCheckBtn');
+    if (checkBtn) checkBtn.addEventListener('click', checkQuizAnswers);
+    var nextBtn = document.getElementById('quizNextBtn');
+    if (nextBtn) nextBtn.addEventListener('click', nextQuizVerb);
+    document.getElementById('quizRestartBtn').addEventListener('click', restartQuiz);
+  }
+
   /* ---------- render orchestration ---------- */
   function renderPreview() {
     save();
@@ -581,13 +703,34 @@
       els.previewNote.textContent = items.length + ' word(s). Click a row below to self-check, or use Print for a worksheet + answer key.';
       renderVocabOnScreenCheck(items);
     } else {
-      var pagesBlank = conjugationPages(false);
       els.sheetNav.innerHTML = '';
       if (!state.conjugations.length) {
         els.previewArea.innerHTML = '<p class="empty-note">Add a verb to preview.</p>';
         els.previewNote.textContent = 'No verbs yet.';
         return;
       }
+
+      var gridModeBtn = document.createElement('button');
+      gridModeBtn.type = 'button'; gridModeBtn.className = 'secondary';
+      gridModeBtn.textContent = conjView === 'grid' ? '[Grid preview]' : 'Grid preview';
+      gridModeBtn.addEventListener('click', function () { conjView = 'grid'; renderPreview(); });
+      var quizModeBtn = document.createElement('button');
+      quizModeBtn.type = 'button'; quizModeBtn.className = 'secondary';
+      quizModeBtn.textContent = conjView === 'quiz' ? '[Quiz mode]' : 'Quiz mode';
+      quizModeBtn.addEventListener('click', function () {
+        conjView = 'quiz';
+        buildQuizOrder();
+        renderPreview();
+      });
+      els.sheetNav.appendChild(gridModeBtn); els.sheetNav.appendChild(quizModeBtn);
+
+      if (conjView === 'quiz') {
+        renderConjugationQuiz();
+        els.previewNote.textContent = 'Fill in each form, then check &mdash; a faster, on-screen alternative to the printable grid.';
+        return;
+      }
+
+      var pagesBlank = conjugationPages(false);
       currentPage = Math.min(currentPage, pagesBlank.length - 1);
       pagesBlank.forEach(function (_, idx) {
         var b = document.createElement('button');
@@ -632,6 +775,9 @@
     renderConjugationEditor();
     checkRevealed = {};
     currentPage = 0;
+    conjView = 'grid';
+    quizOrder = []; quizIndex = 0; quizAnswers = {}; quizChecked = false;
+    quizScore = { correct: 0, total: 0 };
     renderPreview();
   }
 

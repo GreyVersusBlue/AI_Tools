@@ -114,6 +114,19 @@
           parts.push(lineEl(offsetX + seg[0], offsetY + seg[1], offsetX + seg[2], offsetY + seg[3], THIN));
         });
       });
+    } else if (style === 'isometricDot') {
+      // A dot at every vertex of the same triangular lattice the isometric
+      // line grid above draws — alternate rows shifted by half a cell so
+      // each dot sits at the meeting point of the three line families.
+      var isoSpacing = cellSize * (Math.sqrt(3) / 2);
+      var isoRows = Math.floor(gridH / isoSpacing);
+      for (var ir = 0; ir <= isoRows; ir++) {
+        var isoY = offsetY + ir * isoSpacing;
+        var isoXOffset = (ir % 2 === 1) ? cellSize / 2 : 0;
+        for (var ix = isoXOffset; ix <= gridW + 1e-6; ix += cellSize) {
+          parts.push(dotEl(offsetX + ix, isoY, 0.012));
+        }
+      }
     } else if (style === 'dot') {
       for (var dc = 0; dc <= cols; dc++) {
         for (var dr = 0; dr <= rows; dr++) {

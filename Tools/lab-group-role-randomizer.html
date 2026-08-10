@@ -114,6 +114,19 @@
 
   #print-title { display: none; }
 
+  /* ── Printable table tents (foldable name-card per group) ─────────────── */
+  .tent-sheet { display: flex; flex-direction: column; }
+  .tent-card { border: 1px dashed #999; margin-bottom: .6rem; }
+  .tent-half { padding: 1.4rem 1rem; text-align: center; }
+  .tent-half.tent-flip { transform: rotate(180deg); }
+  .tent-fold { border-top: 1px dashed #999; position: relative; }
+  .tent-fold::after { content: '\2702 fold here'; position: absolute; left: 50%; top: -.55rem; transform: translateX(-50%); background: #fff; font-size: .68rem; color: var(--muted); padding: 0 .4rem; }
+  .tent-group { font-size: 1.6rem; font-weight: 800; color: var(--accent); margin-bottom: .6rem; }
+  .tent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+  .tent-list li { display: flex; justify-content: space-between; gap: .8rem; font-size: 1rem; }
+  .tent-list .t-role { color: var(--accent-2); font-weight: 700; text-transform: uppercase; font-size: .78rem; letter-spacing: .03em; }
+  .tent-list .t-role.member { color: var(--muted); }
+
   @media print {
     body { background: #fff; padding: 0; }
     .app-header, .toolbar, .layout > .editor, footer.note, #msg, #warnArea { display: none !important; }
@@ -125,6 +138,13 @@
     .group-card h3 { color: #000; }
     .group-card li .role { color: #000; }
     .group-card li .role.member { color: #444; }
+
+    .tent-card { border: none; break-after: page; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 9in; margin: 0; }
+    .tent-card:last-child { break-after: auto; }
+    .tent-half { padding: 2rem 1rem; }
+    .tent-group { color: #000; }
+    .tent-list .t-role { color: #000; }
+    .tent-list .t-role.member { color: #444; }
   }
 </style>
 </head>
@@ -209,6 +229,9 @@
           <button type="button" class="secondary" id="printHistoryBtn">Print role history</button>
         </div>
         <div class="btn-row">
+          <button type="button" class="secondary" id="printTentsBtn">Print table tents</button>
+        </div>
+        <div class="btn-row">
           <button type="button" class="danger" id="resetHistoryBtn">Reset role history</button>
         </div>
         <p class="hint" id="historyHint"></p>
@@ -245,7 +268,7 @@
    'rosterName', 'namesInput', 'nameCount',
    'splitValueLabel', 'splitValue', 'roleList', 'addRoleBtn',
    'pairA', 'pairB', 'addPairBtn', 'pairList',
-   'shuffleBtn', 'printBtn', 'printHistoryBtn', 'resetHistoryBtn',
+   'shuffleBtn', 'printBtn', 'printHistoryBtn', 'printTentsBtn', 'resetHistoryBtn',
    'historyHint', 'resultsArea', 'warnArea', 'printTitle', 'msg', 'rosterHubSelect', 'rosterHubLoadBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.printTitle = document.getElementById('print-title');
@@ -603,6 +626,42 @@
     if (!state.lastGroups || !state.lastGroups.length) { showMsg('Shuffle groups before printing.'); return; }
     els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Lab Groups & Roles — ' + new Date().toLocaleDateString();
     window.print();
+  });
+
+  // ── Printable table tents: one foldable name-card per group ──────────────
+  // Each card prints the same panel twice, the top copy rotated 180°, so
+  // folding the sheet along the middle dashed line makes it stand up like a
+  // tent with upright text on both faces — set one out at each lab station.
+  function tentPanelHtml(group, groupNum) {
+    var rows = group.map(function (s) {
+      var roleText = s.role || MEMBER_LABEL;
+      var cls = s.role ? 't-role' : 't-role member';
+      return '<li><span class="t-name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
+    }).join('');
+    return '<div class="tent-group">Group ' + groupNum + '</div><ul class="tent-list">' + rows + '</ul>';
+  }
+
+  function tentsHtml(result) {
+    return '<div class="tent-sheet">' + result.map(function (group, i) {
+      var panel = tentPanelHtml(group, i + 1);
+      return '<div class="tent-card">' +
+        '<div class="tent-half tent-flip">' + panel + '</div>' +
+        '<div class="tent-fold"></div>' +
+        '<div class="tent-half">' + panel + '</div>' +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
+  els.printTentsBtn.addEventListener('click', function () {
+    if (!state.lastGroups || !state.lastGroups.length) { showMsg('Shuffle groups before printing.'); return; }
+    var savedResultsHtml = els.resultsArea.innerHTML;
+    var savedWarnHtml = els.warnArea.innerHTML;
+    els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Lab Group Table Tents — ' + new Date().toLocaleDateString();
+    els.warnArea.innerHTML = '';
+    els.resultsArea.innerHTML = tentsHtml(state.lastGroups);
+    window.print(); // blocks until the dialog closes, so this restores the live view right after
+    els.resultsArea.innerHTML = savedResultsHtml;
+    els.warnArea.innerHTML = savedWarnHtml;
   });
 
   // ── Role history report (per student, roles held to date) ───────────────

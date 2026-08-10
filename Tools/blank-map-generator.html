@@ -300,6 +300,17 @@
   body.student-blank .bmg-label .lbl-text { color: transparent !important; }
   body.student-blank #legendPanel .legend-input { color: transparent; }
 
+  /* Self-check quiz mode: hides each label's own text until it's clicked,
+     so a finished (labeled) map can be used as a click-to-reveal study tool
+     instead of only a static handout. Screen-only by design — @media screen
+     keeps it from ever affecting what actually prints, even if the quiz
+     happens to be on when Ctrl+P is pressed. */
+  @media screen {
+    .bmg-label.quiz-hidden .lbl-text { color: transparent !important; border-bottom: 1px dashed var(--accent-2); }
+    .bmg-label.quiz-mode { cursor: pointer; }
+    .bmg-label.quiz-mode .lbl-del { display: none !important; }
+  }
+
   #tiledPrintPanel .tileRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   #tiledPrintPanel label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
   #tiledPrintPanel select { font-family: inherit; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--ink); }
@@ -432,6 +443,7 @@
       </select>
       <button id="btnMeasure" class="small toggle" title="Click two points on the map to measure the real-world straight-line distance between them">Measure Distance</button>
       <button id="btnStudentMode" class="small toggle" title="Hide label and legend text for a printable student handout. Toggle off to see the labeled teacher/answer-key version.">Student Handout Mode</button>
+      <button id="btnQuizMode" class="small toggle" title="Hide every label's text until it's clicked, so this finished map doubles as a click-to-reveal self-check study tool. Screen only — never affects printing.">Self-Check Quiz Mode</button>
     </div>
     <div id="calibratePanel" class="card no-print" hidden>
       <h2>Map coordinates</h2>
@@ -903,6 +915,15 @@ function setStudentModeEnabled(on) {
   save();
 }
 
+// Session-only, unlike Student Handout Mode above — not saved with the
+// project, since it's a study-session toggle rather than part of the map's
+// design. Always starts back off whenever a map/project loads (see
+// displayMap() and showEmptyMapState()).
+function setQuizModeEnabled(on) {
+  labelLayer.setQuizMode(on);
+  el('btnQuizMode').classList.toggle('active', on);
+}
+
 function setScaleBarEnabled(on) {
   project.scaleBarEnabled = on;
   el('btnScaleBar').classList.toggle('active', on);
@@ -915,6 +936,7 @@ function setScaleBarEnabled(on) {
 el('btnCompass').addEventListener('click', () => setCompassEnabled(!project.compassEnabled));
 el('btnLocator').addEventListener('click', () => setLocatorEnabled(!project.locatorEnabled));
 el('btnStudentMode').addEventListener('click', () => setStudentModeEnabled(!project.studentBlankMode));
+el('btnQuizMode').addEventListener('click', () => setQuizModeEnabled(!labelLayer.isQuizMode()));
 el('btnScaleBar').addEventListener('click', () => {
   if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
   setScaleBarEnabled(!project.scaleBarEnabled);
@@ -1413,6 +1435,7 @@ function displayMap(record) {
   // placement mode active — the next click would silently add a marker (or
   // whatever tool was active) into the NEW project using stale style/color.
   setPlaceMode('none');
+  setQuizModeEnabled(false);
   el('calibratePanel').hidden = true;
   el('btnGrid').classList.remove('active');
   el('batchPanel').hidden = true;
@@ -2117,6 +2140,7 @@ function showEmptyMapState(mapMissing) {
   el('btnGrid').classList.remove('active');
   document.body.classList.remove('student-blank');
   el('btnStudentMode').classList.remove('active');
+  setQuizModeEnabled(false);
   el('scaleBar').hidden = true;
   el('btnScaleBar').classList.remove('active');
   el('scaleBarUnitSelect').hidden = true;

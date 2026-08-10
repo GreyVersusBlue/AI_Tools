@@ -33,6 +33,12 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
   let labels = [];
   const nodes = new Map(); // id -> element
   let selectedId = null; // for keyboard-nudge — see select()/nudge()
+  // Self-check quiz mode: while on, every label's text is hidden until
+  // clicked (dragging/editing/deleting are disabled so it stays a read-only
+  // study view). `revealed` tracks which labels the student has tapped so
+  // far this round — session-only, never saved with the project.
+  let quizMode = false;
+  const revealed = new Set();
 
   function newId() {
     return crypto.randomUUID ? crypto.randomUUID() : `lbl_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -41,7 +47,31 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
   function setLabels(list) {
     labels = list;
     selectedId = null;
+    revealed.clear();
     reconcile();
+  }
+
+  /** Turns self-check quiz mode on/off — clears any previously revealed labels so a fresh round starts fully hidden. */
+  function setQuizMode(on) {
+    quizMode = !!on;
+    revealed.clear();
+    if (quizMode) deselect();
+    nodes.forEach((node, id) => applyQuizState(node, id));
+  }
+
+  function isQuizMode() { return quizMode; }
+
+  /** Shows/re-hides one label's text — called when its node is clicked in quiz mode. */
+  function toggleReveal(id) {
+    if (revealed.has(id)) revealed.delete(id);
+    else revealed.add(id);
+    const node = nodes.get(id);
+    if (node) applyQuizState(node, id);
+  }
+
+  function applyQuizState(node, id) {
+    node.classList.toggle('quiz-mode', quizMode);
+    node.classList.toggle('quiz-hidden', quizMode && !revealed.has(id));
   }
 
   /** Selects a label (highlighting it and making it the keyboard-nudge target), or clears selection if id is null/missing. Only one label or marker can be selected at a time — the main script coordinates that across layers. */
@@ -120,6 +150,7 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
         if (textEl && textEl.textContent !== l.text) textEl.textContent = l.text;
         applyStyle(node, l);
       }
+      applyQuizState(node, l.id);
     });
     reposition();
   }
@@ -137,7 +168,11 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     node.querySelector(".lbl-text").textContent = label.text;
     applyStyle(node, label);
     wireDrag(node, label);
-    node.addEventListener("dblclick", e => { e.stopPropagation(); startEdit(node, label); });
+    node.addEventListener("dblclick", e => {
+      e.stopPropagation();
+      if (quizMode) return;
+      startEdit(node, label);
+    });
     node.querySelector(".lbl-del").addEventListener("click", e => {
       e.stopPropagation();
       remove(label.id);
@@ -149,6 +184,7 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     let dragging = false, startX = 0, startY = 0, startStage = null;
     node.addEventListener("pointerdown", e => {
       if (e.target.closest(".lbl-del") || node.classList.contains("editing")) return;
+      if (quizMode) return; // a plain click reveals/hides instead — see the "click" listener below
       dragging = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -177,6 +213,12 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     }
     node.addEventListener("pointerup", end);
     node.addEventListener("pointercancel", end);
+
+    node.addEventListener("click", e => {
+      if (!quizMode) return;
+      e.stopPropagation();
+      toggleReveal(label.id);
+    });
   }
 
   /** Builds the inline style bar (color/size/bold/italic) shown only while a label is being edited. */
@@ -279,5 +321,5 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     if (label && node) startEdit(node, label);
   }
 
-  return { setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge };
+  return { setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge, setQuizMode, isQuizMode };
 }

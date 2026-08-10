@@ -89,14 +89,9 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
-| 2 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
-| 3 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
-| 4 | Lab Group & Role Randomizer | Printable table-tent per group | A foldable name-card showing today's group and roles, to set out at each lab station. |
-| 5 | Timeline Builder | Side-by-side compare mode | View two saved timelines together for teaching concurrent history threads. |
-| 6 | Vocab & Conjugation Drill Generator | Fill-in-the-blank quiz mode | A lighter, faster quiz format alongside the existing full conjugation-grid drill. |
-| 7 | Gallery Walk QR Codes | Per-piece reaction tap | An optional star/emoji reaction button per entry, tallied for the artist — fully local per device, nothing synced. |
-| 8 | Blank Map Generator | Self-check quiz mode | Hide the labels until clicked, so a finished map can double as a self-check study tool instead of only a static handout. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new enhancement idea here at whatever
+rank reflects its priority to start the list over.
 
 ### Currently claimed (in progress elsewhere)
 
