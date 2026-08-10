@@ -150,6 +150,8 @@
         </div>
 
         <button type="button" id="generateBtn">Generate new sheet</button>
+        <button type="button" class="secondary" id="generateLeveledBtn">Generate Leveled Set (Easy / Medium / Hard)</button>
+        <p class="hint">Builds three matching sheets from this template in one pass &mdash; same problem count and layout, with the operand range scaled down for Easy and up for Hard &mdash; so you can hand out the right level to each student without reconfiguring anything.</p>
 
         <div class="toggle-row" id="versionTabs" style="display:none;"></div>
 
@@ -187,7 +189,7 @@
   'use strict';
 
   var els = {};
-  ['templateKey','sheetTitle','problemCount','columns','versionCount','versionTabs','generateBtn',
+  ['templateKey','sheetTitle','problemCount','columns','versionCount','versionTabs','generateBtn','generateLeveledBtn',
    'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote',
    'exportSettingsBtn','importSettingsBtn','importSettingsFile',
    'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn',
@@ -198,6 +200,7 @@
     timedFluency: false, fluencyTargetSeconds: '' };
   var problemSets = []; // [{ label: 'Version A'|null, problems: [...] }, ...]
   var currentVersionIndex = 0;
+  var isLeveledSet = false; // true when problemSets came from "Generate Leveled Set" — just changes preview/print copy
   var view = 'worksheet';
   var todayStr = new Date().toLocaleDateString();
 
@@ -325,14 +328,36 @@
 
   function renderPreview() {
     var set = problemSets[currentVersionIndex];
+    var setWord = isLeveledSet ? 'levels' : 'versions';
     els.previewArea.innerHTML = view === 'worksheet' ? worksheetHtml(set) : answersHtml(set);
     els.previewNote.textContent = (view === 'worksheet'
       ? 'Worksheet preview — ' + set.problems.length + ' problems.'
       : 'Answer key preview — matches the current worksheet exactly.') +
-      (problemSets.length > 1 ? ' (' + set.label + ', ' + problemSets.length + ' versions total.)' : '');
+      (problemSets.length > 1 ? ' (' + set.label + ', ' + problemSets.length + ' ' + setWord + ' total.)' : '');
     els.printBtn.textContent = problemSets.length > 1
-      ? 'Print all ' + problemSets.length + ' versions'
+      ? 'Print all ' + problemSets.length + ' ' + setWord
       : 'Print (both pages)';
+  }
+
+  /** Scales one operand range easier (narrower, from the same floor) or
+      harder (wider, extended past the same ceiling) for the leveled-set
+      button. A pinned range (fact-family templates like "×6 Facts Only")
+      has no span to scale, so it's left untouched at every level. */
+  function levelRangeFor(range, level) {
+    var span = range.max - range.min;
+    if (span <= 0 || level === 'medium') return { min: range.min, max: range.max };
+    var delta = Math.max(1, Math.round(span * 0.5));
+    return level === 'easy'
+      ? { min: range.min, max: range.min + delta }
+      : { min: range.min, max: Math.min(999, range.max + delta) };
+  }
+
+  function templateForLevel(base, level) {
+    return {
+      key: base.key, label: base.label, operation: base.operation,
+      operand1: levelRangeFor(base.operand1, level),
+      operand2: levelRangeFor(base.operand2, level)
+    };
   }
 
   function readFormIntoSettings() {
@@ -356,6 +381,21 @@
         problems: MathDrillGenerate.generateProblems(template, settings.problemCount)
       });
     }
+    isLeveledSet = false;
+    currentVersionIndex = 0;
+    renderVersionTabs();
+    renderPreview();
+  }
+
+  function generateLeveledSet() {
+    readFormIntoSettings();
+    persist();
+    var base = effectiveTemplate(settings.templateKey);
+    problemSets = [['Easy', 'easy'], ['Medium', 'medium'], ['Hard', 'hard']].map(function (pair) {
+      var t = templateForLevel(base, pair[1]);
+      return { label: pair[0], problems: MathDrillGenerate.generateProblems(t, settings.problemCount) };
+    });
+    isLeveledSet = true;
     currentVersionIndex = 0;
     renderVersionTabs();
     renderPreview();
@@ -424,6 +464,7 @@
 
   /* ---------- wiring ---------- */
   els.generateBtn.addEventListener('click', generate);
+  els.generateLeveledBtn.addEventListener('click', generateLeveledSet);
   els.templateKey.addEventListener('change', function () { loadRangeInputs(); generate(); });
   els.sheetTitle.addEventListener('input', function () { readFormIntoSettings(); persist(); renderPreview(); });
   els.problemCount.addEventListener('change', generate);

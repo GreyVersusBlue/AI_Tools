@@ -39,6 +39,16 @@
   .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start; }
   @media (max-width: 1050px) { .board { grid-template-columns: 1fr; } }
 
+  /* ── Message of the Day banner ────────────────────────────────────── */
+  .motd-card { margin-bottom: 1rem; }
+  .motd-display { font-size: clamp(1.2rem, 3.4vw, 1.9rem); font-weight: 700; color: var(--accent); text-align: center; padding: .2rem 0; white-space: pre-wrap; }
+  .motd-empty { color: var(--muted); font-size: .88rem; text-align: center; padding: .2rem 0; margin: 0; }
+  .motd-textarea {
+    width: 100%; font-family: inherit; font-size: 1rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .6rem .7rem; resize: vertical; min-height: 4rem; margin-bottom: .6rem;
+  }
+
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; }
   .card-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .8rem; display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
   .card-title a { color: var(--accent-2); text-transform: none; letter-spacing: 0; font-weight: 600; font-size: .78rem; }
@@ -125,6 +135,23 @@
     <a class="back-link" href="../index.html">&larr; Toolkit</a>
     <h1>Command Center</h1>
     <p class="sub">A timer, today's school-calendar day, and a quick roster call, side by side &mdash; run the whole period from this one page.</p>
+  </div>
+
+  <div class="card motd-card" id="motdCard">
+    <div class="card-title"><span>Message of the Day</span><button type="button" class="secondary small" id="motdEditBtn">Edit</button></div>
+    <div id="motdView">
+      <div class="motd-display" id="motdDisplay" style="display:none;"></div>
+      <p class="motd-empty" id="motdEmpty">No message set for today &mdash; click Edit to add one to the board.</p>
+    </div>
+    <div id="motdEditRow" style="display:none;">
+      <label for="motdInput" class="sr-only">Message of the day</label>
+      <textarea id="motdInput" class="motd-textarea" placeholder="e.g. Quiz Friday on Ch. 4 &mdash; bring a pencil!" maxlength="240"></textarea>
+      <div class="btn-row">
+        <button type="button" class="small" id="motdSaveBtn">Save</button>
+        <button type="button" class="secondary small" id="motdClearBtn">Clear</button>
+        <button type="button" class="secondary small" id="motdCancelBtn">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <div class="board">
@@ -217,6 +244,50 @@
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
   }
   var settings = loadSettings();
+
+  /* ==================== Message of the Day ==================== */
+  var motdDisplay = document.getElementById('motdDisplay');
+  var motdEmpty = document.getElementById('motdEmpty');
+  var motdEditRow = document.getElementById('motdEditRow');
+  var motdInput = document.getElementById('motdInput');
+  var motdEditBtn = document.getElementById('motdEditBtn');
+
+  function renderMotd() {
+    var text = (settings.motd || '').trim();
+    if (text) {
+      motdDisplay.textContent = text;
+      motdDisplay.style.display = '';
+      motdEmpty.style.display = 'none';
+    } else {
+      motdDisplay.style.display = 'none';
+      motdEmpty.style.display = '';
+    }
+  }
+  function openMotdEditor() {
+    motdInput.value = settings.motd || '';
+    motdEditRow.style.display = '';
+    motdInput.focus();
+  }
+  function closeMotdEditor() {
+    motdEditRow.style.display = 'none';
+  }
+  motdEditBtn.addEventListener('click', function () {
+    if (motdEditRow.style.display === 'none') openMotdEditor(); else closeMotdEditor();
+  });
+  document.getElementById('motdSaveBtn').addEventListener('click', function () {
+    settings.motd = motdInput.value.trim().slice(0, 240);
+    saveSettings(settings);
+    renderMotd();
+    closeMotdEditor();
+  });
+  document.getElementById('motdClearBtn').addEventListener('click', function () {
+    settings.motd = '';
+    saveSettings(settings);
+    motdInput.value = '';
+    renderMotd();
+  });
+  document.getElementById('motdCancelBtn').addEventListener('click', closeMotdEditor);
+  renderMotd();
 
   /* ==================== Timer ==================== */
   var timerDisplay = document.getElementById('timerDisplay');

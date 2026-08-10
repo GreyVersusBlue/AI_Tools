@@ -82,6 +82,13 @@
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
   #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
   #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+  #msg.warn { display: block; background: #fdf0dc; color: #8a5a13; border: 1px solid #eecda0; font-weight: 600; }
+
+  .flyer-flag { color: #a3372b; font-weight: 700; white-space: nowrap; }
+  .flyer-threshold-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; font-size: .85rem; }
+  .flyer-threshold-row input[type="number"] {
+    width: 3.4rem; margin-bottom: 0; text-align: center; padding: .4rem .3rem;
+  }
 
   .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
 
@@ -240,6 +247,11 @@
       <div class="card">
         <div class="card-title"><span>This Week</span></div>
         <div class="hint">Sign-out counts since Sunday (today plus any archived days) &mdash; a quick way to spot a pattern worth a hallway or nurse conversation.</div>
+        <div class="flyer-threshold-row">
+          <label for="flyerThreshold" style="margin:0;">&#128681; Flag as &ldquo;frequent flyer&rdquo; after</label>
+          <input type="number" id="flyerThreshold" min="2" max="20">
+          <label style="margin:0;font-weight:400;">passes this week</label>
+        </div>
         <div class="weekly-grid" id="weeklyWrap"></div>
       </div>
 
@@ -293,11 +305,12 @@
   var LOG_LIMIT = 300;
   var OVER_TIME_MIN = 9;
   var LIVE_REFRESH_MS = 20000;
+  var FLYER_THRESHOLD_DEFAULT = 5;
 
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
-   'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap', 'weeklyWrap',
+   'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap', 'weeklyWrap', 'flyerThreshold',
    'destChips', 'studentGrid', 'liveBoard', 'alertSoundToggle', 'printSelect', 'printBtn', 'activityFeed',
    'printArea', 'printTitle', 'printSub', 'printBody', 'msg'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -368,6 +381,8 @@
     if (!Array.isArray(s.log)) s.log = [];
     if (!Array.isArray(s.history)) s.history = [];
     s.alertSoundOn = (typeof s.alertSoundOn === 'boolean') ? s.alertSoundOn : true;
+    var flyerN = parseInt(s.flyerThreshold, 10);
+    s.flyerThreshold = (Number.isFinite(flyerN) && flyerN >= 2 && flyerN <= 20) ? flyerN : FLYER_THRESHOLD_DEFAULT;
     var hasArmed = s.destinations.some(function (d) { return d.id === s.armedDestId; });
     if (!hasArmed) s.armedDestId = s.destinations.length ? s.destinations[0].id : null;
     return s;
@@ -394,6 +409,7 @@
     els.setName.value = state.name;
     els.namesInput.value = state.namesText;
     els.alertSoundToggle.checked = state.alertSoundOn;
+    els.flyerThreshold.value = state.flyerThreshold;
     updateNameCount();
     renderDestsEditor();
     renderChips();
@@ -406,6 +422,16 @@
 
   els.alertSoundToggle.addEventListener('change', function () {
     state.alertSoundOn = els.alertSoundToggle.checked;
+    save();
+  });
+
+  els.flyerThreshold.addEventListener('change', function () {
+    var n = parseInt(els.flyerThreshold.value, 10);
+    state.flyerThreshold = (Number.isFinite(n) && n >= 2 && n <= 20) ? n : FLYER_THRESHOLD_DEFAULT;
+    els.flyerThreshold.value = state.flyerThreshold;
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
     save();
   });
 
@@ -581,7 +607,7 @@
       var cls = out ? 'is-out' : '';
       var status = out ? ('Out \u2014 ' + escapeHtml(out.destLabel)) : 'Tap to sign out';
       return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '">' +
-        '<div class="s-name">' + escapeHtml(n) + '</div>' +
+        '<div class="s-name">' + escapeHtml(n) + flyerBadge(n) + '</div>' +
         '<div class="s-status">' + status + '</div>' +
         '</div>';
     }).join('');
@@ -612,6 +638,9 @@
     renderTodayLog();
     renderWeekly();
     save();
+    if (isFrequentFlyer(name)) {
+      showMsg('\u{1F6A9} ' + name + ' has been out ' + studentWeeklyCount(name) + ' times this week — worth a check-in.', 'warn');
+    }
     if (cardEl) {
       var refreshed = els.studentGrid.querySelector('.student-card[data-name="' + cssEscape(name) + '"]');
       if (refreshed) {
@@ -648,7 +677,7 @@
       }
       var elapsedText = mins < 1 ? 'just now' : (mins + ' min');
       return '<div class="out-row' + (over ? ' over-time' : '') + '">' +
-        '<div class="out-info"><span class="out-name">' + escapeHtml(o.name) + '</span><span class="out-dest">' + escapeHtml(o.destLabel) + '</span></div>' +
+        '<div class="out-info"><span class="out-name">' + escapeHtml(o.name) + flyerBadge(o.name) + '</span><span class="out-dest">' + escapeHtml(o.destLabel) + '</span></div>' +
         '<div class="out-time"><span class="out-clock">Out at ' + escapeHtml(o.outStr) + '</span><span class="out-elapsed">' + elapsedText + '</span></div>' +
         '<button class="secondary" type="button" data-signin="' + escapeAttr(o.id) + '">Sign in</button>' +
         '</div>';
@@ -717,6 +746,22 @@
     return { byDest: byDest, byStudent: byStudent };
   }
 
+  // Weekly count for one student (today's log + anyone currently out + archived
+  // days since Sunday) — used to flag "frequent flyers" wherever their name shows up.
+  function studentWeeklyCount(name) {
+    return weeklyCounts().byStudent[name] || 0;
+  }
+
+  function isFrequentFlyer(name) {
+    return studentWeeklyCount(name) >= state.flyerThreshold;
+  }
+
+  function flyerBadge(name) {
+    return isFrequentFlyer(name)
+      ? ' <span class="flyer-flag" title="' + studentWeeklyCount(name) + ' passes this week">&#128681; ' + studentWeeklyCount(name) + '&times; this wk</span>'
+      : '';
+  }
+
   function topEntries(counts, limit) {
     return Object.keys(counts)
       .map(function (k) { return { label: k, count: counts[k] }; })
@@ -767,7 +812,7 @@
         ? '<span class="a-delta out">still out</span>'
         : ('<span class="a-delta">' + it.durationMin + ' min</span>');
       return '<div class="activity-item">' +
-        '<span><span class="a-who">' + escapeHtml(it.name) + '</span> <span class="a-what">&mdash; ' + escapeHtml(it.destLabel) + '</span></span>' +
+        '<span><span class="a-who">' + escapeHtml(it.name) + '</span>' + flyerBadge(it.name) + ' <span class="a-what">&mdash; ' + escapeHtml(it.destLabel) + '</span></span>' +
         '<span>' + right + ' <span class="a-time">' + escapeHtml(it.outStr) + '</span></span>' +
         '</div>';
     }).join('');

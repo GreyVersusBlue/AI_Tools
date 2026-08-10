@@ -169,6 +169,18 @@
     .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .85rem; }
     .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
     .ref-sheet th { background: #eee; }
+
+    .cover-sheet {
+      border: 3px double #333; border-radius: 4px; padding: 48px 40px; margin: 24px;
+      min-height: 80vh; display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .cover-sheet .c-eyebrow { font-size: .95rem; letter-spacing: .18em; text-transform: uppercase; color: #555; margin-bottom: .8rem; }
+    .cover-sheet .c-title { font-size: 2.1rem; font-weight: 700; margin: 0 0 1.4rem; }
+    .cover-sheet .c-story { font-size: 1.15rem; line-height: 1.8; white-space: pre-wrap; max-width: 62ch; margin-bottom: 2.2rem; }
+    .cover-sheet .c-blanks { margin-top: auto; width: 100%; max-width: 60ch; font-size: 1rem; }
+    .cover-sheet .c-blank-row { display: flex; gap: .5rem; margin-bottom: 1rem; text-align: left; }
+    .cover-sheet .c-blank-row .c-label { white-space: nowrap; }
+    .cover-sheet .c-blank-row .c-line { flex: 1; border-bottom: 1px solid #333; }
   }
 </style>
 </head>
@@ -204,6 +216,16 @@
           <button class="secondary" id="addStationBtn" type="button">+ Add station</button>
         </div>
         <div class="hint">Each station's accepted answer unlocks the next one. Matching ignores case and extra spaces. Leave "Next station" on Auto for a straight linear chain, or point it anywhere for a branching path.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Story intro / cover page</span></div>
+        <label for="storyIntro">Backstory / mission briefing (optional)</label>
+        <textarea id="storyIntro" placeholder="e.g. The lab's readings went dark at midnight. Something in the old wing is still running the experiment &mdash; and it's counting down. Solve each station's puzzle to shut it down before time runs out."></textarea>
+        <div class="hint">Prints as its own full-page cover sheet &mdash; read it aloud or hand it out to set the scene before teams start scanning station codes.</div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="secondary" id="printCoverBtn" type="button">Print Cover Page</button>
+        </div>
       </div>
 
       <div class="card">
@@ -294,6 +316,17 @@
     <tbody id="printAnswerBody"></tbody>
   </table>
 </div>
+<div class="print-only" id="printCoverArea">
+  <div class="cover-sheet">
+    <div class="c-eyebrow">Mission Briefing</div>
+    <h1 class="c-title" id="coverTitle">Escape Room</h1>
+    <div class="c-story" id="coverStory"></div>
+    <div class="c-blanks">
+      <div class="c-blank-row"><span class="c-label">Team name:</span><span class="c-line"></span></div>
+      <div class="c-blank-row"><span class="c-label">Time started:</span><span class="c-line"></span></div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -304,6 +337,7 @@
   var els = {};
   ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
    'chainPreview', 'stationsList', 'addStationBtn',
+   'storyIntro', 'printCoverBtn', 'printCoverArea', 'coverTitle', 'coverStory',
    'playerLink', 'copyLinkBtn',
    'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart',
    'countdownEnabled', 'countdownMinutes', 'countdownMinutesRow', 'printCodesBtn', 'printAnswersBtn',
@@ -369,6 +403,7 @@
       stations: [{ clue: '', answers: '', hint: '', next: null, image: '' }],
       cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
       countdownEnabled: false, countdownMinutes: 20,
+      storyIntro: '',
     };
     applyStateToForm();
     refreshSwitcher();
@@ -383,6 +418,7 @@
     if (!loaded) return;
     if (!Array.isArray(loaded.stations)) loaded.stations = [];
     if (!loaded.roomId) loaded.roomId = makeRoomId();
+    if (typeof loaded.storyIntro !== 'string') loaded.storyIntro = '';
     state = loaded;
     ensureAtLeastOneStation();
     applyStateToForm();
@@ -392,6 +428,7 @@
 
   function applyStateToForm() {
     els.setName.value = state.name;
+    els.storyIntro.value = state.storyIntro || '';
     els.cardsPerPage.value = state.cardsPerPage || '4';
     els.ecLevel.value = state.ecLevel || 'Q';
     els.showNumber.checked = state.showNumber !== false;
@@ -542,6 +579,11 @@
       save();
       scheduleRender();
     }
+  });
+
+  els.storyIntro.addEventListener('input', function () {
+    state.storyIntro = els.storyIntro.value;
+    save();
   });
 
   els.addStationBtn.addEventListener('click', function () {
@@ -748,6 +790,12 @@
     }).join('');
   }
 
+  function buildPrintCover() {
+    els.coverTitle.textContent = state.name || 'Escape Room';
+    var story = (state.storyIntro || '').trim();
+    els.coverStory.textContent = story || 'Solve each station’s puzzle to unlock the next clue — crack them all to escape!';
+  }
+
   function printSection(area, buildFn) {
     buildFn();
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
@@ -757,6 +805,7 @@
 
   els.printCodesBtn.addEventListener('click', function () { printSection(els.printQrArea, buildPrintCodes); });
   els.printAnswersBtn.addEventListener('click', function () { printSection(els.printAnswerArea, buildPrintAnswers); });
+  els.printCoverBtn.addEventListener('click', function () { printSection(els.printCoverArea, buildPrintCover); });
 
   els.copyLinkBtn.addEventListener('click', function () {
     if (!els.playerLink.value) return;
