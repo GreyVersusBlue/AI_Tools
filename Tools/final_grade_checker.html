@@ -131,6 +131,47 @@
   #need-results .result-box { width: 220px; min-width: 220px; }
   #need-results .final-line { width: 100%; flex-wrap: wrap; }
 
+  /* ── Grading Settings panel ─────────────────────────────── */
+  .settings-panel { text-align: left; max-width: 760px; margin: var(--space-4) auto var(--space-6); padding: var(--space-4) var(--space-6); }
+  .settings-panel h2 { font-size: 17px; margin-bottom: 2px; }
+  .settings-panel .settings-help { font-size: 12px; opacity: 0.65; margin-bottom: var(--space-3); }
+  .settings-row { margin-bottom: var(--space-3); font-size: 13px; }
+  .settings-row > strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.7; margin-bottom: 4px; }
+  .settings-row label { display: block; margin: 3px 0; cursor: pointer; }
+  .settings-row select.input { width: 100%; max-width: 420px; padding: 6px 8px; font-size: 13px; }
+  .weights-inputs { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  .weights-inputs[hidden] { display: none; }
+  .weight-field { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .weight-field label { font-size: 10px; font-weight: 700; opacity: 0.6; text-transform: uppercase; }
+  .weight-field input { width: 64px; padding: 5px 4px; text-align: center; }
+  .weights-sum-note { font-size: 11.5px; margin-top: 2px; }
+  .settings-row .persist-help { display: block; font-size: 11px; opacity: 0.6; margin: 2px 0 0 22px; }
+  .slip-target-inline { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; opacity: 0.85; }
+  .slip-target-inline select { width: auto; padding: 4px 6px; font-size: 12px; }
+
+  /* ── "Show the arithmetic" block ────────────────────────── */
+  .arith-block { display: none; font-size: 11.5px; line-height: 1.5; opacity: 0.85; margin-top: var(--space-2); padding: 6px 8px; background: var(--color-surface); border: 1px dashed var(--color-divider); max-width: 420px; }
+  .arith-block .arith-line { margin-bottom: 2px; }
+  .arith-block .arith-line:last-child { margin-bottom: 0; }
+  body.show-work .arith-block { display: block; }
+
+  /* ── Per-student printable slips ────────────────────────── */
+  #slip-print-container { display: none; }
+  .slip { border: 1px solid var(--color-divider); padding: 0.6rem 0.85rem; margin-bottom: 0.5rem; }
+  .slip-name { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+  .slip-quarters { font-size: 12px; opacity: 0.75; margin-bottom: 4px; }
+  .slip-final { font-size: 13px; margin-bottom: 3px; }
+  .slip-method { opacity: 0.65; font-size: 11.5px; }
+  .slip-missing { font-size: 12.5px; margin-bottom: 3px; }
+  .slip-need { font-size: 12.5px; font-weight: 600; }
+  .slip-arith { font-size: 11px; opacity: 0.8; line-height: 1.5; margin-top: 3px; }
+  @media print {
+    body.printing-slips .container > *:not(#slip-print-container) { display: none !important; }
+    body.printing-slips #slip-print-container { display: block; }
+    body.printing-slips header.nav { display: none !important; }
+    .slip { page-break-inside: avoid; border: 1px solid #999; }
+  }
+
   @media (max-width: 680px) {
     .grades-row { flex-direction: column; }
     .divider { width: 100%; height: 1px; margin: var(--space-1) 0; }
@@ -170,14 +211,73 @@
       <button class="btn btn-secondary btn-red"   id="export-pdf-btn"   type="button">Export PDF</button>
       <button class="btn btn-secondary" id="share-pdf-btn" type="button" style="display:none;">Share PDF</button>
       <button class="btn btn-secondary" id="print-btn" type="button">Print</button>
+      <button class="btn btn-secondary" id="settings-toggle-btn" type="button" aria-expanded="false" aria-controls="settings-panel">⚙ Grading Settings</button>
+    </div>
+    <div class="header-actions no-print">
+      <button class="btn btn-secondary" id="print-slips-btn" type="button">Print Student Slips</button>
+      <span class="slip-target-inline">
+        <label for="slip-target-letter">Slip "needed" target:</label>
+        <select id="slip-target-letter" class="input">
+          <option value="D">D (passing)</option>
+          <option value="C">C</option>
+          <option value="B">B</option>
+          <option value="A">A</option>
+        </select>
+      </span>
     </div>
     <p class="privacy-note">
-      Everything stays in this browser tab. Nothing is sent anywhere and nothing is saved.
-      Close the tab and the grades are gone.
+      Everything stays in this browser tab. Nothing is sent anywhere and nothing is saved,
+      unless you explicitly check "Remember these settings" in Grading Settings below — which
+      only ever remembers the rounding/weighting settings, never a student's name or grades.
     </p>
     <div class="mode-tabs no-print" role="tablist" aria-label="Grade checker mode">
       <button class="btn btn-secondary mode-tab-btn active" id="tab-calc-btn" type="button" role="tab" aria-selected="true">Calculate My Grade</button>
       <button class="btn btn-secondary mode-tab-btn" id="tab-need-btn" type="button" role="tab" aria-selected="false">What Do I Need on the Final?</button>
+    </div>
+  </div>
+
+  <div class="card blueprint settings-panel no-print" id="settings-panel" hidden>
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <h2>Grading Settings</h2>
+    <p class="settings-help">
+      These change how <em>every</em> grade on this page is calculated — including exports and
+      slips. They apply only in this tab for this session unless you check "Remember" at the
+      bottom. The defaults below match the Carroll County rule described under the grade cards.
+    </p>
+
+    <div class="settings-row">
+      <strong>Rounding rule at the letter-grade boundary</strong>
+      <label><input type="radio" name="round-boundary" value="half" checked> Round up at exactly .5 (default — 89.5 is an A)</label>
+      <label><input type="radio" name="round-boundary" value="strict"> Strict — no credit for .5; only the whole cutoff counts (89.5 stays a B; 90.00+ is an A)</label>
+    </div>
+
+    <div class="settings-row">
+      <strong>Round the average before checking the cutoff?</strong>
+      <select class="input" id="round-precision">
+        <option value="none">No extra rounding — compare the exact average (recommended)</option>
+        <option value="whole">Round to the nearest whole percent first</option>
+        <option value="tenth">Round to the nearest tenth of a percent first</option>
+      </select>
+    </div>
+
+    <div class="settings-row">
+      <label><input type="checkbox" id="weights-enabled"> Use custom quarter weights instead of an equal 25% each</label>
+      <div class="weights-inputs" id="weights-inputs" hidden>
+        <div class="weight-field"><label for="weight-q1">Q1</label><input class="input" type="number" id="weight-q1" min="0" step="1" value="25"></div>
+        <div class="weight-field"><label for="weight-q2">Q2</label><input class="input" type="number" id="weight-q2" min="0" step="1" value="25"></div>
+        <div class="weight-field"><label for="weight-q3">Q3</label><input class="input" type="number" id="weight-q3" min="0" step="1" value="25"></div>
+        <div class="weight-field"><label for="weight-q4">Q4</label><input class="input" type="number" id="weight-q4" min="0" step="1" value="25"></div>
+        <div class="weights-sum-note" id="weights-sum-note"></div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <label><input type="checkbox" id="show-work-toggle"> Show the arithmetic on every student card, and when printing</label>
+    </div>
+
+    <div class="settings-row">
+      <label><input type="checkbox" id="settings-persist"> Remember these settings in this browser until I clear them</label>
+      <span class="persist-help">Only the rounding rule, weights, and show-work toggle above — never a student's name or grades. Unchecking this removes what was saved.</span>
     </div>
   </div>
 
@@ -275,6 +375,8 @@
     </div>
   </div>
 
+  <div id="slip-print-container" aria-hidden="true"></div>
+
 </div>
 
 <script type="module">
@@ -283,6 +385,7 @@
 // hand-worked cases. Do not reimplement any of it here.
 import {
   getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
+  LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
   isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
 } from './final-grade-checker/grade-math.mjs';
 
@@ -301,6 +404,96 @@ function borderlineInfo(value, cutoffs, margin) {
 }
 function borderlineLabel(info) {
   return `⚠ Borderline — ${info.distance.toFixed(2)} ${info.direction} the ${info.letter} cutoff`;
+}
+/** The letter/QP cutoff tables currently in effect, given the active Grading
+ * Settings — swaps to the "strict" tables when that boundary mode is chosen,
+ * so borderline flags measure distance to the cutoff that's actually in use. */
+function activeLetterCutoffs(opts) { return (opts && opts.boundary === 'strict') ? LETTER_CUTOFFS_STRICT : LETTER_CUTOFFS; }
+function activeQpCutoffs(opts)     { return (opts && opts.boundary === 'strict') ? QP_CUTOFFS_STRICT     : QP_CUTOFFS; }
+
+// ── Grading Settings ─────────────────────────────────────────
+// Session-only by default, matching this tool's deliberate no-storage stance
+// (see improvement-prompts/final-grade-checker.md). The ONLY thing this file
+// ever writes to localStorage is this settings object — rounding rule,
+// weights, and the show-work toggle — and only once the teacher explicitly
+// checks "Remember these settings". Student names and grades are never
+// written to storage anywhere in this file.
+const SETTINGS_KEY = 'final-grade-checker:settings-v1';
+const DEFAULT_SETTINGS = {
+  boundary: 'half',        // 'half' | 'strict'
+  precision: 'none',       // 'none' | 'whole' | 'tenth'
+  weightsEnabled: false,
+  weights: [25, 25, 25, 25],
+  showWork: false,
+  persist: false,
+};
+let settings = { ...DEFAULT_SETTINGS, weights: [...DEFAULT_SETTINGS.weights] };
+
+function loadPersistedSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved && typeof saved === 'object') {
+      settings = { ...DEFAULT_SETTINGS, ...saved, persist: true };
+    }
+  } catch { /* corrupt or blocked storage — fall back to session defaults */ }
+}
+function savePersistedSettings() {
+  try {
+    if (settings.persist) localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    else localStorage.removeItem(SETTINGS_KEY);
+  } catch { /* private browsing or a full quota — settings just won't persist */ }
+}
+function precisionDecimals(p) { return p === 'whole' ? 0 : p === 'tenth' ? 1 : null; }
+/** The opts object every calcFinals/getLetter/qpToFinalLetter call in this
+ * file passes, built fresh from the current Grading Settings. With every
+ * setting at its default, this is equivalent to calling those functions with
+ * no opts at all — see grade-math.mjs. */
+function calcOpts() {
+  return {
+    boundary: settings.boundary,
+    precision: precisionDecimals(settings.precision),
+    weights: settings.weightsEnabled ? settings.weights : null,
+  };
+}
+
+/**
+ * "Show the arithmetic" — the actual computation behind a final grade,
+ * spelled out in plain text, using the SAME `f` (calcFinals' result) already
+ * computed for display elsewhere, so this never disagrees with the numbers
+ * on screen. Returns three short lines a teacher can read aloud or hand to a
+ * student who's questioning a grade.
+ */
+function arithmeticLines(scores, f, opts) {
+  const weighted = !!(opts && opts.weights);
+  const w = weighted ? opts.weights : [25, 25, 25, 25];
+  const letters = scores.map(s => s === null ? null : getLetter(s, opts));
+  const qpVals  = letters.map(l => l === null ? null : getQP(l));
+
+  const qpTerms  = qpVals.map((v, i) => v === null ? '—' : weighted ? `${v}×${w[i]}` : `${v}`);
+  const pctTerms = scores.map((s, i) => s === null ? '—' : weighted ? `${s.toFixed(2)}×${w[i]}` : s.toFixed(2));
+  const denom = weighted ? `(${w.join('+')})` : QUARTERS;
+
+  const qpLine  = `Quality Points — letters ${letters.map(l => l ?? '—').join(', ')} → points ${qpVals.map(v => v ?? '—').join(', ')}. `
+                + `(${qpTerms.join(' + ')}) ÷ ${denom} = ${f.avgQP.toFixed(2)} → ${f.qpFinal}`;
+  const pctLine = `Percentage Average — (${pctTerms.join(' + ')}) ÷ ${denom} = ${f.pctAvg.toFixed(2)}% → ${f.pctFinal}`;
+  const winnerVal   = f.winner === 'QP' ? `${f.avgQP.toFixed(2)} pts → ${f.qpFinal}` : `${f.pctAvg.toFixed(2)}% → ${f.pctFinal}`;
+  const otherVal     = f.winner === 'QP' ? `${f.pctAvg.toFixed(2)}% → ${f.pctFinal}` : `${f.avgQP.toFixed(2)} pts → ${f.qpFinal}`;
+  const finalLine = `Final: ${f.finalLetter} — ${METHOD_NAME[f.winner]} (${winnerVal}) is higher than the other method (${otherVal}), so it's reported.`;
+  return { qpLine, pctLine, finalLine };
+}
+
+/** Renders the arith-block markup (hidden until "Show the arithmetic" is on),
+ * or an empty string when there's no final grade yet to show work for. */
+function arithBlockHtml(scores, f, opts) {
+  if (!f) return '';
+  const lines = arithmeticLines(scores, f, opts);
+  return `<div class="arith-block">
+    <div class="arith-line">${escHtml(lines.qpLine)}</div>
+    <div class="arith-line">${escHtml(lines.pctLine)}</div>
+    <div class="arith-line">${escHtml(lines.finalLine)}</div>
+  </div>`;
 }
 
 function gradeClass(l) { return l ? 'grade-'+l : 'grade-empty'; }
@@ -355,7 +548,7 @@ function exportableStudents() {
 async function withLibs(which, btn, run) {
   const rows = exportableStudents();
   if (rows.length === 0) { alert('No student data to export.'); return; }
-  if (rows.every(s => !calcFinals(s.scores))) {
+  if (rows.every(s => !calcFinals(s.scores, calcOpts()))) {
     alert('Nothing complete to export yet. A student needs all four quarters before a final grade exists.');
     return;
   }
@@ -393,8 +586,9 @@ function exportExcel() {
     'Final Grade', 'Method Used'
   ]];
 
+  const opts = calcOpts();
   students.forEach((s, i) => {
-    const f = calcFinals(s.scores);
+    const f = calcFinals(s.scores, opts);
     rows.push([
       i + 1,
       s.name || `Student ${i+1}`,
@@ -457,8 +651,9 @@ function buildPdfDoc() {
   doc.text(`Generated ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`, doc.internal.pageSize.width / 2, 78, { align: 'center' });
 
   // Build table rows
+  const pdfOpts = calcOpts();
   const tableRows = students.map((s, i) => {
-    const f = calcFinals(s.scores);
+    const f = calcFinals(s.scores, pdfOpts);
     const fmt = v => v !== null ? v.toFixed(2) : 'Missing';
     return [
       i + 1,
@@ -519,13 +714,13 @@ function buildPdfDoc() {
       // colours land on the wrong students.
       const s   = students[si];
       if (!s) return;
-      const f = calcFinals(s.scores);
+      const f = calcFinals(s.scores, pdfOpts);
 
       // Quarter score cells (cols 2–5)
       if (col >= 2 && col <= 5) {
         const score = s.scores[col - 2];
         if (score !== null) {
-          const letter = getLetter(score);
+          const letter = getLetter(score, pdfOpts);
           if (letter && gradeColors[letter]) {
             data.cell.styles.fillColor  = gradeColors[letter].bg;
             data.cell.styles.textColor  = gradeColors[letter].text;
@@ -684,7 +879,8 @@ function buildImportCard(student, i) {
   card.className = 'card blueprint student-card';
   card.innerHTML = '<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>';
   const scores = student.scores;
-  const letters = scores.map(s => s !== null ? getLetter(s) : null);
+  const opts = calcOpts();
+  const letters = scores.map(s => s !== null ? getLetter(s, opts) : null);
 
   const quartersHtml = [0,1,2,3].map(qi => {
     const s = scores[qi], l = letters[qi];
@@ -696,12 +892,12 @@ function buildImportCard(student, i) {
     </div>`;
   }).join('');
 
-  const f = calcFinals(scores);
+  const f = calcFinals(scores, opts);
   let qpHtml = '', avgHtml = '', finalHtml = '';
   if (f) {
     const qpWin = f.winner === 'QP', avgWin = !qpWin;
-    const qpBorderline = borderlineInfo(f.avgQP, QP_CUTOFFS);
-    const avgBorderline = borderlineInfo(f.pctAvg, LETTER_CUTOFFS);
+    const qpBorderline = borderlineInfo(f.avgQP, activeQpCutoffs(opts));
+    const avgBorderline = borderlineInfo(f.pctAvg, activeLetterCutoffs(opts));
     qpHtml = `<div class="result-box${qpWin?' winner':''}">
       <div class="result-label">Quality Points</div>
       <div class="result-row">
@@ -741,7 +937,7 @@ function buildImportCard(student, i) {
     <div class="grades-row">
       <div class="quarters-section">${quartersHtml}</div>
       <div class="divider" aria-hidden="true"></div>
-      <div class="results-section">${qpHtml}${avgHtml}${finalHtml}</div>
+      <div class="results-section">${qpHtml}${avgHtml}${finalHtml}${arithBlockHtml(scores, f, opts)}</div>
     </div>`;
   return card;
 }
@@ -843,6 +1039,7 @@ function buildManualCard(student, displayIndex) {
           <span class="final-letter" id="final-letter-${id}">—</span>
           <span class="final-method" id="final-method-${id}"></span>
         </div>
+        <div class="arith-block" id="arith-${id}"></div>
       </div>
     </div>
     <div class="filled-count" id="filled-${id}"></div>`;
@@ -882,6 +1079,7 @@ function attachManualListeners() {
 }
 
 function updateManual(id) {
+  const opts = calcOpts();
   const inputs = document.querySelectorAll(`.grade-input[data-student="${id}"]`);
   const scores = [], letters = [];
   let filledCount = 0;
@@ -899,7 +1097,7 @@ function updateManual(id) {
         inp.classList.add('input-error'); scores.push(null); letters.push(null);
       } else {
         inp.classList.remove('input-error');
-        const l = getLetter(n);
+        const l = getLetter(n, opts);
         badge.textContent=l; badge.className='letter-badge '+gradeClass(l);
         scores.push(n); letters.push(l); filledCount++;
       }
@@ -923,12 +1121,13 @@ function updateManual(id) {
   const finalLine=document.getElementById(`final-line-${id}`);
   const finalLetEl=document.getElementById(`final-letter-${id}`);
   const finalMethodEl=document.getElementById(`final-method-${id}`);
+  const arithEl=document.getElementById(`arith-${id}`);
 
   qpBox.classList.remove('winner'); avgBox.classList.remove('winner');
   qpBox.querySelectorAll('.winner-tag').forEach(t=>t.remove());
   avgBox.querySelectorAll('.winner-tag').forEach(t=>t.remove());
 
-  const f = letters.filter(l=>l!==null).length < 4 ? null : calcFinals(scores);
+  const f = letters.filter(l=>l!==null).length < 4 ? null : calcFinals(scores, opts);
 
   if (!f) {
     qpAvgEl.textContent='—'; qpLetEl.textContent='—'; qpLetEl.style.opacity='0.4';
@@ -939,17 +1138,18 @@ function updateManual(id) {
     finalLetEl.textContent = filledCount>0 ? 'no grade' : '—';
     finalLetEl.style.color = '';
     finalMethodEl.textContent = filledCount>0 ? 'all four quarters required' : '';
+    if (arithEl) arithEl.innerHTML = '';
     return;
   }
 
   qpAvgEl.textContent='avg '+f.avgQP.toFixed(2)+' pts';
   qpLetEl.textContent=f.qpFinal; qpLetEl.style.opacity='1'; qpLetEl.style.color=letterColor[f.qpFinal]||'inherit';
-  const qpBorderline = borderlineInfo(f.avgQP, QP_CUTOFFS);
+  const qpBorderline = borderlineInfo(f.avgQP, activeQpCutoffs(opts));
   qpNoteEl.textContent = qpBorderline ? borderlineLabel(qpBorderline) : '';
   qpNoteEl.className = 'pending-note' + (qpBorderline ? ' borderline-note' : '');
   avgPctEl.textContent=f.pctAvg.toFixed(2)+'%';
   avgLetEl.textContent=f.pctFinal; avgLetEl.style.opacity='1'; avgLetEl.style.color=letterColor[f.pctFinal]||'inherit';
-  const avgBorderline = borderlineInfo(f.pctAvg, LETTER_CUTOFFS);
+  const avgBorderline = borderlineInfo(f.pctAvg, activeLetterCutoffs(opts));
   avgNoteEl.textContent = avgBorderline ? borderlineLabel(avgBorderline) : '';
   avgNoteEl.className = 'pending-note' + (avgBorderline ? ' borderline-note' : '');
 
@@ -962,6 +1162,13 @@ function updateManual(id) {
   finalLetEl.textContent=f.finalLetter;
   finalLetEl.style.color=letterColor[f.finalLetter]||'inherit';
   finalMethodEl.textContent='by '+METHOD_NAME[f.winner];
+
+  if (arithEl) {
+    const lines = arithmeticLines(scores, f, opts);
+    arithEl.innerHTML = `<div class="arith-line">${escHtml(lines.qpLine)}</div>
+      <div class="arith-line">${escHtml(lines.pctLine)}</div>
+      <div class="arith-line">${escHtml(lines.finalLine)}</div>`;
+  }
 }
 
 function clearManualStudent(id) {
@@ -1001,15 +1208,23 @@ function switchToNeedTab() {
   computeNeed();
 }
 
-function pctCutoffForLetter(letter) {
-  const found = LETTER_CUTOFFS.find(([l]) => l === letter);
+function pctCutoffForLetter(letter, opts) {
+  const found = activeLetterCutoffs(opts).find(([l]) => l === letter);
   return found ? found[1] : 0; // F has no floor
 }
-function qpCutoffForLetter(letter) {
-  const found = QP_CUTOFFS.find(([l]) => l === letter);
+function qpCutoffForLetter(letter, opts) {
+  const found = activeQpCutoffs(opts).find(([l]) => l === letter);
   return found ? found[1] : 0; // F has no floor
 }
-const QP_MIN_PCT_FOR_VALUE = { 4: pctCutoffForLetter('A'), 3: pctCutoffForLetter('B'), 2: pctCutoffForLetter('C'), 1: pctCutoffForLetter('D') };
+const QP_VALUE_LETTER = { 4: 'A', 3: 'B', 2: 'C', 1: 'D' };
+/** The minimum percentage on a SINGLE quarter that earns it a given
+ * quality-point value (4=A .. 1=D), under the active rounding rule. This is
+ * per-quarter, so it does not depend on any quarter weighting — a quarter's
+ * own letter is decided the same way regardless of how much it counts. */
+function qpMinPctForValue(value, opts) {
+  const letter = QP_VALUE_LETTER[value];
+  return letter ? pctCutoffForLetter(letter, opts) : 0;
+}
 
 /** Rounds a required-score threshold UP to two decimals, so float noise never
  * understates what's needed — an 83.99999999 has to read as 84.00, not 83.99. */
@@ -1052,12 +1267,12 @@ function renderNeedResults(errorMsg, data) {
     box.innerHTML = `<div class="pending-note" style="font-size:13px;opacity:0.8;">${errorMsg}</div>`;
     return;
   }
-  const { qLabel, requiredPct, requiredQP, knownSumPct, knownSumQP } = data;
+  const { qLabel, requiredPct, requiredQP, bestCasePct, bestCaseQP, opts } = data;
 
   const pctHtml = needBoxHtml('Percentage Average method', requiredPct, qLabel,
-    () => getLetter((knownSumPct + 100) / QUARTERS));
+    () => getLetter(bestCasePct, opts));
   const qpHtml = needBoxHtml('Quality Points method', requiredQP, qLabel,
-    () => qpToFinalLetter((knownSumQP + 4) / QUARTERS));
+    () => qpToFinalLetter(bestCaseQP, opts));
 
   const pctClass = classifyRequired(requiredPct);
   const qpClass  = classifyRequired(requiredQP);
@@ -1082,8 +1297,8 @@ function renderNeedResults(errorMsg, data) {
       <span class="final-method">on ${qLabel}, via ${method}</span>
     </div>`;
   } else {
-    const bestPctLetter = getLetter((knownSumPct + 100) / QUARTERS);
-    const bestQpLetter  = qpToFinalLetter((knownSumQP + 4) / QUARTERS);
+    const bestPctLetter = getLetter(bestCasePct, opts);
+    const bestQpLetter  = qpToFinalLetter(bestCaseQP, opts);
     const bestLetter = (RANK[bestQpLetter] ?? -1) >= (RANK[bestPctLetter] ?? -1) ? bestQpLetter : bestPctLetter;
     bottomHtml = `<div class="final-line pending">
       <span class="final-label">Bottom line</span>
@@ -1105,7 +1320,15 @@ function updateNeedSolveTarget() {
 }
 
 function computeNeed() {
+  const opts = calcOpts();
+  // Equal 25% weights unless Grading Settings has custom weights on — the
+  // formulas below use each quarter's own weight, so they reduce to the
+  // original plain-average arithmetic exactly when every weight is equal.
+  const weights = opts.weights || [25, 25, 25, 25];
+  const wSum = weights.reduce((a, b) => a + b, 0) || QUARTERS;
   const solveIdx = parseInt(document.querySelector('input[name="need-solve"]:checked').value, 10);
+  const wMissing = weights[solveIdx];
+
   const known = [];
   for (let i = 0; i < QUARTERS; i++) {
     if (i === solveIdx) continue;
@@ -1129,28 +1352,36 @@ function computeNeed() {
       renderNeedResults('Enter a target percentage between 0 and 100.');
       return;
     }
-    targetLetter = getLetter(n);
+    targetLetter = getLetter(n, opts);
   }
-  const targetPctRaw = targetType === 'pct' ? parseFloat(document.getElementById('need-target-pct').value) : pctCutoffForLetter(targetLetter);
+  const targetPctRaw = targetType === 'pct' ? parseFloat(document.getElementById('need-target-pct').value) : pctCutoffForLetter(targetLetter, opts);
 
-  const knownSumPct = known.reduce((a, b) => a + b, 0);
-  const knownSumQP  = known.reduce((a, b) => a + getQP(getLetter(b)), 0);
+  let knownSumPctW = 0, knownSumQPW = 0, ki = 0;
+  for (let i = 0; i < QUARTERS; i++) {
+    if (i === solveIdx) continue;
+    const v = known[ki++];
+    knownSumPctW += v * weights[i];
+    knownSumQPW  += getQP(getLetter(v, opts)) * weights[i];
+  }
 
-  // Percentage Average — continuous, solved exactly: avg of 4 >= target.
-  const requiredPct = targetPctRaw * QUARTERS - knownSumPct;
+  // Percentage Average — continuous, solved exactly: weighted avg >= target.
+  const requiredPct = (targetPctRaw * wSum - knownSumPctW) / wMissing;
 
   // Quality Points — discrete: only the letter the remaining score lands in
   // matters, so translate the needed QP value back to its minimum percentage.
-  const neededSumQP = qpCutoffForLetter(targetLetter) * QUARTERS;
-  const neededRemainingQP = Math.round(neededSumQP - knownSumQP);
+  const neededSumQPW = qpCutoffForLetter(targetLetter, opts) * wSum;
+  const neededRemainingQP = Math.ceil((neededSumQPW - knownSumQPW) / wMissing - 1e-9);
   let requiredQP;
   if (neededRemainingQP <= 0) requiredQP = -Infinity;
   else if (neededRemainingQP > 4) requiredQP = Infinity;
-  else requiredQP = QP_MIN_PCT_FOR_VALUE[neededRemainingQP];
+  else requiredQP = qpMinPctForValue(neededRemainingQP, opts);
 
   renderNeedResults(null, {
     qLabel: `Quarter ${solveIdx + 1}`,
-    requiredPct, requiredQP, knownSumPct, knownSumQP,
+    requiredPct, requiredQP,
+    bestCasePct: (knownSumPctW + 100 * wMissing) / wSum,
+    bestCaseQP:  (knownSumQPW + 4 * wMissing) / wSum,
+    opts,
   });
 }
 
@@ -1169,6 +1400,173 @@ function attachNeedListeners() {
   document.getElementById('need-target-pct').addEventListener('input', computeNeed);
 }
 
+// ── Grading Settings panel — form wiring ─────────────────────
+function updateWeightsSumNote() {
+  const note = document.getElementById('weights-sum-note');
+  if (!note) return;
+  const sum = settings.weights.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+  const ok = Math.abs(sum - 100) < 0.05;
+  note.textContent = ok ? 'Sums to 100. ✓' : `Sums to ${sum.toFixed(1)} — weights are shares of the total, not required to hit exactly 100, but 100 keeps them easy to read.`;
+  note.style.color = ok ? 'var(--color-success)' : 'var(--color-warn)';
+}
+
+function applySettingsToForm() {
+  const boundaryInput = document.querySelector(`input[name="round-boundary"][value="${settings.boundary}"]`);
+  if (boundaryInput) boundaryInput.checked = true;
+  document.getElementById('round-precision').value = settings.precision;
+  document.getElementById('weights-enabled').checked = settings.weightsEnabled;
+  document.getElementById('weights-inputs').hidden = !settings.weightsEnabled;
+  for (let i = 0; i < QUARTERS; i++) document.getElementById(`weight-q${i+1}`).value = settings.weights[i];
+  updateWeightsSumNote();
+  document.getElementById('show-work-toggle').checked = settings.showWork;
+  document.body.classList.toggle('show-work', settings.showWork);
+  document.getElementById('settings-persist').checked = settings.persist;
+}
+
+/** Recomputes every visible grade after a Grading Settings change — cheap
+ * enough to run on every change event, and simpler than threading opts
+ * updates into every open card by hand. */
+function refreshAllCalculations() {
+  if (mode === 'manual') currentStudents.forEach(s => updateManual(s.id));
+  else renderImportedStudents(currentStudents);
+  computeNeed();
+}
+function onSettingsChanged() { savePersistedSettings(); refreshAllCalculations(); }
+
+function wireSettingsPanel() {
+  document.getElementById('settings-toggle-btn').addEventListener('click', () => {
+    const panel = document.getElementById('settings-panel');
+    panel.hidden = !panel.hidden;
+    document.getElementById('settings-toggle-btn').setAttribute('aria-expanded', String(!panel.hidden));
+  });
+  document.querySelectorAll('input[name="round-boundary"]').forEach(r => r.addEventListener('change', () => {
+    settings.boundary = document.querySelector('input[name="round-boundary"]:checked').value;
+    onSettingsChanged();
+  }));
+  document.getElementById('round-precision').addEventListener('change', e => {
+    settings.precision = e.target.value;
+    onSettingsChanged();
+  });
+  document.getElementById('weights-enabled').addEventListener('change', e => {
+    settings.weightsEnabled = e.target.checked;
+    document.getElementById('weights-inputs').hidden = !e.target.checked;
+    onSettingsChanged();
+  });
+  for (let i = 0; i < QUARTERS; i++) {
+    document.getElementById(`weight-q${i+1}`).addEventListener('input', () => {
+      settings.weights = Array.from({length: QUARTERS}, (_, j) => parseFloat(document.getElementById(`weight-q${j+1}`).value) || 0);
+      updateWeightsSumNote();
+      onSettingsChanged();
+    });
+  }
+  document.getElementById('show-work-toggle').addEventListener('change', e => {
+    settings.showWork = e.target.checked;
+    document.body.classList.toggle('show-work', settings.showWork);
+    savePersistedSettings();
+  });
+  document.getElementById('settings-persist').addEventListener('change', e => {
+    settings.persist = e.target.checked;
+    savePersistedSettings();
+  });
+}
+
+// ── Per-student printable slips ──────────────────────────────
+// Reuses the same calcFinals/getLetter machinery as the cards above — a slip
+// never computes a number the on-screen card wouldn't also show.
+
+/** For a student missing EXACTLY one quarter, the score needed on that
+ * quarter to reach `targetLetter`, by each method — the same backwards
+ * algebra as computeNeed(), generalised to any known-scores array instead of
+ * reading the "What Do I Need" form. Returns null when more than one quarter
+ * is missing (there's no unique solution to report). */
+function neededOnSingleMissingQuarter(scores, missingIdx, targetLetter, opts) {
+  if (scores.filter(s => s === null).length !== 1) return null;
+  const weights = opts.weights || [25, 25, 25, 25];
+  const wSum = weights.reduce((a, b) => a + b, 0) || QUARTERS;
+  const wMissing = weights[missingIdx];
+
+  let knownSumPctW = 0, knownSumQPW = 0;
+  scores.forEach((v, i) => {
+    if (i === missingIdx) return;
+    knownSumPctW += v * weights[i];
+    knownSumQPW  += getQP(getLetter(v, opts)) * weights[i];
+  });
+
+  const targetPctRaw = pctCutoffForLetter(targetLetter, opts);
+  const requiredPct = (targetPctRaw * wSum - knownSumPctW) / wMissing;
+
+  const neededSumQPW = qpCutoffForLetter(targetLetter, opts) * wSum;
+  const neededRemainingQP = Math.ceil((neededSumQPW - knownSumQPW) / wMissing - 1e-9);
+  let requiredQP;
+  if (neededRemainingQP <= 0) requiredQP = -Infinity;
+  else if (neededRemainingQP > 4) requiredQP = Infinity;
+  else requiredQP = qpMinPctForValue(neededRemainingQP, opts);
+
+  return { requiredPct, requiredQP };
+}
+
+/** One-line, slip-sized version of the "bottom line" in renderNeedResults —
+ * the lower of the two methods' requirements, in words. */
+function slipNeedSummary(requiredPct, requiredQP, qLabel, targetLetter) {
+  const pctC = classifyRequired(requiredPct);
+  const qpC  = classifyRequired(requiredQP);
+  if (pctC.status === 'secured' || qpC.status === 'secured') {
+    return `Already on track for at least a ${targetLetter}, even with a 0 on ${qLabel}.`;
+  }
+  if (pctC.status === 'ok' || qpC.status === 'ok') {
+    const useQp = qpC.status === 'ok' && (pctC.status !== 'ok' || qpC.value <= pctC.value);
+    const val = useQp ? qpC.value : pctC.value;
+    return `Needs ${val.toFixed(2)}% or higher on ${qLabel} to reach a ${targetLetter}.`;
+  }
+  return `Not reachable this way — even a 100 on ${qLabel} would not make a ${targetLetter}.`;
+}
+
+function buildSlipHtml(student, i, targetLetter, opts) {
+  const scores = student.scores;
+  const name = (student.name && student.name.trim()) ? student.name : `Student ${i+1}`;
+  const f = calcFinals(scores, opts);
+  const missingIdx = [];
+  scores.forEach((s, qi) => { if (s === null) missingIdx.push(qi); });
+
+  const quartersLine = [0,1,2,3].map(qi => `Q${qi+1}: ${scores[qi] !== null ? scores[qi].toFixed(2)+'%' : '—'}`).join(' &nbsp; ');
+
+  let bodyHtml;
+  if (f) {
+    const lines = arithmeticLines(scores, f, opts);
+    bodyHtml = `<div class="slip-final">Current grade: <strong style="color:${letterColor[f.finalLetter]||'inherit'}">${f.finalLetter}</strong> <span class="slip-method">(${METHOD_NAME[f.winner]})</span></div>
+      <div class="slip-arith">
+        <div>${escHtml(lines.qpLine)}</div>
+        <div>${escHtml(lines.pctLine)}</div>
+      </div>`;
+  } else if (missingIdx.length === 1) {
+    const need = neededOnSingleMissingQuarter(scores, missingIdx[0], targetLetter, opts);
+    const qLabel = `Quarter ${missingIdx[0]+1}`;
+    const needLine = need ? slipNeedSummary(need.requiredPct, need.requiredQP, qLabel, targetLetter) : '';
+    bodyHtml = `<div class="slip-missing">Missing: ${qLabel}. No final grade yet.</div>
+      <div class="slip-need">${escHtml(needLine)}</div>`;
+  } else {
+    bodyHtml = `<div class="slip-missing">Missing ${missingIdx.length} quarters (${missingIdx.map(qi=>'Q'+(qi+1)).join(', ')}) — a final grade needs all four, so there's no single number to solve for yet.</div>`;
+  }
+
+  return `<div class="slip">
+    <div class="slip-name">${escHtml(name)}</div>
+    <div class="slip-quarters">${quartersLine}</div>
+    ${bodyHtml}
+  </div>`;
+}
+
+function printSlips() {
+  const rows = exportableStudents();
+  if (rows.length === 0) { alert('No student data to print slips for.'); return; }
+  const targetLetter = document.getElementById('slip-target-letter').value;
+  const opts = calcOpts();
+  const container = document.getElementById('slip-print-container');
+  container.innerHTML = rows.map((s, i) => buildSlipHtml(s, i, targetLetter, opts)).join('');
+  document.body.classList.add('printing-slips');
+  window.print();
+}
+window.addEventListener('afterprint', () => document.body.classList.remove('printing-slips'));
+
 // ── Wiring ───────────────────────────────────────────────────
 // This is a module, so nothing here is on `window` and the old inline
 // onclick="" attributes could not have reached it. They are listeners now.
@@ -1181,11 +1579,15 @@ on('clear-paste-btn', () => {
   showWarnings([]);
 });
 on('print-btn', () => window.print());
+on('print-slips-btn', printSlips);
 on('export-excel-btn', e => withLibs('excel', e.currentTarget, exportExcel));
 on('export-pdf-btn',   e => withLibs('pdf',   e.currentTarget, exportPDF));
 on('add-student-btn', addManualStudent);
 on('tab-calc-btn', switchToCalcTab);
 on('tab-need-btn', switchToNeedTab);
+loadPersistedSettings();
+applySettingsToForm();
+wireSettingsPanel();
 attachNeedListeners();
 updateNeedSolveTarget();
 computeNeed();

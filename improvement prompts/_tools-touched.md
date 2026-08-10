@@ -156,6 +156,38 @@ currently-shipped `schedule-browser.html` in the meantime.
 
 **35 of 46 tools done. 11 to go.**
 
+### Round 8 — 2026-08-10 — PR #61
+
+Ran concurrently with the Round 7 session above (picked from the same "Not
+yet touched" list before either had merged — no tool overlap; this round's
+own merge picked up Round 7's changes cleanly with no conflicts in this
+file). Four clusters, each addressing a duplication or gap the tools' own
+files called out: a grade/data trio that all parse a pasted gradebook table
+independently (Final Grade Checker, Grade Distribution Visualizer, Data
+Chart Builder); a vocab/reference trio that each wanted "a shared
+vocabulary store" and got a lightweight read-only bridge between the two
+vocab tools instead of the full hub; a school-office print pair
+(Certificate Maker, Field Trip Slip) missing the same roster-loading and
+per-student-data gaps; and a sub-coverage pair (Sub Plan Builder, Sub
+Binder Generator) that their own files said should be designed together —
+plus a real fix, vendoring Sub Plan Builder's JSZip locally instead of
+loading it from cdnjs (P5).
+
+| Tool | File |
+|---|---|
+| Final Grade Checker | `final-grade-checker.md` |
+| Grade Distribution Visualizer | `grade-distribution-visualizer.md` |
+| Data Table → Chart Builder | `data-chart-builder.md` |
+| Vocab & Conjugation Drill Generator | `vocab-conjugation-drill.md` |
+| Vocabulary Flashcard & Word Wall Generator | `vocab-flashcard-generator.md` |
+| Formula Reference Sheet Builder | `formula-sheet-builder.md` |
+| Certificate & Award Maker | `certificate-award-maker.md` |
+| Field Trip Permission Slip Generator | `field-trip-permission-slip.md` |
+| Sub Plan Builder | `sub-plan-builder.md` |
+| Sub Binder / Day Bundle Generator | `sub-binder-generator.md` |
+
+**45 of 46 tools done. 1 to go.**
+
 ---
 
 ## Not yet touched
@@ -165,16 +197,6 @@ sense for a round (by subject, by shared machinery, by print-heavy vs
 data-heavy), and say why in the PR.
 
 - Blank Map Generator — `blank-map-generator.md`
-- Certificate & Award Maker — `certificate-award-maker.md`
-- Data Table → Chart Builder — `data-chart-builder.md`
-- Field Trip Permission Slip Generator — `field-trip-permission-slip.md`
-- Final Grade Checker — `final-grade-checker.md`
-- Formula Reference Sheet Builder — `formula-sheet-builder.md`
-- Grade Distribution Visualizer — `grade-distribution-visualizer.md`
-- Sub Binder / Day Bundle Generator — `sub-binder-generator.md`
-- Sub Plan Builder — `sub-plan-builder.md`
-- Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
-- Vocabulary Flashcard & Word Wall Generator — `vocab-flashcard-generator.md`
 
 ---
 
@@ -190,16 +212,19 @@ lands naturally inside a tool you are already working on, take it.
   benefit; the Behavior & Points Tracker is where it would save the most data.
 - **P1 projector mode.** Command Center has one now as a display state rather
   than a separate page. Any tool that gets projected could copy the approach.
-- **P5 CDN dependencies.** `Sub Plan Builder.html` still loads JSZip from
-  cdnjs — it's on the untouched list, so this gets fixed as a side effect if
-  whoever takes it remembers. `docx-merger.html` had the same issue and was
-  fixed in Round 6 (PR #58, vendored into `Tools/docx-merger/lib/`, source
-  pulled from the `jszip` npm package rather than cdnjs since cdnjs was
-  itself unreachable from that session's sandbox — see the npm-package
-  fallback approach in `docx-merger.md`'s Status section if cdnjs is
-  similarly unreachable next time). `image-to-pdf.html` had the same issue
-  with jsPDF and was fixed in Round 3 (PR #54, vendored into
-  `Tools/image-to-pdf/lib/`).
+- **P5 CDN dependencies.** All three tools that used to load a library from
+  cdnjs have now been fixed, each the same way — vendor it locally, source
+  pulled from the library's npm package rather than cdnjs itself, since
+  cdnjs was unreachable from more than one session's sandbox this round of
+  rounds: `image-to-pdf.html` (jsPDF, Round 3, PR #54, vendored into
+  `Tools/image-to-pdf/lib/`), `docx-merger.html` (JSZip, Round 6, PR #58,
+  vendored into `Tools/docx-merger/lib/` — see the npm-package fallback
+  approach documented in `docx-merger.md`'s Status section), and
+  `Sub Plan Builder.html` (JSZip, Round 8, PR #61, vendored into the new
+  `Tools/sub-plan-builder/lib/` via `npm pack jszip@3.10.1`). No known CDN
+  dependency remains on the site as of Round 8, but it's worth a fresh grep
+  for `cdnjs.cloudflare.com` (or any other CDN host) if a future round adds
+  a library, rather than assuming this list is exhaustive forever.
 - **P8 backup compatibility.** `Tools/backup-restore.html` keeps two lists
   that go stale silently: `KNOWN_GROUPS` (friendly names in the scan table)
   and `STUDENT_KEYS` (what the year-end clear is allowed to erase). **A tool

@@ -97,6 +97,26 @@
   .check-toggle { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .85rem; margin: 0 0 .8rem; cursor: pointer; }
   .check-toggle input { width: auto; margin: 0; }
 
+  /* ---- accented character helper ---- */
+  .accent-row { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
+  .accent-row button { flex: 0 0 auto; width: auto; padding: .3rem .6rem; font-size: 1rem; }
+  .lang-select-row { display: flex; align-items: center; gap: .5rem; }
+  .lang-select-row label { margin: 0; white-space: nowrap; }
+  .lang-select-row select { width: auto; margin: 0; }
+
+  /* ---- irregular verb flag ---- */
+  .irregular-toggle { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .78rem; margin: .3rem 0 0; cursor: pointer; }
+  .irregular-toggle input { width: auto; margin: 0; }
+  .verb-head.irregular { color: var(--err); }
+  .irregular-tag {
+    display: inline-block; font-size: .6rem; font-weight: 800; letter-spacing: .03em;
+    background: var(--err); color: #fff; border-radius: 4px; padding: .05rem .35rem; margin-left: .35rem; vertical-align: middle;
+  }
+  .quiz-head.irregular .quiz-title { color: var(--err); }
+
+  /* ---- import-from-other-tool bridge ---- */
+  .import-bridge { border-top: 1px dashed var(--line); margin-top: .8rem; padding-top: .7rem; }
+
   /* ---- person labels editor ---- */
   .person-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .4rem; }
   .person-row input { margin-bottom: 0; }
@@ -200,6 +220,21 @@
     <input type="text" id="setName" placeholder="e.g. Unit 3 &mdash; Spanish Present Tense">
   </div>
 
+  <div class="card">
+    <label style="margin-bottom:.3rem;">Insert accented character</label>
+    <p class="hint">Click a character to insert it at the cursor in whichever field you last clicked into &mdash; typing accents on a US keyboard is the biggest friction point in this tool.</p>
+    <div class="lang-select-row">
+      <label for="langPresetSelect">Language:</label>
+      <select id="langPresetSelect">
+        <option value="spanish">Spanish</option>
+        <option value="french">French</option>
+        <option value="german">German</option>
+        <option value="latin">Latin</option>
+      </select>
+    </div>
+    <div class="accent-row" id="accentRow"></div>
+  </div>
+
   <div class="mode-tabs">
     <div class="mode-tab active" data-mode="vocab">Vocabulary Drill</div>
     <div class="mode-tab" data-mode="conjugation">Conjugation Drill</div>
@@ -213,6 +248,25 @@
           <label for="vocabInput">Words (one per line, "word: translation")</label>
           <p class="hint">Example: la mesa: the table &mdash; any language, this doesn&rsquo;t auto-translate anything.</p>
           <textarea id="vocabInput" placeholder="la mesa: the table&#10;el libro: the book"></textarea>
+
+          <div class="import-bridge" id="importFlashRow" style="display:none;">
+            <label for="flashSetSelect">Import from Vocabulary Flashcard Generator</label>
+            <p class="hint">Reads that tool's saved word lists straight from this browser (term/definition only &mdash; example, pronunciation, and part of speech aren&rsquo;t bridged yet).</p>
+            <div class="row2">
+              <select id="flashSetSelect"></select>
+              <button type="button" class="secondary" id="importFlashBtn" style="margin:0;">Add words to this list</button>
+            </div>
+          </div>
+
+          <label for="vocabDirection">Direction</label>
+          <select id="vocabDirection">
+            <option value="target2en">Target language &rarr; English</option>
+            <option value="en2target">English &rarr; Target language</option>
+            <option value="alternate">Alternate each item</option>
+          </select>
+
+          <label for="vocabLimit">Limit to N random items for this drill (0 = use all)</label>
+          <input type="text" id="vocabLimit" value="0">
           <label class="check-toggle"><input type="checkbox" id="vocabShuffle"> Shuffle order when printing</label>
         </div>
       </div>
@@ -241,6 +295,8 @@
       </div>
 
       <label class="check-toggle"><input type="checkbox" id="printCombined"> Print vocab + conjugation together</label>
+      <label for="printVersions">Print versions (different item order each, so nearby desks don&rsquo;t match)</label>
+      <input type="text" id="printVersions" value="1">
       <button type="button" id="printBtn" class="full">Print</button>
     </div>
 
@@ -289,11 +345,64 @@
     getCurrent: function () { return localStorage.getItem(STORE_CURRENT); }
   };
 
+  /* ---------- read-only cross-tool bridge: import from Vocabulary Flashcard Generator ----------
+     Reads Vocabulary Flashcard & Word Wall Generator's own localStorage
+     contract (Tools/vocab-flashcard-generator/vfg-store.js: a list of list
+     names under 'gvb-vocab-flashcards:list', one JSON blob per name under
+     'gvb-vocab-flashcards:data:<name>', each holding a `words` string in
+     that tool's own tab/colon/CSV "term: definition" format — see its
+     VocabLayout.parseWordList). This is a single-file tool, so rather than
+     loading that tool's own vfg-layout.js as a dependency, this is a
+     minimal, deliberately read-only reimplementation of just enough of its
+     parsing to convert a saved list into this tool's own {word, translation}
+     vocab shape. Only term/definition make the trip — that list's example
+     sentence, pronunciation, and part-of-speech columns are dropped, since
+     this tool's own vocab format has nowhere to put them yet. */
+  var VFG_LIST_KEY = 'gvb-vocab-flashcards:list';
+  var VFG_DATA_PREFIX = 'gvb-vocab-flashcards:data:';
+
+  function listFlashcardSets() {
+    var names = safeParse(localStorage.getItem(VFG_LIST_KEY), []);
+    return Array.isArray(names) ? names.filter(function (n) { return typeof n === 'string' && n; }) : [];
+  }
+
+  function parseFlashcardWordsText(text) {
+    var out = [];
+    String(text || '').replace(/\r\n/g, '\n').split('\n').forEach(function (line) {
+      if (!line.trim()) return;
+      var term, definition = '';
+      if (line.indexOf('\t') !== -1) {
+        var tabParts = line.split('\t');
+        term = (tabParts[0] || '').trim(); definition = (tabParts[1] || '').trim();
+      } else if (line.indexOf(':') !== -1) {
+        var idx = line.indexOf(':');
+        term = line.slice(0, idx).trim();
+        definition = line.slice(idx + 1).split('|')[0].trim();
+      } else if (line.indexOf(',') !== -1) {
+        var commaParts = line.split(',');
+        term = (commaParts[0] || '').trim(); definition = (commaParts[1] || '').trim();
+      } else {
+        return;
+      }
+      if (term) out.push({ word: term, translation: definition });
+    });
+    return out;
+  }
+
+  function getFlashcardItems(name) {
+    if (!name) return [];
+    var data = safeParse(localStorage.getItem(VFG_DATA_PREFIX + name), null);
+    if (!data || typeof data.words !== 'string') return [];
+    return parseFlashcardWordsText(data.words);
+  }
+
   var els = {};
   ['toolbar','setSwitch','newSetBtn','deleteSetBtn','exportSetBtn','importSetBtn','importSetFile','setName',
-   'vocabEditor','conjugationEditor','vocabInput',
+   'accentRow','langPresetSelect',
+   'importFlashRow','flashSetSelect','importFlashBtn',
+   'vocabEditor','conjugationEditor','vocabInput','vocabDirection','vocabLimit',
    'personsList','personPresets','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
-   'printBtn','printCombined','previewArea','previewNote','sheetNav','ttsLangSelect'
+   'printBtn','printCombined','printVersions','previewArea','previewNote','sheetNav','ttsLangSelect'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_PERSONS = ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'];
@@ -304,6 +413,59 @@
     german: ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'],
     latin: ['ego', 'tū', 'is / ea / id', 'nōs', 'vōs', 'eī / eae / ea']
   };
+
+  var ACCENT_SETS = {
+    spanish: ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'],
+    french: ['à', 'â', 'ç', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'œ', 'ù', 'û', 'ü'],
+    german: ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü'],
+    latin: ['ā', 'ē', 'ī', 'ō', 'ū', 'ȳ', 'æ', 'œ']
+  };
+
+  // Tracks whichever text field the teacher last clicked/focused into, so the
+  // accent-character row has somewhere to insert — the set name, the vocab
+  // textarea, and every infinitive/tense/conjugated-form field all count.
+  // Checkboxes, file inputs, and <select>s are excluded since inserting an
+  // accent there never makes sense.
+  var NON_TEXT_FIELD_IDS = { vocabLimit: true, printVersions: true };
+  var lastFocusedField = null;
+  document.addEventListener('focusin', function (evt) {
+    var t = evt.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && t.type !== 'checkbox' && t.type !== 'file' && !NON_TEXT_FIELD_IDS[t.id]) {
+      lastFocusedField = t;
+    }
+  });
+
+  function insertAtCursor(field, text) {
+    if (!field) return;
+    var start = field.selectionStart != null ? field.selectionStart : field.value.length;
+    var end = field.selectionEnd != null ? field.selectionEnd : field.value.length;
+    var val = field.value;
+    field.value = val.slice(0, start) + text + val.slice(end);
+    var pos = start + text.length;
+    if (field.setSelectionRange) field.setSelectionRange(pos, pos);
+    field.focus();
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function renderAccentRow() {
+    var set = ACCENT_SETS[state.langPreset] || ACCENT_SETS.spanish;
+    els.accentRow.innerHTML = set.map(function (ch) {
+      return '<button type="button" class="secondary small" data-char="' + escapeHtml(ch) + '">' + escapeHtml(ch) + '</button>';
+    }).join('');
+  }
+
+  els.accentRow.addEventListener('click', function (evt) {
+    var btn = evt.target.closest('button[data-char]');
+    if (!btn) return;
+    var field = lastFocusedField || (state.mode === 'vocab' ? els.vocabInput : null);
+    insertAtCursor(field, btn.getAttribute('data-char'));
+  });
+
+  els.langPresetSelect.addEventListener('change', function () {
+    state.langPreset = els.langPresetSelect.value;
+    save();
+    renderAccentRow();
+  });
 
   var TTS_LANGS = [
     { code: 'es-ES', label: 'Spanish' }, { code: 'fr-FR', label: 'French' },
@@ -345,7 +507,8 @@
 
   var state = null;
   // { name, mode: 'vocab'|'conjugation', vocabText, persons: [str,...],
-  //   conjugations: [{id, infinitive, tense, forms: [str,...] // same length/order as persons }] }
+  //   conjugations: [{id, infinitive, tense, forms: [str,...], irregular: bool // same forms length/order as persons }],
+  //   langPreset, vocabDirection: 'target2en'|'en2target'|'alternate', vocabLimit, printVersions }
   var idCounter = 1;
   var checkRevealed = {};
   var currentPage = 0;
@@ -387,6 +550,53 @@
     });
     return out;
   }
+
+  /* ---------- direction + shuffle-and-limit helpers (vocabulary drill) ---------- */
+  function directionForIndex(i) {
+    if (state.vocabDirection === 'en2target') return 'en2target';
+    if (state.vocabDirection === 'alternate') return (i % 2 === 0) ? 'target2en' : 'en2target';
+    return 'target2en';
+  }
+
+  /** { front, back } text for item i, honoring the direction setting.
+      `back` is always the answer that goes in the blank/answer-key slot. */
+  function directedPair(item, i) {
+    var dir = directionForIndex(i);
+    return dir === 'target2en'
+      ? { front: item.word, back: item.translation }
+      : { front: item.translation, back: item.word };
+  }
+
+  /** Items for the live preview / a single-version print: honors the
+      shuffle checkbox, and — when a limit is set — draws that many random
+      items. Drawing keeps its original relative order unless "shuffle" is
+      also checked, so "limit" (which items) and "shuffle" (what order) are
+      two independent, composable knobs. */
+  function vocabItemsForRender() {
+    var items = parseVocab(state.vocabText);
+    if (state.vocabLimit > 0 && items.length > state.vocabLimit) {
+      var withIdx = items.map(function (it, i) { return { it: it, i: i }; });
+      var picked = shuffleCopy(withIdx).slice(0, state.vocabLimit);
+      if (!state.shuffleVocab) picked.sort(function (a, b) { return a.i - b.i; });
+      items = picked.map(function (x) { return x.it; });
+    } else if (state.shuffleVocab) {
+      items = shuffleCopy(items);
+    }
+    return items;
+  }
+
+  /** A fresh random draw for one "version" of a multi-version print run —
+      always randomized (that's the point of printing more than one
+      version), independent of the shuffle checkbox. */
+  function vocabItemsForVersion() {
+    var items = parseVocab(state.vocabText);
+    if (state.vocabLimit > 0 && items.length > state.vocabLimit) {
+      return shuffleCopy(items).slice(0, state.vocabLimit);
+    }
+    return shuffleCopy(items);
+  }
+
+  var lastPreviewVocabItems = []; // cached from the last renderPreview() vocab pass, reused for a single-version print so preview and print always match
 
   function save() { if (state) Store.save(state.name, state); }
 
@@ -466,6 +676,15 @@
       row2.appendChild(infFieldRow); row2.appendChild(tenseInput);
       block.appendChild(row2);
 
+      var irregLabel = document.createElement('label');
+      irregLabel.className = 'irregular-toggle';
+      var irregInput = document.createElement('input');
+      irregInput.type = 'checkbox'; irregInput.checked = !!entry.irregular;
+      irregInput.addEventListener('change', function () { entry.irregular = irregInput.checked; renderPreview(); });
+      irregLabel.appendChild(irregInput);
+      irregLabel.appendChild(document.createTextNode(' Irregular verb (highlighted on the printed table & quiz)'));
+      block.appendChild(irregLabel);
+
       var grid = document.createElement('div');
       grid.className = 'forms-grid';
       state.persons.forEach(function (person, pi) {
@@ -513,11 +732,12 @@
   /* ---------- vocab preview / print ---------- */
   function vocabDrillPages(items, filled, kicker) {
     var rows = items.map(function (item, i) {
+      var pair = directedPair(item, i);
       var right = filled
-        ? '<span class="answer">' + escapeHtml(item.translation) + '</span>'
+        ? '<span class="answer">' + escapeHtml(pair.back) + '</span>'
         : '<span class="blank"></span>';
       return '<div class="item"><span class="num">' + (i + 1) + '.</span>' +
-        '<span class="word">' + escapeHtml(item.word) + '</span>' + right + '</div>';
+        '<span class="word">' + escapeHtml(pair.front) + '</span>' + right + '</div>';
     }).join('');
     return '<div class="page">' +
       (kicker ? '<div class="page-kicker">' + escapeHtml(kicker) + '</div>' : '') +
@@ -530,11 +750,12 @@
   function renderVocabOnScreenCheck(items) {
     els.previewArea.innerHTML = items.map(function (item, i) {
       var revealed = !!checkRevealed[i];
+      var pair = directedPair(item, i);
       return '<div class="check-row" data-idx="' + i + '">' +
         '<span class="num">' + (i + 1) + '.</span>' +
         listenButtonHtml(' data-word="' + escapeHtml(item.word) + '"') +
-        '<span class="word">' + escapeHtml(item.word) + '</span>' +
-        '<span class="answer' + (revealed ? '' : ' hidden') + '">' + escapeHtml(item.translation) + '</span>' +
+        '<span class="word">' + escapeHtml(pair.front) + '</span>' +
+        '<span class="answer' + (revealed ? '' : ' hidden') + '">' + escapeHtml(pair.back) + '</span>' +
       '</div>';
     }).join('') || '<p class="empty-note">Add some words to preview.</p>';
 
@@ -563,8 +784,9 @@
         '<td class="' + cellClass + '">' + text + '</td></tr>';
     }).join('');
     return '<div class="conj-card">' +
-      '<div class="verb-head">' + escapeHtml(entry.infinitive || 'Untitled verb') +
-        (entry.tense ? ' &mdash; ' + escapeHtml(entry.tense) : '') + '</div>' +
+      '<div class="verb-head' + (entry.irregular ? ' irregular' : '') + '">' + escapeHtml(entry.infinitive || 'Untitled verb') +
+        (entry.tense ? ' &mdash; ' + escapeHtml(entry.tense) : '') +
+        (entry.irregular ? ' <span class="irregular-tag">IRREGULAR</span>' : '') + '</div>' +
       '<table>' + rows + '</table>' +
     '</div>';
   }
@@ -656,8 +878,9 @@
 
     els.previewArea.innerHTML =
       '<div class="quiz-wrap">' +
-        '<div class="quiz-head">' +
-          '<span>' + escapeHtml(entry.infinitive || 'Untitled verb') + (entry.tense ? ' &mdash; ' + escapeHtml(entry.tense) : '') + '</span>' +
+        '<div class="quiz-head' + (entry.irregular ? ' irregular' : '') + '">' +
+          '<span class="quiz-title">' + escapeHtml(entry.infinitive || 'Untitled verb') + (entry.tense ? ' &mdash; ' + escapeHtml(entry.tense) : '') + '</span>' +
+          (entry.irregular ? '<span class="irregular-tag">IRREGULAR</span>' : '') +
           listenButtonHtml(' data-word="' + escapeHtml(entry.infinitive) + '"') +
         '</div>' +
         '<div class="quiz-progress">Verb ' + (quizIndex + 1) + ' of ' + quizOrder.length +
@@ -693,14 +916,17 @@
     refreshSwitcher();
 
     if (state.mode === 'vocab') {
-      var items = parseVocab(state.vocabText);
+      var items = vocabItemsForRender();
+      lastPreviewVocabItems = items;
       els.sheetNav.innerHTML = '';
       if (!items.length) {
         els.previewArea.innerHTML = '<p class="empty-note">Add some words to preview.</p>';
         els.previewNote.textContent = 'No words yet.';
         return;
       }
-      els.previewNote.textContent = items.length + ' word(s). Click a row below to self-check, or use Print for a worksheet + answer key.';
+      els.previewNote.textContent = items.length + ' word(s)' +
+        (state.vocabLimit > 0 ? ' (limited to ' + state.vocabLimit + ' random)' : '') +
+        '. Click a row below to self-check, or use Print for a worksheet + answer key.';
       renderVocabOnScreenCheck(items);
     } else {
       els.sheetNav.innerHTML = '';
@@ -766,9 +992,15 @@
     els.toolbar.style.display = '';
     els.setName.value = state.name;
     els.vocabInput.value = state.vocabText;
+    els.vocabDirection.value = state.vocabDirection || 'target2en';
+    els.vocabLimit.value = state.vocabLimit || 0;
     els.vocabShuffle.checked = !!state.shuffleVocab;
     els.conjShuffle.checked = !!state.shuffleConjugation;
     els.printCombined.checked = !!state.printCombined;
+    els.printVersions.value = state.printVersions || 1;
+    els.langPresetSelect.value = state.langPreset || 'spanish';
+    renderAccentRow();
+    refreshFlashImportBridge();
     populateTtsLangSelect();
     els.ttsLangSelect.value = state.ttsLang;
     switchModeUI();
@@ -783,8 +1015,11 @@
 
   /* ---------- lifecycle ---------- */
   function newSet(name) {
-    state = { name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [],
-      shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES', printCombined: false };
+    state = {
+      name: name, mode: 'vocab', vocabText: '', persons: DEFAULT_PERSONS.slice(), conjugations: [],
+      shuffleVocab: false, shuffleConjugation: false, ttsLang: 'es-ES', printCombined: false,
+      langPreset: 'spanish', vocabDirection: 'target2en', vocabLimit: 0, printVersions: 1
+    };
     Store.save(name, state);
     renderAll();
   }
@@ -795,13 +1030,45 @@
     state = loaded;
     if (!state.persons || !state.persons.length) state.persons = DEFAULT_PERSONS.slice();
     if (!state.conjugations) state.conjugations = [];
+    state.conjugations.forEach(function (c) { if (typeof c.irregular !== 'boolean') c.irregular = false; });
     if (!state.mode) state.mode = 'vocab';
     if (typeof state.shuffleVocab !== 'boolean') state.shuffleVocab = false;
     if (typeof state.shuffleConjugation !== 'boolean') state.shuffleConjugation = false;
     if (typeof state.printCombined !== 'boolean') state.printCombined = false;
     if (!state.ttsLang) state.ttsLang = 'es-ES';
+    if (!state.langPreset) state.langPreset = 'spanish';
+    if (!state.vocabDirection) state.vocabDirection = 'target2en';
+    if (typeof state.vocabLimit !== 'number') state.vocabLimit = 0;
+    if (typeof state.printVersions !== 'number' || state.printVersions < 1) state.printVersions = 1;
     renderAll();
   }
+
+  function refreshFlashImportBridge() {
+    var names = listFlashcardSets();
+    if (!names.length) { els.importFlashRow.style.display = 'none'; return; }
+    els.importFlashRow.style.display = '';
+    var current = els.flashSetSelect.value;
+    els.flashSetSelect.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      els.flashSetSelect.appendChild(opt);
+    });
+    if (current && names.indexOf(current) !== -1) els.flashSetSelect.value = current;
+  }
+
+  els.importFlashBtn.addEventListener('click', function () {
+    if (!state) return;
+    var name = els.flashSetSelect.value;
+    var items = getFlashcardItems(name);
+    if (!items.length) { alert('That list has no words saved yet.'); return; }
+    var lines = items.map(function (it) { return it.translation ? (it.word + ': ' + it.translation) : it.word; });
+    state.vocabText = (state.vocabText.trim() ? state.vocabText.replace(/\n*$/, '\n') : '') + lines.join('\n');
+    els.vocabInput.value = state.vocabText;
+    save();
+    alert('Added ' + items.length + ' word(s) from "' + name + '".');
+    renderPreview();
+  });
 
   /* ---------- wiring ---------- */
   els.setName.addEventListener('change', function () {
@@ -830,11 +1097,30 @@
   els.vocabShuffle.addEventListener('change', function () {
     state.shuffleVocab = els.vocabShuffle.checked;
     save();
+    renderPreview();
+  });
+
+  els.vocabDirection.addEventListener('change', function () {
+    state.vocabDirection = els.vocabDirection.value;
+    save();
+    renderPreview();
+  });
+
+  els.vocabLimit.addEventListener('input', function () {
+    state.vocabLimit = Math.max(0, parseInt(els.vocabLimit.value, 10) || 0);
+    save();
+    renderPreview();
+  });
+
+  els.printVersions.addEventListener('input', function () {
+    state.printVersions = Math.max(1, parseInt(els.printVersions.value, 10) || 1);
+    save();
   });
 
   els.conjShuffle.addEventListener('change', function () {
     state.shuffleConjugation = els.conjShuffle.checked;
     save();
+    renderPreview();
   });
 
   els.ttsLangSelect.addEventListener('change', function () {
@@ -936,27 +1222,33 @@
   });
 
   els.printBtn.addEventListener('click', function () {
-    var html;
-    if (state.printCombined) {
-      var vocabItems = parseVocab(state.vocabText);
-      if (state.shuffleVocab) vocabItems = shuffleCopy(vocabItems);
-      var conjList = state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations;
-      var vocabHtml = vocabItems.length
-        ? vocabDrillPages(vocabItems, false, 'Vocabulary Drill') + vocabDrillPages(vocabItems, true, 'Vocabulary Drill')
-        : '';
-      var conjHtml = conjList.length
-        ? conjugationPages(false, conjList, 'Conjugation Drill').join('') + conjugationPages(true, conjList, 'Conjugation Drill').join('')
-        : '';
-      html = vocabHtml + conjHtml;
-    } else if (state.mode === 'vocab') {
-      var items = parseVocab(state.vocabText);
-      if (state.shuffleVocab) items = shuffleCopy(items);
-      html = vocabDrillPages(items, false) + vocabDrillPages(items, true);
-    } else {
-      var list = state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations;
-      html = conjugationPages(false, list).join('') + conjugationPages(true, list).join('');
+    var versions = Math.max(1, state.printVersions || 1);
+    var htmlParts = [];
+    for (var v = 0; v < versions; v++) {
+      var versionKicker = versions > 1 ? ('Version ' + (v + 1)) : null;
+      if (state.printCombined) {
+        var vocabItems = versions > 1 ? vocabItemsForVersion() : vocabItemsForRender();
+        var conjList = versions > 1 ? shuffleCopy(state.conjugations) : (state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations);
+        var vocabKicker = versionKicker ? ('Vocabulary Drill — ' + versionKicker) : 'Vocabulary Drill';
+        var conjKicker = versionKicker ? ('Conjugation Drill — ' + versionKicker) : 'Conjugation Drill';
+        var vocabHtml = vocabItems.length
+          ? vocabDrillPages(vocabItems, false, vocabKicker) + vocabDrillPages(vocabItems, true, vocabKicker)
+          : '';
+        var conjHtml = conjList.length
+          ? conjugationPages(false, conjList, conjKicker).join('') + conjugationPages(true, conjList, conjKicker).join('')
+          : '';
+        htmlParts.push(vocabHtml + conjHtml);
+      } else if (state.mode === 'vocab') {
+        // Version 1 reuses exactly what's on screen right now (so print always
+        // matches the live preview); additional versions get fresh random draws.
+        var items = versions > 1 ? vocabItemsForVersion() : lastPreviewVocabItems;
+        htmlParts.push(vocabDrillPages(items, false, versionKicker) + vocabDrillPages(items, true, versionKicker));
+      } else {
+        var list = versions > 1 ? shuffleCopy(state.conjugations) : (state.shuffleConjugation ? shuffleCopy(state.conjugations) : state.conjugations);
+        htmlParts.push(conjugationPages(false, list, versionKicker).join('') + conjugationPages(true, list, versionKicker).join(''));
+      }
     }
-    document.getElementById('printArea').innerHTML = html;
+    document.getElementById('printArea').innerHTML = htmlParts.join('');
     window.print();
   });
 

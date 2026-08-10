@@ -36,41 +36,63 @@
    * Accepts the original "term: definition" per-line format, or a pasted
    * spreadsheet column: tab-separated (the clipboard format Google Sheets/
    * Excel use for a copied range) or comma-separated (a pasted .csv).
-   * A third field, an optional example sentence, comes from a third
-   * tab/comma column, or from "| example sentence" tacked onto the
-   * definition in the colon format. Extra columns beyond the first three
-   * are dropped, matching the tolerant paste parsing used elsewhere in
-   * this toolkit.
+   * Up to three more optional fields — example sentence, pronunciation
+   * guide, part of speech, in that order — come from extra tab/comma
+   * columns, or from "| example | pronunciation | part of speech" tacked
+   * onto the definition in the colon format (each segment optional; you
+   * can supply just an example and stop, for instance). Extra columns
+   * beyond the first five are dropped, matching the tolerant paste parsing
+   * used elsewhere in this toolkit.
    */
   function parseWordList(text) {
     return String(text || '').replace(/\r\n/g, '\n').split('\n').map(function (line) {
       if (!line.trim()) return null;
-      var term, definition, example = '';
+      var term, definition, example = '', pronunciation = '', partOfSpeech = '';
       if (line.indexOf('\t') !== -1) {
         var tabParts = line.split('\t');
         term = (tabParts[0] || '').trim();
         definition = (tabParts[1] || '').trim();
         example = (tabParts[2] || '').trim();
+        pronunciation = (tabParts[3] || '').trim();
+        partOfSpeech = (tabParts[4] || '').trim();
       } else if (line.indexOf(':') !== -1) {
         var idx = line.indexOf(':');
         term = line.slice(0, idx).trim();
         definition = line.slice(idx + 1).trim();
-        var pipeIdx = definition.indexOf('|');
-        if (pipeIdx !== -1) {
-          example = definition.slice(pipeIdx + 1).trim();
-          definition = definition.slice(0, pipeIdx).trim();
-        }
+        var pipeParts = definition.split('|');
+        definition = (pipeParts[0] || '').trim();
+        example = (pipeParts[1] || '').trim();
+        pronunciation = (pipeParts[2] || '').trim();
+        partOfSpeech = (pipeParts[3] || '').trim();
       } else if (line.indexOf(',') !== -1) {
         var csvFields = splitCsvLine(line);
         term = (csvFields[0] || '').trim();
         definition = (csvFields[1] || '').trim();
         example = (csvFields[2] || '').trim();
+        pronunciation = (csvFields[3] || '').trim();
+        partOfSpeech = (csvFields[4] || '').trim();
       } else {
         return null;
       }
       if (!term) return null;
-      return { term: term, definition: definition, example: example };
+      return { term: term, definition: definition, example: example, pronunciation: pronunciation, partOfSpeech: partOfSpeech };
     }).filter(Boolean);
+  }
+
+  /**
+   * Sort a COPY of items by term. mode is 'az', 'za', or anything else
+   * (including the default 'none') for "leave in the order given" — used
+   * so "as entered" round-trips through this function too rather than
+   * needing a separate branch at every call site.
+   */
+  function sortItems(items, mode) {
+    if (mode !== 'az' && mode !== 'za') return items.slice();
+    var copy = items.slice();
+    copy.sort(function (a, b) {
+      var cmp = String((a && a.term) || '').localeCompare(String((b && b.term) || ''), undefined, { sensitivity: 'base' });
+      return mode === 'za' ? -cmp : cmp;
+    });
+    return copy;
   }
 
   function paginate(items, perPage) {
@@ -127,6 +149,7 @@
 
   global.VocabLayout = {
     parseWordList: parseWordList,
+    sortItems: sortItems,
     paginate: paginate,
     shuffleItems: shuffleItems,
     mirrorPageRows: mirrorPageRows,
