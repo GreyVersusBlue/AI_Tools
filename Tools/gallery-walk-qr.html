@@ -122,13 +122,34 @@
   .preview-card .meta { flex: 1; min-width: 0; }
   .preview-card .badge { font-family: Consolas, monospace; font-size: .68rem; color: var(--muted); letter-spacing: .04em; }
   .preview-card .p-name { font-size: .92rem; font-weight: 700; color: var(--ink); margin: .1rem 0 .15rem; overflow-wrap: anywhere; }
-  .preview-card .p-content { font-size: .74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-card .p-content { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .reaction-btn {
     flex-shrink: 0; display: flex; align-items: center; gap: .3rem; background: #fff; color: var(--ink);
     border: 1px solid var(--line-strong); border-radius: 20px; padding: .35rem .7rem; font-size: .9rem; font-weight: 700;
   }
   .reaction-btn:hover { background: #fdf3e3; border-color: #e0b876; color: var(--ink); }
   .reaction-btn .reaction-count { font-size: .82rem; color: var(--muted); font-weight: 700; min-width: 1ch; text-align: left; }
+
+  .entries-table textarea.f-value { min-height: 4rem; font-family: inherit; font-size: .85rem; padding: .45rem .55rem; margin-bottom: 0; }
+  .entries-table td button.link-btn { display: block; margin-top: .2rem; }
+
+  .feedback-config { display: none; }
+  .feedback-config.open { display: block; }
+
+  .notes-list { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .notes-row { border-bottom: 1px solid var(--line); padding: .55rem .7rem; }
+  .notes-row:last-child { border-bottom: none; }
+  .notes-row-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .notes-row-head .n-name { font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+  .notes-count { font-size: .7rem; color: var(--muted); background: #f1f0ea; border: 1px solid var(--line); border-radius: 10px; padding: .05rem .5rem; white-space: nowrap; }
+  .notes-row textarea { margin: .5rem 0 0; min-height: 4.5rem; font-family: inherit; font-size: .85rem; }
+
+  .timer-display { text-align: center; background: #f4f3ee; border: 1px solid var(--line); border-radius: 8px; padding: 1rem .8rem; margin-bottom: .8rem; }
+  .timer-round { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .3rem; }
+  .timer-clock { font-family: Consolas, monospace; font-size: 2.6rem; font-weight: 700; line-height: 1; color: var(--ink); }
+  .timer-clock.paused { color: var(--muted); }
+  .timer-clock.complete { color: var(--accent-2); }
+  .timer-status { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
 
   .ref-list { width: 100%; border-collapse: collapse; font-size: .85rem; }
   .ref-list th, .ref-list td { border: 1px solid var(--line); padding: .4rem .55rem; text-align: left; vertical-align: top; }
@@ -153,6 +174,11 @@
     .print-qr-grid .p-card canvas { width: 100%; height: auto; max-width: 320px; }
     .print-qr-grid .p-card .p-num { font-size: .75rem; letter-spacing: .08em; color: #555; text-transform: uppercase; }
     .print-qr-grid .p-card .p-name { font-size: 1.2rem; font-weight: 700; margin: 4px 0 8px; }
+    .print-qr-grid .p-card .p-instructions {
+      align-self: stretch; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere;
+      font-size: .72rem; line-height: 1.35; color: #222; margin: 0 0 8px;
+      max-height: 150px; overflow: hidden;
+    }
 
     .print-qr-grid.pp-1 .p-card { width: calc(100% - 8px); }
     .print-qr-grid.pp-2 .p-card { width: calc(50% - 8px); }
@@ -173,6 +199,36 @@
     .ref-sheet table { width: 100%; border-collapse: collapse; font-size: .85rem; }
     .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
     .ref-sheet th { background: #eee; }
+
+    .print-slip-grid { display: flex; flex-wrap: wrap; }
+    .print-slip-grid .s-card {
+      box-sizing: border-box; border: 1.5px dashed #999; border-radius: 8px; padding: 12px;
+      display: flex; flex-direction: column; page-break-inside: avoid; margin: 4px;
+    }
+    .print-slip-grid.pp-2 .s-card { width: calc(50% - 8px); }
+    .print-slip-grid.pp-2 .s-card:nth-child(2n) { page-break-after: always; }
+    .print-slip-grid.pp-4 .s-card { width: calc(50% - 8px); }
+    .print-slip-grid.pp-4 .s-card:nth-child(4n) { page-break-after: always; }
+    .print-slip-grid.pp-6 .s-card { width: calc(33.33% - 8px); }
+    .print-slip-grid.pp-6 .s-card:nth-child(6n) { page-break-after: always; }
+    .print-slip-grid .s-card:last-child { page-break-after: auto !important; }
+
+    .s-card .slip-station { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #555; margin-bottom: 6px; }
+    .s-card .slip-station strong { color: #000; text-transform: none; letter-spacing: normal; font-size: 1rem; }
+    .s-card .slip-prompt, .s-card .slip-sticky-prompt { font-size: .82rem; font-style: italic; margin-bottom: 8px; }
+    .s-card .slip-line, .s-card .slip-wish, .s-card .slip-wish-blank { font-size: .95rem; margin: 10px 0; letter-spacing: .02em; }
+    .s-card .slip-rubric { width: 100%; border-collapse: collapse; font-size: .76rem; margin-bottom: 8px; }
+    .s-card .slip-rubric th, .s-card .slip-rubric td { border: 1px solid #999; padding: 4px 6px; text-align: center; }
+    .s-card .slip-rubric th:first-child, .s-card .slip-rubric td:first-child { text-align: left; }
+    .s-card .slip-sticky-box { border: 1px solid #999; border-radius: 4px; flex: 1; min-height: 110px; }
+    .s-card .slip-footer { font-size: .74rem; color: #555; margin-top: auto; padding-top: 8px; }
+
+    .print-packets .packet-page { page-break-after: always; padding: 0 4px 20px; }
+    .print-packets .packet-page:last-child { page-break-after: auto; }
+    .print-packets .packet-page h2 { font-size: 1.15rem; margin-bottom: 4px; }
+    .print-packets .packet-page .packet-sub { font-size: .82rem; color: #555; margin-bottom: 14px; }
+    .print-packets .packet-page ul { padding-left: 1.1rem; }
+    .print-packets .packet-page li { font-size: .95rem; margin-bottom: 10px; line-height: 1.4; }
   }
 </style>
 </head>
@@ -228,7 +284,7 @@
             <input type="file" id="importCsvInput" accept=".csv,text/csv" style="display:none;">
           </div>
         </div>
-        <div class="hint">A link missing "https://" (like "docs.google.com/...") gets it added automatically. Anything that doesn't look like a link or address is encoded as plain text as-is &mdash; handy for pointing at instructions instead of a URL.</div>
+        <div class="hint">A link missing "https://" (like "docs.google.com/...") gets it added automatically. Anything that doesn't look like a link or address is encoded as plain text as-is &mdash; handy for pointing at instructions instead of a URL. If the work isn't online at all, click "Use multi-line prompt / rubric text" on a row to write out the prompt or rubric &mdash; it gets printed right on the card as well as encoded in the code.</div>
       </div>
 
       <div class="card">
@@ -273,6 +329,88 @@
         <div class="hint">The reference sheet is just your own lookup list (name &rarr; link) &mdash; there's nothing secret on it, unlike an answer key, so it's fine to keep with the QR pages if that's handy.</div>
       </div>
 
+      <div class="card">
+        <div class="card-title"><span>Peer feedback slips</span></div>
+        <div class="option-row">
+          <input type="checkbox" id="enableFeedbackSlips">
+          <label class="option-label" for="enableFeedbackSlips">Print a pad of feedback slips for each station &mdash; students fill one in by hand and leave it behind</label>
+        </div>
+        <div class="feedback-config" id="feedbackConfig">
+          <div class="row2">
+            <div>
+              <label for="feedbackStyle">Slip style</label>
+              <select id="feedbackStyle">
+                <option value="stars">Two stars and a wish</option>
+                <option value="rubric">Simple rubric (1&ndash;4 scale)</option>
+                <option value="sticky">Open-ended prompt</option>
+              </select>
+            </div>
+            <div>
+              <label for="feedbackCopies">Slips per station</label>
+              <input type="text" inputmode="numeric" id="feedbackCopies" value="6">
+            </div>
+          </div>
+          <label for="feedbackPrompt">Custom prompt/question (optional &mdash; a sensible default is used if blank)</label>
+          <input type="text" id="feedbackPrompt" placeholder="e.g. What did you notice? What would make this even better?">
+          <label for="feedbackPerPage">Slips per printed page</label>
+          <select id="feedbackPerPage">
+            <option value="2">2 &mdash; large</option>
+            <option value="4" selected>4</option>
+            <option value="6">6 &mdash; compact</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="secondary" id="printSlipsBtn" disabled type="button">Print Feedback Slips</button>
+        </div>
+        <div class="hint">Slips don't need a link or QR code &mdash; a named entry with no link still gets a station slip, for work that's on paper or on display in the room.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Run the gallery walk</span></div>
+        <div class="timer-display">
+          <div class="timer-round" id="timerRound">Not started</div>
+          <div class="timer-clock" id="timerClock">3:00</div>
+          <div class="timer-status" id="timerStatus">Set a rotation time and press Start.</div>
+        </div>
+        <div class="row2">
+          <div class="row2" style="gap:.4rem;">
+            <div>
+              <label for="timerMinutes">Minutes per rotation</label>
+              <input type="text" inputmode="numeric" id="timerMinutes" value="3">
+            </div>
+            <div>
+              <label for="timerSeconds">Seconds</label>
+              <input type="text" inputmode="numeric" id="timerSeconds" value="0">
+            </div>
+          </div>
+          <div>
+            <label for="timerRotations">Number of rotations</label>
+            <input type="text" inputmode="numeric" id="timerRotations" value="1">
+          </div>
+        </div>
+        <div class="option-row">
+          <input type="checkbox" id="timerSound" checked>
+          <label class="option-label" for="timerSound">Play a sound when it's time to rotate</label>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="timerStartBtn">Start</button>
+          <button type="button" class="secondary" id="timerPauseBtn" style="display:none;">Pause</button>
+          <button type="button" id="timerResumeBtn" style="display:none;">Resume</button>
+          <button type="button" class="secondary" id="timerRotateNowBtn">Rotate now</button>
+          <button type="button" class="danger" id="timerResetBtn">Reset</button>
+        </div>
+        <div class="hint">Runs on this screen while you walk the room &mdash; the clock keeps time even if you switch tabs.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Collected feedback (optional)</span></div>
+        <div class="hint">After the walk, jot down or paste what came back on the slips for any station &mdash; one comment per line &mdash; then print a take-home packet per student showing what their classmates said.</div>
+        <div class="notes-list" id="notesList"><p class="empty-hint">Add at least one entry to collect feedback for it.</p></div>
+        <div class="btn-row">
+          <button class="secondary" id="printPacketsBtn" disabled type="button">Print Feedback Packets</button>
+        </div>
+      </div>
+
       <div id="msg"></div>
     </div>
 
@@ -303,6 +441,12 @@
     <tbody id="printRefBody"></tbody>
   </table>
 </div>
+<div class="print-only" id="printSlipsArea">
+  <div class="print-slip-grid" id="printSlipGrid"></div>
+</div>
+<div class="print-only print-packets" id="printPacketsArea">
+  <div id="printPacketsBody"></div>
+</div>
 
 <script>
 (function () {
@@ -318,7 +462,12 @@
    'cardsPerPage', 'ecLevel', 'showNumber', 'enableReactions', 'reactionsResetRow', 'resetReactionsBtn',
    'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
-   'refSheetTitle', 'previewNote', 'msg'
+   'refSheetTitle', 'previewNote', 'msg',
+   'enableFeedbackSlips', 'feedbackConfig', 'feedbackStyle', 'feedbackCopies', 'feedbackPrompt', 'feedbackPerPage',
+   'printSlipsBtn', 'printSlipsArea', 'printSlipGrid',
+   'timerRound', 'timerClock', 'timerStatus', 'timerMinutes', 'timerSeconds', 'timerRotations', 'timerSound',
+   'timerStartBtn', 'timerPauseBtn', 'timerResumeBtn', 'timerRotateNowBtn', 'timerResetBtn',
+   'notesList', 'printPacketsBtn', 'printPacketsArea', 'printPacketsBody'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -369,11 +518,15 @@
   }
 
   function newSet(name) {
-    state = { name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true, reactionsEnabled: false };
+    state = {
+      name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true, reactionsEnabled: false,
+      feedbackEnabled: false, feedbackStyle: 'stars', feedbackPrompt: '', feedbackCopies: 6, feedbackPerPage: '4',
+      timer: { minutes: 3, seconds: 0, rotations: 1, soundEnabled: true, count: 0, running: false, paused: false, endAt: null, remainingMs: null }
+    };
     applyStateToForm();
-    refreshSwitcher();
     els.toolbar.style.display = '';
     save();
+    refreshSwitcher();
     scheduleRender();
   }
 
@@ -383,6 +536,22 @@
     if (!loaded) return;
     if (!Array.isArray(loaded.entries)) loaded.entries = [];
     if (typeof loaded.reactionsEnabled !== 'boolean') loaded.reactionsEnabled = false;
+    if (typeof loaded.feedbackEnabled !== 'boolean') loaded.feedbackEnabled = false;
+    if (typeof loaded.feedbackStyle !== 'string') loaded.feedbackStyle = 'stars';
+    if (typeof loaded.feedbackPrompt !== 'string') loaded.feedbackPrompt = '';
+    if (!loaded.feedbackCopies) loaded.feedbackCopies = 6;
+    if (typeof loaded.feedbackPerPage !== 'string') loaded.feedbackPerPage = '4';
+    if (!loaded.timer || typeof loaded.timer !== 'object') loaded.timer = {};
+    var t = loaded.timer;
+    if (typeof t.minutes !== 'number') t.minutes = 3;
+    if (typeof t.seconds !== 'number') t.seconds = 0;
+    if (typeof t.rotations !== 'number' || t.rotations < 1) t.rotations = 1;
+    if (typeof t.soundEnabled !== 'boolean') t.soundEnabled = true;
+    if (typeof t.count !== 'number') t.count = 0;
+    if (typeof t.running !== 'boolean') t.running = false;
+    if (typeof t.paused !== 'boolean') t.paused = false;
+    if (typeof t.endAt !== 'number') t.endAt = null;
+    if (typeof t.remainingMs !== 'number') t.remainingMs = null;
     state = loaded;
     ensureAtLeastOneRow();
     applyStateToForm();
@@ -397,17 +566,35 @@
     els.showNumber.checked = state.showNumber !== false;
     els.enableReactions.checked = !!state.reactionsEnabled;
     els.reactionsResetRow.style.display = state.reactionsEnabled ? '' : 'none';
+    els.enableFeedbackSlips.checked = !!state.feedbackEnabled;
+    els.feedbackConfig.classList.toggle('open', !!state.feedbackEnabled);
+    els.feedbackStyle.value = state.feedbackStyle || 'stars';
+    els.feedbackPrompt.value = state.feedbackPrompt || '';
+    els.feedbackCopies.value = state.feedbackCopies || 6;
+    els.feedbackPerPage.value = state.feedbackPerPage || '4';
+    els.timerMinutes.value = state.timer.minutes;
+    els.timerSeconds.value = state.timer.seconds;
+    els.timerRotations.value = state.timer.rotations;
+    els.timerSound.checked = !!state.timer.soundEnabled;
+    notesOpenIdx = {};
     renderRows();
+    renderTimerUI();
+    renderNotesList();
   }
 
   // ── Row editor ────────────────────────────────────────────────────────────
   function renderRows() {
     var n = state.entries.length;
     els.entriesBody.innerHTML = state.entries.map(function (row, i) {
+      var valueCell = row.expanded
+        ? '<td><textarea class="f-value" rows="3" placeholder="Prompt, instructions, or rubric text for work that isn\'t online &mdash; this can be several lines">' + escapeHtml(row.value) + '</textarea>' +
+            '<button type="button" class="link-btn" data-collapse="' + i + '">Switch back to a single line</button></td>'
+        : '<td><input type="text" class="f-value" value="' + escapeAttr(row.value) + '" placeholder="docs.google.com/... or plain text">' +
+            '<button type="button" class="link-btn" data-expand="' + i + '">Use multi-line prompt / rubric text instead</button></td>';
       return '<tr data-idx="' + i + '">' +
         '<td class="num-cell">' + (i + 1) + '</td>' +
         '<td><input type="text" class="f-name" value="' + escapeAttr(row.name) + '" placeholder="Student / group ' + (i + 1) + '"></td>' +
-        '<td><input type="text" class="f-value" value="' + escapeAttr(row.value) + '" placeholder="docs.google.com/... or plain text"></td>' +
+        valueCell +
         '<td class="actions-cell">' +
           '<button type="button" class="move-row-btn" data-move-up="' + i + '" title="Move up" ' + (i === 0 ? 'disabled' : '') + '>&#8593;</button>' +
           '<button type="button" class="move-row-btn" data-move-down="' + i + '" title="Move down" ' + (i === n - 1 ? 'disabled' : '') + '>&#8595;</button>' +
@@ -469,6 +656,20 @@
   });
 
   els.entriesBody.addEventListener('click', function (e) {
+    var expandBtn = e.target.closest('[data-expand]');
+    if (expandBtn) {
+      state.entries[parseInt(expandBtn.dataset.expand, 10)].expanded = true;
+      renderRows();
+      save();
+      return;
+    }
+    var collapseBtn = e.target.closest('[data-collapse]');
+    if (collapseBtn) {
+      state.entries[parseInt(collapseBtn.dataset.collapse, 10)].expanded = false;
+      renderRows();
+      save();
+      return;
+    }
     var removeBtn = e.target.closest('[data-remove]');
     if (removeBtn) {
       state.entries.splice(parseInt(removeBtn.dataset.remove, 10), 1);
@@ -597,6 +798,25 @@
     return dupes;
   }
 
+  // True for genuine link content. A real URI never contains whitespace, so
+  // this also correctly rejects plain-text instructions that merely start
+  // with a word-then-colon (e.g. "Rubric:" or "Directions:") — those are not
+  // links even though they'd match the bare scheme pattern normalizeContent
+  // uses, and should still print as readable instructions on the card.
+  function contentIsLink(content) {
+    if (/\s/.test(content)) return false;
+    return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(content);
+  }
+
+  // Any row with a name or a value counts as a station for feedback slips and
+  // the reference/rotation flows that don't need a scannable QR — a piece of
+  // physical work on display needs a slip and a timer round but no link.
+  function nonEmptyEntries() {
+    return state.entries
+      .map(function (e, i) { return { idx: i, name: (e.name || '').trim() || ('Entry ' + (i + 1)), name0: (e.name || '').trim(), value0: (e.value || '').trim() }; })
+      .filter(function (e) { return e.name0 || e.value0; });
+  }
+
   function validEntries() {
     return state.entries
       .map(function (e, i) {
@@ -648,6 +868,8 @@
     var ecLevel = els.ecLevel.value;
 
     renderRefPreview(valid);
+    updateSlipsButton();
+    renderNotesList();
 
     if (!valid.length) {
       els.cardsPreview.innerHTML = '<p class="empty-hint">Add at least one entry with a link or text to see a preview.</p>';
@@ -689,6 +911,10 @@
     els.copyLinksBtn.disabled = false;
   }
 
+  function updateSlipsButton() {
+    els.printSlipsBtn.disabled = !(state.feedbackEnabled && nonEmptyEntries().length);
+  }
+
   // Tapping a reaction just bumps that entry's count in place — no full
   // re-render, so it doesn't scroll/flicker the preview mid-gallery-walk.
   els.cardsPreview.addEventListener('click', function (e) {
@@ -717,6 +943,63 @@
     scheduleRender();
   });
 
+  // ── Peer feedback slip config ────────────────────────────────────────────
+  els.enableFeedbackSlips.addEventListener('change', function () {
+    state.feedbackEnabled = els.enableFeedbackSlips.checked;
+    els.feedbackConfig.classList.toggle('open', state.feedbackEnabled);
+    save();
+    updateSlipsButton();
+  });
+  els.feedbackStyle.addEventListener('change', function () { state.feedbackStyle = els.feedbackStyle.value; save(); });
+  els.feedbackPrompt.addEventListener('input', function () { state.feedbackPrompt = els.feedbackPrompt.value; save(); });
+  els.feedbackCopies.addEventListener('change', function () {
+    state.feedbackCopies = Math.max(1, Math.min(60, parseInt(els.feedbackCopies.value, 10) || 6));
+    els.feedbackCopies.value = state.feedbackCopies;
+    save();
+  });
+  els.feedbackPerPage.addEventListener('change', function () { state.feedbackPerPage = els.feedbackPerPage.value; save(); });
+
+  function slipDefaultPrompt(style) {
+    if (style === 'sticky') return 'What’s one thing you noticed? What’s one question you have?';
+    return 'What did you notice? What would make this even better?';
+  }
+
+  var RUBRIC_CRITERIA = ['Followed the prompt', 'Effort / craftsmanship', 'Creativity', 'Overall impression'];
+
+  function buildSlipCardHTML(name) {
+    var style = state.feedbackStyle || 'stars';
+    var prompt = (state.feedbackPrompt || '').trim() || slipDefaultPrompt(style);
+    var header = '<div class="slip-station">Feedback for<br><strong>' + escapeHtml(name) + '</strong></div>';
+    var body;
+    if (style === 'rubric') {
+      body = '<div class="slip-prompt">' + escapeHtml(prompt) + '</div>' +
+        '<table class="slip-rubric"><thead><tr><th>&nbsp;</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead><tbody>' +
+        RUBRIC_CRITERIA.map(function (c) { return '<tr><td>' + escapeHtml(c) + '</td><td>&#9675;</td><td>&#9675;</td><td>&#9675;</td><td>&#9675;</td></tr>'; }).join('') +
+        '</tbody></table>' +
+        '<div class="slip-line">Comment: _______________________________</div>';
+    } else if (style === 'sticky') {
+      body = '<div class="slip-sticky-prompt">' + escapeHtml(prompt) + '</div><div class="slip-sticky-box"></div>';
+    } else {
+      body = '<div class="slip-prompt">' + escapeHtml(prompt) + '</div>' +
+        '<div class="slip-line">&#9733; _______________________________</div>' +
+        '<div class="slip-line">&#9733; _______________________________</div>' +
+        '<div class="slip-wish">Wish: __________________________</div>' +
+        '<div class="slip-wish-blank">_______________________________</div>';
+    }
+    return '<div class="s-card">' + header + body + '<div class="slip-footer">From (optional): _____________________</div></div>';
+  }
+
+  function buildPrintSlips() {
+    var stations = nonEmptyEntries();
+    var copies = Math.max(1, parseInt(state.feedbackCopies, 10) || 6);
+    els.printSlipGrid.className = 'print-slip-grid pp-' + (state.feedbackPerPage || '4');
+    var html = '';
+    stations.forEach(function (s) {
+      for (var c = 0; c < copies; c++) html += buildSlipCardHTML(s.name);
+    });
+    els.printSlipGrid.innerHTML = html;
+  }
+
   function renderRefPreview(valid) {
     if (!valid.length) { els.refPreview.innerHTML = '<p class="empty-hint">Nothing to reference yet.</p>'; return; }
     var reactCol = state.reactionsEnabled ? '<th>&#11088;</th>' : '';
@@ -727,6 +1010,78 @@
       }).join('') + '</tbody></table>';
   }
 
+  // ── Collected feedback (transcribed by the teacher after the walk) ──────
+  var notesOpenIdx = {};
+  function renderNotesList() {
+    var stations = nonEmptyEntries();
+    if (!stations.length) {
+      els.notesList.innerHTML = '<p class="empty-hint">Add at least one entry to collect feedback for it.</p>';
+      els.printPacketsBtn.disabled = true;
+      return;
+    }
+    els.notesList.innerHTML = stations.map(function (s) {
+      var notes = state.entries[s.idx].feedbackNotes || '';
+      var count = notes.split(/\r?\n/).filter(function (l) { return l.trim().length; }).length;
+      var open = !!notesOpenIdx[s.idx];
+      return '<div class="notes-row" data-notes-idx="' + s.idx + '">' +
+        '<div class="notes-row-head">' +
+          '<span class="n-name">' + escapeHtml(s.name) + '</span>' +
+          '<button type="button" class="link-btn" data-notes-toggle="' + s.idx + '">' + (open ? 'Hide' : (count ? 'Edit notes' : 'Add notes')) + '</button>' +
+          (count ? '<span class="notes-count">' + count + ' comment' + (count === 1 ? '' : 's') + '</span>' : '') +
+        '</div>' +
+        (open ? '<textarea data-notes-field="' + s.idx + '" placeholder="One comment per line">' + escapeHtml(notes) + '</textarea>' : '') +
+        '</div>';
+    }).join('');
+    var anyNotes = stations.some(function (s) { return (state.entries[s.idx].feedbackNotes || '').trim(); });
+    els.printPacketsBtn.disabled = !anyNotes;
+  }
+
+  els.notesList.addEventListener('click', function (e) {
+    var toggle = e.target.closest('[data-notes-toggle]');
+    if (!toggle) return;
+    var idx = parseInt(toggle.dataset.notesToggle, 10);
+    notesOpenIdx[idx] = !notesOpenIdx[idx];
+    renderNotesList();
+  });
+  els.notesList.addEventListener('input', function (e) {
+    var field = e.target.closest('[data-notes-field]');
+    if (!field) return;
+    var idx = parseInt(field.dataset.notesField, 10);
+    if (!state.entries[idx]) return;
+    state.entries[idx].feedbackNotes = field.value;
+    save();
+    var row = field.closest('.notes-row');
+    var countCount = field.value.split(/\r?\n/).filter(function (l) { return l.trim().length; }).length;
+    var badge = row.querySelector('.notes-count');
+    if (countCount) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'notes-count';
+        row.querySelector('.notes-row-head').appendChild(badge);
+      }
+      badge.textContent = countCount + ' comment' + (countCount === 1 ? '' : 's');
+    } else if (badge) {
+      badge.parentNode.removeChild(badge);
+    }
+    els.printPacketsBtn.disabled = !nonEmptyEntries().some(function (s) { return (state.entries[s.idx].feedbackNotes || '').trim(); });
+  });
+
+  function buildPrintPackets() {
+    var stations = nonEmptyEntries().filter(function (s) { return (state.entries[s.idx].feedbackNotes || '').trim(); });
+    els.printPacketsBody.innerHTML = stations.map(function (s) {
+      var lines = (state.entries[s.idx].feedbackNotes || '').split(/\r?\n/).filter(function (l) { return l.trim().length; });
+      return '<div class="packet-page"><h2>' + escapeHtml(s.name) + '</h2>' +
+        '<div class="packet-sub">Feedback from your classmates during the gallery walk</div>' +
+        '<ul>' + lines.map(function (l) { return '<li>' + escapeHtml(l.trim()) + '</li>'; }).join('') + '</ul></div>';
+    }).join('');
+  }
+
+  els.printPacketsBtn.addEventListener('click', function () {
+    buildPrintPackets();
+    if (!els.printPacketsBody.children.length) return;
+    printSection(els.printPacketsArea);
+  });
+
   function buildPrintCodes() {
     var valid = validEntries();
     var ecLevel = els.ecLevel.value;
@@ -736,8 +1091,9 @@
     valid.forEach(function (e, n) {
       var card = document.createElement('div');
       card.className = 'p-card';
+      var instructions = contentIsLink(e.content) ? '' : '<div class="p-instructions">' + escapeHtml(e.content) + '</div>';
       card.innerHTML = (showNum ? '<div class="p-num">Entry ' + (n + 1) + '</div>' : '') +
-        '<div class="p-name">' + escapeHtml(e.name) + '</div><canvas></canvas>';
+        '<div class="p-name">' + escapeHtml(e.name) + '</div>' + instructions + '<canvas></canvas>';
       els.printQrGrid.appendChild(card);
       try {
         drawQR(card.querySelector('canvas'), buildQR(e.content, ecLevel), 600);
@@ -770,6 +1126,11 @@
     if (!validEntries().length) return;
     buildPrintRef();
     printSection(els.printRefArea);
+  });
+  els.printSlipsBtn.addEventListener('click', function () {
+    if (!nonEmptyEntries().length) return;
+    buildPrintSlips();
+    printSection(els.printSlipsArea);
   });
 
   els.copyLinksBtn.addEventListener('click', function () {
@@ -806,6 +1167,180 @@
 
   [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
     el.addEventListener('change', function () { save(); scheduleRender(); });
+  });
+
+  // ── Rotation timer — same endAt/remainingMs pattern as Classroom Timer /
+  //    pe-tournament-stations, so the clock survives tab-switching without
+  //    drifting (recomputed from Date.now(), not a naive per-tick decrement).
+  var TICK_MS = 250;
+  var audioCtx = null;
+  function ensureAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      else if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { audioCtx = null; }
+    return audioCtx;
+  }
+  function playTone(ctx, freq, startAt, duration, volume) {
+    var osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.value = freq;
+    var attack = 0.01, release = 0.08;
+    gain.gain.setValueAtTime(0.00001, startAt);
+    gain.gain.linearRampToValueAtTime(volume, startAt + attack);
+    gain.gain.setValueAtTime(volume, startAt + duration - release);
+    gain.gain.exponentialRampToValueAtTime(0.00001, startAt + duration);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.02);
+  }
+  function playRotationAlarm() {
+    if (!state.timer.soundEnabled) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    try {
+      var now = ctx.currentTime;
+      playTone(ctx, 880, now, 0.16, 0.18);
+      playTone(ctx, 1175, now + 0.18, 0.2, 0.18);
+    } catch (e) { /* sound is a nice-to-have — never block the rotation */ }
+  }
+
+  function getRotationMs() {
+    var m = Math.max(0, parseInt(els.timerMinutes.value, 10) || 0);
+    var s = Math.max(0, Math.min(59, parseInt(els.timerSeconds.value, 10) || 0));
+    return m * 60000 + s * 1000;
+  }
+  function fmtTime(ms) {
+    var total = Math.max(0, Math.round(ms / 1000));
+    var m = Math.floor(total / 60), s = total % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function tickTimerDisplay() {
+    var t = state.timer;
+    var totalMs = getRotationMs();
+    var display;
+    if (t.running && t.endAt) display = t.endAt - Date.now();
+    else if (t.paused && t.remainingMs != null) display = t.remainingMs;
+    else display = totalMs;
+    els.timerClock.textContent = fmtTime(display);
+    els.timerClock.classList.toggle('paused', t.paused);
+    var complete = !t.running && !t.paused && t.count >= t.rotations && t.count > 0;
+    els.timerClock.classList.toggle('complete', complete);
+    if (complete) {
+      els.timerRound.textContent = 'Gallery walk complete';
+      els.timerStatus.textContent = t.rotations + ' rotation' + (t.rotations === 1 ? '' : 's') + ' finished.';
+    } else {
+      els.timerRound.textContent = 'Rotation ' + Math.min(t.count + 1, t.rotations) + ' of ' + t.rotations;
+      if (t.running) els.timerStatus.textContent = 'Running — rotates automatically when the clock hits 0:00.';
+      else if (t.paused) els.timerStatus.textContent = 'Paused.';
+      else els.timerStatus.textContent = 'Set a rotation time and press Start.';
+    }
+    els.timerStartBtn.style.display = (t.running || t.paused) ? 'none' : '';
+    els.timerPauseBtn.style.display = t.running ? '' : 'none';
+    els.timerResumeBtn.style.display = t.paused ? '' : 'none';
+  }
+
+  function renderTimerUI() { tickTimerDisplay(); }
+
+  function tickTimer() {
+    if (!state) return;
+    var t = state.timer;
+    if (!t.running || !t.endAt) { tickTimerDisplay(); return; }
+    var remaining = t.endAt - Date.now();
+    var guard = 0, changed = false;
+    while (remaining <= 0 && guard < 200) {
+      var totalMs = getRotationMs();
+      t.count++;
+      changed = true;
+      if (t.count >= t.rotations) { t.running = false; t.endAt = null; t.remainingMs = null; break; }
+      t.endAt += (totalMs > 0 ? totalMs : 1000);
+      remaining = t.endAt - Date.now();
+      guard++;
+    }
+    if (changed) { playRotationAlarm(); save(); renderTimerUI(); }
+    else tickTimerDisplay();
+  }
+  setInterval(tickTimer, TICK_MS);
+
+  els.timerStartBtn.addEventListener('click', function () {
+    var totalMs = getRotationMs();
+    if (totalMs <= 0) { showMsg('Set a rotation time greater than 0.'); return; }
+    ensureAudio();
+    clearMsg();
+    var t = state.timer;
+    if (t.count >= t.rotations) t.count = 0;
+    t.running = true;
+    t.paused = false;
+    t.endAt = Date.now() + (t.remainingMs != null ? t.remainingMs : totalMs);
+    t.remainingMs = null;
+    save();
+    renderTimerUI();
+  });
+  els.timerPauseBtn.addEventListener('click', function () {
+    var t = state.timer;
+    if (!t.running) return;
+    t.remainingMs = Math.max(0, t.endAt - Date.now());
+    t.running = false;
+    t.paused = true;
+    t.endAt = null;
+    save();
+    renderTimerUI();
+  });
+  els.timerResumeBtn.addEventListener('click', function () {
+    var t = state.timer;
+    if (!t.paused) return;
+    ensureAudio();
+    t.running = true;
+    t.paused = false;
+    t.endAt = Date.now() + (t.remainingMs != null ? t.remainingMs : getRotationMs());
+    t.remainingMs = null;
+    save();
+    renderTimerUI();
+  });
+  els.timerRotateNowBtn.addEventListener('click', function () {
+    var t = state.timer;
+    if (t.count >= t.rotations) return;
+    t.count++;
+    var totalMs = getRotationMs();
+    if (t.count >= t.rotations) { t.running = false; t.paused = false; t.endAt = null; t.remainingMs = null; }
+    else if (t.running) t.endAt = Date.now() + totalMs;
+    else if (t.paused) t.remainingMs = totalMs;
+    save();
+    renderTimerUI();
+  });
+  els.timerResetBtn.addEventListener('click', function () {
+    if (!confirm('Reset the rotation timer back to the start?')) return;
+    var t = state.timer;
+    t.count = 0;
+    t.running = false;
+    t.paused = false;
+    t.endAt = null;
+    t.remainingMs = null;
+    save();
+    renderTimerUI();
+  });
+
+  els.timerMinutes.addEventListener('change', function () {
+    state.timer.minutes = Math.max(0, parseInt(els.timerMinutes.value, 10) || 0);
+    els.timerMinutes.value = state.timer.minutes;
+    save();
+    tickTimerDisplay();
+  });
+  els.timerSeconds.addEventListener('change', function () {
+    state.timer.seconds = Math.max(0, Math.min(59, parseInt(els.timerSeconds.value, 10) || 0));
+    els.timerSeconds.value = state.timer.seconds;
+    save();
+    tickTimerDisplay();
+  });
+  els.timerRotations.addEventListener('change', function () {
+    state.timer.rotations = Math.max(1, parseInt(els.timerRotations.value, 10) || 1);
+    els.timerRotations.value = state.timer.rotations;
+    save();
+    renderTimerUI();
+  });
+  els.timerSound.addEventListener('change', function () {
+    state.timer.soundEnabled = els.timerSound.checked;
+    save();
   });
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }
