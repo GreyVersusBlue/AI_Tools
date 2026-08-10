@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geography Bee / Map Skills Quiz Generator</title>
+<meta name="description" content="A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/geography-bee-quiz-generator.html">
+<meta property="og:title" content="Geography Bee / Map Skills Quiz Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Geography Bee / Map Skills Quiz Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 16h20M16 6c3 4 3 16 0 20M16 6c-3 4-3 16 0 20' stroke='%231f3550' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --ok: #2c6e3f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="number"], select {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .6rem; margin-bottom: .6rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .25rem .6rem; font-size: .8rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+  .controls .field { min-width: 10rem; }
+  .controls select, .controls input { width: 100%; }
+
+  .tabs { display: flex; gap: .4rem; margin: 1rem 0; }
+  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .stage { display: none; }
+  .stage.active { display: block; }
+
+  .display-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 2.5rem 2.2rem; text-align: center; min-height: 26vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .display-num { color: var(--muted); font-size: .9rem; letter-spacing: .05em; text-transform: uppercase; }
+  .display-cat { display: inline-block; font-size: .72rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; background: #e9eef3; color: var(--accent-2); text-transform: uppercase; }
+  .display-q { font-size: 1.5rem; }
+  .display-a { font-size: 1.3rem; color: var(--ok); font-weight: 700; display: none; }
+  .display-a.shown { display: block; }
+  .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; }
+
+  .bank-row { padding: .4rem 0; border-bottom: 1px dashed var(--line); font-size: .86rem; }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-list { max-height: 40vh; overflow-y: auto; }
+  .bank-row .del-btn { float: right; }
+
+  .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
+  .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
+  .sheet-sub { color: var(--muted); font-size: .82rem; margin: 0 0 1rem; }
+  .problem { margin-bottom: .9rem; }
+  .problem .pnum { font-weight: 700; margin-right: .4rem; }
+  .worksheet-line { border-bottom: 1px solid var(--line-strong); display: block; height: 1.2rem; margin-top: .2rem; }
+  .key-list { list-style: none; margin: 0; padding: 0; font-size: .88rem; columns: 2; }
+  .key-list li { margin-bottom: .4rem; }
+
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .sheet-page { border: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Geography Bee / Map Skills Quiz Generator</h1>
+      <p class="sub">Capitals, landmarks, and map-reading questions &mdash; project one at a time or print a quiz with an answer key.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="field">
+        <label for="categoryFilter">Category</label>
+        <select id="categoryFilter">
+          <option value="">All categories</option>
+          <option value="capitals">Capitals</option>
+          <option value="landmarks">Landmarks</option>
+          <option value="mapskills">Map Skills</option>
+        </select>
+      </div>
+      <div class="field">
+        <button id="applyFilterBtn">Apply filter</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-stage="display">Projector display</button>
+    <button type="button" class="tab-btn" data-stage="sheet">Printable quiz</button>
+    <button type="button" class="tab-btn" data-stage="bank">Question bank</button>
+  </div>
+
+  <div class="stage active" id="stage-display">
+    <div class="btnrow" style="margin-bottom:1rem;">
+      <button class="secondary small" id="shuffleBtn">Shuffle order</button>
+    </div>
+    <div class="display-card">
+      <div class="display-num" id="displayNum"></div>
+      <div class="display-cat" id="displayCat"></div>
+      <div class="display-q" id="displayQ"></div>
+      <div class="display-a" id="displayA"></div>
+      <div class="display-nav">
+        <button class="secondary" id="prevBtn">&larr; Prev</button>
+        <button id="revealBtn">Reveal answer</button>
+        <button class="secondary" id="nextBtn">Next &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage-sheet">
+    <div class="card">
+      <label for="sheetCount">How many questions on the quiz</label>
+      <input type="number" id="sheetCount" value="10" min="1" max="30" style="max-width:8rem;">
+      <div class="btnrow">
+        <button id="buildSheetBtn">Build quiz</button>
+        <button class="secondary" id="printBtn">Print quiz + key</button>
+      </div>
+    </div>
+    <div id="printArea">
+      <div class="sheet-page">
+        <h2 class="sheet-title">Geography Quiz</h2>
+        <p class="sheet-sub">Name: __________________________ &nbsp; Date: __________</p>
+        <div id="sheetProblems"></div>
+      </div>
+      <div class="sheet-page">
+        <h2 class="sheet-title">Answer Key</h2>
+        <ul class="key-list" id="sheetKey"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage-bank">
+    <div class="card">
+      <h2>Add a question</h2>
+      <label for="newCategory">Category</label>
+      <select id="newCategory">
+        <option value="capitals">Capitals</option>
+        <option value="landmarks">Landmarks</option>
+        <option value="mapskills">Map Skills</option>
+      </select>
+      <label for="newQ">Question</label>
+      <input type="text" id="newQ" placeholder="e.g. What is the capital of Peru?">
+      <label for="newA">Answer</label>
+      <input type="text" id="newA" placeholder="e.g. Lima">
+      <button id="addQBtn">Add to bank</button>
+    </div>
+    <div class="card">
+      <h2>Full bank (<span id="bankCount">0</span> questions)</h2>
+      <p class="hint">Built-in questions can't be deleted, only your own custom ones.</p>
+      <div class="bank-list" id="bankList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var CUSTOM_KEY = 'gbq_custom_v1';
+  var CAT_LABELS = { capitals: 'Capitals', landmarks: 'Landmarks', mapskills: 'Map Skills' };
+
+  var BUILTIN = [
+    ['capitals', 'What is the capital of France?', 'Paris'],
+    ['capitals', 'What is the capital of Japan?', 'Tokyo'],
+    ['capitals', 'What is the capital of Australia?', 'Canberra'],
+    ['capitals', 'What is the capital of Canada?', 'Ottawa'],
+    ['capitals', 'What is the capital of Brazil?', 'Brasília'],
+    ['capitals', 'What is the capital of Egypt?', 'Cairo'],
+    ['capitals', 'What is the capital of South Korea?', 'Seoul'],
+    ['capitals', 'What is the capital of Kenya?', 'Nairobi'],
+    ['capitals', 'What is the capital of Mexico?', 'Mexico City'],
+    ['capitals', 'What is the capital of Russia?', 'Moscow'],
+    ['landmarks', 'In which country would you find the Great Pyramid of Giza?', 'Egypt'],
+    ['landmarks', 'In which country would you find the Eiffel Tower?', 'France'],
+    ['landmarks', 'In which country would you find Machu Picchu?', 'Peru'],
+    ['landmarks', 'In which country would you find the Great Wall?', 'China'],
+    ['landmarks', 'In which country would you find the Taj Mahal?', 'India'],
+    ['landmarks', 'In which country would you find Mount Kilimanjaro?', 'Tanzania'],
+    ['landmarks', 'In which country would you find the Colosseum?', 'Italy'],
+    ['landmarks', 'In which country would you find Uluru (Ayers Rock)?', 'Australia'],
+    ['landmarks', 'Which river is the longest in the world?', 'The Nile'],
+    ['landmarks', 'Which mountain range contains Mount Everest?', 'The Himalayas'],
+    ['mapskills', 'What is the imaginary line at 0° latitude called?', 'The Equator'],
+    ['mapskills', 'What is the imaginary line at 0° longitude called?', 'The Prime Meridian'],
+    ['mapskills', 'What tool on a map shows the meaning of its symbols?', 'The legend / key'],
+    ['mapskills', 'What do you call a line on a map connecting points of equal elevation?', 'A contour line'],
+    ['mapskills', 'What compass direction is directly opposite of North?', 'South'],
+    ['mapskills', 'What is the term for the ratio between map distance and real distance?', 'Scale'],
+    ['mapskills', 'What are the seven continents?', 'Africa, Antarctica, Asia, Australia, Europe, North America, South America'],
+    ['mapskills', 'What do lines of latitude measure?', 'Distance north or south of the Equator'],
+    ['mapskills', 'What do lines of longitude measure?', 'Distance east or west of the Prime Meridian'],
+    ['mapskills', 'What symbol on a map typically points north?', 'A compass rose']
+  ].map(function (row) { return { category: row[0], q: row[1], a: row[2], custom: false }; });
+
+  var els = {};
+  ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+   'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
+   'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var custom = [];
+  var order = [];
+  var idx = 0;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function uid() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function loadCustom() {
+    try { custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch (e) { custom = []; }
+    if (!Array.isArray(custom)) custom = [];
+  }
+  function saveCustom() {
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function allQuestions() {
+    return BUILTIN.concat(custom.map(function (c) {
+      return { category: c.category, q: c.q, a: c.a, custom: true, id: c.id };
+    }));
+  }
+  function filteredQuestions() {
+    var cat = els.categoryFilter.value;
+    return allQuestions().filter(function (item) { return !cat || item.category === cat; });
+  }
+
+  function resetOrder() {
+    var all = filteredQuestions();
+    order = all.map(function (_, i) { return i; });
+    idx = 0;
+  }
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function renderDisplay() {
+    var all = filteredQuestions();
+    if (!all.length || !order.length) {
+      els.displayNum.textContent = '';
+      els.displayCat.textContent = '';
+      els.displayQ.textContent = 'No questions match this filter.';
+      els.displayA.textContent = '';
+      return;
+    }
+    var item = all[order[idx]];
+    els.displayNum.textContent = 'Question ' + (idx + 1) + ' of ' + order.length;
+    els.displayCat.textContent = CAT_LABELS[item.category] || item.category;
+    els.displayQ.textContent = item.q;
+    els.displayA.textContent = item.a;
+    els.displayA.classList.remove('shown');
+  }
+
+  els.applyFilterBtn.addEventListener('click', function () { resetOrder(); renderDisplay(); });
+  els.prevBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx - 1 + order.length) % order.length; renderDisplay(); });
+  els.nextBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx + 1) % order.length; renderDisplay(); });
+  els.revealBtn.addEventListener('click', function () { els.displayA.classList.toggle('shown'); });
+  els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
+
+  els.buildSheetBtn.addEventListener('click', function () {
+    var all = shuffle(filteredQuestions().slice());
+    var count = Math.max(1, Math.min(30, parseInt(els.sheetCount.value, 10) || 10, all.length));
+    var chosen = all.slice(0, count);
+    els.sheetProblems.innerHTML = chosen.map(function (item, i) {
+      return '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + escapeHtml(item.q) + '<span class="worksheet-line"></span></div>';
+    }).join('');
+    els.sheetKey.innerHTML = chosen.map(function (item, i) {
+      return '<li>' + (i + 1) + '. ' + escapeHtml(item.a) + '</li>';
+    }).join('');
+  });
+  els.printBtn.addEventListener('click', function () {
+    if (!els.sheetProblems.innerHTML.trim()) els.buildSheetBtn.click();
+    window.print();
+  });
+
+  els.addQBtn.addEventListener('click', function () {
+    var q = els.newQ.value.trim();
+    var a = els.newA.value.trim();
+    if (!q || !a) { alert('Fill in both the question and the answer.'); return; }
+    custom.push({ id: uid(), category: els.newCategory.value, q: q, a: a });
+    saveCustom();
+    els.newQ.value = ''; els.newA.value = '';
+    resetOrder(); renderDisplay(); renderBank();
+  });
+
+  function renderBank() {
+    var all = allQuestions();
+    els.bankCount.textContent = all.length;
+    els.bankList.innerHTML = all.map(function (item) {
+      var delBtn = item.custom
+        ? '<button type="button" class="danger small del-btn" data-del="' + item.id + '">Delete</button>'
+        : '<span class="hint del-btn" style="margin:0;">built-in</span>';
+      return '<div class="bank-row">' + delBtn + '<b>[' + CAT_LABELS[item.category] + ']</b> ' + escapeHtml(item.q) + ' &mdash; <em>' + escapeHtml(item.a) + '</em></div>';
+    }).join('');
+  }
+  els.bankList.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del');
+    if (!id) return;
+    custom = custom.filter(function (c) { return c.id !== id; });
+    saveCustom(); resetOrder(); renderDisplay(); renderBank();
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var stage = btn.getAttribute('data-stage');
+      ['display', 'sheet', 'bank'].forEach(function (s) {
+        document.getElementById('stage-' + s).classList.toggle('active', s === stage);
+      });
+    });
+  });
+
+  /* ---------- boot ---------- */
+  loadCustom();
+  resetOrder();
+  renderDisplay();
+  renderBank();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

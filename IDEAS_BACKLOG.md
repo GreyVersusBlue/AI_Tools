@@ -38,7 +38,8 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Geography Bee / Map Skills Quiz Generator | A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## World Language
 
