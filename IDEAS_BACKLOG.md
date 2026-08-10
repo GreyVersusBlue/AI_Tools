@@ -61,7 +61,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Art Critique Worksheet Generator | A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student — pairs with Gallery Walk QR Codes. |
 | Fitness & Skill Assessment Tracker | Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report. |
 | Student Art Portfolio Label & QR Tag Maker | Printable labels and QR tags for physical student art portfolios, each code linking to a photo or description — pairs with Gallery Walk QR Codes. |
 | Music Sight-Reading / Rhythm Warm-Up Generator | Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class. |
