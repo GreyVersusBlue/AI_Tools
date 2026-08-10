@@ -56,28 +56,35 @@ are tagged **Done** below.
 
 ## Major Features
 
-- **Sport and activity library.** Shipped station templates for common PE
+- **Done — Round 4.** **Sport and activity library.** Shipped station templates for common PE
   units (volleyball skills, fitness circuit, striking/fielding, cooperative
   games) with the activity description and equipment list per station. This is
   the content that makes the tool usable by someone who isn't already
-  designing the unit from scratch.
-- **Fitness testing mode.** Station rotation is how fitness testing is run;
+  designing the unit from scratch. *(Five `STATION_TEMPLATES` circuits, real
+  activity descriptions and equipment lists, not placeholder text.)*
+- **Done — Round 4.** **Fitness testing mode.** Station rotation is how fitness testing is run;
   recording scores per student per station (pacer, sit-ups, sit-and-reach)
   with a printable class record is a substantial, unserved need.
-- **Score and result capture during the rotation** — not just a timer, but a
-  record of what happened at each station, which feeds a unit grade.
-- **One rotation engine for the whole site** (P7). Station rotation is also
+- **Done — Round 4.** **Score and result capture during the rotation** — not just a timer, but a
+  record of what happened at each station, which feeds a unit grade. *(A
+  scored flag + score unit per station, a live score-entry card, and a "Print
+  class record" button.)*
+- **Skipped — deferred, Round 4.** **One rotation engine for the whole site** (P7). Station rotation is also
   Classroom Timer's Round-Robin mode, and also what a gallery walk and a lab
   station rotation need. Four tools want this; one has it.
-- **One bracket engine for the whole site** (P7). This tool's bracket
+- **Skipped — deferred, Round 4.** **One bracket engine for the whole site** (P7). This tool's bracket
   duplicates `bracket-tournament-generator.html`, which is more capable
-  (double elimination, byes, saved brackets, QR sharing).
-- **Team/group memory across a unit** so the same four kids aren't together
+  (double elimination, byes, saved brackets, QR sharing). *(Deliberately left
+  alone — `bracket-tournament-generator` was being worked on in parallel this
+  round.)*
+- **Skipped — deferred, Round 4.** **Team/group memory across a unit** so the same four kids aren't together
   every day — the recency logic that
   `group-team-generator.html` already implements.
-- **Phone as the remote** (P9). A PE teacher is never near the laptop; driving
+- **Done — partial, Round 4.** **Phone as the remote** (P9). A PE teacher is never near the laptop; driving
   the rotation from a phone while the gym display follows is close to
-  essential rather than a nicety.
+  essential rather than a nicety. *(Shipped a same-device BroadcastChannel
+  remote window — confirmed working only within the same browser
+  profile/device, not phone-to-laptop; see the Round 4 update below.)*
 
 ## Moonshot / North Star
 
@@ -91,20 +98,27 @@ because the gym wifi does not work.
 ## Platform themes that matter here
 
 - **P9 (phone as remote)** — the strongest case on the site; a gym teacher
-  cannot stand at a laptop.
+  cannot stand at a laptop. **Partial (Round 4, PR #55)**: a same-device
+  remote window shipped; true phone-to-laptop control still needs a relay
+  this tool doesn't have.
 - **P7 (cross-tool)** — duplicates both the bracket engine and the rotation
-  timer that exist elsewhere.
+  timer that exist elsewhere. Deliberately left duplicated this round to
+  avoid stepping on parallel work on `bracket-tournament-generator.html`.
 - **P1 (projector/display mode)** — with an unusually demanding legibility
-  requirement.
+  requirement. **Addressed (Round 4, PR #55)**: gym-legible fullscreen sizing
+  and a high-contrast display toggle shipped.
 - **P6 (print quality)** — wall-sized station cards.
 
 ## Open Questions
 
 - Should the bracket here be replaced by an embed of / link to
   `bracket-tournament-generator.html`, keeping this tool focused on rotation?
-- Is score capture in scope, or does fitness testing deserve its own tool?
+- **Resolved 2026-08-10 (Round 4, PR #55).** Is score capture in scope, or
+  does fitness testing deserve its own tool? — Built directly into this
+  tool: a fitness/skill scores card and a printable class record, described
+  below.
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10 (PR #55)
 
 Implemented four of the Major Features in one pass, still single-file
 (`Tools/pe-tournament-stations.html`, no support folder added — the new

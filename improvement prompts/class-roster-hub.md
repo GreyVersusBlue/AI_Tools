@@ -137,45 +137,65 @@ What shipped, against the backlog below:
 
 ## Quick Wins
 
-- **A real roster editor.** Today a roster is a textarea. Per-student rows
+- **Done —** **A real roster editor.** Today a roster is a textarea. Per-student rows
   with add/remove/reorder, inline rename, and duplicate detection would make
-  this feel like the system of record it actually is.
-- **Duplicate and near-duplicate detection** ("John Smith" and "John  Smith"),
+  this feel like the system of record it actually is. *(Shipped — per-student
+  rows with inline rename, reorder, remove, archive, tick-to-select, sort;
+  the old textarea stays as a "Paste / bulk edit" tab.)*
+- **Done —** **Duplicate and near-duplicate detection** ("John Smith" and "John  Smith"),
   which silently breaks every downstream tool's per-student history.
-- **Column mapping on import.** `firstCellOf` assumes the name is in column 1;
+  *(Shipped — a sorted-token key catches exact repeats, blanks, and
+  name-order swaps, each with a one-click fix.)*
+- **Done —** **Column mapping on import.** `firstCellOf` assumes the name is in column 1;
   a real export from a gradebook has ID, Last, First, Period. Let the teacher
-  pick which columns are which (P13).
-- **Last, First ↔ First Last normalization**, since gradebook exports and
-  teacher typing disagree and downstream tools display both.
-- **Roster stats on the card**: 28 students, last edited 3 weeks ago, used by
-  6 tools.
-- **Print a numbered class list**, a blank checklist, and a seating-quiz style
-  blank — the three paper formats every teacher prints.
-- **Archive rather than delete** (P11) — deleting a roster silently orphans
-  history in a dozen other tools.
+  pick which columns are which (P13). *(Shipped — a mapping dialog with
+  header-row detection, column choice, a five-row preview, and add-vs-replace.
+  `firstCellOf` is gone.)*
+- **Done —** **Last, First ↔ First Last normalization**, since gradebook exports and
+  teacher typing disagree and downstream tools display both. *(Shipped — a
+  checked-by-default import option.)*
+- **Done —** **Roster stats on the card**: 28 students, last edited 3 weeks ago, used by
+  6 tools. *(Shipped — students, archived, how many carry details, last
+  saved.)*
+- **Done — numbered list, blank checklist, and blank grid only.** **Print a numbered class list**, a blank checklist, and a seating-quiz style
+  blank — the three paper formats every teacher prints. *(The numbered list,
+  blank checklist, and blank name grid are shipped; the seating-quiz variant
+  is still open — see "Where the next round should pick up" above.)*
+- **Done —** **Archive rather than delete** (P11) — deleting a roster silently orphans
+  history in a dozen other tools. *(Shipped — a roster can leave every other
+  tool's roster list without its names being destroyed.)*
 
 ## Major Features
 
-- **Own the student record schema** (P2). This is the decision that unblocks
+- **Done —** **Own the student record schema** (P2). This is the decision that unblocks
   the whole site: stable IDs, preferred name, pronunciation, period/section,
   optional photo, and a small set of flags other tools may honor. Today a
   student is a string, which means no tool can reliably carry history across a
   roster edit, and "J. Smith" in one tool is a different person from "Smith,
   John" in another. Whatever shape this takes has to be versioned and
-  migratable (P8), because 15 tools depend on it.
-- **Sections and periods as first-class.** One roster per period is the
+  migratable (P8), because 15 tools depend on it. *(Shipped as the
+  `crh_students_v1` sidecar — stable IDs, preferred name, pronunciation,
+  version stamp; a sidecar rather than an in-place `np_rosters` migration —
+  see the now-resolved Open Question above. Photo/flags deliberately not
+  built yet.)*
+- **Done —** **Sections and periods as first-class.** One roster per period is the
   current model; grouping them into "my 6 sections this year", filtering,
   and moving a student between sections mid-year are all normal events with no
-  current answer.
-- **Show what depends on this roster.** Before you delete or rename, tell the
+  current answer. *(Shipped — period, course, and school year per roster,
+  grouped and sorted in the saved-roster list and on printed pages.)*
+- **Done —** **Show what depends on this roster.** Before you delete or rename, tell the
   teacher which tools have data keyed to it. This is the friendliest possible
-  guardrail and no other tool can provide it.
-- **Year rollover** (P14). Archive last year's rosters, start clean, keep the
-  section structure. Pairs directly with Backup & Restore.
+  guardrail and no other tool can provide it. *(Shipped — a live
+  localStorage scan surfaced inside the delete confirmation.)*
+- **Done —** **Year rollover** (P14). Archive last year's rosters, start clean, keep the
+  section structure. Pairs directly with Backup & Restore. *(Shipped as
+  "Start a new school year" — files every roster under a year label in
+  `crh_archive_v1`, restorable.)*
 - **Roster transfer between devices** (P9) — QR sharing exists; peer-to-peer
   transfer of *all* rosters would make the school-to-home move trivial.
-- **Bulk operations**: merge two rosters, split one, apply a rename across all
-  tools.
+- **Partially done —** **Bulk operations**: merge two rosters, split one, apply a rename across all
+  tools. *(Move-ticked-students and merge are shipped; "apply a rename across
+  all tools" is still open — see "Where the next round should pick up" above.)*
 
 ## Moonshot / North Star
 
@@ -198,9 +218,14 @@ quiet backbone that makes the other 45 tools feel like one product instead of
 
 ## Open Questions
 
-- Should the richer student record live in `np_rosters` (migrating in place,
+- **Resolved 2026-08-10.** Should the richer student record live in `np_rosters` (migrating in place,
   with the old array-of-strings shape still readable) or in a new key beside
-  it? In-place migration is kinder to the 15 consuming tools but riskier.
+  it? In-place migration is kinder to the 15 consuming tools but riskier. —
+  Landed on a sidecar key (`crh_students_v1`): `np_rosters` stays
+  byte-compatible for the fifteen tools that already read it, and the
+  sidecar re-syncs against it on every load/save. Stable IDs only buy
+  continuity inside this tool until other tools opt in — see "Where the
+  next round should pick up" above.
 - How much personal data is appropriate to store at all? Preferred name and
   pronunciation are clearly useful; photos and flags deserve an explicit
   decision and a very visible erase control.
