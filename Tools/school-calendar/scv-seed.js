@@ -5,10 +5,15 @@
 
 export const VERSION = 1;
 
+// `noSchool: true` marks a type as taking a weekday out of the instructional-day
+// count (see the calendar's "instructional days" summary line) — students
+// aren't in the building that day. Half days, testing windows, marking-period
+// boundaries, and first/last day all still have students present, so they
+// default to false/unset.
 export const DEFAULT_DAY_TYPES = [
-  { id: "holiday",   label: "Holiday / No School",        color: "#a3372b", pattern: "solid",    abbr: "H"  },
+  { id: "holiday",   label: "Holiday / No School",        color: "#a3372b", pattern: "solid",    abbr: "H",  noSchool: true },
   { id: "halfday",   label: "Half Day / Early Dismissal",  color: "#c98a1f", pattern: "diagonal", abbr: "½"  },
-  { id: "workday",   label: "Teacher Workday (No Students)", color: "#6d4aa0", pattern: "dots",   abbr: "PD" },
+  { id: "workday",   label: "Teacher Workday (No Students)", color: "#6d4aa0", pattern: "dots",   abbr: "PD", noSchool: true },
   { id: "testing",   label: "Testing Window",              color: "#2e6b8f", pattern: "cross",   abbr: "T"  },
   { id: "mpend",     label: "Marking Period Boundary",     color: "#2e6b3e", pattern: "stripe",  abbr: "MP" },
   { id: "firstlast", label: "First / Last Day",            color: "#1f3550", pattern: "solid",   abbr: "★"  }

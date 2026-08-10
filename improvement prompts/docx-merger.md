@@ -9,8 +9,55 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 6 (PR #TBD): P5 fixed, plus three Quick Wins.**
+
+- **Done — Vendor JSZip locally (P5).** cdnjs was unreachable in this
+  session's own sandboxed network (blocked by egress policy — the exact
+  failure mode this fix exists for), so the file came from the `jszip@3.10.1`
+  npm package's `dist/jszip.min.js` instead, which is a byte-identical build
+  to what cdnjs served at that version. Vendored to
+  `Tools/docx-merger/lib/jszip.min.js` with a README following
+  `Tools/image-to-pdf/lib/README.md`'s convention (version, hash, source,
+  update instructions). `Sub Plan Builder.html` has the same cdnjs dependency
+  and is still unfixed — separate tool, separate round.
+- **Done — Preview before merge.** Opening each file's zip once now also
+  extracts a short plain-text preview of its first readable content, shown
+  under the filename in the list — the "wrong file, wrong order" case the
+  Quick Win asked about shows up before merging, not after.
+- **Done — Warn on unsupported content.** The same pass scans for headers,
+  footers, comments, footnotes, and tracked changes and shows a small ⚠
+  badge per file naming what won't carry over, instead of just the existing
+  static disclaimer text.
+- **Done — Custom heading text per document.** Each row got a "Heading
+  text" field (defaults to the filename) feeding the existing
+  file-name-as-heading option, instead of always using the raw filename.
+- **Not done — per-document page-break/heading toggle, keep-or-normalize
+  styles.** Scoped out to keep this round's changes centered on the file
+  list (preview/warnings/heading) rather than also reworking the merge
+  option model; both are still open below.
+
+Side effect worth knowing about: the old `updatePageEstimate()` reopened
+every file's zip on every add/remove to resum page counts. It's now
+`scanFiles()`, which only opens zips for files that haven't been scanned yet
+and caches pages/preview/warnings on the entry — faster on a re-add, and the
+same pass now does three jobs instead of one.
+
+Verified with a hand-built pair of minimal `.docx` files (one with a header,
+one without) run through the actual merge in headless Chromium: preview text
+extracted correctly for both, the header file got the right warning badge,
+the page estimate summed correctly (2+3=5), the custom heading landed in the
+merged `word/document.xml`, and the merged file re-opened cleanly with JSZip
+to confirm both source texts and the page break were present. No console
+errors.
+
+**Where a future round should pick up:** section-aware merging (preserving
+per-source page size/orientation via `sectPr`), headers/footers/page numbers
+across the merged document, and the packet-builder moonshot are all still
+open (Major Features below) — the OOXML groundwork for the first one already
+exists in `stripTrailingSectPr`/`createDefaultSectPr`.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session.
 
 ## What it does today
 
@@ -32,19 +79,24 @@ not a concatenator.
 
 ## Quick Wins
 
-- **Vendor JSZip locally** (P5). Same cdnjs dependency as Sub Plan Builder;
-  the tool simply fails on a blocked network.
-- **Preview before merge.** Even a plain-text extraction of the first lines of
+- **Done —** **Vendor JSZip locally** (P5). Same cdnjs dependency as Sub Plan Builder;
+  the tool simply fails on a blocked network. *(Sub Plan Builder itself is
+  still unfixed — see Status.)*
+- **Done —** **Preview before merge.** Even a plain-text extraction of the first lines of
   each document would prevent the "wrong file, wrong order" merge.
 - **Per-document options**, not global: page break after *this* one, heading
-  for *this* one, skip the first page of *this* one.
-- **Custom heading text** per document rather than the filename.
+  for *this* one, skip the first page of *this* one. *(Heading text is now
+  per-document — see below. Page-break-after-this-one and skip-first-page
+  are still global/unbuilt.)*
+- **Done —** **Custom heading text** per document rather than the filename.
 - **Keep or normalize styles** as an explicit choice. Merging documents with
   conflicting style definitions is the main way this kind of tool produces
   ugly output, and the user currently has no lever.
-- **Warn on unsupported content** — embedded images, headers/footers, tracked
+- **Done —** **Warn on unsupported content** — embedded images, headers/footers, tracked
   changes, comments, footnotes. Silently dropping content is the worst failure
-  mode a merger can have; naming it is most of the fix.
+  mode a merger can have; naming it is most of the fix. *(Images are actually
+  carried over already — this warns on headers, footers, comments,
+  footnotes, and tracked changes, the things genuinely dropped.)*
 - **Remember the last session's file list** (names only) so an accidental
   refresh doesn't lose a 20-file ordering.
 
@@ -78,7 +130,8 @@ written.
 
 ## Platform themes that matter here
 
-- **P5 (offline integrity)** — the cdnjs JSZip load is a real availability bug.
+- **P5 (offline integrity)** — **fixed for this tool** (JSZip vendored,
+  Round 6). `Sub Plan Builder.html` has the identical bug, still unfixed.
 - **P7 (cross-tool)** — the natural terminal step of many other tools'
   workflows.
 - **P6 (print quality)** — headers/footers/page numbers are exactly the shared

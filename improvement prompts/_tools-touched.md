@@ -116,6 +116,24 @@ assistant (Prompt Builder).
 
 **30 of 46 tools done. 16 to go.**
 
+### Round 6 — 2026-08-10 — PR #TBD
+
+Three tools with little else in common except each having a genuinely
+underbuilt "quick win" list: a document merger that finally got its cdnjs
+dependency vendored (P5) plus real preview/warning info per file, a
+year-spine calendar that gained the instructional-day arithmetic teachers
+do by hand plus range-select and .ics round-trip, and a reading log whose
+real cost — transcription — got a bulk-entry grid built specifically to cut
+it down.
+
+| Tool | File |
+|---|---|
+| Word Doc Merger | `docx-merger.md` |
+| School Calendar Visualizer | `school-calendar-visualizer.md` |
+| Silent Reading (SSR) Log Tracker | `ssr-log-tracker.md` |
+
+**33 of 46 tools done. 13 to go.**
+
 ---
 
 ## Not yet touched
@@ -127,15 +145,12 @@ data-heavy), and say why in the PR.
 - Blank Map Generator — `blank-map-generator.md`
 - Certificate & Award Maker — `certificate-award-maker.md`
 - Data Table → Chart Builder — `data-chart-builder.md`
-- Word Doc Merger — `docx-merger.md`
 - Field Trip Permission Slip Generator — `field-trip-permission-slip.md`
 - Final Grade Checker — `final-grade-checker.md`
 - Formula Reference Sheet Builder — `formula-sheet-builder.md`
 - Grade Distribution Visualizer — `grade-distribution-visualizer.md`
 - East Middle Schedule Browser — `schedule-browser.md`
 - School Layout Visualizer — `schedule-visualizer.md`
-- School Calendar Visualizer — `school-calendar-visualizer.md`
-- Silent Reading (SSR) Log Tracker — `ssr-log-tracker.md`
 - Sub Binder / Day Bundle Generator — `sub-binder-generator.md`
 - Sub Plan Builder — `sub-plan-builder.md`
 - Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
@@ -155,11 +170,16 @@ lands naturally inside a tool you are already working on, take it.
   benefit; the Behavior & Points Tracker is where it would save the most data.
 - **P1 projector mode.** Command Center has one now as a display state rather
   than a separate page. Any tool that gets projected could copy the approach.
-- **P5 CDN dependencies.** `Sub Plan Builder.html` and `docx-merger.html`
-  still load JSZip from cdnjs — both are on the untouched list, so this gets
-  fixed as a side effect if whoever takes them remembers.
-  `image-to-pdf.html` had the same issue with jsPDF and was fixed in Round 3
-  (PR #54, vendored into `Tools/image-to-pdf/lib/`).
+- **P5 CDN dependencies.** `Sub Plan Builder.html` still loads JSZip from
+  cdnjs — it's on the untouched list, so this gets fixed as a side effect if
+  whoever takes it remembers. `docx-merger.html` had the same issue and was
+  fixed in Round 6 (PR #TBD, vendored into `Tools/docx-merger/lib/`, source
+  pulled from the `jszip` npm package rather than cdnjs since cdnjs was
+  itself unreachable from that session's sandbox — see the npm-package
+  fallback approach in `docx-merger.md`'s Status section if cdnjs is
+  similarly unreachable next time). `image-to-pdf.html` had the same issue
+  with jsPDF and was fixed in Round 3 (PR #54, vendored into
+  `Tools/image-to-pdf/lib/`).
 - **P8 backup compatibility.** `Tools/backup-restore.html` keeps two lists
   that go stale silently: `KNOWN_GROUPS` (friendly names in the scan table)
   and `STUDENT_KEYS` (what the year-end clear is allowed to erase). **A tool

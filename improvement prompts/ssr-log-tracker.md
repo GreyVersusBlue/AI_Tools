@@ -9,8 +9,61 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 6 (PR #TBD): five Quick Wins shipped.**
+
+- **Done — Bulk entry grid.** A collapsible "Bulk entry" section: one row
+  per roster student (Student / Book / Pages read to / Minutes) for a single
+  date, tab-ordered down the grid. Each row's book defaults to that
+  student's most-recently-logged title ("same book as last time"); reopening
+  the grid for a date that already has entries shows the existing values
+  instead of blanks, so it doubles as a same-day review/correction view.
+  Only rows with a pages value are saved — untouched rows are silently
+  skipped, so a partial day's entry doesn't force filling in the whole
+  class. Existing single-day entries and bulk-saved entries land in the
+  exact same data structure and are fully interchangeable.
+- **Done — Printable paper log slips.** One card per roster student, in
+  roster order — the same order the bulk-entry grid lists students in — so
+  a stack of filled-in slips reads straight down into the grid rather than
+  requiring the teacher to hunt for each name.
+- **Done — Book autocomplete.** A shared `<datalist>` of every distinct book
+  title already logged anywhere in the class, wired to both the single-entry
+  form and every bulk-grid row.
+- **Done — Reading rate.** Pages-per-minute computed from every entry with
+  minutes logged, shown on the per-student card once at least two timed
+  sessions exist ("1.11 pages/minute — based on 2 timed sessions"). Kept to
+  the per-student view rather than added as a summary-table column, since a
+  reading-pace number is conference material, not a whole-class scan.
+- **Done — Undo on Delete class / delete entry (P11).** One shared undo
+  slot (a banner with a 10-second auto-dismiss) rather than a per-item
+  history — deleting an entry or a whole class shows what was removed and a
+  one-tap Undo. The restore functions close over the actual removed data
+  (or, for a class, the whole storage blob) rather than reading current UI
+  state, so Undo still works correctly even if the teacher has navigated
+  elsewhere in the meantime.
+
+A real bug was caught during testing, not by inspection: the bulk-save
+handler set its own status message ("Saved 2 entries.") *before* calling
+`renderBulkTable()`, which unconditionally clears that same status line as
+part of its normal refresh — so the message was wiped the instant it was
+set, and every bulk save silently showed a blank status. Fixed by moving the
+status-line write to after the refresh. Caught by asserting the actual
+status text in a headless-Chromium run, not just that the save didn't throw.
+
+Verified end-to-end in headless Chromium: two timed entries producing the
+right pages/minute rate, the datalist populated after logging a book, the
+bulk grid defaulting a continuing book correctly, a bulk save landing in the
+same per-student log the single-entry form reads, entry-delete-then-undo and
+class-delete-then-undo both restoring exactly the prior state, and the
+printed slips rendering one card per roster student. No console errors.
+
+**Where a future round should pick up:** reading conference notes, goals and
+challenges (weekly page targets, a class-wide "million pages" thermometer),
+the printed class-recommendations board, and novel-study/library-inventory
+cross-tool integration are all still open (Major Features below) — the
+bulk-entry grid this round built is the piece those all would sit on top of.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session.
 
 ## What it does today
 
@@ -27,24 +80,24 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Bulk entry built for a stack of paper logs.** The teacher transcribing
+- **Done —** **Bulk entry built for a stack of paper logs.** The teacher transcribing
   thirty students' reading is the real cost of this tool, and it's currently
   one form at a time. A single grid — student down the side, today's book and
   pages across — plus "same book as last time" defaults and tab-to-advance
   would cut the typing by most of it.
-- **Printable paper log slips** students fill in during SSR and hand back, in
+- **Done —** **Printable paper log slips** students fill in during SSR and hand back, in
   exactly the column order the bulk-entry grid expects, so transcription is
   a straight read-across.
-- **Book autocomplete** from books already logged in the class — most
+- **Done —** **Book autocomplete** from books already logged in the class — most
   students in a class are reading from the same classroom library.
-- **Reading rate** (pages per minute over logged sessions) — the number that
+- **Done —** **Reading rate** (pages per minute over logged sessions) — the number that
   makes a conference concrete: "you read 1.2 pages a minute; this book is 240
   pages; that's about three weeks."
 - **Books-finished count and a finished-books wall**, which is the motivating
   artifact for middle schoolers, printable as a display.
 - **Genre tagging**, so "you've read six fantasy books; try one of these" is a
   conversation the data supports.
-- **Undo on Delete class / delete entry** (P11).
+- **Done —** **Undo on Delete class / delete entry** (P11).
 - **Timer for the SSR period itself** (P7 — the timer already exists).
 
 ## Major Features

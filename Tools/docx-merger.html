@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="docx-merger/lib/jszip.min.js"></script>
 <style>
   body { max-width: 900px; margin: 0 auto; padding: 0 var(--space-4) var(--space-8); }
   h1 { font-size: 32px; margin-bottom: var(--space-1); }
@@ -45,19 +45,26 @@
   }
   ul#fileList:empty { display: none; }
   li.file-row {
-    display: flex; align-items: center; gap: var(--space-2);
+    display: flex; flex-direction: column; gap: 2px;
     padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--color-divider);
   }
   li.file-row.dragging { opacity: 0.4; }
   li.file-row.match { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
   li.file-row:last-child { border-bottom: none; }
+  .file-row-main { display: flex; align-items: center; gap: var(--space-2); }
   .handle { cursor: grab; opacity: 0.55; user-select: none; padding: 0 2px; }
   .idx { opacity: 0.55; font-size: 12px; width: 26px; text-align: right; flex-shrink: 0; }
   .fname { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fsize { opacity: 0.55; font-size: 12px; flex-shrink: 0; width: 60px; text-align: right; }
   .row-btns { display: flex; gap: 3px; flex-shrink: 0; }
   .row-btns .btn { padding: 3px 8px; font-size: 12px; }
+
+  .file-row-extra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); padding-left: 34px; }
+  .file-preview { font-size: 12px; opacity: 0.6; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 32rem; }
+  .file-warn { font-size: 11.5px; color: var(--color-danger); display: none; }
+  .file-heading-edit { display: flex; align-items: center; gap: 4px; font-size: 12px; opacity: 0.8; margin-left: auto; }
+  .file-heading-edit input { font-size: 12px; padding: 2px 6px; width: 12rem; }
 
   .options label {
     display: flex; align-items: flex-start; gap: var(--space-2);
@@ -170,7 +177,7 @@
       <li>Text, headings, bullet/numbered lists, tables, and images are carried over from every file.</li>
       <li>The page size, margins, and orientation of the <em>last</em> file in your list are used for the whole merged document.</li>
       <li>If different files use very different custom styles or fonts, some formatting may fall back to a default look rather than matching the original exactly.</li>
-      <li>Headers/footers from individual files aren't merged in — only the content between them.</li>
+      <li>Headers/footers from individual files aren't merged in — only the content between them. A file with a header, footer, comments, footnotes, or tracked changes gets a &#9888; warning in the list below once it's been read, so you know before merging, not after.</li>
       <li>Corrupted or non-.docx files are skipped automatically and listed after merging, so one bad file won't stop the rest.</li>
     </ul>
   </details>
@@ -182,7 +189,8 @@
   const REL_TYPE_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
   const REL_TYPE_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
 
-  let filesArr = []; // {file, name, size}
+  let filesArr = []; // {id, file, name, size, heading, scanned, pages, preview, warnings}
+  let nextEntryId = 1;
 
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
@@ -242,36 +250,18 @@
 
   function addFiles(fileListLike) {
     const incoming = Array.from(fileListLike).filter(f => /\.docx$/i.test(f.name));
-    incoming.forEach(f => filesArr.push({ file: f, name: f.name, size: f.size }));
+    incoming.forEach(f => filesArr.push({ id: nextEntryId++, file: f, name: f.name, size: f.size }));
     render();
-    updatePageEstimate();
+    scanFiles();
   }
 
   const pageEstimateLine = document.getElementById('pageEstimateLine');
   let pageEstimateToken = 0;
 
-  // Word saves a last-known page count in docProps/app.xml on every save — reading
-  // just that small entry (not the whole document) lets us sum a real estimate
-  // across 80+ files fast, instead of guessing from file size.
-  async function updatePageEstimate() {
-    const token = ++pageEstimateToken;
+  function updatePageEstimateLine() {
     if (!filesArr.length) { pageEstimateLine.textContent = ''; return; }
-    pageEstimateLine.textContent = 'Estimating total pages…';
     let totalPages = 0, knownCount = 0;
-    for (const entry of filesArr) {
-      try {
-        const buf = await entry.file.arrayBuffer();
-        const zip = await JSZip.loadAsync(buf);
-        const appXml = zip.file('docProps/app.xml');
-        if (appXml) {
-          const str = await appXml.async('string');
-          const m = str.match(/<Pages>(\d+)<\/Pages>/);
-          if (m) { totalPages += parseInt(m[1], 10); knownCount++; }
-        }
-      } catch (e) { /* unreadable file — merge step will report it */ }
-      if (token !== pageEstimateToken) return; // file list changed mid-estimate
-    }
-    if (token !== pageEstimateToken) return;
+    filesArr.forEach(e => { if (typeof e.pages === 'number') { totalPages += e.pages; knownCount++; } });
     if (knownCount === 0) {
       pageEstimateLine.textContent = '';
     } else if (knownCount === filesArr.length) {
@@ -280,6 +270,81 @@
       const missing = filesArr.length - knownCount;
       pageEstimateLine.textContent = `~${totalPages}+ pages total (page count unavailable for ${missing} file${missing === 1 ? '' : 's'})`;
     }
+  }
+
+  /** Surgically updates just the preview/warning text for one row, rather
+      than a full render() — so a scan finishing mid-typing in another row's
+      heading-text input can't steal focus or a cursor position. */
+  function updateRowExtra(entry) {
+    const li = fileListEl.querySelector('li[data-entry-id="' + entry.id + '"]');
+    if (!li) return;
+    const pv = li.querySelector('[data-preview]');
+    if (pv) pv.textContent = entry.preview || '';
+    const wn = li.querySelector('[data-warn]');
+    if (wn) {
+      if (entry.warnings && entry.warnings.length) {
+        wn.textContent = '⚠ has ' + entry.warnings.join(', ') + " — won't carry over to the merged file";
+        wn.style.display = '';
+      } else {
+        wn.textContent = '';
+        wn.style.display = 'none';
+      }
+    }
+  }
+
+  /** Opens each not-yet-scanned file's zip once to gather everything the file
+      list wants to show about it: Word's saved page count (docProps/app.xml,
+      the same small entry `updatePageEstimate` used to read on its own),
+      a short plain-text preview of the first readable content (so "wrong
+      file, wrong order" shows up before merging, not after), and a quick
+      scan for content this merger can't carry over (headers, footers,
+      comments, footnotes, tracked changes) so that's known up front instead
+      of silently dropped. Already-scanned entries are skipped, so re-adding
+      or removing files doesn't re-read everything already read. */
+  async function scanFiles() {
+    const token = ++pageEstimateToken;
+    if (!filesArr.length) { pageEstimateLine.textContent = ''; return; }
+    const toScan = filesArr.filter(e => !e.scanned);
+    if (toScan.length) pageEstimateLine.textContent = 'Reading file previews…';
+    for (const entry of toScan) {
+      try {
+        const buf = await entry.file.arrayBuffer();
+        const zip = await JSZip.loadAsync(buf);
+
+        const appXml = zip.file('docProps/app.xml');
+        entry.pages = null;
+        if (appXml) {
+          const str = await appXml.async('string');
+          const m = str.match(/<Pages>(\d+)<\/Pages>/);
+          if (m) entry.pages = parseInt(m[1], 10);
+        }
+
+        entry.warnings = [];
+        const docXmlFile = zip.file('word/document.xml');
+        if (docXmlFile) {
+          const docStr = await docXmlFile.async('string');
+          const texts = Array.from(docStr.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)).map(m => m[1]).join(' ').replace(/\s+/g, ' ').trim();
+          entry.preview = texts ? (texts.length > 140 ? texts.slice(0, 140) + '…' : texts) : '(no readable text found)';
+          if (/<w:ins[ >]|<w:del[ >]/.test(docStr)) entry.warnings.push('tracked changes');
+        } else {
+          entry.preview = '(could not read document text)';
+        }
+        const names = Object.keys(zip.files);
+        if (names.some(n => /^word\/header\d*\.xml$/.test(n))) entry.warnings.push('a header');
+        if (names.some(n => /^word\/footer\d*\.xml$/.test(n))) entry.warnings.push('a footer');
+        if (names.some(n => n === 'word/comments.xml')) entry.warnings.push('comments');
+        if (names.some(n => n === 'word/footnotes.xml')) entry.warnings.push('footnotes');
+      } catch (e) {
+        entry.pages = null;
+        entry.preview = '(could not read this file)';
+        entry.warnings = [];
+      }
+      entry.scanned = true;
+      if (token !== pageEstimateToken) return; // file list changed mid-scan
+      updateRowExtra(entry);
+    }
+    if (token !== pageEstimateToken) return;
+    updatePageEstimateLine();
   }
 
   function fmtSize(bytes) {
@@ -303,18 +368,28 @@
       li.className = 'file-row';
       li.draggable = true;
       li.dataset.index = i;
+      li.dataset.entryId = entry.id;
       if (filterTerm && entry.name.toLowerCase().includes(filterTerm)) li.classList.add('match');
 
       li.innerHTML = `
-        <span class="handle" title="Drag to reorder">⠿</span>
-        <span class="idx">${i + 1}.</span>
-        <span class="fname" title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</span>
-        <span class="fsize">${fmtSize(entry.size)}</span>
-        <span class="row-btns">
-          <button class="btn btn-secondary" data-act="up" title="Move up">▲</button>
-          <button class="btn btn-secondary" data-act="down" title="Move down">▼</button>
-          <button class="btn btn-secondary" data-act="remove" title="Remove" style="color:var(--color-danger);">✕</button>
-        </span>`;
+        <div class="file-row-main">
+          <span class="handle" title="Drag to reorder">⠿</span>
+          <span class="idx">${i + 1}.</span>
+          <span class="fname" title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</span>
+          <span class="fsize">${fmtSize(entry.size)}</span>
+          <span class="row-btns">
+            <button class="btn btn-secondary" data-act="up" title="Move up">▲</button>
+            <button class="btn btn-secondary" data-act="down" title="Move down">▼</button>
+            <button class="btn btn-secondary" data-act="remove" title="Remove" style="color:var(--color-danger);">✕</button>
+          </span>
+        </div>
+        <div class="file-row-extra">
+          <span class="file-preview" data-preview title="First readable text in this file">${escapeHtml(entry.preview || (entry.scanned ? '' : 'Reading preview…'))}</span>
+          <span class="file-warn" data-warn style="${entry.warnings && entry.warnings.length ? '' : 'display:none;'}">${entry.warnings && entry.warnings.length ? escapeHtml('⚠ has ' + entry.warnings.join(', ') + " — won't carry over to the merged file") : ''}</span>
+          <label class="file-heading-edit">Heading text:
+            <input type="text" data-heading-input placeholder="${escapeHtml(entry.name.replace(/\.docx$/i, ''))}" value="${escapeHtml(entry.heading || '')}">
+          </label>
+        </div>`;
       fileListEl.appendChild(li);
     });
 
@@ -341,7 +416,14 @@
         const act = btn.dataset.act;
         if (act === 'up' && i > 0) { [filesArr[i-1], filesArr[i]] = [filesArr[i], filesArr[i-1]]; render(); }
         if (act === 'down' && i < filesArr.length - 1) { [filesArr[i+1], filesArr[i]] = [filesArr[i], filesArr[i+1]]; render(); }
-        if (act === 'remove') { filesArr.splice(i, 1); render(); updatePageEstimate(); }
+        if (act === 'remove') { filesArr.splice(i, 1); render(); scanFiles(); }
+      });
+    });
+
+    fileListEl.querySelectorAll('[data-heading-input]').forEach(input => {
+      input.addEventListener('input', () => {
+        const i = +input.closest('li').dataset.index;
+        if (filesArr[i]) filesArr[i].heading = input.value;
       });
     });
   }
@@ -365,7 +447,7 @@
     downloadArea.style.display = 'none';
     statusEl.textContent = '';
     render();
-    updatePageEstimate();
+    scanFiles();
   });
 
   // ---------- MERGE LOGIC ----------
@@ -618,6 +700,10 @@
     zip.file(path, xmlToString(doc));
   }
 
+  function effectiveHeading(entry) {
+    return (entry.heading && entry.heading.trim()) || entry.name.replace(/\.docx$/i, '');
+  }
+
   async function readDocxParts(file) {
     const buf = await file.arrayBuffer();
     const zip = await JSZip.loadAsync(buf);
@@ -638,13 +724,13 @@
     const addPageBreak = document.getElementById('optPageBreak').checked;
 
     // find a working base file
-    let baseZip = null, baseIndex = -1, baseName = '';
+    let baseZip = null, baseIndex = -1, baseHeading = '';
     const failedBeforeBase = new Set();
     for (let i = 0; i < filesArr.length; i++) {
       try {
         baseZip = await readDocxParts(filesArr[i].file);
         baseIndex = i;
-        baseName = filesArr[i].name;
+        baseHeading = effectiveHeading(filesArr[i]);
         break;
       } catch (e) {
         errors.push(`${filesArr[i].name}: ${e.message}`);
@@ -681,7 +767,7 @@
     const allExtensions = new Set();
 
     if (addHeadings) {
-      baseBody.insertBefore(createHeadingParagraph(baseDoc, baseName), baseBody.firstChild);
+      baseBody.insertBefore(createHeadingParagraph(baseDoc, baseHeading), baseBody.firstChild);
     }
 
     const addToc = addHeadings && document.getElementById('optToc').checked;
@@ -748,7 +834,7 @@
         if (isLast && sectPr) finalSectPr = sectPr;
 
         if (addPageBreak) baseBody.appendChild(createPageBreakParagraph(baseDoc));
-        if (addHeadings) baseBody.appendChild(createHeadingParagraph(baseDoc, entry.name));
+        if (addHeadings) baseBody.appendChild(createHeadingParagraph(baseDoc, effectiveHeading(entry)));
 
         Array.from(body.childNodes).forEach(node => {
           baseBody.appendChild(baseDoc.importNode(node, true));

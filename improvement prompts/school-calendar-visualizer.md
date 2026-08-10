@@ -9,8 +9,61 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 6 (PR #TBD): five Quick Wins shipped.** `scv-seed.js`'s
+`DEFAULT_DAY_TYPES` gained a `noSchool` boolean (set on `holiday` and
+`workday`, unset elsewhere); every other change lives in the tool's own
+`<script type="module">`.
+
+- **Done — Instructional-day counter.** A new stats line under the toolbar:
+  "N instructional days in this range (M weekdays − K tagged 'No school')",
+  plus "N remaining from today" when today falls inside the calendar's
+  range. Each day type gained a "No school" checkbox in the legend so this
+  stays accurate as types are added/edited, rather than hardcoding which
+  built-in type IDs count.
+- **Done — Count days by type in the legend.** Each legend row now shows how
+  many days currently carry that tag — doubles as the data-entry sanity
+  check the Quick Win asked for.
+- **Done — Today marker + jump to today.** A filled accent-colored day
+  number on today's cell in both the month and year-grid views, plus a
+  "Jump to Today" toolbar button that scrolls to today's month (and says so
+  plainly if today falls outside the calendar's configured range).
+- **Done — Multi-select / drag to paint a range.** Implemented as
+  click-then-shift-click (spreadsheet-style) rather than a mouse-drag: a
+  plain click sets the range anchor, a shift-click on another day opens the
+  drawer in "range mode" against every day between them. Range-mode Save is
+  **additive** (checked types are added to each day, existing tags kept) and
+  a typed label/lesson/note **replaces** each day's only if you typed one —
+  documented in a hint banner inside the drawer itself. A live highlight of
+  the pending range on hover (before you shift-click) was cut for scope;
+  noted below as the natural next step.
+- **Done — Round-trip .ics import.** Handles single, non-recurring, all-day
+  `VEVENT`s (RFC 5545 line unfolding included) — the shape a district
+  calendar's holiday/closure list almost always is. A light heuristic tags
+  an imported day as "Holiday" if its title contains
+  holiday/break/closed/"no school" and the calendar already has a
+  holiday-like type; everything else imports as a label + note only, which
+  is still real value for "paste the table off the district PDF."
+
+Bug caught and fixed during testing, not by inspection: `closeDrawer()` only
+called `renderMonths()`, so the new legend day-counts and the stats line
+went stale after every single-day or range save until some *other* action
+happened to trigger a full `render()`. Now calls `render()` on close instead
+— the fix is one line, but it would have made the two flagship Quick Wins of
+this round (the counters) silently wrong most of the time. Caught by an
+end-to-end headless-Chromium test that checked the stats line's actual
+number before and after a range-tag save, not just that the save didn't
+throw.
+
+**Where a future round should pick up:** the pacing layer (define units with
+a target instructional-day count, auto-flow around holidays,
+know-when-you're-behind), grading-period awareness for other tools to read,
+bell schedules per day type, and a proper year-on-one-page print layout are
+all still open (Major Features below) and are where the real cross-tool
+leverage (P7) is. A live range-preview while shift-selecting (before the
+second click) would also be worth adding.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session.
 
 ## What it does today
 
@@ -27,21 +80,28 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Instructional-day counter.** "37 teaching days left in Q3", "14 days until
+- **Done —** **Instructional-day counter.** "37 teaching days left in Q3", "14 days until
   the testing window" — the number teachers actually do arithmetic for.
-- **Count days by type** in the legend (12 half days, 4 workdays), which
+  *(Whole-range + remaining-from-today, driven by a per-type "No school"
+  flag rather than the range boundaries alone.)*
+- **Done —** **Count days by type** in the legend (12 half days, 4 workdays), which
   doubles as a data-entry check.
 - **A/B day cycle overlay.** The rest of the site (Schedule Browser, Schedule
   Visualizer) is built around A/B days; this calendar doesn't know about them,
   so it can't answer "is the Monday after break an A day?" — which is the
   single most-asked calendar question in a block-schedule school.
 - **Week-at-a-glance print** in addition to the month/year views.
-- **Multi-select / drag to paint a range** of days with one type, instead of
-  clicking each day of a week-long break.
-- **Notes on a day**, not just a type — "picture day", "assembly 2nd period".
-- **Today marker** and "jump to today" on open.
-- **Round-trip .ics** — the tool exports .ics but can't import one, which is
-  how district calendars are usually published.
+- **Done —** **Multi-select / drag to paint a range** of days with one type, instead of
+  clicking each day of a week-long break. *(Click-then-shift-click, not a
+  mouse drag — see Status for why and what the range-mode Save actually
+  does.)*
+- **Already exists.** **Notes on a day**, not just a type — "picture day", "assembly 2nd period".
+  *(The drawer's "Other note" field already did this before this round —
+  this file was stale on that point.)*
+- **Done —** **Today marker** and "jump to today" on open.
+- **Done —** **Round-trip .ics** — the tool exports .ics but can't import one, which is
+  how district calendars are usually published. *(Single-event, non-recurring
+  only — see Status for the exact scope.)*
 
 ## Major Features
 

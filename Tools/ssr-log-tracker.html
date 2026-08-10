@@ -115,6 +115,35 @@
   .summary-table .goal-col { display: none; }
   .summary-table.has-goal .goal-col { display: table-cell; }
 
+  .bulk-details { margin-bottom: 1rem; }
+  .bulk-details summary { cursor: pointer; font-weight: 700; color: var(--accent); padding: .3rem 0; }
+  .bulk-date-row { display: flex; align-items: center; gap: .6rem; margin: .6rem 0; }
+  .bulk-date-row input[type="date"] { width: auto; margin: 0; }
+  .bulk-table th, .bulk-table td { padding: .3rem .4rem; }
+  .bulk-table input[type="text"], .bulk-table input[type="number"] { margin: 0; padding: .35rem .45rem; font-size: .85rem; }
+  .bulk-table td.bulk-name { font-weight: 600; white-space: nowrap; }
+  .bulk-table td.bulk-book { min-width: 11rem; }
+  .bulk-table td.bulk-pages, .bulk-table td.bulk-minutes { width: 6rem; }
+  .bulk-actions { display: flex; align-items: center; gap: .8rem; margin-top: .8rem; }
+  .bulk-actions button { width: auto; }
+  .bulk-status { font-size: .84rem; color: var(--accent-2); font-weight: 600; margin: 0; }
+
+  .reading-rate { font-size: .85rem; color: var(--muted); margin: -.4rem 0 .8rem; }
+  .reading-rate b { color: var(--ink); }
+
+  .undo-banner {
+    display: none; align-items: center; gap: .7rem; background: #fdf3e0; border: 1px solid #e3c07a;
+    border-radius: 7px; padding: .6rem .9rem; margin-bottom: 1rem; font-size: .86rem;
+  }
+  .undo-banner.show { display: flex; }
+  .undo-banner button { width: auto; margin: 0; }
+
+  .slip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .slip-card { border: 1px solid #999; border-radius: 6px; padding: .6rem .8rem; break-inside: avoid; }
+  .slip-card .slip-name { font-weight: 700; font-size: .95rem; margin: 0 0 .4rem; }
+  .slip-card .slip-field { font-size: .85rem; margin-bottom: .5rem; }
+  .slip-card .slip-line { display: block; border-bottom: 1px solid #999; height: 1.1rem; margin-top: .1rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   #printArea { display: none; }
@@ -150,6 +179,13 @@
     <button class="danger small" id="deleteSectionBtn">Delete class</button>
   </div>
 
+  <div class="undo-banner" id="undoBanner">
+    <span id="undoMessage"></span>
+    <button type="button" class="secondary small" id="undoBtn">Undo</button>
+  </div>
+
+  <datalist id="bookDatalist"></datalist>
+
   <div class="card">
     <label for="sectionName">Class / section name</label>
     <input type="text" id="sectionName" placeholder="e.g. 3rd Period ELA">
@@ -167,6 +203,26 @@
     </div>
   </div>
 
+  <details class="card bulk-details" id="bulkDetails">
+    <summary>Bulk entry — log today's reading for the whole class at once</summary>
+    <p class="hint">One row per student. Book defaults to whatever they logged last time — just fill in "pages read to" for kids continuing their book, and type a new title for anyone starting one. Rows left blank (no pages entered) are skipped.</p>
+    <div class="bulk-date-row">
+      <label for="bulkDate" style="margin:0;">Date</label>
+      <input type="date" id="bulkDate">
+      <button type="button" class="secondary small" id="printSlipsBtn" style="margin-left:auto;">Print paper log slips</button>
+    </div>
+    <div class="table-wrap">
+      <table class="bulk-table" id="bulkTable">
+        <thead><tr><th>Student</th><th>Book</th><th>Pages read to</th><th>Minutes</th></tr></thead>
+        <tbody id="bulkTableBody"></tbody>
+      </table>
+    </div>
+    <div class="bulk-actions">
+      <button type="button" id="bulkSaveBtn" style="width:auto;">Save all filled-in rows</button>
+      <p class="bulk-status" id="bulkStatus"></p>
+    </div>
+  </details>
+
   <div class="layout">
     <div class="card">
       <div class="card-title">Students</div>
@@ -181,10 +237,12 @@
           <button type="button" class="secondary small" id="printStudentBtn">Print this student's log</button>
         </div>
 
+        <p class="reading-rate" id="readingRate"></p>
+
         <form id="entryForm" class="entry-form">
           <div class="row4">
             <div><label for="entryDate">Date</label><input type="date" id="entryDate" required></div>
-            <div><label for="entryBook">Book title</label><input type="text" id="entryBook" required placeholder="e.g. Hatchet"></div>
+            <div><label for="entryBook">Book title</label><input type="text" id="entryBook" required placeholder="e.g. Hatchet" list="bookDatalist"></div>
             <div><label for="entryPages">Pages read to</label><input type="number" id="entryPages" min="0" step="1" required placeholder="e.g. 42"></div>
             <div><label for="entryMinutes">Minutes (optional)</label><input type="number" id="entryMinutes" min="0" step="1" placeholder="e.g. 20"></div>
           </div>
@@ -285,7 +343,10 @@
     'printSummaryBtn', 'filterFrom', 'filterTo', 'clearFilterBtn',
     'goalPages', 'goalMinutes',
     'summaryTable', 'summaryTableBody', 'noSummaryHint', 'exportCsvBtn',
-    'printArea'
+    'printArea',
+    'undoBanner', 'undoMessage', 'undoBtn',
+    'bulkDetails', 'bulkDate', 'bulkTableBody', 'bulkSaveBtn', 'bulkStatus', 'printSlipsBtn',
+    'readingRate', 'bookDatalist'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
@@ -317,6 +378,26 @@
   function makeId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
+
+  /* ---------- undo (one slot — the most recent destructive action) ---------- */
+  var pendingUndo = null;
+  var undoTimer = null;
+  function showUndo(message, action) {
+    pendingUndo = action;
+    els.undoMessage.textContent = message;
+    els.undoBanner.classList.add('show');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(hideUndo, 10000);
+  }
+  function hideUndo() {
+    pendingUndo = null;
+    clearTimeout(undoTimer);
+    els.undoBanner.classList.remove('show');
+  }
+  els.undoBtn.addEventListener('click', function () {
+    if (pendingUndo) pendingUndo();
+    hideUndo();
+  });
 
   /* ---------- storage ---------- */
   function readAllSections() {
@@ -384,6 +465,8 @@
     renderStudentList();
     renderActiveStudent();
     renderSummaryTable();
+    renderBookDatalist();
+    renderBulkTable();
   }
 
   function loadSection(name) {
@@ -402,6 +485,8 @@
     renderStudentList();
     renderActiveStudent();
     renderSummaryTable();
+    renderBookDatalist();
+    renderBulkTable();
   }
 
   function applyStateToForm() {
@@ -459,11 +544,22 @@
 
   els.deleteSectionBtn.addEventListener('click', function () {
     if (!state) return;
-    if (!confirm('Delete "' + state.name + '" completely, including its roster and all logs? This can’t be undone.')) return;
-    deleteSectionData(state.name);
+    if (!confirm('Delete "' + state.name + '" completely, including its roster and all logs?')) return;
+    var deletedName = state.name;
+    var deletedData = {
+      roster: state.roster, logs: state.logs, finished: state.finished,
+      weeklyGoalPages: state.weeklyGoalPages || 0, weeklyGoalMinutes: state.weeklyGoalMinutes || 0
+    };
+    deleteSectionData(deletedName);
     var remaining = listSections();
     if (remaining.length) loadSection(remaining[0]);
     else newSection('New Class');
+    showUndo('Deleted class "' + deletedName + '".', function () {
+      var all = readAllSections();
+      all[deletedName] = deletedData;
+      writeAllSections(all);
+      loadSection(deletedName);
+    });
   });
 
   // Read-only reuse of the shared roster list (Class Roster Hub / Name Picker
@@ -507,6 +603,7 @@
     renderStudentList();
     renderActiveStudent();
     renderSummaryTable();
+    renderBulkTable();
   });
 
   /* ---------- student list ---------- */
@@ -583,6 +680,52 @@
     return list;
   }
 
+  /** Every distinct book title logged anywhere in this class — most students
+      read from the same classroom library, so a title one student typed is
+      almost always the exact title another student's entry wants too. */
+  function renderBookDatalist() {
+    if (!state) { els.bookDatalist.innerHTML = ''; return; }
+    var seen = {}, titles = [];
+    state.roster.forEach(function (name) {
+      studentEntries(name).forEach(function (e) {
+        var key = bookKey(e.book);
+        if (key && !seen[key]) { seen[key] = true; titles.push(e.book); }
+      });
+    });
+    titles.sort(function (a, b) { return a.localeCompare(b); });
+    els.bookDatalist.innerHTML = titles.map(function (t) { return '<option value="' + escapeHtml(t) + '">'; }).join('');
+  }
+
+  /** Pages-per-minute from every timed session (an entry with minutes
+      filled in) — the number that turns "read 240 pages" into "that's about
+      three weeks at this pace" during a conference. Needs at least two
+      timed sessions before it's worth showing; one data point isn't a rate. */
+  function readingRateFor(name) {
+    var entries = studentEntries(name);
+    var sessionById = withSessionPages(entries);
+    var timedCount = 0, pages = 0, minutes = 0;
+    entries.forEach(function (e) {
+      if (e.minutes == null || e.minutes <= 0) return;
+      timedCount++;
+      pages += sessionById[e.id] || 0;
+      minutes += e.minutes;
+    });
+    if (timedCount < 2 || minutes <= 0) return null;
+    return { rate: pages / minutes, sessions: timedCount, pages: pages, minutes: minutes };
+  }
+
+  function renderReadingRate() {
+    if (!activeStudent) { els.readingRate.textContent = ''; return; }
+    var r = readingRateFor(activeStudent);
+    if (!r) {
+      els.readingRate.textContent = 'Reading rate: not enough timed sessions yet (log minutes on at least two entries to estimate one).';
+      return;
+    }
+    els.readingRate.innerHTML = 'Reading rate: <b>' + r.rate.toFixed(2) + ' pages/minute</b> ' +
+      '&mdash; based on ' + r.sessions + ' timed session' + (r.sessions === 1 ? '' : 's') +
+      ' (' + r.pages + ' pages in ' + r.minutes + ' minutes).';
+  }
+
   function studentFinished(name) {
     return (state.finished && state.finished[name]) || [];
   }
@@ -611,6 +754,7 @@
     resetForm();
     renderBookProgress();
     renderLogTable();
+    renderReadingRate();
   }
 
   function renderBookProgress() {
@@ -668,14 +812,27 @@
     if (editBtn) startEdit(editBtn.dataset.edit);
     if (delBtn) {
       if (!confirm('Delete this log entry?')) return;
-      var entries = studentEntries(activeStudent);
+      var studentName = activeStudent;
+      var entries = studentEntries(studentName);
       var idx = entries.findIndex(function (e) { return e.id === delBtn.dataset.del; });
-      if (idx !== -1) entries.splice(idx, 1);
+      if (idx === -1) return;
+      var removed = entries[idx];
+      entries.splice(idx, 1);
       if (editingEntryId === delBtn.dataset.del) resetForm();
       saveCurrentState();
       renderStudentList();
       renderLogTable();
       renderSummaryTable();
+      renderBookDatalist();
+      showUndo('Deleted a log entry for ' + studentName + ' (' + removed.date + ', ' + removed.book + ').', function () {
+        var arr = state.logs[studentName] || (state.logs[studentName] = []);
+        arr.splice(Math.min(idx, arr.length), 0, removed);
+        saveCurrentState();
+        renderStudentList();
+        if (activeStudent === studentName) renderLogTable();
+        renderSummaryTable();
+        renderBookDatalist();
+      });
     }
   });
 
@@ -726,7 +883,101 @@
     renderStudentList();
     renderLogTable();
     renderSummaryTable();
+    renderReadingRate();
+    renderBookDatalist();
+    renderBulkTable();
   });
+
+  /* ---------- bulk entry (one grid, whole class, one date) ---------- */
+  function lastKnownBook(name) {
+    var latest = sortedAscending(studentEntries(name)).slice(-1)[0];
+    return latest ? latest.book : '';
+  }
+
+  /** For a given student on the bulk-entry date: the existing entry for
+      that exact date if one was already logged (so reopening the grid for
+      a date you already did shows what's there, for review/correction),
+      otherwise a blank row defaulting the book to whatever they logged most
+      recently — "same book as last time" is the common case. */
+  function bulkRowDefaults(name, date) {
+    var existing = studentEntries(name).find(function (e) { return e.date === date; });
+    if (existing) return { book: existing.book, pages: existing.pagesTo, minutes: existing.minutes, entryId: existing.id };
+    return { book: lastKnownBook(name), pages: '', minutes: '', entryId: null };
+  }
+
+  function renderBulkTable() {
+    if (!state) { els.bulkTableBody.innerHTML = ''; return; }
+    if (!els.bulkDate.value) els.bulkDate.value = todayStr();
+    var date = els.bulkDate.value;
+    els.bulkTableBody.innerHTML = state.roster.map(function (name, i) {
+      var d = bulkRowDefaults(name, date);
+      return '<tr data-student="' + escapeHtml(name) + '">' +
+        '<td class="bulk-name">' + escapeHtml(name) + '</td>' +
+        '<td class="bulk-book"><input type="text" data-f="book" list="bookDatalist" value="' + escapeHtml(d.book).replace(/"/g, '&quot;') + '" tabindex="' + (i * 3 + 1) + '"></td>' +
+        '<td class="bulk-pages"><input type="number" data-f="pages" min="0" step="1" value="' + (d.pages === '' ? '' : d.pages) + '" tabindex="' + (i * 3 + 2) + '"></td>' +
+        '<td class="bulk-minutes"><input type="number" data-f="minutes" min="0" step="1" value="' + (d.minutes == null ? '' : d.minutes) + '" tabindex="' + (i * 3 + 3) + '"></td>' +
+        '</tr>';
+    }).join('');
+    els.bulkStatus.textContent = '';
+  }
+
+  els.bulkDate.addEventListener('change', renderBulkTable);
+  els.bulkDetails.addEventListener('toggle', function () { if (els.bulkDetails.open) renderBulkTable(); });
+
+  els.bulkSaveBtn.addEventListener('click', function () {
+    if (!state) return;
+    var date = els.bulkDate.value || todayStr();
+    var saved = 0, skipped = 0;
+    Array.prototype.slice.call(els.bulkTableBody.querySelectorAll('tr')).forEach(function (tr) {
+      var name = tr.dataset.student;
+      var book = tr.querySelector('[data-f="book"]').value.trim();
+      var pagesRaw = tr.querySelector('[data-f="pages"]').value;
+      var minutesRaw = tr.querySelector('[data-f="minutes"]').value;
+      if (pagesRaw === '') return; // untouched row — nothing to log today
+      var pagesTo = parseInt(pagesRaw, 10);
+      if (!book || isNaN(pagesTo) || pagesTo < 0) { skipped++; return; }
+      var minutes = minutesRaw === '' ? null : Math.max(0, parseInt(minutesRaw, 10) || 0);
+      var entries = state.logs[name] || (state.logs[name] = []);
+      var existing = entries.find(function (e) { return e.date === date; });
+      if (existing) { existing.book = book; existing.pagesTo = pagesTo; existing.minutes = minutes; }
+      else { entries.push({ id: makeId(), date: date, book: book, pagesTo: pagesTo, minutes: minutes }); }
+      saved++;
+    });
+    saveCurrentState();
+    renderStudentList();
+    if (activeStudent) { renderLogTable(); renderBookProgress(); renderReadingRate(); }
+    renderSummaryTable();
+    renderBookDatalist();
+    renderBulkTable(); // clears bulkStatus as part of a normal refresh — set the message after, not before
+    els.bulkStatus.textContent = saved
+      ? ('Saved ' + saved + ' entr' + (saved === 1 ? 'y' : 'ies') + (skipped ? (', skipped ' + skipped + ' (missing a book title)') : '') + '.')
+      : (skipped ? ('Nothing saved — ' + skipped + ' row' + (skipped === 1 ? '' : 's') + ' had pages but no book title.') : 'No rows had pages entered.');
+  });
+
+  /** One card per roster student with blank fields, in the same roster
+      order the bulk-entry grid uses — a class set of these comes back from
+      SSR in an order a teacher can read straight down while filling in the
+      grid, rather than hunting for each name. */
+  function printSlips() {
+    if (!state || !state.roster.length) { alert('Add a roster first.'); return; }
+    var date = els.bulkDate.value || todayStr();
+    var cards = state.roster.map(function (name) {
+      return '<div class="slip-card">' +
+        '<p class="slip-name">' + escapeHtml(name) + '</p>' +
+        '<p class="slip-field">Date: <span class="slip-line">' + escapeHtml(date) + '</span></p>' +
+        '<p class="slip-field">Book: <span class="slip-line">&nbsp;</span></p>' +
+        '<p class="slip-field">Pages read to: <span class="slip-line">&nbsp;</span></p>' +
+        '<p class="slip-field">Minutes: <span class="slip-line">&nbsp;</span></p>' +
+        '</div>';
+    }).join('');
+    els.printArea.innerHTML =
+      '<div class="print-title">' + escapeHtml(state.name) + ' &mdash; Reading Log Slips</div>' +
+      '<div class="print-sub">' + escapeHtml(date) + ' &middot; Fill in and hand back at the end of SSR</div>' +
+      '<div class="slip-grid">' + cards + '</div>';
+    window.print();
+  }
+
+  els.printSlipsBtn.addEventListener('click', printSlips);
 
   /* ---------- class summary ---------- */
 

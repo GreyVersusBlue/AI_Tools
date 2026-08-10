@@ -73,7 +73,12 @@
   .legend-row .swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); flex-shrink: 0; }
   .legend-row input[type=text].label { width: 220px; }
   .legend-row input[type=text].abbr { width: 46px; text-align: center; }
+  .legend-row .no-school { display: flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+  .legend-row .day-count { font-size: 0.76rem; color: var(--muted); white-space: nowrap; min-width: 5.5em; }
   .legend-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+
+  .stats-line { font-size: 0.85rem; color: var(--muted); margin: -8px 0 18px; }
+  .stats-line b { color: var(--ink); }
 
   /* --- month grid --- */
   .months { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
@@ -90,6 +95,8 @@
   .day.empty:hover { background: #fbfaf7; }
   .day .num { font-weight: 600; color: var(--muted); }
   .day.selected { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+  .day.today .num { display: inline-block; background: var(--accent-2); color: #fff; border-radius: 50%; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; }
+  .yday.today { outline: 1.5px solid var(--accent-2); outline-offset: -1.5px; }
   .chips { display: flex; gap: 2px; flex-wrap: wrap; margin: 2px 0; }
   .chip { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.35); }
   .day .lbl { display: block; font-size: 0.62rem; color: var(--ink); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; }
@@ -127,6 +134,8 @@
   #drawer .types { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
   #drawer .types label { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; cursor: pointer; }
   #drawer label.f { font-size: 0.78rem; font-weight: 600; color: var(--muted); display: block; margin: 10px 0 3px; }
+  #drawer .range-hint { display: none; font-size: 0.78rem; background: #eef4f8; border: 1px solid var(--accent-2); border-radius: 5px; padding: 8px 10px; margin: 8px 0; color: var(--accent-2); }
+  #drawer.range-mode .range-hint { display: block; }
 
   .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
 
@@ -162,7 +171,10 @@
     <button id="btnImport">Import Backup</button>
     <input type="file" id="fileImport" accept="application/json" hidden>
     <button id="btnExportIcs">Export Calendar (.ics)</button>
+    <button id="btnImportIcs">Import Calendar (.ics)</button>
+    <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
     <select id="jumpMonth" title="Jump to month"></select>
+    <button id="btnJumpToday">Jump to Today</button>
     <span class="print-mode">
       <label><input type="radio" name="printMode" value="month" checked> Month-by-month</label>
       <label><input type="radio" name="printMode" value="year"> Whole year</label>
@@ -190,6 +202,8 @@
     <button id="btnAddType" class="small" style="margin-top:10px;">+ Add Day Type</button>
   </div>
 
+  <p class="stats-line no-print" id="statsLine"></p>
+
   <h1 id="printTitle" style="display:none;"></h1>
   <div class="months" id="months"></div>
   <div class="year-grid" id="yearGrid"></div>
@@ -198,6 +212,7 @@
 <div id="drawer">
   <button class="close small" id="drawerClose">✕</button>
   <h3 id="drawerDate"></h3>
+  <p class="range-hint">Shift-click selected a range of days. Checked types are <strong>added</strong> to every day below (existing tags are kept); a label, lesson note, or other note you type here <strong>replaces</strong> each day's, but only if you type one — leave a field blank to leave those days' existing text alone.</p>
   <label class="f">Day types</label>
   <div class="types" id="drawerTypes"></div>
   <label class="f" for="drawerLabel">Label (e.g. "Labor Day")</label>
@@ -208,7 +223,7 @@
   <textarea id="drawerNote"></textarea>
   <div style="margin-top:14px; display:flex; gap:8px;">
     <button id="drawerSave" class="primary small">Save</button>
-    <button id="drawerClear" class="danger small">Clear Day</button>
+    <button id="drawerClear" class="danger small">Clear Day/Range</button>
   </div>
 </div>
 
@@ -219,6 +234,8 @@ import { seedCalendar2026, blankCalendar } from './school-calendar/scv-seed.js';
 const store = createStore(seedCalendar2026);
 let cal = store.get();
 let selectedDate = null;
+let rangeAnchor = null; // last plain-clicked date — the shift-click anchor for range selection
+let rangeDates = null;  // array of ISO dates when the drawer is open in range mode, else null
 
 const PATTERNS = ["solid", "diagonal", "dots", "cross", "stripe"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -244,10 +261,20 @@ function iso(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
+function countDaysByType() {
+  const counts = {};
+  Object.values(cal.days).forEach(entry => {
+    entry.types.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+  });
+  return counts;
+}
+
 function renderLegend() {
   const list = document.getElementById("legendList");
   list.innerHTML = "";
+  const counts = countDaysByType();
   cal.dayTypes.forEach((t, idx) => {
+    const n = counts[t.id] || 0;
     const row = document.createElement("div");
     row.className = "legend-row";
     row.innerHTML = `
@@ -258,11 +285,20 @@ function renderLegend() {
       <select data-i="${idx}" data-f="pattern">
         ${PATTERNS.map(p => `<option value="${p}" ${p === t.pattern ? "selected" : ""}>${p}</option>`).join("")}
       </select>
+      <label class="no-school"><input type="checkbox" data-i="${idx}" data-f="noSchool" ${t.noSchool ? "checked" : ""}> No school</label>
+      <span class="day-count">${n} day${n === 1 ? "" : "s"}</span>
       <button class="small danger" data-i="${idx}" data-act="del">Remove</button>
     `;
     list.appendChild(row);
   });
-  list.querySelectorAll("input,select").forEach(el => {
+  list.querySelectorAll("input[data-f=noSchool]").forEach(el => {
+    el.addEventListener("change", e => {
+      const i = +e.target.dataset.i;
+      cal.dayTypes[i].noSchool = e.target.checked;
+      save(); render();
+    });
+  });
+  list.querySelectorAll("input:not([data-f=noSchool]),select").forEach(el => {
     el.addEventListener("change", e => {
       const i = +e.target.dataset.i, f = e.target.dataset.f;
       cal.dayTypes[i][f] = e.target.value;
@@ -317,7 +353,7 @@ function renderMonths() {
         grid.appendChild(cell);
         continue;
       }
-      cell.className = "day" + (dateISO === selectedDate ? " selected" : "");
+      cell.className = "day" + (dateISO === selectedDate ? " selected" : "") + (dateISO === todayISO() ? " today" : "");
       cell.dataset.date = dateISO;
       const entry = cal.days[dateISO];
       const chips = (entry && entry.types.length)
@@ -329,7 +365,10 @@ function renderMonths() {
       const label = entry && entry.label ? `<span class="lbl">${escapeHtml(entry.label)}</span>` : "";
       const lesson = entry && entry.lesson ? `<span class="lesson">${escapeHtml(entry.lesson)}</span>` : "";
       cell.innerHTML = `<span class="num">${d}</span>${chips}${label}${lesson}`;
-      cell.addEventListener("click", () => openDrawer(dateISO));
+      cell.addEventListener("click", (e) => {
+        if (e.shiftKey && rangeAnchor) openDrawerRange(rangeAnchor, dateISO);
+        else openDrawer(dateISO);
+      });
       grid.appendChild(cell);
     }
   });
@@ -367,7 +406,7 @@ function renderYearGrid() {
         grid.appendChild(cell);
         continue;
       }
-      cell.className = "yday";
+      cell.className = "yday" + (dateISO === todayISO() ? " today" : "");
       const entry = cal.days[dateISO];
       const dots = (entry && entry.types.length)
         ? `<div class="ydots">${entry.types.map(id => {
@@ -381,7 +420,49 @@ function renderYearGrid() {
   });
 }
 
-function render() { renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); renderJumpControl(); }
+function todayISO() {
+  const n = new Date();
+  return iso(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+function isNoSchoolDay(dateISO) {
+  const entry = cal.days[dateISO];
+  if (!entry || !entry.types.length) return false;
+  return entry.types.some(id => { const t = typeById(id); return t && t.noSchool; });
+}
+
+/** Weekdays (Mon-Fri) in [startISO, endISO], and how many of those are
+    flagged no-school by their day type(s) — the arithmetic teachers do by
+    hand for "how many teaching days are left in the quarter". */
+function weekdayStats(startISO, endISO) {
+  let total = 0, noSchool = 0;
+  const d = new Date(startISO + "T00:00:00");
+  const end = new Date(endISO + "T00:00:00");
+  while (d <= end) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) {
+      total++;
+      if (isNoSchoolDay(iso(d.getFullYear(), d.getMonth(), d.getDate()))) noSchool++;
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return { total, noSchool, instructional: total - noSchool };
+}
+
+function renderStats() {
+  const el = document.getElementById("statsLine");
+  if (cal.meta.start > cal.meta.end) { el.textContent = ""; return; }
+  const whole = weekdayStats(cal.meta.start, cal.meta.end);
+  let text = `<b>${whole.instructional}</b> instructional day${whole.instructional === 1 ? "" : "s"} in this range (${whole.total} weekdays &minus; ${whole.noSchool} tagged "No school")`;
+  const today = todayISO();
+  if (today >= cal.meta.start && today <= cal.meta.end) {
+    const remaining = weekdayStats(today, cal.meta.end);
+    text += ` &middot; <b>${remaining.instructional}</b> remaining from today`;
+  }
+  el.innerHTML = text;
+}
+
+function render() { renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); renderJumpControl(); renderStats(); }
 
 function syncMeta() {
   document.getElementById("metaLabel").value = cal.meta.yearLabel;
@@ -402,20 +483,34 @@ document.getElementById("jumpMonth").addEventListener("change", e => {
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
+document.getElementById("btnJumpToday").addEventListener("click", () => {
+  const t = todayISO();
+  if (t < cal.meta.start || t > cal.meta.end) { alert("Today isn't within this calendar's date range."); return; }
+  const d = new Date(t + "T00:00:00");
+  const el = document.getElementById(`month-${d.getFullYear()}-${d.getMonth()}`);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 /* --- drawer --- */
-function openDrawer(dateISO) {
-  selectedDate = dateISO;
-  const entry = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
-  document.getElementById("drawerDate").textContent = new Date(dateISO + "T00:00:00")
-    .toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const typesWrap = document.getElementById("drawerTypes");
-  typesWrap.innerHTML = cal.dayTypes.map(t => `
+function drawerTypesHtml(checkedIds) {
+  return cal.dayTypes.map(t => `
     <label>
-      <input type="checkbox" value="${t.id}" ${entry.types.includes(t.id) ? "checked" : ""}>
+      <input type="checkbox" value="${t.id}" ${checkedIds.includes(t.id) ? "checked" : ""}>
       <span class="swatch pat-${t.pattern}" style="width:15px;height:15px;background-color:${t.color};display:inline-block;border-radius:3px;border:1px solid rgba(0,0,0,.3)"></span>
       ${escapeHtml(t.label)}
     </label>
   `).join("");
+}
+
+function openDrawer(dateISO) {
+  rangeDates = null;
+  document.getElementById("drawer").classList.remove("range-mode");
+  selectedDate = dateISO;
+  rangeAnchor = dateISO;
+  const entry = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
+  document.getElementById("drawerDate").textContent = new Date(dateISO + "T00:00:00")
+    .toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  document.getElementById("drawerTypes").innerHTML = drawerTypesHtml(entry.types);
   document.getElementById("drawerLabel").value = entry.label || "";
   document.getElementById("drawerLesson").value = entry.lesson || "";
   document.getElementById("drawerNote").value = entry.note || "";
@@ -423,32 +518,82 @@ function openDrawer(dateISO) {
   renderMonths();
 }
 
+/** Shift-click range selection — the anchor is whichever date was last
+    plain-clicked. Every calendar day between the two (inclusive, in either
+    direction) becomes editable at once, so tagging a week-long break is one
+    click-then-shift-click instead of one click per day. */
+function openDrawerRange(fromISO, toISO) {
+  const lo = fromISO <= toISO ? fromISO : toISO;
+  const hi = fromISO <= toISO ? toISO : fromISO;
+  const dates = [];
+  const d = new Date(lo + "T00:00:00");
+  const end = new Date(hi + "T00:00:00");
+  while (d <= end) { dates.push(iso(d.getFullYear(), d.getMonth(), d.getDate())); d.setDate(d.getDate() + 1); }
+  rangeDates = dates;
+  selectedDate = null;
+  const fmt = iso_ => new Date(iso_ + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  document.getElementById("drawerDate").textContent = `${dates.length} days: ${fmt(lo)} – ${fmt(hi)}`;
+  document.getElementById("drawerTypes").innerHTML = drawerTypesHtml([]);
+  document.getElementById("drawerLabel").value = "";
+  document.getElementById("drawerLesson").value = "";
+  document.getElementById("drawerNote").value = "";
+  document.getElementById("drawer").classList.add("open", "range-mode");
+  renderMonths();
+}
+
 function closeDrawer() {
   selectedDate = null;
-  document.getElementById("drawer").classList.remove("open");
-  renderMonths();
+  rangeDates = null;
+  document.getElementById("drawer").classList.remove("open", "range-mode");
+  // Full render, not just renderMonths(): a save can change the legend's
+  // per-type day counts and the instructional-days stats line, both of
+  // which need to stay in sync with what was just saved or cleared.
+  render();
 }
 
 document.getElementById("drawerClose").addEventListener("click", closeDrawer);
 
 document.getElementById("drawerSave").addEventListener("click", () => {
-  if (!selectedDate) return;
-  const types = [...document.querySelectorAll("#drawerTypes input:checked")].map(el => el.value);
+  const checkedTypes = [...document.querySelectorAll("#drawerTypes input:checked")].map(el => el.value);
   const label = document.getElementById("drawerLabel").value.trim();
   const lesson = document.getElementById("drawerLesson").value.trim();
   const note = document.getElementById("drawerNote").value.trim();
-  if (!types.length && !label && !lesson && !note) {
-    delete cal.days[selectedDate];
+
+  if (rangeDates) {
+    rangeDates.forEach(dateISO => {
+      const existing = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
+      const types = Array.from(new Set([...existing.types, ...checkedTypes]));
+      if (!types.length && !label && !existing.label && !lesson && !existing.lesson && !note && !existing.note) {
+        delete cal.days[dateISO];
+      } else {
+        cal.days[dateISO] = {
+          types,
+          label: label || existing.label,
+          lesson: lesson || existing.lesson,
+          note: note || existing.note
+        };
+      }
+    });
   } else {
-    cal.days[selectedDate] = { types, label, lesson, note };
+    if (!selectedDate) return;
+    if (!checkedTypes.length && !label && !lesson && !note) {
+      delete cal.days[selectedDate];
+    } else {
+      cal.days[selectedDate] = { types: checkedTypes, label, lesson, note };
+    }
   }
   save();
   closeDrawer();
 });
 
 document.getElementById("drawerClear").addEventListener("click", () => {
-  if (!selectedDate) return;
-  delete cal.days[selectedDate];
+  if (rangeDates) {
+    if (!confirm(`Clear all tags and notes from ${rangeDates.length} days?`)) return;
+    rangeDates.forEach(dateISO => { delete cal.days[dateISO]; });
+  } else {
+    if (!selectedDate) return;
+    delete cal.days[selectedDate];
+  }
   save();
   closeDrawer();
 });
@@ -596,6 +741,93 @@ document.getElementById("btnExportIcs").addEventListener("click", () => {
   a.download = `school-calendar-${cal.meta.start}-to-${cal.meta.end}.ics`;
   a.click();
   URL.revokeObjectURL(url);
+});
+
+/* --- ICS import — a district calendar is usually published as .ics. Only
+   single, non-recurring, all-day VEVENTs are handled (no RRULE, no
+   VALUE=DATE-TIME); a district calendar's holiday/closure list is almost
+   always exactly that shape. --- */
+function unfoldIcsLines(text) {
+  // RFC 5545 line folding: a continuation line starts with a space or tab
+  // and is appended to the previous line with that leading character dropped.
+  const out = [];
+  text.split(/\r\n|\n|\r/).forEach(line => {
+    if ((line.startsWith(" ") || line.startsWith("\t")) && out.length) {
+      out[out.length - 1] += line.slice(1);
+    } else {
+      out.push(line);
+    }
+  });
+  return out;
+}
+
+function icsUnescape(s) {
+  return String(s || "").replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
+}
+
+function parseIcs(text) {
+  const lines = unfoldIcsLines(text);
+  const events = [];
+  let cur = null;
+  lines.forEach(line => {
+    if (/^BEGIN:VEVENT/i.test(line)) { cur = {}; return; }
+    if (/^END:VEVENT/i.test(line)) { if (cur && cur.date) events.push(cur); cur = null; return; }
+    if (!cur) return;
+    const idx = line.indexOf(":");
+    if (idx === -1) return;
+    const key = line.slice(0, idx).split(";")[0].toUpperCase();
+    const value = line.slice(idx + 1);
+    if (key === "DTSTART") {
+      const m = value.match(/(\d{4})(\d{2})(\d{2})/);
+      if (m) cur.date = `${m[1]}-${m[2]}-${m[3]}`;
+    } else if (key === "SUMMARY") {
+      cur.summary = icsUnescape(value);
+    } else if (key === "DESCRIPTION") {
+      cur.description = icsUnescape(value);
+    }
+  });
+  return events;
+}
+
+/** A light touch, not a real classifier: if a district's own event name says
+    "holiday"/"break"/"closed" and this calendar already has a day type that
+    looks like a holiday type, tag it — so an imported closure list doesn't
+    land completely untagged. Anything else imports as a label only, which
+    is still exactly what the "paste the table off the district PDF" quick
+    win asked for. */
+function guessTypeForSummary(summary) {
+  if (!summary) return null;
+  if (!/holiday|break|closed|no school/i.test(summary)) return null;
+  const holidayType = cal.dayTypes.find(t => t.id === "holiday") || cal.dayTypes.find(t => /holiday/i.test(t.label));
+  return holidayType ? holidayType.id : null;
+}
+
+document.getElementById("btnImportIcs").addEventListener("click", () => document.getElementById("fileImportIcs").click());
+document.getElementById("fileImportIcs").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let events;
+    try { events = parseIcs(reader.result); } catch (err) { alert("Couldn't read that file as a calendar (.ics)."); e.target.value = ""; return; }
+    if (!events.length) { alert("No dated events found in that file."); e.target.value = ""; return; }
+    if (!confirm(`Import ${events.length} event${events.length === 1 ? "" : "s"} from this file?\n\nEach date's label is replaced with the event's title; any existing type tags and notes on that date are kept. Recurring events aren't supported — only the events listed individually in the file are imported.`)) {
+      e.target.value = "";
+      return;
+    }
+    events.forEach(ev => {
+      const existing = cal.days[ev.date] || { types: [], label: "", note: "", lesson: "" };
+      const guessed = guessTypeForSummary(ev.summary);
+      const types = guessed && !existing.types.includes(guessed) ? [...existing.types, guessed] : existing.types;
+      const note = ev.description ? (existing.note ? existing.note + " / " + ev.description : ev.description) : existing.note;
+      cal.days[ev.date] = { types, label: ev.summary || existing.label, lesson: existing.lesson, note };
+    });
+    save(); render();
+    alert(`Imported ${events.length} event${events.length === 1 ? "" : "s"}.`);
+    e.target.value = "";
+  };
+  reader.onerror = () => { alert("Couldn't read that file."); e.target.value = ""; };
+  reader.readAsText(file);
 });
 
 document.querySelectorAll('input[name="printMode"]').forEach(el => {
