@@ -1,8 +1,8 @@
 # Seating Chart Generator — support files
 
 Everything the tool needs that isn't the page itself. The page stays at
-`Tools/Seating Chart Generator.html`, so the board link
-(`/Tools/Seating%20Chart%20Generator.html`) is unchanged.
+`Tools/005-Seating Chart Generator.html`, so the board link
+(`/Tools/005-Seating%20Chart%20Generator.html`) is unchanged.
 
 ```
 seating.mjs         pure logic + the save slot. No DOM. Node runs it as-is.

@@ -3,7 +3,7 @@
    typed there doesn't have to be retyped here.
 
    This depends on Vocab & Conjugation Drill Generator's own localStorage
-   contract (Tools/vocab-conjugation-drill.html): a list of drill-set names
+   contract (Tools/039-vocab-conjugation-drill.html): a list of drill-set names
    under 'gvb-vocab-conj:list', one JSON blob per name under
    'gvb-vocab-conj:data:<name>', each blob holding a `vocabText` string in
    that tool's own "word: translation" per-line format (see its `parseVocab`).
@@ -35,7 +35,7 @@
     return Array.isArray(names) ? names.filter(function (n) { return typeof n === 'string' && n; }) : [];
   }
 
-  /** Minimal reimplementation of vocab-conjugation-drill.html's own
+  /** Minimal reimplementation of 039-vocab-conjugation-drill.html's own
       parseVocab — colon-separated "word: translation" lines only. */
   function parseDrillVocabText(text) {
     var out = [];

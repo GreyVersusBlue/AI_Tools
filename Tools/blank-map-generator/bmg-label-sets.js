@@ -6,7 +6,7 @@
 // A set is just a name plus a list of [place name, latitude, longitude]
 // triples, which is exactly the shape the existing batch-place-from-
 // coordinates flow already consumes (see parseCoordLine() in
-// blank-map-generator.html) — so placing a set reuses fromLatLon() and the
+// 046-blank-map-generator.html) — so placing a set reuses fromLatLon() and the
 // same calibration math the lat/long readout, grid, and measuring tool all
 // share. Nothing here knows about any particular map image.
 //

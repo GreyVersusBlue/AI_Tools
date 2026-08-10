@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math "Find the Mistake" Warm-Up Generator</title>
+<meta name="description" content="Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/066-math-find-the-mistake-generator.html">
+<meta property="og:title" content="Math &quot;Find the Mistake&quot; Warm-Up Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Math &quot;Find the Mistake&quot; Warm-Up Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23a3372b' stroke-width='2'/%3E%3Cpath d='M12 12l8 8M20 12l-8 8' stroke='%23a3372b' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --ok: #2c6e3f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="number"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .6rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 3.6rem; font-family: Consolas, monospace; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .25rem .6rem; font-size: .8rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
+  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .stage { display: none; }
+  .stage.active { display: block; }
+
+  .display-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 2.4rem 2.2rem; text-align: center; min-height: 28vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .display-num { color: var(--muted); font-size: .9rem; letter-spacing: .05em; text-transform: uppercase; }
+  .display-problem { font-size: 1.3rem; font-weight: 700; }
+  .display-work { font-family: Consolas, monospace; font-size: 1.2rem; white-space: pre-line; color: var(--err); }
+  .display-fix { font-family: Consolas, monospace; font-size: 1.2rem; white-space: pre-line; color: var(--ok); display: none; }
+  .display-fix.shown { display: block; }
+  .display-explain { font-size: .95rem; color: var(--accent-2); display: none; }
+  .display-explain.shown { display: block; }
+  .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; }
+
+  .bank-row { padding: .5rem 0; border-bottom: 1px dashed var(--line); font-size: .86rem; }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-row .btext { flex: 1; }
+  .bank-list { max-height: 40vh; overflow-y: auto; }
+  .bank-row .del-btn { float: right; }
+
+  .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
+  .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
+  .sheet-sub { color: var(--muted); font-size: .82rem; margin: 0 0 1rem; }
+  .problem { margin-bottom: 1.2rem; }
+  .problem .pnum { font-weight: 700; margin-right: .4rem; }
+  .problem .work { font-family: Consolas, monospace; white-space: pre-line; margin: .3rem 0; }
+  .worksheet-line { border-bottom: 1px solid var(--line-strong); display: block; height: 1.3rem; margin-top: .2rem; }
+  .key-list { list-style: none; margin: 0; padding: 0; font-size: .88rem; }
+  .key-list li { margin-bottom: .5rem; }
+  .key-list .work { font-family: Consolas, monospace; white-space: pre-line; }
+
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .sheet-page { border: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator</h1>
+      <p class="sub">A worked problem with one intentional error &mdash; spot it, fix it, then check the correct solution.</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-stage="display">Projector display</button>
+    <button type="button" class="tab-btn" data-stage="sheet">Printable worksheet</button>
+    <button type="button" class="tab-btn" data-stage="bank">Problem bank</button>
+  </div>
+
+  <div class="stage active" id="stage-display">
+    <div class="btnrow" style="margin-bottom:1rem;">
+      <button class="secondary small" id="shuffleBtn">Shuffle order</button>
+    </div>
+    <div class="display-card">
+      <div class="display-num" id="displayNum"></div>
+      <div class="display-problem" id="displayProblem"></div>
+      <div class="display-work" id="displayWork"></div>
+      <div class="display-fix" id="displayFix"></div>
+      <div class="display-explain" id="displayExplain"></div>
+      <div class="display-nav">
+        <button class="secondary" id="prevBtn">&larr; Prev</button>
+        <button id="revealBtn">Reveal correct solution</button>
+        <button class="secondary" id="nextBtn">Next &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage-sheet">
+    <div class="card">
+      <label for="sheetCount">How many problems on the worksheet</label>
+      <input type="number" id="sheetCount" value="5" min="1" max="20" style="max-width:8rem;">
+      <div class="btnrow">
+        <button id="buildSheetBtn">Build worksheet</button>
+        <button class="secondary" id="printBtn">Print worksheet + key</button>
+      </div>
+    </div>
+    <div id="printArea">
+      <div class="sheet-page">
+        <h2 class="sheet-title">Find the Mistake</h2>
+        <p class="sheet-sub">Name: __________________________ &nbsp; Date: __________</p>
+        <p class="hint">Each problem below has one mistake in the worked solution. Find it, explain it, and write the correct answer.</p>
+        <div id="sheetProblems"></div>
+      </div>
+      <div class="sheet-page">
+        <h2 class="sheet-title">Answer Key</h2>
+        <ul class="key-list" id="sheetKey"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage-bank">
+    <div class="card">
+      <h2>Add a problem</h2>
+      <label for="newProblem">Problem statement</label>
+      <input type="text" id="newProblem" placeholder="e.g. Solve: 3(x + 4) = 24">
+      <label for="newWork">Worked solution (with the mistake), one step per line</label>
+      <textarea id="newWork" placeholder="3x + 4 = 24&#10;3x = 20&#10;x = 6.67"></textarea>
+      <label for="newFix">Correct worked solution, one step per line</label>
+      <textarea id="newFix" placeholder="3x + 12 = 24&#10;3x = 12&#10;x = 4"></textarea>
+      <label for="newExplain">What was the mistake? (short explanation)</label>
+      <input type="text" id="newExplain" placeholder="e.g. Forgot to distribute the 3 to both terms inside the parentheses.">
+      <button id="addProblemBtn">Add to bank</button>
+    </div>
+    <div class="card">
+      <h2>Full bank (<span id="bankCount">0</span> problems)</h2>
+      <p class="hint">Built-in problems can't be deleted, only your own custom ones.</p>
+      <div class="bank-list" id="bankList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var CUSTOM_KEY = 'mftm_custom_v1';
+
+  var BUILTIN = [
+    { problem: 'Simplify: 4 + 3 &times; 2', work: '4 + 3 = 7\n7 &times; 2 = 14', fix: '3 &times; 2 = 6\n4 + 6 = 10', explain: 'Order of operations: multiplication happens before addition.' },
+    { problem: 'Solve: 3(x + 4) = 24', work: '3x + 4 = 24\n3x = 20\nx = 6.67', fix: '3x + 12 = 24\n3x = 12\nx = 4', explain: 'Forgot to distribute the 3 to both terms inside the parentheses.' },
+    { problem: 'Add: &frac12; + &frac13;', work: '&frac12; + &frac13; = &frac23;', fix: '&frac36; + &frac26; = &frac56;', explain: 'Fractions need a common denominator before adding &mdash; you can&rsquo;t just add numerators and denominators separately.' },
+    { problem: 'Solve: 2x &minus; 5 = 11', work: '2x = 6\nx = 3', fix: '2x = 16\nx = 8', explain: 'When moving &minus;5 to the other side, it becomes +5, not staying as &minus;5 (11 &minus; 5 = 6 is the wrong direction).' },
+    { problem: 'Find 25% of 60', work: '25% = 0.25\n0.25 &times; 60 = 6', fix: '0.25 &times; 60 = 15', explain: 'Multiplication error: 0.25 &times; 60 is 15, not 6.' },
+    { problem: 'Simplify: (&minus;3)&sup2;', work: '(&minus;3)&sup2; = &minus;9', fix: '(&minus;3)&sup2; = 9', explain: 'A negative number squared is positive: (&minus;3) &times; (&minus;3) = 9.' },
+    { problem: 'Multiply: 2.5 &times; 0.4', work: '2.5 &times; 0.4 = 10', fix: '2.5 &times; 0.4 = 1', explain: 'Decimal point placement error &mdash; there should be two digits total after the decimal point in the answer.' },
+    { problem: 'Simplify: 3/4 &divide; 1/2', work: '3/4 &divide; 1/2 = 3/8', fix: '3/4 &times; 2/1 = 6/4 = 1&frac12;', explain: 'Dividing by a fraction means multiplying by its reciprocal, not multiplying the fractions directly.' },
+    { problem: 'Evaluate: &minus;8 + 3', work: '&minus;8 + 3 = &minus;11', fix: '&minus;8 + 3 = &minus;5', explain: 'When adding a positive to a negative, subtract the smaller absolute value from the larger: 8 &minus; 3 = 5, keep the sign of the larger (negative).' },
+    { problem: 'Solve: x/4 = 12', work: 'x = 12 &minus; 4\nx = 8', fix: 'x = 12 &times; 4\nx = 48', explain: 'To undo division by 4, multiply both sides by 4, not subtract 4.' },
+    { problem: 'Find the area of a rectangle: length 8, width 5', work: 'Area = 8 + 5 = 13', fix: 'Area = 8 &times; 5 = 40', explain: 'Area of a rectangle is length &times; width, not length + width.' },
+    { problem: 'Simplify: 5 &minus; 2(3 &minus; 1)', work: '5 &minus; 2(2) = 3(2) = 6', fix: '5 &minus; 2(2) = 5 &minus; 4 = 1', explain: 'After 3 &minus; 2 &times; ... you multiply 2 by the parentheses result and subtract from 5 &mdash; you can&rsquo;t combine 5 &minus; 2 first.' },
+    { problem: 'Convert 3/5 to a percent', work: '3/5 = 0.35 = 35%', fix: '3/5 = 0.6 = 60%', explain: 'Division error: 3 &divide; 5 = 0.6, not 0.35.' },
+    { problem: 'Solve: &minus;3x = 15', work: 'x = 15 &minus; 3\nx = 12', fix: 'x = 15 &divide; (&minus;3)\nx = &minus;5', explain: 'To undo multiplication by &minus;3, divide both sides by &minus;3, not subtract 3.' },
+    { problem: 'Simplify: 2&sup3;', work: '2&sup3; = 6', fix: '2&sup3; = 8', explain: '2&sup3; means 2 &times; 2 &times; 2 = 8, not 2 &times; 3 = 6.' }
+  ].map(function (p) { return { problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false }; });
+
+  var els = {};
+  ['displayNum', 'displayProblem', 'displayWork', 'displayFix', 'displayExplain', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+   'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
+   'newProblem', 'newWork', 'newFix', 'newExplain', 'addProblemBtn', 'bankCount', 'bankList'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var custom = [];
+  var order = [];
+  var idx = 0;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function uid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function loadCustom() {
+    try { custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch (e) { custom = []; }
+    if (!Array.isArray(custom)) custom = [];
+  }
+  function saveCustom() {
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function allProblems() {
+    return BUILTIN.concat(custom.map(function (c) {
+      return { problem: c.problem, work: c.work, fix: c.fix, explain: c.explain, custom: true, id: c.id };
+    }));
+  }
+
+  function resetOrder() {
+    var all = allProblems();
+    order = all.map(function (_, i) { return i; });
+    idx = 0;
+  }
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function renderDisplay() {
+    var all = allProblems();
+    if (!all.length || !order.length) return;
+    var item = all[order[idx]];
+    els.displayNum.textContent = 'Problem ' + (idx + 1) + ' of ' + order.length;
+    els.displayProblem.innerHTML = item.problem;
+    els.displayWork.innerHTML = item.work;
+    els.displayFix.innerHTML = item.fix;
+    els.displayFix.classList.remove('shown');
+    els.displayExplain.innerHTML = item.explain || '';
+    els.displayExplain.classList.remove('shown');
+  }
+
+  els.prevBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx - 1 + order.length) % order.length; renderDisplay(); });
+  els.nextBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx + 1) % order.length; renderDisplay(); });
+  els.revealBtn.addEventListener('click', function () {
+    els.displayFix.classList.toggle('shown');
+    els.displayExplain.classList.toggle('shown');
+  });
+  els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
+
+  els.buildSheetBtn.addEventListener('click', function () {
+    var all = shuffle(allProblems().slice());
+    var count = Math.max(1, Math.min(20, parseInt(els.sheetCount.value, 10) || 5, all.length));
+    var chosen = all.slice(0, count);
+    els.sheetProblems.innerHTML = chosen.map(function (item, i) {
+      return '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + item.problem +
+        '<div class="work">' + item.work + '</div>' +
+        '<span class="hint">What&rsquo;s the mistake, and what&rsquo;s the correct answer?</span>' +
+        '<span class="worksheet-line"></span><span class="worksheet-line"></span></div>';
+    }).join('');
+    els.sheetKey.innerHTML = chosen.map(function (item, i) {
+      return '<li>' + (i + 1) + '. ' + (item.explain || '') + '<div class="work">' + item.fix + '</div></li>';
+    }).join('');
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!els.sheetProblems.innerHTML.trim()) els.buildSheetBtn.click();
+    window.print();
+  });
+
+  els.addProblemBtn.addEventListener('click', function () {
+    var problem = els.newProblem.value.trim();
+    var work = els.newWork.value.trim();
+    var fix = els.newFix.value.trim();
+    var explain = els.newExplain.value.trim();
+    if (!problem || !work || !fix) { alert('Fill in the problem, the worked (mistaken) solution, and the correct solution.'); return; }
+    custom.push({ id: uid(), problem: problem, work: work.replace(/\n/g, '<br>'), fix: fix.replace(/\n/g, '<br>'), explain: explain });
+    saveCustom();
+    els.newProblem.value = ''; els.newWork.value = ''; els.newFix.value = ''; els.newExplain.value = '';
+    resetOrder(); renderDisplay(); renderBank();
+  });
+
+  function renderBank() {
+    var all = allProblems();
+    els.bankCount.textContent = all.length;
+    els.bankList.innerHTML = all.map(function (item) {
+      var delBtn = item.custom
+        ? '<button type="button" class="danger small del-btn" data-del="' + item.id + '">Delete</button>'
+        : '<span class="hint del-btn" style="margin:0;">built-in</span>';
+      return '<div class="bank-row">' + delBtn + '<strong>' + item.problem + '</strong></div>';
+    }).join('');
+  }
+  els.bankList.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del');
+    if (!id) return;
+    custom = custom.filter(function (c) { return c.id !== id; });
+    saveCustom(); resetOrder(); renderDisplay(); renderBank();
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var stage = btn.getAttribute('data-stage');
+      ['display', 'sheet', 'bank'].forEach(function (s) {
+        document.getElementById('stage-' + s).classList.toggle('active', s === stage);
+      });
+    });
+  });
+
+  /* ---------- boot ---------- */
+  loadCustom();
+  resetOrder();
+  renderDisplay();
+  renderBank();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

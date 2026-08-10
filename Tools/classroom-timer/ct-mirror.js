@@ -8,7 +8,7 @@
 //
 // Covers both roles so the QR-drawing code and the small message shape the
 // two sides agree on live in exactly one place:
-//   - HOST, used by Classroom Timer.html itself — creates the offer, scans
+//   - HOST, used by 004-Classroom Timer.html itself — creates the offer, scans
 //     the reply, then pushes out whatever startHost().send() is given.
 //   - JOIN, used by classroom-timer/mirror.html — scans the offer, shows the
 //     reply, then hands incoming messages to onMessage().

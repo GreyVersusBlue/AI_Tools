@@ -8,13 +8,13 @@ to everything; `README.md` has a table describing each tool.
 Conventions already established in this repo (look at existing tools before
 building):
 - Each tool's entry point is one `.html` file directly under `Tools/` (e.g.
-  `Tools/final_grade_checker.html`, `Tools/Name Picker.html`).
+  `Tools/036-final_grade_checker.html`, `Tools/007-Name Picker.html`).
 - Supporting JS/assets for a tool live in a matching subfolder, e.g.
   `Tools/name-picker/` holds `np-store.js`, `np-pick.js`, fonts, and tests for
-  `Tools/Name Picker.html`. Follow that pattern here — this tool clearly needs
+  `Tools/007-Name Picker.html`. Follow that pattern here — this tool clearly needs
   more than inline script given the persistence requirement below.
-- There's already a tool pair in this repo, `Tools/schedule-visualizer.html`
-  and `Tools/schedule-browser.html`, where the visualizer is the authoring tool
+- There's already a tool pair in this repo, `Tools/035-schedule-visualizer.html`
+  and `Tools/034-schedule-browser.html`, where the visualizer is the authoring tool
   and the browser is the read-only published output. Look at that pair first —
   the school calendar visualizer I want is conceptually similar (a
   build-it-yourself visual layout tool over school-year data) and may share

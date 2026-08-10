@@ -10,7 +10,7 @@ building):
 - Each tool's entry point is one `.html` file directly under `Tools/`.
 - Supporting JS/assets for a tool live in a matching subfolder — this tool
   will likely need one (`Tools/certificate-award-maker/`) for template SVGs/
-  fonts and a print/export helper (see `Tools/image-to-pdf.html` and
+  fonts and a print/export helper (see `Tools/011-image-to-pdf.html` and
   `Tools/final-grade-checker/libs/` for the jsPDF pattern already used for
   print-to-PDF export in this repo — reuse jsPDF rather than adding a new
   PDF library).

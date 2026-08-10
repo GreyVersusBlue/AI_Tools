@@ -27,7 +27,7 @@ const PORT = 8137;   // not 8123 — board-check may be running on that
  *  baseline from the pre-rename file and compare it against the post-rename
  *  one. Newest name first. */
 export function generatorPath() {
-  for (const rel of ['Tools/schedule-visualizer.html',
+  for (const rel of ['Tools/035-schedule-visualizer.html',
                      'Tools/Schedule Visualizer and Browser Generator v60.html']) {
     if (fs.existsSync(path.join(SITE, rel))) return '/' + rel.split('/').map(encodeURIComponent).join('/');
   }

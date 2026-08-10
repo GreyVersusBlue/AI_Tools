@@ -33,7 +33,7 @@ It used to load from `cdnjs.cloudflare.com`. Two problems with that:
 
 ## Not shared with the other tools that use jsPDF
 
-`Tools/final_grade_checker.html` and `Tools/Schedule Visualizer and Browser Generator
+`Tools/036-final_grade_checker.html` and `Tools/Schedule Visualizer and Browser Generator
 v60.html` also use jsPDF. Each vendors its own copy rather than pointing here — a
 duplicated file beats a cross-tool dependency and a merge conflict between sessions
 working on different tools at the same time.

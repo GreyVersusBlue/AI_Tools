@@ -1,7 +1,7 @@
 # Vendored fonts — Schedule Visualizer
 
 Eleven woff2 files, 163,380 bytes total. They replace a `fonts.googleapis.com`
-stylesheet link in `Tools/schedule-visualizer.html` and another one that the
+stylesheet link in `Tools/035-schedule-visualizer.html` and another one that the
 generator baked into every Schedule Browser file it published.
 
 | Family | Weights here | Licence | Source |
@@ -40,7 +40,7 @@ the four weights here is what makes the preview honest.
 
 ## The two consumers
 
-`fonts.css` is for `schedule-visualizer.html`, which is served from the site
+`fonts.css` is for `035-schedule-visualizer.html`, which is served from the site
 and can reference these files by relative path.
 
 `published-fonts.js` is for the files the generator *publishes*. Those are

@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hall Pass Log</title>
+<meta name="description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/001-hall-pass-log.html">
+<meta property="og:title" content="Hall Pass Log — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hall Pass Log — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Tap a destination, then tap a student, to sign kids out of the room with a timestamp — see who's out and for how long, then print a daily hall-pass log.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='6' width='12' height='20' rx='1.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='15.4' cy='16' r='1.3' fill='%232A6DB0'/%3E%3Cpath d='M20 16h6M23.2 12.8L26.4 16l-3.2 3.2' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header p.tagline { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
+  .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+  .toolbar label { margin: 0; font-weight: 600; font-size: .85rem; }
+
+  .layout { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 1.4rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .8rem; gap: .5rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
+  input[type="text"], select, textarea {
+    width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .5rem .6rem; margin-bottom: .8rem;
+  }
+  textarea { min-height: 8rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-2); }
+
+  .roster-load-row { display: flex; gap: .5rem; }
+  .roster-load-row select { flex: 1; margin-bottom: .6rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
+  button.link-btn:hover { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .btn-row { display: flex; gap: .6rem; margin-top: .7rem; flex-wrap: wrap; }
+  .btn-row button { width: auto; }
+
+  .remove-row-btn {
+    background: #fff; border: 1px solid var(--line-strong); color: var(--muted);
+    width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 5px; font-size: .82rem; padding: 0; cursor: pointer;
+  }
+  .remove-row-btn:hover { background: var(--err); color: #fff; border-color: var(--err); }
+
+  #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
+  #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+  #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+  #msg.warn { display: block; background: #fdf0dc; color: #8a5a13; border: 1px solid #eecda0; font-weight: 600; }
+
+  .flyer-flag { color: #a3372b; font-weight: 700; white-space: nowrap; }
+  .flyer-threshold-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; font-size: .85rem; }
+  .flyer-threshold-row input[type="number"] {
+    width: 3.4rem; margin-bottom: 0; text-align: center; padding: .4rem .3rem;
+  }
+
+  .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
+
+  /* ── Destination editor rows ─────────────────────────────────────────── */
+  .tag-row { display: flex; align-items: center; gap: .5rem; }
+  .tag-row input[type="text"] { flex: 1; margin-bottom: .5rem; }
+  .tag-row .dest-overtime-wrap { display: flex; align-items: center; gap: .3rem; margin-bottom: .5rem; flex-shrink: 0; }
+  .tag-row .dest-overtime-wrap label { margin: 0; font-weight: 400; font-size: .74rem; color: var(--muted); white-space: nowrap; }
+  .tag-row input[type="number"].dest-overtime {
+    width: 3.4rem; font-family: inherit; font-size: .85rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .4rem .3rem; text-align: center;
+  }
+  .tag-row .dest-note-wrap { flex-shrink: 0; margin-bottom: .5rem; }
+  .tag-row .dest-note-wrap label { margin: 0; font-weight: 400; font-size: .74rem; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: .25rem; }
+  .tag-row .dest-note-wrap input { margin: 0; width: auto; }
+
+  /* ── Pass rules ───────────────────────────────────────────────────── */
+  .check-row { display: flex; align-items: center; gap: .45rem; font-weight: 600; margin-bottom: .8rem; }
+  .check-row input { width: auto; margin: 0; }
+  .approval-list { max-height: 9rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; margin-bottom: .3rem; }
+  .approval-list label { display: flex; align-items: center; gap: .45rem; font-weight: 400; font-size: .85rem; margin-bottom: .3rem; }
+  .approval-list label input { width: auto; margin: 0; }
+  .approval-list label:last-child { margin-bottom: 0; }
+
+  /* ── Undo bar ─────────────────────────────────────────────────────── */
+  .undo-bar { display: none; align-items: center; gap: .6rem; background: #fdf0dc; border: 1px solid #eecda0; color: #8a5a13; border-radius: 7px; padding: .5rem .8rem; margin-bottom: .8rem; font-size: .85rem; font-weight: 600; }
+  .undo-bar.show { display: flex; }
+  .undo-bar button { padding: .3rem .7rem; font-size: .8rem; }
+
+  .weekly-pattern { font-size: .72rem; font-weight: 400; color: var(--muted); }
+  .weekly-list li > div { display: flex; flex-direction: column; }
+
+  /* ── Pass overlay (on-screen "paper" pass) ───────────────────────────── */
+  .pass-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,20,18,.72);
+    align-items: center; justify-content: center; z-index: 600; padding: 1rem;
+  }
+  .pass-overlay.show { display: flex; }
+  .pass-card {
+    background: #fff; border-radius: 14px; padding: 1.6rem 1.8rem; max-width: 380px; width: 100%;
+    text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  }
+  .pass-card .pass-code { font-size: 2.6rem; font-weight: 800; letter-spacing: .12em; color: var(--accent); }
+  .pass-card .pass-name { font-size: 1.3rem; font-weight: 700; margin-top: .3rem; }
+  .pass-card .pass-dest { font-size: 1rem; color: var(--muted); margin-top: .15rem; }
+  .pass-card .pass-time { font-size: .85rem; color: var(--muted); margin-top: .5rem; }
+  .pass-card .pass-initials { font-size: .8rem; color: var(--muted); margin-top: .2rem; }
+  .pass-card .btn-row { justify-content: center; }
+
+  /* ── Projector view (reduced/redacted) ───────────────────────────────── */
+  .projector-view {
+    display: none; position: fixed; inset: 0; background: #10151c; color: #f4f4f0;
+    align-items: center; justify-content: center; z-index: 700; text-align: center;
+  }
+  .projector-view.show { display: flex; }
+  .proj-inner { max-width: 900px; width: 100%; padding: 2rem; }
+  .proj-clock { font-size: 1.4rem; color: #9aa3b0; margin-bottom: 1rem; letter-spacing: .04em; }
+  .proj-big { font-size: 7rem; font-weight: 800; line-height: 1; }
+  .proj-label { font-size: 1.3rem; color: #c7cbd4; margin-bottom: 1.4rem; }
+  .proj-dests { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; margin-bottom: 1.2rem; }
+  .proj-dest-row {
+    background: #1c2430; border: 1px solid #333c4a; border-radius: 10px; padding: .7rem 1.3rem;
+    display: flex; flex-direction: column; gap: .2rem; min-width: 110px;
+  }
+  .proj-dest-row span:first-child { font-size: .95rem; color: #9aa3b0; }
+  .proj-dest-row span:last-child { font-size: 1.9rem; font-weight: 700; }
+  .proj-dest-row.empty { color: #9aa3b0; font-size: 1rem; padding: .9rem 1.3rem; }
+  .proj-alert { font-size: 1.1rem; font-weight: 700; color: #ff8c7a; min-height: 1.6rem; margin-bottom: 1.4rem; }
+  .proj-note { font-size: .82rem; color: #6c7484; margin-bottom: 1.2rem; }
+  .projector-view button { background: #2e3948; border-color: #2e3948; }
+  .projector-view button:hover { background: #3d4b5e; border-color: #3d4b5e; }
+
+  /* ── Live board ───────────────────────────────────────────────────── */
+  .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .dest-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+  .dest-chip {
+    cursor: pointer; border-radius: 999px; padding: .45rem .95rem; font-size: .85rem; font-weight: 700;
+    border: 1.5px solid var(--line-strong); background: #fff; color: var(--ink); user-select: none;
+  }
+  .dest-chip.armed { background: var(--accent-2); color: #fff; border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(0,0,0,.12); }
+
+  .board-controls { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; flex-wrap: wrap; }
+  .board-controls label { margin: 0; }
+  .board-controls select { width: auto; margin: 0; }
+  .board-controls .spacer { flex: 1; }
+
+  .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .6rem; margin-bottom: 1.3rem; }
+  .student-card {
+    background: #fff; border: 2px solid var(--line); border-radius: 10px; padding: .7rem .5rem; text-align: center;
+    cursor: pointer; user-select: none; transition: transform .08s ease, background .25s, border-color .25s;
+  }
+  .student-card:hover { border-color: var(--accent-2); }
+  .student-card:active { transform: scale(0.96); }
+  .student-card .s-name { font-weight: 700; font-size: .85rem; overflow-wrap: anywhere; margin-bottom: .3rem; }
+  .student-card .s-status { font-size: .72rem; color: var(--muted); }
+  .student-card.is-out { border-color: var(--err); background: #fbeceA; cursor: pointer; }
+  .student-card.is-out .s-status { color: var(--err); font-weight: 700; }
+  .student-card.locked { opacity: .5; cursor: not-allowed; }
+  .student-card.flash { background: #e4f5ea; border-color: var(--good); }
+
+  .live-board { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.3rem; }
+  .out-row {
+    display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+    background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem;
+  }
+  .out-row.over-time { border-color: var(--err); background: #fbeceA; animation: overtimePulse 1.6s ease-in-out infinite; }
+  @keyframes overtimePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163,55,43,.45); }
+    50% { box-shadow: 0 0 0 7px rgba(163,55,43,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .out-row.over-time { animation: none; } }
+  .alert-sound-label { display: flex; align-items: center; gap: .3rem; font-weight: 400; font-size: .78rem; text-transform: none; letter-spacing: 0; color: var(--muted); }
+  .alert-sound-label input { margin: 0; }
+  .out-info { display: flex; flex-direction: column; min-width: 120px; }
+  .out-name { font-weight: 700; font-size: .9rem; }
+  .out-dest { font-size: .78rem; color: var(--muted); }
+  .out-time { display: flex; flex-direction: column; margin-left: auto; text-align: right; }
+  .out-clock { font-size: .78rem; color: var(--muted); }
+  .out-elapsed { font-size: .85rem; font-weight: 700; }
+  .out-row.over-time .out-elapsed { color: var(--err); }
+
+  .activity-feed { max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
+  .activity-item { display: flex; justify-content: space-between; gap: .6rem; font-size: .82rem; padding: .35rem 0; border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
+  .activity-item:last-child { border-bottom: none; }
+  .a-who { font-weight: 600; }
+  .a-what { color: var(--muted); }
+  .a-delta { color: var(--good); font-weight: 700; }
+  .a-delta.out { color: var(--err); }
+  .a-time { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+
+  /* ── History ──────────────────────────────────────────────────────── */
+  .history-entry { border: 1px solid var(--line); border-radius: 7px; margin-bottom: .5rem; overflow: hidden; }
+  .history-entry summary { cursor: pointer; padding: .5rem .7rem; font-size: .83rem; background: #f4f3ee; list-style: none; }
+  .history-entry summary::-webkit-details-marker { display: none; }
+  .history-entry summary b { color: var(--accent); }
+  .history-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .history-table th, .history-table td { border-top: 1px solid var(--line); padding: .3rem .6rem; text-align: left; }
+  .history-table th { color: var(--muted); font-weight: 600; }
+
+  /* ── Weekly frequency ─────────────────────────────────────────────── */
+  .weekly-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .weekly-col { flex: 1; min-width: 130px; }
+  .weekly-col h4 { font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin: 0 0 .4rem; font-weight: 700; }
+  .weekly-list { list-style: none; margin: 0; padding: 0; font-size: .85rem; }
+  .weekly-list li { display: flex; justify-content: space-between; gap: .5rem; padding: .28rem 0; border-bottom: 1px solid var(--line); }
+  .weekly-list li:last-child { border-bottom: none; }
+  .weekly-count { font-weight: 700; color: var(--accent); }
+
+  footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  /* ── Print report ─────────────────────────────────────────────────── */
+  .print-only { display: none; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .wrap > *:not(.print-only) { display: none !important; }
+    .pass-overlay, .projector-view, .undo-bar { display: none !important; }
+    .print-only.active { display: block; }
+    .print-only h2 { font-size: 1.2rem; margin-bottom: .3rem; }
+    .print-only .p-sub { color: #555; font-size: .85rem; margin-bottom: .9rem; }
+    .print-only table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .print-only th, .print-only td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+    .print-only th { background: #eee; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Hall Pass Log</h1>
+      <p class="tagline">Tap a destination, then tap a student &mdash; a live, printable log of who's out of the room and for how long</p>
+    </div>
+  </div>
+
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <label for="setSwitch">Section:</label>
+    <select id="setSwitch"></select>
+    <button class="secondary" id="newSetBtn" type="button">New section</button>
+    <button class="danger" id="deleteSetBtn" type="button">Delete</button>
+  </div>
+
+  <div class="layout">
+    <div class="editor">
+
+      <div class="card">
+        <label for="setName">Section / class name</label>
+        <input type="text" id="setName" placeholder="e.g. Period 3 — Earth Science">
+
+        <div class="card-title" style="margin-top:.6rem;"><span>Roster</span></div>
+        <div class="roster-load-row">
+          <select id="rosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+          <button class="secondary" id="loadRosterBtn" type="button">Load</button>
+        </div>
+        <label for="namesInput">One name per line</label>
+        <textarea id="namesInput" placeholder="Aiden Smith&#10;Brooklyn Jones&#10;Charlie Patel&#10;..." spellcheck="false"></textarea>
+        <div class="hint" id="nameCount">0 names</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Destinations</span><button class="link-btn" id="addDestBtn" type="button">+ Add destination</button></div>
+        <div id="destsEditor"></div>
+        <div class="hint">Renaming a destination here only affects sign-outs from now on &mdash; it doesn&rsquo;t rewrite trips already logged today. &ldquo;Over after&rdquo; sets how many minutes out flags that destination as overdue on the live board. &ldquo;Note at sign-out&rdquo; asks for a quick free-text note when a student heads there &mdash; on by default for anything that sounds like Nurse, Office, or Counselor.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Pass Rules</span></div>
+        <div class="hint">These are prompts the teacher sees and confirms, not an automatic lock &mdash; there&rsquo;s no login here to enforce anything harder than that.</div>
+        <label class="check-row" for="oneOutToggle"><input type="checkbox" id="oneOutToggle">Only one student out at a time</label>
+        <label for="weeklyBudget">Weekly pass budget per student (0 = no limit)</label>
+        <input type="number" id="weeklyBudget" min="0" max="50">
+        <label for="teacherInitials">Teacher initials (shown on passes)</label>
+        <input type="text" id="teacherInitials" maxlength="6" placeholder="e.g. JD">
+        <label>Needs approval before signing out</label>
+        <div class="approval-list" id="approvalList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Day</span></div>
+        <div class="hint">Archiving saves today&rsquo;s log to history and clears the board for a fresh day. The roster and destination list carry over. Everyone must be signed in first.</div>
+        <div class="btn-row" style="margin-top:0;">
+          <button id="archiveBtn" type="button">Archive Day &amp; Reset</button>
+        </div>
+        <div id="historyWrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>This Week</span></div>
+        <div class="hint">Sign-out counts since Sunday (today plus any archived days) &mdash; a quick way to spot a pattern worth a hallway or nurse conversation.</div>
+        <div class="flyer-threshold-row">
+          <label for="flyerThreshold" style="margin:0;">&#128681; Flag as &ldquo;frequent flyer&rdquo; after</label>
+          <input type="number" id="flyerThreshold" min="2" max="20">
+          <label style="margin:0;font-weight:400;">passes this week</label>
+        </div>
+        <div class="weekly-grid" id="weeklyWrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Long-Range Report</span></div>
+        <div class="hint">Per-student totals across a date range you pick &mdash; pulls from archived history (kept up to 90 days) plus today&rsquo;s log. Good for a quarter recap or a parent conversation.</div>
+        <div class="roster-load-row">
+          <div style="flex:1;"><label for="rangeFrom">From</label><input type="date" id="rangeFrom" style="margin-bottom:0;"></div>
+          <div style="flex:1;"><label for="rangeTo">To</label><input type="date" id="rangeTo" style="margin-bottom:0;"></div>
+        </div>
+        <div class="btn-row" style="margin-top:.4rem;">
+          <button class="secondary" id="buildRangeBtn" type="button">Build Report</button>
+        </div>
+        <div id="rangeReportWrap"></div>
+      </div>
+
+      <div id="msg"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="card-title" style="margin-bottom:.7rem;">
+        <span>Tap a destination, then tap a student</span>
+        <button class="secondary" id="projectorBtn" type="button">Projector View</button>
+      </div>
+      <div class="dest-chips" id="destChips"></div>
+
+      <div id="studentGrid" class="student-grid"><p class="empty-hint">Add a roster on the left to get started.</p></div>
+
+      <div class="card-title" style="margin:.2rem 0 .7rem;">
+        <span>Currently Out</span>
+        <label class="alert-sound-label"><input type="checkbox" id="alertSoundToggle">Sound alert when over time</label>
+      </div>
+      <div class="undo-bar" id="undoBar"></div>
+      <div id="liveBoard" class="live-board"><p class="empty-hint">No one is currently out.</p></div>
+
+      <div class="board-controls">
+        <label for="printSelect">Report for:</label>
+        <select id="printSelect"></select>
+        <div class="spacer"></div>
+        <button class="secondary" id="printBtn" type="button">Print Report</button>
+      </div>
+
+      <div class="card-title" style="margin:0 0 .6rem;"><span>Today&rsquo;s Log</span></div>
+      <div id="activityFeed" class="activity-feed"><p class="empty-hint">No one has signed out yet today.</p></div>
+    </div>
+  </div>
+
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded, and no student data leaves this device.</footer>
+
+</div>
+
+<div class="pass-overlay" id="passOverlay">
+  <div class="pass-card">
+    <div class="pass-code" id="passCode"></div>
+    <div class="pass-name" id="passName"></div>
+    <div class="pass-dest" id="passDest"></div>
+    <div class="pass-time" id="passTime"></div>
+    <div class="pass-initials" id="passInitials"></div>
+    <div class="btn-row">
+      <button type="button" id="passPrintBtn">Print Pass</button>
+      <button class="secondary" type="button" id="passCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="projector-view" id="projectorView">
+  <div class="proj-inner">
+    <div class="proj-clock" id="projClock"></div>
+    <div class="proj-big" id="projOutCount">0</div>
+    <div class="proj-label">students currently out</div>
+    <div class="proj-dests" id="projDests"></div>
+    <div class="proj-alert" id="projAlert"></div>
+    <div class="proj-note">Names and destinations are not shown here on purpose.</div>
+    <button class="secondary" type="button" id="projectorCloseBtn">Exit (Esc)</button>
+  </div>
+</div>
+
+<div class="print-only" id="printArea">
+  <h2 id="printTitle">Hall Pass Log</h2>
+  <p class="p-sub" id="printSub"></p>
+  <table>
+    <thead><tr><th>Student</th><th>Destination</th><th>Time Out</th><th>Time In</th><th>Duration</th><th>Note</th></tr></thead>
+    <tbody id="printBody"></tbody>
+  </table>
+</div>
+
+<div class="print-only" id="passPrintArea">
+  <div class="pass-slip" style="border:2px solid #000; max-width:380px; margin:2rem auto; padding:1.4rem; text-align:center;">
+    <h2 style="margin:0 0 .2rem;">Hall Pass</h2>
+    <div style="font-size:2rem; font-weight:800; letter-spacing:.12em; margin:.5rem 0;" id="passPrintCode"></div>
+    <div style="font-size:1.2rem; font-weight:700;" id="passPrintName"></div>
+    <div style="color:#555;" id="passPrintDest"></div>
+    <div style="margin-top:.6rem;" id="passPrintTime"></div>
+    <div style="margin-top:.3rem; color:#555;" id="passPrintInitials"></div>
+  </div>
+</div>
+
+<div class="print-only" id="rangePrintArea">
+  <h2 id="rangePrintTitle">Hall Pass Log &mdash; Long-Range Report</h2>
+  <p class="p-sub" id="rangePrintSub"></p>
+  <table>
+    <thead><tr><th>Student</th><th>Passes</th><th>Total Minutes</th></tr></thead>
+    <tbody id="rangePrintBody"></tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = 'hall-pass-log-sections';
+  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
+  var HISTORY_LIMIT = 90;
+  var LOG_LIMIT = 300;
+  var OVER_TIME_MIN = 9;
+  var LIVE_REFRESH_MS = 20000;
+  var FLYER_THRESHOLD_DEFAULT = 5;
+
+  var els = {};
+  ['toolbar', 'setSwitch', 'newSetBtn', 'deleteSetBtn', 'setName',
+   'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
+   'destsEditor', 'addDestBtn', 'archiveBtn', 'historyWrap', 'weeklyWrap', 'flyerThreshold',
+   'destChips', 'studentGrid', 'liveBoard', 'undoBar', 'alertSoundToggle', 'printSelect', 'printBtn', 'activityFeed',
+   'printArea', 'printTitle', 'printSub', 'printBody', 'msg',
+   'oneOutToggle', 'weeklyBudget', 'teacherInitials', 'approvalList',
+   'projectorBtn', 'projectorView', 'projClock', 'projOutCount', 'projDests', 'projAlert', 'projectorCloseBtn',
+   'passOverlay', 'passCode', 'passName', 'passDest', 'passTime', 'passInitials', 'passPrintBtn', 'passCloseBtn',
+   'passPrintArea', 'passPrintCode', 'passPrintName', 'passPrintDest', 'passPrintTime', 'passPrintInitials',
+   'rangeFrom', 'rangeTo', 'buildRangeBtn', 'rangeReportWrap',
+   'rangePrintArea', 'rangePrintTitle', 'rangePrintSub', 'rangePrintBody'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var DEFAULT_DESTS = [
+    { id: 'd1', label: 'Restroom', overtimeMin: 5 },
+    { id: 'd2', label: 'Nurse', overtimeMin: 20, requiresNote: true },
+    { id: 'd3', label: 'Office', overtimeMin: 15, requiresNote: true },
+    { id: 'd4', label: 'Locker', overtimeMin: 2 },
+    { id: 'd5', label: 'Water fountain', overtimeMin: 5 },
+    { id: 'd6', label: 'Other', overtimeMin: OVER_TIME_MIN },
+  ];
+  var NOTE_LABEL_HINT = /nurse|counsel|office/i;
+
+  // state = { name, namesText, destinations, armedDestId, outNow, log, history }
+  var state = null;
+  var idCounter = 0;
+
+  function nextId(prefix) { idCounter++; return prefix + Date.now() + idCounter; }
+
+  // ── Persisted sections ───────────────────────────────────────────────────
+  function loadStore() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { current: null, sets: {} };
+      var s = JSON.parse(raw);
+      if (!s || typeof s !== 'object') return { current: null, sets: {} };
+      if (!s.sets || typeof s.sets !== 'object') s.sets = {};
+      return s;
+    } catch (e) { return { current: null, sets: {} }; }
+  }
+  function saveStore(store) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+  function save() {
+    if (!state) return;
+    var store = loadStore();
+    store.sets[state.name] = state;
+    store.current = state.name;
+    saveStore(store);
+  }
+  function listNames() {
+    var store = loadStore();
+    return Object.keys(store.sets).sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  function refreshSwitcher() {
+    var names = listNames();
+    els.setSwitch.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (state && n === state.name) opt.selected = true;
+      els.setSwitch.appendChild(opt);
+    });
+  }
+
+  function normalizeState(s) {
+    if (!Array.isArray(s.destinations) || !s.destinations.length) {
+      s.destinations = DEFAULT_DESTS.map(function (d) { return { id: d.id, label: d.label, overtimeMin: d.overtimeMin, requiresNote: !!d.requiresNote }; });
+    }
+    s.destinations.forEach(function (d) {
+      var n = parseInt(d.overtimeMin, 10);
+      d.overtimeMin = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : OVER_TIME_MIN;
+      if (typeof d.requiresNote !== 'boolean') d.requiresNote = NOTE_LABEL_HINT.test(d.label || '');
+    });
+    if (typeof s.namesText !== 'string') s.namesText = '';
+    if (!Array.isArray(s.outNow)) s.outNow = [];
+    if (!Array.isArray(s.log)) s.log = [];
+    if (!Array.isArray(s.history)) s.history = [];
+    s.alertSoundOn = (typeof s.alertSoundOn === 'boolean') ? s.alertSoundOn : true;
+    var flyerN = parseInt(s.flyerThreshold, 10);
+    s.flyerThreshold = (Number.isFinite(flyerN) && flyerN >= 2 && flyerN <= 20) ? flyerN : FLYER_THRESHOLD_DEFAULT;
+    s.oneOutAtATime = (typeof s.oneOutAtATime === 'boolean') ? s.oneOutAtATime : false;
+    var budgetN = parseInt(s.weeklyBudget, 10);
+    s.weeklyBudget = (Number.isFinite(budgetN) && budgetN >= 0 && budgetN <= 50) ? budgetN : 0;
+    if (typeof s.teacherInitials !== 'string') s.teacherInitials = '';
+    if (!Array.isArray(s.approvalNames)) s.approvalNames = [];
+    var hasArmed = s.destinations.some(function (d) { return d.id === s.armedDestId; });
+    if (!hasArmed) s.armedDestId = s.destinations.length ? s.destinations[0].id : null;
+    return s;
+  }
+
+  function newSet(name) {
+    state = normalizeState({ name: name, namesText: '' });
+    applyStateToForm();
+    refreshSwitcher();
+    els.toolbar.style.display = '';
+    save();
+  }
+
+  function loadSetByName(name) {
+    var store = loadStore();
+    var loaded = store.sets[name];
+    if (!loaded) return;
+    state = normalizeState(loaded);
+    applyStateToForm();
+    refreshSwitcher();
+  }
+
+  function applyStateToForm() {
+    els.setName.value = state.name;
+    els.namesInput.value = state.namesText;
+    els.alertSoundToggle.checked = state.alertSoundOn;
+    els.flyerThreshold.value = state.flyerThreshold;
+    els.oneOutToggle.checked = state.oneOutAtATime;
+    els.weeklyBudget.value = state.weeklyBudget;
+    els.teacherInitials.value = state.teacherInitials;
+    lastAction = null;
+    renderUndoBar();
+    updateNameCount();
+    renderDestsEditor();
+    renderChips();
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    renderHistory();
+    renderWeekly();
+    renderApprovalList();
+    els.rangeReportWrap.innerHTML = '';
+  }
+
+  els.alertSoundToggle.addEventListener('change', function () {
+    state.alertSoundOn = els.alertSoundToggle.checked;
+    save();
+  });
+
+  els.flyerThreshold.addEventListener('change', function () {
+    var n = parseInt(els.flyerThreshold.value, 10);
+    state.flyerThreshold = (Number.isFinite(n) && n >= 2 && n <= 20) ? n : FLYER_THRESHOLD_DEFAULT;
+    els.flyerThreshold.value = state.flyerThreshold;
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    save();
+  });
+
+  els.oneOutToggle.addEventListener('change', function () {
+    state.oneOutAtATime = els.oneOutToggle.checked;
+    renderStudentGrid();
+    save();
+  });
+
+  els.weeklyBudget.addEventListener('change', function () {
+    var n = parseInt(els.weeklyBudget.value, 10);
+    state.weeklyBudget = (Number.isFinite(n) && n >= 0 && n <= 50) ? n : 0;
+    els.weeklyBudget.value = state.weeklyBudget;
+    save();
+  });
+
+  els.teacherInitials.addEventListener('input', function () {
+    state.teacherInitials = els.teacherInitials.value;
+    save();
+  });
+
+  function renderApprovalList() {
+    var names = sortedNames();
+    if (!names.length) {
+      els.approvalList.innerHTML = '<p class="empty-hint" style="padding:.4rem;">Add a roster to flag students.</p>';
+      return;
+    }
+    els.approvalList.innerHTML = names.map(function (n) {
+      var checked = state.approvalNames.indexOf(n) !== -1;
+      return '<label><input type="checkbox" class="approval-toggle" data-name="' + escapeAttr(n) + '"' + (checked ? ' checked' : '') + '> ' + escapeHtml(n) + '</label>';
+    }).join('');
+  }
+
+  els.approvalList.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('approval-toggle')) return;
+    var name = e.target.dataset.name;
+    var idx = state.approvalNames.indexOf(name);
+    if (e.target.checked) {
+      if (idx === -1) state.approvalNames.push(name);
+    } else if (idx !== -1) {
+      state.approvalNames.splice(idx, 1);
+    }
+    save();
+  });
+
+  // ── Overtime alert sound ─────────────────────────────────────────────────
+  // Lazily created/unlocked on the first tap anywhere on the page, since
+  // browsers block audio started outside a user gesture — by the time a
+  // live-board tick actually needs to beep, this has long since fired.
+  var audioCtx = null;
+  document.addEventListener('click', function unlockAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { /* Web Audio unavailable */ }
+  }, { capture: true });
+
+  function playOvertimeBeep() {
+    if (!audioCtx) return;
+    try {
+      var now = audioCtx.currentTime;
+      [0, 0.2].forEach(function (offset) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, now + offset);
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.linearRampToValueAtTime(0.15, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.17);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.18);
+      });
+    } catch (e) { /* Web Audio unavailable */ }
+  }
+
+  // Tracks which currently-out sign-outs have already triggered an overtime
+  // alert, so the beep fires once per trip rather than every 20s tick.
+  var alertedOverIds = {};
+
+  // ── Roster ───────────────────────────────────────────────────────────────
+  function parseNames() {
+    return state.namesText.split('\n')
+      .map(function (l) { return l.trim(); })
+      .filter(Boolean);
+  }
+
+  function updateNameCount() {
+    var n = parseNames().length;
+    els.nameCount.textContent = n + ' name' + (n === 1 ? '' : 's');
+  }
+
+  els.namesInput.addEventListener('input', function () {
+    state.namesText = els.namesInput.value;
+    updateNameCount();
+    renderStudentGrid();
+    renderApprovalList();
+    save();
+  });
+
+  function populateRosterSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var names = Object.keys(rosters);
+      els.rosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) {
+      els.rosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
+    }
+  }
+  els.loadRosterBtn.addEventListener('click', function () {
+    var name = els.rosterSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var list = rosters[name];
+      if (!list) return;
+      els.namesInput.value = list.join('\n');
+      state.namesText = els.namesInput.value;
+      updateNameCount();
+      renderStudentGrid();
+      renderApprovalList();
+      save();
+    } catch (e) { showMsg('Could not read that roster from this browser.', 'error'); }
+  });
+
+  // ── Destinations editor ──────────────────────────────────────────────────
+  function renderDestsEditor() {
+    els.destsEditor.innerHTML = state.destinations.map(function (d) {
+      return '<div class="tag-row" data-id="' + escapeAttr(d.id) + '">' +
+        '<input type="text" class="dest-label" value="' + escapeAttr(d.label) + '">' +
+        '<span class="dest-overtime-wrap"><label>Over after</label>' +
+        '<input type="number" class="dest-overtime" min="1" max="120" value="' + d.overtimeMin + '">' +
+        '<label>min</label></span>' +
+        '<span class="dest-note-wrap"><label><input type="checkbox" class="dest-note-toggle"' + (d.requiresNote ? ' checked' : '') + '>Note at sign-out</label></span>' +
+        '<button type="button" class="remove-row-btn" data-remove-dest="' + escapeAttr(d.id) + '" title="Remove destination">&#10005;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.destsEditor.addEventListener('input', function (e) {
+    var row = e.target.closest('.tag-row');
+    if (!row) return;
+    var dest = state.destinations.filter(function (d) { return d.id === row.dataset.id; })[0];
+    if (!dest) return;
+    if (e.target.classList.contains('dest-label')) dest.label = e.target.value;
+    if (e.target.classList.contains('dest-overtime')) {
+      var n = parseInt(e.target.value, 10);
+      dest.overtimeMin = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : dest.overtimeMin;
+    }
+    renderChips();
+    renderLiveBoard();
+    save();
+  });
+
+  els.destsEditor.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('dest-note-toggle')) return;
+    var row = e.target.closest('.tag-row');
+    if (!row) return;
+    var dest = state.destinations.filter(function (d) { return d.id === row.dataset.id; })[0];
+    if (!dest) return;
+    dest.requiresNote = e.target.checked;
+    save();
+  });
+
+  els.destsEditor.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-dest]');
+    if (!btn) return;
+    var id = btn.dataset.removeDest;
+    state.destinations = state.destinations.filter(function (d) { return d.id !== id; });
+    if (state.armedDestId === id) state.armedDestId = state.destinations.length ? state.destinations[0].id : null;
+    renderDestsEditor();
+    renderChips();
+    save();
+  });
+
+  els.addDestBtn.addEventListener('click', function () {
+    var d = { id: nextId('dt'), label: 'New destination', overtimeMin: OVER_TIME_MIN };
+    state.destinations.push(d);
+    if (!state.armedDestId) state.armedDestId = d.id;
+    renderDestsEditor();
+    renderChips();
+    save();
+  });
+
+  // ── Chips (armed destination) ────────────────────────────────────────────
+  function renderChips() {
+    if (!state.destinations.length) {
+      els.destChips.innerHTML = '<p class="empty-hint">Add a destination to sign students out.</p>';
+      return;
+    }
+    els.destChips.innerHTML = state.destinations.map(function (d) {
+      var armed = state.armedDestId === d.id ? ' armed' : '';
+      return '<span class="dest-chip' + armed + '" data-chip="' + escapeAttr(d.id) + '">' + escapeHtml(d.label) + '</span>';
+    }).join('');
+  }
+
+  els.destChips.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-chip]');
+    if (!chip) return;
+    state.armedDestId = chip.dataset.chip;
+    renderChips();
+    save();
+  });
+
+  // ── Student board / sign-out ─────────────────────────────────────────────
+  function sortedNames() {
+    return parseNames().slice().sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  function outEntryFor(name) {
+    return state.outNow.filter(function (o) { return o.name === name; })[0];
+  }
+
+  function armedDest() {
+    return state.destinations.filter(function (d) { return d.id === state.armedDestId; })[0] || state.destinations[0];
+  }
+
+  function renderStudentGrid() {
+    var names = sortedNames();
+    if (!names.length) {
+      els.studentGrid.innerHTML = '<p class="empty-hint">Add a roster on the left to get started.</p>';
+      return;
+    }
+    var locked = state.oneOutAtATime && state.outNow.length > 0;
+    els.studentGrid.innerHTML = names.map(function (n) {
+      var out = outEntryFor(n);
+      var cls = out ? 'is-out' : (locked ? 'locked' : '');
+      var status;
+      if (out) status = 'Out \u2014 ' + escapeHtml(out.destLabel) + ' &middot; tap to sign in';
+      else if (locked) status = 'Someone&rsquo;s already out';
+      else status = 'Tap to sign out';
+      return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '">' +
+        '<div class="s-name">' + escapeHtml(n) + flyerBadge(n) + '</div>' +
+        '<div class="s-status">' + status + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.studentGrid.addEventListener('click', function (e) {
+    var card = e.target.closest('.student-card');
+    if (!card) return;
+    var name = card.dataset.name;
+    var existing = outEntryFor(name);
+    if (existing) { signInStudent(existing.id); return; }
+    signOutStudent(name, card);
+  });
+
+  function signOutStudent(name, cardEl) {
+    if (!state.destinations.length) { showMsg('Add at least one destination before signing students out.', 'error'); return; }
+    if (outEntryFor(name)) { signInStudent(outEntryFor(name).id); return; }
+    if (state.oneOutAtATime && state.outNow.length) {
+      showMsg('Someone is already out (' + state.outNow[0].name + ') \u2014 sign them in before sending another student.', 'error');
+      return;
+    }
+    var dest = armedDest();
+    if (!dest) { showMsg('Pick a destination first.', 'error'); return; }
+    var weeklyCount = studentWeeklyCount(name);
+    if (state.weeklyBudget > 0 && weeklyCount >= state.weeklyBudget) {
+      if (!confirm(name + ' has already used ' + weeklyCount + ' of ' + state.weeklyBudget + ' hall passes budgeted this week. Sign out anyway?')) return;
+    }
+    if (state.approvalNames.indexOf(name) !== -1) {
+      if (!confirm(name + ' is flagged as needing teacher approval for a hall pass. Approve this trip?')) return;
+    }
+    var note = '';
+    if (dest.requiresNote) {
+      note = (prompt('Note for this ' + dest.label + ' trip (optional):', '') || '').trim();
+    }
+    var now = new Date();
+    var entry = {
+      id: nextId('ev'),
+      name: name,
+      destId: dest.id,
+      destLabel: dest.label,
+      outMs: now.getTime(),
+      outStr: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      note: note,
+    };
+    state.outNow.unshift(entry);
+    lastAction = { type: 'signout', id: entry.id, name: name };
+    renderUndoBar();
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    renderWeekly();
+    save();
+    if (isFrequentFlyer(name)) {
+      showMsg('\u{1F6A9} ' + name + ' has been out ' + studentWeeklyCount(name) + ' times this week — worth a check-in.', 'warn');
+    }
+    if (cardEl) {
+      var refreshed = els.studentGrid.querySelector('.student-card[data-name="' + cssEscape(name) + '"]');
+      if (refreshed) {
+        refreshed.classList.add('flash');
+        setTimeout(function () { refreshed.classList.remove('flash'); }, 350);
+      }
+    }
+  }
+
+  function cssEscape(s) {
+    return String(s).replace(/["\\]/g, '\\$&');
+  }
+
+  // ── Live board (currently out) ───────────────────────────────────────────
+  function renderLiveBoard() {
+    if (!state) return;
+    if (!state.outNow.length) {
+      els.liveBoard.innerHTML = '<p class="empty-hint">No one is currently out.</p>';
+      return;
+    }
+    var nowMs = Date.now();
+    var stillOutIds = {};
+    state.outNow.forEach(function (o) { stillOutIds[o.id] = true; });
+    Object.keys(alertedOverIds).forEach(function (id) { if (!stillOutIds[id]) delete alertedOverIds[id]; });
+
+    els.liveBoard.innerHTML = state.outNow.map(function (o) {
+      var mins = Math.floor((nowMs - o.outMs) / 60000);
+      var dest = state.destinations.filter(function (d) { return d.id === o.destId; })[0];
+      var threshold = dest ? dest.overtimeMin : OVER_TIME_MIN;
+      var over = mins >= threshold;
+      if (over && !alertedOverIds[o.id]) {
+        alertedOverIds[o.id] = true;
+        if (state.alertSoundOn) playOvertimeBeep();
+      }
+      var elapsedText = mins < 1 ? 'just now' : (mins + ' min');
+      var noteHtml = o.note ? ('<span class="out-dest" title="' + escapeAttr(o.note) + '">&#128221; ' + escapeHtml(o.note) + '</span>') : '';
+      return '<div class="out-row' + (over ? ' over-time' : '') + '">' +
+        '<div class="out-info"><span class="out-name">' + escapeHtml(o.name) + flyerBadge(o.name) + '</span><span class="out-dest">' + escapeHtml(o.destLabel) + '</span>' + noteHtml + '</div>' +
+        '<div class="out-time"><span class="out-clock">Out at ' + escapeHtml(o.outStr) + '</span><span class="out-elapsed">' + elapsedText + '</span></div>' +
+        '<button class="secondary" type="button" data-pass="' + escapeAttr(o.id) + '">Pass</button>' +
+        '<button class="secondary" type="button" data-signin="' + escapeAttr(o.id) + '">Sign in</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.liveBoard.addEventListener('click', function (e) {
+    var signinBtn = e.target.closest('[data-signin]');
+    if (signinBtn) { signInStudent(signinBtn.dataset.signin); return; }
+    var passBtn = e.target.closest('[data-pass]');
+    if (passBtn) {
+      var entry = state.outNow.filter(function (o) { return o.id === passBtn.dataset.pass; })[0];
+      if (entry) openPass(entry);
+    }
+  });
+
+  function signInStudent(id) {
+    var idx = -1;
+    for (var i = 0; i < state.outNow.length; i++) {
+      if (state.outNow[i].id === id) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    var entry = state.outNow[idx];
+    state.outNow.splice(idx, 1);
+    var now = new Date();
+    var inMs = now.getTime();
+    var durationMin = Math.max(1, Math.round((inMs - entry.outMs) / 60000));
+    var logEntry = {
+      id: entry.id,
+      name: entry.name,
+      destId: entry.destId,
+      destLabel: entry.destLabel,
+      outMs: entry.outMs,
+      outStr: entry.outStr,
+      outHour: new Date(entry.outMs).getHours(),
+      inMs: inMs,
+      inStr: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      durationMin: durationMin,
+      note: entry.note || '',
+    };
+    state.log.unshift(logEntry);
+    if (state.log.length > LOG_LIMIT) state.log.length = LOG_LIMIT;
+    lastAction = { type: 'signin', entry: entry, logId: logEntry.id };
+    renderUndoBar();
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    renderWeekly();
+    save();
+  }
+
+  // ── Undo (one level — the last sign-out or sign-in) ──────────────────────
+  var lastAction = null;
+
+  function renderUndoBar() {
+    if (!lastAction) { els.undoBar.className = 'undo-bar'; els.undoBar.innerHTML = ''; return; }
+    var label = lastAction.type === 'signout'
+      ? ('Signed out ' + escapeHtml(lastAction.name))
+      : ('Signed in ' + escapeHtml(lastAction.entry.name));
+    els.undoBar.className = 'undo-bar show';
+    els.undoBar.innerHTML = '<span>' + label + '</span><button type="button" class="secondary" id="undoBtn">Undo</button>';
+  }
+
+  els.undoBar.addEventListener('click', function (e) {
+    if (!e.target.closest('#undoBtn')) return;
+    undoLastAction();
+  });
+
+  function undoLastAction() {
+    if (!lastAction) return;
+    if (lastAction.type === 'signout') {
+      state.outNow = state.outNow.filter(function (o) { return o.id !== lastAction.id; });
+    } else if (lastAction.type === 'signin') {
+      state.log = state.log.filter(function (e) { return e.id !== lastAction.logId; });
+      state.outNow.unshift(lastAction.entry);
+    }
+    lastAction = null;
+    renderUndoBar();
+    renderStudentGrid();
+    renderLiveBoard();
+    renderTodayLog();
+    renderWeekly();
+    save();
+    showMsg('Undone.', 'info');
+  }
+
+  setInterval(function () { renderLiveBoard(); renderWeekly(); }, LIVE_REFRESH_MS);
+
+  // ── Weekly frequency (per-destination / per-student) ─────────────────────
+  function startOfWeekMs(ms) {
+    var d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - d.getDay());
+    return d.getTime();
+  }
+
+  function weeklyCounts() {
+    var weekStart = startOfWeekMs(Date.now());
+    var byDest = {}, byStudent = {};
+    function tally(name, destLabel) {
+      byDest[destLabel] = (byDest[destLabel] || 0) + 1;
+      byStudent[name] = (byStudent[name] || 0) + 1;
+    }
+    combinedTodayItems().forEach(function (it) { tally(it.name, it.destLabel); });
+    state.history.forEach(function (h) {
+      var ms = (h.dateMs != null) ? h.dateMs : Date.parse(h.date);
+      if (!isNaN(ms) && ms >= weekStart) {
+        h.rows.forEach(function (r) { tally(r.name, r.destLabel); });
+      }
+    });
+    return { byDest: byDest, byStudent: byStudent };
+  }
+
+  // Weekly count for one student (today's log + anyone currently out + archived
+  // days since Sunday) — used to flag "frequent flyers" wherever their name shows up.
+  function studentWeeklyCount(name) {
+    return weeklyCounts().byStudent[name] || 0;
+  }
+
+  function isFrequentFlyer(name) {
+    return studentWeeklyCount(name) >= state.flyerThreshold;
+  }
+
+  function flyerBadge(name) {
+    return isFrequentFlyer(name)
+      ? ' <span class="flyer-flag" title="' + studentWeeklyCount(name) + ' passes this week">&#128681; ' + studentWeeklyCount(name) + '&times; this wk</span>'
+      : '';
+  }
+
+  function topEntries(counts, limit) {
+    return Object.keys(counts)
+      .map(function (k) { return { label: k, count: counts[k] }; })
+      .sort(function (a, b) { return b.count - a.count || a.label.localeCompare(b.label); })
+      .slice(0, limit);
+  }
+
+  // Clusters this week's trips per student by hour-of-day, so a student who
+  // consistently leaves around the same time (likely the same class activity)
+  // can be flagged without needing the bell schedule from another tool.
+  function weeklyHourClusters() {
+    var weekStart = startOfWeekMs(Date.now());
+    var byStudent = {};
+    function tally(name, hour) {
+      if (hour == null || isNaN(hour)) return;
+      var hrs = byStudent[name] || (byStudent[name] = {});
+      hrs[hour] = (hrs[hour] || 0) + 1;
+    }
+    combinedTodayItems().forEach(function (it) { tally(it.name, new Date(it.outMs).getHours()); });
+    state.history.forEach(function (h) {
+      var ms = (h.dateMs != null) ? h.dateMs : Date.parse(h.date);
+      if (!isNaN(ms) && ms >= weekStart) {
+        h.rows.forEach(function (r) { tally(r.name, r.outHour); });
+      }
+    });
+    return byStudent;
+  }
+
+  function studentTimePatternNote(name) {
+    var hours = weeklyHourClusters()[name];
+    if (!hours) return null;
+    var total = 0, topHour = null;
+    Object.keys(hours).forEach(function (h) {
+      total += hours[h];
+      if (topHour === null || hours[h] > hours[topHour]) topHour = h;
+    });
+    if (total < 3 || topHour === null || hours[topHour] / total < 0.6) return null;
+    var label = new Date(2000, 0, 1, parseInt(topHour, 10)).toLocaleTimeString([], { hour: 'numeric' });
+    return hours[topHour] + ' of ' + total + ' trips around ' + label;
+  }
+
+  function renderWeekly() {
+    if (!state) return;
+    var counts = weeklyCounts();
+    var destTop = topEntries(counts.byDest, 8);
+    var studentTop = topEntries(counts.byStudent, 8);
+    if (!destTop.length) {
+      els.weeklyWrap.innerHTML = '<p class="empty-hint">No trips logged yet this week.</p>';
+      return;
+    }
+    function list(entries) {
+      return '<ul class="weekly-list">' + entries.map(function (e) {
+        return '<li><span>' + escapeHtml(e.label) + '</span><span class="weekly-count">' + e.count + '</span></li>';
+      }).join('') + '</ul>';
+    }
+    function studentList(entries) {
+      return '<ul class="weekly-list">' + entries.map(function (e) {
+        var pattern = studentTimePatternNote(e.label);
+        return '<li><div><span>' + escapeHtml(e.label) + '</span>' +
+          (pattern ? '<span class="weekly-pattern">' + escapeHtml(pattern) + '</span>' : '') +
+          '</div><span class="weekly-count">' + e.count + '</span></li>';
+      }).join('') + '</ul>';
+    }
+    els.weeklyWrap.innerHTML =
+      '<div class="weekly-col"><h4>By destination</h4>' + list(destTop) + '</div>' +
+      '<div class="weekly-col"><h4>By student</h4>' + studentList(studentTop) + '</div>';
+  }
+
+  // ── Today's log (combined, newest first) ─────────────────────────────────
+  function combinedTodayItems() {
+    var items = state.log.map(function (e) {
+      return { name: e.name, destLabel: e.destLabel, outStr: e.outStr, outMs: e.outMs, inStr: e.inStr, durationMin: e.durationMin, note: e.note || '', stillOut: false };
+    });
+    state.outNow.forEach(function (o) {
+      items.push({ name: o.name, destLabel: o.destLabel, outStr: o.outStr, outMs: o.outMs, inStr: null, durationMin: null, note: o.note || '', stillOut: true });
+    });
+    items.sort(function (a, b) { return b.outMs - a.outMs; });
+    return items;
+  }
+
+  function renderTodayLog() {
+    var items = combinedTodayItems();
+    if (!items.length) {
+      els.activityFeed.innerHTML = '<p class="empty-hint">No one has signed out yet today.</p>';
+      refreshPrintSelect();
+      return;
+    }
+    els.activityFeed.innerHTML = items.slice(0, 60).map(function (it) {
+      var right = it.stillOut
+        ? '<span class="a-delta out">still out</span>'
+        : ('<span class="a-delta">' + it.durationMin + ' min</span>');
+      var noteMark = it.note ? (' <span title="' + escapeAttr(it.note) + '">&#128221;</span>') : '';
+      return '<div class="activity-item">' +
+        '<span><span class="a-who">' + escapeHtml(it.name) + '</span>' + flyerBadge(it.name) + ' <span class="a-what">&mdash; ' + escapeHtml(it.destLabel) + '</span>' + noteMark + '</span>' +
+        '<span>' + right + ' <span class="a-time">' + escapeHtml(it.outStr) + '</span></span>' +
+        '</div>';
+    }).join('');
+    refreshPrintSelect();
+  }
+
+  // ── Archive day ──────────────────────────────────────────────────────────
+  els.archiveBtn.addEventListener('click', function () {
+    if (state.outNow.length) {
+      showMsg('Sign in ' + state.outNow.length + ' student(s) still out before archiving the day.', 'error');
+      return;
+    }
+    if (!state.log.length) { showMsg('Nothing logged yet today — nothing to archive.', 'info'); return; }
+    if (!confirm('Archive today\u2019s log to history and start a fresh day?')) return;
+
+    state.history.unshift({
+      date: new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
+      dateMs: Date.now(),
+      rows: state.log.slice().reverse().map(function (e) {
+        return { name: e.name, destLabel: e.destLabel, outStr: e.outStr, outMs: e.outMs, outHour: e.outHour, inStr: e.inStr, durationMin: e.durationMin, note: e.note || '' };
+      }),
+    });
+    if (state.history.length > HISTORY_LIMIT) state.history.length = HISTORY_LIMIT;
+
+    state.log = [];
+    lastAction = null;
+    renderUndoBar();
+
+    renderTodayLog();
+    renderHistory();
+    renderWeekly();
+    save();
+    showMsg('Day archived. Ready for a fresh day.', 'info');
+  });
+
+  function renderHistory() {
+    if (!state.history.length) { els.historyWrap.innerHTML = ''; refreshPrintSelect(); return; }
+    els.historyWrap.innerHTML = state.history.map(function (h, i) {
+      var rowsHtml = h.rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td><td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + r.durationMin + ' min</td><td>' + escapeHtml(r.note || '') + '</td></tr>';
+      }).join('');
+      return '<details class="history-entry"' + (i === 0 ? ' open' : '') + '>' +
+        '<summary><b>' + escapeHtml(h.date) + '</b> &middot; ' + h.rows.length + ' sign-out' + (h.rows.length === 1 ? '' : 's') + '</summary>' +
+        '<table class="history-table"><thead><tr><th>Student</th><th>Destination</th><th>Out</th><th>In</th><th>Duration</th><th>Note</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+        '</details>';
+    }).join('');
+    refreshPrintSelect();
+  }
+
+  // ── Print report ─────────────────────────────────────────────────────────
+  function refreshPrintSelect() {
+    if (!state) return;
+    var prevVal = els.printSelect.value;
+    var opts = '<option value="today">Today (' + combinedTodayItems().length + ')</option>';
+    opts += state.history.map(function (h, i) {
+      return '<option value="' + i + '">' + escapeHtml(h.date) + ' (' + h.rows.length + ')</option>';
+    }).join('');
+    els.printSelect.innerHTML = opts;
+    if (prevVal && els.printSelect.querySelector('option[value="' + cssEscape(prevVal) + '"]')) {
+      els.printSelect.value = prevVal;
+    }
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var sel = els.printSelect.value;
+    var rows, sub;
+    if (sel === 'today' || !sel) {
+      var items = combinedTodayItems().slice().sort(function (a, b) { return a.outMs - b.outMs; });
+      rows = items.map(function (it) {
+        return { name: it.name, destLabel: it.destLabel, outStr: it.outStr, inStr: it.stillOut ? '\u2014 still out \u2014' : it.inStr, durationMin: it.stillOut ? '\u2014' : (it.durationMin + ' min'), note: it.note || '' };
+      });
+      sub = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) + ' (Today)';
+    } else {
+      var h = state.history[parseInt(sel, 10)];
+      if (!h) return;
+      rows = h.rows.map(function (r) {
+        return { name: r.name, destLabel: r.destLabel, outStr: r.outStr, inStr: r.inStr, durationMin: r.durationMin + ' min', note: r.note || '' };
+      });
+      sub = h.date;
+    }
+    els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Hall Pass Log';
+    els.printSub.textContent = sub;
+    els.printBody.innerHTML = rows.length
+      ? rows.map(function (r) {
+          return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.destLabel) + '</td><td>' + escapeHtml(r.outStr) + '</td><td>' + escapeHtml(r.inStr) + '</td><td>' + escapeHtml(String(r.durationMin)) + '</td><td>' + escapeHtml(r.note) + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="6">No sign-outs recorded.</td></tr>';
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printArea.classList.add('active');
+    window.print();
+  });
+
+  // ── Paper / on-screen pass ────────────────────────────────────────────────
+  // Not a real credential — just a short, deterministic check digit a hall
+  // monitor can match against the board without the student holding anything
+  // that reveals other students' names or destinations.
+  var currentPassEntry = null;
+  function passCode(entry) {
+    var s = entry.id + '|' + entry.name + '|' + entry.outMs;
+    var h = 0;
+    for (var i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+    return ('0000' + (Math.abs(h) % 10000)).slice(-4);
+  }
+
+  function openPass(entry) {
+    currentPassEntry = entry;
+    els.passCode.textContent = passCode(entry);
+    els.passName.textContent = entry.name;
+    els.passDest.textContent = entry.destLabel;
+    els.passTime.textContent = 'Out at ' + entry.outStr;
+    els.passInitials.textContent = state.teacherInitials ? ('Teacher: ' + state.teacherInitials) : '';
+    els.passOverlay.className = 'pass-overlay show';
+  }
+
+  function closePass() {
+    els.passOverlay.className = 'pass-overlay';
+    currentPassEntry = null;
+  }
+
+  els.passCloseBtn.addEventListener('click', closePass);
+  els.passOverlay.addEventListener('click', function (e) { if (e.target === els.passOverlay) closePass(); });
+
+  els.passPrintBtn.addEventListener('click', function () {
+    if (!currentPassEntry) return;
+    els.passPrintCode.textContent = passCode(currentPassEntry);
+    els.passPrintName.textContent = currentPassEntry.name;
+    els.passPrintDest.textContent = currentPassEntry.destLabel;
+    els.passPrintTime.textContent = 'Out at ' + currentPassEntry.outStr + ' — ' + new Date().toLocaleDateString([], { month: 'short', day: 'numeric' });
+    els.passPrintInitials.textContent = state.teacherInitials ? ('Teacher: ' + state.teacherInitials) : '';
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.passPrintArea.classList.add('active');
+    window.print();
+  });
+
+  // ── Projector view (deliberately reduced — no names, no per-student destinations) ──
+  var projectorTimer = null;
+  function renderProjector() {
+    if (!state) return;
+    els.projClock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    els.projOutCount.textContent = state.outNow.length;
+    var nowMs = Date.now();
+    var byDest = {};
+    var anyOver = false;
+    state.outNow.forEach(function (o) {
+      byDest[o.destLabel] = (byDest[o.destLabel] || 0) + 1;
+      var dest = state.destinations.filter(function (d) { return d.id === o.destId; })[0];
+      var threshold = dest ? dest.overtimeMin : OVER_TIME_MIN;
+      if (Math.floor((nowMs - o.outMs) / 60000) >= threshold) anyOver = true;
+    });
+    var destKeys = Object.keys(byDest);
+    els.projDests.innerHTML = destKeys.length
+      ? destKeys.map(function (k) { return '<div class="proj-dest-row"><span>' + escapeHtml(k) + '</span><span>' + byDest[k] + '</span></div>'; }).join('')
+      : '<div class="proj-dest-row empty">No one out</div>';
+    els.projAlert.textContent = anyOver ? 'One or more passes are over the time limit' : '';
+  }
+
+  function openProjector() {
+    els.projectorView.className = 'projector-view show';
+    renderProjector();
+    projectorTimer = setInterval(renderProjector, 1000);
+    if (els.projectorView.requestFullscreen) els.projectorView.requestFullscreen().catch(function () {});
+  }
+
+  function closeProjector() {
+    els.projectorView.className = 'projector-view';
+    if (projectorTimer) { clearInterval(projectorTimer); projectorTimer = null; }
+    if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+  }
+
+  els.projectorBtn.addEventListener('click', openProjector);
+  els.projectorCloseBtn.addEventListener('click', closeProjector);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (els.projectorView.classList.contains('show')) closeProjector();
+    if (els.passOverlay.classList.contains('show')) closePass();
+  });
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && els.projectorView.classList.contains('show')) closeProjector();
+  });
+
+  // ── Long-range report ─────────────────────────────────────────────────────
+  var lastRangeReport = null;
+
+  function buildRangeTotals(fromMs, toMs) {
+    var totals = {};
+    function tally(name, mins) {
+      var t = totals[name] || (totals[name] = { count: 0, minutes: 0 });
+      t.count++;
+      t.minutes += (mins || 0);
+    }
+    state.log.forEach(function (e) {
+      if (e.outMs >= fromMs && e.outMs <= toMs) tally(e.name, e.durationMin);
+    });
+    state.history.forEach(function (h) {
+      var ms = (h.dateMs != null) ? h.dateMs : Date.parse(h.date);
+      if (!isNaN(ms) && ms >= fromMs && ms <= toMs) {
+        h.rows.forEach(function (r) { tally(r.name, r.durationMin); });
+      }
+    });
+    return totals;
+  }
+
+  els.buildRangeBtn.addEventListener('click', function () {
+    if (!els.rangeFrom.value || !els.rangeTo.value) { showMsg('Pick a start and end date for the range report.', 'error'); return; }
+    var fromMs = new Date(els.rangeFrom.value + 'T00:00:00').getTime();
+    var toMs = new Date(els.rangeTo.value + 'T23:59:59').getTime();
+    if (isNaN(fromMs) || isNaN(toMs) || fromMs > toMs) { showMsg('That date range doesn’t look right.', 'error'); return; }
+    var totals = buildRangeTotals(fromMs, toMs);
+    var rows = Object.keys(totals).map(function (n) { return { name: n, count: totals[n].count, minutes: totals[n].minutes }; })
+      .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name); });
+    lastRangeReport = {
+      fromLabel: new Date(fromMs).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
+      toLabel: new Date(toMs).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
+      rows: rows,
+    };
+    if (!rows.length) {
+      els.rangeReportWrap.innerHTML = '<p class="empty-hint">No sign-outs recorded in that range.</p>';
+      return;
+    }
+    els.rangeReportWrap.innerHTML =
+      '<table class="history-table"><thead><tr><th>Student</th><th>Passes</th><th>Total Minutes</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.count + '</td><td>' + r.minutes + ' min</td></tr>'; }).join('') +
+      '</tbody></table><div class="btn-row" style="margin-top:.6rem;"><button class="secondary" type="button" id="printRangeBtn">Print Range Report</button></div>';
+  });
+
+  els.rangeReportWrap.addEventListener('click', function (e) {
+    if (!e.target.closest('#printRangeBtn') || !lastRangeReport) return;
+    els.rangePrintTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Hall Pass Log — Long-Range Report';
+    els.rangePrintSub.textContent = lastRangeReport.fromLabel + ' – ' + lastRangeReport.toLabel;
+    els.rangePrintBody.innerHTML = lastRangeReport.rows.length
+      ? lastRangeReport.rows.map(function (r) { return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.count + '</td><td>' + r.minutes + ' min</td></tr>'; }).join('')
+      : '<tr><td colspan="3">No sign-outs recorded.</td></tr>';
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.rangePrintArea.classList.add('active');
+    window.print();
+  });
+
+  function showMsg(text, kind) { els.msg.textContent = text; els.msg.className = kind || 'error'; }
+
+  function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+  /* ---------- section lifecycle ---------- */
+  els.setName.addEventListener('change', function () {
+    if (!state) return;
+    var oldName = state.name;
+    var newName = els.setName.value.trim() || oldName;
+    if (newName !== oldName) {
+      var store = loadStore();
+      delete store.sets[oldName];
+      state.name = newName;
+      store.sets[newName] = state;
+      store.current = newName;
+      saveStore(store);
+      refreshSwitcher();
+    }
+  });
+
+  els.setSwitch.addEventListener('change', function () { loadSetByName(els.setSwitch.value); });
+
+  els.newSetBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new section:', 'New Section');
+    if (!name) return;
+    newSet(name.trim());
+  });
+
+  els.deleteSetBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Delete "' + state.name + '" completely? This can\u2019t be undone.')) return;
+    var store = loadStore();
+    delete store.sets[state.name];
+    var remaining = Object.keys(store.sets);
+    if (remaining.length) {
+      store.current = remaining[0];
+      saveStore(store);
+      loadSetByName(remaining[0]);
+    } else {
+      saveStore(store);
+      newSet('New Section');
+    }
+  });
+
+  /* ---------- boot ---------- */
+  populateRosterSelect();
+  var initial = loadStore();
+  if (initial.current && initial.sets[initial.current]) {
+    loadSetByName(initial.current);
+    els.toolbar.style.display = '';
+  } else {
+    var names = Object.keys(initial.sets);
+    if (names.length) {
+      loadSetByName(names[0]);
+      els.toolbar.style.display = '';
+    } else {
+      newSet('New Section');
+    }
+  }
+
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

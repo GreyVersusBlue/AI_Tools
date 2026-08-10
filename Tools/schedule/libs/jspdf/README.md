@@ -11,7 +11,7 @@
 | Source | `https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js` |
 | Upstream | https://github.com/parallax/jsPDF |
 
-Byte-for-byte the file `Tools/schedule-visualizer.html` used to load from
+Byte-for-byte the file `Tools/035-schedule-visualizer.html` used to load from
 cdnjs. Same version, so this is a path change and nothing else.
 
 ## Why it is here

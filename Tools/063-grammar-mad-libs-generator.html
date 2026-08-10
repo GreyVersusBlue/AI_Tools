@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grammar Mad Libs Generator</title>
+<meta name="description" content="Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/063-grammar-mad-libs-generator.html">
+<meta property="og:title" content="Grammar Mad Libs Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Grammar Mad Libs Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 12h6M8 16h16M8 20h10' stroke='%231f3550' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  select, textarea, input[type="text"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .6rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 6rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
+
+  .story-preview { font-size: 1.15rem; line-height: 1.9; }
+  .story-preview .blank { display: inline-block; border-bottom: 2px solid var(--ink); min-width: 5rem; text-align: center; margin: 0 .1rem; }
+  .story-preview .blank .tag-label { display: block; font-size: .62rem; text-transform: uppercase; color: var(--muted); letter-spacing: .03em; }
+  .story-preview .filled { color: var(--accent-2); font-weight: 700; border-bottom: 2px solid var(--accent-2); }
+
+  .bank-box { background: #f6f5f0; border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; font-size: .84rem; margin-top: 1rem; }
+  .bank-box .bank-group { margin-bottom: .3rem; }
+  .bank-box .bank-group b { text-transform: capitalize; }
+
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .sheet-page { page-break-after: always; }
+  }
+  .sheet-title { font-size: 1.3rem; margin: 0 0 .2rem; }
+  .sheet-sub { color: #555; font-size: .85rem; margin: 0 0 1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Grammar Mad Libs Generator</h1>
+      <p class="sub">Pick a story, see the parts of speech it needs, and print a blank worksheet with a word bank.</p>
+    </div>
+    <div class="btnrow" style="margin-bottom:0;">
+      <button class="secondary" id="printBtn">Print worksheet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="templateSelect">Story template</label>
+    <select id="templateSelect"></select>
+    <label for="customText" style="margin-top:.6rem;">Or write your own (use tags like {noun}, {adjective}, {verb-ed}, {place}, {animal}, {number}, {name})</label>
+    <textarea id="customText" placeholder="Once there was a {adjective} {animal} who loved to {verb}..."></textarea>
+    <button class="secondary" id="useCustomBtn">Use my own story</button>
+  </div>
+
+  <div class="card">
+    <div class="btnrow">
+      <h2 style="margin:0;flex:1;">Preview</h2>
+      <button id="fillRandomBtn">Fill randomly (demo)</button>
+      <button class="secondary" id="clearFillBtn">Clear fill</button>
+    </div>
+    <div class="story-preview" id="storyPreview"></div>
+    <div class="bank-box" id="bankBox"></div>
+  </div>
+</div>
+
+<div id="printArea">
+  <div class="sheet-page">
+    <h2 class="sheet-title">Mad Libs</h2>
+    <p class="sheet-sub">Name: __________________________ &nbsp; Date: __________</p>
+    <p class="hint">Fill in each blank with the part of speech shown, without looking at the rest of the story!</p>
+    <div class="story-preview" id="printStory"></div>
+    <div class="bank-box" id="printBank"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TEMPLATES = [
+    { name: 'A Very Silly School Day',
+      text: 'This morning I woke up and put on my {adjective} shoes. When I got to school, my teacher, {name}, was riding a {animal} down the hallway! During {subject-area} class, we had to {verb} for {number} minutes straight while singing about {plural-noun}. At lunch, I ate a {adjective} {food} that tasted like {color} paint. By the end of the day, everyone was {adverb} {adjective}, and we all agreed it was the {adjective} day of the year.' },
+    { name: 'The Adventure Story',
+      text: 'Deep in the {adjective} forest, a young explorer named {name} discovered a {color} {noun} buried under a pile of {plural-noun}. Without thinking twice, they picked it up and {verb-ed} toward the nearest {place}. Suddenly, a {adjective} {animal} jumped out and shouted, "{exclamation}!" {name} had to think fast, so they {verb-ed} {adverb} until they reached safety.' },
+    { name: 'Book Report Parody',
+      text: 'The book I read was called "The {adjective} {noun}." It is about a {adjective} {animal} who wants to {verb} more than anything else in the world. Along the way, they meet a {noun} who teaches them to {verb} {adverb}. My favorite part was when the {animal} {verb-ed} all the way to {place}. I would give this book {number} out of 10 stars.' },
+    { name: 'A Day in the Life of a Pet',
+      text: 'Being a pet {animal} is {adjective} work. Every morning I wake up and demand {number} bowls of {food}. Then I {verb} around the {place} until my human, {name}, gives me a {adjective} {noun} to play with. At night, I curl up on the {adjective} {noun} and dream about {plural-noun}.' }
+  ];
+
+  var WORD_BANK = {
+    noun: ['sandwich', 'trampoline', 'umbrella', 'dragon', 'backpack', 'volcano'],
+    'plural-noun': ['socks', 'penguins', 'noodles', 'balloons', 'robots', 'pickles'],
+    verb: ['jump', 'giggle', 'wobble', 'sprint', 'daydream', 'wiggle'],
+    'verb-ed': ['wiggled', 'sprinted', 'giggled', 'wobbled', 'zoomed', 'tiptoed'],
+    adjective: ['squishy', 'enormous', 'sparkly', 'mysterious', 'wobbly', 'gigantic'],
+    adverb: ['quietly', 'suddenly', 'cheerfully', 'nervously', 'dramatically', 'clumsily'],
+    place: ['the moon', 'the cafeteria', 'a haunted castle', 'the library', 'outer space', 'the school gym'],
+    name: ['Mr. Wobblesworth', 'Captain Noodle', 'Aunt Petunia', 'Zorp', 'Ms. Higgins', 'Sir Reginald'],
+    number: ['seven', 'forty-two', 'three', 'one hundred', 'nine', 'twelve'],
+    exclamation: ['Yikes', 'Great Scott', 'Holy cow', 'Oh no', 'Well butter my biscuit', 'Good grief'],
+    color: ['neon green', 'purple', 'polka-dotted', 'rainbow', 'glow-in-the-dark', 'burnt orange'],
+    animal: ['llama', 'penguin', 'raccoon', 'octopus', 'kangaroo', 'hedgehog'],
+    food: ['pizza', 'meatloaf', 'jellybean', 'taco', 'broccoli', 'ice cream'],
+    'body-part': ['elbow', 'nose', 'toe', 'eyebrow', 'kneecap', 'pinky finger'],
+    'subject-area': ['math', 'science', 'gym', 'art', 'music', 'social studies']
+  };
+
+  var els = {};
+  ['templateSelect', 'customText', 'useCustomBtn', 'storyPreview', 'bankBox', 'fillRandomBtn', 'clearFillBtn',
+   'printBtn', 'printStory', 'printBank'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var currentText = TEMPLATES[0].text;
+  var filled = false;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  els.templateSelect.innerHTML = TEMPLATES.map(function (t, i) {
+    return '<option value="' + i + '">' + escapeHtml(t.name) + '</option>';
+  }).join('');
+
+  function parseTags(text) {
+    var tags = [];
+    var re = /\{([a-z-]+)\}/g;
+    var m;
+    while ((m = re.exec(text))) { if (tags.indexOf(m[1]) === -1) tags.push(m[1]); }
+    return tags;
+  }
+
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function renderStory(targetEl, forPrint) {
+    var html = escapeHtml(currentText).replace(/\{([a-z-]+)\}/g, function (whole, tag) {
+      if (filled && !forPrint) {
+        var word = pickRandom(WORD_BANK[tag] || ['&hellip;']);
+        return '<span class="blank filled">' + word + '</span>';
+      }
+      return '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tag-label">(' + tag.replace('-', ' ') + ')</span></span>';
+    });
+    targetEl.innerHTML = html;
+  }
+
+  function renderBank(targetEl) {
+    var tags = parseTags(currentText);
+    targetEl.innerHTML = '<b>Word bank ideas (or invent your own!):</b><br>' + tags.map(function (tag) {
+      var words = WORD_BANK[tag] || [];
+      return '<div class="bank-group"><b>' + escapeHtml(tag.replace('-', ' ')) + ':</b> ' + words.map(escapeHtml).join(', ') + '</div>';
+    }).join('');
+  }
+
+  function refresh() {
+    renderStory(els.storyPreview, false);
+    renderBank(els.bankBox);
+  }
+
+  els.templateSelect.addEventListener('change', function () {
+    currentText = TEMPLATES[parseInt(els.templateSelect.value, 10)].text;
+    filled = false;
+    refresh();
+  });
+
+  els.useCustomBtn.addEventListener('click', function () {
+    var text = els.customText.value.trim();
+    if (!text) { alert('Write a story with at least one {tag} first.'); return; }
+    if (!/\{[a-z-]+\}/.test(text)) { alert('Add at least one blank like {noun} or {adjective} to your story.'); return; }
+    currentText = text;
+    filled = false;
+    refresh();
+  });
+
+  els.fillRandomBtn.addEventListener('click', function () {
+    filled = true;
+    renderStory(els.storyPreview, false);
+  });
+  els.clearFillBtn.addEventListener('click', function () {
+    filled = false;
+    renderStory(els.storyPreview, false);
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    renderStory(els.printStory, true);
+    renderBank(els.printBank);
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  refresh();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

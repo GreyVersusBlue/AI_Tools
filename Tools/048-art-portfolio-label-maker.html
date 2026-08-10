@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Art Portfolio Label &amp; QR Tag Maker</title>
+<meta name="description" content="Printable labels and QR tags for physical student art portfolios, each code carrying a photo thumbnail or artist statement.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/048-art-portfolio-label-maker.html">
+<meta property="og:title" content="Student Art Portfolio Label &amp; QR Tag Maker — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Printable labels and QR tags for physical student art portfolios, each code carrying a photo thumbnail or artist statement.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Student Art Portfolio Label &amp; QR Tag Maker — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Printable labels and QR tags for physical student art portfolios, each code carrying a photo thumbnail or artist statement.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='7' width='20' height='15' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='11' cy='13' r='2' fill='%231f3550'/%3E%3Cpath d='M8 20l5-5 4 4 3-3 4 4' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script src="art-portfolio-label-maker/lib/qrcode.js"></script>
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header p.tagline { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .layout { display: grid; grid-template-columns: minmax(320px, 480px) 1fr; gap: 1.4rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  .card-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin-bottom: .8rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
+  input[type="text"], select, textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 3.2rem; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .25rem .55rem; font-size: .78rem; }
+  button.link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .78rem; }
+  button.link-btn:hover { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .btnrow, .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
+
+  .entries-list { display: flex; flex-direction: column; gap: .7rem; }
+  .entry-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; display: grid; grid-template-columns: 70px 1fr; gap: .7rem; }
+  .entry-thumb-wrap { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+  .entry-thumb {
+    width: 64px; height: 64px; border-radius: 6px; border: 1px dashed var(--line-strong);
+    background: #f1f0ea center/cover no-repeat; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: .65rem; text-align: center; overflow: hidden;
+  }
+  .entry-fields input[type="text"], .entry-fields textarea { margin-bottom: .4rem; }
+  .entry-fields .field-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 700; margin-bottom: .15rem; }
+  .entry-footer { display: flex; justify-content: space-between; align-items: center; margin-top: .2rem; }
+  .entry-footer .num { font-family: Consolas, monospace; font-size: .74rem; color: var(--muted); }
+
+  .import-box { background: #f4f3ee; border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; display: none; }
+  .import-box.open { display: block; }
+  .import-box textarea { min-height: 6rem; font-family: Consolas, monospace; font-size: .82rem; }
+
+  #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .7rem; white-space: pre-line; }
+  #msg.show { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
+
+  .preview-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
+
+  .label-preview-grid { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .label-preview { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .7rem; width: 190px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: .3rem; }
+  .label-preview img.thumb, .label-preview .no-thumb {
+    width: 70px; height: 70px; border-radius: 6px; object-fit: cover; background: #f1f0ea;
+    display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .62rem;
+  }
+  .label-preview canvas { width: 84px; height: 84px; image-rendering: pixelated; }
+  .label-preview .lbl-title { font-weight: 700; font-size: .84rem; overflow-wrap: anywhere; }
+  .label-preview .lbl-desc { font-size: .68rem; color: var(--muted); overflow-wrap: anywhere; }
+  .label-preview .no-qr-note { font-size: .62rem; color: var(--muted); font-style: italic; }
+
+  footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  .print-only { display: none; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .wrap > *:not(.print-only) { display: none !important; }
+    .print-only.active { display: block; }
+    .print-label-grid { display: flex; flex-wrap: wrap; }
+    .print-label-grid .p-label {
+      box-sizing: border-box; border: 1.5px solid #999; border-radius: 8px; padding: 10px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      page-break-inside: avoid; margin: 4px; gap: 4px;
+    }
+    .print-label-grid .p-label img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+    .print-label-grid .p-label canvas { width: 100%; height: auto; max-width: 150px; }
+    .print-label-grid .p-label .p-title { font-weight: 700; font-size: 1rem; }
+    .print-label-grid .p-label .p-desc { font-size: .72rem; color: #333; overflow-wrap: anywhere; }
+
+    .print-label-grid.pp-2 .p-label { width: calc(50% - 8px); }
+    .print-label-grid.pp-2 .p-label:nth-child(2n) { page-break-after: always; }
+    .print-label-grid.pp-3 .p-label { width: calc(33.33% - 8px); }
+    .print-label-grid.pp-3 .p-label:nth-child(3n) { page-break-after: always; }
+    .print-label-grid.pp-6 .p-label { width: calc(33.33% - 8px); }
+    .print-label-grid.pp-6 .p-label:nth-child(6n) { page-break-after: always; }
+    .print-label-grid.pp-8 .p-label { width: calc(25% - 8px); }
+    .print-label-grid.pp-8 .p-label:nth-child(8n) { page-break-after: always; }
+    .print-label-grid .p-label:last-child { page-break-after: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Student Art Portfolio Label &amp; QR Tag Maker</h1>
+      <p class="tagline">Labels for physical art portfolios &mdash; each one can carry a photo thumbnail and a QR code holding the artist statement, no server or upload needed.</p>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="editor">
+      <div class="card">
+        <label for="portfolioTitle">Portfolio / class / unit name (for the print header)</label>
+        <input type="text" id="portfolioTitle" placeholder="e.g. Rm 214 &mdash; Semester 1 Portfolios">
+
+        <div class="card-title" style="margin-top:.6rem;">
+          <span>Portfolio entries</span>
+          <button class="link-btn" id="toggleImportBtn" type="button">Paste a list instead</button>
+        </div>
+        <div class="entries-list" id="entriesList"></div>
+        <div class="btn-row">
+          <button class="secondary" id="addRowBtn" type="button">+ Add entry</button>
+        </div>
+
+        <div class="import-box" id="importBox">
+          <label for="importText">One entry per line &mdash; title, then the artist statement, separated by a tab or a comma</label>
+          <p class="hint">Example: Self-Portrait &mdash; Ava R.&nbsp;&nbsp;Charcoal on paper, inspired by...</p>
+          <textarea id="importText" placeholder="Self-Portrait &mdash; Ava R.	Charcoal on paper, inspired by our unit on shading&#10;Clay Bowl &mdash; Marco T., Hand-built pinch pot, glazed blue"></textarea>
+          <div class="btn-row">
+            <button id="importBtn" type="button">Add these entries</button>
+          </div>
+        </div>
+        <div class="hint">Add a photo to a row to print a thumbnail on the label. The QR code encodes the artist statement text directly (readable offline by any QR scanner) &mdash; it doesn't link anywhere, since nothing here is hosted online.</div>
+        <div id="msg"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Print layout</span></div>
+        <div class="row2">
+          <div>
+            <label for="labelsPerPage">Labels per printed page</label>
+            <select id="labelsPerPage">
+              <option value="2">2 &mdash; large</option>
+              <option value="3">3</option>
+              <option value="6" selected>6</option>
+              <option value="8">8 &mdash; small</option>
+            </select>
+          </div>
+          <div>
+            <label for="ecLevel">QR error correction</label>
+            <select id="ecLevel">
+              <option value="M">Medium &mdash; default</option>
+              <option value="Q" selected>Quartile &mdash; handles wear well</option>
+              <option value="H">High &mdash; best if handled a lot</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="printBtn" disabled type="button">Print labels</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-wrap">
+      <p class="preview-note" id="previewNote">Live preview.</p>
+      <div class="label-preview-grid" id="previewGrid"><p class="empty-hint">Add at least one entry to see a label preview.</p></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    Runs entirely in your browser &mdash; nothing is uploaded.
+  </footer>
+</div>
+
+<div class="print-only" id="printArea">
+  <h2 id="printHeaderTitle" style="font-size:1.2rem;margin:0 0 10px;"></h2>
+  <div class="print-label-grid" id="printLabelGrid"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'apl_portfolio_v1';
+
+  var els = {};
+  ['portfolioTitle', 'entriesList', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
+   'labelsPerPage', 'ecLevel', 'printBtn', 'previewGrid', 'previewNote', 'msg',
+   'printArea', 'printHeaderTitle', 'printLabelGrid'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = { title: '', entries: [], labelsPerPage: '6', ecLevel: 'Q' };
+
+  function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.entries)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.entries.length) state.entries.push({ id: uid(), title: '', description: '', image: '' });
+    if (!state.labelsPerPage) state.labelsPerPage = '6';
+    if (!state.ecLevel) state.ecLevel = 'Q';
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function showMsg(text) { els.msg.textContent = text; els.msg.className = 'show'; }
+  function clearMsg() { els.msg.textContent = ''; els.msg.className = ''; }
+
+  function ensureAtLeastOneRow() {
+    if (!state.entries.length) state.entries.push({ id: uid(), title: '', description: '', image: '' });
+  }
+
+  function renderRows() {
+    els.entriesList.innerHTML = state.entries.map(function (e, i) {
+      var thumb = e.image
+        ? '<div class="entry-thumb" style="background-image:url(\'' + e.image + '\');"></div>'
+        : '<div class="entry-thumb">No photo</div>';
+      return '<div class="entry-row" data-id="' + e.id + '">' +
+        '<div class="entry-thumb-wrap">' + thumb +
+          '<button type="button" class="link-btn" data-photo="' + e.id + '">' + (e.image ? 'Change' : 'Add photo') + '</button>' +
+          (e.image ? '<button type="button" class="link-btn" data-remove-photo="' + e.id + '">Remove</button>' : '') +
+        '</div>' +
+        '<div class="entry-fields">' +
+          '<div class="field-label">Title / student</div>' +
+          '<input type="text" data-title="' + e.id + '" value="' + escapeAttr(e.title) + '" placeholder="e.g. Self-Portrait &mdash; Ava R.">' +
+          '<div class="field-label">Artist statement / description (goes in the QR code)</div>' +
+          '<textarea data-desc="' + e.id + '" placeholder="What is this piece, and what should a viewer know about it?">' + escapeHtml(e.description) + '</textarea>' +
+          '<div class="entry-footer"><span class="num">Entry ' + (i + 1) + '</span>' +
+            '<button type="button" class="danger small" data-remove="' + e.id + '">Remove entry</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  els.entriesList.addEventListener('input', function (ev) {
+    var titleId = ev.target.getAttribute('data-title');
+    var descId = ev.target.getAttribute('data-desc');
+    if (titleId) {
+      var e1 = state.entries.find(function (x) { return x.id === titleId; });
+      if (e1) e1.title = ev.target.value;
+      save(); scheduleRender();
+    } else if (descId) {
+      var e2 = state.entries.find(function (x) { return x.id === descId; });
+      if (e2) e2.description = ev.target.value;
+      save(); scheduleRender();
+    }
+  });
+
+  var pendingPhotoId = null;
+  var photoInput = document.createElement('input');
+  photoInput.type = 'file';
+  photoInput.accept = 'image/*';
+  photoInput.style.display = 'none';
+  document.body.appendChild(photoInput);
+  photoInput.addEventListener('change', function () {
+    var file = photoInput.files && photoInput.files[0];
+    if (!file || !pendingPhotoId) { pendingPhotoId = null; return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var e = state.entries.find(function (x) { return x.id === pendingPhotoId; });
+      if (e) e.image = String(reader.result || '');
+      save(); renderRows(); scheduleRender();
+      pendingPhotoId = null;
+      photoInput.value = '';
+    };
+    reader.onerror = function () {
+      showMsg('Could not read that image file. Try a different one.');
+      pendingPhotoId = null;
+      photoInput.value = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  els.entriesList.addEventListener('click', function (ev) {
+    var photoBtn = ev.target.closest('[data-photo]');
+    if (photoBtn) {
+      pendingPhotoId = photoBtn.getAttribute('data-photo');
+      photoInput.click();
+      return;
+    }
+    var removePhotoBtn = ev.target.closest('[data-remove-photo]');
+    if (removePhotoBtn) {
+      var id1 = removePhotoBtn.getAttribute('data-remove-photo');
+      var e1 = state.entries.find(function (x) { return x.id === id1; });
+      if (e1) e1.image = '';
+      save(); renderRows(); scheduleRender();
+      return;
+    }
+    var removeBtn = ev.target.closest('[data-remove]');
+    if (removeBtn) {
+      var id2 = removeBtn.getAttribute('data-remove');
+      state.entries = state.entries.filter(function (x) { return x.id !== id2; });
+      ensureAtLeastOneRow();
+      save(); renderRows(); scheduleRender();
+      return;
+    }
+  });
+
+  els.addRowBtn.addEventListener('click', function () {
+    state.entries.push({ id: uid(), title: '', description: '', image: '' });
+    save(); renderRows(); scheduleRender();
+  });
+
+  els.toggleImportBtn.addEventListener('click', function () {
+    els.importBox.classList.toggle('open');
+  });
+
+  els.importBtn.addEventListener('click', function () {
+    var text = els.importText.value;
+    if (!text || !text.trim()) return;
+    var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
+    var added = lines.map(function (line) {
+      var delim = line.indexOf('\t') !== -1 ? '\t' : ',';
+      var idx = line.indexOf(delim);
+      var title = idx === -1 ? line.trim() : line.slice(0, idx).trim();
+      var description = idx === -1 ? '' : line.slice(idx + 1).trim();
+      return { id: uid(), title: title, description: description, image: '' };
+    });
+    if (state.entries.length === 1 && !state.entries[0].title && !state.entries[0].description && !state.entries[0].image) state.entries = [];
+    state.entries = state.entries.concat(added);
+    els.importText.value = '';
+    clearMsg();
+    save(); renderRows(); scheduleRender();
+  });
+
+  els.portfolioTitle.addEventListener('input', function () {
+    state.title = els.portfolioTitle.value;
+    save();
+  });
+  els.labelsPerPage.addEventListener('change', function () {
+    state.labelsPerPage = els.labelsPerPage.value;
+    save(); scheduleRender();
+  });
+  els.ecLevel.addEventListener('change', function () {
+    state.ecLevel = els.ecLevel.value;
+    save(); scheduleRender();
+  });
+
+  function buildQR(text, ecLevel) {
+    var qr = qrcode(0, ecLevel);
+    qr.addData(text);
+    qr.make();
+    return qr;
+  }
+  function drawQR(canvas, qr, size) {
+    var count = qr.getModuleCount();
+    var quietModules = 4;
+    var totalModules = count + quietModules * 2;
+    var px = size / totalModules;
+    canvas.width = size; canvas.height = size;
+    var c = canvas.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, size, size);
+    c.fillStyle = '#000';
+    for (var r = 0; r < count; r++) {
+      for (var col = 0; col < count; col++) {
+        if (qr.isDark(r, col)) {
+          var x = (quietModules + col) * px, y = (quietModules + r) * px;
+          c.fillRect(Math.floor(x), Math.floor(y), Math.ceil(px) + 1, Math.ceil(px) + 1);
+        }
+      }
+    }
+  }
+
+  function validEntries() {
+    return state.entries
+      .map(function (e, i) {
+        return { idx: i, id: e.id, title: (e.title || '').trim() || ('Entry ' + (i + 1)), description: (e.description || '').trim(), image: e.image || '' };
+      })
+      .filter(function (e) { return e.title || e.description || e.image; });
+  }
+
+  var renderTimer = null;
+  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 150); }
+
+  function render() {
+    clearMsg();
+    var valid = validEntries();
+    if (!valid.length) {
+      els.previewGrid.innerHTML = '<p class="empty-hint">Add at least one entry to see a label preview.</p>';
+      els.previewNote.textContent = 'Live preview.';
+      els.printBtn.disabled = true;
+      return;
+    }
+    var ecLevel = els.ecLevel.value;
+    var failures = [];
+    els.previewGrid.innerHTML = '';
+    valid.forEach(function (e) {
+      var card = document.createElement('div');
+      card.className = 'label-preview';
+      var thumbHtml = e.image
+        ? '<img class="thumb" src="' + e.image + '" alt="">'
+        : '<div class="no-thumb">No photo</div>';
+      var qrHtml = e.description
+        ? '<canvas></canvas>'
+        : '<div class="no-qr-note">Add a statement to include a QR code</div>';
+      card.innerHTML = thumbHtml +
+        '<div class="lbl-title">' + escapeHtml(e.title) + '</div>' +
+        qrHtml +
+        (e.description ? '<div class="lbl-desc">' + escapeHtml(e.description.slice(0, 90)) + (e.description.length > 90 ? '…' : '') + '</div>' : '');
+      els.previewGrid.appendChild(card);
+      if (e.description) {
+        try {
+          var qr = buildQR(e.description, ecLevel);
+          drawQR(card.querySelector('canvas'), qr, 168);
+        } catch (err) {
+          failures.push(e.title);
+        }
+      }
+    });
+    if (failures.length) {
+      showMsg('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that statement or lowering error correction.');
+    }
+    els.previewNote.textContent = valid.length + ' label' + (valid.length === 1 ? '' : 's') + ' ready.';
+    els.printBtn.disabled = false;
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var valid = validEntries();
+    if (!valid.length) return;
+    var ecLevel = els.ecLevel.value;
+    els.printHeaderTitle.textContent = state.title.trim() || 'Student Art Portfolio Labels';
+    els.printLabelGrid.className = 'print-label-grid pp-' + (state.labelsPerPage || '6');
+    els.printLabelGrid.innerHTML = '';
+    valid.forEach(function (e) {
+      var card = document.createElement('div');
+      card.className = 'p-label';
+      var thumbHtml = e.image ? '<img class="thumb" src="' + e.image + '" alt="">' : '';
+      card.innerHTML = thumbHtml +
+        '<div class="p-title">' + escapeHtml(e.title) + '</div>' +
+        (e.description ? '<canvas></canvas><div class="p-desc">' + escapeHtml(e.description) + '</div>' : '');
+      els.printLabelGrid.appendChild(card);
+      if (e.description) {
+        try {
+          var qr = buildQR(e.description, ecLevel);
+          drawQR(card.querySelector('canvas'), qr, 300);
+        } catch (err) { /* label just prints without a code */ }
+      }
+    });
+    els.printArea.classList.add('active');
+    window.print();
+    els.printArea.classList.remove('active');
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.portfolioTitle.value = state.title;
+  els.labelsPerPage.value = state.labelsPerPage;
+  els.ecLevel.value = state.ecLevel;
+  renderRows();
+  render();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

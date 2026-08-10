@@ -260,14 +260,14 @@ await browser2.close();
 fs.rmSync(outDir, { recursive: true, force: true });
 
 /* ── 4. The committed copy on the site ─────────────────────────────────── */
-// schedule-browser.html is a data file in a public repo. These two assertions
+// 034-schedule-browser.html is a data file in a public repo. These two assertions
 // are about the site, not the tool.
 
 console.log('\ncommitted site copy');
 const server = await serve(PORT);
 const browser3 = await launch();
 const page3 = await prepPage(browser3, 'http://127.0.0.1:' + PORT, { width: 1280, height: 1000, dsf: 1 });
-await page3.goto(`http://127.0.0.1:${PORT}/Tools/schedule-browser.html`, { waitUntil: 'load' });
+await page3.goto(`http://127.0.0.1:${PORT}/Tools/034-schedule-browser.html`, { waitUntil: 'load' });
 const committed = await page3.evaluate(() => ({
   teachers: Object.keys(BR_TEACHERS || {}).length,
   hasSocial: document.querySelector('meta[property="og:title"]') !== null,

@@ -4,7 +4,7 @@
 
    Encoding: base64(encodeURIComponent(JSON)), via btoa(unescape(...)) so
    unicode text survives btoa's Latin1-only limitation. This is the same
-   trick Tools/escape-room-builder/lock.html and escape-room-builder.html
+   trick Tools/escape-room-builder/lock.html and 019-escape-room-builder.html
    already use for QR-coded puzzle state — this just gives it one shared,
    tested home instead of copy-pasting it into every tool that wants the
    same capability.

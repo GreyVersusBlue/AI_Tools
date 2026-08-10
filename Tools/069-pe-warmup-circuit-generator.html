@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PE Warm-Up Circuit Card Generator</title>
+<meta name="description" content="Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/069-pe-warmup-circuit-generator.html">
+<meta property="og:title" content="PE Warm-Up Circuit Card Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PE Warm-Up Circuit Card Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='8' r='3' fill='%231f3550'/%3E%3Cpath d='M16 12v8m0-6l-6 3m6-3l6 3m-6 5l-4 6m4-6l4 6' fill='none' stroke='%231f3550' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .layout { display: grid; grid-template-columns: minmax(340px, 500px) 1fr; gap: 1.4rem; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
+  input[type="text"], select {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .25rem .55rem; font-size: .78rem; }
+  .btnrow, .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
+
+  .station-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; margin-bottom: .6rem; }
+  .station-row .top-line { display: grid; grid-template-columns: 46px 1fr; gap: .5rem; margin-bottom: .4rem; }
+  .station-row input.emoji-field { text-align: center; font-size: 1.3rem; padding: .3rem; margin-bottom: 0; }
+  .station-row input.name-field { margin-bottom: 0; font-weight: 700; }
+  .station-row .row2 { margin-bottom: 0; }
+  .station-row input, .station-row textarea { margin-bottom: .4rem; }
+  .station-row textarea {
+    width: 100%; font-family: inherit; font-size: .85rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .4rem .5rem; resize: vertical; min-height: 2.6rem;
+  }
+  .station-footer { display: flex; justify-content: space-between; align-items: center; }
+  .station-footer .num { font-family: Consolas, monospace; font-size: .74rem; color: var(--muted); }
+
+  .preview-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
+  .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+  .empty-hint { font-size: .85rem; color: var(--muted); text-align: center; padding: 2.4rem 1rem; }
+
+  .card-preview-grid { display: flex; flex-wrap: wrap; gap: .7rem; }
+  .card-preview { background: #fff; border: 2px solid var(--accent); border-radius: 10px; padding: .9rem; width: 220px; }
+  .card-preview .cp-num { font-family: Consolas, monospace; font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .card-preview .cp-emoji { font-size: 2.2rem; text-align: center; margin: .2rem 0; }
+  .card-preview .cp-name { font-weight: 700; font-size: 1.05rem; text-align: center; margin-bottom: .2rem; }
+  .card-preview .cp-duration { text-align: center; font-size: .82rem; color: var(--accent-2); font-weight: 700; margin-bottom: .4rem; }
+  .card-preview .cp-instructions { font-size: .78rem; color: var(--muted); text-align: center; }
+
+  footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  .print-only { display: none; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .wrap > *:not(.print-only) { display: none !important; }
+    .print-only.active { display: block; }
+    .print-only h1 { font-size: 1.2rem; margin: 0 0 12px; }
+    .print-card-grid { display: flex; flex-wrap: wrap; }
+    .print-card-grid .p-card {
+      box-sizing: border-box; border: 2px solid #333; border-radius: 12px; padding: 18px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      page-break-inside: avoid; margin: 4px;
+    }
+    .print-card-grid .p-card .p-num { font-size: .78rem; letter-spacing: .08em; color: #555; text-transform: uppercase; margin-bottom: 4px; }
+    .print-card-grid .p-card .p-emoji { font-size: 3rem; margin: 2px 0 6px; }
+    .print-card-grid .p-card .p-name { font-size: 1.35rem; font-weight: 700; margin-bottom: 4px; }
+    .print-card-grid .p-card .p-duration { font-size: 1rem; font-weight: 700; color: #222; margin-bottom: 8px; }
+    .print-card-grid .p-card .p-instructions { font-size: .82rem; color: #333; line-height: 1.4; }
+
+    .print-card-grid.pp-2 .p-card { width: calc(50% - 8px); }
+    .print-card-grid.pp-2 .p-card:nth-child(2n) { page-break-after: always; }
+    .print-card-grid.pp-4 .p-card { width: calc(50% - 8px); }
+    .print-card-grid.pp-4 .p-card:nth-child(4n) { page-break-after: always; }
+    .print-card-grid.pp-6 .p-card { width: calc(33.33% - 8px); }
+    .print-card-grid.pp-6 .p-card:nth-child(6n) { page-break-after: always; }
+    .print-card-grid.pp-8 .p-card { width: calc(25% - 8px); }
+    .print-card-grid.pp-8 .p-card:nth-child(8n) { page-break-after: always; }
+    .print-card-grid .p-card:last-child { page-break-after: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>PE Warm-Up Circuit Card Generator</h1>
+      <p class="sub">Build a set of station cards to post around the gym before a circuit, rotation, or tournament begins.</p>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="editor">
+      <div class="card">
+        <label for="circuitTitle">Circuit name (for the print header)</label>
+        <input type="text" id="circuitTitle" placeholder="e.g. Monday Warm-Up Circuit">
+
+        <div class="row2">
+          <div>
+            <label for="templateSelect">Start from</label>
+            <select id="templateSelect">
+              <option value="default">Default warm-up circuit (8 stations)</option>
+              <option value="blank">Blank &mdash; build from scratch</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <button class="secondary" id="useTemplateBtn" type="button" style="width:100%;">Use this template</button>
+          </div>
+        </div>
+        <div class="hint">Loading a template replaces the current station list below.</div>
+      </div>
+
+      <div class="card">
+        <h2>Stations</h2>
+        <div id="stationsList"></div>
+        <div class="btn-row">
+          <button class="secondary" id="addStationBtn" type="button">+ Add station</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Print layout</h2>
+        <label for="cardsPerPage">Cards per printed page</label>
+        <select id="cardsPerPage">
+          <option value="2">2 &mdash; large</option>
+          <option value="4" selected>4</option>
+          <option value="6">6</option>
+          <option value="8">8 &mdash; small</option>
+        </select>
+        <div class="btn-row">
+          <button id="printBtn" disabled type="button">Print station cards</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-wrap">
+      <p class="preview-note" id="previewNote">Live preview.</p>
+      <div class="card-preview-grid" id="previewGrid"><p class="empty-hint">Add at least one station to see a card preview.</p></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    Runs entirely in your browser &mdash; nothing is uploaded.
+  </footer>
+</div>
+
+<div class="print-only" id="printArea">
+  <h1 id="printHeaderTitle"></h1>
+  <div class="print-card-grid" id="printCardGrid"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'pe_circuit_v1';
+
+  var els = {};
+  ['circuitTitle', 'templateSelect', 'useTemplateBtn', 'stationsList', 'addStationBtn',
+   'cardsPerPage', 'printBtn', 'previewGrid', 'previewNote',
+   'printArea', 'printHeaderTitle', 'printCardGrid'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var DEFAULT_STATIONS = [
+    { emoji: '&#129354;', name: 'Jumping Jacks', duration: '30 seconds', instructions: 'Feet together to feet apart, arms overhead each time.' },
+    { emoji: '&#127939;', name: 'High Knees', duration: '30 seconds', instructions: 'Jog in place, driving knees up to hip height.' },
+    { emoji: '&#128694;', name: 'Butt Kicks', duration: '30 seconds', instructions: 'Jog in place, kicking heels back toward glutes.' },
+    { emoji: '&#128260;', name: 'Arm Circles', duration: '20 seconds each direction', instructions: 'Arms out to the sides, small circles forward then backward.' },
+    { emoji: '&#128694;', name: 'Walking Lunges', duration: '10 per leg', instructions: 'Step forward into a lunge, back knee close to the floor, alternate legs.' },
+    { emoji: '&#128170;', name: 'Push-Ups', duration: '10 reps', instructions: 'Full or modified (knees down) — chest to the floor, elbows at 45°.' },
+    { emoji: '&#128721;', name: 'Plank Hold', duration: '20 seconds', instructions: 'Forearms and toes on the floor, straight line from head to heels.' },
+    { emoji: '&#129497;', name: 'Bodyweight Squats', duration: '15 reps', instructions: 'Feet shoulder-width apart, sit hips back, chest up.' }
+  ];
+
+  var state = { title: '', stations: [], cardsPerPage: '4' };
+
+  function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function blankStation() { return { id: uid(), emoji: '', name: '', duration: '', instructions: '' }; }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.stations)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.stations.length) applyTemplate('default', true);
+    if (!state.cardsPerPage) state.cardsPerPage = '4';
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function applyTemplate(kind, skipConfirm) {
+    if (!skipConfirm && state.stations.some(function (s) { return s.name || s.instructions || s.duration; })) {
+      if (!confirm('Replace the current station list with this template?')) return;
+    }
+    if (kind === 'blank') {
+      state.stations = [blankStation()];
+    } else {
+      state.stations = DEFAULT_STATIONS.map(function (t) {
+        return { id: uid(), emoji: t.emoji, name: t.name, duration: t.duration, instructions: t.instructions };
+      });
+    }
+    save();
+    renderStations();
+    scheduleRender();
+  }
+
+  els.useTemplateBtn.addEventListener('click', function () { applyTemplate(els.templateSelect.value, false); });
+
+  function ensureAtLeastOneRow() {
+    if (!state.stations.length) state.stations.push(blankStation());
+  }
+
+  function renderStations() {
+    els.stationsList.innerHTML = state.stations.map(function (s, i) {
+      return '<div class="station-row" data-id="' + s.id + '">' +
+        '<div class="top-line">' +
+          '<input type="text" class="emoji-field" data-emoji="' + s.id + '" value="' + escapeAttr(s.emoji) + '" placeholder="&#127942;">' +
+          '<input type="text" class="name-field" data-name="' + s.id + '" value="' + escapeAttr(s.name) + '" placeholder="Station name">' +
+        '</div>' +
+        '<input type="text" data-duration="' + s.id + '" value="' + escapeAttr(s.duration) + '" placeholder="Duration or reps, e.g. 30 seconds">' +
+        '<textarea data-instructions="' + s.id + '" placeholder="How to do it, cues, or safety notes">' + escapeHtml(s.instructions) + '</textarea>' +
+        '<div class="station-footer"><span class="num">Station ' + (i + 1) + '</span>' +
+          '<button type="button" class="danger small" data-remove="' + s.id + '">Remove station</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  els.stationsList.addEventListener('input', function (ev) {
+    var id = ev.target.getAttribute('data-emoji') || ev.target.getAttribute('data-name') ||
+      ev.target.getAttribute('data-duration') || ev.target.getAttribute('data-instructions');
+    if (!id) return;
+    var s = state.stations.find(function (x) { return x.id === id; });
+    if (!s) return;
+    if (ev.target.hasAttribute('data-emoji')) s.emoji = ev.target.value;
+    else if (ev.target.hasAttribute('data-name')) s.name = ev.target.value;
+    else if (ev.target.hasAttribute('data-duration')) s.duration = ev.target.value;
+    else if (ev.target.hasAttribute('data-instructions')) s.instructions = ev.target.value;
+    save();
+    scheduleRender();
+  });
+
+  els.stationsList.addEventListener('click', function (ev) {
+    var removeBtn = ev.target.closest('[data-remove]');
+    if (!removeBtn) return;
+    var id = removeBtn.getAttribute('data-remove');
+    state.stations = state.stations.filter(function (s) { return s.id !== id; });
+    ensureAtLeastOneRow();
+    save(); renderStations(); scheduleRender();
+  });
+
+  els.addStationBtn.addEventListener('click', function () {
+    state.stations.push(blankStation());
+    save(); renderStations(); scheduleRender();
+  });
+
+  els.circuitTitle.addEventListener('input', function () { state.title = els.circuitTitle.value; save(); });
+  els.cardsPerPage.addEventListener('change', function () { state.cardsPerPage = els.cardsPerPage.value; save(); });
+
+  function validStations() {
+    return state.stations
+      .map(function (s, i) { return { idx: i, emoji: s.emoji || '', name: (s.name || '').trim() || ('Station ' + (i + 1)), duration: (s.duration || '').trim(), instructions: (s.instructions || '').trim() }; })
+      .filter(function (s) { return s.name || s.duration || s.instructions || s.emoji; });
+  }
+
+  var renderTimer = null;
+  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 150); }
+
+  function render() {
+    var valid = validStations();
+    if (!valid.length) {
+      els.previewGrid.innerHTML = '<p class="empty-hint">Add at least one station to see a card preview.</p>';
+      els.previewNote.textContent = 'Live preview.';
+      els.printBtn.disabled = true;
+      return;
+    }
+    els.previewGrid.innerHTML = valid.map(function (s) {
+      return '<div class="card-preview">' +
+        '<div class="cp-num">Station ' + (s.idx + 1) + '</div>' +
+        (s.emoji ? '<div class="cp-emoji">' + s.emoji + '</div>' : '') +
+        '<div class="cp-name">' + escapeHtml(s.name) + '</div>' +
+        (s.duration ? '<div class="cp-duration">' + escapeHtml(s.duration) + '</div>' : '') +
+        (s.instructions ? '<div class="cp-instructions">' + escapeHtml(s.instructions) + '</div>' : '') +
+      '</div>';
+    }).join('');
+    els.previewNote.textContent = valid.length + ' station card' + (valid.length === 1 ? '' : 's') + ' ready.';
+    els.printBtn.disabled = false;
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var valid = validStations();
+    if (!valid.length) return;
+    els.printHeaderTitle.textContent = state.title.trim() || 'Warm-Up Circuit';
+    els.printCardGrid.className = 'print-card-grid pp-' + (state.cardsPerPage || '4');
+    els.printCardGrid.innerHTML = valid.map(function (s) {
+      return '<div class="p-card">' +
+        '<div class="p-num">Station ' + (s.idx + 1) + '</div>' +
+        (s.emoji ? '<div class="p-emoji">' + s.emoji + '</div>' : '') +
+        '<div class="p-name">' + escapeHtml(s.name) + '</div>' +
+        (s.duration ? '<div class="p-duration">' + escapeHtml(s.duration) + '</div>' : '') +
+        (s.instructions ? '<div class="p-instructions">' + escapeHtml(s.instructions) + '</div>' : '') +
+      '</div>';
+    }).join('');
+    els.printArea.classList.add('active');
+    window.print();
+    els.printArea.classList.remove('active');
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.circuitTitle.value = state.title;
+  els.cardsPerPage.value = state.cardsPerPage;
+  renderStations();
+  render();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

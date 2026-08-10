@@ -19,7 +19,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SHOTS = path.join(HERE, '..', 'shots');
 const PORT = 8146;
 const BASE = `http://127.0.0.1:${PORT}`;
-const URL_PAGE = BASE + '/Tools/Seating%20Chart%20Generator.html';
+const URL_PAGE = BASE + '/Tools/005-Seating%20Chart%20Generator.html';
 
 fs.mkdirSync(SHOTS, { recursive: true });
 
