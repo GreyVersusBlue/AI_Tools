@@ -11,6 +11,7 @@
 import {
   getLetter, getQP, qpToFinalLetter, calcFinals, toScore,
   parseGradeToken, splitRow, parsePastedData, findQuarterWindow, isGradeCell,
+  LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
 } from './grade-math.mjs';
 
 let passed = 0, failed = 0;
@@ -224,6 +225,62 @@ eq(splitRow('a\tb\tc\td\r'), ['a','b','c','d'], 'a trailing carriage return is s
 eq(splitRow('a  b   c'), ['a','b','c'], 'fixed-width text splits on runs of spaces');
 eq(findQuarterWindow(['1','n','s','7','B(85.00)','B(84.00)','A(91.00)','A(93.00)','88.25']).start, 4,
    'the documented layout is used as-is');
+
+// ── Rounding-rule options (opts.boundary / opts.precision) ──
+// Added when the tool grew a visible "Grading Settings" panel. Every case
+// above this point calls these functions with no second argument at all, so
+// none of them exercise this — these are new coverage, not a rewrite of the
+// old cases, and the old cases passing unmodified is itself the proof that
+// the default behaviour (opts undefined) did not change.
+group('Rounding options — boundary: strict vs half (default)');
+eq(getLetter(89.5), 'A', 'default (no opts) still rounds 89.5 up to an A');
+eq(getLetter(89.5, {}), 'A', 'an empty opts object behaves like no opts at all');
+eq(getLetter(89.5, { boundary: 'strict' }), 'B', 'strict mode gives no credit for exactly .5');
+eq(getLetter(90, { boundary: 'strict' }), 'A', 'strict mode still awards the whole cutoff');
+eq(getLetter(89.99, { boundary: 'strict' }), 'B', 'strict mode: 89.99 is not a 90');
+eq(qpToFinalLetter(3.5), 'A', 'default quality points still rounds 3.5 up to an A');
+eq(qpToFinalLetter(3.5, { boundary: 'strict' }), 'B', 'strict quality points gives no credit for 3.5');
+eq(qpToFinalLetter(4, { boundary: 'strict' }), 'A', 'strict quality points still awards an exact 4.0');
+eq(LETTER_CUTOFFS_STRICT.find(([l]) => l === 'A')[1], 90, 'strict letter cutoff for A is a flat 90');
+eq(QP_CUTOFFS_STRICT.find(([l]) => l === 'A')[1], 4, 'strict QP cutoff for A is a flat 4.0');
+
+group('Rounding options — precision (round before the cutoff check)');
+eq(getLetter(89.46), 'B', 'without precision, 89.46 stays a B');
+eq(getLetter(89.46, { precision: 1 }), 'A', 'rounded to one decimal first, 89.46 becomes 89.5, an A');
+eq(getLetter(89.44, { precision: 1 }), 'B', 'rounded to one decimal, 89.44 becomes 89.4, still a B');
+eq(getLetter(89.6, { precision: 0 }), 'A', 'rounded to a whole percent, 89.6 becomes 90, an A');
+eq(getLetter(89.4, { precision: 0 }), 'B', 'rounded to a whole percent, 89.4 becomes 89, still a B');
+
+group('Rounding options — weights (opts.weights)');
+{
+  // Equal weights must reproduce the unweighted result exactly, not just
+  // approximately — the tool falls back to the plain sum/QUARTERS arithmetic
+  // whenever weights are absent, and this checks the two paths agree when
+  // weights are present but equal.
+  const scores = [90, 90, 60, 60];
+  const equal = calcFinals(scores, { weights: [25, 25, 25, 25] });
+  const none  = calcFinals(scores);
+  eq(equal.finalLetter, none.finalLetter, 'equal explicit weights match the unweighted default');
+  eq(equal.avgQP, none.avgQP, 'and the quality-points average matches exactly');
+  eq(equal.pctAvg, none.pctAvg, 'and the percentage average matches exactly');
+}
+{
+  // Q1 100=A(4) Q2 100=A(4) Q3 60=D(1) Q4 60=D(1), weighted 10/10/40/40.
+  // Percentage: (100*10 + 100*10 + 60*40 + 60*40) / 100 = 68.00 -> D
+  // Quality points: (4*10 + 4*10 + 1*40 + 1*40) / 100 = 1.60 -> C
+  // Quality points (C) beats percentage (D), so the weighted final is a C —
+  // a flat unweighted average of the same four scores is 80 (a B) by
+  // percentage, so the weighting visibly changes the outcome, as it should.
+  const f = calcFinals([100, 100, 60, 60], { weights: [10, 10, 40, 40] });
+  eq(f.pctAvg, 68, 'heavily-weighted low quarters pull the percentage average down to 68');
+  eq(f.pctFinal, 'D', 'which is a D');
+  eq(f.avgQP, 1.6, 'the quality-points average is pulled down to 1.60');
+  eq(f.qpFinal, 'C', 'which is a C');
+  eq(f.winner, 'QP', 'quality points wins');
+  eq(f.finalLetter, 'C', 'so the weighted final is a C, not the unweighted B');
+}
+eq(calcFinals([90, 90, 90, 90], { weights: [0, 0, 0, 0] }).finalLetter, 'A',
+  'all-zero weights fall back to the unweighted average rather than dividing by zero');
 
 // ── End-to-end: a paste, through the arithmetic, to a letter ─
 group('End to end — a pasted class');

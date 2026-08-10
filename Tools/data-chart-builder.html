@@ -37,7 +37,10 @@
     --danger: #f87171;
     --radius: 10px;
     --mono: 'JetBrains Mono', 'Fira Mono', monospace;
-    --series1: #6c8ef5; --series2: #a78bfa; --series3: #4ade80; --series4: #fbbf24; --series5: #f87171; --series6: #38bdf8;
+    /* Okabe–Ito palette — the standard citation for a colorblind-safe
+       categorical color set (Okabe & Ito, 2008). Matches PALETTE_HEX in the
+       script; keep the two in sync if either changes. */
+    --series1: #0072B2; --series2: #E69F00; --series3: #009E73; --series4: #D55E00; --series5: #CC79A7; --series6: #56B4E9;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -112,6 +115,16 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
 
   @media (max-width: 900px) { .col-right { position: static; } }
+
+  #print-area { display: none; }
+  .print-header { font-family: 'Inter', system-ui, sans-serif; color: #16222e; margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .print-header .fill-line { display: inline-block; min-width: 8rem; border-bottom: 1px solid #16222e; margin: 0 0.4rem; }
+  @media print {
+    body.printing > *:not(#print-area) { display: none !important; }
+    body.printing #print-area { display: block; }
+    body.printing #print-area svg { width: 100%; height: auto; }
+    @page { size: letter landscape; margin: 0.4in; }
+  }
 </style>
 </head>
 <body>
@@ -168,6 +181,11 @@
         <label>Value column(s)</label>
         <div id="value-cols-list"></div>
         <div class="hint">Only columns that look numeric are offered here.</div>
+        <div class="option-row" id="error-bars-row">
+          <input type="checkbox" id="show-error-bars">
+          <label class="option-label" for="show-error-bars">Error bars — pick a "± value" column per series above</label>
+        </div>
+        <div id="error-bars-config" style="display:none;"></div>
       </div>
 
       <div class="control-group" id="scatter-cols-group" style="display:none;">
@@ -218,6 +236,10 @@
         <input type="checkbox" id="sort-values">
         <label class="option-label" for="sort-values">Sort by value (largest first)</label>
       </div>
+      <div class="option-row">
+        <input type="checkbox" id="grayscale-mode">
+        <label class="option-label" for="grayscale-mode">Grayscale / print-safe colors (for black-and-white printers)</label>
+      </div>
     </div>
 
     <div id="msg"></div>
@@ -238,8 +260,14 @@
         <button class="btn-primary" id="btn-png" disabled>Download PNG</button>
         <button class="btn-secondary" id="btn-svg" disabled>Download SVG</button>
       </div>
+      <div class="btn-row">
+        <button class="btn-secondary" id="btn-print-worksheet">Print blank worksheet (bar/line only)</button>
+      </div>
+      <div class="hint">Prints just the axes and category labels — no bars, lines, or values — so students can plot the data by hand from a handout of the numbers.</div>
     </div>
   </div>
+
+  <div id="print-area"></div>
 </div>
 
 <script>
@@ -250,19 +278,33 @@
   var DATASETS_KEY = 'data-chart-builder-datasets';
   var PALETTE = ['var(--series1)', 'var(--series2)', 'var(--series3)', 'var(--series4)', 'var(--series5)', 'var(--series6)'];
   var PALETTE_HEX = ['#6c8ef5', '#a78bfa', '#4ade80', '#fbbf24', '#f87171', '#38bdf8'];
+  // A lightness-ramped grayscale swap for "Grayscale / print-safe colors" —
+  // darkest first, so on a black-and-white printer (where hue disappears)
+  // series stay distinguishable by how dark they are, the same technique
+  // grade-distribution-visualizer.html uses for its letter-grade ramp.
+  var GRAYSCALE_HEX = ['#141414', '#3d3d3d', '#666666', '#8f8f8f', '#b3b3b3', '#d1d1d1'];
+  // Line charts additionally vary dash pattern per series in grayscale mode,
+  // since two overlapping gray lines of similar lightness can still be hard
+  // to tell apart by shade alone.
+  var DASH_PATTERNS = ['', '7,5', '2,3', '10,3,2,3', '1,3', '9,2,2,2'];
+  function activePalette() { return els.grayscaleMode.checked ? GRAYSCALE_HEX : PALETTE_HEX; }
+  function paletteColor(i) { var p = activePalette(); return p[i % p.length]; }
+  function seriesDash(i) { return els.grayscaleMode.checked ? DASH_PATTERNS[i % DASH_PATTERNS.length] : ''; }
 
   var els = {};
   ['data-input', 'has-headers', 'preview-table-wrap', 'preview-table', 'columns-card', 'category-col',
    'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
-   'btn-load-dataset', 'btn-delete-dataset'
+   'btn-load-dataset', 'btn-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
+   'btn-print-worksheet', 'print-area'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
   var table = null;      // { headers: [...], rows: [[...], ...] } — rows are raw strings
   var numericCols = [];  // indices of columns that look numeric
   var lastSvgString = null;
+  var errorColSelections = {}; // valueColIndex -> errorColumnIndex, reset whenever new data is parsed
 
   // ── Persisted settings (not the pasted data itself — that can contain student data) ─
   function loadSettings() {
@@ -412,7 +454,42 @@
         '<label class="option-label"><span class="series-swatch" style="background:' + PALETTE[i % PALETTE.length] + ';"></span>' +
         escapeHtml(t.headers[c]) + '</label></div>';
     }).join('') || '<p class="hint">No numeric columns detected.</p>';
+    renderErrorBarConfig();
   }
+
+  /**
+   * A small per-series "± value column" picker, shown only when "Error
+   * bars" is checked and the chart type actually plots one bar/point per
+   * category (bar or line). Selections live in `errorColSelections`
+   * (checked value-col index -> error-col index) and survive re-renders of
+   * this list as long as the same columns stay checked.
+   */
+  function renderErrorBarConfig() {
+    var type = getChartType();
+    var applicable = type === 'bar' || type === 'line';
+    var show = els.showErrorBars.checked && applicable;
+    els.errorBarsConfig.style.display = show ? 'block' : 'none';
+    if (!show || !table) { els.errorBarsConfig.innerHTML = ''; return; }
+    var valueCols = getCheckedValueCols();
+    els.errorBarsConfig.innerHTML = valueCols.map(function (c) {
+      var opts = '<option value="">None</option>' + numericCols.filter(function (nc) { return nc !== c; }).map(function (nc) {
+        var sel = errorColSelections[c] === nc ? ' selected' : '';
+        return '<option value="' + nc + '"' + sel + '>' + escapeHtml(table.headers[nc]) + '</option>';
+      }).join('');
+      return '<div class="option-row"><label class="option-label" style="flex:0 0 auto;min-width:8.5rem;">± for ' +
+        escapeHtml(table.headers[c]) + '</label><select class="err-col-select" data-col="' + c + '">' + opts + '</select></div>';
+    }).join('') || '<p class="hint">No other numeric column to use as an error value.</p>';
+  }
+  els.errorBarsConfig.addEventListener('change', function (e) {
+    var sel = e.target.closest('.err-col-select');
+    if (!sel) return;
+    var c = parseInt(sel.getAttribute('data-col'), 10);
+    if (sel.value === '') delete errorColSelections[c];
+    else errorColSelections[c] = parseInt(sel.value, 10);
+    scheduleRender();
+  });
+  els.showErrorBars.addEventListener('change', function () { renderErrorBarConfig(); scheduleRender(); });
+  els.grayscaleMode.addEventListener('change', scheduleRender);
 
   // ── Wiring: reparse on input ─────────────────────────────────────────────
   var debounceTimer = null;
@@ -437,6 +514,7 @@
     }
     table = t;
     numericCols = detectNumericColumns(t);
+    errorColSelections = {};
     renderPreview(t);
     populateColumnSelects(t);
     els.columnsCard.style.display = 'block';
@@ -483,7 +561,7 @@
     reader.readAsText(file);
   }
   els.categoryCol.addEventListener('change', scheduleRender);
-  els.valueColsList.addEventListener('change', scheduleRender);
+  els.valueColsList.addEventListener('change', function () { renderErrorBarConfig(); scheduleRender(); });
   els.scatterXCol.addEventListener('change', scheduleRender);
   els.scatterYCol.addEventListener('change', scheduleRender);
   els.showTrendline.addEventListener('change', scheduleRender);
@@ -507,6 +585,7 @@
     els.scatterColsGroup.style.display = isScatter ? 'block' : 'none';
     els.sortRow.style.display = (isScatter || isPie || isBox) ? 'none' : 'flex';
     els.yAxisLabelGroup.style.display = isPie ? 'none' : 'block';
+    renderErrorBarConfig();
   }
 
   function scheduleRender() { clearTimeout(debounceTimer); debounceTimer = setTimeout(render, 100); }
@@ -571,11 +650,15 @@
     var valueCols = getCheckedValueCols();
     if (!valueCols.length) return null;
     var categories = table.rows.map(function (r) { return r[catCol]; });
+    var showErrors = els.showErrorBars.checked;
     var series = valueCols.map(function (c, i) {
+      var errCol = showErrors ? errorColSelections[c] : undefined;
       return {
         label: table.headers[c],
-        color: PALETTE_HEX[i % PALETTE_HEX.length],
+        color: paletteColor(i),
+        dash: seriesDash(i),
         values: table.rows.map(function (r) { return isNumeric(r[c]) ? toNumber(r[c]) : 0; }),
+        errors: errCol === undefined ? null : table.rows.map(function (r) { return isNumeric(r[errCol]) ? Math.abs(toNumber(r[errCol])) : 0; }),
       };
     });
 
@@ -583,7 +666,10 @@
       var order = categories.map(function (_, i) { return i; })
         .sort(function (a, b) { return series[0].values[b] - series[0].values[a]; });
       categories = order.map(function (i) { return categories[i]; });
-      series.forEach(function (s) { s.values = order.map(function (i) { return s.values[i]; }); });
+      series.forEach(function (s) {
+        s.values = order.map(function (i) { return s.values[i]; });
+        if (s.errors) s.errors = order.map(function (i) { return s.errors[i]; });
+      });
     }
     return { categories: categories, series: series };
   }
@@ -626,7 +712,7 @@
       var q = quartiles(sorted);
       return {
         label: table.headers[c],
-        color: PALETTE_HEX[i % PALETTE_HEX.length],
+        color: paletteColor(i),
         min: sorted[0], max: sorted[sorted.length - 1],
         q1: q.q1, median: q.median, q3: q.q3,
         values: values,
@@ -698,6 +784,17 @@
     return Math.round(v * 100) / 100 + '';
   }
 
+  /** A vertical error-bar-with-caps centered on (cx, centerY), extending
+   * `halfH` pixels up and down — used identically by the bar and line
+   * charts so a ± value column reads the same way regardless of chart type. */
+  function errorBarSvg(cx, centerY, halfH) {
+    if (!halfH) return '';
+    var top = centerY - halfH, bot = centerY + halfH;
+    return '<line x1="' + cx.toFixed(1) + '" y1="' + top.toFixed(1) + '" x2="' + cx.toFixed(1) + '" y2="' + bot.toFixed(1) + '" stroke="#16222e" stroke-width="1.4"/>' +
+      '<line x1="' + (cx - 4).toFixed(1) + '" y1="' + top.toFixed(1) + '" x2="' + (cx + 4).toFixed(1) + '" y2="' + top.toFixed(1) + '" stroke="#16222e" stroke-width="1.4"/>' +
+      '<line x1="' + (cx - 4).toFixed(1) + '" y1="' + bot.toFixed(1) + '" x2="' + (cx + 4).toFixed(1) + '" y2="' + bot.toFixed(1) + '" stroke="#16222e" stroke-width="1.4"/>';
+  }
+
   function drawBarChart(built) {
     var plotW = W - PAD.left - PAD.right, plotH = H - PAD.top - PAD.bottom;
     var maxVal = niceMax(Math.max.apply(null, built.series.map(function (s) { return Math.max.apply(null, s.values.concat([0])); })) * 1.15);
@@ -714,6 +811,7 @@
         var x = PAD.left + slot * i + groupPad + barW * si;
         var y = PAD.top + plotH - barH;
         parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + Math.max(barW - 2, 1).toFixed(1) + '" height="' + Math.max(barH, 0).toFixed(1) + '" fill="' + s.color + '" rx="2"/>');
+        if (s.errors && s.errors[i]) parts.push(errorBarSvg(x + (barW - 2) / 2, y, (s.errors[i] / maxVal) * plotH));
         if (els.showValues.checked && val !== 0) {
           parts.push('<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (y - 5).toFixed(1) + '" text-anchor="middle" font-size="9.5" fill="#16222e">' + formatNum(val) + '</text>');
         }
@@ -737,8 +835,10 @@
         var y = PAD.top + plotH - (v / maxVal) * plotH;
         return [x, y];
       });
-      parts.push('<polyline points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.color + '" stroke-width="2.5"/>');
+      var dashAttr = s.dash ? ' stroke-dasharray="' + s.dash + '"' : '';
+      parts.push('<polyline points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.color + '" stroke-width="2.5"' + dashAttr + '/>');
       pts.forEach(function (p, i) {
+        if (s.errors && s.errors[i]) parts.push(errorBarSvg(p[0], p[1], (s.errors[i] / maxVal) * plotH));
         parts.push('<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="' + s.color + '"/>');
         if (els.showValues.checked) {
           parts.push('<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 9).toFixed(1) + '" text-anchor="middle" font-size="9.5" fill="#16222e">' + formatNum(s.values[i]) + '</text>');
@@ -764,7 +864,7 @@
       var x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
       var x2 = cx + r * Math.cos(next), y2 = cy + r * Math.sin(next);
       var largeArc = frac > 0.5 ? 1 : 0;
-      var color = PALETTE_HEX[i % PALETTE_HEX.length];
+      var color = paletteColor(i);
       if (frac > 0) {
         parts.push('<path d="M' + cx + ',' + cy + ' L' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' A' + r + ',' + r + ' 0 ' + largeArc + ' 1 ' + x2.toFixed(1) + ',' + y2.toFixed(1) + ' Z" fill="' + color + '" stroke="#fff" stroke-width="1.5"/>');
       }
@@ -776,7 +876,7 @@
       angle = next;
     });
     var legendItems = built.categories.map(function (cat, i) {
-      return { label: String(cat), color: PALETTE_HEX[i % PALETTE_HEX.length] };
+      return { label: String(cat), color: paletteColor(i) };
     });
     parts.push(drawLegendItems(legendItems));
     parts.push('</svg>');
@@ -943,6 +1043,37 @@
     img.onerror = function () { URL.revokeObjectURL(url); showMsg('Could not render a PNG — try downloading the SVG instead.'); };
     img.src = url;
   });
+
+  // ── Print blank worksheet (teacher-generated student handout) ────────────
+  // Reuses the same axes/title/label drawing as the real chart, but omits
+  // every bar, line, point, value, and legend — so a student plots the data
+  // by hand from a printed table of the numbers, rather than the tool
+  // plotting it for them.
+  function buildBlankWorksheetSvg(built) {
+    var maxVal = niceMax(Math.max.apply(null, built.series.map(function (s) { return Math.max.apply(null, s.values.concat([0])); })) * 1.15);
+    var parts = [svgOpen(), chartTitleEl(), drawAxes(maxVal, built.categories), drawYAxisLabel(built.series[0] ? built.series[0].label : '')];
+    parts.push('</svg>');
+    return parts.join('');
+  }
+
+  els.btnPrintWorksheet.addEventListener('click', function () {
+    var type = getChartType();
+    if (type !== 'bar' && type !== 'line') {
+      showMsg('Blank worksheet printing works for Bar and Line charts (the ones with a category axis) — switch chart type to use it.');
+      return;
+    }
+    if (!table) { showMsg('Paste some data first.'); return; }
+    var built = buildCategorySeries();
+    if (!built) { showMsg('Pick at least one value column first.'); return; }
+    var svg = buildBlankWorksheetSvg(built);
+    var title = els.chartTitle.value.trim() || 'Chart';
+    els.printArea.innerHTML =
+      '<div class="print-header"><strong>' + escapeHtml(title) + '</strong> — complete the chart by hand.<br>' +
+      'Name: <span class="fill-line"></span> Date: <span class="fill-line"></span></div>' + svg;
+    document.body.classList.add('printing');
+    window.print();
+  });
+  window.addEventListener('afterprint', function () { document.body.classList.remove('printing'); });
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }
   function clearMsg() { els.msg.textContent = ''; els.msg.className = ''; }

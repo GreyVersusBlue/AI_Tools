@@ -18,6 +18,7 @@
 <!-- gvb:social:end -->
 <script src="vocab-flashcard-generator/vfg-layout.js"></script>
 <script src="vocab-flashcard-generator/vfg-store.js"></script>
+<script src="vocab-flashcard-generator/vfg-conjdrill-link.js"></script>
 <style>
   :root {
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
@@ -52,6 +53,9 @@
   }
   textarea { min-height: 9rem; resize: vertical; font-family: Consolas, monospace; font-size: .85rem; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .check-toggle { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .85rem; margin: 0 0 .8rem; cursor: pointer; }
+  .check-toggle input { width: auto; margin: 0; }
+  .import-bridge { border-top: 1px dashed var(--line); margin-top: .8rem; padding-top: .7rem; }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; }
   .mode-tab { flex: 1; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }
@@ -79,13 +83,18 @@
     background: #fff; width: 8.5in; margin: 0 auto 1rem; padding: 0.4in;
     box-shadow: 0 2px 10px rgba(0,0,0,.18); max-width: 100%;
   }
+  /* ---- cut lines & margin guide ---- */
+  .page.guides { outline: 1px dashed #b7b5aa; outline-offset: -0.22in; }
   .grid { display: grid; gap: 0.15in; }
   .flash-card {
     border: 1px dashed #999; display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; padding: 0.1in; overflow: hidden;
   }
+  .flash-card.guides, .wordwall-card.guides, .fold-card.guides { border: 1px solid #8b8a82; }
   .flash-card.blank { border-style: dotted; opacity: .3; }
   .flash-card .term { font-weight: 700; font-size: 1.1rem; }
+  .flash-card .pron { font-size: .7rem; color: var(--accent-2); font-style: italic; margin-top: .15rem; }
+  .flash-card .pos { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 700; margin-bottom: .15rem; }
   .flash-card .def { font-size: .82rem; color: var(--muted); margin-top: .3rem; overflow-wrap: break-word; }
   .flash-card .example { font-style: italic; color: var(--muted); margin-top: .2rem; overflow-wrap: break-word; }
 
@@ -94,8 +103,22 @@
     text-align: center; padding: 0.3in;
   }
   .wordwall-card .term { font-weight: 800; font-size: 2.4rem; line-height: 1.1; }
+  .wordwall-card .pron { font-size: 1.1rem; color: var(--accent-2); font-style: italic; margin-top: .2rem; }
+  .wordwall-card .pos { font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 700; margin-top: .3rem; }
   .wordwall-card .def { font-size: 1rem; color: var(--muted); margin-top: .6rem; overflow-wrap: break-word; }
   .wordwall-card .example { font-style: italic; color: var(--muted); margin-top: .3rem; overflow-wrap: break-word; }
+
+  /* ---- foldable single-sided card layout ---- */
+  .fold-card { border: 1px dashed #999; display: flex; flex-direction: column; overflow: hidden; }
+  .fold-card.blank { border-style: dotted; opacity: .3; }
+  .fold-half { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0.08in; overflow: hidden; min-height: 0; min-width: 0; }
+  .fold-half .term { font-weight: 700; font-size: 1.05rem; }
+  .fold-half .pron { font-size: .68rem; color: var(--accent-2); font-style: italic; margin-top: .12rem; }
+  .fold-half .pos { font-size: .64rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 700; margin-bottom: .1rem; }
+  .fold-half .def { color: var(--muted); overflow-wrap: break-word; }
+  .fold-half .example { font-style: italic; color: var(--muted); margin-top: .15rem; overflow-wrap: break-word; }
+  .fold-line { border-top: 1px dashed #888; margin: 0 0.15in; flex-shrink: 0; }
+  .fold-def-inner { transform: rotate(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
 
   .quiz-wrap { max-width: 560px; margin: 0 auto; text-align: center; }
   .quiz-counter { color: var(--muted); font-size: .85rem; margin-bottom: .7rem; }
@@ -106,6 +129,8 @@
   }
   .quiz-card .quiz-term { font-weight: 700; font-size: 1.6rem; }
   .quiz-card .quiz-def { font-size: 1.15rem; color: var(--accent-2); }
+  .quiz-card .pron { font-size: .9rem; color: var(--accent-2); font-style: italic; margin-top: .3rem; }
+  .quiz-card .pos { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 700; margin-bottom: .3rem; }
   .quiz-card .quiz-hint { display: block; color: var(--muted); font-size: .78rem; font-weight: 400; margin-top: .8rem; }
   .quiz-nav { display: flex; gap: .5rem; justify-content: center; margin-top: 1rem; }
   .quiz-nav button.secondary { width: auto; margin: 0; }
@@ -150,8 +175,17 @@
         <input type="text" id="listName" placeholder="e.g. Unit 4 Vocabulary">
 
         <label for="wordInput">Words (one per line, "term: definition")</label>
-        <p class="hint">Example: Photosynthesis: process plants use to make food &mdash; or paste two columns straight from a spreadsheet (tab- or comma-separated). Add an optional example sentence with a third column, or "| example sentence" after the definition.</p>
+        <p class="hint">Example: Photosynthesis: process plants use to make food &mdash; or paste columns straight from a spreadsheet (tab- or comma-separated). Add up to three more optional fields &mdash; example sentence, pronunciation guide, part of speech &mdash; as more columns, or as "| example | pronunciation | part of speech" after the definition (each one optional).</p>
         <textarea id="wordInput" placeholder="Photosynthesis: process plants use to make food | Plants use photosynthesis to grow&#10;Mitosis: cell division"></textarea>
+
+        <div class="import-bridge" id="importBridgeRow" style="display:none;">
+          <label for="conjDrillSetSelect">Import from Vocab &amp; Conjugation Drill Generator</label>
+          <p class="hint">Reads that tool's saved drill sets straight from this browser &mdash; nothing is uploaded or shared between tools beyond this one-time copy.</p>
+          <div class="row2">
+            <select id="conjDrillSetSelect"></select>
+            <button type="button" class="secondary" id="importConjDrillBtn" style="width:100%;margin:0;">Add words to this list</button>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -162,16 +196,36 @@
         </div>
 
         <div class="row2">
-          <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <div>
+            <label for="sortOrder">Sort</label>
+            <select id="sortOrder">
+              <option value="none">As entered</option>
+              <option value="az">A &rarr; Z (term)</option>
+              <option value="za">Z &rarr; A (term)</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;margin-top:1.55rem;">
             <input type="checkbox" id="shuffleOrder" style="width:auto;margin:0;"> Shuffle order
           </label>
         </div>
+        <label class="check-toggle"><input type="checkbox" id="showGuides" checked> Cut lines &amp; margin guide</label>
 
         <div id="flashOptions">
           <div class="row2">
             <div><label for="flashCols">Columns</label><input type="text" id="flashCols" value="2"></div>
             <div><label for="flashRows">Rows</label><input type="text" id="flashRows" value="4"></div>
           </div>
+          <label for="cardSizePreset">Card stock size</label>
+          <select id="cardSizePreset">
+            <option value="grid" selected>Custom grid (use columns/rows above)</option>
+            <option value="3x5">3&times;5 index card (4 per page)</option>
+            <option value="4x6">4&times;6 index card (2 per page)</option>
+          </select>
+          <label for="flashLayout">Printing layout</label>
+          <select id="flashLayout">
+            <option value="duplex">Double-sided (front page, then back page mirrored)</option>
+            <option value="fold">Single-sided fold-over (no duplex printer needed)</option>
+          </select>
         </div>
 
         <div id="wallOptions" style="display:none;">
@@ -218,15 +272,24 @@
 
   var els = {};
   ['toolbar','listSwitch','newListBtn','deleteListBtn','exportListBtn','importListBtn','importListFile','listName','wordInput',
-   'flashOptions','wallOptions','quizOptions','flashCols','flashRows','wallPerPage','wallShowDef','shuffleOrder',
+   'importBridgeRow','conjDrillSetSelect','importConjDrillBtn',
+   'flashOptions','wallOptions','quizOptions','flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
+   'sortOrder','shuffleOrder','showGuides',
    'printBtn','previewArea','previewNote','printNote','sheetView'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef, shuffle }
+  // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
+  //   sortOrder: 'none'|'az'|'za', shuffle, showGuides, cardSizePreset: 'grid'|'3x5'|'4x6', flashLayout: 'duplex'|'fold' }
+  var state = null;
   var currentPreviewIndex = 0;
   var currentPreviewSide = 'front';
   var quizIndex = 0;
   var quizFlipped = false;
+
+  var CARD_SIZE_PRESETS = {
+    '3x5': { cols: 2, rows: 2, wIn: 3, hIn: 5 },
+    '4x6': { cols: 2, rows: 1, wIn: 4, hIn: 6 }
+  };
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -249,11 +312,24 @@
 
   function readFormIntoState() {
     state.words = els.wordInput.value;
-    state.flashCols = Math.max(1, parseInt(els.flashCols.value, 10) || 2);
-    state.flashRows = Math.max(1, parseInt(els.flashRows.value, 10) || 4);
+    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
+    state.flashCols = preset ? preset.cols : Math.max(1, parseInt(els.flashCols.value, 10) || 2);
+    state.flashRows = preset ? preset.rows : Math.max(1, parseInt(els.flashRows.value, 10) || 4);
     state.wallPerPage = parseInt(els.wallPerPage.value, 10) || 2;
     state.wallShowDef = els.wallShowDef.checked;
+    state.sortOrder = els.sortOrder.value;
     state.shuffle = els.shuffleOrder.checked;
+    state.showGuides = els.showGuides.checked;
+  }
+
+  /** Sorted + shuffled items for whatever's currently in the textarea —
+      the single source of truth both the live preview and the print
+      output pull from, so what you see is always what prints. */
+  function currentItems() {
+    var items = VocabLayout.parseWordList(state.words);
+    items = VocabLayout.sortItems(items, state.sortOrder || 'none');
+    if (state.shuffle) items = VocabLayout.shuffleItems(items);
+    return items;
   }
 
   // Fixed-size cards can't grow to fit long text, so shrink the font instead of letting it clip —
@@ -265,25 +341,34 @@
     return Math.max(minRem, baseRem * Math.sqrt(allowance / len));
   }
 
+  function guideClass(base) { return base + (state.showGuides ? ' guides' : ''); }
+  function pageClass() { return guideClass('page'); }
+
   function flashCardHtml(item) {
-    if (!item) return '<div class="flash-card blank"></div>';
-    return '<div class="flash-card"><div class="term">' + escapeHtml(item.term) + '</div></div>';
+    if (!item) return '<div class="' + guideClass('flash-card blank') + '"></div>';
+    var pron = item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '';
+    return '<div class="' + guideClass('flash-card') + '"><div class="term">' + escapeHtml(item.term) + '</div>' + pron + '</div>';
   }
   function defCardHtml(item) {
-    if (!item) return '<div class="flash-card blank"></div>';
+    if (!item) return '<div class="' + guideClass('flash-card blank') + '"></div>';
     var perPage = state.flashCols * state.flashRows;
     var allowance = Math.max(15, Math.round(120 / Math.sqrt(perPage)));
     var size = fitFontSizeRem(item.definition, 0.82, 0.48, allowance);
+    var posHtml = item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '';
     var exampleHtml = '';
     if (item.example) {
       var exampleSize = fitFontSizeRem(item.example, 0.62, 0.4, allowance);
       exampleHtml = '<div class="example" style="font-size:' + exampleSize + 'rem;">' + escapeHtml(item.example) + '</div>';
     }
-    return '<div class="flash-card"><div class="def" style="font-size:' + size + 'rem;">' + escapeHtml(item.definition) + '</div>' + exampleHtml + '</div>';
+    return '<div class="' + guideClass('flash-card') + '">' + posHtml + '<div class="def" style="font-size:' + size + 'rem;">' + escapeHtml(item.definition) + '</div>' + exampleHtml + '</div>';
   }
 
   function buildFlashPages(items) {
     var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
+    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
+    var gridStyle = preset
+      ? 'grid-template-columns:repeat(' + cols + ',' + preset.wIn + 'in);grid-template-rows:repeat(' + rows + ',' + preset.hIn + 'in);justify-content:center;align-content:center;'
+      : 'grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);';
     var pages = VocabLayout.paginate(items, perPage);
     var fronts = [], backs = [];
     pages.forEach(function (page) {
@@ -291,30 +376,64 @@
       while (padded.length < perPage) padded.push(null);
       var mirrored = VocabLayout.mirrorPageRows(padded, cols);
       fronts.push(
-        '<div class="page"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);">' +
-          padded.map(flashCardHtml).join('') + '</div></div>'
+        '<div class="' + pageClass() + '"><div class="grid" style="' + gridStyle + '">' + padded.map(flashCardHtml).join('') + '</div></div>'
       );
       backs.push(
-        '<div class="page"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);">' +
-          mirrored.map(defCardHtml).join('') + '</div></div>'
+        '<div class="' + pageClass() + '"><div class="grid" style="' + gridStyle + '">' + mirrored.map(defCardHtml).join('') + '</div></div>'
       );
     });
     return { fronts: fronts, backs: backs, pageCount: pages.length };
   }
 
+  /** Foldable single-sided layout: term on top, definition rotated 180°
+      underneath a fold line, so folding the card back along that line
+      (a valley fold) puts the definition right-side up on the reverse —
+      no duplex printing required. */
+  function foldCardHtml(item) {
+    if (!item) return '<div class="' + guideClass('fold-card blank') + '"></div>';
+    var perPage = state.flashCols * state.flashRows;
+    var allowance = Math.max(15, Math.round(120 / Math.sqrt(perPage)));
+    var pron = item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '';
+    var pos = item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '';
+    var defSize = fitFontSizeRem(item.definition, 0.78, 0.46, allowance);
+    var exampleHtml = item.example
+      ? '<div class="example" style="font-size:' + fitFontSizeRem(item.example, 0.6, 0.38, allowance) + 'rem;">' + escapeHtml(item.example) + '</div>'
+      : '';
+    return '<div class="' + guideClass('fold-card') + '">' +
+      '<div class="fold-half fold-term"><div class="term">' + escapeHtml(item.term) + '</div>' + pron + '</div>' +
+      '<div class="fold-line"></div>' +
+      '<div class="fold-half fold-def"><div class="fold-def-inner">' + pos +
+        '<div class="def" style="font-size:' + defSize + 'rem;">' + escapeHtml(item.definition) + '</div>' + exampleHtml +
+      '</div></div>' +
+    '</div>';
+  }
+
+  function buildFoldPages(items) {
+    var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
+    var pages = VocabLayout.paginate(items, perPage);
+    return pages.map(function (page) {
+      var padded = page.slice();
+      while (padded.length < perPage) padded.push(null);
+      return '<div class="' + pageClass() + '"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);">' +
+        padded.map(foldCardHtml).join('') + '</div></div>';
+    });
+  }
+
   function wallCardHtml(item) {
-    if (!item) return '<div class="wordwall-card"></div>';
-    var defHtml = '', exampleHtml = '';
+    if (!item) return '<div class="' + guideClass('wordwall-card') + '"></div>';
+    var pronHtml = item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '';
+    var defHtml = '', exampleHtml = '', posHtml = '';
     if (state.wallShowDef && item.definition) {
       var allowance = state.wallPerPage === 1 ? 90 : (state.wallPerPage === 2 ? 60 : 32);
       var size = fitFontSizeRem(item.definition, 1, 0.6, allowance);
+      posHtml = item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '';
       defHtml = '<div class="def" style="font-size:' + size + 'rem;">' + escapeHtml(item.definition) + '</div>';
       if (item.example) {
         var exampleSize = fitFontSizeRem(item.example, 0.75, 0.45, allowance);
         exampleHtml = '<div class="example" style="font-size:' + exampleSize + 'rem;">' + escapeHtml(item.example) + '</div>';
       }
     }
-    return '<div class="wordwall-card"><div class="term">' + escapeHtml(item.term) + '</div>' + defHtml + exampleHtml + '</div>';
+    return '<div class="' + guideClass('wordwall-card') + '"><div class="term">' + escapeHtml(item.term) + '</div>' + pronHtml + posHtml + defHtml + exampleHtml + '</div>';
   }
 
   function buildWallPages(items) {
@@ -325,7 +444,7 @@
     return pages.map(function (page) {
       var padded = page.slice();
       while (padded.length < perPage) padded.push(null);
-      return '<div class="page"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);min-height:9.5in;">' +
+      return '<div class="' + pageClass() + '"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);min-height:9.5in;">' +
         padded.map(wallCardHtml).join('') + '</div></div>';
     });
   }
@@ -338,8 +457,11 @@
     var card = document.createElement('div');
     card.className = 'quiz-card';
     card.innerHTML = quizFlipped
-      ? '<div><div class="quiz-def">' + escapeHtml(item.definition || '(no definition)') + '</div><span class="quiz-hint">Click to show the term</span></div>'
-      : '<div><div class="quiz-term">' + escapeHtml(item.term) + '</div><span class="quiz-hint">Click to reveal the definition</span></div>';
+      ? '<div>' + (item.partOfSpeech ? '<div class="pos">' + escapeHtml(item.partOfSpeech) + '</div>' : '') +
+          '<div class="quiz-def">' + escapeHtml(item.definition || '(no definition)') + '</div><span class="quiz-hint">Click to show the term</span></div>'
+      : '<div><div class="quiz-term">' + escapeHtml(item.term) + '</div>' +
+          (item.pronunciation ? '<div class="pron">' + escapeHtml(item.pronunciation) + '</div>' : '') +
+          '<span class="quiz-hint">Click to reveal the definition</span></div>';
     card.addEventListener('click', function () { quizFlipped = !quizFlipped; renderPreview(); });
 
     var prevBtn = document.createElement('button');
@@ -377,8 +499,7 @@
     save();
     refreshSwitcher();
 
-    var items = VocabLayout.parseWordList(state.words);
-    if (state.shuffle) items = VocabLayout.shuffleItems(items);
+    var items = currentItems();
     els.sheetView.innerHTML = '';
 
     if (!items.length) {
@@ -390,6 +511,22 @@
 
     if (state.mode === 'quiz') {
       renderQuiz(items);
+    } else if (state.mode === 'flashcards' && state.flashLayout === 'fold') {
+      var foldPages = buildFoldPages(items);
+      els.printNote.style.display = '';
+      els.printNote.textContent = 'Single-sided fold-over layout: the term prints above the fold, the definition ' +
+        'prints upside-down below it. Fold each card back along the dashed line (valley fold) so the definition ' +
+        'reads right-side up on the reverse — no duplex printer needed.';
+      currentPreviewIndex = Math.min(currentPreviewIndex, foldPages.length - 1);
+      foldPages.forEach(function (_, idx) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'secondary';
+        b.textContent = 'Page ' + (idx + 1);
+        b.addEventListener('click', function () { currentPreviewIndex = idx; renderPreview(); });
+        els.sheetView.appendChild(b);
+      });
+      els.previewArea.innerHTML = foldPages[currentPreviewIndex] || '';
+      els.previewNote.textContent = items.length + ' words, ' + foldPages.length + ' page(s), single-sided (fold-over).';
     } else if (state.mode === 'flashcards') {
       var built = buildFlashPages(items);
       els.printNote.style.display = '';
@@ -435,10 +572,11 @@
   }
 
   function buildPrintArea() {
-    var items = VocabLayout.parseWordList(state.words);
-    if (state.shuffle) items = VocabLayout.shuffleItems(items);
+    var items = currentItems();
     var html;
-    if (state.mode === 'flashcards') {
+    if (state.mode === 'flashcards' && state.flashLayout === 'fold') {
+      html = buildFoldPages(items).join('');
+    } else if (state.mode === 'flashcards') {
       var built = buildFlashPages(items);
       html = built.fronts.join('') + built.backs.join('');
     } else {
@@ -449,7 +587,11 @@
 
   /* ---------- lifecycle ---------- */
   function newList(name) {
-    state = { name: name, words: '', mode: 'flashcards', flashCols: 2, flashRows: 4, wallPerPage: 2, wallShowDef: true, shuffle: false };
+    state = {
+      name: name, words: '', mode: 'flashcards', flashCols: 2, flashRows: 4,
+      cardSizePreset: 'grid', flashLayout: 'duplex', wallPerPage: 2, wallShowDef: true,
+      sortOrder: 'none', shuffle: false, showGuides: true
+    };
     VocabStore.setCurrentName(name);
     quizIndex = 0; quizFlipped = false;
     applyStateToForm();
@@ -462,6 +604,11 @@
     var loaded = VocabStore.loadSet(name);
     if (!loaded) return;
     state = loaded;
+    // Fields added in later rounds — default them for lists saved before they existed.
+    if (!state.cardSizePreset) state.cardSizePreset = 'grid';
+    if (!state.flashLayout) state.flashLayout = 'duplex';
+    if (!state.sortOrder) state.sortOrder = 'none';
+    if (typeof state.showGuides !== 'boolean') state.showGuides = true;
     VocabStore.setCurrentName(name);
     quizIndex = 0; quizFlipped = false;
     applyStateToForm();
@@ -472,17 +619,52 @@
   function applyStateToForm() {
     els.listName.value = state.name;
     els.wordInput.value = state.words;
-    els.flashCols.value = state.flashCols;
-    els.flashRows.value = state.flashRows;
+    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
+    els.flashCols.value = preset ? preset.cols : state.flashCols;
+    els.flashRows.value = preset ? preset.rows : state.flashRows;
+    els.flashCols.disabled = !!preset;
+    els.flashRows.disabled = !!preset;
+    els.cardSizePreset.value = state.cardSizePreset || 'grid';
+    els.flashLayout.value = state.flashLayout || 'duplex';
     els.wallPerPage.value = state.wallPerPage;
     els.wallShowDef.checked = state.wallShowDef;
+    els.sortOrder.value = state.sortOrder || 'none';
     els.shuffleOrder.checked = !!state.shuffle;
+    els.showGuides.checked = state.showGuides !== false;
     document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.mode === state.mode); });
     els.flashOptions.style.display = state.mode === 'flashcards' ? '' : 'none';
     els.wallOptions.style.display = state.mode === 'wordwall' ? '' : 'none';
     els.quizOptions.style.display = state.mode === 'quiz' ? '' : 'none';
     els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
+    refreshImportBridge();
   }
+
+  /* ---------- read-only cross-tool bridge: import from Vocab & Conjugation Drill ---------- */
+  function refreshImportBridge() {
+    if (!window.VfgConjDrillLink) { els.importBridgeRow.style.display = 'none'; return; }
+    var names = VfgConjDrillLink.listConjDrillSets();
+    if (!names.length) { els.importBridgeRow.style.display = 'none'; return; }
+    els.importBridgeRow.style.display = '';
+    var current = els.conjDrillSetSelect.value;
+    els.conjDrillSetSelect.innerHTML = '';
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      els.conjDrillSetSelect.appendChild(opt);
+    });
+    if (current && names.indexOf(current) !== -1) els.conjDrillSetSelect.value = current;
+  }
+
+  els.importConjDrillBtn.addEventListener('click', function () {
+    if (!state || !window.VfgConjDrillLink) return;
+    var name = els.conjDrillSetSelect.value;
+    var items = VfgConjDrillLink.getConjDrillItems(name);
+    if (!items.length) { alert('That drill set has no vocabulary words saved yet.'); return; }
+    var lines = items.map(function (it) { return it.definition ? (it.term + ': ' + it.definition) : it.term; });
+    els.wordInput.value = (els.wordInput.value.trim() ? els.wordInput.value.replace(/\n*$/, '\n') : '') + lines.join('\n');
+    alert('Added ' + items.length + ' word(s) from "' + name + '".');
+    renderPreview();
+  });
 
   /* ---------- wiring ---------- */
   els.listName.addEventListener('change', function () {
@@ -496,9 +678,25 @@
   els.wordInput.addEventListener('input', renderPreview);
   els.flashCols.addEventListener('input', renderPreview);
   els.flashRows.addEventListener('input', renderPreview);
+  els.cardSizePreset.addEventListener('change', function () {
+    state.cardSizePreset = els.cardSizePreset.value;
+    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
+    els.flashCols.disabled = !!preset;
+    els.flashRows.disabled = !!preset;
+    if (preset) { els.flashCols.value = preset.cols; els.flashRows.value = preset.rows; }
+    currentPreviewIndex = 0;
+    renderPreview();
+  });
+  els.flashLayout.addEventListener('change', function () {
+    state.flashLayout = els.flashLayout.value;
+    currentPreviewIndex = 0;
+    renderPreview();
+  });
   els.wallPerPage.addEventListener('change', renderPreview);
   els.wallShowDef.addEventListener('change', renderPreview);
+  els.sortOrder.addEventListener('change', renderPreview);
   els.shuffleOrder.addEventListener('change', renderPreview);
+  els.showGuides.addEventListener('change', renderPreview);
 
   document.querySelectorAll('.mode-tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -580,9 +778,13 @@
         mode: (parsed.mode === 'wordwall' || parsed.mode === 'quiz') ? parsed.mode : 'flashcards',
         flashCols: Math.max(1, parseInt(parsed.flashCols, 10) || 2),
         flashRows: Math.max(1, parseInt(parsed.flashRows, 10) || 4),
+        cardSizePreset: CARD_SIZE_PRESETS[parsed.cardSizePreset] ? parsed.cardSizePreset : 'grid',
+        flashLayout: parsed.flashLayout === 'fold' ? 'fold' : 'duplex',
         wallPerPage: parseInt(parsed.wallPerPage, 10) || 2,
         wallShowDef: parsed.wallShowDef !== false,
-        shuffle: !!parsed.shuffle
+        sortOrder: (parsed.sortOrder === 'az' || parsed.sortOrder === 'za') ? parsed.sortOrder : 'none',
+        shuffle: !!parsed.shuffle,
+        showGuides: parsed.showGuides !== false
       };
       VocabStore.saveSet(importedName, imported);
       loadListByName(importedName);

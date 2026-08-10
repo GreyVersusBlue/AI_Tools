@@ -66,6 +66,7 @@
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
   button.danger:hover { background: var(--err); color: #fff; }
   button.full { width: 100%; margin-bottom: .5rem; }
+  button.small { padding: .25rem .5rem; font-size: .78rem; }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; }
   .mode-tab {
@@ -80,12 +81,30 @@
 
   .name-count { font-size: .78rem; color: var(--muted); margin: -.5rem 0 .7rem; }
 
+  .deadline-line { font-size: .88rem; font-weight: 700; color: var(--ink); margin-bottom: .5rem; padding: .5rem .7rem; background: #f2f2ef; border-radius: 6px; }
+  .deadline-line.overdue { color: var(--err); background: #fbeceb; }
+  .deadline-line .sub { font-weight: 400; color: var(--muted); font-size: .82rem; }
+
   .collection-summary { font-size: .85rem; font-weight: 700; color: var(--accent); margin-bottom: .6rem; }
   .collection-rows { display: flex; flex-direction: column; gap: .4rem; max-height: 280px; overflow-y: auto; }
   .collection-row { display: flex; align-items: center; gap: .8rem; padding: .35rem .6rem; border: 1px solid var(--line); border-radius: 6px; flex-wrap: wrap; }
   .collection-name { flex: 1 1 auto; font-weight: 600; font-size: .88rem; min-width: 100px; }
   .collection-check { display: flex; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 400; margin: 0; white-space: nowrap; }
   .collection-check input { width: auto; margin: 0; }
+  .collection-row select.payment-select { width: auto; margin: 0; padding: .25rem .4rem; font-size: .8rem; }
+  .collection-row select.chaperone-select { width: auto; margin: 0; padding: .25rem .4rem; font-size: .8rem; }
+
+  .print-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .7rem; }
+  .print-actions button { width: auto; flex: 1 1 auto; }
+
+  .chaperone-row { display: flex; gap: .5rem; margin-bottom: .6rem; align-items: center; }
+  .chaperone-row input { margin-bottom: 0; }
+  .chaperone-row input.chaperone-name { flex: 1 1 auto; }
+  .chaperone-row input.chaperone-phone { flex: 0 1 9rem; }
+  .chaperone-row button { flex-shrink: 0; padding: .5rem .7rem; width: auto; }
+
+  .undo-bar { font-size: .82rem; color: var(--muted); display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
+  .undo-bar button { width: auto; }
 
   .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
@@ -123,6 +142,34 @@
   .slip-footer .due { font-weight: 700; }
   .slip-qr { width: .85in; height: .85in; flex-shrink: 0; image-rendering: pixelated; }
 
+  /* ---- printable "missing" pocket list ---- */
+  .missing-list-page {
+    background: #fff; width: 4.25in; max-width: 100%; margin: 0 auto 1.4rem; padding: .35in;
+    color: #000; font-family: Georgia, "Times New Roman", serif;
+  }
+  .missing-list-page h2 { font-size: 1.05rem; margin: 0 0 .1rem; }
+  .missing-list-page .sub { font-size: .78rem; color: #444; margin-bottom: .6rem; }
+  .missing-list-page table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .missing-list-page th, .missing-list-page td { border: 1px solid #000; padding: .25rem .35rem; text-align: left; }
+  .missing-list-page .fold-hint { font-size: .7rem; color: #666; margin-top: .5rem; font-style: italic; }
+
+  /* ---- printable reminder slip (one per missing student) ---- */
+  .reminder-slip {
+    background: #fff; width: 5.5in; max-width: 100%; margin: 0 auto 1.2rem; padding: .4in;
+    border: 1px dashed #000; color: #000; font-family: Georgia, "Times New Roman", serif;
+  }
+  .reminder-slip h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+  .reminder-slip .rline { font-size: .9rem; margin-bottom: .35rem; }
+  .reminder-slip .rline b { display: inline-block; min-width: 6rem; }
+
+  /* ---- printable chaperone group sheet ---- */
+  .chaperone-print { background: #fff; width: 8.5in; max-width: 100%; margin: 0 auto; padding: .5in; color: #000; font-family: Georgia, "Times New Roman", serif; }
+  .chaperone-print h2 { font-size: 1.3rem; margin: 0 0 .8rem; text-align: center; }
+  .chaperone-group { margin-bottom: 1rem; border: 1px solid #000; border-radius: 4px; padding: .6rem .8rem; }
+  .chaperone-group h3 { font-size: 1rem; margin: 0 0 .3rem; }
+  .chaperone-group .phone { font-size: .82rem; color: #333; margin-bottom: .4rem; }
+  .chaperone-group ul { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   @media print {
@@ -131,6 +178,10 @@
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
     #printArea .slip { box-shadow: none; width: 100%; page-break-after: always; }
     #printArea .slip:last-child { page-break-after: auto; }
+    #printArea .reminder-slip { border: none; page-break-after: always; }
+    #printArea .reminder-slip:last-child { page-break-after: auto; }
+    #printArea .missing-list-page { page-break-after: auto; }
+    #printArea .chaperone-print { page-break-after: auto; }
     @page { size: letter portrait; margin: 0.4in; }
   }
 </style>
@@ -153,6 +204,10 @@
     <button class="secondary" id="exportTripBtn">Export JSON</button>
     <button class="secondary" id="importTripBtn">Import JSON</button>
     <input type="file" id="importTripFile" accept="application/json,.json" style="display:none;">
+    <span class="undo-bar" id="deleteUndoBar" style="display:none;">
+      Deleted &ldquo;<span id="deleteUndoName"></span>&rdquo;.
+      <button type="button" class="secondary small" id="undoDeleteTripBtn">Undo</button>
+    </span>
   </div>
 
   <div class="layout">
@@ -246,8 +301,27 @@
 
       <div class="card">
         <div class="card-title">Slip collection tracker</div>
-        <p class="hint">Tracks who's turned theirs in, using the same student list as &ldquo;Whole class (batch)&rdquo; above. This is separate from what prints on the slip.</p>
+        <p class="hint">Tracks who's turned theirs in and, if there's a cost, who's paid &mdash; using the same student
+          list as &ldquo;Whole class (batch)&rdquo; above. This is separate from what prints on the slip.</p>
+        <div id="deadlineLine"></div>
         <div id="collectionWrap"></div>
+        <div class="print-actions">
+          <button type="button" class="secondary" id="printMissingListBtn">Print missing list</button>
+          <button type="button" class="secondary" id="printReminderSlipsBtn">Print reminder slips</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Chaperones</div>
+        <p class="hint">Add each chaperone's name and phone number, then assign students to a group below. Printable
+          as a trip-day roster grouped by chaperone.</p>
+        <div id="chaperoneRows"></div>
+        <button type="button" class="secondary" id="addChaperoneBtn" style="width:auto;">+ Add chaperone</button>
+
+        <label style="margin-top:.9rem;">Chaperone group assignments</label>
+        <p class="hint">Uses the same student list as the batch/collection tracker above.</p>
+        <div id="chaperoneAssignWrap"></div>
+        <button type="button" class="secondary full" id="printChaperoneBtn">Print chaperone groups</button>
       </div>
     </div>
 
@@ -312,12 +386,15 @@
   var els = {};
   [
     'toolbar', 'tripSwitch', 'newTripBtn', 'deleteTripBtn', 'exportTripBtn', 'importTripBtn', 'importTripFile',
+    'deleteUndoBar', 'deleteUndoName', 'undoDeleteTripBtn',
     'tripName', 'schoolTeacher', 'destination', 'tripStartDate', 'tripEndDate',
     'departureTime', 'returnTime', 'purpose', 'cost', 'whatToBring',
     'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate',
     'singleFields', 'batchFields', 'blankFields',
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
-    'printBtn', 'previewArea', 'previewNote', 'collectionWrap'
+    'printBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
+    'printMissingListBtn', 'printReminderSlipsBtn',
+    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var FIELD_KEYS = [
@@ -326,7 +403,7 @@
     'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate'
   ];
 
-  var state = null; // { name, mode, studentName, batchNames, blankCount, ...FIELD_KEYS }
+  var state = null; // { name, mode, studentName, batchNames, blankCount, collected, chaperones, chaperoneAssignments, ...FIELD_KEYS }
 
   /* ---------- helpers ---------- */
   function escapeHtml(s) {
@@ -336,9 +413,33 @@
   }
 
   function defaultState(name) {
-    var s = { name: name, mode: 'single', studentName: '', batchNames: '', blankCount: 5, collected: {} };
+    var s = {
+      name: name, mode: 'single', studentName: '', batchNames: '', blankCount: 5, collected: {},
+      chaperones: [], // [{ name, phone }]
+      chaperoneAssignments: {} // { studentName: chaperoneName }
+    };
     FIELD_KEYS.forEach(function (k) { s[k] = ''; });
     return s;
+  }
+
+  // Older saved trips don't have payment/chaperone data at all — fill in
+  // the additive defaults so they load exactly as before instead of
+  // throwing on a missing field.
+  function normalizeState(s) {
+    if (!s.collected || typeof s.collected !== 'object') s.collected = {};
+    Object.keys(s.collected).forEach(function (n) { normalizeCollectedRecord(s.collected[n]); });
+    if (!Array.isArray(s.chaperones)) s.chaperones = [];
+    if (!s.chaperoneAssignments || typeof s.chaperoneAssignments !== 'object') s.chaperoneAssignments = {};
+    return s;
+  }
+
+  // A record used to be { returned, paid }. `payment` ('unpaid'/'paid'/
+  // 'waived') is the new tri-state field; `paid` is kept in sync alongside
+  // it in case anything else ever reads it, but `payment` is authoritative.
+  function normalizeCollectedRecord(rec) {
+    if (!rec.payment) rec.payment = rec.paid ? 'paid' : 'unpaid';
+    rec.paid = rec.payment === 'paid';
+    return rec;
   }
 
   function formatDate(iso) {
@@ -409,6 +510,8 @@
       els.batchNames.value = list.join('\n');
       state.batchNames = els.batchNames.value;
       renderAll();
+      renderCollectionTracker();
+      renderChaperoneAssign();
     } catch (e) { /* ignore */ }
   });
 
@@ -418,7 +521,13 @@
   }
 
   /* ---------- collection tracker (separate from what prints) ---------- */
+  function collectedRecord(name) {
+    var rec = (state.collected && state.collected[name]) || { returned: false, payment: 'unpaid', paid: false };
+    return normalizeCollectedRecord(rec);
+  }
+
   function renderCollectionTracker() {
+    renderDeadlineLine();
     var names = batchNamesList();
     if (!names.length) {
       els.collectionWrap.innerHTML = '<p class="hint" style="margin:0;">Add student names in the &ldquo;Whole class (batch)&rdquo; tab above to track which slips have come back.</p>';
@@ -428,11 +537,16 @@
     els.collectionWrap.innerHTML =
       '<div class="collection-summary" id="collectionSummary"></div>' +
       '<div class="collection-rows">' + names.map(function (n) {
-        var rec = (state.collected && state.collected[n]) || { returned: false, paid: false };
+        var rec = collectedRecord(n);
         return '<div class="collection-row">' +
           '<span class="collection-name">' + escapeHtml(n) + '</span>' +
           '<label class="collection-check"><input type="checkbox" data-collected-returned="' + escapeHtml(n) + '"' + (rec.returned ? ' checked' : '') + '> Returned</label>' +
-          (showPaid ? '<label class="collection-check"><input type="checkbox" data-collected-paid="' + escapeHtml(n) + '"' + (rec.paid ? ' checked' : '') + '> Paid</label>' : '') +
+          (showPaid ?
+            '<select class="payment-select" data-payment-select="' + escapeHtml(n) + '">' +
+              '<option value="unpaid"' + (rec.payment === 'unpaid' ? ' selected' : '') + '>Not paid</option>' +
+              '<option value="paid"' + (rec.payment === 'paid' ? ' selected' : '') + '>Paid</option>' +
+              '<option value="waived"' + (rec.payment === 'waived' ? ' selected' : '') + '>Waived</option>' +
+            '</select>' : '') +
         '</div>';
       }).join('') + '</div>';
     updateCollectionSummary(names);
@@ -450,11 +564,13 @@
     var el = document.getElementById('collectionSummary');
     if (!el) return;
     var total = names.length;
-    var returned = names.filter(function (n) { return state.collected && state.collected[n] && state.collected[n].returned; }).length;
+    var returned = names.filter(function (n) { return collectedRecord(n).returned; }).length;
     var text = returned + ' of ' + total + ' returned';
     if (state.cost && state.cost.trim()) {
-      var paid = names.filter(function (n) { return state.collected && state.collected[n] && state.collected[n].paid; }).length;
+      var paid = names.filter(function (n) { return collectedRecord(n).payment === 'paid'; }).length;
+      var waived = names.filter(function (n) { return collectedRecord(n).payment === 'waived'; }).length;
       text += ' &middot; ' + paid + ' of ' + total + ' paid';
+      if (waived) text += ' (' + waived + ' waived)';
       var perStudent = parseCostAmount(state.cost);
       if (!isNaN(perStudent)) {
         text += ' &middot; $' + (paid * perStudent).toFixed(2) + ' collected';
@@ -463,18 +579,58 @@
     el.innerHTML = text;
   }
 
+  // Anyone who hasn't returned their slip, or (when there's a cost) hasn't
+  // paid and hasn't been waived — the list a "missing" print or reminder
+  // slip run is for.
+  function missingStudents() {
+    var showPaid = !!(state.cost && state.cost.trim());
+    return batchNamesList().filter(function (n) {
+      var rec = collectedRecord(n);
+      if (!rec.returned) return true;
+      if (showPaid && rec.payment === 'unpaid') return true;
+      return false;
+    });
+  }
+
   els.collectionWrap.addEventListener('change', function (e) {
     var returnedBox = e.target.closest('[data-collected-returned]');
-    var paidBox = e.target.closest('[data-collected-paid]');
-    if (!returnedBox && !paidBox) return;
+    var paymentSel = e.target.closest('[data-payment-select]');
+    if (!returnedBox && !paymentSel) return;
     if (!state.collected) state.collected = {};
-    var name = returnedBox ? returnedBox.dataset.collectedReturned : paidBox.dataset.collectedPaid;
-    if (!state.collected[name]) state.collected[name] = { returned: false, paid: false };
+    var name = returnedBox ? returnedBox.dataset.collectedReturned : paymentSel.dataset.paymentSelect;
+    if (!state.collected[name]) state.collected[name] = { returned: false, payment: 'unpaid', paid: false };
     if (returnedBox) state.collected[name].returned = returnedBox.checked;
-    if (paidBox) state.collected[name].paid = paidBox.checked;
+    if (paymentSel) state.collected[name].payment = paymentSel.value;
+    normalizeCollectedRecord(state.collected[name]);
     save();
     updateCollectionSummary(batchNamesList());
   });
+
+  /* ---------- deadline / countdown ---------- */
+  function renderDeadlineLine() {
+    var names = batchNamesList();
+    if (!state.dueDate || !names.length) { els.deadlineLine.innerHTML = ''; return; }
+    var due = new Date(state.dueDate + 'T00:00:00');
+    if (isNaN(due.getTime())) { els.deadlineLine.innerHTML = ''; return; }
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var msPerDay = 24 * 60 * 60 * 1000;
+    var daysLeft = Math.round((due.getTime() - today.getTime()) / msPerDay);
+    var returned = names.filter(function (n) { return collectedRecord(n).returned; }).length;
+    var weekday = due.toLocaleDateString(undefined, { weekday: 'long' });
+    var shortDate = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    var countdown;
+    var overdue = false;
+    if (daysLeft > 1) countdown = daysLeft + ' days left';
+    else if (daysLeft === 1) countdown = '1 day left';
+    else if (daysLeft === 0) countdown = 'due today';
+    else { countdown = Math.abs(daysLeft) + (Math.abs(daysLeft) === 1 ? ' day overdue' : ' days overdue'); overdue = true; }
+    els.deadlineLine.innerHTML =
+      '<div class="deadline-line' + (overdue ? ' overdue' : '') + '">' +
+        'Due ' + weekday + ', ' + shortDate + ' &mdash; ' + returned + ' of ' + names.length + ' returned' +
+        ' <span class="sub">&mdash; ' + countdown + '</span>' +
+      '</div>';
+  }
 
   /* ---------- QR code encoding trip name/date/destination ---------- */
   var qrCache = { key: '', url: null };
@@ -618,6 +774,182 @@
     document.getElementById('printArea').innerHTML = html;
   }
 
+  /* ---------- printable "missing" pocket list ---------- */
+  function missingListHtml() {
+    var showPaid = !!(state.cost && state.cost.trim());
+    var missing = missingStudents();
+    var rows = missing.map(function (n) {
+      var rec = collectedRecord(n);
+      var payLabel = rec.payment === 'paid' ? 'Paid' : rec.payment === 'waived' ? 'Waived' : 'Not paid';
+      return '<tr><td>' + escapeHtml(n) + '</td><td>' + (rec.returned ? 'Yes' : 'No') + '</td>' +
+        (showPaid ? '<td>' + payLabel + '</td>' : '') + '</tr>';
+    }).join('');
+    return (
+      '<div class="missing-list-page">' +
+        '<h2>' + (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Still Missing</h2>' +
+        '<div class="sub">Return by ' + (formatDate(state.dueDate) || 'no date set') + ' &middot; ' + missing.length + ' student' + (missing.length === 1 ? '' : 's') + ' outstanding</div>' +
+        '<table>' +
+          '<tr><th>Name</th><th>Returned?</th>' + (showPaid ? '<th>Payment</th>' : '') + '</tr>' +
+          (rows || '<tr><td colspan="' + (showPaid ? 3 : 2) + '">Nobody &mdash; everything is in!</td></tr>') +
+        '</table>' +
+        '<div class="fold-hint">Sized to fold or trim and carry on a clipboard.</div>' +
+      '</div>'
+    );
+  }
+
+  function buildMissingListPrintArea() {
+    document.getElementById('printArea').innerHTML = missingListHtml();
+  }
+
+  /* ---------- printable reminder slip, one per missing student ---------- */
+  function reminderSlipHtml(studentName) {
+    var showPaid = !!(state.cost && state.cost.trim());
+    var rec = collectedRecord(studentName);
+    var needs = [];
+    if (!rec.returned) needs.push('the signed permission slip');
+    if (showPaid && rec.payment === 'unpaid') needs.push('the trip fee (' + (state.cost || 'see teacher') + ')');
+    return (
+      '<div class="reminder-slip">' +
+        '<h2>Field Trip Reminder</h2>' +
+        '<div class="rline"><b>Student:</b> ' + escapeHtml(studentName) + '</div>' +
+        '<div class="rline"><b>Trip:</b> ' + (escapeHtml(state.name) || '&mdash;') + '</div>' +
+        '<div class="rline"><b>Destination:</b> ' + (escapeHtml(state.destination) || '&mdash;') + '</div>' +
+        '<div class="rline"><b>Return by:</b> ' + (formatDate(state.dueDate) || '&mdash;') + '</div>' +
+        '<div class="rline"><b>Still needed:</b> ' + (needs.length ? escapeHtml(needs.join(' and ')) : 'Nothing &mdash; thank you!') + '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildReminderPrintArea() {
+    var missing = missingStudents();
+    if (!missing.length) { document.getElementById('printArea').innerHTML = '<p style="padding:1in;font-family:Georgia,serif;">Nobody is missing anything for this trip right now.</p>'; return; }
+    document.getElementById('printArea').innerHTML = missing.map(function (n) { return reminderSlipHtml(n); }).join('');
+  }
+
+  /* ---------- chaperone groups ---------- */
+  function chaperoneNames() {
+    return state.chaperones.map(function (c) { return c.name.trim(); }).filter(Boolean);
+  }
+
+  function renderChaperoneRows() {
+    els.chaperoneRows.innerHTML = state.chaperones.map(function (c, i) {
+      return '<div class="chaperone-row">' +
+        '<input type="text" class="chaperone-name" data-chap-idx="' + i + '" data-chap-field="name" placeholder="Chaperone name" value="' + escapeHtml(c.name) + '">' +
+        '<input type="text" class="chaperone-phone" data-chap-idx="' + i + '" data-chap-field="phone" placeholder="Phone" value="' + escapeHtml(c.phone) + '">' +
+        '<button type="button" class="secondary" data-chap-remove="' + i + '">Remove</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderChaperoneAssign() {
+    var names = batchNamesList();
+    if (!names.length) {
+      els.chaperoneAssignWrap.innerHTML = '<p class="hint" style="margin:0;">Add student names in the &ldquo;Whole class (batch)&rdquo; tab above to assign chaperone groups.</p>';
+      return;
+    }
+    var groupNames = chaperoneNames();
+    els.chaperoneAssignWrap.innerHTML = '<div class="collection-rows">' + names.map(function (n) {
+      var assigned = (state.chaperoneAssignments && state.chaperoneAssignments[n]) || '';
+      return '<div class="collection-row">' +
+        '<span class="collection-name">' + escapeHtml(n) + '</span>' +
+        '<select class="chaperone-select" data-chaperone-for="' + escapeHtml(n) + '">' +
+          '<option value="">Unassigned</option>' +
+          groupNames.map(function (g) { return '<option value="' + escapeHtml(g) + '"' + (assigned === g ? ' selected' : '') + '>' + escapeHtml(g) + '</option>'; }).join('') +
+        '</select>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  els.addChaperoneBtn.addEventListener('click', function () {
+    state.chaperones.push({ name: '', phone: '' });
+    renderChaperoneRows();
+    save();
+  });
+
+  els.chaperoneRows.addEventListener('input', function (e) {
+    var field = e.target.closest('[data-chap-field]');
+    if (!field) return;
+    var idx = Number(field.dataset.chapIdx);
+    if (!state.chaperones[idx]) return;
+    state.chaperones[idx][field.dataset.chapField] = field.value;
+    save();
+    renderChaperoneAssign();
+  });
+
+  els.chaperoneRows.addEventListener('click', function (e) {
+    var removeBtn = e.target.closest('[data-chap-remove]');
+    if (!removeBtn) return;
+    var idx = Number(removeBtn.dataset.chapRemove);
+    var removedName = (state.chaperones[idx] || {}).name;
+    state.chaperones.splice(idx, 1);
+    // Un-assign anyone who was pointed at the chaperone that just left, so
+    // the assignment select doesn't silently keep a name that no longer
+    // exists in its own dropdown.
+    if (removedName && state.chaperoneAssignments) {
+      Object.keys(state.chaperoneAssignments).forEach(function (n) {
+        if (state.chaperoneAssignments[n] === removedName) state.chaperoneAssignments[n] = '';
+      });
+    }
+    renderChaperoneRows();
+    renderChaperoneAssign();
+    save();
+  });
+
+  els.chaperoneAssignWrap.addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-chaperone-for]');
+    if (!sel) return;
+    if (!state.chaperoneAssignments) state.chaperoneAssignments = {};
+    state.chaperoneAssignments[sel.dataset.chaperoneFor] = sel.value;
+    save();
+  });
+
+  function chaperonePrintHtml() {
+    var names = batchNamesList();
+    var groups = {};
+    state.chaperones.forEach(function (c) {
+      var key = c.name.trim();
+      if (key) groups[key] = { phone: c.phone, students: [] };
+    });
+    var unassigned = [];
+    names.forEach(function (n) {
+      var assigned = (state.chaperoneAssignments && state.chaperoneAssignments[n]) || '';
+      if (assigned && groups[assigned]) groups[assigned].students.push(n);
+      else unassigned.push(n);
+    });
+    var groupsHtml = Object.keys(groups).map(function (chapName) {
+      var g = groups[chapName];
+      return '<div class="chaperone-group">' +
+        '<h3>' + escapeHtml(chapName) + '</h3>' +
+        (g.phone ? '<div class="phone">' + escapeHtml(g.phone) + '</div>' : '') +
+        '<ul>' + (g.students.length ? g.students.map(function (s) { return '<li>' + escapeHtml(s) + '</li>'; }).join('') : '<li><em>No students assigned yet</em></li>') + '</ul>' +
+      '</div>';
+    }).join('');
+    var unassignedHtml = unassigned.length ?
+      '<div class="chaperone-group"><h3>Unassigned</h3><ul>' + unassigned.map(function (s) { return '<li>' + escapeHtml(s) + '</li>'; }).join('') + '</ul></div>' : '';
+    return (
+      '<div class="chaperone-print">' +
+        '<h2>' + (escapeHtml(state.name) || 'Field Trip') + ' &mdash; Chaperone Groups</h2>' +
+        (groupsHtml || '<p>No chaperones added yet.</p>') +
+        unassignedHtml +
+      '</div>'
+    );
+  }
+
+  els.printChaperoneBtn.addEventListener('click', function () {
+    document.getElementById('printArea').innerHTML = chaperonePrintHtml();
+    window.print();
+  });
+
+  els.printMissingListBtn.addEventListener('click', function () {
+    buildMissingListPrintArea();
+    window.print();
+  });
+
+  els.printReminderSlipsBtn.addEventListener('click', function () {
+    buildReminderPrintArea();
+    window.print();
+  });
+
   /* ---------- form <-> state wiring ---------- */
   function bindTextField(id, key) {
     els[id].addEventListener('input', function () {
@@ -629,9 +961,10 @@
   FIELD_KEYS.forEach(function (key) { bindTextField(key, key); });
 
   els.studentName.addEventListener('input', function () { state.studentName = els.studentName.value; renderAll(); });
-  els.batchNames.addEventListener('input', function () { state.batchNames = els.batchNames.value; renderAll(); renderCollectionTracker(); });
+  els.batchNames.addEventListener('input', function () { state.batchNames = els.batchNames.value; renderAll(); renderCollectionTracker(); renderChaperoneAssign(); });
   els.blankCount.addEventListener('input', function () { state.blankCount = els.blankCount.value; renderAll(); });
   els.cost.addEventListener('input', renderCollectionTracker);
+  els.dueDate.addEventListener('input', renderCollectionTracker);
 
   Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -671,10 +1004,37 @@
     newTrip(name.trim());
   });
 
+  // Delete already asks for confirmation (above); this adds a short-lived
+  // undo on top of it, since a confirm() dialog is easy to click through on
+  // autopilot. Holds exactly one deleted trip — a second delete before the
+  // first is undone just replaces it, matching the "one accidental tap"
+  // scope of the ask rather than a full history.
+  var lastDeletedTrip = null;
+  var tripUndoHideTimer = null;
+  function showTripDeleteUndo(name) {
+    clearTimeout(tripUndoHideTimer);
+    els.deleteUndoName.textContent = name;
+    els.deleteUndoBar.style.display = 'flex';
+    tripUndoHideTimer = setTimeout(hideTripDeleteUndo, 10000);
+  }
+  function hideTripDeleteUndo() {
+    clearTimeout(tripUndoHideTimer);
+    els.deleteUndoBar.style.display = 'none';
+    lastDeletedTrip = null;
+  }
+  els.undoDeleteTripBtn.addEventListener('click', function () {
+    if (!lastDeletedTrip) return;
+    TripStore.saveTrip(lastDeletedTrip.name, lastDeletedTrip.data);
+    hideTripDeleteUndo();
+    loadTripByName(lastDeletedTrip.name);
+  });
+
   els.deleteTripBtn.addEventListener('click', function () {
     if (!state) return;
     if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    lastDeletedTrip = { name: state.name, data: JSON.parse(JSON.stringify(state)) };
     TripStore.deleteTrip(state.name);
+    showTripDeleteUndo(lastDeletedTrip.name);
     var remaining = TripStore.listTrips();
     if (remaining.length) loadTripByName(remaining[0]);
     else newTrip('New Field Trip');
@@ -738,7 +1098,9 @@
       if (typeof decoded.batchNames === 'string') next.batchNames = decoded.batchNames;
       if (decoded.blankCount !== undefined) next.blankCount = decoded.blankCount;
       if (decoded.collected && typeof decoded.collected === 'object') next.collected = decoded.collected;
-      state = next;
+      if (Array.isArray(decoded.chaperones)) next.chaperones = decoded.chaperones;
+      if (decoded.chaperoneAssignments && typeof decoded.chaperoneAssignments === 'object') next.chaperoneAssignments = decoded.chaperoneAssignments;
+      state = normalizeState(next);
       TripStore.setCurrentName(name);
       refreshSwitcher();
       els.toolbar.style.display = '';
@@ -765,6 +1127,8 @@
     els.blankFields.style.display = state.mode === 'blank' ? '' : 'none';
     if (state.mode === 'batch') populateRosterSelect();
     renderCollectionTracker();
+    renderChaperoneRows();
+    renderChaperoneAssign();
   }
 
   function newTrip(name) {
@@ -779,10 +1143,9 @@
   function loadTripByName(name) {
     var loaded = TripStore.loadTrip(name);
     if (!loaded) return;
-    state = loaded;
+    state = normalizeState(loaded);
     if (!state.mode) state.mode = 'single';
     if (state.blankCount === undefined) state.blankCount = 5;
-    if (!state.collected || typeof state.collected !== 'object') state.collected = {};
     FIELD_KEYS.forEach(function (k) { if (state[k] === undefined) state[k] = ''; });
     TripStore.setCurrentName(name);
     refreshSwitcher();

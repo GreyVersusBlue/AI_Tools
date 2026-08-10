@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sub Plan Builder</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="sub-plan-builder/lib/jszip.min.js"></script>
 <style>
   :root {
     --ink: #1f2430;
@@ -193,8 +193,16 @@
   <div class="inner">
     <p class="hint">These stay in your browser (localStorage) between visits. Nothing here leaves your computer.</p>
 
-    <label for="teacherName">Your name</label>
-    <input type="text" id="teacherName" placeholder="Devon Moore">
+    <div class="row-2">
+      <div>
+        <label for="teacherName">Your name</label>
+        <input type="text" id="teacherName" placeholder="Devon Moore">
+      </div>
+      <div>
+        <label for="roomNumber">Room number <span class="opt">(shown on the Sub Binder cover page)</span></label>
+        <input type="text" id="roomNumber" placeholder="214">
+      </div>
+    </div>
 
     <label>Class periods &amp; times <span class="opt">— add, remove, or reorder to match your schedule</span></label>
     <div id="periodList"></div>
@@ -243,6 +251,16 @@
       </div>
     </fieldset>
 
+    <fieldset>
+      <legend>Quick checklist for the sub <span class="opt" style="font-weight:400;">— printed at the very top of every plan</span></legend>
+      <label for="keysLocation">Where are the keys? <span class="opt">(optional)</span></label>
+      <input type="text" id="keysLocation" placeholder="Hanging by the door on a red lanyard">
+      <label for="whoToAsk">Who should the sub ask if something comes up? <span class="opt">(optional)</span></label>
+      <input type="text" id="whoToAsk" placeholder="Ms. Rivera next door, Room 216">
+      <label for="techFailureText">If the projector / computer doesn't work&hellip; <span class="opt">(optional)</span></label>
+      <textarea id="techFailureText" rows="2" placeholder="Skip the video — have students read Ch. 12 silently and answer questions 1-5 instead."></textarea>
+    </fieldset>
+
     <label for="signOffName">Sign-off name</label>
     <input type="text" id="signOffName" placeholder="Devon Moore">
 
@@ -254,6 +272,19 @@
       <input type="file" id="importSettingsFile" accept="application/json" style="display:none;">
     </div>
     <p class="field-hint">Moves everything in this section — never the Student Notes box below, since that's never saved anywhere — to another computer or a colleague.</p>
+  </div>
+</details>
+
+<details class="card warn" id="emergencyCard" open>
+  <summary>Emergency info <span class="opt">— always printed at the top of the plan, no matter how short today's lesson is</span></summary>
+  <div class="inner">
+    <p class="hint">Saved with standing details, just like the rest of this section. This block is always included — in the printed/quick-copy plan and in the .docx — so a sub can find it in two seconds.</p>
+    <label for="fireRoute">Fire / evacuation route <span class="opt">(optional)</span></label>
+    <textarea id="fireRoute" rows="2" placeholder="Exit through the door by the windows, turn right, line up on the blacktop past the flagpole."></textarea>
+    <label for="lockdownProcedure">Lockdown procedure <span class="opt">(optional)</span></label>
+    <textarea id="lockdownProcedure" rows="2" placeholder="Lock the door, turn off lights, move students away from windows and out of sight of the door window."></textarea>
+    <label for="medicalAlerts">Medical alerts <span class="opt">(optional — allergies, seizure protocol, etc.)</span></label>
+    <textarea id="medicalAlerts" rows="2" placeholder="One student carries an EpiPen in their backpack; the nurse is already aware."></textarea>
   </div>
 </details>
 
@@ -269,15 +300,24 @@
   <h2 class="section-title">Today's plan</h2>
   <p class="hint">This part is freeform and isn't saved — fill it in fresh each time.</p>
 
-  <div class="row-2">
+  <div class="row-3">
     <div>
-      <label for="planDate">Date</label>
+      <label for="planDate">First day out</label>
       <input type="date" id="planDate">
+    </div>
+    <div style="flex: 0 0 100px;">
+      <label for="numDays">Days out <span class="opt">(school days)</span></label>
+      <input type="text" id="numDays" value="1">
     </div>
     <div>
       <label for="lessonTitle">Lesson / activity title</label>
       <input type="text" id="lessonTitle" placeholder="e.g. Fall of Rome Video">
     </div>
+  </div>
+
+  <div id="dayTabsWrap" style="display:none; margin: -4px 0 16px;">
+    <p class="field-hint" style="margin:0 0 6px;">Multi-day absence — fill in each day separately, then generate once. Editing: <strong id="dayTabsHint"></strong></p>
+    <div id="dayTabs" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
   </div>
 
   <label for="announcement">One-off announcement banner <span class="opt">(optional — e.g. a club cancellation, schedule change)</span></label>
@@ -338,6 +378,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     <li>Use <code>**text**</code> in any of the note fields to bold that part in the exported document.</li>
     <li>The Student Notes box is intentionally never saved — refreshing the page clears it.</li>
     <li>No student names or other data are sent anywhere — the Word doc is built entirely in your browser.</li>
+    <li>"Days out" counts school days only — weekends are skipped automatically, so 3 days out starting Friday means Friday, Monday, and Tuesday.</li>
+    <li>The <a href="sub-binder-generator.html">Sub Binder Generator</a> reads whichever dates you've selected here to default its own date picker — no need to re-enter the date there.</li>
   </ul>
 </details>
 
@@ -348,6 +390,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   const DEFAULTS = {
     teacherName: "Devon Moore",
+    roomNumber: "",
     periods: [
       { label: "2", time: "", _id: "p0" },
       { label: "3", time: "", _id: "p1" },
@@ -366,7 +409,15 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     phoneSupport: "647-2256",
     phoneOther: "posted on the filing cabinet",
     includeCallingOut: true,
-    signOffName: "Devon Moore"
+    signOffName: "Devon Moore",
+    // Emergency info — a standing, always-included block (fix per platform theme P6/quick win).
+    fireRoute: "",
+    lockdownProcedure: "",
+    medicalAlerts: "",
+    // Quick checklist — drawn into the top of every generated plan.
+    keysLocation: "",
+    whoToAsk: "",
+    techFailureText: ""
   };
 
   const BEHAVIOR_TEXT = {
@@ -469,6 +520,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   function applySettingsToForm() {
     el('teacherName').value = settings.teacherName;
+    el('roomNumber').value = settings.roomNumber || '';
     el('rosterLocation').value = settings.rosterLocation;
     el('absenceLocation').value = settings.absenceLocation;
     el('emergencyLocation').value = settings.emergencyLocation;
@@ -483,12 +535,19 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     el('phoneOther').value = settings.phoneOther;
     el('includeCallingOut').checked = !!settings.includeCallingOut;
     el('signOffName').value = settings.signOffName;
+    el('keysLocation').value = settings.keysLocation || '';
+    el('whoToAsk').value = settings.whoToAsk || '';
+    el('techFailureText').value = settings.techFailureText || '';
+    el('fireRoute').value = settings.fireRoute || '';
+    el('lockdownProcedure').value = settings.lockdownProcedure || '';
+    el('medicalAlerts').value = settings.medicalAlerts || '';
     renderPeriods();
   }
 
   applySettingsToForm();
 
   bindField('teacherName', 'teacherName');
+  bindField('roomNumber', 'roomNumber');
   bindField('rosterLocation', 'rosterLocation');
   bindField('absenceLocation', 'absenceLocation');
   bindField('emergencyLocation', 'emergencyLocation');
@@ -501,6 +560,12 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   bindField('phoneOther', 'phoneOther');
   bindField('includeCallingOut', 'includeCallingOut', true);
   bindField('signOffName', 'signOffName');
+  bindField('keysLocation', 'keysLocation');
+  bindField('whoToAsk', 'whoToAsk');
+  bindField('techFailureText', 'techFailureText');
+  bindField('fireRoute', 'fireRoute');
+  bindField('lockdownProcedure', 'lockdownProcedure');
+  bindField('medicalAlerts', 'medicalAlerts');
 
   el('behaviorVariant').addEventListener('change', () => {
     settings.behaviorVariant = el('behaviorVariant').value;
@@ -579,7 +644,127 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   samePeriodsBox.addEventListener('change', renderPerPeriodBlocks);
   renderPerPeriodBlocks();
 
+  // ---------- Multi-day absence: one set of standing details, several day tabs ----------
+  // dayPlans holds each date's freeform fields (never Student Notes, which is
+  // never saved anywhere). Switching tabs captures the currently-visible
+  // fields into dayPlans under the outgoing date, then loads the new one.
+
+  let dayPlans = {};
+  let currentDay = null;
+
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function addDaysISO(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function isWeekendISO(dateStr) {
+    const wd = new Date(dateStr + 'T00:00:00').getDay();
+    return wd === 0 || wd === 6;
+  }
+  function dayLabelLong(dateStr) {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  }
+  function dayLabelShort(dateStr) {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  // The dates a teacher is actually out, in order — consecutive *school* days
+  // (weekends are skipped) starting from "First day out".
+  function computeDateList() {
+    const start = el('planDate').value || todayISO();
+    const n = Math.max(1, Math.min(10, parseInt(el('numDays').value, 10) || 1));
+    const dates = [];
+    let cursor = start;
+    let guard = 0;
+    while (dates.length < n && guard < 60) {
+      if (!isWeekendISO(cursor)) dates.push(cursor);
+      cursor = addDaysISO(cursor, 1);
+      guard++;
+    }
+    return dates;
+  }
+
+  function blankDayPlan() {
+    return { lessonTitle: '', announcement: '', overviewText: '', scheduleText: '', samePeriods: true, sharedPeriodNotes: '', perPeriodValues: {}, materialsNote: '' };
+  }
+
+  function captureCurrentDayFields() {
+    if (!currentDay) return;
+    dayPlans[currentDay] = {
+      lessonTitle: el('lessonTitle').value,
+      announcement: el('announcement').value,
+      overviewText: el('overviewText').value,
+      scheduleText: el('scheduleText').value,
+      samePeriods: samePeriodsBox.checked,
+      sharedPeriodNotes: el('sharedPeriodNotes').value,
+      perPeriodValues: Object.assign({}, perPeriodValues),
+      materialsNote: el('materialsNote').value
+    };
+  }
+
+  function applyDayFieldsToForm(dateStr) {
+    const dp = dayPlans[dateStr] || blankDayPlan();
+    el('lessonTitle').value = dp.lessonTitle;
+    el('announcement').value = dp.announcement;
+    el('overviewText').value = dp.overviewText;
+    el('scheduleText').value = dp.scheduleText;
+    samePeriodsBox.checked = dp.samePeriods !== false;
+    el('sharedPeriodNotes').value = dp.sharedPeriodNotes;
+    perPeriodValues = Object.assign({}, dp.perPeriodValues || {});
+    el('materialsNote').value = dp.materialsNote;
+    renderPerPeriodBlocks();
+  }
+
+  function switchToDay(dateStr) {
+    if (dateStr === currentDay) return;
+    captureCurrentDayFields();
+    currentDay = dateStr;
+    applyDayFieldsToForm(dateStr);
+    renderDayTabs();
+  }
+
+  function renderDayTabs() {
+    const dates = computeDateList();
+    const wrap = el('dayTabsWrap');
+    if (!dates.includes(currentDay)) {
+      captureCurrentDayFields();
+      currentDay = dates[0];
+      applyDayFieldsToForm(currentDay);
+    }
+    if (dates.length <= 1) {
+      wrap.style.display = 'none';
+    } else {
+      wrap.style.display = 'block';
+      el('dayTabsHint').textContent = dayLabelLong(currentDay);
+      el('dayTabs').innerHTML = dates.map(d => {
+        const cls = d === currentDay ? 'small primary' : 'small';
+        return `<button type="button" class="${cls}" data-day="${d}">${dayLabelShort(d)}</button>`;
+      }).join('');
+      el('dayTabs').querySelectorAll('button[data-day]').forEach(btn => {
+        btn.addEventListener('click', () => switchToDay(btn.dataset.day));
+      });
+    }
+    persistLastAbsence(dates);
+  }
+
+  // The one piece of shared state between this tool and Sub Binder Generator:
+  // whichever dates are currently selected here, so that tool can default its
+  // own date picker to the same absence instead of always assuming "today".
+  const LAST_ABSENCE_KEY = 'subPlanBuilder.lastAbsence.v1';
+  function persistLastAbsence(dates) {
+    try {
+      localStorage.setItem(LAST_ABSENCE_KEY, JSON.stringify({ dates: dates, updatedAt: new Date().toISOString() }));
+    } catch (e) { /* storage full/blocked */ }
+  }
+
   el('planDate').valueAsDate = new Date();
+  el('planDate').addEventListener('change', renderDayTabs);
+  el('numDays').addEventListener('input', renderDayTabs);
+  renderDayTabs();
 
   // ---------- Dated plan history (opt-in; never includes Student Notes) ----------
 
@@ -594,22 +779,29 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   }
 
   function saveCurrentPlanToHistory() {
-    const dateVal = el('planDate').value;
-    if (!dateVal) return;
-    const entry = {
-      date: dateVal,
-      lessonTitle: el('lessonTitle').value,
-      announcement: el('announcement').value,
-      overviewText: el('overviewText').value,
-      scheduleText: el('scheduleText').value,
-      samePeriods: samePeriodsBox.checked,
-      sharedPeriodNotes: el('sharedPeriodNotes').value,
-      perPeriodValues: Object.assign({}, perPeriodValues),
-      materialsNote: el('materialsNote').value
-    };
-    // Re-saving the same date replaces that day's entry rather than duplicating it.
-    let entries = loadHistoryEntries().filter(en => en.date !== dateVal);
-    entries.unshift(entry);
+    // Multi-day: each day out gets its own history entry, in the exact same
+    // shape used before multi-day existed — this is also the shape Sub Binder
+    // Generator reads directly to find "the plan for date X".
+    captureCurrentDayFields();
+    const dates = computeDateList();
+    let entries = loadHistoryEntries();
+    dates.forEach(dateVal => {
+      const dp = dayPlans[dateVal] || blankDayPlan();
+      const entry = {
+        date: dateVal,
+        lessonTitle: dp.lessonTitle,
+        announcement: dp.announcement,
+        overviewText: dp.overviewText,
+        scheduleText: dp.scheduleText,
+        samePeriods: dp.samePeriods,
+        sharedPeriodNotes: dp.sharedPeriodNotes,
+        perPeriodValues: Object.assign({}, dp.perPeriodValues),
+        materialsNote: dp.materialsNote
+      };
+      // Re-saving the same date replaces that day's entry rather than duplicating it.
+      entries = entries.filter(en => en.date !== dateVal);
+      entries.unshift(entry);
+    });
     if (entries.length > MAX_HISTORY) entries = entries.slice(0, MAX_HISTORY);
     try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch (e) { /* storage full/blocked */ }
     renderHistoryList();
@@ -634,16 +826,19 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   function loadHistoryEntry(i) {
     const en = loadHistoryEntries()[i];
     if (!en) return;
-    if (!confirm("Load this saved plan as a starting point? This replaces the current Today's plan fields below (Student Notes is left untouched).")) return;
-    el('lessonTitle').value = en.lessonTitle || '';
-    el('announcement').value = en.announcement || '';
-    el('overviewText').value = en.overviewText || '';
-    el('scheduleText').value = en.scheduleText || '';
-    samePeriodsBox.checked = en.samePeriods !== false;
-    el('sharedPeriodNotes').value = en.sharedPeriodNotes || '';
-    perPeriodValues = Object.assign({}, en.perPeriodValues || {});
-    el('materialsNote').value = en.materialsNote || '';
-    renderPerPeriodBlocks();
+    if (!confirm("Load this saved plan as a starting point? This replaces the currently-open day tab's fields below (Student Notes is left untouched).")) return;
+    if (!currentDay) currentDay = todayISO();
+    dayPlans[currentDay] = {
+      lessonTitle: en.lessonTitle || '',
+      announcement: en.announcement || '',
+      overviewText: en.overviewText || '',
+      scheduleText: en.scheduleText || '',
+      samePeriods: en.samePeriods !== false,
+      sharedPeriodNotes: en.sharedPeriodNotes || '',
+      perPeriodValues: Object.assign({}, en.perPeriodValues || {}),
+      materialsNote: en.materialsNote || ''
+    };
+    applyDayFieldsToForm(currentDay);
   }
 
   function deleteHistoryEntry(i) {
@@ -667,43 +862,64 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     return String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
   }
 
-  function buildPlainTextPlan() {
+  function buildPlainTextForDay(dateStr, dp, dayIndex, totalDays) {
     const lines = [];
     const teacherName = el('teacherName').value.trim() || 'Devon Moore';
     const signOff = el('signOffName').value.trim() || teacherName;
-    const dateVal = el('planDate').value;
-    const dateDisplay = dateVal ? new Date(dateVal + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '[Insert Date]';
-    const lessonTitle = el('lessonTitle').value.trim();
+    const dateDisplay = dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '[Insert Date]';
+    const lessonTitle = (dp.lessonTitle || '').trim();
+    const dayTag = totalDays > 1 ? ` (Day ${dayIndex + 1} of ${totalDays})` : '';
 
-    lines.push('SUBSTITUTE PLAN' + (lessonTitle ? ' – ' + lessonTitle : ''));
-    lines.push('Teacher: ' + teacherName);
+    lines.push('SUBSTITUTE PLAN' + (lessonTitle ? ' – ' + lessonTitle : '') + dayTag);
+    lines.push('Teacher: ' + teacherName + (settings.roomNumber ? '   Room: ' + settings.roomNumber : ''));
     lines.push('Date: ' + dateDisplay);
 
-    const announcement = el('announcement').value.trim();
+    // Emergency info — always included, first, regardless of how short the lesson is.
+    lines.push('');
+    lines.push('EMERGENCY INFO');
+    const hasEmergencyInfo = (settings.fireRoute || '').trim() || (settings.lockdownProcedure || '').trim() || (settings.medicalAlerts || '').trim();
+    if (!hasEmergencyInfo) {
+      lines.push('  (Nothing entered yet — add a fire route, lockdown procedure, and any medical alerts in Standing Details.)');
+    } else {
+      if ((settings.fireRoute || '').trim()) lines.push('  Fire / evacuation: ' + stripBold(settings.fireRoute.trim()));
+      if ((settings.lockdownProcedure || '').trim()) lines.push('  Lockdown: ' + stripBold(settings.lockdownProcedure.trim()));
+      if ((settings.medicalAlerts || '').trim()) lines.push('  Medical alerts: ' + stripBold(settings.medicalAlerts.trim()));
+    }
+
+    // Quick checklist — the "hard to accidentally omit" summary drawn from standing details.
+    lines.push('');
+    lines.push('QUICK CHECKLIST');
+    const periodsAll = settings.periods.filter(p => (p.label || '').trim());
+    if (periodsAll.length) lines.push('  Bell times: ' + periodsAll.map(p => 'P' + p.label + (p.time ? ' ' + p.time : '')).join(', '));
+    if ((settings.keysLocation || '').trim()) lines.push('  Keys: ' + settings.keysLocation.trim());
+    if ((settings.whoToAsk || '').trim()) lines.push('  Who to ask: ' + settings.whoToAsk.trim());
+    if ((settings.techFailureText || '').trim()) lines.push('  If tech fails: ' + stripBold(settings.techFailureText.trim()));
+
+    const announcement = (dp.announcement || '').trim();
     if (announcement) { lines.push(''); linesOf(announcement).forEach(l => lines.push(stripBold(l).toUpperCase())); }
 
-    const overview = el('overviewText').value.trim();
+    const overview = (dp.overviewText || '').trim();
     if (overview) { lines.push(''); lines.push('OVERVIEW'); linesOf(overview).forEach(l => lines.push(stripBold(l))); }
 
-    const schedule = el('scheduleText').value.trim();
+    const schedule = (dp.scheduleText || '').trim();
     if (schedule) { lines.push(''); lines.push('CLASS SCHEDULE & TIMING'); linesOf(schedule).forEach(l => lines.push('- ' + stripBold(l))); }
 
-    const periods = settings.periods.filter(p => (p.label || '').trim());
+    const periods = periodsAll;
     if (periods.length) {
       lines.push('');
       lines.push('PERIOD-SPECIFIC DETAILS');
-      const same = samePeriodsBox.checked;
-      const sharedNotes = el('sharedPeriodNotes').value.trim();
+      const same = dp.samePeriods !== false;
+      const sharedNotes = (dp.sharedPeriodNotes || '').trim();
       periods.forEach(p => {
         lines.push('Period ' + p.label + (p.time ? ' (' + p.time + ')' : ''));
-        const notes = same ? sharedNotes : (perPeriodValues[p._id] || '');
+        const notes = same ? sharedNotes : ((dp.perPeriodValues || {})[p._id] || '');
         linesOf(notes).forEach(l => lines.push('  - ' + stripBold(l)));
       });
     }
 
     lines.push('');
     lines.push('IMPORTANT NOTES');
-    const materials = el('materialsNote').value.trim();
+    const materials = (dp.materialsNote || '').trim();
     if (materials) linesOf(materials).forEach(l => lines.push(stripBold(l)));
     const attendanceText = el('attendanceText').value.trim();
     if (attendanceText) lines.push('Attendance: ' + attendanceText);
@@ -746,6 +962,13 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     lines.push(signOff);
 
     return lines.join('\n');
+  }
+
+  function buildPlainTextPlan() {
+    captureCurrentDayFields();
+    const dates = computeDateList();
+    return dates.map((d, i) => buildPlainTextForDay(d, dayPlans[d] || blankDayPlan(), i, dates.length))
+      .join('\n\n' + '='.repeat(44) + '\n\n');
   }
 
   function openQuickCopyModal() {
@@ -882,29 +1105,52 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     return text.split('\n').map(l => l.trim()).filter(Boolean).map(l => paragraph(l, opts));
   }
 
-  function buildDocumentXml() {
+  function pageBreakParagraph() {
+    return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+  }
+
+  function buildDayParas(dateStr, dp, dayIndex, totalDays) {
     const paras = [];
 
     const teacherName = el('teacherName').value.trim() || 'Devon Moore';
     const signOff = el('signOffName').value.trim() || teacherName;
-    const dateVal = el('planDate').value;
-    const dateDisplay = dateVal ? new Date(dateVal + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
-    const lessonTitle = el('lessonTitle').value.trim();
+    const dateDisplay = dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+    const lessonTitle = (dp.lessonTitle || '').trim();
+    const dayTag = totalDays > 1 ? ` (Day ${dayIndex + 1} of ${totalDays})` : '';
 
-    paras.push(heading(1, 'Substitute Plan' + (lessonTitle ? ' – ' + lessonTitle : '')));
-    paras.push(paragraph('Teacher: ' + teacherName, {}));
-    // bold just the label
-    paras[paras.length - 1] = `<w:p>${run('Teacher: ', true)}${run(teacherName, false)}</w:p>`;
+    paras.push(heading(1, 'Substitute Plan' + (lessonTitle ? ' – ' + lessonTitle : '') + dayTag));
+    paras.push(`<w:p>${run('Teacher: ', true)}${run(teacherName, false)}${settings.roomNumber ? run('   Room: ', true) + run(settings.roomNumber, false) : ''}</w:p>`);
     paras.push(`<w:p>${run('Date: ', true)}${run(dateDisplay || '[Insert Date]', false)}</w:p>`);
 
-    const announcement = el('announcement').value.trim();
+    // Emergency info — always included, right up top, regardless of lesson length.
+    paras.push(emptyParagraph());
+    paras.push(heading(2, 'Emergency Info'));
+    const hasEmergencyInfo = (settings.fireRoute || '').trim() || (settings.lockdownProcedure || '').trim() || (settings.medicalAlerts || '').trim();
+    if (!hasEmergencyInfo) {
+      paras.push(paragraph('(Nothing entered yet — add a fire route, lockdown procedure, and any medical alerts in Standing Details.)', {}));
+    } else {
+      if ((settings.fireRoute || '').trim()) paras.push(`<w:p>${run('Fire / evacuation: ', true)}${runsFor(settings.fireRoute.trim())}</w:p>`);
+      if ((settings.lockdownProcedure || '').trim()) paras.push(`<w:p>${run('Lockdown: ', true)}${runsFor(settings.lockdownProcedure.trim())}</w:p>`);
+      if ((settings.medicalAlerts || '').trim()) paras.push(`<w:p>${run('Medical alerts: ', true)}${runsFor(settings.medicalAlerts.trim())}</w:p>`);
+    }
+
+    // Quick checklist
+    paras.push(emptyParagraph());
+    paras.push(heading(2, 'Quick Checklist'));
+    const periodsAll = settings.periods.filter(p => (p.label || '').trim());
+    if (periodsAll.length) paras.push(paragraph('Bell times: ' + periodsAll.map(p => 'P' + p.label + (p.time ? ' ' + p.time : '')).join(', '), { style: 'ListParagraph', bullet: true }));
+    if ((settings.keysLocation || '').trim()) paras.push(paragraph('Keys: ' + settings.keysLocation.trim(), { style: 'ListParagraph', bullet: true }));
+    if ((settings.whoToAsk || '').trim()) paras.push(paragraph('Who to ask: ' + settings.whoToAsk.trim(), { style: 'ListParagraph', bullet: true }));
+    if ((settings.techFailureText || '').trim()) paras.push(paragraph('If tech fails: ' + settings.techFailureText.trim(), { style: 'ListParagraph', bullet: true }));
+
+    const announcement = (dp.announcement || '').trim();
     if (announcement) {
       paras.push(emptyParagraph());
       linesToParagraphs(announcement, { bold: true }).forEach(p => paras.push(p));
     }
 
     // Overview
-    const overview = el('overviewText').value.trim();
+    const overview = (dp.overviewText || '').trim();
     if (overview) {
       paras.push(emptyParagraph());
       paras.push(heading(2, 'Overview'));
@@ -912,7 +1158,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     }
 
     // Schedule & timing
-    const schedule = el('scheduleText').value.trim();
+    const schedule = (dp.scheduleText || '').trim();
     if (schedule) {
       paras.push(emptyParagraph());
       paras.push(heading(2, 'Class Schedule & Timing'));
@@ -920,16 +1166,16 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     }
 
     // Period-specific details
-    const periods = settings.periods.filter(p => (p.label || '').trim());
+    const periods = periodsAll;
     if (periods.length) {
       paras.push(emptyParagraph());
       paras.push(heading(2, 'Period-Specific Details'));
-      const same = samePeriodsBox.checked;
-      const sharedNotes = el('sharedPeriodNotes').value.trim();
+      const same = dp.samePeriods !== false;
+      const sharedNotes = (dp.sharedPeriodNotes || '').trim();
       periods.forEach((p, i) => {
         const label = 'Period ' + p.label + (p.time ? ' (' + p.time + ')' : '');
         paras.push(heading(3, label));
-        const notes = same ? sharedNotes : (perPeriodValues[p._id] || '');
+        const notes = same ? sharedNotes : ((dp.perPeriodValues || {})[p._id] || '');
         if (notes.trim()) {
           linesToParagraphs(notes, { style: 'ListParagraph', bullet: true }).forEach(p2 => paras.push(p2));
         }
@@ -937,7 +1183,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     }
 
     // Important notes
-    const materials = el('materialsNote').value.trim();
+    const materials = (dp.materialsNote || '').trim();
     paras.push(emptyParagraph());
     paras.push(heading(2, 'Important Notes'));
     if (materials) {
@@ -998,10 +1244,19 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     paras.push(paragraph('Thank you for covering!', {}));
     paras.push(paragraph(signOff, {}));
 
+    return paras;
+  }
+
+  function buildDocumentXml() {
+    captureCurrentDayFields();
+    const dates = computeDateList();
+    const body = dates.map((d, i) => buildDayParas(d, dayPlans[d] || blankDayPlan(), i, dates.length).join(''))
+      .join(pageBreakParagraph());
+
     const sectPr = `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
-      `<w:document xmlns:w="${W_NS}"><w:body>${paras.join('')}${sectPr}</w:body></w:document>`;
+      `<w:document xmlns:w="${W_NS}"><w:body>${body}${sectPr}</w:body></w:document>`;
   }
 
   function buildStylesXml() {
@@ -1096,9 +1351,11 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     downloadArea.style.display = 'none';
     try {
       const blob = await generateDocx();
-      const dateVal = el('planDate').value || 'plan';
-      const title = (el('lessonTitle').value.trim() || 'Sub Plan').replace(/[\\/:*?"<>|]/g, '');
-      const filename = `${dateVal} - ${title}.docx`;
+      const dates = computeDateList();
+      const firstDayTitle = ((dayPlans[dates[0]] || {}).lessonTitle || el('lessonTitle').value || 'Sub Plan').trim().replace(/[\\/:*?"<>|]/g, '') || 'Sub Plan';
+      const filename = dates.length > 1
+        ? `${dates[0]} to ${dates[dates.length - 1]} - Sub Plans.docx`
+        : `${dates[0]} - ${firstDayTitle}.docx`;
       const url = URL.createObjectURL(blob);
       downloadLink.href = url;
       downloadLink.setAttribute('download', filename);

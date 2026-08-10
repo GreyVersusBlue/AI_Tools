@@ -40,6 +40,14 @@ export const QUARTERS = 4;
 export const LETTER_CUTOFFS = [['A', 89.5], ['B', 79.5], ['C', 69.5], ['D', 59.5]];
 export const QP_CUTOFFS     = [['A', 3.5],  ['B', 2.5],  ['C', 1.5],  ['D', 0.5]];
 
+// "Strict" cutoffs are the alternative rounding policy: no credit for exactly
+// .5, so the average has to actually reach the next whole letter/point rather
+// than round up into it. Some districts round; some don't. This is an opt-in
+// (see `boundary` in the opts object below) — the default everywhere in this
+// file is still the county rule above, unchanged.
+export const LETTER_CUTOFFS_STRICT = [['A', 90], ['B', 80], ['C', 70], ['D', 60]];
+export const QP_CUTOFFS_STRICT     = [['A', 4],  ['B', 3],  ['C', 2],  ['D', 1]];
+
 const QP_VALUE = { A: 4, B: 3, C: 2, D: 1, F: 0 };
 export const RANK = { A: 4, B: 3, C: 2, D: 1, F: 0 };
 
@@ -52,12 +60,42 @@ export function toScore(v) {
   return n;
 }
 
+/**
+ * Rounds `v` to `decimals` places, or returns `v` unchanged when `decimals`
+ * is null/undefined. This is the "does the average get rounded before it's
+ * compared to a cutoff" knob — off by default, because the county rule as
+ * documented above never does this, and turning it on is a policy choice a
+ * teacher makes explicitly (see the Grading Settings panel in the tool).
+ */
+function roundTo(v, decimals) {
+  if (decimals === null || decimals === undefined) return v;
+  const f = Math.pow(10, decimals);
+  return Math.round(v * f) / f;
+}
+
+/**
+ * Rounding-rule options threaded through getLetter/qpToFinalLetter/calcFinals.
+ * All optional, and every default reproduces the original, tested behaviour
+ * exactly — calling any of these functions with no opts (or `{}`) is
+ * byte-for-byte the same as before this option existed.
+ *
+ *   boundary  — 'half' (default, county rule: exactly .5 rounds up) or
+ *               'strict' (no rounding credit; the whole cutoff must be reached)
+ *   precision — null (default, no extra rounding) or a number of decimal
+ *               places to round the score/average to before the cutoff check
+ *   weights   — null (default, four quarters at equal 25% weight) or an
+ *               array of four positive numbers (need not sum to 100; they're
+ *               normalised) giving each quarter's share of the final average
+ */
+
 /** Letter for a single percentage on the ten-point scale. */
-export function getLetter(score) {
+export function getLetter(score, opts) {
   const n = toScore(score);
   if (n === null) return null;
-  const v = normalise(n);
-  for (const [letter, cutoff] of LETTER_CUTOFFS) if (v >= cutoff) return letter;
+  const { boundary = 'half', precision = null } = opts || {};
+  const v = roundTo(normalise(n), precision);
+  const cutoffs = boundary === 'strict' ? LETTER_CUTOFFS_STRICT : LETTER_CUTOFFS;
+  for (const [letter, cutoff] of cutoffs) if (v >= cutoff) return letter;
   return 'F';
 }
 
@@ -67,10 +105,12 @@ export function getQP(letter) {
 }
 
 /** Letter for an averaged quality-point figure. */
-export function qpToFinalLetter(avgQP) {
+export function qpToFinalLetter(avgQP, opts) {
   if (!Number.isFinite(avgQP)) return null;
-  const v = normalise(avgQP);
-  for (const [letter, cutoff] of QP_CUTOFFS) if (v >= cutoff) return letter;
+  const { boundary = 'half', precision = null } = opts || {};
+  const v = roundTo(normalise(avgQP), precision);
+  const cutoffs = boundary === 'strict' ? QP_CUTOFFS_STRICT : QP_CUTOFFS;
+  for (const [letter, cutoff] of cutoffs) if (v >= cutoff) return letter;
   return 'F';
 }
 
@@ -80,17 +120,33 @@ export function qpToFinalLetter(avgQP) {
  * county's number and printing one next to the words "final grade" invites it
  * onto a report card.
  *
+ * `opts` is the same rounding/weights object described above and is entirely
+ * optional. With no `opts.weights`, the four quarters are averaged equally,
+ * exactly as before — the weighted branch below only runs when a caller
+ * supplies weights, so the unweighted arithmetic path (and every existing
+ * test against it) is untouched.
+ *
  * Returns { avgQP, qpFinal, pctAvg, pctFinal, winner, finalLetter }.
  */
-export function calcFinals(scores) {
+export function calcFinals(scores, opts) {
+  const weights = opts && opts.weights;
   const valid = (scores || []).map(toScore).filter(s => s !== null);
   if (valid.length < QUARTERS) return null;
 
-  const letters  = valid.map(getLetter);
-  const avgQP    = letters.map(getQP).reduce((a, b) => a + b, 0) / QUARTERS;
-  const qpFinal  = qpToFinalLetter(avgQP);
-  const pctAvg   = valid.reduce((a, b) => a + b, 0) / QUARTERS;
-  const pctFinal = getLetter(pctAvg);
+  const letters = valid.map(s => getLetter(s, opts));
+  const qpVals  = letters.map(getQP);
+
+  let avgQP, pctAvg;
+  if (weights && weights.length === QUARTERS && weights.every(w => Number.isFinite(w) && w > 0)) {
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    avgQP  = qpVals.reduce((acc, v, i) => acc + v * weights[i], 0) / wSum;
+    pctAvg = valid.reduce((acc, v, i) => acc + v * weights[i], 0) / wSum;
+  } else {
+    avgQP  = qpVals.reduce((a, b) => a + b, 0) / QUARTERS;
+    pctAvg = valid.reduce((a, b) => a + b, 0) / QUARTERS;
+  }
+  const qpFinal  = qpToFinalLetter(avgQP, opts);
+  const pctFinal = getLetter(pctAvg, opts);
 
   // Rule 2. Ties go to quality points; the letter is the same either way.
   const winner = (RANK[qpFinal] ?? -1) >= (RANK[pctFinal] ?? -1) ? 'QP' : 'PCT';

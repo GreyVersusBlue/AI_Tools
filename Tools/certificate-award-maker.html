@@ -80,6 +80,22 @@
   }
   .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
 
+  /* Layout choice pills (orientation, per-page) — same look as .mode-tab but
+     not full-width/flex:1, since there are only ever two short options. */
+  .seg-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; flex-wrap: wrap; }
+  .seg-tab {
+    padding: .4rem .8rem; border: 1px solid var(--line-strong);
+    border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .8rem; color: var(--muted);
+  }
+  .seg-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+  .roster-row { display: flex; gap: .5rem; margin-bottom: .6rem; }
+  .roster-row select { margin-bottom: 0; flex: 1; }
+  .roster-row button { flex-shrink: 0; padding: .5rem .8rem; width: auto; }
+
+  .undo-bar { font-size: .82rem; color: var(--muted); display: flex; align-items: center; gap: .5rem; }
+  .undo-bar button { width: auto; }
+
   .view-toggle { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .view-tab {
     padding: .35rem .8rem; border: 1px solid var(--line-strong);
@@ -131,8 +147,11 @@
     position: relative; width: 100%; aspect-ratio: 1100 / 850; overflow: hidden;
     background: #fff; border-radius: 4px; box-shadow: 0 1px 6px rgba(0,0,0,.22);
   }
+  /* Width and aspect-ratio are set inline per-thumbnail by renderGrid()/
+     scaleThumbs() since they depend on the orientation setting (1100x850
+     landscape vs 850x1100 portrait) rather than being a fixed constant. */
   .thumb-inner .cert {
-    position: absolute; top: 0; left: 0; width: 1100px; max-width: none;
+    position: absolute; top: 0; left: 0; max-width: none;
     margin: 0; box-shadow: none; transform-origin: top left;
   }
   .thumb-label {
@@ -163,13 +182,33 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  /* One .print-page per printed sheet, holding one or two .cert-slot
+     wrappers (see buildPrintArea()/#perPageTabs). The @page size itself
+     (landscape vs portrait) is injected dynamically by #camPageSizeStyle
+     since it depends on the orientation setting, not fixed here. */
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-    .cert { box-shadow: none; width: 100vw; max-width: none; aspect-ratio: auto; height: 100vh; page-break-after: always; }
-    .cert:last-child { page-break-after: auto; }
-    @page { size: letter landscape; margin: 0.35in; }
+    .print-page {
+      width: 100vw; height: 100vh; display: flex; flex-direction: column;
+      page-break-after: always;
+    }
+    .print-page:last-child { page-break-after: auto; }
+    .print-page .cert-slot {
+      flex: 1 1 0; min-height: 0; position: relative; overflow: hidden;
+    }
+    /* A faint cut guide between the two halves when printing 2-per-page. */
+    .print-page.per-2 .cert-slot + .cert-slot { border-top: 1px dashed #999; }
+    /* certificateHtml() sets aspect-ratio inline (it has to — it varies with
+       orientation) so overriding it here for print needs !important: the
+       slot is stretched to fill exactly, same as this tool always did before
+       per-page/orientation existed. */
+    .cert {
+      box-shadow: none !important; margin: 0 !important;
+      width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important;
+      aspect-ratio: auto !important;
+    }
   }
 </style>
 </head>
@@ -188,6 +227,10 @@
     <select id="presetSwitch"></select>
     <button class="secondary" style="width:auto;" id="newPresetBtn">New preset</button>
     <button class="danger" style="width:auto;" id="deletePresetBtn">Delete</button>
+    <span class="undo-bar" id="deleteUndoBar" style="display:none;">
+      Deleted &ldquo;<span id="deleteUndoName"></span>&rdquo;.
+      <button type="button" class="secondary small" id="undoDeleteBtn">Undo</button>
+    </span>
   </div>
 
   <div class="layout">
@@ -224,18 +267,29 @@
           <input type="text" id="studentName" placeholder="Jordan Smith">
         </div>
         <div id="batchFields" style="display:none;">
+          <div class="roster-row">
+            <select id="camRosterSelect"><option value="">Load a saved Name Picker roster&hellip;</option></select>
+            <button type="button" class="secondary" id="camLoadRosterBtn">Load</button>
+          </div>
           <label for="batchNames">Student names (one per line)</label>
-          <p class="hint">Every name gets its own certificate with the same settings below. Add a comma and a title after a name (e.g. "Alex Rivera, Most Improved") to give just that student a different award instead of the shared one.</p>
-          <textarea id="batchNames" placeholder="Jordan Smith&#10;Alex Rivera, Most Improved&#10;Sam Okafor"></textarea>
+          <p class="hint">Every name gets its own certificate with the same settings below. Paste a name and a reason
+            as two columns straight from a spreadsheet (tab-separated), or type a comma after the name, to give just
+            that student their own specific reason instead of the shared one &mdash; e.g. "Alex Rivera, for helping a
+            classmate with the fraction unit." Add "| Custom Title" at the end to also swap that student's award
+            title.</p>
+          <textarea id="batchNames" placeholder="Jordan Smith&#10;Alex Rivera, for helping a classmate all week | Most Improved&#10;Sam Okafor"></textarea>
         </div>
 
-        <label for="awardTitle">Award title</label>
+        <label for="awardTitle">Award title / template</label>
         <select id="awardTitle">
           <option>Certificate of Achievement</option>
           <option>Most Improved</option>
           <option>Perfect Attendance</option>
           <option>Student of the Month</option>
           <option>Outstanding Effort</option>
+          <option>Homework Pass</option>
+          <option>Reading Milestone</option>
+          <option>Good News Note Home</option>
           <option value="__custom">Custom&hellip;</option>
         </select>
         <input type="text" id="awardTitleCustom" placeholder="Type a custom award title" style="display:none;">
@@ -252,7 +306,21 @@
         <label for="qrUrl">Link this certificate to (optional)</label>
         <p class="hint">Adds a small QR code to the certificate that scans to a congratulatory note, video, or portfolio page.</p>
         <input type="text" id="qrUrl" placeholder="https://...">
+      </div>
 
+      <div class="card">
+        <label>Orientation</label>
+        <div class="seg-tabs" id="orientTabs">
+          <div class="seg-tab active" data-orient="landscape">Landscape</div>
+          <div class="seg-tab" data-orient="portrait">Portrait</div>
+        </div>
+        <label>Certificates per printed page</label>
+        <div class="seg-tabs" id="perPageTabs">
+          <div class="seg-tab active" data-perpage="1">1 per page</div>
+          <div class="seg-tab" data-perpage="2">2 per page</div>
+        </div>
+        <p class="hint">Two per page works well for smaller awards — a homework pass or a "caught being kind" slip
+          doesn't need a whole sheet of paper. Cut along the dashed guide.</p>
         <button type="button" id="printBtn">Print / Save as PDF</button>
       </div>
     </div>
@@ -273,6 +341,7 @@
 
 </div>
 
+<style id="camPageSizeStyle">@page { size: letter landscape; margin: 0.35in; }</style>
 <div id="printArea" style="display:none;"></div>
 
 <script>
@@ -289,11 +358,15 @@
 
   var els = {};
   ['toolbar','presetSwitch','newPresetBtn','deletePresetBtn','presetName',
+   'deleteUndoBar','deleteUndoName','undoDeleteBtn',
    'themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoRemove',
-   'singleFields','batchFields','studentName','batchNames',
+   'singleFields','batchFields','studentName','batchNames','camRosterSelect','camLoadRosterBtn',
    'awardTitle','awardTitleCustom','reason','certDate','signature','qrUrl','printBtn',
+   'orientTabs','perPageTabs','camPageSizeStyle',
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   // Which batch preview the teacher is looking at right now — not persisted,
   // it's a display choice rather than a certificate setting.
@@ -326,8 +399,19 @@
       reason: '',
       certDate: todayLocalISO(),
       signature: '',
-      qrUrl: '' // optional link to a note/video/portfolio page, or '' for no QR code
+      qrUrl: '', // optional link to a note/video/portfolio page, or '' for no QR code
+      orientation: 'landscape', // 'landscape' | 'portrait'
+      perPage: 1 // 1 | 2 — certificates per printed sheet
     };
+  }
+
+  // Certificates saved before orientation/perPage existed just don't have
+  // the keys — fill in the old (landscape, one-per-page) behavior so a
+  // returning preset renders exactly as it always did.
+  function normalizeSettings(s) {
+    if (s.orientation !== 'portrait') s.orientation = 'landscape';
+    s.perPage = (s.perPage === 2 || s.perPage === '2') ? 2 : 1;
+    return s;
   }
 
   function persist() { if (settings) CertificateStore.savePreset(settings.name, settings); }
@@ -387,6 +471,40 @@
     }
   }
 
+  /* ---------- roster loading (read-only reuse of Name Picker rosters) ----------
+     Same shape/behavior as behavior-points-tracker.html and
+     field-trip-permission-slip.html: np_rosters is an object of
+     { "Roster Name": ["Student A", "Student B", ...] }. */
+  function safeParseJson(json, fallback) {
+    if (json == null) return fallback;
+    try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
+  }
+
+  function populateRosterSelect() {
+    var rosters = safeParseJson(localStorage.getItem(NAME_PICKER_ROSTERS_KEY), {});
+    var names = Object.keys(rosters);
+    if (!names.length) {
+      els.camRosterSelect.innerHTML = '<option value="">No saved rosters found</option>';
+      return;
+    }
+    els.camRosterSelect.innerHTML = '<option value="">Load a saved Name Picker roster&hellip;</option>' +
+      names.map(function (n) {
+        var count = Array.isArray(rosters[n]) ? rosters[n].length : 0;
+        return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + count + ')</option>';
+      }).join('');
+  }
+
+  els.camLoadRosterBtn.addEventListener('click', function () {
+    var name = els.camRosterSelect.value;
+    if (!name) return;
+    var rosters = safeParseJson(localStorage.getItem(NAME_PICKER_ROSTERS_KEY), {});
+    var list = rosters[name];
+    if (!Array.isArray(list) || !list.length) return;
+    els.batchNames.value = list.join('\n');
+    settings.batchNames = els.batchNames.value;
+    renderAll();
+  });
+
   /* ---------- QR code encoding the optional link URL ---------- */
   var qrCache = { key: '', url: null };
   function buildQrDataUrl(text) {
@@ -442,19 +560,39 @@
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  function certificateHtml(name, title) {
-    var w = 1100, h = 850;
+  // Certificate dimensions in the design-time SVG/HTML coordinate space —
+  // swapped for portrait. Everything (border SVG viewBox, thumbnail native
+  // width, aspect-ratio) is derived from this one pair.
+  function certDims() {
+    return settings.orientation === 'portrait' ? [850, 1100] : [1100, 850];
+  }
+
+  // A few templates aren't "awarded to" a student in the usual sense: a
+  // homework pass is redeemed, a note home is addressed to the family. The
+  // line above the name swaps to match. Anything not listed (including a
+  // custom title, or a per-line batch override) keeps the default phrase.
+  var KICKER_MAP = {
+    'Homework Pass': 'This pass entitles',
+    'Good News Note Home': 'Great news about'
+  };
+  var DEFAULT_KICKER = 'This certificate is proudly presented to';
+  function kickerFor(title) { return KICKER_MAP[title] || DEFAULT_KICKER; }
+
+  function certificateHtml(name, title, reason) {
+    var dims = certDims(), w = dims[0], h = dims[1];
     var qrUrl = (settings.qrUrl || '').trim();
     var qrDataUrl = qrUrl ? getQrDataUrl(qrUrl) : null;
+    var effTitle = title || effectiveTitle();
+    var effReason = (reason != null && reason !== '') ? reason : settings.reason;
     return (
-      '<div class="cert theme-' + settings.theme + '">' +
+      '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + '">' +
         CertificateBorders.borderSvg(settings.border, w, h) +
         (settings.logo ? '<img class="cert-logo" src="' + settings.logo + '" alt="">' : '') +
         (qrDataUrl ? '<img class="cert-qr" src="' + qrDataUrl + '" alt="QR code linking to more about this award" title="Scan for more">' : '') +
-        '<div class="cert-kicker">This certificate is proudly presented to</div>' +
+        '<div class="cert-kicker">' + escapeHtml(kickerFor(effTitle)) + '</div>' +
         '<div class="cert-name">' + escapeHtml(name) + '</div>' +
-        '<div class="cert-title">' + escapeHtml(title || effectiveTitle()) + '</div>' +
-        (settings.reason ? '<div class="cert-reason">' + escapeHtml(settings.reason) + '</div>' : '') +
+        '<div class="cert-title">' + escapeHtml(effTitle) + '</div>' +
+        (effReason ? '<div class="cert-reason">' + escapeHtml(effReason) + '</div>' : '') +
         '<div class="cert-footer">' +
           '<div class="line">' + escapeHtml(formattedDate()) + '</div>' +
           '<div class="line">' + escapeHtml(settings.signature || ' ') + '</div>' +
@@ -463,13 +601,33 @@
     );
   }
 
-  // Each line is "Name" or "Name, Award Title" — the per-line title (if any)
-  // overrides the shared awardTitle just for that one certificate.
+  // Each line is "Name", "Name, Reason", or "Name<TAB>Reason" (tab-separated
+  // is what pasting two columns straight from a spreadsheet produces — the
+  // same convention used by vocab-flashcard-generator and
+  // exit-ticket-generator elsewhere on the site). Either form may end with
+  // "| Custom Title" to also override the award title just for that one
+  // certificate.
   function batchEntriesList() {
-    return settings.batchNames.split('\n').map(function (s) { return s.trim(); }).filter(Boolean).map(function (line) {
-      var idx = line.indexOf(',');
-      if (idx === -1) return { name: line, title: null };
-      return { name: line.slice(0, idx).trim(), title: line.slice(idx + 1).trim() || null };
+    return settings.batchNames.split('\n').map(function (s) { return s.trim(); }).filter(Boolean).map(function (rawLine) {
+      var line = rawLine;
+      var title = null;
+      var pipeIdx = line.lastIndexOf('|');
+      if (pipeIdx !== -1) {
+        title = line.slice(pipeIdx + 1).trim() || null;
+        line = line.slice(0, pipeIdx).trim();
+      }
+      var name, reason = null;
+      if (line.indexOf('\t') !== -1) {
+        var tabParts = line.split('\t');
+        name = (tabParts[0] || '').trim();
+        reason = (tabParts[1] || '').trim() || null;
+        if (!title) title = (tabParts[2] || '').trim() || null;
+      } else {
+        var idx = line.indexOf(',');
+        if (idx === -1) { name = line; }
+        else { name = line.slice(0, idx).trim(); reason = line.slice(idx + 1).trim() || null; }
+      }
+      return { name: name, title: title, reason: reason };
     });
   }
 
@@ -481,25 +639,33 @@
   // full-size preview instead of relying on font sizes that don't shrink
   // with a smaller container.
   function renderGrid(entries) {
+    var dims = certDims(), w = dims[0], h = dims[1];
     els.previewArea.innerHTML =
       '<div class="thumb-grid">' +
         entries.map(function (e) {
           return (
             '<div class="thumb-cell">' +
-              '<div class="thumb-inner">' + certificateHtml(e.name, e.title) + '</div>' +
+              '<div class="thumb-inner" style="aspect-ratio:' + w + '/' + h + '">' + certificateHtml(e.name, e.title, e.reason) + '</div>' +
               '<div class="thumb-label">' + escapeHtml(e.name) + '</div>' +
             '</div>'
           );
         }).join('') +
       '</div>';
+    // Each thumbnail's .cert renders at its native full-size pixel width
+    // (1100 landscape / 850 portrait) so text sizes (in rem) stay correct
+    // relative to the border, then gets scaled down to fit the grid cell.
+    Array.prototype.slice.call(els.previewArea.querySelectorAll('.thumb-inner .cert')).forEach(function (cert) {
+      cert.style.width = w + 'px';
+    });
     scaleThumbs();
   }
 
   function scaleThumbs() {
+    var w = certDims()[0];
     Array.prototype.slice.call(els.previewArea.querySelectorAll('.thumb-inner')).forEach(function (inner) {
       var cert = inner.querySelector('.cert');
       if (!cert) return;
-      cert.style.transform = 'scale(' + (inner.clientWidth / 1100) + ')';
+      cert.style.transform = 'scale(' + (inner.clientWidth / w) + ')';
     });
   }
 
@@ -526,28 +692,49 @@
     if (!canGrid && viewMode === 'grid') viewMode = 'single'; // grid stops making sense with 0-1 names
     updateViewTabs();
 
+    var perPageNote = settings.perPage === 2 ? ' Printing makes two per sheet.' : ' Printing makes one page per name.';
     if (!entries.length) {
       els.previewArea.innerHTML = certificateHtml('Student Name');
       els.previewNote.textContent = 'Add names on the left to preview the batch. Showing a sample.';
     } else if (canGrid && viewMode === 'grid') {
       renderGrid(entries);
-      els.previewNote.textContent = 'Showing all ' + entries.length + ' certificates. Printing makes one page per name.';
+      els.previewNote.textContent = 'Showing all ' + entries.length + ' certificates.' + perPageNote;
     } else {
-      els.previewArea.innerHTML = certificateHtml(entries[0].name, entries[0].title);
-      els.previewNote.textContent = 'Showing certificate 1 of ' + entries.length + '. Printing makes one page per name.';
+      els.previewArea.innerHTML = certificateHtml(entries[0].name, entries[0].title, entries[0].reason);
+      els.previewNote.textContent = 'Showing certificate 1 of ' + entries.length + '.' + perPageNote;
     }
   }
 
+  // Updates the injected @page rule to match the current orientation. Called
+  // on boot, whenever the orientation setting changes, and right before
+  // print as a belt-and-suspenders measure.
+  function updatePageSizeStyle() {
+    var size = settings.orientation === 'portrait' ? 'letter portrait' : 'letter landscape';
+    els.camPageSizeStyle.textContent = '@page { size: ' + size + '; margin: 0.35in; }';
+  }
+
+  // Groups certificates into one <div class="print-page"> per printed
+  // sheet, each holding one or two .cert-slot wrappers, per the "per page"
+  // setting — see the .print-page / .cert-slot print CSS.
   function buildPrintArea() {
-    var html;
+    updatePageSizeStyle();
+    var entries;
     if (settings.mode === 'single') {
-      html = certificateHtml(settings.studentName || 'Student Name');
+      entries = [{ name: settings.studentName || 'Student Name', title: null, reason: null }];
     } else {
-      var entries = batchEntriesList();
-      if (!entries.length) entries = [{ name: settings.studentName || 'Student Name', title: null }];
-      html = entries.map(function (e) { return certificateHtml(e.name, e.title); }).join('');
+      entries = batchEntriesList();
+      if (!entries.length) entries = [{ name: settings.studentName || 'Student Name', title: null, reason: null }];
     }
-    document.getElementById('printArea').innerHTML = html;
+    var perPage = settings.perPage === 2 ? 2 : 1;
+    var pages = [];
+    for (var i = 0; i < entries.length; i += perPage) {
+      var group = entries.slice(i, i + perPage);
+      var slots = group.map(function (e) {
+        return '<div class="cert-slot">' + certificateHtml(e.name, e.title, e.reason) + '</div>';
+      }).join('');
+      pages.push('<div class="print-page' + (perPage === 2 ? ' per-2' : '') + '">' + slots + '</div>');
+    }
+    document.getElementById('printArea').innerHTML = pages.join('');
   }
 
   /* ---------- lifecycle ---------- */
@@ -569,6 +756,15 @@
     document.querySelector('.mode-tab[data-mode="single"]').classList.toggle('active', !isBatch);
     els.singleFields.style.display = isBatch ? 'none' : '';
     els.batchFields.style.display = isBatch ? '' : 'none';
+    if (isBatch) populateRosterSelect();
+
+    Array.prototype.slice.call(els.orientTabs.querySelectorAll('.seg-tab')).forEach(function (tab) {
+      tab.classList.toggle('active', tab.dataset.orient === settings.orientation);
+    });
+    Array.prototype.slice.call(els.perPageTabs.querySelectorAll('.seg-tab')).forEach(function (tab) {
+      tab.classList.toggle('active', Number(tab.dataset.perpage) === settings.perPage);
+    });
+    updatePageSizeStyle();
 
     buildThemeSwatches();
     buildBorderSwatches();
@@ -587,7 +783,7 @@
   function loadPresetByName(name) {
     var loaded = CertificateStore.loadPreset(name);
     if (!loaded) return;
-    settings = loaded;
+    settings = normalizeSettings(loaded);
     if (!settings.name) settings.name = name;
     CertificateStore.setCurrentName(name);
     applySettingsToForm();
@@ -612,10 +808,37 @@
     if (!name) return;
     newPreset(name.trim());
   });
+  // Delete already asks for confirmation (above); this adds a short-lived
+  // undo on top of it, since a confirm() dialog is easy to click through on
+  // autopilot. Holds exactly one deleted preset — a second delete before the
+  // first is undone just replaces it, matching the "one accidental tap"
+  // scope of the ask rather than a full history.
+  var lastDeleted = null;
+  var undoHideTimer = null;
+  function showDeleteUndo(name) {
+    clearTimeout(undoHideTimer);
+    els.deleteUndoName.textContent = name;
+    els.deleteUndoBar.style.display = 'flex';
+    undoHideTimer = setTimeout(hideDeleteUndo, 10000);
+  }
+  function hideDeleteUndo() {
+    clearTimeout(undoHideTimer);
+    els.deleteUndoBar.style.display = 'none';
+    lastDeleted = null;
+  }
+  els.undoDeleteBtn.addEventListener('click', function () {
+    if (!lastDeleted) return;
+    CertificateStore.savePreset(lastDeleted.name, lastDeleted.data);
+    hideDeleteUndo();
+    loadPresetByName(lastDeleted.name);
+  });
+
   els.deletePresetBtn.addEventListener('click', function () {
     if (!settings) return;
     if (!confirm('Delete "' + settings.name + '" completely? This can’t be undone.')) return;
+    lastDeleted = { name: settings.name, data: JSON.parse(JSON.stringify(settings)) };
     CertificateStore.deletePreset(settings.name);
+    showDeleteUndo(lastDeleted.name);
     var remaining = CertificateStore.listPresets();
     if (remaining.length) loadPresetByName(remaining[0]);
     else newPreset('My Certificate');
@@ -628,6 +851,26 @@
       settings.mode = tab.dataset.mode;
       els.singleFields.style.display = settings.mode === 'single' ? '' : 'none';
       els.batchFields.style.display = settings.mode === 'batch' ? '' : 'none';
+      if (settings.mode === 'batch') populateRosterSelect();
+      renderAll();
+    });
+  });
+
+  Array.prototype.slice.call(els.orientTabs.querySelectorAll('.seg-tab')).forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      Array.prototype.slice.call(els.orientTabs.querySelectorAll('.seg-tab')).forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      settings.orientation = tab.dataset.orient;
+      updatePageSizeStyle();
+      renderAll();
+    });
+  });
+
+  Array.prototype.slice.call(els.perPageTabs.querySelectorAll('.seg-tab')).forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      Array.prototype.slice.call(els.perPageTabs.querySelectorAll('.seg-tab')).forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      settings.perPage = Number(tab.dataset.perpage);
       renderAll();
     });
   });
