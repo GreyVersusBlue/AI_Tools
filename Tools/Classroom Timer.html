@@ -38,6 +38,7 @@
     --color-divider: #e1e5ea;
     --color-accent: #2a6db0;
     --color-success: #2f8f5b;
+    --color-warn: #a6740a;
     --color-danger: #c43a2f;
     --radius: 10px;
   }
@@ -49,6 +50,7 @@
     --color-divider: #333c44;
     --color-accent: #5b9bd9;
     --color-success: #4caf7d;
+    --color-warn: #d9a441;
     --color-danger: #e0665a;
   }
   * { box-sizing: border-box; }
@@ -119,12 +121,51 @@
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
-  #timeDisplay.flash { animation: flashPulse 1.1s ease-in-out 2; }
+  #timeDisplay.flash { color: var(--color-danger); }
+  @media (prefers-reduced-motion: no-preference) {
+    #timeDisplay.flash { animation: flashPulse 1.1s ease-in-out 2; }
+  }
   @keyframes flashPulse {
     0%, 100% { color: var(--color-text); }
     50% { color: var(--color-danger); }
   }
   #subDisplay { font-size: 0.95rem; color: var(--color-dim); min-height: 1.2em; }
+  #subDisplay.end-message {
+    font-size: clamp(1.3rem, 5vw, 2.1rem);
+    font-weight: 700;
+    color: var(--color-danger);
+  }
+
+  /* ---------- green/amber/red urgency — colour-blind-safe because the state
+     is also spelled out in .urgency-badge's text, not colour alone. Thresholds
+     are configurable percentages of the total (Display card). */
+  .ring-wrap[data-urgency="warn"] .ring-fg { stroke: var(--color-warn); }
+  .ring-wrap[data-urgency="warn"] #timeDisplay { color: var(--color-warn); }
+  .ring-wrap[data-urgency="critical"] .ring-fg { stroke: var(--color-danger); }
+  .ring-wrap[data-urgency="critical"] #timeDisplay { color: var(--color-danger); }
+  .urgency-badge { font-size: 0.8rem; font-weight: 600; min-height: 1.1em; }
+  .ring-wrap[data-urgency="warn"] .urgency-badge { color: var(--color-warn); }
+  .ring-wrap[data-urgency="critical"] .urgency-badge { color: var(--color-danger); }
+
+  .agenda-current { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; color: var(--color-accent); }
+  .agenda-bar {
+    width: 100%; max-width: 480px; height: 6px;
+    background: var(--color-divider); border-radius: 4px; overflow: hidden;
+  }
+  .agenda-bar-fill { height: 100%; width: 0%; background: var(--color-accent); transition: width 0.2s linear; }
+  .agenda-seg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .agenda-seg-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .agenda-seg-name { flex: 1 1 140px; min-width: 0; }
+  .preset-icon-btn { font-size: 1.1rem; padding: 0.3rem 0.5rem; min-width: 0; flex: 0 0 auto; }
+  .preset-icon-btn.selected { border-color: var(--color-accent); background: var(--color-bg); }
+  .shortcut-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .shortcut-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-divider); }
+  .shortcut-table td:first-child { white-space: nowrap; width: 1%; }
+  kbd {
+    display: inline-block; font-family: inherit; font-size: 0.82rem;
+    background: var(--color-bg); border: 1px solid var(--color-divider);
+    border-radius: 5px; padding: 0.1rem 0.4rem;
+  }
 
   /* ---------- silent "flash at zero" cue — a companion to the audio alert for
      testing rooms / hearing-impaired students. Opt-in (off by default) via the
@@ -139,7 +180,10 @@
     opacity: 0;
     box-shadow: inset 0 0 0 16px var(--color-danger);
   }
-  .zero-flash-overlay.active { animation: zeroFlashPulse 1s ease-in-out infinite; }
+  .zero-flash-overlay.active { opacity: 1; }
+  @media (prefers-reduced-motion: no-preference) {
+    .zero-flash-overlay.active { animation: zeroFlashPulse 1s ease-in-out infinite; opacity: 0; }
+  }
   @keyframes zeroFlashPulse {
     0%, 100% { opacity: 0; }
     50% { opacity: 1; }
@@ -259,8 +303,28 @@
       <span class="mirror-live-badge" id="mirrorLiveBadge"><span class="dot" aria-hidden="true"></span>Mirroring</span>
       <button type="button" id="fullscreenBtn" title="Toggle fullscreen (F)">⛶ Fullscreen</button>
       <button type="button" id="mirrorBtn">Mirror to a device</button>
+      <button type="button" id="helpBtn" title="Keyboard shortcuts (?)" aria-haspopup="dialog">⌨ Shortcuts</button>
     </div>
   </header>
+
+  <div class="mirror-overlay" id="helpOverlay" hidden>
+    <div class="mirror-modal" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+      <div class="mirror-head">
+        <h2>Keyboard shortcuts</h2>
+        <button type="button" class="mirror-close" id="helpCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="mirror-body">
+        <table class="shortcut-table">
+          <tr><td><kbd>Space</kbd></td><td>Start / pause / resume</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Reset</td></tr>
+          <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
+          <tr><td><kbd>1</kbd>&ndash;<kbd>9</kbd></td><td>Start saved Countdown preset 1&ndash;9</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Leave fullscreen / close a dialog</td></tr>
+          <tr><td><kbd>?</kbd></td><td>Toggle this help</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <div class="mirror-overlay" id="mirrorOverlay" hidden>
     <div class="mirror-modal" role="dialog" aria-modal="true" aria-label="Mirror to a device">
@@ -278,16 +342,20 @@
     <button class="mode-tab" role="tab" data-mode="random">Random Interval</button>
     <button class="mode-tab" role="tab" data-mode="stopwatch">Stopwatch</button>
     <button class="mode-tab" role="tab" data-mode="roundrobin">Round-Robin</button>
+    <button class="mode-tab" role="tab" data-mode="agenda">Agenda</button>
   </nav>
 
   <main class="timer-stage">
+    <div class="agenda-bar" id="agendaBar" hidden><div class="agenda-bar-fill" id="agendaBarFill"></div></div>
     <div class="ring-wrap" id="ringWrap">
       <svg class="progress-ring" viewBox="0 0 200 200" aria-hidden="true">
         <circle class="ring-bg" cx="100" cy="100" r="90"></circle>
         <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="90"></circle>
       </svg>
       <div class="stage-center">
+        <div class="agenda-current" id="agendaCurrent" hidden></div>
         <div id="timeDisplay" aria-live="polite">05:00</div>
+        <div class="urgency-badge" id="urgencyBadge" aria-hidden="true"></div>
         <div id="subDisplay"></div>
       </div>
     </div>
@@ -303,27 +371,43 @@
   <section id="modeSettings">
     <div class="card settings-panel" data-panel="countdown">
       <h2>Countdown</h2>
-      <div class="field-row">
-        <label for="cdMinutes">Minutes</label>
-        <input type="number" id="cdMinutes" class="num-input" min="0" max="180">
-        <span class="field-sep">:</span>
-        <label for="cdSeconds" class="sr-only">Seconds</label>
-        <input type="number" id="cdSeconds" class="num-input" min="0" max="59">
+      <div class="checkbox-row" style="margin-bottom: 0.8rem;">
+        <input type="checkbox" id="cdUntilToggle">
+        <label for="cdUntilToggle">Count down to a specific time instead</label>
       </div>
-      <div class="preset-row">
-        <button type="button" class="cd-preset" data-min="5">5m</button>
-        <button type="button" class="cd-preset" data-min="10">10m</button>
-        <button type="button" class="cd-preset" data-min="15">15m</button>
-        <button type="button" class="cd-preset" data-min="20">20m</button>
-        <button type="button" class="cd-preset" data-min="30">30m</button>
-      </div>
-      <div class="custom-preset-block">
-        <div class="field-row" style="margin-top: 0.9rem;">
-          <label for="cdPresetName" class="sr-only">Preset name</label>
-          <input type="text" id="cdPresetName" placeholder="Name this duration (e.g. Bell ringer)" maxlength="40" style="flex: 1 1 160px;">
-          <button type="button" id="cdSavePreset">Save as preset</button>
+      <div id="cdDurationFields">
+        <div class="field-row">
+          <label for="cdMinutes">Minutes</label>
+          <input type="number" id="cdMinutes" class="num-input" min="0" max="180">
+          <span class="field-sep">:</span>
+          <label for="cdSeconds" class="sr-only">Seconds</label>
+          <input type="number" id="cdSeconds" class="num-input" min="0" max="59">
         </div>
-        <div class="preset-row" id="cdCustomPresets"></div>
+        <div class="preset-row">
+          <button type="button" class="cd-preset" data-min="5">5m</button>
+          <button type="button" class="cd-preset" data-min="10">10m</button>
+          <button type="button" class="cd-preset" data-min="15">15m</button>
+          <button type="button" class="cd-preset" data-min="20">20m</button>
+          <button type="button" class="cd-preset" data-min="30">30m</button>
+        </div>
+        <div class="custom-preset-block">
+          <div class="field-row" style="margin-top: 0.9rem;">
+            <label for="cdPresetName" class="sr-only">Preset name</label>
+            <input type="text" id="cdPresetName" placeholder="Name this duration (e.g. Bell ringer)" maxlength="40" style="flex: 1 1 160px;">
+            <label for="cdPresetIcon" class="sr-only">Icon</label>
+            <input type="text" id="cdPresetIcon" placeholder="Icon" maxlength="4" style="width: 3.6rem;">
+            <label for="cdPresetColor" class="sr-only">Colour</label>
+            <input type="color" id="cdPresetColor" value="#2a6db0" style="padding: 0.2rem; width: 2.6rem;">
+            <button type="button" id="cdSavePreset">Save as preset</button>
+          </div>
+          <div class="preset-row" id="presetIconRow" aria-label="Quick icon picker"></div>
+          <div class="preset-row" id="cdCustomPresets"></div>
+          <p style="font-size: 0.78rem; color: var(--color-dim); margin: 0.5rem 0 0;">Presets fire with keys 1&ndash;9 (in the order saved).</p>
+        </div>
+      </div>
+      <div class="field-row" id="cdUntilRow" hidden>
+        <label for="cdUntilTime">Until</label>
+        <input type="time" id="cdUntilTime">
       </div>
     </div>
 
@@ -381,6 +465,16 @@
         </span>
       </div>
     </div>
+
+    <div class="card settings-panel" data-panel="agenda" hidden>
+      <h2>Agenda — chain the whole period</h2>
+      <p style="font-size: 0.85rem; color: var(--color-dim); margin: 0 0 0.7rem;">Runs each segment in order — Do Now, Notes, Practice, Exit Ticket — with a chime between them and a slim progress bar for the whole period.</p>
+      <ul class="agenda-seg-list" id="agendaSegList"></ul>
+      <div class="field-row" style="margin-top: 0.6rem; justify-content: space-between;">
+        <button type="button" id="agendaAddSeg">+ Add segment</button>
+        <span id="agendaTotal" style="font-size: 0.85rem; color: var(--color-dim);"></span>
+      </div>
+    </div>
   </section>
 
   <section class="card">
@@ -404,6 +498,26 @@
         <label for="flashZero">Flash at zero</label>
       </span>
       <button type="button" id="soundTest">Test sound</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Display</h2>
+    <div class="field-row">
+      <label for="amberPct">Amber below</label>
+      <input type="number" id="amberPct" class="num-input" min="1" max="90">
+      <span style="font-size:0.85rem; color: var(--color-dim);">%</span>
+      <label for="redPct">Red below</label>
+      <input type="number" id="redPct" class="num-input" min="0" max="90">
+      <span style="font-size:0.85rem; color: var(--color-dim);">%</span>
+    </div>
+    <div class="checkbox-row" style="margin-top: 0.7rem;">
+      <input type="checkbox" id="overtimeEnabled">
+      <label for="overtimeEnabled">Count up past zero (overtime) instead of stopping</label>
+    </div>
+    <div class="field-row" style="margin-top: 0.7rem;">
+      <label for="endMessage" class="sr-only">End-of-timer message</label>
+      <input type="text" id="endMessage" placeholder="End message (e.g. Pencils down.)" maxlength="60" style="flex: 1 1 220px;">
     </div>
   </section>
 
