@@ -17,7 +17,8 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Fraction–Decimal–Percent Conversion Drill Generator | A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## English / Language Arts
 
