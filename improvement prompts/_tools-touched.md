@@ -188,6 +188,28 @@ loading it from cdnjs (P5).
 
 **45 of 46 tools done. 1 to go.**
 
+### Rounds 9 and 10 — 2026-08-10 — PRs #64 and PENDING_PR
+
+The last tool on the list, and the only one to get two rounds in this pass —
+both at Devon's direct request rather than by picking from the list below.
+Round 9 (PR #64) did page shapes and turned Print/Save PDF into genuine
+map exports instead of a screenshot of the web page. Round 10 did the
+classroom-worksheet cluster: numbered fill-in-the-blank worksheets with
+answer keys and shuffled versions, reusable label sets, a label
+de-overlapping pass, semantic line types, and a projector-ready quiz mode
+with scoring. See `blank-map-generator.md` for what each round shipped and
+where the next one should pick up.
+
+| Tool | File |
+|---|---|
+| Blank Map Generator | `blank-map-generator.md` |
+
+**46 of 46 tools done.** The list below is empty — per the instructions at
+the top of this file, that is the signal to reset for a second pass: move
+every tool back to "Not yet touched" and start a new round-number series.
+That reset is deliberately left for Devon or the next session to make, so
+it isn't done silently inside a tool round.
+
 ---
 
 ## Not yet touched
@@ -196,7 +218,7 @@ Pick from here. No particular order is implied — group them however makes
 sense for a round (by subject, by shared machinery, by print-heavy vs
 data-heavy), and say why in the PR.
 
-- Blank Map Generator — `blank-map-generator.md`
+- *(empty — see the reset note above)*
 
 ---
 
@@ -260,6 +282,13 @@ lands naturally inside a tool you are already working on, take it.
   Any future "phone as remote" work (P9) needs a different mechanism (e.g.
   WebRTC pairing, as `schedule-visualizer.html` already uses) for true
   cross-device control.
+- **`hidden` loses to `display: flex`.** Round 10 found a control in the
+  Blank Map Generator's toolbar that had been visible whenever it shouldn't
+  be, because the element carried `hidden` but its class set
+  `display: flex` — which outranks the browser's own `[hidden]` rule. Any
+  tool that hides a flex/grid-displayed element by attribute needs an
+  explicit `[hidden] { display: none; }` rule; worth a grep wherever a
+  toolbar control is toggled this way.
 - **Generated-output drift is a real failure mode, not just a theoretical
   one.** Round 7 found that `schedule-visualizer.html`'s "Publish" button
   would produce a broken `schedule-browser.html` (undefined `escHtml`/

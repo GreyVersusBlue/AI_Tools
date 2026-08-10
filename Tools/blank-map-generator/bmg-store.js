@@ -32,6 +32,16 @@ function blankProjectData() {
     legendOrder: [],
     pageFormat: { type: "letter", flipped: false, customW: 4, customH: 3 },
     grayscaleSafePrint: true,
+    worksheet: blankWorksheetSettings(),
+  };
+}
+
+/** Defaults for the numbered-blank worksheet builder (see the worksheet section of blank-map-generator.html). Saved per project so a teacher's chosen wording/layout comes back with the map it belongs to. */
+function blankWorksheetSettings() {
+  return {
+    title: "", instructions: "Write the name of each numbered place on the lines.",
+    nameLine: true, wordBank: true, answerKey: true, credit: true,
+    listPlacement: "beside", versions: 1,
   };
 }
 
@@ -66,6 +76,15 @@ function normalizeProjectData(p) {
   if (!Number.isFinite(p.pageFormat.customW) || p.pageFormat.customW <= 0) p.pageFormat.customW = 4;
   if (!Number.isFinite(p.pageFormat.customH) || p.pageFormat.customH <= 0) p.pageFormat.customH = 3;
   if (typeof p.grayscaleSafePrint !== "boolean") p.grayscaleSafePrint = true;
+  p.worksheet = { ...blankWorksheetSettings(), ...(p.worksheet && typeof p.worksheet === "object" ? p.worksheet : {}) };
+  if (!["beside", "below"].includes(p.worksheet.listPlacement)) p.worksheet.listPlacement = "beside";
+  if (!Number.isFinite(p.worksheet.versions) || p.worksheet.versions < 1) p.worksheet.versions = 1;
+  p.worksheet.versions = Math.min(4, Math.round(p.worksheet.versions));
+  if (Array.isArray(p.lines)) {
+    // `type` (river / border / trade route / …) arrived after lines did —
+    // older saved lines are plain custom lines with no semantic type.
+    p.lines = p.lines.map(l => ({ type: null, ...l }));
+  }
   if (Array.isArray(p.regions)) {
     p.regions = p.regions.map(r => ({ pattern: "solid", ...r }));
   }
@@ -80,7 +99,10 @@ function normalizeProjectData(p) {
 
 function blankWorkspace() {
   const id = newId();
-  return { __v: VERSION, activeId: id, projects: [{ id, name: "My Map", updatedAt: Date.now(), data: blankProjectData() }] };
+  return {
+    __v: VERSION, activeId: id, labelSets: [],
+    projects: [{ id, name: "My Map", updatedAt: Date.now(), data: blankProjectData() }],
+  };
 }
 
 function isValidWorkspace(w) {
@@ -89,6 +111,15 @@ function isValidWorkspace(w) {
 }
 
 function normalizeWorkspace(w) {
+  // Saved label sets live on the workspace, not inside a project: the whole
+  // point of a set ("the 13 colonies", "my corrected Europe labels") is that
+  // it outlives the map it was built on and can be dropped onto the next
+  // one. Keeping them here also means no second localStorage key to teach
+  // Backup & Restore about — they ride along inside the workspace save.
+  if (!Array.isArray(w.labelSets)) w.labelSets = [];
+  w.labelSets = w.labelSets
+    .filter(s => s && typeof s.name === "string" && Array.isArray(s.places))
+    .map(s => (typeof s.id === "string" && s.id ? s : { ...s, id: newId() }));
   w.projects.forEach(entry => {
     if (typeof entry.name !== "string" || !entry.name) entry.name = "My Map";
     if (typeof entry.updatedAt !== "number") entry.updatedAt = Date.now();
@@ -103,7 +134,7 @@ function importLegacyProject(raw) {
   const parsed = JSON.parse(raw);
   const data = isValidProjectData(parsed) ? normalizeProjectData(parsed) : blankProjectData();
   const id = newId();
-  return { __v: VERSION, activeId: id, projects: [{ id, name: "My Map", updatedAt: Date.now(), data }] };
+  return { __v: VERSION, activeId: id, labelSets: [], projects: [{ id, name: "My Map", updatedAt: Date.now(), data }] };
 }
 
 function probeBlocked() {
@@ -240,9 +271,34 @@ export function createStore() {
     return getActiveProject();
   }
 
+  // --- Saved label sets (workspace-wide, shared by every project) -------
+
+  function listLabelSets() {
+    return workspace.labelSets.map(s => ({ id: s.id, name: s.name, places: s.places }));
+  }
+
+  /** Saves a named list of {name, lat, lon} places for reuse on any map. A set whose name matches an existing one replaces it (same "save over it" behavior a file dialog would give). Returns the saved set. */
+  function saveLabelSet(name, places) {
+    const clean = String(name || "").trim() || "Saved places";
+    const existing = workspace.labelSets.find(s => s.name.toLowerCase() === clean.toLowerCase());
+    const set = existing || { id: newId(), name: clean, places: [] };
+    set.name = clean;
+    set.places = places.map(p => ({ name: p.name, lat: p.lat, lon: p.lon }));
+    set.savedAt = Date.now();
+    if (!existing) workspace.labelSets.push(set);
+    saveWorkspace();
+    return set;
+  }
+
+  function deleteLabelSet(id) {
+    workspace.labelSets = workspace.labelSets.filter(s => s.id !== id);
+    saveWorkspace();
+  }
+
   return {
     getActiveProject, setActiveProject, listProjects, getActiveId,
     createProject, switchProject, renameProject, deleteProject, importProject, duplicateProject,
+    listLabelSets, saveLabelSet, deleteLabelSet,
     get isMemoryOnly() { return blocked; },
   };
 }

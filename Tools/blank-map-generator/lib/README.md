@@ -16,7 +16,8 @@ so this is a path change and nothing else. Used by `blank-map-generator.html`'s
 "Save PDF" export: the finished map is rasterized to a canvas at the selected
 page format's exact physical dimensions, then embedded as a single full-page
 image so the output PDF has genuinely correct page size/aspect ratio instead
-of relying on the browser's print-to-PDF dialog.
+of relying on the browser's print-to-PDF dialog. "Save Worksheet PDF" uses it
+the same way, one `addPage()` per worksheet/answer-key page.
 
 ## Updating
 
