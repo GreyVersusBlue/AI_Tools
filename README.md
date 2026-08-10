@@ -79,6 +79,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Scientific Method / Experiment Design Planner | `Tools/experiment-design-planner.html` | A guided pre-lab worksheet — testable question, If/then/because hypothesis, variables, materials, and procedure — printable as a fillable planning packet. |
 | Science Fair Project Tracker | `Tools/science-fair-project-tracker.html` | Six editable milestones with due dates, a per-student checkbox grid with a live progress percentage, and a printable report with a "still missing, by milestone" chase-list. |
 | Dichotomous Key Builder | `Tools/dichotomous-key-builder.html` | Numbered couplets branching to another step or a final answer, with example specimens tagged per result, printed as a shuffled classification worksheet plus a matching answer key. |
+| DBQ / Source Packet Builder | `Tools/dbq-source-packet-builder.html` | Add text or image sources with a citation and source-specific guiding questions, plus a shared question set, printed as one packet with a cover page and one source per page. |
 
 ## Using these
 
