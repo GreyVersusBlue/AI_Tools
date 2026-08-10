@@ -92,6 +92,14 @@
   .used-by a { color: var(--accent-2); }
   .used-by .n { color: var(--muted); }
 
+  .archive-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .archive-col { flex: 1; min-width: 180px; }
+  .archive-col h4 { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .5rem; font-weight: 700; }
+  .archive-list { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+  .archive-list li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .35rem 0; border-top: 1px dashed var(--line); font-size: .85rem; }
+  .archive-list li:first-child { border-top: none; }
+  .archive-list button { padding: .3rem .6rem; font-size: .74rem; flex-shrink: 0; }
+
   .empty-hint { text-align: center; color: var(--muted); padding: 2.4rem 1rem; font-size: .92rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
@@ -183,6 +191,22 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Archive a withdrawn student</div>
+        <p class="hint">Archiving moves a student out of the active roster &mdash; and out of Name Picker, random grouping, and every other tool that loads this roster &mdash; without erasing their name from anywhere they already have history (points, hall passes, reading logs). Restore them any time.</p>
+        <div class="archive-grid">
+          <div class="archive-col">
+            <h4>Active</h4>
+            <ul class="archive-list" id="activeStudentList"></ul>
+          </div>
+          <div class="archive-col">
+            <h4>Archived</h4>
+            <ul class="archive-list" id="archivedStudentList"></ul>
+            <p class="empty-hint" id="archivedEmptyHint" style="display:none;padding:.6rem 0;">No archived students.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Where this shows up</div>
         <p class="hint">These tools already know how to load a saved roster from here &mdash; look for "Load a saved roster&hellip;" near their own roster box.</p>
         <ul class="used-by">
@@ -221,12 +245,14 @@
   'use strict';
 
   var STORE_KEY = 'np_rosters'; // shared with Name Picker and every tool that reuses its saved rosters
+  var ARCHIVE_KEY = 'crh_archived_students'; // { [rosterName]: [name, name, ...] } — this tool only
   var MAX_NAME = 120, MAX_ROSTER = 400, MAX_ROSTERS = 60; // mirrors Name Picker's own ceilings
 
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'duplicateRosterBtn', 'deleteRosterBtn', 'rosterName', 'renameBtn',
    'namesInput', 'nameCount', 'saveBtn', 'printBtn', 'allRosters', 'emptyHint', 'msg',
-   'shareBar', 'qrBtn', 'qrOverlay', 'qrCloseBtn', 'qrCanvas', 'importCsvBtn', 'csvFileInput'
+   'shareBar', 'qrBtn', 'qrOverlay', 'qrCloseBtn', 'qrCanvas', 'importCsvBtn', 'csvFileInput',
+   'activeStudentList', 'archivedStudentList', 'archivedEmptyHint'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentName = null;
@@ -247,6 +273,24 @@
   function saveAll(all) {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); }
     catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); }
+  }
+
+  // ── Archived (withdrawn) students, kept separately from the active roster ──
+  // so removing someone from Name Picker / grouping tools never touches the
+  // logs those other tools already have on that name.
+  function loadArchive() {
+    try {
+      var v = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
+  }
+  function saveArchive(archive) {
+    try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive)); }
+    catch (e) { showMsg('Could not save — this browser’s storage may be full or unavailable.'); }
+  }
+  function archivedFor(name) {
+    var archive = loadArchive();
+    return Array.isArray(archive[name]) ? archive[name] : [];
   }
 
   // ── Tolerant name parsing (dedupe case-insensitively, cap lengths) ──────────
@@ -355,6 +399,8 @@
     els.namesInput.value = list.join('\n');
     els.toolbar.style.display = '';
     updateNameCount();
+    renderActiveList();
+    renderArchivedList();
     refreshSwitcher();
     clearMsg();
   }
@@ -363,7 +409,94 @@
     var n = parseNames(els.namesInput.value).names.length;
     els.nameCount.textContent = n + ' name' + (n === 1 ? '' : 's');
   }
-  els.namesInput.addEventListener('input', updateNameCount);
+  els.namesInput.addEventListener('input', function () { updateNameCount(); renderActiveList(); });
+
+  // ── Active / archived student lists ─────────────────────────────────────
+  function renderActiveList() {
+    var names = parseNames(els.namesInput.value).names;
+    if (!names.length) {
+      els.activeStudentList.innerHTML = '<li style="border-top:none;"><span class="n">No active students.</span></li>';
+      return;
+    }
+    els.activeStudentList.innerHTML = names.map(function (n) {
+      return '<li><span>' + escapeHtml(n) + '</span><button type="button" class="secondary small" data-archive="' + escapeHtml(n) + '">Archive</button></li>';
+    }).join('');
+  }
+
+  function renderArchivedList() {
+    var names = currentName ? archivedFor(currentName) : [];
+    if (!names.length) {
+      els.archivedStudentList.innerHTML = '';
+      els.archivedEmptyHint.style.display = '';
+      return;
+    }
+    els.archivedEmptyHint.style.display = 'none';
+    els.archivedStudentList.innerHTML = names.map(function (n) {
+      return '<li><span>' + escapeHtml(n) + '</span><button type="button" class="secondary small" data-restore="' + escapeHtml(n) + '">Restore</button></li>';
+    }).join('');
+  }
+
+  function archiveStudent(name) {
+    if (!currentName) { showMsg('Save this roster first, then archive a student.'); return; }
+    var parsed = parseNames(els.namesInput.value);
+    var idx = parsed.names.indexOf(name);
+    if (idx === -1) return;
+    parsed.names.splice(idx, 1);
+    els.namesInput.value = parsed.names.join('\n');
+
+    var all = loadAll();
+    all[currentName] = parsed.names;
+    saveAll(all);
+
+    var archive = loadArchive();
+    var list = Array.isArray(archive[currentName]) ? archive[currentName] : [];
+    if (list.indexOf(name) === -1) list.push(name);
+    archive[currentName] = list;
+    saveArchive(archive);
+
+    updateNameCount();
+    renderActiveList();
+    renderArchivedList();
+    refreshSwitcher();
+    showMsg('Archived "' + name + '" — off the active roster, restorable any time.', true);
+  }
+
+  function restoreStudent(name) {
+    if (!currentName) return;
+    var archive = loadArchive();
+    var list = Array.isArray(archive[currentName]) ? archive[currentName] : [];
+    var idx = list.indexOf(name);
+    if (idx === -1) return;
+    list.splice(idx, 1);
+    if (list.length) archive[currentName] = list; else delete archive[currentName];
+    saveArchive(archive);
+
+    var parsed = parseNames(els.namesInput.value);
+    if (parsed.names.indexOf(name) === -1) parsed.names.push(name);
+    els.namesInput.value = parsed.names.join('\n');
+
+    var all = loadAll();
+    all[currentName] = parsed.names;
+    saveAll(all);
+
+    updateNameCount();
+    renderActiveList();
+    renderArchivedList();
+    refreshSwitcher();
+    showMsg('Restored "' + name + '" to the active roster.', true);
+  }
+
+  els.activeStudentList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-archive]');
+    if (!btn) return;
+    archiveStudent(btn.getAttribute('data-archive'));
+  });
+
+  els.archivedStudentList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-restore]');
+    if (!btn) return;
+    restoreStudent(btn.getAttribute('data-restore'));
+  });
 
   els.rosterSwitch.addEventListener('change', function () { loadRosterByName(els.rosterSwitch.value); });
 
@@ -404,6 +537,9 @@
     var all = loadAll();
     delete all[currentName];
     saveAll(all);
+    var archive = loadArchive();
+    delete archive[currentName];
+    saveArchive(archive);
     var remaining = Object.keys(all);
     currentName = null;
     if (remaining.length) {
@@ -413,6 +549,8 @@
       els.namesInput.value = '';
       els.toolbar.style.display = 'none';
       updateNameCount();
+      renderActiveList();
+      renderArchivedList();
       refreshSwitcher();
     }
   });
@@ -427,7 +565,10 @@
     all[newName] = all[currentName] || [];
     delete all[currentName];
     saveAll(all);
+    var archive = loadArchive();
+    if (archive[currentName]) { archive[newName] = archive[currentName]; delete archive[currentName]; saveArchive(archive); }
     currentName = newName;
+    renderArchivedList();
     refreshSwitcher();
     showMsg('Renamed to "' + newName + '".', true);
   });
@@ -447,6 +588,8 @@
     els.toolbar.style.display = '';
     refreshSwitcher();
     updateNameCount();
+    renderActiveList();
+    renderArchivedList();
 
     var warnings = [];
     if (parsed.truncatedNames) warnings.push(parsed.truncatedNames + ' name' + (parsed.truncatedNames === 1 ? '' : 's') + ' shortened to ' + MAX_NAME + ' characters');
@@ -572,6 +715,8 @@
     } else {
       els.toolbar.style.display = 'none';
       updateNameCount();
+      renderActiveList();
+      renderArchivedList();
     }
   })();
 })();

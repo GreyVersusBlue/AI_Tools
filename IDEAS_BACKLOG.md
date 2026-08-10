@@ -89,19 +89,14 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Hall Pass Log | 🔒 **CLAIMED (2026-08-09)** — "Frequent flyer" flag | Surface a flag on a student's next sign-out if they've had an unusually high number of passes that week. |
-| 2 | Class Roster Hub | 🔒 **CLAIMED (2026-08-09)** — Archive an inactive student | Move a withdrawn student out of the active roster view without deleting their history in tools that reference them. |
-| 3 | Command Center | 🔒 **CLAIMED (2026-08-09)** — Message-of-the-day banner | A freeform text banner slot alongside the timer and quick-call panels. |
-| 4 | Escape Room Builder | 🔒 **CLAIMED (2026-08-09)** — Printable story-intro cover page | A one-page prop/cover sheet to set the scene before students start scanning stations. |
-| 5 | Math Fact Drill Sheet Generator | 🔒 **CLAIMED (2026-08-09)** — One-click leveled set | Generate a matching easy/medium/hard set of sheets together in one pass, for quick differentiation. |
-| 6 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
-| 7 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
-| 8 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
-| 9 | Lab Group & Role Randomizer | Printable table-tent per group | A foldable name-card showing today's group and roles, to set out at each lab station. |
-| 10 | Timeline Builder | Side-by-side compare mode | View two saved timelines together for teaching concurrent history threads. |
-| 11 | Vocab & Conjugation Drill Generator | Fill-in-the-blank quiz mode | A lighter, faster quiz format alongside the existing full conjugation-grid drill. |
-| 12 | Gallery Walk QR Codes | Per-piece reaction tap | An optional star/emoji reaction button per entry, tallied for the artist — fully local per device, nothing synced. |
-| 13 | Blank Map Generator | Self-check quiz mode | Hide the labels until clicked, so a finished map can double as a self-check study tool instead of only a static handout. |
+| 1 | Graph Paper & Number Line Generator | Isometric dot/grid mode | A fourth paper mode alongside graph paper, number lines, and coordinate planes. |
+| 2 | Number Talks / Mental Math Routine Board | String history log | Track which number strings have already been used this term, so a fresh pull can avoid recent repeats. |
+| 3 | Novel Study / Reading Circles Manager | Per-chapter vocabulary tracker | Log vocabulary words alongside each meeting's chapter checkpoint. |
+| 4 | Lab Group & Role Randomizer | Printable table-tent per group | A foldable name-card showing today's group and roles, to set out at each lab station. |
+| 5 | Timeline Builder | Side-by-side compare mode | View two saved timelines together for teaching concurrent history threads. |
+| 6 | Vocab & Conjugation Drill Generator | Fill-in-the-blank quiz mode | A lighter, faster quiz format alongside the existing full conjugation-grid drill. |
+| 7 | Gallery Walk QR Codes | Per-piece reaction tap | An optional star/emoji reaction button per entry, tallied for the artist — fully local per device, nothing synced. |
+| 8 | Blank Map Generator | Self-check quiz mode | Hide the labels until clicked, so a finished map can double as a self-check study tool instead of only a static handout. |
 
 ### Currently claimed (in progress elsewhere)
 
