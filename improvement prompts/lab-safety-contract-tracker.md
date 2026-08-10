@@ -12,6 +12,66 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Round 3 (2026-08-10) — shipped
+
+- **Print the contract itself.** Each required document now has an optional
+  "form text" field (`doc.body`), and a new "Print blank forms" button
+  prints one signable copy per roster student — title, form text, and
+  Student/Parent signature+date lines. `defaultDocuments()` seeds a real
+  generic lab-safety paragraph so a first-time user sees a usable form, not
+  an empty one. When there's more than one required document, a `prompt()`
+  picks which one (consistent with the file's existing style — it already
+  uses `prompt()`/`confirm()` elsewhere rather than custom modals).
+- **Reminder slips for the missing list.** "Print reminder slips" lays out
+  the current missing students 4-to-a-page in a dashed-border cut-apart
+  grid, each slip showing the student's name, which document(s) they still
+  owe, and the due date if one is set.
+- **Percent-signed on the class switcher.** Each `<option>` now reads e.g.
+  "Period 3 — Chemistry — 18/24 (75%)", computed from that section's stored
+  data (not just the currently-loaded one) so you can see which of several
+  classes is behind without switching into each. Refreshed on every
+  `renderAll()` so it stays live as students get marked off.
+- **Date-received per student** and **confirm-before-destructive-action**
+  (Mark all as signed, Delete class) turned out to already be implemented
+  in the existing code — verified by reading `setDocDate`/`getDoc` (keyed by
+  both student and document) and the existing `confirm()` calls before
+  skipping those two items.
+
+All three new print paths were verified in a headless Chromium run:
+roster of 4, 2 marked signed → switcher reads "2/4 (50%)", "Print blank
+forms" produces 4 form pages with signature lines, "Print reminder slips"
+produces 2 slips naming the 2 missing students with the due date shown.
+
+### Challenges
+
+- `sectionProgressLabel()` has to read *other* sections' stored data (to
+  show every class's percentage in the dropdown, not just the active one),
+  which may still be in the pre-multi-document `{signed, date}` shape if
+  that section hasn't been loaded (and therefore migrated) since the
+  multi-document format shipped. Wrote `normalizedDocsFor()` as a read-only
+  version of the same mapping `migrateContracts()` does, rather than
+  triggering a write for a section the teacher hasn't opened.
+- The reminder-slip grid uses `grid-auto-rows: 1fr` over a fixed
+  `min-height` so 4 slips fill a page as quarters; with fewer than 4 missing
+  students the single row still expands to fill that height, so a 1- or
+  2-missing print comes out as half-page or full-page slips rather than
+  true quarters. Cosmetic, not a correctness problem — noted for whoever
+  picks this up next rather than fixed, since a real fix wants a
+  content-driven row height that still ties out at exactly 4-per-page.
+
+### Where the next round should pick up
+
+- **Generalize beyond lab safety** (Major Feature) is now more clearly in
+  reach — the tool can already print AND track an arbitrary named,
+  multi-document form. Renaming/repositioning it as a general Form &
+  Signature Tracker is a product decision for Devon, not a code change; the
+  Open Question below still stands.
+- **Merge with the permission-slip collection tracker** in
+  `field-trip-permission-slip.html` (P7) is still open and is now more
+  clearly the same feature built twice.
+- **Money collection** (paid/unpaid) and **QR-scan check-in** for returned
+  forms are still open Major Features, unbuilt this round.
+
 ## What it does today
 
 - Per-student signed/not-signed, one tap; live "N of M signed" summary

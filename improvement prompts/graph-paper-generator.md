@@ -12,6 +12,70 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Round 3 (2026-08-10) — shipped
+
+- **Labelled gridlines** for square graph paper: an opt-in "Number the
+  gridlines" checkbox with a "label every Nth line" interval, numbering
+  columns along the bottom and rows along the left edge (row 0 at the
+  bottom, increasing upward — matches how a plotted grid reads). Labels
+  stay full ink even in ink-saving mode; a small reserve band keeps them off
+  the physical page margin.
+- **Header block** (title + optional Name/Date fill-in line) shared across
+  all four modes — graph paper, number line, coordinate plane, isometric.
+  Implemented once in `gpg-render.js` (`headerBlockHeight`/`headerSvg`) and
+  threaded through every render call rather than reimplemented per mode.
+- **Ink-saving mode**: a "lighter gridlines" toggle. Implemented by giving
+  the SVG root a `color="#1a1a1a"` attribute and having every line/dot/text
+  element paint with `fill/stroke="currentColor"`, then wrapping the
+  fadeable content (not the header, which stays full-ink for legibility) in
+  a `<g color="...">` override — one wrap per render function instead of
+  touching every element's own color attribute.
+- **Multiple coordinate planes per page** (1/2/4/6, `PLANE_LAYOUTS`) — the
+  "four quadrants on one worksheet" format called out as the most common
+  actual use. Refactored the single-plane math in `renderCoordinatePlane`
+  into `onePlaneSvg(opts, originX, originY, w, h)` so it renders into an
+  arbitrary sub-rectangle; the multi-copy path just tiles that helper across
+  a grid the same way the graph-paper contact-sheet logic in
+  `image-to-pdf.html` tiles images. Axis-label font size shrinks
+  automatically when a cell is narrow.
+
+All four changes are additive to `gpg-render.js`'s existing opts shape — old
+callers with no `header`/`faded`/`labelAxes`/`copies` fields get identical
+output to before (verified in Node by calling all three render functions
+with old-style and new-style opts and diffing/checking for `NaN` in the
+output), and visually in a headless Chromium run of the actual tool for both
+the labelled/header/faded square-grid case and the 4-plane case.
+
+### Challenges
+
+- No test harness exists for this tool (no `Tools/graph-paper-generator/test/`
+  the way `Tools/schedule` has one). Verified correctness by calling
+  `GraphPaperRender.*` directly in Node (checked returned `cols`/`rows`/
+  `copies` and scanned the SVG string for `NaN`) and by a headless Playwright
+  screenshot of the live tool. Worth adding a small Node smoke test near
+  `gpg-render.js` in a future round since it's pure functions with no DOM
+  dependency — cheap to test properly.
+- `renderCoordinatePlane`'s return value used to include `xTicks`/`yTicks`;
+  multi-plane made a single tick count meaningless so it now returns
+  `copies` instead. Confirmed nothing in `graph-paper-generator.html` reads
+  those fields (only `.svg` is consumed) before removing them.
+- The axis-label reserve band (0.22in) is a fixed constant rather than
+  computed from the actual label text width; at very large custom grids
+  (many digits) it's plausible a long row number could still nudge close to
+  the reserved margin. Not observed in testing at realistic sizes.
+
+### Where the next round should pick up
+
+- **Worksheet mode** (Major Feature: a problem printed above each small
+  plane, with an answer key) is the natural next step now that multi-plane
+  layout exists — the tiling and answer-key machinery are the hard parts and
+  are now half-built.
+- More grid types (hex, polar, log/semi-log, Cornell notes, handwriting
+  lines, storyboard, music staff) are still open and are independent of
+  everything shipped this round.
+- Pre-plotted content (a line/curve/point set drawn onto the grid before
+  printing) is still open and is the highest-value Major Feature remaining.
+
 ## What it does today
 
 - Grid types: square, dot grid, **isometric** (line and dot), with sizes in

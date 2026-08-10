@@ -160,6 +160,42 @@
     });
   }
 
+  /** Fixed, distinct palette for event categories (political/cultural/
+   * technological/etc.) — picked for reasonable print/grayscale separation. */
+  var CATEGORY_PALETTE = ['#2e6b8f', '#a3372b', '#5b8c3a', '#8a5b9e', '#c07a1f', '#1f7a72', '#a34a8a', '#4a5fa3'];
+
+  /** Distinct, first-seen-order list of non-empty category strings across a
+   * set of events — the legend and the category `<datalist>` both want this. */
+  function collectCategories(events) {
+    var seen = {};
+    var list = [];
+    (events || []).forEach(function (e) {
+      var c = (e.category || '').trim();
+      if (c && !seen[c]) { seen[c] = true; list.push(c); }
+    });
+    return list;
+  }
+
+  /** Maps each distinct category in `events` to a palette color by
+   * first-seen order, so two categories always get two different colors as
+   * long as there are 8 or fewer distinct categories (a string hash was
+   * tried first and rejected — collisions between short common words like
+   * "Cultural" and "Technological" landing on the same slot defeated the
+   * whole point of a legend). Beyond 8 categories, colors repeat — flagged
+   * in the improvement notes rather than solved, since a timeline with more
+   * than 8 categories needs a different visual approach (patterns, not just
+   * more hues) to stay legible in print. Call once per render and reuse the
+   * map, so the legend and the markers it describes always agree — building
+   * it twice from two different event lists (e.g. a screen view built from
+   * `state.events` and a legend built from a filtered subset) would silently
+   * assign the same category two different colors. */
+  function buildCategoryColorMap(events) {
+    var categories = collectCategories(events);
+    var map = {};
+    categories.forEach(function (c, i) { map[c] = CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]; });
+    return map;
+  }
+
   global.TimelineLayout = {
     formatYear: formatYear,
     formatDateLabel: formatDateLabel,
@@ -169,6 +205,8 @@
     gridlineInterval: gridlineInterval,
     computeGridlines: computeGridlines,
     computeEraBands: computeEraBands,
-    assignLabelSides: assignLabelSides
+    assignLabelSides: assignLabelSides,
+    collectCategories: collectCategories,
+    buildCategoryColorMap: buildCategoryColorMap
   };
 })(typeof window !== 'undefined' ? window : global);

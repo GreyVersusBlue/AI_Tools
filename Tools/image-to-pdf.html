@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="image-to-pdf/lib/jspdf.umd.min.js"></script>
 
 <style>
   * { box-sizing: border-box; }
@@ -62,6 +62,7 @@
   .controls { display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; }
   .control-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
   .control-group label { font-size: 11.5px; opacity: 0.65; font-weight: 500; }
+  .control-group label input[type="checkbox"] { margin-right: 5px; vertical-align: -2px; }
 
   .toggle-group {
     display: flex; background: var(--color-surface);
@@ -81,7 +82,7 @@
 
   #file-list { list-style: none; max-height: 260px; overflow-y: auto; border: 1px solid var(--color-divider); font-size: 13px; }
   #file-list:empty::after { content: 'No files loaded yet.'; display: block; opacity: 0.5; text-align: center; padding: var(--space-6); }
-  #file-list li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-divider); }
+  #file-list li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
   #file-list li:last-child { border-bottom: none; }
   #file-list li:hover { background: var(--color-surface); }
   #file-list .seq { opacity: 0.5; min-width: 2.5rem; text-align: right; }
@@ -91,7 +92,12 @@
   .badge-svg { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
   .badge-jpg { background: var(--color-warn-bg); color: var(--color-warn); }
   .badge-webp { background: var(--color-success-bg); color: var(--color-success); }
-  .filename { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filename { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 90px; }
+  .caption-input {
+    flex-basis: 100%; margin-left: calc(2.5rem + 2.4rem + var(--space-2) * 2);
+    font-size: 12px; padding: 3px 6px; border: 1px solid var(--color-divider);
+    background: var(--color-bg); color: inherit; max-width: 320px;
+  }
   .row-actions { display: flex; gap: 3px; flex-shrink: 0; }
   .row-actions button {
     background: transparent; border: 1px solid var(--color-divider); opacity: 0.6;
@@ -216,18 +222,49 @@
   </div>
 </div>
 
+<!-- Document options: title page, header, page numbers, captions -->
+<div class="card blueprint tool-card">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="card-title">3 · Header, Title Page &amp; Page Numbers</div>
+  <div class="controls">
+
+    <div class="control-group" style="flex-basis:100%;">
+      <label><input type="checkbox" id="opt-titlepage"> Add a title page</label>
+    </div>
+    <div class="control-group" id="titlepage-fields" style="display:none;">
+      <label>Title</label>
+      <input class="input" type="text" id="titlepage-title" placeholder="e.g. Room 204 — Lab Photos">
+    </div>
+    <div class="control-group" id="titlepage-fields-2" style="display:none;">
+      <label>Subtitle (optional)</label>
+      <input class="input" type="text" id="titlepage-subtitle" placeholder="e.g. Ms. Rivera — Period 3">
+    </div>
+
+    <div class="control-group" style="flex-basis:100%;">
+      <label>Running header (printed at the top of every page, optional)</label>
+      <input class="input" type="text" id="header-text" placeholder="e.g. Chapter 12 — Lab Photos">
+    </div>
+
+    <div class="control-group" style="flex-basis:100%;">
+      <label><input type="checkbox" id="opt-pagenum" checked> Add page numbers (footer, "Page N of M")</label>
+    </div>
+
+  </div>
+</div>
+
 <!-- File list -->
 <div class="card blueprint tool-card">
   <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-  <div class="card-title">3 · File Queue</div>
+  <div class="card-title">4 · File Queue</div>
   <div id="file-count" aria-live="polite">Load files above to see the sort order preview.</div>
+  <p style="font-size:12px; opacity:0.6; margin:0 0 var(--space-2);">Add an optional caption to print under an image — useful for documentation packets and lab photo series.</p>
   <ul id="file-list"></ul>
 </div>
 
 <!-- Generate -->
 <div class="card blueprint tool-card">
   <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-  <div class="card-title">4 · Generate PDF</div>
+  <div class="card-title">5 · Generate PDF</div>
   <div id="progress-wrap">
     <div id="progress-bar-bg"><div id="progress-bar"></div></div>
     <div id="progress-label" aria-live="polite">Ready</div>
@@ -278,6 +315,9 @@
     if (raw.gridDensity && gridDensitySel.querySelector(`option[value="${raw.gridDensity}"]`)) {
       gridDensitySel.value = raw.gridDensity;
     }
+    if (typeof raw.pageNumbers === 'boolean') {
+      document.getElementById('opt-pagenum').checked = raw.pageNumbers;
+    }
   })();
 
   function saveSettingsPrefs() {
@@ -286,7 +326,8 @@
         pageSize: pageSizeSel.value,
         orient: document.querySelector('input[name="orient"]:checked').value,
         quality: qualitySel.value,
-        gridDensity: gridDensitySel.value
+        gridDensity: gridDensitySel.value,
+        pageNumbers: document.getElementById('opt-pagenum').checked
       }));
     } catch (e) { /* storage full/blocked */ }
   }
@@ -297,8 +338,25 @@
 
   const VALID_EXT = /\.(png|jpe?g|webp|svg)$/i;
 
-  let loadedFiles = [];   // Array of { id, file, thumbUrl, rotation } — array order is the "custom" order
+  let loadedFiles = [];   // Array of { id, file, thumbUrl, rotation, caption } — array order is the "custom" order
   let nextId = 1;
+
+  // ── Document options: title page, header, page numbers ─────────────────────
+  const optTitlepage    = document.getElementById('opt-titlepage');
+  const titlepageFields  = document.getElementById('titlepage-fields');
+  const titlepageFields2 = document.getElementById('titlepage-fields-2');
+  const titlepageTitle   = document.getElementById('titlepage-title');
+  const titlepageSubtitle = document.getElementById('titlepage-subtitle');
+  const headerTextInput  = document.getElementById('header-text');
+  const optPagenum       = document.getElementById('opt-pagenum');
+
+  optTitlepage.addEventListener('change', () => {
+    const on = optTitlepage.checked;
+    titlepageFields.style.display  = on ? '' : 'none';
+    titlepageFields2.style.display = on ? '' : 'none';
+    saveSettingsPrefs();
+  });
+  optPagenum.addEventListener('change', saveSettingsPrefs);
 
   function extOf(name) {
     const m = name.match(/\.([a-z0-9]+)$/i);
@@ -347,7 +405,7 @@
 
     const existingNames = new Set(loadedFiles.map(e => e.file.name));
     const newOnes = valid.filter(f => !existingNames.has(f.name));
-    newOnes.forEach(f => loadedFiles.push({ id: nextId++, file: f, thumbUrl: URL.createObjectURL(f), rotation: 0 }));
+    newOnes.forEach(f => loadedFiles.push({ id: nextId++, file: f, thumbUrl: URL.createObjectURL(f), rotation: 0, caption: '' }));
 
     if (invalid.length > 0) {
       const lines = invalid.slice(0, 5).map(f => rejectionReason(f.name));
@@ -439,7 +497,7 @@
     const isCustom = getSortMode() === 'custom';
 
     ordered.forEach((entry, i) => {
-      const { id, file, thumbUrl, rotation } = entry;
+      const { id, file, thumbUrl, rotation, caption } = entry;
       const li = document.createElement('li');
       const ext = badgeExt(file.name);
       const safeName = escapeHtml(file.name);
@@ -457,12 +515,17 @@
           <button type="button" data-act="rotate" aria-label="Rotate ${safeName} 90° (currently ${rotation}°)">&#8635;</button>
           <button type="button" data-act="remove" aria-label="Remove ${safeName}">&#10005;</button>
         </span>
+        <input type="text" class="input caption-input" data-act="caption" placeholder="Caption (optional)" value="${escapeHtml(caption || '')}" aria-label="Caption for ${safeName}">
       `;
 
       li.querySelector('[data-act="up"]').addEventListener('click', () => moveFile(id, -1));
       li.querySelector('[data-act="down"]').addEventListener('click', () => moveFile(id, 1));
       li.querySelector('[data-act="rotate"]').addEventListener('click', () => rotateFile(id));
       li.querySelector('[data-act="remove"]').addEventListener('click', () => removeFile(id));
+      li.querySelector('[data-act="caption"]').addEventListener('input', e => {
+        const idx = indexOfId(id);
+        if (idx !== -1) loadedFiles[idx].caption = e.target.value;
+      });
 
       // Drag-and-drop reorder — desktop-mouse enhancement. Touch devices don't
       // support HTML5 drag, so the up/down buttons above are the real mechanism.
@@ -573,6 +636,17 @@
     let   outName     = document.getElementById('filename').value.trim() || 'assembled.pdf';
     if (!/\.pdf$/i.test(outName)) outName += '.pdf';
 
+    const headerText   = headerTextInput.value.trim();
+    const pageNumEnabled = optPagenum.checked;
+    const wantTitlePage = optTitlepage.checked;
+    const titleText    = titlepageTitle.value.trim();
+    const subtitleText = titlepageSubtitle.value.trim();
+    const hasTitlePage = wantTitlePage && (titleText || subtitleText);
+    const anyCaptions  = ordered.some(e => e.caption && e.caption.trim());
+    const HEADER_BAND_MM  = headerText ? 10 : 0;
+    const FOOTER_BAND_MM  = pageNumEnabled ? 8 : 0;
+    const CAPTION_BAND_MM = 10;
+
     btnGen.disabled = true;
     btnClear.disabled = true;
     progressWrap.classList.add('visible');
@@ -585,6 +659,8 @@
     // grid page shares the same size/orientation/cell grid, unlike the
     // one-per-page path where each page is sized off its own image.
     let gridCols = 0, gridRows = 0, gridPgW = 0, gridPgH = 0, gridCellW = 0, gridCellH = 0;
+    let gridTopMargin = 0;
+    const gridCapBand = anyCaptions ? CAPTION_BAND_MM : 0;
     if (gridDensity > 1) {
       [gridPgW, gridPgH] = resolveGridPageDimsMm(pageMode, orient);
       const base = GRID_LAYOUTS[gridDensity];
@@ -592,20 +668,48 @@
       const swap = landscape && base.cols !== base.rows;
       gridCols = swap ? base.rows : base.cols;
       gridRows = swap ? base.cols : base.rows;
+      gridTopMargin = GRID_MARGIN_MM + HEADER_BAND_MM;
+      const bottomMargin = GRID_MARGIN_MM + FOOTER_BAND_MM;
       const usableW = gridPgW - 2 * GRID_MARGIN_MM;
-      const usableH = gridPgH - 2 * GRID_MARGIN_MM;
+      const usableH = gridPgH - gridTopMargin - bottomMargin;
       gridCellW = (usableW - (gridCols - 1) * GRID_GUTTER_MM) / gridCols;
       gridCellH = (usableH - (gridRows - 1) * GRID_GUTTER_MM) / gridRows;
     }
 
     let pdf = null;
+    let pdfPageCount = 0;
+
+    if (hasTitlePage) {
+      const [tW, tH] = resolveGridPageDimsMm(pageMode, orient);
+      pdf = new jsPDF({ orientation: tW >= tH ? 'l' : 'p', unit: 'mm', format: [tW, tH], compress: true });
+      pdfPageCount++;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(26);
+      pdf.setTextColor(20);
+      const titleLines = pdf.splitTextToSize(titleText || 'Untitled', tW - 40);
+      const titleY = tH / 2 - (subtitleText ? 8 : 0) - (titleLines.length - 1) * 5;
+      pdf.text(titleLines, tW / 2, titleY, { align: 'center' });
+      if (subtitleText) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(14);
+        pdf.setTextColor(90);
+        const subLines = pdf.splitTextToSize(subtitleText, tW - 50);
+        pdf.text(subLines, tW / 2, titleY + 14, { align: 'center' });
+      }
+      const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.setTextColor(150);
+      pdf.text(dateStr, tW / 2, tH - 20, { align: 'center' });
+    }
+
     const skipped = [];
     let sourceBytes = 0;
-    let pdfPageCount = 0; // actual PDF pages created — fewer than ordered.length in grid mode
     let placedCount  = 0; // successfully-embedded images only; skipped ones don't consume a grid cell
 
     for (let i = 0; i < ordered.length; i++) {
-      const { file, rotation } = ordered[i];
+      const { file, rotation, caption } = ordered[i];
+      const captionText = (caption || '').trim();
       sourceBytes += file.size;
       const isSVG = /\.svg$/i.test(file.name);
 
@@ -659,20 +763,30 @@
           const row = Math.floor(cellIdx / gridCols);
           const col = cellIdx % gridCols;
           const cellX = GRID_MARGIN_MM + col * (gridCellW + GRID_GUTTER_MM);
-          const cellY = GRID_MARGIN_MM + row * (gridCellH + GRID_GUTTER_MM);
+          const cellY = gridTopMargin + row * (gridCellH + GRID_GUTTER_MM);
+          const imgAreaH = gridCellH - gridCapBand;
 
-          // Fit the image inside its cell, keeping aspect ratio (letterboxed,
-          // never stretched/cropped), centered — same approach as the
-          // one-per-page path below, just against the cell instead of the page.
-          const scale = Math.min(gridCellW / wMm, gridCellH / hMm);
+          // Fit the image inside its cell (minus any reserved caption strip),
+          // keeping aspect ratio (letterboxed, never stretched/cropped),
+          // centered — same approach as the one-per-page path below, just
+          // against the cell instead of the page.
+          const scale = Math.min(gridCellW / wMm, imgAreaH / hMm);
           const dW = wMm * scale, dH = hMm * scale;
-          const offX = cellX + (gridCellW - dW) / 2, offY = cellY + (gridCellH - dH) / 2;
+          const offX = cellX + (gridCellW - dW) / 2, offY = cellY + (imgAreaH - dH) / 2;
 
           pdf.addImage(embedDataURL, embedFormat, offX, offY, dW, dH, undefined, 'FAST');
           // Faint cell border so the sheet reads as a grid at a glance.
           pdf.setDrawColor(200);
           pdf.setLineWidth(0.2);
           pdf.rect(cellX, cellY, gridCellW, gridCellH);
+
+          if (gridCapBand && captionText) {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7);
+            pdf.setTextColor(70);
+            const capLines = pdf.splitTextToSize(captionText, gridCellW - 4).slice(0, 2);
+            pdf.text(capLines, cellX + gridCellW / 2, cellY + imgAreaH + 4, { align: 'center' });
+          }
 
           placedCount++;
         } else {
@@ -685,12 +799,26 @@
           }
           pdfPageCount++;
 
-          // Scale image to fit the page, keeping aspect ratio, centered
-          const scale = Math.min(pgW / wMm, pgH / hMm);
+          // Scale image to fit the page (minus header/footer/caption bands),
+          // keeping aspect ratio, centered
+          const capBand = captionText ? CAPTION_BAND_MM : 0;
+          const usableTop = HEADER_BAND_MM;
+          const usableH = pgH - HEADER_BAND_MM - FOOTER_BAND_MM - capBand;
+          const scale = Math.min(pgW / wMm, usableH / hMm);
           const dW = wMm * scale, dH = hMm * scale;
-          const offX = (pgW - dW) / 2, offY = (pgH - dH) / 2;
+          const offX = (pgW - dW) / 2, offY = usableTop + (usableH - dH) / 2;
 
           pdf.addImage(embedDataURL, embedFormat, offX, offY, dW, dH, undefined, 'FAST');
+
+          if (capBand) {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(10);
+            pdf.setTextColor(60);
+            const capLines = pdf.splitTextToSize(captionText, pgW - 24);
+            pdf.text(capLines, pgW / 2, offY + dH + 6, { align: 'center' });
+          }
+
+          placedCount++;
         }
 
       } catch (err) {
@@ -699,12 +827,31 @@
       }
     }
 
-    if (!pdf) {
+    if (!pdf || placedCount === 0) {
       showMsg('Nothing could be generated:\n' + skipped.join('\n'), 'error');
       setProgress(0, 'Failed.');
       btnGen.disabled = false;
       btnClear.disabled = false;
       return;
+    }
+
+    // Running header and "Page N of M" footer, applied as a pass over every
+    // finished page rather than during layout — the total page count (M) and
+    // whether a title page precedes the content aren't both known until now.
+    if (headerText || pageNumEnabled) {
+      const totalPages = pdf.internal.getNumberOfPages();
+      const contentStart = hasTitlePage ? 2 : 1;
+      const contentTotal = totalPages - contentStart + 1;
+      for (let p = contentStart; p <= totalPages; p++) {
+        pdf.setPage(p);
+        const size = pdf.internal.pageSize;
+        const pw = size.getWidth(), ph = size.getHeight();
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.setTextColor(120);
+        if (headerText) pdf.text(headerText, pw / 2, 7, { align: 'center' });
+        if (pageNumEnabled) pdf.text(`Page ${p - contentStart + 1} of ${contentTotal}`, pw / 2, ph - 5, { align: 'center' });
+      }
     }
 
     setProgress(100, 'Finalizing…');
