@@ -53,7 +53,6 @@ Reminder: coming soon means not right now.
 | Idea | What it would do |
 |---|---|
 | Classroom Label Maker (Target Language) | Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a text-to-speech pronunciation clip, plus a plain reference sheet of the whole label set. |
-| Verb Conjugation Reference Poster Generator | A printable large-format wall poster of conjugation patterns — a visual reference to hang up, distinct from the drill worksheets. |
 | Cultural Trivia Card Generator | Printable trivia cards about target-language countries and cultures, for warm-ups or feeding into the Quiz / Review Game Board. |
 | Picture-Prompt Speaking/Writing Task Generator | A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable. |
 | Cognates & False Friends Reference List Builder | Build and print a reference list of cognates and false friends for whatever language you teach. |

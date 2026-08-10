@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v15';
+const CACHE_VERSION = 'v16';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -170,11 +170,12 @@ const PRECACHE_URLS = [
   "Tools/timeline-builder/tlb-photo.js",
   "Tools/timeline-builder/tlb-store.js",
   "Tools/unit-conversion-chart-builder.html",
+  "Tools/verb-conjugation-poster-generator.html",
   "Tools/vocab-conjugation-drill.html",
-  "Tools/word-problem-warmup-generator.html",
   "Tools/vocab-flashcard-generator.html",
   "Tools/vocab-flashcard-generator/vfg-layout.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
+  "Tools/word-problem-warmup-generator.html",
   "Tools/writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
   "Tools/writing-prompt-generator/wpg-store.js",
