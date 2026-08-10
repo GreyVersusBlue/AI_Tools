@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 6 (PR #TBD): five Quick Wins shipped.**
+**2026-08-10 — Round 6 (PR #58): five Quick Wins shipped.**
 
 - **Done — Bulk entry grid.** A collapsible "Bulk entry" section: one row
   per roster student (Student / Book / Pages read to / Minutes) for a single

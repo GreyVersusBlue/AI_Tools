@@ -116,7 +116,7 @@ assistant (Prompt Builder).
 
 **30 of 46 tools done. 16 to go.**
 
-### Round 6 — 2026-08-10 — PR #TBD
+### Round 6 — 2026-08-10 — PR #58
 
 Three tools with little else in common except each having a genuinely
 underbuilt "quick win" list: a document merger that finally got its cdnjs
@@ -173,7 +173,7 @@ lands naturally inside a tool you are already working on, take it.
 - **P5 CDN dependencies.** `Sub Plan Builder.html` still loads JSZip from
   cdnjs — it's on the untouched list, so this gets fixed as a side effect if
   whoever takes it remembers. `docx-merger.html` had the same issue and was
-  fixed in Round 6 (PR #TBD, vendored into `Tools/docx-merger/lib/`, source
+  fixed in Round 6 (PR #58, vendored into `Tools/docx-merger/lib/`, source
   pulled from the `jszip` npm package rather than cdnjs since cdnjs was
   itself unreachable from that session's sandbox — see the npm-package
   fallback approach in `docx-merger.md`'s Status section if cdnjs is
