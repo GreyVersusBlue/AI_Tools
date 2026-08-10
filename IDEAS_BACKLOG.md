@@ -24,7 +24,6 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Book Tasting Menu Generator | Turn a stack of book blurbs into a printable "menu" or table tents for a book-tasting activity, so students can browse titles before choosing one. |
 | Grammar Mad Libs Generator | Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal. |
 | Story Elements / Plot Diagram Builder | Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference. |
 
