@@ -449,6 +449,22 @@ parse.
 | Backup & Restore | `009-backup-restore.md` |
 | Command Center | `010-command-center-dashboard.md` |
 
+**Leftover from this round — pick these up before starting a fresh round
+elsewhere:** session `yjj7k6` was assigned the 001–010 range and completed
+five of them; **001 Hall Pass Log, 004 Classroom Timer, 005 Seating Chart
+Generator, 007 Name Picker, and 008 Behavior & Points Tracker are still
+sitting in "Not yet touched" below.** They weren't skipped for lack of
+ideas — each one's own `improvement prompts/<tool>.md` "where the next round
+should pick up" note names something real, it's just each is a full
+session's worth on its own rather than a bounded fix (stable per-student
+IDs / bell-schedule correlation for 001; bell-schedule awareness, a
+multi-timer board, or real sound assets for 004; the base64→IndexedDB photo
+migration for 005; splitting the 2,400-line file or the history-cap rollup
+for 007; the seating-chart-based board layout for 008 — see each file for
+the full list). A future session — ideally one picking up the 001–010 range
+again, but anyone is fine — should finish these five so the range gets a
+complete Pass 2 first pass before other tools get a second round.
+
 ---
 
 ## Not yet touched
