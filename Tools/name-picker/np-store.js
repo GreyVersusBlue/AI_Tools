@@ -1,4 +1,4 @@
-// np-store.js — the Name Picker's twelve storage keys, on gvb-save.js.
+// np-store.js — the Name Picker's thirteen storage keys, on gvb-save.js.
 //
 // The page used to call localStorage directly at forty-six sites across twelve
 // keys. Four of those were bare
@@ -10,7 +10,9 @@
 //
 // Two constraints shaped everything here:
 //
-//   1. Every key name stays exactly as it was (locked decision #36). All twelve.
+//   1. Every key name stays exactly as it was (locked decision #36). All twelve
+//      of the original ones. np_absent was added later; #36 forbids renaming a
+//      key, not adding one, and a new key costs no existing teacher anything.
 //   2. So does every byte on disk. gvb-save stamps `__v` into the object it
 //      writes, which would turn `np_history` (an array) into an object with
 //      numeric keys, and `np_theme` (the bare string `medieval`) into something
@@ -81,6 +83,11 @@ export const OPTION_DEFAULTS = {
   coldCall: false,
   suddenDeath: false,
   promptsOn: false,
+  // Replaces every moving celebration with a still one. Defaults off; the OS
+  // `prefers-reduced-motion` setting turns the same behaviour on by itself, so
+  // this box is for the teacher whose device does not ask for it but whose room
+  // does.
+  calm: false,
   mode: "jump",
   speed: 130,
   multi: 1,
@@ -99,7 +106,7 @@ const FLAG = {
 };
 
 /* ---------------------------------------------------------------------------
-   The twelve keys, plus np_options.
+   The thirteen keys, plus np_options.
 
    `group` is the interesting column. The three groups have genuinely different
    erase needs, and that is what makes one honest "clear all data" button
@@ -176,11 +183,36 @@ export const KEYS = [
     name: "history", key: "np_history", group: "records", wire: "json",
     label: "Pick history", blank: () => [],
     ok: Array.isArray,
+    // `date` and `prompt` are additive fields (2026-08). The page was already
+    // writing `prompt` and this repair silently dropped it on every read, so a
+    // question attached to a pick never survived a reload. `date` is what the
+    // equity view needs to answer "who has not been called in three weeks";
+    // entries written before it existed simply have none, and every consumer
+    // has to treat a missing date as unknown rather than as today.
     fix: v => v
       .filter(isObj)
-      .map(h => ({ name: trimmed(h.name).slice(0, MAX_NAME), time: trimmed(h.time).slice(0, 20) }))
+      .map(h => {
+        const out = { name: trimmed(h.name).slice(0, MAX_NAME), time: trimmed(h.time).slice(0, 20) };
+        if (/^\d{4}-\d{2}-\d{2}$/.test(h.date)) out.date = h.date;
+        const prompt = trimmed(h.prompt).slice(0, 300);
+        if (prompt) out.prompt = prompt;
+        return out;
+      })
       .filter(h => h.name)
       .slice(-MAX_HISTORY)
+  },
+  {
+    // Who is out today. In `roster` rather than `prefs` because it is a list of
+    // student names — same reason np_lucky is there. Date-stamped so the page
+    // can drop a stale list on open instead of carrying Monday's absences into
+    // Tuesday, which is what a session-only Set silently did every reload.
+    name: "absent", key: "np_absent", group: "roster", wire: "json",
+    label: "Absent today", blank: () => ({ date: "", names: [] }),
+    ok: isObj,
+    fix: v => ({
+      date: /^\d{4}-\d{2}-\d{2}$/.test(v.date) ? v.date : "",
+      names: nameList(v.names)
+    })
   },
   {
     name: "hof", key: "np_hof", group: "records", wire: "json",
@@ -372,7 +404,7 @@ export function createStore(options = {}) {
     }));
   }
 
-  // Export/import only. Given a memory stub so it can never become key thirteen.
+  // Export/import only. Given a memory stub so it can never become a real key.
   const bundle = createSaveSlot({
     game: GAME,
     key: "np_bundle",

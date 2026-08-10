@@ -9,9 +9,115 @@
 
 ## Status
 
-Reviewed — structural read of the source. The ideas below are deliberately
-ambitious and are **not** scoped to a single session. Pick what fits; leave
-the rest.
+**2026-08-10 — The equity dashboard, question-attached picks, reduced motion,
+undo, dated absences, and the first read of Class Roster Hub's student record
+all shipped.** Two new DOM-free modules (`np-equity.js`, `np-details.js`) and
+one new storage key (`np_absent`); the Node suite went from 206 to 261
+assertions and a 28-check Playwright pass covers the page itself.
+
+What shipped, against the backlog below:
+
+- **Cold-call equity dashboard (Major Feature)** — a new ⚖️ Equity tab, built
+  on `np-equity.js`. Per student: picks inside a 7/14/30-day or all-time
+  window, days since last called, lifetime total, sorted so never-called and
+  longest-overdue come first. A one-line summary ("31 picks across 28
+  students in the last 14 days · 3 never called on record") and a printable
+  Participation Summary, which is the artifact the backlog said teachers are
+  asked for and have no way to produce.
+- **The change that made it possible: `np_history` entries now carry a
+  `date`.** Lifetime totals cannot answer "who have I not called on in three
+  weeks" — a student called eleven times in September looks identical to one
+  called eleven times this week. `date` is additive and optional; entries
+  written before it existed have none, are excluded from every windowed
+  figure, and are counted and reported (`undated`) rather than silently
+  assumed to be today.
+- **Question-attached picks (Major Feature)** — and a real bug fixed on the
+  way. The page has always written `prompt` onto the history entry, and
+  `np-store`'s repair silently dropped it on every read, so a question
+  attached to a pick never survived a reload. It is kept now, shown in the
+  history list, carried into the text export (which gained Date and Question
+  columns), and already appeared in the print report. Added **"Same question,
+  next student"** on the winner modal — asking one discussion question of
+  three students in a row previously meant re-rolling, which threw the
+  question away and drew a new one.
+- **Preferred name and pronunciation (Quick Win + P2 adoption)** — this is
+  the Name Picker reading Class Roster Hub's `crh_students_v1` sidecar, via
+  the new `np-details.js`. On the winner modal the preferred name becomes the
+  big name, the roster name drops to a subtitle, and the pronunciation sits
+  under it in italics. A teacher who has never opened Class Roster Hub sees
+  no change anywhere. **This is the first consumer of that schema** — it was
+  the "next round should pick up" item in `class-roster-hub.md` and it is
+  done; the read-side helper other tools would copy is `np-details.js`.
+- **`prefers-reduced-motion` (Quick Win, P4)** — confetti, fireworks,
+  lightning, screen shake, chaos particles and the sudden-death explosion all
+  route through one `motionOff()` check and fall back to a **still** flash
+  (`staticCelebrate`), not a fade — "reduce motion" means do not move things,
+  and a fade is still movement to some of the people who set it. Sound
+  survives. There is also a **Calm mode** checkbox for the teacher whose
+  device does not ask for it but whose room does, and the options page says
+  plainly when the device setting is already in effect.
+- **Undo the last pick (Quick Win, P11)** — an ↩️ Undo button in the header
+  reverses the pick: history entry removed, pick count decremented, Hall of
+  Fame entry dropped, rotation restored, and any student the pick took off
+  the board put back.
+- **Absences that survive the day and clear themselves (Quick Win)** — the
+  new `np_absent` key, date-stamped. A refresh mid-period used to silently
+  put every absent student back on the board. A list from an earlier day is
+  never applied, but it is offered back ("4 students were marked absent on
+  8/8 — mark them absent again?"), because multi-day absences are normal and
+  re-ticking eight names is exactly the retyping this site exists to remove.
+- **Bigger, calmer winner name (Quick Win, partial)** — the winner name is
+  now `clamp(2.4rem, 7vw, 5rem)` so it scales with the projector instead of
+  sitting at a fixed 3.5em. The larger half of that idea — theming becoming
+  opt-in rather than the tool's personality — was not attempted.
+
+**Challenges hit:**
+
+- **Undo across a "Remove & Roll" was the one genuinely hard part**, and the
+  first implementation got it wrong in exactly the case the feature exists
+  for. Three modal buttons remove a student and *then* immediately roll
+  again, so the snapshot the new pick took was of a board the student had
+  already vanished from — undo reversed the new pick and left the mis-click
+  intact. Fixed with `noteBoardRemoval()`, called just before each of those
+  removals, which the next `markUndoPoint()` inherits. Anything added later
+  that removes a name and re-rolls needs that call too.
+- Undo is deliberately **one level, not a stack**. The case is a fat-fingered
+  eliminate thirty seconds ago, not rewinding a lesson, and every extra level
+  is another copy of the roster held for a scenario nobody has described.
+- `np_current` records the names on the board but not *which* saved roster
+  they came from, and the roster name is what picks the right set of
+  preferred names out of the sidecar. Rather than add a fourteenth key,
+  `inferRosterName()` matches the restored list against the saved rosters on
+  load. It fails silently for a hand-typed list, which then falls back to
+  "any roster that knows this name" — the right degradation, but worth
+  knowing it is a guess.
+- `np_history` is capped at 500 entries. Six classes a day fills that in a
+  few weeks, so a 30-day window can be reporting on less than it claims. The
+  equity view says so (`truncated`) rather than quietly under-reporting, but
+  raising the cap — or summarising per-day counts into a separate rollup —
+  is the real fix and is not done.
+- The site's ES modules mean the page cannot be exercised from a `file://`
+  URL (module CORS); the browser pass runs against a local static server.
+
+**Where the next round should pick up:**
+
+1. **The 500-entry history cap** is now load-bearing for a feature teachers
+   might be asked to defend. Either raise it or add a per-day rollup key that
+   survives the trim.
+2. **Seat-position distribution** — the equity report's most interesting
+   unbuilt column, and it needs `seating-chart-v1` (P7). "You call on the
+   back row a third as often" is a sharper finding than any of the numbers
+   currently shown.
+3. **Split the file.** Still 2,400+ lines, and this round added to it. The
+   themes table, the sound engine, and each pick mode are the obvious
+   extractions; `np-store`/`np-pick`/`np-equity`/`np-details` show the shape.
+4. **Second-screen mirror (P9)** and **theme packs as data** are untouched.
+5. **Team Draft still ends in a board**, not an artifact — the handoff to
+   Group/Team Generator and the bracket seed are unbuilt.
+6. The **Open Questions** below are unchanged and still want Devon's call —
+   particularly whether the participation data should have its own front door
+   and its own erase button now that it is a reportable artifact rather than
+   a bar chart.
 
 ## What it does today
 
