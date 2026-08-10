@@ -195,6 +195,118 @@ payload (no new fields at all) still renders with the pre-existing free-hint
 auto-reveal behavior and no score/letters UI. A third script drove the print
 Answer Key and QR Code views. All checks passed; scripts were deleted after.
 
+## Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+Picked up the three items Round 4 explicitly left open, all inside
+`019-escape-room-builder.html` and `escape-room-builder/lock.html`.
+`monitor.html`, `lib/qrcode.js`, and `lib/jsqr.js` were not touched.
+
+**What shipped:**
+
+- **Attempt limits and feedback (Quick Win).** Each station now has an
+  optional "Attempt limit before lockout" field in the builder
+  (`maxAttempts`, blank = unlimited, omitted from the payload when unset).
+  In `lock.html`, once a student's consecutive wrong guesses on a station
+  reach that limit, they're locked out of guessing again for 30 seconds — a
+  ticking countdown replaces the answer form (the clue, image, and hint stay
+  visible) and resets automatically when it expires, clearing that station's
+  miss counter so they get a fresh run at it. Progress persists the lockout
+  (`progress.lockUntil`), so a reload or re-scan during a cooldown doesn't
+  reset it early. This is orthogonal to puzzle type — it applies the same way
+  to text, digit-lock, and cipher stations.
+- **Near-miss feedback (Quick Win, overlaps with the item below).** A wrong
+  text answer within a couple of edits (Levenshtein distance, scaled a little
+  for longer answers) of an accepted answer now shows "So close — check your
+  capitalization, spacing, and spelling, then try again." instead of the
+  generic "Not quite — try again." Digit-lock and cipher wrong answers keep
+  the generic message; a typo in a decoded cipher phrase or a fat-fingered
+  digit doesn't get the same treatment since forgiving didn't make sense
+  there either (see below).
+- **Forgiving text-answer matching (Quick Win).** Text-type stations now
+  compare answers after stripping *all* punctuation (not just the small set
+  `normalizeAnswer` already handled) in addition to case and whitespace, via
+  a new `normalizeTextAnswer`. Digit-lock and cipher stations deliberately
+  keep using the original `normalizeAnswer` unchanged — those aren't
+  free-typed answers, so loosening them further wasn't the ask. Text stations
+  also gained an optional **numeric tolerance** (`numericTolerance`, e.g. an
+  accepted answer of "3.14" with tolerance "0.05" also accepts "3.1"–"3.19")
+  as a second, independent way to match, tried only after the exact/loose
+  text match fails.
+- **Edge case (b) — cipher with multiple accepted phrases — actually fixed.**
+  `lock.html`'s cipher display and the builder's answer-key `typeDetail` both
+  now encode and show *every* comma-separated accepted phrase, one per line,
+  instead of only the first. A teacher who lists "open sesame, opensesame" as
+  alternate acceptable phrasings now sees both correctly rendered as
+  ciphertext for the student, and both correctly documented in the answer
+  key — previously the second phrase was accepted silently on submit but
+  never actually shown encoded anywhere.
+- **Edge case (a) — digit-lock box count from the first answer only —
+  validated/warned, not restructured.** A real fix would mean either forcing
+  a single explicit "code length" field independent of the accepted-answer
+  strings, or redesigning how fixed per-character boxes reconcile with
+  variable-length accepted codes — real scope, not attempted. Instead, the
+  builder now shows a live inline warning under the "Correct code" field
+  whenever a digit-lock station's comma-separated accepted codes have
+  inconsistent lengths ("⚠ These codes are different lengths (3, 4 digits) —
+  the student will see boxes sized to the first code only (3). Use codes that
+  are all the same length…"), so a teacher catches the mismatch before
+  printing rather than discovering it when a team's correct-looking code
+  won't fit the boxes. `lock.html`'s box-sizing behavior itself (first
+  answer's length) is unchanged.
+- Builder's answer-key `typeDetail` also grew a "locks out after N misses"
+  note (any type) and a "(numeric match within ±N)" note (text type), so the
+  printed/on-screen answer key documents both new fields per station.
+
+**Data model additions (all optional, all omitted from the room payload when
+unset, so a plain room without any of this is byte-for-byte unchanged):**
+`station.maxAttempts` (int ≥ 1) and `station.numericTolerance` (number ≥ 0,
+text stations only). `progress.lockUntil` (an object keyed by station index,
+same shape as `progress.misses`/`progress.hintsUsed`) was added to
+`lock.html`'s saved progress shape, migrated in for old saved progress the
+same way `hintsUsed`/`letters` were in Round 4.
+
+**Deliberately left as documented edge cases / not attempted:**
+
+- Non-QR short-code fallback, preview/test-run mode, and station numbering
+  surviving reordering (remaining Quick Wins) — not touched.
+- Branching on *which* answer was given, and the rest of the Major Features
+  list — not touched.
+- Directional lock and jigsaw puzzle types — not touched.
+- No payload-size warning UI added (unchanged reasoning from Round 4 — the
+  new fields are a small int and a small number, omitted when unused).
+
+**Testing performed:** `node --check` on the inline `<script>` blocks in both
+changed files (both passed). A Playwright (Chromium, headless) script drove
+the builder UI to build a 3-station room — a text station ("keyboard"/"a
+keyboard", attempt limit 3), a digit-lock station with intentionally
+mismatched-length accepted codes ("482, 4820", to exercise edge case (a)),
+and a cipher station with two comma-separated accepted phrases ("open
+sesame, opensesame", to exercise edge case (b)) — then walked the generated
+player link end-to-end through `lock.html`: confirmed the builder's inline
+digit-length warning appears and is visible; confirmed a plain wrong answer
+("mouse") gets the generic message while a one-typo near-miss ("keybord")
+gets the "So close" message; confirmed a third consecutive miss trips the
+30-second lockout screen with a live countdown, persisted through a reload;
+confirmed a correct answer that differs only by case, doubled whitespace,
+and trailing punctuation ("A  Keyboard.") is now accepted; confirmed the
+digit-lock still solves via the first accepted code's length (3 boxes);
+confirmed the cipher station's box shows *both* accepted phrases correctly
+encoded on separate lines and that decoding the *second* one (not just the
+first) solves the station and finishes the room. Two smaller follow-up
+Playwright scripts separately verified numeric-tolerance matching (accepts
+within tolerance, rejects outside it) and that the builder's answer-key
+preview text surfaces both the new attempt-limit and numeric-tolerance
+details. All scripts were throwaway, run from the sandbox scratchpad
+directory, not committed.
+
+**Where the next round should pick up:** the still-open Quick Wins above
+(non-QR fallback, preview/test-run mode, stable station numbering) are the
+smallest remaining scoped items. If edge case (a) is revisited for a real
+fix rather than a warning, the cleanest path is probably an explicit
+`digitLength` field the teacher sets directly (defaulting to the first
+answer's length for backward compatibility) rather than continuing to infer
+box count from accepted-answer strings.
+
 ## Open Questions
 
 - Should this and `018-qr-scavenger-hunt-builder.html` merge? They differ mainly
