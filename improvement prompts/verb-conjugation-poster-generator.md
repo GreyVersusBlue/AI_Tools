@@ -1,4 +1,4 @@
-# Improvement Prompts — Verb Conjugation Reference Poster Generator
+# Improvement Prompts — 079 — Verb Conjugation Reference Poster Generator
 
 **Tool file:** `Tools/verb-conjugation-poster-generator.html`
 **Support folder:** none yet — everything is inline in the one file.

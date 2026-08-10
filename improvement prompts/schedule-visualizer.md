@@ -1,4 +1,4 @@
-# Improvement Prompts — School Layout Visualizer
+# Improvement Prompts — 035 — School Layout Visualizer
 
 **Tool file:** `Tools/schedule-visualizer.html` (~19,400 lines — by far the largest tool on the site)
 **Support folder:** `Tools/schedule-visualizer/` — `lib/jsqr.js`, `lib/qrcode.js`; plus `Tools/schedule/` — fonts, `libs/jspdf/`

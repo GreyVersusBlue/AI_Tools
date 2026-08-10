@@ -1,4 +1,4 @@
-# Improvement Prompts — East Middle Schedule Browser
+# Improvement Prompts — 034 — East Middle Schedule Browser
 
 **Tool file:** `Tools/schedule-browser.html`
 **Support folder:** `Tools/schedule/` — fonts, `libs/jspdf/`

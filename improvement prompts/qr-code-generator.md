@@ -1,4 +1,4 @@
-# Improvement Prompts — QR Code Generator
+# Improvement Prompts — 016 — QR Code Generator
 
 **Tool file:** `Tools/qr-code-generator.html`
 **Support folder:** `Tools/qr-code-generator/` — `lib/jsqr.js`, `lib/qrcode.js`

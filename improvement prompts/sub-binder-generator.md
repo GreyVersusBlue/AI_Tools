@@ -1,4 +1,4 @@
-# Improvement Prompts — Sub Binder / Day Bundle Generator
+# Improvement Prompts — 045 — Sub Binder / Day Bundle Generator
 
 **Tool file:** `Tools/sub-binder-generator.html`
 **Support folder:** none — single file

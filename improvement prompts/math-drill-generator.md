@@ -1,4 +1,4 @@
-# Improvement Prompts — Math Fact Drill Sheet Generator
+# Improvement Prompts — 026 — Math Fact Drill Sheet Generator
 
 **Tool file:** `Tools/math-drill-generator.html`
 **Support folder:** `Tools/math-drill-generator/` — `mdg-generate.js`, `mdg-store.js`, `mdg-templates.js`

@@ -1,4 +1,4 @@
-# Improvement Prompts — Art Critique Worksheet Generator
+# Improvement Prompts — 047 — Art Critique Worksheet Generator
 
 **Tool file:** `Tools/art-critique-worksheet-generator.html`
 **Support folder:** none yet — everything is inline in the one file.

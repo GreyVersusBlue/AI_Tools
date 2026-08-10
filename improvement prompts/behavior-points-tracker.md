@@ -1,4 +1,4 @@
-# Improvement Prompts — Behavior & Points Tracker
+# Improvement Prompts — 008 — Behavior & Points Tracker
 
 **Tool file:** `Tools/behavior-points-tracker.html`
 **Support folder:** none — single file

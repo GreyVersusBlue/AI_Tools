@@ -1,4 +1,4 @@
-# Improvement Prompts — Writing Prompt Generator
+# Improvement Prompts — 025 — Writing Prompt Generator
 
 **Tool file:** `Tools/writing-prompt-generator.html`
 **Support folder:** `Tools/writing-prompt-generator/` — `wpg-prompts.js`, `wpg-store.js`

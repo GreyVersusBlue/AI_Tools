@@ -1,4 +1,4 @@
-# Improvement Prompts — Story Elements / Plot Diagram Builder
+# Improvement Prompts — 072 — Story Elements / Plot Diagram Builder
 
 **Tool file:** `Tools/plot-diagram-builder.html`
 **Support folder:** none yet — everything is inline in the one file.

@@ -1,4 +1,4 @@
-# Improvement Prompts — Data Table → Chart Builder
+# Improvement Prompts — 038 — Data Table → Chart Builder
 
 **Tool file:** `Tools/data-chart-builder.html`
 **Support folder:** none — single file

@@ -1,4 +1,4 @@
-# Improvement Prompts — Book Tasting Menu Generator
+# Improvement Prompts — 049 — Book Tasting Menu Generator
 
 **Tool file:** `Tools/book-tasting-menu-generator.html`
 **Support folder:** none yet — everything is inline in the one file.

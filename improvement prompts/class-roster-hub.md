@@ -1,4 +1,4 @@
-# Improvement Prompts — Class Roster Hub
+# Improvement Prompts — 006 — Class Roster Hub
 
 **Tool file:** `Tools/class-roster-hub.html`
 **Support folder:** `Tools/class-roster-hub/` — `lib/qrcode.js`

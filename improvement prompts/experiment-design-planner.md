@@ -1,4 +1,4 @@
-# Improvement Prompts — Scientific Method / Experiment Design Planner
+# Improvement Prompts — 059 — Scientific Method / Experiment Design Planner
 
 **Tool file:** `Tools/experiment-design-planner.html`
 **Support folder:** none yet — everything is inline in the one file.

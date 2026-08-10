@@ -1,4 +1,4 @@
-# Improvement Prompts — Classroom Label Maker (Target Language)
+# Improvement Prompts — 051 — Classroom Label Maker (Target Language)
 
 **Tool file:** `Tools/classroom-label-maker.html`
 **Support folder:** `Tools/classroom-label-maker/` — `lib/qrcode.js` (vendored, same library used by Gallery Walk QR Codes, QR Scavenger Hunt Builder, etc.), `speak.html` (pronunciation companion page)

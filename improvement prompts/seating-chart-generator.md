@@ -1,4 +1,4 @@
-# Improvement Prompts — Seating Chart Generator
+# Improvement Prompts — 005 — Seating Chart Generator
 
 **Tool file:** `Tools/Seating Chart Generator.html`
 **Support folder:** `Tools/seating-chart/` — `scg-photo.js` and assets
