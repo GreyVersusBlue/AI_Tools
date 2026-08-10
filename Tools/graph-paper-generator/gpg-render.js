@@ -47,6 +47,13 @@
     return '<circle cx="' + x.toFixed(4) + '" cy="' + y.toFixed(4) + '" r="' + r + '" fill="currentColor"/>';
   }
 
+  // Same as lineEl but with a dash pattern — used for the handwriting-practice
+  // midline, which by convention is dashed so it reads as "guide, not ink".
+  function dashedLineEl(x1, y1, x2, y2, strokeWidth) {
+    return '<line x1="' + x1.toFixed(4) + '" y1="' + y1.toFixed(4) + '" x2="' + x2.toFixed(4) +
+      '" y2="' + y2.toFixed(4) + '" stroke="currentColor" stroke-width="' + strokeWidth + '" stroke-dasharray="0.08 0.06"/>';
+  }
+
   function escapeXml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c];
@@ -366,9 +373,103 @@
     return { svg: svgWrap(page.w, page.h, svgInner), copies: copies };
   }
 
+  /* ---------- Cornell notes ---------- */
+  // opts: { orientation, cueWidth (inches, left cue column), summaryHeight
+  //         (inches, bottom summary band), ruleSpacing (inches, note-taking
+  //         line spacing), faded, header }.
+  // Layout: a left "cues" column and right "notes" column ruled the same,
+  // separated by a vertical divider, sitting above a full-width "summary"
+  // band separated by a horizontal divider — the standard three-region
+  // Cornell page. Section labels are small caption text drawn inside the
+  // faded group (same as gridlines) since they're guides, not header content.
+  function renderCornellNotes(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2;
+    var usableH = page.h - MARGIN * 2 - headerH;
+
+    var cueWidth = Math.max(0.5, Math.min(usableW - 0.5, opts.cueWidth || 2.5));
+    var summaryHeight = Math.max(0.5, Math.min(usableH - 0.5, opts.summaryHeight || 2));
+    var ruleSpacing = Math.max(0.15, opts.ruleSpacing || 0.34);
+
+    var top = MARGIN + headerH;
+    var left = MARGIN, right = MARGIN + usableW;
+    var bottom = top + usableH;
+    var noteAreaH = usableH - summaryHeight;
+    var summaryTop = top + noteAreaH;
+    var cueDividerX = left + cueWidth;
+
+    var parts = [];
+
+    // Ruled note-taking lines across the full width (cue + notes columns share
+    // the same rule spacing, so a line drawn in one column lines up with its
+    // neighbor), then again across the summary band at the same spacing.
+    var noteRuleCount = Math.max(0, Math.floor(noteAreaH / ruleSpacing));
+    for (var i = 1; i <= noteRuleCount; i++) {
+      var y = top + i * ruleSpacing;
+      if (y >= summaryTop - 1e-6) break;
+      parts.push(lineEl(left, y, right, y, THIN));
+    }
+    var summaryRuleCount = Math.max(0, Math.floor(summaryHeight / ruleSpacing));
+    for (var j = 1; j <= summaryRuleCount; j++) {
+      var ys = summaryTop + j * ruleSpacing;
+      if (ys >= bottom - 1e-6) break;
+      parts.push(lineEl(left, ys, right, ys, THIN));
+    }
+
+    // Section boundaries, bolder than the ruling so the three regions read at a glance.
+    parts.push(lineEl(cueDividerX, top, cueDividerX, summaryTop, BOLD));
+    parts.push(lineEl(left, summaryTop, right, summaryTop, BOLD));
+
+    // Small caption labels — inside the faded group like everything else here.
+    parts.push(textEl(left + 0.06, top + 0.16, 'CUES', 'start', 0.1));
+    parts.push(textEl(cueDividerX + 0.08, top + 0.16, 'NOTES', 'start', 0.1));
+    parts.push(textEl(left + 0.06, summaryTop + 0.16, 'SUMMARY', 'start', 0.1));
+
+    var gridColor = opts.faded ? FADE_COLOR : INK_COLOR;
+    var svgInner = headerSvg(opts.header, page, headerH) + gridGroup(gridColor, parts.join(''));
+    return { svg: svgWrap(page.w, page.h, svgInner), cueWidth: cueWidth, summaryHeight: summaryHeight };
+  }
+
+  /* ---------- Handwriting practice lines ---------- */
+  // opts: { orientation, lineHeight (inches, distance from topline to
+  //         baseline), faded, header }.
+  // Each repeated unit is the classic three-line set — topline, dashed
+  // midline, solid baseline — with a blank gap before the next set so
+  // ascenders/descenders from adjacent rows don't collide.
+  function renderHandwritingLines(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2;
+    var usableH = page.h - MARGIN * 2 - headerH;
+
+    var lineHeight = Math.max(0.15, opts.lineHeight || 0.5);
+    var gap = lineHeight * 0.6;
+    var unit = lineHeight + gap;
+    // How many complete sets (topline through baseline) fit before the page runs out.
+    var sets = usableH >= lineHeight ? Math.floor((usableH - lineHeight) / unit) + 1 : 0;
+
+    var offsetX = MARGIN, offsetY = MARGIN + headerH;
+    var parts = [];
+    for (var i = 0; i < sets; i++) {
+      var topY = offsetY + i * unit;
+      var baseY = topY + lineHeight;
+      var midY = topY + lineHeight / 2;
+      parts.push(lineEl(offsetX, topY, offsetX + usableW, topY, THIN));
+      parts.push(dashedLineEl(offsetX, midY, offsetX + usableW, midY, THIN));
+      parts.push(lineEl(offsetX, baseY, offsetX + usableW, baseY, BOLD));
+    }
+
+    var gridColor = opts.faded ? FADE_COLOR : INK_COLOR;
+    var svgInner = headerSvg(opts.header, page, headerH) + gridGroup(gridColor, parts.join(''));
+    return { svg: svgWrap(page.w, page.h, svgInner), lineSets: sets, lineHeight: lineHeight };
+  }
+
   global.GraphPaperRender = {
     renderGraphPaper: renderGraphPaper,
     renderNumberLine: renderNumberLine,
-    renderCoordinatePlane: renderCoordinatePlane
+    renderCoordinatePlane: renderCoordinatePlane,
+    renderCornellNotes: renderCornellNotes,
+    renderHandwritingLines: renderHandwritingLines
   };
 })(typeof window !== 'undefined' ? window : global);
