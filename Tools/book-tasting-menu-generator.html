@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Tasting Menu Generator</title>
+<meta name="description" content="Turn a stack of book blurbs into a printable menu or table tents for a book-tasting activity, so students can browse titles before choosing one.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/book-tasting-menu-generator.html">
+<meta property="og:title" content="Book Tasting Menu Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Turn a stack of book blurbs into a printable menu or table tents for a book-tasting activity, so students can browse titles before choosing one.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Book Tasting Menu Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Turn a stack of book blurbs into a printable menu or table tents for a book-tasting activity, so students can browse titles before choosing one.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 8h14v17l-7-3-7 3z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], textarea, input[type="file"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 3.5rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+
+  .book-row { display: flex; gap: .7rem; padding: .6rem 0; border-bottom: 1px dashed var(--line); align-items: flex-start; }
+  .book-row:last-child { border-bottom: none; }
+  .book-row img.thumb { width: 44px; height: 60px; object-fit: cover; border: 1px solid var(--line-strong); border-radius: 3px; flex-shrink: 0; }
+  .book-row .info { flex: 1; }
+  .book-row .title-line { font-weight: 700; }
+  .book-row .meta { font-size: .78rem; color: var(--muted); }
+  .book-row .blurb { font-size: .82rem; margin-top: .2rem; }
+
+  .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
+  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  #printArea { display: none; }
+  .menu-title { text-align: center; font-size: 1.8rem; margin: 0 0 .3rem; font-family: Georgia, serif; }
+  .menu-sub { text-align: center; color: #555; font-size: .85rem; margin: 0 0 1.2rem; }
+  .menu-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
+  .menu-entry { margin-bottom: 1rem; }
+  .menu-entry .mtitle { font-weight: 700; font-size: 1.05rem; }
+  .menu-entry .mmeta { font-size: .78rem; color: #555; font-style: italic; }
+  .menu-entry .mblurb { font-size: .85rem; margin-top: .15rem; }
+
+  .tent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .3in; }
+  .tent-card { border: 1px dashed #999; height: 4in; display: flex; flex-direction: column; page-break-inside: avoid; }
+  .tent-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .3in; text-align: center; }
+  .tent-half.top { transform: rotate(180deg); border-bottom: 1px dashed #999; }
+  .tent-half .ttitle { font-weight: 700; font-size: 1.1rem; font-family: Georgia, serif; }
+  .tent-half .tmeta { font-size: .78rem; color: #555; margin: .2rem 0; }
+  .tent-half .tblurb { font-size: .74rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Book Tasting Menu Generator</h1>
+      <p class="sub">Turn a stack of book blurbs into a printable menu or table tents for a book tasting.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Add a book</h2>
+    <div class="add-grid">
+      <div><label for="newTitle">Title</label><input type="text" id="newTitle"></div>
+      <div><label for="newAuthor">Author</label><input type="text" id="newAuthor"></div>
+      <div><label for="newGenre">Genre</label><input type="text" id="newGenre" placeholder="e.g. Mystery"></div>
+      <div><label for="newCover">Cover image (optional)</label><input type="file" id="newCover" accept="image/*"></div>
+    </div>
+    <label for="newBlurb">Blurb</label>
+    <textarea id="newBlurb" placeholder="A short teaser description &mdash; what would make a student want to pick this up?"></textarea>
+    <button id="addBookBtn">Add book</button>
+  </div>
+
+  <div class="card">
+    <h2>Books (<span id="bookCount">0</span>)</h2>
+    <div id="booksWrap"></div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-mode="menu">Print as menu</button>
+    <button type="button" class="tab-btn" data-mode="tents">Print as table tents</button>
+  </div>
+  <div class="btnrow">
+    <button class="secondary" id="printBtn">Print</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'btmg_books_v1';
+  var els = {};
+  ['newTitle', 'newAuthor', 'newGenre', 'newCover', 'newBlurb', 'addBookBtn', 'booksWrap', 'bookCount', 'printBtn', 'printArea'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var books = [];
+  var printMode = 'menu';
+
+  function uid() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function load() {
+    try { books = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { books = []; }
+    if (!Array.isArray(books)) books = [];
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(books)); } catch (e) { /* storage full/blocked, e.g. too many cover images */ }
+  }
+
+  function renderBooks() {
+    els.bookCount.textContent = books.length;
+    els.booksWrap.innerHTML = books.map(function (b) {
+      var img = b.cover ? '<img class="thumb" src="' + b.cover + '" alt="">' : '';
+      return '<div class="book-row" data-id="' + b.id + '">' + img +
+        '<div class="info"><div class="title-line">' + escapeHtml(b.title) + '</div>' +
+        '<div class="meta">' + escapeHtml(b.author) + (b.genre ? ' &middot; ' + escapeHtml(b.genre) : '') + '</div>' +
+        '<div class="blurb">' + escapeHtml(b.blurb) + '</div></div>' +
+        '<button type="button" class="danger small" data-del="' + b.id + '">Delete</button></div>';
+    }).join('');
+  }
+
+  els.booksWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del');
+    if (!id) return;
+    books = books.filter(function (b) { return b.id !== id; });
+    save(); renderBooks();
+  });
+
+  function addBook(cover) {
+    var title = els.newTitle.value.trim();
+    if (!title) { alert('Add a title at least.'); return; }
+    books.push({
+      id: uid(), title: title, author: els.newAuthor.value.trim(), genre: els.newGenre.value.trim(),
+      blurb: els.newBlurb.value.trim(), cover: cover || null
+    });
+    save(); renderBooks();
+    els.newTitle.value = ''; els.newAuthor.value = ''; els.newGenre.value = ''; els.newBlurb.value = '';
+    els.newCover.value = '';
+  }
+
+  els.addBookBtn.addEventListener('click', function () {
+    var file = els.newCover.files && els.newCover.files[0];
+    if (!file) { addBook(null); return; }
+    var reader = new FileReader();
+    reader.onload = function () { addBook(reader.result); };
+    reader.onerror = function () { addBook(null); };
+    reader.readAsDataURL(file);
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      printMode = btn.getAttribute('data-mode');
+    });
+  });
+
+  function menuHtml() {
+    var half = Math.ceil(books.length / 2);
+    var col1 = books.slice(0, half), col2 = books.slice(half);
+    function entryHtml(b) {
+      return '<div class="menu-entry"><div class="mtitle">' + escapeHtml(b.title) + '</div>' +
+        '<div class="mmeta">' + escapeHtml(b.author) + (b.genre ? ' &middot; ' + escapeHtml(b.genre) : '') + '</div>' +
+        '<div class="mblurb">' + escapeHtml(b.blurb) + '</div></div>';
+    }
+    return '<h1 class="menu-title">Today&rsquo;s Book Tasting Menu</h1>' +
+      '<p class="menu-sub">Browse the menu, then choose your first course.</p>' +
+      '<div class="menu-columns"><div>' + col1.map(entryHtml).join('') + '</div><div>' + col2.map(entryHtml).join('') + '</div></div>';
+  }
+
+  function tentCardHtml(b) {
+    var content = '<div class="ttitle">' + escapeHtml(b.title) + '</div>' +
+      '<div class="tmeta">' + escapeHtml(b.author) + (b.genre ? ' &middot; ' + escapeHtml(b.genre) : '') + '</div>' +
+      '<div class="tblurb">' + escapeHtml(b.blurb) + '</div>';
+    return '<div class="tent-card">' +
+      '<div class="tent-half top">' + content + '</div>' +
+      '<div class="tent-half">' + content + '</div>' +
+      '</div>';
+  }
+
+  function tentsHtml() {
+    return '<div class="tent-grid">' + books.map(tentCardHtml).join('') + '</div>';
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    if (!books.length) { alert('Add at least one book first.'); return; }
+    els.printArea.innerHTML = printMode === 'tents' ? tentsHtml() : menuHtml();
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  renderBooks();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

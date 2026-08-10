@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraction–Decimal–Percent Conversion Drill Generator</title>
+<meta name="description" content="A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/fraction-decimal-percent-drill-generator.html">
+<meta property="og:title" content="Fraction–Decimal–Percent Conversion Drill Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fraction–Decimal–Percent Conversion Drill Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ctext x='4' y='22' font-family='Georgia,serif' font-weight='700' font-size='13' fill='%231f3550'%3E%C2%BD%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  select, input[type="number"] {
+    font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .6rem;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+  .controls .field { min-width: 10rem; }
+  .controls select, .controls input { width: 100%; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .tabs { display: flex; gap: .4rem; margin: 1rem 0; }
+  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  table.drill-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  table.drill-table th, table.drill-table td { border: 1px solid var(--line-strong); padding: .55rem .6rem; text-align: center; }
+  table.drill-table th { background: #eef1f4; font-size: .78rem; text-transform: uppercase; color: var(--muted); }
+  table.drill-table td.given { font-weight: 700; color: var(--accent); }
+  table.drill-table td.blank { color: transparent; }
+  table.drill-table td.answer { color: var(--accent-2); font-weight: 600; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .sheet-page { page-break-after: always; }
+  }
+  #printArea { display: none; }
+  .sheet-title { font-size: 1.3rem; margin: 0 0 .1rem; }
+  .sheet-sub { color: #555; font-size: .85rem; margin: 0 0 1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator</h1>
+      <p class="sub">Randomized conversion practice &mdash; one form given, two to fill in.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="field">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty">
+          <option value="easy">Easy (halves, quarters, fifths, tenths&hellip;)</option>
+          <option value="medium" selected>Medium (adds thirds, sixths, eighths)</option>
+          <option value="hard">Hard (any denominator 2&ndash;20, rounded decimals)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="givenForm">Given form</label>
+        <select id="givenForm">
+          <option value="random" selected>Random each row</option>
+          <option value="fraction">Always fraction</option>
+          <option value="decimal">Always decimal</option>
+          <option value="percent">Always percent</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:7rem;">
+        <label for="rowCount">Rows</label>
+        <input type="number" id="rowCount" value="12" min="4" max="30">
+      </div>
+      <div class="field">
+        <button id="generateBtn">Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-view="worksheet">Worksheet</button>
+    <button type="button" class="tab-btn" data-view="key">Answer key</button>
+  </div>
+
+  <div class="view active" id="view-worksheet">
+    <div class="card">
+      <button class="secondary" id="printWorksheetBtn">Print worksheet</button>
+      <table class="drill-table" id="worksheetTable" style="margin-top:1rem;"></table>
+    </div>
+  </div>
+
+  <div class="view" id="view-key">
+    <div class="card">
+      <button class="secondary" id="printKeyBtn">Print answer key</button>
+      <table class="drill-table" id="keyTable" style="margin-top:1rem;"></table>
+    </div>
+  </div>
+</div>
+
+<div id="printArea">
+  <div class="sheet-page">
+    <h2 class="sheet-title">Fraction&ndash;Decimal&ndash;Percent Conversion Drill</h2>
+    <p class="sheet-sub">Name: __________________________ &nbsp; Date: __________</p>
+    <table class="drill-table" id="printWorksheetTable"></table>
+  </div>
+  <div class="sheet-page">
+    <h2 class="sheet-title">Answer Key</h2>
+    <table class="drill-table" id="printKeyTable"></table>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DENOMS = {
+    easy: [2, 4, 5, 10, 20, 25, 50, 100],
+    medium: [2, 3, 4, 5, 6, 8, 10, 20, 25, 100],
+    hard: Array.from({ length: 19 }, function (_, i) { return i + 2; })
+  };
+
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+  function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+  function fmtFraction(num, den) {
+    var g = gcd(num, den) || 1;
+    num /= g; den /= g;
+    if (den === 1) return String(num);
+    return num + '/' + den;
+  }
+  function trimNumberString(str) {
+    if (str.indexOf('.') === -1) return str;
+    return str.replace(/0+$/, '').replace(/\.$/, '');
+  }
+  function roundedDecimalValue(value) { return Math.round(value * 1000) / 1000; }
+
+  function makeRow(difficulty, givenSetting) {
+    var denoms = DENOMS[difficulty];
+    var den = pick(denoms);
+    var num = randInt(1, den - 1);
+    var value = num / den;
+    var roundedValue = roundedDecimalValue(value);
+    var fraction = fmtFraction(num, den);
+    var decimal = trimNumberString(roundedValue.toString());
+    var percentValue = Math.round(roundedValue * 100 * 1000) / 1000;
+    var percent = trimNumberString(percentValue.toString()) + '%';
+    var given = givenSetting === 'random' ? pick(['fraction', 'decimal', 'percent']) : givenSetting;
+    return { fraction: fraction, decimal: decimal, percent: percent, given: given };
+  }
+
+  var els = {};
+  ['difficulty', 'givenForm', 'rowCount', 'generateBtn', 'worksheetTable', 'keyTable',
+   'printWorksheetBtn', 'printKeyBtn', 'printWorksheetTable', 'printKeyTable'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var rows = [];
+
+  function tableHtml(showAnswers) {
+    var head = '<tr><th>#</th><th>Fraction</th><th>Decimal</th><th>Percent</th></tr>';
+    var body = rows.map(function (r, i) {
+      function cell(form, value) {
+        if (form === r.given) return '<td class="given">' + value + '</td>';
+        if (showAnswers) return '<td class="answer">' + value + '</td>';
+        return '<td>&nbsp;</td>';
+      }
+      return '<tr><td>' + (i + 1) + '</td>' + cell('fraction', r.fraction) + cell('decimal', r.decimal) + cell('percent', r.percent) + '</tr>';
+    }).join('');
+    return head + body;
+  }
+
+  function generate() {
+    var difficulty = els.difficulty.value;
+    var givenSetting = els.givenForm.value;
+    var count = Math.max(4, Math.min(30, parseInt(els.rowCount.value, 10) || 12));
+    rows = [];
+    for (var i = 0; i < count; i++) rows.push(makeRow(difficulty, givenSetting));
+    render();
+  }
+
+  function render() {
+    els.worksheetTable.innerHTML = tableHtml(false);
+    els.keyTable.innerHTML = tableHtml(true);
+  }
+
+  els.generateBtn.addEventListener('click', generate);
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var view = btn.getAttribute('data-view');
+      document.getElementById('view-worksheet').classList.toggle('active', view === 'worksheet');
+      document.getElementById('view-key').classList.toggle('active', view === 'key');
+    });
+  });
+
+  els.printWorksheetBtn.addEventListener('click', function () {
+    els.printWorksheetTable.innerHTML = tableHtml(false);
+    els.printKeyTable.innerHTML = tableHtml(true);
+    window.print();
+  });
+  els.printKeyBtn.addEventListener('click', function () {
+    els.printWorksheetTable.innerHTML = tableHtml(false);
+    els.printKeyTable.innerHTML = tableHtml(true);
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  generate();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pronunciation</title>
+<meta name="robots" content="noindex">
+<style>
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: #fafaf8; color: #1f2430; margin: 0;
+    padding: 10vh 20px; text-align: center;
+  }
+  .word { font-size: 2.4rem; font-weight: 700; margin-bottom: .3rem; }
+  .lang { color: #6b6a63; font-size: .9rem; margin-bottom: 2rem; }
+  button {
+    font-family: inherit; font-size: 1.1rem; font-weight: 600; cursor: pointer;
+    background: #1f3550; color: #fff; border: 1px solid #1f3550;
+    border-radius: 10px; padding: .9rem 1.6rem;
+  }
+  button:hover { background: #2e6b8f; border-color: #2e6b8f; }
+  .hint { color: #6b6a63; font-size: .82rem; margin-top: 1.2rem; }
+  .missing { color: #a3372b; }
+</style>
+</head>
+<body>
+  <div class="word" id="wordText"></div>
+  <div class="lang" id="langText"></div>
+  <button id="playBtn">&#128266; Hear it again</button>
+  <p class="hint" id="hintText"></p>
+
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var text = params.get('text') || '';
+  var lang = params.get('lang') || 'en-US';
+
+  document.getElementById('wordText').textContent = text || '(no word given)';
+  document.getElementById('langText').textContent = lang;
+
+  function speak() {
+    if (!text) return;
+    if (!('speechSynthesis' in window)) {
+      document.getElementById('hintText').textContent = 'This browser can’t speak text aloud.';
+      document.getElementById('hintText').className = 'hint missing';
+      return;
+    }
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }
+
+  document.getElementById('playBtn').addEventListener('click', speak);
+
+  // Try to speak automatically; many mobile browsers block this without a
+  // tap, which is exactly what the button above is for.
+  if (text) speak();
+})();
+</script>
+</body>
+</html>
