@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v18';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -40,6 +40,7 @@ const PRECACHE_URLS = [
   "Tools/School%20Calendar%20Visualizer.html",
   "Tools/Seating%20Chart%20Generator.html",
   "Tools/Sub%20Plan%20Builder.html",
+  "Tools/art-critique-worksheet-generator.html",
   "Tools/backup-restore.html",
   "Tools/behavior-points-tracker.html",
   "Tools/blank-map-generator.html",
@@ -73,6 +74,8 @@ const PRECACHE_URLS = [
   "Tools/classroom-timer/lib/qrcode.js",
   "Tools/classroom-timer/mirror.html",
   "Tools/command-center-dashboard.html",
+  "Tools/current-events-discussion-guide-generator.html",
+  "Tools/daily-editing-warmup-generator.html",
   "Tools/data-chart-builder.html",
   "Tools/docx-merger.html",
   "Tools/escape-room-builder.html",
@@ -102,6 +105,7 @@ const PRECACHE_URLS = [
   "Tools/image-to-pdf.html",
   "Tools/image-to-pdf/lib/jspdf.umd.min.js",
   "Tools/lab-group-role-randomizer.html",
+  "Tools/lab-report-template-builder.html",
   "Tools/lab-safety-contract-tracker.html",
   "Tools/math-drill-generator.html",
   "Tools/math-drill-generator/mdg-generate.js",
@@ -121,7 +125,9 @@ const PRECACHE_URLS = [
   "Tools/name-picker/np-store.js",
   "Tools/novel-study-circles-manager.html",
   "Tools/number-talks-board.html",
+  "Tools/parent-contact-log.html",
   "Tools/pe-tournament-stations.html",
+  "Tools/peer-feedback-checklist-generator.html",
   "Tools/primary-source-analysis-generator.html",
   "Tools/prompt-builder.html",
   "Tools/qr-code-generator.html",
@@ -158,16 +164,20 @@ const PRECACHE_URLS = [
   "Tools/school-calendar/scv-seed.js",
   "Tools/school-calendar/scv-store.js",
   "Tools/seating-chart/seating.mjs",
+  "Tools/staff-directory-builder.html",
   "Tools/ssr-log-tracker.html",
   "Tools/sub-binder-generator.html",
   "Tools/timeline-builder.html",
   "Tools/timeline-builder/tlb-layout.js",
   "Tools/timeline-builder/tlb-photo.js",
   "Tools/timeline-builder/tlb-store.js",
+  "Tools/unit-conversion-chart-builder.html",
+  "Tools/verb-conjugation-poster-generator.html",
   "Tools/vocab-conjugation-drill.html",
   "Tools/vocab-flashcard-generator.html",
   "Tools/vocab-flashcard-generator/vfg-layout.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
+  "Tools/word-problem-warmup-generator.html",
   "Tools/writing-prompt-generator.html",
   "Tools/writing-prompt-generator/wpg-prompts.js",
   "Tools/writing-prompt-generator/wpg-store.js",
