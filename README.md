@@ -70,6 +70,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Sub Note / Feedback Slip Generator | `Tools/sub-note-feedback-slip-generator.html` | An editable list of prompts, each printed with blank lines, as repeated half-sheets a substitute fills out by hand before leaving for the day. |
 | Testing Accommodations Reference Card Generator | `Tools/testing-accommodations-card-generator.html` | A roster × accommodation-type grid with a per-student note field, printed as small reference cards — entirely local. |
 | Virtual Manipulatives Board | `Tools/virtual-manipulatives-board.html` | Draggable base-ten blocks, fraction tiles, and algebra tiles on a shared board, plus a separate draggable number line, each with a one-click PNG snapshot. |
+| Math "Find the Mistake" Warm-Up Generator | `Tools/math-find-the-mistake-generator.html` | A worked math solution with one deliberate error, revealed on a projector display or printed as a worksheet with an explanation-and-answer key. |
 
 ## Using these
 
