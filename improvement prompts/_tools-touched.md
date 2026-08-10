@@ -96,6 +96,26 @@ same content-bank + display + handout shape, built three separate times).
 
 **25 of 46 tools done. 21 to go.**
 
+### Round 5 — 2026-08-10 — PR #TBD
+
+Ran concurrently with another session working a separate tool set (no
+overlap). Mixed group — two content-authoring tools that gained real
+question/prompt banks (Math Drill, Primary Source), one classroom-workflow
+tool (Novel Study Circles), and two projector-facing tools that share the
+site's most underused pattern, a live scoring/game overlay (Review Game
+Board) next to the one tool whose entire job is talking to a *different* AI
+assistant (Prompt Builder).
+
+| Tool | File |
+|---|---|
+| Math Fact Drill Sheet Generator | `math-drill-generator.md` |
+| Novel Study / Reading Circles Manager | `novel-study-circles-manager.md` |
+| Primary Source Analysis Worksheet Generator | `primary-source-analysis-generator.md` |
+| Prompt Builder | `prompt-builder.md` |
+| Quiz / Review Game Board | `review-game-board.md` |
+
+**30 of 46 tools done. 16 to go.**
+
 ---
 
 ## Not yet touched
@@ -112,11 +132,6 @@ data-heavy), and say why in the PR.
 - Final Grade Checker — `final-grade-checker.md`
 - Formula Reference Sheet Builder — `formula-sheet-builder.md`
 - Grade Distribution Visualizer — `grade-distribution-visualizer.md`
-- Math Fact Drill Sheet Generator — `math-drill-generator.md`
-- Novel Study / Reading Circles Manager — `novel-study-circles-manager.md`
-- Primary Source Analysis Worksheet Generator — `primary-source-analysis-generator.md`
-- Prompt Builder — `prompt-builder.md`
-- Quiz / Review Game Board — `review-game-board.md`
 - East Middle Schedule Browser — `schedule-browser.md`
 - School Layout Visualizer — `schedule-visualizer.md`
 - School Calendar Visualizer — `school-calendar-visualizer.md`

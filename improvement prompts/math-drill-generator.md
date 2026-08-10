@@ -9,8 +9,51 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 5 (PR #TBD): five Quick Wins shipped.** All changes were
+additive to `settings` (new fields default sensibly for old saved settings)
+and to `MathDrillGenerate.generateProblems()`, which now takes an optional
+third `options` argument instead of changing its existing signature.
+
+- **Done — Vertical (stacked) format.** A Format dropdown (Horizontal /
+  Vertical) renders each problem as a right-aligned two-row table with a rule
+  and a blank answer line; division gets an actual long-division bracket
+  (blank quotient line over a bracketed dividend/divisor), not just a stacked
+  fraction. Reuses the existing `columns` setting, capped at 4 in vertical
+  mode since stacked problems are wider.
+- **Done — Font size control.** Small/Medium/Large, applied via a CSS class
+  on the problems/answers containers rather than inline sizing, so print and
+  preview stay in sync.
+- **Done — Avoid trivial and repeated problems.** `mdg-generate.js` gained
+  `isTrivial()` (filters ×0/×1/÷1/+0-style facts) wired to a checkbox; the
+  existing per-sheet dedup (`seen` map) was untouched, just now composed with
+  the triviality filter in the same generation attempt loop.
+- **Done — Seeded generation.** `mdg-generate.js` gained a `makeRng(seed)`
+  (mulberry32) and every `randInt`/`pick` call now threads a `rng` function
+  instead of calling `Math.random()` directly. A "Lock seed" checkbox keeps
+  reusing the same seed across "Generate" clicks (so a sheet can be reprinted
+  identically for a make-up test), and the seed is shown read-only and
+  travels through settings export/import. Multiple versions/leveled sets use
+  `seed + index` so each version is still distinct but the whole set is
+  reproducible together.
+- **Done — Problems-per-page.** An optional numeric field splits the
+  worksheet (not the answer key, which stays teacher-facing and single-page)
+  into multiple `.sheet` pages with "(page X of Y)" in the title and correct
+  continuous numbering, using `page-break-after` the same way multi-version
+  sheets already did.
+
+Verified with a headless Chromium smoke test (vertical format + avoid-trivial
++ locked seed + 10-per-page all together, checking the generated markup and
+seed reproducibility) — no console errors, seed-lock confirmed byte-identical
+across two "Generate" clicks.
+
+**Where a future round should pick up:** everything under Major Features
+below is untouched — targeted practice from missed facts, fluency history,
+word problems, "find the mistake" mode, and the self-checking formats
+(riddle/colour-by-answer/maze) are all still open. The Open Questions below
+are unresolved by this round.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session.
 
 ## What it does today
 
@@ -29,18 +72,22 @@ ambitious and are **not** scoped to a single session.
   decimals, percents, integers with negatives, order of operations, exponents,
   one-step equations. `IDEAS_BACKLOG.md` lists a
   fraction–decimal–percent drill as a separate tool; it belongs here.
-- **Vertical (stacked) format** as well as horizontal — required for
+- **Done —** **Vertical (stacked) format** as well as horizontal — required for
   multi-digit addition and long division practice, and currently missing.
-- **Problems-per-page and font size** as explicit controls, so the same
+  *(Format dropdown; division renders as an actual long-division bracket.)*
+- **Done —** **Problems-per-page and font size** as explicit controls, so the same
   settings can produce a 20-problem sheet for a struggling student and a
-  60-problem sheet for a timed drill.
-- **Avoid trivial and repeated problems.** Filter out `n × 1` and `n × 0` if
-  wanted, and don't emit the same problem twice on one sheet.
+  60-problem sheet for a timed drill. *(Font size is Small/Medium/Large;
+  problems-per-page paginates the worksheet into multiple numbered pages.)*
+- **Done —** **Avoid trivial and repeated problems.** Filter out `n × 1` and `n × 0` if
+  wanted, and don't emit the same problem twice on one sheet. *(Per-sheet
+  dedup already existed; added an "Avoid trivial facts" checkbox.)*
 - **Answer key on the same sheet, in a corner**, as an option — for
   self-checking stations.
-- **Seeded generation.** Save a seed so an identical sheet can be reprinted
+- **Done —** **Seeded generation.** Save a seed so an identical sheet can be reprinted
   next year or for a make-up test, which "a fresh sheet every time" currently
-  prevents.
+  prevents. *(Mulberry32 seeded RNG; "Lock seed" checkbox + visible seed
+  field, carried through settings export/import.)*
 - **Multiple versions with the same problems in a different order** — the
   anti-copying pattern for a quiz, distinct from the existing version tabs.
 

@@ -109,6 +109,20 @@
   .strength-label{ display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.6; margin-bottom: var(--space-1); }
   .strength-bar{ height: 6px; background: var(--color-divider); overflow: hidden; }
   .strength-fill{ height: 100%; width: 0%; background: var(--color-accent); transition: width 0.25s ease; }
+  .strength-hint{ font-size: 12px; opacity: 0.65; margin: var(--space-1) 0 0; line-height: 1.4; }
+
+  .privacy-banner{
+    max-width: 40em; margin: var(--space-3) auto 0; font-size: 12.5px; line-height: 1.5;
+    color: var(--color-danger); background: var(--color-danger-bg); border: 1px solid var(--color-danger);
+    border-radius: 4px; padding: var(--space-2) var(--space-3); text-align: left;
+  }
+
+  .result-toggle{ background: none; border: none; padding: 2px 0; font-size: 11.5px; opacity: 0.6; cursor: pointer; text-decoration: underline; }
+  .result-toggle:hover{ opacity: 1; }
+  .result-wrap{ display: none; margin-top: var(--space-2); }
+  .result-wrap.open{ display: block; }
+  .result-wrap textarea{ width: 100%; font-size: 12.5px; min-height: 4em; }
+  .result-badge{ font-size: 10.5px; color: var(--color-success); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 
   .action-row{ display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
 
@@ -147,6 +161,7 @@
   <span class="tag">No AI required to run this</span>
   <h1>Prompt Builder</h1>
   <p>Answer what applies to you, skip what doesn't. The card on the right fills itself in as you type &mdash; then copy it and take it to whatever AI tool you use.</p>
+  <p class="privacy-banner">Unlike the rest of this site, this prompt leaves your browser &mdash; you're the one sending it, when you paste it into Claude, ChatGPT, or wherever you go next. Leave out student names, grades, or anything else identifying before you do.</p>
 </header>
 
 <main>
@@ -168,6 +183,9 @@
         <button type="button" class="btn btn-secondary preset-btn" data-preset="rubric">Rubric</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="email">Parent email</button>
         <button type="button" class="btn btn-secondary preset-btn" data-preset="differentiated">Differentiated materials</button>
+        <button type="button" class="btn btn-secondary preset-btn" data-preset="reviewBoard">Review game questions</button>
+        <button type="button" class="btn btn-secondary preset-btn" data-preset="vocabList">Vocab list</button>
+        <button type="button" class="btn btn-secondary preset-btn" data-preset="exitTickets">Exit ticket prompts</button>
         <button type="button" class="btn btn-secondary" id="savePresetBtn">+ Save current as preset</button>
         <button type="button" class="btn btn-ghost preset-btn-clear" id="clearAllTop">Clear all fields</button>
       </div>
@@ -380,6 +398,7 @@
       <div class="strength-row">
         <div class="strength-label"><span id="strengthText">Bare bones</span><span id="strengthCount">0 / 29 fields</span></div>
         <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+        <p class="strength-hint" id="strengthHint"></p>
       </div>
       <div id="promptOutput"><span class="placeholder">Fill in a few boxes on the left &mdash; your prompt builds itself here.</span></div>
       <div class="copy-row">
@@ -646,6 +665,20 @@
   }
 
   // ---- strength meter ----
+  // The fields that change an AI's answer the most, in the order it's worth
+  // filling them — used to tell the teacher *what* would strengthen the
+  // prompt next, not just that it's weak.
+  const IMPACT_FIELDS = [
+    { id: 'toolType', label: 'what you’re building' },
+    { id: 'grade', label: 'grade level' },
+    { id: 'subject', label: 'subject' },
+    { id: 'topic', label: 'the topic' },
+    { id: 'objective', label: 'the learning goal' },
+    { id: 'studentNeeds', label: 'students to keep in mind' },
+    { id: 'format', label: 'the final format' },
+    { id: 'tone', label: 'tone' },
+    { id: 'avoidInclude', label: 'what to avoid' }
+  ];
   function updateStrength(){
     const ids = document.body.classList.contains('mode-simple') ? SIMPLE_IDS : STATIC_IDS;
     let filled = 0;
@@ -659,6 +692,16 @@
     else if (pct >= 55) label = 'Solid';
     else if (pct >= 25) label = 'Getting there';
     $('strengthText').textContent = label;
+
+    const missing = IMPACT_FIELDS.filter(f => ids.includes(f.id) && !val(f.id) && (f.id !== 'toolType' || !getToolType()) && (f.id !== 'tone' || !getTone()));
+    const hint = $('strengthHint');
+    if (!filled){
+      hint.textContent = '';
+    } else if (missing.length){
+      hint.textContent = 'Adding ' + missing.slice(0, 2).map(f => f.label).join(' and ') + ' would sharpen this the most.';
+    } else {
+      hint.textContent = 'The fields that matter most are filled — the rest is polish.';
+    }
   }
 
   // ---- simple / advanced mode ----
@@ -723,6 +766,33 @@
       studentNeeds: 'a mix of on-level, below-level, and advanced readers',
       languageNeeds: 'include an ELL-friendly version with simplified vocabulary',
       dyn: { x_levels: '3 versions: below, on, and above grade level' }
+    },
+    // These three are shaped to paste straight into another tool on this site
+    // rather than into a document — the format field spells out the exact
+    // import shape each tool expects (see review-game-board.html,
+    // vocab-flashcard-generator.html, exit-ticket-generator.html).
+    reviewBoard: {
+      toolType: 'other',
+      toolTypeOther: 'a set of review game questions for a Jeopardy-style review board',
+      exampleCount: '20 questions across 4-5 categories, with point values 100/200/300/400 within each category',
+      format: 'a CSV with this exact header row: Category,Points,Question,Answer — plain comma-separated values only, no markdown table, no code block, and no text outside the CSV',
+      avoidInclude: "no questions that depend on an image or source I haven't given you",
+      tone: 'direct and concise'
+    },
+    vocabList: {
+      toolType: 'other',
+      toolTypeOther: 'a vocabulary list',
+      exampleCount: '15 terms',
+      format: 'one line per term, in exactly this format: term: definition — you can add "| example sentence" after the definition on the same line if useful. No numbering, no headers, nothing else on the page',
+      readingLevel: 'definitions written in student-friendly language, not textbook-dense',
+      tone: 'direct and concise'
+    },
+    exitTickets: {
+      toolType: 'other',
+      toolTypeOther: 'a bank of short exit-ticket / bell-ringer prompts',
+      exampleCount: '10 prompts',
+      format: 'a plain numbered list, one prompt per line, each answerable in 2-3 sentences or less — no commentary before or after the list',
+      tone: 'direct and concise'
     }
   };
 
@@ -852,20 +922,28 @@
   }
   function addPromptToHistory(text){
     if (!text) return;
-    const list = loadPromptHistory().filter(h => h.text !== text);
-    list.unshift({ text: text, ts: Date.now() });
-    savePromptHistory(list);
+    const list = loadPromptHistory();
+    const existing = list.find(h => h.text === text);
+    const filtered = list.filter(h => h.text !== text);
+    filtered.unshift({ text: text, ts: Date.now(), result: existing ? (existing.result || '') : '' });
+    savePromptHistory(filtered);
     renderPromptHistory();
   }
   function renderPromptHistory(){
     const list = loadPromptHistory();
     if (!list.length){
-      promptHistoryWrap.innerHTML = '<p class="section-hint" style="margin:0;">Prompts you copy, download, or send to an AI tool are kept here for quick recovery.</p>';
+      promptHistoryWrap.innerHTML = '<p class="section-hint" style="margin:0;">Prompts you copy, download, or send to an AI tool are kept here for quick recovery — paste back what the AI gave you and it’s saved right alongside.</p>';
       return;
     }
     promptHistoryWrap.innerHTML = list.map((h, i) => (
       '<div class="history-item">' +
-        '<div class="history-text">' + esc(h.text.slice(0, 140)) + (h.text.length > 140 ? '…' : '') + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="history-text">' + esc(h.text.slice(0, 140)) + (h.text.length > 140 ? '…' : '') + '</div>' +
+          '<button type="button" class="result-toggle" data-toggle-result-i="' + i + '">' + (h.result ? '✓ Result saved — view/edit' : '+ Add what it gave you') + '</button>' +
+          '<div class="result-wrap" data-result-wrap-i="' + i + '">' +
+            '<textarea data-result-i="' + i + '" placeholder="Paste the AI\'s response here to keep it with this prompt">' + esc(h.result || '') + '</textarea>' +
+          '</div>' +
+        '</div>' +
         '<div class="history-meta">' +
           '<button type="button" class="btn btn-secondary" data-copy-hist-i="' + i + '">Copy</button>' +
           '<button type="button" class="history-remove" data-remove-hist-i="' + i + '" aria-label="Remove this prompt from history">&times;</button>' +
@@ -889,7 +967,26 @@
       list.splice(Number(removeBtn.dataset.removeHistI), 1);
       savePromptHistory(list);
       renderPromptHistory();
+      return;
     }
+    const toggleBtn = e.target.closest('[data-toggle-result-i]');
+    if (toggleBtn){
+      const wrap = promptHistoryWrap.querySelector('[data-result-wrap-i="' + toggleBtn.dataset.toggleResultI + '"]');
+      if (wrap) wrap.classList.toggle('open');
+    }
+  });
+  // Debounced-by-nature (plain input, no full rerender) so pasting a long
+  // result doesn't fight the cursor — only the toggle button's label updates.
+  promptHistoryWrap.addEventListener('input', (e) => {
+    const ta = e.target.closest('[data-result-i]');
+    if (!ta) return;
+    const i = Number(ta.dataset.resultI);
+    const list = loadPromptHistory();
+    if (!list[i]) return;
+    list[i].result = ta.value;
+    savePromptHistory(list);
+    const toggleBtn = promptHistoryWrap.querySelector('[data-toggle-result-i="' + i + '"]');
+    if (toggleBtn) toggleBtn.textContent = ta.value.trim() ? '✓ Result saved — view/edit' : '+ Add what it gave you';
   });
 
   function copyPromptText(cb){

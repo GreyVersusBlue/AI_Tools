@@ -131,6 +131,19 @@
     font-size: .86rem; margin-top: .5rem; padding: .5rem .6rem; background: #f7f7f4;
     border-left: 3px solid #999; white-space: pre-wrap;
   }
+  .source-text-lines { font-size: .86rem; margin-top: .5rem; padding: .5rem .6rem; background: #f7f7f4; border-left: 3px solid #999; }
+  .source-text-lines .stl-line { display: flex; gap: .5rem; }
+  .source-text-lines .stl-num { flex-shrink: 0; width: 1.6rem; text-align: right; color: #888; font-family: Consolas, monospace; font-size: .78rem; }
+  .source-text-lines .stl-text { white-space: pre-wrap; }
+  .citation-line { font-size: .82rem; color: #333; margin-top: .3rem; font-style: italic; }
+  .vocab-box {
+    border: 1px solid #999; border-radius: 4px; padding: .5rem .7rem; margin: .6rem 0 0; background: #fbf9f2;
+    font-family: "Segoe UI", sans-serif;
+  }
+  .vocab-box .vocab-heading { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .3rem; }
+  .vocab-box ul { margin: 0; padding-left: 1.1rem; font-size: .84rem; }
+  .vocab-box li { margin-bottom: .1rem; }
+  .vocab-box .vword { font-weight: 700; }
 
   .student-line { font-size: .9rem; margin-bottom: 1rem; }
 
@@ -201,12 +214,26 @@
         <label for="sourceType">Source type</label>
         <select id="sourceType"></select>
 
+        <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+          <div><label for="citationAuthor">Author / creator (optional)</label><input type="text" id="citationAuthor" placeholder="e.g. Dorothea Lange"></div>
+          <div><label for="citationDate">Date created (optional)</label><input type="text" id="citationDate" placeholder="e.g. March 1936"></div>
+        </div>
+        <label for="citationOrigin">Where it's from (optional, prints as a citation line)</label>
+        <input type="text" id="citationOrigin" placeholder="e.g. Library of Congress, LC-USF34-009058-C">
+
         <label for="sourceDescription">Describe what the source depicts or says</label>
         <p class="hint">A sentence or two is enough — this is what students see printed above the questions. Since this is a static site, there's no image upload; describe it in words (an optional image link is below).</p>
         <textarea id="sourceDescription" placeholder="e.g. A black-and-white 1936 photograph of a migrant farmworker mother with three children, taken during the Great Depression."></textarea>
 
         <label for="sourceText">Paste the source's actual text (optional, for speeches/letters/documents)</label>
         <textarea id="sourceText" class="source-text-input" placeholder="Paste the speech, letter, or document excerpt here. It will print above the analysis questions."></textarea>
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="lineNumbers" style="width:auto;margin:0;"> Number each line (for referencing specific lines in discussion)
+        </label>
+
+        <label for="vocabSupport">Vocabulary support (optional)</label>
+        <p class="hint">One word per line, with an optional definition after a colon: <code>austerity: extreme plainness</code>. Prints as a glossary box under the source.</p>
+        <textarea id="vocabSupport" placeholder="austerity: extreme and rigid economy&#10;emancipation"></textarea>
 
         <label for="imageUrl">Image URL (optional)</label>
         <p class="hint">If the image is hosted somewhere online, paste its link and it will appear on the worksheet. Leave blank to rely on the description only.</p>
@@ -419,6 +446,49 @@
           'Why does it matter, or what can we learn from it?'
         ] }
       ]
+    },
+    hipp: {
+      key: 'hipp',
+      fullName: 'HIPP',
+      when: 'Sourcing and contextualization for text or visual sources — a historical-thinking-skills framework common in AP / IB courses.',
+      steps: [
+        { key: 'historical-context', letter: 'H', label: 'Historical Context', questions: [
+          'What was happening in the world, nation, or region at the time this source was created?',
+          'How might that context have shaped what the creator said or made?'
+        ] },
+        { key: 'intended-audience', letter: 'I', label: 'Intended Audience', questions: [
+          'Who was this source originally created for?',
+          'How might that intended audience have shaped its content, tone, or word choice?'
+        ] },
+        { key: 'purpose', letter: 'P', label: 'Purpose', questions: [
+          'Why was this source created? What was the creator trying to accomplish?',
+          'What does the creator want the audience to think, feel, or do as a result?'
+        ] },
+        { key: 'point-of-view', letter: 'P', label: 'Point of View', questions: [
+          "What is the creator's perspective, position, or bias?",
+          'How does that point of view affect what the source includes, leaves out, or emphasizes?',
+          'How reliable is this source for understanding what actually happened?'
+        ] }
+      ]
+    },
+    stw: {
+      key: 'stw',
+      fullName: 'See-Think-Wonder',
+      when: 'A visible-thinking routine for younger students or a first look at any visual source — slows down observation before interpretation.',
+      steps: [
+        { key: 'see', letter: 'See', label: 'See', questions: [
+          'What do you observe? List only what you actually see — no interpretation yet.',
+          'What people, objects, or details stand out?'
+        ] },
+        { key: 'think', letter: 'Think', label: 'Think', questions: [
+          'What do you think is going on in this source?',
+          'What makes you say that? Point to specific details.'
+        ] },
+        { key: 'wonder', letter: 'Wonder', label: 'Wonder', questions: [
+          'What does this make you wonder?',
+          'What questions do you still have about it?'
+        ] }
+      ]
     }
   };
 
@@ -440,6 +510,7 @@
   [
     'toolbar', 'sheetSwitch', 'newSheetBtn', 'deleteSheetBtn', 'exportSheetBtn', 'importSheetBtn', 'importSheetFile',
     'sheetName', 'sourceTitle', 'sourceType', 'sourceDescription', 'sourceText', 'imageUrl',
+    'citationAuthor', 'citationDate', 'citationOrigin', 'lineNumbers', 'vocabSupport',
     'imageFile', 'imageFilePreviewWrap', 'imageFilePreview', 'clearImageFileBtn',
     'fwOptions', 'notesEditor', 'answerLines',
     'previewArea', 'printBlankBtn', 'printKeyBtn'
@@ -471,11 +542,32 @@
       sourceText: '',
       imageUrl: '',
       imageDataUrl: '',
+      citationAuthor: '',
+      citationDate: '',
+      citationOrigin: '',
+      lineNumbers: false,
+      vocabSupport: '',
       framework: 'optic',
       notes: {},
       customQuestions: {},
       answerLines: 4
     };
+  }
+
+  /* "word" or "word: definition" / "word - definition", one per line — same
+     tolerant shape as the vocab parsing in novel-study-circles-manager.html. */
+  function parseVocabLines(text) {
+    return String(text || '').split('\n')
+      .map(function (line) { return line.trim(); })
+      .filter(Boolean)
+      .map(function (line) {
+        var idx = line.indexOf(':');
+        var skip = 1;
+        if (idx === -1) { idx = line.indexOf(' - '); skip = 3; }
+        if (idx === -1) return { word: line, definition: '' };
+        return { word: line.slice(0, idx).trim(), definition: line.slice(idx + skip).trim() };
+      })
+      .filter(function (v) { return v.word; });
   }
 
   function answerLineCount() {
@@ -608,7 +700,25 @@
       parts.push('<div class="source-desc empty">No source description added yet.</div>');
     }
     if (state.sourceText) {
-      parts.push('<div class="source-text-block">' + nlToBr(state.sourceText) + '</div>');
+      if (state.lineNumbers) {
+        var lines = state.sourceText.split('\n').map(function (line, i) {
+          return '<div class="stl-line"><span class="stl-num">' + (i + 1) + '</span><span class="stl-text">' + escapeHtml(line) + '</span></div>';
+        }).join('');
+        parts.push('<div class="source-text-lines">' + lines + '</div>');
+      } else {
+        parts.push('<div class="source-text-block">' + nlToBr(state.sourceText) + '</div>');
+      }
+    }
+    var citationBits = [];
+    if (state.citationAuthor) citationBits.push(escapeHtml(state.citationAuthor));
+    if (state.citationDate) citationBits.push(escapeHtml(state.citationDate));
+    if (state.citationOrigin) citationBits.push(escapeHtml(state.citationOrigin));
+    if (citationBits.length) parts.push('<div class="citation-line">' + citationBits.join(' &middot; ') + '</div>');
+    var vocab = parseVocabLines(state.vocabSupport);
+    if (vocab.length) {
+      parts.push('<div class="vocab-box"><p class="vocab-heading">Vocabulary</p><ul>' + vocab.map(function (v) {
+        return '<li><span class="vword">' + escapeHtml(v.word) + '</span>' + (v.definition ? ' &mdash; ' + escapeHtml(v.definition) : '') + '</li>';
+      }).join('') + '</ul></div>');
     }
     parts.push('</div>');
     return parts.join('');
@@ -669,6 +779,11 @@
     els.sourceDescription.value = state.sourceDescription || '';
     els.sourceText.value = state.sourceText || '';
     els.imageUrl.value = state.imageUrl || '';
+    els.citationAuthor.value = state.citationAuthor || '';
+    els.citationDate.value = state.citationDate || '';
+    els.citationOrigin.value = state.citationOrigin || '';
+    els.lineNumbers.checked = !!state.lineNumbers;
+    els.vocabSupport.value = state.vocabSupport || '';
     els.imageFile.value = '';
     if (state.imageDataUrl) {
       els.imageFilePreview.src = state.imageDataUrl;
@@ -705,6 +820,11 @@
     if (!state.sourceType) state.sourceType = 'photo';
     if (!state.imageDataUrl) state.imageDataUrl = '';
     if (!state.answerLines) state.answerLines = 4;
+    if (typeof state.citationAuthor !== 'string') state.citationAuthor = '';
+    if (typeof state.citationDate !== 'string') state.citationDate = '';
+    if (typeof state.citationOrigin !== 'string') state.citationOrigin = '';
+    if (typeof state.vocabSupport !== 'string') state.vocabSupport = '';
+    state.lineNumbers = !!state.lineNumbers;
     Store.setCurrentName(name);
     renderAll();
   }
@@ -720,8 +840,16 @@
   bindTextField('sourceDescription', 'sourceDescription');
   bindTextField('sourceText', 'sourceText');
   bindTextField('imageUrl', 'imageUrl');
+  bindTextField('citationAuthor', 'citationAuthor');
+  bindTextField('citationDate', 'citationDate');
+  bindTextField('citationOrigin', 'citationOrigin');
+  bindTextField('vocabSupport', 'vocabSupport');
   els.sourceType.addEventListener('change', function () {
     state.sourceType = els.sourceType.value;
+    renderPreview();
+  });
+  els.lineNumbers.addEventListener('change', function () {
+    state.lineNumbers = els.lineNumbers.checked;
     renderPreview();
   });
 
@@ -782,7 +910,7 @@
   function isPlausibleWorksheet(obj) {
     return !!obj && typeof obj === 'object' &&
       typeof obj.name === 'string' &&
-      (obj.framework === 'optic' || obj.framework === 'soapstone') &&
+      Object.prototype.hasOwnProperty.call(FRAMEWORKS, obj.framework) &&
       typeof obj.notes === 'object';
   }
 
