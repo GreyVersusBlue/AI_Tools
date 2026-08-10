@@ -59,8 +59,6 @@ ambitious and are **not** scoped to a single session.
 - **Chain scenarios into a unit.** Ordering, paying, complaining, and
   returning an item are one restaurant unit; a sequence with growing
   complexity is more useful than a shuffle.
-- **Student-facing version by link/QR** (P3) so each student's role card is on
-  their own device without printing thirty pages.
 - **Convergence with the other language tool** (P7).
   `vocab-conjugation-drill.html` holds vocabulary sets per language; this tool
   holds vocabulary fills per class. They should share one vocabulary store.
@@ -74,13 +72,25 @@ pronunciation, culture notes for context, a rubric the teacher taps while
 circulating, and a printed record of every student's speaking progress — all
 language-agnostic, because the teacher supplies the words.
 
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Role cards on student devices** by link/QR instead of printing. Printing
+  thirty half-sheets is the teacher-facing path.
+
 ## Platform themes that matter here
 
 - **P7 (cross-tool)** — a shared vocabulary store with the conjugation drill
   tool, and the rubric engine for speaking assessment.
 - **P2 (shared roster)** — role assignment and per-student records.
 - **P6 (print quality)** — per-student role cards are the deliverable.
-- **P3 (share links)** — student-device role cards.
+- **P3 (share links)** — sending a scenario set to a colleague who teaches the
+  same language.
 
 ## Open Questions
 

@@ -21,6 +21,35 @@ limitation to design around; it is the product.
 
 ---
 
+## Scope: this is a teacher-facing toolkit
+
+**Students are not intended users of this site.** The teacher is the operator
+of every tool. Anything that would put a student in front of this website —
+logging in on their own device, submitting responses, buzzing in, studying
+from a shared deck, self-logging their work — is **out of scope and belongs
+at the bottom of any priority list**, below every teacher-facing idea.
+
+This is not the same as "nothing for students." The toolkit's whole purpose is
+producing things *for* students: printed handouts, blank worksheets, role
+cards, answer keys, station cards, certificates, study sheets. All of that is
+teacher-facing work — the teacher builds it and prints it. Keep those ideas
+where they are; they're the core of the product.
+
+The line is **who operates the tool**, not who benefits from it.
+
+Where a tool file records a student-operated idea, it does so under a
+**"Deferred — student-facing (out of scope)"** heading placed below the
+moonshot. Those are kept as notes for completeness, not as a queue. Do not
+pick one up ahead of teacher-facing work, and do not promote one back up the
+list without Devon saying so.
+
+Note that a few *shipped* features already put a student device in the loop —
+`escape-room-builder.html` ships a `lock.html` player page, and the QR
+scavenger hunt and gallery walk tools assume students scan codes. Those exist
+and are not being reclassified here; the scope rule governs **new** work.
+
+---
+
 ## P1 — Dark mode / projector mode is built but not shipped
 
 `_shared/theme.css` (45 lines of tokens) and `_shared/theme-toggle.js` (32
@@ -165,12 +194,26 @@ tools — Classroom Timer ("Mirror to a device") and Schedule Visualizer
 (project handoff).
 
 This is a genuinely unusual capability for a no-server site and it is barely
-used. Obvious extensions: mirror any projector-facing tool to a second
-display or a student tablet; drive the projector view from a phone while
-walking the room; hand a project file to a colleague standing next to you
-without email; let student devices report into a live board (scavenger hunt
-progress, gallery walk reactions, exit ticket responses) with nothing stored
-anywhere but the two browsers.
+used. The teacher-facing extensions are the valuable ones:
+
+- **Phone as a remote.** Drive the projector view from a phone while walking
+  the room — start and pause the timer, advance the prompt, call the next
+  student, sign someone back in. A teacher is rarely standing at the laptop.
+  This is the single strongest use of the module and it applies to a dozen
+  tools.
+- **Second display.** Mirror a projector-facing tool to a second monitor or a
+  panel, so the teacher's screen can show controls while the room sees only
+  the display.
+- **Colleague handoff.** Hand a project file — a schedule, a bracket, a
+  roster, a room layout — to another teacher standing next to you, without
+  email and without a file. `schedule-visualizer.html` already does this.
+- **Device migration.** Move a year of work from the school desktop to the
+  home laptop with no file and no cloud (see Backup & Restore).
+
+Student devices reporting into a live board (hunt progress, gallery
+reactions, exit ticket responses) is technically the same mechanism, but it
+is **out of scope** per the scope section above. Tool files record those
+ideas under their "Deferred — student-facing" heading.
 
 ## P10 — Fast, keyboard-first operation mid-lesson
 

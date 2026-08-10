@@ -52,8 +52,6 @@ ambitious and are **not** scoped to a single session.
   prepared / advanced the conversation) with a printable summary. This is the
   hardest thing to grade in an ELA classroom and the tool is already in the
   room when it happens.
-- **Student-facing role card by link/QR** (P3) so each student's job and
-  questions are on their own device.
 - **Book and reading-log integration** (P7). `ssr-log-tracker.html` already
   tracks books and pages; a student in a novel study is doing both, in two
   tools that don't know about each other.
@@ -71,6 +69,18 @@ real prompts on them, an accountability sheet between meetings, a running
 vocabulary list that feeds flashcards and a review game, and a per-student
 discussion record — with the projector showing today's circles when the bell
 rings.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Role cards on student devices** by link/QR, instead of printing them.
+  Printing is the teacher-facing path and is already the better artifact,
+  since the role prompts need to sit in front of the student all meeting.
 
 ## Platform themes that matter here
 

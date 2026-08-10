@@ -63,9 +63,6 @@ ambitious and are **not** scoped to a single session.
   `review-game-board.html`'s bank or vocabulary from
   `vocab-flashcard-generator.html` so building a room for Friday doesn't mean
   writing eight new questions.
-- **Student device experience.** A single link/QR that opens the whole run on
-  a student device with progress kept locally, rather than one scan per
-  station.
 - **Printable non-digital version** — the same puzzle chain as a paper packet,
   for the day the Chromebooks aren't charged.
 
@@ -77,6 +74,23 @@ difficulty, and get a printed set of station cards, a teacher answer key, a
 live team leaderboard, and a fallback paper packet — with branching so groups
 don't bottleneck, hints so nobody stalls out, and a finish that feels earned.
 No accounts, no uploads, works with the wifi down.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Single-link student run.** One link/QR that opens the whole chain on a
+  student device with progress kept locally, rather than a scan per station.
+
+Note: this tool already ships `lock.html`, a student-operated player page, and
+the printed QR codes are scanned by students by design. That's existing
+behaviour and isn't being reclassified — but new work should favour the
+printed/teacher-run paths (the paper packet, the typed short code on a shared
+classroom device) over deepening student-device use.
 
 ## Platform themes that matter here
 
@@ -93,6 +107,8 @@ No accounts, no uploads, works with the wifi down.
 
 - Should this and `qr-scavenger-hunt-builder.html` merge? They differ mainly
   in whether stations are ordered and whether teams are tracked.
-- What is the realistic device situation — one shared device per group, or one
-  per student? The answer determines whether the non-QR fallback is a nicety
-  or the primary path.
+- Given that students aren't intended users of this site, how much should the
+  existing `lock.html` player page be leaned on at all? The printed paper
+  packet and a typed short code on one shared classroom device are the
+  teacher-facing alternatives, and it's worth deciding whether they become the
+  primary path.

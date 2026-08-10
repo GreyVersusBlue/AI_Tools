@@ -47,12 +47,13 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Interactive on-screen mode for students** via a share link (P3) — pan the
-  timeline, tap an event, quiz yourself on the order. A timeline is a
-  navigational object and is wasted as a static image.
-- **Drag events onto the line.** An ordering activity — given ten events,
-  place them in sequence, check yourself — is the most common timeline
-  exercise and needs exactly the layout engine already written.
+- **Projected navigation mode.** Pan and zoom the timeline on the projector,
+  tap an event to expand it, and step through a period chronologically — a
+  timeline is a navigational object and is wasted as a static image, and the
+  teacher driving it is the classroom-appropriate way to use that.
+- **Printed ordering activity.** Given ten events on cut-apart cards, students
+  place them in sequence on paper — generated from the timeline along with a
+  teacher answer key. The layout engine already has everything needed.
 - **Map handoff** (P7). Every historical event has a place;
   `blank-map-generator.html` covers where. A combined print — timeline along
   the bottom, map above, events pinned to both — would be a distinctive
@@ -69,11 +70,24 @@ ambitious and are **not** scoped to a single session.
 
 ## Moonshot / North Star
 
-**The class timeline that lives on the wall and in every student's hand.**
-Built once per unit, printed tiled across a hallway wall, viewable and
-navigable on a student device, comparable against a reference timeline of what
-was happening elsewhere, linked to the class map so every event has a place as
-well as a date, and printable as a blank for the unit test.
+**The class timeline that lives on the wall.** Built once per unit, printed
+tiled across a hallway wall, navigable on the projector when you're teaching
+into it, comparable against a reference timeline of what was happening
+elsewhere, linked to the class map so every event has a place as well as a
+date, and printable as a blank for the unit test and as cut-apart cards for an
+ordering activity.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student-navigable timeline** by share link, and an on-screen drag-to-order
+  activity students do themselves. The projected navigation mode and the
+  printed cut-apart ordering activity above cover both.
 
 ## Platform themes that matter here
 
@@ -82,7 +96,8 @@ well as a date, and printable as a blank for the unit test.
 - **P12 (storage/images)** — per-event photos base64'd into `localStorage`.
 - **P6 (print quality)** — the paginated layout is good; tiled wall printing
   is the next step.
-- **P3 (share links)** — a student-navigable timeline.
+- **P3 (share links)** — sending a timeline to a colleague; student-facing
+  output is printed.
 
 ## Open Questions
 

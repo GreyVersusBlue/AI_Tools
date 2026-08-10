@@ -43,7 +43,8 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Student-facing versions of the same sheet.** A blank version where the
+- **Printed scaffolding variants of the same sheet** (teacher-generated, given
+  out on paper — not a student-operated feature). A blank version where the
   student fills in the formulas, a partially-blank version, and a full
   version — generated from one source. This is the standard scaffolding
   progression and it's three print modes over the same data.
@@ -54,9 +55,10 @@ ambitious and are **not** scoped to a single session.
   chemistry, plus unit conversions and geometry area/volume. The
   `IDEAS_BACKLOG.md` entry for a Unit Conversion Chart Builder is really a
   request for this library to exist.
-- **Interactive mode.** Tap a formula to see it solved for each variable, or
-  plug in numbers and see the result — turning a static sheet into a
-  reference tool on a student device via a share link (P3).
+- **Interactive mode for the projector.** Tap a formula to see it solved for
+  each variable, or plug in numbers and see the result, at a size the room
+  can read — a teacher-driven demonstration surface rather than a static
+  sheet.
 - **Subject packs beyond math**: chemistry (polyatomic ions, solubility
   rules), physics (kinematics, circuits), grammar (parts of speech reference),
   world language (verb endings). The engine is subject-agnostic; only the
@@ -69,6 +71,17 @@ Browse a real library or type your own, get correct mathematical typesetting,
 auto-fit to the page, and print the full version for the wall, the blank
 version for the students to build, and the allowed-subset version for the
 test — from one source, offline, free.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Interactive reference on a student device** via a share link. The
+  projector-driven interactive mode above covers the demonstration case.
 
 ## Platform themes that matter here
 

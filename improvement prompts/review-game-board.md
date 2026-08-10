@@ -53,12 +53,13 @@ ambitious and are **not** scoped to a single session.
 - **A real question bank, separate from a board.** Tagged by unit, standard,
   and difficulty; searchable; reusable across boards and across years. Right
   now questions live inside a board and can't be recombined.
-- **Buzzer mode** (P9). Student devices connect via `webrtc-pair.js` and
-  buzz in, with order and timing shown on the projector. This is the missing
-  piece that makes a review game feel like a game, and this site can do it
-  with no server, which almost no competitor can.
-- **Answer capture from every team**, not just the fastest — so the quiet
-  teams also answer every question rather than watching.
+- **Every-team-answers mode.** Instead of first-hand-up, every team writes an
+  answer on a whiteboard and the teacher taps which teams got it — awarding
+  points to all of them at once. Keeps the quiet teams playing, and it's a
+  scoring-UI change rather than a device problem.
+- **Teacher-side buzz order.** A simple on-screen row of team buttons the
+  teacher taps in the order hands went up, so ties and disputes have an
+  answer without any student hardware.
 - **Difficulty-aware point values**, and a mode where a wrong answer passes
   the question to the next team.
 - **Print the whole board as a paper quiz** with an answer key, for absent
@@ -68,16 +69,31 @@ ambitious and are **not** scoped to a single session.
 
 **One question bank, every review format.** Build or import the questions
 once — tagged by unit and standard — and then play them as a game board, a
-bracket, a buzzer quiz-bowl, a scavenger hunt, or an escape room; or print
-them as a practice quiz, a study guide, or flashcards. With student devices
-buzzing in over a local peer connection, no accounts, and no wifi required
-beyond the room.
+bracket, or a whiteboard every-team-answers round; or print them as a practice
+quiz, a study guide, flashcards, or the station content for a scavenger hunt
+or escape room. One authoring effort, six outputs, all driven from the front
+of the room.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Buzzer mode.** Student devices connecting over `webrtc-pair.js` to buzz
+  in, with order and timing on the projector. Genuinely novel for a no-server
+  site, and out of scope. The teacher-side buzz-order row above solves the
+  dispute problem without student hardware.
+- **Per-student answer submission** from devices.
 
 ## Platform themes that matter here
 
 - **P7 (cross-tool)** — the question bank is the site's most reusable missing
   asset; four other tools need questions and none can get them from here.
-- **P9 (device pairing)** — buzzers are the standout unbuilt feature.
+- **P9 (device pairing)** — teacher-side only: running the board from a phone
+  or mirroring it to a second display.
 - **P13 (import surfaces)** — already the best on the site; its
   template-download pattern should be copied everywhere.
 - **P1 (projector mode)** and **P10 (keyboard-first)** — it's a live
@@ -88,5 +104,6 @@ beyond the room.
 - Should the question bank become its own tool (or a shared store) that this
   board, the escape room, the scavenger hunt, and the flashcard generator all
   read? That's the architectural version of the moonshot above.
-- Is buzzer mode worth the complexity given classroom device reality, or is
-  "one device per team" the realistic target?
+- ~~Is buzzer mode worth building?~~ **Answered: out of scope** — it requires
+  student devices. The open question that replaces it: is a teacher-tapped
+  buzz-order row enough to settle "who was first" disputes in practice?

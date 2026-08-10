@@ -49,12 +49,10 @@ ambitious and are **not** scoped to a single session.
   `novel-study-circles-manager.html` (which accumulates a vocabulary log) all
   hold word lists in incompatible formats. One list should drive flashcards,
   wall cards, drills, review game questions, and a word search.
-- **On-screen study mode for students** (P3). A share link opens the deck on a
-  student device with self-testing and local progress — no accounts, no
-  uploads, works offline. This is the format students actually use flashcards
-  in now.
-- **Spaced repetition.** Once there's an on-screen mode, scheduling is a small
-  addition and it's the thing that makes vocabulary study work.
+- **Projected whole-class review mode.** Flip through the deck on the board —
+  term, pause, definition — with shuffle and a "missed it" pile the teacher
+  taps, producing a reteach list at the end. The existing quiz preview is
+  most of the way there.
 - **More printable formats from the same list**: a word search, a crossword,
   a matching worksheet, a bingo card set, a quiz with an answer key, a Frayer
   model page per word. Each is a mechanical transformation of the same data
@@ -71,8 +69,21 @@ ambitious and are **not** scoped to a single session.
 once and get: cut-apart flashcards that print correctly on any printer, word
 wall cards sized for the room, a Frayer model page per word, a word search and
 a crossword for the warm-up, a matching quiz with a key, review game
-questions, and a study deck on every student's device with spaced repetition
-and audio — all offline, all free, all from one paste.
+questions, and a projected whole-class review round that hands you a reteach
+list at the end — all offline, all free, all from one paste.
+
+## Deferred — student-facing (out of scope)
+
+The toolkit is teacher-facing; students are not intended users of this site
+(see `_platform-themes.md`). These ideas are recorded because they're natural
+extensions of the tool, not because they're queued. **Everything above ranks
+above everything here.** Don't pick one of these up ahead of teacher-facing
+work, and don't promote one without Devon saying so.
+
+- **Student study decks on their own devices**, with self-testing and spaced
+  repetition. This is how students actually use flashcards now, and it is
+  still out of scope. Printed cards and the projected class review above are
+  the teacher-facing equivalents.
 
 ## Platform themes that matter here
 
@@ -80,7 +91,7 @@ and audio — all offline, all free, all from one paste.
   review game and drill tools.
 - **P6 (print quality)** — double-sided alignment, cut lines, and card stock
   sizes are this tool's core craft.
-- **P3 (share links)** — a student study deck.
+- **P3 (share links)** — sharing a word list with a colleague.
 - **P12 (storage)** — if images are added to cards.
 
 ## Open Questions
@@ -88,6 +99,6 @@ and audio — all offline, all free, all from one paste.
 - Which tool should own the shared vocabulary store — this one, the
   conjugation drill, or a new small "word lists" hub in the way
   `class-roster-hub.html` owns rosters? The hub pattern is probably right.
-- Is a student-facing study mode within the site's intended scope? It's the
-  single most-used flashcard workflow and it does put the site in front of
-  students.
+- ~~Is a student-facing study mode in scope?~~ **Answered: no** — students
+  aren't intended users. Printed cards remain the deliverable, with the
+  projected class review as the on-screen option.
