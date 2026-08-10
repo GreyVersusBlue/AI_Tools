@@ -45,7 +45,6 @@ Reminder: coming soon means not right now.
 |---|---|
 | DBQ / Source Packet Builder | Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source — pairs with the Primary Source Analysis Worksheet Generator. |
 | Historical Figure / Country Trading Card Maker | Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list. |
-| Current Events Discussion Guide Generator | Turn a pasted news article into a printable discussion guide (summary box, vocabulary, guiding questions). |
 | Government/Civics Simulation Role Card Generator | Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points. |
 | Geography Bee / Map Skills Quiz Generator | A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator. |
 

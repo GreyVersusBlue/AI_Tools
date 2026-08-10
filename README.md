@@ -63,6 +63,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Daily Editing / DOL Warm-Up Generator | `Tools/daily-editing-warmup-generator.html` | A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank. |
 | Peer Feedback / Editing Checklist Generator | `Tools/peer-feedback-checklist-generator.html` | Build a custom peer-review checklist (grammar, structure, argument) from a template or from scratch, tied to a specific writing assignment, and print it as a half-sheet per student. |
 | Lab Report Template Builder | `Tools/lab-report-template-builder.html` | Build a reusable lab report template — hypothesis, materials, procedure, a configurable data table, and conclusion prompts — from a subject-flavored starter or from scratch, and print a fillable packet for each lab. |
+| Current Events Discussion Guide Generator | `Tools/current-events-discussion-guide-generator.html` | Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide. |
 
 ## Using these
 
