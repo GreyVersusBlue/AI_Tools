@@ -88,6 +88,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Picture-Prompt Speaking/Writing Task Generator | `Tools/picture-prompt-generator.html` | Upload images, pair each with a random editable task prompt, step through no-repeats-until-cycled for a projector display, or print a set of image + prompt cards. |
 | Cognates & False Friends Reference List Builder | `Tools/cognates-false-friends-builder.html` | Spanish and French starter examples (or build from scratch) split into true cognates and false friends, printed as a two-section reference sheet. |
 | Fitness & Skill Assessment Tracker | `Tools/fitness-skill-assessment-tracker.html` | Save a roster, add time- or count-based fitness-test events, enter results in a per-student grid with live class average/range stats, and print a report. |
+| Student Art Portfolio Label & QR Tag Maker | `Tools/art-portfolio-label-maker.html` | Add a title, photo, and artist statement per piece; print portfolio labels with a thumbnail and a QR code carrying the statement text itself, no hosting needed. |
 
 ## Using these
 

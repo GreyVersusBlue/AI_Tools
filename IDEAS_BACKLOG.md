@@ -52,7 +52,6 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Student Art Portfolio Label & QR Tag Maker | Printable labels and QR tags for physical student art portfolios, each code linking to a photo or description — pairs with Gallery Walk QR Codes. |
 | Music Sight-Reading / Rhythm Warm-Up Generator | Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class. |
 | PE Warm-Up Circuit Card Generator | Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins. |
 
