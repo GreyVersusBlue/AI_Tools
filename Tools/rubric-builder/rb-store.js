@@ -76,6 +76,11 @@
     localStorage.setItem(SCORES_PREFIX + rubricName, JSON.stringify(scores));
   }
 
+  /** Whole studentName -> record map for a rubric, for class-wide views
+      (grid scoring, analytics, CSV export) that need every student at once
+      rather than one at a time. */
+  function getAllScores(rubricName) { return getScores(rubricName); }
+
   /** Carries scored students along when a rubric is renamed, so scoring
       history isn't orphaned under the old name. */
   function renameScores(oldName, newName) {
@@ -94,6 +99,7 @@
     listRubrics: listRubrics, saveRubric: saveRubric, loadRubric: loadRubric,
     deleteRubric: deleteRubric, getCurrentName: getCurrentName, setCurrentName: setCurrentName,
     listScoredStudents: listScoredStudents, loadScore: loadScore, saveScore: saveScore,
-    deleteScore: deleteScore, renameScores: renameScores, deleteAllScores: deleteAllScores
+    deleteScore: deleteScore, renameScores: renameScores, deleteAllScores: deleteAllScores,
+    getAllScores: getAllScores
   };
 })(window);
