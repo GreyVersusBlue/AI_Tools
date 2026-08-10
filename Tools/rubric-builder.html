@@ -131,8 +131,69 @@
   .rubric-table .pts { display: block; font-size: .72rem; font-weight: 600; color: var(--accent-2); margin-top: .1rem; }
   .rubric-table .crit-name-cell { white-space: nowrap; background: #f7f7f4; font-weight: 700; }
   .rubric-table .empty-row { text-align: center; color: var(--muted); font-style: italic; padding: 2rem; }
+  .rubric-table .comment-row td { background: #fbfaf5; font-style: italic; font-size: .8rem; }
+  .rubric-table .self-assess-cell, .rubric-table .blank-note-cell {
+    background: repeating-linear-gradient(#fff, #fff 1.5em, var(--line) 1.5em, var(--line) calc(1.5em + 1px));
+  }
+  .sheet-subhead { text-align: center; font-size: .85rem; color: var(--muted); margin-bottom: .8rem; }
+  .sheet-nameline { display: flex; gap: 1.5rem; justify-content: center; font-size: .9rem; margin-bottom: .8rem; }
+  .sheet-nameline span { border-bottom: 1px solid var(--ink); padding: 0 2.5rem .1rem 0; }
+  .overall-comment { border: 1px solid var(--ink); border-top: none; padding: .5rem .65rem; font-size: .85rem; }
+  .overall-comment strong { margin-right: .3rem; }
+  .checklist-table td.chk { width: 1.6rem; text-align: center; font-size: 1.1rem; }
+  .checklist-table .crit-desc { color: var(--muted); font-size: .78rem; margin-top: .15rem; display: block; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  /* ---- comment bank & student-text (build mode) ---- */
+  .comment-bank { margin-top: .4rem; }
+  .comment-bank-chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .4rem; }
+  .comment-chip {
+    display: inline-flex; align-items: center; gap: .3rem; background: #eef1f5; border: 1px solid var(--line-strong);
+    border-radius: 12px; padding: .2rem .3rem .2rem .6rem; font-size: .75rem;
+  }
+  .comment-chip button { background: none; border: none; color: var(--muted); font-weight: 700; padding: 0 .3rem; font-size: .8rem; }
+  .comment-chip button:hover { color: var(--err); background: none; }
+  .comment-bank-add { display: flex; gap: .3rem; }
+  .comment-bank-add input { margin-bottom: 0; flex: 1; }
+  .student-cell-wrap { margin-top: .3rem; }
+  .student-cell-wrap textarea { min-height: 2.4rem; font-size: .75rem; margin-bottom: 0; background: #fdf9ee; }
+
+  /* ---- score mode: comments & half-credit ---- */
+  .half-credit-row { display: flex; align-items: center; gap: .4rem; margin: .4rem 0; }
+  .half-credit-row label { display: flex; align-items: center; gap: .35rem; font-weight: 500; font-size: .82rem; margin: 0; }
+  .crit-comment-wrap { margin-top: .5rem; }
+  .crit-comment-wrap textarea { min-height: 2.6rem; font-size: .85rem; margin-bottom: .3rem; }
+  .comment-bank-picks { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .comment-pick-btn {
+    background: #eef1f5; color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 12px; padding: .25rem .6rem; font-size: .75rem; font-weight: 500;
+  }
+  .comment-pick-btn:hover { background: #dfe6ec; }
+
+  /* ---- class scoring grid ---- */
+  .class-controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .8rem; }
+  .class-controls select, .class-controls input[type="text"] { margin-bottom: 0; width: auto; min-width: 10rem; }
+  .class-grid-wrap { overflow-x: auto; }
+  table.class-grid { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  table.class-grid th, table.class-grid td { border: 1px solid var(--line-strong); padding: .4rem .5rem; text-align: left; }
+  table.class-grid thead th { background: #eef1f5; position: sticky; top: 0; }
+  table.class-grid td.student-cell { font-weight: 600; white-space: nowrap; background: #f7f7f4; }
+  table.class-grid select { width: 100%; font-size: .78rem; padding: .3rem; margin-bottom: 0; }
+  table.class-grid td.total-cell { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  table.class-grid td.remove-cell { text-align: center; }
+  .analytics-list { list-style: none; margin: 0; padding: 0; }
+  .analytics-list li {
+    display: flex; justify-content: space-between; gap: 1rem; padding: .4rem .2rem; border-bottom: 1px dashed var(--line);
+    font-size: .85rem;
+  }
+  .analytics-list li:last-child { border-bottom: none; }
+  .analytics-list li.lowest { background: #fbeeee; font-weight: 700; }
+  .analytics-bar-wrap { flex: 1; background: #eee; border-radius: 4px; overflow: hidden; height: .6rem; align-self: center; }
+  .analytics-bar { height: 100%; background: var(--accent-2); }
+  .analytics-list li.lowest .analytics-bar { background: var(--err); }
+
+  .rubric-table tr, .checklist-table tr { break-inside: avoid; page-break-inside: avoid; }
 
   @media print {
     body * { visibility: hidden; }
@@ -168,6 +229,7 @@
   <div class="mode-tabs" id="modeTabs" style="display:none;">
     <button type="button" class="mode-tab active" id="modeBuildBtn">Build rubric</button>
     <button type="button" class="mode-tab" id="modeScoreBtn">Score a student</button>
+    <button type="button" class="mode-tab" id="modeClassBtn">Class scoring</button>
   </div>
 
   <div class="layout" id="buildMode">
@@ -193,18 +255,35 @@
       </div>
 
       <div class="card">
-        <label style="margin-bottom:.6rem;">Criteria</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.6rem;">
+          <label style="margin:0;">Criteria</label>
+          <button type="button" class="secondary small" id="toggleStudentTextBtn">Add student-friendly language</button>
+        </div>
+        <p class="hint" id="studentTextHint" style="display:none;">Each level cell now has an optional &ldquo;I can&hellip;&rdquo; version for the student-friendly print format below. Leave blank to fall back to the teacher text.</p>
         <div id="criteriaList"></div>
         <p class="hint" id="emptyHint" style="display:none;">No criteria yet &mdash; load a template above or add one below.</p>
         <button type="button" class="secondary full" id="addCriterionBtn">+ Add criterion</button>
       </div>
 
-      <button type="button" id="printBtn" class="full">Print</button>
+      <div class="card">
+        <label for="printFormat">Print format</label>
+        <select id="printFormat">
+          <option value="standard">Standard grid</option>
+          <option value="student">Student-friendly (with self-assessment)</option>
+          <option value="single-point">Single-point rubric</option>
+          <option value="checklist">Checklist</option>
+        </select>
+        <div id="singlePointWrap" style="display:none;">
+          <label for="singlePointLevel">Target level shown as &ldquo;meets expectations&rdquo;</label>
+          <select id="singlePointLevel"></select>
+        </div>
+        <button type="button" id="printBtn" class="full">Print</button>
+      </div>
     </div>
 
     <div class="preview-wrap">
       <div class="stat-bar">
-        <p class="preview-note" style="margin:0;">Live preview &mdash; this is exactly what prints (one page, landscape).</p>
+        <p class="preview-note" style="margin:0;" id="previewNote">Live preview &mdash; this is exactly what prints (one page, landscape).</p>
         <div class="stat-points" id="totalPoints"></div>
       </div>
       <div id="previewArea"></div>
@@ -214,8 +293,17 @@
   <div class="layout" id="scoreMode" style="display:none;">
     <div class="editor">
       <div class="card">
+        <label for="scoreRosterSelect">Load a saved roster</label>
+        <p class="hint">Pulls names from Name Picker / Class Roster Hub into the autocomplete below &mdash; no retyping the class list.</p>
+        <div style="display:flex;gap:.5rem;">
+          <select id="scoreRosterSelect" style="margin-bottom:0;"></select>
+          <button type="button" class="secondary" id="scoreRosterLoadBtn">Load</button>
+        </div>
+      </div>
+
+      <div class="card">
         <label for="studentNameInput">Student name</label>
-        <p class="hint">Type a new name, or pick a previously scored student from the list to reopen their score.</p>
+        <p class="hint">Type a new name, or pick a previously scored (or rostered) student from the list to reopen their score.</p>
         <input type="text" id="studentNameInput" list="studentNamesList" placeholder="e.g. Jordan A.">
         <datalist id="studentNamesList"></datalist>
         <button type="button" class="secondary full" id="loadStudentScoreBtn">Load / start scoring this student</button>
@@ -224,12 +312,19 @@
 
       <div class="card">
         <label style="margin-bottom:.6rem;">Score each criterion</label>
-        <p class="hint">Click the performance level that applies. Click it again to clear a selection.</p>
+        <p class="hint">Click the performance level that applies. Click it again to clear a selection. Add a half point toward the next level up if the work is in between.</p>
         <div id="scoreCriteriaList"></div>
         <p class="hint" id="scoreEmptyHint" style="display:none;">This rubric has no criteria yet &mdash; add some in Build rubric mode.</p>
       </div>
 
+      <div class="card" id="overallCommentCard" style="display:none;">
+        <label for="overallCommentInput">Overall comment</label>
+        <p class="hint">The comment is what the student reads; the numbers are what the gradebook reads.</p>
+        <textarea id="overallCommentInput" rows="3" placeholder="Overall feedback for this student&hellip;"></textarea>
+      </div>
+
       <button type="button" id="printScoreBtn" class="full">Print this student&rsquo;s scored rubric</button>
+      <button type="button" class="secondary full" id="exportScoresCsvBtn">Export all scores as CSV</button>
     </div>
 
     <div class="preview-wrap">
@@ -239,6 +334,29 @@
       </div>
       <div id="scorePreviewArea"></div>
     </div>
+  </div>
+
+  <div class="card" id="classMode" style="display:none;">
+    <div class="class-controls">
+      <label style="margin:0;">Roster:</label>
+      <select id="classRosterSelect"></select>
+      <button type="button" class="secondary" id="classRosterLoadBtn">Add roster to grid</button>
+      <label style="margin:0;">Add one student:</label>
+      <input type="text" id="classAddStudentInput" placeholder="Student name">
+      <button type="button" class="secondary" id="classAddStudentBtn">Add</button>
+      <button type="button" class="secondary" id="exportClassCsvBtn">Export scores as CSV</button>
+    </div>
+    <p class="hint">Pick a level per student per criterion right in the grid &mdash; grades a class of 28 from one screen. Comments and half points are still per-student in &ldquo;Score a student.&rdquo;</p>
+    <div class="class-grid-wrap">
+      <table class="class-grid" id="classGridTable"></table>
+    </div>
+    <p class="hint" id="classEmptyHint" style="display:none;">No students yet &mdash; load a roster or add one above.</p>
+  </div>
+
+  <div class="card" id="analyticsCard" style="display:none;">
+    <label style="margin-bottom:.4rem;">Rubric analytics</label>
+    <p class="hint">Class average per criterion, lowest first &mdash; the reteaching signal.</p>
+    <ul class="analytics-list" id="analyticsList"></ul>
   </div>
 
   <footer class="note">
@@ -258,17 +376,25 @@
    'exportRubricBtn','importRubricBtn','importRubricFile',
    'rubricName','rubricTitle','templatePicker','loadTemplateBtn',
    'levelsRow','addLevelBtn','criteriaList','emptyHint','addCriterionBtn',
-   'printBtn','previewArea','totalPoints','shareBar',
-   'modeTabs','modeBuildBtn','modeScoreBtn','buildMode','scoreMode',
+   'toggleStudentTextBtn','studentTextHint',
+   'printFormat','singlePointWrap','singlePointLevel',
+   'printBtn','previewArea','previewNote','totalPoints','shareBar',
+   'modeTabs','modeBuildBtn','modeScoreBtn','modeClassBtn','buildMode','scoreMode','classMode','analyticsCard',
+   'scoreRosterSelect','scoreRosterLoadBtn',
    'studentNameInput','studentNamesList','loadStudentScoreBtn','deleteScoreBtn',
    'scoreCriteriaList','scoreEmptyHint','scoreStudentLabel','scoreTotalPoints',
-   'scorePreviewArea','printScoreBtn'
+   'overallCommentCard','overallCommentInput',
+   'scorePreviewArea','printScoreBtn','exportScoresCsvBtn',
+   'classRosterSelect','classRosterLoadBtn','classAddStudentInput','classAddStudentBtn',
+   'exportClassCsvBtn','classGridTable','classEmptyHint','analyticsList'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = null; // { name, title, levels: [{id,label,points}], criteria: [{id,name,cells:{levelId:text}}] }
+  var state = null; // { name, title, levels: [{id,label,points}], criteria: [{id,name,weight,cells:{levelId:text},studentCells:{levelId:text},commentBank:[str]}], showStudentText, singlePointLevelId }
   var idCounter = 1;
-  var currentMode = 'build'; // 'build' | 'score'
-  var currentScore = null; // { student, selections: {critId: levelId} } — the student currently being scored, or null
+  var currentMode = 'build'; // 'build' | 'score' | 'class'
+  var currentScore = null; // { student, selections: {critId: {levelId, half, comment}}, overallComment } — the student currently being scored, or null
+  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
+  var rosterNameCache = []; // names from the last "Load" in Score mode, merged into the datalist
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -278,14 +404,34 @@
 
   function nextId(prefix) { return prefix + (idCounter++); }
 
-  /** Backfills `weight` (default 1) on criteria loaded from before this field
-      existed — old saves, JSON imports, and shared links alike. */
+  /** Backfills `weight` (default 1), `studentCells` and `commentBank` on
+      criteria loaded from before those fields existed — old saves, JSON
+      imports, and shared links alike — so old rubrics keep loading and
+      computing exactly as they always have. */
   function normalizeCriteria(criteria) {
     (criteria || []).forEach(function (c) {
       var w = Number(c.weight);
       c.weight = (isFinite(w) && w > 0) ? w : 1;
+      if (!c.studentCells || typeof c.studentCells !== 'object') c.studentCells = {};
+      if (!Array.isArray(c.commentBank)) c.commentBank = [];
     });
     return criteria;
+  }
+
+  function newCriterion(name, cells, weight) {
+    return { id: nextId('crit'), name: name, weight: weight || 1, cells: cells || {}, studentCells: {}, commentBank: [] };
+  }
+
+  /** Backfills rubric-level fields added after the original {name,title,
+      levels,criteria} shape — applied on load, import, and shared-link
+      import so every entry point produces the same complete state. */
+  function ensureStateDefaults(s) {
+    if (!s.levels) s.levels = defaultLevels();
+    if (!s.criteria) s.criteria = [];
+    normalizeCriteria(s.criteria);
+    if (typeof s.showStudentText !== 'boolean') s.showStudentText = false;
+    if (s.singlePointLevelId == null) s.singlePointLevelId = null;
+    return s;
   }
 
   function bumpIdCounterFromState() {
@@ -411,8 +557,13 @@
         crit.weight = (isFinite(v) && v > 0) ? v : 1;
         renderPreview();
       });
+      var weightPct = document.createElement('span');
+      weightPct.className = 'crit-weight-label crit-weight-pct';
+      weightPct.setAttribute('data-crit-id', crit.id);
+      weightPct.title = 'Share of the total possible points, given every criterion\'s current weight';
       weightWrap.appendChild(weightLabel);
       weightWrap.appendChild(weightInput);
+      weightWrap.appendChild(weightPct);
 
       var btns = document.createElement('div');
       btns.className = 'btns';
@@ -455,9 +606,61 @@
         ta.placeholder = 'What does "' + (level.label || 'this level') + '" look like?';
         ta.addEventListener('input', function () { crit.cells[level.id] = ta.value; renderPreview(); });
         cellWrap.appendChild(cellLabel); cellWrap.appendChild(ta);
+
+        if (state.showStudentText) {
+          var studentWrap = document.createElement('div');
+          studentWrap.className = 'student-cell-wrap';
+          var studentTa = document.createElement('textarea');
+          studentTa.rows = 2;
+          studentTa.value = crit.studentCells[level.id] || '';
+          studentTa.placeholder = 'Student version, e.g. "I can ' + (level.label || 'do this') + '..." (optional)';
+          studentTa.addEventListener('input', function () { crit.studentCells[level.id] = studentTa.value; renderPreview(); });
+          studentWrap.appendChild(studentTa);
+          cellWrap.appendChild(studentWrap);
+        }
+
         cellsGrid.appendChild(cellWrap);
       });
       block.appendChild(cellsGrid);
+
+      var bankWrap = document.createElement('div');
+      bankWrap.className = 'comment-bank';
+      var bankChips = document.createElement('div');
+      bankChips.className = 'comment-bank-chips';
+      crit.commentBank.forEach(function (text, ci) {
+        var chip = document.createElement('span');
+        chip.className = 'comment-chip';
+        var chipText = document.createElement('span');
+        chipText.textContent = text;
+        var chipRemove = document.createElement('button');
+        chipRemove.type = 'button'; chipRemove.textContent = '×';
+        chipRemove.title = 'Remove this canned comment';
+        chipRemove.addEventListener('click', function () {
+          crit.commentBank.splice(ci, 1);
+          renderEditor(); renderPreview();
+        });
+        chip.appendChild(chipText); chip.appendChild(chipRemove);
+        bankChips.appendChild(chip);
+      });
+      var bankAdd = document.createElement('div');
+      bankAdd.className = 'comment-bank-add';
+      var bankInput = document.createElement('input');
+      bankInput.type = 'text'; bankInput.placeholder = 'Add a canned comment for this criterion…';
+      bankInput.setAttribute('aria-label', 'New comment bank entry for ' + (crit.name || 'this criterion'));
+      var bankAddBtn = document.createElement('button');
+      bankAddBtn.type = 'button'; bankAddBtn.className = 'secondary small'; bankAddBtn.textContent = '+ Add to bank';
+      function addBankEntry() {
+        var v = bankInput.value.trim();
+        if (!v) return;
+        crit.commentBank.push(v);
+        renderEditor(); renderPreview();
+      }
+      bankAddBtn.addEventListener('click', addBankEntry);
+      bankInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addBankEntry(); } });
+      bankAdd.appendChild(bankInput); bankAdd.appendChild(bankAddBtn);
+      bankWrap.appendChild(bankChips); bankWrap.appendChild(bankAdd);
+      block.appendChild(bankWrap);
+
       els.criteriaList.appendChild(block);
     });
   }
@@ -516,24 +719,192 @@
     );
   }
 
+  /** Which of the current levels reads as the "meets expectations" row for
+      the single-point format — the teacher's explicit pick if it still
+      exists, else a level whose label sounds right, else the middle one. */
+  function resolveSinglePointLevelId() {
+    if (state.singlePointLevelId && state.levels.some(function (l) { return l.id === state.singlePointLevelId; })) {
+      return state.singlePointLevelId;
+    }
+    var guess = state.levels.filter(function (l) {
+      return /proficient|meets|good|satisfactory|on target|on-target/i.test(l.label || '');
+    })[0];
+    if (guess) return guess.id;
+    if (!state.levels.length) return null;
+    return state.levels[Math.floor((state.levels.length - 1) / 2)].id;
+  }
+
+  function studentRubricTableHtml() {
+    var headerCells = state.levels.map(function (l) {
+      return '<th>' + escapeHtml(l.label || 'Untitled') + '</th>';
+    }).join('');
+    var bodyRows;
+    if (state.criteria.length) {
+      bodyRows = state.criteria.map(function (c) {
+        var cells = state.levels.map(function (l) {
+          var text = escapeHtml(c.studentCells[l.id] || c.cells[l.id] || '').replace(/\n/g, '<br>');
+          return '<td>' + text + '</td>';
+        }).join('');
+        return '<tr><th class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + '</th>' + cells +
+          '<td class="self-assess-cell"></td></tr>';
+      }).join('');
+    } else {
+      bodyRows = '<tr><td class="empty-row" colspan="' + (state.levels.length + 2) + '">No criteria yet.</td></tr>';
+    }
+    return (
+      '<div class="rubric-sheet">' +
+        '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
+        '<div class="sheet-nameline"><span>Name</span><span>Date</span></div>' +
+        '<p class="sheet-subhead">Before you turn this in: read each row, decide which level best describes your work, and say why in the last column.</p>' +
+        '<table class="rubric-table"><thead><tr><th class="corner">What I&rsquo;m being graded on</th>' + headerCells + '<th>My self-assessment</th></tr></thead>' +
+        '<tbody>' + bodyRows + '</tbody></table>' +
+      '</div>'
+    );
+  }
+
+  function singlePointTableHtml() {
+    var targetId = resolveSinglePointLevelId();
+    var target = state.levels.filter(function (l) { return l.id === targetId; })[0];
+    var bodyRows;
+    if (state.criteria.length) {
+      bodyRows = state.criteria.map(function (c) {
+        var text = escapeHtml((target && c.cells[target.id]) || '').replace(/\n/g, '<br>');
+        return '<tr><td class="blank-note-cell"></td>' +
+          '<td class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + '<br>' + text + '</td>' +
+          '<td class="blank-note-cell"></td></tr>';
+      }).join('');
+    } else {
+      bodyRows = '<tr><td class="empty-row" colspan="3">No criteria yet.</td></tr>';
+    }
+    return (
+      '<div class="rubric-sheet">' +
+        '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
+        '<div class="sheet-nameline"><span>Name</span><span>Date</span></div>' +
+        '<table class="rubric-table"><thead><tr><th>Concerns</th><th>Criteria &mdash; ' +
+        escapeHtml(target ? target.label : 'meets expectations') + '</th><th>Advanced</th></tr></thead>' +
+        '<tbody>' + bodyRows + '</tbody></table>' +
+      '</div>'
+    );
+  }
+
+  function checklistTableHtml() {
+    var targetId = resolveSinglePointLevelId();
+    var target = state.levels.filter(function (l) { return l.id === targetId; })[0];
+    var bodyRows;
+    if (state.criteria.length) {
+      bodyRows = state.criteria.map(function (c) {
+        var text = escapeHtml((target && c.cells[target.id]) || '');
+        return '<tr><td class="chk">&#9633;</td><td>' + escapeHtml(c.name || 'Untitled') +
+          (text ? '<span class="crit-desc">' + text + '</span>' : '') + '</td></tr>';
+      }).join('');
+    } else {
+      bodyRows = '<tr><td class="empty-row" colspan="2">No criteria yet.</td></tr>';
+    }
+    return (
+      '<div class="rubric-sheet">' +
+        '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
+        '<table class="rubric-table checklist-table"><tbody>' + bodyRows + '</tbody></table>' +
+      '</div>'
+    );
+  }
+
+  function currentPreviewHtml() {
+    switch (els.printFormat.value) {
+      case 'student': return studentRubricTableHtml();
+      case 'single-point': return singlePointTableHtml();
+      case 'checklist': return checklistTableHtml();
+      default: return rubricTableHtml();
+    }
+  }
+
+  function updateWeightPercentLabels() {
+    var total = totalPossiblePoints();
+    var maxPts = maxLevelPoints();
+    var spans = els.criteriaList.querySelectorAll('.crit-weight-pct');
+    for (var i = 0; i < spans.length; i++) {
+      var span = spans[i];
+      var crit = state.criteria.filter(function (c) { return c.id === span.getAttribute('data-crit-id'); })[0];
+      if (!crit) continue;
+      var share = total > 0 ? (maxPts * (crit.weight || 1) / total * 100) : 0;
+      span.textContent = '(' + fmtNum(share) + '% of grade)';
+    }
+  }
+
+  function updatePrintFormatUi() {
+    var isSinglePoint = els.printFormat.value === 'single-point';
+    els.singlePointWrap.style.display = isSinglePoint ? '' : 'none';
+    els.singlePointLevel.innerHTML = state.levels.map(function (l) {
+      return '<option value="' + l.id + '">' + escapeHtml(l.label || 'Untitled') + '</option>';
+    }).join('');
+    var resolved = resolveSinglePointLevelId();
+    if (resolved != null) els.singlePointLevel.value = resolved;
+    var notes = {
+      standard: 'Live preview — this is exactly what prints (one page, landscape).',
+      student: 'Live preview of the student-friendly, self-assessment version.',
+      'single-point': 'Live preview of the single-point format.',
+      checklist: 'Live preview of the checklist format.'
+    };
+    els.previewNote.textContent = notes[els.printFormat.value] || notes.standard;
+  }
+
   /* ---------- score-a-student: totals & printable sheet ---------- */
+
+  function levelsIndex() {
+    var m = {};
+    state.levels.forEach(function (l) { m[l.id] = l; });
+    return m;
+  }
+
+  /** The lowest-point level above the given one, regardless of column
+      order — half credit always means "toward the next best level up",
+      even after the teacher has reordered the level columns. */
+  function higherNeighbor(level) {
+    var base = Number(level.points) || 0;
+    var higher = state.levels.filter(function (l) { return (Number(l.points) || 0) > base; });
+    if (!higher.length) return null;
+    return higher.reduce(function (best, l) { return (Number(l.points) || 0) < (Number(best.points) || 0) ? l : best; });
+  }
+
+  /** Backfills the old `selections[critId] = levelId` string shape into the
+      current `{levelId, half, comment}` object shape, so scores saved before
+      half-credit and per-criterion comments existed still load correctly. */
+  function normalizeSelectionValue(v) {
+    if (v == null) return null;
+    if (typeof v === 'string') return { levelId: v, half: false, comment: '' };
+    return { levelId: v.levelId || null, half: !!v.half, comment: v.comment || '' };
+  }
+
+  /** Raw (unweighted) points for one criterion's selection, or null if
+      unscored or pointing at a level column that's since been removed. */
+  function pointsForSelection(levelsById, sel) {
+    if (!sel || !sel.levelId) return null;
+    var level = levelsById[sel.levelId];
+    if (!level) return null;
+    var base = Number(level.points) || 0;
+    if (sel.half) {
+      var hi = higherNeighbor(level);
+      if (hi) base = base + ((Number(hi.points) || 0) - base) / 2;
+    }
+    return base;
+  }
 
   /** Points earned so far for the given score record — a selected level
       that no longer exists (e.g. its column was removed) simply counts as
       unscored, same as a criterion that hasn't been clicked yet. */
   function earnedPoints(scoreRec) {
     if (!scoreRec) return 0;
+    var levelsById = levelsIndex();
     return state.criteria.reduce(function (sum, c) {
-      var levelId = scoreRec.selections[c.id];
-      if (!levelId) return sum;
-      var level = state.levels.filter(function (l) { return l.id === levelId; })[0];
-      if (!level) return sum;
-      return sum + (Number(level.points) || 0) * (c.weight || 1);
+      var sel = normalizeSelectionValue(scoreRec.selections[c.id]);
+      var pts = pointsForSelection(levelsById, sel);
+      if (pts == null) return sum;
+      return sum + pts * (c.weight || 1);
     }, 0);
   }
 
   function scoreTableHtml(scoreRec) {
     var maxPts = maxLevelPoints();
+    var levelsById = levelsIndex();
     var headerCells = state.levels.map(function (l) {
       return '<th>' + escapeHtml(l.label || 'Untitled') + '<span class="pts">' + escapeHtml(String(l.points)) + ' pts</span></th>';
     }).join('');
@@ -542,17 +913,27 @@
     if (state.criteria.length) {
       bodyRows = state.criteria.map(function (c) {
         var weight = c.weight || 1;
-        var selectedId = scoreRec.selections[c.id];
+        var sel = normalizeSelectionValue(scoreRec.selections[c.id]);
+        var selectedId = sel ? sel.levelId : null;
         var cells = state.levels.map(function (l) {
           var text = escapeHtml(c.cells[l.id] || '').replace(/\n/g, '<br>');
           var isSelected = l.id === selectedId;
-          var mark = isSelected ? '<span class="pts">&#10003; ' + escapeHtml(fmtNum((Number(l.points) || 0) * weight)) + ' pts</span>' : '';
+          var mark = '';
+          if (isSelected) {
+            var pts = pointsForSelection(levelsById, sel);
+            mark = '<span class="pts">&#10003; ' + escapeHtml(fmtNum((pts == null ? 0 : pts) * weight)) +
+              ' pts' + (sel.half ? ' (½ credit)' : '') + '</span>';
+          }
           return '<td' + (isSelected ? ' class="selected-cell"' : '') + '>' + text + mark + '</td>';
         }).join('');
         var weightNote = weight !== 1
           ? '<span class="pts">&times;' + escapeHtml(fmtNum(weight)) + ' &middot; up to ' + escapeHtml(fmtNum(maxPts * weight)) + ' pts</span>'
           : '';
-        return '<tr><th class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + weightNote + '</th>' + cells + '</tr>';
+        var row = '<tr><th class="crit-name-cell">' + escapeHtml(c.name || 'Untitled') + weightNote + '</th>' + cells + '</tr>';
+        if (sel && sel.comment) {
+          row += '<tr class="comment-row"><td colspan="' + (state.levels.length + 1) + '">Comment: ' + escapeHtml(sel.comment) + '</td></tr>';
+        }
+        return row;
       }).join('');
     } else {
       bodyRows = '<tr><td class="empty-row" colspan="' + (state.levels.length + 1) + '">No criteria yet.</td></tr>';
@@ -561,6 +942,9 @@
     var possible = totalPossiblePoints();
     var earned = earnedPoints(scoreRec);
     var pctText = possible > 0 ? ' (' + fmtNum((earned / possible) * 100) + '%)' : '';
+    var overallHtml = scoreRec.overallComment
+      ? '<div class="overall-comment"><strong>Overall comment:</strong>' + escapeHtml(scoreRec.overallComment) + '</div>'
+      : '';
 
     return (
       '<div class="rubric-sheet">' +
@@ -569,6 +953,7 @@
         '<table class="rubric-table"><thead><tr><th class="corner">Criteria</th>' + headerCells + '</tr></thead>' +
         '<tbody>' + bodyRows + '</tbody></table>' +
         '<div class="score-summary">Total: ' + fmtNum(earned) + ' / ' + fmtNum(possible) + ' pts' + pctText + '</div>' +
+        overallHtml +
       '</div>'
     );
   }
@@ -577,7 +962,8 @@
   function renderPreview() {
     save();
     updateTotalPointsDisplay();
-    els.previewArea.innerHTML = rubricTableHtml();
+    updateWeightPercentLabels();
+    els.previewArea.innerHTML = currentPreviewHtml();
   }
 
   function renderEditor() {
@@ -588,18 +974,32 @@
   /* ---------- score-a-student: mode + editor rendering ---------- */
   function populateStudentDatalist() {
     els.studentNamesList.innerHTML = '';
-    RubricStore.listScoredStudents(state.name).forEach(function (name) {
+    var names = RubricStore.listScoredStudents(state.name).slice();
+    rosterNameCache.forEach(function (n) { if (names.indexOf(n) === -1) names.push(n); });
+    names.sort(function (a, b) { return a.localeCompare(b); });
+    names.forEach(function (name) {
       var opt = document.createElement('option');
       opt.value = name;
       els.studentNamesList.appendChild(opt);
     });
   }
 
+  function getSelection(critId) {
+    return normalizeSelectionValue(currentScore.selections[critId]);
+  }
+  function setSelection(critId, sel) {
+    currentScore.selections[critId] = sel;
+    RubricStore.saveScore(state.name, currentScore.student, currentScore);
+  }
+
   function renderScoreCriteria() {
     els.scoreCriteriaList.innerHTML = '';
     els.scoreEmptyHint.style.display = state.criteria.length ? 'none' : '';
+    els.overallCommentCard.style.display = state.criteria.length ? '' : 'none';
     if (!currentScore) return;
+    var levelsById = levelsIndex();
     state.criteria.forEach(function (crit) {
+      var sel = getSelection(crit.id);
       var block = document.createElement('div');
       block.className = 'score-crit-block';
 
@@ -613,15 +1013,15 @@
       state.levels.forEach(function (level) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'level-btn' + (currentScore.selections[crit.id] === level.id ? ' selected' : '');
+        btn.className = 'level-btn' + (sel && sel.levelId === level.id ? ' selected' : '');
         btn.textContent = (level.label || 'Untitled') + ' — ' + fmtNum(level.points) + ' pts';
         btn.addEventListener('click', function () {
-          if (currentScore.selections[crit.id] === level.id) {
-            delete currentScore.selections[crit.id]; // click the selected level again to clear it
+          if (sel && sel.levelId === level.id) {
+            // click the selected level again to clear it — the comment, if any, is kept
+            setSelection(crit.id, { levelId: null, half: false, comment: sel.comment });
           } else {
-            currentScore.selections[crit.id] = level.id;
+            setSelection(crit.id, { levelId: level.id, half: false, comment: sel ? sel.comment : '' });
           }
-          RubricStore.saveScore(state.name, currentScore.student, currentScore);
           renderScoreCriteria();
           renderScoreTotals();
           renderScorePreview();
@@ -629,9 +1029,69 @@
         row.appendChild(btn);
       });
       block.appendChild(row);
+
+      if (sel && sel.levelId) {
+        var selectedLevel = levelsById[sel.levelId];
+        var hi = selectedLevel ? higherNeighbor(selectedLevel) : null;
+        if (hi) {
+          var halfRow = document.createElement('div');
+          halfRow.className = 'half-credit-row';
+          var halfLabel = document.createElement('label');
+          var halfCheck = document.createElement('input');
+          halfCheck.type = 'checkbox'; halfCheck.checked = !!sel.half;
+          halfCheck.addEventListener('change', function () {
+            setSelection(crit.id, { levelId: sel.levelId, half: halfCheck.checked, comment: sel.comment });
+            renderScoreCriteria();
+            renderScoreTotals();
+            renderScorePreview();
+          });
+          halfLabel.appendChild(halfCheck);
+          halfLabel.appendChild(document.createTextNode(
+            '½ credit toward "' + (hi.label || 'Untitled') + '" (' + fmtNum((levelPointsOf(selectedLevel) + levelPointsOf(hi)) / 2) + ' pts)'
+          ));
+          halfRow.appendChild(halfLabel);
+          block.appendChild(halfRow);
+        }
+      }
+
+      var commentWrap = document.createElement('div');
+      commentWrap.className = 'crit-comment-wrap';
+      var commentTa = document.createElement('textarea');
+      commentTa.rows = 2;
+      commentTa.placeholder = 'Comment for ' + (crit.name || 'this criterion') + ' (what the student reads)';
+      commentTa.value = sel ? sel.comment : '';
+      commentTa.addEventListener('input', function () {
+        var base = getSelection(crit.id) || { levelId: null, half: false, comment: '' };
+        setSelection(crit.id, { levelId: base.levelId, half: base.half, comment: commentTa.value });
+        renderScorePreview();
+      });
+      commentWrap.appendChild(commentTa);
+
+      if (crit.commentBank.length) {
+        var picks = document.createElement('div');
+        picks.className = 'comment-bank-picks';
+        crit.commentBank.forEach(function (text) {
+          var pickBtn = document.createElement('button');
+          pickBtn.type = 'button'; pickBtn.className = 'comment-pick-btn'; pickBtn.textContent = text;
+          pickBtn.title = 'Add this comment';
+          pickBtn.addEventListener('click', function () {
+            var current = commentTa.value;
+            commentTa.value = current ? current.replace(/\s+$/, '') + ' ' + text : text;
+            var base = getSelection(crit.id) || { levelId: null, half: false, comment: '' };
+            setSelection(crit.id, { levelId: base.levelId, half: base.half, comment: commentTa.value });
+            renderScorePreview();
+          });
+          picks.appendChild(pickBtn);
+        });
+        commentWrap.appendChild(picks);
+      }
+      block.appendChild(commentWrap);
+
       els.scoreCriteriaList.appendChild(block);
     });
   }
+
+  function levelPointsOf(level) { return Number(level.points) || 0; }
 
   function renderScoreTotals() {
     els.scoreStudentLabel.textContent = currentScore ? currentScore.student : '(no student selected)';
@@ -649,20 +1109,193 @@
   }
 
   function renderScoreMode() {
+    populateRosterSelect(els.scoreRosterSelect);
     populateStudentDatalist();
     renderScoreCriteria();
     renderScoreTotals();
     renderScorePreview();
+    els.overallCommentInput.value = currentScore ? (currentScore.overallComment || '') : '';
+  }
+
+  /* ---------- class-wide scoring grid ---------- */
+  function classStudentList() {
+    return RubricStore.listScoredStudents(state.name);
+  }
+
+  function levelSelectOptions(selected) {
+    var opts = ['<option value=""' + (selected === '' || !selected ? ' selected' : '') + '>&mdash;</option>'];
+    state.levels.forEach(function (l) {
+      var full = l.id;
+      opts.push('<option value="' + full + '"' + (selected === full ? ' selected' : '') + '>' +
+        escapeHtml(l.label || 'Untitled') + ' (' + fmtNum(l.points) + ')</option>');
+      var hi = higherNeighbor(l);
+      if (hi) {
+        var halfVal = l.id + '|half';
+        opts.push('<option value="' + halfVal + '"' + (selected === halfVal ? ' selected' : '') + '>' +
+          escapeHtml(l.label || 'Untitled') + ' + ½ (' + fmtNum((levelPointsOf(l) + levelPointsOf(hi)) / 2) + ')</option>');
+      }
+    });
+    return opts.join('');
+  }
+
+  function renderClassMode() {
+    populateRosterSelect(els.classRosterSelect);
+    var students = classStudentList();
+    els.classEmptyHint.style.display = students.length ? 'none' : '';
+    if (!students.length || !state.criteria.length) {
+      els.classGridTable.innerHTML = '';
+      renderAnalytics();
+      return;
+    }
+    var scores = RubricStore.getAllScores(state.name);
+    var possible = totalPossiblePoints();
+
+    var head = '<thead><tr><th>Student</th>' +
+      state.criteria.map(function (c) {
+        return '<th>' + escapeHtml(c.name || 'Untitled') + ((c.weight || 1) !== 1 ? ' (×' + fmtNum(c.weight) + ')' : '') + '</th>';
+      }).join('') + '<th>Total</th><th></th></tr></thead>';
+
+    var bodyRows = students.map(function (name) {
+      var rec = scores[name] || { student: name, selections: {}, overallComment: '' };
+      var cells = state.criteria.map(function (c) {
+        var sel = normalizeSelectionValue(rec.selections[c.id]);
+        var selectedVal = sel && sel.levelId ? (sel.levelId + (sel.half ? '|half' : '')) : '';
+        return '<td><select data-student="' + escapeHtml(name) + '" data-crit="' + c.id + '">' +
+          levelSelectOptions(selectedVal) + '</select></td>';
+      }).join('');
+      var earned = earnedPoints(rec);
+      var pctText = possible > 0 ? ' (' + fmtNum((earned / possible) * 100) + '%)' : '';
+      return '<tr><td class="student-cell">' + escapeHtml(name) + '</td>' + cells +
+        '<td class="total-cell">' + fmtNum(earned) + ' / ' + fmtNum(possible) + pctText + '</td>' +
+        '<td class="remove-cell"><button type="button" class="danger small" data-remove="' + escapeHtml(name) + '">Remove</button></td></tr>';
+    }).join('');
+
+    els.classGridTable.innerHTML = head + '<tbody>' + bodyRows + '</tbody>';
+
+    var selects = els.classGridTable.querySelectorAll('select[data-student]');
+    for (var i = 0; i < selects.length; i++) {
+      selects[i].addEventListener('change', function (e) {
+        var sel = e.target;
+        var studentName = sel.getAttribute('data-student');
+        var critId = sel.getAttribute('data-crit');
+        var scoresNow = RubricStore.getAllScores(state.name);
+        var rec = scoresNow[studentName] || { student: studentName, selections: {}, overallComment: '' };
+        var raw = sel.value;
+        var priorComment = (normalizeSelectionValue(rec.selections[critId]) || {}).comment || '';
+        if (!raw) {
+          rec.selections[critId] = { levelId: null, half: false, comment: priorComment };
+        } else {
+          var parts = raw.split('|');
+          rec.selections[critId] = { levelId: parts[0], half: parts[1] === 'half', comment: priorComment };
+        }
+        RubricStore.saveScore(state.name, studentName, rec);
+        renderClassMode();
+      });
+    }
+    var removeBtns = els.classGridTable.querySelectorAll('button[data-remove]');
+    for (var j = 0; j < removeBtns.length; j++) {
+      removeBtns[j].addEventListener('click', function (e) {
+        var name = e.target.getAttribute('data-remove');
+        if (!confirm('Remove "' + name + '" from this grid and delete their saved score?')) return;
+        RubricStore.deleteScore(state.name, name);
+        renderClassMode();
+      });
+    }
+    renderAnalytics();
+  }
+
+  function classAnalytics() {
+    var scores = RubricStore.getAllScores(state.name);
+    var students = Object.keys(scores);
+    var levelsById = levelsIndex();
+    var maxPts = maxLevelPoints();
+    return state.criteria.map(function (c) {
+      var total = 0, count = 0;
+      students.forEach(function (name) {
+        var sel = normalizeSelectionValue(scores[name].selections[c.id]);
+        var pts = pointsForSelection(levelsById, sel);
+        if (pts != null) { total += pts; count++; }
+      });
+      var maxForCrit = maxPts * (c.weight || 1);
+      var avg = count ? total / count : null;
+      var avgPct = (avg != null && maxForCrit > 0) ? (avg / maxForCrit) * 100 : null;
+      return { criterion: c, avg: avg, avgPct: avgPct, count: count, maxForCrit: maxForCrit };
+    }).sort(function (a, b) {
+      if (a.avgPct == null) return 1;
+      if (b.avgPct == null) return -1;
+      return a.avgPct - b.avgPct;
+    });
+  }
+
+  function renderAnalytics() {
+    if (!state.criteria.length || !classStudentList().length) {
+      els.analyticsList.innerHTML = '<li>No class scores yet &mdash; score at least one student to see the reteaching signal here.</li>';
+      return;
+    }
+    var rows = classAnalytics();
+    var firstScored = rows.filter(function (r) { return r.avgPct != null; })[0];
+    els.analyticsList.innerHTML = rows.map(function (r) {
+      var isLowest = firstScored && r === firstScored;
+      if (r.avgPct == null) {
+        return '<li>' + escapeHtml(r.criterion.name || 'Untitled') + '<span>no scores yet</span></li>';
+      }
+      return '<li' + (isLowest ? ' class="lowest"' : '') + '>' +
+        '<span>' + escapeHtml(r.criterion.name || 'Untitled') + (isLowest ? ' — lowest, possible reteach target' : '') + '</span>' +
+        '<span class="analytics-bar-wrap"><span class="analytics-bar" style="width:' + Math.max(0, Math.min(100, r.avgPct)) + '%"></span></span>' +
+        '<span>' + fmtNum(r.avg) + ' / ' + fmtNum(r.maxForCrit) + ' (' + fmtNum(r.avgPct) + '%, n=' + r.count + ')</span>' +
+      '</li>';
+    }).join('');
+  }
+
+  function csvEscape(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function exportScoresCsv() {
+    if (!state) return;
+    var scores = RubricStore.getAllScores(state.name);
+    var students = Object.keys(scores).sort(function (a, b) { return a.localeCompare(b); });
+    if (!students.length) { alert('No scored students yet for this rubric.'); return; }
+    var possible = totalPossiblePoints();
+    var header = ['Student'].concat(state.criteria.map(function (c) { return c.name || 'Untitled'; }))
+      .concat(['Total points', 'Total possible', 'Percent', 'Overall comment']);
+    var rows = students.map(function (name) {
+      var rec = scores[name];
+      var levelsById = levelsIndex();
+      var rowVals = state.criteria.map(function (c) {
+        var sel = normalizeSelectionValue(rec.selections[c.id]);
+        var pts = pointsForSelection(levelsById, sel);
+        return pts == null ? '' : fmtNum(pts * (c.weight || 1));
+      });
+      var earned = earnedPoints(rec);
+      var pct = possible > 0 ? fmtNum((earned / possible) * 100) : '';
+      return [name].concat(rowVals).concat([fmtNum(earned), fmtNum(possible), pct, rec.overallComment || '']);
+    });
+    var csv = [header].concat(rows).map(function (r) { return r.map(csvEscape).join(','); }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '-scores.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   function setMode(mode) {
     currentMode = mode;
-    var isScore = mode === 'score';
-    els.buildMode.style.display = isScore ? 'none' : '';
-    els.scoreMode.style.display = isScore ? '' : 'none';
-    els.modeBuildBtn.classList.toggle('active', !isScore);
-    els.modeScoreBtn.classList.toggle('active', isScore);
-    if (isScore) renderScoreMode();
+    els.buildMode.style.display = mode === 'build' ? '' : 'none';
+    els.scoreMode.style.display = mode === 'score' ? '' : 'none';
+    els.classMode.style.display = mode === 'class' ? '' : 'none';
+    els.analyticsCard.style.display = mode === 'class' ? '' : 'none';
+    els.modeBuildBtn.classList.toggle('active', mode === 'build');
+    els.modeScoreBtn.classList.toggle('active', mode === 'score');
+    els.modeClassBtn.classList.toggle('active', mode === 'class');
+    if (mode === 'score') renderScoreMode();
+    if (mode === 'class') renderClassMode();
   }
 
   function renderAll() {
@@ -671,16 +1304,20 @@
     els.modeTabs.style.display = '';
     els.rubricName.value = state.name;
     els.rubricTitle.value = state.title;
+    updateStudentTextToggleUi();
+    updatePrintFormatUi();
     renderEditor();
     renderPreview();
     currentScore = null;
     els.studentNameInput.value = '';
+    els.overallCommentInput.value = '';
     if (currentMode === 'score') renderScoreMode();
+    if (currentMode === 'class') renderClassMode();
   }
 
   /* ---------- lifecycle ---------- */
   function newRubric(name) {
-    state = { name: name, title: '', levels: defaultLevels(), criteria: [] };
+    state = ensureStateDefaults({ name: name, title: '', levels: defaultLevels(), criteria: [] });
     RubricStore.setCurrentName(name);
     renderAll();
   }
@@ -688,10 +1325,7 @@
   function loadRubricByName(name) {
     var loaded = RubricStore.loadRubric(name);
     if (!loaded) return;
-    state = loaded;
-    if (!state.levels) state.levels = defaultLevels();
-    if (!state.criteria) state.criteria = [];
-    normalizeCriteria(state.criteria);
+    state = ensureStateDefaults(loaded);
     bumpIdCounterFromState();
     RubricStore.setCurrentName(name);
     renderAll();
@@ -721,7 +1355,7 @@
     state.criteria = tmpl.criteria.map(function (c) {
       var cells = {};
       c.cells.forEach(function (text, idx) { cells[levelIds[idx]] = text; });
-      return { id: nextId('crit'), name: c.name, weight: 1, cells: cells };
+      return newCriterion(c.name, cells, 1);
     });
     if (!state.title) state.title = tmpl.label;
     renderEditor(); renderPreview();
@@ -737,9 +1371,22 @@
   els.addCriterionBtn.addEventListener('click', function () {
     var cells = {};
     state.levels.forEach(function (l) { cells[l.id] = ''; });
-    state.criteria.push({ id: nextId('crit'), name: 'New Criterion', weight: 1, cells: cells });
+    state.criteria.push(newCriterion('New Criterion', cells, 1));
     renderEditor(); renderPreview();
   });
+
+  els.toggleStudentTextBtn.addEventListener('click', function () {
+    if (!state) return;
+    state.showStudentText = !state.showStudentText;
+    updateStudentTextToggleUi();
+    renderEditor();
+  });
+
+  function updateStudentTextToggleUi() {
+    var on = !!(state && state.showStudentText);
+    els.toggleStudentTextBtn.textContent = on ? 'Hide student-friendly language' : 'Add student-friendly language';
+    els.studentTextHint.style.display = on ? '' : 'none';
+  }
 
   els.rubricSwitch.addEventListener('change', function () { loadRubricByName(els.rubricSwitch.value); });
 
@@ -803,7 +1450,8 @@
         return;
       }
       var name = uniqueRubricName(decoded.name || decoded.title || 'Imported Rubric');
-      state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: normalizeCriteria(decoded.criteria) };
+      state = ensureStateDefaults({ name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria,
+        showStudentText: decoded.showStudentText, singlePointLevelId: decoded.singlePointLevelId });
       bumpIdCounterFromState();
       RubricStore.saveRubric(name, state);
       RubricStore.setCurrentName(name);
@@ -814,26 +1462,40 @@
   });
 
   els.printBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = rubricTableHtml();
+    document.getElementById('printArea').innerHTML = currentPreviewHtml();
     window.print();
+  });
+
+  els.printFormat.addEventListener('change', function () {
+    if (!state) return;
+    updatePrintFormatUi();
+    renderPreview();
+  });
+
+  els.singlePointLevel.addEventListener('change', function () {
+    if (!state) return;
+    state.singlePointLevelId = els.singlePointLevel.value;
+    renderPreview();
   });
 
   /* ---------- score-a-student: wiring ---------- */
   els.modeBuildBtn.addEventListener('click', function () { setMode('build'); });
   els.modeScoreBtn.addEventListener('click', function () { setMode('score'); });
+  els.modeClassBtn.addEventListener('click', function () { setMode('class'); });
 
   els.loadStudentScoreBtn.addEventListener('click', function () {
     if (!state) return;
     var name = els.studentNameInput.value.trim();
     if (!name) { alert('Enter a student name first.'); return; }
     var existing = RubricStore.loadScore(state.name, name);
-    currentScore = existing || { student: name, selections: {} };
+    currentScore = existing || { student: name, selections: {}, overallComment: '' };
     if (!existing) RubricStore.saveScore(state.name, name, currentScore);
     els.studentNameInput.value = name;
     populateStudentDatalist();
     renderScoreCriteria();
     renderScoreTotals();
     renderScorePreview();
+    els.overallCommentInput.value = currentScore.overallComment || '';
   });
 
   els.deleteScoreBtn.addEventListener('click', function () {
@@ -846,12 +1508,73 @@
     renderScoreCriteria();
     renderScoreTotals();
     renderScorePreview();
+    els.overallCommentInput.value = '';
+  });
+
+  els.overallCommentInput.addEventListener('input', function () {
+    if (!currentScore) return;
+    currentScore.overallComment = els.overallCommentInput.value;
+    RubricStore.saveScore(state.name, currentScore.student, currentScore);
+    renderScorePreview();
   });
 
   els.printScoreBtn.addEventListener('click', function () {
     if (!currentScore) { alert('Enter or pick a student first.'); return; }
     document.getElementById('printArea').innerHTML = scoreTableHtml(currentScore);
     window.print();
+  });
+
+  /* ---------- roster loading (np_rosters, written by Name Picker / Class Roster Hub) ---------- */
+  function populateRosterSelect(selectEl) {
+    var rosters = {};
+    try { rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}'); } catch (e) { rosters = {}; }
+    var names = Object.keys(rosters);
+    selectEl.innerHTML = names.length
+      ? names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('')
+      : '<option value="">No saved rosters found</option>';
+    return rosters;
+  }
+  function getRoster(name) {
+    try { return (JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}')[name]) || []; }
+    catch (e) { return []; }
+  }
+
+  els.scoreRosterLoadBtn.addEventListener('click', function () {
+    var name = els.scoreRosterSelect.value;
+    if (!name) return;
+    rosterNameCache = getRoster(name);
+    populateStudentDatalist();
+  });
+
+  els.exportScoresCsvBtn.addEventListener('click', exportScoresCsv);
+  els.exportClassCsvBtn.addEventListener('click', exportScoresCsv);
+
+  /* ---------- class-wide scoring: wiring ---------- */
+  els.classRosterLoadBtn.addEventListener('click', function () {
+    if (!state) return;
+    var name = els.classRosterSelect.value;
+    if (!name) return;
+    var roster = getRoster(name);
+    var existingScores = RubricStore.getAllScores(state.name);
+    roster.forEach(function (studentName) {
+      if (!existingScores[studentName]) {
+        RubricStore.saveScore(state.name, studentName, { student: studentName, selections: {}, overallComment: '' });
+      }
+    });
+    renderClassMode();
+  });
+
+  els.classAddStudentBtn.addEventListener('click', function () {
+    if (!state) return;
+    var name = els.classAddStudentInput.value.trim();
+    if (!name) return;
+    var existing = RubricStore.loadScore(state.name, name);
+    if (!existing) RubricStore.saveScore(state.name, name, { student: name, selections: {}, overallComment: '' });
+    els.classAddStudentInput.value = '';
+    renderClassMode();
+  });
+  els.classAddStudentInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); els.classAddStudentBtn.click(); }
   });
 
   StateLink.mountShareControl(els.shareBar, {
@@ -888,7 +1611,8 @@
       return false;
     }
     var name = uniqueRubricName(decoded.name || decoded.title || 'Shared Rubric');
-    state = { name: name, title: decoded.title || '', levels: decoded.levels, criteria: normalizeCriteria(decoded.criteria) };
+    state = ensureStateDefaults({ name: name, title: decoded.title || '', levels: decoded.levels, criteria: decoded.criteria,
+      showStudentText: decoded.showStudentText, singlePointLevelId: decoded.singlePointLevelId });
     bumpIdCounterFromState();
     RubricStore.saveRubric(name, state);
     RubricStore.setCurrentName(name);

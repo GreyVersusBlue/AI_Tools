@@ -8,9 +8,10 @@
 
 import {
   STORAGE_KEY, SCHEMA_VERSION, ROOM,
-  freshState, newSection, validateState, repairState, createSeatingSlot,
+  freshState, newSection, newLayout, validateState, repairState, createSeatingSlot,
   neighborMap, togetherGroups, apartMap, assignSeats, checkConstraints,
   pickNext, parseRoster, gridDesks, rowDesks, nextSpot, contentBox, snap,
+  QUOTA_BYTES, estimateStorageBytes, storageReport, matchPhotoFilenames,
 } from '../seating.mjs';
 import { defaultStorage } from '../../../assets/js/gvb-save.js';
 
@@ -70,9 +71,12 @@ console.log('seating chart — pure logic\n');
   eq(a.sections.length, 3, 'freshState makes three sections');
   eq(a.active, a.sections[0].id, 'freshState activates the first section');
   ok(a.sections[0].id !== b.sections[0].id, 'freshState is a factory: two calls, different ids');
-  ok(a.sections.every(s => Array.isArray(s.students) && Array.isArray(s.desks)), 'sections start with empty arrays');
+  ok(a.sections.every(s => Array.isArray(s.students) && Array.isArray(s.desks) && Array.isArray(s.layouts)), 'sections start with empty arrays, including layouts');
   eq(STORAGE_KEY, 'seating-chart-v1', 'storage key is seating-chart-v1');
   eq(SCHEMA_VERSION, 1, 'schema version is 1');
+  eq(a.numbered, false, 'freshState starts unnumbered');
+  eq(a.mirror, false, 'freshState starts unmirrored');
+  ok(a.printNames && a.printPhotos && a.printViolations, 'freshState prints names, photos and conflicts by default');
 }
 
 /* ------------------------------------------------------------- validate ---- */
@@ -93,6 +97,11 @@ console.log('seating chart — pure logic\n');
     theme: 'neon',
     zoom: 'sideways',
     lastFirst: 'yes',
+    numbered: 'yes',
+    mirror: 1,
+    printNames: 'no',       // junk, not the literal `false` — falls back to the true default
+    printPhotos: false,     // the literal boolean — sticks
+    printViolations: 0,     // junk, not the literal `false` — falls back to the true default
     sections: [
       'not a section',
       {
@@ -111,6 +120,14 @@ console.log('seating chart — pure logic\n');
           { id: 'd3', x: 99999, y: -400, rot: 45, locked: 'yes' },
         ],
         assign: { d1: 'a', d2: 'a', d9: 'a', d3: 'ghost' },
+        layouts: [
+          'not a layout',
+          {
+            name: '  Testing rows  ',
+            desks: [{ id: 'ld1', x: 40, y: 110 }, { id: 'ld2', x: 'left', y: undefined }],
+            assign: { ld1: 'a', ld2: 'a', ld9: 'a', ld1x: 'gone' },
+          },
+        ],
       },
     ],
   };
@@ -129,6 +146,18 @@ console.log('seating chart — pure logic\n');
   eq(s.theme, 'light', 'repair rejects an unknown theme');
   eq(s.zoom, 'fit', 'repair rejects an unknown zoom');
   eq(s.lastFirst, false, 'repair coerces lastFirst to a boolean');
+  eq(s.numbered, false, 'repair coerces a non-boolean numbered to false (its default)');
+  eq(s.mirror, false, 'repair coerces a non-boolean mirror to false (its default)');
+  eq(s.printNames, true, 'a junk printNames value falls back to its true default, same as theme/zoom fall back to theirs');
+  eq(s.printPhotos, false, 'repair keeps a real printPhotos:false rather than defaulting over it');
+  eq(s.printViolations, true, 'a junk printViolations value falls back to its true default');
+
+  eq(s.sections[0].layouts.length, 1, 'repair drops a non-object layout');
+  const layout = s.sections[0].layouts[0];
+  eq(layout.name, 'Testing rows', 'repair trims a layout name');
+  ok(layout.id, 'repair generates a layout id when none is saved');
+  ok(Number.isFinite(layout.desks[1].x), 'a layout desk with junk coordinates is repaired the same way a live desk is');
+  deep(layout.assign, { ld1: 'a' }, 'a layout assign drops a desk that does not exist, a student seated twice, and a removed student');
 
   const [d1, d2, d3] = s.sections[0].desks;
   ok(Number.isFinite(d2.x) && Number.isFinite(d2.y), 'repair replaces junk desk coordinates with numbers');
@@ -324,6 +353,73 @@ console.log('seating chart — pure logic\n');
   const box = contentBox([{ x: 100, y: 200 }, { x: 400, y: 300 }]);
   deep(box, { x: 100, y: 200, w: 400 + ROOM.deskW - 100, h: 300 + ROOM.deskH - 200 }, 'contentBox wraps the desks that exist');
   eq(contentBox([]).w, ROOM.width, 'contentBox on an empty floor falls back to the whole room');
+}
+
+/* --------------------------------------------------- saved layouts (MF2) ---- */
+{
+  const l = newLayout('Testing rows', [{ id: 'd1', x: 40, y: 110, rot: 0, locked: false }], { d1: 'a' }, rngFrom(35));
+  eq(l.name, 'Testing rows', 'newLayout keeps the name given');
+  ok(l.id, 'newLayout gets its own id');
+  eq(l.desks[0].id, 'd1', 'newLayout copies the desks given');
+  eq(l.assign.d1, 'a', 'newLayout copies the assign given');
+
+  // A layout is a snapshot: mutating the section afterward must not reach
+  // back into a saved layout, or "Save current as" would not really be a save.
+  const sourceDesks = [{ id: 'd1', x: 40, y: 110, rot: 0, locked: false }];
+  const sourceAssign = { d1: 'a' };
+  const snap2 = newLayout('Snapshot', sourceDesks, sourceAssign, rngFrom(36));
+  sourceDesks[0].x = 999;
+  sourceAssign.d1 = 'b';
+  eq(snap2.desks[0].x, 40, 'a saved layout does not move when the live desks move later');
+  eq(snap2.assign.d1, 'a', 'a saved layout does not reseat when the live assign changes later');
+}
+
+/* -------------------------------------------------- storage usage (P12) ---- */
+{
+  eq(estimateStorageBytes('ab'), 4, 'estimateStorageBytes counts 2 bytes per UTF-16 code unit');
+  eq(estimateStorageBytes(''), 0, 'an empty string is zero bytes');
+  ok(QUOTA_BYTES > 1024 * 1024, 'the assumed quota is on the order of a few MB');
+
+  const state = freshState(rngFrom(37));
+  state.sections[0].students = [
+    { id: 'a', name: 'Ada Lovelace', note: '', flag: false, photo: 'data:image/jpeg;base64,' + 'A'.repeat(1000) },
+    { id: 'b', name: 'Marco Polo', note: '', flag: false, photo: '' },
+  ];
+  const report = storageReport(state);
+  eq(report.quotaBytes, QUOTA_BYTES, 'storageReport reports against the shared quota constant');
+  ok(report.totalBytes > 2000, 'storageReport counts the photo toward the total');
+  eq(report.photoCount, 1, 'storageReport counts only students who actually have a photo');
+  ok(report.photoBytes > 2000, 'storageReport isolates photo bytes so they can be called out separately');
+  eq(report.bySection.length, 3, 'storageReport breaks the total down by section');
+  eq(report.bySection[0].name, 'Honors GT', 'the per-section breakdown is named');
+  ok(report.pct > 0 && report.pct < 1, 'a small chart reports well under 100% of quota');
+}
+
+/* --------------------------------------------- bulk photo import (P12/QW) ---- */
+{
+  const students = [
+    { id: 'a', name: 'Ada Lovelace' }, { id: 'b', name: 'Marco Polo' }, { id: 'c', name: 'Mansa Musa' },
+  ];
+  const r = matchPhotoFilenames(
+    ['Ada Lovelace.jpg', 'Lovelace, Marco (2).PNG', 'polo_marco_014.jpeg', 'nobody-here.jpg'],
+    students,
+  );
+  // "Ada Lovelace.jpg" is an exact match for Ada. "Lovelace, Marco (2).PNG"
+  // shares no full name with anyone (it is "Lovelace" + "Marco", which is
+  // neither student's exact word set) so it is left for the token pass to
+  // skip too — proving a partial name overlap is not treated as a match.
+  ok(r.matches.some(m => m.filename === 'Ada Lovelace.jpg' && m.studentId === 'a'), 'an exact filename match finds the right student');
+  ok(r.matches.some(m => m.filename === 'polo_marco_014.jpeg' && m.studentId === 'b'), 'underscores, a trailing id number and reversed word order all still match');
+  ok(r.unmatched.includes('nobody-here.jpg'), 'a filename with no matching student is reported unmatched, not guessed at');
+  ok(r.unmatched.includes('Lovelace, Marco (2).PNG'), 'a filename that mixes two different students\' names matches neither');
+  eq(r.matches.length + r.unmatched.length, 4, 'every filename is accounted for exactly once');
+
+  const oneEach = matchPhotoFilenames(['ada_lovelace.jpg', 'ADA LOVELACE (1).jpg'], [{ id: 'a', name: 'Ada Lovelace' }]);
+  eq(oneEach.matches.length, 1, 'a student is matched at most once even if two filenames both fit');
+  eq(oneEach.unmatched.length, 1, 'the second filename for an already-matched student is left unmatched rather than double-assigned');
+
+  eq(matchPhotoFilenames([], students).matches.length, 0, 'no filenames means no matches');
+  eq(matchPhotoFilenames(['x.jpg'], []).unmatched.length, 1, 'no students means everything is unmatched');
 }
 
 /* ------------------------------------------------------ save round trip ---- */
