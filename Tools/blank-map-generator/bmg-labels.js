@@ -29,7 +29,7 @@ export function labelFontSizePx(size) {
   return labelFontSizeRem(size) * 16;
 }
 
-export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
+export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {}) {
   let labels = [];
   const nodes = new Map(); // id -> element
   let selectedId = null; // for keyboard-nudge — see select()/nudge()
@@ -57,6 +57,7 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     revealed.clear();
     if (quizMode) deselect();
     nodes.forEach((node, id) => applyQuizState(node, id));
+    onQuizChange?.(getQuizProgress());
   }
 
   function isQuizMode() { return quizMode; }
@@ -67,6 +68,48 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     else revealed.add(id);
     const node = nodes.get(id);
     if (node) applyQuizState(node, id);
+    onQuizChange?.(getQuizProgress());
+  }
+
+  /** Labels that can actually be quizzed on — an empty label has nothing to hide or guess. */
+  function quizzableLabels() {
+    return labels.filter(l => l.text);
+  }
+
+  function getQuizProgress() {
+    const total = quizzableLabels().length;
+    return { total, revealed: quizzableLabels().filter(l => revealed.has(l.id)).length };
+  }
+
+  /**
+   * Reveals one still-hidden label at random and returns it (or null if all
+   * are already showing). This is what makes quiz mode work on a projector
+   * for whole-class review: the teacher drives the round from a button
+   * instead of hunting for the next unrevealed label on screen, and the
+   * random pick means the same map gives a different sequence every time.
+   */
+  function revealNext() {
+    const hidden = quizzableLabels().filter(l => !revealed.has(l.id));
+    if (!hidden.length) return null;
+    const pick = hidden[Math.floor(Math.random() * hidden.length)];
+    revealed.add(pick.id);
+    const node = nodes.get(pick.id);
+    if (node) applyQuizState(node, pick.id);
+    onQuizChange?.(getQuizProgress());
+    return pick;
+  }
+
+  function revealAll() {
+    quizzableLabels().forEach(l => revealed.add(l.id));
+    nodes.forEach((node, id) => applyQuizState(node, id));
+    onQuizChange?.(getQuizProgress());
+  }
+
+  /** Re-hides everything — a fresh round on the same map. */
+  function hideAll() {
+    revealed.clear();
+    nodes.forEach((node, id) => applyQuizState(node, id));
+    onQuizChange?.(getQuizProgress());
   }
 
   function applyQuizState(node, id) {
@@ -314,6 +357,94 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     input.addEventListener("pointerdown", e => e.stopPropagation());
   }
 
+  /**
+   * Nudges overlapping labels apart until none of their boxes collide,
+   * keeping each as close to where it was as the crowding allows.
+   *
+   * A dense map (anything placed from a coordinate list or a saved label
+   * set, especially) lands labels wherever their real coordinates fall,
+   * which on a zoomed-out map means stacks of unreadable overlapping text
+   * that has to be dragged apart one at a time. This is that job, done in
+   * one pass: a simple iterative relaxation over each label's *rendered*
+   * box (measured from the DOM, so it accounts for the label's own text
+   * length, font size, bold/italic, and the node's CSS transform rather
+   * than assuming a size), pushing colliding pairs apart along whichever
+   * axis they overlap least — usually vertically, since label boxes are
+   * wide and short — with a weak spring pulling each back toward where the
+   * teacher (or the coordinate list) originally put it.
+   *
+   * Works in screen pixels and converts the result back to stage
+   * coordinates at the end, so the amount of separation is what looks right
+   * at the *current* zoom. Runs through onChange like any other edit, so
+   * it's a single Ctrl+Z away from being undone. Returns how many labels
+   * actually moved.
+   */
+  function tidyOverlaps({ padding = 5, iterations = 260 } = {}) {
+    const scale = viewer.getView().scale;
+    const layerRect = layerEl.getBoundingClientRect();
+    const boxes = [];
+    labels.forEach(l => {
+      const node = nodes.get(l.id);
+      if (!node || !l.text) return;
+      const r = node.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const anchor = viewer.stageToScreen(l.x, l.y);
+      boxes.push({
+        label: l,
+        offX: r.left - (layerRect.left + anchor.x), // box position relative to the anchor point
+        offY: r.top - (layerRect.top + anchor.y),
+        w: r.width, h: r.height,
+        x: anchor.x, y: anchor.y,
+        homeX: anchor.x, homeY: anchor.y,
+      });
+    });
+    if (boxes.length < 2) return 0;
+
+    for (let iter = 0; iter < iterations; iter++) {
+      let collided = false;
+      for (let i = 0; i < boxes.length; i++) {
+        for (let j = i + 1; j < boxes.length; j++) {
+          const a = boxes[i], b = boxes[j];
+          const ax = a.x + a.offX, ay = a.y + a.offY;
+          const bx = b.x + b.offX, by = b.y + b.offY;
+          const overlapX = Math.min(ax + a.w, bx + b.w) - Math.max(ax, bx) + padding;
+          const overlapY = Math.min(ay + a.h, by + b.h) - Math.max(ay, by) + padding;
+          if (overlapX <= 0 || overlapY <= 0) continue;
+          collided = true;
+          if (overlapX < overlapY) {
+            const dir = (ax + a.w / 2) <= (bx + b.w / 2) ? -1 : 1;
+            const shift = (overlapX / 2) * 0.5;
+            a.x += dir * shift;
+            b.x -= dir * shift;
+          } else {
+            const dir = (ay + a.h / 2) <= (by + b.h / 2) ? -1 : 1;
+            const shift = (overlapY / 2) * 0.5;
+            a.y += dir * shift;
+            b.y -= dir * shift;
+          }
+        }
+      }
+      // Weak pull back toward the original position, so a label that was
+      // shoved aside drifts home again once whatever crowded it has moved.
+      boxes.forEach(box => {
+        box.x += (box.homeX - box.x) * 0.03;
+        box.y += (box.homeY - box.y) * 0.03;
+      });
+      if (!collided) break;
+    }
+
+    let moved = 0;
+    boxes.forEach(box => {
+      const dx = box.x - box.homeX, dy = box.y - box.homeY;
+      if (Math.hypot(dx, dy) < 0.75) return;
+      box.label.x += dx / scale;
+      box.label.y += dy / scale;
+      moved++;
+    });
+    if (moved) { reposition(); onChange?.(labels); }
+    return moved;
+  }
+
   /** Starts editing a just-placed label by id (used right after addAt()). */
   function startEditing(id) {
     const label = labels.find(l => l.id === id);
@@ -321,5 +452,8 @@ export function createLabelLayer(layerEl, viewer, { onChange } = {}) {
     if (label && node) startEdit(node, label);
   }
 
-  return { setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge, setQuizMode, isQuizMode };
+  return {
+    setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge,
+    setQuizMode, isQuizMode, revealNext, revealAll, hideAll, getQuizProgress, tidyOverlaps,
+  };
 }

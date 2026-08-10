@@ -18,6 +18,31 @@ export const LINE_STYLES = [
   { key: "dotted", label: "Dotted" },
 ];
 
+// Semantic line types. A drawn line is geometry plus a color and a dash
+// style, which leaves the teacher to remember that "gold dashed means trade
+// route" and to type that into the key by hand for every map. A type picks
+// the color/style/arrowhead conventionally used for that kind of feature
+// *and* supplies the caption, so choosing "Trade route" before drawing
+// makes the legend write itself. Every type's color+style pair is distinct,
+// so two types never collapse into one shared legend row (see
+// lineLegendKey() in bmg-legend.js). "Custom" keeps the old
+// pick-your-own-color behavior and writes no caption.
+export const LINE_TYPES = [
+  { key: "custom", label: "Custom line", caption: "" },
+  { key: "river", label: "River", color: "blue", style: "solid", arrow: false, caption: "River" },
+  { key: "border", label: "Border", color: "purple", style: "dashed", arrow: false, caption: "Border" },
+  { key: "disputed", label: "Disputed boundary", color: "red", style: "dotted", arrow: false, caption: "Disputed boundary" },
+  { key: "route", label: "Trade route", color: "gold", style: "dashed", arrow: true, caption: "Trade route" },
+  { key: "migration", label: "Migration path", color: "red", style: "solid", arrow: true, caption: "Migration path" },
+  { key: "invasion", label: "Invasion / campaign", color: "red", style: "dashed", arrow: true, caption: "Invasion route" },
+  { key: "transport", label: "Railroad / road", color: "teal", style: "dotted", arrow: false, caption: "Railroad or road" },
+  { key: "expedition", label: "Exploration route", color: "green", style: "dashed", arrow: true, caption: "Exploration route" },
+];
+
+export function findLineType(key) {
+  return LINE_TYPES.find(t => t.key === key) || null;
+}
+
 const DASH_ARRAYS = { dashed: "4 3", dotted: "0.5 3.5" };
 
 export function lineSwatchSvg(color, size = 16, style = "solid") {
@@ -76,7 +101,7 @@ export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange } = {}) {
   function isDrafting() { return !!draft; }
   function draftPointCount() { return draft ? draft.points.length : 0; }
 
-  function startDraft(color, style, arrow) { draft = { color, style, arrow, points: [] }; }
+  function startDraft(color, style, arrow, type = null) { draft = { color, style, arrow, type, points: [] }; }
 
   function addDraftPoint(x, y) {
     if (!draft) return;
@@ -96,7 +121,7 @@ export function createLineLayer(svgEl, chipLayerEl, viewer, { onChange } = {}) {
 
   function finishDraft() {
     if (!draft || draft.points.length < 2) return null;
-    const line = { id: newId(), color: draft.color, style: draft.style, arrow: draft.arrow, points: draft.points };
+    const line = { id: newId(), color: draft.color, style: draft.style, arrow: draft.arrow, type: draft.type, points: draft.points };
     lines.push(line);
     draft = null;
     renderAll();

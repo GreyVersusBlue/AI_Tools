@@ -1,7 +1,7 @@
 # Improvement Prompts — Blank Map Generator
 
 **Tool file:** `Tools/blank-map-generator.html`
-**Support folder:** `Tools/blank-map-generator/` — `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-viewer.js`
+**Support folder:** `Tools/blank-map-generator/` — `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-label-sets.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-viewer.js`
 
 **Current description (from README):** Search Wikimedia Commons for a map, pan/zoom into a region, and annotate it with draggable labels, markers (pin/star/dot/flag), and shaded polygon regions — all auto-building an editable legend. Optional compass rose, lat/long grid, and a locator inset. Undo for accidental deletes. Maps are cached for offline reuse; print or save as PDF.
 
@@ -13,6 +13,67 @@ Reviewed — structural read of the source. This is the most architecturally
 mature tool on the site: properly modularized, IndexedDB-backed, with
 undo/redo. Ideas below are deliberately ambitious and **not** scoped to one
 session.
+
+### Round 10 (2026-08-10) — shipped
+
+The classroom-worksheet round: everything a labeled map has to become
+before it's actually an assignment. Five of the six open Quick Wins, plus
+the projected half of the quiz-mode major feature.
+
+- **Numbered-blank worksheets + answer key printing** (`Worksheet…`). Every
+  text label on the map becomes a numbered circle; a numbered answer line
+  per label prints beside or below the map, with an optional shuffled word
+  bank and a matching **ANSWER KEY** page (same map, numbers *and* names,
+  stamped in red). Ask for up to 4 versions and each gets its own numbering
+  and word-bank order from a seeded PRNG — one map becomes a set of
+  non-copyable papers, and "version 3" regenerates identically if a copy
+  gets lost. A worksheet page is laid out and drawn on a **single canvas**
+  (the map panel is rendered by the same `drawMapContent()` path everything
+  else uses, then composited in), so Print and Save PDF share one layout
+  implementation instead of an HTML one and a jsPDF one that drift apart.
+  Layout units are hundredths of an inch, so the whole page is physical page
+  space and only the rasterization density changes between preview and
+  print. The map panel is shaped to the on-screen view's aspect ratio and
+  then made as large as the answer list allows, rather than being letterboxed
+  into whatever rectangle is left.
+- **Reusable label sets** (`Label Sets…`, new `bmg-label-sets.js`). Seven
+  built-in lists — continents & oceans, the Thirteen Colonies, the 50
+  states, the countries of Europe / Africa / South America, and world
+  physical features — drop onto any *calibrated* map in one click, reusing
+  the same `fromLatLon()` + `addAt()` path the batch coordinate paste
+  already used. Teachers can also **save their own set** from a map they've
+  labeled and dragged into place (stored by lat/lon on the workspace, not
+  the project, so it's available to every project — and no second
+  localStorage key for Backup & Restore to learn). Options: skip places
+  outside this map's bounds, drop a marker at each place, and auto-tidy
+  afterwards.
+- **Label collision avoidance** (`Tidy Labels`). An iterative relaxation
+  pass over each label's *measured* rendered box, pushing colliding pairs
+  apart along whichever axis they overlap least with a weak spring home.
+  Placing 50 states at once used to mean 50 manual drags. It's one edit
+  through `save()`, so Ctrl+Z puts everything back (verified). It measures
+  the DOM, so it also works on the enlarged Projector-text labels below.
+- **Semantic line types.** A type picker next to the line tool: river,
+  border, disputed boundary, trade route, migration path, invasion route,
+  railroad/road, exploration route. Picking one sets the colour, dash style
+  and arrowhead that feature is conventionally drawn with, and captions its
+  legend row automatically on finish (each type's colour+style pair is
+  distinct, so no two types collapse into one row). Still fully overridable;
+  "Custom" keeps the old behavior.
+- **Quiz mode scoring, shuffle, and a projected mode.** Self-Check Quiz Mode
+  gained a control bar: `Reveal next` picks a still-hidden label at random,
+  a counter shows how far through the map the class is, ✓/✗ buttons keep
+  score on the board, `New round` reshuffles, and `Projector text` enlarges
+  on-screen label text for the back of the room. Session-only, screen-only,
+  exactly as before.
+- **Bug found and fixed on the way:** a bare `display: flex` outranks the
+  browser's `[hidden]` rule, so `#lineArrowWrap` (the line Arrowhead
+  checkbox) had been showing in the toolbar whether or not a line was being
+  drawn. Fixed for both it and the new quiz bar.
+- Not done this round: choropleth from a data table, vector base maps,
+  time-slice maps, map+timeline pairing, and making attribution unmissable
+  on *every* export (the worksheet carries a credit line; the plain map
+  exports still don't).
 
 ### Round 9 (2026-08-10) — shipped
 
@@ -69,7 +130,14 @@ session.
 - **Map coordinate calibration** (Mercator or equirectangular), which enables
   **batch placing markers from a coordinate list** and **distance measurement**
   in km/mi
-- **Student Handout Mode** and **Self-Check Quiz Mode**
+- **Reusable label sets** — seven built-in place lists plus teacher-saved
+  ones, dropped onto any calibrated map, and a **Tidy Labels** pass that
+  nudges overlapping labels apart
+- **Semantic line types** (river / border / trade route / migration / …)
+  that caption their own legend row
+- **Student Handout Mode**, **Self-Check Quiz Mode** (with reveal-next,
+  scoring, reshuffle and projector text), and a **numbered worksheet +
+  answer key** builder with word bank and multiple shuffled versions
 - Multiple named projects, import/export, PNG download, print / save PDF, and
   **tiled poster printing** across several pages
 - IndexedDB map cache for genuine offline reuse; "clear cached maps"
@@ -77,24 +145,28 @@ session.
 
 ## Quick Wins
 
-- **Answer key printing** as a first-class pair to Student Handout Mode —
-  same map, labels visible, marked "KEY".
-- **Numbered-blank worksheets**: place numbered markers, print a blank with a
-  numbered answer-line list beside the map. This is the single most common
-  map worksheet format in a social studies classroom.
-- **Quiz mode scoring/shuffle** — Self-Check Quiz Mode exists; randomizing
-  which labels are hidden, and generating several versions from one project,
-  turns one map into a whole set.
-- **Label collision avoidance** or at least a "nudge overlapping labels" pass;
-  a dense map currently needs a lot of manual dragging.
-- **Reusable label sets.** The 13 colonies, the 50 states, the countries of
-  Europe — a saved list you can drop onto any calibrated map.
-- **Line style for rivers/borders/routes as semantic types**, so the legend
-  writes itself with the right words.
-- **Print in grayscale-safe fills** (P6) — shaded regions currently rely on
-  colour, and most classroom printers are black and white. The region fill
-  *pattern* machinery already exists (`regionFillPatternTile`); make patterns
-  the default for print.
+Round 10 shipped the worksheet/answer-key/label-set/tidy/line-type/quiz
+cluster and Round 9 shipped grayscale-safe fills; what's left here is what
+those rounds surfaced rather than solved.
+
+- **Word bank on the answer-key page is redundant** — it prints there
+  because the key reuses the worksheet layout wholesale. Minor, but it's a
+  wasted inch of paper on every key.
+- **Numbered markers aren't worksheet items.** The worksheet numbers text
+  labels only. A teacher who built their map from numbered pins (and put the
+  answers in the legend captions) gets an empty worksheet with no
+  explanation beyond the panel's hint. Either number them too, or say so
+  where they'll see it.
+- **Label sets can't be edited or exported.** A saved set can be created and
+  deleted, but not renamed, trimmed, or handed to a colleague — and the
+  built-in coordinates can't be corrected in place, only re-saved as a
+  private copy. Set import/export would also make the built-ins
+  community-fixable.
+- **A "shrink to fit" pass for labels**, as a companion to Tidy Labels: on a
+  really dense map, separation alone runs out of room and the honest fix is
+  smaller type.
+- **Worksheet answer lines don't wrap.** A long place name in a narrow
+  answer column overruns its line rather than shrinking or wrapping.
 
 ## Major Features
 
@@ -109,10 +181,10 @@ session.
 - **Choropleth from a data table.** Paste "state, value" and shade
   accordingly — directly reusing the parsing already in
   `data-chart-builder.html` (P7).
-- **Projected quiz mode.** Run Self-Check Quiz Mode on the projector as a
-  whole-class review — reveal labels one at a time, keep score on the board,
-  and cycle through several randomized versions. Teacher-driven, and it makes
-  the existing quiz mode useful without any student hardware.
+- **Projected quiz mode** — *shipped in Round 10* (reveal-next, counter, ✓/✗
+  tally, reshuffle, projector text). What's still missing is persistence of
+  which labels a class struggled with across sessions, which is the part
+  that would actually change reteaching.
 - **Map + timeline pairing** (P7). `timeline-builder.html` covers *when*;
   this covers *where*. A combined print — timeline along the bottom, map
   above, events pinned to both — would be a genuinely distinctive artifact.
@@ -157,6 +229,13 @@ work, and don't promote one without Devon saying so.
 
 - How much of the geography data (`bmg-geography.js`) should be shipped
   locally versus fetched? Fully local is better offline and bigger.
+- **How accurate do the built-in label-set coordinates need to be?** They're
+  deliberately approximate label anchors (a readable spot inside each area),
+  and they land well on equirectangular/Mercator maps, but a Robinson or
+  conic Commons map will need dragging. The alternative — per-projection
+  anchor sets, or real centroids from GeoJSON — is most of the way to the
+  "vector base maps" moonshot, so it may be the wrong problem to solve
+  twice.
 - Is Wikimedia Commons search reliable enough long-term to be the primary
   map source, or should shipped base maps become the default with Commons as
   the fallback?
