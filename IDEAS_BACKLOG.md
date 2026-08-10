@@ -34,7 +34,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Lab Report Template Builder | Build a reusable lab report template — hypothesis, materials, procedure, data table, and conclusion prompts — from a topic starter or from scratch, and print a fillable packet for each lab. |
 | Science Safety Symbol & Equipment Label Maker | Printable hazard and equipment labels for lab storage, bins, and stations — pairs with the Lab Safety Contract Tracker. |
 | Scientific Method / Experiment Design Planner | A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder. |
 | Science Fair Project Tracker | Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report. |

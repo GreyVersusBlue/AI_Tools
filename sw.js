@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -102,6 +102,7 @@ const PRECACHE_URLS = [
   "Tools/image-to-pdf.html",
   "Tools/image-to-pdf/lib/jspdf.umd.min.js",
   "Tools/lab-group-role-randomizer.html",
+  "Tools/lab-report-template-builder.html",
   "Tools/lab-safety-contract-tracker.html",
   "Tools/math-drill-generator.html",
   "Tools/math-drill-generator/mdg-generate.js",
