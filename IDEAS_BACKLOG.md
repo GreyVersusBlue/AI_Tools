@@ -10,61 +10,50 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Duty Roster Builder | Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board. |
-| Sub Note / Feedback Slip Generator | A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow. |
-| Testing Accommodations Reference Card Generator | Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local, like the Final Grade Checker. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Math
 
 | Idea | What it would do |
 |---|---|
-| Virtual Manipulatives Board | A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever's on the board. |
-| Math "Find the Mistake" Warm-Up Generator | Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet. |
-| Fraction–Decimal–Percent Conversion Drill Generator | A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## English / Language Arts
 
 | Idea | What it would do |
 |---|---|
-| Book Tasting Menu Generator | Turn a stack of book blurbs into a printable "menu" or table tents for a book-tasting activity, so students can browse titles before choosing one. |
-| Grammar Mad Libs Generator | Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal. |
-| Story Elements / Plot Diagram Builder | Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Science
 
 | Idea | What it would do |
 |---|---|
-| Science Safety Symbol & Equipment Label Maker | Printable hazard and equipment labels for lab storage, bins, and stations — pairs with the Lab Safety Contract Tracker. |
-| Scientific Method / Experiment Design Planner | A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder. |
-| Science Fair Project Tracker | Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report. |
-| Dichotomous Key Builder | Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Social Studies
 
 | Idea | What it would do |
 |---|---|
-| DBQ / Source Packet Builder | Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source — pairs with the Primary Source Analysis Worksheet Generator. |
-| Historical Figure / Country Trading Card Maker | Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list. |
-| Government/Civics Simulation Role Card Generator | Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points. |
-| Geography Bee / Map Skills Quiz Generator | A question bank generator for geography practice (capitals, landmarks, map reading) — the quiz-format companion to the Blank Map Generator. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## World Language
 
 | Idea | What it would do |
 |---|---|
-| Classroom Label Maker (Target Language) | Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a text-to-speech pronunciation clip, plus a plain reference sheet of the whole label set. |
-| Cultural Trivia Card Generator | Printable trivia cards about target-language countries and cultures, for warm-ups or feeding into the Quiz / Review Game Board. |
-| Picture-Prompt Speaking/Writing Task Generator | A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable. |
-| Cognates & False Friends Reference List Builder | Build and print a reference list of cognates and false friends for whatever language you teach. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Arts & PE
 
 | Idea | What it would do |
 |---|---|
-| Fitness & Skill Assessment Tracker | Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report. |
-| Student Art Portfolio Label & QR Tag Maker | Printable labels and QR tags for physical student art portfolios, each code linking to a photo or description — pairs with Gallery Walk QR Codes. |
-| Music Sight-Reading / Rhythm Warm-Up Generator | Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class. |
-| PE Warm-Up Circuit Card Generator | Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Existing Tools — Enhancement Ideas
 

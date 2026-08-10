@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Sight-Reading / Rhythm Warm-Up Generator</title>
+<meta name="description" content="Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/music-warmup-generator.html">
+<meta property="og:title" content="Music Sight-Reading / Rhythm Warm-Up Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Music Sight-Reading / Rhythm Warm-Up Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M12 22V9l10-2v13' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='10' cy='22' r='2.4' fill='%231f3550'/%3E%3Ccircle cx='20' cy='20' r='2.4' fill='%231f3550'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .tabs { display: flex; gap: .5rem; margin-bottom: 1.2rem; }
+  .tab-btn {
+    font-family: inherit; font-size: .9rem; font-weight: 700; cursor: pointer;
+    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    border-radius: 7px; padding: .5rem 1rem;
+  }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
+  select, input[type="text"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  @media (max-width: 640px) { .row3, .row2 { grid-template-columns: 1fr; } }
+
+  .check-grid { display: flex; flex-wrap: wrap; gap: .6rem 1.1rem; margin-bottom: .6rem; }
+  .check-row { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+  .check-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .6rem 1.1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .3rem; }
+
+  .display-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.6rem 1.2rem; }
+  .display-note { color: var(--muted); font-size: .82rem; margin-bottom: 1rem; }
+
+  /* Rhythm mode display */
+  .measure-row { display: flex; flex-wrap: wrap; gap: .9rem; margin-bottom: 1.1rem; }
+  .measure {
+    display: flex; align-items: flex-end; gap: .55rem; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink);
+    padding: .4rem 1rem .4rem .8rem; min-height: 74px;
+  }
+  .measure .glyph { font-size: 2.6rem; line-height: 1; }
+  .ts-glyph { font-size: 2.6rem; font-weight: 700; line-height: .85; text-align: center; margin-right: .4rem; }
+
+  /* Sight-reading mode display */
+  .staff-system { margin-bottom: 1.4rem; }
+  .staff-system svg { width: 100%; height: auto; display: block; }
+  .note-name-cap { font-size: .68rem; text-anchor: middle; fill: var(--muted); }
+
+  footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  .print-only { display: none; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .wrap > *:not(.print-only) { display: none !important; }
+    .print-only.active { display: block; }
+    .print-only h1 { font-size: 1.3rem; margin: 0 0 4px; }
+    .print-only .p-sub { font-size: .85rem; color: #444; margin: 0 0 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Music Sight-Reading / Rhythm Warm-Up Generator</h1>
+      <p class="sub">Randomized warm-up patterns for a projector display &mdash; band, chorus, or general music class.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print this warm-up</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" id="rhythmTabBtn">Rhythm Warm-Up</button>
+    <button type="button" class="tab-btn" id="pitchTabBtn">Sight-Reading Warm-Up</button>
+  </div>
+
+  <div id="rhythmPanel">
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="row3">
+        <div>
+          <label for="timeSig">Time signature</label>
+          <select id="timeSig">
+            <option value="4">4/4</option>
+            <option value="3">3/4</option>
+            <option value="2">2/4</option>
+          </select>
+        </div>
+        <div>
+          <label for="numMeasures">Number of measures</label>
+          <select id="numMeasures">
+            <option value="2">2</option>
+            <option value="4" selected>4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+        <div>
+          <label for="tempo">Suggested tempo (for the display only)</label>
+          <input type="text" id="tempo" value="&#9834; = 92">
+        </div>
+      </div>
+      <label>Note/rest values to include</label>
+      <div class="check-grid" id="rhythmPool">
+        <label class="check-row"><input type="checkbox" value="quarter" checked> Quarter note (&#9833;)</label>
+        <label class="check-row"><input type="checkbox" value="eighthPair" checked> Eighth pair (&#9835;)</label>
+        <label class="check-row"><input type="checkbox" value="half" checked> Half note (&#119134;)</label>
+        <label class="check-row"><input type="checkbox" value="quarterRest"> Quarter rest (&#119101;)</label>
+      </div>
+      <div class="btnrow">
+        <button type="button" id="newRhythmBtn">New rhythm pattern</button>
+      </div>
+    </div>
+
+    <div class="display-card">
+      <p class="display-note" id="rhythmNote">Clap or count through each measure left to right.</p>
+      <div class="measure-row" id="rhythmDisplay"></div>
+    </div>
+  </div>
+
+  <div id="pitchPanel" style="display:none;">
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="row3">
+        <div>
+          <label for="clefSelect">Clef</label>
+          <select id="clefSelect">
+            <option value="treble">Treble</option>
+            <option value="bass">Bass</option>
+          </select>
+        </div>
+        <div>
+          <label for="minNote">Lowest note</label>
+          <select id="minNote"></select>
+        </div>
+        <div>
+          <label for="maxNote">Highest note</label>
+          <select id="maxNote"></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label for="numNotes">Number of notes</label>
+          <select id="numNotes">
+            <option value="8">8</option>
+            <option value="12" selected>12</option>
+            <option value="16">16</option>
+            <option value="24">24</option>
+          </select>
+        </div>
+        <div class="check-row" style="margin-top:1.7rem;">
+          <input type="checkbox" id="showNames">
+          <label class="check-row" for="showNames" style="margin:0;">Show letter names under each note</label>
+        </div>
+      </div>
+      <div class="hint">Natural notes only (no sharps/flats) &mdash; a key-signature/accidentals option is a planned improvement.</div>
+      <div class="btnrow">
+        <button type="button" id="newPitchBtn">New sight-reading pattern</button>
+      </div>
+    </div>
+
+    <div class="display-card">
+      <p class="display-note" id="pitchNote">Sing or play through each note left to right.</p>
+      <div id="pitchDisplay"></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    Runs entirely in your browser &mdash; nothing is uploaded.
+  </footer>
+</div>
+
+<div class="print-only" id="printRhythmArea">
+  <h1>Rhythm Warm-Up</h1>
+  <p class="p-sub" id="printRhythmSub"></p>
+  <div class="measure-row" id="printRhythmDisplay"></div>
+</div>
+<div class="print-only" id="printPitchArea">
+  <h1>Sight-Reading Warm-Up</h1>
+  <p class="p-sub" id="printPitchSub"></p>
+  <div id="printPitchDisplay"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var els = {};
+  ['rhythmTabBtn', 'pitchTabBtn', 'rhythmPanel', 'pitchPanel',
+   'timeSig', 'numMeasures', 'tempo', 'rhythmPool', 'newRhythmBtn', 'rhythmDisplay', 'rhythmNote',
+   'clefSelect', 'minNote', 'maxNote', 'numNotes', 'showNames', 'newPitchBtn', 'pitchDisplay', 'pitchNote',
+   'printBtn', 'printRhythmArea', 'printRhythmSub', 'printRhythmDisplay',
+   'printPitchArea', 'printPitchSub', 'printPitchDisplay'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var mode = 'rhythm';
+  var rhythmMeasures = [];
+  var pitchNotes = [];
+
+  /* ---------------- Tabs ---------------- */
+  els.rhythmTabBtn.addEventListener('click', function () { setMode('rhythm'); });
+  els.pitchTabBtn.addEventListener('click', function () { setMode('pitch'); });
+  function setMode(m) {
+    mode = m;
+    els.rhythmTabBtn.classList.toggle('active', m === 'rhythm');
+    els.pitchTabBtn.classList.toggle('active', m === 'pitch');
+    els.rhythmPanel.style.display = m === 'rhythm' ? '' : 'none';
+    els.pitchPanel.style.display = m === 'pitch' ? '' : 'none';
+  }
+
+  /* ---------------- Rhythm generation ---------------- */
+  var RHYTHM_GLYPH = { quarter: '&#9833;', eighthPair: '&#9835;', half: '&#119134;', quarterRest: '&#119101;' };
+  var RHYTHM_BEATS = { quarter: 1, eighthPair: 1, half: 2, quarterRest: 1 };
+
+  function selectedRhythmPool() {
+    return Array.prototype.slice.call(els.rhythmPool.querySelectorAll('input:checked')).map(function (cb) { return cb.value; });
+  }
+
+  function generateMeasure(beatsPerMeasure, pool) {
+    var usable = pool.length ? pool : ['quarter'];
+    var measure = [];
+    var remaining = beatsPerMeasure;
+    while (remaining > 0) {
+      var candidates = usable.filter(function (v) { return RHYTHM_BEATS[v] <= remaining; });
+      if (!candidates.length) candidates = ['quarter'];
+      var pick = candidates[Math.floor(Math.random() * candidates.length)];
+      measure.push(pick);
+      remaining -= RHYTHM_BEATS[pick];
+    }
+    return measure;
+  }
+
+  function generateRhythm() {
+    var beats = parseInt(els.timeSig.value, 10);
+    var count = parseInt(els.numMeasures.value, 10);
+    var pool = selectedRhythmPool();
+    rhythmMeasures = [];
+    for (var i = 0; i < count; i++) rhythmMeasures.push(generateMeasure(beats, pool));
+    renderRhythm(els.rhythmDisplay, els.timeSig.value);
+  }
+
+  function renderRhythm(target, timeSigValue) {
+    target.innerHTML = rhythmMeasures.map(function (measure, i) {
+      var tsHtml = i === 0 ? '<div class="ts-glyph">' + timeSigValue + '<br>4</div>' : '';
+      var glyphs = measure.map(function (v) { return '<span class="glyph">' + RHYTHM_GLYPH[v] + '</span>'; }).join('');
+      return tsHtml + '<div class="measure">' + glyphs + '</div>';
+    }).join('');
+  }
+
+  els.newRhythmBtn.addEventListener('click', generateRhythm);
+
+  /* ---------------- Sight-reading generation ---------------- */
+  var LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  var DIATONIC_INDEX = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+  var CLEF_ANCHOR = { treble: 4 * 7 + DIATONIC_INDEX.E, bass: 2 * 7 + DIATONIC_INDEX.G };
+  var CLEF_GLYPH = { treble: '&#119070;', bass: '&#119074;' };
+
+  function allNoteOptions() {
+    var list = [];
+    for (var oct = 2; oct <= 6; oct++) {
+      LETTERS.forEach(function (letter) { list.push({ letter: letter, octave: oct }); });
+    }
+    return list;
+  }
+  function overallDiatonic(note) { return note.octave * 7 + DIATONIC_INDEX[note.letter]; }
+  function notePosition(note, clef) { return overallDiatonic(note) - CLEF_ANCHOR[clef]; }
+  function noteLabel(note) { return note.letter + note.octave; }
+
+  function populateNoteSelects() {
+    var options = allNoteOptions();
+    [els.minNote, els.maxNote].forEach(function (sel) {
+      sel.innerHTML = options.map(function (n) { return '<option value="' + noteLabel(n) + '">' + noteLabel(n) + '</option>'; }).join('');
+    });
+  }
+  function applyClefDefaults() {
+    var clef = els.clefSelect.value;
+    if (clef === 'treble') { els.minNote.value = 'C4'; els.maxNote.value = 'G5'; }
+    else { els.minNote.value = 'C2'; els.maxNote.value = 'C4'; }
+  }
+  els.clefSelect.addEventListener('change', function () { applyClefDefaults(); generatePitches(); });
+
+  function parseNoteLabel(label) {
+    return { letter: label.charAt(0), octave: parseInt(label.slice(1), 10) };
+  }
+
+  function poolBetween(minLabel, maxLabel, clef) {
+    var minPos = notePosition(parseNoteLabel(minLabel), clef);
+    var maxPos = notePosition(parseNoteLabel(maxLabel), clef);
+    if (maxPos < minPos) { var t = minPos; minPos = maxPos; maxPos = t; }
+    return allNoteOptions().filter(function (n) {
+      var p = notePosition(n, clef);
+      return p >= minPos && p <= maxPos;
+    });
+  }
+
+  function generatePitches() {
+    var clef = els.clefSelect.value;
+    var pool = poolBetween(els.minNote.value, els.maxNote.value, clef);
+    if (!pool.length) pool = [parseNoteLabel(els.minNote.value)];
+    var count = parseInt(els.numNotes.value, 10);
+    pitchNotes = [];
+    var prevLabel = null;
+    for (var i = 0; i < count; i++) {
+      var pick = pool[Math.floor(Math.random() * pool.length)];
+      if (pool.length > 1) {
+        var tries = 0;
+        while (noteLabel(pick) === prevLabel && tries < 5) { pick = pool[Math.floor(Math.random() * pool.length)]; tries++; }
+      }
+      pitchNotes.push(pick);
+      prevLabel = noteLabel(pick);
+    }
+    renderPitches(els.pitchDisplay, clef);
+  }
+
+  function ledgerLinePositions(position) {
+    var out = [];
+    if (position > 8) {
+      var end = position % 2 === 0 ? position : position - 1;
+      for (var p = 10; p <= end; p += 2) out.push(p);
+    } else if (position < 0) {
+      var end2 = position % 2 === 0 ? position : position + 1;
+      for (var p2 = -2; p2 >= end2; p2 -= 2) out.push(p2);
+    }
+    return out;
+  }
+
+  var ROW_CAPACITY = 8;
+  var LINE_GAP = 14;
+  var STEP = LINE_GAP / 2;
+
+  function renderPitches(target, clef) {
+    var showNames = els.showNames.checked;
+    var rows = [];
+    for (var i = 0; i < pitchNotes.length; i += ROW_CAPACITY) rows.push(pitchNotes.slice(i, i + ROW_CAPACITY));
+
+    target.innerHTML = rows.map(function (rowNotes) {
+      var width = 90 + rowNotes.length * 70;
+      var height = 140;
+      var staffTop = 40;
+      var lineYs = [0, 1, 2, 3, 4].map(function (i) { return staffTop + i * LINE_GAP; });
+      var baseLineY = lineYs[4]; // bottom line = position 0
+
+      var svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">';
+      lineYs.forEach(function (y) {
+        svg += '<line x1="10" y1="' + y + '" x2="' + (width - 10) + '" y2="' + y + '" stroke="#333" stroke-width="1.2"></line>';
+      });
+      svg += '<line x1="10" y1="' + lineYs[0] + '" x2="10" y2="' + lineYs[4] + '" stroke="#333" stroke-width="2"></line>';
+      svg += '<line x1="' + (width - 10) + '" y1="' + lineYs[0] + '" x2="' + (width - 10) + '" y2="' + lineYs[4] + '" stroke="#333" stroke-width="2"></line>';
+      svg += '<text x="20" y="' + (staffTop + LINE_GAP * 3.1) + '" font-size="' + (LINE_GAP * 4.2) + '" font-family="serif">' + CLEF_GLYPH[clef] + '</text>';
+
+      var startX = 78;
+      var stepX = (width - startX - 20) / Math.max(rowNotes.length, 1);
+      rowNotes.forEach(function (note, i) {
+        var pos = notePosition(note, clef);
+        var cx = startX + stepX * i + stepX / 2;
+        var cy = baseLineY - pos * STEP;
+
+        ledgerLinePositions(pos).forEach(function (lp) {
+          var ly = baseLineY - lp * STEP;
+          svg += '<line x1="' + (cx - 10) + '" y1="' + ly + '" x2="' + (cx + 10) + '" y2="' + ly + '" stroke="#333" stroke-width="1.2"></line>';
+        });
+
+        svg += '<ellipse cx="' + cx + '" cy="' + cy + '" rx="6.4" ry="4.8" fill="#1f2430"></ellipse>';
+        var stemUp = pos < 4;
+        var stemX = stemUp ? cx + 6 : cx - 6;
+        var stemY2 = stemUp ? cy - 30 : cy + 30;
+        svg += '<line x1="' + stemX + '" y1="' + cy + '" x2="' + stemX + '" y2="' + stemY2 + '" stroke="#1f2430" stroke-width="1.6"></line>';
+
+        if (showNames) {
+          svg += '<text class="note-name-cap" x="' + cx + '" y="' + (height - 6) + '">' + noteLabel(note) + '</text>';
+        }
+      });
+      svg += '</svg>';
+      return '<div class="staff-system">' + svg + '</div>';
+    }).join('');
+  }
+
+  els.newPitchBtn.addEventListener('click', generatePitches);
+  els.numNotes.addEventListener('change', generatePitches);
+  els.minNote.addEventListener('change', generatePitches);
+  els.maxNote.addEventListener('change', generatePitches);
+  els.showNames.addEventListener('change', function () { renderPitches(els.pitchDisplay, els.clefSelect.value); });
+
+  /* ---------------- Print ---------------- */
+  els.printBtn.addEventListener('click', function () {
+    if (mode === 'rhythm') {
+      els.printRhythmSub.textContent = els.timeSig.value + '/4 time — ' + rhythmMeasures.length + ' measures — ' + els.tempo.value;
+      renderRhythm(els.printRhythmDisplay, els.timeSig.value);
+      els.printRhythmArea.classList.add('active');
+      window.print();
+      els.printRhythmArea.classList.remove('active');
+    } else {
+      var clef = els.clefSelect.value;
+      els.printPitchSub.textContent = clef.charAt(0).toUpperCase() + clef.slice(1) + ' clef — ' + pitchNotes.length + ' notes — range ' + els.minNote.value + '–' + els.maxNote.value;
+      renderPitches(els.printPitchDisplay, clef);
+      els.printPitchArea.classList.add('active');
+      window.print();
+      els.printPitchArea.classList.remove('active');
+    }
+  });
+
+  /* ---------------- Boot ---------------- */
+  populateNoteSelects();
+  applyClefDefaults();
+  generateRhythm();
+  generatePitches();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

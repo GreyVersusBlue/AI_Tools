@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Science Fair Project Tracker</title>
+<meta name="description" content="Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/science-fair-project-tracker.html">
+<meta property="og:title" content="Science Fair Project Tracker — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Science Fair Project Tracker — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M6 26V10M14 26V6M22 26V16' stroke='%231f3550' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --ok: #2c6e3f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="date"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .milestone-row { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
+  .milestone-row input[type="text"] { flex: 1; margin-bottom: 0; }
+  .milestone-row input[type="date"] { flex: 0 0 9.5rem; margin-bottom: 0; }
+
+  table.grid-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  table.grid-table th, table.grid-table td { border: 1px solid var(--line); padding: .4rem .5rem; text-align: center; }
+  table.grid-table th { background: #eef1f4; font-size: .72rem; color: var(--muted); }
+  table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
+  table.grid-table .due { font-size: .68rem; color: var(--muted); display: block; }
+  table.grid-table td.progress { font-size: .8rem; }
+
+  #printArea { display: none; }
+  .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
+  .print-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
+  table.print-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  table.print-table th, table.print-table td { border: 1px solid #999; padding: .4rem .5rem; text-align: center; }
+  table.print-table th { background: #eee; }
+  table.print-table td:first-child, table.print-table th:first-child { text-align: left; font-weight: 700; }
+  .missing-list { margin-top: 1.5rem; }
+  .missing-list h3 { font-size: 1rem; border-bottom: 1.5px solid #333; padding-bottom: .2rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Science Fair Project Tracker</h1>
+      <p class="sub">Track each student's milestones toward the science fair, with due dates and a printable report.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print progress report</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Students</h2>
+    <label for="rosterInput">Student names, one per line</label>
+    <textarea id="rosterInput" placeholder="Alex Johnson&#10;Bailey Smith"></textarea>
+    <button class="secondary" id="saveRosterBtn">Save roster</button>
+  </div>
+
+  <div class="card">
+    <h2>Milestones</h2>
+    <div id="milestonesWrap"></div>
+    <button class="secondary small" id="addMilestoneBtn">+ Add milestone</button>
+  </div>
+
+  <div class="card">
+    <h2>Progress</h2>
+    <div style="overflow-x:auto;">
+      <table class="grid-table" id="progressTable"></table>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'sfpt_tracker_v1';
+
+  var DEFAULT_MILESTONES = ['Question & Hypothesis', 'Background Research', 'Materials & Procedure', 'Data Collection', 'Board Complete', 'Presentation Ready'];
+
+  var els = {};
+  ['rosterInput', 'saveRosterBtn', 'milestonesWrap', 'addMilestoneBtn', 'progressTable', 'printBtn', 'printArea'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var state = { roster: [], milestones: [], done: {} };
+
+  function uid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    return parts[1] + '/' + parts[2] + '/' + parts[0];
+  }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.roster)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.milestones || !state.milestones.length) {
+      state.milestones = DEFAULT_MILESTONES.map(function (name) { return { id: uid(), name: name, due: '' }; });
+    }
+    if (!state.done) state.done = {};
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function doneKey(name, milestoneId) { return name + '|' + milestoneId; }
+
+  function renderMilestones() {
+    els.milestonesWrap.innerHTML = state.milestones.map(function (m) {
+      return '<div class="milestone-row" data-id="' + m.id + '">' +
+        '<input type="text" data-mname="' + m.id + '" value="' + escapeAttr(m.name) + '">' +
+        '<input type="date" data-mdue="' + m.id + '" value="' + escapeAttr(m.due) + '">' +
+        '<button type="button" class="danger small" data-del-m="' + m.id + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+  els.milestonesWrap.addEventListener('input', function (ev) {
+    var nameId = ev.target.getAttribute('data-mname');
+    var dueId = ev.target.getAttribute('data-mdue');
+    if (nameId) {
+      var m = state.milestones.find(function (x) { return x.id === nameId; });
+      if (m) m.name = ev.target.value;
+      save(); renderTable();
+    } else if (dueId) {
+      var m2 = state.milestones.find(function (x) { return x.id === dueId; });
+      if (m2) m2.due = ev.target.value;
+      save(); renderTable();
+    }
+  });
+  els.milestonesWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-m');
+    if (!id) return;
+    state.milestones = state.milestones.filter(function (m) { return m.id !== id; });
+    save(); renderMilestones(); renderTable();
+  });
+  els.addMilestoneBtn.addEventListener('click', function () {
+    state.milestones.push({ id: uid(), name: 'New milestone', due: '' });
+    save(); renderMilestones(); renderTable();
+  });
+
+  els.saveRosterBtn.addEventListener('click', function () {
+    var names = els.rosterInput.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var seen = {}; var unique = [];
+    names.forEach(function (n) { if (!seen[n]) { seen[n] = true; unique.push(n); } });
+    state.roster = unique;
+    save(); renderTable();
+  });
+
+  function renderTable() {
+    if (!state.roster.length) {
+      els.progressTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
+      return;
+    }
+    var head = '<tr><th>Student</th>' + state.milestones.map(function (m) {
+      return '<th>' + escapeHtml(m.name) + (m.due ? '<span class="due">due ' + fmtDate(m.due) + '</span>' : '') + '</th>';
+    }).join('') + '<th>Progress</th></tr>';
+    var rows = state.roster.map(function (name) {
+      var completeCount = 0;
+      var cells = state.milestones.map(function (m) {
+        var key = doneKey(name, m.id);
+        var checked = state.done[key] ? ' checked' : '';
+        if (state.done[key]) completeCount++;
+        return '<td><input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + checked + '></td>';
+      }).join('');
+      var pct = state.milestones.length ? Math.round(completeCount / state.milestones.length * 100) : 0;
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '<td class="progress">' + completeCount + '/' + state.milestones.length + ' (' + pct + '%)</td></tr>';
+    }).join('');
+    els.progressTable.innerHTML = head + rows;
+  }
+
+  els.progressTable.addEventListener('change', function (ev) {
+    var student = ev.target.getAttribute('data-student');
+    var milestone = ev.target.getAttribute('data-milestone');
+    if (!student || !milestone) return;
+    state.done[doneKey(student, milestone)] = ev.target.checked;
+    save(); renderTable();
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.roster.length) { alert('Save a roster first.'); return; }
+    var head = '<tr><th>Student</th>' + state.milestones.map(function (m) { return '<th>' + escapeHtml(m.name) + '</th>'; }).join('') + '</tr>';
+    var rows = state.roster.map(function (name) {
+      var cells = state.milestones.map(function (m) {
+        return '<td>' + (state.done[doneKey(name, m.id)] ? '&#10003;' : '') + '</td>';
+      }).join('');
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
+    }).join('');
+    var missingHtml = state.milestones.map(function (m) {
+      var missing = state.roster.filter(function (name) { return !state.done[doneKey(name, m.id)]; });
+      return '<p><b>' + escapeHtml(m.name) + '</b>' + (m.due ? ' (due ' + fmtDate(m.due) + ')' : '') + ': ' +
+        (missing.length ? missing.map(escapeHtml).join(', ') : 'everyone done') + '</p>';
+    }).join('');
+    els.printArea.innerHTML = '<h1 class="print-title">Science Fair Progress Report</h1>' +
+      '<p class="print-sub">Printed ' + new Date().toLocaleDateString() + '</p>' +
+      '<table class="print-table">' + head + rows + '</table>' +
+      '<div class="missing-list"><h3>Still missing, by milestone</h3>' + missingHtml + '</div>';
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.rosterInput.value = state.roster.join('\n');
+  renderMilestones();
+  renderTable();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

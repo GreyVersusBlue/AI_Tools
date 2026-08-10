@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognates &amp; False Friends Reference List Builder</title>
+<meta name="description" content="Build and print a reference list of cognates and false friends for whatever language you teach.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/cognates-false-friends-builder.html">
+<meta property="og:title" content="Cognates &amp; False Friends Reference List Builder — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Build and print a reference list of cognates and false friends for whatever language you teach.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cognates &amp; False Friends Reference List Builder — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Build and print a reference list of cognates and false friends for whatever language you teach.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='11' cy='16' r='6' fill='none' stroke='%232c6e3f' stroke-width='2'/%3E%3Ccircle cx='21' cy='16' r='6' fill='none' stroke='%23a3372b' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --ok: #2c6e3f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  input[type="text"], select {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .row3 { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; align-items: center; margin-bottom: .3rem; }
+  .row3.ff { grid-template-columns: 1fr 1fr 1.4fr auto; }
+  .row3 input { margin-bottom: 0; }
+
+  table.ref-table { width: 100%; border-collapse: collapse; }
+  table.ref-table th, table.ref-table td { border: 1px solid #999; padding: .4rem .6rem; text-align: left; font-size: .88rem; }
+  table.ref-table th { background: #eee; }
+
+  #printArea { display: none; }
+  .print-title { font-size: 1.4rem; margin: 0 0 .2rem; text-align: center; }
+  .print-lang { text-align: center; color: #555; margin: 0 0 1rem; }
+  .print-section { margin-bottom: 1.2rem; }
+  .print-section h2 { font-size: 1.1rem; border-bottom: 1.5px solid #333; padding-bottom: .2rem; }
+  .cognate-text { color: var(--ok); }
+  .false-friend-text { color: var(--err); }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Cognates &amp; False Friends Reference List Builder</h1>
+      <p class="sub">Build a reference list of look-alike words that mean the same thing, and ones that don't.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print reference sheet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="langName">Language</label>
+    <input type="text" id="langName" placeholder="e.g. Spanish">
+    <label for="templateSelect">Load starter examples</label>
+    <select id="templateSelect">
+      <option value="spanish">Spanish examples</option>
+      <option value="french">French examples</option>
+      <option value="blank">Blank</option>
+    </select>
+    <button class="secondary" id="loadTemplateBtn">Load (replaces current lists)</button>
+  </div>
+
+  <div class="card">
+    <h2>True cognates (look alike, mean the same thing)</h2>
+    <div id="cognatesWrap"></div>
+    <button type="button" class="secondary small" id="addCognateBtn">+ Add cognate pair</button>
+  </div>
+
+  <div class="card">
+    <h2>False friends (look alike, mean something different)</h2>
+    <div id="falseFriendsWrap"></div>
+    <button type="button" class="secondary small" id="addFalseFriendBtn">+ Add false friend</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'cffb_list_v1';
+
+  var TEMPLATES = {
+    spanish: {
+      lang: 'Spanish',
+      cognates: [['actor', 'actor'], ['hospital', 'hospital'], ['animal', 'animal'], ['color', 'color'], ['familia', 'family'], ['música', 'music']],
+      falseFriends: [
+        ['embarazada', 'embarrassed', 'Actually means "pregnant."'],
+        ['librería', 'library', 'Actually means "bookstore" (library is "biblioteca").'],
+        ['éxito', 'exit', 'Actually means "success" (exit is "salida").'],
+        ['sopa', 'soap', 'Actually means "soup" (soap is "jabón").'],
+        ['realizar', 'realize', 'Actually means "to carry out/accomplish" (to realize is "darse cuenta").']
+      ]
+    },
+    french: {
+      lang: 'French',
+      cognates: [['animal', 'animal'], ['important', 'important'], ['nation', 'nation'], ['musique', 'music'], ['télévision', 'television']],
+      falseFriends: [
+        ['attendre', 'attend', 'Actually means "to wait for" (to attend is "assister à").'],
+        ['librairie', 'library', 'Actually means "bookstore" (library is "bibliothèque").'],
+        ['pain', 'pain', 'Actually means "bread" (pain is "douleur").'],
+        ['coin', 'coin', 'Actually means "corner" (coin is "pièce de monnaie").'],
+        ['sensible', 'sensible', 'Actually means "sensitive" (sensible is "raisonnable").']
+      ]
+    },
+    blank: { lang: '', cognates: [['', '']], falseFriends: [['', '', '']] }
+  };
+
+  var els = {};
+  ['langName', 'templateSelect', 'loadTemplateBtn', 'cognatesWrap', 'addCognateBtn',
+   'falseFriendsWrap', 'addFalseFriendBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = { lang: '', cognates: [], falseFriends: [] };
+
+  function uid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function fromTemplate(key) {
+    var t = TEMPLATES[key];
+    state.lang = t.lang;
+    state.cognates = t.cognates.map(function (c) { return { id: uid(), target: c[0], english: c[1] }; });
+    state.falseFriends = t.falseFriends.map(function (f) { return { id: uid(), target: f[0], looksLike: f[1], actual: f[2] }; });
+  }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.cognates)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.cognates.length && !state.falseFriends.length) fromTemplate('spanish');
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderCognates() {
+    els.cognatesWrap.innerHTML = state.cognates.map(function (c) {
+      return '<div class="row3" data-id="' + c.id + '">' +
+        '<input type="text" data-field="target" data-id="' + c.id + '" value="' + escapeAttr(c.target) + '" placeholder="Target-language word">' +
+        '<input type="text" data-field="english" data-id="' + c.id + '" value="' + escapeAttr(c.english) + '" placeholder="English word">' +
+        '<button type="button" class="danger small" data-del-cognate="' + c.id + '">&times;</button></div>';
+    }).join('');
+  }
+  function renderFalseFriends() {
+    els.falseFriendsWrap.innerHTML = state.falseFriends.map(function (f) {
+      return '<div class="row3 ff" data-id="' + f.id + '">' +
+        '<input type="text" data-ffield="target" data-id="' + f.id + '" value="' + escapeAttr(f.target) + '" placeholder="Target-language word">' +
+        '<input type="text" data-ffield="looksLike" data-id="' + f.id + '" value="' + escapeAttr(f.looksLike) + '" placeholder="Looks like (English)">' +
+        '<input type="text" data-ffield="actual" data-id="' + f.id + '" value="' + escapeAttr(f.actual) + '" placeholder="What it actually means">' +
+        '<button type="button" class="danger small" data-del-ff="' + f.id + '">&times;</button></div>';
+    }).join('');
+  }
+
+  els.cognatesWrap.addEventListener('input', function (ev) {
+    var field = ev.target.getAttribute('data-field'); var id = ev.target.getAttribute('data-id');
+    if (!field || !id) return;
+    var c = state.cognates.find(function (x) { return x.id === id; });
+    if (c) c[field] = ev.target.value;
+    save();
+  });
+  els.cognatesWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-cognate');
+    if (!id) return;
+    state.cognates = state.cognates.filter(function (c) { return c.id !== id; });
+    save(); renderCognates();
+  });
+  els.addCognateBtn.addEventListener('click', function () {
+    state.cognates.push({ id: uid(), target: '', english: '' });
+    save(); renderCognates();
+  });
+
+  els.falseFriendsWrap.addEventListener('input', function (ev) {
+    var field = ev.target.getAttribute('data-ffield'); var id = ev.target.getAttribute('data-id');
+    if (!field || !id) return;
+    var f = state.falseFriends.find(function (x) { return x.id === id; });
+    if (f) f[field] = ev.target.value;
+    save();
+  });
+  els.falseFriendsWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-ff');
+    if (!id) return;
+    state.falseFriends = state.falseFriends.filter(function (f) { return f.id !== id; });
+    save(); renderFalseFriends();
+  });
+  els.addFalseFriendBtn.addEventListener('click', function () {
+    state.falseFriends.push({ id: uid(), target: '', looksLike: '', actual: '' });
+    save(); renderFalseFriends();
+  });
+
+  els.loadTemplateBtn.addEventListener('click', function () {
+    if ((state.cognates.length || state.falseFriends.length) && !confirm('Replace the current lists with this template?')) return;
+    fromTemplate(els.templateSelect.value);
+    save(); renderAll();
+  });
+  els.langName.addEventListener('input', function () { state.lang = els.langName.value; save(); });
+
+  function renderAll() {
+    els.langName.value = state.lang;
+    renderCognates();
+    renderFalseFriends();
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var lang = state.lang.trim() || 'Target Language';
+    var cognateRows = state.cognates.filter(function (c) { return c.target.trim(); }).map(function (c) {
+      return '<tr><td class="cognate-text">' + escapeHtml(c.target) + '</td><td>' + escapeHtml(c.english) + '</td></tr>';
+    }).join('') || '<tr><td colspan="2">&mdash;</td></tr>';
+    var ffRows = state.falseFriends.filter(function (f) { return f.target.trim(); }).map(function (f) {
+      return '<tr><td class="false-friend-text">' + escapeHtml(f.target) + '</td><td>' + escapeHtml(f.looksLike) + '</td><td>' + escapeHtml(f.actual) + '</td></tr>';
+    }).join('') || '<tr><td colspan="3">&mdash;</td></tr>';
+    els.printArea.innerHTML = '<h1 class="print-title">Cognates &amp; False Friends</h1><p class="print-lang">' + escapeHtml(lang) + '</p>' +
+      '<div class="print-section"><h2>True Cognates</h2><table class="ref-table"><thead><tr><th>' + escapeHtml(lang) + '</th><th>English</th></tr></thead><tbody>' + cognateRows + '</tbody></table></div>' +
+      '<div class="print-section"><h2>False Friends</h2><table class="ref-table"><thead><tr><th>' + escapeHtml(lang) + '</th><th>Looks Like</th><th>Actually Means</th></tr></thead><tbody>' + ffRows + '</tbody></table></div>';
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  renderAll();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

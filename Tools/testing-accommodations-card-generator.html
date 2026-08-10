@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Testing Accommodations Reference Card Generator</title>
+<meta name="description" content="Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/testing-accommodations-card-generator.html">
+<meta property="og:title" content="Testing Accommodations Reference Card Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Testing Accommodations Reference Card Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='10' width='18' height='13' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 15h6M10 19h4' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .accom-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+  .accom-row input[type="text"] { margin-bottom: 0; }
+
+  table.grid-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  table.grid-table th, table.grid-table td { border: 1px solid var(--line); padding: .4rem .4rem; text-align: center; }
+  table.grid-table th { background: #eef1f4; font-size: .72rem; color: var(--muted); }
+  table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
+  table.grid-table input[type="text"].note-input { width: 6rem; margin: 0; font-size: .78rem; padding: .2rem .3rem; }
+
+  #printArea { display: none; }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .5rem; }
+  .accom-card { border: 1.5px solid #333; border-radius: 8px; padding: .6rem .7rem; height: 2.6in; overflow: hidden; }
+  .accom-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; border-bottom: 1px solid #999; padding-bottom: .2rem; }
+  .accom-card ul { margin: 0; padding-left: 1.1rem; font-size: .82rem; }
+  .accom-card li { margin-bottom: .15rem; }
+  .accom-card .note { font-size: .74rem; color: #555; margin-top: .3rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Testing Accommodations Reference Card Generator</h1>
+      <p class="sub">Small per-student cards for testing day &mdash; stays entirely in your browser.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print cards</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Students</h2>
+    <label for="rosterInput">Student names, one per line</label>
+    <textarea id="rosterInput" placeholder="Alex Johnson&#10;Bailey Smith"></textarea>
+    <button class="secondary" id="saveRosterBtn">Save roster</button>
+  </div>
+
+  <div class="card">
+    <h2>Accommodation types</h2>
+    <div id="typesWrap"></div>
+    <button class="secondary small" id="addTypeBtn">+ Add accommodation type</button>
+  </div>
+
+  <div class="card">
+    <h2>Assign accommodations</h2>
+    <div style="overflow-x:auto;">
+      <table class="grid-table" id="assignTable"></table>
+    </div>
+  </div>
+</div>
+
+<div id="printArea">
+  <div class="card-grid" id="printGrid"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'tacg_cards_v1';
+
+  var DEFAULT_TYPES = ['Extended time', 'Separate setting', 'Read-aloud', 'Breaks as needed', 'Use of calculator', 'Preferential seating'];
+
+  var els = {};
+  ['rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printGrid'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var state = { roster: [], types: [], assignments: {}, notes: {} };
+
+  function uid() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.roster)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.types || !state.types.length) state.types = DEFAULT_TYPES.map(function (t) { return { id: uid(), name: t }; });
+    if (!state.assignments) state.assignments = {};
+    if (!state.notes) state.notes = {};
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function assignKey(name, typeId) { return name + '|' + typeId; }
+
+  function renderTypes() {
+    els.typesWrap.innerHTML = state.types.map(function (t) {
+      return '<div class="accom-row" data-id="' + t.id + '">' +
+        '<input type="text" data-type="' + t.id + '" value="' + escapeAttr(t.name) + '">' +
+        '<button type="button" class="danger small" data-del-type="' + t.id + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+  els.typesWrap.addEventListener('input', function (ev) {
+    var id = ev.target.getAttribute('data-type');
+    if (!id) return;
+    var t = state.types.find(function (x) { return x.id === id; });
+    if (t) t.name = ev.target.value;
+    save(); renderTable();
+  });
+  els.typesWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-type');
+    if (!id) return;
+    state.types = state.types.filter(function (t) { return t.id !== id; });
+    save(); renderTypes(); renderTable();
+  });
+  els.addTypeBtn.addEventListener('click', function () {
+    state.types.push({ id: uid(), name: 'New accommodation' });
+    save(); renderTypes(); renderTable();
+  });
+
+  els.saveRosterBtn.addEventListener('click', function () {
+    var names = els.rosterInput.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var seen = {}; var unique = [];
+    names.forEach(function (n) { if (!seen[n]) { seen[n] = true; unique.push(n); } });
+    state.roster = unique;
+    save(); renderTable();
+  });
+
+  function renderTable() {
+    if (!state.roster.length) {
+      els.assignTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
+      return;
+    }
+    var head = '<tr><th>Student</th>' + state.types.map(function (t) { return '<th>' + escapeHtml(t.name) + '</th>'; }).join('') + '<th>Note</th></tr>';
+    var rows = state.roster.map(function (name) {
+      var cells = state.types.map(function (t) {
+        var key = assignKey(name, t.id);
+        var checked = state.assignments[key] ? ' checked' : '';
+        return '<td><input type="checkbox" data-student="' + escapeAttr(name) + '" data-type-check="' + t.id + '"' + checked + '></td>';
+      }).join('');
+      var note = state.notes[name] || '';
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells +
+        '<td><input type="text" class="note-input" data-note="' + escapeAttr(name) + '" value="' + escapeAttr(note) + '"></td></tr>';
+    }).join('');
+    els.assignTable.innerHTML = head + rows;
+  }
+
+  els.assignTable.addEventListener('change', function (ev) {
+    var student = ev.target.getAttribute('data-student');
+    var typeId = ev.target.getAttribute('data-type-check');
+    if (student && typeId) {
+      state.assignments[assignKey(student, typeId)] = ev.target.checked;
+      save();
+    }
+  });
+  els.assignTable.addEventListener('input', function (ev) {
+    var noteStudent = ev.target.getAttribute('data-note');
+    if (noteStudent) {
+      state.notes[noteStudent] = ev.target.value;
+      save();
+    }
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.roster.length) { alert('Save a roster first.'); return; }
+    els.printGrid.innerHTML = state.roster.map(function (name) {
+      var checkedTypes = state.types.filter(function (t) { return state.assignments[assignKey(name, t.id)]; });
+      var items = checkedTypes.length
+        ? checkedTypes.map(function (t) { return '<li>' + escapeHtml(t.name) + '</li>'; }).join('')
+        : '<li>No accommodations selected</li>';
+      var note = state.notes[name] ? '<div class="note">' + escapeHtml(state.notes[name]) + '</div>' : '';
+      return '<div class="accom-card"><h3>' + escapeHtml(name) + '</h3><ul>' + items + '</ul>' + note + '</div>';
+    }).join('');
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.rosterInput.value = state.roster.join('\n');
+  renderTypes();
+  renderTable();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sub Note / Feedback Slip Generator</title>
+<meta name="description" content="A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/sub-note-feedback-slip-generator.html">
+<meta property="og:title" content="Sub Note / Feedback Slip Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sub Note / Feedback Slip Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 8h11l4 4v12H9z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M20 8v4h4' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="number"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+  .prompt-row input { margin-bottom: 0; }
+
+  #printArea { display: none; }
+  .slip { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+  .slip h2 { margin: 0 0 .1rem; font-size: 1.2rem; }
+  .slip .meta-line { font-size: .82rem; color: var(--muted); margin-bottom: .7rem; }
+  .slip .slip-prompt { font-size: .88rem; font-weight: 600; margin: .5rem 0 .1rem; }
+  .slip .slip-line { display: block; border-bottom: 1px solid var(--line-strong); height: 1.2rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .slip { border: none; height: 47vh; overflow: hidden; page-break-inside: avoid; border-bottom: 1px dashed #999; }
+    .slip:nth-child(2n) { page-break-after: always; border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Sub Note / Feedback Slip Generator</h1>
+      <p class="sub">A quick slip for a substitute to fill out by hand before they leave for the day.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print slips</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="copyCount">How many copies to print</label>
+    <input type="number" id="copyCount" value="2" min="1" max="20" style="max-width:8rem;">
+  </div>
+
+  <div class="card">
+    <h2>Prompts</h2>
+    <p class="hint">Edit, remove, or add prompts &mdash; each gets a blank line for the sub to write on.</p>
+    <div id="promptsWrap"></div>
+    <button class="secondary small" id="addPromptBtn">+ Add prompt</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'snfs_slip_v1';
+
+  var DEFAULT_PROMPTS = [
+    'What worked well today?',
+    'What didn’t go as planned?',
+    'Any names or notes I should know for tomorrow?',
+    'Anything else the teacher should know?'
+  ];
+
+  var els = {};
+  ['copyCount', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = { copyCount: 2, prompts: [] };
+
+  function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.prompts) && saved.prompts.length) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.prompts.length) state.prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderPrompts() {
+    els.promptsWrap.innerHTML = state.prompts.map(function (p) {
+      return '<div class="prompt-row" data-id="' + p.id + '">' +
+        '<input type="text" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '">' +
+        '<button type="button" class="danger small" data-del="' + p.id + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.promptsWrap.addEventListener('input', function (ev) {
+    var id = ev.target.getAttribute('data-prompt');
+    if (!id) return;
+    var p = state.prompts.find(function (x) { return x.id === id; });
+    if (p) p.text = ev.target.value;
+    save();
+  });
+  els.promptsWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del');
+    if (!id) return;
+    state.prompts = state.prompts.filter(function (p) { return p.id !== id; });
+    save(); renderPrompts();
+  });
+  els.addPromptBtn.addEventListener('click', function () {
+    state.prompts.push({ id: uid(), text: '' });
+    save(); renderPrompts();
+  });
+  els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
+
+  function slipHtml() {
+    var prompts = state.prompts.filter(function (p) { return p.text.trim(); }).map(function (p) {
+      return '<p class="slip-prompt">' + escapeHtml(p.text) + '</p><span class="slip-line"></span><span class="slip-line"></span>';
+    }).join('');
+    return '<div class="slip"><h2>Sub Note</h2>' +
+      '<div class="meta-line">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div>' +
+      prompts + '</div>';
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var count = Math.max(1, Math.min(20, state.copyCount || 2));
+    var html = '';
+    for (var i = 0; i < count; i++) html += slipHtml();
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.copyCount.value = state.copyCount;
+  renderPrompts();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
