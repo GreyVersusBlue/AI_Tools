@@ -47,6 +47,22 @@ export function newSection(name, rng = Math.random) {
     together: [],
     desks: [],      // { id, x, y, rot, locked }
     assign: {},     // { deskId: studentId }
+    layouts: [],    // { id, name, desks, assign } — saved arrangements, see newLayout
+  };
+}
+
+/**
+ * A saved seating arrangement: its own desks and assignment, independent of
+ * whatever is currently on the floor. The roster and the constraint pairs
+ * are NOT part of a layout — they belong to the section as a whole, so
+ * "Testing rows" and "Group pods" for the same class share one roster.
+ */
+export function newLayout(name, desks, assign, rng = Math.random) {
+  return {
+    id: uid(rng),
+    name,
+    desks: (desks || []).map(d => ({ ...d })),
+    assign: { ...(assign || {}) },
   };
 }
 
@@ -61,7 +77,14 @@ export function newSection(name, rng = Math.random) {
  */
 export function freshState(rng = Math.random) {
   const sections = ['Honors GT', 'Honors', 'Academic'].map(n => newSection(n, rng));
-  return { sections, active: sections[0].id, theme: 'light', zoom: 'fit', lastFirst: false };
+  return {
+    sections, active: sections[0].id, theme: 'light', zoom: 'fit', lastFirst: false,
+    numbered: false,        // show a seat number on every desk, on screen and on paper
+    mirror: false,          // student's-eye view: the floor flipped left/right
+    printNames: true,       // the three print-only toggles Quick Wins ask for
+    printPhotos: true,
+    printViolations: true,
+  };
 }
 
 /* ---------------------------------------------------------------------------
@@ -116,7 +139,51 @@ export function repairState(state, rng = Math.random) {
     theme: state.theme === 'dark' ? 'dark' : 'light',
     zoom: state.zoom === 'full' ? 'full' : 'fit',
     lastFirst: bool(state.lastFirst),
+    numbered: bool(state.numbered),
+    mirror: bool(state.mirror),
+    printNames: state.printNames === false ? false : true,
+    printPhotos: state.printPhotos === false ? false : true,
+    printViolations: state.printViolations === false ? false : true,
   };
+}
+
+/** Shared by a section's live desks and every saved layout's desks. */
+function repairDesks(list, rng) {
+  return (Array.isArray(list) ? list : [])
+    .filter(d => d && typeof d === 'object')
+    .map(d => ({
+      id: str(d.id) || uid(rng),
+      x: clamp(num(d.x, 40), 0, ROOM.width - ROOM.deskW),
+      y: clamp(num(d.y, 110), 0, ROOM.height - ROOM.deskH),
+      rot: [0, 90, 180, 270].includes(num(d.rot, 0)) ? num(d.rot, 0) : 0,
+      locked: bool(d.locked),
+    }));
+}
+
+/** Drops a seat assignment pointing at a desk or student that no longer
+    exists, and a student seated at two desks at once. Shared by a section's
+    live assign and every saved layout's assign. */
+function cleanAssign(assign, deskIds, studentIds) {
+  const out = {};
+  const seated = new Set();
+  for (const [deskId, sid] of Object.entries(assign && typeof assign === 'object' ? assign : {})) {
+    if (!deskIds.has(deskId) || !studentIds.has(sid)) continue;
+    if (seated.has(sid)) continue;
+    out[deskId] = sid;
+    seated.add(sid);
+  }
+  return out;
+}
+
+/** A saved layout's desks and assign are repaired the same way the live floor
+    is — they're just a floor that isn't the one currently on screen. */
+function repairLayout(l, studentIds, rng) {
+  const id = str(l.id) || uid(rng);
+  const name = str(l.name).trim() || 'Layout';
+  const desks = repairDesks(l.desks, rng);
+  const deskIds = new Set(desks.map(d => d.id));
+  const assign = cleanAssign(l.assign, deskIds, studentIds);
+  return { id, name, desks, assign };
 }
 
 function repairSection(s, index, rng) {
@@ -137,15 +204,7 @@ function repairSection(s, index, rng) {
     }));
   const studentIds = new Set(students.map(st => st.id));
 
-  const desks = (Array.isArray(s.desks) ? s.desks : [])
-    .filter(d => d && typeof d === 'object')
-    .map(d => ({
-      id: str(d.id) || uid(rng),
-      x: clamp(num(d.x, 40), 0, ROOM.width - ROOM.deskW),
-      y: clamp(num(d.y, 110), 0, ROOM.height - ROOM.deskH),
-      rot: [0, 90, 180, 270].includes(num(d.rot, 0)) ? num(d.rot, 0) : 0,
-      locked: bool(d.locked),
-    }));
+  const desks = repairDesks(s.desks, rng);
   const deskIds = new Set(desks.map(d => d.id));
 
   const pairs = list => {
@@ -168,16 +227,13 @@ function repairSection(s, index, rng) {
   // still carry both, and then the solver chases a contradiction for 800 rounds.
   const together = pairs(s.together).filter(([a, b]) => !apartKeys.has([a, b].sort().join('|')));
 
-  const assign = {};
-  const seated = new Set();
-  for (const [deskId, sid] of Object.entries(s.assign && typeof s.assign === 'object' ? s.assign : {})) {
-    if (!deskIds.has(deskId) || !studentIds.has(sid)) continue;  // desk or student gone
-    if (seated.has(sid)) continue;                               // same student twice
-    assign[deskId] = sid;
-    seated.add(sid);
-  }
+  const assign = cleanAssign(s.assign, deskIds, studentIds);
 
-  return { id, name, students, apart, together, desks, assign };
+  const layouts = (Array.isArray(s.layouts) ? s.layouts : [])
+    .filter(l => l && typeof l === 'object')
+    .map(l => repairLayout(l, studentIds, rng));
+
+  return { id, name, students, apart, together, desks, assign, layouts };
 }
 
 /* ---------------------------------------------------------------------------
@@ -481,4 +537,93 @@ export function contentBox(desks) {
     w: Math.max(...xs) + ROOM.deskW - x,
     h: Math.max(...ys) + ROOM.deskH - y,
   };
+}
+
+/* ---------------------------------------------------------------------------
+   Storage usage (P12)
+
+   localStorage stores strings as UTF-16, so a string's own .length (in UTF-16
+   code units) times 2 is the byte count the browser actually books against
+   quota — that is what the tool measures against, not a UTF-8 estimate that
+   would understate a roster full of accented names.
+--------------------------------------------------------------------------- */
+export const QUOTA_BYTES = 5 * 1024 * 1024; // most browsers cap a localStorage origin near 5MB
+
+export function estimateStorageBytes(str) {
+  return String(str ?? '').length * 2;
+}
+
+/** How much of the one saved key a chart is using, and where it's going —
+    photos are the thing that actually grows without bound, so they get their
+    own line rather than being buried inside a section's total. */
+export function storageReport(state) {
+  const whole = estimateStorageBytes(JSON.stringify({ ...state, __v: SCHEMA_VERSION }));
+  const bySection = state.sections.map(s => {
+    const photoBytes = s.students.reduce((t, st) => t + estimateStorageBytes(st.photo || ''), 0);
+    const photoCount = s.students.filter(st => st.photo).length;
+    return {
+      id: s.id,
+      name: s.name,
+      bytes: estimateStorageBytes(JSON.stringify(s)),
+      photoBytes,
+      photoCount,
+    };
+  });
+  const photoBytes = bySection.reduce((t, s) => t + s.photoBytes, 0);
+  const photoCount = bySection.reduce((t, s) => t + s.photoCount, 0);
+  return { totalBytes: whole, quotaBytes: QUOTA_BYTES, pct: whole / QUOTA_BYTES, photoBytes, photoCount, bySection };
+}
+
+/* ---------------------------------------------------------------------------
+   Bulk photo import — match a batch of image filenames to roster names, so a
+   teacher can drop in a folder of ID-photo exports instead of clicking each
+   student's circle one at a time.
+--------------------------------------------------------------------------- */
+
+function normalizeForMatch(s) {
+  return String(s ?? '')
+    .replace(/\.[a-z0-9]{2,4}$/i, '')          // drop a file extension
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // drop accents so they match plain ASCII
+    .toLowerCase()
+    .replace(/[_.\-]+/g, ' ')                  // filename separators become spaces
+    .replace(/\d+/g, ' ')                      // strip stray id numbers ("ada_lovelace_014")
+    .replace(/[^a-z ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenSet(s) {
+  return new Set(normalizeForMatch(s).split(' ').filter(Boolean));
+}
+
+const sameTokens = (a, b) => a.size > 0 && a.size === b.size && [...a].every(t => b.has(t));
+
+/**
+ * `filenames` — plain strings, e.g. from a batch of `File.name`. `students` —
+ * `[{ id, name }]`. Matches each filename to at most one student and each
+ * student to at most one filename: first an exact normalized match ("Ada
+ * Lovelace.jpg"), then a same-word match regardless of order ("Lovelace,
+ * Ada (3).png" — same two words as "Ada Lovelace"). Whatever is left over
+ * comes back unmatched rather than guessed at, since a wrong photo on a face
+ * is worse than a missing one.
+ */
+export function matchPhotoFilenames(filenames, students) {
+  const used = new Set();
+  const matches = [];
+  const claimed = new Set();
+
+  for (const filename of filenames) {
+    const norm = normalizeForMatch(filename);
+    const hit = students.find(st => !used.has(st.id) && normalizeForMatch(st.name) === norm);
+    if (hit) { matches.push({ filename, studentId: hit.id, name: hit.name }); used.add(hit.id); claimed.add(filename); }
+  }
+  for (const filename of filenames) {
+    if (claimed.has(filename)) continue;
+    const toks = tokenSet(filename);
+    if (!toks.size) continue;
+    const hit = students.find(st => !used.has(st.id) && sameTokens(toks, tokenSet(st.name)));
+    if (hit) { matches.push({ filename, studentId: hit.id, name: hit.name }); used.add(hit.id); claimed.add(filename); }
+  }
+  const unmatched = filenames.filter(f => !claimed.has(f));
+  return { matches, unmatched };
 }
