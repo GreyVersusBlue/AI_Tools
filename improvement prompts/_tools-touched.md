@@ -185,7 +185,16 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Tournament Bracket & Station Rotation (PE) | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Lab Group & Role Randomizer | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Exit Ticket / Bell Ringer Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Number Talks / Mental Math Routine Board | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Writing Prompt Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Math Fact Drill Sheet Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Novel Study / Reading Circles Manager | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Primary Source Analysis Worksheet Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Prompt Builder | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| Quiz / Review Game Board | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
 
 ---
 
