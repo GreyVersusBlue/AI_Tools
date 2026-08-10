@@ -30,6 +30,7 @@ function blankProjectData() {
     compassPos: null, locatorPos: null, studentBlankMode: false,
     scaleBarEnabled: false, scaleBarUnit: "km", scaleBarPos: null,
     legendOrder: [],
+    pageFormat: { type: "letter", flipped: false, customW: 4, customH: 3 },
   };
 }
 
@@ -58,6 +59,11 @@ function normalizeProjectData(p) {
   if (p.scaleBarUnit !== "km" && p.scaleBarUnit !== "mi") p.scaleBarUnit = "km";
   if (p.scaleBarPos !== null && typeof p.scaleBarPos !== "object") p.scaleBarPos = null;
   if (!Array.isArray(p.legendOrder)) p.legendOrder = [];
+  if (!p.pageFormat || typeof p.pageFormat !== "object") p.pageFormat = { type: "letter", flipped: false, customW: 4, customH: 3 };
+  if (!["letter", "widescreen", "custom"].includes(p.pageFormat.type)) p.pageFormat.type = "letter";
+  if (typeof p.pageFormat.flipped !== "boolean") p.pageFormat.flipped = false;
+  if (!Number.isFinite(p.pageFormat.customW) || p.pageFormat.customW <= 0) p.pageFormat.customW = 4;
+  if (!Number.isFinite(p.pageFormat.customH) || p.pageFormat.customH <= 0) p.pageFormat.customH = 3;
   if (Array.isArray(p.regions)) {
     p.regions = p.regions.map(r => ({ pattern: "solid", ...r }));
   }
