@@ -31,7 +31,8 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Dichotomous Key Builder | Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Social Studies
 

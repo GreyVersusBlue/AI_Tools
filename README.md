@@ -78,6 +78,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Science Safety Symbol & Equipment Label Maker | `Tools/science-safety-label-maker.html` | Ten hazard/equipment icons, custom label text and copy counts, printed as a grid of storage-bin labels. |
 | Scientific Method / Experiment Design Planner | `Tools/experiment-design-planner.html` | A guided pre-lab worksheet — testable question, If/then/because hypothesis, variables, materials, and procedure — printable as a fillable planning packet. |
 | Science Fair Project Tracker | `Tools/science-fair-project-tracker.html` | Six editable milestones with due dates, a per-student checkbox grid with a live progress percentage, and a printable report with a "still missing, by milestone" chase-list. |
+| Dichotomous Key Builder | `Tools/dichotomous-key-builder.html` | Numbered couplets branching to another step or a final answer, with example specimens tagged per result, printed as a shuffled classification worksheet plus a matching answer key. |
 
 ## Using these
 
