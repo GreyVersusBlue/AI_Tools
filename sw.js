@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -72,6 +72,7 @@ const PRECACHE_URLS = [
   "Tools/classroom-timer/lib/qrcode.js",
   "Tools/classroom-timer/mirror.html",
   "Tools/command-center-dashboard.html",
+  "Tools/daily-editing-warmup-generator.html",
   "Tools/data-chart-builder.html",
   "Tools/docx-merger.html",
   "Tools/escape-room-builder.html",

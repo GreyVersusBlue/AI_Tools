@@ -26,7 +26,6 @@ Reminder: coming soon means not right now.
 
 | Idea | What it would do |
 |---|---|
-| Daily Editing / DOL Warm-Up Generator | A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank. |
 | Peer Feedback / Editing Checklist Generator | Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student. |
 | Book Tasting Menu Generator | Turn a stack of book blurbs into a printable "menu" or table tents for a book-tasting activity, so students can browse titles before choosing one. |
 | Grammar Mad Libs Generator | Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal. |

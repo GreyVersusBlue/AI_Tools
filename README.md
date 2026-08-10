@@ -60,6 +60,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Staff Directory / Quick-Reference Builder | `Tools/staff-directory-builder.html` | Add staff one at a time or paste a whole list from a spreadsheet, sort and search, print a clean one-page directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |
 | Word Problem Warm-Up Generator | `Tools/word-problem-warmup-generator.html` | Randomized word problems by operation and grade band, projected one at a time with a reveal-answer button or printed as a worksheet with a matching answer key. |
 | Unit Conversion Reference Chart Builder | `Tools/unit-conversion-chart-builder.html` | Check off customary, metric, cross-system, temperature, and time unit sets, add custom lines, and print a one-page conversion reference chart. |
+| Daily Editing / DOL Warm-Up Generator | `Tools/daily-editing-warmup-generator.html` | A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank. |
 
 ## Using these
 
