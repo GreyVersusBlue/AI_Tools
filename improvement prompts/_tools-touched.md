@@ -457,6 +457,41 @@ was touched.
 list — each still has substantial Major Features/Moonshot items open in its
 own file — so none moved to `stable tools/` this round.
 
+### Pass 2 — Round 1 — 2026-08-10 23:49 UTC — session `yjj7k6` — PR #72
+
+Bounded follow-ups on five of the ten tools assigned to this session (001,
+004, 005, 007, 008 are left for a future round from the same session or
+another) — each tool's own "where the next round should pick up" note named
+the specific gap picked up here, so this round stayed narrow and verified
+rather than spreading thin across all ten. Every change was smoke-tested in
+a headless browser (page load + a realistic interaction) with zero console
+errors, and every touched file's inline scripts were confirmed to still
+parse.
+
+| Tool | File |
+|---|---|
+| Group / Team Generator | `002-group-team-generator.md` |
+| Rubric Builder | `003-rubric-builder.md` |
+| Class Roster Hub | `006-class-roster-hub.md` |
+| Backup & Restore | `009-backup-restore.md` |
+| Command Center | `010-command-center-dashboard.md` |
+
+**Leftover from this round — pick these up before starting a fresh round
+elsewhere:** session `yjj7k6` was assigned the 001–010 range and completed
+five of them; **001 Hall Pass Log, 004 Classroom Timer, 005 Seating Chart
+Generator, 007 Name Picker, and 008 Behavior & Points Tracker are still
+sitting in "Not yet touched" below.** They weren't skipped for lack of
+ideas — each one's own `improvement prompts/<tool>.md` "where the next round
+should pick up" note names something real, it's just each is a full
+session's worth on its own rather than a bounded fix (stable per-student
+IDs / bell-schedule correlation for 001; bell-schedule awareness, a
+multi-timer board, or real sound assets for 004; the base64→IndexedDB photo
+migration for 005; splitting the 2,400-line file or the history-cap rollup
+for 007; the seating-chart-based board layout for 008 — see each file for
+the full list). A future session — ideally one picking up the 001–010 range
+again, but anyone is fine — should finish these five so the range gets a
+complete Pass 2 first pass before other tools get a second round.
+
 ---
 
 ## Not yet touched
@@ -467,15 +502,10 @@ data-heavy), and say why in the PR. Skip anything already listed in
 **Currently claimed**.
 
 - Digital Hall Pass / Sign-Out Log — `001-hall-pass-log.md`
-- Group / Team Generator — `002-group-team-generator.md`
-- Rubric Builder — `003-rubric-builder.md`
 - Classroom Timer — `004-classroom-timer.md`
 - Seating Chart Generator — `005-seating-chart-generator.md`
-- Class Roster Hub — `006-class-roster-hub.md`
 - Name Picker — `007-name-picker.md`
 - Behavior & Points Tracker — `008-behavior-points-tracker.md`
-- Backup & Restore — `009-backup-restore.md`
-- Command Center — `010-command-center-dashboard.md`
 - Tournament Bracket & Station Rotation (PE) — `021-pe-tournament-stations.md`
 - Lab Group & Role Randomizer — `022-lab-group-role-randomizer.md`
 - Exit Ticket / Bell Ringer Generator — `023-exit-ticket-generator.md`

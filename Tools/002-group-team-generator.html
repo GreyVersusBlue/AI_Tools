@@ -231,6 +231,7 @@
       <div class="control-group">
         <label for="split-value" id="split-value-label">Number of groups</label>
         <input type="number" id="split-value" min="2" max="40" value="4">
+        <div class="hint" id="split-lock-hint" style="display:none;"></div>
       </div>
       <div class="control-group">
         <label for="strategy-select">Grouping strategy</label>
@@ -348,6 +349,7 @@
     absentList: document.getElementById('absent-list'),
     splitValueLabel: document.getElementById('split-value-label'),
     splitValue: document.getElementById('split-value'),
+    splitLockHint: document.getElementById('split-lock-hint'),
     strategySelect: document.getElementById('strategy-select'),
     strategyHint: document.getElementById('strategy-hint'),
     oddModeSelect: document.getElementById('odd-mode-select'),
@@ -792,6 +794,16 @@
   });
 
   // ── Split mode (count vs size) ───────────────────────────────────────────
+  function syncSplitLockUI() {
+    var anyLocked = lockedFlags.some(Boolean);
+    els.splitValue.disabled = anyLocked;
+    document.getElementById('mode-count').disabled = anyLocked;
+    document.getElementById('mode-size').disabled = anyLocked;
+    els.splitLockHint.style.display = anyLocked ? 'block' : 'none';
+    els.splitLockHint.textContent = anyLocked
+      ? 'Split settings are locked while a group is locked — unlock every group, or generate fresh groups, to change how many groups or students-per-group.'
+      : '';
+  }
   function syncSplitLabel() {
     var isSize = document.getElementById('mode-size').checked;
     els.splitValueLabel.textContent = isSize ? 'Students per group' : 'Number of groups';
@@ -1232,6 +1244,7 @@
 
     els.exportRow.style.display = 'flex';
     els.regenerateBtn.disabled = false;
+    syncSplitLockUI();
   }
 
   els.results.addEventListener('click', function (e) {
@@ -1270,6 +1283,7 @@
     els.explainArea.innerHTML = '';
     els.warnArea.innerHTML = '';
     els.results.innerHTML = '<p class="empty-hint">Add names on the left, then click "Make Groups."</p>';
+    syncSplitLockUI();
   }
 
   function snapshotForUndo() {

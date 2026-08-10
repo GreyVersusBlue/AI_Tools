@@ -9,7 +9,67 @@
 
 ## Status
 
-**2026-08-10 — The versioned format, merge restore, IndexedDB coverage, and
+### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
+
+Picked up item 5 from Round 1's "where the next round should pick up" list:
+*"Keep `STUDENT_KEYS` and `KNOWN_GROUPS` current."* This round audited both
+against every tool actually on the site, not just the ones this page already
+knew about.
+
+Method: grepped every `Tools/*.html` and `Tools/*/*.js` for
+`localStorage`-key-holding variable declarations (`*_KEY`, `*_PREFIX`,
+`STORE_KEY`, etc.), which turned out to be the naming convention nearly
+every tool on the site already follows, then cross-checked the resulting
+key list against `KNOWN_GROUPS`.
+
+**Found a real gap**: the entire batch of 35 tools added at the Pass 2 reset
+(047 through 081) was missing from `KNOWN_GROUPS` outright — every key any
+of them writes was showing up in the scan table as unlabeled "Other saved
+data" rather than under the tool's name. Also found two older, pre-existing
+gaps that had nothing to do with the Pass 2 batch: `br_home_teacher` (East
+Middle Schedule Browser, `034-schedule-browser.html`) and
+`final-grade-checker:settings-v1` (Final Grade Checker,
+`036-final_grade_checker.html`) were never added to `KNOWN_GROUPS` when
+those tools shipped their own settings persistence.
+
+Added all of them — 32 new `KNOWN_GROUPS` entries in total. Five tools in
+the Pass 2 batch (061 Fraction–Decimal–Percent Drill, 063 Grammar Mad Libs,
+067 Music Sight-Reading, 080 Virtual Manipulatives Board, 081 Word Problem
+Warm-Up) genuinely write nothing to `localStorage` at all — confirmed by
+grep, not assumed — so there was nothing to add for them; they're
+stateless generators by design.
+
+Also classified the five new keys that actually hold student names into
+`STUDENT_KEYS` (checked each candidate by grepping its file for
+roster/student-name fields rather than guessing from the tool's title —
+`058-duty-roster-builder.html`'s "roster" is a staff duty roster, for
+instance, and correctly stayed out):
+
+- `apl_portfolio_v1` (Student Art Portfolio Label & QR Tag Maker)
+- `fsat_tracker_v1` (Fitness & Skill Assessment Tracker)
+- `pcl_roster_v1`, `pcl_entries_v1` (Parent/Guardian Contact Log)
+- `sfpt_tracker_v1` (Science Fair Project Tracker)
+- `tacg_cards_v1` (Testing Accommodations Reference Card Generator)
+
+Everything else stayed classified as settings (the conservative default),
+including template/content-bank tools like DBQ Source Packet Builder or
+Verb Conjugation Poster Generator that hold no per-student data.
+
+Verified the file's inline scripts still parse cleanly and the page loads
+with no console errors in a headless-browser smoke test. Did not attempt a
+full Playwright pass reproducing this round's own 39-check suite — this was
+a data-table addition, not a logic change, and the existing `classifyKey`/
+`labelFor` functions were not touched.
+
+**Where the next round should pick up**: this audit is a snapshot, not a
+standing guarantee — any tool that starts writing a new `localStorage` key
+after this round still needs a manual add to `KNOWN_GROUPS` (and
+`STUDENT_KEYS` if it's student data), per the existing "Threads left open"
+note in `_tools-touched.md`. The rest of this tool's Round 1 backlog
+(device-to-device transfer, scheduled reminders, per-tool restore, per-record
+conflict resolution, the encrypted-backup question) is unchanged.
+
+### Round 1 (Pass 1) — 2026-08-10 — The versioned format, merge restore, IndexedDB coverage, and
 the year-end archive-and-clear workflow all shipped**, along with the quota
 readout, named backups, file verification, the harder first-run nag, and
 selective export. Verified with a 39-check Playwright pass over the page plus
