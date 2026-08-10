@@ -175,6 +175,14 @@
   .class-controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .8rem; }
   .class-controls select, .class-controls input[type="text"] { margin-bottom: 0; width: auto; min-width: 10rem; }
   .class-grid-wrap { overflow-x: auto; }
+  .grid-cell-controls { display: flex; align-items: center; gap: .25rem; }
+  .grid-cell-controls select { margin-bottom: 0; min-width: 8rem; }
+  .grid-comment-btn {
+    flex-shrink: 0; background: #eef1f5; color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 4px; padding: .15rem .35rem; font-size: .8rem; line-height: 1; opacity: .55;
+  }
+  .grid-comment-btn:hover { opacity: 1; background: #dfe6ec; }
+  .grid-comment-btn.active { opacity: 1; background: #fff3c4; border-color: #e6c200; }
   table.class-grid { width: 100%; border-collapse: collapse; font-size: .82rem; }
   table.class-grid th, table.class-grid td { border: 1px solid var(--line-strong); padding: .4rem .5rem; text-align: left; }
   table.class-grid thead th { background: #eef1f5; position: sticky; top: 0; }
@@ -1160,8 +1168,14 @@
       var cells = state.criteria.map(function (c) {
         var sel = normalizeSelectionValue(rec.selections[c.id]);
         var selectedVal = sel && sel.levelId ? (sel.levelId + (sel.half ? '|half' : '')) : '';
-        return '<td><select data-student="' + escapeHtml(name) + '" data-crit="' + c.id + '">' +
-          levelSelectOptions(selectedVal) + '</select></td>';
+        var hasComment = !!(sel && sel.comment);
+        return '<td><div class="grid-cell-controls">' +
+          '<select data-student="' + escapeHtml(name) + '" data-crit="' + c.id + '">' +
+          levelSelectOptions(selectedVal) + '</select>' +
+          '<button type="button" class="grid-comment-btn' + (hasComment ? ' active' : '') + '"' +
+          ' data-comment-student="' + escapeHtml(name) + '" data-comment-crit="' + c.id + '"' +
+          ' title="' + (hasComment ? escapeHtml(sel.comment) : 'Add a comment for this criterion') + '">💬</button>' +
+          '</div></td>';
       }).join('');
       var earned = earnedPoints(rec);
       var pctText = possible > 0 ? ' (' + fmtNum((earned / possible) * 100) + '%)' : '';
@@ -1188,6 +1202,22 @@
           var parts = raw.split('|');
           rec.selections[critId] = { levelId: parts[0], half: parts[1] === 'half', comment: priorComment };
         }
+        RubricStore.saveScore(state.name, studentName, rec);
+        renderClassMode();
+      });
+    }
+    var commentBtns = els.classGridTable.querySelectorAll('button[data-comment-student]');
+    for (var cm = 0; cm < commentBtns.length; cm++) {
+      commentBtns[cm].addEventListener('click', function (e) {
+        var btn = e.currentTarget;
+        var studentName = btn.getAttribute('data-comment-student');
+        var critId = btn.getAttribute('data-comment-crit');
+        var scoresNow = RubricStore.getAllScores(state.name);
+        var rec = scoresNow[studentName] || { student: studentName, selections: {}, overallComment: '' };
+        var sel = normalizeSelectionValue(rec.selections[critId]) || { levelId: null, half: false, comment: '' };
+        var next = prompt('Comment for ' + studentName + ' on this criterion (what the student reads):', sel.comment || '');
+        if (next === null) return;
+        rec.selections[critId] = { levelId: sel.levelId, half: sel.half, comment: next.trim() };
         RubricStore.saveScore(state.name, studentName, rec);
         renderClassMode();
       });

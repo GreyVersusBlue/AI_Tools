@@ -185,11 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Group / Team Generator | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
-| Rubric Builder | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
-| Class Roster Hub | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
-| Backup & Restore | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
-| Command Center | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
+| *(none)* | | | |
 
 ---
 
@@ -434,6 +430,25 @@ Verb Conjugation Reference Poster Generator (`079-verb-conjugation-poster-genera
 Virtual Manipulatives Board (`080-virtual-manipulatives-board.md`) ·
 Word Problem Warm-Up Generator (`081-word-problem-warmup-generator.md`)
 
+### Pass 2 — Round 1 — 2026-08-10 23:49 UTC — session `yjj7k6` — PR pending
+
+Bounded follow-ups on five of the ten tools assigned to this session (001,
+004, 005, 007, 008 are left for a future round from the same session or
+another) — each tool's own "where the next round should pick up" note named
+the specific gap picked up here, so this round stayed narrow and verified
+rather than spreading thin across all ten. Every change was smoke-tested in
+a headless browser (page load + a realistic interaction) with zero console
+errors, and every touched file's inline scripts were confirmed to still
+parse.
+
+| Tool | File |
+|---|---|
+| Group / Team Generator | `002-group-team-generator.md` |
+| Rubric Builder | `003-rubric-builder.md` |
+| Class Roster Hub | `006-class-roster-hub.md` |
+| Backup & Restore | `009-backup-restore.md` |
+| Command Center | `010-command-center-dashboard.md` |
+
 ---
 
 ## Not yet touched
@@ -444,15 +459,10 @@ data-heavy), and say why in the PR. Skip anything already listed in
 **Currently claimed**.
 
 - Digital Hall Pass / Sign-Out Log — `001-hall-pass-log.md`
-- Group / Team Generator — `002-group-team-generator.md`
-- Rubric Builder — `003-rubric-builder.md`
 - Classroom Timer — `004-classroom-timer.md`
 - Seating Chart Generator — `005-seating-chart-generator.md`
-- Class Roster Hub — `006-class-roster-hub.md`
 - Name Picker — `007-name-picker.md`
 - Behavior & Points Tracker — `008-behavior-points-tracker.md`
-- Backup & Restore — `009-backup-restore.md`
-- Command Center — `010-command-center-dashboard.md`
 - Image → PDF Assembler — `011-image-to-pdf.md`
 - Graph Paper & Number Line Generator — `012-graph-paper-generator.md`
 - Lab Safety Contract Tracker — `013-lab-safety-contract-tracker.md`
