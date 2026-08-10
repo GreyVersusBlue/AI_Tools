@@ -14,6 +14,49 @@ mature tool on the site: properly modularized, IndexedDB-backed, with
 undo/redo. Ideas below are deliberately ambitious and **not** scoped to one
 session.
 
+### Round 9 (2026-08-10) — shipped
+
+- **Page-format / aspect-ratio picker.** New "Page shape" control above the
+  viewer: US Letter 8.5×11 (portrait, for printing), Widescreen 16:9 (for
+  dropping into a PowerPoint slide), or a Custom ratio set with two range
+  sliders, plus a Flip button to swap orientation. `#viewport` itself is
+  resized in real pixels (not CSS `aspect-ratio`, to sidestep min/max-height
+  interplay quirks) to match, as large as the card width and a viewport-height
+  cap allow, and the map is refit into the new shape — so the live preview is
+  a true WYSIWYG of what Print/Save PDF/Download PNG will produce. Persisted
+  per-project as `project.pageFormat`.
+- **Print Map and Save PDF now export the actual map, not a screenshot of
+  the page.** The old single "Print / Save PDF" button just called
+  `window.print()` on the live interactive DOM — whatever happened to be
+  visible in the browser chrome around the map, toolbar included, went to
+  the printer/PDF. Both are now genuine exports: they rasterize the
+  annotated map via the same canvas renderer the PNG download already used
+  (`renderMapCanvas`/`drawMapContent`), sized to the selected page format's
+  exact physical dimensions (`getPhysicalPageInches` — a literal 8.5:11
+  ratio comes out as exact US Letter). **Print Map** injects that raster
+  into a dedicated print-only stage with a dynamically-set `@page` size and
+  calls `window.print()` against *that*, not the app UI; Ctrl/Cmd+P is
+  intercepted to go through the same path. **Save PDF** is new — builds a
+  real PDF via a newly-vendored jsPDF (`Tools/blank-map-generator/lib/`,
+  same 2.5.1 build already used elsewhere on the site) instead of relying on
+  the browser's own print-to-PDF. Tiled poster printing was already doing
+  this correctly (it never screenshotted the DOM) and was left alone.
+- **Grayscale-safe fills (P6), scoped down.** The backlog item below asked
+  for patterns to become print's default; shipped as a "Grayscale-safe
+  fills" checkbox (on by default) next to the export buttons instead of a
+  silent behavior change, so a teacher who deliberately wants flat color
+  output (color printer, projector) can turn it off. When on, any region
+  still set to "Solid" gets rendered in the export (map + legend swatch,
+  both from the same substitution map so they always agree) with an
+  alternating hatch/dots pattern per distinct color — the on-screen SVG
+  editing view and the region's actual `pattern` field/legend-text key are
+  untouched, only the raster output changes. Verified with a real
+  two-color-both-"Solid" region case via Playwright screenshots: on
+  renders visibly different hatch vs. dot fills, off renders flat color.
+- Not done this round: answer-key printing, numbered-blank worksheets, quiz
+  mode scoring/shuffle, reusable label sets, semantic line types — see Quick
+  Wins below, still open.
+
 ## What it does today
 
 - **Wikimedia Commons search** with continent browsing and "load more", plus
