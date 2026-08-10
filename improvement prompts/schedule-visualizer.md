@@ -9,9 +9,79 @@
 
 ## Status
 
-Reviewed — structural read of the source. This is the most ambitious piece of
-software in the repo by a wide margin and deserves a proportionally ambitious
-list. Ideas below are **not** scoped to a single session; several are
+**2026-08-10 — Round 7 (PR #TBD): a critical publish-pipeline crash fixed,
+plus the storage headroom warning Quick Win.**
+
+**The main finding this round, and the reason it dominates this Status
+section:** `brBuildPublishedHTML()` — the function behind the "Publish"
+button — was **producing a broken `schedule-browser.html`.** Its function
+list (`brPublishFnList()`) stringifies `brRenderTeacher`, `brDayRows`,
+`brRenderGroup`, `brMiniMapHTML`, `brGroupMapHTML`, `brGeoFloorSVG`, and
+`brOverviewHTML` into the published file, and every one of those calls two
+app-wide escaping helpers, `escHtml()` and `escJsAttr()` (defined once,
+around line 10657, and used throughout the rest of this app) — but neither
+function was ever added to the publisher's `consts` list. Those two names
+would be **undefined in the published file's scope**, so opening any teacher
+or any group in a freshly-published `schedule-browser.html` would throw
+`ReferenceError: escHtml is not defined` immediately — the browser's two
+core views, completely broken, with no error shown to the person who just
+published it.
+
+This wasn't a hypothetical: it was verified two ways. First, calling
+`brBuildPublishedHTML()` directly in a live session and inspecting the
+output confirmed `escHtml`/`escJsAttr` were absent from the generated
+`<script>`. Second — and more convincingly — the *actual generated HTML* was
+loaded into a fresh page, a fabricated teacher was injected into
+`BR_TEACHERS`, and `brRenderTeacher()` was called on it: before the fix,
+that throws; after the fix, it renders correctly. The comment already
+sitting on `escJsAttr()` even says outright that it's "needed... in both the
+live Schedule Browser preview and every already-published
+schedule-browser.html this generates" — this was a known intention that
+regressed, not a design gap.
+
+- **Fixed — the publish crash.** Added `const escHtml = ...` and
+  `const escJsAttr = ...` to `brBuildPublishedHTML()`'s `consts` array,
+  using the exact same `.toString()`-embedding pattern already proven for
+  `brDColor`/`brTDept`/`brDShort`/`brOrderOf` two lines above. Minimal,
+  additive, and now verified end-to-end (generate → load → render).
+- **Found but explicitly not fixed — R61–R63 feature drift.** While tracing
+  this bug, a second and larger problem surfaced: the real, currently-shipped
+  `Tools/schedule-browser.html` has features — PNG schedule download,
+  copy/share links, the staleness banner, and the entire Common
+  Planning/Compare mode — that **do not exist anywhere in this file's
+  source**. `brPublishFnList()`, the live-preview `<div id="app-browser">`
+  markup (around line 18193), and `BR_CSS` are all missing them. Someone
+  clearly built these directly against the published output (the
+  `/* R61: ... */`, `/* R62: ... */`, `/* R63: ... */` comments in
+  `schedule-browser.html` name exactly this work) without ever backporting
+  them here. Publishing today would silently **delete** all of it from a
+  fresh export. This is a real "Major Feature"-sized port (~300 lines,
+  across three template locations, needing UI verification this session
+  didn't have the budget to do safely on a 19,400-line file) and was left
+  for a dedicated future round rather than attempted partially. See
+  `schedule-browser.md`'s Status for the Quick Wins this round shipped
+  directly to the standalone file instead, and the note that they'll need
+  re-applying (or finally backporting) whenever this gap does get closed.
+- **Done — Storage headroom warning (P12).** A fixed, dismissible banner
+  (`#stviz-storage-warn`) that appears once per session when this origin's
+  total `localStorage` usage crosses ~4 MB (80% of the common 5 MB
+  per-browser floor), checked after every successful blueprint autosave.
+  A second, harder-styled banner fires on an actual write failure
+  (`QuotaExceededError`), telling the teacher their last change did **not**
+  save and to export a backup immediately — replacing the previous silent
+  `console.warn`-only failure mode. Both paths verified in headless
+  Chromium: the proactive banner by filling real `localStorage` until usage
+  crossed the threshold, the failure banner by mocking `Storage.prototype.setItem`
+  to throw a real `QuotaExceededError`.
+
+**Where a future round should pick up:** the R61–R63 backport above is now
+the clearest, best-documented, highest-value item in the whole improvement-
+prompts programme for this tool pair — do it as its own round, with time to
+actually drive the visualizer's UI (create a project, add teachers/rooms,
+click Publish, open the result) rather than reasoning about it statically.
+Everything else in Quick Wins and Major Features below is untouched.
+
+Ideas below are **not** scoped to a single session; several are
 multi-session on their own.
 
 ## What it does today
@@ -54,7 +124,7 @@ multi-session on their own.
 - **Autosave and crash recovery.** The largest, most-easily-lost artifact on
   the site; snapshots exist but a periodic autosave slot would prevent the
   worst outcome.
-- **Storage headroom warning** (P12). A blueprint with a traced image plus
+- **Done —** **Storage headroom warning** (P12). A blueprint with a traced image plus
   snapshots is the biggest thing in `localStorage` on this site, and the
   failure mode is a silent write failure.
 - **A shipped example project** (P15) — this tool has an onboarding flow and
@@ -109,6 +179,9 @@ laptop by QR code across a desk.
 - **P11 (undo/history)** — has the most complete history system on the site;
   worth extracting.
 - **P12 (storage quota)** — the largest payloads on the site live here.
+  **Partly addressed Round 7** — a proactive headroom warning and a hard
+  write-failure banner now exist; the export-often workflow they point to is
+  still manual.
 - **P7 (cross-tool)** — the bell schedule and building map are assets four
   other tools want.
 - **P8 (versioning)** — seven storage keys and a published-output format;
@@ -124,3 +197,12 @@ laptop by QR code across a desk.
   here gets easier if it's the latter.
 - Should the published `schedule-browser.html` be regenerated automatically
   when the project changes, or stay an explicit publish step?
+  **Sharpened 2026-08-10**: whichever answer Devon prefers, an explicit step
+  that nobody re-runs is exactly how the R61–R63 drift (see above) happened
+  silently — regeneration frequency and a way to *detect* drift both matter
+  more now than they did before this round.
+- **Raised 2026-08-10.** Given the R61–R63 drift, is `brPublishFnList()` +
+  hand-copied consts the right mechanism going forward, or would a build-time
+  check (e.g. a script that diffs a fresh `brBuildPublishedHTML()` output
+  against the checked-in `schedule-browser.html` and flags unexplained
+  removals) be worth adding so this class of bug can't recur silently?

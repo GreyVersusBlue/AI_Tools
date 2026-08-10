@@ -103,9 +103,11 @@
 #app-browser .btn-copy:disabled{opacity:.65;cursor:default}
 @media(max-width:620px){#app-browser .idhead-actions{margin-left:0;width:100%}
   #app-browser .idhead-actions>*{width:100%}}
-#app-browser .stale-banner{display:none;margin:22px 6px 0;padding:14px 18px;border-radius:12px;
-  background:#fdf3d9;border:1px solid #eecf7a;color:#7a5c14;font-size:14px;font-weight:600;line-height:1.5;text-align:center}
+#app-browser .stale-banner{display:none;margin:0 0 16px;padding:14px 20px;border-radius:0 0 10px 10px;
+  background:#fbe4c8;border:2px solid #c96a1f;border-top:none;color:#7a3c0e;font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
 #app-browser .stale-banner.show{display:block}
+#app-browser .stale-banner::before{content:"⚠ "}
+#app-browser .gchip.active{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
 #app-browser .br-empty .big{font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--br-forest);margin-bottom:8px}
@@ -234,6 +236,15 @@
   #app-browser .tcard,#app-browser .gchip{cursor:default}
   #app-browser .br-view{display:none!important}#app-browser .br-view.show{display:block!important}
 }
+/* ── Door sign: a single big compact card, hidden except while printing one ── */
+#br-door-sign{display:none}
+body.door-print-mode #app-browser{display:none!important}
+body.door-print-mode #br-door-sign{display:block!important}
+#br-door-sign .door-card{border:7px solid;border-radius:24px;text-align:center;padding:2in .5in;margin:.4in}
+#br-door-sign .door-name{font-family:'Fraunces',serif;font-weight:600;font-size:66px;color:#283831;line-height:1.1}
+#br-door-sign .door-room{font-size:48px;font-weight:700;margin-top:.3in}
+#br-door-sign .door-dept{font-size:22px;color:#62756a;margin-top:.2in;font-weight:600}
+@media screen{#br-door-sign{display:none!important}}
 /* ── R60 additions ── */
 #app-browser .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 #app-browser .blockrow .bk .bt{display:block;font-size:10px;font-weight:600;color:var(--br-muted);margin-top:2px;line-height:1.2}
@@ -248,8 +259,8 @@
 @media(max-width:640px){
   #app-browser{padding:16px 10px 60px}
   #app-browser .toolbar{flex-direction:column;align-items:stretch;padding:14px}
-  #app-browser .mode{width:100%;display:flex}
-  #app-browser .mode button{flex:1;padding-top:12px;padding-bottom:12px}
+  #app-browser .mode{width:100%;display:flex;flex-wrap:wrap}
+  #app-browser .mode button{flex:1 1 45%;padding-top:12px;padding-bottom:12px}
   #app-browser .br-field{min-width:0}
   #app-browser .btn-print{width:100%;padding:13px;min-height:44px}
   #app-browser .stage{padding:20px 14px}
@@ -276,12 +287,14 @@ html,body{margin:0;padding:0;background:#f4f7f4}
         <p class="sub">Teacher Schedule Browser</p>
       </div>
     </header>
+    <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <div class="panel">
       <div class="toolbar">
         <div class="mode" role="tablist">
           <button id="br-mTeacher" class="on" onclick="brSetMode('teacher')">By Teacher</button>
           <button id="br-mGroup"   onclick="brSetMode('group')">By Student Group</button>
           <button id="br-mCompare" onclick="brSetMode('compare')">Common Planning</button>
+          <button id="br-mFree"    onclick="brSetMode('free')">Who's Free Now</button>
           <button id="br-mMap"     onclick="brSetMode('map')">Building Map</button>
         </div>
         <div class="br-field" id="br-searchField">
@@ -302,10 +315,10 @@ html,body{margin:0;padding:0;background:#f4f7f4}
         <div id="br-view" class="br-view"></div>
       </div>
     </div>
-    <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <p class="footnote">Published July 15, 2026 from the School Layout Visualizer v60. This file is a read-only snapshot — republish to update.</p>
   </div>
 </div>
+<div id="br-door-sign" class="door-sign"></div>
 <script>
 'use strict';
 /* Published by the Movement Visualizer — read-only schedule snapshot. */
@@ -498,6 +511,7 @@ function brSetMode(mo) {
   document.getElementById('br-mTeacher').classList.toggle('on', mo==='teacher');
   document.getElementById('br-mGroup').classList.toggle('on',   mo==='group');
   document.getElementById('br-mCompare').classList.toggle('on', mo==='compare');
+  document.getElementById('br-mFree').classList.toggle('on',    mo==='free');
   document.getElementById('br-mMap').classList.toggle('on',     mo==='map');
   const sf = document.getElementById('br-searchField');
   if (mo==='map') {
@@ -505,6 +519,14 @@ function brSetMode(mo) {
     document.getElementById('br-empty').style.display='none';
     const v=document.getElementById('br-view'); v.classList.remove('show'); void v.offsetWidth;
     brRenderMap(); v.classList.add('show');
+    return;
+  }
+  if (mo==='free') {
+    sf.style.display='none';
+    document.getElementById('br-empty').style.display='none';
+    const v=document.getElementById('br-view'); v.classList.remove('show'); void v.offsetWidth;
+    brFreePeriod = brCurrentPeriodIdx(brFreeDay);
+    brRenderFreeView(); v.classList.add('show');
     return;
   }
   sf.style.display='';
@@ -565,6 +587,8 @@ function brRenderTeacher(n) {
      <div class="ibadge" style="background:${col}">${brEscHtml(n[0])}</div>
      <div><h2>${brEscHtml(n)}</h2><div class="role" style="color:${col}">${brEscHtml(deptLabel)} · Room ${brEscHtml(t.room)}</div></div>
      <div class="idhead-actions">
+       <button class="btn-copy" onclick="brToggleHomeTeacher('${brJsAttr(n)}')">${brIsHomeTeacher(n)?'★ My schedule (tap to unset)':'☆ Set as my schedule'}</button>
+       <button class="btn-copy" onclick="brPrintDoorSign('${brJsAttr(n)}')">Print door sign</button>
        <button class="btn-dl" onclick="brDownloadTeacherSchedule('${brJsAttr(n)}')">Download schedule (PNG)</button>
        ${brShareButtonsHTML('teacher', n)}
      </div>
@@ -814,6 +838,107 @@ function brRenderCompareView() {
   view.classList.add('show');
 }
 
+/* ── "Who's Free Now" — the most-asked office question, one tap. Bell times
+   are plain "H:MM–H:MM" strings with no AM/PM marker (see PUBLISHED_DATA.bell),
+   so any hour below 8 is assumed PM — true for any real school day. There's
+   no A/B-day-of-week calendar in this file, so the day itself stays a manual
+   toggle rather than being guessed. ── */
+let brFreeDay = 'A', brFreePeriod = -1;
+function brParseBellTime(s) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(s || '').trim());
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h < 8) h += 12;
+  return h * 60 + min;
+}
+function brParseBellRange(rangeStr) {
+  const parts = String(rangeStr || '').split(/[–—-]/);
+  if (parts.length < 2) return null;
+  const start = brParseBellTime(parts[0]), end = brParseBellTime(parts[1]);
+  return (start == null || end == null) ? null : { start, end };
+}
+function brCurrentPeriodIdx(day) {
+  const arr = BR_BELL ? (day === 'B' ? BR_BELL.B : BR_BELL.A) : null;
+  if (!arr) return -1;
+  const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+  for (let i = 0; i < arr.length; i++) {
+    const r = brParseBellRange(arr[i]);
+    if (r && nowMin >= r.start && nowMin < r.end) return i;
+  }
+  return -1;
+}
+function brFreeTeachersFor(day, idx) {
+  if (idx < 0) return [];
+  return Object.keys(BR_TEACHERS).filter(n => {
+    const sec = (day === 'B' ? BR_TEACHERS[n].B : BR_TEACHERS[n].A)[idx];
+    return !sec || sec === 'Planning';
+  }).sort((a, b) => (brOrderOf(brTDept(a)) - brOrderOf(brTDept(b))) || a.localeCompare(b));
+}
+function brFreeHTML() {
+  const bell = BR_BELL ? (brFreeDay === 'B' ? BR_BELL.B : BR_BELL.A) : null;
+  const dayToggle = `<div class="daychips"><button class="${brFreeDay==='A'?'on':''}" onclick="brSetFreeDay('A')">A Day</button><button class="${brFreeDay==='B'?'on':''}" onclick="brSetFreeDay('B')">B Day</button></div>`;
+  const periodBtns = Array.from({ length: BR_MODCOUNT }, (_, i) => {
+    const time = bell ? (bell[i] || '') : '';
+    return `<button class="gchip${i===brFreePeriod?' active':''}" onclick="brSetFreePeriod(${i})">${brEscHtml(BR_MOD_LABEL)} ${i+1}${time?' · '+brEscHtml(time):''}</button>`;
+  }).join('');
+  let body;
+  if (brFreePeriod < 0) {
+    body = `<p class="hint">Pick a ${brEscHtml(BR_MOD_LABEL)} above${bell?' — or check back once it lines up with the current time':', since no bell times are in this file to guess "right now" automatically'}.</p>`;
+  } else {
+    const free = brFreeTeachersFor(brFreeDay, brFreePeriod);
+    body = free.length
+      ? `<p class="factline"><b>${free.length}</b> teacher${free.length!==1?'s':''} free ${brEscHtml(BR_MOD_LABEL)} ${brFreePeriod+1} on ${brFreeDay} day.</p>
+         <p class="hint">Tap a card to open that teacher's full schedule.</p>
+         <div class="team">${free.map(n => { const t=BR_TEACHERS[n]; const c=brDColor(t.dept); const dLabel=(BR_DEPT[t.dept]||{}).name||t.dept;
+           return `<button class="tcard" style="border-left-color:${c}" onclick="brJumpTeacher('${brJsAttr(n)}')">
+             <div class="nm">${brEscHtml(n)}</div><div class="sj" style="color:${c}">${brEscHtml(dLabel)}</div>
+             <div class="rm">Room ${brEscHtml(t.room)}</div></button>`; }).join('')}</div>`
+      : `<p class="factline">No one is free ${brEscHtml(BR_MOD_LABEL)} ${brFreePeriod+1} on ${brFreeDay} day.</p>`;
+  }
+  return `<div class="idhead">
+     <div class="ibadge" style="background:#0c4b31">?</div>
+     <div><h2>Who's Free Right Now</h2><div class="role" style="color:#62756a">Pick a day and ${brEscHtml((BR_MOD_LABEL||'').toLowerCase())}</div></div>
+   </div>
+   ${dayToggle}
+   <div class="classrow" style="margin-bottom:16px;">${periodBtns}</div>
+   ${body}`;
+}
+function brRenderFreeView() {
+  document.getElementById('br-view').innerHTML = brFreeHTML();
+}
+function brSetFreeDay(d) { brFreeDay = d; brFreePeriod = brCurrentPeriodIdx(d); brRenderFreeView(); }
+function brSetFreePeriod(i) { brFreePeriod = i; brRenderFreeView(); }
+
+/* ── Save a home teacher — skip the search box on every return visit ── */
+const BR_HOME_KEY = 'br_home_teacher';
+function brIsHomeTeacher(n) {
+  try { return localStorage.getItem(BR_HOME_KEY) === n; } catch (e) { return false; }
+}
+function brToggleHomeTeacher(n) {
+  try {
+    if (brIsHomeTeacher(n)) localStorage.removeItem(BR_HOME_KEY);
+    else localStorage.setItem(BR_HOME_KEY, n);
+  } catch (e) { /* storage full/blocked — the toggle just won't persist */ }
+  if (brMode === 'teacher' && brCurrent === n) brRenderTeacher(n);
+}
+
+/* ── Print door sign: one big compact card for outside a classroom or a sub folder ── */
+function brPrintDoorSign(n) {
+  const t = BR_TEACHERS[n]; if (!t) return;
+  const col = brDColor(t.dept);
+  const dLabel = (BR_DEPT[t.dept] || {}).name || t.dept;
+  document.getElementById('br-door-sign').innerHTML =
+    `<div class="door-card" style="border-color:${col}">
+       <div class="door-name">${brEscHtml(n)}</div>
+       <div class="door-room" style="color:${col}">Room ${brEscHtml(t.room)}</div>
+       <div class="door-dept">${brEscHtml(dLabel)}</div>
+     </div>`;
+  document.body.classList.add('door-print-mode');
+  window.print();
+  document.body.classList.remove('door-print-mode');
+}
+
 function brOverviewHTML() {
   if (Object.keys(BR_TEACHERS).length===0) return '';
   const agg={};
@@ -977,6 +1102,14 @@ if (!Object.keys(BR_TEACHERS).length) {
   document.getElementById('br-empty-sub').textContent = 'Ask the publisher to re-export after adding rooms and groups.';
 }
 brApplyDeepLink();
+if (!brCurrent) {
+  let home = null;
+  try { home = localStorage.getItem(BR_HOME_KEY); } catch (e) { /* private mode / blocked */ }
+  if (home) {
+    const key = brFindKeyCI(BR_TEACHERS, home);
+    if (key) brJumpTeacher(key);
+  }
+}
 brCheckStaleness();
 </script>
 <script>

@@ -936,6 +936,22 @@
     .bp-autosave-indicator.saved { color: var(--success); }
     .bp-autosave-indicator.saving { color: var(--warn); }
 
+    /* ── Storage headroom warning (P12) — fixed banner, independent of
+       whichever panel/tab is active, since the risk (quota) is global. ── */
+    #stviz-storage-warn {
+      display: none; position: fixed; left: 50%; top: 12px; transform: translateX(-50%);
+      z-index: 99999; max-width: 640px; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 10px 16px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    }
+    #stviz-storage-warn.warn { background: #fdf3d9; border: 1px solid #eecf7a; color: #7a5c14; }
+    #stviz-storage-warn.fail { background: #fde2e1; border: 1px solid #e59a97; color: #7a1f1c; }
+    #stviz-storage-warn button {
+      font: inherit; font-weight: 700; background: none; border: 1px solid currentColor;
+      border-radius: 6px; padding: 4px 10px; cursor: pointer; color: inherit; opacity: .85; flex-shrink: 0;
+    }
+    #stviz-storage-warn button:hover { opacity: 1; }
+
     /* ── ENHANCED STATUS BAR ── */
     #bp-status-bar {
       position: absolute; bottom: 0; left: var(--bp-left-w); right: var(--bp-right-w);
@@ -5695,9 +5711,71 @@ function saveBlueprintToLocalStorage() {
     _lastBlueprintSaveTime = new Date();
     updateSaveIndicator();
     rebuildRoomRegistry();
+    checkStorageHeadroom();
   } catch(e) {
     console.warn('[STVIZ] Blueprint auto-save failed:', e);
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+      showStorageBanner('fail',
+        'Your last change could NOT be saved — this browser’s storage for this site is full. ' +
+        'Export a backup right now (Blueprint → Export) before you lose more work, then use Backup & Restore ' +
+        'or a different browser profile to make room.');
+    }
   }
+}
+
+/* ── Storage headroom warning (P12) — a blueprint with a traced image plus
+   snapshots is the largest payload on the site, and a silent write failure
+   loses a period's worth of layout work with no indication anything went
+   wrong. `estimateLocalStorageBytes()` is a character-count proxy for bytes
+   (UTF-16 in practice runs closer to 2x this for non-ASCII text, so it's a
+   conservative/low estimate, not exact) against the ~5MB-per-origin quota
+   that's the practical floor across major browsers. Runs after every
+   successful autosave; the proactive banner only fires once per session
+   until usage drops back under the threshold, so it doesn't nag on every
+   keystroke once shown. ── */
+const STORAGE_WARN_BYTES = 4 * 1024 * 1024; // ~80% of the common 5MB floor
+let _storageWarnShown = false;
+
+function estimateLocalStorageBytes() {
+  let total = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      total += (k || '').length + (localStorage.getItem(k) || '').length;
+    }
+  } catch (e) { /* storage blocked entirely — nothing to warn about here */ }
+  return total;
+}
+
+function checkStorageHeadroom() {
+  const bytes = estimateLocalStorageBytes();
+  if (bytes < STORAGE_WARN_BYTES) { _storageWarnShown = false; hideStorageBanner(); return; }
+  if (_storageWarnShown) return;
+  _storageWarnShown = true;
+  const mb = (bytes / (1024 * 1024)).toFixed(1);
+  showStorageBanner('warn',
+    'This browser’s storage for this site is around ' + mb + ' MB, and most browsers cap it near 5 MB total. ' +
+    'Export a backup now (Blueprint → Export) so a future full-quota write failure can’t silently lose your layout.');
+}
+
+function showStorageBanner(kind, message) {
+  let el = document.getElementById('stviz-storage-warn');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'stviz-storage-warn';
+    el.setAttribute('role', 'alert');
+    document.body.appendChild(el);
+  }
+  el.className = 'stviz-storage-banner ' + kind;
+  el.innerHTML = '<span>⚠ ' + escHtml(message) + '</span>' +
+    '<button type="button" id="stviz-storage-warn-dismiss">Dismiss</button>';
+  el.style.display = 'flex';
+  document.getElementById('stviz-storage-warn-dismiss').addEventListener('click', hideStorageBanner);
+}
+
+function hideStorageBanner() {
+  const el = document.getElementById('stviz-storage-warn');
+  if (el) el.style.display = 'none';
 }
 
 /**
@@ -19273,7 +19351,15 @@ function brBuildPublishedHTML() {
     'const brDColor = '  + brDColor.toString()  + ';',
     'const brTDept = '   + brTDept.toString()   + ';',
     'const brDShort = '  + brDShort.toString()  + ';',
-    'const brOrderOf = ' + brOrderOf.toString() + ';'
+    'const brOrderOf = ' + brOrderOf.toString() + ';',
+    /* brDayRows/brRenderTeacher/brRenderGroup/brMiniMapHTML/brGroupMapHTML/
+       brGeoFloorSVG/brOverviewHTML (all published via brPublishFnList() below)
+       call these two unprefixed — they're the app-wide escaping helpers, not
+       br-specific ones. Without them here the published file throws a
+       ReferenceError the instant anyone opens a teacher or group: this was
+       missing (see improvement prompts/schedule-visualizer.md, Round 7). */
+    'const escHtml = '   + escHtml.toString()   + ';',
+    'const escJsAttr = ' + escJsAttr.toString() + ';'
   ].join('\n');
 
   const js = [
