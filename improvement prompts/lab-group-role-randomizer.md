@@ -9,8 +9,11 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+shipped undo, printed role descriptions, station/equipment assignment, and
+checkout tracking. Ideas below are deliberately ambitious and are **not**
+scoped to a single session; items confirmed shipped are tagged **Done**
+below.
 
 ## What it does today
 
@@ -26,38 +29,47 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Role cards with the job description on them.** A tent that says "Recorder"
+- **Done — Round 4.** **Role cards with the job description on them.** A tent that says "Recorder"
   is a label; a tent that says "Recorder — write down every measurement, read
   it back to the group before moving on" is instruction. Let each role carry
-  a short description that prints.
-- **Lock a group or a role and reshuffle the rest.**
-- **Absent handling** — reassign a missing student's role in one tap rather
+  a short description that prints. *(Roles grew an optional description
+  field, printed under the role name on table tents only.)*
+- **Skipped — deferred, Round 4.** **Lock a group or a role and reshuffle the rest.**
+- **Skipped — deferred, Round 4.** **Absent handling** — reassign a missing student's role in one tap rather
   than regenerating the lab.
-- **Show the fairness data.** The recency memory is the selling point and is
+- **Skipped — deferred, Round 4.** **Show the fairness data.** The recency memory is the selling point and is
   currently invisible; a small "roles you've had" grid per student, printable,
-  makes it credible to students who claim unfairness.
+  makes it credible to students who claim unfairness. *(The role-history
+  report already exists and is close; a per-student printable grid is a
+  distinct, smaller quick win still open.)*
 - **Group size that matches the equipment.** "I have 7 microscopes" is the
   real constraint, not "make groups of 4".
-- **Undo the last shuffle** (P11).
+- **Done — Round 4.** **Undo the last shuffle** (P11). *(Single-level undo restores groups,
+  role history, and the checkout log together.)*
 - **Names on the tent in a size readable from the front of the room.**
 
 ## Major Features
 
-- **Lab-specific structure.** A lab has stations, equipment, and safety
+- **Done — partial, Round 4.** **Lab-specific structure.** A lab has stations, equipment, and safety
   requirements — not just groups. Assigning groups *to stations*, tracking
   which group has used which station, and printing a rotation schedule is the
   natural next layer, and `pe-tournament-stations.html` already has a rotation
-  engine (P7).
-- **Equipment and materials checkout.** Which group has which microscope,
+  engine (P7). *(Shipped station + equipment assignment, round-robin cycled
+  onto groups on shuffle; a multi-day rotation schedule across sessions is
+  still unbuilt — the model resets stations on every reshuffle.)*
+- **Done — Round 4.** **Equipment and materials checkout.** Which group has which microscope,
   which balance, which probe — and a printable check-in sheet at the end of
-  the period. This is a genuine, unserved need in a science classroom.
+  the period. This is a genuine, unserved need in a science classroom. *(Per-group
+  checked-out/returned toggle with timestamps, plus a "Print equipment
+  checkout sheet" button.)*
 - **Integration with the safety contract** (P7).
   `lab-safety-contract-tracker.html` knows who has signed; this tool should
   refuse to assign an unsigned student to a lab, or at least flag it.
-- **One grouping engine** (P7). This tool, `group-team-generator.html`,
+- **Skipped — deferred, Round 4.** **One grouping engine** (P7). This tool, `group-team-generator.html`,
   `novel-study-circles-manager.html`, and Name Picker all implement group
   formation, and two of them implement role rotation with recency memory. The
-  logic should be shared.
+  logic should be shared. *(Necessarily touches other tools; left for a
+  dedicated cross-tool round.)*
 - **Multi-day lab projects.** A lab that runs three days needs the same groups
   with rotating roles across sessions — which is exactly what
   `novel-study-circles-manager.html` does for reading circles, in a different
@@ -91,9 +103,12 @@ the bell.
 - Should this remain a separate tool from Group/Team Generator, or become a
   "lab mode" of one grouping tool? The distinctive parts (roles, stations,
   equipment, safety) are real, but the group formation is duplicated.
-- Is station/equipment tracking within scope, or does it want its own tool?
+- **Resolved 2026-08-10 (Round 4, PR #55).** Is station/equipment tracking
+  within scope, or does it want its own tool? — Built directly into this
+  tool: station/equipment assignment per group plus checkout/return tracking,
+  both described below.
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10 (PR #55)
 
 Implemented four of the highest-value ideas from Quick Wins and Major
 Features in one pass, still as a single file (no support folder needed —

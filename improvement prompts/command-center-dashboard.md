@@ -120,17 +120,19 @@ What shipped, against the backlog below:
 
 ## Quick Wins
 
-- **It's a read-only composite; make the panels actionable.** Currently you
+- **Done —** **It's a read-only composite; make the panels actionable.** Currently you
   can see who's out but not sign someone in, and see the calendar but not edit
-  it. Every panel should be one tap from doing the thing.
-- **Fullscreen / projector mode** (P1). This is explicitly a projector page
-  and has neither fullscreen nor the shared theme.
-- **A clock and the current period.** The most-glanced-at information in a
+  it. Every panel should be one tap from doing the thing. *(The Hall Pass
+  panel now signs a student back in from here — see Status.)*
+- **Done —** **Fullscreen / projector mode** (P1). This is explicitly a projector page
+  and has neither fullscreen nor the shared theme. *(Shipped as a display
+  state, not a separate page — see Status.)*
+- **Done —** **A clock and the current period.** The most-glanced-at information in a
   classroom, and this page — which is the one meant to be up all day — doesn't
   show it.
-- **Configurable panels.** Let the teacher choose which panels appear and in
+- **Done —** **Configurable panels.** Let the teacher choose which panels appear and in
   what order; a PE teacher and an English teacher want different dashboards.
-- **Remember panel state across a refresh** so an accidental reload doesn't
+- **Done —** **Remember panel state across a refresh** so an accidental reload doesn't
   reset the timer and the turn order.
 - **Reuse the real timer.** This page reimplements a simplified timer
   (`startTimer`, `tick`, `playAlert`) that duplicates `Classroom Timer.html`.
@@ -142,20 +144,21 @@ What shipped, against the backlog below:
   timer, the bell schedule, who's out, today's do-now prompt, the current
   seating chart, and the day's calendar note — assembled from the tools that
   already hold each piece, on one page you leave projected all day.
-- **Widget architecture.** Panels as small, self-registering modules so adding
+- **Done —** **Widget architecture.** Panels as small, self-registering modules so adding
   a new one (exit ticket prompt, number talk of the day, SSR timer, behavior
   totals) is cheap. This is the enabling refactor for everything else here,
   and it's what turns this from a fixed trio into the site's front door.
-- **Period-aware.** With bell schedules (see School Calendar Visualizer), the
+- **Done —** **Period-aware.** With bell schedules (see School Calendar Visualizer), the
   page can automatically switch to 3rd period's roster and seating chart at
-  10:15 without being told.
+  10:15 without being told. *(The bell schedule is owned outright by this
+  tool rather than read from School Calendar Visualizer — see Status.)*
 - **Remote control from a phone** (P9). Start the timer, call the next
   student, sign someone back in — while walking the room, with the projector
   showing the result.
 - **Do Now / agenda strip.** A slim always-visible band with the day's agenda
   and the current segment highlighted, pairing with the Classroom Timer agenda
   idea.
-- **Morning setup routine.** One button that, at the start of the day, pulls
+- **Done —** **Morning setup routine.** One button that, at the start of the day, pulls
   today's calendar entry, resets turn order, archives yesterday's hall passes,
   and tells you what needs attention.
 

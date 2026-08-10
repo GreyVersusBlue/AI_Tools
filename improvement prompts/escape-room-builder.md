@@ -9,8 +9,10 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+shipped hints-with-a-cost, two new puzzle types, and the meta-puzzle letter
+collection. Ideas below are deliberately ambitious and are **not** scoped to
+a single session; items confirmed shipped are tagged **Done** below.
 
 ## What it does today
 
@@ -27,9 +29,11 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Hints with a cost.** A "stuck?" button that reveals a graded hint is the
+- **Done — Round 4.** **Hints with a cost.** A "stuck?" button that reveals a graded hint is the
   standard escape-room affordance and the main thing that keeps a struggling
-  group from giving up.
+  group from giving up. *(Shipped as a per-station `hintCost`; a costed hint
+  no longer auto-reveals after two misses and is gated behind a manual "Show
+  a hint (−N pts)" button instead.)*
 - **Attempt limits and feedback.** "Not quite — check your spelling" versus
   "wrong" changes the experience considerably; so does a lockout after N
   wrong answers.
@@ -40,25 +44,32 @@ ambitious and are **not** scoped to a single session.
   a safe assumption.
 - **Preview / test-run mode** for the teacher, walking the chain without
   printing anything.
-- **Estimated payload size warning.** The whole room rides in the QR; a room
-  with several images will silently produce an unscannable code (P3).
+- **Skipped — Round 4 considered this and passed.** **Estimated payload size warning.** The whole room rides in the QR; a room
+  with several images will silently produce an unscannable code (P3). *(The
+  new per-station fields are all a few bytes and omitted when unused, so the
+  existing try/catch QR-generation error remains the only size guard.)*
 - **Station numbering that survives reordering**, so a reprint doesn't
   invalidate the codes already taped to the wall.
 
 ## Major Features
 
-- **Team progress tracking.** `qr-scavenger-hunt-builder.html` already has
+- **Done — already existed.** **Team progress tracking.** `qr-scavenger-hunt-builder.html` already has
   live teams, a timer, and a leaderboard; this tool has none. The two are
-  siblings and should share that engine (P7).
-- **Puzzle types beyond text answers.** A digit lock, a directional lock, a
+  siblings and should share that engine (P7). *(Turned out this was already
+  fully built — WebRTC device pairing + a live roster in `monitor.html` — by
+  an earlier, undocumented round; this section predated it. Round 4 only
+  added a Score column to that existing roster.)*
+- **Done — partial, Round 4.** **Puzzle types beyond text answers.** A digit lock, a directional lock, a
   cipher (Caesar / substitution) with an auto-generated key, a jigsaw of a
   clue image, a "collect four letters to spell the word" meta-puzzle. The
   meta-puzzle in particular is what makes an escape room feel like an escape
-  room rather than a worksheet with QR codes.
-- **Branching that matters.** The next-station rule already supports jumps;
+  room rather than a worksheet with QR codes. *(Shipped: digit lock, Caesar
+  cipher, and the meta-puzzle letter collection. Still open: directional
+  lock, jigsaw.)*
+- **Skipped — deferred, Round 4.** **Branching that matters.** The next-station rule already supports jumps;
   building on it — different paths for different answers, optional side
   stations, a required set in any order — would make genuinely different runs
-  for different groups.
+  for different groups. *(Real scope, not attempted this round.)*
 - **Content from elsewhere** (P7). Pull questions from
   `review-game-board.html`'s bank or vocabulary from
   `vocab-flashcard-generator.html` so building a room for Friday doesn't mean
@@ -103,7 +114,7 @@ classroom device) over deepening student-device use.
 - **P6 (print quality)** — station cards get handled, taped, and re-scanned;
   error correction and print size are functional decisions here.
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10 (PR #55)
 
 Implemented three of the Major Features in one pass, all inside
 `escape-room-builder.html`, `escape-room-builder/lock.html`, and

@@ -9,8 +9,10 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+Reviewed — structural read of the source, followed by a Round 4 implementation
+pass (see the Round 4 update below) that shipped Prompt Sets, rubric pairing,
+and the Anonymous Response Display. Ideas below that remain unmarked are
+deliberately ambitious and are **not** scoped to a single session.
 
 ## What it does today
 
@@ -26,6 +28,14 @@ ambitious and are **not** scoped to a single session.
   loaded `np_rosters` roster and print the sheet. This is the tool's most
   distinctive feature and the README doesn't mention it.
 - Prompt history with no-repeat logic (`recentTexts`, `uniqueByText`)
+- **Prompt Sets** — Random Draw / Planned Sequence modes, a set advanced by
+  date with a manual Prev/Next/Jump override (`wpg-store.js`: `loadSets`/
+  `saveSets`)
+- **Rubric pairing** with Rubric Builder — a read-only bridge
+  (`wpg-rubric-link.js`) to attach an existing rubric to a prompt or Prompt
+  Set item and open it in Rubric Builder
+- **Anonymous Response Display** — up to six pasted student responses shown
+  full-screen, one-at-a-time or side-by-side, never persisted to storage
 - Loads `_shared/a11y.js`
 
 ## Quick Wins
@@ -40,22 +50,26 @@ ambitious and are **not** scoped to a single session.
 - **Tag prompts by purpose** (quick write, journal, on-demand assessment,
   creative) as well as genre.
 - **Import a prompt list** from a paste (P13) instead of one at a time.
-- **Prompt of the day, by date** — a stable sequence rather than a shuffle, so
-  a class that writes daily doesn't get randomness where it wants routine.
+- **Done — subsumed.** **Prompt of the day, by date** — a stable sequence
+  rather than a shuffle, so a class that writes daily doesn't get randomness
+  where it wants routine. *(Built as the Planned Sequence mode of Prompt Sets
+  below, rather than as its own feature — see the Round 4 update.)*
 
 ## Major Features
 
-- **Prompt sets as units.** A two-week narrative sequence, or a set of
+- **Done —** **Prompt sets as units.** A two-week narrative sequence, or a set of
   argumentative prompts escalating in complexity, planned in advance and
-  advanced by date — rather than a random draw each morning.
-- **Rubric pairing** (P7). A prompt without criteria is half an assignment;
+  advanced by date — rather than a random draw each morning. *(Random Draw /
+  Planned Sequence modes, see the Round 4 update.)*
+- **Done —** **Rubric pairing** (P7). A prompt without criteria is half an assignment;
   linking a prompt to a rubric from `rubric-builder.html` and printing them
-  together would close the loop.
-- **Anonymous sharing on the projector.** A large, well-typeset display the
+  together would close the loop. *(A read-only `wpg-rubric-link.js` bridge —
+  see the Round 4 update.)*
+- **Done —** **Anonymous sharing on the projector.** A large, well-typeset display the
   teacher types or pastes two or three student responses into — without
   names — for a whole-class revision discussion. The highest-value five
   minutes in a writing classroom, and currently done by squinting at a
-  document camera.
+  document camera. *(Anonymous Response Display, see the Round 4 update.)*
 - **Convergence with the other prompt-bank tools** (P7).
   `exit-ticket-generator.html` and `number-talks-board.html` have the same
   bank/display/handout architecture. Three implementations exist.
@@ -89,8 +103,9 @@ work, and don't promote one without Devon saying so.
 
 ## Platform themes that matter here
 
-- **P7 (cross-tool)** — one of three prompt-bank tools; wants the timer, the
-  rubric engine, and the source tools.
+- **P7 (cross-tool)** — one of three prompt-bank tools; wants the timer and
+  the source tools still. **Rubric pairing addressed 2026-08-10** via the
+  read-only `wpg-rubric-link.js` bridge.
 - **P2 (shared roster)** — already reads `np_rosters` for the assignment
   sheet, which is the pattern other tools should copy.
 - **P9 (device pairing)** — teacher-side only: a phone remote for the
@@ -104,7 +119,7 @@ work, and don't promote one without Devon saying so.
 - ~~Is collecting student writing in scope?~~ **Answered: no**, here and in
   the exit ticket tool alike. Students aren't intended users of this site.
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10
 
 Implemented three of the Major Features in one pass, plus the small
 "Prompt of the day, by date" quick win that the first one subsumes.

@@ -35,16 +35,22 @@ tools table. Worth fixing whenever someone touches the README.
 
 - **Label under each code**, in the single view and in the bulk grid, so a
   printed sheet of thirty codes is identifiable without scanning.
-- **Cut lines and margins** in the bulk grid, so a printed sheet can actually
-  be cut apart.
-- **More templates**: calendar event (vEvent), SMS, geo location, and a
+- **Done —** **Cut lines and margins** in the bulk grid, so a printed sheet can actually
+  be cut apart. *(Cut lines via a checkbox on the custom grid; exact margins
+  via the new Avery preset dimensions — see the Round 4 update below.)*
+- **Done —** **More templates**: calendar event (vEvent), SMS, geo location, and a
   plain "Wi-Fi for guests" card layout that prints the network name and
   password beside the code — which is what school open-house nights need.
-- **Verify the whole bulk grid**, not just a single code.
-- **Short display text under the code** for people whose camera doesn't work.
-- **Sizing guidance.** "At this size this code is scannable from about 3
+  *(SMS/geo/calendar shipped as three new templates; the Wi-Fi guest card
+  need is covered by the new caption field instead of a dedicated layout —
+  see the Round 4 update below.)*
+- **Done —** **Verify the whole bulk grid**, not just a single code.
+- **Done —** **Short display text under the code** for people whose camera doesn't work.
+- **Partly done.** **Sizing guidance.** "At this size this code is scannable from about 3
   feet" — a printed classroom code is useless if it's too small, and the
-  arithmetic is simple.
+  arithmetic is simple. *(Shipped for the new Avery label presets only,
+  where the physical size is actually known; not attempted for single-code
+  mode — see the Round 4 update below.)*
 - **Confirm before clearing recents** (P11).
 
 ## Major Features
@@ -62,8 +68,10 @@ tools table. Worth fixing whenever someone touches the README.
 - **Batch codes from a roster or a spreadsheet** (P2/P13) — one code per
   student, labelled with their name, printed as a grid. That's the pattern
   Gallery Walk and Scavenger Hunt each reimplement.
-- **Sheet layouts for standard label stock** (Avery-style), so codes can be
+- **Done —** **Sheet layouts for standard label stock** (Avery-style), so codes can be
   printed onto stickers for lab equipment, library books, or classroom bins.
+  *(Two real presets, Avery 5160/8160 and 5163/8163 — see the Round 4 update
+  below.)*
 - **Scanner mode as a first-class feature.** `jsqr.js` is already vendored;
   a "scan a code and act on it" mode would let this tool serve the check-in
   and collection-tracking flows other tools need (P7).
@@ -97,7 +105,7 @@ end for check-in and collection workflows.
 - Is a scanner/check-in mode this tool's job, or should it be a separate
   "Scan & Check In" tool that several workflows call?
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10
 
 Implemented four of the Major Features from this file in one pass, all inside
 `Tools/qr-code-generator.html` (no support-folder or library changes needed):

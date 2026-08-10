@@ -9,8 +9,11 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+shipped the strategy-organized number string library, fullscreen/dark
+projector mode, and dot images. Ideas below are deliberately ambitious and
+are **not** scoped to a single session; items confirmed shipped are tagged
+**Done** below.
 
 ## What it does today
 
@@ -31,8 +34,10 @@ ambitious and are **not** scoped to a single session.
 - **Attribute strategies to students.** "Maya's way" is how number talks
   actually work, and a name field on a strategy card (optionally pulled from
   `np_rosters`, P2) would make the board match the classroom practice.
-- **Bigger projector rendering and fullscreen** (P1). This is a projector tool
-  without a projector mode.
+- **Done — Round 4.** **Bigger projector rendering and fullscreen** (P1). This is a projector tool
+  without a projector mode. *(Shipped as `#stageArea`-scoped
+  `requestFullscreen()` with a near-black background and blown-up type; see
+  the deliberate single-vs-dual-screen tradeoff in the Round 4 update below.)*
 - **Draw on a strategy card.** Number talk strategies are frequently
   visual — a number line, an array, a decomposition tree. A minimal drawing
   surface would capture what typing can't.
@@ -45,20 +50,23 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **A real number string library.** Number talks work because the strings are
+- **Done — Round 4.** **A real number string library.** Number talks work because the strings are
   deliberately sequenced (each problem sets up the next). A shipped library
   organized by strategy — making tens, doubling and halving, compensation,
   partial products, fraction equivalence — with the pedagogical intent stated
   for each, would be more valuable than any UI change. This is content work,
   not code work, and it's what separates a good number talk from a random set
-  of problems.
-- **Generate strings from a strategy.** Given "compensation" and a grade band,
+  of problems. *(~55 hand-written entries across 9 strategy categories, each
+  with a "why this string" teaching note.)*
+- **Skipped — deferred, Round 4.** **Generate strings from a strategy.** Given "compensation" and a grade band,
   produce a fresh, correctly-sequenced string. The expression parser already
-  proves the tool can reason about arithmetic.
-- **Dot images / visual number talks.** Quick-image routines (dot cards, ten
+  proves the tool can reason about arithmetic. *(Judged genuinely next-round
+  scope — risky to get pedagogically right without more thought.)*
+- **Done — Round 4.** **Dot images / visual number talks.** Quick-image routines (dot cards, ten
   frames, arrays) shown briefly then hidden — a different and equally common
   form of the routine, and one that needs generated images rather than
-  expressions.
+  expressions. *(Shipped as a "Quick Images (Dot Talk)" mode with ten-frame,
+  dice/domino, scattered, and two-part-decomposition layouts.)*
 - **Strategy library that persists across the year.** The class's own named
   strategies accumulate into a wall reference — printable as posters, which is
   exactly what a number-talks classroom has on its walls.
@@ -79,8 +87,9 @@ well but doesn't have a math coach.
 
 ## Platform themes that matter here
 
-- **P1 (projector mode)** — this is a projector-first tool with no fullscreen
-  or dark mode.
+- **P1 (projector mode)** — **addressed 2026-08-10 (Round 4, PR #55)**:
+  `#stageArea` fullscreen/dark mode shipped, with a noted single-vs-dual-screen
+  tradeoff (only the stage subtree renders while fullscreened).
 - **P7 (cross-tool)** — shares an architecture with two other prompt-bank
   tools and needs the timer.
 - **P2 (shared roster)** — strategy attribution.
@@ -93,7 +102,7 @@ well but doesn't have a math coach.
 - Should the expression parser be extracted to `_shared/` — the graph paper
   and math drill tools could both use it?
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10 (PR #55)
 
 Implemented three of the Major Features in one round, no code comments added
 beyond one non-obvious constraint note (the fullscreen/element-boundary

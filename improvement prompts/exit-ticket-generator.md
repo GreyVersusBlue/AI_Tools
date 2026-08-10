@@ -9,8 +9,11 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+shipped fullscreen/projector mode, the paper-triage grid, and the anonymous
+discussion board. Ideas below are deliberately ambitious and are **not**
+scoped to a single session; items confirmed shipped are tagged **Done**
+below.
 
 ## What it does today
 
@@ -27,41 +30,49 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Name and date lines on the slips.** An exit ticket you can't attribute is
+- **Skipped — deferred, Round 4.** **Name and date lines on the slips.** An exit ticket you can't attribute is
   an exit ticket you can't use; this should be on by default with a toggle.
+  *(The new Paper Triage tab reads `np_rosters` for its own picker; the
+  handout tab itself is untouched.)*
 - **A response box sized for the prompt**, and lined vs blank as a choice.
-- **Print a whole class set** with names pre-printed from `np_rosters` (P2) —
+- **Skipped — deferred, Round 4.** **Print a whole class set** with names pre-printed from `np_rosters` (P2) —
   the same batch pattern Certificate Maker and Permission Slip already have.
-- **Tag prompts by subject and by purpose** (recall, reflection, prediction,
+  *(Natural next pairing with the Round 4 roster helpers, not built yet.)*
+- **Skipped — deferred, Round 4.** **Tag prompts by subject and by purpose** (recall, reflection, prediction,
   self-assessment) so the bank is browsable rather than only shuffleable.
-- **Pin / favourite prompts** and a "don't show me this one again" control.
-- **Import a prompt list** from a paste (P13) instead of adding one at a time.
-- **Bigger projector type and fullscreen** (P1) — this is a display tool
-  without a proper display mode.
+- **Skipped — deferred, Round 4.** **Pin / favourite prompts** and a "don't show me this one again" control.
+- **Skipped — deferred, Round 4.** **Import a prompt list** from a paste (P13) instead of adding one at a time.
+- **Done — Round 4.** **Bigger projector type and fullscreen** (P1) — this is a display tool
+  without a proper display mode. *(Shipped as a Fullscreen button on the
+  `.stage` element, matching the same pattern already used by
+  `writing-prompt-generator.html` and `pe-tournament-stations.html`.)*
 
 ## Major Features
 
-- **Paper triage that's actually fast.** The teacher reads the paper slips
+- **Done — Round 4.** **Paper triage that's actually fast.** The teacher reads the paper slips
   and taps each student got-it / almost / reteach on a class grid, then
   prints the reteach list for tomorrow and the small-group split. The
   reading is unavoidable; the sorting, counting, and list-making are what
-  currently eat the prep period.
-- **A projected discussion board the teacher types into.** Transcribe two or
+  currently eat the prep period. *(Shipped as the "Paper Triage" tab — see
+  the Round 4 update below for the small-groups pooling decision.)*
+- **Done — Round 4.** **A projected discussion board the teacher types into.** Transcribe two or
   three anonymous responses onto the projector for a whole-class
   conversation — the "show me the class's thinking" move — driven entirely
-  from the teacher's machine.
-- **Tally by response category**, not just a raw count, so the existing Quick
+  from the teacher's machine. *(Shipped as the "Discussion Board" tab.)*
+- **Skipped — deferred, Round 4.** **Tally by response category**, not just a raw count, so the existing Quick
   Tally can capture "12 got it, 9 partial, 7 confused" and chart it over time.
-- **Bell-ringer sequences.** A prompt per day for a week or a unit, planned in
+- **Skipped — deferred, Round 4.** **Bell-ringer sequences.** A prompt per day for a week or a unit, planned in
   advance and advanced automatically by date, rather than shuffled each
   morning.
-- **Standards / objective tagging** so the prompt bank can be filtered by what
+- **Skipped — deferred, Round 4.** **Standards / objective tagging** so the prompt bank can be filtered by what
   you're actually teaching that day.
-- **Number Talks and Writing Prompt convergence** (P7). This tool, 
+- **Skipped — deferred, Round 4.** **Number Talks and Writing Prompt convergence** (P7). This tool, 
   `number-talks-board.html`, and `writing-prompt-generator.html` are three
   implementations of "bank of prompts + projector display + printable
   handout". They should share the bank format and the display engine even if
-  they stay separate front doors.
+  they stay separate front doors. *(Confirmed duplication by inspection —
+  see the Round 4 update's cross-tool note — but not touched; `_shared/` was
+  out of scope this round.)*
 
 ## Moonshot / North Star
 
@@ -94,7 +105,8 @@ work, and don't promote one without Devon saying so.
 - **P2 (shared roster)** — named class sets and per-student triage.
 - **P7 (cross-tool)** — the prompt-bank/display/handout trio it shares with
   Number Talks and Writing Prompt Generator.
-- **P1 (projector mode)** — a display tool with no fullscreen.
+- **P1 (projector mode)** — **addressed 2026-08-10 (Round 4, PR #55)**: a
+  Fullscreen button now enlarges the `.stage` element for the prompt display.
 
 ## Open Questions
 
@@ -104,7 +116,7 @@ work, and don't promote one without Devon saying so.
 - Should the three prompt-bank tools merge into one with modes, or stay
   separate and share a library?
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10 (PR #55)
 
 Implemented three of the Major Features / Quick Wins in one round, all in
 `Tools/exit-ticket-generator.html` (no other files touched besides this one

@@ -24,20 +24,25 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Load a roster** (P2). This tool doesn't read `np_rosters`, so a class
+- **Done —** **Load a roster** (P2). This tool doesn't read `np_rosters`, so a class
   tournament means retyping the class list — the exact tax the toolkit exists
-  to remove.
+  to remove. *(Shipped Round 4 as a "Load a saved Name Picker roster…"
+  dropdown, read-only over `np_rosters`.)*
 - **Seeding options**: random, as-entered, or ranked — and a "protect the top
   seeds" bracket placement rather than pure order.
-- **Round-robin and pool play.** Elimination brackets send half the class home
+- **Done — round robin only.** **Round-robin and pool play.** Elimination brackets send half the class home
   after one round, which is pedagogically the wrong shape for a classroom
   review game or a PE unit. Round-robin, pools-into-a-bracket, and a ladder
-  are the formats teachers actually want.
+  are the formats teachers actually want. *(Shipped Round 4 as a third
+  bracket type using the circle-method scheduling algorithm; pools-into-a-
+  bracket and a ladder are still open — see Round 4 update below.)*
 - **Score entry, not just a winner tap.** "21–18" makes the printed bracket a
   record rather than a diagram.
 - **Undo the last advance** (P11) — a mis-tap currently propagates.
-- **Bigger projector rendering** with the current match highlighted, so the
-  bracket can live on the board during the activity.
+- **Done —** **Bigger projector rendering** with the current match highlighted, so the
+  bracket can live on the board during the activity. *(Shipped Round 4 as
+  "Presentation mode" — a same-screen enlarge with a "Now Playing" banner,
+  not a second-display broadcast; see Round 4 update below.)*
 - **Team names with members**, so a bracket of six four-person teams prints a
   roster alongside.
 
@@ -46,10 +51,12 @@ ambitious and are **not** scoped to a single session.
 - **Consolation / everybody-plays formats.** A "loser's side that keeps
   playing", a Swiss format, or guaranteed-three-games pool play. This is the
   difference between a tool used once a year and a tool used every unit.
-- **Match scheduling with stations and time.** Which match is on which court
+- **Done — single elimination and round robin only.** **Match scheduling with stations and time.** Which match is on which court
   or table, in which round, at what time — which is precisely what
   `pe-tournament-stations.html` does for rotations. These two tools overlap
-  heavily and should probably share an engine (P7).
+  heavily and should probably share an engine (P7). *(Shipped Round 4 for
+  single elimination and round robin; deliberately not built for double
+  elimination — see Round 4 update below.)*
 - **Academic tournament mode.** Bracketed review — pairs of students compete
   on questions drawn from `review-game-board.html`'s question bank, with the
   bracket advancing on answers rather than clicks.
@@ -103,7 +110,7 @@ work, and don't promote one without Devon saying so.
 - What is the largest realistic bracket — a class of 30, or a whole-grade
   event of 150? The answer changes the print layout work substantially.
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10
 
 Implemented four of the items above in one pass: **Load a roster** (Quick
 Wins), **round robin / everybody-plays** and **match scheduling with
