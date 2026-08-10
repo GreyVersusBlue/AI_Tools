@@ -55,7 +55,21 @@ The platform spine: the tools that own shared data or compose it.
 | Backup & Restore | `backup-restore.md` |
 | Command Center | `command-center-dashboard.md` |
 
-**10 of 46 tools done. 36 to go.**
+### Round 3 — 2026-08-10 — PR #TBD
+
+Print-heavy and cross-cutting: a document assembler, a paper generator, two
+tools that gained a shared-roster/print upgrade, and a timeline that got a
+category legend + fill-in worksheet mode.
+
+| Tool | File |
+|---|---|
+| Image → PDF Assembler | `image-to-pdf.md` |
+| Graph Paper & Number Line Generator | `graph-paper-generator.md` |
+| Lab Safety Contract Tracker | `lab-safety-contract-tracker.md` |
+| Immersion Roleplay Scenario Generator | `roleplay-scenario-generator.md` |
+| Timeline Builder | `timeline-builder.md` |
+
+**15 of 46 tools done. 31 to go.**
 
 ---
 
@@ -77,10 +91,7 @@ data-heavy), and say why in the PR.
 - Formula Reference Sheet Builder — `formula-sheet-builder.md`
 - Gallery Walk QR Codes — `gallery-walk-qr.md`
 - Grade Distribution Visualizer — `grade-distribution-visualizer.md`
-- Graph Paper & Number Line Generator — `graph-paper-generator.md`
-- Image → PDF Assembler — `image-to-pdf.md`
 - Lab Group & Role Randomizer — `lab-group-role-randomizer.md`
-- Lab Safety Contract Tracker — `lab-safety-contract-tracker.md`
 - Math Fact Drill Sheet Generator — `math-drill-generator.md`
 - Novel Study / Reading Circles Manager — `novel-study-circles-manager.md`
 - Number Talks / Mental Math Routine Board — `number-talks-board.md`
@@ -90,14 +101,12 @@ data-heavy), and say why in the PR.
 - QR Code Generator — `qr-code-generator.md`
 - QR Scavenger Hunt Builder — `qr-scavenger-hunt-builder.md`
 - Quiz / Review Game Board — `review-game-board.md`
-- Immersion Roleplay Scenario Generator — `roleplay-scenario-generator.md`
 - East Middle Schedule Browser — `schedule-browser.md`
 - School Layout Visualizer — `schedule-visualizer.md`
 - School Calendar Visualizer — `school-calendar-visualizer.md`
 - Silent Reading (SSR) Log Tracker — `ssr-log-tracker.md`
 - Sub Binder / Day Bundle Generator — `sub-binder-generator.md`
 - Sub Plan Builder — `sub-plan-builder.md`
-- Timeline Builder — `timeline-builder.md`
 - Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
 - Vocabulary Flashcard & Word Wall Generator — `vocab-flashcard-generator.md`
 - Writing Prompt Generator — `writing-prompt-generator.md`
@@ -116,10 +125,11 @@ lands naturally inside a tool you are already working on, take it.
   benefit; the Behavior & Points Tracker is where it would save the most data.
 - **P1 projector mode.** Command Center has one now as a display state rather
   than a separate page. Any tool that gets projected could copy the approach.
-- **P5 CDN dependencies.** `Sub Plan Builder.html`, `docx-merger.html` and
-  `image-to-pdf.html` still load libraries from cdnjs — all three are on the
-  untouched list, so this gets fixed as a side effect if whoever takes them
-  remembers.
+- **P5 CDN dependencies.** `Sub Plan Builder.html` and `docx-merger.html`
+  still load JSZip from cdnjs — both are on the untouched list, so this gets
+  fixed as a side effect if whoever takes them remembers.
+  `image-to-pdf.html` had the same issue with jsPDF and was fixed in Round 3
+  (vendored into `Tools/image-to-pdf/lib/`).
 - **P8 backup compatibility.** `Tools/backup-restore.html` keeps two lists
   that go stale silently: `KNOWN_GROUPS` (friendly names in the scan table)
   and `STUDENT_KEYS` (what the year-end clear is allowed to erase). **A tool

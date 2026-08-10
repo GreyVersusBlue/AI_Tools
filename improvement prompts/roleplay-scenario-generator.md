@@ -12,6 +12,73 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Round 3 (2026-08-10) — shipped
+
+- **Roster-backed role assignment (P2).** A new "Roster for this class" row
+  loads a saved roster from `np_rosters` (same read-only pattern as the lab
+  safety tracker) per roleplay class/session, stored in a new
+  `rosterByClass` object (`gvb-roleplay:roster`) parallel to the existing
+  `fillsByClass`. "Randomly pair up the class" then Fisher-Yates shuffles
+  the whole roster into partner pairs (an odd student out joins the last
+  pair as a labeled helper/observer rather than being dropped), randomly
+  assigning Role A/B per pair, and displays the pairing in a new "Class
+  pairing" box on the stage.
+- **Print role cards, one per student.** "Print role cards (one per
+  student)" uses that pairing to print one page per student: their own name
+  and role prominently, their partner named (but not the partner's private
+  role details), plus the shared vocabulary scaffolding and useful-phrases
+  grid both partners need. Falls back to an alert asking the teacher to load
+  a roster and pair up first if no pairing exists yet.
+- **Useful-phrases box.** A fixed set of six generic conversational tools
+  ("Could you repeat that?", "I don't understand", "How do you say ___?",
+  etc.) with the same language-agnostic fill-in-the-target-language
+  mechanic as the per-scenario vocabulary cards, saved once per class
+  (`usefulFillsByClass` / `gvb-roleplay:usefulFills`) rather than per
+  scenario, and shown on the stage and included in every printed handout
+  and role card.
+- Rename/Delete class now also move or clear the roster, useful-phrases,
+  and in-memory pairing for that class, matching how they already handled
+  `fillsByClass` — a rename or delete that left roster data behind under
+  the old class name would have been a quiet data leak between classes.
+
+Verified end-to-end in a headless Chromium run: seeded a 5-student roster,
+loaded it, paired the class (2 pairs + 1 helper, matching the odd-count
+handling), confirmed the useful-phrases box renders and its fill-ins persist
+into print output, and confirmed "Print role cards" produces exactly 5 cards
+(one per student, including the helper card) with the filled useful phrase
+present.
+
+### Challenges
+
+- Deciding what a printed role card should and shouldn't show: showing the
+  partner's specific role text felt like it undercuts "each participant
+  mainly sees their own side," so the card names the partner but not the
+  partner's role. Worth revisiting with actual classroom feedback — some
+  teachers may want the full picture on one card for younger or lower-level
+  classes.
+- Class-wide pairing is intentionally in-memory only (`classPairs`, not
+  persisted), matching the existing precedent set by `roleFlips` in the same
+  file — both reset on reload. This means reloading mid-class loses the
+  pairing (roster and fill-ins survive; the pairing doesn't). Flagged rather
+  than fixed, since persisting it raises the same "is this still valid
+  today" staleness question the file's other per-scenario state already
+  sidesteps by not persisting.
+
+### Where the next round should pick up
+
+- **Sentence-frame layer**, **difficulty variants**, and **success-criteria
+  strip** (Quick Wins) are still open and are independent of everything
+  shipped this round.
+- **Audio via `speechSynthesis`** (Major Feature, code already exists one
+  file away in `vocab-conjugation-drill.html`) is the highest-value Major
+  Feature left unbuilt.
+- The **shared per-language vocabulary store** Open Question is now more
+  pressing: this round added a *second* class-scoped fill-in store (useful
+  phrases) parallel to the scenario-specific one, which strengthens the case
+  for unifying vocabulary storage across this tool,
+  `vocab-conjugation-drill.html`, and `vocab-flashcard-generator.html` rather
+  than letting each tool keep growing its own.
+
 ## What it does today
 
 - Scenario bank browsable by **category** and **level**, with prev/next and

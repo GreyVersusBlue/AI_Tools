@@ -13,6 +13,60 @@ Reviewed — structural read of the source. This tool is considerably more
 capable than its one-line README description. Ideas below are deliberately
 ambitious and **not** scoped to a single session.
 
+### Round 3 (2026-08-10) — shipped
+
+- **Vendored jsPDF (P5).** Copied `Tools/schedule/libs/jspdf/jspdf.umd.min.js`
+  (2.5.1, same hash) into `Tools/image-to-pdf/lib/jspdf.umd.min.js` and
+  pointed the `<script>` tag at it instead of cdnjs. Added the file to
+  `sw.js`'s precache list so offline-first load now works. `docx-merger.html`
+  and `Sub Plan Builder.html` still load JSZip from cdnjs — untouched, still
+  open per P5.
+- **Page numbers, running header, and a title page.** New "3 · Header, Title
+  Page & Page Numbers" card: an optional title page (title, subtitle, dated
+  automatically) as PDF page 1, an optional running header printed at the top
+  of every content page, and an optional "Page N of M" footer where N/M count
+  only the content pages (the title page itself is unnumbered, the
+  conventional behavior). Implemented as a post-process pass over
+  `pdf.internal.getNumberOfPages()` after the main image loop, since the
+  total page count isn't known until generation finishes.
+- **Per-image captions.** Each row in the file queue now has a caption text
+  input; the caption prints centered under the image on the one-per-page
+  path, and under each cell (max 2 lines) on the contact-sheet path. Page/cell
+  image-fit math was reworked to reserve space for header/footer/caption
+  bands so nothing overlaps — verified visually via a headless Playwright
+  screenshot of the actual jsPDF output for both one-per-page and 4-per-page
+  grid modes (title page → header/caption/footer page → contact sheet with
+  mixed captioned/uncaptioned cells).
+
+### Challenges
+
+- The existing `placedCount` variable was scoped to grid mode only
+  ("successfully-embedded images only; skipped ones don't consume a grid
+  cell"); reusing it as a universal "did anything actually get embedded?"
+  check for the new failure path required also incrementing it on the
+  one-per-page branch, which the original code never did. Caught by an actual
+  headless run, not by reading the diff — the one-per-page path silently hit
+  the new failure message about a third of the way through testing. Worth
+  flagging for future rounds: this file has no automated smoke test the way
+  `Tools/schedule` does, so a canvas/jsPDF change here is easy to break
+  without noticing.
+- Grid-mode captions are reserved per-cell globally (if *any* image in the
+  batch has a caption, every cell reserves the caption band, whether or not
+  that particular image has one) rather than per-image, to keep the grid
+  visually even. An uncaptioned image next to a captioned one gets a little
+  extra white space at the bottom of its cell instead of a ragged grid.
+
+### Where the next round should pick up
+
+- No automated test harness exists for this tool (contrast with
+  `Tools/schedule/test/smoke.mjs`); a small Playwright script that generates
+  a PDF and asserts page count / absence of console errors would catch the
+  kind of regression described above without a human eyeballing a screenshot.
+- Crop/straighten and document-scanner mode (Major Features) are still
+  unbuilt and are the highest-value remaining ideas.
+- Reorder-by-thumbnail-grid for large batches (list becomes unwieldy past
+  ~15-20 files) is still open.
+
 ## What it does today
 
 - Add many images (drag-drop), reorder, rotate, remove, clear; sort modes

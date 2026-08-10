@@ -12,6 +12,70 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Round 3 (2026-08-10) — shipped
+
+- **Colour-code by category, with a legend.** Events get an optional free-text
+  "Category" field (with a `<datalist>` of already-used categories for
+  autocomplete). `tlb-layout.js` gained `collectCategories()` and
+  `buildCategoryColorMap()` — the map assigns each distinct category a
+  color from a fixed 8-color palette **by first-seen order**, not by
+  hashing the string. A hash was tried first and rejected during testing: it
+  put "Cultural" and "Technological" on the identical color, which silently
+  defeats the entire point of a legend. The map is built once per render
+  from the exact event list being drawn (screen, print, and the compare
+  view all build their own, from their own combined event list) so the
+  legend and the markers it describes can never drift apart. Colors repeat
+  past 8 distinct categories in one timeline — flagged, not solved.
+- **Blank / student-fill print mode.** A "Print mode" select next to the
+  Print button: Full, "Blank titles" (dates stay, title replaced with a
+  fill-in line), or "Blank dates" (title stays, date replaced with a
+  fill-in line) — the standard fill-in-the-timeline worksheet, generated
+  from the same event data instead of a hand-built separate sheet. The
+  print-layout preview updates live when the mode changes.
+- Confirmed **century/decade gridlines** (`computeGridlines` /
+  `gridlineInterval` in `tlb-layout.js`) and **photo downscaling + storage
+  warning** (`tlb-photo.js`, `save()`'s `storageWarn` banner) were already
+  built — both were on the file's own Quick Wins list but shipped in an
+  earlier pass not recorded here. Read the actual source before picking
+  Quick Wins in a future round; the list undersells what's already done.
+
+Verified in a headless Chromium run (four events, three categorized, one
+not): legend shows exactly the three categories used, each a different
+color both in the legend swatches and on the on-screen markers; print
+preview in "blank titles" mode hides all four titles and keeps all four
+dates (and vice versa for "blank dates"); a caught color-collision bug was
+fixed and reverified before calling this done.
+
+### Challenges
+
+- The category-color collision above is the one worth remembering: a string
+  hash into a small fixed palette *looks* fine with two or three
+  categories in ad-hoc manual testing and only breaks with the "wrong"
+  pair of words, which is exactly the kind of bug that survives a quick
+  visual check and ships. Caught here only because the test script asserted
+  on legend text with three specific category names rather than eyeballing
+  a screenshot once.
+- Deciding where the color map gets built was the actual design question —
+  building it independently in three places (screen canvas, print, compare)
+  from three different event lists would reintroduce the same
+  drift-between-legend-and-markers risk in a different form. Solved by
+  making `buildCategoryColorMap` a pure function of "the exact event list
+  about to be drawn" and calling it fresh at the top of each render path.
+
+### Where the next round should pick up
+
+- **Logarithmic/compressed scale** for a timeline spanning millennia into
+  the present (Quick Win) is still open and is probably the single most
+  requested remaining capability — right now a 3000 BCE–2000 CE timeline
+  still puts all of recorded history in a few pixels.
+- **Wall-timeline tiled printing** (Quick Win, P7) — `blank-map-generator.html`
+  already has `printTiledPages` to reuse — is still open.
+- **Map handoff** (Major Feature, P7 — timeline along the bottom, map above,
+  events pinned to both) is still the most distinctive unbuilt idea in the
+  file.
+- More than 8 categories in one timeline needs a real answer (patterns or a
+  documented cap), not just silent color reuse.
+
 ## What it does today
 
 - Events with exact years, **BCE support**, and ranges/eras; optional photo
