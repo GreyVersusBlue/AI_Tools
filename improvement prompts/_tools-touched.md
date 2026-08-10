@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Group / Team Generator | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
+| Rubric Builder | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
+| Class Roster Hub | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
+| Backup & Restore | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
+| Command Center | `yjj7k6` | 2026-08-10 22:49 UTC | `claude/tools-001-010-improvements-yjj7k6` |
 
 ---
 
