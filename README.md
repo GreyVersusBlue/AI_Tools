@@ -57,6 +57,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Prompt Builder | `Tools/prompt-builder.html` | Answer a guided form about what you're building — audience, tone, format, guardrails — and get a ready-to-use prompt for whatever AI assistant you use, with task presets, prompt history, and a shareable link. |
 | QR Code Generator | `Tools/qr-code-generator.html` | Turn a link or short text into a printable QR code, with an optional logo in the center. |
 | Parent/Guardian Contact Log | `Tools/parent-contact-log.html` | Log a call, email, or note home per student — date, method, and outcome — with a per-student contact count and a printable history, for quick reference before a conference or a difficult phone call. |
+| Staff Directory / Quick-Reference Builder | `Tools/staff-directory-builder.html` | Add staff one at a time or paste a whole list from a spreadsheet, sort and search, print a clean one-page directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |
 
 ## Using these
 

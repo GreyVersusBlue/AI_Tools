@@ -12,7 +12,6 @@ Reminder: coming soon means not right now.
 |---|---|
 | Duty Roster Builder | Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board. |
 | Sub Note / Feedback Slip Generator | A short printable slip a substitute fills out by hand before leaving for the day — what worked, what didn't, and any names to know for tomorrow. |
-| Staff Directory / Quick-Reference Builder | Build a printable staff directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |
 | Testing Accommodations Reference Card Generator | Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight — stays entirely local, like the Final Grade Checker. |
 
 ## Math
