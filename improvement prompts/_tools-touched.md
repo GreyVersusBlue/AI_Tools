@@ -71,6 +71,112 @@ stall or get interrupted, this isn't an accusation).
 
 ---
 
+## Tool ID registry
+
+Every tool in the toolkit gets a permanent internal ID, assigned once and
+never reused or renumbered — regardless of which list a tool sits in below,
+or how many times it moves between "Not yet touched," "Currently claimed,"
+and "Already done" across future passes. This ID is for internal tracking
+only (round notes, cross-references, future tooling); it is not a public
+tool number and has no bearing on display order anywhere on the site.
+
+IDs were assigned in the order each tool first appears in this file's own
+history: the 46 tools from Pass 1 (Rounds 1–10), in the order their round
+tables list them, followed by the 35 tools added at the Pass 2 reset, in the
+order they're listed in that reset note. Tools were **not** regrouped by
+category or renumbered — this is simply the order they already showed up
+in.
+
+When a new tool joins the toolkit, give it the next unused ID by appending a
+row to the bottom of this table. Never renumber or reuse an existing row,
+even if a tool is later retired.
+
+| ID | Tool | File |
+|---|---|---|
+| 001 | Digital Hall Pass / Sign-Out Log | `hall-pass-log.md` |
+| 002 | Group / Team Generator | `group-team-generator.md` |
+| 003 | Rubric Builder | `rubric-builder.md` |
+| 004 | Classroom Timer | `classroom-timer.md` |
+| 005 | Seating Chart Generator | `seating-chart-generator.md` |
+| 006 | Class Roster Hub | `class-roster-hub.md` |
+| 007 | Name Picker | `name-picker.md` |
+| 008 | Behavior & Points Tracker | `behavior-points-tracker.md` |
+| 009 | Backup & Restore | `backup-restore.md` |
+| 010 | Command Center | `command-center-dashboard.md` |
+| 011 | Image → PDF Assembler | `image-to-pdf.md` |
+| 012 | Graph Paper & Number Line Generator | `graph-paper-generator.md` |
+| 013 | Lab Safety Contract Tracker | `lab-safety-contract-tracker.md` |
+| 014 | Immersion Roleplay Scenario Generator | `roleplay-scenario-generator.md` |
+| 015 | Timeline Builder | `timeline-builder.md` |
+| 016 | QR Code Generator | `qr-code-generator.md` |
+| 017 | Gallery Walk QR Codes | `gallery-walk-qr.md` |
+| 018 | QR Scavenger Hunt Builder | `qr-scavenger-hunt-builder.md` |
+| 019 | Digital Escape Room / Puzzle Lock Builder | `escape-room-builder.md` |
+| 020 | Bracket / Tournament Generator | `bracket-tournament-generator.md` |
+| 021 | Tournament Bracket & Station Rotation (PE) | `pe-tournament-stations.md` |
+| 022 | Lab Group & Role Randomizer | `lab-group-role-randomizer.md` |
+| 023 | Exit Ticket / Bell Ringer Generator | `exit-ticket-generator.md` |
+| 024 | Number Talks / Mental Math Routine Board | `number-talks-board.md` |
+| 025 | Writing Prompt Generator | `writing-prompt-generator.md` |
+| 026 | Math Fact Drill Sheet Generator | `math-drill-generator.md` |
+| 027 | Novel Study / Reading Circles Manager | `novel-study-circles-manager.md` |
+| 028 | Primary Source Analysis Worksheet Generator | `primary-source-analysis-generator.md` |
+| 029 | Prompt Builder | `prompt-builder.md` |
+| 030 | Quiz / Review Game Board | `review-game-board.md` |
+| 031 | Word Doc Merger | `docx-merger.md` |
+| 032 | School Calendar Visualizer | `school-calendar-visualizer.md` |
+| 033 | Silent Reading (SSR) Log Tracker | `ssr-log-tracker.md` |
+| 034 | East Middle Schedule Browser | `schedule-browser.md` |
+| 035 | School Layout Visualizer | `schedule-visualizer.md` |
+| 036 | Final Grade Checker | `final-grade-checker.md` |
+| 037 | Grade Distribution Visualizer | `grade-distribution-visualizer.md` |
+| 038 | Data Table → Chart Builder | `data-chart-builder.md` |
+| 039 | Vocab & Conjugation Drill Generator | `vocab-conjugation-drill.md` |
+| 040 | Vocabulary Flashcard & Word Wall Generator | `vocab-flashcard-generator.md` |
+| 041 | Formula Reference Sheet Builder | `formula-sheet-builder.md` |
+| 042 | Certificate & Award Maker | `certificate-award-maker.md` |
+| 043 | Field Trip Permission Slip Generator | `field-trip-permission-slip.md` |
+| 044 | Sub Plan Builder | `sub-plan-builder.md` |
+| 045 | Sub Binder / Day Bundle Generator | `sub-binder-generator.md` |
+| 046 | Blank Map Generator | `blank-map-generator.md` |
+| 047 | Art Critique Worksheet Generator | `art-critique-worksheet-generator.md` |
+| 048 | Student Art Portfolio Label & QR Tag Maker | `art-portfolio-label-maker.md` |
+| 049 | Book Tasting Menu Generator | `book-tasting-menu-generator.md` |
+| 050 | Government/Civics Simulation Role Card Generator | `civics-role-card-generator.md` |
+| 051 | Classroom Label Maker, Target Language | `classroom-label-maker.md` |
+| 052 | Cognates & False Friends Reference List Builder | `cognates-false-friends-builder.md` |
+| 053 | Cultural Trivia Card Generator | `cultural-trivia-card-generator.md` |
+| 054 | Current Events Discussion Guide Generator | `current-events-discussion-guide-generator.md` |
+| 055 | Daily Editing / DOL Warm-Up Generator | `daily-editing-warmup-generator.md` |
+| 056 | DBQ / Source Packet Builder | `dbq-source-packet-builder.md` |
+| 057 | Dichotomous Key Builder | `dichotomous-key-builder.md` |
+| 058 | Duty Roster Builder | `duty-roster-builder.md` |
+| 059 | Scientific Method / Experiment Design Planner | `experiment-design-planner.md` |
+| 060 | Fitness & Skill Assessment Tracker | `fitness-skill-assessment-tracker.md` |
+| 061 | Fraction–Decimal–Percent Conversion Drill Generator | `fraction-decimal-percent-drill-generator.md` |
+| 062 | Geography Bee / Map Skills Quiz Generator | `geography-bee-quiz-generator.md` |
+| 063 | Grammar Mad Libs Generator | `grammar-mad-libs-generator.md` |
+| 064 | Historical Figure / Country Trading Card Maker | `historical-trading-card-maker.md` |
+| 065 | Lab Report Template Builder | `lab-report-template-builder.md` |
+| 066 | Math "Find the Mistake" Warm-Up Generator | `math-find-the-mistake-generator.md` |
+| 067 | Music Sight-Reading / Rhythm Warm-Up Generator | `music-sightreading-generator.md` |
+| 068 | Parent/Guardian Contact Log | `parent-contact-log.md` |
+| 069 | PE Warm-Up Circuit Card Generator | `pe-warmup-circuit-generator.md` |
+| 070 | Peer Feedback / Editing Checklist Generator | `peer-feedback-checklist-generator.md` |
+| 071 | Picture-Prompt Speaking/Writing Task Generator | `picture-prompt-generator.md` |
+| 072 | Story Elements / Plot Diagram Builder | `plot-diagram-builder.md` |
+| 073 | Science Fair Project Tracker | `science-fair-project-tracker.md` |
+| 074 | Science Safety Symbol & Equipment Label Maker | `science-safety-label-maker.md` |
+| 075 | Staff Directory / Quick-Reference Builder | `staff-directory-builder.md` |
+| 076 | Sub Note / Feedback Slip Generator | `sub-note-feedback-slip-generator.md` |
+| 077 | Testing Accommodations Reference Card Generator | `testing-accommodations-card-generator.md` |
+| 078 | Unit Conversion Reference Chart Builder | `unit-conversion-chart-builder.md` |
+| 079 | Verb Conjugation Reference Poster Generator | `verb-conjugation-poster-generator.md` |
+| 080 | Virtual Manipulatives Board | `virtual-manipulatives-board.md` |
+| 081 | Word Problem Warm-Up Generator | `word-problem-warmup-generator.md` |
+
+---
+
 ## Currently claimed (in progress)
 
 Nothing claimed right now. When you claim a tool per "Claiming a tool"
