@@ -56,6 +56,16 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Tournament Bracket & Station Rotation | `Tools/pe-tournament-stations.html` | A station rotation timer with named stations and groups, plus a tournament bracket for PE units. |
 | Prompt Builder | `Tools/prompt-builder.html` | Answer a guided form about what you're building — audience, tone, format, guardrails — and get a ready-to-use prompt for whatever AI assistant you use, with task presets, prompt history, and a shareable link. |
 | QR Code Generator | `Tools/qr-code-generator.html` | Turn a link or short text into a printable QR code, with an optional logo in the center. |
+| Parent/Guardian Contact Log | `Tools/parent-contact-log.html` | Log a call, email, or note home per student — date, method, and outcome — with a per-student contact count and a printable history, for quick reference before a conference or a difficult phone call. |
+| Staff Directory / Quick-Reference Builder | `Tools/staff-directory-builder.html` | Add staff one at a time or paste a whole list from a spreadsheet, sort and search, print a clean one-page directory (name, room, extension, subject) for the workroom wall or a new teacher's binder. |
+| Word Problem Warm-Up Generator | `Tools/word-problem-warmup-generator.html` | Randomized word problems by operation and grade band, projected one at a time with a reveal-answer button or printed as a worksheet with a matching answer key. |
+| Unit Conversion Reference Chart Builder | `Tools/unit-conversion-chart-builder.html` | Check off customary, metric, cross-system, temperature, and time unit sets, add custom lines, and print a one-page conversion reference chart. |
+| Daily Editing / DOL Warm-Up Generator | `Tools/daily-editing-warmup-generator.html` | A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank. |
+| Peer Feedback / Editing Checklist Generator | `Tools/peer-feedback-checklist-generator.html` | Build a custom peer-review checklist (grammar, structure, argument) from a template or from scratch, tied to a specific writing assignment, and print it as a half-sheet per student. |
+| Lab Report Template Builder | `Tools/lab-report-template-builder.html` | Build a reusable lab report template — hypothesis, materials, procedure, a configurable data table, and conclusion prompts — from a subject-flavored starter or from scratch, and print a fillable packet for each lab. |
+| Current Events Discussion Guide Generator | `Tools/current-events-discussion-guide-generator.html` | Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide. |
+| Verb Conjugation Reference Poster Generator | `Tools/verb-conjugation-poster-generator.html` | Spanish, French, or blank starter templates of verb-group conjugation panels with editable subject/person labels, printed as a large-font wall poster. |
+| Art Critique Worksheet Generator | `Tools/art-critique-worksheet-generator.html` | A four-step describe/analyze/interpret/judge critique worksheet with editable prompts and follow-up questions per step, printed as repeated half-sheets for a gallery walk or artwork critique. |
 
 ## Using these
 

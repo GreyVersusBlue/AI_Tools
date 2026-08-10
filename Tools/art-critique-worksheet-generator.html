@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art Critique Worksheet Generator</title>
+<meta name="description" content="A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/art-critique-worksheet-generator.html">
+<meta property="og:title" content="Art Critique Worksheet Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Art Critique Worksheet Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%231f3550'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="number"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 2.4rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+
+  .step-block { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; margin-bottom: .9rem; }
+  .step-block h3 { font-size: 1.05rem; margin: 0 0 .1rem; color: var(--accent); }
+  .step-block .step-num { display: inline-block; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; line-height: 1.4rem; font-size: .8rem; margin-right: .4rem; }
+  .sub-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
+  .sub-row input { margin-bottom: 0; }
+
+  #printArea { display: none; }
+  .half-sheet { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+  .half-sheet h2 { margin: 0 0 .1rem; font-size: 1.2rem; }
+  .half-sheet .names { font-size: .82rem; color: var(--muted); margin-bottom: .6rem; }
+  .half-sheet .hs-step { margin-bottom: .5rem; }
+  .half-sheet .hs-step h4 { margin: 0 0 .1rem; font-size: .9rem; color: var(--accent-2); }
+  .half-sheet .hs-step .prompt { font-size: .84rem; margin: 0 0 .15rem; }
+  .half-sheet .hs-line { border-bottom: 1px solid var(--line-strong); display: block; height: 1rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .half-sheet { border: none; height: 47vh; overflow: hidden; page-break-inside: avoid; border-bottom: 1px dashed #999; }
+    .half-sheet:nth-child(2n) { page-break-after: always; border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Art Critique Worksheet Generator</h1>
+      <p class="sub">A describe &rarr; analyze &rarr; interpret &rarr; judge critique worksheet for artwork or a gallery walk.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print worksheets</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="info-grid">
+      <div>
+        <label for="activityName">Activity / gallery walk name</label>
+        <input type="text" id="activityName" placeholder="e.g. Self-Portrait Gallery Walk">
+      </div>
+      <div>
+        <label for="copyCount">How many copies to print</label>
+        <input type="number" id="copyCount" value="10" min="1" max="60">
+      </div>
+    </div>
+  </div>
+
+  <div id="stepsWrap"></div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'acw_worksheet_v1';
+
+  var DEFAULT_STEPS = [
+    { key: 'describe', label: 'Describe', prompt: 'What do you see? List the colors, shapes, materials, and subject matter.',
+      subs: ['What is the medium (paint, sculpture, photography, etc.)?', 'What objects or subjects are shown?'] },
+    { key: 'analyze', label: 'Analyze', prompt: 'How is the artwork organized? Think about composition, balance, and use of color, line, or texture.',
+      subs: ['Where does your eye go first, and why?', 'How does the artist use color or contrast?'] },
+    { key: 'interpret', label: 'Interpret', prompt: 'What do you think the artist is trying to say or make you feel?',
+      subs: ['What mood or emotion does this piece create?', 'What might the title or subject suggest about its meaning?'] },
+    { key: 'judge', label: 'Judge', prompt: 'Do you think this artwork is successful? Why or why not?',
+      subs: ['What is the strongest part of this piece?', 'What is one suggestion you would give the artist?'] }
+  ];
+
+  var els = {};
+  ['activityName', 'copyCount', 'stepsWrap', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = { activityName: '', copyCount: 10, steps: [] };
+
+  function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function defaultSteps() {
+    return DEFAULT_STEPS.map(function (s) {
+      return { key: s.key, label: s.label, prompt: s.prompt, subs: s.subs.map(function (t) { return { id: uid(), text: t }; }) };
+    });
+  }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.steps) && saved.steps.length) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.steps.length) state.steps = defaultSteps();
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderSteps() {
+    els.stepsWrap.innerHTML = state.steps.map(function (step, i) {
+      var subs = step.subs.map(function (sub) {
+        return '<div class="sub-row" data-step="' + step.key + '"><input type="text" data-sub="' + sub.id + '" value="' + escapeAttr(sub.text) + '">' +
+          '<button type="button" class="danger small" data-del-sub="' + sub.id + '" data-del-step="' + step.key + '">&times;</button></div>';
+      }).join('');
+      return '<div class="card step-block" data-step-key="' + step.key + '">' +
+        '<h3><span class="step-num">' + (i + 1) + '</span>' + escapeHtml(step.label) + '</h3>' +
+        '<label>Main prompt</label>' +
+        '<textarea data-prompt="' + step.key + '">' + escapeHtml(step.prompt) + '</textarea>' +
+        '<label>Follow-up questions</label>' + subs +
+        '<button type="button" class="secondary small" data-add-sub="' + step.key + '">+ Add follow-up question</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function findStep(key) { return state.steps.find(function (s) { return s.key === key; }); }
+
+  els.stepsWrap.addEventListener('input', function (ev) {
+    var promptKey = ev.target.getAttribute('data-prompt');
+    var subId = ev.target.getAttribute('data-sub');
+    if (promptKey) {
+      var step = findStep(promptKey);
+      if (step) step.prompt = ev.target.value;
+      save();
+    } else if (subId) {
+      var block = ev.target.closest('.step-block');
+      var key = block.getAttribute('data-step-key');
+      var step2 = findStep(key);
+      var sub = step2 && step2.subs.find(function (s) { return s.id === subId; });
+      if (sub) sub.text = ev.target.value;
+      save();
+    }
+  });
+
+  els.stepsWrap.addEventListener('click', function (ev) {
+    var addKey = ev.target.getAttribute('data-add-sub');
+    var delSubId = ev.target.getAttribute('data-del-sub');
+    if (addKey) {
+      var step = findStep(addKey);
+      if (step) step.subs.push({ id: uid(), text: '' });
+      save(); renderSteps();
+    } else if (delSubId) {
+      var delStepKey = ev.target.getAttribute('data-del-step');
+      var step2 = findStep(delStepKey);
+      if (step2) step2.subs = step2.subs.filter(function (s) { return s.id !== delSubId; });
+      save(); renderSteps();
+    }
+  });
+
+  els.activityName.addEventListener('input', function () { state.activityName = els.activityName.value; save(); });
+  els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
+
+  function halfSheetHtml() {
+    var title = state.activityName.trim() ? escapeHtml(state.activityName.trim()) : 'Art Critique Worksheet';
+    var steps = state.steps.map(function (step, i) {
+      var subs = step.subs.filter(function (s) { return s.text.trim(); }).map(function (s) {
+        return '<div style="font-size:.8rem;margin:.15rem 0 0 .8rem;">&bull; ' + escapeHtml(s.text) + '<span class="hs-line"></span></div>';
+      }).join('');
+      return '<div class="hs-step"><h4>' + (i + 1) + '. ' + escapeHtml(step.label) + '</h4>' +
+        '<p class="prompt">' + escapeHtml(step.prompt) + '</p><span class="hs-line"></span>' + subs + '</div>';
+    }).join('');
+    return '<div class="half-sheet"><h2>' + title + '</h2>' +
+      '<div class="names">Artwork title: _______________________ &nbsp; Reviewer: _______________________</div>' +
+      steps + '</div>';
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var count = Math.max(1, Math.min(60, state.copyCount || 10));
+    var html = '';
+    for (var i = 0; i < count; i++) html += halfSheetHtml();
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.activityName.value = state.activityName;
+  els.copyCount.value = state.copyCount;
+  renderSteps();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
