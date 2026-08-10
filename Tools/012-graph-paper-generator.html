@@ -125,6 +125,8 @@
           <div class="mode-tab" data-mode="numberline">Number line</div>
           <div class="mode-tab" data-mode="plane">Coordinate plane</div>
           <div class="mode-tab" data-mode="isometric">Isometric</div>
+          <div class="mode-tab" data-mode="cornell">Cornell notes</div>
+          <div class="mode-tab" data-mode="handwriting">Handwriting lines</div>
         </div>
 
         <label for="orientation">Page orientation</label>
@@ -263,6 +265,36 @@
           <input type="number" id="isoSizeCustom" min="1" max="20" step="0.5" value="2" style="display:none;" placeholder="Triangles per inch">
         </div>
 
+        <!-- ===== Cornell notes panel ===== -->
+        <div class="mode-panel" id="panel-cornell">
+          <label for="cornellCueWidth">Cue column width (inches)</label>
+          <input type="number" id="cornellCueWidth" min="1" max="4" step="0.25" value="2.5">
+
+          <label for="cornellSummaryHeight">Summary band height (inches)</label>
+          <input type="number" id="cornellSummaryHeight" min="0.5" max="4" step="0.25" value="2">
+
+          <label for="cornellRuleSpacing">Note line spacing</label>
+          <select id="cornellRuleSpacing">
+            <option value="0.25">Narrow ruled (1/4")</option>
+            <option value="0.34">College ruled</option>
+            <option value="0.44">Wide ruled</option>
+          </select>
+        </div>
+
+        <!-- ===== Handwriting practice lines panel ===== -->
+        <div class="mode-panel" id="panel-handwriting">
+          <label for="hwSizePreset">Line height</label>
+          <select id="hwSizePreset">
+            <option value="0.25">1/4 inch (upper elementary)</option>
+            <option value="0.375">3/8 inch (primary)</option>
+            <option value="0.5">1/2 inch (early elementary)</option>
+            <option value="0.75">3/4 inch (beginner)</option>
+            <option value="custom">Custom (inches)</option>
+          </select>
+          <input type="number" id="hwSizeCustom" min="0.1" max="3" step="0.05" value="0.5" style="display:none;" placeholder="Line height (inches)">
+          <p class="hint">Each set is a topline, a dashed midline, and a solid baseline — the standard handwriting-practice triplet, repeated down the page.</p>
+        </div>
+
         <div class="btnRow">
           <button type="button" id="printBtn">Print</button>
           <button type="button" id="downloadPngBtn">Download PNG</button>
@@ -293,6 +325,8 @@
    'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery','planeCopies',
    'isoStyle','isoSizePreset','isoSizeCustom',
+   'cornellCueWidth','cornellSummaryHeight','cornellRuleSpacing',
+   'hwSizePreset','hwSizeCustom',
    'faded','headerOn','headerFields','headerTitle','headerShowName','headerShowDate',
    'printBtn','downloadPngBtn','previewArea'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -317,6 +351,8 @@
       planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
       planeInterval: 1, planeLabelEvery: 5, planeCopies: 1,
       isoStyle: 'dot', isoSizePreset: '0.5', isoSizeCustom: 2,
+      cornellCueWidth: 2.5, cornellSummaryHeight: 2, cornellRuleSpacing: 0.34,
+      hwSizePreset: '0.5', hwSizeCustom: 0.5,
       faded: false, headerOn: false, headerTitle: '', headerShowName: false, headerShowDate: false
     };
   }
@@ -378,6 +414,15 @@
     els.isoSizeCustom.value = settings.isoSizeCustom;
     els.isoSizeCustom.style.display = isoPreset === 'custom' ? '' : 'none';
 
+    els.cornellCueWidth.value = settings.cornellCueWidth;
+    els.cornellSummaryHeight.value = settings.cornellSummaryHeight;
+    els.cornellRuleSpacing.value = settings.cornellRuleSpacing;
+
+    var hwPreset = ['0.25', '0.375', '0.5', '0.75'].indexOf(String(settings.hwSizePreset)) !== -1 ? String(settings.hwSizePreset) : 'custom';
+    els.hwSizePreset.value = hwPreset;
+    els.hwSizeCustom.value = settings.hwSizeCustom;
+    els.hwSizeCustom.style.display = hwPreset === 'custom' ? '' : 'none';
+
     Array.prototype.slice.call(document.querySelectorAll('.mode-tab')).forEach(function (t) { t.classList.toggle('active', t.dataset.mode === settings.mode); });
     Array.prototype.slice.call(document.querySelectorAll('.mode-panel')).forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + settings.mode); });
   }
@@ -420,6 +465,13 @@
     var isoPreset = els.isoSizePreset.value;
     settings.isoSizePreset = isoPreset;
     settings.isoSizeCustom = parseFloat(els.isoSizeCustom.value) || 2;
+
+    settings.cornellCueWidth = parseFloat(els.cornellCueWidth.value) || 2.5;
+    settings.cornellSummaryHeight = parseFloat(els.cornellSummaryHeight.value) || 2;
+    settings.cornellRuleSpacing = parseFloat(els.cornellRuleSpacing.value) || 0.34;
+
+    settings.hwSizePreset = els.hwSizePreset.value;
+    settings.hwSizeCustom = parseFloat(els.hwSizeCustom.value) || 0.5;
   }
 
   function toggleNumberLineRangeUI() {
@@ -469,6 +521,10 @@
 
   function isoSizeInches() {
     return settings.isoSizePreset === 'custom' ? (1 / settings.isoSizeCustom) : parseFloat(settings.isoSizePreset);
+  }
+
+  function hwLineHeightInches() {
+    return settings.hwSizePreset === 'custom' ? settings.hwSizeCustom : parseFloat(settings.hwSizePreset);
   }
 
   function headerOpt() {
@@ -525,12 +581,28 @@
         faded: settings.faded,
         header: headerOpt()
       });
-    } else {
+    } else if (settings.mode === 'isometric') {
       result = window.GraphPaperRender.renderGraphPaper({
         orientation: settings.orientation,
         style: settings.isoStyle === 'dot' ? 'isometricDot' : 'isometric',
         mode: 'fill',
         cellSize: isoSizeInches(),
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else if (settings.mode === 'cornell') {
+      result = window.GraphPaperRender.renderCornellNotes({
+        orientation: settings.orientation,
+        cueWidth: settings.cornellCueWidth,
+        summaryHeight: settings.cornellSummaryHeight,
+        ruleSpacing: settings.cornellRuleSpacing,
+        faded: settings.faded,
+        header: headerOpt()
+      });
+    } else {
+      result = window.GraphPaperRender.renderHandwritingLines({
+        orientation: settings.orientation,
+        lineHeight: hwLineHeightInches(),
         faded: settings.faded,
         header: headerOpt()
       });
@@ -557,6 +629,11 @@
     if (!settings.isoStyle) settings.isoStyle = 'dot';
     if (!settings.isoSizePreset) settings.isoSizePreset = '0.5';
     if (!settings.isoSizeCustom) settings.isoSizeCustom = 2;
+    if (!settings.cornellCueWidth) settings.cornellCueWidth = 2.5;
+    if (!settings.cornellSummaryHeight) settings.cornellSummaryHeight = 2;
+    if (!settings.cornellRuleSpacing) settings.cornellRuleSpacing = 0.34;
+    if (!settings.hwSizePreset) settings.hwSizePreset = '0.5';
+    if (!settings.hwSizeCustom) settings.hwSizeCustom = 0.5;
     GraphPaperStore.setCurrentName(name);
     applySettingsToForm();
     refreshSwitcher();
@@ -604,6 +681,10 @@
   });
   els.isoSizePreset.addEventListener('change', function () {
     els.isoSizeCustom.style.display = els.isoSizePreset.value === 'custom' ? '' : 'none';
+    render();
+  });
+  els.hwSizePreset.addEventListener('change', function () {
+    els.hwSizeCustom.style.display = els.hwSizePreset.value === 'custom' ? '' : 'none';
     render();
   });
   els.exactCount.addEventListener('change', function () {

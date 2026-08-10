@@ -71,7 +71,7 @@
   .stations-table th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 0 0.4rem 0.4rem; }
   .stations-table td { padding: 0.3rem 0.3rem; vertical-align: top; }
   .stations-table td.num-cell { color: var(--text-dim); font-family: var(--mono); font-size: 0.8rem; text-align: center; padding-top: 0.65rem; width: 1.8rem; }
-  .stations-table td.actions-cell { width: 5.4rem; text-align: center; }
+  .stations-table td.actions-cell { width: 7.2rem; text-align: center; }
   .stations-table input, .stations-table select { font-size: 0.82rem; padding: 0.45rem 0.6rem; }
   .row-actions { display: flex; gap: 0.25rem; justify-content: center; }
   .detail-row td { padding: 0 0.3rem 0.6rem; }
@@ -313,7 +313,9 @@
       <div class="team-row" style="margin-top:0.75rem;">
         <input type="text" id="checkin-code" autocomplete="off" placeholder="Scan or type a team's code, then Enter" style="text-transform:uppercase;">
         <button class="btn-primary" id="checkin-submit-btn" type="button">Check In</button>
+        <button class="btn-secondary" id="checkin-hint-btn" type="button" disabled>💡 Hint</button>
       </div>
+      <div id="checkin-hint-panel" class="hint" style="margin-top:0.5rem;"></div>
       <div id="checkin-answer-panel"></div>
       <div id="checkin-feedback" class="hint" style="margin-top:0.6rem;"></div>
     </div>
@@ -331,7 +333,10 @@
     <div class="card">
       <div class="card-title">
         <span>Team Progress</span>
-        <button class="btn-link" id="clear-progress-btn" type="button">Clear all progress</button>
+        <span>
+          <button class="btn-link" id="undo-clear-btn" type="button" style="display:none;">Undo clear</button>
+          <button class="btn-link" id="clear-progress-btn" type="button">Clear all progress</button>
+        </span>
       </div>
       <div id="team-progress-list"></div>
     </div>
@@ -342,7 +347,7 @@
     <div class="card">
       <div class="card-title">Leaderboard</div>
       <table class="stations-table" id="leaderboard-table">
-        <thead><tr><th>#</th><th>Team</th><th>Stations</th><th>Heading to</th><th>Status</th></tr></thead>
+        <thead><tr><th>#</th><th>Team</th><th>Stations</th><th>Heading to</th><th>Hints</th><th>Status</th></tr></thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
     </div>
@@ -377,8 +382,9 @@
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg',
    'tab-build', 'tab-run', 'build-view', 'run-view', 'run-hunt-info', 'teams-body', 'add-team-btn',
    'print-teams-btn', 'print-teams-area', 'print-teams-grid',
-   'checkin-station', 'checkin-station-info', 'checkin-code', 'checkin-submit-btn', 'checkin-answer-panel', 'checkin-feedback',
-   'timer-display', 'timer-start-btn', 'timer-pause-btn', 'timer-reset-btn', 'clear-progress-btn',
+   'checkin-station', 'checkin-station-info', 'checkin-code', 'checkin-submit-btn', 'checkin-hint-btn', 'checkin-hint-panel',
+   'checkin-answer-panel', 'checkin-feedback',
+   'timer-display', 'timer-start-btn', 'timer-pause-btn', 'timer-reset-btn', 'clear-progress-btn', 'undo-clear-btn',
    'team-progress-list', 'leaderboard-body'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
@@ -396,8 +402,15 @@
     if (typeof s.correctChoice !== 'number') s.correctChoice = 0;
     if (typeof s.numericAnswer !== 'string') s.numericAnswer = s.numericAnswer != null ? String(s.numericAnswer) : '';
     if (typeof s.tolerance !== 'string') s.tolerance = s.tolerance != null ? String(s.tolerance) : '0';
+    if (typeof s.hint !== 'string') s.hint = s.hint != null ? String(s.hint) : '';
+    if (typeof s.hintPenalty !== 'string') s.hintPenalty = s.hintPenalty != null ? String(s.hintPenalty) : '0';
     return s;
   }
+
+  // Rows whose hint/penalty editor has been manually expanded this session
+  // (transient UI state, not persisted — keyed by station object identity so
+  // reordering/moving rows doesn't lose track of which one was open).
+  var hintEditorsOpen = new WeakSet();
 
   // ── Persisted hunts, keyed by name (this can include external links, same
   // trust level as any other locally-saved tool state in this toolkit) ─────
@@ -467,7 +480,7 @@
   }
 
   // ── Row editor ───────────────────────────────────────────────────────────
-  function blankStation() { return { label: '', content: '', note: '', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0' }; }
+  function blankStation() { return { label: '', content: '', note: '', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0', hint: '', hintPenalty: '0' }; }
 
   function ensureAtLeastOneRow() {
     if (!state.stations.length) state.stations.push(blankStation());
@@ -518,10 +531,12 @@
         '<td class="actions-cell"><div class="row-actions">' +
           '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
           '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
+          '<button type="button" class="move-row-btn" data-hint-toggle="' + i + '" title="Add/edit a hint (optional, has a time penalty)">&#128161;</button>' +
           '<button type="button" class="remove-row-btn" data-remove="' + i + '" title="Remove station">&#10005;</button>' +
         '</div></td>' +
         '</tr>';
-      if (s.qType === 'choice' || s.qType === 'numeric') row += renderDetailRow(s, i);
+      var showDetail = s.qType === 'choice' || s.qType === 'numeric' || hintEditorsOpen.has(s) || !!(s.hint && s.hint.trim());
+      if (showDetail) row += renderDetailRow(s, i);
       return row;
     }).join('');
   }
@@ -552,6 +567,13 @@
         '<div><label>Tolerance (&plusmn;)</label><input type="number" step="any" min="0" class="f-tolerance" data-idx="' + i + '" value="' + escapeAttr(s.tolerance) + '"></div>' +
         '</div>';
     }
+    body += '<div style="' + (body ? 'margin-top:0.6rem;' : '') + '">' +
+      '<label>Hint (optional — a team can request this during check-in, for a time penalty)</label>' +
+      '<textarea class="f-hint" data-idx="' + i + '" style="min-height:50px;" placeholder="e.g. Look near the flagpole">' + escapeHtml(s.hint) + '</textarea>' +
+      '<div class="control-row" style="margin-top:0.5rem;">' +
+        '<div><label>Time penalty if used (minutes)</label><input type="number" step="any" min="0" class="f-hint-penalty" data-idx="' + i + '" value="' + escapeAttr(s.hintPenalty) + '"></div>' +
+      '</div>' +
+      '</div>';
     return '<tr class="detail-row"><td colspan="6"><div class="detail-inner">' + body + '</div></td></tr>';
   }
 
@@ -578,6 +600,12 @@
       state.stations[parseInt(t.dataset.idx, 10)].tolerance = t.value;
       save();
       scheduleRender();
+    } else if (t.classList.contains('f-hint')) {
+      state.stations[parseInt(t.dataset.idx, 10)].hint = t.value;
+      save();
+    } else if (t.classList.contains('f-hint-penalty')) {
+      state.stations[parseInt(t.dataset.idx, 10)].hintPenalty = t.value;
+      save();
     }
   });
 
@@ -603,6 +631,13 @@
     var removeBtn = e.target.closest('[data-remove]');
     var addChoiceBtn = e.target.closest('.btn-choice-add');
     var removeChoiceBtn = e.target.closest('.btn-choice-remove');
+    var hintToggleBtn = e.target.closest('[data-hint-toggle]');
+    if (hintToggleBtn) {
+      var hs = state.stations[parseInt(hintToggleBtn.dataset.hintToggle, 10)];
+      if (hintEditorsOpen.has(hs)) hintEditorsOpen.delete(hs); else hintEditorsOpen.add(hs);
+      renderRows();
+      return;
+    }
     if (moveBtn) {
       var tr = moveBtn.closest('tr');
       var i = parseInt(tr.dataset.idx, 10);
@@ -729,6 +764,8 @@
           correctChoice: s.correctChoice,
           numericAnswer: s.numericAnswer,
           tolerance: s.tolerance,
+          hint: (s.hint || '').trim(),
+          hintPenalty: parseFloat(s.hintPenalty) || 0,
         };
       })
       .filter(function (s) { return s.content.length > 0; });
@@ -823,7 +860,9 @@
   function buildAnswerKey() {
     var valid = validStations();
     els.answerKeyBody.innerHTML = valid.map(function (s, n) {
-      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.label) + '</td><td>' + escapeHtml(s.content) + '</td><td>' + escapeHtml(s.note || '—') + '</td><td>' + escapeHtml(answerSummary(s)) + '</td></tr>';
+      var answerCell = escapeHtml(answerSummary(s));
+      if (s.hint) answerCell += '<br><span style="color:#666;">Hint (&minus;' + s.hintPenalty + ' min if used): ' + escapeHtml(s.hint) + '</span>';
+      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.label) + '</td><td>' + escapeHtml(s.content) + '</td><td>' + escapeHtml(s.note || '—') + '</td><td>' + answerCell + '</td></tr>';
     }).join('');
   }
 
@@ -862,9 +901,9 @@
   }
 
   els.exportCsvBtn.addEventListener('click', function () {
-    var rows = [['Label', 'Content', 'Note', 'Type', 'Answer Details']].concat(state.stations.map(function (s) {
+    var rows = [['Label', 'Content', 'Note', 'Type', 'Answer Details', 'Hint', 'Hint Penalty (min)']].concat(state.stations.map(function (s) {
       ensureStationDefaults(s);
-      return [s.label, s.content, s.note, Q_TYPE_LABELS[s.qType] || 'Open-ended', answerSummary(s)];
+      return [s.label, s.content, s.note, Q_TYPE_LABELS[s.qType] || 'Open-ended', answerSummary(s), s.hint, s.hintPenalty];
     }));
     var csv = rows.map(function (row) { return row.map(csvField).join(','); }).join('\r\n');
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -909,6 +948,8 @@
         if (typeof t.marks[k] === 'number') t.marks[k] = { at: t.marks[k], correct: true };
       });
       if (!t.attempts || typeof t.attempts !== 'object') t.attempts = {};
+      if (!t.hintsUsed || typeof t.hintsUsed !== 'object') t.hintsUsed = {};
+      if (typeof t.penaltyMs !== 'number') t.penaltyMs = 0;
       if (typeof t.code !== 'string' || !t.code) {
         t.code = generateTeamCode(existingCodes);
         existingCodes.push(t.code);
@@ -942,9 +983,11 @@
     renderCheckinStationOptions();
     renderCheckinAnswerPanel();
     setCheckinFeedback('', false);
+    els.checkinHintPanel.textContent = '';
     renderTeamProgress();
     renderLeaderboard();
     updateTimerDisplay();
+    if (clearProgressUndo) hideClearUndo();
   }
 
   function renderTeamsSetup() {
@@ -997,7 +1040,7 @@
   els.addTeamBtn.addEventListener('click', function () {
     if (!state) return;
     var existingCodes = state.run.teams.map(function (t) { return t.code; });
-    state.run.teams.push({ name: 'Team ' + (state.run.teams.length + 1), marks: {}, attempts: {}, code: generateTeamCode(existingCodes) });
+    state.run.teams.push({ name: 'Team ' + (state.run.teams.length + 1), marks: {}, attempts: {}, hintsUsed: {}, penaltyMs: 0, code: generateTeamCode(existingCodes) });
     save();
     renderTeamsSetup();
     renderTeamProgress();
@@ -1033,6 +1076,7 @@
       els.checkinStation.innerHTML = '<option value="">No stations yet</option>';
       els.checkinStation.disabled = true;
       els.checkinStationInfo.textContent = 'Add stations in Build mode first.';
+      els.checkinHintBtn.disabled = true;
       return;
     }
     els.checkinStation.disabled = false;
@@ -1048,18 +1092,21 @@
   function updateCheckinStationInfo() {
     var valid = validStations();
     var s = valid[state.run.checkinStation];
-    if (!s) { els.checkinStationInfo.textContent = ''; return; }
+    if (!s) { els.checkinStationInfo.textContent = ''; els.checkinHintBtn.disabled = true; return; }
     var descr = s.qType === 'text' ? 'open-ended — checking in marks it reached.'
       : s.qType === 'photo' ? 'photo proof — check their photo, then check them in.'
       : s.qType === 'choice' ? 'multiple choice — you\'ll pick the letter they answer.'
       : 'a numeric answer — you\'ll enter the number they give.';
     els.checkinStationInfo.textContent = 'Set the helper here to Station ' + (state.run.checkinStation + 1) + '. This station is ' + descr;
+    els.checkinHintBtn.disabled = !s.hint;
+    els.checkinHintBtn.title = s.hint ? ('Show this station’s hint to a team (−' + s.hintPenalty + ' min penalty on first use)') : 'This station has no hint set';
   }
 
   els.checkinStation.addEventListener('change', function () {
     state.run.checkinStation = parseInt(els.checkinStation.value, 10) || 0;
     pendingCheckin = null;
     renderCheckinAnswerPanel();
+    els.checkinHintPanel.textContent = '';
     save();
     updateCheckinStationInfo();
   });
@@ -1103,6 +1150,44 @@
     renderLeaderboard();
     var msg = (team.name || 'Team') + ' checked in at Station ' + (stationIdx + 1) + (station.qType === 'photo' ? ' — don’t forget to check their photo!' : '.');
     setCheckinFeedback(msg, false);
+    focusCheckinCode();
+  }
+
+  // ── Hints: a team can ask for a station's hint through the same code
+  // box, at a time penalty applied once (first request) per team+station. ──
+  els.checkinHintBtn.addEventListener('click', requestHint);
+
+  function requestHint() {
+    els.checkinHintPanel.textContent = '';
+    if (!state.run.teams.length) { setCheckinFeedback('Add a team first.', true); return; }
+    var valid = validStations();
+    if (!valid.length) { setCheckinFeedback('Add stations in Build mode first.', true); return; }
+    var stationIdx = state.run.checkinStation || 0;
+    if (stationIdx >= valid.length) stationIdx = 0;
+    var station = valid[stationIdx];
+    if (!station.hint) { setCheckinFeedback('This station has no hint set.', true); return; }
+    var raw = els.checkinCode.value.trim();
+    if (!raw) { setCheckinFeedback('Type or scan a team’s code first, then request the hint.', true); return; }
+    var code = raw.toUpperCase();
+    var teamIdx = -1;
+    state.run.teams.forEach(function (t, i) { if (t.code === code) teamIdx = i; });
+    if (teamIdx === -1) { setCheckinFeedback('No team matches code “' + raw + '”.', true); return; }
+    var team = state.run.teams[teamIdx];
+    if (!team.hintsUsed || typeof team.hintsUsed !== 'object') team.hintsUsed = {};
+    var alreadyUsed = Object.prototype.hasOwnProperty.call(team.hintsUsed, stationIdx);
+    var penaltyNote;
+    if (alreadyUsed) {
+      penaltyNote = 'already used — no additional penalty.';
+    } else {
+      team.hintsUsed[stationIdx] = { at: Date.now(), penaltyMin: station.hintPenalty };
+      team.penaltyMs = (team.penaltyMs || 0) + station.hintPenalty * 60000;
+      penaltyNote = station.hintPenalty > 0 ? ('−' + station.hintPenalty + ' minute penalty applied to ' + (team.name || 'their') + ' time.') : 'no time penalty configured for this hint.';
+      save();
+      renderTeamProgress();
+      renderLeaderboard();
+    }
+    els.checkinCode.value = '';
+    els.checkinHintPanel.textContent = 'Hint for ' + (team.name || 'the team') + ' — Station ' + (stationIdx + 1) + ': ' + station.hint + ' (' + penaltyNote + ')';
     focusCheckinCode();
   }
 
@@ -1209,6 +1294,8 @@
         btns += '<button type="button" class="' + cls + '" data-team="' + ti + '" data-station="' + j + '" title="' + escapeAttr(title) + '">' + (j + 1) + '</button>';
       }
       var statusLine = solvedCount >= total ? 'All stations complete!' : 'Next up: Station ' + (nextIdx + 1) + ' — ' + escapeHtml(valid[nextIdx].label);
+      var hintCount = t.hintsUsed ? Object.keys(t.hintsUsed).length : 0;
+      if (hintCount) statusLine += ' · ' + hintCount + ' hint' + (hintCount === 1 ? '' : 's') + ' used (−' + formatPenaltyMinutes(t.penaltyMs || 0) + ' min)';
       return '<div class="team-progress"><div class="tp-name">' + escapeHtml(t.name || ('Team ' + (ti + 1))) + '<span class="tp-code">' + escapeHtml(t.code || '') + '</span></div>' +
         '<div class="station-btns">' + btns + '</div><div class="tp-status">' + statusLine + '</div></div>';
     }).join('');
@@ -1227,6 +1314,10 @@
     renderLeaderboard();
   });
 
+  // A hint's time penalty is added to the team's *effective* completion
+  // time — the same "earlier finish wins" scoring the leaderboard already
+  // used via lastMark, just nudged later per penalty minute — rather than a
+  // separate points system, since this tool never had points to dock.
   function renderLeaderboard() {
     var valid = validStations();
     var total = valid.length;
@@ -1234,44 +1325,92 @@
       var markTimes = Object.keys(t.marks).map(function (k) { return t.marks[k].at; });
       var nextIdx = -1;
       for (var j = 0; j < total; j++) { if (!Object.prototype.hasOwnProperty.call(t.marks, j)) { nextIdx = j; break; } }
+      var lastMark = markTimes.length ? Math.max.apply(Math, markTimes) : null;
+      var penaltyMs = t.penaltyMs || 0;
       return {
         name: t.name || ('Team ' + (i + 1)),
         count: markTimes.length,
-        lastMark: markTimes.length ? Math.max.apply(Math, markTimes) : null,
+        lastMark: lastMark,
+        effectiveMark: lastMark == null ? null : lastMark + penaltyMs,
+        penaltyMs: penaltyMs,
+        hintCount: t.hintsUsed ? Object.keys(t.hintsUsed).length : 0,
         nextLabel: nextIdx === -1 ? null : (nextIdx + 1) + '. ' + valid[nextIdx].label,
       };
     });
     rows.sort(function (a, b) {
       if (b.count !== a.count) return b.count - a.count;
-      if (a.lastMark == null && b.lastMark == null) return 0;
-      if (a.lastMark == null) return 1;
-      if (b.lastMark == null) return -1;
-      return a.lastMark - b.lastMark;
+      if (a.effectiveMark == null && b.effectiveMark == null) return 0;
+      if (a.effectiveMark == null) return 1;
+      if (b.effectiveMark == null) return -1;
+      return a.effectiveMark - b.effectiveMark;
     });
     if (!rows.length) {
-      els.leaderboardBody.innerHTML = '<tr><td colspan="5" class="empty-hint">No teams yet.</td></tr>';
+      els.leaderboardBody.innerHTML = '<tr><td colspan="6" class="empty-hint">No teams yet.</td></tr>';
       return;
     }
     els.leaderboardBody.innerHTML = rows.map(function (r, i) {
       var status;
       if (total && r.count >= total) {
-        status = (state.run.raceStartAt && r.lastMark) ? 'Finished in ' + formatElapsed(r.lastMark - state.run.raceStartAt) : 'Finished';
+        status = (state.run.raceStartAt && r.lastMark) ? 'Finished in ' + formatElapsed((r.effectiveMark - state.run.raceStartAt)) : 'Finished';
       } else if (r.count > 0) {
         status = 'In progress';
       } else {
         status = 'Not started';
       }
       var heading = r.nextLabel ? escapeHtml(r.nextLabel) : '—';
-      return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + r.count + ' / ' + total + '</td><td>' + heading + '</td><td>' + status + '</td></tr>';
+      var hints = r.hintCount ? (r.hintCount + ' (−' + formatPenaltyMinutes(r.penaltyMs) + ' min)') : '—';
+      return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.name) + '</td><td>' + r.count + ' / ' + total + '</td><td>' + heading + '</td><td>' + hints + '</td><td>' + status + '</td></tr>';
     }).join('');
+  }
+
+  // ── Clear all progress: confirm, then keep a one-shot undo buffer so a
+  // mis-tap doesn't silently erase a live run with no way back. ───────────
+  var clearProgressUndo = null; // { teams: [{code, marks, attempts, hintsUsed, penaltyMs}], timeoutId }
+
+  function hideClearUndo() {
+    if (clearProgressUndo && clearProgressUndo.timeoutId) clearTimeout(clearProgressUndo.timeoutId);
+    clearProgressUndo = null;
+    els.undoClearBtn.style.display = 'none';
   }
 
   els.clearProgressBtn.addEventListener('click', function () {
     if (!state || !state.run.teams.length) return;
-    if (!confirm('Clear every team’s marked progress? The timer is left as-is.')) return;
-    state.run.teams.forEach(function (t) { t.marks = {}; t.attempts = {}; });
+    if (!confirm('Clear every team’s marked progress (including hints used)? The timer is left as-is.')) return;
+    var snapshot = state.run.teams.map(function (t) {
+      return {
+        code: t.code,
+        marks: JSON.parse(JSON.stringify(t.marks || {})),
+        attempts: JSON.parse(JSON.stringify(t.attempts || {})),
+        hintsUsed: JSON.parse(JSON.stringify(t.hintsUsed || {})),
+        penaltyMs: t.penaltyMs || 0,
+      };
+    });
+    state.run.teams.forEach(function (t) { t.marks = {}; t.attempts = {}; t.hintsUsed = {}; t.penaltyMs = 0; });
     pendingCheckin = null;
     renderCheckinAnswerPanel();
+    save();
+    renderTeamProgress();
+    renderLeaderboard();
+
+    if (clearProgressUndo && clearProgressUndo.timeoutId) clearTimeout(clearProgressUndo.timeoutId);
+    clearProgressUndo = { teams: snapshot };
+    els.undoClearBtn.style.display = '';
+    clearProgressUndo.timeoutId = setTimeout(hideClearUndo, 15000); // 15s undo window
+  });
+
+  els.undoClearBtn.addEventListener('click', function () {
+    if (!clearProgressUndo || !state) return;
+    var snapshot = clearProgressUndo.teams;
+    hideClearUndo();
+    snapshot.forEach(function (saved) {
+      var team = null;
+      state.run.teams.forEach(function (t) { if (t.code === saved.code) team = t; });
+      if (!team) return; // team was removed during the undo window — nothing to restore it onto
+      team.marks = saved.marks;
+      team.attempts = saved.attempts;
+      team.hintsUsed = saved.hintsUsed;
+      team.penaltyMs = saved.penaltyMs;
+    });
     save();
     renderTeamProgress();
     renderLeaderboard();
@@ -1288,6 +1427,10 @@
     var s = totalSec % 60;
     var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
     return (h > 0 ? h + ':' + pad(m) : m) + ':' + pad(s);
+  }
+  function formatPenaltyMinutes(ms) {
+    var m = Math.round((ms / 60000) * 100) / 100;
+    return m % 1 === 0 ? String(m) : m.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   }
   function updateTimerDisplay() {
     els.timerDisplay.textContent = formatElapsed(currentElapsedMs());

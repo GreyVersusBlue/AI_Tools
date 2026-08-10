@@ -12,6 +12,82 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+- **Two new grid types**, the "More grid types" Quick Win (partially — hex,
+  polar, log/semi-log, engineering, storyboard, and music staff are still
+  open):
+  - **Cornell-notes ruling** (`GraphPaperRender.renderCornellNotes`) — a left
+    cue column and right notes column (ruled at the same line spacing so
+    lines match up across the divider), separated by a bold vertical
+    divider, sitting above a full-width bold-bordered summary band (also
+    ruled). Small `CUES`/`NOTES`/`SUMMARY` caption labels are drawn inside
+    the faded/ink group. Configurable cue-column width, summary-band height,
+    and note-line spacing (a preset dropdown: narrow/college/wide ruled).
+  - **Handwriting practice lines** (`GraphPaperRender.renderHandwritingLines`)
+    — repeating topline/dashed-midline/solid-baseline triplets down the
+    page, sized by a `hwSizePreset` size selector (1/4"–3/4" presets plus
+    Custom, same dropdown-plus-custom-input pattern as `gridSizePreset` and
+    `isoSizePreset`) that sets `lineHeight`; the gap between triplets is
+    `lineHeight * 0.6` so ascenders/descenders from adjacent rows don't
+    collide.
+  - Both are new modes wired the same way as the four existing ones: new
+    `mode-tab`/`mode-panel` pairs in `012-graph-paper-generator.html`, new
+    `defaultSettings` fields, read/write in `readFormIntoSettings`/
+    `applySettingsToForm`, and a new branch in `render()`. Both reuse
+    `headerBlockHeight`/`headerSvg` for the shared header block and the
+    `faded ? FADE_COLOR : INK_COLOR` + `gridGroup`/`currentColor` pattern for
+    ink-saving mode — no new plumbing needed, exactly as the existing modes'
+    code predicted.
+  - Added one new low-level helper, `dashedLineEl` (same signature as
+    `lineEl`, adds `stroke-dasharray`), for the handwriting midline. No
+    existing function bodies were touched — `git diff --stat` on
+    `gpg-render.js` for this round shows only added lines, confirmed by
+    re-running the pre-existing `renderGraphPaper`/`renderNumberLine`/
+    `renderCoordinatePlane` calls before/after and diffing (byte-identical).
+  - Hex grid (the third suggested type) was left for a future round per the
+    "do only if the first two go smoothly, hex is the most complex" guidance
+    — Cornell and handwriting lines were the higher-value, lower-risk pair
+    and took the full round to do well (in particular getting the Cornell
+    rule-spacing to line up across the cue/notes divider, and getting the
+    handwriting triplet gap to look right, took a few iterations of visual
+    checking).
+
+### Challenges
+
+- No visual reference to check against beyond general knowledge of what
+  Cornell notes / primary handwriting paper look like — verified by eye via
+  Playwright screenshots (topline/dashed-midline/bold-baseline sets read
+  correctly; cue/notes/summary regions and their bold dividers read
+  correctly) rather than against a scanned real-world template.
+- Both new render functions return `{ svg, ...metadata }` shapes consistent
+  with the existing four (e.g. `renderCornellNotes` returns `cueWidth`/
+  `summaryHeight`, `renderHandwritingLines` returns `lineSets`/`lineHeight`)
+  even though — per the same finding as Round 3 — only `.svg` is read by the
+  HTML caller today. Kept for consistency/future debugging, not because
+  anything currently depends on it.
+- Verified in Node directly (calling `GraphPaperRender.renderCornellNotes`/
+  `renderHandwritingLines` with default/custom/extreme opts — zero/negative
+  `ruleSpacing`, zero `lineHeight`, `lineHeight` larger than the whole page —
+  and scanning for `NaN`/`undefined` in the output) and with a headless
+  Playwright pass over the live tool (switching modes, editing every new
+  field, and toggling ink-saving + header together) with zero console/page
+  errors.
+
+### Where the next round should pick up
+
+- **Hex grid** is still open and is a good next candidate now that two of
+  the three suggested "more grid types" are done — it's the one flagged as
+  needing real tiling math (axial/offset hex coordinates), unlike the two
+  shipped this round which reused the existing "ruled lines across a
+  usable-area rectangle" shape.
+- Polar, log/semi-log, engineering (5 squares/inch — this one is nearly
+  free, it's just another `gridSizePreset` option on the existing square
+  style), storyboard boxes, and music staff are all still open per the
+  original Quick Win list.
+- **Worksheet mode** and **pre-plotted content** (the two Major Features)
+  remain the highest-value work and are untouched by this round.
+
 ### Round 3 (2026-08-10) — shipped
 
 - **Labelled gridlines** for square graph paper: an opt-in "Number the

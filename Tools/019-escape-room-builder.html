@@ -215,7 +215,7 @@
         <div class="btn-row" style="margin-top:0;">
           <button class="secondary" id="addStationBtn" type="button">+ Add station</button>
         </div>
-        <div class="hint">Each station's accepted answer unlocks the next one. Matching ignores case and extra spaces. Leave "Next station" on Auto for a straight linear chain, or point it anywhere for a branching path. Pick a puzzle type per station &mdash; plain text, a digit lock, or a Caesar cipher &mdash; charge points for revealing a hint, and optionally award a letter toward a final combine-the-letters station.</div>
+        <div class="hint">Each station's accepted answer unlocks the next one. Text answers ignore case, extra spaces, and punctuation, and can optionally accept a numeric answer within a tolerance. Leave "Next station" on Auto for a straight linear chain, or point it anywhere for a branching path. Pick a puzzle type per station &mdash; plain text, a digit lock, or a Caesar cipher &mdash; charge points for revealing a hint, cap the number of guesses before a short lockout, and optionally award a letter toward a final combine-the-letters station.</div>
       </div>
 
       <div class="card">
@@ -346,7 +346,7 @@
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
-  // state = { name, roomId, stations: [{clue, answers, hint, next}], cardsPerPage, ecLevel, showNumber, randomizeStart }
+  // state = { name, roomId, stations: [{clue, answers, hint, next, maxAttempts, numericTolerance}], cardsPerPage, ecLevel, showNumber, randomizeStart }
   // `next` is null for "auto — next in order", or a 0-based station index for branching.
   var state = null;
 
@@ -394,13 +394,13 @@
   }
 
   function ensureAtLeastOneStation() {
-    if (!state.stations.length) state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0 });
+    if (!state.stations.length) state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null });
   }
 
   function newSet(name) {
     state = {
       name: name, roomId: makeRoomId(),
-      stations: [{ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0 }],
+      stations: [{ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null }],
       cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
       countdownEnabled: false, countdownMinutes: 20,
       storyIntro: '',
@@ -450,6 +450,28 @@
     return opts;
   }
 
+  // Digit-lock box count on the student side (lock.html) is sized off the
+  // *first* accepted code's length only (a known, documented edge case — see
+  // the improvement-prompts file). Rather than silently mis-sizing the boxes
+  // for a station with codes of different lengths, warn the teacher right
+  // under the field so they can fix it before printing.
+  function digitLengthWarningHtml(s) {
+    var msg = '';
+    if ((s.type || 'text') === 'digits') {
+      var codes = splitAnswers(s.answers);
+      if (codes.length >= 2) {
+        var lens = codes.map(function (c) { return c.length; });
+        var uniqueLens = lens.filter(function (v, idx) { return lens.indexOf(v) === idx; });
+        if (uniqueLens.length > 1) {
+          msg = '&#9888; These codes are different lengths (' + uniqueLens.join(', ') + ' digits) &mdash; ' +
+            'the student will see boxes sized to the first code only (' + lens[0] + '). Use codes that are ' +
+            'all the same length so every accepted code fits the boxes.';
+        }
+      }
+    }
+    return '<div class="hint digit-warn" style="color:var(--err);margin:-.5rem 0 .6rem;' + (msg ? '' : 'display:none;') + '">' + msg + '</div>';
+  }
+
   function renderStations() {
     els.stationsList.innerHTML = state.stations.map(function (s, i) {
       var type = s.type || 'text';
@@ -492,7 +514,8 @@
             '</div>' +
             '<div class="hint" style="margin:-.4rem 0 .6rem;">Students see the message below encoded with this shift and must decode it &mdash; the accepted answer is the plain message above.</div>'
           : '<div class="field-row"><label>' + (type === 'digits' ? 'Correct code (digits; comma-separated for more than one)' : 'Accepted answers (comma-separated)') + '</label>' +
-              '<input type="text" class="f-answers" value="' + escapeAttr(s.answers) + '" placeholder="' + (type === 'digits' ? 'e.g. 4821' : 'e.g. keyboard, a keyboard') + '"></div>'
+              '<input type="text" class="f-answers" value="' + escapeAttr(s.answers) + '" placeholder="' + (type === 'digits' ? 'e.g. 4821' : 'e.g. keyboard, a keyboard') + '"></div>' +
+              digitLengthWarningHtml(s)
         ) +
         '<div class="row2">' +
           '<div class="field-row"><label>Hint (optional)</label>' +
@@ -504,6 +527,15 @@
           '<div class="field-row"><label>Next station on success</label>' +
             '<select class="f-next">' + nextOptionsHtml(i, s.next) + '</select></div>' +
         '</div>' +
+        '<div class="row2">' +
+          '<div class="field-row"><label>Attempt limit before lockout (optional)</label>' +
+            '<input type="number" class="f-max-attempts" min="0" step="1" value="' + (Number(s.maxAttempts) > 0 ? Number(s.maxAttempts) : '') + '" placeholder="Unlimited"></div>' +
+          (type === 'text'
+            ? '<div class="field-row"><label>Numeric tolerance (optional)</label>' +
+                '<input type="number" class="f-numeric-tolerance" min="0" step="any" value="' + (s.numericTolerance !== null && s.numericTolerance !== undefined && s.numericTolerance !== '' ? s.numericTolerance : '') + '" placeholder="e.g. 0.5"></div>'
+            : '<div></div>') +
+        '</div>' +
+        '<div class="hint" style="margin:-.3rem 0 .6rem;">Attempt limit locks the student out for 30 seconds after this many consecutive wrong guesses in a row (blank = unlimited). Numeric tolerance (text answers only) also accepts any number within &plusmn; this amount of an accepted numeric answer, e.g. answer &ldquo;3.14&rdquo; with tolerance &ldquo;0.05&rdquo;.</div>' +
       '</div>';
     }).join('');
   }
@@ -519,7 +551,22 @@
     else if (e.target.classList.contains('f-award-letter')) state.stations[i].awardLetter = e.target.value.slice(0, 1).toUpperCase();
     else if (e.target.classList.contains('f-cipher-plain')) state.stations[i].cipherPlain = e.target.value;
     else if (e.target.classList.contains('f-cipher-shift')) state.stations[i].cipherShift = clampShift(e.target.value);
+    else if (e.target.classList.contains('f-max-attempts')) {
+      var maxAttemptsVal = parseInt(e.target.value, 10);
+      state.stations[i].maxAttempts = (isFinite(maxAttemptsVal) && maxAttemptsVal > 0) ? maxAttemptsVal : 0;
+    }
+    else if (e.target.classList.contains('f-numeric-tolerance')) {
+      var toleranceRaw = e.target.value.trim();
+      state.stations[i].numericTolerance = toleranceRaw === '' ? null : Math.max(0, parseFloat(toleranceRaw) || 0);
+    }
     else return;
+    // Keep the digit-length warning live as the teacher edits the answers
+    // field, without rebuilding the whole station card (which would drop
+    // input focus mid-keystroke).
+    if (e.target.classList.contains('f-answers')) {
+      var warnEl = cardEl.querySelector('.digit-warn');
+      if (warnEl) warnEl.outerHTML = digitLengthWarningHtml(state.stations[i]);
+    }
     save();
     scheduleRender();
   });
@@ -630,7 +677,7 @@
   });
 
   els.addStationBtn.addEventListener('click', function () {
-    state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0 });
+    state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null });
     renderStations();
     save();
     scheduleRender();
@@ -669,12 +716,16 @@
       .map(function (s, i) {
         var type = s.type || 'text';
         var answers = type === 'cipher' ? splitAnswers(s.cipherPlain) : splitAnswers(s.answers);
+        var numericTolerance = (s.numericTolerance === undefined || s.numericTolerance === null || s.numericTolerance === '')
+          ? null : Math.max(0, parseFloat(s.numericTolerance) || 0);
         return {
           idx: i, clue: (s.clue || '').trim(), answers: answers, hint: (s.hint || '').trim(),
           hintCost: Math.max(0, parseInt(s.hintCost, 10) || 0),
           next: s.next, image: s.image || '',
           type: type, cipherShift: clampShift(s.cipherShift),
           awardLetter: (s.awardLetter || '').trim().slice(0, 1).toUpperCase(),
+          maxAttempts: Math.max(0, parseInt(s.maxAttempts, 10) || 0),
+          numericTolerance: numericTolerance,
         };
       })
       .filter(function (s) { return s.clue.length > 0 && s.answers.length > 0; });
@@ -683,12 +734,24 @@
   // For the answer-key views: what a teacher needs to see to verify the
   // puzzle is solvable, per puzzle type.
   function typeDetail(s) {
+    var detail;
     if (s.type === 'cipher') {
-      var cipherText = s.answers[0] ? caesarEncode(s.answers[0], s.cipherShift) : '';
-      return 'Cipher (shift ' + s.cipherShift + ') — students see “' + cipherText + '”, decodes to: ' + s.answers.join(', ');
+      // Every accepted phrase is shown encoded (not just the first) — a
+      // station with several comma-separated accepted answers used to only
+      // ever display the first one's ciphertext here, leaving the rest
+      // accepted-but-invisible to the teacher proofreading the room.
+      var cipherTexts = s.answers.map(function (a) { return caesarEncode(a, s.cipherShift); });
+      detail = 'Cipher (shift ' + s.cipherShift + ') — students see: “' + cipherTexts.join('” / “') + '” — decodes to: ' + s.answers.join(', ');
+    } else if (s.type === 'digits') {
+      detail = 'Digit lock — code: ' + s.answers.join(', ');
+    } else {
+      detail = s.answers.join(', ');
+      if (s.numericTolerance !== null && s.numericTolerance !== undefined) {
+        detail += ' (numeric match within ±' + s.numericTolerance + ')';
+      }
     }
-    if (s.type === 'digits') return 'Digit lock — code: ' + s.answers.join(', ');
-    return s.answers.join(', ');
+    if (s.maxAttempts) detail += ' · locks out after ' + s.maxAttempts + ' miss' + (s.maxAttempts === 1 ? '' : 'es');
+    return detail;
   }
 
   // Build the room payload actually encoded into the link/QR data. Indices
@@ -710,6 +773,12 @@
         if (s.type === 'cipher') out.cipherShift = s.cipherShift;
         if (s.hintCost) out.hintCost = s.hintCost;
         if (s.awardLetter) out.awardLetter = s.awardLetter;
+        if (s.maxAttempts) out.maxAttempts = s.maxAttempts;
+        // Numeric tolerance only ever applies to the free-text matching path —
+        // guarded to text type so it can't be set on digit/cipher stations.
+        if (s.type === 'text' && s.numericTolerance !== null && s.numericTolerance !== undefined) {
+          out.numericTolerance = s.numericTolerance;
+        }
         return out;
       }),
     };

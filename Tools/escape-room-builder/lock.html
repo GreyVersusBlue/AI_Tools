@@ -143,8 +143,53 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
   }
 
+  // Digit-lock and cipher answers are compared exactly as before (this is the
+  // matching used for those two types) — untouched by the free-text forgiveness
+  // added below, since a digit code or a decoded cipher phrase isn't the kind of
+  // free typing that benefits from punctuation/typo tolerance.
   function normalizeAnswer(s) {
     return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,!?'"]/g, '');
+  }
+
+  // Text-type answers get a more forgiving comparison: case, leading/trailing
+  // and repeated whitespace, and *all* punctuation are ignored, so "It's a
+  // KEYBOARD!" and "its a keyboard" both match an accepted answer of
+  // "a keyboard".
+  function normalizeTextAnswer(s) {
+    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '');
+  }
+
+  // Plain Levenshtein edit distance — used only to decide whether a wrong
+  // text answer is a near miss (a small typo) worth a gentler message, never
+  // to accept an answer as correct.
+  function levenshtein(a, b) {
+    var m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    var prev = new Array(n + 1);
+    var curr = new Array(n + 1);
+    for (var j = 0; j <= n; j++) prev[j] = j;
+    for (var i = 1; i <= m; i++) {
+      curr[0] = i;
+      for (var k = 1; k <= n; k++) {
+        var cost = a.charAt(i - 1) === b.charAt(k - 1) ? 0 : 1;
+        curr[k] = Math.min(prev[k] + 1, curr[k - 1] + 1, prev[k - 1] + cost);
+      }
+      var tmp = prev; prev = curr; curr = tmp;
+    }
+    return prev[n];
+  }
+
+  // "Close but not correct" — within a couple of edits of some accepted
+  // answer, scaled a little for longer answers, but never so loose that a
+  // genuinely different answer counts as a near miss.
+  function isNearMiss(given, acceptedList) {
+    if (!given) return false;
+    return acceptedList.some(function (accepted) {
+      if (!accepted || accepted === given) return false;
+      var dist = levenshtein(given, accepted);
+      return dist > 0 && dist <= Math.max(1, Math.min(3, Math.ceil(accepted.length * 0.3)));
+    });
   }
 
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -198,8 +243,14 @@
 
   var PROGRESS_KEY = 'escape-room-progress:' + roomId;
 
+  // How long a student is locked out of guessing again once a station's
+  // attempt limit (`maxAttempts`, optional, teacher-configured) is reached by
+  // consecutive wrong answers. Short enough not to stall a group out of the
+  // activity, long enough to actually force a pause instead of guess-spamming.
+  var LOCKOUT_MS = 30000;
+
   function loadProgress() {
-    var fresh = { current: startHere ? scannedStation : 0, misses: {}, solved: {}, hintsUsed: {}, letters: {} };
+    var fresh = { current: startHere ? scannedStation : 0, misses: {}, solved: {}, hintsUsed: {}, letters: {}, lockUntil: {} };
     try {
       var raw = localStorage.getItem(PROGRESS_KEY);
       if (!raw) return fresh;
@@ -210,6 +261,7 @@
       if (!p.solved || typeof p.solved !== 'object') p.solved = {};
       if (!p.hintsUsed || typeof p.hintsUsed !== 'object') p.hintsUsed = {};
       if (!p.letters || typeof p.letters !== 'object') p.letters = {};
+      if (!p.lockUntil || typeof p.lockUntil !== 'object') p.lockUntil = {};
       return p;
     } catch (e) { return fresh; }
   }
@@ -380,7 +432,17 @@
   }
   setupTimer();
 
+  // The lockout countdown (see renderLockout) ticks via its own interval,
+  // separate from the whole-room timer — cleared any time we navigate away
+  // from the clue screen it belongs to so it can't keep firing into a
+  // gate/done screen or a freshly-rendered next station.
+  var lockoutInterval = null;
+  function clearLockoutInterval() {
+    if (lockoutInterval) { clearInterval(lockoutInterval); lockoutInterval = null; }
+  }
+
   function render() {
+    clearLockoutInterval();
     if (progress.current === 'done') {
       renderDone();
       return;
@@ -420,11 +482,48 @@
     sendMonitorUpdate();
     document.getElementById('resetBtn').addEventListener('click', function () {
       if (!confirm('Reset your progress on this escape room and start over from Station 1?')) return;
-      progress = { current: 0, misses: {}, solved: {}, hintsUsed: {}, letters: {} };
+      progress = { current: 0, misses: {}, solved: {}, hintsUsed: {}, letters: {}, lockUntil: {} };
       saveProgress(progress);
       setupTimer();
       render();
     });
+  }
+
+  // ── Attempt limit / lockout ─────────────────────────────────────────────
+  // A station can optionally set `maxAttempts` (teacher-configured in the
+  // builder); once a student's consecutive wrong guesses on that station
+  // reach it, they're locked out of guessing again for LOCKOUT_MS — a short,
+  // ticking cooldown rather than a hard stop, so a stuck group is nudged to
+  // slow down (and read the hint, if there is one) instead of guess-spamming.
+  function renderLockout(idx, lockUntil) {
+    var station = room.stations[idx];
+    var secondsLeft = Math.max(0, Math.ceil((lockUntil - Date.now()) / 1000));
+    card.innerHTML =
+      '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
+      '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + (hasScoring ? ' · Score: ' + computeScore() : '') + '</span>' +
+      lettersStripHtml() +
+      (station.image ? '<img class="clue-image" src="' + escapeHtml(station.image) + '" alt="Clue image">' : '') +
+      '<div class="clue-box">' + escapeHtml(station.clue || '(no clue text)') + '</div>' +
+      '<div class="feedback show bad">🔒 Too many misses in a row — locked out for <strong><span id="lockoutSeconds">' + secondsLeft + '</span>s</strong>.' +
+        (station.hint ? ' Read the hint below while you wait.' : '') + '</div>' +
+      (station.hint ? '<div class="hint-box show">💡 Hint: ' + escapeHtml(station.hint) + '</div>' : '') +
+      '<p class="progress-note">Progress is saved on this device — re-scanning this code won’t lose your place.</p>' +
+      monitorBoxHtml();
+    wireMonitorBox();
+    sendMonitorUpdate();
+    clearLockoutInterval();
+    lockoutInterval = setInterval(function () {
+      var remaining = Math.max(0, Math.ceil((lockUntil - Date.now()) / 1000));
+      var span = document.getElementById('lockoutSeconds');
+      if (span) span.textContent = remaining;
+      if (remaining <= 0) {
+        clearLockoutInterval();
+        progress.misses[idx] = 0;
+        if (progress.lockUntil) delete progress.lockUntil[idx];
+        saveProgress(progress);
+        render();
+      }
+    }, 500);
   }
 
   function renderClue(idx) {
@@ -432,6 +531,13 @@
     var type = station.type || 'text';
     var misses = progress.misses[idx] || 0;
     var cost = station.hintCost || 0;
+
+    var lockUntil = progress.lockUntil && progress.lockUntil[idx];
+    if (lockUntil && Date.now() < lockUntil) {
+      renderLockout(idx, lockUntil);
+      return;
+    }
+
     // A costed hint is never given away free on misses — the whole point of
     // a cost is that the student chooses to spend it. A free hint (cost 0)
     // keeps the original behavior: it auto-reveals after two wrong tries.
@@ -454,8 +560,13 @@
         '<button type="submit">Unlock</button>';
     }
     var cipherHtml = '';
-    if (type === 'cipher' && station.answers && station.answers[0]) {
-      cipherHtml = '<div class="cipher-box">' + escapeHtml(caesarEncode(station.answers[0], station.cipherShift || 3)) + '</div>';
+    if (type === 'cipher' && station.answers && station.answers.length) {
+      // Every accepted phrase is shown encoded, not just the first — a station
+      // with several comma-separated accepted answers used to encode only the
+      // first one here, so the others were accepted on submit but the student
+      // never actually saw them as ciphertext to decode.
+      var cipherLines = station.answers.map(function (a) { return escapeHtml(caesarEncode(a, station.cipherShift || 3)); });
+      cipherHtml = '<div class="cipher-box">' + cipherLines.join('<br>') + '</div>';
     }
 
     card.innerHTML =
@@ -512,11 +623,38 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var given = digitBoxes
-        ? normalizeAnswer(digitBoxes.map(function (b) { return b.value || ''; }).join(''))
-        : normalizeAnswer(input.value);
-      var accepted = (station.answers || []).map(normalizeAnswer);
-      var correct = given.length > 0 && accepted.indexOf(given) !== -1;
+      var rawGiven = digitBoxes
+        ? digitBoxes.map(function (b) { return b.value || ''; }).join('')
+        : input.value;
+      var correct, nearMiss = false;
+
+      if (type === 'text') {
+        // Free-text matching forgives case, whitespace, and punctuation (see
+        // normalizeTextAnswer), plus an optional numeric-with-tolerance match
+        // for a station where the teacher set `numericTolerance` — e.g. an
+        // accepted answer of "3.14" with a tolerance of "0.05" also accepts
+        // "3.1" or "3.19".
+        var givenNorm = normalizeTextAnswer(rawGiven);
+        var acceptedNorm = (station.answers || []).map(normalizeTextAnswer);
+        correct = givenNorm.length > 0 && acceptedNorm.indexOf(givenNorm) !== -1;
+        if (!correct && station.numericTolerance !== undefined && station.numericTolerance !== null) {
+          var givenNum = parseFloat(rawGiven);
+          if (!isNaN(givenNum) && rawGiven.trim() !== '') {
+            correct = (station.answers || []).some(function (a) {
+              var accNum = parseFloat(a);
+              return !isNaN(accNum) && Math.abs(accNum - givenNum) <= station.numericTolerance;
+            });
+          }
+        }
+        if (!correct) nearMiss = isNearMiss(givenNorm, acceptedNorm);
+      } else {
+        // Digit-lock and cipher matching is unchanged from before this round —
+        // exact after only the original light normalization (case/whitespace),
+        // since a digit code or a decoded cipher phrase isn't free typing.
+        var givenOld = normalizeAnswer(rawGiven);
+        var acceptedOld = (station.answers || []).map(normalizeAnswer);
+        correct = givenOld.length > 0 && acceptedOld.indexOf(givenOld) !== -1;
+      }
 
       if (correct) {
         progress.solved = progress.solved || {};
@@ -539,9 +677,27 @@
         setTimeout(render, 550);
       } else {
         progress.misses[idx] = (progress.misses[idx] || 0) + 1;
+
+        // Optional per-station attempt limit: once consecutive misses reach
+        // it, lock the station out for a short cooldown instead of letting
+        // guesses continue indefinitely.
+        var maxAttempts = parseInt(station.maxAttempts, 10) || 0;
+        var lockingOutNow = maxAttempts > 0 && progress.misses[idx] >= maxAttempts;
+        if (lockingOutNow) {
+          progress.lockUntil = progress.lockUntil || {};
+          progress.lockUntil[idx] = Date.now() + LOCKOUT_MS;
+        }
         saveProgress(progress);
+
+        if (lockingOutNow) {
+          render();
+          return;
+        }
+
         feedback.className = 'feedback show bad';
-        feedback.textContent = 'Not quite — try again.';
+        feedback.textContent = nearMiss
+          ? 'So close — check your capitalization, spacing, and spelling, then try again.'
+          : 'Not quite — try again.';
         if (cost === 0 && station.hint && progress.misses[idx] >= 2 && hintBox && !hintBox.classList.contains('show')) {
           hintBox.classList.add('show');
           if (hintBtn) hintBtn.style.display = 'none';

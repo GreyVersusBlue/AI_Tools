@@ -189,3 +189,108 @@ removing the correct choice re-indexes correctly; confirmed state survives a
 full page reload; watched for console/page errors throughout (none seen).
 No manual code-review fallback was needed — Playwright with the pre-installed
 Chromium worked directly.
+
+### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+Shipped the two remaining Quick Wins flagged at the end of Round 4: undo on
+"Clear all progress" and hints with a time penalty. Both are additive to the
+station/team data model; nothing from Round 4 was touched otherwise.
+
+- **Undo on "Clear all progress."** The confirm() dialog already existed
+  (`confirm('Clear every team’s marked progress...')`) — Round 4 or earlier
+  had already added it — so this round's actual gap was the undo. Clicking
+  the button now snapshots every team's `marks`/`attempts`/`hintsUsed`/
+  `penaltyMs` (keyed by team **code**, not array index, so it survives a
+  reorder) before wiping them, and reveals an "Undo clear" link next to the
+  button for a 15-second window. Clicking it restores every team's snapshot
+  exactly (a team deleted during the window is simply skipped, nothing
+  throws); the window auto-collapses via `setTimeout`, and switching hunts or
+  tabs (`refreshRunView`) also clears any pending undo so a stale snapshot
+  can never be applied to the wrong run.
+- **Hints with a time penalty.** Each station gained an optional `hint` text
+  field and a `hintPenalty` (minutes) field, edited via a small 💡 toggle
+  button added to the row actions (next to move/remove) that opens the same
+  detail-row used by the choice/numeric editors — so a plain open-ended or
+  photo-proof station can have a hint too, not just choice/numeric ones. The
+  Team Check-In panel gained a "💡 Hint" button next to "Check In": type or
+  scan a team's code and press it to reveal that station's hint text inline
+  (no `alert()`, so it stays scriptable/testable) and, on that team's *first*
+  request for that station, apply the penalty — a later re-request just
+  re-shows the hint for free. The scoring model here is time-based, not
+  points-based (this tool never had points — `renderLeaderboard` already
+  ranked by solved-count then by earliest mark timestamp), so the penalty is
+  stored as `team.penaltyMs` and added to that team's *effective* finish time:
+  it now sorts ties later and lengthens their "Finished in X" clock by
+  exactly the configured minutes. A new "Hints" column on the leaderboard and
+  a "N hints used (−M min)" note under Team Progress make the penalty visible
+  without doing math by hand. The hint text and its penalty also print on the
+  answer key (so the teacher remembers what they wrote) and export to CSV.
+
+### Data model / compatibility
+
+Stations gained `hint` (string) and `hintPenalty` (string, parsed as
+minutes), both defaulted through `ensureStationDefaults` — a hunt saved
+before this round has no `hint`/`hintPenalty` keys at all, and loads with
+both defaulting to `''`/`'0'`, no hint button shown (it's `disabled` whenever
+the current check-in station's hint is empty), and the detail row stays
+collapsed unless it's a choice/numeric type. Teams gained `hintsUsed` (an
+object keyed by station index, like `attempts`) and `penaltyMs` (number),
+both defaulted through `ensureRun()` alongside the existing `marks`/`code`
+migrations, so a legacy team object (bare-number marks, no `code`, no
+`attempts`) still upgrades cleanly and simply starts at zero hints/zero
+penalty. This was exercised directly: a hand-built legacy blob (no `qType`,
+no `hint`, bare-number `marks`, no team `code`) was written straight into
+`localStorage` and loaded — it migrated with no console errors, the hint
+button was correctly disabled (station has no hint), and the leaderboard/
+progress views rendered normally.
+
+### Tradeoffs / deliberately skipped
+
+- The undo window is a fixed 15 seconds and in-memory only (not persisted) —
+  a reload during the window loses the ability to undo, same as the general
+  in-memory-toast pattern used elsewhere in the toolkit. This was a
+  deliberate scope choice to keep the fix small; a "keep last N clears in
+  localStorage" version would be more robust but is a bigger change than a
+  Quick Win warrants.
+- A hint applies its penalty once per team **per station**, not once per
+  hunt — a team can request hints at multiple stations, each charged
+  independently, which matches "the standard mechanic" description in the
+  prompt (a stuck team pays to get unstuck at *that* station) rather than a
+  single hunt-wide allowance.
+- Still not implemented, left for the next round: randomized/rotated station
+  order per team, a printed no-device team answer sheet, a distinct
+  "location hint" printed on the answer key for the teacher's own setup/
+  teardown (different from the team-facing penalty hint added this round —
+  worth keeping those two concepts separate if built later), a projector-
+  visible timer view, pulling questions from other toolkit tools, the
+  annotated floor-plan map, the post-hunt debrief print, and any joint
+  planning with `escape-room-builder`.
+
+### Testing performed
+
+`node --check` on both extracted `<script>` blocks (clean). Playwright
+(Chromium, headless, `file://`) end-to-end: built a two-station hunt (one
+open-ended station with a hint + 3-minute penalty, one multiple-choice);
+confirmed the answer key shows the hint text and penalty; added two teams in
+Live Run; requested the hint for team 1 via its code and the Hint button,
+confirmed the inline hint text and penalty-applied note, then requested it
+again and confirmed the "already used — no additional penalty" message with
+no further time added; checked both teams fully through the hunt, started
+the race timer, and confirmed the leaderboard's Hints column and "Finished
+in X" ranking correctly reflected the 3-minute penalty (the team that used
+the hint finished at 3:00 and ranked below the team that used none at 0:00,
+despite both completing every station); clicked "Clear all progress",
+confirmed the browser `confirm()` fired and, once accepted, that all
+teams' marks/hints reset and an "Undo clear" control appeared; clicked Undo
+and confirmed marks, attempts, hint usage, and the leaderboard/penalty
+figures were restored exactly to their pre-clear values, and that the undo
+control then hid itself; reloaded the page and confirmed all of the above
+(marks, hints, penalties) persisted through localStorage; hand-built and
+loaded a legacy hunt blob (no `qType`/`hint`/`hintPenalty` on the station, a
+bare-number team mark, no team `code`, no `hintsUsed`/`penaltyMs`) and
+confirmed it migrated cleanly with the hint button correctly disabled and no
+console/page errors; took full-page screenshots of both the Build table
+(hint toggle button and expanded hint/penalty editor) and Live Run view
+(Hint button in Team Check-In, Hints column on the leaderboard) to confirm
+layout held after widening the row-actions column for the new button.
+Watched for console/page errors throughout all of the above (none seen).

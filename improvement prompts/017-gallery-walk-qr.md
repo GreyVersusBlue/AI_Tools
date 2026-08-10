@@ -213,3 +213,95 @@ first.
   automated check was run against a real print dialog/paper output — print
   CSS was reviewed by hand against the existing print stylesheet
   conventions.
+
+## Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+Implemented the last open Quick Win from Round 4's "deliberately left for a
+future round" list: **station numbering and a walking order, with printable
+per-student/group route cards.** All changes are in
+`017-gallery-walk-qr.html` only (no changes to `gallery-walk-qr/lib/`).
+
+- **Station numbering.** The entry rows were already implicitly numbered by
+  row order (the `num-cell` column, and "Entry N" on preview/print cards) —
+  no new numbering scheme was needed. The only change here was labeling that
+  first table header "Station" instead of blank, so the existing row order
+  reads explicitly as station numbers once route cards reference "Station N."
+- **Walking order.** New "Walking order & route cards" card (placed right
+  after "Run the gallery walk," since it composes with the timer). Stations
+  are the same `nonEmptyEntries()` concept the feedback-slips feature already
+  uses (any row with a name or value, station-owner or not). The list of
+  students/groups actually *walking* is a separate, independently-loaded
+  list (`state.walkGroups`) — reusing the exact same `np_rosters` read
+  pattern as the existing "Load names from a saved roster" control for
+  entries, via a second roster `<select>` + "Load names" button. A "Use
+  station names instead" button covers the common case where the same
+  roster that owns the stations is also the one walking. This split matters
+  because a real gallery walk usually has more walking students than
+  stations (28 students, 7 stations of work), so the walker list and the
+  station list are legitimately different sizes.
+- **Staggered start algorithm.** `computeWalkOrder()` assigns walker `gi` a
+  starting station of `gi % stationCount`, then the visiting order for
+  `stops` steps is `((start + k) % stationCount) + 1` for `k` in
+  `[0, stops)` — the standard staggered-start rotation, so groups fan out
+  across every station rather than all queuing at Station 1. When there are
+  more walkers than stations (28 students, 7 stations), the assignment wraps
+  and reuses starting stations, still evenly spread.
+- **Timer composition.** `stops` (the number of stations each route card
+  lists) is read directly from `state.timer.rotations` — the same field
+  "Run the gallery walk" already uses — so a route card always has exactly
+  as many stops as the timer will call "rotate," per the round's brief.
+  Falls back to one stop per station (a full loop) only if `rotations` isn't
+  a usable positive number. Changing the rotation count updates the live
+  walking-order preview immediately (`renderWalkOrderPreview()` is now
+  called from both `render()` and the `timerRotations` change handler), so
+  the route cards can't silently go stale relative to the timer.
+- **Print Route Cards.** New print target (`#printRouteCardsArea` /
+  `.print-route-grid`, mirroring the existing `.print-slip-grid` page-break
+  convention with a 2/4/6-per-page selector) producing one small card per
+  walker: "Start at Station N," then "Then: X → Y → Z" for the remaining
+  stops (or "Stay at this station for the whole walk" when `stops === 1`).
+- Persistence: `state.walkGroups` (array of names) and
+  `state.routeCardsPerPage` were added to `newSet()` and given migration
+  defaults in `loadSetByName()` (`[]` and `'4'` respectively) so galleries
+  saved before this round load without errors.
+
+### Testing performed
+
+- `node --check` on both extracted inline script blocks — passes.
+- Playwright (Chromium, headless): seeded an `np_rosters` roster via
+  `localStorage`, added stations via `#addRowBtn` and filled in
+  name/link cells, loaded the roster into the walking-order list via the
+  new select + "Load names" button, set the timer's rotation count to match
+  the station count, clicked "Generate walking order," and asserted (a)
+  starting stations differ across walkers — not everyone lands on Station 1
+  — and (b) every route card's full order is a permutation of all stations
+  with zero repeats within one pass. Then clicked "Print Route Cards" and
+  confirmed the printed area renders exactly one `.r-card` per walker,
+  matching the on-screen count, with no console errors throughout. A second
+  pass exercised regressions and edge cases: a pre-this-round ("legacy
+  shape") saved gallery missing `walkGroups`/`routeCardsPerPage` entirely
+  loads with correct migrated defaults and no errors; the existing "Print
+  QR Codes" flow still produces the right card count after these changes;
+  creating a brand-new gallery and switching between two saved galleries
+  correctly carries the new fields per-gallery with no stale UI; and
+  generating a walking order using the timer's *default* rotation count
+  (not overridden) produces the expected shorter, still-valid rotation.
+
+### Deliberately left for a future round
+
+- **Test-scan each code before printing** (Quick Win, P7) — still open, as
+  noted in Round 4; not touched this round either.
+- **QR + label + blank comment area on one card** (Quick Win) — still open.
+- **Short-link display under each code** (Quick Win) — still open.
+- **Undo/confirm on reset-reactions and delete-gallery** (Quick Win, P11) —
+  delete-gallery already confirms via `confirm()`; an "undo" affordance
+  (vs. just a confirm dialog) is still open for both actions.
+- **Walking order UX polish** — the walker list and the station list are
+  two separate manually-triggered loads; a teacher who edits stations after
+  generating a route currently needs to re-click "Use station names
+  instead" or "Load names" to resync if they were relying on that source.
+  A tighter binding (e.g., an explicit "keep in sync with stations" toggle)
+  would remove that manual step, but wasn't necessary for the walker/roster
+  path and was left out to keep this round's UI additions minimal.
+- **True feedback-slip scanning/OCR** and **reuse the station/card/print
+  engine across the three QR tools** — unchanged from Round 4, still open.
