@@ -85,6 +85,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Geography Bee / Map Skills Quiz Generator | `Tools/geography-bee-quiz-generator.html` | A 30-question built-in bank across capitals, landmarks, and map-reading skills, filterable by category, projected one at a time or printed as a quiz with an answer key. |
 | Classroom Label Maker (Target Language) | `Tools/classroom-label-maker.html` | Paste a target-word/English vocabulary list and print small labels each with a QR code linking to a browser-text-to-speech pronunciation page, plus a plain reference sheet. |
 | Cultural Trivia Card Generator | `Tools/cultural-trivia-card-generator.html` | A 30-question built-in bank across Hispanic World, Francophone World, and Global Culture categories, filterable, projected one at a time or printed as matching front/back trivia cards. |
+| Picture-Prompt Speaking/Writing Task Generator | `Tools/picture-prompt-generator.html` | Upload images, pair each with a random editable task prompt, step through no-repeats-until-cycled for a projector display, or print a set of image + prompt cards. |
 
 ## Using these
 
