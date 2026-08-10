@@ -55,7 +55,7 @@ The platform spine: the tools that own shared data or compose it.
 | Backup & Restore | `backup-restore.md` |
 | Command Center | `command-center-dashboard.md` |
 
-### Round 3 — 2026-08-10 — PR #TBD
+### Round 3 — 2026-08-10 — PR #54
 
 Print-heavy and cross-cutting: a document assembler, a paper generator, two
 tools that gained a shared-roster/print upgrade, and a timeline that got a
