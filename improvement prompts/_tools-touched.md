@@ -185,7 +185,16 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Image → PDF Assembler | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Graph Paper & Number Line Generator | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Lab Safety Contract Tracker | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Immersion Roleplay Scenario Generator | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Timeline Builder | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| QR Code Generator | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Gallery Walk QR Codes | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| QR Scavenger Hunt Builder | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Digital Escape Room / Puzzle Lock Builder | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
+| Bracket / Tournament Generator | `v19h3x` | 2026-08-10 22:50 UTC | `claude/tools-011-020-improvements-v19h3x` |
 
 ---
 
