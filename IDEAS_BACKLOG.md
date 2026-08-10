@@ -31,7 +31,6 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Science Safety Symbol & Equipment Label Maker | Printable hazard and equipment labels for lab storage, bins, and stations — pairs with the Lab Safety Contract Tracker. |
 | Scientific Method / Experiment Design Planner | A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder. |
 | Science Fair Project Tracker | Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report. |
 | Dichotomous Key Builder | Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key. |
