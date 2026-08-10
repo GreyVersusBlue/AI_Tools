@@ -91,6 +91,10 @@
   .tag-row { display: flex; align-items: center; gap: .5rem; }
   .tag-row input[type="text"] { flex: 1; margin-bottom: .5rem; }
   .tag-row input[type="number"] { width: 4.3rem; text-align: center; margin-bottom: .5rem; }
+  /* The shared rule gives every select width:100%, which would eat the label
+     field beside it. */
+  .tag-row select.tag-cat { flex: 0 0 auto; width: 7.4rem; margin-bottom: .5rem; }
+  .tag-row input[type="text"] { min-width: 6rem; }
 
   /* ── Live board ───────────────────────────────────────────────────── */
   .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
@@ -119,6 +123,25 @@
   .student-card:active { transform: scale(0.96); }
   .student-card .s-name { font-weight: 700; font-size: .85rem; overflow-wrap: anywhere; margin-bottom: .3rem; }
   .student-card .s-points { font-size: 1.6rem; font-weight: 800; font-family: Consolas, monospace; color: var(--muted); }
+  .student-card .s-sub { font-size: .68rem; color: var(--muted); margin-top: .15rem; font-family: Consolas, monospace; }
+  .student-card .s-goal { font-size: .66rem; margin-top: .1rem; font-weight: 700; letter-spacing: .03em; }
+  .student-card .s-goal.met { color: var(--good); }
+  .student-card .s-goal.missed { color: var(--err); }
+  .student-card.picked { outline: 3px solid var(--accent-2); outline-offset: -3px; }
+  .cat-academic { border-left: 4px solid #2e6b8f; }
+  .cat-social { border-left: 4px solid #7a5aa8; }
+  .cat-effort { border-left: 4px solid #b8860b; }
+  .chip-key { opacity: .55; font-size: .78em; margin-right: .25rem; font-family: Consolas, monospace; }
+  .spark { display: inline-flex; align-items: flex-end; gap: 1px; height: 20px; vertical-align: bottom; }
+  .spark i { width: 4px; background: var(--good); display: block; min-height: 1px; }
+  .spark i.neg { background: var(--err); }
+  .trend-row { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; border-top: 1px dashed var(--line); font-size: .85rem; }
+  .trend-row:first-child { border-top: none; }
+  .trend-row .t-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trend-row .t-total { font-family: Consolas, monospace; font-weight: 700; min-width: 3.2rem; text-align: right; }
+  .trend-row .t-goal { min-width: 4.4rem; text-align: right; font-size: .78rem; color: var(--muted); }
+  .note-pill { display: inline-block; background: #f1f0ea; border: 1px solid var(--line); border-radius: 999px; padding: 0 .4rem; font-size: .72rem; margin-left: .3rem; }
+  .display-note { font-size: .78rem; color: var(--muted); margin: -.3rem 0 .6rem; }
   .student-card.pos-total .s-points { color: var(--good); }
   .student-card.neg-total .s-points { color: var(--err); }
   .student-card.flash-pos { background: #e4f5ea; border-color: var(--good); }
@@ -206,9 +229,31 @@
         <div class="hint">Archiving saves today&rsquo;s totals below and zeroes every student back to 0. Do this at the end of the day, not between periods, if you want points to carry across periods.</div>
         <div class="btn-row" style="margin-top:0;">
           <button id="archiveBtn" type="button">Archive Day &amp; Reset</button>
+          <button class="secondary" id="clearDayBtn" type="button">Undo the whole day</button>
           <button class="secondary" id="exportHistoryBtn" type="button">Export history (CSV)</button>
         </div>
         <div id="historyWrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Daily goals</span></div>
+        <div class="hint">A behaviour plan is usually written as &ldquo;at or above <em>N</em> points, 4 days out of 5&rdquo;. Set a daily target and this tool counts the days met &mdash; on the board, in the trends below, and on the printed summary.</div>
+        <div class="roster-load-row" style="align-items:center;">
+          <select id="goalStudent"><option value="">Pick a student&hellip;</option></select>
+          <input type="number" id="goalValue" step="1" placeholder="target" style="max-width:6rem;">
+          <button class="secondary" id="setGoalBtn" type="button">Set</button>
+        </div>
+        <div id="goalList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Trends</span></div>
+        <div class="hint">Every archived day, per student. The bars run oldest to newest &mdash; a run of red on the right is the thing worth catching early.</div>
+        <div id="trendWrap"></div>
+        <div class="btn-row">
+          <select id="summaryStudent" style="max-width:16rem;"><option value="">Student summary for&hellip;</option></select>
+          <button class="secondary" id="printSummaryBtn" type="button">Print student summary</button>
+        </div>
       </div>
 
       <div class="card">
@@ -231,9 +276,29 @@
           <option value="points-desc">Points, high &rarr; low</option>
           <option value="points-asc">Points, low &rarr; high</option>
         </select>
+        <label for="displayMode">Show:</label>
+        <select id="displayMode" title="What the class sees when this board is on the projector">
+          <option value="full">Names and points</option>
+          <option value="positive">Names, positives only</option>
+          <option value="initials">Initials and points</option>
+          <option value="total">Class total only</option>
+        </select>
         <div class="spacer"></div>
         <button class="secondary" id="printBtn" type="button" disabled>Print Report</button>
       </div>
+      <p class="display-note" id="displayNote"></p>
+
+      <div class="board-controls" style="margin-bottom:.7rem;">
+        <button class="secondary" id="awardAllBtn" type="button">Award everyone</button>
+        <button class="secondary" id="awardSelectedBtn" type="button">Award ticked</button>
+        <button class="secondary" id="awardUnselectedBtn" type="button">Award everyone else</button>
+        <button class="link-btn" id="clearPickedBtn" type="button">Clear ticks</button>
+        <div class="spacer"></div>
+        <label for="noteMode" style="display:flex;align-items:center;gap:.3rem;font-weight:600;font-size:.8rem;">
+          <input type="checkbox" id="noteMode"> Ask for a note on each tap
+        </label>
+      </div>
+      <p class="hint" id="pickHint" style="margin-top:-.4rem;">Shift-click (or long-press) a student to tick them without giving a point.</p>
 
       <div id="studentGrid" class="student-grid"><p class="empty-hint">Add a roster on the left to get started.</p></div>
 
@@ -255,6 +320,12 @@
   </table>
 </div>
 
+<div class="print-only" id="summaryArea">
+  <h2 id="summaryTitle">Student Summary</h2>
+  <p class="p-sub" id="summarySub"></p>
+  <div id="summaryBody"></div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -271,23 +342,37 @@
    'rosterSelect', 'loadRosterBtn', 'namesInput', 'nameCount',
    'tagsEditor', 'addTagBtn', 'archiveBtn', 'exportHistoryBtn', 'historyWrap', 'cumulativeWrap',
    'tagChips', 'sortMode', 'printBtn', 'studentGrid', 'activityFeed',
-   'printArea', 'printTitle', 'printSub', 'printBody', 'msg'
+   'printArea', 'printTitle', 'printSub', 'printBody', 'msg',
+   'displayMode', 'displayNote', 'awardAllBtn', 'awardSelectedBtn', 'awardUnselectedBtn',
+   'clearPickedBtn', 'pickHint', 'noteMode', 'clearDayBtn',
+   'goalStudent', 'goalValue', 'setGoalBtn', 'goalList', 'trendWrap',
+   'summaryStudent', 'printSummaryBtn', 'summaryArea', 'summaryTitle', 'summarySub', 'summaryBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var BUILTIN_CHIPS = [
     { id: 'm+1', label: '+1', delta: 1, builtin: true },
     { id: 'm-1', label: '\u22121', delta: -1, builtin: true },
   ];
+  /* `cat` groups a behaviour on the printed report and colours its chip. It is
+     optional everywhere: a behaviour saved before categories existed simply has
+     none and lands in "Other". */
+  var CATEGORIES = ['academic', 'social', 'effort', 'other'];
+  var CAT_LABELS = { academic: 'Academic', social: 'Social', effort: 'Effort', other: 'Other' };
   var DEFAULT_TAGS = [
-    { id: 't1', label: 'On Task', delta: 1 },
-    { id: 't2', label: 'Helping Others', delta: 1 },
-    { id: 't3', label: 'Great Answer', delta: 2 },
-    { id: 't4', label: 'Kindness', delta: 1 },
-    { id: 't5', label: 'Off Task', delta: -1 },
-    { id: 't6', label: 'Talking Out', delta: -1 },
-    { id: 't7', label: 'Unprepared', delta: -1 },
-    { id: 't8', label: 'Disrespect', delta: -2 },
+    { id: 't1', label: 'On Task', delta: 1, cat: 'effort' },
+    { id: 't2', label: 'Helping Others', delta: 1, cat: 'social' },
+    { id: 't3', label: 'Great Answer', delta: 2, cat: 'academic' },
+    { id: 't4', label: 'Kindness', delta: 1, cat: 'social' },
+    { id: 't5', label: 'Off Task', delta: -1, cat: 'effort' },
+    { id: 't6', label: 'Talking Out', delta: -1, cat: 'social' },
+    { id: 't7', label: 'Unprepared', delta: -1, cat: 'effort' },
+    { id: 't8', label: 'Disrespect', delta: -2, cat: 'social' },
   ];
+
+  /* Ticked students, for the "award everyone else" case. Session-only on
+     purpose — a selection is a thirty-second thing, and persisting it would
+     mean a teacher opening the tool tomorrow to a mystery set of ticks. */
+  var picked = {};
 
   // state = { name, namesText, tags, armedTagId, points, posCount, negCount, log, history, sortMode }
   var state = null;
@@ -336,7 +421,7 @@
   }
 
   function normalizeState(s) {
-    if (!Array.isArray(s.tags) || !s.tags.length) s.tags = DEFAULT_TAGS.map(function (t) { return { id: t.id, label: t.label, delta: t.delta }; });
+    if (!Array.isArray(s.tags) || !s.tags.length) s.tags = DEFAULT_TAGS.map(function (t) { return { id: t.id, label: t.label, delta: t.delta, cat: t.cat }; });
     if (typeof s.namesText !== 'string') s.namesText = '';
     if (!s.points || typeof s.points !== 'object') s.points = {};
     if (!s.posCount || typeof s.posCount !== 'object') s.posCount = {};
@@ -346,6 +431,16 @@
     if (!Array.isArray(s.history)) s.history = [];
     if (!s.armedTagId) s.armedTagId = 'm+1';
     if (!s.sortMode) s.sortMode = 'name';
+    /* All additive. A section saved before this round has none of them and
+       reads exactly as it always did. */
+    if (['full', 'positive', 'initials', 'total'].indexOf(s.displayMode) === -1) s.displayMode = 'full';
+    if (typeof s.noteMode !== 'boolean') s.noteMode = false;
+    if (!s.goals || typeof s.goals !== 'object') s.goals = {};
+    s.tags.forEach(function (t) { if (CATEGORIES.indexOf(t.cat) === -1) t.cat = 'other'; });
+    s.history.forEach(function (h) {
+      if (!Array.isArray(h.rows)) h.rows = [];
+      h.rows.forEach(function (r) { if (!Array.isArray(r.notes)) r.notes = []; });
+    });
     return s;
   }
 
@@ -370,12 +465,17 @@
     els.setName.value = state.name;
     els.namesInput.value = state.namesText;
     els.sortMode.value = state.sortMode;
+    els.displayMode.value = state.displayMode;
+    els.noteMode.checked = !!state.noteMode;
+    picked = {};
     updateNameCount();
     renderTagsEditor();
     renderChips();
     renderBoard();
     renderHistory();
     renderCumulative();
+    renderGoals();
+    renderTrends();
   }
 
   // ── Roster ───────────────────────────────────────────────────────────────
@@ -383,6 +483,11 @@
     return state.namesText.split('\n')
       .map(function (l) { return l.trim(); })
       .filter(Boolean);
+  }
+
+  function refreshDependentViews() {
+    renderGoals();
+    renderTrends();
   }
 
   function updateNameCount() {
@@ -394,6 +499,7 @@
     state.namesText = els.namesInput.value;
     updateNameCount();
     renderBoard();
+    refreshDependentViews();
     save();
   });
 
@@ -418,6 +524,7 @@
       state.namesText = els.namesInput.value;
       updateNameCount();
       renderBoard();
+      refreshDependentViews();
       save();
     } catch (e) { showMsg('Could not read that roster from this browser.', 'error'); }
   });
@@ -425,9 +532,13 @@
   // ── Behavior tags editor ─────────────────────────────────────────────────
   function renderTagsEditor() {
     els.tagsEditor.innerHTML = state.tags.map(function (t) {
+      var catOpts = CATEGORIES.map(function (c) {
+        return '<option value="' + c + '"' + (t.cat === c ? ' selected' : '') + '>' + CAT_LABELS[c] + '</option>';
+      }).join('');
       return '<div class="tag-row" data-id="' + escapeAttr(t.id) + '">' +
         '<input type="text" class="tag-label" value="' + escapeAttr(t.label) + '">' +
         '<input type="number" class="tag-delta" value="' + t.delta + '" step="1">' +
+        '<select class="tag-cat" title="Category — groups this behavior on the printed report">' + catOpts + '</select>' +
         '<button type="button" class="remove-row-btn" data-remove-tag="' + escapeAttr(t.id) + '" title="Remove behavior">&#10005;</button>' +
         '</div>';
     }).join('');
@@ -440,6 +551,17 @@
     if (!tag) return;
     if (e.target.classList.contains('tag-label')) tag.label = e.target.value;
     else if (e.target.classList.contains('tag-delta')) tag.delta = parseInt(e.target.value, 10) || 0;
+    else if (e.target.classList.contains('tag-cat')) tag.cat = e.target.value;
+    renderChips();
+    save();
+  });
+
+  els.tagsEditor.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('tag-cat')) return;
+    var row = e.target.closest('.tag-row');
+    var tag = state.tags.filter(function (t) { return t.id === row.dataset.id; })[0];
+    if (!tag) return;
+    tag.cat = e.target.value;
     renderChips();
     save();
   });
@@ -456,7 +578,7 @@
   });
 
   els.addTagBtn.addEventListener('click', function () {
-    state.tags.push({ id: nextTagId(), label: 'New Behavior', delta: 1 });
+    state.tags.push({ id: nextTagId(), label: 'New Behavior', delta: 1, cat: 'other' });
     renderTagsEditor();
     renderChips();
     save();
@@ -466,13 +588,35 @@
   function allChips() { return BUILTIN_CHIPS.concat(state.tags); }
 
   function renderChips() {
-    els.tagChips.innerHTML = allChips().map(function (c) {
+    els.tagChips.innerHTML = allChips().map(function (c, i) {
       var sign = c.delta > 0 ? 'pos' : (c.delta < 0 ? 'neg' : '');
       var armed = state.armedTagId === c.id ? ' armed' : '';
+      var cat = (!c.builtin && c.cat && c.cat !== 'other') ? ' cat-' + c.cat : '';
       var label = c.builtin ? c.label : c.label + ' ' + (c.delta > 0 ? '+' : '') + c.delta;
-      return '<span class="tag-chip ' + sign + armed + '" data-chip="' + escapeAttr(c.id) + '">' + escapeHtml(label) + '</span>';
+      /* The number prefix is the shortcut, printed on the chip so nobody has to
+         be told it exists — this board gets driven mid-lesson without looking. */
+      var key = i < 9 ? '<span class="chip-key">' + (i + 1) + '</span>' : '';
+      return '<span class="tag-chip ' + sign + armed + cat + '" data-chip="' + escapeAttr(c.id) + '" title="Press ' + (i + 1) + ' to arm">' + key + escapeHtml(label) + '</span>';
     }).join('');
   }
+
+  /* 1–9 arms a chip; Esc clears the ticked set. Ignored while a text field has
+     focus, so typing a roster does not re-arm the board underneath. */
+  document.addEventListener('keydown', function (e) {
+    if (!state) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape' && Object.keys(picked).length) { picked = {}; renderBoard(); return; }
+    if (!/^[1-9]$/.test(e.key)) return;
+    var chips = allChips();
+    var chip = chips[Number(e.key) - 1];
+    if (!chip) return;
+    e.preventDefault();
+    state.armedTagId = chip.id;
+    renderChips();
+    save();
+  });
 
   els.tagChips.addEventListener('click', function (e) {
     var chip = e.target.closest('[data-chip]');
@@ -492,23 +636,86 @@
     return names;
   }
 
+  /** "Aiden Smith" → "A.S." — enough for the teacher to know who a card is,
+      not enough for the back row to read a classmate's tally off the wall. */
+  function initialsOf(name) {
+    return String(name).split(/\s+/).filter(Boolean).map(function (w) { return w[0].toUpperCase() + '.'; }).join('');
+  }
+
+  /** Points across every archived day, per student. */
+  function cumulativePoints() {
+    var totals = {};
+    state.history.forEach(function (h) {
+      h.rows.forEach(function (r) { totals[r.name] = (totals[r.name] || 0) + r.points; });
+    });
+    return totals;
+  }
+
+  var DISPLAY_NOTES = {
+    full: '',
+    positive: 'Negative points are hidden on the board — they are still counted, still on the report, and still in the activity feed.',
+    initials: 'Initials only. The activity feed and every printed page still use full names.',
+    total: 'Only the class total is on the board. Nobody is named, and no individual tally is visible.'
+  };
+
   function renderBoard() {
     var names = sortedNames();
     if (!names.length) {
       els.studentGrid.innerHTML = '<p class="empty-hint">Add a roster on the left to get started.</p>';
       els.printBtn.disabled = true;
+      els.displayNote.textContent = '';
       return;
     }
+    els.displayNote.textContent = DISPLAY_NOTES[state.displayMode] || '';
+
+    if (state.displayMode === 'total') {
+      var classTotal = names.reduce(function (sum, n) { return sum + (state.points[n] || 0); }, 0);
+      els.studentGrid.innerHTML =
+        '<div class="student-card" style="grid-column:1/-1;cursor:default;padding:1.6rem;">' +
+        '<div class="s-name">Class total today</div>' +
+        '<div class="s-points" style="font-size:3rem;color:' + (classTotal < 0 ? 'var(--err)' : 'var(--good)') + ';">' +
+        (classTotal > 0 ? '+' : '') + classTotal + '</div>' +
+        '<div class="s-sub">' + names.length + ' students &middot; switch "Show" back to award points</div>' +
+        '</div>';
+      els.printBtn.disabled = false;
+      return;
+    }
+
+    var cumulative = state.history.length ? cumulativePoints() : null;
     els.studentGrid.innerHTML = names.map(function (n) {
       var pts = state.points[n] || 0;
-      var cls = pts > 0 ? 'pos-total' : (pts < 0 ? 'neg-total' : '');
+      var shownPts = state.displayMode === 'positive' ? Math.max(0, pts) : pts;
+      var cls = shownPts > 0 ? 'pos-total' : (shownPts < 0 ? 'neg-total' : '');
+      if (picked[n]) cls += ' picked';
+      var label = state.displayMode === 'initials' ? initialsOf(n) : n;
+      /* Today and the quarter answer different questions: +14 for the term and
+         −2 today is a different conversation from −2 for both. */
+      /* Shown for everyone once any day is archived, including the students
+         with nothing on record — a blank where a peer has a number reads as a
+         rendering bug, and "0 to date" is the honest answer for a student who
+         joined this week. */
+      var toDate = cumulative ? (cumulative[n] || 0) : null;
+      var sub = cumulative ? '<div class="s-sub">' + (toDate > 0 ? '+' : '') + toDate + ' to date</div>' : '';
+      var goal = '';
+      if (state.goals[n] !== undefined && state.goals[n] !== null && state.displayMode !== 'positive') {
+        var met = pts >= state.goals[n];
+        goal = '<div class="s-goal ' + (met ? 'met' : 'missed') + '">goal ' +
+               (state.goals[n] > 0 ? '+' : '') + state.goals[n] + (met ? ' \u2713' : '') + '</div>';
+      }
       return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '">' +
-        '<div class="s-name">' + escapeHtml(n) + '</div>' +
-        '<div class="s-points">' + (pts > 0 ? '+' : '') + pts + '</div>' +
+        '<div class="s-name">' + escapeHtml(label) + '</div>' +
+        '<div class="s-points">' + (shownPts > 0 ? '+' : '') + shownPts + '</div>' +
+        sub + goal +
         '</div>';
     }).join('');
     els.printBtn.disabled = false;
   }
+
+  els.displayMode.addEventListener('change', function () {
+    state.displayMode = els.displayMode.value;
+    renderBoard();
+    save();
+  });
 
   els.sortMode.addEventListener('change', function () {
     state.sortMode = els.sortMode.value;
@@ -518,8 +725,60 @@
 
   els.studentGrid.addEventListener('click', function (e) {
     var card = e.target.closest('.student-card');
-    if (!card) return;
+    if (!card || !card.dataset.name) return;
+    if (e.shiftKey || longPressed) { longPressed = false; togglePicked(card.dataset.name); return; }
     applyTap(card.dataset.name, card);
+  });
+
+  /* Shift-click has no touchscreen equivalent and this board gets used on a
+     classroom panel, so a long press does the same thing. */
+  var longPressTimer = null, longPressed = false;
+  els.studentGrid.addEventListener('pointerdown', function (e) {
+    var card = e.target.closest('.student-card');
+    if (!card || !card.dataset.name) return;
+    longPressed = false;
+    longPressTimer = setTimeout(function () {
+      longPressed = true;
+      togglePicked(card.dataset.name);
+    }, 550);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+    els.studentGrid.addEventListener(ev, function () { clearTimeout(longPressTimer); });
+  });
+
+  function togglePicked(name) {
+    if (picked[name]) delete picked[name]; else picked[name] = true;
+    renderBoard();
+  }
+
+  els.clearPickedBtn.addEventListener('click', function () { picked = {}; renderBoard(); });
+
+  /* One armed behaviour applied to a whole set of students in one go — the most
+     obvious missing action on a board of twenty-eight cards. */
+  function awardMany(names, what) {
+    if (!names.length) { showMsg('Nobody to award — tick some students first.', 'info'); return; }
+    var chip = armedChip();
+    if (!chip.delta) return;
+    var note = state.noteMode ? (prompt('Note for this ' + what + ' award (optional):', '') || '') : '';
+    if (!confirm('Apply "' + (chip.builtin ? chip.label : chip.label) + '" (' + (chip.delta > 0 ? '+' : '') + chip.delta + ') to ' + names.length + ' student' + (names.length === 1 ? '' : 's') + '?')) return;
+    names.forEach(function (n) { applyTap(n, null, { note: note, skipRender: true, skipNotePrompt: true }); });
+    renderBoard();
+    renderActivity();
+    save();
+    showMsg('Applied ' + (chip.delta > 0 ? '+' : '') + chip.delta + ' to ' + names.length + ' student' + (names.length === 1 ? '' : 's') + '.', 'info');
+  }
+
+  els.awardAllBtn.addEventListener('click', function () { awardMany(parseNames(), 'whole-class'); });
+  els.awardSelectedBtn.addEventListener('click', function () {
+    awardMany(parseNames().filter(function (n) { return picked[n]; }), 'group');
+  });
+  els.awardUnselectedBtn.addEventListener('click', function () {
+    awardMany(parseNames().filter(function (n) { return !picked[n]; }), 'group');
+  });
+
+  els.noteMode.addEventListener('change', function () {
+    state.noteMode = els.noteMode.checked;
+    save();
   });
 
   function armedChip() {
@@ -527,22 +786,37 @@
     return allChips().filter(function (c) { return c.id === id; })[0] || BUILTIN_CHIPS[0];
   }
 
-  function applyTap(name, cardEl) {
+  function applyTap(name, cardEl, batch) {
+    batch = batch || {};
     var chip = armedChip();
     var delta = chip.delta;
     if (!delta) return;
+
+    /* A sentence is worth more than a number three months later at a
+       conference, and the note is the only part of this tool that carries
+       context. Optional, and off unless the teacher asks for it. */
+    var note = batch.note || '';
+    if (state.noteMode && !batch.skipNotePrompt) {
+      note = prompt('Note for ' + name + ' (optional):', '') || '';
+    }
+
     state.points[name] = (state.points[name] || 0) + delta;
     if (delta > 0) state.posCount[name] = (state.posCount[name] || 0) + 1;
     else state.negCount[name] = (state.negCount[name] || 0) + 1;
 
-    state.log.unshift({
+    var entry = {
       id: nextLogId(),
       name: name,
       tagLabel: chip.builtin ? 'Manual' : chip.label,
+      cat: chip.builtin ? 'other' : (chip.cat || 'other'),
       delta: delta,
       ts: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-    });
+    };
+    if (note) entry.note = note.slice(0, 240);
+    state.log.unshift(entry);
     if (state.log.length > LOG_LIMIT) state.log.length = LOG_LIMIT;
+
+    if (batch.skipRender) return;
 
     renderBoard();
     renderActivity();
@@ -573,8 +847,9 @@
       var undoBtn = i < UNDO_STACK_LIMIT
         ? '<button type="button" class="link-btn a-undo" data-undo-id="' + escapeAttr(ev.id) + '">Undo</button>'
         : '';
+      var noteHtml = ev.note ? '<span class="note-pill" title="' + escapeAttr(ev.note) + '">' + escapeHtml(ev.note.length > 40 ? ev.note.slice(0, 40) + '\u2026' : ev.note) + '</span>' : '';
       return '<div class="activity-item">' +
-        '<span><span class="a-who">' + escapeHtml(ev.name) + '</span> <span class="a-what">&mdash; ' + escapeHtml(ev.tagLabel) + '</span></span>' +
+        '<span><span class="a-who">' + escapeHtml(ev.name) + '</span> <span class="a-what">&mdash; ' + escapeHtml(ev.tagLabel) + '</span>' + noteHtml + '</span>' +
         '<span><span class="a-delta ' + sign + '">' + (ev.delta > 0 ? '+' : '') + ev.delta + '</span> <span class="a-time">' + escapeHtml(ev.ts) + '</span>' + undoBtn + '</span>' +
         '</div>';
     }).join('');
@@ -614,10 +889,25 @@
     if (!state.log.length && totalPts === 0) { showMsg('Nothing logged yet today — nothing to archive.', 'info'); return; }
     if (!confirm('Archive today\u2019s totals to history and reset every student back to 0?')) return;
 
+    /* The day's notes go into the archive with it — they are the only thing in
+       this tool that carries context, and the whole point of the student
+       summary is being able to say what happened, not just how many. Capped
+       per student so a busy day cannot bloat the section. */
+    var notesByName = {};
+    state.log.forEach(function (ev) {
+      if (!ev.note) return;
+      (notesByName[ev.name] = notesByName[ev.name] || []).push({ label: ev.tagLabel, delta: ev.delta, note: ev.note });
+    });
+    var todayIso = new Date().toISOString().slice(0, 10);
     state.history.unshift({
       date: new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
+      iso: todayIso,
       rows: names.map(function (n) {
-        return { name: n, points: state.points[n] || 0, pos: state.posCount[n] || 0, neg: state.negCount[n] || 0 };
+        return {
+          name: n, points: state.points[n] || 0, pos: state.posCount[n] || 0, neg: state.negCount[n] || 0,
+          goal: (state.goals[n] === undefined || state.goals[n] === null) ? null : state.goals[n],
+          notes: (notesByName[n] || []).slice(0, 6)
+        };
       }),
     });
     if (state.history.length > HISTORY_LIMIT) state.history.length = HISTORY_LIMIT;
@@ -627,12 +917,218 @@
     state.negCount = {};
     state.log = [];
 
+    picked = {};
     renderBoard();
     renderActivity();
     renderHistory();
     renderCumulative();
+    renderTrends();
     save();
     showMsg('Day archived. Every student is back to 0.', 'info');
+  });
+
+  /* Wipes today without filing it. The per-entry undo handles a mis-tap; this
+     handles the period where the board got used as a demo, or a substitute
+     tapped through it, and none of it should count. */
+  els.clearDayBtn.addEventListener('click', function () {
+    if (!state.log.length && !Object.keys(state.points).length) {
+      showMsg('Nothing logged today — there is nothing to undo.', 'info');
+      return;
+    }
+    if (!confirm('Undo everything logged today? Every student goes back to 0 and today\u2019s activity is discarded. Archived days are not touched.')) return;
+    state.points = {}; state.posCount = {}; state.negCount = {}; state.log = [];
+    picked = {};
+    renderBoard(); renderActivity(); save();
+    showMsg('Today cleared. Archived days are untouched.', 'info');
+  });
+
+  // ── Daily goals ─────────────────────────────────────────────────────────
+  function refreshStudentSelects() {
+    var names = parseNames();
+    [els.goalStudent, els.summaryStudent].forEach(function (sel) {
+      var keep = sel.value;
+      var first = sel.options[0] ? sel.options[0].outerHTML : '';
+      sel.innerHTML = first + names.map(function (n) {
+        return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + '</option>';
+      }).join('');
+      if (names.indexOf(keep) !== -1) sel.value = keep;
+    });
+  }
+
+  /** Days met, days on record, for one student — the shape a behaviour plan is
+      actually written in ("4 of 5 days at or above target"). */
+  function goalRecord(name) {
+    var goal = state.goals[name];
+    if (goal === undefined || goal === null) return null;
+    var days = 0, met = 0;
+    state.history.forEach(function (h) {
+      var row = h.rows.filter(function (r) { return r.name === name; })[0];
+      if (!row) return;
+      days++;
+      /* The target in force on the day it was archived, so changing a goal now
+         does not silently rewrite last month's record. */
+      var target = (row.goal === undefined || row.goal === null) ? goal : row.goal;
+      if (row.points >= target) met++;
+    });
+    return { goal: goal, days: days, met: met };
+  }
+
+  function renderGoals() {
+    var withGoals = Object.keys(state.goals).filter(function (n) {
+      return state.goals[n] !== undefined && state.goals[n] !== null;
+    }).sort();
+    refreshStudentSelects();
+    if (!withGoals.length) {
+      els.goalList.innerHTML = '<p class="empty-hint">No goals set. Pick a student and a daily target above.</p>';
+      return;
+    }
+    els.goalList.innerHTML = withGoals.map(function (n) {
+      var rec = goalRecord(n);
+      var today = state.points[n] || 0;
+      var onTrack = today >= rec.goal;
+      return '<div class="trend-row"><span class="t-name">' + escapeHtml(n) + '</span>' +
+        '<span class="t-goal">target ' + (rec.goal > 0 ? '+' : '') + rec.goal + '</span>' +
+        '<span class="t-total" style="color:' + (onTrack ? 'var(--good)' : 'var(--err)') + ';">' + (today > 0 ? '+' : '') + today + '</span>' +
+        '<span class="t-goal">' + rec.met + ' of ' + rec.days + ' days</span>' +
+        '<button type="button" class="link-btn" data-clear-goal="' + escapeAttr(n) + '">Clear</button></div>';
+    }).join('');
+  }
+
+  els.setGoalBtn.addEventListener('click', function () {
+    var name = els.goalStudent.value;
+    if (!name) { showMsg('Pick a student to set a goal for.', 'error'); return; }
+    var raw = els.goalValue.value.trim();
+    if (raw === '') { showMsg('Enter a daily point target.', 'error'); return; }
+    state.goals[name] = parseInt(raw, 10) || 0;
+    renderGoals();
+    renderBoard();
+    save();
+    showMsg('Daily target for ' + name + ' set to ' + (state.goals[name] > 0 ? '+' : '') + state.goals[name] + '.', 'info');
+  });
+
+  els.goalList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-clear-goal]');
+    if (!btn) return;
+    delete state.goals[btn.dataset.clearGoal];
+    renderGoals();
+    renderBoard();
+    save();
+  });
+
+  // ── Trends across archived days ─────────────────────────────────────────
+  /** Oldest-to-newest daily points for one student. `history` is newest-first. */
+  function seriesFor(name) {
+    var out = [];
+    for (var i = state.history.length - 1; i >= 0; i--) {
+      var row = state.history[i].rows.filter(function (r) { return r.name === name; })[0];
+      out.push({ date: state.history[i].date, points: row ? row.points : 0, present: !!row });
+    }
+    return out;
+  }
+
+  /** A bar per archived day, scaled to that student's own biggest day, so a
+      quiet class and a points-heavy one both read at a glance. */
+  function sparkHtml(series) {
+    if (!series.length) return '';
+    /* A student with no archived rows at all — joined this week, or the roster
+       changed — gets a word rather than a row of 1px bars pretending to be data. */
+    if (!series.some(function (d) { return d.present; })) return '<span class="t-goal">no record yet</span>';
+    var max = Math.max(1, Math.max.apply(null, series.map(function (d) { return Math.abs(d.points); })));
+    return '<span class="spark">' + series.slice(-20).map(function (d) {
+      var h = Math.round((Math.abs(d.points) / max) * 18) + 1;
+      return '<i class="' + (d.points < 0 ? 'neg' : '') + '" style="height:' + h + 'px" title="' + escapeAttr(d.date + ': ' + (d.points > 0 ? '+' : '') + d.points) + '"></i>';
+    }).join('') + '</span>';
+  }
+
+  function renderTrends() {
+    refreshStudentSelects();
+    if (!state.history.length) {
+      els.trendWrap.innerHTML = '<p class="empty-hint">Archive at least one day and a trend appears here.</p>';
+      return;
+    }
+    var names = parseNames();
+    if (!names.length) { els.trendWrap.innerHTML = '<p class="empty-hint">Add a roster to see trends.</p>'; return; }
+    var totals = cumulativePoints();
+    els.trendWrap.innerHTML = names.map(function (n) {
+      var series = seriesFor(n);
+      var rec = goalRecord(n);
+      return '<div class="trend-row"><span class="t-name">' + escapeHtml(n) + '</span>' +
+        sparkHtml(series) +
+        '<span class="t-total" style="color:' + ((totals[n] || 0) < 0 ? 'var(--err)' : 'var(--good)') + ';">' +
+        ((totals[n] || 0) > 0 ? '+' : '') + (totals[n] || 0) + '</span>' +
+        '<span class="t-goal">' + (rec ? rec.met + '/' + rec.days + ' met' : '') + '</span></div>';
+    }).join('');
+  }
+
+  // ── Per-student printable summary ───────────────────────────────────────
+  /* Deliberately plain and factual. This page can end up in front of a parent,
+     and it is a record of what was logged rather than a judgement about a
+     child — so it states counts, targets and the teacher's own notes, and
+     nothing else. */
+  els.printSummaryBtn.addEventListener('click', function () {
+    var name = els.summaryStudent.value;
+    if (!name) { showMsg('Pick a student to summarise.', 'error'); return; }
+    var series = seriesFor(name);
+    var rec = goalRecord(name);
+    var totals = cumulativePoints();
+    var archivedTotal = totals[name] || 0;
+    var todayPts = state.points[name] || 0;
+    var pos = 0, neg = 0;
+    state.history.forEach(function (h) {
+      var r = h.rows.filter(function (x) { return x.name === name; })[0];
+      if (r) { pos += r.pos; neg += r.neg; }
+    });
+    pos += state.posCount[name] || 0;
+    neg += state.negCount[name] || 0;
+
+    var notes = [];
+    state.history.forEach(function (h) {
+      var r = h.rows.filter(function (x) { return x.name === name; })[0];
+      if (r && r.notes) r.notes.forEach(function (nt) { notes.push({ date: h.date, label: nt.label, delta: nt.delta, note: nt.note }); });
+    });
+    state.log.filter(function (ev) { return ev.name === name && ev.note; }).forEach(function (ev) {
+      notes.push({ date: 'Today', label: ev.tagLabel, delta: ev.delta, note: ev.note });
+    });
+
+    els.summaryTitle.textContent = name;
+    els.summarySub.textContent = (state.name ? state.name + ' \u00b7 ' : '') +
+      new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) +
+      ' \u00b7 ' + state.history.length + ' recorded day' + (state.history.length === 1 ? '' : 's');
+
+    var html = '<table><thead><tr><th>Measure</th><th>Value</th></tr></thead><tbody>' +
+      '<tr><td>Points across recorded days</td><td>' + (archivedTotal > 0 ? '+' : '') + archivedTotal + '</td></tr>' +
+      '<tr><td>Points so far today</td><td>' + (todayPts > 0 ? '+' : '') + todayPts + '</td></tr>' +
+      '<tr><td>Positive entries</td><td>' + pos + '</td></tr>' +
+      '<tr><td>Entries needing follow-up</td><td>' + neg + '</td></tr>' +
+      (rec ? '<tr><td>Daily target</td><td>' + (rec.goal > 0 ? '+' : '') + rec.goal + ' \u2014 met on ' + rec.met + ' of ' + rec.days + ' recorded days</td></tr>' : '') +
+      '</tbody></table>';
+
+    if (series.length) {
+      html += '<h3 style="font-size:1rem;margin:1rem 0 .4rem;">Day by day</h3>' +
+        '<table><thead><tr><th>Day</th><th>Points</th>' + (rec ? '<th>Target met</th>' : '') + '</tr></thead><tbody>' +
+        series.map(function (d, i) {
+          var row = state.history[state.history.length - 1 - i];
+          var r = row.rows.filter(function (x) { return x.name === name; })[0];
+          var target = rec ? ((r && r.goal !== undefined && r.goal !== null) ? r.goal : rec.goal) : null;
+          return '<tr><td>' + escapeHtml(d.date) + '</td><td>' + (d.points > 0 ? '+' : '') + d.points + '</td>' +
+                 (rec ? '<td>' + (d.points >= target ? 'Yes' : 'No') + '</td>' : '') + '</tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    if (notes.length) {
+      html += '<h3 style="font-size:1rem;margin:1rem 0 .4rem;">Notes recorded at the time</h3>' +
+        '<table><thead><tr><th>Day</th><th>Behavior</th><th>Note</th></tr></thead><tbody>' +
+        notes.map(function (nt) {
+          return '<tr><td>' + escapeHtml(nt.date) + '</td><td>' + escapeHtml(nt.label) + ' (' + (nt.delta > 0 ? '+' : '') + nt.delta + ')</td><td>' + escapeHtml(nt.note) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    } else {
+      html += '<p class="p-sub" style="margin-top:1rem;">No written notes were recorded for this student. Turn on &ldquo;Ask for a note on each tap&rdquo; to capture context alongside the points.</p>';
+    }
+
+    els.summaryBody.innerHTML = html;
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.summaryArea.classList.add('active');
+    window.print();
   });
 
   // ── Cumulative totals across every archived day ──────────────────────────
@@ -708,10 +1204,24 @@
     if (!names.length) return;
     els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Behavior & Points Report';
     els.printSub.textContent = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+    /* Per-student totals, then a breakdown by category — "six academic, one
+       social" says something a single number does not. */
+    var byCat = {};
+    state.log.forEach(function (ev) {
+      var c = ev.cat || 'other';
+      if (!byCat[c]) byCat[c] = { count: 0, points: 0 };
+      byCat[c].count++;
+      byCat[c].points += ev.delta;
+    });
+    var catRows = CATEGORIES.filter(function (c) { return byCat[c]; }).map(function (c) {
+      return '<tr><td>' + CAT_LABELS[c] + '</td><td class="pts">' + (byCat[c].points > 0 ? '+' : '') + byCat[c].points + '</td><td>' + byCat[c].count + '</td><td></td></tr>';
+    }).join('');
     els.printBody.innerHTML = names.map(function (n) {
       var pts = state.points[n] || 0;
-      return '<tr><td>' + escapeHtml(n) + '</td><td class="pts">' + (pts > 0 ? '+' : '') + pts + '</td><td>' + (state.posCount[n] || 0) + '</td><td>' + (state.negCount[n] || 0) + '</td></tr>';
-    }).join('');
+      var goal = state.goals[n];
+      var goalCell = (goal === undefined || goal === null) ? '' : ' <small>(target ' + (goal > 0 ? '+' : '') + goal + (pts >= goal ? ', met' : ', not met') + ')</small>';
+      return '<tr><td>' + escapeHtml(n) + goalCell + '</td><td class="pts">' + (pts > 0 ? '+' : '') + pts + '</td><td>' + (state.posCount[n] || 0) + '</td><td>' + (state.negCount[n] || 0) + '</td></tr>';
+    }).join('') + (catRows ? '<tr><td colspan="4" style="padding-top:.8rem;"><b>By category, today</b></td></tr>' + catRows : '');
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printArea.classList.add('active');
     window.print();
