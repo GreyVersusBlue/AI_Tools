@@ -52,7 +52,8 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| PE Warm-Up Circuit Card Generator | Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Existing Tools — Enhancement Ideas
 

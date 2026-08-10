@@ -90,6 +90,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Fitness & Skill Assessment Tracker | `Tools/fitness-skill-assessment-tracker.html` | Save a roster, add time- or count-based fitness-test events, enter results in a per-student grid with live class average/range stats, and print a report. |
 | Student Art Portfolio Label & QR Tag Maker | `Tools/art-portfolio-label-maker.html` | Add a title, photo, and artist statement per piece; print portfolio labels with a thumbnail and a QR code carrying the statement text itself, no hosting needed. |
 | Music Sight-Reading / Rhythm Warm-Up Generator | `Tools/music-sightreading-generator.html` | Randomized rhythm patterns (4/4, 3/4, or 2/4) or randomized pitch sight-reading on a real treble/bass staff, for a projector display or printed handout. |
+| PE Warm-Up Circuit Card Generator | `Tools/pe-warmup-circuit-generator.html` | A default 8-station calisthenics circuit (or build from scratch), each with an emoji, duration/reps, and instructions, printed as large station cards. |
 
 ## Using these
 
