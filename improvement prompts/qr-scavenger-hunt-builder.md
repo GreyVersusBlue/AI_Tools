@@ -27,10 +27,12 @@ ambitious and **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Teams should be able to check themselves in.** Right now the live run is
+- **Done —** **Teams should be able to check themselves in.** Right now the live run is
   driven by the teacher; a hunt with eight teams spread across a building
   needs the teams to report progress, not one person tapping for all of them
-  (P9 — or a per-team code the team shows the teacher to scan).
+  (P9 — or a per-team code the team shows the teacher to scan). *(Shipped as
+  a 4-character team code plus a "Team Check-In" panel — see the Round 4
+  update above.)*
 - **Randomized station order per team**, so eight teams don't queue at station
   1. The tool has the data; the shuffle is small and the impact is large.
 - **Hints with a time penalty** — the standard mechanic that keeps a stuck
@@ -48,9 +50,11 @@ ambitious and **not** scoped to a single session.
   has branching, per-station images, answer validation and a player page
   (`lock.html`); this tool has teams, timing, and a leaderboard. Each is
   missing exactly what the other has, and they print the same station cards.
-- **Question types beyond text answers**: multiple choice, numeric with
+- **Done —** **Question types beyond text answers**: multiple choice, numeric with
   tolerance, "photograph this and show me", "count the X". The physical-world
-  question types are what distinguish a hunt from a worksheet.
+  question types are what distinguish a hunt from a worksheet. *(Shipped as
+  Open-ended / Multiple choice / Numeric / Photo proof — see the Round 4
+  update above.)*
 - **Content from the toolkit** (P7). Pull questions from
   `review-game-board.html`'s bank or vocabulary from the flashcard tool, so
   building Friday's hunt isn't writing twelve new questions from scratch.
@@ -91,7 +95,7 @@ printed debrief for every team at the end.
   answer changes whether self-check-in or paper answer sheets is the primary
   path.
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10
 
 Implemented three of the Major Features in one pass, all self-contained to
 this tool (escape-room-builder untouched, no shared library, no CDN

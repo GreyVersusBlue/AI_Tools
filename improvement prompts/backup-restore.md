@@ -137,45 +137,62 @@ What shipped, against the backlog below:
 
 ## Quick Wins
 
-- **It doesn't cover IndexedDB.** `blank-map-generator` keeps its cached maps
+- **Done —** **It doesn't cover IndexedDB.** `blank-map-generator` keeps its cached maps
   in IndexedDB (`bmg-map-cache.js`), and any tool that follows that pattern
   for images (P12) will be invisible to this tool. A backup that silently
-  omits data is worse than no backup.
-- **Backup age nag with teeth.** The banner is good; a hard "you have never
+  omits data is worse than no backup. *(Shipped — the page now enumerates
+  IndexedDB and can export/rebuild it, including schema and Blob/ArrayBuffer/
+  Date values.)*
+- **Done —** **Backup age nag with teeth.** The banner is good; a hard "you have never
   backed up and you have 2.1 MB of work here" state on first visit is better.
+  *(Shipped — a red, bold banner naming the exact amount at risk.)*
 - **Restore preview / diff.** Show what changes: "3 rosters will be replaced,
   2 new ones added, 1 left alone." Restoring is the scary operation and it
-  currently asks for trust.
-- **Selective export**, not just selective restore — "just my rosters", "just
-  this year's grade data".
-- **Quota readout.** Total bytes used against the ~5 MB `localStorage` ceiling,
+  currently asks for trust. *(Not shipped this round — "Verify a backup"
+  below shows what a file contains before arming it, but not a per-record
+  diff of what restoring it would change.)*
+- **Done —** **Selective export**, not just selective restore — "just my rosters", "just
+  this year's grade data". *(Shipped — "Only student data" / "Only settings &
+  templates" / "Select everything" one-click filters.)*
+- **Done —** **Quota readout.** Total bytes used against the ~5 MB `localStorage` ceiling,
   with the biggest offenders listed. This is the natural home for the
-  storage-pressure warning the whole site needs (P12).
-- **A named backup.** Filename with date and, optionally, a label
-  ("end-of-Q2") instead of a generic name.
-- **Verify a backup file** without restoring it — open it, list contents,
-  confirm it isn't truncated or from a different site.
+  storage-pressure warning the whole site needs (P12). *(Shipped — a meter,
+  the three biggest consumers, and a warning above 70%.)*
+- **Done —** **A named backup.** Filename with date and, optionally, a label
+  ("end-of-Q2") instead of a generic name. *(Shipped — a label field,
+  sanitised into the filename, with a live preview.)*
+- **Done —** **Verify a backup file** without restoring it — open it, list contents,
+  confirm it isn't truncated or from a different site. *(Shipped — dropping a
+  file produces a report before anything is armed, ending in "Nothing has
+  been changed yet".)*
 
 ## Major Features
 
-- **Versioned, self-describing backup format.** Stamp a schema version and a
+- **Done —** **Versioned, self-describing backup format.** Stamp a schema version and a
   per-tool version into the file, and ship migrations so a backup taken in
   September still restores in May after three tools changed shape (P8). This
   is the feature that makes this tool trustworthy rather than hopeful.
-- **Merge restore, not just overwrite.** Two computers (school desktop and
+  *(Shipped — `formatVersion`, a `meta` block, and backward-compatible
+  reading of every pre-existing unversioned backup.)*
+- **Done — whole-file modes only.** **Merge restore, not just overwrite.** Two computers (school desktop and
   home laptop) is the normal case. "Combine, keeping the newer of each" and
   per-item conflict resolution would make the two-machine workflow actually
-  work.
+  work. *(Shipped three whole-file modes — Replace, Add only what's missing,
+  Combine with file-wins-on-clash. Per-record conflict resolution ("keep the
+  newer of each") is still open — it needs per-record timestamps no tool
+  currently writes; see Where the next round should pick up.)*
 - **Scheduled reminder.** A local, opt-in reminder — end of each grading
   period, or every N days — surfaced on the site rather than emailed.
 - **Direct device-to-device transfer** (P9). `_shared/webrtc-pair.js` already
   does serverless peer-to-peer with QR pairing. Moving a whole year's work
   from the old laptop to the new one without producing a file at all is a
   genuinely delightful, genuinely private answer to the migration problem.
-- **Archive-and-clear for a school year** (P14). "Save last year to a file,
+- **Done —** **Archive-and-clear for a school year** (P14). "Save last year to a file,
   then clear last year's student data but keep my templates, rubrics, and
   standing details." Right now backup and rollover are unrelated ideas; they
-  are really one workflow.
+  are really one workflow. *(Shipped — one button downloads a full archive,
+  shows which tools fall on which side of the line, then clears student
+  data.)*
 - **Per-tool restore from the tool itself.** A small shared control any tool
   can mount — "restore just this tool's data from a backup file" — so a
   teacher who breaks one tool doesn't have to reason about all of them.

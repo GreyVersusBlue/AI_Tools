@@ -9,8 +9,11 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+shipped the station template library, fitness/score capture, gym-legible
+fullscreen, and a same-device remote control. Ideas below are deliberately
+ambitious and are **not** scoped to a single session; items confirmed shipped
+are tagged **Done** below.
 
 ## What it does today
 
@@ -26,21 +29,30 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **The display has to be readable from across a gym.** This is the most
+- **Done — Round 4.** **The display has to be readable from across a gym.** This is the most
   extreme legibility requirement on the site — bigger than any classroom
   projector. Current station / timer / group text should be sized for 60 feet,
-  not 20.
-- **Audible signals that carry.** A single tone will not be heard over a gym.
+  not 20. *(Fullscreen timer scales up to ~15rem; a "high-contrast gym
+  display" toggle switches to black/yellow-white.)*
+- **Done — Round 4.** **Audible signals that carry.** A single tone will not be heard over a gym.
   Longer, louder, repeated signals, plus a visual full-screen colour flash, and
-  a warning signal 30 seconds before rotation.
-- **Show the next station**, not just the current one, so groups can move
-  without being told where.
-- **Uneven groups and stations.** More groups than stations, or a station that
-  takes two rotations — currently the schedule assumes a clean cycle.
-- **Rest stations** and a water break as a first-class station type.
+  a warning signal 30 seconds before rotation. *(Alarm is now three louder
+  repeated chimes, a distinct 30-second warning tone was added, plus a
+  full-stage flash on rotation.)*
+- **Done — Round 4.** **Show the next station**, not just the current one, so groups can move
+  without being told where. *(Each station tile shows a "Next" line via
+  `computeAssignment(count + 1)`.)*
+- **Skipped — partial, Round 4.** **Uneven groups and stations.** More groups than stations, or a station that
+  takes two rotations — currently the schedule assumes a clean cycle. *(More/
+  fewer groups than stations already wraps via `computeAssignment`; a station
+  taking two full rotations, or locking a group out of the cycle, is still
+  unmodeled.)*
+- **Skipped — deferred, Round 4.** **Rest stations** and a water break as a first-class station type. *(The
+  shipped templates include a "Rest / Water" station as ordinary content, but
+  there's no special handling — e.g. skip-scoring — yet.)*
 - **Print a wall-sized station card**, one per page, with the activity
   instructions and a diagram space.
-- **Undo on Reset / New unit** (P11).
+- **Skipped — deferred, Round 4.** **Undo on Reset / New unit** (P11).
 
 ## Major Features
 

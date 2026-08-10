@@ -42,23 +42,31 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Printed feedback slips as the collection mechanism.** Rather than
+- **Done —** **Printed feedback slips as the collection mechanism.** Rather than
   collecting digitally, print a pad of feedback slips per station that
   students fill in by hand and leave behind — then give the teacher a fast
   way to tally and redistribute them. Paper is the right medium here anyway:
-  it keeps the walk moving and doesn't require a device per student.
-- **Works when the work isn't online.** The current model assumes each piece
+  it keeps the walk moving and doesn't require a device per student. *(Shipped
+  Round 4 as a "Peer feedback slips" card — style, custom prompt, slips-per-
+  station, slips-per-page.)*
+- **Done —** **Works when the work isn't online.** The current model assumes each piece
   of student work has a URL. Most classroom work is on paper or on a
   Chromebook that isn't publicly shared. A mode where the QR encodes the
   *prompt and the rubric* rather than a link — or where the station card is
   just a printed card with a feedback area — would make the tool usable far
-  more often.
-- **Rotation timing** (P7). A gallery walk is a timed rotation; the timer and
+  more often. *(Shipped Round 4 — any entry row can expand to a multi-line
+  prompt/rubric instead of a link, printed directly on the card.)*
+- **Done —** **Rotation timing** (P7). A gallery walk is a timed rotation; the timer and
   station-rotation logic already exist in `Classroom Timer.html` and
-  `pe-tournament-stations.html`.
-- **Aggregate the feedback.** Once comments come back, print a per-student
+  `pe-tournament-stations.html`. *(Shipped Round 4 as a "Run the gallery
+  walk" card — Start/Pause/Resume/Rotate now/Reset, one shared class-wide
+  clock.)*
+- **Partially done —** **Aggregate the feedback.** Once comments come back, print a per-student
   packet of the feedback their work received — the part of a gallery walk that
-  usually never happens because collating sticky notes is tedious.
+  usually never happens because collating sticky notes is tedious. *(Shipped
+  Round 4 as manual transcription into a "Collected feedback" card, then
+  "Print Feedback Packets" — saves the collating step, not the data-entry
+  step; true OCR/scanning is still open.)*
 - **Reuse for anything QR-and-stations shaped** — museum-style exhibits,
   science fair judging, book tasting stations. This tool,
   `qr-scavenger-hunt-builder.html`, and `escape-room-builder.html` are three
@@ -105,7 +113,7 @@ reclassified here.
   card-and-feedback model.
 - Should the three QR tools share one station/card/print engine?
 
-## Round 3 update — 2026-08-10
+## Round 4 update — 2026-08-10
 
 Implemented four of the Major Features in one pass, all in `gallery-walk-qr.html`
 (no changes to `gallery-walk-qr/lib/`):

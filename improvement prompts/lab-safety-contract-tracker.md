@@ -86,20 +86,26 @@ produces 2 slips naming the 2 missing students with the due date shown.
 
 ## Quick Wins
 
-- **Print the contract itself**, not just the tracking. The tool tracks a
+- **Done —** **Print the contract itself**, not just the tracking. The tool tracks a
   document it can't produce; a printable contract (and a parent signature
-  line) makes it a complete workflow.
-- **Reminder slips** for the students who haven't returned theirs — a
+  line) makes it a complete workflow. *(Shipped Round 3 as "Print blank
+  forms" — one signable copy per roster student, seeded with a default
+  generic lab-safety paragraph.)*
+- **Done —** **Reminder slips** for the students who haven't returned theirs — a
   quarter-sheet with the student's name and the deadline, printed in one pass
-  from the missing list.
-- **Date-received per student**, not just per document, so the record shows
-  when each came in.
+  from the missing list. *(Shipped Round 3 as "Print reminder slips",
+  4-to-a-page.)*
+- **Already done (predates this round) —** **Date-received per student**, not just per document, so the record shows
+  when each came in. *(Verified Round 3 — already implemented, keyed by
+  both student and document; nothing to build.)*
 - **Digital acknowledgement option.** A student signing on screen isn't legally
   equivalent to a parent signature, but for classroom-rules acknowledgements
   it's often enough and saves a paper cycle.
-- **Percent-signed progress bar** on the section switcher, so you can see at a
-  glance which of six classes is behind.
-- **Undo / confirm on "Mark all as signed"** and Delete class (P11).
+- **Done —** **Percent-signed progress bar** on the section switcher, so you can see at a
+  glance which of six classes is behind. *(Shipped Round 3 — each class
+  option reads e.g. "Period 3 — Chemistry — 18/24 (75%)".)*
+- **Already done (predates this round) —** **Undo / confirm on "Mark all as signed"** and Delete class (P11). *(Verified
+  Round 3 — both already prompted with `confirm()`; nothing to build.)*
 
 ## Major Features
 

@@ -83,13 +83,17 @@ ambitious and **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Vendor jsPDF locally** (P5). `Tools/schedule/libs/jspdf/jspdf.umd.min.js`
+- **Done —** **Vendor jsPDF locally** (P5). `Tools/schedule/libs/jspdf/jspdf.umd.min.js`
   is already in the repo — this tool should use it rather than cdnjs. Right
-  now the tool is dead on a blocked or offline first load.
-- **Page numbers, a header, and a title page** — the difference between a
-  stack of photos and a document you can hand in.
-- **Per-image caption**, printed under the image. For a lab photo series or a
-  documentation packet this is the whole point.
+  now the tool is dead on a blocked or offline first load. *(Shipped Round 3
+  — copied into `Tools/image-to-pdf/lib/` and added to `sw.js`'s precache
+  list.)*
+- **Done —** **Page numbers, a header, and a title page** — the difference between a
+  stack of photos and a document you can hand in. *(Shipped Round 3 as the
+  "Header, Title Page & Page Numbers" card.)*
+- **Done —** **Per-image caption**, printed under the image. For a lab photo series or a
+  documentation packet this is the whole point. *(Shipped Round 3 — centered
+  under the image on one-per-page, under each cell on contact sheets.)*
 - **Crop and straighten.** Photos of student work and whiteboards are always
   slightly rotated with desk visible around the edges; a simple crop would
   improve nearly every output.

@@ -128,35 +128,49 @@ What shipped, against the backlog below:
 
 ## Quick Wins
 
-- **Whole-class / group awards.** Tapping 28 cards to give everyone a point is
+- **Done —** **Whole-class / group awards.** Tapping 28 cards to give everyone a point is
   the most obvious missing action; "award all", "award this group", and
-  "award everyone not on this list" would each get used.
-- **Undo the whole day**, not just the last entry — and a confirm on Archive
+  "award everyone not on this list" would each get used. *(Shipped as "Award
+  everyone" / "Award ticked" / "Award everyone else", each confirmed; ticking
+  is shift-click plus long-press for touch panels.)*
+- **Done —** **Undo the whole day**, not just the last entry — and a confirm on Archive
   Day & Reset, which is currently a one-click destroyer of the day's data.
-- **Behavior chip categories and colours** (academic / social / effort) so the
-  printed report can group by kind rather than list flat.
-- **Keyboard/number-key arming** so a chip can be selected without looking
-  (P10).
-- **Show today vs cumulative on the same card** — a student who is at +14 for
+  *(The whole-day undo is new this round; Archive already had a confirm
+  before this round and was left unchanged — see Status.)*
+- **Done —** **Behavior chip categories and colours** (academic / social / effort) so the
+  printed report can group by kind rather than list flat. *(Shipped —
+  academic/social/effort/other, colouring the chip and grouping the printed
+  report.)*
+- **Done —** **Keyboard/number-key arming** so a chip can be selected without looking
+  (P10). *(Shipped — 1–9 arms a chip, printed on the chip; Esc clears.)*
+- **Done —** **Show today vs cumulative on the same card** — a student who is at +14 for
   the quarter and -2 today is a different conversation from one who is at -2
-  for both.
-- **Per-student note on a tap** ("called out during the video"), optional and
+  for both. *(Shipped — the running total to date sits under today's number.)*
+- **Done —** **Per-student note on a tap** ("called out during the video"), optional and
   quick — the report is far more useful with a sentence than with a number.
-- **Anonymous / projector-safe mode.** Publicly displaying negative points
+  *(Shipped as an opt-in "Ask for a note on each tap" mode; the note is
+  archived with the day.)*
+- **Done —** **Anonymous / projector-safe mode.** Publicly displaying negative points
   next to a named child is a real pedagogical and privacy concern; a mode that
   shows only positives, or shows initials, or shows only the class total,
   should exist and arguably should be the default for the projected view.
+  *(Shipped as a four-setting "Show" control; default left at "names and
+  points" — see Status and Open Questions.)*
 
 ## Major Features
 
-- **Trends over time.** The archive already stores days; charting a student's
+- **Done —** **Trends over time.** The archive already stores days; charting a student's
   or a class's trajectory across a quarter turns tally marks into evidence for
   a parent conference or an intervention meeting. Pair with
-  `data-chart-builder.html` rather than rewriting charting (P7).
-- **Goal / contract tracking.** A student with a behavior plan needs "4 of 5
+  `data-chart-builder.html` rather than rewriting charting (P7). *(Shipped as
+  an in-tool per-student sparkline across every archived day — built
+  in-tool rather than handed to Data Chart Builder; see Status for why.)*
+- **Done —** **Goal / contract tracking.** A student with a behavior plan needs "4 of 5
   periods at or above target" tracked and printed weekly. This tool is one
   small feature away from serving that need, which is currently done on paper
-  clipboards everywhere.
+  clipboards everywhere. *(Shipped — a daily point target per student,
+  counted as "4 of 5 days met"; the target in force on a given day is
+  archived with that day.)*
 - **Team / house points.** Aggregate individual points into groups from
   Group/Team Generator, with a projector leaderboard — a very common classroom
   economy that currently needs a whiteboard.
@@ -165,8 +179,10 @@ What shipped, against the backlog below:
 - **Seating-chart board layout** (P7). Tapping students arranged the way the
   room actually is, rather than alphabetically, is dramatically faster mid-
   lesson — read the layout from Seating Chart Generator.
-- **Parent-facing printable summary.** A single, kindly-worded page per
+- **Done —** **Parent-facing printable summary.** A single, kindly-worded page per
   student for a conference, drawing on the notes and the trend, kept local.
+  *(Shipped — one page per student: totals, positives, entries needing
+  follow-up, goal record, day-by-day table, and notes.)*
 
 ## Moonshot / North Star
 

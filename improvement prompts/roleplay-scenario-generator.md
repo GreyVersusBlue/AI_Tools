@@ -95,14 +95,16 @@ present.
 
 ## Quick Wins
 
-- **Load a roster for role assignment** (P2). Random role assignment currently
-  has no access to `np_rosters`.
-- **Print role cards, one per student**, rather than one handout with all
+- **Done —** **Load a roster for role assignment** (P2). Random role assignment currently
+  has no access to `np_rosters`. *(Shipped as the "Roster for this class" row
+  plus "Randomly pair up the class" — see Round 3 above.)*
+- **Done —** **Print role cards, one per student**, rather than one handout with all
   roles on it — a roleplay works better when each participant only sees their
   own side.
-- **Useful-phrases box** per scenario (greetings, asking for clarification,
+- **Done —** **Useful-phrases box** per scenario (greetings, asking for clarification,
   polite disagreement) that the student can lean on — the scaffolding that
-  makes a nervous student attempt the conversation at all.
+  makes a nervous student attempt the conversation at all. *(Shipped saved
+  once per class rather than per scenario — see Round 3 above.)*
 - **A sentence-frame layer** beneath the vocabulary layer: "I would like ___,
   please" is more supportive than a word list.
 - **Difficulty variants of one scenario** — a supported version with frames

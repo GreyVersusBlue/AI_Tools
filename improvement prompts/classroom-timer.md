@@ -228,8 +228,11 @@ link and have the whole period paced for them.
 
 ## Platform themes that matter here
 
-- **P1 (dark/projector mode)** — this is the most-projected tool on the site
-  and still does not load `theme-toggle.js`. It should be the first adopter.
+- **P1 (dark/projector mode)** — resolved 2026-08-10: dark mode already ships
+  here via `_shared/a11y.js`'s native theme toggle (see Status), which
+  deliberately supersedes `theme-toggle.js` rather than running a second
+  parallel theme system. The remaining gap is site-wide discoverability of
+  the "Aa" widget, not this tool specifically.
 - **P9 (device pairing)** — one of only two tools using `webrtc-pair.js`; the
   patterns proven here should be lifted into other projector tools.
 - **P10 (keyboard-first)** — a timer that needs a mouse mid-lesson has failed.
