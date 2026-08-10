@@ -103,3 +103,95 @@ work, and don't promote one without Devon saying so.
   even if they keep separate front doors? The duplication is substantial.
 - ~~Is collecting student writing in scope?~~ **Answered: no**, here and in
   the exit ticket tool alike. Students aren't intended users of this site.
+
+## Round 3 update — 2026-08-10
+
+Implemented three of the Major Features in one pass, plus the small
+"Prompt of the day, by date" quick win that the first one subsumes.
+
+**1. Prompt sets as units.** New "Prompt Sets" panel and a `Random Draw` /
+`Planned Sequence` mode-tab pair above the stage. A set is
+`{id, name, startDate, cursor, items:[{id, band, genre, text, rubricName}]}`,
+persisted at `gvb-writing-prompts:sets` (`wpg-store.js`: `loadSets`/
+`saveSets`); the set being viewed/edited is remembered at
+`gvb-writing-prompts:activeSet`. Items are added either as a random pull from
+the current band/genre filters (dedup'd against what's already in the set) or
+typed by hand, and can be reordered and removed. Giving a set a start date
+computes a suggested day-index by counting school days (Mon–Fri) since that
+date, offered as a one-click "Jump to today" rather than auto-advancing — a
+teacher who was out sick shouldn't have the sequence silently skip a day out
+from under them. Prev/Next move the cursor by hand regardless. Deliberately
+**does not** write into the existing "Prompt history" list — that log stays
+scoped to the random-draw generator's own no-repeat logic, and a set's own
+item list is its own record, so the two features don't tangle.
+
+**2. Rubric pairing with Rubric Builder.** New
+`writing-prompt-generator/wpg-rubric-link.js` — a small, explicitly
+**read-only** bridge that reads Rubric Builder's own storage contract
+(`gvb-rubric-builder:list`, `gvb-rubric-builder:data:<name>`) to list and
+summarize already-built rubrics, and writes only the `:current` pointer
+Rubric Builder already reads on boot to pick a rubric before opening it in a
+new tab. A "Rubric" row under the stage (present in both modes) lets a
+teacher attach one of their existing rubrics to whatever prompt is showing;
+for a Prompt Set item the pairing is persisted on the item itself, and each
+set item row also gets its own compact rubric picker. The print poster grows
+a one-line "Rubric: <name>" credit when a rubric is attached. Deliberately
+**did not** duplicate Rubric Builder's full criteria/level table into the
+poster print, and did not add a "generate a starter rubric from here" flow —
+both would mean this tool carrying a second, silently-driftable copy of
+Rubric Builder's state shape. `_shared/state-link.js` already exists for
+exactly that kind of handoff (`rubric-builder.html?rubric=<encoded>`) if a
+future round wants to build one; picking an *existing* named rubric by
+reading the list, the way this round does it, needs no knowledge of that
+shape at all and can't go stale.
+
+**3. Anonymous Response Display.** New "Anonymous Response Display" section:
+add up to six response textareas (no name field exists at all — anonymity
+isn't a display option, there's nothing identifying to strip), then
+"Project" opens a full-screen overlay reusing the same fullscreen affordance
+as the prompt stage. Two view modes: "One at a time" (large centered text,
+Prev/Next, arrow-key navigation) for walking a class through responses one
+by one, and "Side by side" (a card grid) for a quick compare. The view-mode
+toggle is duplicated into the overlay's own bar — the overlay is
+`position: fixed; inset: 0`, so the page's copy of that control is covered
+and unclickable while projecting, which an early Playwright pass caught.
+Responses are **intentionally not persisted** to localStorage; they exist in
+memory for the current page session only, so nothing a student wrote lingers
+in browser storage after class. "Clear all" wipes them without a confirm
+dialog, matching their transient/low-stakes nature.
+
+**Not done, left for a future round:**
+- Sentence starters / "if you're stuck" lines (Quick Win) — would need
+  genuinely per-prompt authored content across all 200 bank prompts to be
+  worth shipping, not generic filler; too large for this round.
+- The bigger, source-tied prompt bank and the student portfolio (Major
+  Features) — untouched, per the round's 2–4-idea scope.
+- Convergence with `exit-ticket-generator.html` / `number-talks-board.html`
+  — not attempted this round (both were being worked on in parallel by
+  someone else). Worth flagging concretely now that this round exists: the
+  "prompt sets as a sequenced unit, advanced by date with a manual
+  Prev/Next override" pattern built here is generic enough that all three
+  bank tools could plausibly share it verbatim, and the read-only
+  cross-tool bridge pattern in `wpg-rubric-link.js` (read the other tool's
+  own storage contract, write only its "open this one" pointer) is probably
+  the right template for any future bank tool that wants to hand off to a
+  companion tool without coupling to its internals.
+- Dark mode / P1 projector polish — not addressed; the new overlay and
+  seq-nav UI reuse the existing CSS variables so they inherit whatever
+  theming the tool has today (i.e., none beyond `_shared/a11y.js`'s filter
+  fallback), but nothing new was done here.
+
+**Testing:** `node --check` on `wpg-store.js`, `wpg-rubric-link.js`,
+`wpg-prompts.js`, and both inline `<script>` blocks extracted from the HTML.
+A throwaway Playwright script (Chromium, `file://`) exercised: generating a
+random prompt; switching to Planned Sequence with no sets; creating a set,
+adding random and manual items, reordering guards (first item's "up" button
+disabled); Prev/Next/Jump navigation and its persistence across a reload;
+attaching a rubric (seeded a fake Rubric Builder entry in localStorage) and
+confirming the summary line, the poster's rubric credit, and the set item's
+persisted `rubricName`; the "Open in Rubric Builder" handoff end-to-end,
+including that the opened tab read back the `:current` pointer this tool
+wrote and loaded with zero console errors; deleting a set and confirming the
+sequence stage falls back cleanly; and the anonymous response flow including
+the one-at-a-time/grid toggle and Next navigation. Zero console errors on
+either page throughout. The test script was thrown away after use.
