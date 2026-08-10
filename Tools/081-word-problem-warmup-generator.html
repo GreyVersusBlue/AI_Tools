@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Problem Warm-Up Generator</title>
+<meta name="description" content="Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/081-word-problem-warmup-generator.html">
+<meta property="og:title" content="Word Problem Warm-Up Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Word Problem Warm-Up Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ctext x='5' y='22' font-family='Georgia,serif' font-weight='700' font-size='16' fill='%231f3550'%3E?%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  select, input[type="number"] {
+    font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .6rem;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin-bottom: .8rem; }
+  .controls .field { min-width: 9rem; }
+  .controls select, .controls input { width: 100%; }
+  .op-check { display: flex; align-items: center; gap: .35rem; font-size: .86rem; font-weight: 400; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.small { padding: .35rem .7rem; font-size: .84rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
+  .tabs button { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* projector display */
+  .stage { display: none; }
+  .stage.active { display: block; }
+  .display-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 3rem 2.5rem; text-align: center; min-height: 30vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem;
+  }
+  .display-num { color: var(--muted); font-size: .9rem; letter-spacing: .05em; text-transform: uppercase; }
+  .display-text { font-size: 1.9rem; max-width: 46rem; }
+  .display-answer { font-size: 1.6rem; color: var(--accent-2); font-weight: 700; display: none; }
+  .display-answer.shown { display: block; }
+  .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; }
+
+  /* worksheet */
+  .sheet { display: none; }
+  .sheet.active { display: block; }
+  .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
+  .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
+  .sheet-sub { color: var(--muted); font-size: .82rem; margin: 0 0 1rem; }
+  .problem { margin-bottom: 1.1rem; }
+  .problem .pnum { font-weight: 700; margin-right: .4rem; }
+  .answer-line { border-bottom: 1px solid var(--line-strong); display: inline-block; min-width: 6rem; margin-left: .4rem; }
+  .key-list { list-style: none; margin: 0; padding: 0; columns: 3; font-size: .88rem; }
+  .key-list li { margin-bottom: .3rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    .print-target, .print-target * { visibility: visible; }
+    .print-target { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+    .sheet-page { border: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Word Problem Warm-Up Generator</h1>
+      <p class="sub">Randomized word problems, by operation and grade band — project one at a time or print a full sheet.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="field">
+        <label for="gradeBand">Grade band</label>
+        <select id="gradeBand">
+          <option value="elementary">Grades 3&ndash;5 (smaller numbers)</option>
+          <option value="middle" selected>Grades 6&ndash;8 (larger numbers)</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:16rem;">
+        <label>Operations</label>
+        <div style="display:flex;gap:.9rem;flex-wrap:wrap;">
+          <label class="op-check"><input type="checkbox" data-op="addition" checked> Addition</label>
+          <label class="op-check"><input type="checkbox" data-op="subtraction" checked> Subtraction</label>
+          <label class="op-check"><input type="checkbox" data-op="multiplication" checked> Multiplication</label>
+          <label class="op-check"><input type="checkbox" data-op="division" checked> Division</label>
+        </div>
+      </div>
+      <div class="field" style="max-width:7rem;">
+        <label for="problemCount">How many</label>
+        <input type="number" id="problemCount" value="6" min="1" max="20">
+      </div>
+      <div class="field">
+        <button id="generateBtn">Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-stage="display">Projector display</button>
+    <button type="button" class="tab-btn" data-stage="sheet">Printable worksheet</button>
+  </div>
+
+  <div class="stage active" id="stage-display">
+    <div class="display-card">
+      <div class="display-num" id="displayNum">Problem 1 of 6</div>
+      <div class="display-text" id="displayText">Click Generate to make a set of warm-up problems.</div>
+      <div class="display-answer" id="displayAnswer"></div>
+      <div class="display-nav">
+        <button class="secondary" id="prevBtn">&larr; Prev</button>
+        <button id="revealBtn">Reveal answer</button>
+        <button class="secondary" id="nextBtn">Next &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="stage-sheet">
+    <div class="btnrow" style="margin-bottom:.8rem;">
+      <button class="secondary" id="printBtn">Print worksheet + key</button>
+    </div>
+    <div class="print-target" id="printTarget">
+      <div class="sheet-page">
+        <h2 class="sheet-title">Word Problem Warm-Up</h2>
+        <p class="sheet-sub">Name: __________________________ &nbsp; Date: __________</p>
+        <div id="sheetProblems"></div>
+      </div>
+      <div class="sheet-page">
+        <h2 class="sheet-title">Answer Key</h2>
+        <ul class="key-list" id="sheetKey"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var NAMES = ['Maya', 'Ethan', 'Priya', 'Jaden', 'Sofia', 'Marcus', 'Aaliyah', 'Owen', 'Lucia', 'Deshawn', 'Ivy', 'Noah', 'Fatima', 'Caleb', 'Zoe', 'Kenji'];
+  var ITEMS = ['stickers', 'trading cards', 'marbles', 'baseball cards', 'pencils', 'stamps', 'bracelets', 'comic books', 'seashells', 'granola bars'];
+
+  var RANGES = {
+    elementary: { add: [5, 60], mult: [2, 9], divDividendMax: 90 },
+    middle: { add: [15, 400], mult: [6, 15], divDividendMax: 900 }
+  };
+
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+
+  var TEMPLATES = {
+    addition: [
+      function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + '. Then ' + name + ' gets ' + b + ' more. How many ' + item + ' does ' + name + ' have now?', answer: a + b }; },
+      function (a, b, name, item) { return { text: 'On Monday, ' + name + ' collected ' + a + ' ' + item + '. On Tuesday, ' + name + ' collected ' + b + ' more ' + item + '. How many ' + item + ' has ' + name + ' collected in total?', answer: a + b }; },
+      function (a, b, name, item) { return { text: 'A box has ' + a + ' ' + item + ' in it. Someone adds another ' + b + ' ' + item + ' to the box. How many ' + item + ' are in the box now?', answer: a + b }; }
+    ],
+    subtraction: [
+      function (a, b, name, item) { return { text: name + ' had ' + a + ' ' + item + '. ' + name + ' gave away ' + b + ' ' + item + '. How many ' + item + ' does ' + name + ' have left?', answer: a - b }; },
+      function (a, b, name, item) { return { text: 'A shelf had ' + a + ' ' + item + ' on it. ' + b + ' ' + item + ' were sold. How many ' + item + ' are left on the shelf?', answer: a - b }; },
+      function (a, b, name, item) { return { text: name + ' wants ' + a + ' ' + item + ' for a collection and already has ' + b + '. How many more ' + item + ' does ' + name + ' need?', answer: a - b }; }
+    ],
+    multiplication: [
+      function (a, b, name, item) { return { text: name + ' has ' + a + ' bags with ' + b + ' ' + item + ' in each bag. How many ' + item + ' does ' + name + ' have in all?', answer: a * b }; },
+      function (a, b, name, item) { return { text: 'There are ' + a + ' tables, and each table has ' + b + ' ' + item + ' on it. How many ' + item + ' are there in total?', answer: a * b }; },
+      function (a, b, name, item) { return { text: name + ' buys ' + a + ' packs of ' + item + '. Each pack has ' + b + ' in it. How many ' + item + ' did ' + name + ' buy altogether?', answer: a * b }; }
+    ],
+    division: [
+      function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + ' and wants to split them evenly into ' + b + ' groups. How many ' + item + ' will be in each group?', answer: a / b }; },
+      function (a, b, name, item) { return { text: 'A total of ' + a + ' ' + item + ' need to be shared equally among ' + b + ' students. How many ' + item + ' does each student get?', answer: a / b }; },
+      function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + ' to pack into boxes of ' + b + '. How many boxes will ' + name + ' fill?', answer: a / b }; }
+    ]
+  };
+
+  function makeProblem(op, band) {
+    var r = RANGES[band];
+    var name = pick(NAMES), item = pick(ITEMS);
+    var a, b, fn;
+    if (op === 'addition' || op === 'subtraction') {
+      a = randInt(r.add[0], r.add[1]);
+      b = randInt(r.add[0], Math.max(r.add[0], Math.floor(a * 0.8)));
+      if (op === 'subtraction' && b > a) { var t = a; a = b; b = t; }
+      if (op === 'subtraction' && a === b) a = b + randInt(1, 10);
+    } else if (op === 'multiplication') {
+      a = randInt(r.mult[0], r.mult[1]);
+      b = randInt(r.mult[0], r.mult[1]);
+    } else {
+      b = randInt(r.mult[0], r.mult[1]);
+      var quotient = randInt(2, Math.max(2, Math.floor(r.divDividendMax / b)));
+      a = b * quotient;
+    }
+    fn = pick(TEMPLATES[op]);
+    var p = fn(a, b, name, item);
+    p.op = op;
+    return p;
+  }
+
+  var els = {};
+  ['gradeBand', 'problemCount', 'generateBtn', 'displayNum', 'displayText', 'displayAnswer',
+   'prevBtn', 'revealBtn', 'nextBtn', 'printBtn', 'sheetProblems', 'sheetKey'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var problems = [];
+  var idx = 0;
+
+  function selectedOps() {
+    return Array.prototype.slice.call(document.querySelectorAll('[data-op]'))
+      .filter(function (cb) { return cb.checked; })
+      .map(function (cb) { return cb.getAttribute('data-op'); });
+  }
+
+  function generate() {
+    var ops = selectedOps();
+    if (!ops.length) { alert('Pick at least one operation.'); return; }
+    var count = Math.max(1, Math.min(20, parseInt(els.problemCount.value, 10) || 6));
+    var band = els.gradeBand.value;
+    problems = [];
+    for (var i = 0; i < count; i++) {
+      problems.push(makeProblem(pick(ops), band));
+    }
+    idx = 0;
+    renderDisplay();
+    renderSheet();
+  }
+
+  function renderDisplay() {
+    if (!problems.length) return;
+    els.displayNum.textContent = 'Problem ' + (idx + 1) + ' of ' + problems.length;
+    els.displayText.textContent = problems[idx].text;
+    els.displayAnswer.textContent = 'Answer: ' + problems[idx].answer;
+    els.displayAnswer.classList.remove('shown');
+  }
+
+  function renderSheet() {
+    els.sheetProblems.innerHTML = problems.map(function (p, i) {
+      return '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + p.text +
+        ' <span class="answer-line">&nbsp;</span></div>';
+    }).join('');
+    els.sheetKey.innerHTML = problems.map(function (p, i) {
+      return '<li>' + (i + 1) + '. ' + p.answer + '</li>';
+    }).join('');
+  }
+
+  els.generateBtn.addEventListener('click', generate);
+
+  els.prevBtn.addEventListener('click', function () {
+    if (!problems.length) return;
+    idx = (idx - 1 + problems.length) % problems.length;
+    renderDisplay();
+  });
+  els.nextBtn.addEventListener('click', function () {
+    if (!problems.length) return;
+    idx = (idx + 1) % problems.length;
+    renderDisplay();
+  });
+  els.revealBtn.addEventListener('click', function () {
+    els.displayAnswer.classList.toggle('shown');
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var stage = btn.getAttribute('data-stage');
+      document.getElementById('stage-display').classList.toggle('active', stage === 'display');
+      document.getElementById('stage-sheet').classList.toggle('active', stage === 'sheet');
+    });
+  });
+
+  els.printBtn.addEventListener('click', function () { window.print(); });
+
+  /* ---------- boot ---------- */
+  generate();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

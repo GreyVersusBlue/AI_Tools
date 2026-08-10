@@ -93,87 +93,87 @@ even if a tool is later retired.
 
 | ID | Tool | File |
 |---|---|---|
-| 001 | Digital Hall Pass / Sign-Out Log | `hall-pass-log.md` |
-| 002 | Group / Team Generator | `group-team-generator.md` |
-| 003 | Rubric Builder | `rubric-builder.md` |
-| 004 | Classroom Timer | `classroom-timer.md` |
-| 005 | Seating Chart Generator | `seating-chart-generator.md` |
-| 006 | Class Roster Hub | `class-roster-hub.md` |
-| 007 | Name Picker | `name-picker.md` |
-| 008 | Behavior & Points Tracker | `behavior-points-tracker.md` |
-| 009 | Backup & Restore | `backup-restore.md` |
-| 010 | Command Center | `command-center-dashboard.md` |
-| 011 | Image → PDF Assembler | `image-to-pdf.md` |
-| 012 | Graph Paper & Number Line Generator | `graph-paper-generator.md` |
-| 013 | Lab Safety Contract Tracker | `lab-safety-contract-tracker.md` |
-| 014 | Immersion Roleplay Scenario Generator | `roleplay-scenario-generator.md` |
-| 015 | Timeline Builder | `timeline-builder.md` |
-| 016 | QR Code Generator | `qr-code-generator.md` |
-| 017 | Gallery Walk QR Codes | `gallery-walk-qr.md` |
-| 018 | QR Scavenger Hunt Builder | `qr-scavenger-hunt-builder.md` |
-| 019 | Digital Escape Room / Puzzle Lock Builder | `escape-room-builder.md` |
-| 020 | Bracket / Tournament Generator | `bracket-tournament-generator.md` |
-| 021 | Tournament Bracket & Station Rotation (PE) | `pe-tournament-stations.md` |
-| 022 | Lab Group & Role Randomizer | `lab-group-role-randomizer.md` |
-| 023 | Exit Ticket / Bell Ringer Generator | `exit-ticket-generator.md` |
-| 024 | Number Talks / Mental Math Routine Board | `number-talks-board.md` |
-| 025 | Writing Prompt Generator | `writing-prompt-generator.md` |
-| 026 | Math Fact Drill Sheet Generator | `math-drill-generator.md` |
-| 027 | Novel Study / Reading Circles Manager | `novel-study-circles-manager.md` |
-| 028 | Primary Source Analysis Worksheet Generator | `primary-source-analysis-generator.md` |
-| 029 | Prompt Builder | `prompt-builder.md` |
-| 030 | Quiz / Review Game Board | `review-game-board.md` |
-| 031 | Word Doc Merger | `docx-merger.md` |
-| 032 | School Calendar Visualizer | `school-calendar-visualizer.md` |
-| 033 | Silent Reading (SSR) Log Tracker | `ssr-log-tracker.md` |
-| 034 | East Middle Schedule Browser | `schedule-browser.md` |
-| 035 | School Layout Visualizer | `schedule-visualizer.md` |
-| 036 | Final Grade Checker | `final-grade-checker.md` |
-| 037 | Grade Distribution Visualizer | `grade-distribution-visualizer.md` |
-| 038 | Data Table → Chart Builder | `data-chart-builder.md` |
-| 039 | Vocab & Conjugation Drill Generator | `vocab-conjugation-drill.md` |
-| 040 | Vocabulary Flashcard & Word Wall Generator | `vocab-flashcard-generator.md` |
-| 041 | Formula Reference Sheet Builder | `formula-sheet-builder.md` |
-| 042 | Certificate & Award Maker | `certificate-award-maker.md` |
-| 043 | Field Trip Permission Slip Generator | `field-trip-permission-slip.md` |
-| 044 | Sub Plan Builder | `sub-plan-builder.md` |
-| 045 | Sub Binder / Day Bundle Generator | `sub-binder-generator.md` |
-| 046 | Blank Map Generator | `blank-map-generator.md` |
-| 047 | Art Critique Worksheet Generator | `art-critique-worksheet-generator.md` |
-| 048 | Student Art Portfolio Label & QR Tag Maker | `art-portfolio-label-maker.md` |
-| 049 | Book Tasting Menu Generator | `book-tasting-menu-generator.md` |
-| 050 | Government/Civics Simulation Role Card Generator | `civics-role-card-generator.md` |
-| 051 | Classroom Label Maker, Target Language | `classroom-label-maker.md` |
-| 052 | Cognates & False Friends Reference List Builder | `cognates-false-friends-builder.md` |
-| 053 | Cultural Trivia Card Generator | `cultural-trivia-card-generator.md` |
-| 054 | Current Events Discussion Guide Generator | `current-events-discussion-guide-generator.md` |
-| 055 | Daily Editing / DOL Warm-Up Generator | `daily-editing-warmup-generator.md` |
-| 056 | DBQ / Source Packet Builder | `dbq-source-packet-builder.md` |
-| 057 | Dichotomous Key Builder | `dichotomous-key-builder.md` |
-| 058 | Duty Roster Builder | `duty-roster-builder.md` |
-| 059 | Scientific Method / Experiment Design Planner | `experiment-design-planner.md` |
-| 060 | Fitness & Skill Assessment Tracker | `fitness-skill-assessment-tracker.md` |
-| 061 | Fraction–Decimal–Percent Conversion Drill Generator | `fraction-decimal-percent-drill-generator.md` |
-| 062 | Geography Bee / Map Skills Quiz Generator | `geography-bee-quiz-generator.md` |
-| 063 | Grammar Mad Libs Generator | `grammar-mad-libs-generator.md` |
-| 064 | Historical Figure / Country Trading Card Maker | `historical-trading-card-maker.md` |
-| 065 | Lab Report Template Builder | `lab-report-template-builder.md` |
-| 066 | Math "Find the Mistake" Warm-Up Generator | `math-find-the-mistake-generator.md` |
-| 067 | Music Sight-Reading / Rhythm Warm-Up Generator | `music-sightreading-generator.md` |
-| 068 | Parent/Guardian Contact Log | `parent-contact-log.md` |
-| 069 | PE Warm-Up Circuit Card Generator | `pe-warmup-circuit-generator.md` |
-| 070 | Peer Feedback / Editing Checklist Generator | `peer-feedback-checklist-generator.md` |
-| 071 | Picture-Prompt Speaking/Writing Task Generator | `picture-prompt-generator.md` |
-| 072 | Story Elements / Plot Diagram Builder | `plot-diagram-builder.md` |
-| 073 | Science Fair Project Tracker | `science-fair-project-tracker.md` |
-| 074 | Science Safety Symbol & Equipment Label Maker | `science-safety-label-maker.md` |
-| 075 | Staff Directory / Quick-Reference Builder | `staff-directory-builder.md` |
-| 076 | Sub Note / Feedback Slip Generator | `sub-note-feedback-slip-generator.md` |
-| 077 | Testing Accommodations Reference Card Generator | `testing-accommodations-card-generator.md` |
-| 078 | Unit Conversion Reference Chart Builder | `unit-conversion-chart-builder.md` |
-| 079 | Verb Conjugation Reference Poster Generator | `verb-conjugation-poster-generator.md` |
-| 080 | Virtual Manipulatives Board | `virtual-manipulatives-board.md` |
-| 081 | Word Problem Warm-Up Generator | `word-problem-warmup-generator.md` |
+| 001 | Digital Hall Pass / Sign-Out Log | `001-hall-pass-log.md` |
+| 002 | Group / Team Generator | `002-group-team-generator.md` |
+| 003 | Rubric Builder | `003-rubric-builder.md` |
+| 004 | Classroom Timer | `004-classroom-timer.md` |
+| 005 | Seating Chart Generator | `005-seating-chart-generator.md` |
+| 006 | Class Roster Hub | `006-class-roster-hub.md` |
+| 007 | Name Picker | `007-name-picker.md` |
+| 008 | Behavior & Points Tracker | `008-behavior-points-tracker.md` |
+| 009 | Backup & Restore | `009-backup-restore.md` |
+| 010 | Command Center | `010-command-center-dashboard.md` |
+| 011 | Image → PDF Assembler | `011-image-to-pdf.md` |
+| 012 | Graph Paper & Number Line Generator | `012-graph-paper-generator.md` |
+| 013 | Lab Safety Contract Tracker | `013-lab-safety-contract-tracker.md` |
+| 014 | Immersion Roleplay Scenario Generator | `014-roleplay-scenario-generator.md` |
+| 015 | Timeline Builder | `015-timeline-builder.md` |
+| 016 | QR Code Generator | `016-qr-code-generator.md` |
+| 017 | Gallery Walk QR Codes | `017-gallery-walk-qr.md` |
+| 018 | QR Scavenger Hunt Builder | `018-qr-scavenger-hunt-builder.md` |
+| 019 | Digital Escape Room / Puzzle Lock Builder | `019-escape-room-builder.md` |
+| 020 | Bracket / Tournament Generator | `020-bracket-tournament-generator.md` |
+| 021 | Tournament Bracket & Station Rotation (PE) | `021-pe-tournament-stations.md` |
+| 022 | Lab Group & Role Randomizer | `022-lab-group-role-randomizer.md` |
+| 023 | Exit Ticket / Bell Ringer Generator | `023-exit-ticket-generator.md` |
+| 024 | Number Talks / Mental Math Routine Board | `024-number-talks-board.md` |
+| 025 | Writing Prompt Generator | `025-writing-prompt-generator.md` |
+| 026 | Math Fact Drill Sheet Generator | `026-math-drill-generator.md` |
+| 027 | Novel Study / Reading Circles Manager | `027-novel-study-circles-manager.md` |
+| 028 | Primary Source Analysis Worksheet Generator | `028-primary-source-analysis-generator.md` |
+| 029 | Prompt Builder | `029-prompt-builder.md` |
+| 030 | Quiz / Review Game Board | `030-review-game-board.md` |
+| 031 | Word Doc Merger | `031-docx-merger.md` |
+| 032 | School Calendar Visualizer | `032-school-calendar-visualizer.md` |
+| 033 | Silent Reading (SSR) Log Tracker | `033-ssr-log-tracker.md` |
+| 034 | East Middle Schedule Browser | `034-schedule-browser.md` |
+| 035 | School Layout Visualizer | `035-schedule-visualizer.md` |
+| 036 | Final Grade Checker | `036-final-grade-checker.md` |
+| 037 | Grade Distribution Visualizer | `037-grade-distribution-visualizer.md` |
+| 038 | Data Table → Chart Builder | `038-data-chart-builder.md` |
+| 039 | Vocab & Conjugation Drill Generator | `039-vocab-conjugation-drill.md` |
+| 040 | Vocabulary Flashcard & Word Wall Generator | `040-vocab-flashcard-generator.md` |
+| 041 | Formula Reference Sheet Builder | `041-formula-sheet-builder.md` |
+| 042 | Certificate & Award Maker | `042-certificate-award-maker.md` |
+| 043 | Field Trip Permission Slip Generator | `043-field-trip-permission-slip.md` |
+| 044 | Sub Plan Builder | `044-sub-plan-builder.md` |
+| 045 | Sub Binder / Day Bundle Generator | `045-sub-binder-generator.md` |
+| 046 | Blank Map Generator | `046-blank-map-generator.md` |
+| 047 | Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` |
+| 048 | Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` |
+| 049 | Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` |
+| 050 | Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` |
+| 051 | Classroom Label Maker, Target Language | `051-classroom-label-maker.md` |
+| 052 | Cognates & False Friends Reference List Builder | `052-cognates-false-friends-builder.md` |
+| 053 | Cultural Trivia Card Generator | `053-cultural-trivia-card-generator.md` |
+| 054 | Current Events Discussion Guide Generator | `054-current-events-discussion-guide-generator.md` |
+| 055 | Daily Editing / DOL Warm-Up Generator | `055-daily-editing-warmup-generator.md` |
+| 056 | DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` |
+| 057 | Dichotomous Key Builder | `057-dichotomous-key-builder.md` |
+| 058 | Duty Roster Builder | `058-duty-roster-builder.md` |
+| 059 | Scientific Method / Experiment Design Planner | `059-experiment-design-planner.md` |
+| 060 | Fitness & Skill Assessment Tracker | `060-fitness-skill-assessment-tracker.md` |
+| 061 | Fraction–Decimal–Percent Conversion Drill Generator | `061-fraction-decimal-percent-drill-generator.md` |
+| 062 | Geography Bee / Map Skills Quiz Generator | `062-geography-bee-quiz-generator.md` |
+| 063 | Grammar Mad Libs Generator | `063-grammar-mad-libs-generator.md` |
+| 064 | Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` |
+| 065 | Lab Report Template Builder | `065-lab-report-template-builder.md` |
+| 066 | Math "Find the Mistake" Warm-Up Generator | `066-math-find-the-mistake-generator.md` |
+| 067 | Music Sight-Reading / Rhythm Warm-Up Generator | `067-music-sightreading-generator.md` |
+| 068 | Parent/Guardian Contact Log | `068-parent-contact-log.md` |
+| 069 | PE Warm-Up Circuit Card Generator | `069-pe-warmup-circuit-generator.md` |
+| 070 | Peer Feedback / Editing Checklist Generator | `070-peer-feedback-checklist-generator.md` |
+| 071 | Picture-Prompt Speaking/Writing Task Generator | `071-picture-prompt-generator.md` |
+| 072 | Story Elements / Plot Diagram Builder | `072-plot-diagram-builder.md` |
+| 073 | Science Fair Project Tracker | `073-science-fair-project-tracker.md` |
+| 074 | Science Safety Symbol & Equipment Label Maker | `074-science-safety-label-maker.md` |
+| 075 | Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` |
+| 076 | Sub Note / Feedback Slip Generator | `076-sub-note-feedback-slip-generator.md` |
+| 077 | Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` |
+| 078 | Unit Conversion Reference Chart Builder | `078-unit-conversion-chart-builder.md` |
+| 079 | Verb Conjugation Reference Poster Generator | `079-verb-conjugation-poster-generator.md` |
+| 080 | Virtual Manipulatives Board | `080-virtual-manipulatives-board.md` |
+| 081 | Word Problem Warm-Up Generator | `081-word-problem-warmup-generator.md` |
 
 ---
 
@@ -206,11 +206,11 @@ backfill session codes onto these.
 
 | Tool | File |
 |---|---|
-| Digital Hall Pass / Sign-Out Log | `hall-pass-log.md` |
-| Group / Team Generator | `group-team-generator.md` |
-| Rubric Builder | `rubric-builder.md` |
-| Classroom Timer | `classroom-timer.md` |
-| Seating Chart Generator | `seating-chart-generator.md` |
+| Digital Hall Pass / Sign-Out Log | `001-hall-pass-log.md` |
+| Group / Team Generator | `002-group-team-generator.md` |
+| Rubric Builder | `003-rubric-builder.md` |
+| Classroom Timer | `004-classroom-timer.md` |
+| Seating Chart Generator | `005-seating-chart-generator.md` |
 
 ### Round 2 — 2026-08-10 — PR #52
 
@@ -218,11 +218,11 @@ The platform spine: the tools that own shared data or compose it.
 
 | Tool | File |
 |---|---|
-| Class Roster Hub | `class-roster-hub.md` |
-| Name Picker | `name-picker.md` |
-| Behavior & Points Tracker | `behavior-points-tracker.md` |
-| Backup & Restore | `backup-restore.md` |
-| Command Center | `command-center-dashboard.md` |
+| Class Roster Hub | `006-class-roster-hub.md` |
+| Name Picker | `007-name-picker.md` |
+| Behavior & Points Tracker | `008-behavior-points-tracker.md` |
+| Backup & Restore | `009-backup-restore.md` |
+| Command Center | `010-command-center-dashboard.md` |
 
 ### Round 3 — 2026-08-10 — PR #54
 
@@ -232,11 +232,11 @@ category legend + fill-in worksheet mode.
 
 | Tool | File |
 |---|---|
-| Image → PDF Assembler | `image-to-pdf.md` |
-| Graph Paper & Number Line Generator | `graph-paper-generator.md` |
-| Lab Safety Contract Tracker | `lab-safety-contract-tracker.md` |
-| Immersion Roleplay Scenario Generator | `roleplay-scenario-generator.md` |
-| Timeline Builder | `timeline-builder.md` |
+| Image → PDF Assembler | `011-image-to-pdf.md` |
+| Graph Paper & Number Line Generator | `012-graph-paper-generator.md` |
+| Lab Safety Contract Tracker | `013-lab-safety-contract-tracker.md` |
+| Immersion Roleplay Scenario Generator | `014-roleplay-scenario-generator.md` |
+| Timeline Builder | `015-timeline-builder.md` |
 
 **15 of 46 tools done. 31 to go.**
 
@@ -252,16 +252,16 @@ same content-bank + display + handout shape, built three separate times).
 
 | Tool | File |
 |---|---|
-| QR Code Generator | `qr-code-generator.md` |
-| Gallery Walk QR Codes | `gallery-walk-qr.md` |
-| QR Scavenger Hunt Builder | `qr-scavenger-hunt-builder.md` |
-| Digital Escape Room / Puzzle Lock Builder | `escape-room-builder.md` |
-| Bracket / Tournament Generator | `bracket-tournament-generator.md` |
-| Tournament Bracket & Station Rotation (PE) | `pe-tournament-stations.md` |
-| Lab Group & Role Randomizer | `lab-group-role-randomizer.md` |
-| Exit Ticket / Bell Ringer Generator | `exit-ticket-generator.md` |
-| Number Talks / Mental Math Routine Board | `number-talks-board.md` |
-| Writing Prompt Generator | `writing-prompt-generator.md` |
+| QR Code Generator | `016-qr-code-generator.md` |
+| Gallery Walk QR Codes | `017-gallery-walk-qr.md` |
+| QR Scavenger Hunt Builder | `018-qr-scavenger-hunt-builder.md` |
+| Digital Escape Room / Puzzle Lock Builder | `019-escape-room-builder.md` |
+| Bracket / Tournament Generator | `020-bracket-tournament-generator.md` |
+| Tournament Bracket & Station Rotation (PE) | `021-pe-tournament-stations.md` |
+| Lab Group & Role Randomizer | `022-lab-group-role-randomizer.md` |
+| Exit Ticket / Bell Ringer Generator | `023-exit-ticket-generator.md` |
+| Number Talks / Mental Math Routine Board | `024-number-talks-board.md` |
+| Writing Prompt Generator | `025-writing-prompt-generator.md` |
 
 **25 of 46 tools done. 21 to go.**
 
@@ -277,11 +277,11 @@ assistant (Prompt Builder).
 
 | Tool | File |
 |---|---|
-| Math Fact Drill Sheet Generator | `math-drill-generator.md` |
-| Novel Study / Reading Circles Manager | `novel-study-circles-manager.md` |
-| Primary Source Analysis Worksheet Generator | `primary-source-analysis-generator.md` |
-| Prompt Builder | `prompt-builder.md` |
-| Quiz / Review Game Board | `review-game-board.md` |
+| Math Fact Drill Sheet Generator | `026-math-drill-generator.md` |
+| Novel Study / Reading Circles Manager | `027-novel-study-circles-manager.md` |
+| Primary Source Analysis Worksheet Generator | `028-primary-source-analysis-generator.md` |
+| Prompt Builder | `029-prompt-builder.md` |
+| Quiz / Review Game Board | `030-review-game-board.md` |
 
 **30 of 46 tools done. 16 to go.**
 
@@ -297,9 +297,9 @@ it down.
 
 | Tool | File |
 |---|---|
-| Word Doc Merger | `docx-merger.md` |
-| School Calendar Visualizer | `school-calendar-visualizer.md` |
-| Silent Reading (SSR) Log Tracker | `ssr-log-tracker.md` |
+| Word Doc Merger | `031-docx-merger.md` |
+| School Calendar Visualizer | `032-school-calendar-visualizer.md` |
+| Silent Reading (SSR) Log Tracker | `033-ssr-log-tracker.md` |
 
 **33 of 46 tools done. 13 to go.**
 
@@ -307,21 +307,21 @@ it down.
 
 A linked pair: the published schedule browser and the 19,400-line tool that
 generates it. Found, along the way, that the two had already drifted apart —
-`schedule-browser.html` carries real features
+`034-schedule-browser.html` carries real features
 (PNG download, share links, staleness banner, Common Planning/Compare mode)
-that don't exist in `schedule-visualizer.html`'s publisher at all, and the
+that don't exist in `035-schedule-visualizer.html`'s publisher at all, and the
 publisher's own function list was missing two helpers its stringified
 functions actually call, which would throw a `ReferenceError` on the browser's
 two core views the moment anyone published fresh. The second bug — the crash
 — got fixed this round; the first — the feature drift — was judged too large
 to port safely into a file this size in one sitting and is documented in
 detail instead, with four Quick Wins shipped by hand to the real,
-currently-shipped `schedule-browser.html` in the meantime.
+currently-shipped `034-schedule-browser.html` in the meantime.
 
 | Tool | File |
 |---|---|
-| East Middle Schedule Browser | `schedule-browser.md` |
-| School Layout Visualizer | `schedule-visualizer.md` |
+| East Middle Schedule Browser | `034-schedule-browser.md` |
+| School Layout Visualizer | `035-schedule-visualizer.md` |
 
 **35 of 46 tools done. 11 to go.**
 
@@ -344,16 +344,16 @@ loading it from cdnjs (P5).
 
 | Tool | File |
 |---|---|
-| Final Grade Checker | `final-grade-checker.md` |
-| Grade Distribution Visualizer | `grade-distribution-visualizer.md` |
-| Data Table → Chart Builder | `data-chart-builder.md` |
-| Vocab & Conjugation Drill Generator | `vocab-conjugation-drill.md` |
-| Vocabulary Flashcard & Word Wall Generator | `vocab-flashcard-generator.md` |
-| Formula Reference Sheet Builder | `formula-sheet-builder.md` |
-| Certificate & Award Maker | `certificate-award-maker.md` |
-| Field Trip Permission Slip Generator | `field-trip-permission-slip.md` |
-| Sub Plan Builder | `sub-plan-builder.md` |
-| Sub Binder / Day Bundle Generator | `sub-binder-generator.md` |
+| Final Grade Checker | `036-final-grade-checker.md` |
+| Grade Distribution Visualizer | `037-grade-distribution-visualizer.md` |
+| Data Table → Chart Builder | `038-data-chart-builder.md` |
+| Vocab & Conjugation Drill Generator | `039-vocab-conjugation-drill.md` |
+| Vocabulary Flashcard & Word Wall Generator | `040-vocab-flashcard-generator.md` |
+| Formula Reference Sheet Builder | `041-formula-sheet-builder.md` |
+| Certificate & Award Maker | `042-certificate-award-maker.md` |
+| Field Trip Permission Slip Generator | `043-field-trip-permission-slip.md` |
+| Sub Plan Builder | `044-sub-plan-builder.md` |
+| Sub Binder / Day Bundle Generator | `045-sub-binder-generator.md` |
 
 **45 of 46 tools done. 1 to go.**
 
@@ -366,12 +366,12 @@ map exports instead of a screenshot of the web page. Round 10 did the
 classroom-worksheet cluster: numbered fill-in-the-blank worksheets with
 answer keys and shuffled versions, reusable label sets, a label
 de-overlapping pass, semantic line types, and a projector-ready quiz mode
-with scoring. See `blank-map-generator.md` for what each round shipped and
+with scoring. See `046-blank-map-generator.md` for what each round shipped and
 where the next one should pick up.
 
 | Tool | File |
 |---|---|
-| Blank Map Generator | `blank-map-generator.md` |
+| Blank Map Generator | `046-blank-map-generator.md` |
 
 **46 of 46 tools done.** Pass 1 complete.
 
@@ -394,41 +394,41 @@ prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
 system as a deliberate batch rather than mixed in silently with this reset.
 Leave them out until told otherwise:
 
-Art Critique Worksheet Generator (`art-critique-worksheet-generator.md`) ·
-Student Art Portfolio Label & QR Tag Maker (`art-portfolio-label-maker.md`) ·
-Book Tasting Menu Generator (`book-tasting-menu-generator.md`) ·
-Government/Civics Simulation Role Card Generator (`civics-role-card-generator.md`) ·
-Classroom Label Maker, Target Language (`classroom-label-maker.md`) ·
-Cognates & False Friends Reference List Builder (`cognates-false-friends-builder.md`) ·
-Cultural Trivia Card Generator (`cultural-trivia-card-generator.md`) ·
-Current Events Discussion Guide Generator (`current-events-discussion-guide-generator.md`) ·
-Daily Editing / DOL Warm-Up Generator (`daily-editing-warmup-generator.md`) ·
-DBQ / Source Packet Builder (`dbq-source-packet-builder.md`) ·
-Dichotomous Key Builder (`dichotomous-key-builder.md`) ·
-Duty Roster Builder (`duty-roster-builder.md`) ·
-Scientific Method / Experiment Design Planner (`experiment-design-planner.md`) ·
-Fitness & Skill Assessment Tracker (`fitness-skill-assessment-tracker.md`) ·
-Fraction–Decimal–Percent Conversion Drill Generator (`fraction-decimal-percent-drill-generator.md`) ·
-Geography Bee / Map Skills Quiz Generator (`geography-bee-quiz-generator.md`) ·
-Grammar Mad Libs Generator (`grammar-mad-libs-generator.md`) ·
-Historical Figure / Country Trading Card Maker (`historical-trading-card-maker.md`) ·
-Lab Report Template Builder (`lab-report-template-builder.md`) ·
-Math "Find the Mistake" Warm-Up Generator (`math-find-the-mistake-generator.md`) ·
-Music Sight-Reading / Rhythm Warm-Up Generator (`music-sightreading-generator.md`) ·
-Parent/Guardian Contact Log (`parent-contact-log.md`) ·
-PE Warm-Up Circuit Card Generator (`pe-warmup-circuit-generator.md`) ·
-Peer Feedback / Editing Checklist Generator (`peer-feedback-checklist-generator.md`) ·
-Picture-Prompt Speaking/Writing Task Generator (`picture-prompt-generator.md`) ·
-Story Elements / Plot Diagram Builder (`plot-diagram-builder.md`) ·
-Science Fair Project Tracker (`science-fair-project-tracker.md`) ·
-Science Safety Symbol & Equipment Label Maker (`science-safety-label-maker.md`) ·
-Staff Directory / Quick-Reference Builder (`staff-directory-builder.md`) ·
-Sub Note / Feedback Slip Generator (`sub-note-feedback-slip-generator.md`) ·
-Testing Accommodations Reference Card Generator (`testing-accommodations-card-generator.md`) ·
-Unit Conversion Reference Chart Builder (`unit-conversion-chart-builder.md`) ·
-Verb Conjugation Reference Poster Generator (`verb-conjugation-poster-generator.md`) ·
-Virtual Manipulatives Board (`virtual-manipulatives-board.md`) ·
-Word Problem Warm-Up Generator (`word-problem-warmup-generator.md`)
+Art Critique Worksheet Generator (`047-art-critique-worksheet-generator.md`) ·
+Student Art Portfolio Label & QR Tag Maker (`048-art-portfolio-label-maker.md`) ·
+Book Tasting Menu Generator (`049-book-tasting-menu-generator.md`) ·
+Government/Civics Simulation Role Card Generator (`050-civics-role-card-generator.md`) ·
+Classroom Label Maker, Target Language (`051-classroom-label-maker.md`) ·
+Cognates & False Friends Reference List Builder (`052-cognates-false-friends-builder.md`) ·
+Cultural Trivia Card Generator (`053-cultural-trivia-card-generator.md`) ·
+Current Events Discussion Guide Generator (`054-current-events-discussion-guide-generator.md`) ·
+Daily Editing / DOL Warm-Up Generator (`055-daily-editing-warmup-generator.md`) ·
+DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`) ·
+Dichotomous Key Builder (`057-dichotomous-key-builder.md`) ·
+Duty Roster Builder (`058-duty-roster-builder.md`) ·
+Scientific Method / Experiment Design Planner (`059-experiment-design-planner.md`) ·
+Fitness & Skill Assessment Tracker (`060-fitness-skill-assessment-tracker.md`) ·
+Fraction–Decimal–Percent Conversion Drill Generator (`061-fraction-decimal-percent-drill-generator.md`) ·
+Geography Bee / Map Skills Quiz Generator (`062-geography-bee-quiz-generator.md`) ·
+Grammar Mad Libs Generator (`063-grammar-mad-libs-generator.md`) ·
+Historical Figure / Country Trading Card Maker (`064-historical-trading-card-maker.md`) ·
+Lab Report Template Builder (`065-lab-report-template-builder.md`) ·
+Math "Find the Mistake" Warm-Up Generator (`066-math-find-the-mistake-generator.md`) ·
+Music Sight-Reading / Rhythm Warm-Up Generator (`067-music-sightreading-generator.md`) ·
+Parent/Guardian Contact Log (`068-parent-contact-log.md`) ·
+PE Warm-Up Circuit Card Generator (`069-pe-warmup-circuit-generator.md`) ·
+Peer Feedback / Editing Checklist Generator (`070-peer-feedback-checklist-generator.md`) ·
+Picture-Prompt Speaking/Writing Task Generator (`071-picture-prompt-generator.md`) ·
+Story Elements / Plot Diagram Builder (`072-plot-diagram-builder.md`) ·
+Science Fair Project Tracker (`073-science-fair-project-tracker.md`) ·
+Science Safety Symbol & Equipment Label Maker (`074-science-safety-label-maker.md`) ·
+Staff Directory / Quick-Reference Builder (`075-staff-directory-builder.md`) ·
+Sub Note / Feedback Slip Generator (`076-sub-note-feedback-slip-generator.md`) ·
+Testing Accommodations Reference Card Generator (`077-testing-accommodations-card-generator.md`) ·
+Unit Conversion Reference Chart Builder (`078-unit-conversion-chart-builder.md`) ·
+Verb Conjugation Reference Poster Generator (`079-verb-conjugation-poster-generator.md`) ·
+Virtual Manipulatives Board (`080-virtual-manipulatives-board.md`) ·
+Word Problem Warm-Up Generator (`081-word-problem-warmup-generator.md`)
 
 ---
 
@@ -439,52 +439,52 @@ sense for a round (by subject, by shared machinery, by print-heavy vs
 data-heavy), and say why in the PR. Skip anything already listed in
 **Currently claimed**.
 
-- Digital Hall Pass / Sign-Out Log — `hall-pass-log.md`
-- Group / Team Generator — `group-team-generator.md`
-- Rubric Builder — `rubric-builder.md`
-- Classroom Timer — `classroom-timer.md`
-- Seating Chart Generator — `seating-chart-generator.md`
-- Class Roster Hub — `class-roster-hub.md`
-- Name Picker — `name-picker.md`
-- Behavior & Points Tracker — `behavior-points-tracker.md`
-- Backup & Restore — `backup-restore.md`
-- Command Center — `command-center-dashboard.md`
-- Image → PDF Assembler — `image-to-pdf.md`
-- Graph Paper & Number Line Generator — `graph-paper-generator.md`
-- Lab Safety Contract Tracker — `lab-safety-contract-tracker.md`
-- Immersion Roleplay Scenario Generator — `roleplay-scenario-generator.md`
-- Timeline Builder — `timeline-builder.md`
-- QR Code Generator — `qr-code-generator.md`
-- Gallery Walk QR Codes — `gallery-walk-qr.md`
-- QR Scavenger Hunt Builder — `qr-scavenger-hunt-builder.md`
-- Digital Escape Room / Puzzle Lock Builder — `escape-room-builder.md`
-- Bracket / Tournament Generator — `bracket-tournament-generator.md`
-- Tournament Bracket & Station Rotation (PE) — `pe-tournament-stations.md`
-- Lab Group & Role Randomizer — `lab-group-role-randomizer.md`
-- Exit Ticket / Bell Ringer Generator — `exit-ticket-generator.md`
-- Number Talks / Mental Math Routine Board — `number-talks-board.md`
-- Writing Prompt Generator — `writing-prompt-generator.md`
-- Math Fact Drill Sheet Generator — `math-drill-generator.md`
-- Novel Study / Reading Circles Manager — `novel-study-circles-manager.md`
-- Primary Source Analysis Worksheet Generator — `primary-source-analysis-generator.md`
-- Prompt Builder — `prompt-builder.md`
-- Quiz / Review Game Board — `review-game-board.md`
-- Word Doc Merger — `docx-merger.md`
-- School Calendar Visualizer — `school-calendar-visualizer.md`
-- Silent Reading (SSR) Log Tracker — `ssr-log-tracker.md`
-- East Middle Schedule Browser — `schedule-browser.md`
-- School Layout Visualizer — `schedule-visualizer.md`
-- Final Grade Checker — `final-grade-checker.md`
-- Grade Distribution Visualizer — `grade-distribution-visualizer.md`
-- Data Table → Chart Builder — `data-chart-builder.md`
-- Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
-- Vocabulary Flashcard & Word Wall Generator — `vocab-flashcard-generator.md`
-- Formula Reference Sheet Builder — `formula-sheet-builder.md`
-- Certificate & Award Maker — `certificate-award-maker.md`
-- Field Trip Permission Slip Generator — `field-trip-permission-slip.md`
-- Sub Plan Builder — `sub-plan-builder.md`
-- Sub Binder / Day Bundle Generator — `sub-binder-generator.md`
-- Blank Map Generator — `blank-map-generator.md`
+- Digital Hall Pass / Sign-Out Log — `001-hall-pass-log.md`
+- Group / Team Generator — `002-group-team-generator.md`
+- Rubric Builder — `003-rubric-builder.md`
+- Classroom Timer — `004-classroom-timer.md`
+- Seating Chart Generator — `005-seating-chart-generator.md`
+- Class Roster Hub — `006-class-roster-hub.md`
+- Name Picker — `007-name-picker.md`
+- Behavior & Points Tracker — `008-behavior-points-tracker.md`
+- Backup & Restore — `009-backup-restore.md`
+- Command Center — `010-command-center-dashboard.md`
+- Image → PDF Assembler — `011-image-to-pdf.md`
+- Graph Paper & Number Line Generator — `012-graph-paper-generator.md`
+- Lab Safety Contract Tracker — `013-lab-safety-contract-tracker.md`
+- Immersion Roleplay Scenario Generator — `014-roleplay-scenario-generator.md`
+- Timeline Builder — `015-timeline-builder.md`
+- QR Code Generator — `016-qr-code-generator.md`
+- Gallery Walk QR Codes — `017-gallery-walk-qr.md`
+- QR Scavenger Hunt Builder — `018-qr-scavenger-hunt-builder.md`
+- Digital Escape Room / Puzzle Lock Builder — `019-escape-room-builder.md`
+- Bracket / Tournament Generator — `020-bracket-tournament-generator.md`
+- Tournament Bracket & Station Rotation (PE) — `021-pe-tournament-stations.md`
+- Lab Group & Role Randomizer — `022-lab-group-role-randomizer.md`
+- Exit Ticket / Bell Ringer Generator — `023-exit-ticket-generator.md`
+- Number Talks / Mental Math Routine Board — `024-number-talks-board.md`
+- Writing Prompt Generator — `025-writing-prompt-generator.md`
+- Math Fact Drill Sheet Generator — `026-math-drill-generator.md`
+- Novel Study / Reading Circles Manager — `027-novel-study-circles-manager.md`
+- Primary Source Analysis Worksheet Generator — `028-primary-source-analysis-generator.md`
+- Prompt Builder — `029-prompt-builder.md`
+- Quiz / Review Game Board — `030-review-game-board.md`
+- Word Doc Merger — `031-docx-merger.md`
+- School Calendar Visualizer — `032-school-calendar-visualizer.md`
+- Silent Reading (SSR) Log Tracker — `033-ssr-log-tracker.md`
+- East Middle Schedule Browser — `034-schedule-browser.md`
+- School Layout Visualizer — `035-schedule-visualizer.md`
+- Final Grade Checker — `036-final-grade-checker.md`
+- Grade Distribution Visualizer — `037-grade-distribution-visualizer.md`
+- Data Table → Chart Builder — `038-data-chart-builder.md`
+- Vocab & Conjugation Drill Generator — `039-vocab-conjugation-drill.md`
+- Vocabulary Flashcard & Word Wall Generator — `040-vocab-flashcard-generator.md`
+- Formula Reference Sheet Builder — `041-formula-sheet-builder.md`
+- Certificate & Award Maker — `042-certificate-award-maker.md`
+- Field Trip Permission Slip Generator — `043-field-trip-permission-slip.md`
+- Sub Plan Builder — `044-sub-plan-builder.md`
+- Sub Binder / Day Bundle Generator — `045-sub-binder-generator.md`
+- Blank Map Generator — `046-blank-map-generator.md`
 
 ---
 
@@ -504,49 +504,49 @@ lands naturally inside a tool you are already working on, take it.
   cdnjs have now been fixed, each the same way — vendor it locally, source
   pulled from the library's npm package rather than cdnjs itself, since
   cdnjs was unreachable from more than one session's sandbox this round of
-  rounds: `image-to-pdf.html` (jsPDF, Round 3, PR #54, vendored into
-  `Tools/image-to-pdf/lib/`), `docx-merger.html` (JSZip, Round 6, PR #58,
+  rounds: `011-image-to-pdf.html` (jsPDF, Round 3, PR #54, vendored into
+  `Tools/image-to-pdf/lib/`), `031-docx-merger.html` (JSZip, Round 6, PR #58,
   vendored into `Tools/docx-merger/lib/` — see the npm-package fallback
-  approach documented in `docx-merger.md`'s Status section), and
-  `Sub Plan Builder.html` (JSZip, Round 8, PR #61, vendored into the new
+  approach documented in `031-docx-merger.md`'s Status section), and
+  `044-Sub Plan Builder.html` (JSZip, Round 8, PR #61, vendored into the new
   `Tools/sub-plan-builder/lib/` via `npm pack jszip@3.10.1`). No known CDN
   dependency remains on the site as of Round 8, but it's worth a fresh grep
   for `cdnjs.cloudflare.com` (or any other CDN host) if a future round adds
   a library, rather than assuming this list is exhaustive forever.
-- **P8 backup compatibility.** `Tools/backup-restore.html` keeps two lists
+- **P8 backup compatibility.** `Tools/009-backup-restore.html` keeps two lists
   that go stale silently: `KNOWN_GROUPS` (friendly names in the scan table)
   and `STUDENT_KEYS` (what the year-end clear is allowed to erase). **A tool
   that starts writing a new storage key — especially one holding student
   names — needs adding to both**, or it shows up as "Other saved data" and
   survives a year-end clear.
 - **Content-bank + display + handout convergence.** After Round 4 (PR #55),
-  this pattern now exists independently in `exit-ticket-generator.html`,
-  `number-talks-board.html`, and `writing-prompt-generator.html` — each has
+  this pattern now exists independently in `023-exit-ticket-generator.html`,
+  `024-number-talks-board.html`, and `025-writing-prompt-generator.html` — each has
   its own bank editor, its own fullscreen/projector stage wiring, and its
   own print handout. The fullscreen-stage code in particular is now
-  near-identical in three places (and also in `pe-tournament-stations.html`).
+  near-identical in three places (and also in `021-pe-tournament-stations.html`).
   Worth lifting into a shared `_shared/` helper next time one of these four
   is touched, rather than writing a fifth copy.
-- **Rotation/bracket engine duplication.** `bracket-tournament-generator.html`
-  and `pe-tournament-stations.html` still have separate bracket/rotation
+- **Rotation/bracket engine duplication.** `020-bracket-tournament-generator.html`
+  and `021-pe-tournament-stations.html` still have separate bracket/rotation
   logic after Round 4 (each grew independently this round, deliberately
   scoped that way to avoid a risky shared-engine refactor mid-round). A
   future round could unify them — `bracket-tournament-generator`'s new
   round-robin/scheduling code and `pe-tournament-stations`'s rotation timer
   are the two halves to reconcile.
-- **Read-only cross-tool bridge pattern.** `writing-prompt-generator.html`
+- **Read-only cross-tool bridge pattern.** `025-writing-prompt-generator.html`
   added `wpg-rubric-link.js`, which reads Rubric Builder's own localStorage
   keys read-only and writes back only the `:current` pointer Rubric Builder
   already watches on boot — no shared library, no format negotiation. This
   is a lighter-weight alternative to a full shared-hub tool and is worth
   copying wherever a tool wants to reference another tool's data without
   taking on a dependency.
-- **BroadcastChannel is same-device only.** `pe-tournament-stations.html`'s
+- **BroadcastChannel is same-device only.** `021-pe-tournament-stations.html`'s
   new phone/remote-control feature confirmed empirically that
   `BroadcastChannel` only bridges tabs within the same browser
   context/profile — it does not work across two different phones/devices.
   Any future "phone as remote" work (P9) needs a different mechanism (e.g.
-  WebRTC pairing, as `schedule-visualizer.html` already uses) for true
+  WebRTC pairing, as `035-schedule-visualizer.html` already uses) for true
   cross-device control.
 - **`hidden` loses to `display: flex`.** Round 10 found a control in the
   Blank Map Generator's toolbar that had been visible whenever it shouldn't
@@ -556,8 +556,8 @@ lands naturally inside a tool you are already working on, take it.
   explicit `[hidden] { display: none; }` rule; worth a grep wherever a
   toolbar control is toggled this way.
 - **Generated-output drift is a real failure mode, not just a theoretical
-  one.** Round 7 found that `schedule-visualizer.html`'s "Publish" button
-  would produce a broken `schedule-browser.html` (undefined `escHtml`/
+  one.** Round 7 found that `035-schedule-visualizer.html`'s "Publish" button
+  would produce a broken `034-schedule-browser.html` (undefined `escHtml`/
   `escJsAttr` — fixed) and, separately, one missing three real feature
   generations' worth of code (R61–R63: PNG download, share links, staleness
   banner, Compare mode — documented but not ported, too large for one

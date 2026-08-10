@@ -36,7 +36,7 @@ function blankProjectData() {
   };
 }
 
-/** Defaults for the numbered-blank worksheet builder (see the worksheet section of blank-map-generator.html). Saved per project so a teacher's chosen wording/layout comes back with the map it belongs to. */
+/** Defaults for the numbered-blank worksheet builder (see the worksheet section of 046-blank-map-generator.html). Saved per project so a teacher's chosen wording/layout comes back with the map it belongs to. */
 function blankWorksheetSettings() {
   return {
     title: "", instructions: "Write the name of each numbered place on the lines.",

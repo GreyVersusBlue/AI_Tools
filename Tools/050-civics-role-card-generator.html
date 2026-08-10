@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Government/Civics Simulation Role Card Generator</title>
+<meta name="description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/050-civics-role-card-generator.html">
+<meta property="og:title" content="Government/Civics Simulation Role Card Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Government/Civics Simulation Role Card Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v3M9 20h14M7 26h18M9 20l-2-9h6zM23 20l-2-9h6z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  input[type="text"], select {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .role-block { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
+  .role-block-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+  .role-block-head input { font-weight: 700; margin-bottom: 0; }
+  .point-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
+  .point-row input { margin-bottom: 0; }
+
+  #printArea { display: none; }
+  .role-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25in; }
+  .role-print-card { border: 1.5px solid #333; border-radius: 8px; padding: .3in; height: 4in; page-break-inside: avoid; }
+  .role-print-card h3 { margin: 0 0 .1in; font-size: 1.2rem; text-align: center; }
+  .role-print-card .position { font-style: italic; text-align: center; color: #555; margin-bottom: .2in; font-size: .9rem; }
+  .role-print-card ul { margin: 0; padding-left: 1.2rem; font-size: .82rem; }
+  .role-print-card li { margin-bottom: .1in; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Government/Civics Simulation Role Card Generator</h1>
+      <p class="sub">Build role cards for a mock trial, debate, or legislative simulation.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print role cards</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Start from a template</h2>
+    <select id="templateSelect">
+      <option value="mock_trial">Mock Trial</option>
+      <option value="debate">Debate</option>
+      <option value="legislative">Legislative Simulation</option>
+      <option value="blank">Blank / Custom</option>
+    </select>
+    <button class="secondary" id="loadTemplateBtn">Load template (replaces current roles)</button>
+  </div>
+
+  <div class="card">
+    <div class="btnrow">
+      <h2 style="margin:0;flex:1;">Roles</h2>
+      <button class="secondary" id="addRoleBtn">+ Add role</button>
+    </div>
+    <div id="rolesWrap"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'crcg_roles_v1';
+
+  var TEMPLATES = {
+    mock_trial: [
+      { role: 'Judge', position: 'Neutral — oversees the trial and ensures rules are followed', points: ['Introduce the case and both sides', 'Rule on objections', 'Instruct the jury before deliberation'] },
+      { role: 'Prosecution / Plaintiff Attorney', position: 'Arguing the defendant is responsible', points: ['Present opening statement', 'Call and question witnesses', 'Deliver closing argument summarizing the evidence'] },
+      { role: 'Defense Attorney', position: 'Arguing the defendant is not responsible', points: ['Present opening statement', 'Cross-examine opposing witnesses', 'Deliver closing argument creating reasonable doubt'] },
+      { role: 'Witness', position: 'Provides testimony for one side', points: ['Answer questions truthfully based on your assigned facts', 'Stay in character during cross-examination'] },
+      { role: 'Juror', position: 'Neutral — decides the verdict', points: ['Listen carefully to all evidence', 'Discuss respectfully during deliberation', 'Reach a verdict based on the evidence presented'] }
+    ],
+    debate: [
+      { role: 'Affirmative Team', position: 'Arguing in favor of the resolution', points: ['Present a clear opening argument', 'Provide evidence supporting your position', 'Rebut the opposing team\'s points'] },
+      { role: 'Negative Team', position: 'Arguing against the resolution', points: ['Present a clear opening argument', 'Provide evidence against the resolution', 'Rebut the affirmative team\'s points'] },
+      { role: 'Moderator', position: 'Neutral — keeps the debate on track', points: ['Introduce the resolution and both teams', 'Enforce time limits', 'Facilitate the audience Q&A if used'] },
+      { role: 'Judge / Scorer', position: 'Neutral — evaluates the debate', points: ['Score each team on evidence and delivery', 'Decide which team argued more persuasively'] }
+    ],
+    legislative: [
+      { role: 'Bill Sponsor', position: 'Supports passing the bill', points: ['Explain what the bill does and why it\'s needed', 'Answer questions from other members', 'Rally support for a yes vote'] },
+      { role: 'Committee Chair', position: 'Neutral — runs the session', points: ['Recognize speakers in order', 'Keep discussion on topic and on time', 'Call for and record the final vote'] },
+      { role: 'Opposing Legislator', position: 'Opposes the bill as written', points: ['Raise specific concerns or objections', 'Propose an amendment if appropriate', 'Explain your reasoning for a no vote'] },
+      { role: 'Supporting Legislator', position: 'Supports the bill', points: ['Add supporting arguments beyond the sponsor\'s', 'Respond to the opposition\'s concerns'] }
+    ],
+    blank: [
+      { role: 'New Role', position: '', points: [''] }
+    ]
+  };
+
+  var els = {};
+  ['templateSelect', 'loadTemplateBtn', 'addRoleBtn', 'rolesWrap', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = { roles: [] };
+
+  function uid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function fromTemplate(key) {
+    state.roles = TEMPLATES[key].map(function (r) {
+      return { id: uid(), role: r.role, position: r.position, points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
+    });
+  }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.roles) && saved.roles.length) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.roles.length) fromTemplate('mock_trial');
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderRoles() {
+    els.rolesWrap.innerHTML = state.roles.map(function (r) {
+      var points = r.points.map(function (p) {
+        return '<div class="point-row" data-role="' + r.id + '"><input type="text" data-point="' + p.id + '" value="' + escapeAttr(p.text) + '" placeholder="Talking point">' +
+          '<button type="button" class="danger small" data-del-point="' + p.id + '" data-point-role="' + r.id + '">&times;</button></div>';
+      }).join('');
+      return '<div class="role-block" data-role-id="' + r.id + '">' +
+        '<div class="role-block-head"><input type="text" data-field="role" data-role="' + r.id + '" value="' + escapeAttr(r.role) + '" placeholder="Role name">' +
+        '<button type="button" class="danger small" data-del-role="' + r.id + '">Remove</button></div>' +
+        '<label>Position</label><input type="text" data-field="position" data-role="' + r.id + '" value="' + escapeAttr(r.position) + '" placeholder="e.g. Arguing in favor of...">' +
+        '<label>Talking points</label>' + points +
+        '<button type="button" class="secondary small" data-add-point="' + r.id + '">+ Add talking point</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function findRole(id) { return state.roles.find(function (r) { return r.id === id; }); }
+
+  els.rolesWrap.addEventListener('input', function (ev) {
+    var field = ev.target.getAttribute('data-field');
+    var roleId = ev.target.getAttribute('data-role');
+    var pointId = ev.target.getAttribute('data-point');
+    if (field && roleId) {
+      var r = findRole(roleId);
+      if (r) r[field] = ev.target.value;
+      save();
+    } else if (pointId) {
+      var row = ev.target.closest('.point-row');
+      var r2 = findRole(row.getAttribute('data-role'));
+      var p = r2 && r2.points.find(function (x) { return x.id === pointId; });
+      if (p) p.text = ev.target.value;
+      save();
+    }
+  });
+
+  els.rolesWrap.addEventListener('click', function (ev) {
+    var addPointRole = ev.target.getAttribute('data-add-point');
+    var delPointId = ev.target.getAttribute('data-del-point');
+    var delRoleId = ev.target.getAttribute('data-del-role');
+    if (addPointRole) {
+      var r = findRole(addPointRole);
+      if (r) r.points.push({ id: uid(), text: '' });
+      save(); renderRoles();
+    } else if (delPointId) {
+      var r2 = findRole(ev.target.getAttribute('data-point-role'));
+      if (r2) r2.points = r2.points.filter(function (p) { return p.id !== delPointId; });
+      save(); renderRoles();
+    } else if (delRoleId) {
+      state.roles = state.roles.filter(function (r) { return r.id !== delRoleId; });
+      save(); renderRoles();
+    }
+  });
+
+  els.loadTemplateBtn.addEventListener('click', function () {
+    if (state.roles.length && !confirm('Replace the current roles with this template?')) return;
+    fromTemplate(els.templateSelect.value);
+    save(); renderRoles();
+  });
+  els.addRoleBtn.addEventListener('click', function () {
+    state.roles.push({ id: uid(), role: 'New Role', position: '', points: [{ id: uid(), text: '' }] });
+    save(); renderRoles();
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.roles.length) { alert('Add at least one role first.'); return; }
+    var cards = state.roles.map(function (r) {
+      var points = r.points.filter(function (p) { return p.text.trim(); }).map(function (p) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
+      return '<div class="role-print-card"><h3>' + escapeHtml(r.role || 'Role') + '</h3>' +
+        '<div class="position">' + escapeHtml(r.position || '') + '</div><ul>' + points + '</ul></div>';
+    }).join('');
+    els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>';
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  renderRoles();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

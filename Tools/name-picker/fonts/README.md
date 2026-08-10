@@ -59,7 +59,7 @@ these three were among them, which is part of why nobody noticed the hotlink.
 
 ## Why these are in the repo
 
-`Tools/Name Picker.html` used to carry two `<link rel="preconnect">` tags and a
+`Tools/007-Name Picker.html` used to carry two `<link rel="preconnect">` tags and a
 `fonts.googleapis.com/css2?family=Bungee&family=Outfit…&family=Press+Start+2P`
 stylesheet. v7 §5 recorded that the site made zero offsite requests site-wide.
 That was wrong for fifteen pages, and the reason it went unnoticed is worth

@@ -12,7 +12,7 @@
 // The generator loads published-fonts.js with a plain script tag and pastes
 // the string into the <style> block of every file it publishes. If the file is
 // missing, brBuildPublishedHTML() falls back to a system font stack rather
-// than a hotlink — see the FONT_CSS comment in schedule-visualizer.html.
+// than a hotlink — see the FONT_CSS comment in 035-schedule-visualizer.html.
 //
 // Only the faces the published stylesheet uses are here. That is a smaller set
 // than the generator's own fonts.css: a published file has no DM Sans or DM

@@ -1,9 +1,9 @@
 # `Tools/name-picker/`
 
-Everything `Tools/Name Picker.html` needs that is not markup or CSS.
+Everything `Tools/007-Name Picker.html` needs that is not markup or CSS.
 
-The page itself stayed at `Tools/Name Picker.html`, space and all, so
-`https://greyversusblue.com/Tools/Name%20Picker.html` and the board's `href` both
+The page itself stayed at `Tools/007-Name Picker.html`, space and all, so
+`https://greyversusblue.com/Tools/007-Name%20Picker.html` and the board's `href` both
 still resolve. Splitting the 1,700-line file further, or losing the space in the
 name, would have meant a board change and a broken URL; see the session notes.
 

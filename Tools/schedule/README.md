@@ -3,8 +3,8 @@
 Everything the School Layout Visualizer needs that is not the HTML file itself.
 
 ```
-Tools/schedule-visualizer.html   the tool
-Tools/schedule-browser.html      a published snapshot, committed and served
+Tools/035-schedule-visualizer.html   the tool
+Tools/034-schedule-browser.html      a published snapshot, committed and served
 Tools/schedule/fonts/            vendored woff2 + the embedded-font build
 Tools/schedule/libs/jspdf/       vendored jsPDF 2.5.1
 Tools/schedule/test/             the smoke suite and its fixture
@@ -21,7 +21,7 @@ node Tools/schedule/test/smoke.mjs
 42 assertions, exit code 1 on any failure. It boots the generator in headless
 Chromium, imports a fake school, publishes a Schedule Browser, opens that file
 from `file://` with no server, and uses it. It also checks the committed
-`schedule-browser.html` and the generator as the site serves them.
+`034-schedule-browser.html` and the generator as the site serves them.
 
 It borrows the static server and browser launch from
 `Tools/board-check/harness.mjs`, which belongs to another thread and is only
@@ -47,7 +47,7 @@ is still today's, so expect one line of diff for free.
 
 `test/fixture-northwind.mjs` is a small invented school: two floors, eleven
 rooms, ten teachers, four groups, A/B blocks. Every name is made up, and
-everything in this folder has to stay that way — `schedule-browser.html` is
+everything in this folder has to stay that way — `034-schedule-browser.html` is
 committed to a public repository and served from a public domain.
 
 `test/fixture-northwind.json` is the same object written out, so it can be
@@ -63,7 +63,7 @@ node Tools/schedule/test/fixture-northwind.mjs
 `brPublish()` writes a plain `<head>`; it does not emit the `gvb:social`
 markers, and it should not — a file a teacher emails to staff has no business
 carrying `greyversusblue.com` Open Graph tags. So replacing
-`Tools/schedule-browser.html` with a fresh publish drops its social block.
+`Tools/034-schedule-browser.html` with a fresh publish drops its social block.
 
 ```bash
 cd Tools/board-check && npm run social      # puts the block back

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picture-Prompt Speaking/Writing Task Generator</title>
+<meta name="description" content="A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/071-picture-prompt-generator.html">
+<meta property="og:title" content="Picture-Prompt Speaking/Writing Task Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Picture-Prompt Speaking/Writing Task Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='7' width='20' height='16' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='12' cy='13' r='2' fill='%231f3550'/%3E%3Cpath d='M8 21l6-6 4 4 3-3 5 5' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], input[type="file"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .thumb-grid { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .thumb-wrap { position: relative; }
+  .thumb-wrap img { width: 5rem; height: 5rem; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
+  .thumb-wrap .del { position: absolute; top: -6px; right: -6px; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--err); font-size: .75rem; line-height: 1; cursor: pointer; }
+
+  .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
+  .prompt-row input { margin-bottom: 0; }
+
+  .stage-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  }
+  .stage-card img { max-width: 100%; max-height: 50vh; border-radius: 8px; }
+  .stage-card .task-text { font-size: 1.3rem; }
+  .stage-nav { display: flex; gap: .8rem; justify-content: center; margin-top: .5rem; }
+  .empty-hint { color: var(--muted); }
+
+  #printArea { display: none; }
+  .print-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .3in; }
+  .print-card { border: 1.5px solid #333; border-radius: 8px; padding: .2in; text-align: center; page-break-inside: avoid; }
+  .print-card img { max-width: 100%; max-height: 2.4in; border-radius: 4px; margin-bottom: .1in; }
+  .print-card .ptext { font-size: .88rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Picture-Prompt Speaking/Writing Task Generator</h1>
+      <p class="sub">Upload images, get a random prompt for a speaking or writing task in the target language.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="imageInput">Upload images (you can select several at once)</label>
+    <input type="file" id="imageInput" accept="image/*" multiple>
+    <div class="thumb-grid" id="thumbGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Task prompts</h2>
+    <p class="hint">One is picked at random alongside each image.</p>
+    <div id="promptsWrap"></div>
+    <button type="button" class="secondary small" id="addPromptBtn">+ Add prompt</button>
+  </div>
+
+  <div class="card">
+    <div class="btnrow">
+      <button id="newImageBtn">New random image</button>
+      <button class="secondary" id="resetUsedBtn">Reset (allow repeats)</button>
+      <button class="secondary" id="printBtn">Print a set of prompt cards</button>
+    </div>
+    <p class="hint" id="usedHint"></p>
+    <div class="stage-card" id="stageCard">
+      <p class="empty-hint">Upload at least one image to get started.</p>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var IMAGES_KEY = 'ppg_images_v1';
+  var PROMPTS_KEY = 'ppg_prompts_v1';
+
+  var DEFAULT_PROMPTS = [
+    'Describe what you see in as much detail as possible.',
+    'What is happening in this picture? Use at least three verbs.',
+    'Write five sentences about this image.',
+    'Who might be in this picture, and what are they doing?',
+    'Describe the colors, shapes, and objects you notice.',
+    'Imagine you are inside this picture. What do you hear, smell, and feel?'
+  ];
+
+  var els = {};
+  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'newImageBtn', 'resetUsedBtn', 'printBtn', 'usedHint', 'stageCard', 'printArea'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var images = [];
+  var prompts = [];
+  var usedIndexes = [];
+  var currentImageIdx = -1;
+  var currentPromptIdx = -1;
+
+  function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try { images = JSON.parse(localStorage.getItem(IMAGES_KEY) || '[]'); } catch (e) { images = []; }
+    if (!Array.isArray(images)) images = [];
+    try { prompts = JSON.parse(localStorage.getItem(PROMPTS_KEY) || 'null') || []; } catch (e) { prompts = []; }
+    if (!prompts.length) prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
+  }
+  function saveImages() {
+    try { localStorage.setItem(IMAGES_KEY, JSON.stringify(images)); } catch (e) { /* storage full/blocked */ }
+  }
+  function savePrompts() {
+    try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(prompts)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderThumbs() {
+    els.thumbGrid.innerHTML = images.map(function (img) {
+      return '<div class="thumb-wrap" data-id="' + img.id + '"><img src="' + img.src + '" alt=""><span class="del" data-del="' + img.id + '">&times;</span></div>';
+    }).join('');
+  }
+  els.thumbGrid.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del');
+    if (!id) return;
+    images = images.filter(function (i) { return i.id !== id; });
+    usedIndexes = [];
+    saveImages(); renderThumbs(); renderStageEmpty();
+  });
+
+  els.imageInput.addEventListener('change', function () {
+    var files = Array.prototype.slice.call(els.imageInput.files || []);
+    if (!files.length) return;
+    var remaining = files.length;
+    files.forEach(function (file) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        images.push({ id: uid(), src: reader.result });
+        remaining--;
+        if (remaining === 0) { saveImages(); renderThumbs(); els.imageInput.value = ''; }
+      };
+      reader.onerror = function () { remaining--; };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  function renderPrompts() {
+    els.promptsWrap.innerHTML = prompts.map(function (p) {
+      return '<div class="prompt-row" data-id="' + p.id + '"><input type="text" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '">' +
+        '<button type="button" class="danger small" data-del-prompt="' + p.id + '">&times;</button></div>';
+    }).join('');
+  }
+  els.promptsWrap.addEventListener('input', function (ev) {
+    var id = ev.target.getAttribute('data-prompt');
+    if (!id) return;
+    var p = prompts.find(function (x) { return x.id === id; });
+    if (p) p.text = ev.target.value;
+    savePrompts();
+  });
+  els.promptsWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-prompt');
+    if (!id) return;
+    prompts = prompts.filter(function (p) { return p.id !== id; });
+    savePrompts(); renderPrompts();
+  });
+  els.addPromptBtn.addEventListener('click', function () {
+    prompts.push({ id: uid(), text: '' });
+    savePrompts(); renderPrompts();
+  });
+
+  function renderStageEmpty() {
+    els.stageCard.innerHTML = '<p class="empty-hint">Upload at least one image to get started.</p>';
+    els.usedHint.textContent = '';
+  }
+
+  function pickNewImage() {
+    if (!images.length) { renderStageEmpty(); return; }
+    if (usedIndexes.length >= images.length) usedIndexes = [];
+    var available = images.map(function (_, i) { return i; }).filter(function (i) { return usedIndexes.indexOf(i) === -1; });
+    currentImageIdx = available[Math.floor(Math.random() * available.length)];
+    usedIndexes.push(currentImageIdx);
+    currentPromptIdx = prompts.length ? Math.floor(Math.random() * prompts.length) : -1;
+    renderStage();
+  }
+
+  function renderStage() {
+    if (currentImageIdx === -1 || !images[currentImageIdx]) { renderStageEmpty(); return; }
+    var img = images[currentImageIdx];
+    var task = currentPromptIdx !== -1 && prompts[currentPromptIdx] ? prompts[currentPromptIdx].text : '';
+    els.stageCard.innerHTML = '<img src="' + img.src + '" alt=""><div class="task-text">' + escapeHtml(task) + '</div>';
+    els.usedHint.textContent = usedIndexes.length + ' of ' + images.length + ' images shown this round';
+  }
+
+  els.newImageBtn.addEventListener('click', pickNewImage);
+  els.resetUsedBtn.addEventListener('click', function () { usedIndexes = []; els.usedHint.textContent = 'Reset — every image can appear again.'; });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!images.length) { alert('Upload at least one image first.'); return; }
+    var cards = images.map(function (img) {
+      var p = prompts.length ? prompts[Math.floor(Math.random() * prompts.length)].text : '';
+      return '<div class="print-card"><img src="' + img.src + '" alt=""><div class="ptext">' + escapeHtml(p) + '</div></div>';
+    }).join('');
+    els.printArea.innerHTML = '<div class="print-grid">' + cards + '</div>';
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  renderThumbs();
+  renderPrompts();
+  renderStageEmpty();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

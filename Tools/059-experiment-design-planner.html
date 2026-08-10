@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scientific Method / Experiment Design Planner</title>
+<meta name="description" content="A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/059-experiment-design-planner.html">
+<meta property="og:title" content="Scientific Method / Experiment Design Planner — AsPerMyLessonPlan.com">
+<meta property="og:description" content="A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Scientific Method / Experiment Design Planner — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) — the planning-stage companion to the Lab Report Template Builder.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='14' cy='14' r='7' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M19 19l6 6' stroke='%231f3550' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .3rem; color: var(--accent); }
+  .card .step-num { display: inline-block; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; line-height: 1.5rem; font-size: .82rem; margin-right: .4rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: 0 0 .6rem; }
+  input[type="text"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .4rem;
+  }
+  textarea { resize: vertical; min-height: 2.6rem; }
+  .hyp-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .hyp-row span { font-weight: 700; font-size: .88rem; }
+  .hyp-row input { flex: 1; min-width: 10rem; margin-bottom: 0; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+
+  .list-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
+  .list-row input { margin-bottom: 0; }
+
+  #printArea { display: none; }
+  .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
+  .print-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
+  .print-section { margin-bottom: 1rem; }
+  .print-section h3 { font-size: 1rem; margin: 0 0 .3rem; border-bottom: 1.5px solid #333; padding-bottom: .15rem; }
+  .print-section p { font-size: .9rem; margin: .2rem 0; }
+  .print-section ul, .print-section ol { margin: .2rem 0; padding-left: 1.3rem; font-size: .9rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Scientific Method / Experiment Design Planner</h1>
+      <p class="sub">A guided pre-lab worksheet &mdash; plan the experiment before you run it.</p>
+    </div>
+    <div>
+      <button class="secondary" id="printBtn">Print planner</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="expTitle">Experiment title</label>
+    <input type="text" id="expTitle" placeholder="e.g. Does water temperature affect how fast sugar dissolves?">
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">1</span>Question</h2>
+    <p class="hint">What are you trying to find out? Write it as a question you can actually test.</p>
+    <textarea id="question" placeholder="e.g. How does the temperature of water affect how quickly sugar dissolves?"></textarea>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">2</span>Hypothesis</h2>
+    <p class="hint">A testable prediction, in an If&hellip;then&hellip;because&hellip; format.</p>
+    <div class="hyp-row"><span>If</span><input type="text" id="hypIf" placeholder="the water temperature is increased"></div>
+    <div class="hyp-row"><span>then</span><input type="text" id="hypThen" placeholder="sugar will dissolve faster"></div>
+    <div class="hyp-row"><span>because</span><input type="text" id="hypBecause" placeholder="warmer water molecules move faster and break down sugar quicker"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">3</span>Variables</h2>
+    <label for="varIndependent">Independent variable (what you change)</label>
+    <input type="text" id="varIndependent" placeholder="e.g. water temperature">
+    <label for="varDependent">Dependent variable (what you measure)</label>
+    <input type="text" id="varDependent" placeholder="e.g. time for sugar to dissolve">
+    <label>Controlled variables (kept the same)</label>
+    <div id="controlledWrap"></div>
+    <button type="button" class="secondary small" id="addControlledBtn">+ Add controlled variable</button>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">4</span>Materials</h2>
+    <div id="materialsWrap"></div>
+    <button type="button" class="secondary small" id="addMaterialBtn">+ Add material</button>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">5</span>Procedure</h2>
+    <div id="procedureWrap"></div>
+    <button type="button" class="secondary small" id="addStepBtn">+ Add step</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'edp_planner_v1';
+
+  var els = {};
+  ['expTitle', 'question', 'hypIf', 'hypThen', 'hypBecause', 'varIndependent', 'varDependent',
+   'controlledWrap', 'addControlledBtn', 'materialsWrap', 'addMaterialBtn', 'procedureWrap', 'addStepBtn',
+   'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var state = {
+    title: '', question: '', hypIf: '', hypThen: '', hypBecause: '',
+    varIndependent: '', varDependent: '',
+    controlled: [{ id: uid(), text: '' }],
+    materials: [{ id: uid(), text: '' }],
+    procedure: [{ id: uid(), text: '' }]
+  };
+
+  function uid() { return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.materials)) state = saved;
+    } catch (e) { /* ignore */ }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderList(wrapEl, list, placeholder) {
+    wrapEl.innerHTML = list.map(function (item) {
+      return '<div class="list-row" data-id="' + item.id + '">' +
+        '<input type="text" value="' + escapeAttr(item.text) + '" placeholder="' + escapeAttr(placeholder) + '">' +
+        '<button type="button" class="danger small" data-del="' + item.id + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function bindList(wrapEl, listKey, placeholder) {
+    wrapEl.addEventListener('input', function (ev) {
+      var row = ev.target.closest('.list-row');
+      if (!row) return;
+      var id = row.getAttribute('data-id');
+      var item = state[listKey].find(function (i) { return i.id === id; });
+      if (item) item.text = ev.target.value;
+      save();
+    });
+    wrapEl.addEventListener('click', function (ev) {
+      var id = ev.target.getAttribute('data-del');
+      if (!id) return;
+      state[listKey] = state[listKey].filter(function (i) { return i.id !== id; });
+      save();
+      renderList(wrapEl, state[listKey], placeholder);
+    });
+  }
+
+  bindList(els.controlledWrap, 'controlled', 'e.g. amount of sugar used');
+  bindList(els.materialsWrap, 'materials', 'e.g. thermometer');
+  bindList(els.procedureWrap, 'procedure', 'e.g. Measure 100mL of water');
+
+  els.addControlledBtn.addEventListener('click', function () { state.controlled.push({ id: uid(), text: '' }); save(); renderList(els.controlledWrap, state.controlled, 'e.g. amount of sugar used'); });
+  els.addMaterialBtn.addEventListener('click', function () { state.materials.push({ id: uid(), text: '' }); save(); renderList(els.materialsWrap, state.materials, 'e.g. thermometer'); });
+  els.addStepBtn.addEventListener('click', function () { state.procedure.push({ id: uid(), text: '' }); save(); renderList(els.procedureWrap, state.procedure, 'e.g. Measure 100mL of water'); });
+
+  ['expTitle', 'question', 'hypIf', 'hypThen', 'hypBecause', 'varIndependent', 'varDependent'].forEach(function (id) {
+    var field = { expTitle: 'title', question: 'question', hypIf: 'hypIf', hypThen: 'hypThen', hypBecause: 'hypBecause', varIndependent: 'varIndependent', varDependent: 'varDependent' }[id];
+    els[id].addEventListener('input', function () { state[field] = els[id].value; save(); });
+  });
+
+  function renderAll() {
+    els.expTitle.value = state.title;
+    els.question.value = state.question;
+    els.hypIf.value = state.hypIf;
+    els.hypThen.value = state.hypThen;
+    els.hypBecause.value = state.hypBecause;
+    els.varIndependent.value = state.varIndependent;
+    els.varDependent.value = state.varDependent;
+    renderList(els.controlledWrap, state.controlled, 'e.g. amount of sugar used');
+    renderList(els.materialsWrap, state.materials, 'e.g. thermometer');
+    renderList(els.procedureWrap, state.procedure, 'e.g. Measure 100mL of water');
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    var title = state.title.trim() || 'Experiment Design Planner';
+    var hyp = 'If ' + (state.hypIf || '&hellip;') + ', then ' + (state.hypThen || '&hellip;') + ', because ' + (state.hypBecause || '&hellip;') + '.';
+    var controlled = state.controlled.filter(function (c) { return c.text.trim(); }).map(function (c) { return '<li>' + escapeHtml(c.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
+    var materials = state.materials.filter(function (m) { return m.text.trim(); }).map(function (m) { return '<li>' + escapeHtml(m.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
+    var procedure = state.procedure.filter(function (p) { return p.text.trim(); }).map(function (p, i) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
+    els.printArea.innerHTML =
+      '<h1 class="print-title">' + escapeHtml(title) + '</h1>' +
+      '<p class="print-sub">Name: __________________________ &nbsp; Date: __________</p>' +
+      '<div class="print-section"><h3>1. Question</h3><p>' + escapeHtml(state.question || '&mdash;') + '</p></div>' +
+      '<div class="print-section"><h3>2. Hypothesis</h3><p>' + escapeHtml(hyp) + '</p></div>' +
+      '<div class="print-section"><h3>3. Variables</h3><p><b>Independent:</b> ' + escapeHtml(state.varIndependent || '&mdash;') +
+      '</p><p><b>Dependent:</b> ' + escapeHtml(state.varDependent || '&mdash;') + '</p><p><b>Controlled:</b></p><ul>' + controlled + '</ul></div>' +
+      '<div class="print-section"><h3>4. Materials</h3><ul>' + materials + '</ul></div>' +
+      '<div class="print-section"><h3>5. Procedure</h3><ol>' + procedure + '</ol></div>';
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  renderAll();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

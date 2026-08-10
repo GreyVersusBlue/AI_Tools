@@ -12,8 +12,8 @@
 | Upstream | https://github.com/parallax/jsPDF |
 
 Byte-for-byte copy of `Tools/schedule/libs/jspdf/jspdf.umd.min.js` — same
-version, so this is a path change and nothing else. `image-to-pdf.html` used
-to load this from cdnjs directly (see `improvement prompts/image-to-pdf.md`,
+version, so this is a path change and nothing else. `011-image-to-pdf.html` used
+to load this from cdnjs directly (see `improvement prompts/011-image-to-pdf.md`,
 P5). A teacher on school wifi behind a filter that blocks cdnjs got a tool
 that loaded, looked completely fine, and then silently failed the moment they
 clicked "Generate PDF" — this file removes that failure mode, and lets `sw.js`

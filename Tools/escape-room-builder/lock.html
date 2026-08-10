@@ -131,7 +131,7 @@
   // ── Room data travels entirely inside the URL (no server, no accounts). ──
   // Encoding: base64( encodeURIComponent(JSON) ) via btoa(unescape(...)) so
   // it's unicode-safe and a bit shorter/denser in the QR code than raw
-  // encodeURIComponent JSON would be. See escape-room-builder.html for the
+  // encodeURIComponent JSON would be. See 019-escape-room-builder.html for the
   // matching encode step.
   function decodeRoom(raw) {
     var jsonStr = decodeURIComponent(escape(atob(raw)));
@@ -149,7 +149,7 @@
 
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-  // Matching copy of escape-room-builder.html's caesarEncode — see that
+  // Matching copy of 019-escape-room-builder.html's caesarEncode — see that
   // file's comment for why it's duplicated rather than shared.
   function caesarEncode(text, shift) {
     var sh = ((shift % 26) + 26) % 26;

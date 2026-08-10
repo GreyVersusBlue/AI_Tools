@@ -12,7 +12,7 @@
 | Upstream | https://github.com/parallax/jsPDF |
 
 Byte-for-byte copy of `Tools/image-to-pdf/lib/jspdf.umd.min.js` — same version,
-so this is a path change and nothing else. Used by `blank-map-generator.html`'s
+so this is a path change and nothing else. Used by `046-blank-map-generator.html`'s
 "Save PDF" export: the finished map is rasterized to a canvas at the selected
 page format's exact physical dimensions, then embedded as a single full-page
 image so the output PDF has genuinely correct page size/aspect ratio instead

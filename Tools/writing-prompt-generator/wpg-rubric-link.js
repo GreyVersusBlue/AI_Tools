@@ -1,6 +1,6 @@
 /* Writing Prompt Generator — read-only bridge to Rubric Builder's saved
    rubrics, so a prompt (or a prompt-set item) can be paired with a rubric
-   built in Tools/rubric-builder.html and reopened there in one click.
+   built in Tools/003-rubric-builder.html and reopened there in one click.
 
    This depends on Rubric Builder's own localStorage contract
    (Tools/rubric-builder/rb-store.js): a list of rubric names under
@@ -49,7 +49,7 @@
   function openInRubricBuilder(name) {
     if (!name) return;
     try { localStorage.setItem(CURRENT_KEY, name); } catch (e) {}
-    global.open('rubric-builder.html', '_blank');
+    global.open('003-rubric-builder.html', '_blank');
   }
 
   global.WpgRubricLink = {

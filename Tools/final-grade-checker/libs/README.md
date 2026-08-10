@@ -56,7 +56,7 @@ privacy problem:
 
 Vendoring settles both, and it matches what v4 decided for three.js and what v7
 decided for Golden Hour's sand. Each project keeps its own copy (locked
-decision #17). `Tools/image-to-pdf.html` also uses jsPDF and gets its own,
+decision #17). `Tools/011-image-to-pdf.html` also uses jsPDF and gets its own,
 because a shared `Tools/libs/` would couple two tools that other threads are
 editing right now.
 

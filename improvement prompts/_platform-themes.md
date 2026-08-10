@@ -44,7 +44,7 @@ pick one up ahead of teacher-facing work, and do not promote one back up the
 list without Devon saying so.
 
 Note that a few *shipped* features already put a student device in the loop —
-`escape-room-builder.html` ships a `lock.html` player page, and the QR
+`019-escape-room-builder.html` ships a `lock.html` player page, and the QR
 scavenger hunt and gallery walk tools assume students scan codes. Those exist
 and are not being reclassified here; the scope rule governs **new** work.
 
@@ -126,9 +126,9 @@ tablet or an interactive panel, not a mouse.
 call for a school network. But **three tools still load libraries from
 `cdnjs.cloudflare.com`**:
 
-- `Sub Plan Builder.html` → JSZip
-- `docx-merger.html` → JSZip
-- `image-to-pdf.html` → jsPDF
+- `044-Sub Plan Builder.html` → JSZip
+- `031-docx-merger.html` → JSZip
+- `011-image-to-pdf.html` → jsPDF
 
 `sw.js` has a CDN allowlist that catches these opportunistically *after* a
 successful online load, but a teacher whose first use of the tool is on a
@@ -158,9 +158,9 @@ Worth standardizing:
 
 ## P7 — Cross-tool bundles and handoff
 
-`sub-binder-generator.html` is the proof of concept: it reads three other
+`045-sub-binder-generator.html` is the proof of concept: it reads three other
 tools' storage keys (`subPlanBuilder.standingDetails.v1`, `seating-chart-v1`,
-`scv_calendar_v1`) and assembles one printable packet. `command-center-dashboard.html`
+`scv_calendar_v1`) and assembles one printable packet. `010-command-center-dashboard.html`
 does the same trick live with four keys.
 
 That pattern generalizes into the toolkit's biggest untapped idea: **a
@@ -178,7 +178,7 @@ something to contribute.
 
 Key naming has drifted across three or four eras: `np_rosters`,
 `gvb-<tool>:<thing>`, `stviz_*`, `sslt_*`, `lgrr_*`, `subPlanBuilder.<x>.v1`,
-`seating-chart-v1`, `hall-pass-log-sections`. `backup-restore.html` has to
+`seating-chart-v1`, `hall-pass-log-sections`. `009-backup-restore.html` has to
 scan and label them heuristically as a result.
 
 Not worth a disruptive rename on its own, but worth: a documented convention
@@ -206,7 +206,7 @@ used. The teacher-facing extensions are the valuable ones:
   the display.
 - **Colleague handoff.** Hand a project file — a schedule, a bracket, a
   roster, a room layout — to another teacher standing next to you, without
-  email and without a file. `schedule-visualizer.html` already does this.
+  email and without a file. `035-schedule-visualizer.html` already does this.
 - **Device migration.** Move a year of work from the school desktop to the
   home laptop with no file and no cloud (see Backup & Restore).
 
@@ -253,9 +253,9 @@ silent write failure that loses a period's work.
 
 ## P13 — Import surfaces should be at parity
 
-The strongest import experience on the site is `final_grade_checker.html`
+The strongest import experience on the site is `036-final_grade_checker.html`
 (CSV *and* XLSX, drag-drop, header detection, warnings) and
-`review-game-board.html` (Excel import plus a downloadable blank template).
+`030-review-game-board.html` (Excel import plus a downloadable blank template).
 Most other tools only accept a pasted list.
 
 Two ideas travel well: **download a blank template** in the exact shape the

@@ -10,7 +10,7 @@ Three files, **143 KB** (146,400 bytes) total:
 
 Both families are **variable** fonts, so one file covers every weight the page uses.
 That is why there is no stack of static 500/600/700 files here: the `@font-face`
-rules in `Tools/Seating Chart Generator.html` declare a weight *range*, and
+rules in `Tools/005-Seating Chart Generator.html` declare a weight *range*, and
 Fraunces' optical-size axis is driven by `font-optical-sizing: auto` off the
 font-size, which is the behaviour the old Google hotlink was asking for with
 `opsz,wght@9..144`.

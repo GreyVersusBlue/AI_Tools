@@ -8,15 +8,15 @@ to everything; `README.md` has a table describing each tool.
 Conventions already established in this repo (look at existing tools before
 building):
 - Each tool's entry point is one `.html` file directly under `Tools/` (e.g.
-  `Tools/final_grade_checker.html`, `Tools/Name Picker.html`).
+  `Tools/036-final_grade_checker.html`, `Tools/007-Name Picker.html`).
 - Supporting JS/assets for a tool live in a matching subfolder, e.g.
   `Tools/name-picker/` holds `np-store.js`, `np-pick.js`, fonts, and tests for
-  `Tools/Name Picker.html`. Follow that pattern if the tool needs more than
+  `Tools/007-Name Picker.html`. Follow that pattern if the tool needs more than
   inline script.
 - Shared dark-mode/theme tokens live in `_shared/theme.css` and
   `_shared/theme-toggle.js` — load these so the new tool matches the rest of
   the site visually instead of inventing its own palette.
-- There's already a `Tools/docx-merger.html` tool in this repo that merges Word
+- There's already a `Tools/031-docx-merger.html` tool in this repo that merges Word
   docs client-side — look at how it handles `.docx` generation/reading in the
   browser (likely via a JS library bundled locally, not a CDN-only dependency)
   and reuse that approach rather than introducing a new docx library if one is

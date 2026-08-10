@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBQ / Source Packet Builder</title>
+<meta name="description" content="Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/056-dbq-source-packet-builder.html">
+<meta property="og:title" content="DBQ / Source Packet Builder — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DBQ / Source Packet Builder — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M8 6h12l4 4v16H8z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M11 15h10M11 19h10M11 23h6' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+    --line: #dcdad2; --line-strong: #c3c0b6;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  input[type="text"], textarea, select, input[type="file"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem;
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+
+  button {
+    font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 7px; padding: .55rem 1rem;
+  }
+  button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  button.small { padding: .2rem .5rem; font-size: .76rem; }
+  .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  .source-block { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; margin-bottom: .9rem; }
+  .source-block h3 { font-size: 1.05rem; margin: 0 0 .5rem; color: var(--accent); }
+  .qrow { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
+  .qrow input { margin-bottom: 0; }
+  .thumb-preview { max-width: 8rem; max-height: 6rem; border: 1px solid var(--line-strong); border-radius: 4px; margin-bottom: .5rem; }
+
+  #printArea { display: none; }
+  .print-title { font-size: 1.4rem; margin: 0 0 .2rem; }
+  .print-context { font-size: .9rem; margin: .3rem 0 1rem; }
+  .source-page { page-break-after: always; }
+  .source-page h2 { font-size: 1.1rem; border-bottom: 1.5px solid #333; padding-bottom: .2rem; }
+  .source-page .citation { font-size: .78rem; color: #555; font-style: italic; margin-bottom: .6rem; }
+  .source-page .source-text { font-size: .92rem; white-space: pre-line; margin-bottom: .8rem; }
+  .source-page img { max-width: 100%; margin-bottom: .8rem; }
+  .source-page .q-item { font-size: .9rem; margin-bottom: .1rem; }
+  .fill-line { display: block; border-bottom: 1px solid #999; height: 1.2rem; margin: .1rem 0 .5rem; }
+  .shared-q { font-size: .9rem; margin-top: 1.5rem; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>DBQ / Source Packet Builder</h1>
+      <p class="sub">Assemble sources, add guiding questions per source, print one packet.</p>
+    </div>
+    <div class="btnrow">
+      <button class="secondary" id="printBtn">Print packet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="packetTitle">Packet title</label>
+    <input type="text" id="packetTitle" placeholder="e.g. Causes of the American Revolution">
+    <label for="packetContext">Historical context / task</label>
+    <textarea id="packetContext" placeholder="Brief background and the overall question students should answer using these sources."></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Shared guiding questions (asked for every source)</h2>
+    <div id="sharedQWrap"></div>
+    <button type="button" class="secondary small" id="addSharedQBtn">+ Add shared question</button>
+  </div>
+
+  <div class="card">
+    <div class="btnrow">
+      <h2 style="margin:0;flex:1;">Sources</h2>
+      <button id="addSourceBtn">+ Add source</button>
+    </div>
+    <div id="sourcesWrap"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'dbq_packet_v1';
+
+  var els = {};
+  ['packetTitle', 'packetContext', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printArea'].forEach(function (id) {
+    els[id] = document.getElementById(id);
+  });
+
+  var state = { title: '', context: '', sharedQuestions: [], sources: [] };
+
+  function uid() { return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+  var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (saved && Array.isArray(saved.sources)) state = saved;
+    } catch (e) { /* ignore */ }
+    if (!state.sharedQuestions.length) state.sharedQuestions = [{ id: uid(), text: 'What is the main idea of this source?' }, { id: uid(), text: 'Who created this source, and why might that matter?' }];
+    if (!state.sources.length) state.sources = [{ id: uid(), title: '', type: 'text', text: '', image: null, citation: '', questions: [{ id: uid(), text: '' }] }];
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked, e.g. large images */ }
+  }
+
+  function renderSharedQ() {
+    els.sharedQWrap.innerHTML = state.sharedQuestions.map(function (q) {
+      return '<div class="qrow" data-id="' + q.id + '"><input type="text" data-sq="' + q.id + '" value="' + escapeAttr(q.text) + '">' +
+        '<button type="button" class="danger small" data-del-sq="' + q.id + '">&times;</button></div>';
+    }).join('');
+  }
+  els.sharedQWrap.addEventListener('input', function (ev) {
+    var id = ev.target.getAttribute('data-sq');
+    if (!id) return;
+    var q = state.sharedQuestions.find(function (x) { return x.id === id; });
+    if (q) q.text = ev.target.value;
+    save();
+  });
+  els.sharedQWrap.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-sq');
+    if (!id) return;
+    state.sharedQuestions = state.sharedQuestions.filter(function (q) { return q.id !== id; });
+    save(); renderSharedQ();
+  });
+  els.addSharedQBtn.addEventListener('click', function () {
+    state.sharedQuestions.push({ id: uid(), text: '' });
+    save(); renderSharedQ();
+  });
+
+  function renderSources() {
+    els.sourcesWrap.innerHTML = state.sources.map(function (src, i) {
+      var label = 'Source ' + LETTERS[i % 26];
+      var imgPreview = src.type === 'image' && src.image ? '<img class="thumb-preview" src="' + src.image + '" alt="">' : '';
+      var questions = src.questions.map(function (q) {
+        return '<div class="qrow" data-src="' + src.id + '" data-q="' + q.id + '"><input type="text" data-field="qtext" value="' + escapeAttr(q.text) + '" placeholder="Source-specific question">' +
+          '<button type="button" class="danger small" data-del-q="' + q.id + '" data-del-src="' + src.id + '">&times;</button></div>';
+      }).join('');
+      return '<div class="source-block" data-src-id="' + src.id + '">' +
+        '<h3>' + label + '</h3>' +
+        '<label>Source title</label><input type="text" data-field="title" data-src="' + src.id + '" value="' + escapeAttr(src.title) + '">' +
+        '<label>Type</label><select data-field="type" data-src="' + src.id + '"><option value="text"' + (src.type === 'text' ? ' selected' : '') + '>Text</option><option value="image"' + (src.type === 'image' ? ' selected' : '') + '>Image</option></select>' +
+        (src.type === 'text'
+          ? '<label>Source text</label><textarea data-field="text" data-src="' + src.id + '">' + escapeHtml(src.text) + '</textarea>'
+          : imgPreview + '<label>Upload image</label><input type="file" accept="image/*" data-field="image" data-src="' + src.id + '">') +
+        '<label>Citation</label><input type="text" data-field="citation" data-src="' + src.id + '" value="' + escapeAttr(src.citation) + '" placeholder="e.g. Letter from John Adams, 1776">' +
+        '<label>Source-specific questions</label>' + questions +
+        '<button type="button" class="secondary small" data-add-q="' + src.id + '">+ Add question</button>' +
+        '<button type="button" class="danger small" data-del-src-btn="' + src.id + '" style="margin-left:.5rem;">Remove source</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function findSource(id) { return state.sources.find(function (s) { return s.id === id; }); }
+
+  els.sourcesWrap.addEventListener('input', function (ev) {
+    var field = ev.target.getAttribute('data-field');
+    var srcId = ev.target.getAttribute('data-src');
+    if (field && srcId) {
+      var src = findSource(srcId);
+      if (!src) return;
+      if (field === 'type') { src.type = ev.target.value; save(); renderSources(); return; }
+      if (field === 'qtext') {
+        var row = ev.target.closest('.qrow');
+        var qId = row.getAttribute('data-q');
+        var q = src.questions.find(function (x) { return x.id === qId; });
+        if (q) q.text = ev.target.value;
+        save();
+        return;
+      }
+      src[field] = ev.target.value;
+      save();
+    }
+  });
+
+  els.sourcesWrap.addEventListener('change', function (ev) {
+    if (ev.target.getAttribute('data-field') !== 'image') return;
+    var srcId = ev.target.getAttribute('data-src');
+    var src = findSource(srcId);
+    var file = ev.target.files && ev.target.files[0];
+    if (!src || !file) return;
+    var reader = new FileReader();
+    reader.onload = function () { src.image = reader.result; save(); renderSources(); };
+    reader.readAsDataURL(file);
+  });
+
+  els.sourcesWrap.addEventListener('click', function (ev) {
+    var addQSrc = ev.target.getAttribute('data-add-q');
+    var delQ = ev.target.getAttribute('data-del-q');
+    var delSrcBtn = ev.target.getAttribute('data-del-src-btn');
+    if (addQSrc) {
+      var src = findSource(addQSrc);
+      if (src) src.questions.push({ id: uid(), text: '' });
+      save(); renderSources();
+    } else if (delQ) {
+      var delSrcId = ev.target.getAttribute('data-del-src');
+      var src2 = findSource(delSrcId);
+      if (src2) src2.questions = src2.questions.filter(function (q) { return q.id !== delQ; });
+      save(); renderSources();
+    } else if (delSrcBtn) {
+      state.sources = state.sources.filter(function (s) { return s.id !== delSrcBtn; });
+      save(); renderSources();
+    }
+  });
+
+  els.addSourceBtn.addEventListener('click', function () {
+    state.sources.push({ id: uid(), title: '', type: 'text', text: '', image: null, citation: '', questions: [{ id: uid(), text: '' }] });
+    save(); renderSources();
+  });
+
+  els.packetTitle.addEventListener('input', function () { state.title = els.packetTitle.value; save(); });
+  els.packetContext.addEventListener('input', function () { state.context = els.packetContext.value; save(); });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.sources.length) { alert('Add at least one source first.'); return; }
+    var title = state.title.trim() || 'DBQ Source Packet';
+    var coverHtml = '<h1 class="print-title">' + escapeHtml(title) + '</h1>' +
+      '<p class="print-context">' + escapeHtml(state.context || '') + '</p>' +
+      '<p class="print-context">Name: __________________________ &nbsp; Date: __________</p>';
+    var sourcesHtml = state.sources.map(function (src, i) {
+      var label = 'Source ' + LETTERS[i % 26];
+      var body = src.type === 'image' && src.image
+        ? '<img src="' + src.image + '" alt="">'
+        : '<div class="source-text">' + escapeHtml(src.text || '(no text entered)') + '</div>';
+      var allQuestions = src.questions.filter(function (q) { return q.text.trim(); }).concat(state.sharedQuestions.filter(function (q) { return q.text.trim(); }));
+      var qHtml = allQuestions.map(function (q) {
+        return '<div class="q-item">' + escapeHtml(q.text) + '</div><span class="fill-line"></span>';
+      }).join('');
+      return '<div class="source-page"><h2>' + label + (src.title.trim() ? ': ' + escapeHtml(src.title.trim()) : '') + '</h2>' +
+        '<div class="citation">' + escapeHtml(src.citation || '') + '</div>' +
+        body + qHtml + '</div>';
+    }).join('');
+    els.printArea.innerHTML = '<div class="source-page">' + coverHtml + '</div>' + sourcesHtml;
+    window.print();
+  });
+
+  /* ---------- boot ---------- */
+  load();
+  els.packetTitle.value = state.title;
+  els.packetContext.value = state.context;
+  renderSharedQ();
+  renderSources();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('../sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
