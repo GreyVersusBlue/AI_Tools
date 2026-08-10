@@ -104,3 +104,104 @@ reclassified here.
   most work is on paper, the tool's centre of gravity should shift to the
   card-and-feedback model.
 - Should the three QR tools share one station/card/print engine?
+
+## Round 3 update — 2026-08-10
+
+Implemented four of the Major Features in one pass, all in `gallery-walk-qr.html`
+(no changes to `gallery-walk-qr/lib/`):
+
+- **Printed feedback slips as the collection mechanism.** New "Peer feedback
+  slips" card: pick a style (two stars and a wish / simple 1–4 rubric /
+  open-ended prompt), an optional custom prompt, slips-per-station (a real
+  "pad," default 6), and slips-per-page (2/4/6, own print grid
+  `.print-slip-grid` mirroring the existing QR-grid page-break convention).
+  Slips are keyed off station name only — no link or QR needed — so a station
+  for physical/on-display work still gets a slip.
+- **Works when the work isn't online.** Any entry row can be expanded ("Use
+  multi-line prompt / rubric text instead") to a textarea for a full prompt
+  or rubric instead of a one-line link. The data model didn't need a new
+  field — this is just an editing affordance for the same `value`/QR content
+  the tool already encodes literally when it doesn't look like a URL. What's
+  new: the printed QR card itself now shows that instructions/rubric text
+  directly on the card (`.p-instructions`) whenever the content isn't an
+  actual link, so the wall card carries the rubric even for a student who
+  never scans it. Detecting "is this actually a link" needed its own check
+  (`contentIsLink`) — the existing scheme-detection regex used for
+  auto-adding `https://` also matches plain prose that happens to start with
+  a word and a colon (e.g. "Rubric:", "Directions:"), so `contentIsLink`
+  additionally requires the content contain no whitespace before treating it
+  as a link. This mattered in testing: a rubric literally starting with
+  "Rubric:\n..." was originally mis-detected as a link and the instructions
+  block silently didn't render.
+- **Rotation timing.** New "Run the gallery walk" card: minutes+seconds per
+  rotation, total rotation count, sound toggle, Start/Pause/Resume/Rotate
+  now/Reset. Uses the same `endAt`/`remainingMs` + `Date.now()` pattern as
+  `pe-tournament-stations.html` (drift-resistant, survives a tab switch) and
+  the same WebAudio two-tone alarm (no audio assets, no CDN). Deliberately
+  kept simple relative to the PE tool: one shared class-wide round counter
+  and clock, no per-group station assignment/mapping — a gallery walk moves
+  everyone at once, so that mapping machinery didn't carry over. Also
+  deliberately skipped: a fullscreen/big-display mode (mentioned in P9-style
+  asks for other tools) — the clock is just large-font instead. That's the
+  clearest next step if a teacher wants this projected across a room.
+- **Aggregate the feedback (partial).** New "Collected feedback (optional)"
+  card: after the walk, expand any station and paste/type back what the
+  slips said (one comment per line), then "Print Feedback Packets" generates
+  one page per station with notes — a bulleted list of what came back — one
+  page break per page for handing to students. This is a light version of
+  the moonshot: it's manual transcription, not OCR/scanning of the paper
+  slips, so it only saves the *collating* step, not the data-entry step.
+  That's the honest scope for a single round — turning a photo of a stack of
+  slips into structured feedback is a much bigger feature (OCR, handwriting
+  recognition) and wasn't attempted here.
+
+### Also fixed in passing
+
+`newSet()` called `refreshSwitcher()` before `save()`, so the saved-gallery
+dropdown briefly omitted a just-created gallery until some other action
+resynced it (pre-existing, not introduced this round — found while writing
+the Playwright test for gallery switching). Reordered so `save()` runs
+first.
+
+### Deliberately left for a future round
+
+- **Station numbering and a walking order / per-student route cards** (Quick
+  Win) — a natural pairing with the new rotation timer (assign each
+  student/group a starting station and rotation offset) but not attempted
+  here to keep this round's scope to the Major Features.
+- **Test-scan each code before printing** (Quick Win, P7) — `_shared/qr-scan.js`
+  and `jsqr.js` exist elsewhere on the site; wiring a scan-to-verify step
+  into this tool is still open.
+- **Fullscreen/projector mode for the timer** — see above.
+- **Reuse the station/card/print engine across the three QR tools** (P7,
+  Open Question) — not attempted; this round intentionally kept everything
+  local to this one file rather than starting a shared engine that could
+  touch `qr-scavenger-hunt-builder.html` / `escape-room-builder.html`, which
+  are out of this round's file scope.
+- **True feedback-slip scanning/OCR** — see "partial" note above; the
+  packet-printing half of the moonshot works, the paper-to-text half
+  doesn't.
+
+### Testing performed
+
+- `node --check` on the extracted inline script — passes.
+- Playwright (Chromium, headless) sanity pass exercising: page load with no
+  console errors; adding an entry, expanding it to multi-line rubric text,
+  and confirming the textarea renders; live preview rendering for both a
+  link entry and a rubric-text entry; enabling feedback slips and confirming
+  the printed slip count matches stations × copies; printing QR codes and
+  confirming the instructions block appears only on the non-link entry;
+  running the rotation timer through a full start → auto-advance → complete
+  cycle; pause/resume/rotate-now/reset; adding collected-feedback notes and
+  printing a packet with the expected comment list; loading a pre-round
+  ("legacy shape") saved gallery from `localStorage` to confirm the
+  migration defaults apply without errors; creating a second gallery and
+  switching between saved galleries without errors or stale UI state; and
+  duplicate-link detection still working with an expanded row. A real
+  naming collision (a new `renderTimer` function silently shadowed the
+  existing `renderTimer` debounce-timer variable used by `scheduleRender`,
+  permanently breaking it after the first assignment) was caught by this
+  pass and fixed by renaming the new function to `renderTimerUI`. No
+  automated check was run against a real print dialog/paper output — print
+  CSS was reviewed by hand against the existing print stylesheet
+  conventions.

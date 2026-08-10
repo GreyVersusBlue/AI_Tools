@@ -71,6 +71,31 @@ category legend + fill-in worksheet mode.
 
 **15 of 46 tools done. 31 to go.**
 
+### Round 4 — 2026-08-10 — PR #55
+
+Ran concurrently with PR #54 above (both picked from the same "Not yet
+touched" list before either had merged — no tool overlap between them, only
+a merge conflict in this tracker file, resolved by renumbering this round to
+4). Three clusters addressing recurring duplication themes: QR/station-builder
+tools (shared `lib/qrcode.js` pattern), rotation/fairness tools ("who goes
+next" logic reinvented independently), and prompt-bank/projector tools (the
+same content-bank + display + handout shape, built three separate times).
+
+| Tool | File |
+|---|---|
+| QR Code Generator | `qr-code-generator.md` |
+| Gallery Walk QR Codes | `gallery-walk-qr.md` |
+| QR Scavenger Hunt Builder | `qr-scavenger-hunt-builder.md` |
+| Digital Escape Room / Puzzle Lock Builder | `escape-room-builder.md` |
+| Bracket / Tournament Generator | `bracket-tournament-generator.md` |
+| Tournament Bracket & Station Rotation (PE) | `pe-tournament-stations.md` |
+| Lab Group & Role Randomizer | `lab-group-role-randomizer.md` |
+| Exit Ticket / Bell Ringer Generator | `exit-ticket-generator.md` |
+| Number Talks / Mental Math Routine Board | `number-talks-board.md` |
+| Writing Prompt Generator | `writing-prompt-generator.md` |
+
+**25 of 46 tools done. 21 to go.**
+
 ---
 
 ## Not yet touched
@@ -80,26 +105,17 @@ sense for a round (by subject, by shared machinery, by print-heavy vs
 data-heavy), and say why in the PR.
 
 - Blank Map Generator — `blank-map-generator.md`
-- Bracket / Tournament Generator — `bracket-tournament-generator.md`
 - Certificate & Award Maker — `certificate-award-maker.md`
 - Data Table → Chart Builder — `data-chart-builder.md`
 - Word Doc Merger — `docx-merger.md`
-- Digital Escape Room / Puzzle Lock Builder — `escape-room-builder.md`
-- Exit Ticket / Bell Ringer Generator — `exit-ticket-generator.md`
 - Field Trip Permission Slip Generator — `field-trip-permission-slip.md`
 - Final Grade Checker — `final-grade-checker.md`
 - Formula Reference Sheet Builder — `formula-sheet-builder.md`
-- Gallery Walk QR Codes — `gallery-walk-qr.md`
 - Grade Distribution Visualizer — `grade-distribution-visualizer.md`
-- Lab Group & Role Randomizer — `lab-group-role-randomizer.md`
 - Math Fact Drill Sheet Generator — `math-drill-generator.md`
 - Novel Study / Reading Circles Manager — `novel-study-circles-manager.md`
-- Number Talks / Mental Math Routine Board — `number-talks-board.md`
-- Tournament Bracket & Station Rotation (PE) — `pe-tournament-stations.md`
 - Primary Source Analysis Worksheet Generator — `primary-source-analysis-generator.md`
 - Prompt Builder — `prompt-builder.md`
-- QR Code Generator — `qr-code-generator.md`
-- QR Scavenger Hunt Builder — `qr-scavenger-hunt-builder.md`
 - Quiz / Review Game Board — `review-game-board.md`
 - East Middle Schedule Browser — `schedule-browser.md`
 - School Layout Visualizer — `schedule-visualizer.md`
@@ -109,7 +125,6 @@ data-heavy), and say why in the PR.
 - Sub Plan Builder — `sub-plan-builder.md`
 - Vocab & Conjugation Drill Generator — `vocab-conjugation-drill.md`
 - Vocabulary Flashcard & Word Wall Generator — `vocab-flashcard-generator.md`
-- Writing Prompt Generator — `writing-prompt-generator.md`
 
 ---
 
@@ -129,10 +144,39 @@ lands naturally inside a tool you are already working on, take it.
   still load JSZip from cdnjs — both are on the untouched list, so this gets
   fixed as a side effect if whoever takes them remembers.
   `image-to-pdf.html` had the same issue with jsPDF and was fixed in Round 3
-  (vendored into `Tools/image-to-pdf/lib/`).
+  (PR #54, vendored into `Tools/image-to-pdf/lib/`).
 - **P8 backup compatibility.** `Tools/backup-restore.html` keeps two lists
   that go stale silently: `KNOWN_GROUPS` (friendly names in the scan table)
   and `STUDENT_KEYS` (what the year-end clear is allowed to erase). **A tool
   that starts writing a new storage key — especially one holding student
   names — needs adding to both**, or it shows up as "Other saved data" and
   survives a year-end clear.
+- **Content-bank + display + handout convergence.** After Round 4 (PR #55),
+  this pattern now exists independently in `exit-ticket-generator.html`,
+  `number-talks-board.html`, and `writing-prompt-generator.html` — each has
+  its own bank editor, its own fullscreen/projector stage wiring, and its
+  own print handout. The fullscreen-stage code in particular is now
+  near-identical in three places (and also in `pe-tournament-stations.html`).
+  Worth lifting into a shared `_shared/` helper next time one of these four
+  is touched, rather than writing a fifth copy.
+- **Rotation/bracket engine duplication.** `bracket-tournament-generator.html`
+  and `pe-tournament-stations.html` still have separate bracket/rotation
+  logic after Round 4 (each grew independently this round, deliberately
+  scoped that way to avoid a risky shared-engine refactor mid-round). A
+  future round could unify them — `bracket-tournament-generator`'s new
+  round-robin/scheduling code and `pe-tournament-stations`'s rotation timer
+  are the two halves to reconcile.
+- **Read-only cross-tool bridge pattern.** `writing-prompt-generator.html`
+  added `wpg-rubric-link.js`, which reads Rubric Builder's own localStorage
+  keys read-only and writes back only the `:current` pointer Rubric Builder
+  already watches on boot — no shared library, no format negotiation. This
+  is a lighter-weight alternative to a full shared-hub tool and is worth
+  copying wherever a tool wants to reference another tool's data without
+  taking on a dependency.
+- **BroadcastChannel is same-device only.** `pe-tournament-stations.html`'s
+  new phone/remote-control feature confirmed empirically that
+  `BroadcastChannel` only bridges tabs within the same browser
+  context/profile — it does not work across two different phones/devices.
+  Any future "phone as remote" work (P9) needs a different mechanism (e.g.
+  WebRTC pairing, as `schedule-visualizer.html` already uses) for true
+  cross-device control.

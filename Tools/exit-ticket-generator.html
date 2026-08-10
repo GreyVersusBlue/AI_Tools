@@ -21,7 +21,7 @@
   :root {
     --ink: #1f2430; --paper: #fafaf8; --card: #fff;
     --line: #dcdad2; --line-strong: #c3c0b6;
-    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f;
+    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f7d4f; --warn: #a3791f;
   }
   * { box-sizing: border-box; }
   body {
@@ -89,6 +89,9 @@
   .stage .think-timer:empty { display: none; }
   .stage .think-timer.think-timer-done { color: var(--err); animation: think-timer-flash 1s steps(2, start) infinite; }
   @keyframes think-timer-flash { 50% { opacity: .2; } }
+  .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
+  .stage:fullscreen .prompt-text { font-size: clamp(2.2rem, 6vw, 5rem); }
+  .stage:fullscreen .think-timer { font-size: clamp(2.6rem, 8vw, 6rem); }
 
   .meta-row { display: flex; justify-content: center; gap: .5rem; margin-bottom: 1.3rem; flex-wrap: wrap; min-height: 1.4rem; }
   .meta-row .tag {
@@ -131,6 +134,58 @@
   .tally-bar-track { flex: 1; background: #eceae1; border-radius: 7px; height: 1.7rem; overflow: hidden; }
   .tally-bar-fill { height: 100%; background: var(--accent-2); border-radius: 7px 0 0 7px; transition: width .2s ease; }
   .tally-row-count { width: 2.8rem; flex-shrink: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ── Paper Triage tab ─────────────────────────────────────────────── */
+  .triage-summary { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: .9rem; font-weight: 700; }
+  .triage-summary .count-good { color: var(--good); }
+  .triage-summary .count-warn { color: var(--warn); }
+  .triage-summary .count-err { color: var(--err); }
+  .triage-summary .count-muted { color: var(--muted); font-weight: 600; }
+  .triage-grid { display: flex; flex-direction: column; gap: .4rem; max-height: 26rem; overflow-y: auto; margin-bottom: .8rem; }
+  .triage-row {
+    display: flex; align-items: center; gap: .8rem; padding: .5rem .6rem;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer;
+  }
+  .triage-row.current { border-color: var(--accent-2); background: #eaf1f6; }
+  .triage-name { flex: 1; font-weight: 600; font-size: .92rem; }
+  .triage-btns { display: flex; gap: .4rem; }
+  .triage-opt {
+    font-family: inherit; font-size: .78rem; font-weight: 700; padding: .35rem .7rem; border-radius: 6px; cursor: pointer;
+    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+  }
+  .triage-opt:hover { border-color: var(--accent-2); color: var(--accent-2); }
+  .triage-opt.opt-got.active { background: var(--good); border-color: var(--good); color: #fff; }
+  .triage-opt.opt-almost.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+  .triage-opt.opt-reteach.active { background: var(--err); border-color: var(--err); color: #fff; }
+  .triage-empty { color: var(--muted); font-size: .85rem; margin: 0; }
+  .triage-results h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); margin: 1rem 0 .4rem; }
+  .triage-results h3:first-child { margin-top: 0; }
+  .triage-name-list { margin: 0 0 .6rem; padding-left: 1.2rem; font-size: .9rem; }
+  .triage-name-list li { margin-bottom: .15rem; }
+  .triage-group { margin: 0 0 .4rem; font-size: .9rem; }
+  .triage-group b { color: var(--accent); }
+
+  /* ── Discussion Board tab ────────────────────────────────────────── */
+  .discussion-manage-list { list-style: none; margin: 0; padding: 0; }
+  .discussion-manage-list li { display: flex; justify-content: space-between; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .discussion-manage-list li:last-child { border-bottom: none; }
+  .discussion-stage {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 2rem; min-height: 12rem; margin-bottom: .6rem; display: flex; align-items: center; justify-content: center;
+  }
+  .discussion-stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; background: var(--paper); }
+  .discussion-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; width: 100%; }
+  .discussion-board.focused { display: block; }
+  .discussion-card {
+    background: #eaf1f6; border: 1px solid #c9dce6; border-radius: 10px; padding: 1.2rem 1.4rem;
+    font-size: clamp(1.1rem, 2.6vw, 1.6rem); font-weight: 600; line-height: 1.4; cursor: pointer;
+  }
+  .discussion-stage:fullscreen .discussion-card { font-size: clamp(1.6rem, 4vw, 3rem); }
+  .discussion-card .discussion-letter {
+    display: block; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent-2); margin-bottom: .4rem;
+  }
+  .discussion-empty { color: var(--muted); font-size: 1.05rem; margin: 0; }
 
   /* ── Printable handout tab ───────────────────────────────────────── */
   .handout-prompt-display {
@@ -189,6 +244,13 @@
     .print-only .slip-grid.pp2 .slip-qr { width: .8in; height: .8in; }
     .print-only .slip-grid.pp4 .slip-qr { width: .55in; height: .55in; }
     .print-only .slip-answer-line { border-bottom: 1px solid #555; }
+    .print-only .triage-print-page { padding: .3in; font-family: Georgia, serif; }
+    .print-only .triage-print-page h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+    .print-only .triage-print-page .triage-print-sub { font-size: .95rem; color: #333; margin: 0 0 1.1rem; }
+    .print-only .triage-results h3 { font-size: 1.1rem; margin: 1.1rem 0 .4rem; border-bottom: 1px solid #999; padding-bottom: .15rem; }
+    .print-only .triage-results h3:first-child { margin-top: 0; }
+    .print-only .triage-name-list { font-size: 1.05rem; }
+    .print-only .triage-group { font-size: 1.05rem; margin-bottom: .5rem; }
     @page { size: letter portrait; margin: 0.4in; }
   }
 </style>
@@ -206,6 +268,8 @@
 
   <div class="tab-bar">
     <button type="button" class="tab-btn active" data-tab="bank">Prompt &amp; Display</button>
+    <button type="button" class="tab-btn" data-tab="triage">Paper Triage</button>
+    <button type="button" class="tab-btn" data-tab="discussion">Discussion Board</button>
     <button type="button" class="tab-btn" data-tab="tally">Quick Tally</button>
     <button type="button" class="tab-btn" data-tab="handout">Printable Handout</button>
   </div>
@@ -227,6 +291,7 @@
       </div>
       <label class="check-inline" for="includeMineCheck"><input type="checkbox" id="includeMineCheck"> Also include My Prompts</label>
       <button type="button" id="shuffleBtn">&#128256; Shuffle / Next Prompt</button>
+      <button type="button" class="secondary" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9974; Fullscreen</button>
     </div>
 
     <div class="stage" id="stage">
@@ -255,6 +320,72 @@
     <div class="history">
       <h2>Shown earlier today (this session)</h2>
       <ol id="historyList"></ol>
+    </div>
+  </section>
+
+  <section class="tab-panel" id="panel-triage">
+    <div class="card">
+      <div class="card-title"><span>Class Roster</span></div>
+      <div class="row2">
+        <div>
+          <label for="triageRosterSelect">Load a saved roster</label>
+          <select id="triageRosterSelect" style="width:100%;"><option value="">Paste names below&hellip;</option></select>
+        </div>
+        <div>
+          <label for="triageGroupSizeInput">Small-group size</label>
+          <input type="text" id="triageGroupSizeInput" inputmode="numeric" style="width:100%;" value="4">
+        </div>
+      </div>
+      <label for="triageNamesInput">Or paste names, one per line</label>
+      <textarea id="triageNamesInput" rows="4" placeholder="Amir&#10;Brianna&#10;Devon&#10;..."></textarea>
+      <button type="button" id="buildTriageBtn">Build Triage Grid</button>
+      <p class="hint">Rebuilding keeps any taps already made for names still on the list. Rosters saved elsewhere on this device under &ldquo;np_rosters&rdquo; show up in the dropdown above.</p>
+    </div>
+
+    <div class="card" id="triageGridCard" hidden>
+      <div class="card-title">
+        <span>Tap as you read each slip &mdash; 1 = Got it, 2 = Almost, 3 = Reteach</span>
+        <button type="button" class="secondary" id="resetTriageBtn">Reset Taps</button>
+      </div>
+      <div class="triage-summary" id="triageSummary"></div>
+      <div class="triage-grid" id="triageGrid"></div>
+      <p class="hint">Click a name to select it, then use the buttons or press 1 / 2 / 3 on your keyboard &mdash; each tap auto-advances to the next student so you can keep flipping through the stack. Tap the same status again to clear it.</p>
+    </div>
+
+    <div class="card" id="triageResultsCard" hidden>
+      <div class="card-title"><span>Reteach List &amp; Small Groups</span></div>
+      <div id="triageResults"></div>
+      <button type="button" id="printTriageBtn">Print Reteach List</button>
+    </div>
+  </section>
+
+  <section class="tab-panel" id="panel-discussion">
+    <div class="card">
+      <div class="card-title"><span>Add a Response</span></div>
+      <label for="discussionInput">Transcribe a student's response &mdash; kept anonymous, no name attached</label>
+      <textarea id="discussionInput" rows="2" placeholder="e.g. I think the answer is 42 because..."></textarea>
+      <button type="button" id="addDiscussionBtn">Add to Board</button>
+      <p class="hint">Add two or three responses that show different thinking, then use Project Board below to drive a whole-class discussion. Nothing here is tied to a student's name.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>On the Board</span>
+        <button type="button" class="secondary" id="clearDiscussionBtn">Clear Board</button>
+      </div>
+      <ul class="discussion-manage-list" id="discussionManageList"></ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Project Board</span>
+        <button type="button" class="secondary" id="discussionFullscreenBtn" title="Toggle fullscreen (F)">&#9974; Fullscreen</button>
+      </div>
+      <div class="discussion-stage" id="discussionStage">
+        <div class="discussion-board" id="discussionBoard"></div>
+        <p class="empty discussion-empty" id="discussionEmpty">Add responses above, then project this board for discussion.</p>
+      </div>
+      <p class="hint">Click a response on the board to enlarge just that one for the room; click it again to go back to the grid.</p>
     </div>
   </section>
 
@@ -340,6 +471,7 @@
 </div>
 
 <div class="print-only" id="printArea"></div>
+<div class="print-only" id="triagePrintArea"></div>
 
 <script>
 (function () {
@@ -348,18 +480,26 @@
   var STORAGE_KEY = 'gvb-exit-ticket:settings';
   var CUSTOM_BANK_KEY = 'gvb-exit-ticket:customPrompts';
   var TALLY_KEY = 'gvb-exit-ticket:tally';
+  var TRIAGE_KEY = 'gvb-exit-ticket:triage';
+  var DISCUSSION_KEY = 'gvb-exit-ticket:discussion';
+  var NP_ROSTERS_KEY = 'np_rosters';
   var HISTORY_LIMIT = 10;
   var AVOID_REPEAT_WINDOW = 8;
   var MINE_KEY = 'mine';
 
   var els = {};
-  ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow',
+  ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
    'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
-   'tallyGrid', 'tallyResults', 'tallyTotal', 'tallyResetBtn'
+   'tallyGrid', 'tallyResults', 'tallyTotal', 'tallyResetBtn',
+   'triageRosterSelect', 'triageGroupSizeInput', 'triageNamesInput', 'buildTriageBtn',
+   'triageGridCard', 'triageSummary', 'triageGrid', 'resetTriageBtn',
+   'triageResultsCard', 'triageResults', 'printTriageBtn', 'triagePrintArea',
+   'discussionInput', 'addDiscussionBtn', 'discussionManageList', 'clearDiscussionBtn',
+   'discussionStage', 'discussionBoard', 'discussionEmpty', 'discussionFullscreenBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var THINK_TIME_OPTIONS = [0, 30, 60, 120];
@@ -491,6 +631,11 @@
   var thinkTimeRemaining = 0;
   var differentSlipPrompts = []; // texts, one per slip, when settings.slipMode === 'different'
   var tally = [0, 0, 0, 0]; // taps for options 1-4
+  var triage = { groupSize: 4, students: [] }; // students: [{ id, name, status }], status: '' | 'got' | 'almost' | 'reteach'
+  var triageCurrentId = null;
+  var discussionResponses = []; // [{ id, text }], anonymous responses transcribed for the projected discussion board
+  var discussionFocusedId = null;
+  var currentTab = 'bank';
 
   // ── Persistence ──────────────────────────────────────────────────────────
   function loadSettings() {
@@ -546,6 +691,47 @@
   function saveTally() {
     try { localStorage.setItem(TALLY_KEY, JSON.stringify(tally)); }
     catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function loadTriage() {
+    try {
+      var raw = localStorage.getItem(TRIAGE_KEY);
+      if (!raw) return { groupSize: 4, students: [] };
+      var v = JSON.parse(raw);
+      if (!v || typeof v !== 'object') return { groupSize: 4, students: [] };
+      var students = Array.isArray(v.students) ? v.students.filter(function (s) {
+        return s && typeof s.name === 'string' && s.id != null;
+      }).map(function (s) {
+        return { id: s.id, name: s.name, status: ['got', 'almost', 'reteach'].indexOf(s.status) !== -1 ? s.status : '' };
+      }) : [];
+      var groupSize = (typeof v.groupSize === 'number' && v.groupSize > 0 && v.groupSize <= 50) ? v.groupSize : 4;
+      return { groupSize: groupSize, students: students };
+    } catch (e) { return { groupSize: 4, students: [] }; }
+  }
+  function saveTriage() {
+    try { localStorage.setItem(TRIAGE_KEY, JSON.stringify(triage)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function loadDiscussion() {
+    try {
+      var raw = localStorage.getItem(DISCUSSION_KEY);
+      if (!raw) return [];
+      var v = JSON.parse(raw);
+      if (!Array.isArray(v)) return [];
+      return v.filter(function (r) { return r && typeof r.text === 'string' && r.id != null; });
+    } catch (e) { return []; }
+  }
+  function saveDiscussion() {
+    try { localStorage.setItem(DISCUSSION_KEY, JSON.stringify(discussionResponses)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function loadNpRosters() {
+    try {
+      var v = JSON.parse(localStorage.getItem(NP_ROSTERS_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -720,6 +906,44 @@
     startThinkTimer();
   });
 
+  // ── Fullscreen / projector mode ──────────────────────────────────────────
+  function updateFullscreenLabel() {
+    var active = document.fullscreenElement === els.stage;
+    els.fullscreenBtn.innerHTML = active ? '&#9974; Exit Fullscreen' : '&#9974; Fullscreen';
+  }
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (els.stage.requestFullscreen) els.stage.requestFullscreen();
+  }
+  function updateDiscussionFullscreenLabel() {
+    var active = document.fullscreenElement === els.discussionStage;
+    els.discussionFullscreenBtn.innerHTML = active ? '&#9974; Exit Fullscreen' : '&#9974; Fullscreen';
+  }
+  function toggleDiscussionFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (els.discussionStage.requestFullscreen) els.discussionStage.requestFullscreen();
+  }
+  els.fullscreenBtn.addEventListener('click', toggleFullscreen);
+  els.discussionFullscreenBtn.addEventListener('click', toggleDiscussionFullscreen);
+  document.addEventListener('fullscreenchange', function () {
+    updateFullscreenLabel();
+    updateDiscussionFullscreenLabel();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if ((e.key === 'f' || e.key === 'F') && !typing) {
+      if (currentTab === 'bank') { e.preventDefault(); toggleFullscreen(); }
+      else if (currentTab === 'discussion') { e.preventDefault(); toggleDiscussionFullscreen(); }
+      return;
+    }
+    if (currentTab === 'triage' && !typing && triageCurrentId && (e.key === '1' || e.key === '2' || e.key === '3')) {
+      e.preventDefault();
+      setTriageStatus(triageCurrentId, { '1': 'got', '2': 'almost', '3': 'reteach' }[e.key]);
+    }
+  });
+
   // ── My Prompts bank ──────────────────────────────────────────────────────
   function addBankPrompt() {
     var val = els.newBankPrompt.value.trim();
@@ -752,6 +976,274 @@
     var btn = e.target.closest ? e.target.closest('.bank-remove-btn') : null;
     if (!btn) return;
     removeBankPrompt(btn.getAttribute('data-id'));
+  });
+
+  // ── Paper Triage ─────────────────────────────────────────────────────────
+  function parseRosterNames(text) {
+    return text.split('\n')
+      .map(function (line) { return line.trim(); })
+      .filter(Boolean)
+      .map(function (raw) {
+        var line = raw.replace(/^\s*\d+[.)]\s+/, '');
+        if (line.indexOf('\t') !== -1) {
+          var cells = line.split('\t').map(function (c) { return c.trim(); }).filter(function (c) { return c !== ''; });
+          if (cells.length) line = cells[0];
+        }
+        return line.replace(/,\s*$/, '').trim();
+      })
+      .filter(function (n) { return n.length > 0; });
+  }
+
+  function populateTriageRosterSelect() {
+    var rosters = loadNpRosters();
+    var names = Object.keys(rosters);
+    els.triageRosterSelect.innerHTML = '<option value="">Paste names below&hellip;</option>' +
+      names.map(function (n) {
+        var list = rosters[n];
+        var count = Array.isArray(list) ? list.length : 0;
+        return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + count + ')</option>';
+      }).join('');
+  }
+
+  function buildTriageGrid() {
+    var names = parseRosterNames(els.triageNamesInput.value);
+    if (!names.length) return;
+    var pool = triage.students.slice();
+    triage.students = names.map(function (name, i) {
+      var idx = -1;
+      for (var j = 0; j < pool.length; j++) { if (pool[j].name === name) { idx = j; break; } }
+      if (idx !== -1) return pool.splice(idx, 1)[0];
+      return { id: 't' + Date.now().toString(36) + i + Math.random().toString(36).slice(2), name: name, status: '' };
+    });
+    var size = parseInt(els.triageGroupSizeInput.value, 10);
+    triage.groupSize = (size > 0 && size <= 50) ? size : 4;
+    els.triageGroupSizeInput.value = String(triage.groupSize);
+    var firstUnmarked = triage.students.filter(function (s) { return !s.status; })[0];
+    triageCurrentId = firstUnmarked ? firstUnmarked.id : (triage.students[0] ? triage.students[0].id : null);
+    saveTriage();
+    renderTriage();
+  }
+
+  function setTriageStatus(id, status) {
+    var s = triage.students.filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    s.status = s.status === status ? '' : status;
+    var idx = triage.students.indexOf(s);
+    var next = triage.students[idx + 1];
+    triageCurrentId = next ? next.id : s.id;
+    saveTriage();
+    renderTriage();
+  }
+
+  function resetTriage() {
+    triage.students.forEach(function (s) { s.status = ''; });
+    triageCurrentId = triage.students.length ? triage.students[0].id : null;
+    saveTriage();
+    renderTriage();
+  }
+
+  function computeTriageCounts() {
+    var counts = { got: 0, almost: 0, reteach: 0, unmarked: 0 };
+    triage.students.forEach(function (s) {
+      if (s.status === 'got') counts.got++;
+      else if (s.status === 'almost') counts.almost++;
+      else if (s.status === 'reteach') counts.reteach++;
+      else counts.unmarked++;
+    });
+    return counts;
+  }
+
+  function triageOptBtn(s, status, label) {
+    var active = s.status === status ? ' active' : '';
+    return '<button type="button" class="triage-opt opt-' + status + active + '" data-id="' + escapeHtml(s.id) + '" data-status="' + status + '">' + label + '</button>';
+  }
+
+  function renderTriageSummary() {
+    var c = computeTriageCounts();
+    els.triageSummary.innerHTML =
+      '<span class="count-good">' + c.got + ' got it</span>' +
+      '<span class="count-warn">' + c.almost + ' almost</span>' +
+      '<span class="count-err">' + c.reteach + ' reteach</span>' +
+      (c.unmarked ? '<span class="count-muted">' + c.unmarked + ' not yet tapped</span>' : '');
+  }
+
+  function renderTriageGrid() {
+    if (!triage.students.length) {
+      els.triageGrid.innerHTML = '<p class="triage-empty">No students yet &mdash; paste names above.</p>';
+      return;
+    }
+    els.triageGrid.innerHTML = triage.students.map(function (s) {
+      var cur = s.id === triageCurrentId ? ' current' : '';
+      return '<div class="triage-row' + cur + '" data-id="' + escapeHtml(s.id) + '">' +
+        '<span class="triage-name">' + escapeHtml(s.name) + '</span>' +
+        '<div class="triage-btns">' +
+          triageOptBtn(s, 'got', 'Got it') +
+          triageOptBtn(s, 'almost', 'Almost') +
+          triageOptBtn(s, 'reteach', 'Reteach') +
+        '</div></div>';
+    }).join('');
+  }
+
+  function buildTriageResultsBodyHtml() {
+    if (!triage.students.length) return '<p class="triage-empty">Build the grid above to see a reteach list.</p>';
+    var reteach = triage.students.filter(function (s) { return s.status === 'reteach'; });
+    var almost = triage.students.filter(function (s) { return s.status === 'almost'; });
+    var html = '';
+    html += '<h3>Needs Reteach (' + reteach.length + ')</h3>';
+    html += reteach.length
+      ? '<ol class="triage-name-list">' + reteach.map(function (s) { return '<li>' + escapeHtml(s.name) + '</li>'; }).join('') + '</ol>'
+      : '<p class="triage-empty">Nobody flagged reteach yet.</p>';
+    html += '<h3>Almost (' + almost.length + ')</h3>';
+    html += almost.length
+      ? '<ol class="triage-name-list">' + almost.map(function (s) { return '<li>' + escapeHtml(s.name) + '</li>'; }).join('') + '</ol>'
+      : '<p class="triage-empty">Nobody flagged almost yet.</p>';
+    var needsHelp = reteach.concat(almost);
+    html += '<h3>Small Groups (size ' + triage.groupSize + ')</h3>';
+    if (!needsHelp.length) {
+      html += '<p class="triage-empty">No one needs a small group yet.</p>';
+    } else {
+      var groups = [];
+      for (var i = 0; i < needsHelp.length; i += triage.groupSize) groups.push(needsHelp.slice(i, i + triage.groupSize));
+      html += groups.map(function (g, gi) {
+        return '<p class="triage-group"><b>Group ' + (gi + 1) + ':</b> ' + g.map(function (s) { return escapeHtml(s.name); }).join(', ') + '</p>';
+      }).join('');
+    }
+    return html;
+  }
+
+  function renderTriageResults() {
+    els.triageResultsCard.hidden = !triage.students.length;
+    els.triageResults.innerHTML = '<div class="triage-results">' + buildTriageResultsBodyHtml() + '</div>';
+  }
+
+  function renderTriage() {
+    els.triageGridCard.hidden = !triage.students.length;
+    renderTriageSummary();
+    renderTriageGrid();
+    renderTriageResults();
+  }
+
+  function renderTriagePrintArea() {
+    var dateStr = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    var c = computeTriageCounts();
+    var summary = c.got + ' got it &middot; ' + c.almost + ' almost &middot; ' + c.reteach + ' reteach (' + triage.students.length + ' total)';
+    els.triagePrintArea.innerHTML =
+      '<div class="triage-print-page">' +
+        '<h1>Reteach List &amp; Small Groups</h1>' +
+        '<p class="triage-print-sub">' + escapeHtml(dateStr) + ' &mdash; ' + summary + '</p>' +
+        '<div class="triage-results">' + buildTriageResultsBodyHtml() + '</div>' +
+      '</div>';
+  }
+
+  els.triageRosterSelect.addEventListener('change', function () {
+    var name = els.triageRosterSelect.value;
+    if (!name) return;
+    var rosters = loadNpRosters();
+    var list = rosters[name];
+    if (!Array.isArray(list)) return;
+    els.triageNamesInput.value = list.join('\n');
+    buildTriageGrid();
+  });
+  els.triageGroupSizeInput.addEventListener('change', function () {
+    var size = parseInt(els.triageGroupSizeInput.value, 10);
+    triage.groupSize = (size > 0 && size <= 50) ? size : 4;
+    els.triageGroupSizeInput.value = String(triage.groupSize);
+    saveTriage();
+    renderTriageResults();
+  });
+  els.buildTriageBtn.addEventListener('click', buildTriageGrid);
+  els.resetTriageBtn.addEventListener('click', resetTriage);
+  els.triageGrid.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.triage-opt') : null;
+    if (btn) {
+      setTriageStatus(btn.getAttribute('data-id'), btn.getAttribute('data-status'));
+      return;
+    }
+    var row = e.target.closest ? e.target.closest('.triage-row') : null;
+    if (row) { triageCurrentId = row.getAttribute('data-id'); renderTriage(); }
+  });
+  els.printTriageBtn.addEventListener('click', function () {
+    renderTriagePrintArea();
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.triagePrintArea.classList.add('active');
+    window.print();
+  });
+
+  // ── Discussion Board ─────────────────────────────────────────────────────
+  function discussionLetter(i) { return String.fromCharCode(65 + (i % 26)); }
+
+  function addDiscussionResponse() {
+    var val = els.discussionInput.value.trim();
+    if (!val) return;
+    discussionResponses.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2), text: val });
+    saveDiscussion();
+    els.discussionInput.value = '';
+    renderDiscussion();
+  }
+  function removeDiscussionResponse(id) {
+    discussionResponses = discussionResponses.filter(function (r) { return r.id !== id; });
+    if (discussionFocusedId === id) discussionFocusedId = null;
+    saveDiscussion();
+    renderDiscussion();
+  }
+  function clearDiscussion() {
+    discussionResponses = [];
+    discussionFocusedId = null;
+    saveDiscussion();
+    renderDiscussion();
+  }
+  function renderDiscussionManageList() {
+    if (!discussionResponses.length) {
+      els.discussionManageList.innerHTML = '<p class="bank-empty">No responses yet &mdash; add one above.</p>';
+      return;
+    }
+    els.discussionManageList.innerHTML = discussionResponses.map(function (r, i) {
+      return '<li><span class="bank-item-text"><b>' + discussionLetter(i) + '.</b> ' + escapeHtml(r.text) + '</span>' +
+        '<button type="button" class="bank-remove-btn" data-id="' + escapeHtml(r.id) + '" title="Remove this response" aria-label="Remove this response">&times;</button></li>';
+    }).join('');
+  }
+  function renderDiscussionBoard() {
+    if (!discussionResponses.length) {
+      els.discussionBoard.innerHTML = '';
+      els.discussionBoard.classList.remove('focused');
+      els.discussionEmpty.style.display = '';
+      return;
+    }
+    els.discussionEmpty.style.display = 'none';
+    var focused = discussionResponses.filter(function (r) { return r.id === discussionFocusedId; })[0];
+    if (focused) {
+      els.discussionBoard.classList.add('focused');
+      var idx = discussionResponses.indexOf(focused);
+      els.discussionBoard.innerHTML = '<div class="discussion-card" data-id="' + escapeHtml(focused.id) + '">' +
+        '<span class="discussion-letter">Response ' + discussionLetter(idx) + '</span>' + escapeHtml(focused.text) + '</div>';
+    } else {
+      els.discussionBoard.classList.remove('focused');
+      els.discussionBoard.innerHTML = discussionResponses.map(function (r, i) {
+        return '<div class="discussion-card" data-id="' + escapeHtml(r.id) + '">' +
+          '<span class="discussion-letter">Response ' + discussionLetter(i) + '</span>' + escapeHtml(r.text) + '</div>';
+      }).join('');
+    }
+  }
+  function renderDiscussion() {
+    renderDiscussionManageList();
+    renderDiscussionBoard();
+  }
+  els.addDiscussionBtn.addEventListener('click', addDiscussionResponse);
+  els.discussionInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addDiscussionResponse(); }
+  });
+  els.clearDiscussionBtn.addEventListener('click', clearDiscussion);
+  els.discussionManageList.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.bank-remove-btn') : null;
+    if (!btn) return;
+    removeDiscussionResponse(btn.getAttribute('data-id'));
+  });
+  els.discussionBoard.addEventListener('click', function (e) {
+    var card = e.target.closest ? e.target.closest('.discussion-card') : null;
+    if (!card) return;
+    var id = card.getAttribute('data-id');
+    discussionFocusedId = (discussionFocusedId === id) ? null : id;
+    renderDiscussionBoard();
   });
 
   // ── Quick Tally ──────────────────────────────────────────────────────────
@@ -940,15 +1432,18 @@
     window.print();
   });
   window.addEventListener('afterprint', function () {
-    els.printArea.classList.remove('active');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
   });
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   function switchTab(tab) {
+    currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     document.getElementById('panel-bank').classList.toggle('active', tab === 'bank');
+    document.getElementById('panel-triage').classList.toggle('active', tab === 'triage');
+    document.getElementById('panel-discussion').classList.toggle('active', tab === 'discussion');
     document.getElementById('panel-tally').classList.toggle('active', tab === 'tally');
     document.getElementById('panel-handout').classList.toggle('active', tab === 'handout');
   }
@@ -975,6 +1470,19 @@
   els.qrEnabledCheck.checked = settings.qrEnabled;
   els.qrUrlInput.value = settings.qrUrl;
   els.qrUrlRow.hidden = !settings.qrEnabled;
+
+  triage = loadTriage();
+  els.triageGroupSizeInput.value = String(triage.groupSize);
+  els.triageNamesInput.value = triage.students.map(function (s) { return s.name; }).join('\n');
+  if (triage.students.length) {
+    var firstUnmarked = triage.students.filter(function (s) { return !s.status; })[0];
+    triageCurrentId = firstUnmarked ? firstUnmarked.id : triage.students[0].id;
+  }
+  populateTriageRosterSelect();
+  renderTriage();
+
+  discussionResponses = loadDiscussion();
+  renderDiscussion();
 
   pickPrompt();
   if (settings.slipMode === 'different') refreshDifferentSlipPrompts();

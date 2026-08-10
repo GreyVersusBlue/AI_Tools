@@ -76,7 +76,7 @@
   <div class="card">
     <div class="card-title">Connected Devices</div>
     <table class="roster" id="rosterTable" style="display:none;">
-      <thead><tr><th>Device</th><th>Progress</th><th>Status</th></tr></thead>
+      <thead><tr><th>Device</th><th>Progress</th><th>Score</th><th>Status</th></tr></thead>
       <tbody id="rosterBody"></tbody>
     </table>
     <p class="empty-hint" id="rosterEmpty">No devices connected yet. Add one below for each team.</p>
@@ -143,9 +143,10 @@
         ? '<span class="status-disconnected">Disconnected</span>'
         : (d.done ? '<span class="status-done">🏁 Finished!</span>' : 'In progress');
       var progressText = d.total > 0 ? ('Station ' + (d.done ? d.total : d.station + 1) + ' of ' + d.total) : '—';
+      var scoreText = (typeof d.score === 'number') ? d.score : '—';
       return '<tr><td>Device ' + d.id + '</td><td>' + progressText +
         '<div class="bar-wrap"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
-        '<td>' + statusHtml + '</td></tr>';
+        '<td>' + scoreText + '</td><td>' + statusHtml + '</td></tr>';
     }).join('');
   }
 
@@ -176,7 +177,7 @@
     if (!pendingPc || !answerPayload) return;
     els.pairingStatus.textContent = 'Connecting…';
     window.WebRTCPair.applyAnswer(pendingPc.pc, answerPayload).then(function () {
-      var device = { id: nextDeviceId++, pc: pendingPc.pc, channel: pendingPc.channel, station: 0, total: 0, done: false, connected: false };
+      var device = { id: nextDeviceId++, pc: pendingPc.pc, channel: pendingPc.channel, station: 0, total: 0, done: false, connected: false, score: null };
       devices.push(device);
       device.channel.addEventListener('open', function () {
         device.connected = true;
@@ -192,6 +193,7 @@
         device.station = msg.station || 0;
         device.total = msg.total || 0;
         device.done = !!msg.done;
+        device.score = (typeof msg.score === 'number') ? msg.score : null;
         renderRoster();
       });
       renderRoster();

@@ -91,3 +91,109 @@ because the gym wifi does not work.
 - Should the bracket here be replaced by an embed of / link to
   `bracket-tournament-generator.html`, keeping this tool focused on rotation?
 - Is score capture in scope, or does fitness testing deserve its own tool?
+
+## Round 3 update — 2026-08-10
+
+Implemented four of the Major Features in one pass, still single-file
+(`Tools/pe-tournament-stations.html`, no support folder added — the new
+content fit comfortably inline without needing a vendored JS file, so the
+"minimal support folder" option from the brief wasn't needed this round).
+
+**Shipped station template library.** A `STATION_TEMPLATES` array ships five
+real, ready-to-use circuits: Fitness Circuit (8 stations), Volleyball Skills,
+Striking & Fielding, Cooperative Games, and a Fitness Testing Battery (PACER,
+curl-ups, push-ups, sit-and-reach). Each station carries a real activity
+description and an equipment list, not placeholder text. A "Start from a
+shipped template" picker in the Stations card loads one in, replacing the
+current list after a confirm if stations already exist.
+
+**Station schema grew equipment + scored fields.** Every station now has an
+`equipment` string and a `scored` flag with a free-text `scoreUnit` (reps,
+seconds, laps, inches, etc.), editable in a second row under each station's
+name/activity. Equipment and the "scored" tag now also print on the wall
+station cards.
+
+**Fitness testing / score capture mode.** A new "Fitness / skill scores" card
+appears automatically whenever at least one station is marked scored. It
+lists every group's members with a number input per student per scored
+station, marks whichever group is currently assigned there ("here now"), and
+persists to `state.scores[stationId][studentName]`. A "Print class record"
+button produces a student-by-station printable table pulling from the same
+data — this is the printable record for grading the brief asked for. Scores
+are entered live as the rotation runs, independent of which rotation cycle
+the group is in, so a mis-entered value can be corrected after the group
+moves on.
+
+**Gym-display legibility and audio.** Fullscreen now scales the timer, station
+names, and chips dramatically larger (timer up to ~15rem) rather than reusing
+the same clamp as the non-fullscreen card. A "high-contrast gym display"
+toggle switches the stage to a black background with yellow/white text,
+independent of fullscreen. Each station tile now shows a "Next" line (who's
+arriving at this station after the next rotation), computed via
+`computeAssignment(count + 1)`, addressing the Quick Win about showing next,
+not just current. The rotation alarm is now three louder repeated chimes
+instead of one soft pair, there's a distinct quiet 30-second warning tone
+before rotation (`maybePlayWarning`, guarded so it fires once per countdown),
+a full-stage flash on both automatic and manual rotation, and a short
+confirmation tone on manual "Rotate now" — useful feedback when driving the
+rotation from the remote below, where the teacher can't see the screen while
+walking.
+
+**Phone/remote control via BroadcastChannel.** An "Open remote control" button
+opens the same HTML file in a second window with `?remote=1`, which renders a
+stripped, huge-button remote view (Start/Pause/Resume/Rotate now/Reset, plus a
+mirrored timer and a per-station here/next list) instead of the full editor.
+The main window is the sole timer authority — it still runs the only `tick()`
+loop and broadcasts a state snapshot after every render; the remote window's
+own `tick()` is disabled (`if (isRemote) return`) so it never double-counts
+rotations, and it only ever sends `{type:'cmd'}` messages that the main window
+applies through the same `doStart/doPause/doResume/doRotateNow/doReset`
+functions the on-screen buttons call.
+
+**Important tradeoff, tested and confirmed, not glossed over:**
+`BroadcastChannel` only reaches other tabs/windows in the *same browser
+profile on the same device* — it cannot bridge a phone to a laptop over wifi,
+and there is no backend here to relay between two different devices. This was
+verified directly: two independent Playwright browser *contexts* (Chromium's
+approximate of two unrelated devices/profiles) never deliver a
+`BroadcastChannel` message to each other, over both `file://` and `http://`,
+while two pages in the *same* context (same profile, multiple tabs/windows —
+the realistic "same laptop, second window" case) deliver instantly and
+reliably, `file://` included. So what shipped is a genuine, working
+same-device second-screen remote (e.g., a small control window on the same
+laptop that's mirroring/HDMI'd to the gym TV), not yet a true separate-phone
+remote — that would need either a lightweight local relay (a tiny same-machine
+WebSocket/HTTP server the tool doesn't have) or a cloud relay (a real
+backend, explicitly out of scope). The in-app copy on the remote screen and
+around the "Open remote control" button says this plainly rather than
+overselling it.
+
+**Deliberately skipped this round** (left for a future pass, per the brief's
+"pick 2-4" guidance):
+- Rest/water stations as a first-class station type (Quick Win) — the
+  templates include a "Rest / Water" station as ordinary content, but there's
+  no special handling (e.g., skip-scoring, different tile styling) yet.
+- Uneven groups/stations handling beyond what `computeAssignment` already
+  does (it already copes with more/fewer groups than stations by wrapping,
+  but a station that should take two full rotations, or locking a specific
+  group out of the cycle, is not modeled).
+- Undo on Reset / New unit (P11).
+- Team/group memory across a unit (the `group-team-generator.html` recency
+  logic) — not touched.
+- Unifying the rotation engine or bracket engine across tools (P7) — not
+  attempted, per the instruction not to touch `bracket-tournament-generator`,
+  which is being worked on in parallel this round. Worth flagging again for
+  whoever picks up P7 next: this tool's bracket code
+  (`buildBracket`/`autoAdvance`/`renderBracket`) is line-for-line the same
+  algorithm as `bracket-tournament-generator.html`'s, and the rotation-timer
+  pattern here (endAt-based countdown, WebAudio tone alarm, fullscreen stage)
+  is close enough to Classroom Timer's Round-Robin mode that a shared module
+  seems genuinely warranted — this round intentionally left both alone to
+  avoid stepping on that parallel work.
+
+**Where the next round should pick up:** a true phone-to-separate-display
+remote (would need a deliberate decision on backend/relay, since the site's
+"no backend" constraint is precisely what blocks it); rest-station and
+uneven-rotation modeling; undo; and the cross-tool engine unification once
+`bracket-tournament-generator`'s parallel work has landed and the two can be
+reconciled deliberately rather than by accident.

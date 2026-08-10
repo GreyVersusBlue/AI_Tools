@@ -92,3 +92,94 @@ the bell.
   "lab mode" of one grouping tool? The distinctive parts (roles, stations,
   equipment, safety) are real, but the group formation is duplicated.
 - Is station/equipment tracking within scope, or does it want its own tool?
+
+## Round 3 update — 2026-08-10
+
+Implemented four of the highest-value ideas from Quick Wins and Major
+Features in one pass, still as a single file (no support folder needed —
+the additions were data-model and rendering changes, not new subsystems).
+
+**What shipped:**
+
+- **Undo the last shuffle** (P11, Quick Win). A one-level undo: before each
+  shuffle the previous `lastGroups`, `history`, and `checkoutLog` are
+  snapshotted into a module-level `undoSnapshot` variable (deliberately kept
+  out of `state`/localStorage — undo is a same-session convenience, not
+  saved data). Clicking Undo restores all three together, which matters
+  because a shuffle also mutates the role-recency history — an undo that
+  only restored the visible groups but left the fairness memory pointing at
+  the discarded shuffle would quietly corrupt the tool's best feature.
+  Verified via Playwright that history and group assignment both roll back
+  bit-for-bit. The undo button disables itself after use and on any roster
+  switch/new/import (a snapshot from a different roster's shuffle would be
+  meaningless).
+- **Role descriptions that print on tents** (Quick Win). Roles changed shape
+  from `string[]` to `{name, description}[]`. The role editor now has a
+  second, optional input per role for a short description ("what this role
+  does"); it prints under the role name on table tents only (kept off the
+  on-screen group cards and the role-history report to avoid clutter there).
+  Old saved/exported rosters with plain-string roles are migrated
+  transparently on load (`normalizeRoles`).
+- **Station/equipment assignment per group** (Major Feature). A new
+  "Stations & Equipment" card (optional, empty by default) lets a teacher
+  list stations with an equipment note (e.g. "Station 1 / Microscope A,
+  slides"). On shuffle, if any stations are defined, they're shuffled and
+  cycled onto the groups round-robin — every station gets used as evenly as
+  possible, and if there are fewer stations than groups a warning banner
+  says so (mirrors the existing keep-apart violation banner). Station +
+  equipment show on the group cards, the printed group sheet, and the table
+  tents.
+- **Equipment checkout/return tracking** (Major Feature). Each group with a
+  station gets an inline "Mark checked out" / "Mark returned" control with a
+  timestamp, tracked in `state.checkoutLog` (parallel array to
+  `lastGroups`, reset on every reshuffle since a new shuffle means new
+  group/station pairings). A new "Print equipment checkout sheet" button
+  produces a table (Group / Station / Equipment / Checked out / Returned)
+  using recorded times where available and blank lines for manual sign-off
+  otherwise — usable either as a live digital log or a paper backup.
+
+**Data model / compatibility notes:**
+
+- `lastGroups` changed from `array of arrays of {name, role}` to
+  `array of {station, members}`. `normalizeLastGroups` migrates the old
+  shape (a bare array is wrapped as `{station: null, members: array}`) so
+  rosters saved before this round, or JSON files exported before this
+  round, still load and shuffle correctly. Verified by hand-seeding
+  `localStorage` with an old-shape roster and confirming it renders and
+  reshuffles without errors.
+- Exported/imported JSON now includes `stations` and `checkoutLog`; import
+  of a pre-this-round file works via the same normalization path used for
+  localStorage.
+
+**Deliberately skipped this round** (left for next time, per the file's own
+scoping): lock-a-group-or-role-and-reshuffle-the-rest, absent-student
+one-tap reassignment, the printable "roles you've had" fairness grid per
+student (the role-history report already exists and is close, but a
+per-student printable grid is a distinct, smaller quick win worth its own
+pass), safety-contract integration, and the cross-tool shared
+grouping/role-rotation engine (P7) — all real, all bigger cross-cutting
+changes than one round should absorb, especially the shared-engine idea
+which necessarily touches other tools this round's constraints forbade
+touching.
+
+**Where to pick up next:** the station/equipment and checkout-log data
+model is intentionally simple (one station per group, one checkout cycle
+per shuffle) — a multi-day lab that keeps the same station across sessions,
+or a checkout log that persists across reshuffles within a period, would
+need a different persistence key than "reset on every shuffle." The role
+recency memory itself was not touched beyond swapping its role-identifier
+source from `string[]` to `{name}[]`.map(name) — the underlying algorithm,
+scoring, and history array are unchanged and still the tool's strongest
+idea.
+
+**Testing performed:** `node --check` on the extracted inline script (no
+support-folder `.js` files were added). Playwright + headless Chromium
+(`/opt/pw-browsers/chromium-1194`) driving the page via `file://`, with no
+console/page errors across all scenarios: fresh roster shuffle with
+stations, role descriptions, and keep-apart pairs; checkout/return button
+toggling; two consecutive shuffles followed by undo verified byte-for-byte
+equal to the pre-second-shuffle group assignment and role history; table
+tent print output containing the station/equipment and role description;
+checkout sheet print output containing the equipment text; and a
+hand-seeded legacy-shape roster (string roles, array-of-arrays
+`lastGroups`) loading, rendering, and reshuffling without errors.

@@ -103,3 +103,97 @@ work, and don't promote one without Devon saying so.
   Paper collection plus fast teacher-side triage is the direction.
 - Should the three prompt-bank tools merge into one with modes, or stay
   separate and share a library?
+
+## Round 3 update — 2026-08-10
+
+Implemented three of the Major Features / Quick Wins in one round, all in
+`Tools/exit-ticket-generator.html` (no other files touched besides this one
+and this prompt doc):
+
+- **Fullscreen / projector mode (P1).** Added a Fullscreen button next to
+  Shuffle on the Prompt & Display tab; it calls `requestFullscreen()` on the
+  `.stage` element (same pattern already used by `writing-prompt-generator.html`
+  and `pe-tournament-stations.html` — matched their convention exactly:
+  `document.fullscreenElement === els.stage`, `fullscreenchange` listener,
+  `F` keyboard shortcut ignored while typing in a field). Added
+  `.stage:fullscreen` rules that bump the prompt text and think-timer font
+  sizes well past their normal `clamp()` ceilings so it reads from the back
+  of a room. This finally closes the gap the doc called out under P1.
+- **Fast paper-triage grid (flagship Major Feature).** New "Paper Triage" tab.
+  Teacher pastes a roster (or loads one from the shared `np_rosters`
+  localStorage key the same way `writing-prompt-generator.html`'s roster
+  sheet does — read-only, no shared code, just the same data convention) and
+  gets one row per student with Got it / Almost / Reteach buttons. Tapping a
+  button (or pressing 1/2/3 on the keyboard once a row is "current")
+  auto-advances to the next student so the teacher can flip through the
+  physical stack without touching the mouse; tapping the same status twice
+  clears it (mis-tap undo). Live counts, a generated reteach + almost list,
+  and a small-group split (configurable group size, reteach names first)
+  render below the grid and print as a clean one-page handout via a new
+  `#triagePrintArea`. Rebuilding the grid from a re-pasted roster preserves
+  existing taps for names that are still present (matched by name, in order,
+  so duplicate names don't collide). Everything persists to
+  `gvb-exit-ticket:triage` so a mid-triage page reload doesn't lose taps.
+- **Projected anonymous discussion board.** New "Discussion Board" tab. The
+  teacher transcribes two or three student responses (plain textarea, no
+  name field exists anywhere in this flow), sees them lettered (Response A,
+  B, C…) in a manage list with per-response remove, and projects them on a
+  `.discussion-stage` that supports the same fullscreen treatment as the
+  main stage. Clicking a card on the board enlarges just that one response
+  for the room (click again to return to the grid) — a small but real aid
+  for driving a 30-second whole-class conversation off of one response at a
+  time. Persists to `gvb-exit-ticket:discussion`.
+
+Both new tabs reuse existing CSS classes/tokens (`.card`, `.card-title`,
+`.hint`, `.bank-remove-btn`, `.row2`, the `--good`/`--err` vars already
+defined but unused in the file, plus one new `--warn` var for "Almost") and
+the existing storage-key-per-feature convention (`TALLY_KEY`, `CUSTOM_BANK_KEY`,
+etc.) rather than overloading the single settings object. `afterprint` now
+clears `.active` off of every `.print-only` element generically instead of
+just the handout one, since there are now two independent print areas.
+
+**Deliberate scope decisions / what's skipped:**
+
+- Small groups combine reteach + almost students in one pool (reteach
+  first) rather than only reteach. The improvement doc says "the reteach
+  list for tomorrow and the small-group split" without specifying whether
+  almost-there students belong in the groups too; grouping both felt like
+  the more useful default for actually running small groups, but a future
+  round could add a toggle if that guess is wrong.
+- No name/date-line handout toggle-by-default and no batch class-set
+  printing from `np_rosters` (P2, listed under Quick Wins) — the triage
+  tab now reads `np_rosters` for its own roster picker, but the handout tab
+  itself is untouched. That's the natural next pairing (print one exit
+  slip per name from the loaded roster) and would reuse the same
+  `loadNpRosters()`/`parseRosterNames()` helpers added here.
+- Tag prompts by subject/purpose, pin/favorite prompts, "don't show again",
+  import-a-list-from-paste for the custom bank, bell-ringer sequences, and
+  standards tagging (all listed under Quick Wins / Major Features) were not
+  touched this round — the three features above were judged the highest
+  leverage for one session and the moonshot explicitly names all three
+  together as the "closes the loop in one class period" workflow.
+- Tally-by-response-category (got it / partial / confused counts over time)
+  was left alone; Quick Tally is unchanged. It's a reasonable next pick and
+  is a smaller lift than what shipped here.
+- No student-facing changes — the deferred section's boundary was respected
+  throughout; both new tabs are exclusively teacher-input, teacher-facing.
+
+**Cross-tool note (P7):** `writing-prompt-generator.html` already carries a
+fullscreen-stage implementation that is byte-for-byte the same pattern
+this round just added here (and `pe-tournament-stations.html` has a third
+copy). All three now duplicate the same ~15 lines of
+`toggleFullscreen`/`updateFullscreenLabel`/`fullscreenchange` wiring and the
+same `.stage:fullscreen` CSS shape. If Number Talks Board picks up
+fullscreen too this round, that's four copies — worth lifting into a small
+shared `_shared/` helper (e.g. `_shared/fullscreen-stage.js` exporting a
+`wireFullscreen(stageEl, buttonEl)`) the next time any of these four files
+is touched, rather than a fifth copy-paste. Not done here since touching
+`_shared/` was out of scope for this round and the other two tools are
+being worked on in parallel.
+
+**Where the next round should pick up:** batch class-set printing from
+`np_rosters` on the handout tab (reusing this round's roster helpers),
+tally-by-category, and the P7 shared-library convergence noted above are
+the most obvious next steps. The triage tab's "small groups" pooling
+decision above is worth revisiting if a teacher explicitly wants
+reteach-only groups.

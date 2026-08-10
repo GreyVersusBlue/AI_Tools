@@ -103,6 +103,87 @@ classroom device) over deepening student-device use.
 - **P6 (print quality)** — station cards get handled, taped, and re-scanned;
   error correction and print size are functional decisions here.
 
+## Round 3 update — 2026-08-10
+
+Implemented three of the Major Features in one pass, all inside
+`escape-room-builder.html`, `escape-room-builder/lock.html`, and
+`escape-room-builder/monitor.html`. `qr-scavenger-hunt-builder` was not
+touched.
+
+**What shipped:**
+
+- **Puzzle types beyond text.** Each station now has a `type`: Text (default,
+  unchanged), **Digit lock** (student enters the code into per-digit boxes
+  with auto-advance/backspace nav instead of a free-text field — same
+  matching underneath), and **Caesar cipher** (teacher types a plain secret
+  message and a shift 1–25; `lock.html` shows only the encoded ciphertext,
+  student must decode and type the plaintext). `type`/`cipherShift` are
+  omitted from the payload when unused, so a plain-text room's link is
+  byte-for-byte what it was before this round.
+- **Meta-puzzle letter collection.** Any station can optionally award a
+  single letter on success (`awardLetter`). `lock.html` tracks earned letters
+  in progress and shows a persistent "Letters collected: F _ O _" strip
+  (blanks for stations not yet solved) on every clue screen and the finish
+  screen — this is what makes a final "unscramble your letters" station
+  actually work without students having to write anything down.
+- **Hints with a cost.** Each station's hint can carry a point cost
+  (`hintCost`, default 0/free). Cost-0 hints behave exactly as before
+  (auto-reveal after 2 misses). Any hint with a cost > 0 is gated behind a
+  "Show a hint (−N pts)" button — it no longer auto-reveals on misses, since
+  a hint that's free after two wrong guesses isn't actually costing anything.
+  Score is `100 × stations solved − cost of every hint actually spent`,
+  computed client-side from `progress.solved`/`progress.hintsUsed` (both new,
+  migrated in for old saved progress). Score only appears at all — on the
+  clue screen, the finish screen, and now a **Score column in the teacher
+  monitor roster** (`monitor.html`, sent over the existing WebRTC progress
+  channel) — when at least one station in the room actually has a nonzero
+  hint cost, so a plain riddle-chain room's UI is untouched.
+- Answer key (on-screen and print) grew a "Letter" column and now shows
+  puzzle-type detail per station — the cipher's shift, its literal encoded
+  ciphertext, and the decoded plaintext side by side, so a teacher can
+  proofread a cipher station without opening the student page.
+
+**Note on team progress tracking:** this was already fully built (WebRTC
+device pairing + live roster in `monitor.html`) by an earlier, undocumented
+round — the "What it does today" section above predates it and is stale.
+This round only added the Score column to that existing roster; the pairing
+mechanism itself wasn't touched.
+
+**Deliberately skipped / left for next round:**
+
+- Branching on *which* answer was given (right now branching is per-station,
+  not per-answer) and "required set in any order" — real scope, not attempted
+  here.
+- Attempt limits/lockouts, numeric-tolerance matching, and non-QR short-code
+  fallback (Quick Wins list) — none touched.
+- No payload-size warning UI was added. The new per-station fields are all a
+  few bytes (a type string, a small int, one char) and are omitted when
+  unused, so the existing try/catch around QR generation (which already
+  reports "could not build a QR code for Station N") remains the only size
+  guard. Worth revisiting if a room combines many cipher/digit stations with
+  station images.
+- Digit-lock box count is derived from the first accepted answer's string
+  length (preserves leading zeros); a station with accepted-answer codes of
+  different lengths will size boxes off the first one only — edge case, not
+  handled.
+- Cipher ciphertext is generated from only the *first* accepted answer if a
+  teacher enters several comma-separated acceptable phrases for a cipher
+  station; the others are accepted on submit but never shown encoded.
+- No CDN dependencies added; no changes to the vendored `lib/qrcode.js` or
+  `lib/jsqr.js`.
+
+**Testing performed:** `node --check` on every inline `<script>` block
+extracted from all three HTML files (all passed). A throwaway Playwright
+(Chromium, headless) script built a 3-station room in the builder (text+
+hint-cost+award-letter, digit lock, cipher), walked it end-to-end through
+`lock.html` — confirmed the costed hint does *not* auto-reveal after two
+misses, confirmed it reveals and deducts points on manual click, solved all
+three stations, confirmed the final screen shows the correct score (290) and
+the collected letter — then separately confirmed a legacy-format room
+payload (no new fields at all) still renders with the pre-existing free-hint
+auto-reveal behavior and no score/letters UI. A third script drove the print
+Answer Key and QR Code views. All checks passed; scripts were deleted after.
+
 ## Open Questions
 
 - Should this and `qr-scavenger-hunt-builder.html` merge? They differ mainly

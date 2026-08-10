@@ -96,3 +96,111 @@ end for check-in and collection workflows.
   would need care to avoid breaking the precache list.
 - Is a scanner/check-in mode this tool's job, or should it be a separate
   "Scan & Check In" tool that several workflows call?
+
+## Round 3 update — 2026-08-10
+
+Implemented four of the Major Features from this file in one pass, all inside
+`Tools/qr-code-generator.html` (no support-folder or library changes needed):
+
+- **Three new typed templates**: SMS (`sms:` URI, with optional body), map
+  location (`geo:` URI with an optional place name in the `q=` param), and
+  calendar event (a full `BEGIN:VCALENDAR`/`VEVENT` block from a
+  `datetime-local` picker, with all-day support and sensible 1-hour/1-day
+  defaults when only a start time is given). Templates now total seven:
+  Wi-Fi, vCard, phone, SMS, email, geo, and calendar event.
+- **Caption under the code** (single-code mode): a new optional text field
+  that bakes a short caption into the bottom of the generated PNG/SVG/print
+  output (extends the canvas height rather than overlaying it on the code
+  itself, so it never touches error correction). Every "Insert into code"
+  template action auto-suggests a sensible caption (SSID + password for
+  Wi-Fi, contact name, phone number, event title, etc.) *only* if the field
+  is still empty, so a manual edit is never clobbered. This covers both the
+  "short display text under the code" quick win and the "Wi-Fi guest card"
+  idea from Quick Wins/Major Features — a teacher can print a Wi-Fi code
+  with the network name and password spelled out underneath for open-house
+  night. Caption is now also carried through Save-to-Recent/reload.
+- **Avery-style label sheet layouts for the bulk grid** (Major Feature):
+  a new "Print layout" selector alongside the existing custom column grid,
+  with two real presets — Avery 5160/8160 (30/sheet address labels, 1in x
+  2.63in) and Avery 5163/8163 (10/sheet shipping labels, 2in x 4in). Picking
+  a preset switches the print output to exact physical inch dimensions
+  (label size, pitch, and sheet margins all taken from the vendor spec and
+  checked to sum to exactly 8.5in x 11in) via a dynamically-injected `@page`
+  margin rule plus inline-styled label boxes — the on-screen preview grid is
+  untouched (still a fluid N-column CSS grid) since it's only ever a rough
+  preview. A sizing-guidance line ("expect reliable scans from about X away")
+  is shown for presets only, since it needs a known physical size to be
+  non-speculative — deliberately not attempted for single-code mode, where
+  the print size is browser-scaled and unknown. The custom grid keeps its
+  original behavior and gained an optional "Add cut lines" checkbox for
+  plain-paper sheets.
+- **Whole-batch verification**: every bulk-generated code is now decoded
+  with jsQR immediately after rendering (same technique as the existing
+  single-code `verifyScan`), not just checked for generation errors. Codes
+  that render fine but can't be confirmed scannable get a distinct amber
+  "unverified" badge (separate from the existing red "generation failed"
+  state), and the summary line reports both counts plus, for a label-sheet
+  preset, how many physical sheets the batch needs.
+
+### Testing performed
+
+- `node --check` against both inline `<script>` blocks (extracted to temp
+  files) and against the two vendored library files — all pass.
+- Headless Chromium via Playwright (already present at
+  `/opt/pw-browsers`, package resolved from the global npm install since
+  it isn't in this repo's `node_modules`): loaded the file over `file://`,
+  watched for `console.error`/`pageerror`, and drove the actual UI —
+  filled and inserted all three new templates, set a caption and confirmed
+  the canvas grew and still verified as scannable, switched to bulk mode,
+  generated a custom grid, switched to the Avery 5160 preset and confirmed
+  the injected `@page` margin, the exact-inch print item sizing, and the
+  sheet-count arithmetic, and forced an intentionally dense bulk entry to
+  confirm the new "unverified" badge actually triggers (not just always
+  green). Zero console errors in any pass.
+
+### Things noticed but deliberately left alone
+
+- Rendering the new calendar-event template at the default 400px single-code
+  size sometimes lands in the existing "could not verify a scan" state —
+  this isn't a regression, it's the app's pre-existing jsQR-based
+  self-check correctly reporting that a longer payload needs either a
+  bigger render or a higher error-correction level at that size (confirmed
+  by decoding the identical payload successfully at 500px+). The existing
+  warning copy already tells the user what to do about it.
+- CSS Grid pagination across multiple physical pages (e.g. printing 90
+  labels = 3 sheets of Avery 5160) is only verified in Chromium here.
+  Multi-page break behavior inside CSS Grid has historically been uneven
+  across browser engines; worth a real print test in Firefox/Safari before
+  calling the label-sheet feature fully cross-browser solid.
+- Did not add a third label preset (e.g. a small return-address size like
+  5167) — its real-world margins/pitch weren't ones I could verify with
+  confidence, and a wrong-by-a-few-millimeters preset is worse than not
+  offering it. A future round could add more presets once the exact vendor
+  specs are confirmed against a source.
+- Did not touch the px-based "sizing guidance" quick win for single-code
+  mode (only implemented it for label-sheet presets, where the physical
+  size is actually known) — the on-screen size slider doesn't correspond to
+  a physical print size, so any "scannable from N feet" claim there would
+  be a guess dressed up as a fact.
+- Did not add a "confirm before clearing recents" quick win — there is
+  currently no "clear all" action on the Recent list to confirm before
+  (only per-item remove), so this quick win doesn't yet apply; it becomes
+  relevant only if a future round adds a bulk-clear button.
+- Left the cross-tool consolidation ideas (shared QR layer, state-link
+  integration, inventory/check-out tracking, scanner-mode-as-a-first-class-
+  feature) untouched — all of them reach outside this tool's own files, or
+  are large enough to deserve their own round.
+
+### Where the next round should pick up
+
+- A general-purpose "scan a code and act on it" mode (distinct from the
+  existing verify-your-own-code camera check) is still open, per the
+  "Scanner mode as a first-class feature" idea and the open question about
+  whether it belongs here or in a separate tool.
+- If another label preset is wanted, confirm exact label/pitch/margin specs
+  before adding it — the two implemented here were cross-checked against
+  the 8.5in x 11in page arithmetic as a sanity test, which is worth doing
+  for any addition.
+- Real inkjet/laser print tests against physical Avery 5160/5163 stock
+  would be the strongest possible validation of the label-sheet math above
+  and beyond what a headless browser can confirm.

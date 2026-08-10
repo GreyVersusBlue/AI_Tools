@@ -125,7 +125,7 @@
     margin-bottom: 0.35rem;
   }
 
-  textarea, select, input[type="text"], input[type="number"] {
+  textarea, select, input[type="text"], input[type="number"], input[type="datetime-local"] {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -484,6 +484,12 @@
   }
   .bulk-item-error { background: rgba(248, 113, 113, 0.12); }
   .bulk-item-error .bulk-item-label { color: var(--danger); }
+  .bulk-item-unverified { background: rgba(251, 191, 36, 0.15); }
+  .bulk-item-unverified .bulk-item-label { color: #92600a; }
+
+  /* Cut lines for a plain-paper custom grid — toggled via #bulk-cutlines,
+     only visible once the print-only container is shown by @media print. */
+  #print-area-bulk.cut-lines .bulk-item { border: 1px dashed #94a3b8; }
 
   .print-only { display: none; }
   @media print {
@@ -536,7 +542,10 @@
             <option value="wifi">Wi-Fi network</option>
             <option value="vcard">Contact card (vCard)</option>
             <option value="tel">Phone number</option>
+            <option value="sms">Text message (SMS)</option>
             <option value="mailto">Email</option>
+            <option value="geo">Location (map pin)</option>
+            <option value="vevent">Calendar event</option>
           </select>
         </div>
         <div id="template-fields"></div>
@@ -553,7 +562,16 @@
           <textarea id="bulk-text" spellcheck="false" style="min-height: 160px;" placeholder="Station 1, https://example.com/station1&#10;Station 2, https://example.com/station2&#10;Station 3, https://example.com/station3"></textarea>
           <div class="hint" id="bulk-hint">Each line becomes one code: <strong>label, link or text</strong> (comma- or tab-separated, matching how a spreadsheet column pastes in). No delimiter on a line? The whole line is used as both the label and the QR content.</div>
         </div>
-        <div class="control-row">
+        <div class="control-group">
+          <label for="bulk-sheet">Print layout</label>
+          <select id="bulk-sheet">
+            <option value="custom">Custom grid (plain paper)</option>
+            <option value="avery5160">Avery 5160 / 8160 — address labels (30/sheet, 1&Prime; &times; 2.63&Prime;)</option>
+            <option value="avery5163">Avery 5163 / 8163 — shipping labels (10/sheet, 2&Prime; &times; 4&Prime;)</option>
+          </select>
+          <div class="hint" id="bulk-sheet-hint">Prints as a plain grid on regular paper — turn on cut lines below if you plan to cut the codes apart with scissors.</div>
+        </div>
+        <div class="control-row" id="bulk-cols-row">
           <div class="control-group">
             <label for="bulk-cols">Grid columns</label>
             <select id="bulk-cols">
@@ -562,6 +580,11 @@
               <option value="4">4 per row</option>
               <option value="5">5 per row</option>
             </select>
+          </div>
+          <div class="control-group">
+            <label for="bulk-cutlines" style="display:flex; align-items:center; gap:.4rem; cursor:pointer;">
+              <input type="checkbox" id="bulk-cutlines" style="width:auto;"> Add cut lines
+            </label>
           </div>
         </div>
         <div class="btn-row">
@@ -598,6 +621,12 @@
             <span class="hex" id="bg-hex">#ffffff</span>
           </div>
         </div>
+      </div>
+
+      <div class="control-group single-only">
+        <label for="caption-text">Caption under code (optional)</label>
+        <input type="text" id="caption-text" maxlength="60" placeholder="e.g. Rm 214 Wi-Fi, or Ms. Rivera's Form">
+        <div class="hint">Printed under the code in every download and printout — a plain-language fallback for anyone whose camera can't scan it, or a place to spell out a Wi-Fi password beside the code.</div>
       </div>
 
       <div class="control-group">
@@ -711,6 +740,7 @@
 </div>
 
 <div class="print-only" id="print-area-bulk"></div>
+<style id="print-page-style"></style>
 
 <script>
 (function () {
@@ -741,6 +771,7 @@
     overlaySizeGroup: document.getElementById('overlay-size-group'),
     overlaySize: document.getElementById('overlay-size-slider'),
     overlaySizeVal: document.getElementById('overlay-size-val'),
+    captionText: document.getElementById('caption-text'),
     canvas: document.getElementById('qr-canvas'),
     scanBadge: document.getElementById('scan-badge'),
     filename: document.getElementById('filename'),
@@ -754,11 +785,16 @@
     msg: document.getElementById('msg'),
     bulkText: document.getElementById('bulk-text'),
     bulkCols: document.getElementById('bulk-cols'),
+    bulkColsRow: document.getElementById('bulk-cols-row'),
+    bulkCutlines: document.getElementById('bulk-cutlines'),
+    bulkSheet: document.getElementById('bulk-sheet'),
+    bulkSheetHint: document.getElementById('bulk-sheet-hint'),
     btnBulkGenerate: document.getElementById('btn-bulk-generate'),
     bulkStatus: document.getElementById('bulk-status'),
     bulkGrid: document.getElementById('bulk-grid'),
     btnBulkPrint: document.getElementById('btn-bulk-print'),
     printAreaBulk: document.getElementById('print-area-bulk'),
+    printPageStyle: document.getElementById('print-page-style'),
   };
 
   var ctx = els.canvas.getContext('2d');
@@ -912,6 +948,38 @@
     return String(s || '').replace(/([\\;,:])/g, '\\$1');
   }
 
+  // iCalendar (RFC 5545) TEXT escaping — backslash, semicolon, comma, and
+  // newline only; unlike escField above, a bare colon is legal in ICS values
+  // and must NOT be escaped (it would corrupt URLs or times in free text).
+  function icsEscape(s) {
+    return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  }
+
+  // "YYYY-MM-DDTHH:MM" (a <input type="datetime-local"> value) -> ICS local
+  // date-time "YYYYMMDDTHHMMSS", or bare "YYYYMMDD" for an all-day event.
+  function icsDateTime(local, allDay) {
+    if (!local) return '';
+    var datePart = local.slice(0, 10).replace(/-/g, '');
+    if (allDay) return datePart;
+    var timePart = (local.slice(11, 16) || '00:00').replace(':', '') + '00';
+    return datePart + 'T' + timePart;
+  }
+
+  function addDaysToLocalDate(local, days) {
+    var d = new Date(local.slice(0, 10) + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    var y = d.getFullYear(), m = ('0' + (d.getMonth() + 1)).slice(-2), day = ('0' + d.getDate()).slice(-2);
+    return y + '-' + m + '-' + day;
+  }
+
+  function addHoursToLocal(local, hours) {
+    var d = new Date(local);
+    d.setHours(d.getHours() + hours);
+    var y = d.getFullYear(), mo = ('0' + (d.getMonth() + 1)).slice(-2), da = ('0' + d.getDate()).slice(-2);
+    var h = ('0' + d.getHours()).slice(-2), mi = ('0' + d.getMinutes()).slice(-2);
+    return y + '-' + mo + '-' + da + 'T' + h + ':' + mi;
+  }
+
   var TEMPLATES = {
     wifi: {
       fields: [
@@ -966,8 +1034,76 @@
         if (v['tf-body']) params.push('body=' + encodeURIComponent(v['tf-body']));
         return 'mailto:' + v['tf-mail'] + (params.length ? '?' + params.join('&') : '');
       }
+    },
+    sms: {
+      fields: [
+        { id: 'tf-sms-tel', label: 'Phone number', type: 'text', placeholder: '(555) 123-4567' },
+        { id: 'tf-sms-msg', label: 'Message (optional)', type: 'text' }
+      ],
+      build: function (v) {
+        if (!v['tf-sms-tel']) return '';
+        var num = v['tf-sms-tel'].replace(/[^\d+]/g, '');
+        return 'sms:' + num + (v['tf-sms-msg'] ? '?body=' + encodeURIComponent(v['tf-sms-msg']) : '');
+      }
+    },
+    geo: {
+      fields: [
+        { id: 'tf-geo-lat', label: 'Latitude', type: 'text', placeholder: '33.5843' },
+        { id: 'tf-geo-lng', label: 'Longitude', type: 'text', placeholder: '-85.0797' },
+        { id: 'tf-geo-label', label: 'Place name (optional)', type: 'text' }
+      ],
+      build: function (v) {
+        if (!v['tf-geo-lat'] || !v['tf-geo-lng']) return '';
+        var lat = v['tf-geo-lat'], lng = v['tf-geo-lng'];
+        var q = lat + ',' + lng + (v['tf-geo-label'] ? '(' + v['tf-geo-label'] + ')' : '');
+        return 'geo:' + lat + ',' + lng + '?q=' + encodeURIComponent(q);
+      }
+    },
+    vevent: {
+      fields: [
+        { id: 'tf-ev-title', label: 'Event title', type: 'text' },
+        { id: 'tf-ev-loc', label: 'Location (optional)', type: 'text' },
+        { id: 'tf-ev-allday', label: 'All-day event', type: 'checkbox' },
+        { id: 'tf-ev-start', label: 'Starts', type: 'datetime' },
+        { id: 'tf-ev-end', label: 'Ends (optional)', type: 'datetime' },
+        { id: 'tf-ev-desc', label: 'Description (optional)', type: 'text' }
+      ],
+      build: function (v) {
+        if (!v['tf-ev-title'] || !v['tf-ev-start']) return '';
+        var allDay = !!v['tf-ev-allday'];
+        var start = icsDateTime(v['tf-ev-start'], allDay);
+        var end;
+        if (v['tf-ev-end']) {
+          end = icsDateTime(v['tf-ev-end'], allDay);
+        } else if (allDay) {
+          end = icsDateTime(addDaysToLocalDate(v['tf-ev-start'], 1), true);
+        } else {
+          end = icsDateTime(addHoursToLocal(v['tf-ev-start'], 1), false);
+        }
+        var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT'];
+        lines.push((allDay ? 'DTSTART;VALUE=DATE:' : 'DTSTART:') + start);
+        lines.push((allDay ? 'DTEND;VALUE=DATE:' : 'DTEND:') + end);
+        lines.push('SUMMARY:' + icsEscape(v['tf-ev-title']));
+        if (v['tf-ev-loc']) lines.push('LOCATION:' + icsEscape(v['tf-ev-loc']));
+        if (v['tf-ev-desc']) lines.push('DESCRIPTION:' + icsEscape(v['tf-ev-desc']));
+        lines.push('END:VEVENT', 'END:VCALENDAR');
+        return lines.join('\n');
+      }
     }
   };
+
+  function suggestCaption(type, v) {
+    switch (type) {
+      case 'wifi': return v['tf-ssid'] ? ('Wi-Fi: ' + v['tf-ssid'] + (v['tf-pass'] ? ' / ' + v['tf-pass'] : '')) : '';
+      case 'vcard': return v['tf-name'] || '';
+      case 'tel': return v['tf-tel'] || '';
+      case 'mailto': return v['tf-mail'] || '';
+      case 'sms': return v['tf-sms-tel'] || '';
+      case 'geo': return v['tf-geo-label'] || ((v['tf-geo-lat'] && v['tf-geo-lng']) ? (v['tf-geo-lat'] + ', ' + v['tf-geo-lng']) : '');
+      case 'vevent': return v['tf-ev-title'] || '';
+      default: return '';
+    }
+  }
 
   function renderTemplateFields() {
     var type = els.templateType.value;
@@ -980,6 +1116,9 @@
       if (f.type === 'select') {
         var opts = f.options.map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
         return '<div class="control-group"><label for="' + f.id + '">' + f.label + '</label><select id="' + f.id + '">' + opts + '</select></div>';
+      }
+      if (f.type === 'datetime') {
+        return '<div class="control-group"><label for="' + f.id + '">' + f.label + '</label><input type="datetime-local" id="' + f.id + '"></div>';
       }
       return '<div class="control-group"><label for="' + f.id + '">' + f.label + '</label><input type="text" id="' + f.id + '" placeholder="' + (f.placeholder || '') + '"></div>';
     }).join('') + '<button type="button" class="btn-secondary" id="tf-insert">Insert into code</button>';
@@ -995,6 +1134,10 @@
       clearMsg();
       els.text.value = result;
       els.charCount.textContent = result.length + ' character' + (result.length === 1 ? '' : 's');
+      if (!els.captionText.value.trim()) {
+        var suggestion = suggestCaption(type, values);
+        if (suggestion) els.captionText.value = suggestion.slice(0, 60);
+      }
       scheduleRender();
     });
   }
@@ -1012,6 +1155,7 @@
     el.addEventListener('input', function () { syncLabels(); saveSettings(); scheduleRender(); });
   });
   els.overlayTextInput.addEventListener('input', scheduleRender);
+  els.captionText.addEventListener('input', scheduleRender);
   document.querySelectorAll('input[name="overlay-type"]').forEach(function (r) {
     r.addEventListener('change', function () { syncOverlayPanes(); scheduleRender(); });
   });
@@ -1036,20 +1180,55 @@
     return qr;
   }
 
-  // Draws the QR matrix + overlay onto the given canvas at `size` px square.
-  // Returns { size } for reuse by the scan check / SVG export.
+  // A caption (if any) is drawn as an extra band below the QR square itself,
+  // outside the code's own quiet zone — jsQR ignores the extra plain area
+  // and still finds the pattern fine, verified by verifyScan() on every render.
+  function captionHeightFor(size, caption) {
+    return caption ? Math.max(24, Math.round(size * 0.09)) : 0;
+  }
+
+  function drawCaption(c, qrSize, canvasHeight, opts) {
+    var bandH = canvasHeight - qrSize;
+    c.fillStyle = opts.bg;
+    c.fillRect(0, qrSize, qrSize, bandH);
+    c.fillStyle = opts.fg;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    var fontSize = Math.max(10, Math.round(bandH * 0.55));
+    c.font = '700 ' + fontSize + 'px Inter, system-ui, sans-serif';
+    var maxWidth = qrSize * 0.92;
+    var text = opts.caption;
+    var w = c.measureText(text).width;
+    while (w > maxWidth && fontSize > 8) {
+      fontSize -= 1;
+      c.font = '700 ' + fontSize + 'px Inter, system-ui, sans-serif';
+      w = c.measureText(text).width;
+    }
+    if (w > maxWidth) {
+      while (text.length > 1 && c.measureText(text + '…').width > maxWidth) {
+        text = text.slice(0, -1);
+      }
+      text += '…';
+    }
+    c.fillText(text, qrSize / 2, qrSize + bandH / 2);
+  }
+
+  // Draws the QR matrix + overlay + optional caption band onto the given
+  // canvas at `size` px square (plus caption height). Returns metadata for
+  // reuse by the scan check / SVG export.
   function drawQR(canvas, qr, size, opts) {
     var count = qr.getModuleCount();
     var quietModules = 4; // standard QR quiet zone
     var totalModules = count + quietModules * 2;
     var px = size / totalModules;
+    var captionH = captionHeightFor(size, opts.caption);
 
     canvas.width = size;
-    canvas.height = size;
+    canvas.height = size + captionH;
     var c = canvas.getContext('2d');
-    c.clearRect(0, 0, size, size);
+    c.clearRect(0, 0, canvas.width, canvas.height);
     c.fillStyle = opts.bg;
-    c.fillRect(0, 0, size, size);
+    c.fillRect(0, 0, canvas.width, canvas.height);
     c.fillStyle = opts.fg;
     for (var r = 0; r < count; r++) {
       for (var col = 0; col < count; col++) {
@@ -1066,8 +1245,11 @@
     if (opts.overlayType !== 'none') {
       drawOverlay(c, size, opts);
     }
+    if (opts.caption) {
+      drawCaption(c, size, canvas.height, opts);
+    }
 
-    return { size: size, quietModules: quietModules, moduleCount: count, px: px };
+    return { size: size, quietModules: quietModules, moduleCount: count, px: px, canvasHeight: canvas.height };
   }
 
   function drawOverlay(c, size, opts) {
@@ -1169,6 +1351,7 @@
       overlayType: overlayType,
       overlayText: overlayText,
       overlayPct: parseInt(els.overlaySize.value, 10),
+      caption: els.captionText.value.trim(),
     };
 
     var ecLevel = effectiveEcLevel();
@@ -1237,6 +1420,7 @@
 
   els.btnPrint.addEventListener('click', function () {
     if (!lastQR) return;
+    setPrintPageMargin(null); // defensive reset in case a bulk print's @page override is still active
     els.printImg.src = els.canvas.toDataURL('image/png');
     window.print();
   });
@@ -1247,10 +1431,12 @@
     var quietModules = 4;
     var totalModules = count + quietModules * 2;
     var px = size / totalModules;
+    var captionH = captionHeightFor(size, opts.caption);
+    var totalH = size + captionH;
 
     var parts = [];
-    parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">');
-    parts.push('<rect width="' + size + '" height="' + size + '" fill="' + opts.bg + '"/>');
+    parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + totalH + '" viewBox="0 0 ' + size + ' ' + totalH + '">');
+    parts.push('<rect width="' + size + '" height="' + totalH + '" fill="' + opts.bg + '"/>');
     parts.push('<g fill="' + opts.fg + '">');
     for (var r = 0; r < count; r++) {
       for (var col = 0; col < count; col++) {
@@ -1288,6 +1474,11 @@
       }
     }
 
+    if (opts.caption) {
+      var capFontSize = Math.max(10, Math.round(captionH * 0.55));
+      parts.push('<text x="' + (size / 2).toFixed(2) + '" y="' + (size + captionH / 2).toFixed(2) + '" fill="' + opts.fg + '" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="' + capFontSize + '" text-anchor="middle" dominant-baseline="middle">' + escapeXML(opts.caption) + '</text>');
+    }
+
     parts.push('</svg>');
     return parts.join('');
   }
@@ -1316,6 +1507,45 @@
   var BULK_QR_PX = 300; // fixed print-friendly resolution, independent of the single-mode size slider
   var bulkScratch = document.createElement('canvas');
   var bulkRunToken = 0; // bumped on every new run so a stale chunked loop bails out
+  var lastBulkPreset = null; // the sheet preset actually used by the last "Generate grid" run
+
+  // Avery-style label sheet presets, in inches, for a US Letter page.
+  // Dimensions checked against the vendor spec: 2*marginSide + (cols-1)*pitchX
+  // + labelW == 8.5in, and marginTop*2 + rows*pitchY == 11in, for both.
+  var SHEET_PRESETS = {
+    avery5160: { name: 'Avery 5160/8160', cols: 3, rows: 10, labelW: 2.625, labelH: 1, marginTop: 0.5, marginSide: 0.1875, pitchX: 2.75, pitchY: 1 },
+    avery5163: { name: 'Avery 5163/8163', cols: 2, rows: 5, labelW: 4, labelH: 2, marginTop: 0.5, marginSide: 0.25, pitchX: 4, pitchY: 2 }
+  };
+  var PRESET_PRINT_PAD_IN = 0.06;
+  var PRESET_CAPTION_H_IN = 0.16;
+  var PRESET_DPI = 300;
+
+  function humanizeInches(inches) {
+    if (inches < 12) return inches.toFixed(1) + '″';
+    return (inches / 12).toFixed(1) + ' ft';
+  }
+
+  function setPrintPageMargin(preset) {
+    els.printPageStyle.textContent = preset
+      ? ('@page { size: letter; margin: ' + preset.marginTop + 'in ' + preset.marginSide + 'in; }')
+      : '';
+  }
+
+  function syncBulkSheetUI() {
+    var preset = SHEET_PRESETS[els.bulkSheet.value];
+    els.bulkColsRow.style.display = preset ? 'none' : 'flex';
+    if (!preset) {
+      els.bulkSheetHint.textContent = 'Prints as a plain grid on regular paper — turn on cut lines below if you plan to cut the codes apart with scissors.';
+      return;
+    }
+    var perSheet = preset.cols * preset.rows;
+    var minDim = Math.min(preset.labelW, preset.labelH);
+    els.bulkSheetHint.textContent = 'Each label is ' + preset.labelW + '″ × ' + preset.labelH + '″ — ' +
+      perSheet + ' per sheet, aligned to the standard template. Expect reliable scans from about ' +
+      humanizeInches(minDim * 10) + ' away. Test-print one sheet on plain paper first to check alignment before using label stock.';
+  }
+
+  els.bulkSheet.addEventListener('change', syncBulkSheetUI);
 
   function splitBulkLine(line) {
     var delim = line.indexOf('\t') !== -1 ? '\t' : ',';
@@ -1335,9 +1565,12 @@
       .map(splitBulkLine);
   }
 
-  function bulkItemEl(label, dataURL, isError, errMessage) {
+  function bulkItemEl(label, dataURL, isError, errMessage, verified) {
     var div = document.createElement('div');
-    div.className = 'bulk-item' + (isError ? ' bulk-item-error' : '');
+    var cls = 'bulk-item';
+    if (isError) cls += ' bulk-item-error';
+    else if (verified === false) cls += ' bulk-item-unverified';
+    div.className = cls;
     if (!isError) {
       var img = document.createElement('img');
       img.src = dataURL;
@@ -1346,9 +1579,89 @@
     }
     var caption = document.createElement('div');
     caption.className = 'bulk-item-label';
-    caption.textContent = isError ? (label + ' — ' + errMessage) : label;
+    if (isError) caption.textContent = label + ' — ' + errMessage;
+    else if (verified === false) caption.textContent = label + ' (unverified ⚠)';
+    else caption.textContent = label;
     div.appendChild(caption);
     return div;
+  }
+
+  // Fixed-inch print item for an Avery-style label sheet, sized to the exact
+  // physical label dimensions instead of the fluid on-screen grid CSS.
+  function buildPrintLabelItem(label, dataURL, preset) {
+    var div = document.createElement('div');
+    div.className = 'bulk-item';
+    div.style.width = preset.labelW + 'in';
+    div.style.height = preset.labelH + 'in';
+    div.style.padding = PRESET_PRINT_PAD_IN + 'in';
+    div.style.margin = '0';
+    div.style.gap = '0';
+    div.style.boxSizing = 'border-box';
+    var img = document.createElement('img');
+    img.src = dataURL;
+    img.alt = 'QR code for ' + label;
+    img.style.width = '100%';
+    img.style.height = (preset.labelH - PRESET_PRINT_PAD_IN * 2 - PRESET_CAPTION_H_IN) + 'in';
+    img.style.objectFit = 'contain';
+    img.style.display = 'block';
+    div.appendChild(img);
+    var cap = document.createElement('div');
+    cap.className = 'bulk-item-label';
+    cap.style.height = PRESET_CAPTION_H_IN + 'in';
+    cap.style.lineHeight = PRESET_CAPTION_H_IN + 'in';
+    cap.style.overflow = 'hidden';
+    cap.style.whiteSpace = 'nowrap';
+    cap.style.textOverflow = 'ellipsis';
+    cap.style.fontSize = '7pt';
+    cap.textContent = label;
+    div.appendChild(cap);
+    return div;
+  }
+
+  function verifyBulkCanvas(canvas, expectedText) {
+    try {
+      var imgData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+      var result = window.jsQR(imgData.data, canvas.width, canvas.height);
+      return !!(result && result.data === expectedText);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function applyPrintAreaLayout(preset, cols) {
+    if (!preset) {
+      els.printAreaBulk.style.display = '';
+      els.printAreaBulk.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+      els.printAreaBulk.style.gridAutoRows = '';
+      els.printAreaBulk.style.columnGap = '';
+      els.printAreaBulk.style.rowGap = '';
+      els.printAreaBulk.style.padding = '';
+      els.printAreaBulk.classList.toggle('cut-lines', !!els.bulkCutlines.checked);
+      return;
+    }
+    els.printAreaBulk.classList.remove('cut-lines');
+    els.printAreaBulk.style.display = 'grid';
+    els.printAreaBulk.style.gridTemplateColumns = 'repeat(' + preset.cols + ', ' + preset.labelW + 'in)';
+    els.printAreaBulk.style.gridAutoRows = preset.labelH + 'in';
+    els.printAreaBulk.style.columnGap = (preset.pitchX - preset.labelW) + 'in';
+    els.printAreaBulk.style.rowGap = (preset.pitchY - preset.labelH) + 'in';
+    els.printAreaBulk.style.padding = '0';
+  }
+
+  function finishBulk(total, errors, unverified, preset) {
+    var ok = total - errors;
+    var msg = ok + ' code' + (ok === 1 ? '' : 's') + ' generated';
+    if (errors) msg += ', ' + errors + ' failed (shown in red below)';
+    if (unverified) msg += ', ' + unverified + ' could not be confirmed scannable (marked with a caution note below — try more contrast, a bigger label, or simpler content for those)';
+    if (preset) {
+      var perSheet = preset.cols * preset.rows;
+      var sheets = Math.max(1, Math.ceil(ok / perSheet));
+      msg += '. ' + sheets + ' sheet' + (sheets === 1 ? '' : 's') + ' of ' + preset.name + ' needed.';
+    } else {
+      msg += '.';
+    }
+    showBulkMsg(msg);
+    els.btnBulkPrint.disabled = ok === 0;
   }
 
   function showBulkMsg(text) { els.bulkStatus.textContent = text; }
@@ -1367,9 +1680,11 @@
     els.btnBulkPrint.disabled = true;
     showBulkMsg('Generating 0 / ' + entries.length + '…');
 
-    var cols = parseInt(els.bulkCols.value, 10) || 3;
+    var preset = SHEET_PRESETS[els.bulkSheet.value];
+    lastBulkPreset = preset || null;
+    var cols = preset ? preset.cols : (parseInt(els.bulkCols.value, 10) || 3);
     els.bulkGrid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-    els.printAreaBulk.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    applyPrintAreaLayout(preset, cols);
 
     var overlayType = getOverlayType();
     var opts = {
@@ -1381,8 +1696,16 @@
     };
     var ecLevel = effectiveEcLevel();
 
+    var qrPx = BULK_QR_PX;
+    if (preset) {
+      var imgMaxWIn = preset.labelW - PRESET_PRINT_PAD_IN * 2;
+      var imgMaxHIn = preset.labelH - PRESET_PRINT_PAD_IN * 2 - PRESET_CAPTION_H_IN;
+      qrPx = Math.max(80, Math.round(Math.min(imgMaxWIn, imgMaxHIn) * PRESET_DPI));
+    }
+
     var i = 0;
     var errors = 0;
+    var unverified = 0;
 
     function step() {
       if (myRun !== bulkRunToken) return; // a newer run superseded this one
@@ -1393,10 +1716,12 @@
         var entry = entries[i];
         try {
           var qr = buildQR(entry.content, ecLevel);
-          drawQR(bulkScratch, qr, BULK_QR_PX, opts);
+          drawQR(bulkScratch, qr, qrPx, opts);
+          var verified = verifyBulkCanvas(bulkScratch, entry.content);
+          if (!verified) unverified++;
           var dataURL = bulkScratch.toDataURL('image/png');
-          screenFrag.appendChild(bulkItemEl(entry.label, dataURL, false));
-          printFrag.appendChild(bulkItemEl(entry.label, dataURL, false));
+          screenFrag.appendChild(bulkItemEl(entry.label, dataURL, false, null, verified));
+          printFrag.appendChild(preset ? buildPrintLabelItem(entry.label, dataURL, preset) : bulkItemEl(entry.label, dataURL, false));
         } catch (err) {
           errors++;
           screenFrag.appendChild(bulkItemEl(entry.label, null, true, err.message));
@@ -1408,9 +1733,7 @@
       if (i < entries.length) {
         setTimeout(step, 0);
       } else {
-        var ok = entries.length - errors;
-        showBulkMsg(ok + ' code' + (ok === 1 ? '' : 's') + ' generated' + (errors ? ', ' + errors + ' failed (shown in red below)' : '') + '.');
-        els.btnBulkPrint.disabled = ok === 0;
+        finishBulk(entries.length, errors, unverified, preset);
       }
     }
     step();
@@ -1420,12 +1743,14 @@
 
   els.btnBulkPrint.addEventListener('click', function () {
     if (!els.printAreaBulk.children.length) return;
+    setPrintPageMargin(lastBulkPreset);
     document.body.classList.add('print-bulk');
     window.print();
   });
 
   window.addEventListener('afterprint', function () {
     document.body.classList.remove('print-bulk');
+    setPrintPageMargin(null);
   });
 
   // ── Recently generated codes ─────────────────────────────────────────────
@@ -1462,7 +1787,7 @@
     if (!lastQR) return;
     var label = (els.filename.value || '').trim() || lastQR.text.slice(0, 40);
     var list = loadRecent().filter(function (r) { return r.text !== lastQR.text; });
-    list.unshift({ label: label, text: lastQR.text, ts: Date.now() });
+    list.unshift({ label: label, text: lastQR.text, caption: lastQR.opts.caption || '', ts: Date.now() });
     saveRecentList(list);
     renderRecent();
   });
@@ -1481,6 +1806,7 @@
     var entry = loadRecent()[Number(item.dataset.i)];
     if (!entry) return;
     els.text.value = entry.text;
+    els.captionText.value = entry.caption || '';
     els.charCount.textContent = entry.text.length + ' character' + (entry.text.length === 1 ? '' : 's');
     render();
   });
@@ -1527,6 +1853,7 @@
   // ── Init ─────────────────────────────────────────────────────────────────
   syncLabels();
   syncOverlayPanes();
+  syncBulkSheetUI();
   renderRecent();
   render();
 
