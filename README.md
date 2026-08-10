@@ -77,6 +77,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Story Elements / Plot Diagram Builder | `Tools/plot-diagram-builder.html` | A five-stage plot-mountain diagram (exposition through resolution) alongside a characters/setting/conflict/theme summary, printable or projectable as one shared reference. |
 | Science Safety Symbol & Equipment Label Maker | `Tools/science-safety-label-maker.html` | Ten hazard/equipment icons, custom label text and copy counts, printed as a grid of storage-bin labels. |
 | Scientific Method / Experiment Design Planner | `Tools/experiment-design-planner.html` | A guided pre-lab worksheet — testable question, If/then/because hypothesis, variables, materials, and procedure — printable as a fillable planning packet. |
+| Science Fair Project Tracker | `Tools/science-fair-project-tracker.html` | Six editable milestones with due dates, a per-student checkbox grid with a live progress percentage, and a printable report with a "still missing, by milestone" chase-list. |
 
 ## Using these
 

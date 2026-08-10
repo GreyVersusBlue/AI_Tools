@@ -31,7 +31,6 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Science Fair Project Tracker | Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report. |
 | Dichotomous Key Builder | Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key. |
 
 ## Social Studies
