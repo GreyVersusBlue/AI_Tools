@@ -430,6 +430,33 @@ Verb Conjugation Reference Poster Generator (`079-verb-conjugation-poster-genera
 Virtual Manipulatives Board (`080-virtual-manipulatives-board.md`) ·
 Word Problem Warm-Up Generator (`081-word-problem-warmup-generator.md`)
 
+### Pass 2 — Round 1 — 2026-08-10 23:40 UTC — session `v19h3x` — PR #71
+
+Ten tools, all print-heavy or QR/bracket-primitive tools that had each
+already had a Pass 1 round (see their own files' Round 3/4 history) — this
+round picked up specifically where each file's own "Where the next round
+should pick up" notes left off, one scoped improvement (or two, where both
+were small) per tool, each independently verified via `node --check` and a
+headless Playwright pass before being committed. No tool outside this list
+was touched.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Image → PDF Assembler | `011-image-to-pdf.md` | Automated Playwright smoke test (`Tools/image-to-pdf/test/`); optional "target output size (MB)" that steps down a quality ladder and reports the outcome honestly. |
+| Graph Paper & Number Line Generator | `012-graph-paper-generator.md` | Two new grid modes — Cornell-notes ruling and handwriting practice lines — reusing the shared header/ink-saving plumbing. |
+| Lab Safety Contract Tracker | `013-lab-safety-contract-tracker.md` | Money collection: optional per-document fee, per-student paid/unpaid toggle, reflected in the summary, missing list, and reminder slips. |
+| Immersion Roleplay Scenario Generator | `014-roleplay-scenario-generator.md` | `speechSynthesis` audio (per-class language selector + Speak buttons) and an optional sentence-frame layer beneath each vocabulary card. |
+| Timeline Builder | `015-timeline-builder.md` | Compressed/logarithmic scale mode — more pixel-space for recent history on a deep-BCE-to-present span, strict chronological ordering preserved, applied across the scroll/print/compare views. |
+| QR Code Generator | `016-qr-code-generator.md` | Standalone "Scan a code" mode (camera or uploaded image), decoding and field-parsing any QR code, with a session-scoped recently-scanned list. |
+| Gallery Walk QR Codes | `017-gallery-walk-qr.md` | Staggered walking order across stations plus printable per-walker route cards, composed with the existing rotation timer's rotation count. |
+| QR Scavenger Hunt Builder | `018-qr-scavenger-hunt-builder.md` | Undo (15s window) on "Clear all progress"; per-station hints with a configurable time penalty, applied through the Team Check-In panel. |
+| Digital Escape Room / Puzzle Lock Builder | `019-escape-room-builder.md` | Per-station attempt-limit lockouts with near-miss feedback; forgiving text-answer matching (punctuation/case/whitespace + optional numeric tolerance); fixed the multi-answer cipher display and flagged digit-lock length mismatches. |
+| Bracket / Tournament Generator | `020-bracket-tournament-generator.md` | Single-level "Undo last pick" (full-state snapshot) across all three formats; Random/As-entered/Ranked seeding selector with standard protect-the-top-seeds bracket placement. |
+
+**10 of 46 (Pass 2) tools done. 36 to go.** None of the ten cleared their
+list — each still has substantial Major Features/Moonshot items open in its
+own file — so none moved to `stable tools/` this round.
+
 ### Pass 2 — Round 1 — 2026-08-10 23:49 UTC — session `yjj7k6` — PR pending
 
 Bounded follow-ups on five of the ten tools assigned to this session (001,
@@ -479,16 +506,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Seating Chart Generator — `005-seating-chart-generator.md`
 - Name Picker — `007-name-picker.md`
 - Behavior & Points Tracker — `008-behavior-points-tracker.md`
-- Image → PDF Assembler — `011-image-to-pdf.md`
-- Graph Paper & Number Line Generator — `012-graph-paper-generator.md`
-- Lab Safety Contract Tracker — `013-lab-safety-contract-tracker.md`
-- Immersion Roleplay Scenario Generator — `014-roleplay-scenario-generator.md`
-- Timeline Builder — `015-timeline-builder.md`
-- QR Code Generator — `016-qr-code-generator.md`
-- Gallery Walk QR Codes — `017-gallery-walk-qr.md`
-- QR Scavenger Hunt Builder — `018-qr-scavenger-hunt-builder.md`
-- Digital Escape Room / Puzzle Lock Builder — `019-escape-room-builder.md`
-- Bracket / Tournament Generator — `020-bracket-tournament-generator.md`
 - Tournament Bracket & Station Rotation (PE) — `021-pe-tournament-stations.md`
 - Lab Group & Role Randomizer — `022-lab-group-role-randomizer.md`
 - Exit Ticket / Bell Ringer Generator — `023-exit-ticket-generator.md`

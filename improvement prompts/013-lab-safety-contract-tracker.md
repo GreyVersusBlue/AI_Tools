@@ -12,6 +12,102 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+Shipped **money collection** (the first of the two remaining Major
+Features from Round 3's "where the next round should pick up").
+
+- Each `doc` (in `defaultDocuments`/`renderDocsEditor`) now carries an
+  optional `fee` field — a small `.doc-fee` text input beside the label,
+  blank by default. `feeAmount(doc)` parses it and treats blank/0/garbage
+  as "no fee" (`docHasFee`), so a class with no paid forms sees nothing new
+  in the UI at all — no stray toggle, no summary line, no print-column,
+  exactly as scoped ("must not clutter the UI when unused").
+- Per student per document, a `paid` boolean lives alongside `signed`/`date`
+  in `contracts[name].docs[docId]`. A `.paid-toggle` pill (amber, echoing
+  the existing green `.status-toggle.is-signed` pattern) appears next to a
+  student's signed-toggle and date field *only* for documents where
+  `docHasFee()` is true — `setDocPaid()`/`getDoc()` handle it the same way
+  `setDocSigned()`/`setDocDate()` already did.
+- Live summary: `summaryData()` now also returns `paid`/`hasFee`; when any
+  document has a fee, `#summaryCount` reads e.g. "2 of 4 signed · 2 of 4
+  paid ($15 each)" (single fee-bearing doc) or "… ($35 total)" (more than
+  one fee-bearing doc, summed). The existing multi-document
+  `#docBreakdown` chip row gains a second chip per fee-bearing document
+  ("Lab Safety Contract paid: 2/4 ($15 ea)") alongside its existing
+  signed-count chip — mirrors the file's existing per-doc breakdown
+  convention rather than inventing a new one.
+- **Print missing list** gains an "Unpaid" column (only when any document
+  has a fee) listing which fee-bearing documents that student still owes
+  on, plus the dollar amount, right beside the existing "Missing" column —
+  so one printout covers both dimensions as asked.
+- **Reminder slips** gain a `Fee due: $X` line (amber, matching the
+  existing red due-date line's visual weight) whenever that student owes
+  money on an unsigned document.
+- **Print full report** also got a quieter version of the same treatment —
+  each document's Yes/No cell appends "· Paid"/"· Unpaid" when that
+  document has a fee — not explicitly asked for but essentially free once
+  `docHasFee()`/`getDoc().paid` existed, and it keeps that print consistent
+  with the other two.
+- Migration: `loadSection()`'s existing per-document upgrade loop (the one
+  that already defaults missing `d.body` to `''`) now also defaults a
+  missing `d.fee` to `''`. `getDoc()` was changed to always return a
+  fully-shaped `{signed, date, paid}` object (defaulting any missing field)
+  rather than only defaulting when the whole record is absent, so a
+  contract saved before this round (whose per-doc records have no `paid`
+  key at all) reads as `paid: false` with no crash — verified directly
+  against a hand-seeded pre-existing section using the *old pre-multi-doc*
+  flat `{signed, date}` shape with a `documents` array that has no `fee`
+  key whatsoever (i.e. a section untouched since before Round 3's
+  `migrateContracts()` even existed).
+
+Verified with a headless Playwright run against the real file (no build
+step): seeded a 4-student roster, set a $15 fee on the one document,
+confirmed 4 paid-toggle buttons appeared; mixed signed/paid combinations
+across the 4 students produced summary "2 of 4 signed · 2 of 4 paid ($15
+each)"; missing-list print showed the unpaid student with "Lab Safety
+Contract — $15" and the paid-but-unsigned student with "—"; reminder slips
+showed "Fee due: $15" only for the unpaid+unsigned student; full report
+showed "Yes … · Paid" / "Yes … · Unpaid" / "No · Paid" / "No · Unpaid" per
+student correctly. Separately loaded a hand-seeded legacy section (no
+`fee` field anywhere, pre-multi-doc contract shape) and confirmed it loads
+with no console/page errors, no paid toggles shown (correctly, since no
+fee was ever set), and the pre-existing signed count still reads
+correctly. Also verified the multi-document case (one fee-bearing doc
+alongside one fee-free doc): breakdown chips and the "$X each" vs "$X
+total" summary wording both render without errors.
+
+#### Challenges
+
+- Deciding what "the missing-list print … should show unpaid status
+  alongside not-signed" means in scope: it does **not** pull
+  signed-but-unpaid students onto the missing list (that list is still
+  defined by "hasn't returned the form yet") — it only adds an unpaid
+  column to the rows already on that list, matching the literal wording
+  ("alongside not-signed"). A signed-but-unpaid student (turned the paper
+  in, still owes money) is genuinely invisible to the missing-list/slips
+  workflow today; they'd only show up in the summary's paid count and the
+  full report. If a teacher wants a dedicated "still owes money" view
+  independent of signed status, that's a follow-on, not something this
+  round's wording asked for — flagging it for whoever picks this up next.
+- Multiple fee-bearing documents in one class are supported (the summary
+  sums them as "$X total" and the breakdown lists each separately), but
+  this is a less-tested path than the common single-fee case the feature
+  description centers on ("$15 each"); worth a second look if a teacher
+  ever puts fees on more than one document in the same class.
+
+### Where the next round should pick up
+
+- **QR-scan check-in** for returned forms is the one remaining Major
+  Feature from the original list that's still fully unbuilt.
+- **Merge with the permission-slip collection tracker**
+  (`043-field-trip-permission-slip.html`) and **generalize beyond lab
+  safety** are both still open, unchanged from Round 3's notes.
+- Consider whether a signed-but-unpaid student should surface somewhere
+  more prominent than the full report (see Challenges above) — e.g. a
+  "still owes money" filter next to "Show missing only" on the Students
+  card.
+
 ### Round 3 (2026-08-10) — shipped
 
 - **Print the contract itself.** Each required document now has an optional
@@ -83,6 +179,9 @@ produces 2 slips naming the 2 missing students with the due date shown.
 - Print a **full report** and a **missing list**
 - **`.ics` export** — "add lab-day reminder to calendar"
   (`buildIcsForDueDate`), with a days-until countdown
+- **Optional per-document fee with a paid/unpaid toggle** per student,
+  a parallel "N of M paid" count in the live summary, and unpaid status
+  on the missing-list print and reminder slips
 
 ## Quick Wins
 
@@ -119,8 +218,12 @@ produces 2 slips naming the 2 missing students with the due date shown.
   this is the same feature in two places.
 - **Gate other tools on it** (P7). Lab Group & Role Randomizer should be able
   to ask "is this student cleared for lab?" and flag or exclude accordingly.
-- **Money collection.** Many returned forms come with a fee; paid/unpaid
+- **Done — Money collection.** Many returned forms come with a fee; paid/unpaid
   beside returned/not-returned is the clipboard teachers actually keep.
+  *(Shipped Pass 2 Round 1 — optional per-document fee, per-student
+  paid/unpaid toggle, a parallel "N of M paid ($X each)" count in the live
+  summary, and unpaid status on both the missing-list print and the
+  reminder slips.)*
 - **Scan returned forms** with `_shared/qr-scan.js` if each printed form
   carries a per-student code — ticking off thirty returns in under a minute.
 - **Parent contact list for the stragglers** — print the missing list with a

@@ -105,6 +105,116 @@ end for check-in and collection workflows.
 - Is a scanner/check-in mode this tool's job, or should it be a separate
   "Scan & Check In" tool that several workflows call?
 
+### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+Implemented the **"Scanner mode as a first-class feature"** Major Feature,
+entirely inside `Tools/016-qr-code-generator.html` (no support-folder or
+library changes — `lib/jsqr.js` and `lib/qrcode.js` untouched):
+
+- **New third mode, "Scan a code"**, alongside the existing Single/Bulk
+  toggle. Selecting it hides the generator-only cards (Content's
+  single/bulk panes, Appearance, Center Overlay — all newly marked
+  `.gen-card`/existing `single-only`/`bulk-only` classes) and shows a
+  dedicated scan pane and result cards instead. This is a genuinely
+  standalone capability, not the existing "verify your own generated
+  code" self-check: it decodes *any* QR code shown to it, independent of
+  whatever (if anything) is in the generator's own text field.
+- **Camera input**, reusing the same `getUserMedia` + `window.QRScan`
+  technique as the existing `verifyScan`/camera-test-scan modal, but as a
+  second, separate modal (`#scan-cam-overlay`) that accepts whatever
+  `onResult` decodes instead of comparing it against one expected string
+  — the key behavioral difference from the existing verify flow.
+- **Upload/drop an image file** as an alternative to the camera: a new
+  drop zone (`#scan-drop-zone`, sharing the logo drop-zone's `.drop-zone`
+  styling) loads the file into an `<img>`, draws it 1:1 onto a scratch
+  canvas, and decodes it with `window.jsQR` directly — no camera needed,
+  which is both how a teacher with a photo of a code would use this and
+  how this feature could be verified headlessly.
+- **Decoded content displayed clearly**: plain text as-is; a URL as a
+  clickable `target="_blank"` link; and this tool's own typed formats
+  (Wi-Fi, vCard, tel, SMS, mailto, geo, calendar event) parsed back into
+  the same labeled-field convention the generator's template fields use
+  (`scanFieldRows`/`.scan-field`), not a raw string dump — e.g. a scanned
+  Wi-Fi code shows "Network (SSID)", "Password", "Security", "Hidden
+  network" as separate rows. Parsing reverses the exact escaping the
+  generator side uses (`escField`/`icsEscape`) via a small manual
+  unescape/split walk (`splitUnescaped`, `unescapeField`, `icsUnescape`)
+  rather than a lookbehind regex, to avoid any engine-support risk.
+- **"Recently scanned" list, separate from "Recently generated"**: a new
+  `sessionStorage` key (`qr-code-generator-scanned`, deliberately
+  `sessionStorage` rather than `localStorage` since the ask was scoped to
+  "for the session") holds up to 20 entries with kind + source (camera vs.
+  upload) icon, so scanning several codes in a row — e.g. checking in a
+  stack of returned equipment — keeps every prior result instead of only
+  the latest. Clicking an entry re-renders that result; a per-item remove
+  button matches the existing recent-generated list's pattern.
+
+### Testing performed (Pass 2 — Round 1)
+
+- `node --check` against both inline `<script>` blocks (extracted to temp
+  files) — pass.
+- Headless Chromium via Playwright (`/opt/pw-browsers`, package from the
+  global npm install): loaded the file over `file://`, generated a plain
+  URL code with the tool's own single-code generator, pulled the canvas
+  as a PNG via `toDataURL`, saved it to disk, switched to the new Scan
+  mode, confirmed the generator-only cards were actually hidden and the
+  scan pane visible, fed that saved PNG into the new upload input, and
+  confirmed the decoded text round-tripped byte-for-byte back to the
+  original URL and rendered as a clickable link. Repeated the same
+  round-trip with a Wi-Fi template code (SSID + password) to confirm
+  field-parsing renders "Network (SSID)"/"Password"/"Security"/"Hidden
+  network" correctly rather than raw `WIFI:...` text — this needed
+  bumping the render size to 600px first, since the existing jsQR
+  self-check already flagged the same payload as unverified at the
+  default 400px (a pre-existing, documented characteristic from the
+  Round 4 notes, not something this round introduced). Also confirmed two
+  sequential scans (URL then Wi-Fi) both remain in the "recently scanned"
+  list rather than the second overwriting the first. Zero console or page
+  errors in every pass.
+
+### Things noticed but deliberately left alone (Pass 2 — Round 1)
+
+- Did not touch `_shared/qr-scan.js` — it already exposes
+  `scanQRFromCamera(videoEl, {onResult, onError})` generically (it
+  doesn't compare against an expected string itself; only this tool's own
+  `verifyScan` caller does that comparison), so the new scan mode's camera
+  path calls it directly with a different `onResult` handler rather than
+  needing any change to the shared helper.
+- Did not attempt to reuse the *existing* `#cam-overlay` modal for the new
+  scan mode — added a second, separate modal (`#scan-cam-overlay`)
+  instead. The existing modal's status text and close handlers are
+  wired specifically to the single-code verify flow; sharing it would
+  have meant threading a mode flag through code that's simple and correct
+  as two small, independent instances of the same modal markup/CSS.
+- Did not build an "Inventory/labelling mode" (the other open Major
+  Feature in this file) — scanning is now a first-class capability this
+  tool exposes, but persisting a local checked-out/returned record on top
+  of it is a distinct, larger feature and was left for its own round per
+  the existing Open Questions note about scope.
+- Only decode formats already produced by this tool's own generator
+  (seven typed templates) get the labeled-field treatment; any other QR
+  content (a Google Form URL, an arbitrary app deep link, etc.) correctly
+  falls through to the plain-text/link rendering, which is the intended
+  behavior, not a gap.
+
+### Where the next round should pick up
+
+- **Inventory/check-out tracking mode** is the natural next step now that
+  scanning is a first-class capability: pair it with a local
+  checked-out/returned record (who has what, scanned in/out timestamps)
+  per the remaining Major Feature idea in this file.
+- Real-camera testing (as opposed to the headless upload-path proof used
+  here) on an actual phone/tablet camera against printed codes in varied
+  lighting would be the strongest validation of the new camera-scan path
+  — a headless browser has no real camera, so that path is only exercised
+  by code inspection and by the pattern match against the already-proven
+  `verifyScan`/`stopCameraScan` camera technique, not by an end-to-end
+  automated test.
+- If a future round wants scanned Wi-Fi/vCard/etc. content to be
+  *actionable* (e.g. a "connect" button, an "add to contacts" download),
+  that's a reasonable next layer on top of the display-only parsing shipped
+  here.
+
 ## Round 4 update — 2026-08-10
 
 Implemented four of the Major Features from this file in one pass, all inside

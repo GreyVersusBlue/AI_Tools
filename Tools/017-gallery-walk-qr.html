@@ -229,6 +229,24 @@
     .print-packets .packet-page .packet-sub { font-size: .82rem; color: #555; margin-bottom: 14px; }
     .print-packets .packet-page ul { padding-left: 1.1rem; }
     .print-packets .packet-page li { font-size: .95rem; margin-bottom: 10px; line-height: 1.4; }
+
+    .print-route-grid { display: flex; flex-wrap: wrap; }
+    .print-route-grid .r-card {
+      box-sizing: border-box; border: 1.5px solid #999; border-radius: 8px; padding: 14px;
+      display: flex; flex-direction: column; page-break-inside: avoid; margin: 4px;
+    }
+    .print-route-grid.pp-2 .r-card { width: calc(50% - 8px); }
+    .print-route-grid.pp-2 .r-card:nth-child(2n) { page-break-after: always; }
+    .print-route-grid.pp-4 .r-card { width: calc(50% - 8px); }
+    .print-route-grid.pp-4 .r-card:nth-child(4n) { page-break-after: always; }
+    .print-route-grid.pp-6 .r-card { width: calc(33.33% - 8px); }
+    .print-route-grid.pp-6 .r-card:nth-child(6n) { page-break-after: always; }
+    .print-route-grid .r-card:last-child { page-break-after: auto !important; }
+
+    .r-card .route-header { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 6px; }
+    .r-card .route-name { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; overflow-wrap: anywhere; }
+    .r-card .route-start { font-size: .98rem; margin-bottom: 6px; }
+    .r-card .route-steps { font-size: .85rem; color: #222; overflow-wrap: anywhere; line-height: 1.35; }
   }
 </style>
 </head>
@@ -262,7 +280,7 @@
           <button class="link-btn" id="toggleImportBtn" type="button">Paste a list instead</button>
         </div>
         <table class="entries-table">
-          <thead><tr><th></th><th>Name / title</th><th>Link or text</th><th></th></tr></thead>
+          <thead><tr><th>Station</th><th>Name / title</th><th>Link or text</th><th></th></tr></thead>
           <tbody id="entriesBody"></tbody>
         </table>
         <div class="btn-row" style="margin-top:0;">
@@ -403,6 +421,35 @@
       </div>
 
       <div class="card">
+        <div class="card-title"><span>Walking order &amp; route cards</span></div>
+        <div class="hint">Spread students or groups across different starting stations so the whole class doesn't bottleneck at Station 1 &mdash; everyone still visits every station, just starting from a different spot and rotating forward from there.</div>
+        <div class="btn-row" style="margin-top:0;">
+          <select id="walkRosterSelect" aria-label="Load student/group names for the walking order"><option value="">Load names from a saved roster&hellip;</option></select>
+          <button class="secondary" id="walkRosterLoadBtn" type="button">Load names</button>
+          <button class="secondary" id="walkUseStationNamesBtn" type="button">Use station names instead</button>
+        </div>
+        <div class="hint" id="walkGroupsSummary">No names loaded yet.</div>
+        <div class="row2">
+          <div>
+            <label for="routeCardsPerPage">Route cards per printed page</label>
+            <select id="routeCardsPerPage">
+              <option value="2">2 &mdash; large</option>
+              <option value="4" selected>4</option>
+              <option value="6">6 &mdash; compact</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+        <div id="walkOrderPreview"></div>
+        <div class="hint" id="walkStopsHint"></div>
+        <div class="btn-row">
+          <button class="secondary" id="generateWalkOrderBtn" type="button">Generate walking order</button>
+          <button class="secondary" id="printRouteCardsBtn" disabled type="button">Print Route Cards</button>
+        </div>
+        <div class="hint">Each route card's number of stops matches "Number of rotations" in the timer above, so the printed route always matches how many times the timer will call a rotation.</div>
+      </div>
+
+      <div class="card">
         <div class="card-title"><span>Collected feedback (optional)</span></div>
         <div class="hint">After the walk, jot down or paste what came back on the slips for any station &mdash; one comment per line &mdash; then print a take-home packet per student showing what their classmates said.</div>
         <div class="notes-list" id="notesList"><p class="empty-hint">Add at least one entry to collect feedback for it.</p></div>
@@ -447,6 +494,9 @@
 <div class="print-only print-packets" id="printPacketsArea">
   <div id="printPacketsBody"></div>
 </div>
+<div class="print-only" id="printRouteCardsArea">
+  <div class="print-route-grid" id="printRouteCardsGrid"></div>
+</div>
 
 <script>
 (function () {
@@ -467,7 +517,10 @@
    'printSlipsBtn', 'printSlipsArea', 'printSlipGrid',
    'timerRound', 'timerClock', 'timerStatus', 'timerMinutes', 'timerSeconds', 'timerRotations', 'timerSound',
    'timerStartBtn', 'timerPauseBtn', 'timerResumeBtn', 'timerRotateNowBtn', 'timerResetBtn',
-   'notesList', 'printPacketsBtn', 'printPacketsArea', 'printPacketsBody'
+   'notesList', 'printPacketsBtn', 'printPacketsArea', 'printPacketsBody',
+   'walkRosterSelect', 'walkRosterLoadBtn', 'walkUseStationNamesBtn', 'walkGroupsSummary',
+   'routeCardsPerPage', 'walkOrderPreview', 'walkStopsHint', 'generateWalkOrderBtn',
+   'printRouteCardsBtn', 'printRouteCardsArea', 'printRouteCardsGrid'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -521,7 +574,8 @@
     state = {
       name: name, entries: [{ name: '', value: '' }], cardsPerPage: '4', ecLevel: 'Q', showNumber: true, reactionsEnabled: false,
       feedbackEnabled: false, feedbackStyle: 'stars', feedbackPrompt: '', feedbackCopies: 6, feedbackPerPage: '4',
-      timer: { minutes: 3, seconds: 0, rotations: 1, soundEnabled: true, count: 0, running: false, paused: false, endAt: null, remainingMs: null }
+      timer: { minutes: 3, seconds: 0, rotations: 1, soundEnabled: true, count: 0, running: false, paused: false, endAt: null, remainingMs: null },
+      walkGroups: [], routeCardsPerPage: '4'
     };
     applyStateToForm();
     els.toolbar.style.display = '';
@@ -552,6 +606,8 @@
     if (typeof t.paused !== 'boolean') t.paused = false;
     if (typeof t.endAt !== 'number') t.endAt = null;
     if (typeof t.remainingMs !== 'number') t.remainingMs = null;
+    if (!Array.isArray(loaded.walkGroups)) loaded.walkGroups = [];
+    if (typeof loaded.routeCardsPerPage !== 'string') loaded.routeCardsPerPage = '4';
     state = loaded;
     ensureAtLeastOneRow();
     applyStateToForm();
@@ -576,10 +632,12 @@
     els.timerSeconds.value = state.timer.seconds;
     els.timerRotations.value = state.timer.rotations;
     els.timerSound.checked = !!state.timer.soundEnabled;
+    els.routeCardsPerPage.value = state.routeCardsPerPage || '4';
     notesOpenIdx = {};
     renderRows();
     renderTimerUI();
     renderNotesList();
+    renderWalkGroupsSummary();
   }
 
   // ── Row editor ────────────────────────────────────────────────────────────
@@ -870,6 +928,7 @@
     renderRefPreview(valid);
     updateSlipsButton();
     renderNotesList();
+    renderWalkOrderPreview();
 
     if (!valid.length) {
       els.cardsPreview.innerHTML = '<p class="empty-hint">Add at least one entry with a link or text to see a preview.</p>';
@@ -1080,6 +1139,115 @@
     buildPrintPackets();
     if (!els.printPacketsBody.children.length) return;
     printSection(els.printPacketsArea);
+  });
+
+  // ── Walking order & route cards ──────────────────────────────────────────
+  // Stations = the same "station" concept the feedback slips use
+  // (nonEmptyEntries — any row with a name or value, numbered by row order,
+  // whether or not it has a scannable link). Groups = whatever roster/list of
+  // students or groups is actually doing the walking, loaded independently of
+  // the station list so a class of 28 can walk 7 stations without assuming
+  // "one group owns one station" the way the entries table does.
+  //
+  // Staggered start: group index gi starts at station (gi mod stationCount),
+  // then advances one station per stop, wrapping with modulo — the standard
+  // "staggered start" rotation so groups fan out across every station instead
+  // of queueing at Station 1. The stop count intentionally mirrors the
+  // rotation timer's "Number of rotations" field (state.timer.rotations) so
+  // a printed route always has exactly as many stops as the timer will
+  // actually call "rotate" — falling back to one stop per station (a full
+  // loop) only if rotations somehow isn't a usable positive number.
+  function computeWalkOrder() {
+    var stationCount = nonEmptyEntries().length;
+    var groups = state.walkGroups || [];
+    if (stationCount < 2 || !groups.length) return null;
+    var stops = Math.max(1, parseInt(state.timer.rotations, 10) || stationCount);
+    return groups.map(function (name, gi) {
+      var start = gi % stationCount;
+      var order = [];
+      for (var k = 0; k < stops; k++) order.push(((start + k) % stationCount) + 1);
+      return { name: (name || '').trim() || ('Group ' + (gi + 1)), start: start + 1, order: order };
+    });
+  }
+
+  function renderWalkGroupsSummary() {
+    var n = (state.walkGroups || []).length;
+    els.walkGroupsSummary.textContent = n
+      ? n + ' name' + (n === 1 ? '' : 's') + ' loaded for the walking order.'
+      : 'No names loaded yet — load a saved roster, or use the station names above.';
+  }
+
+  function renderWalkOrderPreview() {
+    var stationCount = nonEmptyEntries().length;
+    var stops = Math.max(1, parseInt(state.timer.rotations, 10) || stationCount || 1);
+    els.walkStopsHint.textContent = stationCount >= 2
+      ? 'Each route card has ' + stops + ' stop' + (stops === 1 ? '' : 's') + ', matching the ' + stops +
+        ' rotation' + (stops === 1 ? '' : 's') + ' set in "Run the gallery walk" above.'
+      : '';
+    var order = computeWalkOrder();
+    if (!order) {
+      els.walkOrderPreview.innerHTML = '<p class="empty-hint">' +
+        (stationCount < 2 ? 'Add at least two stations above first.' : 'Load names (a saved roster, or the station names) to generate a walking order.') +
+        '</p>';
+      els.printRouteCardsBtn.disabled = true;
+      return;
+    }
+    els.walkOrderPreview.innerHTML = '<table class="ref-list"><thead><tr><th>Student / group</th><th>Start</th><th>Full order</th></tr></thead><tbody>' +
+      order.map(function (g) {
+        return '<tr><td>' + escapeHtml(g.name) + '</td><td>Station ' + g.start + '</td><td>' + g.order.join(', ') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+    els.printRouteCardsBtn.disabled = false;
+  }
+
+  els.walkRosterLoadBtn.addEventListener('click', function () {
+    var name = els.walkRosterSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      var list = rosters[name];
+      if (!list || !list.length) return;
+      state.walkGroups = list.slice();
+      save();
+      renderWalkGroupsSummary();
+      renderWalkOrderPreview();
+    } catch (e) { /* ignore — leaves the walking-order list unchanged */ }
+  });
+
+  els.walkUseStationNamesBtn.addEventListener('click', function () {
+    state.walkGroups = nonEmptyEntries().map(function (s) { return s.name; });
+    save();
+    renderWalkGroupsSummary();
+    renderWalkOrderPreview();
+  });
+
+  els.generateWalkOrderBtn.addEventListener('click', function () { renderWalkOrderPreview(); });
+
+  els.routeCardsPerPage.addEventListener('change', function () {
+    state.routeCardsPerPage = els.routeCardsPerPage.value;
+    save();
+  });
+
+  function buildPrintRouteCards() {
+    var order = computeWalkOrder();
+    if (!order) return;
+    els.printRouteCardsGrid.className = 'print-route-grid pp-' + (state.routeCardsPerPage || '4');
+    els.printRouteCardsGrid.innerHTML = order.map(function (g) {
+      var stepsHtml = g.order.length > 1
+        ? '<div class="route-steps">Then: ' + g.order.slice(1).join(' &rarr; ') + '</div>'
+        : '<div class="route-steps">Stay at this station for the whole walk.</div>';
+      return '<div class="r-card">' +
+        '<div class="route-header">Gallery Walk Route</div>' +
+        '<div class="route-name">' + escapeHtml(g.name) + '</div>' +
+        '<div class="route-start">Start at <strong>Station ' + g.start + '</strong></div>' +
+        stepsHtml +
+        '</div>';
+    }).join('');
+  }
+
+  els.printRouteCardsBtn.addEventListener('click', function () {
+    buildPrintRouteCards();
+    if (!els.printRouteCardsGrid.children.length) return;
+    printSection(els.printRouteCardsArea);
   });
 
   function buildPrintCodes() {
@@ -1337,6 +1505,7 @@
     els.timerRotations.value = state.timer.rotations;
     save();
     renderTimerUI();
+    renderWalkOrderPreview();
   });
   els.timerSound.addEventListener('change', function () {
     state.timer.soundEnabled = els.timerSound.checked;
@@ -1391,15 +1560,19 @@
 
   /* ---------- read-only reuse of the shared roster list (Class Roster Hub /
      Name Picker both save here under 'np_rosters') — separate storage. ---------- */
-  function populateRosterHubSelect() {
+  function populateRosterSelect(selectEl) {
     try {
       var rosters = JSON.parse(localStorage.getItem('np_rosters') || '{}');
       var names = Object.keys(rosters);
-      els.rosterHubSelect.innerHTML = '<option value="">Load names from a saved roster&hellip;</option>' +
+      selectEl.innerHTML = '<option value="">Load names from a saved roster&hellip;</option>' +
         names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
     } catch (e) {
-      els.rosterHubSelect.innerHTML = '<option value="">No saved rosters found</option>';
+      selectEl.innerHTML = '<option value="">No saved rosters found</option>';
     }
+  }
+  function populateRosterHubSelect() {
+    populateRosterSelect(els.rosterHubSelect);
+    populateRosterSelect(els.walkRosterSelect);
   }
   els.rosterHubLoadBtn.addEventListener('click', function () {
     var name = els.rosterHubSelect.value;

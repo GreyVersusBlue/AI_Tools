@@ -13,6 +13,119 @@ Reviewed — structural read of the source. This tool is considerably more
 capable than its one-line README description. Ideas below are deliberately
 ambitious and **not** scoped to a single session.
 
+### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+
+- **Automated smoke test (`Tools/image-to-pdf/test/smoke.mjs`).** This tool had
+  zero automated coverage before this round — the exact gap Round 3's
+  "Challenges" section flagged. Wrote a Playwright-driven suite in the same
+  spirit as `Tools/schedule/test/smoke.mjs` but fully self-contained (no
+  shared harness file existed to reuse — see below): it opens
+  `Tools/011-image-to-pdf.html` over `file://`, feeds it PNG fixtures via
+  `#file-input`'s `setInputFiles`, drives the real UI (queue → quality →
+  target size → Generate), and asserts on the *downloaded* PDF bytes (a real
+  `%PDF-` header, a page count derived by counting `/Type /Page` object
+  dictionaries — carefully excluding the root `/Type /Pages` — since no PDF
+  parser is vendored) plus zero `console.error`/`pageerror` activity. Three
+  scenarios: (1) basic one-per-page generation — 3 images in, 3 pages out; (2)
+  an impossible target size (~1 KB) — confirms the retry ladder runs all the
+  way to its lowest tier and then *reports failure honestly* rather than
+  silently keeping the oversized file; (3) a reachable target — confirms the
+  ladder actually stops early with a size-appropriate quality and reports
+  success. Scenario (2)/(3) fixtures are synthesized noise PNGs built
+  byte-by-byte in `test/make-fixtures.mjs` (xorshift32, no image library) —
+  solid-color swatches compress to near-nothing at every quality tier, which
+  would make the target-size assertions vacuous (nothing to downgrade *from*).
+  Verified the suite actually catches regressions, not just happy-path
+  theater, by deliberately breaking (a) the vendored jsPDF `<script src>` path
+  and (b) the target-size retry loop's stop condition, confirming both fail
+  loudly — then reverted both. `node Tools/image-to-pdf/test/smoke.mjs` (no
+  `npm install`; resolves the global Playwright install via
+  `createRequire(...).resolve('playwright', {paths:['/opt/node22/lib/node_modules']})`
+  since Node's ESM loader, unlike CJS `require`, does not honor `NODE_PATH`).
+- **Target output size (Quick Win).** New "Target output size (MB, optional)"
+  number input next to Quality, off by default (blank = feature disabled, not
+  persisted across sessions on purpose — see Challenges). When set, the
+  existing `generatePDF()` was split into `buildAtQuality(ordered, opts,
+  qualityMode, progressPrefix)` (the ~150 lines of per-image/page-fit/header-
+  footer logic, now parameterized on quality instead of closing over it) plus
+  a thin orchestrator that walks a `QUALITY_LADDER` —
+  `['original','high','standard','compact','min']`, where `compact`/`min` are
+  two new internal-only presets one notch below "Standard" (not exposed in the
+  Quality dropdown — see code comment for why) — starting at whatever the user
+  picked and stepping only downward, rebuilding the whole PDF at each tier
+  until the blob fits the target or the ladder runs out. Always reports the
+  outcome in the existing `#msg` banner: "downgraded to X quality to fit the N
+  MB target," "within target size (N MB)" if no downgrade was needed, or
+  "could not reach the N MB target even at Minimum quality (lowest tried);
+  final size N.N MB" if it never fit — never silent. Exposes
+  `window.__imgToPdfLastRun = { attempts, targetBytes, targetSizeMB,
+  finalQuality }` purely for test/devtools introspection; the UI itself
+  doesn't read it.
+
+#### Challenges
+
+- `Tools/schedule/test/smoke.mjs` (referenced by Round 3's notes as the model
+  to follow) imports a shared harness at `../../board-check/harness.mjs` —
+  that file does not exist in this checkout. Rather than depend on
+  infrastructure that may be mid-flight in a sibling workstream, this round's
+  test is fully self-contained: its own Playwright resolution, its own
+  request-blocking, its own PNG fixture generator. If `board-check/harness.mjs`
+  lands later and offers equivalent (or better) `serve`/`launch`/`prepPage`
+  helpers, `smoke.mjs` here could be slimmed down to use it — not urgent, the
+  current version works standalone.
+- The shared design-system stylesheet every tool loads
+  (`_ds/industry-.../styles.css`, referenced via `../_ds/...` from
+  `011-image-to-pdf.html`) `@import`s Google Fonts over HTTPS. In an
+  offline/sandboxed test environment that request fails with
+  `net::ERR_CONNECTION_RESET`, which Chromium surfaces as a generic "Failed to
+  load resource" console error on *every* page load — nothing to do with this
+  tool's own script. Asserting "zero console errors" without accounting for
+  it would make the suite permanently red for a pre-existing, site-wide, P5
+  gap that lives well outside `Tools/011-image-to-pdf.html` and
+  `Tools/image-to-pdf/`. Worked around it two ways in `smoke.mjs`: all
+  non-`file://` requests are aborted up front (this tool is supposed to work
+  fully offline anyway), and the resulting generic message is filtered out of
+  the asserted error list by pattern, while any *other* console error (a real
+  thrown exception, an explicit `console.error(err)` from `generatePDF`'s
+  catch blocks) still fails the suite. Flagging this here since it's a real
+  finding, just not one in scope for this tool's own files to fix — the
+  underlying `@import` lives in `Tools/_ds/`.
+- Getting the target-size test to be meaningful (not just "any target passes
+  trivially") took some thought: this tool's own quality presets only change
+  JPEG re-encode quality and a max-dimension cap, and a solid-color test image
+  compresses to near-nothing at *every* quality tier — there's no signal to
+  detect a real downgrade. Solved by generating a pseudo-random noise PNG
+  in-test (`make-fixtures.mjs`), where JPEG quality and downscaling actually
+  produce visibly different file sizes, and made the "reachable target"
+  scenario self-adapting (target = half of a freshly-measured baseline size)
+  rather than a hardcoded MB figure, so the test doesn't quietly rot if
+  compression ratios shift with a future jsPDF version or preset tweak.
+- Deliberately did **not** persist the target-size input to `localStorage`
+  alongside page size/quality/grid density, even though the existing settings
+  code makes that a one-line addition. A forgotten target silently downgrading
+  every future PDF (long after whoever set it forgot why) seemed like a worse
+  surprise than having to re-type "5" occasionally. Worth reconsidering if a
+  future round adds a visible "target size is active" indicator elsewhere in
+  the UI — persistence would be safer paired with that.
+
+#### Where the next round should pick up
+
+- The retry ladder's `compact`/`min` tiers are new presets invented for this
+  feature (`{maxDim:1100,q:0.55}` and `{maxDim:850,q:0.40}`); they haven't
+  been validated against a *real* phone photo, only synthetic test fixtures.
+  Worth a manual pass with an actual multi-megapixel photo batch to confirm
+  "Minimum (auto)" still produces something legible before calling this
+  feature fully done.
+- Crop/straighten, document-scanner mode, and reorder-by-thumbnail-grid (all
+  still open from Round 3) remain the highest-value unbuilt ideas.
+- The smoke suite covers the one-per-page path plus both target-size outcomes;
+  it does **not** cover contact sheets, SVG input, or the title-page/header/
+  caption combination end-to-end (those were manually re-verified by hand this
+  round after the `generatePDF()`/`buildAtQuality()` split, and still pass,
+  but aren't asserted in `smoke.mjs`). Extending the suite to cover those
+  paths — especially contact-sheet page-count math — would be a reasonable
+  next increment before adding more features to this file.
+
 ### Round 3 (2026-08-10) — shipped
 
 - **Vendored jsPDF (P5).** Copied `Tools/schedule/libs/jspdf/jspdf.umd.min.js`
@@ -100,9 +213,11 @@ ambitious and **not** scoped to a single session.
 - **Auto-enhance for whiteboard/document photos** — contrast boost and
   white-balance to make a phone photo of a page legible and ink-cheap. Purely
   canvas math, no libraries.
-- **Target file size.** "Make this under 5 MB so it can be emailed" is the
+- **Done —** **Target file size.** "Make this under 5 MB so it can be emailed" is the
   actual constraint teachers hit, and the tool has the compression levers to
-  hit it.
+  hit it. *(Shipped Pass 2 Round 1 — an optional "Target output size (MB)"
+  input that retries generation at progressively lower quality tiers and
+  always reports the final outcome, success or honest failure.)*
 - **Remember the last session's settings per use case** rather than one global
   preference.
 

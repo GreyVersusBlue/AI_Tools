@@ -271,8 +271,9 @@
   .overlay-pane { display: none; }
   .overlay-pane.active { display: block; }
 
-  /* Image drop zone (compact version) */
-  #drop-zone {
+  /* Image drop zone (compact version) — .drop-zone class is reused by the
+     scan-mode image upload zone; #drop-zone keeps its id for the logo one. */
+  #drop-zone, .drop-zone {
     border: 2px dashed var(--border);
     border-radius: var(--radius);
     padding: 1.25rem 1rem;
@@ -282,12 +283,12 @@
     position: relative;
   }
 
-  #drop-zone:hover, #drop-zone.drag-over {
+  #drop-zone:hover, #drop-zone.drag-over, .drop-zone:hover, .drop-zone.drag-over {
     border-color: var(--accent);
     background: rgba(108, 142, 245, 0.05);
   }
 
-  #drop-zone input[type="file"] {
+  #drop-zone input[type="file"], .drop-zone input[type="file"] {
     position: absolute;
     inset: 0;
     opacity: 0;
@@ -296,9 +297,9 @@
     height: 100%;
   }
 
-  #drop-zone .icon { font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }
-  #drop-zone .label { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
-  #drop-zone .sublabel { font-size: 0.72rem; color: var(--text-dim); }
+  #drop-zone .icon, .drop-zone .icon { font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }
+  #drop-zone .label, .drop-zone .label { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
+  #drop-zone .sublabel, .drop-zone .sublabel { font-size: 0.72rem; color: var(--text-dim); }
 
   #logo-preview-row {
     display: none;
@@ -442,9 +443,43 @@
   }
   .recent-remove:hover { background: var(--danger); border-color: var(--danger); color: #fff; opacity: 1; }
 
-  /* Single vs Bulk mode — one pane of each pair is hidden via the body class */
+  /* Scan-mode: decoded result panel + inline error/info message */
+  .scan-result-kind {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--accent2); margin-bottom: 0.6rem;
+  }
+  .scan-fields { display: flex; flex-direction: column; gap: 0.5rem; }
+  .scan-field { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.65rem; }
+  .scan-field-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 0.2rem; }
+  .scan-field-value { font-size: 0.85rem; color: var(--text); font-family: var(--mono); word-break: break-word; white-space: pre-wrap; }
+  .scan-plain {
+    font-size: 0.9rem; color: var(--text); word-break: break-word; white-space: pre-wrap;
+    font-family: var(--mono); background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.6rem 0.7rem;
+  }
+  .scan-link {
+    display: block; font-size: 0.9rem; color: var(--accent); word-break: break-all;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.6rem 0.7rem; text-decoration: none;
+  }
+  .scan-link:hover { text-decoration: underline; }
+  #scan-msg {
+    font-size: 0.78rem; padding: 0.55rem 0.75rem; border-radius: 6px;
+    display: none; margin-top: 0.75rem; white-space: pre-line;
+  }
+  #scan-msg.error { display: block; background: rgba(248, 113, 113, 0.12); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
+  #scan-msg.info { display: block; background: rgba(74, 222, 128, 0.12); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.3); }
+
+  /* Single / Bulk / Scan mode — exactly one of the three body classes below
+     is ever set (none = single, the default); each pane is hidden unless its
+     own mode is active. */
   body:not(.mode-bulk) .bulk-only { display: none; }
-  body.mode-bulk .single-only { display: none; }
+  body.mode-bulk .single-only, body.mode-scan .single-only { display: none; }
+  .scan-only { display: none; }
+  body.mode-scan .scan-only { display: block; }
+  /* Appearance / Overlay cards are shared by single + bulk, but meaningless
+     while just scanning — hidden in scan mode only. */
+  body.mode-scan .gen-card { display: none; }
 
   #bulk-hint { margin-bottom: 0.75rem; }
 
@@ -532,6 +567,8 @@
         <label for="mode-single">Single code</label>
         <input type="radio" name="app-mode" id="mode-bulk" value="bulk">
         <label for="mode-bulk">Bulk (grid)</label>
+        <input type="radio" name="app-mode" id="mode-scan" value="scan">
+        <label for="mode-scan">Scan a code</label>
       </div>
 
       <div class="single-only" id="single-content-pane">
@@ -592,10 +629,26 @@
         </div>
         <div id="bulk-status"></div>
       </div>
+
+      <div class="scan-only" id="scan-content-pane">
+        <p class="hint" style="margin-bottom:1rem;">Point a camera at any QR code, or upload a photo of one, to
+          see what it contains — a returned library book, a piece of lab equipment, or someone else's printed
+          code. This reads <em>any</em> code, not just ones made by this tool.</p>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn-primary" type="button" id="btn-scan-camera">📷 Scan with camera</button>
+        </div>
+        <div class="drop-zone" id="scan-drop-zone" style="margin-top:0.9rem;">
+          <input type="file" id="scan-file-input" accept="image/*" aria-label="Upload a photo of a QR code">
+          <span class="icon">🖼️</span>
+          <div class="label">Drop a photo of a QR code, or click to browse</div>
+          <div class="sublabel">PNG, JPG, WEBP, or similar — useful when you have a picture rather than a live camera</div>
+        </div>
+        <div id="scan-msg"></div>
+      </div>
     </div>
 
     <!-- Appearance -->
-    <div class="card">
+    <div class="card gen-card">
       <div class="card-title">2 · Appearance</div>
 
       <div class="control-group">
@@ -642,7 +695,7 @@
     </div>
 
     <!-- Center overlay -->
-    <div class="card">
+    <div class="card gen-card">
       <div class="card-title">3 · Center Overlay (optional)</div>
 
       <div class="toggle-group">
@@ -718,6 +771,16 @@
       <div class="card-title">Recently generated</div>
       <div id="recent-list" class="recent-list"></div>
     </div>
+
+    <div class="card scan-only" id="scan-result-card">
+      <div class="card-title">Decoded result</div>
+      <div id="scan-result"><p class="hint" style="margin:0;">Scan a code with the camera, or upload a photo of one, to see its contents here.</p></div>
+    </div>
+
+    <div class="card scan-only">
+      <div class="card-title">Recently scanned (this session)</div>
+      <div id="scanned-list" class="recent-list"></div>
+    </div>
   </div>
 </div>
 
@@ -731,6 +794,20 @@
       <video id="cam-video" autoplay muted playsinline></video>
       <p class="cam-status" id="cam-status">Point the camera at your printed QR code&hellip;</p>
       <button type="button" class="btn-secondary" id="cam-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="cam-overlay" id="scan-cam-overlay" hidden>
+  <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Scan a QR code">
+    <div class="cam-head">
+      <span>Scan a QR code</span>
+      <button type="button" class="cam-close" id="scan-cam-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="cam-body">
+      <video id="scan-cam-video" autoplay muted playsinline></video>
+      <p class="cam-status" id="scan-cam-status">Point the camera at any QR code&hellip;</p>
+      <button type="button" class="btn-secondary" id="scan-cam-cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -795,6 +872,12 @@
     btnBulkPrint: document.getElementById('btn-bulk-print'),
     printAreaBulk: document.getElementById('print-area-bulk'),
     printPageStyle: document.getElementById('print-page-style'),
+    btnScanCamera: document.getElementById('btn-scan-camera'),
+    scanDropZone: document.getElementById('scan-drop-zone'),
+    scanFileInput: document.getElementById('scan-file-input'),
+    scanMsg: document.getElementById('scan-msg'),
+    scanResult: document.getElementById('scan-result'),
+    scannedList: document.getElementById('scanned-list'),
   };
 
   var ctx = els.canvas.getContext('2d');
@@ -1160,10 +1243,12 @@
     r.addEventListener('change', function () { syncOverlayPanes(); scheduleRender(); });
   });
 
-  // ── Single vs Bulk mode ──────────────────────────────────────────────────
+  // ── Single vs Bulk vs Scan mode ──────────────────────────────────────────
   document.querySelectorAll('input[name="app-mode"]').forEach(function (r) {
     r.addEventListener('change', function () {
-      document.body.classList.toggle('mode-bulk', document.getElementById('mode-bulk').checked);
+      var mode = document.querySelector('input[name="app-mode"]:checked').value;
+      document.body.classList.toggle('mode-bulk', mode === 'bulk');
+      document.body.classList.toggle('mode-scan', mode === 'scan');
     });
   });
 
@@ -1848,13 +1933,399 @@
   document.getElementById('cam-close').addEventListener('click', stopCameraScan);
   document.getElementById('cam-cancel').addEventListener('click', stopCameraScan);
   camOverlay.addEventListener('mousedown', function (e) { if (e.target === camOverlay) stopCameraScan(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !camOverlay.hidden) stopCameraScan(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!camOverlay.hidden) stopCameraScan();
+    if (!scanCamOverlay.hidden) stopScanCamera();
+  });
+
+  // ── Scan mode: a standalone "decode any code" feature ────────────────────
+  // Distinct from the verify-your-own-code check above: this reads whatever
+  // QR code is shown to it (camera or an uploaded/dropped photo) and tries
+  // to make sense of the payload, rather than comparing it to a code this
+  // tool just generated. Meant for check-in / collection-tracking flows —
+  // scan a returned book, a piece of lab equipment, someone else's flyer.
+
+  // Reverses escField()'s backslash-escaping of \, ;, comma, and colon —
+  // used for WIFI:/vCard field values once the outer delimiter is stripped.
+  function unescapeField(s) {
+    return String(s || '').replace(/\\(.)/g, '$1');
+  }
+
+  // Reverses icsEscape() (RFC 5545 TEXT escaping: \n, \, , \; ).
+  function icsUnescape(s) {
+    return String(s || '')
+      .replace(/\\n/gi, '\n')
+      .replace(/\\,/g, ',')
+      .replace(/\\;/g, ';')
+      .replace(/\\\\/g, '\\');
+  }
+
+  // Splits `s` on unescaped occurrences of the single-char `delim`, and
+  // unescapes as it goes (a backslash consumes whatever follows it) — same
+  // convention as escField() above, walked manually instead of a lookbehind
+  // regex so it behaves the same on every engine.
+  function splitUnescaped(s, delim) {
+    var out = [], cur = '', i = 0;
+    while (i < s.length) {
+      var ch = s[i];
+      if (ch === '\\' && i + 1 < s.length) { cur += s[i + 1]; i += 2; continue; }
+      if (ch === delim) { out.push(cur); cur = ''; i++; continue; }
+      cur += ch; i++;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  function parseWifi(text) {
+    var body = text.replace(/^WIFI:/i, '');
+    var out = {};
+    splitUnescaped(body, ';').forEach(function (part) {
+      if (!part) return;
+      var idx = part.indexOf(':');
+      if (idx === -1) return;
+      out[part.slice(0, idx)] = part.slice(idx + 1);
+    });
+    return { ssid: out.S || '', password: out.P || '', security: out.T || '', hidden: out.H === 'true' };
+  }
+
+  function parseVCard(text) {
+    var out = {};
+    text.split(/\r?\n/).forEach(function (line) {
+      var idx = line.indexOf(':');
+      if (idx === -1) return;
+      var key = line.slice(0, idx).trim().toUpperCase();
+      var val = unescapeField(line.slice(idx + 1));
+      if (key === 'FN') out.name = val;
+      else if (key === 'N' && !out.name) out.name = val;
+      else if (key === 'ORG') out.org = val;
+      else if (key === 'TEL') out.tel = val;
+      else if (key === 'EMAIL') out.email = val;
+    });
+    return out;
+  }
+
+  function parseTel(text) { return { tel: text.replace(/^tel:/i, '') }; }
+
+  function parseSmsMailto(text, scheme) {
+    var rest = text.slice(scheme.length + 1); // "sms:" / "mailto:"
+    var qIdx = rest.indexOf('?');
+    var head = qIdx === -1 ? rest : rest.slice(0, qIdx);
+    var params = {};
+    if (qIdx !== -1) {
+      rest.slice(qIdx + 1).split('&').forEach(function (pair) {
+        var kv = pair.split('=');
+        if (!kv[0]) return;
+        try { params[kv[0]] = decodeURIComponent(kv[1] || ''); } catch (e) { params[kv[0]] = kv[1] || ''; }
+      });
+    }
+    return { head: head, params: params };
+  }
+
+  function parseSms(text) {
+    var p = parseSmsMailto(text, 'sms');
+    return { tel: p.head, body: p.params.body || '' };
+  }
+
+  function parseMailto(text) {
+    var p = parseSmsMailto(text, 'mailto');
+    return { email: p.head, subject: p.params.subject || '', body: p.params.body || '' };
+  }
+
+  function parseGeo(text) {
+    var rest = text.replace(/^geo:/i, '');
+    var qIdx = rest.indexOf('?');
+    var coords = (qIdx === -1 ? rest : rest.slice(0, qIdx)).split(',');
+    var label = '';
+    if (qIdx !== -1) {
+      var m = /(?:^|&)q=([^&]*)/.exec(rest.slice(qIdx + 1));
+      if (m) {
+        var q = decodeURIComponent(m[1]);
+        var lm = /\(([^)]*)\)\s*$/.exec(q);
+        if (lm) label = lm[1];
+      }
+    }
+    return { lat: (coords[0] || '').trim(), lng: (coords[1] || '').trim(), label: label };
+  }
+
+  function formatIcsDate(v) {
+    if (!v) return '';
+    var m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?/.exec(v);
+    if (!m) return v;
+    if (!m[4]) return m[2] + '/' + m[3] + '/' + m[1] + ' (all day)';
+    var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+    if (isNaN(d.getTime())) return v;
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function parseVEvent(text) {
+    var out = {};
+    text.split(/\r?\n/).forEach(function (line) {
+      var idx = line.indexOf(':');
+      if (idx === -1) return;
+      var key = line.slice(0, idx).split(';')[0].toUpperCase();
+      var val = line.slice(idx + 1);
+      if (key === 'SUMMARY') out.title = icsUnescape(val);
+      else if (key === 'LOCATION') out.location = icsUnescape(val);
+      else if (key === 'DESCRIPTION') out.description = icsUnescape(val);
+      else if (key === 'DTSTART') out.start = formatIcsDate(val);
+      else if (key === 'DTEND') out.end = formatIcsDate(val);
+    });
+    return out;
+  }
+
+  // Recognizes this tool's own typed formats (and a plain URL) so the scan
+  // result can be rendered as labeled fields instead of a raw string dump.
+  function detectScanType(text) {
+    if (/^WIFI:/i.test(text)) return 'wifi';
+    if (/^BEGIN:VCARD/i.test(text)) return 'vcard';
+    if (/^tel:/i.test(text)) return 'tel';
+    if (/^sms(to)?:/i.test(text)) return 'sms';
+    if (/^mailto:/i.test(text)) return 'mailto';
+    if (/^geo:/i.test(text)) return 'geo';
+    if (/BEGIN:VCALENDAR|BEGIN:VEVENT/i.test(text)) return 'vevent';
+    if (/^https?:\/\//i.test(text) || /^www\./i.test(text)) return 'url';
+    return 'text';
+  }
+
+  var SCAN_KIND_LABELS = {
+    wifi: 'Wi-Fi network', vcard: 'Contact card', tel: 'Phone number', sms: 'Text message',
+    mailto: 'Email', geo: 'Location', vevent: 'Calendar event', url: 'Link', text: 'Plain text'
+  };
+
+  // Builds [label, value] rows using the same "typed field" idea as the
+  // generator's own template fields, just in reverse (decode instead of build).
+  function scanFieldRows(kind, text) {
+    switch (kind) {
+      case 'wifi': {
+        var w = parseWifi(text);
+        return [
+          ['Network (SSID)', w.ssid],
+          ['Password', w.password || '(none — open network)'],
+          ['Security', w.security || 'WPA/WPA2'],
+          ['Hidden network', w.hidden ? 'Yes' : 'No']
+        ];
+      }
+      case 'vcard': {
+        var c = parseVCard(text);
+        var rows = [['Name', c.name || '']];
+        if (c.org) rows.push(['Organization', c.org]);
+        if (c.tel) rows.push(['Phone', c.tel]);
+        if (c.email) rows.push(['Email', c.email]);
+        return rows;
+      }
+      case 'tel': return [['Phone number', parseTel(text).tel]];
+      case 'sms': {
+        var s = parseSms(text);
+        var rows2 = [['Phone number', s.tel]];
+        if (s.body) rows2.push(['Message', s.body]);
+        return rows2;
+      }
+      case 'mailto': {
+        var m = parseMailto(text);
+        var rows3 = [['Email', m.email]];
+        if (m.subject) rows3.push(['Subject', m.subject]);
+        if (m.body) rows3.push(['Body', m.body]);
+        return rows3;
+      }
+      case 'geo': {
+        var g = parseGeo(text);
+        var rows4 = [['Latitude', g.lat], ['Longitude', g.lng]];
+        if (g.label) rows4.push(['Place', g.label]);
+        return rows4;
+      }
+      case 'vevent': {
+        var v = parseVEvent(text);
+        var rows5 = [['Event', v.title || '']];
+        if (v.start) rows5.push(['Starts', v.start]);
+        if (v.end) rows5.push(['Ends', v.end]);
+        if (v.location) rows5.push(['Location', v.location]);
+        if (v.description) rows5.push(['Description', v.description]);
+        return rows5;
+      }
+      default: return null;
+    }
+  }
+
+  function renderScanResult(text) {
+    var kind = detectScanType(text);
+    var html = '<div class="scan-result-kind">' + escapeHtml(SCAN_KIND_LABELS[kind] || 'Plain text') + '</div>';
+    if (kind === 'url') {
+      var href = /^https?:\/\//i.test(text) ? text : 'https://' + text;
+      html += '<a class="scan-link" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(text) + '</a>';
+    } else if (kind === 'text') {
+      html += '<div class="scan-plain">' + escapeHtml(text) + '</div>';
+    } else {
+      var rows = scanFieldRows(kind, text) || [];
+      html += '<div class="scan-fields">' + rows.map(function (r) {
+        return '<div class="scan-field"><div class="scan-field-label">' + escapeHtml(r[0]) +
+          '</div><div class="scan-field-value">' + escapeHtml(String(r[1] || '')) + '</div></div>';
+      }).join('') + '</div>';
+    }
+    els.scanResult.innerHTML = html;
+  }
+
+  function showScanMsg(text, kind) { els.scanMsg.textContent = text; els.scanMsg.className = kind || 'error'; }
+  function clearScanMsg() { els.scanMsg.textContent = ''; els.scanMsg.className = ''; }
+
+  // ── Recently scanned (session-only — deliberately separate storage from
+  // the persistent "Recently generated" list above, and cleared when the
+  // tab/session ends, since it's just a scratchpad for a run of check-ins) ──
+  var SCANNED_KEY = 'qr-code-generator-scanned';
+  var SCANNED_MAX = 20;
+
+  function loadScanned() {
+    try {
+      var v = JSON.parse(sessionStorage.getItem(SCANNED_KEY) || '[]');
+      return Array.isArray(v) ? v : [];
+    } catch (e) { return []; }
+  }
+
+  function saveScannedList(list) {
+    try { sessionStorage.setItem(SCANNED_KEY, JSON.stringify(list.slice(0, SCANNED_MAX))); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function addScanned(text, source) {
+    var list = loadScanned();
+    list.unshift({ text: text, kind: detectScanType(text), source: source, ts: Date.now() });
+    saveScannedList(list);
+  }
+
+  function renderScannedList() {
+    var list = loadScanned();
+    if (!list.length) {
+      els.scannedList.innerHTML = '<p class="hint" style="margin:0;">Nothing scanned yet this session — use the camera or upload a photo above.</p>';
+      return;
+    }
+    els.scannedList.innerHTML = list.map(function (r, i) {
+      var icon = r.source === 'camera' ? '📷' : '🖼️';
+      return '<div class="recent-item" data-i="' + i + '" title="Click to view this result again">' +
+        '<div class="recent-main"><div class="recent-label">' + icon + ' ' + escapeHtml(SCAN_KIND_LABELS[r.kind] || 'Plain text') + '</div>' +
+        '<div class="recent-text">' + escapeHtml(r.text) + '</div></div>' +
+        '<button type="button" class="recent-remove" data-i="' + i + '" aria-label="Remove this scanned entry">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.scannedList.addEventListener('click', function (e) {
+    var removeBtn = e.target.closest('.recent-remove');
+    if (removeBtn) {
+      var list = loadScanned();
+      list.splice(Number(removeBtn.dataset.i), 1);
+      saveScannedList(list);
+      renderScannedList();
+      return;
+    }
+    var item = e.target.closest('.recent-item');
+    if (!item) return;
+    var entry = loadScanned()[Number(item.dataset.i)];
+    if (!entry) return;
+    clearScanMsg();
+    renderScanResult(entry.text);
+  });
+
+  function handleScannedText(text, source) {
+    clearScanMsg();
+    renderScanResult(text);
+    addScanned(text, source);
+    renderScannedList();
+  }
+
+  // ── Scan mode: camera input (reuses the QRScan helper the same way the
+  // verify-scan check above does, but accepts whatever it decodes instead
+  // of comparing it to one specific expected string) ───────────────────────
+  var scanCamHandle = null;
+  var scanCamOverlay = document.getElementById('scan-cam-overlay');
+  var scanCamVideo = document.getElementById('scan-cam-video');
+  var scanCamStatus = document.getElementById('scan-cam-status');
+
+  function setScanCamStatus(text, kind) {
+    scanCamStatus.textContent = text;
+    scanCamStatus.className = 'cam-status' + (kind ? ' ' + kind : '');
+  }
+
+  function stopScanCamera() {
+    if (scanCamHandle) { scanCamHandle.stop(); scanCamHandle = null; }
+    scanCamOverlay.hidden = true;
+  }
+
+  els.btnScanCamera.addEventListener('click', function () {
+    scanCamOverlay.hidden = false;
+    setScanCamStatus('Point the camera at any QR code…');
+    scanCamHandle = window.QRScan.scanQRFromCamera(scanCamVideo, {
+      onResult: function (text) {
+        setScanCamStatus('✓ Decoded a code.', 'ok');
+        stopScanCamera();
+        handleScannedText(text, 'camera');
+      },
+      onError: function (err) {
+        setScanCamStatus('Camera unavailable: ' + err.message, 'bad');
+      }
+    });
+  });
+
+  document.getElementById('scan-cam-close').addEventListener('click', stopScanCamera);
+  document.getElementById('scan-cam-cancel').addEventListener('click', stopScanCamera);
+  scanCamOverlay.addEventListener('mousedown', function (e) { if (e.target === scanCamOverlay) stopScanCamera(); });
+
+  // ── Scan mode: uploaded/dropped image (headless-testable alternative to
+  // a live camera, and useful for a teacher who has a photo of a code) ─────
+  function decodeImageFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { reject(new Error('Could not read that image.')); return; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var cctx = canvas.getContext('2d', { willReadFrequently: true });
+          cctx.drawImage(img, 0, 0, w, h);
+          var imgData;
+          try { imgData = cctx.getImageData(0, 0, w, h); }
+          catch (e) { reject(new Error('Could not read that image’s pixel data in this browser.')); return; }
+          var code = window.jsQR(imgData.data, w, h);
+          if (code && code.data) resolve(code.data);
+          else reject(new Error('No QR code found in that image — try a clearer or more square-on photo.'));
+        };
+        img.onerror = function () { reject(new Error('Could not load that file as an image.')); };
+        img.src = reader.result;
+      };
+      reader.onerror = function () { reject(new Error('Could not read that file.')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function handleScanImageFile(file) {
+    if (!file) return;
+    clearScanMsg();
+    decodeImageFile(file).then(function (text) {
+      handleScannedText(text, 'upload');
+    }).catch(function (err) {
+      showScanMsg(err.message);
+    });
+  }
+
+  els.scanDropZone.addEventListener('dragover', function (e) { e.preventDefault(); els.scanDropZone.classList.add('drag-over'); });
+  els.scanDropZone.addEventListener('dragleave', function () { els.scanDropZone.classList.remove('drag-over'); });
+  els.scanDropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    els.scanDropZone.classList.remove('drag-over');
+    handleScanImageFile(e.dataTransfer.files[0]);
+  });
+  els.scanFileInput.addEventListener('change', function () {
+    handleScanImageFile(els.scanFileInput.files[0]);
+    els.scanFileInput.value = '';
+  });
 
   // ── Init ─────────────────────────────────────────────────────────────────
   syncLabels();
   syncOverlayPanes();
   syncBulkSheetUI();
   renderRecent();
+  renderScannedList();
   render();
 
 })();

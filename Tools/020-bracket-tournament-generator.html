@@ -235,6 +235,7 @@
     <select id="bracketSwitch"></select>
     <button class="secondary" id="newBracketBtn">New bracket</button>
     <button class="secondary" id="resetPicksBtn">Reset picks</button>
+    <button class="secondary" id="undoBtn" style="display:none;" title="Reverts the single most recent winner pick, including any bye auto-advance it triggered.">Undo last pick</button>
     <button class="danger" id="deleteBracketBtn">Delete</button>
     <span id="shareBar"></span>
     <button type="button" class="secondary" id="qrBtn">QR code</button>
@@ -277,9 +278,14 @@
     </div>
 
     <div class="row">
-      <div class="checkline">
-        <input type="checkbox" id="seedRandom" checked>
-        <label style="margin:0;" for="seedRandom">Seed randomly (shuffle order)</label>
+      <div>
+        <label for="seedMode">Seeding</label>
+        <p class="hint">Random shuffles the list. As entered keeps your list order (also used for byes). Ranked treats your list as seed 1..N in order and places seeds so the top two can't meet before the final — seed 1 plays the lowest seed in round 1. Round robin only affects the standings table's Seed column.</p>
+        <select id="seedMode">
+          <option value="random" selected>Random (shuffle)</option>
+          <option value="asEntered">As entered (no shuffle)</option>
+          <option value="ranked">Ranked (protect top seeds)</option>
+        </select>
       </div>
       <div style="flex:0 0 auto;">
         <button id="generateBtn">Generate bracket</button>
@@ -349,6 +355,7 @@
     bracketSwitch: document.getElementById('bracketSwitch'),
     newBracketBtn: document.getElementById('newBracketBtn'),
     resetPicksBtn: document.getElementById('resetPicksBtn'),
+    undoBtn: document.getElementById('undoBtn'),
     deleteBracketBtn: document.getElementById('deleteBracketBtn'),
     printBtn: document.getElementById('printBtn'),
     printBlank: document.getElementById('printBlank'),
@@ -358,7 +365,7 @@
     rosterSelect: document.getElementById('rosterSelect'),
     loadRosterBtn: document.getElementById('loadRosterBtn'),
     bracketType: document.getElementById('bracketType'),
-    seedRandom: document.getElementById('seedRandom'),
+    seedMode: document.getElementById('seedMode'),
     generateBtn: document.getElementById('generateBtn'),
     bracketCard: document.getElementById('bracketCard'),
     bracketTitle: document.getElementById('bracketTitle'),
@@ -386,6 +393,27 @@
   };
 
   var state = null; // { name, slots: [ [round0...], [round1...], ... ] }
+
+  /* ---------- undo (single-level) ----------
+     A "mis-tap" undo: before every winner-advance click (elimination pick,
+     round-robin pick, or grand-final pick) captureUndoSnapshot() stashes a
+     full JSON clone of `state` as it stood immediately before that click.
+     Undo just swaps `state` back to that clone and re-renders — since the
+     clone was taken pre-mutation, it already reflects whatever earlier byes
+     had auto-advanced, so restoring it also correctly un-does any cascade
+     the undone click triggered downstream. Deliberately single-level (not a
+     full history stack) per the ask; it's cleared (not chained) on the next
+     pick, on Undo itself, and whenever the bracket is switched/reset/
+     regenerated so Undo never reaches across those boundaries. */
+  var undoSnapshot = null;
+
+  function captureUndoSnapshot() {
+    if (state) undoSnapshot = JSON.stringify(state);
+  }
+
+  function updateUndoButton() {
+    els.undoBtn.style.display = (state && undoSnapshot) ? '' : 'none';
+  }
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -440,25 +468,63 @@
     } catch (e) { /* malformed np_rosters entry — leave the textarea alone */ }
   }
 
-  function buildBracket(name, names, doShuffle) {
-    var ordered = doShuffle ? shuffle(names) : names.slice();
-    var n = ordered.length;
-    var size = nextPowerOf2(n);
-    var numByes = size - n;
-    var numMatches = size / 2;
+  /* Standard "protect the top seeds" bracket placement, recursively built:
+     seed 1 always lands at position 0. At each doubling from size n to 2n,
+     every existing seed s is paired with its mirror (2n + 1 - s) — the
+     textbook NCAA-style seeding order (size 8: 1,8,4,5,2,7,3,6 — i.e.
+     1v8, 4v5, 2v7, 3v6). Returns seedPositions where seedPositions[i] is
+     the seed NUMBER occupying round-0 position i. */
+  function standardSeedOrder(size) {
+    var seeds = [1];
+    while (seeds.length < size) {
+      var n = seeds.length * 2;
+      var next = [];
+      seeds.forEach(function (s) { next.push(s); next.push(n + 1 - s); });
+      seeds = next;
+    }
+    return seeds;
+  }
 
-    /* Spread byes one per match (never two in the same match) — numByes is
-       always < numMatches for any n, since size is the smallest power of 2
-       that is >= n. */
+  /* seedMode: 'random' shuffles; 'ranked' treats `names` as already in seed
+     order (names[0] = seed 1) and places them with standardSeedOrder() so
+     the top seeds can't meet early and byes land on the weakest seeds;
+     anything else ("asEntered") keeps the list order and spreads byes one
+     per match front-to-back, same as this tool's original behavior.
+
+     Note on why ranked seeding never doubles up byes in one match: the
+     final pairing seedPositions produces is always (s, size+1-s) for
+     s = 1..size/2, i.e. one "top half" seed (1..size/2) paired with one
+     "bottom half" seed (size/2+1..size). Since numByes = size - n is always
+     < size/2 (size is the smallest power of 2 >= n, so n > size/2), every
+     bye seed number falls in the bottom half, and the paired top-half seed
+     is always real — so no match ever pairs two byes. */
+  function buildBracket(name, names, seedMode) {
+    var n = names.length;
+    var size = nextPowerOf2(n);
+    var numMatches = size / 2;
     var round0 = new Array(size).fill(null);
-    var idx = 0;
-    for (var m = 0; m < numMatches; m++) {
-      if (m < numByes) {
-        round0[m * 2] = ordered[idx++];
-        round0[m * 2 + 1] = null;
-      } else {
-        round0[m * 2] = ordered[idx++];
-        round0[m * 2 + 1] = ordered[idx++];
+
+    if (seedMode === 'ranked') {
+      var seedPositions = standardSeedOrder(size);
+      for (var p = 0; p < size; p++) {
+        var seedNum = seedPositions[p];
+        round0[p] = (seedNum <= n) ? names[seedNum - 1] : null;
+      }
+    } else {
+      var ordered = (seedMode === 'random') ? shuffle(names) : names.slice();
+      var numByes = size - n;
+      /* Spread byes one per match (never two in the same match) — numByes
+         is always < numMatches for any n, since size is the smallest power
+         of 2 that is >= n. */
+      var idx = 0;
+      for (var m = 0; m < numMatches; m++) {
+        if (m < numByes) {
+          round0[m * 2] = ordered[idx++];
+          round0[m * 2 + 1] = null;
+        } else {
+          round0[m * 2] = ordered[idx++];
+          round0[m * 2 + 1] = ordered[idx++];
+        }
       }
     }
 
@@ -479,7 +545,7 @@
        because two contestants can share a name, so comparing the winner's
        *name* against a slot's name (as round rendering used to) can't tell
        them apart. */
-    return { name: name, slots: rounds, winnerSide: {}, scores: {} };
+    return { name: name, slots: rounds, winnerSide: {}, scores: {}, seedMode: seedMode };
   }
 
   /* Auto-advance byes: if exactly one of a pair is a real name and the
@@ -542,8 +608,8 @@
        LB round B(i=2) [lb3, 2 slots]: that winner at slot 0 + the WB
          Final's loser at slot 1 -> 1 match -> the LB champion.
      This matches the standard published 8-team double-elim bracket. */
-  function buildDoubleElimBracket(name, names, doShuffle) {
-    var base = buildBracket(name, names, doShuffle);
+  function buildDoubleElimBracket(name, names, seedMode) {
+    var base = buildBracket(name, names, seedMode);
     var wbRounds = base.slots;
     var K = wbRounds.length - 1; // number of real WB match-rounds
 
@@ -563,7 +629,8 @@
       loserSlots: loserSlots,
       loserWinnerSide: {},
       grandFinal: { p: [false, false], m1Winner: null, needsReset: false, m2Winner: null, champion: null },
-      scores: {}
+      scores: {},
+      seedMode: seedMode
     };
   }
 
@@ -662,8 +729,14 @@
      matches each, with every real pair meeting exactly once. A `null` on
      either side of a match means the other side sits out that round — it is
      not a result and never touches standings. */
-  function buildRoundRobin(name, names, doShuffle) {
-    var ordered = doShuffle ? shuffle(names) : names.slice();
+  /* Round robin has no bracket-placement concept — every pair meets
+     regardless of seed order — so seedMode only decides (a) whether the
+     entry list is shuffled ('random') or kept as-is ('asEntered'/'ranked'),
+     and (b) for 'ranked', a seeds map (entry order = rank 1..N) carried
+     along purely so the standings table can show an initial Seed column;
+     it never affects the match schedule itself. */
+  function buildRoundRobin(name, names, seedMode) {
+    var ordered = (seedMode === 'random') ? shuffle(names) : names.slice();
     var arr = ordered.slice();
     if (arr.length % 2 === 1) arr.push(null);
     var n = arr.length;
@@ -680,12 +753,19 @@
       rest.unshift(rest.pop());
       arr = [fixed].concat(rest);
     }
-    return { name: name, type: 'roundrobin', players: ordered, rounds: rounds, scores: {} };
+    var out = { name: name, type: 'roundrobin', players: ordered, rounds: rounds, scores: {}, seedMode: seedMode };
+    if (seedMode === 'ranked') {
+      out.seeds = {};
+      names.forEach(function (p, i) { out.seeds[p] = i + 1; });
+    }
+    return out;
   }
 
   function computeStandings(state) {
     var records = {};
-    state.players.forEach(function (p) { records[p] = { name: p, w: 0, l: 0, played: 0 }; });
+    state.players.forEach(function (p) {
+      records[p] = { name: p, w: 0, l: 0, played: 0, seed: (state.seeds && state.seeds[p]) || null };
+    });
     state.rounds.forEach(function (round) {
       round.forEach(function (m) {
         if (m.a == null || m.b == null || m.winner === null) return;
@@ -958,6 +1038,7 @@
      every already-saved single-elim bracket working unchanged. */
   function render() {
     if (!state) return;
+    updateUndoButton();
     els.scheduleBtn.style.display = (state.type === 'double') ? 'none' : '';
     if (state.type === 'double') { renderDouble(); return; }
     if (state.type === 'roundrobin') { renderRoundRobin(); return; }
@@ -1035,6 +1116,7 @@
               slotEl.className = 'slot';
               slotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx) {
                 return function () {
+                  captureUndoSnapshot();
                   state.slots[roundIdx + 1][matchIdx] = name;
                   state.winnerSide[(roundIdx + 1) + '_' + matchIdx] = sourceIdx;
                   render();
@@ -1226,6 +1308,7 @@
               slotEl.className = 'slot';
               slotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx) {
                 return function () {
+                  captureUndoSnapshot();
                   state.slots[roundIdx + 1][matchIdx] = name;
                   state.winnerSide[(roundIdx + 1) + '_' + matchIdx] = sourceIdx;
                   render();
@@ -1317,6 +1400,7 @@
               lslotEl.className = 'slot';
               lslotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx, target) {
                 return function () {
+                  captureUndoSnapshot();
                   state.loserSlots[roundIdx + 1][target] = name;
                   state.loserWinnerSide[roundIdx + '_' + matchIdx] = sourceIdx;
                   render();
@@ -1387,6 +1471,7 @@
           slotEl.className = 'slot';
           slotEl.addEventListener('click', (function (game, sideIdx) {
             return function () {
+              captureUndoSnapshot();
               if (game === 0) {
                 gf.m1Winner = sideIdx;
                 if (sideIdx === 1) gf.needsReset = true; // LB side won game 1 — bracket reset
@@ -1624,14 +1709,18 @@
 
   function standingsTable(state) {
     var standings = computeStandings(state);
+    var hasSeeds = !!state.seeds;
     var table = document.createElement('table');
     table.className = 'standings-table';
     var leaderWins = standings.length ? standings[0].w : 0;
     var complete = roundRobinComplete(state);
-    var thead = '<thead><tr><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Played</th></tr></thead>';
+    var thead = '<thead><tr>' + (hasSeeds ? '<th class="num">Seed</th>' : '') +
+      '<th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Played</th></tr></thead>';
     var tbody = '<tbody>' + standings.map(function (row) {
       var isLeader = complete && row.w === leaderWins && leaderWins > 0;
-      return '<tr' + (isLeader ? ' class="leader"' : '') + '><td>' + escapeHtml(row.name) + '</td><td class="num">' +
+      return '<tr' + (isLeader ? ' class="leader"' : '') + '>' +
+        (hasSeeds ? '<td class="num">' + (row.seed || '') + '</td>' : '') +
+        '<td>' + escapeHtml(row.name) + '</td><td class="num">' +
         row.w + '</td><td class="num">' + row.l + '</td><td class="num">' + row.played + '</td></tr>';
     }).join('') + '</tbody>';
     table.innerHTML = thead + tbody;
@@ -1698,6 +1787,7 @@
               slotEl.className = 'slot';
               slotEl.addEventListener('click', (function (roundIdx, matchIdx, sideIdx) {
                 return function () {
+                  captureUndoSnapshot();
                   state.rounds[roundIdx][matchIdx].winner = sideIdx;
                   render();
                 };
@@ -1824,6 +1914,7 @@
     var loaded = BracketStore.loadBracket(name);
     if (!loaded) return;
     state = loaded;
+    undoSnapshot = null; // undo never reaches across a bracket switch
     if (state.type === 'roundrobin') {
       if (!state.scores) state.scores = {};
     } else {
@@ -1841,6 +1932,7 @@
 
   function showSetup() {
     state = null;
+    undoSnapshot = null;
     els.setupCard.style.display = '';
     els.bracketCard.style.display = 'none';
     els.toolbar.style.display = BracketStore.listBrackets().length ? '' : 'none';
@@ -1848,14 +1940,15 @@
     els.bracketName.value = '';
     els.contestants.value = '';
     els.bracketType.value = 'single';
+    els.seedMode.value = 'random';
     populateRosterSelect();
     refreshSwitcher();
   }
 
-  function buildForType(type, name, names, doShuffle) {
-    if (type === 'double') return buildDoubleElimBracket(name, names, doShuffle);
-    if (type === 'roundrobin') return buildRoundRobin(name, names, doShuffle);
-    return buildBracket(name, names, doShuffle);
+  function buildForType(type, name, names, seedMode) {
+    if (type === 'double') return buildDoubleElimBracket(name, names, seedMode);
+    if (type === 'roundrobin') return buildRoundRobin(name, names, seedMode);
+    return buildBracket(name, names, seedMode);
   }
 
   els.generateBtn.addEventListener('click', function () {
@@ -1865,7 +1958,8 @@
       return;
     }
     var name = els.bracketName.value.trim() || ('Bracket ' + new Date().toISOString().slice(0, 10));
-    state = buildForType(els.bracketType.value, name, names, els.seedRandom.checked);
+    state = buildForType(els.bracketType.value, name, names, els.seedMode.value);
+    undoSnapshot = null;
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -1883,19 +1977,31 @@
   els.resetPicksBtn.addEventListener('click', function () {
     if (!state) return;
     if (!confirm('Clear all picks in "' + state.name + '" and start the bracket over with the same contestants?')) return;
+    undoSnapshot = null; // a full reset starts a fresh undo history too
     if (state.type === 'roundrobin') {
       var schedule = state.schedule;
-      state = buildRoundRobin(state.name, state.players, false);
+      var seeds = state.seeds;
+      state = buildRoundRobin(state.name, state.players, 'asEntered');
       if (schedule) state.schedule = schedule;
+      if (seeds) state.seeds = seeds;
     } else {
       var round0 = state.slots[0];
       var entrants = round0.filter(function (n) { return n != null; });
-      var rebuilt = buildForType(state.type, state.name, entrants, false);
+      var rebuilt = buildForType(state.type, state.name, entrants, 'asEntered');
       // preserve original (unshuffled) slot order, including existing byes
       rebuilt.slots[0] = round0.slice();
+      rebuilt.seedMode = state.seedMode;
       if (state.schedule) rebuilt.schedule = state.schedule;
       state = rebuilt;
     }
+    render();
+  });
+
+  els.undoBtn.addEventListener('click', function () {
+    if (!state || !undoSnapshot) return;
+    var restored = JSON.parse(undoSnapshot);
+    undoSnapshot = null; // single-level undo — nothing further back is kept
+    state = restored;
     render();
   });
 
@@ -1996,6 +2102,7 @@
       return false;
     }
     var name = uniqueBracketName(decoded.name);
+    undoSnapshot = null; // a freshly-imported bracket starts its own undo history
     if (decoded.type === 'roundrobin') {
       state = {
         name: name,
@@ -2004,6 +2111,8 @@
         rounds: decoded.rounds,
         scores: (decoded.scores && typeof decoded.scores === 'object') ? decoded.scores : {}
       };
+      if (decoded.seeds && typeof decoded.seeds === 'object') state.seeds = decoded.seeds;
+      if (typeof decoded.seedMode === 'string') state.seedMode = decoded.seedMode;
     } else {
       state = {
         name: name,
@@ -2022,6 +2131,9 @@
     }
     if (decoded.schedule && typeof decoded.schedule === 'object' && state.type !== 'double') {
       state.schedule = decoded.schedule;
+    }
+    if (state.type !== 'roundrobin' && typeof decoded.seedMode === 'string') {
+      state.seedMode = decoded.seedMode;
     }
     BracketStore.saveBracket(name, state);
     render();

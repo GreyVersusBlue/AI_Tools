@@ -87,6 +87,18 @@
     padding: .5rem .6rem; min-height: 3.4rem; resize: vertical;
   }
   .scaff-card .fill-hint { color: var(--muted); font-size: .74rem; margin: .3rem 0 0; }
+  .fill-row { display: flex; gap: .4rem; align-items: flex-start; }
+  .fill-row textarea { flex: 1 1 auto; }
+  .speak-btn {
+    flex: 0 0 auto; white-space: nowrap; font-size: .78rem; padding: .4rem .55rem;
+    align-self: flex-start;
+  }
+  .speak-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .frame-label {
+    display: block; color: var(--muted); font-size: .72rem; font-style: italic;
+    margin: .5rem 0 .25rem;
+  }
+  .scaff-card textarea.frame-input { border-style: dashed; background: #fdfcf8; }
 
   .pairs-box { border: 1px solid var(--line); border-radius: 9px; padding: .8rem .9rem; margin-bottom: 1.4rem; background: var(--paper); }
   .pairs-box h3 { margin: 0 0 .5rem; font-size: .9rem; }
@@ -141,6 +153,7 @@
     .print-only .h-scaff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem .9rem; }
     .print-only .h-scaff-card { border: 1px solid #999; border-radius: 4px; padding: .4rem .55rem; break-inside: avoid; page-break-inside: avoid; }
     .print-only .h-scaff-card .h-prompt { font-weight: 700; font-size: .82rem; margin-bottom: .3rem; }
+    .print-only .h-scaff-card .h-frame { font-style: italic; font-size: .8rem; color: #333; margin: 0 0 .3rem; white-space: pre-wrap; }
     .print-only .h-scaff-card .h-fill { font-size: .88rem; min-height: 1.3rem; border-bottom: 1px solid #999; white-space: pre-wrap; }
     .print-only .h-scaff-card .h-fill.blank { min-height: 1.6rem; }
     .print-only .h-useful { margin-top: .8rem; border-top: 1px dashed #999; padding-top: .5rem; }
@@ -179,6 +192,8 @@
     <button type="button" class="secondary small" id="addClassBtn">+ New class&hellip;</button>
     <button type="button" class="secondary small" id="renameClassBtn">Rename</button>
     <button type="button" class="secondary small" id="deleteClassBtn">Delete</button>
+    <label style="margin:0 0 0 .8rem;font-weight:600;font-size:.85rem;" for="ttsLangSelect">Pronunciation:</label>
+    <select id="ttsLangSelect" aria-label="Speech synthesis language for this class"></select>
     <div class="spacer"></div>
     <p class="hint" style="margin:0;color:var(--muted);font-size:.8rem;">Scaffolding fill-ins are saved separately per class, so switching classes won&rsquo;t overwrite another class&rsquo;s answers.</p>
   </div>
@@ -264,6 +279,8 @@
   var CUSTOM_KEY = 'gvb-roleplay:custom';
   var ROSTER_KEY = 'gvb-roleplay:roster';
   var USEFUL_FILLS_KEY = 'gvb-roleplay:usefulFills';
+  var FRAMES_KEY = 'gvb-roleplay:frames';
+  var TTS_LANG_KEY = 'gvb-roleplay:ttsLang';
   var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   // Generic conversational tools that help in ANY scenario, not just the
@@ -542,11 +559,83 @@
     return arr;
   }
 
+  // framesByClass: { className: { scenarioId: [text, ...] } }, same shape as
+  // fillsByClass — one optional teacher-authored sentence frame per vocabulary
+  // fill-in prompt (e.g. "Je voudrais ___, s'il vous plaît."), off/empty by
+  // default so existing saved classes render exactly as before.
+  var framesByClass = safeParse(localStorage.getItem(FRAMES_KEY), {});
+  if (!framesByClass || typeof framesByClass !== 'object' || Array.isArray(framesByClass)) framesByClass = {};
+  function saveFrames() { localStorage.setItem(FRAMES_KEY, JSON.stringify(framesByClass)); }
+  function framesFor(id) {
+    var scenario = SCENARIO_BY_ID[id];
+    var bucket = framesByClass[currentClass];
+    if (!bucket) bucket = framesByClass[currentClass] = {};
+    var arr = bucket[id];
+    if (!Array.isArray(arr)) arr = [];
+    while (arr.length < scenario.phrases.length) arr.push('');
+    bucket[id] = arr;
+    return arr;
+  }
+
+  // ttsLangByClass: { className: 'es-ES' }  — one speechSynthesis BCP-47
+  // language code saved per class, alongside the other class-scoped state, so
+  // "Speak" buttons use whatever language the teacher is teaching that class.
+  var ttsLangByClass = safeParse(localStorage.getItem(TTS_LANG_KEY), {});
+  if (!ttsLangByClass || typeof ttsLangByClass !== 'object' || Array.isArray(ttsLangByClass)) ttsLangByClass = {};
+  function saveTtsLang() { localStorage.setItem(TTS_LANG_KEY, JSON.stringify(ttsLangByClass)); }
+  function ttsLangFor() { return ttsLangByClass[currentClass] || 'es-ES'; }
+
+  var TTS_LANGS = [
+    { code: 'es-ES', label: 'Spanish' }, { code: 'fr-FR', label: 'French' },
+    { code: 'de-DE', label: 'German' }, { code: 'it-IT', label: 'Italian' },
+    { code: 'pt-PT', label: 'Portuguese' }, { code: 'la', label: 'Latin' },
+    { code: 'en-US', label: 'English' }, { code: 'zh-CN', label: 'Mandarin Chinese' },
+    { code: 'ja-JP', label: 'Japanese' }, { code: 'ko-KR', label: 'Korean' },
+    { code: 'ru-RU', label: 'Russian' }, { code: 'ar-SA', label: 'Arabic' },
+    { code: 'hi-IN', label: 'Hindi' }, { code: 'nl-NL', label: 'Dutch' },
+    { code: 'el-GR', label: 'Greek' }, { code: 'he-IL', label: 'Hebrew' },
+    { code: 'vi-VN', label: 'Vietnamese' }, { code: 'pl-PL', label: 'Polish' },
+    { code: 'tr-TR', label: 'Turkish' }, { code: 'sv-SE', label: 'Swedish' }
+  ];
+  var ttsSupported = 'speechSynthesis' in window;
+
+  function speak(text) {
+    if (!ttsSupported || !text) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = ttsLangFor();
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* no-op if speech synthesis is unavailable/blocked */ }
+  }
+
+  function speakBtnHtml(kind, idx) {
+    return '<button type="button" class="secondary small speak-btn" data-kind="' + kind + '" data-idx="' + idx + '"' +
+      (ttsSupported ? '' : ' disabled') + ' title="Speak this aloud" aria-label="Speak this aloud">&#128266; Speak</button>';
+  }
+
+  function populateTtsLangSelect() {
+    if (els.ttsLangSelect.options.length) return;
+    TTS_LANGS.forEach(function (l) {
+      var opt = document.createElement('option');
+      opt.value = l.code; opt.textContent = l.label;
+      els.ttsLangSelect.appendChild(opt);
+    });
+    if (!ttsSupported) {
+      els.ttsLangSelect.disabled = true;
+      els.ttsLangSelect.title = 'Speech synthesis is not available in this browser';
+    }
+  }
+
+  function syncTtsLangSelect() {
+    els.ttsLangSelect.value = ttsLangFor();
+  }
+
   var els = {};
   ['categorySelect', 'levelSelect', 'scenarioSelect', 'prevBtn', 'nextBtn', 'shuffleBtn', 'printCurrentBtn',
    'printRoleCardsBtn',
    'toggleSetBtn', 'setPanel', 'setList', 'setSelectAllBtn', 'setSelectNoneBtn', 'printSetBtn',
-   'classSelect', 'addClassBtn', 'renameClassBtn', 'deleteClassBtn',
+   'classSelect', 'addClassBtn', 'renameClassBtn', 'deleteClassBtn', 'ttsLangSelect',
    'rosterHubSelect', 'rosterHubLoadBtn', 'rosterStatus', 'pairUpBtn',
    'toggleAddBtn', 'addPanel', 'addTitle', 'addCategory', 'addRoleA', 'addRoleB', 'addSetup', 'addPhrases',
    'saveCustomBtn', 'cancelCustomBtn', 'customList',
@@ -654,6 +743,7 @@
     }
     var s = SCENARIO_BY_ID[currentId];
     var arr = fillsFor(s.id);
+    var frameArr = framesFor(s.id);
 
     var flipped = !!roleFlips[s.id];
     var pairs = classPairs[currentClass];
@@ -682,7 +772,15 @@
         s.phrases.map(function (p, i) {
           return '<div class="scaff-card">' +
             '<div class="prompt">' + escapeHtml(p) + '</div>' +
-            '<textarea class="fill-input" data-idx="' + i + '" placeholder="Type the target-language words/phrases here&hellip;">' + escapeHtml(arr[i]) + '</textarea>' +
+            '<div class="fill-row">' +
+              '<textarea class="fill-input" data-idx="' + i + '" placeholder="Type the target-language words/phrases here&hellip;">' + escapeHtml(arr[i]) + '</textarea>' +
+              speakBtnHtml('fill', i) +
+            '</div>' +
+            '<label class="frame-label" for="frame-' + i + '">Sentence frame (optional) &mdash; a full sentence with ___ for the blank</label>' +
+            '<div class="fill-row">' +
+              '<textarea class="frame-input" id="frame-' + i + '" data-idx="' + i + '" placeholder="e.g. Je voudrais ___, s&rsquo;il vous pla&icirc;t.">' + escapeHtml(frameArr[i]) + '</textarea>' +
+              speakBtnHtml('frame', i) +
+            '</div>' +
           '</div>';
         }).join('') +
       '</div>' +
@@ -691,7 +789,10 @@
         USEFUL_PHRASES.map(function (p, i) {
           return '<div class="scaff-card">' +
             '<div class="prompt">' + escapeHtml(p) + '</div>' +
-            '<textarea class="useful-fill-input" data-idx="' + i + '" placeholder="Type the target-language words/phrases here&hellip;">' + escapeHtml(uArr[i]) + '</textarea>' +
+            '<div class="fill-row">' +
+              '<textarea class="useful-fill-input" data-idx="' + i + '" placeholder="Type the target-language words/phrases here&hellip;">' + escapeHtml(uArr[i]) + '</textarea>' +
+              speakBtnHtml('useful', i) +
+            '</div>' +
           '</div>';
         }).join('') +
       '</div>';
@@ -720,6 +821,24 @@
         saveUsefulFills();
       });
     });
+    Array.prototype.forEach.call(els.stage.querySelectorAll('.frame-input'), function (ta) {
+      ta.addEventListener('input', function () {
+        var idx = Number(ta.getAttribute('data-idx'));
+        framesFor(s.id)[idx] = ta.value;
+        saveFrames();
+      });
+    });
+    Array.prototype.forEach.call(els.stage.querySelectorAll('.speak-btn'), function (btn) {
+      btn.addEventListener('click', function () {
+        var kind = btn.getAttribute('data-kind');
+        var idx = Number(btn.getAttribute('data-idx'));
+        var text = '';
+        if (kind === 'fill') text = fillsFor(s.id)[idx] || '';
+        else if (kind === 'frame') text = framesFor(s.id)[idx] || '';
+        else if (kind === 'useful') text = usefulFillsFor()[idx] || '';
+        speak(text);
+      });
+    });
   }
 
   function pairsBoxHtml(pairs, s) {
@@ -739,6 +858,7 @@
     buildClassSelect();
     buildScenarioSelect();
     renderRosterStatus();
+    syncTtsLangSelect();
     renderStage();
     if (els.setPanel.style.display !== 'none') renderSetList();
     if (els.addPanel.style.display !== 'none') renderCustomList();
@@ -860,6 +980,8 @@
     rebuildScenarioIndex();
     classes.forEach(function (c) { if (fillsByClass[c]) delete fillsByClass[c][id]; });
     saveFills();
+    classes.forEach(function (c) { if (framesByClass[c]) delete framesByClass[c][id]; });
+    saveFrames();
     if (currentId === id) {
       var list = filteredList();
       setCurrent(list.length ? list[0].id : null);
@@ -884,6 +1006,7 @@
 
   function handoutHtml(s) {
     var arr = fillsFor(s.id);
+    var frameArr = framesFor(s.id);
     return '<div class="handout">' +
       '<div class="h-cat">' + escapeHtml(categoryLabel(s.category)) + '</div>' +
       '<div class="h-title">' + escapeHtml(s.title) + '</div>' +
@@ -895,7 +1018,9 @@
       '<div class="h-scaff-grid">' +
         s.phrases.map(function (p, i) {
           var text = arr[i] || '';
+          var frameText = frameArr[i] || '';
           return '<div class="h-scaff-card"><div class="h-prompt">' + escapeHtml(p) + '</div>' +
+            (frameText ? '<div class="h-frame">' + escapeHtml(frameText) + '</div>' : '') +
             '<div class="h-fill' + (text ? '' : ' blank') + '">' + escapeHtml(text) + '</div></div>';
         }).join('') +
       '</div>' +
@@ -909,6 +1034,7 @@
   // both partners need.
   function roleCardHtml(s, studentName, roleIdx, partnerName, isHelper) {
     var arr = fillsFor(s.id);
+    var frameArr = framesFor(s.id);
     var uArr = usefulFillsFor();
     var roleLine = isHelper
       ? '<div class="h-role">' + escapeHtml(studentName) + ': Helper / observer for this pair</div>'
@@ -924,7 +1050,9 @@
       '<div class="h-scaff-grid">' +
         s.phrases.map(function (p, i) {
           var text = arr[i] || '';
+          var frameText = frameArr[i] || '';
           return '<div class="h-scaff-card"><div class="h-prompt">' + escapeHtml(p) + '</div>' +
+            (frameText ? '<div class="h-frame">' + escapeHtml(frameText) + '</div>' : '') +
             '<div class="h-fill' + (text ? '' : ' blank') + '">' + escapeHtml(text) + '</div></div>';
         }).join('') +
       '</div>' +
@@ -984,7 +1112,13 @@
     currentClass = els.classSelect.value;
     saveCurrentClass();
     renderRosterStatus();
+    syncTtsLangSelect();
     renderStage();
+  });
+
+  els.ttsLangSelect.addEventListener('change', function () {
+    ttsLangByClass[currentClass] = els.ttsLangSelect.value;
+    saveTtsLang();
   });
 
   els.addClassBtn.addEventListener('click', function () {
@@ -1012,6 +1146,8 @@
     delete fillsByClass[currentClass];
     if (rosterByClass[currentClass]) { rosterByClass[name] = rosterByClass[currentClass]; delete rosterByClass[currentClass]; }
     if (usefulFillsByClass[currentClass]) { usefulFillsByClass[name] = usefulFillsByClass[currentClass]; delete usefulFillsByClass[currentClass]; }
+    if (framesByClass[currentClass]) { framesByClass[name] = framesByClass[currentClass]; delete framesByClass[currentClass]; }
+    if (ttsLangByClass[currentClass]) { ttsLangByClass[name] = ttsLangByClass[currentClass]; delete ttsLangByClass[currentClass]; }
     if (classPairs[currentClass]) { classPairs[name] = classPairs[currentClass]; delete classPairs[currentClass]; }
     classes = classes.map(function (c) { return c === currentClass ? name : c; });
     currentClass = name;
@@ -1019,6 +1155,8 @@
     saveFills();
     saveRosters();
     saveUsefulFills();
+    saveFrames();
+    saveTtsLang();
     renderAll();
   });
 
@@ -1028,6 +1166,8 @@
     delete fillsByClass[currentClass];
     delete rosterByClass[currentClass];
     delete usefulFillsByClass[currentClass];
+    delete framesByClass[currentClass];
+    delete ttsLangByClass[currentClass];
     delete classPairs[currentClass];
     classes = classes.filter(function (c) { return c !== currentClass; });
     currentClass = classes[0];
@@ -1035,6 +1175,8 @@
     saveFills();
     saveRosters();
     saveUsefulFills();
+    saveFrames();
+    saveTtsLang();
     renderAll();
   });
 
@@ -1154,6 +1296,7 @@
     if (list.length) setCurrent(list[Math.floor(Math.random() * list.length)].id);
   }
   populateRosterHubSelect();
+  populateTtsLangSelect();
   renderAll();
 })();
 </script>
