@@ -24,7 +24,8 @@ Nothing on this list right now — every row that was here has shipped. Add a ne
 
 | Idea | What it would do |
 |---|---|
-| Story Elements / Plot Diagram Builder | Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference. |
+
+Nothing on this list right now — every row that was here has shipped. Add a new idea here to start the list over.
 
 ## Science
 
