@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v24';
+const CACHE_VERSION = 'v25';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -99,6 +99,7 @@ const PRECACHE_URLS = [
   "Tools/gallery-walk-qr.html",
   "Tools/gallery-walk-qr/lib/qrcode.js",
   "Tools/grade-distribution-visualizer.html",
+  "Tools/grammar-mad-libs-generator.html",
   "Tools/graph-paper-generator.html",
   "Tools/graph-paper-generator/gpg-render.js",
   "Tools/graph-paper-generator/gpg-store.js",

@@ -73,6 +73,7 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Math "Find the Mistake" Warm-Up Generator | `Tools/math-find-the-mistake-generator.html` | A worked math solution with one deliberate error, revealed on a projector display or printed as a worksheet with an explanation-and-answer key. |
 | Fraction–Decimal–Percent Conversion Drill Generator | `Tools/fraction-decimal-percent-drill-generator.html` | Randomized conversion rows across three difficulty tiers, one form given and the other two left blank, with a matching answer key. |
 | Book Tasting Menu Generator | `Tools/book-tasting-menu-generator.html` | Add books with title, author, genre, blurb, and an optional cover image, then print a two-column menu or fold-in-half table tents. |
+| Grammar Mad Libs Generator | `Tools/grammar-mad-libs-generator.html` | Four built-in story templates (or write your own with {tag} placeholders), a "fill randomly" demo reveal, and a printable worksheet with a word-bank suggestion box per blank type. |
 
 ## Using these
 
