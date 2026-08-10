@@ -215,7 +215,7 @@
         <div class="btn-row" style="margin-top:0;">
           <button class="secondary" id="addStationBtn" type="button">+ Add station</button>
         </div>
-        <div class="hint">Each station's accepted answer unlocks the next one. Matching ignores case and extra spaces. Leave "Next station" on Auto for a straight linear chain, or point it anywhere for a branching path.</div>
+        <div class="hint">Each station's accepted answer unlocks the next one. Matching ignores case and extra spaces. Leave "Next station" on Auto for a straight linear chain, or point it anywhere for a branching path. Pick a puzzle type per station &mdash; plain text, a digit lock, or a Caesar cipher &mdash; charge points for revealing a hint, and optionally award a letter toward a final combine-the-letters station.</div>
       </div>
 
       <div class="card">
@@ -312,7 +312,7 @@
 <div class="print-only ref-sheet" id="printAnswerArea">
   <h2 id="answerSheetTitle">Escape Room Answer Key</h2>
   <table>
-    <thead><tr><th>#</th><th>Clue</th><th>Accepted answers</th><th>Hint</th><th>Next on success</th></tr></thead>
+    <thead><tr><th>#</th><th>Clue</th><th>Accepted answers / details</th><th>Hint</th><th>Letter</th><th>Next on success</th></tr></thead>
     <tbody id="printAnswerBody"></tbody>
   </table>
 </div>
@@ -394,13 +394,13 @@
   }
 
   function ensureAtLeastOneStation() {
-    if (!state.stations.length) state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '' });
+    if (!state.stations.length) state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0 });
   }
 
   function newSet(name) {
     state = {
       name: name, roomId: makeRoomId(),
-      stations: [{ clue: '', answers: '', hint: '', next: null, image: '' }],
+      stations: [{ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0 }],
       cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
       countdownEnabled: false, countdownMinutes: 20,
       storyIntro: '',
@@ -452,6 +452,7 @@
 
   function renderStations() {
     els.stationsList.innerHTML = state.stations.map(function (s, i) {
+      var type = s.type || 'text';
       return '<div class="station-card" data-idx="' + i + '">' +
         '<div class="station-card-head">' +
           '<span class="s-num">Station ' + (i + 1) + '</span>' +
@@ -460,6 +461,16 @@
             '<button type="button" class="icon-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
             '<button type="button" class="icon-btn danger" data-remove title="Remove station">&#10005;</button>' +
           '</div>' +
+        '</div>' +
+        '<div class="row2">' +
+          '<div class="field-row"><label>Puzzle type</label>' +
+            '<select class="f-type">' +
+              '<option value="text"' + (type === 'text' ? ' selected' : '') + '>Text answer</option>' +
+              '<option value="digits"' + (type === 'digits' ? ' selected' : '') + '>Digit lock (numeric code)</option>' +
+              '<option value="cipher"' + (type === 'cipher' ? ' selected' : '') + '>Caesar cipher</option>' +
+            '</select></div>' +
+          '<div class="field-row"><label>Letter to award (optional)</label>' +
+            '<input type="text" class="f-award-letter" maxlength="1" style="text-transform:uppercase;" value="' + escapeAttr(s.awardLetter || '') + '" placeholder="e.g. R — feeds a final meta-puzzle"></div>' +
         '</div>' +
         '<div class="field-row"><label>Clue (shown to students)</label>' +
           '<textarea class="f-clue" placeholder="e.g. I have keys but open no locks. What am I?">' + escapeHtml(s.clue) + '</textarea></div>' +
@@ -470,11 +481,26 @@
               : '<input type="file" class="f-image" accept="image/*">') +
           '</div>' +
           '<div class="hint" style="margin:-.4rem 0 .6rem;">Shrunk automatically before it\'s saved. Adding a photo makes every station\'s QR code bigger — if a code stops scanning, remove the image or lower error correction.</div></div>' +
-        '<div class="field-row"><label>Accepted answers (comma-separated)</label>' +
-          '<input type="text" class="f-answers" value="' + escapeAttr(s.answers) + '" placeholder="e.g. keyboard, a keyboard"></div>' +
+        (type === 'cipher'
+          ? '<div class="field-row"><label>Secret message to encode (this becomes the answer)</label>' +
+              '<input type="text" class="f-cipher-plain" value="' + escapeAttr(s.cipherPlain || '') + '" placeholder="e.g. the vault is open"></div>' +
+            '<div class="row2">' +
+              '<div class="field-row"><label>Shift (1&ndash;25)</label>' +
+                '<input type="number" class="f-cipher-shift" min="1" max="25" value="' + (s.cipherShift || 3) + '"></div>' +
+              '<div class="field-row"><label>&nbsp;</label>' +
+                '<button type="button" class="secondary" data-randomize-shift style="width:auto;">&#127922; Randomize shift</button></div>' +
+            '</div>' +
+            '<div class="hint" style="margin:-.4rem 0 .6rem;">Students see the message below encoded with this shift and must decode it &mdash; the accepted answer is the plain message above.</div>'
+          : '<div class="field-row"><label>' + (type === 'digits' ? 'Correct code (digits; comma-separated for more than one)' : 'Accepted answers (comma-separated)') + '</label>' +
+              '<input type="text" class="f-answers" value="' + escapeAttr(s.answers) + '" placeholder="' + (type === 'digits' ? 'e.g. 4821' : 'e.g. keyboard, a keyboard') + '"></div>'
+        ) +
         '<div class="row2">' +
           '<div class="field-row"><label>Hint (optional)</label>' +
-            '<input type="text" class="f-hint" value="' + escapeAttr(s.hint) + '" placeholder="Shown after 2 misses"></div>' +
+            '<div style="display:flex;gap:.4rem;align-items:center;">' +
+              '<input type="text" class="f-hint" style="flex:1;margin-bottom:.6rem;" value="' + escapeAttr(s.hint) + '" placeholder="' + (Number(s.hintCost) > 0 ? 'Shown when spent' : 'Free — shown after 2 misses') + '">' +
+              '<input type="number" class="f-hint-cost" min="0" step="5" style="width:4.4rem;margin-bottom:.6rem;" value="' + (Number(s.hintCost) || 0) + '" title="Points deducted when a student reveals this hint (0 = free)">' +
+              '<span style="font-size:.68rem;color:var(--muted);margin-bottom:.6rem;">pts</span>' +
+            '</div></div>' +
           '<div class="field-row"><label>Next station on success</label>' +
             '<select class="f-next">' + nextOptionsHtml(i, s.next) + '</select></div>' +
         '</div>' +
@@ -489,6 +515,10 @@
     if (e.target.classList.contains('f-clue')) state.stations[i].clue = e.target.value;
     else if (e.target.classList.contains('f-answers')) state.stations[i].answers = e.target.value;
     else if (e.target.classList.contains('f-hint')) state.stations[i].hint = e.target.value;
+    else if (e.target.classList.contains('f-hint-cost')) state.stations[i].hintCost = Math.max(0, parseInt(e.target.value, 10) || 0);
+    else if (e.target.classList.contains('f-award-letter')) state.stations[i].awardLetter = e.target.value.slice(0, 1).toUpperCase();
+    else if (e.target.classList.contains('f-cipher-plain')) state.stations[i].cipherPlain = e.target.value;
+    else if (e.target.classList.contains('f-cipher-shift')) state.stations[i].cipherShift = clampShift(e.target.value);
     else return;
     save();
     scheduleRender();
@@ -501,6 +531,13 @@
     if (e.target.classList.contains('f-next')) {
       var v = e.target.value;
       state.stations[i].next = (v === '') ? null : (v === 'end' ? 'end' : parseInt(v, 10));
+      save();
+      scheduleRender();
+    } else if (e.target.classList.contains('f-type')) {
+      var newType = e.target.value;
+      state.stations[i].type = newType;
+      if (newType === 'cipher' && !state.stations[i].cipherShift) state.stations[i].cipherShift = clampShift(1 + Math.floor(Math.random() * 25));
+      renderStations();
       save();
       scheduleRender();
     }
@@ -557,8 +594,14 @@
     var moveBtn = e.target.closest('[data-move]');
     var removeBtn = e.target.closest('[data-remove]');
     var removeImageBtn = e.target.closest('[data-remove-image]');
+    var randomizeShiftBtn = e.target.closest('[data-randomize-shift]');
     if (removeImageBtn) {
       state.stations[i].image = '';
+      renderStations();
+      save();
+      scheduleRender();
+    } else if (randomizeShiftBtn) {
+      state.stations[i].cipherShift = clampShift(1 + Math.floor(Math.random() * 25));
       renderStations();
       save();
       scheduleRender();
@@ -587,7 +630,7 @@
   });
 
   els.addStationBtn.addEventListener('click', function () {
-    state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '' });
+    state.stations.push({ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0 });
     renderStations();
     save();
     scheduleRender();
@@ -598,10 +641,54 @@
     return String(raw || '').split(',').map(function (a) { return a.trim(); }).filter(function (a) { return a.length; });
   }
 
+  // Caesar-shift helper shared by the answer-key preview/print and by
+  // lock.html's student-facing display (kept as a duplicate, self-contained
+  // copy there — this toolkit vendors rather than shares runtime code
+  // between the builder and the student page).
+  function caesarEncode(text, shift) {
+    var sh = ((shift % 26) + 26) % 26;
+    return String(text || '').replace(/[a-zA-Z]/g, function (ch) {
+      var base = ch === ch.toUpperCase() ? 65 : 97;
+      return String.fromCharCode((ch.charCodeAt(0) - base + sh) % 26 + base);
+    });
+  }
+
+  // A shift of 0 would leave the message unencoded, so it's treated as
+  // invalid input and bumped to a usable default rather than silently
+  // shipping a plaintext "cipher".
+  function clampShift(raw) {
+    var x = parseInt(raw, 10);
+    if (!isFinite(x) || isNaN(x)) x = 3;
+    x = ((x % 26) + 26) % 26;
+    if (x === 0) x = 13;
+    return x;
+  }
+
   function validStations() {
     return state.stations
-      .map(function (s, i) { return { idx: i, clue: (s.clue || '').trim(), answers: splitAnswers(s.answers), hint: (s.hint || '').trim(), next: s.next, image: s.image || '' }; })
+      .map(function (s, i) {
+        var type = s.type || 'text';
+        var answers = type === 'cipher' ? splitAnswers(s.cipherPlain) : splitAnswers(s.answers);
+        return {
+          idx: i, clue: (s.clue || '').trim(), answers: answers, hint: (s.hint || '').trim(),
+          hintCost: Math.max(0, parseInt(s.hintCost, 10) || 0),
+          next: s.next, image: s.image || '',
+          type: type, cipherShift: clampShift(s.cipherShift),
+          awardLetter: (s.awardLetter || '').trim().slice(0, 1).toUpperCase(),
+        };
+      })
       .filter(function (s) { return s.clue.length > 0 && s.answers.length > 0; });
+  }
+
+  // For the answer-key views: what a teacher needs to see to verify the
+  // puzzle is solvable, per puzzle type.
+  function typeDetail(s) {
+    if (s.type === 'cipher') {
+      var cipherText = s.answers[0] ? caesarEncode(s.answers[0], s.cipherShift) : '';
+      return 'Cipher (shift ' + s.cipherShift + ') — students see “' + cipherText + '”, decodes to: ' + s.answers.join(', ');
+    }
+    if (s.type === 'digits') return 'Digit lock — code: ' + s.answers.join(', ');
+    return s.answers.join(', ');
   }
 
   // Build the room payload actually encoded into the link/QR data. Indices
@@ -619,6 +706,10 @@
         else if (typeof s.next === 'number' && idxMap.hasOwnProperty(s.next)) next = idxMap[s.next];
         var out = { clue: s.clue, answers: s.answers, hint: s.hint || '', next: next };
         if (s.image) out.image = s.image; // omitted unless set, keeps links the same size without one
+        if (s.type && s.type !== 'text') out.type = s.type;
+        if (s.type === 'cipher') out.cipherShift = s.cipherShift;
+        if (s.hintCost) out.hintCost = s.hintCost;
+        if (s.awardLetter) out.awardLetter = s.awardLetter;
         return out;
       }),
     };
@@ -726,7 +817,8 @@
         var qr = buildQR(link, ecLevel);
         var card = document.createElement('div');
         card.className = 'preview-card';
-        card.innerHTML = '<canvas></canvas><div class="meta"><div class="badge">STATION ' + (n + 1) + '</div>' +
+        var typeTag = s.type && s.type !== 'text' ? ' · ' + s.type.toUpperCase() : '';
+        card.innerHTML = '<canvas></canvas><div class="meta"><div class="badge">STATION ' + (n + 1) + typeTag + '</div>' +
           '<div class="p-name">' + escapeHtml(s.clue.slice(0, 60) || 'Station ' + (n + 1)) + (s.clue.length > 60 ? '…' : '') + '</div>' +
           '<div class="p-content">' + escapeHtml(link) + '</div></div>';
         els.cardsPreview.appendChild(card);
@@ -752,12 +844,16 @@
     return target === -1 ? 'Auto (next in order)' : ('Station ' + (target + 1));
   }
 
+  function answerRowHtml(s, n, valid) {
+    var hintCell = s.hint ? escapeHtml(s.hint) + (s.hintCost ? ' (&minus;' + s.hintCost + ' pts)' : '') : '—';
+    return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.clue) + '</td><td>' + escapeHtml(typeDetail(s)) + '</td><td>' + hintCell +
+      '</td><td>' + (s.awardLetter ? escapeHtml(s.awardLetter) : '—') + '</td><td>' + escapeHtml(nextLabel(s, valid)) + '</td></tr>';
+  }
+
   function renderAnswerPreview(valid) {
     if (!valid.length) { els.answerPreview.innerHTML = '<p class="empty-hint">Nothing to show yet.</p>'; return; }
-    els.answerPreview.innerHTML = '<table class="ref-list"><thead><tr><th>#</th><th>Clue</th><th>Accepted answers</th><th>Hint</th><th>Next</th></tr></thead><tbody>' +
-      valid.map(function (s, n) {
-        return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.clue) + '</td><td>' + escapeHtml(s.answers.join(', ')) + '</td><td>' + escapeHtml(s.hint || '—') + '</td><td>' + escapeHtml(nextLabel(s, valid)) + '</td></tr>';
-      }).join('') + '</tbody></table>';
+    els.answerPreview.innerHTML = '<table class="ref-list"><thead><tr><th>#</th><th>Clue</th><th>Accepted answers / details</th><th>Hint</th><th>Letter</th><th>Next</th></tr></thead><tbody>' +
+      valid.map(function (s, n) { return answerRowHtml(s, n, valid); }).join('') + '</tbody></table>';
   }
 
   function buildPrintCodes() {
@@ -772,7 +868,8 @@
       var card = document.createElement('div');
       card.className = 'p-card';
       var label = s.clue.length > 40 ? s.clue.slice(0, 40) + '…' : s.clue;
-      card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + '</div>' : '') +
+      var typeTag = s.type === 'cipher' ? ' · Cipher' : (s.type === 'digits' ? ' · Digit Lock' : '');
+      card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + typeTag + '</div>' : '') +
         '<div class="p-name">' + escapeHtml(state.name || 'Escape Room') + '</div><canvas></canvas>';
       els.printQrGrid.appendChild(card);
       try {
@@ -785,9 +882,7 @@
     var valid = validStations();
     if (!valid.length) return;
     els.answerSheetTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Answer Key';
-    els.printAnswerBody.innerHTML = valid.map(function (s, n) {
-      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.clue) + '</td><td>' + escapeHtml(s.answers.join(', ')) + '</td><td>' + escapeHtml(s.hint || '—') + '</td><td>' + escapeHtml(nextLabel(s, valid)) + '</td></tr>';
-    }).join('');
+    els.printAnswerBody.innerHTML = valid.map(function (s, n) { return answerRowHtml(s, n, valid); }).join('');
   }
 
   function buildPrintCover() {

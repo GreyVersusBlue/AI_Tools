@@ -73,6 +73,24 @@
   .home-link { display: block; text-align: center; font-size: .76rem; color: var(--muted); text-decoration: none; margin-top: 1.2rem; }
   .home-link:hover { color: var(--accent-2); }
   .stars { text-align: center; letter-spacing: .3rem; font-size: 1.4rem; margin-bottom: .6rem; }
+  .digit-row { display: flex; justify-content: center; gap: .5rem; margin-bottom: .9rem; }
+  .digit-box {
+    width: 2.6rem; height: 3rem; text-align: center; font-size: 1.6rem; font-weight: 700;
+    font-family: Consolas, monospace; border: 2px solid var(--line-strong); border-radius: 8px;
+    background: #fff; color: var(--ink);
+  }
+  .digit-box:focus { outline: none; border-color: var(--accent-2); }
+  .cipher-box {
+    font-family: Consolas, monospace; letter-spacing: .14em; font-size: 1.25rem; text-align: center;
+    text-transform: uppercase; background: #f4f3ee; border: 1px dashed var(--line-strong); border-radius: 8px;
+    padding: .9rem 1rem; margin: -.5rem 0 1.1rem; overflow-wrap: anywhere;
+  }
+  .letters-strip { text-align: center; font-size: .85rem; color: var(--muted); margin-bottom: .8rem; }
+  .letters-strip .letter-box {
+    display: inline-block; min-width: 1.4rem; padding: 0 .1rem; font-weight: 700; color: var(--accent);
+    border-bottom: 2px solid var(--line-strong); margin: 0 .12rem;
+  }
+  .letters-strip .letter-box.filled { border-color: var(--accent-2); }
   .timer-banner {
     text-align: center; font-family: Consolas, monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: .03em;
     background: var(--card); border: 1px solid var(--line); border-radius: 10px;
@@ -131,6 +149,18 @@
 
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+  // Matching copy of escape-room-builder.html's caesarEncode — see that
+  // file's comment for why it's duplicated rather than shared.
+  function caesarEncode(text, shift) {
+    var sh = ((shift % 26) + 26) % 26;
+    return String(text || '').replace(/[a-zA-Z]/g, function (ch) {
+      var base = ch === ch.toUpperCase() ? 65 : 97;
+      return String.fromCharCode((ch.charCodeAt(0) - base + sh) % 26 + base);
+    });
+  }
+
+  var BASE_POINTS = 100;
+
   var card = document.getElementById('card');
 
   var rParam = getParam('r');
@@ -169,7 +199,7 @@
   var PROGRESS_KEY = 'escape-room-progress:' + roomId;
 
   function loadProgress() {
-    var fresh = { current: startHere ? scannedStation : 0, misses: {} };
+    var fresh = { current: startHere ? scannedStation : 0, misses: {}, solved: {}, hintsUsed: {}, letters: {} };
     try {
       var raw = localStorage.getItem(PROGRESS_KEY);
       if (!raw) return fresh;
@@ -177,6 +207,9 @@
       if (!p || typeof p !== 'object') return fresh;
       if (typeof p.current === 'undefined') p.current = fresh.current;
       if (!p.misses || typeof p.misses !== 'object') p.misses = {};
+      if (!p.solved || typeof p.solved !== 'object') p.solved = {};
+      if (!p.hintsUsed || typeof p.hintsUsed !== 'object') p.hintsUsed = {};
+      if (!p.letters || typeof p.letters !== 'object') p.letters = {};
       return p;
     } catch (e) { return fresh; }
   }
@@ -185,6 +218,30 @@
   }
 
   var progress = loadProgress();
+
+  // Scoring only surfaces at all when some station actually charges points
+  // for its hint — a plain riddle-chain room stays exactly as before.
+  var hasScoring = room.stations.some(function (st) { return (st.hintCost || 0) > 0; });
+  function computeScore() {
+    var score = 0;
+    Object.keys(progress.solved || {}).forEach(function () { score += BASE_POINTS; });
+    Object.keys(progress.hintsUsed || {}).forEach(function (idx) {
+      var st = room.stations[idx];
+      if (st) score -= (st.hintCost || 0);
+    });
+    return score;
+  }
+
+  function lettersStripHtml() {
+    var lettered = [];
+    room.stations.forEach(function (st, i) { if (st.awardLetter) lettered.push(i); });
+    if (!lettered.length) return '';
+    var cells = lettered.map(function (i) {
+      var got = progress.letters && progress.letters[i];
+      return '<span class="letter-box' + (got ? ' filled' : '') + '">' + (got ? escapeHtml(got) : '_') + '</span>';
+    }).join('');
+    return '<div class="letters-strip">Letters collected: ' + cells + '</div>';
+  }
 
   // ── R61: "Connect to teacher monitor" — one WebRTC data-channel pairing
   // per browser session (see monitor.html on the teacher's side). Lives in
@@ -222,6 +279,7 @@
         station: done ? room.stations.length : progress.current,
         total: room.stations.length,
         done: done,
+        score: hasScoring ? computeScore() : null,
       }));
     } catch (e) { /* channel not ready — next render()'s call will retry */ }
   }
@@ -353,14 +411,16 @@
       '<div class="stars">⭐ 🏆 ⭐</div>' +
       '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
       '<div class="done-icon">🎉</div>' +
-      '<p class="done-text"><strong>You escaped!</strong><br>Every station solved. Great work.</p>' +
+      '<p class="done-text"><strong>You escaped!</strong><br>Every station solved. Great work.' +
+        (hasScoring ? '<br>Final score: ' + computeScore() : '') + '</p>' +
+      lettersStripHtml() +
       '<button type="button" class="secondary" id="resetBtn">Restart this room</button>' +
       monitorBoxHtml();
     wireMonitorBox();
     sendMonitorUpdate();
     document.getElementById('resetBtn').addEventListener('click', function () {
       if (!confirm('Reset your progress on this escape room and start over from Station 1?')) return;
-      progress = { current: 0, misses: {} };
+      progress = { current: 0, misses: {}, solved: {}, hintsUsed: {}, letters: {} };
       saveProgress(progress);
       setupTimer();
       render();
@@ -369,22 +429,46 @@
 
   function renderClue(idx) {
     var station = room.stations[idx];
+    var type = station.type || 'text';
     var misses = progress.misses[idx] || 0;
-    var showHintNow = !!station.hint && misses >= 2;
+    var cost = station.hintCost || 0;
+    // A costed hint is never given away free on misses — the whole point of
+    // a cost is that the student chooses to spend it. A free hint (cost 0)
+    // keeps the original behavior: it auto-reveals after two wrong tries.
+    var hintUsedPersisted = !!(progress.hintsUsed && progress.hintsUsed[idx]);
+    var showHintNow = !!station.hint && (cost > 0 ? hintUsedPersisted : (misses >= 2 || hintUsedPersisted));
+
+    var answerFieldHtml;
+    if (type === 'digits') {
+      var digitLen = 4;
+      if (station.answers && station.answers[0]) digitLen = Math.max(1, Math.min(10, String(station.answers[0]).length));
+      var boxesHtml = '';
+      for (var di = 0; di < digitLen; di++) {
+        boxesHtml += '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="digit-box" data-i="' + di + '">';
+      }
+      answerFieldHtml = '<label>Enter the code</label><div class="digit-row" id="digitRow">' + boxesHtml + '</div><button type="submit">Unlock</button>';
+    } else {
+      answerFieldHtml =
+        '<label for="answerInput">Your answer</label>' +
+        '<input type="text" id="answerInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type the answer to unlock the next clue">' +
+        '<button type="submit">Unlock</button>';
+    }
+    var cipherHtml = '';
+    if (type === 'cipher' && station.answers && station.answers[0]) {
+      cipherHtml = '<div class="cipher-box">' + escapeHtml(caesarEncode(station.answers[0], station.cipherShift || 3)) + '</div>';
+    }
 
     card.innerHTML =
       '<p class="room-title">' + escapeHtml(room.title || 'Escape Room') + '</p>' +
-      '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + '</span>' +
+      '<span class="station-badge">Station ' + (idx + 1) + ' of ' + room.stations.length + (hasScoring ? ' · Score: ' + computeScore() : '') + '</span>' +
+      lettersStripHtml() +
       (station.image ? '<img class="clue-image" src="' + escapeHtml(station.image) + '" alt="Clue image">' : '') +
       '<div class="clue-box">' + escapeHtml(station.clue || '(no clue text)') + '</div>' +
-      '<form id="answerForm" autocomplete="off">' +
-        '<label for="answerInput">Your answer</label>' +
-        '<input type="text" id="answerInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type the answer to unlock the next clue">' +
-        '<button type="submit">Unlock</button>' +
-      '</form>' +
+      cipherHtml +
+      '<form id="answerForm" autocomplete="off">' + answerFieldHtml + '</form>' +
       '<div class="feedback" id="feedback"></div>' +
       (station.hint ? '<div class="hint-box' + (showHintNow ? ' show' : '') + '" id="hintBox">💡 Hint: ' + escapeHtml(station.hint) + '</div>' : '') +
-      (station.hint && !showHintNow ? '<button type="button" class="secondary" id="hintBtn">Show a hint</button>' : '') +
+      (station.hint && !showHintNow ? '<button type="button" class="secondary" id="hintBtn">' + escapeHtml('Show a hint' + (cost > 0 ? ' (−' + cost + ' pts)' : '')) + '</button>' : '') +
       '<p class="progress-note">Progress is saved on this device — re-scanning this code won’t lose your place.</p>' +
       monitorBoxHtml();
 
@@ -393,26 +477,58 @@
 
     var form = document.getElementById('answerForm');
     var input = document.getElementById('answerInput');
+    var digitBoxes = type === 'digits' ? Array.prototype.slice.call(document.querySelectorAll('.digit-box')) : null;
     var feedback = document.getElementById('feedback');
     var hintBtn = document.getElementById('hintBtn');
     var hintBox = document.getElementById('hintBox');
+
+    if (digitBoxes) {
+      digitBoxes.forEach(function (box, i) {
+        box.addEventListener('input', function () {
+          box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+          if (box.value && i < digitBoxes.length - 1) digitBoxes[i + 1].focus();
+        });
+        box.addEventListener('keydown', function (e) {
+          if (e.key === 'Backspace' && !box.value && i > 0) digitBoxes[i - 1].focus();
+        });
+      });
+      digitBoxes[0].focus();
+    }
 
     if (hintBtn) {
       hintBtn.addEventListener('click', function () {
         hintBox.classList.add('show');
         hintBtn.style.display = 'none';
+        if (cost > 0 && !hintUsedPersisted) {
+          progress.hintsUsed = progress.hintsUsed || {};
+          progress.hintsUsed[idx] = true;
+          saveProgress(progress);
+          sendMonitorUpdate();
+          var badge = document.querySelector('.station-badge');
+          if (badge && hasScoring) badge.textContent = 'Station ' + (idx + 1) + ' of ' + room.stations.length + ' · Score: ' + computeScore();
+        }
       });
     }
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var given = normalizeAnswer(input.value);
+      var given = digitBoxes
+        ? normalizeAnswer(digitBoxes.map(function (b) { return b.value || ''; }).join(''))
+        : normalizeAnswer(input.value);
       var accepted = (station.answers || []).map(normalizeAnswer);
       var correct = given.length > 0 && accepted.indexOf(given) !== -1;
 
       if (correct) {
+        progress.solved = progress.solved || {};
+        progress.solved[idx] = true;
+        var letterMsg = '';
+        if (station.awardLetter) {
+          progress.letters = progress.letters || {};
+          progress.letters[idx] = station.awardLetter;
+          letterMsg = ' You earned the letter “' + station.awardLetter + '”.';
+        }
         feedback.className = 'feedback show good';
-        feedback.textContent = '✓ Correct! Unlocking the next clue…';
+        feedback.textContent = '✓ Correct!' + letterMsg + ' Unlocking the next clue…';
         var nextIdx = (typeof station.next === 'number') ? station.next : idx + 1;
         if (nextIdx >= room.stations.length || nextIdx === null) {
           progress.current = 'done';
@@ -426,11 +542,12 @@
         saveProgress(progress);
         feedback.className = 'feedback show bad';
         feedback.textContent = 'Not quite — try again.';
-        if (station.hint && progress.misses[idx] >= 2 && hintBox && !hintBox.classList.contains('show')) {
+        if (cost === 0 && station.hint && progress.misses[idx] >= 2 && hintBox && !hintBox.classList.contains('show')) {
           hintBox.classList.add('show');
           if (hintBtn) hintBtn.style.display = 'none';
         }
-        input.select();
+        if (digitBoxes) { digitBoxes.forEach(function (b) { b.value = ''; }); digitBoxes[0].focus(); }
+        else input.select();
       }
     });
   }
