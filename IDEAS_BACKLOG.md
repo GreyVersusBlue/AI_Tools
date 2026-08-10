@@ -19,7 +19,6 @@ Reminder: coming soon means not right now.
 | Idea | What it would do |
 |---|---|
 | Virtual Manipulatives Board | A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever's on the board. |
-| Unit Conversion Reference Chart Builder | A printable customary/metric conversion chart, customizable by unit set — the measurement-focused cousin of the Formula Reference Sheet Builder. |
 | Math "Find the Mistake" Warm-Up Generator | Worked-out problems with one intentional error each, for students to spot and correct — reveal the fix on the projector or print as a worksheet. |
 | Fraction–Decimal–Percent Conversion Drill Generator | A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key. |
 
