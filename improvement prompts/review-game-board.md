@@ -9,8 +9,53 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 5 (PR #TBD): four Quick Wins shipped, one of which
+replaced an existing mechanic rather than adding to it.**
+
+- **Done — Undo the last score change (P11).** A generic undo stack (not
+  scoped to just one clue) records every score change — the scoreboard's
+  manual +/−10 buttons and every clue award — with enough context (team
+  index, delta, and the clue it came from if any) to reverse it: the score
+  moves back and, if the change came from awarding a clue, that clue goes
+  back to unused so it can be replayed. The stack clears on board switch,
+  new board, reset game, or team removal (an index-shift that would make old
+  entries wrong) rather than trying to survive across those.
+- **Done — Wager mechanics for the Daily Double.** This **replaced** the old
+  fixed "always doubles the points" behavior rather than sitting alongside
+  it: opening a Daily Double clue now shows a small wager panel (pick which
+  team found it, type a wager) before the question itself appears, and the
+  award row becomes a single Correct/Incorrect pair for just that team and
+  wager amount — a real strategic decision instead of an automatic ×2. A
+  final-question wager round (also mentioned in this Quick Win) was **not**
+  built — it's a genuinely separate game phase (single question, every team
+  wagers simultaneously) and didn't fit this round's scope next to the
+  Daily Double rework.
+- **Done — Keyboard control (P10).** While a clue is open: <kbd>Space</kbd>
+  reveals the answer (or confirms a Daily Double wager panel first, if one's
+  showing), digits <kbd>1</kbd>-<kbd>9</kbd> click the Nth award-row button
+  (works for both the normal per-team row and the Daily Double
+  Correct/Incorrect pair), <kbd>Esc</kbd> closes via whichever close action
+  is currently valid. A hint line next to the scoreboard documents the keys
+  in place, rather than a hidden shortcut nobody discovers.
+- **Done — Print the whole board as a paper quiz (Major Feature, taken
+  early).** A new "Print practice quiz" button next to the existing "Print
+  answer key" produces a blank, numbered, one-per-question sheet
+  (category + point value + question, with two blank lines) grouped in
+  board order — for an absent student or a study guide once the game's done.
+
+Verified with a headless Chromium smoke test covering both award paths: a
+Daily Double open → wager entered → keyboard-space reveal → keyboard-1
+"Correct" award → undo-button reverts the exact score and re-opens the clue;
+and a normal clue → keyboard reveal → keyboard award → Esc-close on a
+different clue confirmed it left the cell unused. No console errors.
+
+**Where a future round should pick up:** the single highest-leverage idea in
+this tool's Moonshot — **one question bank, played six ways** (bracket,
+whiteboard every-team-answers, teacher-tapped buzz order, and feeding
+questions to the escape room / scavenger hunt tools) — is entirely
+untouched. So is "load a roster to build teams" (P2), images/audio in a
+clue, and difficulty-aware/pass-along-on-wrong-answer scoring. The final
+wager round from this round's Quick Win is also still open — see above.
 
 ## What it does today
 
@@ -29,13 +74,17 @@ ambitious and are **not** scoped to a single session.
 - **Team names and a bigger scoreboard.** The scoreboard is the thing thirty
   students stare at; it should be large, persistent, and animated when it
   changes.
-- **Undo the last score change** (P11) — a mis-tap in front of a competitive
+- **Done —** **Undo the last score change** (P11) — a mis-tap in front of a competitive
   class is a genuine classroom management problem.
-- **Wager mechanics for the Daily Double**, and a final-question wager round.
+- **Done — Daily Double wager shipped; final-question wager round not built.**
+  **Wager mechanics for the Daily Double**, and a final-question wager round.
   The wager is where the format's strategy lives and it's currently absent.
+  *(Daily Double now prompts for team + wager before showing the question,
+  replacing the old fixed ×2. A separate final-round wager phase is a bigger,
+  distinct feature — see Status.)*
 - **Images and audio in a clue.** A map, a diagram, a primary source, a
   pronunciation — a text-only clue limits the tool to recall questions.
-- **Keyboard control** (P10) — number keys to award, space to reveal, Esc to
+- **Done —** **Keyboard control** (P10) — number keys to award, space to reveal, Esc to
   close. Running a game by mouse from a laptop is slow.
 - **Load a roster to build teams** (P2) rather than typing team names.
 - **Projector styling** (P1). This is a projector-first tool with neither
@@ -62,8 +111,10 @@ ambitious and are **not** scoped to a single session.
   answer without any student hardware.
 - **Difficulty-aware point values**, and a mode where a wrong answer passes
   the question to the next team.
-- **Print the whole board as a paper quiz** with an answer key, for absent
-  students or as a study guide.
+- **Done —** **Print the whole board as a paper quiz** with an answer key, for absent
+  students or as a study guide. *(Taken early this round — see Status. Uses
+  the existing "Print answer key" for the key half; the new "Print practice
+  quiz" is the blank half.)*
 
 ## Moonshot / North Star
 

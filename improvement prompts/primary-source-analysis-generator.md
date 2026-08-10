@@ -9,10 +9,46 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session. This is a
-social-studies-teacher's tool written by a social studies teacher, and it has
-the most room to grow of any content tool on the site.
+**2026-08-10 — Round 5 (PR #TBD): four Quick Wins shipped, plus one
+pre-existing bug fixed.** Found that **APPARTS and 5 W's frameworks already
+existed** in the source (this file was stale on that point) — this round
+added two more: **HIPP** (Historical Context / Intended Audience / Purpose /
+Point of View — the AP/IB sourcing framework) and **See-Think-Wonder** (a
+visible-thinking routine for younger students or a first look at a visual
+source), bringing the total to six frameworks.
+
+- **Done — Source citation block.** Three new optional fields (author/
+  creator, date created, where it's from) print as a single italic citation
+  line under the source box — modeling real citation practice, which was
+  entirely absent before.
+- **Done — Line numbering.** A checkbox switches the pasted source text from
+  a plain block to a numbered-gutter layout (one number per line), so a
+  class can reference "line 12" when discussing a document together.
+- **Done — Vocabulary / glossary box.** A new textarea (same tolerant
+  `word: definition` parsing used elsewhere on the site, e.g.
+  `novel-study-circles-manager.html`'s vocab log) renders a small glossary
+  box under the source.
+- **Fixed — stale framework whitelist.** `isPlausibleWorksheet()` (the import
+  validator) only accepted `framework === 'optic' || 'soapstone'`, silently
+  rejecting valid exports using the already-shipped APPARTS/5 W's frameworks
+  (and would have rejected HIPP/STW too). Now checks membership in the live
+  `FRAMEWORKS` object instead of a hardcoded pair.
+
+Verified with a headless Chromium smoke test: citation line, numbered-line
+source text, and vocab box all render correctly together; all six framework
+radio options present; HIPP and See-Think-Wonder both render their real step
+labels and questions when selected. No console errors.
+
+**Where a future round should pick up:** the DBQ / multi-source packet idea
+(Major Features below) is the single biggest lever left in this tool and is
+untouched — this round deliberately stayed inside the single-source shape
+rather than take on that larger restructuring. Reading-support variant,
+image cropping/zoom, a source library, and projected analysis mode are also
+all still open.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session. This is a social-studies-teacher's tool written by a social studies
+teacher, and it has the most room to grow of any content tool on the site.
 
 ## What it does today
 
@@ -29,18 +65,19 @@ the most room to grow of any content tool on the site.
 
 ## Quick Wins
 
-- **More frameworks.** APPARTS, HIPP/HAPP, the NARA document analysis
-  worksheets, "See–Think–Wonder", and a Corroboration/Sourcing/Contextualization
-  set for historical thinking skills. Each is a small data addition and each
-  serves a different grade level or purpose.
-- **Source citation block** — author, date, origin, where you found it —
+- **Partly done.** **More frameworks.** APPARTS and 5 W's already existed (this file
+  was stale — they were built in an earlier round not reflected here); HIPP
+  and See-Think-Wonder shipped this round. Still open: the NARA document
+  analysis worksheets and a dedicated Corroboration/Sourcing/Contextualization
+  set for historical thinking skills.
+- **Done —** **Source citation block** — author, date, origin, where you found it —
   printed on the worksheet. Modelling citation is half the point of the
   exercise and it's currently absent.
-- **Vocabulary / glossary box** for a hard text, since primary sources are
+- **Done —** **Vocabulary / glossary box** for a hard text, since primary sources are
   usually above grade reading level.
 - **Reading-support version**: the same source with a summary sidebar, a
   simplified paraphrase field, or line numbers for text references.
-- **Line numbering** on pasted text — the single most useful formatting
+- **Done —** **Line numbering** on pasted text — the single most useful formatting
   feature for discussing a document with a class.
 - **Image cropping and zoom** for the uploaded source, plus a
   "detail callout" that prints an enlarged region next to the whole image.

@@ -9,8 +9,51 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 5 (PR #TBD): three Quick Wins shipped.** `state.roles`
+changed shape from `[string, ...]` to `[{name, prompts}, ...]`; a
+`normalizeRoles()` helper migrates old string-shaped roles (including ones
+inside a JSON import) on load, so existing saved projects and old exports
+keep working.
+
+- **Done — Role sheets with the role's actual job on them.** Each of the six
+  default roles (Discussion Director, Summarizer, Word Wizard, Passage
+  Picker, Connector, Illustrator) ships with 3-4 starter discussion prompts;
+  the role editor now has a prompts textarea per role (one per line) instead
+  of just a name field. A teacher-added role starts with an empty prompt
+  list rather than a guess.
+- **Done — Discussion question bank per role**, via the same prompts field
+  above — this and the "role sheets" item were really one feature once
+  written, so both shipped together as a new **"Print role cards"** output:
+  one card per (student, role) from the latest meeting, with that role's
+  prompts printed as a numbered list and the group's checkpoint underneath.
+  "Group Member" doesn't get a card (no job to print).
+- **Done — Reading schedule generator.** A new "Reading Schedule Planner"
+  card: total chapters/pages, a start and end date, and which weekdays the
+  class meets → an evenly-paced per-meeting chapter target. Clicking a
+  schedule row drops that date and "Through Chapter N" checkpoint straight
+  into the Log a Meeting form below. Explicitly does **not** know about
+  school holidays or early-release days (calendar awareness is P7, deferred);
+  the UI says so directly rather than silently being wrong.
+- **Done — Individual accountability sheet**, as a "Print reading logs"
+  output: one half-sheet-ish card per student (grouped by reading circle)
+  with the next reading due (pulled from the schedule planner, or the latest
+  meeting's checkpoint if no schedule exists) and blank fields for a
+  question, a passage to discuss, and something noticed/predicted.
+
+Verified with a headless Chromium smoke test: split a roster into groups,
+confirmed 6 role-prompt textareas render with non-empty defaults, generated
+and printed a schedule (rows clickable, prefill confirmed), logged a
+meeting, and printed both new outputs (role cards contained an `<ol>` of
+prompts; accountability sheets rendered one per student) — no console
+errors.
+
+**Where a future round should pick up:** multiple books at once, discussion
+assessment, book/reading-log integration with `ssr-log-tracker.html`, and
+reusable-across-the-year templates are all still open (Major Features
+below). The vocabulary-handoff-to-other-tools idea (P7) is also untouched.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session.
 
 ## What it does today
 
@@ -26,17 +69,21 @@ ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **Role sheets with the role's actual job on them.** Discussion Director,
+- **Done —** **Role sheets with the role's actual job on them.** Discussion Director,
   Word Wizard, Connector, Illustrator — each needs its prompts printed, not
   just its name. This is the difference between roles working and roles being
-  a label.
-- **Discussion question bank per role**, so the Discussion Director has five
-  starter questions rather than a blank page.
-- **Reading schedule generator.** Given a book length and an end date, produce
+  a label. *(Shipped as "Print role cards.")*
+- **Done —** **Discussion question bank per role**, so the Discussion Director has five
+  starter questions rather than a blank page. *(Same prompts field powers
+  both this and the role cards above.)*
+- **Done —** **Reading schedule generator.** Given a book length and an end date, produce
   the per-meeting chapter targets — the tool logs checkpoints but doesn't help
   plan them, and calendar awareness (P7) would make it account for holidays.
-- **Individual accountability sheet** — a per-student half sheet for the
+  *(Weekday picker instead of full calendar awareness; still doesn't know
+  about holidays — see Status.)*
+- **Done —** **Individual accountability sheet** — a per-student half sheet for the
   reading between meetings, which is where reading circles usually fall apart.
+  *(Shipped as "Print reading logs.")*
 - **Vocabulary handoff** (P7). The vocabulary log should export directly to
   `vocab-flashcard-generator.html` and `review-game-board.html` rather than
   ending as a printed list.

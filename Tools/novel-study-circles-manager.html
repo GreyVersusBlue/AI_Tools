@@ -59,11 +59,24 @@
   .toggle-group input[type="radio"] { display: none; }
   .toggle-group input[type="radio"]:checked + label { background: var(--accent); color: #fff; }
 
-  .role-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
-  .role-row input[type="text"] { margin-bottom: 0; flex: 1; }
+  .role-row { border: 1px solid var(--line); border-radius: 8px; padding: .55rem .6rem; margin-bottom: .5rem; background: #fdfdfb; }
+  .role-row .role-name-row { display: flex; gap: .5rem; align-items: center; }
+  .role-row .role-name-row input[type="text"] { margin-bottom: 0; flex: 1; font-weight: 700; }
   .role-row .x { flex-shrink: 0; background: #fff; border: 1px solid var(--line-strong); color: var(--muted); width: 2rem; height: 2rem; border-radius: 6px; font-size: .85rem; padding: 0; }
   .role-row .x:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .role-row .role-prompts { margin: .4rem 0 0; min-height: 4.5rem; font-family: inherit; font-size: .8rem; }
+  .role-row .role-prompts-label { font-size: .72rem; font-weight: 600; color: var(--muted); margin: 0 0 .2rem; text-transform: uppercase; letter-spacing: .03em; }
   .role-list { margin-bottom: .6rem; }
+
+  .schedule-table-wrap { overflow-x: auto; }
+  table.schedule-table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-bottom: .6rem; }
+  table.schedule-table th, table.schedule-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--line); }
+  table.schedule-table th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; }
+  table.schedule-table tr.schedule-row { cursor: pointer; }
+  table.schedule-table tr.schedule-row:hover { background: #f1f0ea; }
+  .weekday-checks { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: .8rem; }
+  .weekday-checks label { display: flex; align-items: center; gap: .3rem; font-weight: 500; margin: 0; font-size: .8rem; }
+  .weekday-checks input { width: auto; margin: 0; }
 
   .group-edit-row { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem; margin-bottom: .6rem; background: #fdfdfb; }
   .group-edit-row input[type="text"] { margin-bottom: .4rem; font-weight: 700; }
@@ -134,6 +147,22 @@
   .print-only .print-meeting { margin-bottom: 1.6rem; }
   .print-only .print-meeting + .print-meeting { border-top: 1px solid #999; padding-top: 1rem; }
   .print-only .print-meeting h3 { font-size: 1.02rem; margin: 0 0 .6rem; color: #000; }
+
+  .role-cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; }
+  .role-cards-grid .role-card { border: 1px solid #999; border-radius: 8px; padding: .8rem .9rem; break-inside: avoid; }
+  .role-cards-grid .role-card h3 { margin: 0 0 .1rem; font-size: 1.05rem; color: #000; }
+  .role-cards-grid .role-card .rc-student { font-size: .85rem; color: #333; margin: 0 0 .2rem; }
+  .role-cards-grid .role-card .rc-checkpoint { font-size: .8rem; color: #333; margin: 0 0 .5rem; font-style: italic; }
+  .role-cards-grid .role-card ol { margin: 0; padding-left: 1.15rem; font-size: .82rem; }
+  .role-cards-grid .role-card ol li { margin-bottom: .35rem; }
+  .role-cards-grid .role-card .rc-no-prompts { font-size: .8rem; color: #555; }
+
+  .acct-sheet { border: 1px solid #999; border-radius: 8px; padding: .8rem 1rem; margin-bottom: .7rem; break-inside: avoid; }
+  .acct-sheet h3 { margin: 0 0 .1rem; font-size: 1.02rem; color: #000; }
+  .acct-sheet .acct-meta { font-size: .8rem; color: #333; margin: 0 0 .5rem; }
+  .acct-sheet .acct-field { font-size: .82rem; margin-bottom: .55rem; }
+  .acct-sheet .acct-field .acct-line { display: block; border-bottom: 1px solid #999; height: 1.1rem; margin-top: .15rem; }
+  .acct-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; }
 
   @media print {
     body { background: #fff; padding: 0; }
@@ -208,14 +237,41 @@
       </div>
 
       <div class="card">
-        <div class="card-title">3 &middot; Discussion Roles</div>
-        <p class="hint">Every group gets these roles, one per student, distinct within the group. Extra students beyond the role list are labeled "Group Member." Add, rename, or remove roles freely.</p>
+        <div class="card-title">3 &middot; Reading Schedule Planner</div>
+        <p class="hint">Spread the book across your meeting days between now and a target end date, and get a per-meeting chapter target. Click a row to drop that date and checkpoint straight into "Log a Meeting" below.</p>
+        <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+          <div><label for="schTotalChapters">Total chapters (or pages)</label><input type="number" id="schTotalChapters" min="1" placeholder="e.g. 23"></div>
+          <div><label for="schUnitLabel">Unit label</label><input type="text" id="schUnitLabel" placeholder="Chapter" value="Chapter"></div>
+        </div>
+        <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+          <div><label for="schStartDate">Start date</label><input type="date" id="schStartDate"></div>
+          <div><label for="schEndDate">End date</label><input type="date" id="schEndDate"></div>
+        </div>
+        <label>Meets on</label>
+        <div class="weekday-checks" id="schWeekdays">
+          <label><input type="checkbox" data-day="1" checked> Mon</label>
+          <label><input type="checkbox" data-day="2" checked> Tue</label>
+          <label><input type="checkbox" data-day="3" checked> Wed</label>
+          <label><input type="checkbox" data-day="4" checked> Thu</label>
+          <label><input type="checkbox" data-day="5" checked> Fri</label>
+          <label><input type="checkbox" data-day="6"> Sat</label>
+          <label><input type="checkbox" data-day="0"> Sun</label>
+        </div>
+        <button type="button" id="scheduleGenBtn">Generate schedule</button>
+        <p class="hint" style="margin-top:-.3rem;">Doesn't know about school holidays or early-release days &mdash; skim the generated dates before you print.</p>
+        <div id="scheduleResult"></div>
+        <button type="button" class="secondary" id="printScheduleBtn" style="display:none;">Print schedule</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">4 &middot; Discussion Roles</div>
+        <p class="hint">Every group gets these roles, one per student, distinct within the group. Extra students beyond the role list are labeled "Group Member." Give each role a few starter prompts &mdash; they print on that student's role card.</p>
         <div class="role-list" id="roleList"></div>
         <button type="button" class="secondary small" id="addRoleBtn" style="width:100%;">+ Add role</button>
       </div>
 
       <div class="card">
-        <div class="card-title">4 &middot; Log a Meeting</div>
+        <div class="card-title">5 &middot; Log a Meeting</div>
         <div class="toggle-group">
           <input type="radio" name="pace-mode" id="pace-together" value="together" checked>
           <label for="pace-together">Everyone reads together</label>
@@ -234,6 +290,10 @@
         <div class="btn-row">
           <button type="button" class="secondary" id="printBtn">Print today's roles sheet</button>
           <button type="button" class="secondary" id="printLogBtn">Print full meeting log</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="secondary" id="printRoleCardsBtn">Print role cards (with prompts)</button>
+          <button type="button" class="secondary" id="printAcctBtn">Print reading logs (accountability)</button>
         </div>
         <div class="btn-row">
           <button type="button" class="danger" id="resetHistoryBtn">Reset role history</button>
@@ -293,6 +353,29 @@
   </div>
 </div>
 
+<div class="print-only" id="printScheduleArea">
+  <h2 id="printScheduleTitle">Reading Schedule</h2>
+  <p class="p-sub" id="printScheduleSub"></p>
+  <div class="schedule-table-wrap">
+    <table class="schedule-table">
+      <thead><tr><th>Meeting</th><th>Date</th><th>Through</th></tr></thead>
+      <tbody id="printScheduleBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="print-only" id="printRoleCardsArea">
+  <h2 id="printRoleCardsTitle">Role Cards</h2>
+  <p class="p-sub" id="printRoleCardsSub"></p>
+  <div id="printRoleCardsGrid" class="role-cards-grid"></div>
+</div>
+
+<div class="print-only" id="printAcctArea">
+  <h2 id="printAcctTitle">Reading Log</h2>
+  <p class="p-sub" id="printAcctSub"></p>
+  <div id="printAcctGrid" class="acct-grid"></div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -301,6 +384,55 @@
   var CURRENT_KEY = 'novel-study-circles-current';
   var DEFAULT_ROLES = ['Discussion Director', 'Summarizer', 'Word Wizard', 'Passage Picker', 'Connector', 'Illustrator'];
   var MEMBER_LABEL = 'Group Member';
+
+  // Starter discussion prompts for the roles this tool ships with — printed
+  // on that role's card so the job is more than a label. A teacher-added
+  // role starts with no prompts (empty textarea) rather than a guess.
+  var DEFAULT_ROLE_PROMPTS = {
+    'Discussion Director': [
+      'What was the most important thing that happened in this section, and why?',
+      'What questions did this section leave you with?',
+      'If you could ask the author one question about this section, what would it be?',
+      'What would you want the group to talk about first today?'
+    ],
+    'Summarizer': [
+      'In 3-4 sentences, what happened in this section?',
+      'Who were the key characters involved, and what did each of them do?',
+      'What was the turning point of this section, if there was one?'
+    ],
+    'Word Wizard': [
+      'Find 2-3 words that were new, interesting, or confusing. What do they mean in context?',
+      'Was there a word or phrase the author used in an unusual way? What effect did it have?',
+      'Pick one word from this section that the group should add to the vocabulary list.'
+    ],
+    'Passage Picker': [
+      'Choose a passage worth reading aloud. Why did you pick it?',
+      'Find a line that was funny, surprising, sad, or confusing — mark the page number.',
+      'What passage best shows what a character is feeling right now?'
+    ],
+    'Connector': [
+      'Does anything in this section remind you of your own life, another book, or something in the news?',
+      'Does a character remind you of someone, or does an event remind you of something else you\'ve read?',
+      'What\'s a real-world topic this section connects to?'
+    ],
+    'Illustrator': [
+      'Draw a scene, symbol, or image from this section (bring it to share).',
+      'What moment from this section would make the best illustration, and why?',
+      'Describe in words the picture you drew and why you chose that moment.'
+    ]
+  };
+
+  function defaultPromptsFor(name) { return (DEFAULT_ROLE_PROMPTS[name] || []).join('\n'); }
+
+  /** Roles were plain strings before role prompts existed. Accepts either
+      shape so old saved projects and imports keep working. */
+  function normalizeRoles(roles) {
+    return (roles || []).map(function (r) {
+      if (typeof r === 'string') return { name: r, prompts: defaultPromptsFor(r) };
+      return { name: r && r.name || '', prompts: (r && typeof r.prompts === 'string') ? r.prompts : '' };
+    });
+  }
+  function defaultRoleObjects() { return DEFAULT_ROLES.map(function (r) { return { name: r, prompts: defaultPromptsFor(r) }; }); }
 
   var els = {};
   ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'exportProjectBtn', 'importProjectBtn', 'importProjectFile', 'projectName', 'bookTitle',
@@ -311,7 +443,11 @@
    'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'msg',
    'printArea', 'printTitle', 'printSub', 'printGroups',
    'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings',
-   'printVocabArea', 'printVocabTitle', 'printVocabSub', 'printVocabBody'
+   'printVocabArea', 'printVocabTitle', 'printVocabSub', 'printVocabBody',
+   'schTotalChapters', 'schUnitLabel', 'schStartDate', 'schEndDate', 'schWeekdays', 'scheduleGenBtn', 'scheduleResult', 'printScheduleBtn',
+   'printScheduleArea', 'printScheduleTitle', 'printScheduleSub', 'printScheduleBody',
+   'printRoleCardsBtn', 'printRoleCardsArea', 'printRoleCardsTitle', 'printRoleCardsSub', 'printRoleCardsGrid',
+   'printAcctBtn', 'printAcctArea', 'printAcctTitle', 'printAcctSub', 'printAcctGrid'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.nameCount = document.getElementById('name-count');
 
@@ -421,18 +557,27 @@
   function renderRoleList() {
     els.roleList.innerHTML = state.roles.map(function (role, i) {
       return '<div class="role-row">' +
-        '<input type="text" data-role-idx="' + i + '" value="' + escapeHtml(role).replace(/"/g, '&quot;') + '">' +
+        '<div class="role-name-row">' +
+        '<input type="text" data-role-idx="' + i + '" value="' + escapeHtml(role.name).replace(/"/g, '&quot;') + '">' +
         '<button type="button" class="x" data-remove-role="' + i + '" title="Remove role">&#10005;</button>' +
+        '</div>' +
+        '<p class="role-prompts-label">Starter prompts (one per line, printed on the role card)</p>' +
+        '<textarea class="role-prompts" data-role-prompts-idx="' + i + '" placeholder="e.g. What was the turning point of this section?">' + escapeHtml(role.prompts) + '</textarea>' +
         '</div>';
     }).join('');
   }
 
+  function rolePromptsByName(name) {
+    var r = state.roles.find(function (r) { return r.name === name; });
+    if (!r || !r.prompts) return [];
+    return r.prompts.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
   els.roleList.addEventListener('input', function (e) {
-    var input = e.target.closest('[data-role-idx]');
-    if (!input) return;
-    var idx = parseInt(input.dataset.roleIdx, 10);
-    state.roles[idx] = input.value;
-    saveCurrent();
+    var nameInput = e.target.closest('[data-role-idx]');
+    if (nameInput) { state.roles[parseInt(nameInput.dataset.roleIdx, 10)].name = nameInput.value; saveCurrent(); return; }
+    var promptsInput = e.target.closest('[data-role-prompts-idx]');
+    if (promptsInput) { state.roles[parseInt(promptsInput.dataset.rolePromptsIdx, 10)].prompts = promptsInput.value; saveCurrent(); return; }
   });
 
   els.roleList.addEventListener('click', function (e) {
@@ -445,11 +590,119 @@
   });
 
   els.addRoleBtn.addEventListener('click', function () {
-    state.roles.push('New Role');
+    state.roles.push({ name: 'New Role', prompts: '' });
     renderRoleList();
     saveCurrent();
     var inputs = els.roleList.querySelectorAll('input[type="text"]');
     if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
+  // ── Reading schedule planner ────────────────────────────────────────────
+  function fmtDate(d) {
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
+  function computeSchedule() {
+    var total = parseInt(els.schTotalChapters.value, 10);
+    var unit = els.schUnitLabel.value.trim() || 'Chapter';
+    var start = els.schStartDate.value;
+    var end = els.schEndDate.value;
+    if (!total || total < 1) { showMsg('Enter a total chapter/page count first.'); return null; }
+    if (!start || !end) { showMsg('Enter both a start and an end date.'); return null; }
+    var startD = new Date(start + 'T00:00:00');
+    var endD = new Date(end + 'T00:00:00');
+    if (endD < startD) { showMsg('End date must be on or after the start date.'); return null; }
+    var allowedDays = {};
+    els.schWeekdays.querySelectorAll('input[type="checkbox"]').forEach(function (cb) { if (cb.checked) allowedDays[cb.dataset.day] = true; });
+    if (!Object.keys(allowedDays).length) { showMsg('Check at least one meeting day.'); return null; }
+    var dates = [];
+    var cursor = new Date(startD);
+    while (cursor <= endD) {
+      if (allowedDays[String(cursor.getDay())]) dates.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    if (!dates.length) { showMsg('No meeting days fall between those two dates.'); return null; }
+    var n = dates.length;
+    var rows = dates.map(function (d, i) {
+      var target = Math.round(total * (i + 1) / n);
+      if (i === n - 1) target = total; // last meeting always lands exactly on the end
+      return { date: fmtDate(d), throughNum: target };
+    });
+    var prev = 0;
+    rows.forEach(function (r) {
+      r.throughLabel = (r.throughNum > prev + 1) ? (unit + 's ' + (prev + 1) + '-' + r.throughNum) : (unit + ' ' + r.throughNum);
+      prev = r.throughNum;
+    });
+    return { totalChapters: total, unitLabel: unit, startDate: start, endDate: end, days: allowedDays, rows: rows };
+  }
+
+  function renderScheduleTable() {
+    var sch = state.schedule;
+    if (!sch || !sch.rows || !sch.rows.length) {
+      els.scheduleResult.innerHTML = '';
+      els.printScheduleBtn.style.display = 'none';
+      return;
+    }
+    els.scheduleResult.innerHTML = '<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Meeting</th><th>Date</th><th>Through</th></tr></thead><tbody>' +
+      sch.rows.map(function (r, i) {
+        return '<tr class="schedule-row" data-sch-date="' + r.date + '" data-sch-label="' + escapeHtml(r.throughLabel).replace(/"/g, '&quot;') + '"><td>' + (i + 1) + '</td><td>' + r.date + '</td><td>' + escapeHtml(r.throughLabel) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    els.printScheduleBtn.style.display = '';
+  }
+
+  function restoreScheduleForm() {
+    var sch = state.schedule;
+    if (sch) {
+      els.schTotalChapters.value = sch.totalChapters;
+      els.schUnitLabel.value = sch.unitLabel;
+      els.schStartDate.value = sch.startDate;
+      els.schEndDate.value = sch.endDate;
+      els.schWeekdays.querySelectorAll('input[type="checkbox"]').forEach(function (cb) { cb.checked = !!sch.days[cb.dataset.day]; });
+    } else {
+      els.schTotalChapters.value = '';
+      els.schStartDate.value = '';
+      els.schEndDate.value = '';
+    }
+    renderScheduleTable();
+  }
+
+  els.scheduleGenBtn.addEventListener('click', function () {
+    var sch = computeSchedule();
+    if (!sch) return;
+    state.schedule = sch;
+    saveCurrent();
+    clearMsg();
+    renderScheduleTable();
+  });
+
+  els.scheduleResult.addEventListener('click', function (e) {
+    var row = e.target.closest('[data-sch-date]');
+    if (!row) return;
+    els.meetingDate.value = row.dataset.schDate;
+    if (state.together) {
+      var cpEl = document.getElementById('cpWhole');
+      if (cpEl) cpEl.value = 'Through ' + row.dataset.schLabel;
+    }
+    showMsg('Loaded ' + row.dataset.schDate + ' into "Log a Meeting" below.', true);
+  });
+
+  els.printScheduleBtn.addEventListener('click', function () {
+    var sch = state.schedule;
+    if (!sch || !sch.rows.length) return;
+    els.printScheduleTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Reading Schedule';
+    var subBits = [];
+    if (state.bookTitle) subBits.push(state.bookTitle);
+    subBits.push(sch.rows.length + ' meetings');
+    subBits.push(sch.startDate + ' to ' + sch.endDate);
+    els.printScheduleSub.textContent = subBits.join(' · ');
+    els.printScheduleBody.innerHTML = sch.rows.map(function (r, i) {
+      return '<tr><td>' + (i + 1) + '</td><td>' + r.date + '</td><td>' + escapeHtml(r.throughLabel) + '</td></tr>';
+    }).join('');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printScheduleArea.classList.add('active');
+    window.print();
   });
 
   // ── Split mode ───────────────────────────────────────────────────────────
@@ -621,7 +874,7 @@
   // ── Logging a meeting ────────────────────────────────────────────────────
   function logMeeting() {
     if (!state.groups || !state.groups.length) { showMsg('Split the class into groups first.'); return; }
-    var roles = state.roles.map(function (r) { return r.trim(); }).filter(Boolean);
+    var roles = state.roles.map(function (r) { return r.name.trim(); }).filter(Boolean);
     if (!roles.length) { showMsg('Add at least one discussion role first.'); return; }
 
     var date = els.meetingDate.value || todayStr();
@@ -863,6 +1116,74 @@
     window.print();
   });
 
+  els.printRoleCardsBtn.addEventListener('click', function () {
+    var meeting = currentMeeting();
+    if (!meeting) { showMsg('Log a meeting before printing role cards.'); return; }
+    var cards = [];
+    meeting.groups.forEach(function (g) {
+      g.assignment.forEach(function (s) {
+        if (!s.role) return; // "Group Member" has no job to print a card for
+        cards.push({ group: g, name: s.name, role: s.role, checkpoint: g.checkpoint, prompts: rolePromptsByName(s.role) });
+      });
+    });
+    if (!cards.length) { showMsg('No roles were assigned in the latest meeting.'); return; }
+    els.printRoleCardsTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Role Cards';
+    var subBits = [meeting.date];
+    if (state.bookTitle) subBits.push(state.bookTitle);
+    els.printRoleCardsSub.textContent = subBits.join(' · ');
+    els.printRoleCardsGrid.innerHTML = cards.map(function (c) {
+      var checkpointText = c.checkpoint || (meeting.together ? meeting.wholeClassCheckpoint : '');
+      return '<div class="role-card"><h3>' + escapeHtml(c.role) + '</h3>' +
+        '<p class="rc-student">' + escapeHtml(c.name) + ' &middot; ' + escapeHtml(c.group.label) + '</p>' +
+        (checkpointText ? '<p class="rc-checkpoint">' + escapeHtml(checkpointText) + '</p>' : '') +
+        (c.prompts.length
+          ? '<ol>' + c.prompts.map(function (p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('') + '</ol>'
+          : '<p class="rc-no-prompts">Come ready to lead this job in the discussion.</p>') +
+        '</div>';
+    }).join('');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printRoleCardsArea.classList.add('active');
+    window.print();
+  });
+
+  els.printAcctBtn.addEventListener('click', function () {
+    var members = [];
+    if (state.groups && state.groups.length) {
+      state.groups.forEach(function (g) { g.members.forEach(function (name) { members.push({ name: name, group: g.label }); }); });
+    } else {
+      studentNames().forEach(function (name) { members.push({ name: name, group: '' }); });
+    }
+    if (!members.length) { showMsg('Add a roster or split into groups first.'); return; }
+    // Prefer the next not-yet-due schedule row; fall back to the latest logged meeting's checkpoint.
+    var nextLabel = '';
+    if (state.schedule && state.schedule.rows && state.schedule.rows.length) {
+      var today = todayStr();
+      var next = state.schedule.rows.find(function (r) { return r.date >= today; });
+      nextLabel = next ? ('Through ' + next.throughLabel + ' by ' + next.date) : '';
+    }
+    if (!nextLabel) {
+      var meeting = currentMeeting();
+      if (meeting && meeting.together && meeting.wholeClassCheckpoint) nextLabel = meeting.wholeClassCheckpoint;
+    }
+    els.printAcctTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Reading Log';
+    var subBits = [];
+    if (state.bookTitle) subBits.push(state.bookTitle);
+    if (nextLabel) subBits.push('Next: ' + nextLabel);
+    els.printAcctSub.textContent = subBits.join(' · ');
+    els.printAcctGrid.innerHTML = members.map(function (m) {
+      return '<div class="acct-sheet"><h3>' + escapeHtml(m.name) + '</h3>' +
+        '<p class="acct-meta">' + (m.group ? escapeHtml(m.group) + (state.bookTitle ? ' &middot; ' : '') : '') + (state.bookTitle ? escapeHtml(state.bookTitle) : '') + '</p>' +
+        '<p class="acct-field">Reading due: <span class="acct-line">' + escapeHtml(nextLabel) + '</span></p>' +
+        '<p class="acct-field">A question I have: <span class="acct-line">&nbsp;</span></p>' +
+        '<p class="acct-field">A quote or passage I want to talk about (page ___): <span class="acct-line">&nbsp;</span></p>' +
+        '<p class="acct-field">Something I noticed or predicted: <span class="acct-line">&nbsp;</span></p>' +
+        '</div>';
+    }).join('');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printAcctArea.classList.add('active');
+    window.print();
+  });
+
   function showMsg(text, ok) {
     els.msg.textContent = text;
     els.msg.className = 'show' + (ok ? ' ok' : '');
@@ -899,14 +1220,15 @@
     renderMeetingHistory();
     renderHistoryHint();
     renderVocabLog();
+    restoreScheduleForm();
   }
 
   function newProject(name) {
     state = {
       name: name, students: '', bookTitle: '',
       mode: 'count', splitValue: 4,
-      groups: [], roles: DEFAULT_ROLES.slice(),
-      together: true, history: {}, meetings: []
+      groups: [], roles: defaultRoleObjects(),
+      together: true, history: {}, meetings: [], schedule: null
     };
     saveCurrent();
     applyStateToForm();
@@ -926,10 +1248,11 @@
       mode: loaded.mode === 'size' ? 'size' : 'count',
       splitValue: loaded.splitValue || 4,
       groups: loaded.groups || [],
-      roles: (loaded.roles && loaded.roles.length) ? loaded.roles : DEFAULT_ROLES.slice(),
+      roles: (loaded.roles && loaded.roles.length) ? normalizeRoles(loaded.roles) : defaultRoleObjects(),
       together: loaded.together !== false,
       history: loaded.history || {},
-      meetings: loaded.meetings || []
+      meetings: loaded.meetings || [],
+      schedule: loaded.schedule || null
     };
     try { localStorage.setItem(CURRENT_KEY, name); } catch (e) { /* ignore */ }
     applyStateToForm();
@@ -1007,10 +1330,11 @@
         mode: imported.mode === 'size' ? 'size' : 'count',
         splitValue: imported.splitValue || 4,
         groups: imported.groups || [],
-        roles: (imported.roles && imported.roles.length) ? imported.roles : DEFAULT_ROLES.slice(),
+        roles: (imported.roles && imported.roles.length) ? normalizeRoles(imported.roles) : defaultRoleObjects(),
         together: imported.together !== false,
         history: imported.history || {},
-        meetings: imported.meetings || []
+        meetings: imported.meetings || [],
+        schedule: imported.schedule || null
       };
       saveCurrent();
       els.toolbar.style.display = '';

@@ -9,12 +9,54 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-10 — Round 5 (PR #TBD): five Quick Wins shipped.**
 
-Note: this tool and `qr-code-generator.html` are both missing from the
-README tools table and from the description list. Worth fixing whenever
-someone touches the README.
+- **Done — Added to the README.** Both this tool and `qr-code-generator.html`
+  (also missing) got a row in the README tools table. Neither was missing
+  from the landing page (`index.html` already had both) — only the README
+  was stale.
+- **Done — Guardrail reminder.** A visible (not preachy) banner under the
+  page tagline: this is the one tool on the site whose whole purpose is
+  sending text somewhere else, and it says so plainly, with a reminder to
+  leave out student names/grades. Resolves the first Open Question below —
+  Devon didn't need to weigh in beyond what shipped; it's a one-line banner,
+  not a modal or a blocking gate.
+- **Done — Strength meter explained.** Below the strength bar, a new hint
+  line names the 1-2 highest-impact unfilled fields (from a fixed
+  `IMPACT_FIELDS` priority list: what you're building, grade, subject,
+  topic, learning goal, students to keep in mind, format, tone, what to
+  avoid) rather than just showing a bare percentage.
+- **Done — Paste-the-result-back field.** Each entry in prompt history can
+  now be expanded to paste in what the AI actually returned; it's saved
+  alongside that prompt in `promptBuilderHistory_v1` (new optional `result`
+  field, old entries without one still render fine). Typing in the result
+  textarea doesn't trigger a full list re-render (would steal focus
+  mid-paste) — only the toggle button's label updates live.
+- **Done — Output-shape presets tied to the toolkit.** Three new presets:
+  "Review game questions" (asks for the exact `Category,Points,Question,
+  Answer` CSV header `review-game-board.html` imports), "Vocab list" (the
+  `term: definition` — optionally `| example sentence` — format
+  `vocab-flashcard-generator.html` parses), and "Exit ticket prompts" (a
+  plain numbered list). This is the first slice of the "AI as content
+  supplier for the whole site" moonshot — output shape matched by hand per
+  preset, no shared schema yet.
+
+Verified with a headless Chromium smoke test: banner renders, strength hint
+text updates on a field change, all three new presets produce prompt text
+containing the exact format strings above, prompt history captures a result,
+the toggle label updates live, and the result **persists across a page
+reload** (confirms the localStorage round-trip). No console errors (aside
+from an unrelated network probe the sandboxed test environment itself
+generates).
+
+**Where a future round should pick up:** prompt versioning/comparison,
+`{{variable}}` templates with saved defaults, the redaction helper, and a
+task-organized prompt library are all still open (Major Features below). The
+output-shape-preset idea could go much further — e.g. matching Rubric
+Builder's actual JSON export shape, not just a CSV/text convention.
+
+Ideas below are deliberately ambitious and are **not** scoped to a single
+session.
 
 ## What it does today
 
@@ -32,19 +74,22 @@ someone touches the README.
 
 ## Quick Wins
 
-- **Add it to the README and the landing page.** It's invisible right now.
-- **A "paste your result back" field.** The workflow is build → copy → use
+- **Done —** **Add it to the README and the landing page.** It's invisible right now.
+  *(Landing page already had it; README was the actual gap.)*
+- **Done —** **A "paste your result back" field.** The workflow is build → copy → use
   elsewhere → and then nothing. Letting the teacher paste the AI's output back
   in, saved alongside the prompt, turns history into a genuinely useful record
   of what worked.
-- **Explain the strength meter.** Tell the teacher *what* would make the
+- **Done —** **Explain the strength meter.** Tell the teacher *what* would make the
   prompt stronger, not just that it's weak — that's the teaching moment.
-- **More presets aimed at this site's own outputs**: "write 20 review
+- **Done —** **More presets aimed at this site's own outputs**: "write 20 review
   questions I can paste into the Review Game Board", "write 10 exit ticket
   prompts", "write a rubric I can type into Rubric Builder". Prompts that
   produce data in the exact shape another tool imports (P7) would be the
-  single most useful thing this tool could do.
-- **Guardrail reminders.** A visible, non-preachy note about not pasting
+  single most useful thing this tool could do. *(Rubric preset already
+  existed with a "table" format; shipped review-board CSV, vocab list, and
+  exit-ticket presets net-new.)*
+- **Done —** **Guardrail reminders.** A visible, non-preachy note about not pasting
   student names or grades into a third-party AI service — this site's entire
   premise is that data stays local, and this is the one tool that sends the
   user somewhere it won't.
@@ -93,11 +138,15 @@ browser.
 
 ## Open Questions
 
-- The site's promise is "no data leaving your machine". This tool's whole
-  purpose is to help the teacher send text somewhere else. That's a defensible
-  distinction (the tool itself sends nothing) but it should be stated
-  explicitly on the page, and it's worth Devon deciding how prominent that
-  note should be.
+- **Resolved 2026-08-10.** The site's promise is "no data leaving your
+  machine". This tool's whole purpose is to help the teacher send text
+  somewhere else. That's a defensible distinction (the tool itself sends
+  nothing) but it should be stated explicitly on the page, and it's worth
+  Devon deciding how prominent that note should be. — Shipped a visible
+  banner under the tagline stating it plainly; if Devon wants it more or
+  less prominent than a static banner (e.g. dismissible, or gated behind a
+  first-visit modal), that's a follow-up, not a re-litigation of whether to
+  say it at all.
 - Should the tool ever call an AI API directly with a user-supplied key? That
   would cross the current constraint, so the default answer is no — but it's
   the obvious question and worth recording as answered.

@@ -151,6 +151,19 @@
   .board-options input[type="checkbox"] { width: auto; }
   .board-options .seconds-input { width: 3.6rem; padding: .3rem .4rem; font-weight: 400; }
 
+  .score-toolbar { display: flex; align-items: center; gap: .7rem; margin: -.4rem 0 .9rem; }
+  .score-toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+  .kbd-hint { color: var(--muted); font-size: .78rem; }
+  .kbd-hint kbd { font-family: Consolas, monospace; background: #fff; border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 .3rem; }
+
+  .wager-panel { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 1.2rem 1.4rem; max-width: 26rem; margin-bottom: 1.4rem; }
+  .wager-panel label { display: block; color: #cfd6ea; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; text-align: left; }
+  .wager-panel select, .wager-panel input[type="number"] { width: 100%; font-family: inherit; font-size: .95rem; padding: .5rem .6rem; border-radius: 6px; border: 1px solid #445; margin-bottom: .9rem; }
+  .quiz-sub { font-size: .9rem; color: #444; margin: 0 0 1rem; }
+  .quiz-item { break-inside: avoid; margin-bottom: 1.1rem; }
+  .quiz-q { margin: 0 0 .4rem; font-size: .95rem; }
+  .quiz-lines .quiz-line { border-bottom: 1px solid #999; height: 1.3rem; margin-bottom: .2rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   .print-only { display: none; }
@@ -182,6 +195,7 @@
     <button class="secondary" id="editBoardBtn">Edit questions</button>
     <button class="secondary" id="resetGameBtn">Reset game</button>
     <button class="secondary" id="printAnswerKeyBtn">Print answer key</button>
+    <button class="secondary" id="printQuizBtn">Print practice quiz</button>
     <button class="secondary" id="exportBoardBtn">Export JSON</button>
     <button class="secondary" id="importBoardBtn">Import JSON</button>
     <input type="file" id="importBoardFile" accept="application/json,.json" style="display:none;">
@@ -229,6 +243,10 @@
       <label for="lightningRoundSeconds">Seconds: <input type="number" id="lightningRoundSeconds" class="seconds-input" min="3" max="120" value="15"></label>
     </div>
     <div class="scoreboard" id="scoreboard"></div>
+    <div class="score-toolbar">
+      <button type="button" class="secondary small" id="undoScoreBtn" disabled>Undo last score change</button>
+      <span class="kbd-hint">While a clue is open: <kbd>Space</kbd> reveal &middot; <kbd>1</kbd>-<kbd>9</kbd> award &middot; <kbd>Esc</kbd> close</span>
+    </div>
     <div class="board-grid">
       <div class="board-cols" id="boardCols"></div>
     </div>
@@ -244,6 +262,13 @@
 
 <div class="overlay" id="overlay">
   <div class="cat-points" id="overlayCatPoints"></div>
+  <div class="wager-panel" id="wagerPanel" style="display:none;">
+    <label for="wagerTeamSelect">Which team found the Daily Double?</label>
+    <select id="wagerTeamSelect"></select>
+    <label for="wagerAmount">Wager (points)</label>
+    <input type="number" id="wagerAmount" min="0" step="10">
+    <button type="button" id="wagerStartBtn">Reveal the question</button>
+  </div>
   <div class="countdown" id="overlayCountdown"></div>
   <div class="question-text" id="overlayQuestion"></div>
   <div class="answer-text" id="overlayAnswer"></div>
@@ -277,19 +302,58 @@
 
   var els = {};
   ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn',
-   'printAnswerKeyBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
+   'printAnswerKeyBtn', 'printQuizBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
    'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','lightningRoundToggle','lightningRoundSeconds',
-   'scoreboard','boardCols',
+   'scoreboard','boardCols','undoScoreBtn',
    'overlay','overlayCatPoints','overlayCountdown','overlayQuestion','overlayAnswer',
+   'wagerPanel','wagerTeamSelect','wagerAmount','wagerStartBtn',
    'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
   var currentClue = null; // {catIdx, clueIdx}
+  var dailyDoubleWager = null; // { teamIndex, amount } — set once a Daily Double's wager is confirmed
   var lightningTimer = null;
   var lightningRemaining = 0;
+  var undoStack = []; // [{ teamIndex, delta, catIdx, clueIdx }, ...] most-recent last
+  var UNDO_MAX = 20;
+
+  function pushScoreUndo(teamIndex, delta, catIdx, clueIdx) {
+    undoStack.push({ teamIndex: teamIndex, delta: delta, catIdx: catIdx == null ? null : catIdx, clueIdx: clueIdx == null ? null : clueIdx });
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    renderUndoButton();
+  }
+  function clearUndoStack() { undoStack = []; renderUndoButton(); }
+  function renderUndoButton() {
+    if (!els.undoScoreBtn) return;
+    var entry = undoStack[undoStack.length - 1];
+    if (!entry || !state || !state.teams[entry.teamIndex]) {
+      els.undoScoreBtn.disabled = true;
+      els.undoScoreBtn.textContent = 'Undo last score change';
+      return;
+    }
+    els.undoScoreBtn.disabled = false;
+    var sign = entry.delta >= 0 ? '+' : '';
+    els.undoScoreBtn.textContent = 'Undo: ' + sign + entry.delta + ' ' + state.teams[entry.teamIndex].name;
+  }
+  if (els.undoScoreBtn) {
+    els.undoScoreBtn.addEventListener('click', function () {
+      var entry = undoStack.pop();
+      renderUndoButton();
+      if (!entry || !state) return;
+      var team = state.teams[entry.teamIndex];
+      if (team) team.score -= entry.delta;
+      if (entry.catIdx != null && entry.clueIdx != null) {
+        var cat = state.categories[entry.catIdx];
+        var clue = cat && cat.clues[entry.clueIdx];
+        if (clue) clue.used = false;
+      }
+      save();
+      renderBoard();
+    });
+  }
 
   /* ---------- persistence ---------- */
   function save() {
@@ -482,6 +546,7 @@
     };
     ReviewBoardStore.setCurrentName(name);
     assignDailyDouble();
+    clearUndoStack();
     renderBoard();
   }
 
@@ -519,6 +584,7 @@
     if (!state.lightningRoundSeconds) state.lightningRoundSeconds = 15;
     ReviewBoardStore.setCurrentName(name);
     refreshSwitcher();
+    clearUndoStack();
     renderBoard();
   }
 
@@ -539,6 +605,32 @@
   els.printAnswerKeyBtn.addEventListener('click', function () {
     if (!state) return;
     els.printArea.innerHTML = answerKeyHtml();
+    window.print();
+  });
+
+  /** A blank, student-facing version of the whole board — one page, every
+      question numbered with room to write, no answers. For absent students
+      or as a study guide once the game itself is done. */
+  function studentQuizHtml() {
+    var n = 0;
+    var items = [];
+    state.categories.forEach(function (cat) {
+      cat.clues.forEach(function (cl) {
+        n++;
+        items.push(
+          '<div class="quiz-item"><p class="quiz-q"><b>' + n + '.</b> [' + escapeHtml(cat.name) + ' &mdash; ' + cl.points + ' pts] ' +
+          escapeHtml(cl.question) + '</p><div class="quiz-lines"><div class="quiz-line"></div><div class="quiz-line"></div></div></div>'
+        );
+      });
+    });
+    return '<h2>' + escapeHtml(state.name) + ' &mdash; Practice Quiz</h2>' +
+      '<p class="quiz-sub">Name: _____________________________ &nbsp;&nbsp; Date: ______________</p>' +
+      items.join('');
+  }
+
+  els.printQuizBtn.addEventListener('click', function () {
+    if (!state) return;
+    els.printArea.innerHTML = studentQuizHtml();
     window.print();
   });
 
@@ -681,17 +773,17 @@
       nameInput.addEventListener('change', function () { team.name = nameInput.value.trim() || team.name; save(); });
       var minus = document.createElement('button');
       minus.className = 'small secondary'; minus.textContent = '−';
-      minus.addEventListener('click', function () { team.score -= 10; renderScoreboardOnly(); save(); });
+      minus.addEventListener('click', function () { team.score -= 10; pushScoreUndo(i, -10, null, null); renderScoreboardOnly(); save(); });
       var scoreSpan = document.createElement('span');
       scoreSpan.className = 'score'; scoreSpan.textContent = team.score;
       var plus = document.createElement('button');
       plus.className = 'small secondary'; plus.textContent = '+';
-      plus.addEventListener('click', function () { team.score += 10; renderScoreboardOnly(); save(); });
+      plus.addEventListener('click', function () { team.score += 10; pushScoreUndo(i, 10, null, null); renderScoreboardOnly(); save(); });
       var removeBtn = document.createElement('button');
       removeBtn.className = 'small danger'; removeBtn.textContent = '×';
       removeBtn.title = 'Remove team';
       removeBtn.addEventListener('click', function () {
-        state.teams.splice(i, 1); renderBoard();
+        state.teams.splice(i, 1); clearUndoStack(); renderBoard();
       });
       chip.appendChild(nameInput); chip.appendChild(minus); chip.appendChild(scoreSpan);
       chip.appendChild(plus); chip.appendChild(removeBtn);
@@ -738,6 +830,7 @@
         els.boardCols.appendChild(btn);
       });
     }
+    renderUndoButton();
   }
 
   function renderScoreboardOnly() {
@@ -748,21 +841,49 @@
   /* ---------- clue reveal overlay ---------- */
   function openClue(catIdx, clueIdx) {
     currentClue = { catIdx: catIdx, clueIdx: clueIdx };
+    dailyDoubleWager = null;
     var cat = state.categories[catIdx];
     var clue = cat.clues[clueIdx];
-    var effectivePoints = clue.points * (clue.dailyDouble ? 2 : 1);
-    els.overlayCatPoints.innerHTML = (clue.dailyDouble ? '🌟 DAILY DOUBLE! 🌟<br>' : '') +
-      escapeHtml(cat.name) + ' — ' + effectivePoints + (clue.dailyDouble ? ' (doubled)' : '');
     els.overlayQuestion.textContent = clue.question;
     els.overlayAnswer.textContent = clue.answer;
     els.overlayAnswer.classList.remove('show');
-    els.showAnswerBtn.style.display = '';
-    els.closeNoAskBtn.style.display = '';
     els.awardRow.classList.remove('show');
     els.closeUsedRow.style.display = 'none';
+    els.wagerPanel.style.display = 'none';
+    els.overlayQuestion.style.display = '';
     els.overlay.classList.add('show');
-    startLightningTimer();
+
+    if (clue.dailyDouble) {
+      els.overlayCatPoints.innerHTML = '🌟 DAILY DOUBLE! 🌟<br>' + escapeHtml(cat.name);
+      els.overlayQuestion.style.display = 'none';
+      els.showAnswerBtn.style.display = 'none';
+      els.closeNoAskBtn.style.display = '';
+      els.wagerTeamSelect.innerHTML = state.teams.map(function (t, i) {
+        return '<option value="' + i + '">' + escapeHtml(t.name) + ' (score: ' + t.score + ')</option>';
+      }).join('');
+      els.wagerAmount.value = Math.max(clue.points * 2, 0);
+      els.wagerPanel.style.display = '';
+    } else {
+      els.overlayCatPoints.textContent = escapeHtml(cat.name) + ' — ' + clue.points;
+      els.showAnswerBtn.style.display = '';
+      els.closeNoAskBtn.style.display = '';
+      startLightningTimer();
+    }
   }
+
+  els.wagerStartBtn.addEventListener('click', function () {
+    var teamIdx = parseInt(els.wagerTeamSelect.value, 10);
+    var amount = parseInt(els.wagerAmount.value, 10);
+    if (isNaN(amount) || amount < 0) amount = 0;
+    dailyDoubleWager = { teamIndex: teamIdx, amount: amount };
+    var team = state.teams[teamIdx];
+    els.overlayCatPoints.innerHTML = '🌟 DAILY DOUBLE! 🌟<br>' + escapeHtml(team.name) + ' wagers ' + amount;
+    els.wagerPanel.style.display = 'none';
+    els.overlayQuestion.style.display = '';
+    els.showAnswerBtn.style.display = '';
+    els.closeNoAskBtn.style.display = '';
+    startLightningTimer();
+  });
 
   function markCurrentClueUsed() {
     if (!currentClue) return;
@@ -808,19 +929,42 @@
     els.closeUsedRow.style.display = '';
 
     els.awardRow.innerHTML = '';
+    var savedClue = currentClue; // closeOverlay() clears currentClue, so capture indices for the undo entry now
     var clue = state.categories[currentClue.catIdx].clues[currentClue.clueIdx];
-    var effectivePoints = clue.points * (clue.dailyDouble ? 2 : 1);
-    state.teams.forEach(function (team) {
-      var b = document.createElement('button');
-      b.textContent = '+' + effectivePoints + ' ' + team.name;
-      b.addEventListener('click', function () {
-        team.score += effectivePoints;
-        markCurrentClueUsed();
-        closeOverlay();
-        renderBoard();
+
+    if (dailyDoubleWager) {
+      var wTeam = state.teams[dailyDoubleWager.teamIndex];
+      var correctBtn = document.createElement('button');
+      correctBtn.textContent = 'Correct: +' + dailyDoubleWager.amount + ' ' + wTeam.name;
+      correctBtn.addEventListener('click', function () {
+        wTeam.score += dailyDoubleWager.amount;
+        pushScoreUndo(dailyDoubleWager.teamIndex, dailyDoubleWager.amount, savedClue.catIdx, savedClue.clueIdx);
+        markCurrentClueUsed(); closeOverlay(); renderBoard();
       });
-      els.awardRow.appendChild(b);
-    });
+      var incorrectBtn = document.createElement('button');
+      incorrectBtn.className = 'ghost';
+      incorrectBtn.textContent = 'Incorrect: −' + dailyDoubleWager.amount + ' ' + wTeam.name;
+      incorrectBtn.addEventListener('click', function () {
+        wTeam.score -= dailyDoubleWager.amount;
+        pushScoreUndo(dailyDoubleWager.teamIndex, -dailyDoubleWager.amount, savedClue.catIdx, savedClue.clueIdx);
+        markCurrentClueUsed(); closeOverlay(); renderBoard();
+      });
+      els.awardRow.appendChild(correctBtn);
+      els.awardRow.appendChild(incorrectBtn);
+    } else {
+      state.teams.forEach(function (team, ti) {
+        var b = document.createElement('button');
+        b.textContent = '+' + clue.points + ' ' + team.name;
+        b.addEventListener('click', function () {
+          team.score += clue.points;
+          pushScoreUndo(ti, clue.points, savedClue.catIdx, savedClue.clueIdx);
+          markCurrentClueUsed();
+          closeOverlay();
+          renderBoard();
+        });
+        els.awardRow.appendChild(b);
+      });
+    }
     els.awardRow.classList.add('show');
   }
 
@@ -835,6 +979,26 @@
     markCurrentClueUsed();
     closeOverlay();
     renderBoard();
+  });
+
+  /* ---------- keyboard shortcuts (only while a clue is open) ---------- */
+  document.addEventListener('keydown', function (e) {
+    if (!els.overlay.classList.contains('show')) return;
+    if (e.key === ' ' || e.code === 'Space') {
+      if (els.showAnswerBtn.style.display !== 'none') { e.preventDefault(); revealAnswer(); }
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (els.closeUsedRow.style.display !== 'none') els.closeUsedBtn.click();
+      else if (els.closeNoAskBtn.style.display !== 'none') els.closeNoAskBtn.click();
+      return;
+    }
+    if (/^[1-9]$/.test(e.key) && els.awardRow.classList.contains('show')) {
+      var buttons = els.awardRow.querySelectorAll('button');
+      var btn = buttons[Number(e.key) - 1];
+      if (btn) { e.preventDefault(); btn.click(); }
+    }
   });
 
   /* ---------- setup wiring ---------- */
@@ -897,6 +1061,7 @@
     state.categories.forEach(function (c) { c.clues.forEach(function (cl) { cl.used = false; }); });
     state.teams.forEach(function (t) { t.score = 0; });
     assignDailyDouble();
+    clearUndoStack();
     save();
     renderBoard();
   });

@@ -76,12 +76,31 @@
   .sheet-meta .fill-line { border-bottom: 1px solid #999; display: inline-block; min-width: 6rem; }
 
   .problems { column-gap: 1.4rem; font-family: Consolas, monospace; font-size: 1rem; }
+  .problems.fs-sm { font-size: .82rem; }
+  .problems.fs-lg { font-size: 1.3rem; }
   .problems .p { break-inside: avoid; margin-bottom: .85rem; white-space: nowrap; }
-  .problems .p .num { color: var(--muted); font-size: .78rem; margin-right: .35rem; }
+  .problems .p .num { color: var(--muted); font-size: .78em; margin-right: .35rem; }
+
+  .problems.vertical { column-count: initial !important; display: grid; grid-template-columns: repeat(var(--vcols, 3), max-content); gap: 1.6rem 2.4rem; }
+  .problems.vertical .p { white-space: normal; }
+  .problems.vertical .p .num { display: block; margin-bottom: .2rem; }
+  .vert-table { border-collapse: collapse; }
+  .vert-table td { padding: 0 .12em; text-align: right; font-family: Consolas, monospace; line-height: 1.3; }
+  .vert-table td.op { text-align: left; width: 1.1em; }
+  .vert-table tr.rule td { border-top: 2px solid var(--ink); padding-top: .12em; }
+  .vert-table tr.blank td { height: 1.5em; }
+  .vert-div .top-blank { border-bottom: 2px solid var(--ink); min-width: 2.4em; height: 1.3em; margin-left: 1.9em; }
+  .vert-div .bracket-row { display: flex; align-items: flex-end; }
+  .vert-div .divisor { padding-right: .2em; }
+  .vert-div .dividend { border-top: 2px solid var(--ink); border-left: 2px solid var(--ink); border-radius: 0 8px 0 0; padding: 0 .35em; }
 
   .answers { column-gap: 1.4rem; font-family: Consolas, monospace; font-size: .92rem; }
+  .answers.fs-sm { font-size: .78rem; }
+  .answers.fs-lg { font-size: 1.15rem; }
   .answers .a { break-inside: avoid; margin-bottom: .5rem; }
-  .answers .a .num { color: var(--muted); font-size: .78rem; margin-right: .35rem; }
+  .answers .a .num { color: var(--muted); font-size: .78em; margin-right: .35rem; }
+
+  .page-label { color: var(--muted); font-size: .7em; font-weight: 400; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -136,6 +155,38 @@
           <div><label for="problemCount">Number of problems</label><input type="number" id="problemCount" value="30" min="5" max="100"></div>
           <div><label for="columns">Columns</label><input type="number" id="columns" value="3" min="1" max="6"></div>
         </div>
+
+        <div class="row2">
+          <div>
+            <label for="format">Format</label>
+            <select id="format">
+              <option value="horizontal">Horizontal (7 + 8 = ___)</option>
+              <option value="vertical">Vertical (stacked)</option>
+            </select>
+          </div>
+          <div>
+            <label for="fontSize">Font size</label>
+            <select id="fontSize">
+              <option value="sm">Small</option>
+              <option value="md" selected>Medium</option>
+              <option value="lg">Large</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div><label for="perPage">Problems per page (blank = one page)</label><input type="number" id="perPage" min="1" max="100" placeholder="auto"></div>
+          <div><label for="seedDisplay">Sheet seed</label><input type="text" id="seedDisplay" readonly aria-label="Sheet seed, used to reprint this exact sheet"></div>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="avoidTrivial" style="width:auto;margin:0;"> Avoid trivial facts (&times;0, &times;1, &divide;1, +0)
+        </label>
+
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="lockSeed" style="width:auto;margin:0;"> Lock seed &mdash; keep reproducing this exact sheet
+        </label>
+        <p class="hint" id="lockSeedHint" style="display:none;">Every "Generate" will now rebuild the identical sheet above. Export settings to save the seed for a make-up test or next year.</p>
 
         <label for="versionCount">Number of versions</label>
         <input type="number" id="versionCount" value="1" min="1" max="6">
@@ -193,11 +244,13 @@
    'viewWorksheetBtn','viewAnswersBtn','printBtn','previewArea','previewNote',
    'exportSettingsBtn','importSettingsBtn','importSettingsFile',
    'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn',
-   'timedFluency','fluencyTargetRow','fluencyTargetSeconds'
+   'timedFluency','fluencyTargetRow','fluencyTargetSeconds',
+   'format','fontSize','perPage','seedDisplay','avoidTrivial','lockSeed','lockSeedHint'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, versions: 1, rangesByTemplate: {},
-    timedFluency: false, fluencyTargetSeconds: '' };
+    timedFluency: false, fluencyTargetSeconds: '',
+    format: 'horizontal', fontSize: 'md', perPage: '', avoidTrivial: false, lockSeed: false, seed: null };
   var problemSets = []; // [{ label: 'Version A'|null, problems: [...] }, ...]
   var currentVersionIndex = 0;
   var isLeveledSet = false; // true when problemSets came from "Generate Leveled Set" — just changes preview/print copy
@@ -282,24 +335,68 @@
     return label ? base + ' &mdash; ' + label : base;
   }
 
-  function worksheetHtml(set) {
-    var cols = settings.columns;
-    var items = set.problems.map(function (p, i) {
-      return '<div class="p"><span class="num">' + (i + 1) + '.</span>' +
-        p.a + ' ' + p.symbol + ' ' + p.b + ' = _____</div>';
-    }).join('');
+  /** Stacked vertical layout for a single problem: a table so both operands
+      right-align on their ones digit, with a rule and a blank line for the
+      answer beneath. Division gets a long-division bracket instead. */
+  function verticalProblemHtml(p) {
+    if (p.op === 'divide') {
+      return (
+        '<div class="vert-div">' +
+          '<div class="top-blank">&nbsp;</div>' +
+          '<div class="bracket-row"><span class="divisor">' + p.b + '</span>' +
+          '<span class="dividend">' + p.a + '</span></div>' +
+        '</div>'
+      );
+    }
     return (
-      '<div class="sheet">' +
-        '<div class="sheet-title">' + sheetTitleFor(set.label) + '</div>' +
-        '<div class="sheet-meta"><span>Name: <span class="fill-line">&nbsp;</span></span><span>Date: ' + todayStr + '</span></div>' +
-        fluencyHeaderHtml() +
-        '<div class="problems" style="column-count:' + cols + ';">' + items + '</div>' +
-      '</div>'
+      '<table class="vert-table"><tbody>' +
+        '<tr><td class="op">&nbsp;</td><td>' + p.a + '</td></tr>' +
+        '<tr><td class="op">' + p.symbol + '</td><td>' + p.b + '</td></tr>' +
+        '<tr class="rule"><td></td><td></td></tr>' +
+        '<tr class="blank"><td></td><td></td></tr>' +
+      '</tbody></table>'
     );
+  }
+
+  function problemItemHtml(p, num) {
+    var body = settings.format === 'vertical'
+      ? verticalProblemHtml(p)
+      : (p.a + ' ' + p.symbol + ' ' + p.b + ' = _____');
+    return '<div class="p"><span class="num">' + num + '.</span>' + body + '</div>';
+  }
+
+  /** Split a problem list into pages of `perPage` (or one page if unset/invalid). */
+  function paginate(problems) {
+    var perPage = parseInt(settings.perPage, 10);
+    if (!perPage || perPage <= 0 || perPage >= problems.length) return [problems];
+    var pages = [];
+    for (var i = 0; i < problems.length; i += perPage) pages.push(problems.slice(i, i + perPage));
+    return pages;
+  }
+
+  function worksheetHtml(set) {
+    var cols = settings.format === 'vertical' ? Math.min(settings.columns, 4) : settings.columns;
+    var fsClass = settings.fontSize === 'md' ? '' : ' fs-' + settings.fontSize;
+    var vertClass = settings.format === 'vertical' ? ' vertical' : '';
+    var pages = paginate(set.problems);
+    var num = 0;
+    return pages.map(function (pageProblems, pageIndex) {
+      var items = pageProblems.map(function (p) { num++; return problemItemHtml(p, num); }).join('');
+      var pageLabel = pages.length > 1 ? ' <span class="page-label">(page ' + (pageIndex + 1) + ' of ' + pages.length + ')</span>' : '';
+      return (
+        '<div class="sheet">' +
+          '<div class="sheet-title">' + sheetTitleFor(set.label) + pageLabel + '</div>' +
+          '<div class="sheet-meta"><span>Name: <span class="fill-line">&nbsp;</span></span><span>Date: ' + todayStr + '</span></div>' +
+          (pageIndex === 0 ? fluencyHeaderHtml() : '') +
+          '<div class="problems' + vertClass + fsClass + '" style="column-count:' + cols + ';--vcols:' + cols + ';">' + items + '</div>' +
+        '</div>'
+      );
+    }).join('');
   }
 
   function answersHtml(set) {
     var cols = settings.columns + 1;
+    var fsClass = settings.fontSize === 'md' ? '' : ' fs-' + settings.fontSize;
     var items = set.problems.map(function (p, i) {
       return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + p.answer + '</div>';
     }).join('');
@@ -307,7 +404,7 @@
       '<div class="sheet">' +
         '<div class="sheet-title">' + sheetTitleFor(set.label) + ' &mdash; Answer Key</div>' +
         '<div class="sheet-meta"><span>&nbsp;</span><span>Date: ' + todayStr + '</span></div>' +
-        '<div class="answers" style="column-count:' + cols + ';">' + items + '</div>' +
+        '<div class="answers' + fsClass + '" style="column-count:' + cols + ';">' + items + '</div>' +
       '</div>'
     );
   }
@@ -368,35 +465,60 @@
     settings.versions = Math.max(1, Math.min(6, parseInt(els.versionCount.value, 10) || 1));
     settings.timedFluency = els.timedFluency.checked;
     settings.fluencyTargetSeconds = els.fluencyTargetSeconds.value;
+    settings.format = els.format.value === 'vertical' ? 'vertical' : 'horizontal';
+    settings.fontSize = ['sm', 'md', 'lg'].indexOf(els.fontSize.value) >= 0 ? els.fontSize.value : 'md';
+    settings.perPage = els.perPage.value;
+    settings.avoidTrivial = els.avoidTrivial.checked;
+    settings.lockSeed = els.lockSeed.checked;
+  }
+
+  /** Fresh 32-bit seed unless the sheet is locked, in which case the last
+      seed is kept so "Generate" reproduces the same sheet on demand
+      (reprint for a make-up test, or after a settings tweak that didn't
+      change the seed field itself). */
+  function nextSeed() {
+    if (settings.lockSeed && settings.seed != null) return settings.seed;
+    return Math.floor(Math.random() * 0xFFFFFFFF);
   }
 
   function generate() {
     readFormIntoSettings();
+    settings.seed = nextSeed();
     persist();
     var template = effectiveTemplate(settings.templateKey);
     problemSets = [];
     for (var i = 0; i < settings.versions; i++) {
       problemSets.push({
         label: settings.versions > 1 ? 'Version ' + String.fromCharCode(65 + i) : null,
-        problems: MathDrillGenerate.generateProblems(template, settings.problemCount)
+        problems: MathDrillGenerate.generateProblems(template, settings.problemCount, {
+          seed: settings.seed + i, avoidTrivial: settings.avoidTrivial
+        })
       });
     }
     isLeveledSet = false;
     currentVersionIndex = 0;
+    els.seedDisplay.value = settings.seed;
     renderVersionTabs();
     renderPreview();
   }
 
   function generateLeveledSet() {
     readFormIntoSettings();
+    settings.seed = nextSeed();
     persist();
     var base = effectiveTemplate(settings.templateKey);
-    problemSets = [['Easy', 'easy'], ['Medium', 'medium'], ['Hard', 'hard']].map(function (pair) {
+    problemSets = [['Easy', 'easy'], ['Medium', 'medium'], ['Hard', 'hard']].map(function (pair, i) {
       var t = templateForLevel(base, pair[1]);
-      return { label: pair[0], problems: MathDrillGenerate.generateProblems(t, settings.problemCount) };
+      return {
+        label: pair[0],
+        problems: MathDrillGenerate.generateProblems(t, settings.problemCount, {
+          seed: settings.seed + i, avoidTrivial: settings.avoidTrivial
+        })
+      };
     });
     isLeveledSet = true;
     currentVersionIndex = 0;
+    els.seedDisplay.value = settings.seed;
     renderVersionTabs();
     renderPreview();
   }
@@ -439,6 +561,13 @@
     els.timedFluency.checked = !!obj.timedFluency;
     els.fluencyTargetRow.style.display = els.timedFluency.checked ? '' : 'none';
     els.fluencyTargetSeconds.value = typeof obj.fluencyTargetSeconds === 'string' || typeof obj.fluencyTargetSeconds === 'number' ? obj.fluencyTargetSeconds : '';
+    els.format.value = obj.format === 'vertical' ? 'vertical' : 'horizontal';
+    els.fontSize.value = ['sm', 'md', 'lg'].indexOf(obj.fontSize) >= 0 ? obj.fontSize : 'md';
+    els.perPage.value = typeof obj.perPage === 'string' || typeof obj.perPage === 'number' ? obj.perPage : '';
+    els.avoidTrivial.checked = !!obj.avoidTrivial;
+    els.lockSeed.checked = !!obj.lockSeed;
+    els.lockSeedHint.style.display = els.lockSeed.checked ? '' : 'none';
+    settings.seed = (typeof obj.seed === 'number') ? obj.seed : null;
     loadRangeInputs();
     generate();
   }
@@ -486,6 +615,16 @@
   });
   els.fluencyTargetSeconds.addEventListener('input', function () { readFormIntoSettings(); persist(); renderPreview(); });
 
+  els.format.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
+  els.fontSize.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
+  els.perPage.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
+  els.avoidTrivial.addEventListener('change', generate);
+  els.lockSeed.addEventListener('change', function () {
+    readFormIntoSettings();
+    els.lockSeedHint.style.display = els.lockSeed.checked ? '' : 'none';
+    persist();
+  });
+
   els.viewWorksheetBtn.addEventListener('click', function () {
     view = 'worksheet';
     els.viewWorksheetBtn.classList.add('active');
@@ -522,6 +661,12 @@
   els.timedFluency.checked = !!settings.timedFluency;
   els.fluencyTargetRow.style.display = els.timedFluency.checked ? '' : 'none';
   els.fluencyTargetSeconds.value = settings.fluencyTargetSeconds || '';
+  els.format.value = settings.format === 'vertical' ? 'vertical' : 'horizontal';
+  els.fontSize.value = ['sm', 'md', 'lg'].indexOf(settings.fontSize) >= 0 ? settings.fontSize : 'md';
+  els.perPage.value = settings.perPage || '';
+  els.avoidTrivial.checked = !!settings.avoidTrivial;
+  els.lockSeed.checked = !!settings.lockSeed;
+  els.lockSeedHint.style.display = els.lockSeed.checked ? '' : 'none';
   loadRangeInputs();
   generate();
 })();

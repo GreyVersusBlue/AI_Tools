@@ -54,6 +54,8 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Primary Source Analysis Worksheet Generator | `Tools/primary-source-analysis-generator.html` | Builds a printable OPTIC or SOAPSTone worksheet around a described or pasted-in source, with an answer key from your own notes. |
 | Immersion Roleplay Scenario Generator | `Tools/roleplay-scenario-generator.html` | Real-life dialogue scenarios with vocabulary scaffolding cards you fill in for whatever language you teach. |
 | Tournament Bracket & Station Rotation | `Tools/pe-tournament-stations.html` | A station rotation timer with named stations and groups, plus a tournament bracket for PE units. |
+| Prompt Builder | `Tools/prompt-builder.html` | Answer a guided form about what you're building — audience, tone, format, guardrails — and get a ready-to-use prompt for whatever AI assistant you use, with task presets, prompt history, and a shareable link. |
+| QR Code Generator | `Tools/qr-code-generator.html` | Turn a link or short text into a printable QR code, with an optional logo in the center. |
 
 ## Using these
 
