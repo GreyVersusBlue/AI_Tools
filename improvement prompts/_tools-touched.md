@@ -280,18 +280,49 @@ not just a bare date, so that several rounds landing the same calendar day
 (as happened throughout Pass 1) stay distinguishable at a glance. The next
 round entry gets appended directly below this note.
 
-10 new tools were also added straight from the Ideas Backlog since Pass 1
-started (Art Critique Worksheet Generator, Current Events Discussion Guide
-Generator, Daily Editing/DOL Warm-Up Generator, Lab Report Template
-Builder, Parent/Guardian Contact Log, Peer Feedback/Editing Checklist
-Generator, Staff Directory/Quick-Reference Builder, Unit Conversion
-Reference Chart Builder, Verb Conjugation Reference Poster Generator, Word
-Problem Warm-Up Generator). Each already has its own `improvement
-prompts/<tool>.md` with a first-build Status, but none of the ten are in
-the "Not yet touched" list below yet — Devon wants to fold them into the
-round system deliberately rather than mixed in silently with this reset.
-Leave them out until told otherwise; more may be coming from the backlog
-before that happens.
+**35 new tools** were also added straight from the Ideas Backlog since Pass
+1 started — as of this reset, the entire Ideas Backlog (`IDEAS_BACKLOG.md`)
+has shipped and sits empty. Each new tool already has its own `improvement
+prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
+"Not yet touched" list below yet — Devon wants to fold them into the round
+system as a deliberate batch rather than mixed in silently with this reset.
+Leave them out until told otherwise:
+
+Art Critique Worksheet Generator (`art-critique-worksheet-generator.md`) ·
+Student Art Portfolio Label & QR Tag Maker (`art-portfolio-label-maker.md`) ·
+Book Tasting Menu Generator (`book-tasting-menu-generator.md`) ·
+Government/Civics Simulation Role Card Generator (`civics-role-card-generator.md`) ·
+Classroom Label Maker, Target Language (`classroom-label-maker.md`) ·
+Cognates & False Friends Reference List Builder (`cognates-false-friends-builder.md`) ·
+Cultural Trivia Card Generator (`cultural-trivia-card-generator.md`) ·
+Current Events Discussion Guide Generator (`current-events-discussion-guide-generator.md`) ·
+Daily Editing / DOL Warm-Up Generator (`daily-editing-warmup-generator.md`) ·
+DBQ / Source Packet Builder (`dbq-source-packet-builder.md`) ·
+Dichotomous Key Builder (`dichotomous-key-builder.md`) ·
+Duty Roster Builder (`duty-roster-builder.md`) ·
+Scientific Method / Experiment Design Planner (`experiment-design-planner.md`) ·
+Fitness & Skill Assessment Tracker (`fitness-skill-assessment-tracker.md`) ·
+Fraction–Decimal–Percent Conversion Drill Generator (`fraction-decimal-percent-drill-generator.md`) ·
+Geography Bee / Map Skills Quiz Generator (`geography-bee-quiz-generator.md`) ·
+Grammar Mad Libs Generator (`grammar-mad-libs-generator.md`) ·
+Historical Figure / Country Trading Card Maker (`historical-trading-card-maker.md`) ·
+Lab Report Template Builder (`lab-report-template-builder.md`) ·
+Math "Find the Mistake" Warm-Up Generator (`math-find-the-mistake-generator.md`) ·
+Music Sight-Reading / Rhythm Warm-Up Generator (`music-sightreading-generator.md`) ·
+Parent/Guardian Contact Log (`parent-contact-log.md`) ·
+PE Warm-Up Circuit Card Generator (`pe-warmup-circuit-generator.md`) ·
+Peer Feedback / Editing Checklist Generator (`peer-feedback-checklist-generator.md`) ·
+Picture-Prompt Speaking/Writing Task Generator (`picture-prompt-generator.md`) ·
+Story Elements / Plot Diagram Builder (`plot-diagram-builder.md`) ·
+Science Fair Project Tracker (`science-fair-project-tracker.md`) ·
+Science Safety Symbol & Equipment Label Maker (`science-safety-label-maker.md`) ·
+Staff Directory / Quick-Reference Builder (`staff-directory-builder.md`) ·
+Sub Note / Feedback Slip Generator (`sub-note-feedback-slip-generator.md`) ·
+Testing Accommodations Reference Card Generator (`testing-accommodations-card-generator.md`) ·
+Unit Conversion Reference Chart Builder (`unit-conversion-chart-builder.md`) ·
+Verb Conjugation Reference Poster Generator (`verb-conjugation-poster-generator.md`) ·
+Virtual Manipulatives Board (`virtual-manipulatives-board.md`) ·
+Word Problem Warm-Up Generator (`word-problem-warmup-generator.md`)
 
 ---
 
