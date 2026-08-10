@@ -134,7 +134,7 @@ it down.
 
 **33 of 46 tools done. 13 to go.**
 
-### Round 7 — 2026-08-10 — PR #TBD
+### Round 7 — 2026-08-10 — PR #60
 
 A linked pair: the published schedule browser and the 19,400-line tool that
 generates it. Found, along the way, that the two had already drifted apart —

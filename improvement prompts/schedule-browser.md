@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 7 (PR #TBD): four Quick Wins shipped directly to this
+**2026-08-10 — Round 7 (PR #60): four Quick Wins shipped directly to this
 file, plus a critical bug found and fixed in the publisher (see
 `schedule-visualizer.md`).**
 
