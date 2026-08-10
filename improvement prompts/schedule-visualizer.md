@@ -9,7 +9,7 @@
 
 ## Status
 
-**2026-08-10 — Round 7 (PR #TBD): a critical publish-pipeline crash fixed,
+**2026-08-10 — Round 7 (PR #60): a critical publish-pipeline crash fixed,
 plus the storage headroom warning Quick Win.**
 
 **The main finding this round, and the reason it dominates this Status
