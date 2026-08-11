@@ -44,30 +44,48 @@ all expected cards with no console errors.
 
 Nothing below has been started.
 
+**2026-08-11 — Round 2 (session `4o6xmy`).** Three Quick Wins shipped,
+verified with a headless Chromium smoke test (real interactions) with zero
+console errors:
+
+- **Reorder stations** via up/down buttons in each station's footer row,
+  swap-with-neighbor, first/last disabled appropriately.
+- **Duplicate station** button, inserting a copy immediately after the
+  original with all fields intact (rename left to the teacher).
+- **Emoji picker** — a "Pick emoji" button opens a small palette of ~22
+  exercise-related emoji next to the free-text emoji field; picking one
+  fills the field and closes the palette; clicking anywhere else (another
+  station, elsewhere on the page) also closes it.
+
+**Where the next round should pick up:** Multiple named saved circuits is
+the clear next lift — the file's own Open Questions note it should reuse
+the `list`/`data:<name>`/`current` localStorage convention already
+established in Formula Sheet Builder (`Tools/formula-sheet-builder/
+fsb-store.js`) and now also in Plot Diagram Builder (072, this same
+round) rather than reinventing it a third time. After that, the live
+projector/timer "run the circuit" mode is the Major Feature with the most
+leverage, and should explicitly reuse Gallery Walk QR Codes' rotation-timer
+pattern per the Open Questions below rather than a fresh implementation.
+
 ## What it does today
 
 - Default 8-station calisthenics circuit, or a blank starting point
 - Per-station emoji, name, duration/reps, and instructions, fully editable
-- Add/remove stations; confirm-gated template switching
+- Add/remove/reorder/duplicate stations; emoji picker palette; confirm-gated
+  template switching
 - Print: station card grid (2/4/6/8 per page)
 - Autosaves to `localStorage` (`pe_circuit_v1`)
 
 ## Quick Wins
 
-- **Reorder stations** via up/down buttons, matching the pattern used
-  throughout this toolkit (Gallery Walk QR Codes, several tools this
-  round) — station order matters for a circuit's flow and there's no way
-  to fix a misordered list today short of deleting and re-adding.
-- **A simple emoji picker** (a small palette of common exercise-related
-  emoji to click, alongside the free-text field) instead of requiring a
-  teacher to know how to type or paste an emoji character.
+- **Done — Reorder stations** via up/down buttons.
+- **Done — A simple emoji picker.**
 - **Multiple named saved circuits**, matching the multi-save convention
   used by most builder tools in this round — one flat circuit per
   browser right now, so a teacher running different circuits for
-  different units/sports can't keep them separate.
-- **Duplicate a station** (for building near-identical stations quickly,
-  e.g. "Push-Ups — Beginner" and "Push-Ups — Advanced" with slightly
-  different rep counts) instead of retyping every field.
+  different units/sports can't keep them separate. *(Still open — see
+  Status for the recommended storage pattern to copy.)*
+- **Done — Duplicate a station.**
 
 ## Major Features
 

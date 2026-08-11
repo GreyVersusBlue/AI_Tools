@@ -54,3 +54,43 @@ requests and filters the resulting generic connection-reset console message,
 rather than fixing the shared file. This means the smoke test doesn't
 actually catch a regression in the font loading itself — just doesn't fail
 on the pre-existing problem it isn't scoped to fix.
+
+---
+
+## HTML entity written as literal text in a JS string, later passed through `escapeHtml()` — six confirmed instances, worth a dedicated sweep
+
+Found again 2026-08-11 in `072-plot-diagram-builder.html` (Pass 2, session
+`4o6xmy`), fixed as part of that tool's own round.
+
+The bug shape: a JS string literal contains an HTML entity written as text
+(e.g. `'&mdash;'`, `'&deg;'`) instead of the actual Unicode character (—,
+°), and that string is later passed through the toolkit's standard
+`escapeHtml()` helper before being inserted via `innerHTML`. `escapeHtml()`
+escapes the leading `&` into `&amp;`, so the entity never resolves — the
+page (or, worse, the printed output) shows the literal text `&mdash;`
+instead of an em dash.
+
+This is now confirmed **six times** across the toolkit, each caught by
+chance during a different tool's own round rather than by a systematic
+search:
+
+1. Verb Conjugation Reference Poster Generator (`079-...html`)
+2. Sub Note / Feedback Slip Generator (`076-...html`)
+3. Science Fair Project Tracker (`073-...html`)
+4. Government/Civics Simulation Role Card Generator (`050-...html`)
+5. PE Warm-Up Circuit Card Generator (`069-...html`, in a station's
+   instructions text)
+6. Story Elements / Plot Diagram Builder (`072-...html`, in the print
+   view's empty-field fallback text — `'&mdash;'` used four times)
+
+Six independent hits by accident is a strong signal there are more. Worth
+a dedicated site-wide grep the next time someone has a round to spare:
+search every `Tools/*.html` for entity-name patterns (`&mdash;`, `&ndash;`,
+`&deg;`, `&hellip;`, `&rsquo;`, `&lsquo;`, `&ldquo;`, `&rdquo;`, `&trade;`,
+etc. — not `&amp;`/`&lt;`/`&gt;`/`&quot;`/`&#39;`, which are the
+legitimately-escaped ones) appearing *inside a JS string literal* (i.e.
+inside `'...'` or `"..."` in a `<script>` block, not inside literal HTML
+markup where entities are correct as-is) rather than waiting for the next
+tool's smoke test to catch instance seven by luck. The fix each time has
+been the same one-line swap: replace the entity name with the actual
+Unicode character in the source string.

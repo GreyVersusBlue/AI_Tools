@@ -61,7 +61,7 @@
   .btnrow, .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
 
   .station-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; margin-bottom: .6rem; }
-  .station-row .top-line { display: grid; grid-template-columns: 46px 1fr; gap: .5rem; margin-bottom: .4rem; }
+  .station-row .top-line { display: grid; grid-template-columns: 46px 1fr auto; gap: .5rem; margin-bottom: .4rem; position: relative; }
   .station-row input.emoji-field { text-align: center; font-size: 1.3rem; padding: .3rem; margin-bottom: 0; }
   .station-row input.name-field { margin-bottom: 0; font-weight: 700; }
   .station-row .row2 { margin-bottom: 0; }
@@ -71,8 +71,18 @@
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .4rem .5rem; resize: vertical; min-height: 2.6rem;
   }
-  .station-footer { display: flex; justify-content: space-between; align-items: center; }
+  .station-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .4rem; }
   .station-footer .num { font-family: Consolas, monospace; font-size: .74rem; color: var(--muted); }
+  .station-footer .footer-actions { display: flex; gap: .3rem; flex-wrap: wrap; }
+  button.icon-btn { padding: .25rem .5rem; font-size: .78rem; line-height: 1; }
+  .emoji-pick-btn { align-self: center; font-size: .74rem; padding: .35rem .5rem; white-space: nowrap; }
+  .emoji-palette {
+    position: absolute; top: 100%; left: 0; z-index: 10; margin-top: .2rem;
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.15);
+    padding: .5rem; display: grid; grid-template-columns: repeat(7, 1fr); gap: .15rem; width: 240px;
+  }
+  .emoji-palette button { background: none; border: none; color: inherit; font-size: 1.2rem; padding: .3rem; border-radius: 5px; }
+  .emoji-palette button:hover { background: #eeece3; }
 
   .preview-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
@@ -212,6 +222,9 @@
 
   var state = { title: '', stations: [], cardsPerPage: '4' };
 
+  var EMOJI_PALETTE = ['🏃','🤸','🦵','💪','🧘','🤾','🏋️','⛹️','🤺','🥊','🏸','⏱️','🔁','💦','🥇','🎯','🧗','🚴','🤸‍♀️','🤸‍♂️','🏆','❤️‍🔥'];
+  var openPaletteId = null;
+
   function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -257,16 +270,26 @@
   }
 
   function renderStations() {
+    var last = state.stations.length - 1;
     els.stationsList.innerHTML = state.stations.map(function (s, i) {
       return '<div class="station-row" data-id="' + s.id + '">' +
         '<div class="top-line">' +
           '<input type="text" class="emoji-field" data-emoji="' + s.id + '" value="' + escapeAttr(s.emoji) + '" placeholder="&#127942;">' +
           '<input type="text" class="name-field" data-name="' + s.id + '" value="' + escapeAttr(s.name) + '" placeholder="Station name">' +
+          '<button type="button" class="secondary emoji-pick-btn" data-emoji-pick="' + s.id + '">Pick emoji</button>' +
+          (openPaletteId === s.id ? '<div class="emoji-palette" data-palette-for="' + s.id + '">' +
+            EMOJI_PALETTE.map(function (em) { return '<button type="button" data-emoji-choice="' + s.id + '" data-emoji-value="' + escapeAttr(em) + '">' + em + '</button>'; }).join('') +
+          '</div>' : '') +
         '</div>' +
         '<input type="text" data-duration="' + s.id + '" value="' + escapeAttr(s.duration) + '" placeholder="Duration or reps, e.g. 30 seconds">' +
         '<textarea data-instructions="' + s.id + '" placeholder="How to do it, cues, or safety notes">' + escapeHtml(s.instructions) + '</textarea>' +
         '<div class="station-footer"><span class="num">Station ' + (i + 1) + '</span>' +
-          '<button type="button" class="danger small" data-remove="' + s.id + '">Remove station</button>' +
+          '<div class="footer-actions">' +
+            '<button type="button" class="secondary small icon-btn" data-move-up="' + s.id + '"' + (i === 0 ? ' disabled' : '') + ' title="Move up">&uarr;</button>' +
+            '<button type="button" class="secondary small icon-btn" data-move-down="' + s.id + '"' + (i === last ? ' disabled' : '') + ' title="Move down">&darr;</button>' +
+            '<button type="button" class="secondary small" data-duplicate="' + s.id + '">Duplicate</button>' +
+            '<button type="button" class="danger small" data-remove="' + s.id + '">Remove station</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -288,16 +311,73 @@
 
   els.stationsList.addEventListener('click', function (ev) {
     var removeBtn = ev.target.closest('[data-remove]');
-    if (!removeBtn) return;
-    var id = removeBtn.getAttribute('data-remove');
-    state.stations = state.stations.filter(function (s) { return s.id !== id; });
-    ensureAtLeastOneRow();
-    save(); renderStations(); scheduleRender();
+    var pickBtn = ev.target.closest('[data-emoji-pick]');
+    var choiceBtn = ev.target.closest('[data-emoji-choice]');
+    var upBtn = ev.target.closest('[data-move-up]');
+    var downBtn = ev.target.closest('[data-move-down]');
+    var dupBtn = ev.target.closest('[data-duplicate]');
+
+    if (removeBtn) {
+      var id = removeBtn.getAttribute('data-remove');
+      state.stations = state.stations.filter(function (s) { return s.id !== id; });
+      ensureAtLeastOneRow();
+      openPaletteId = null;
+      save(); renderStations(); scheduleRender();
+      return;
+    }
+    if (pickBtn) {
+      var pid = pickBtn.getAttribute('data-emoji-pick');
+      openPaletteId = openPaletteId === pid ? null : pid;
+      renderStations();
+      return;
+    }
+    if (choiceBtn) {
+      var cid = choiceBtn.getAttribute('data-emoji-choice');
+      var val = choiceBtn.getAttribute('data-emoji-value');
+      var st = state.stations.find(function (s) { return s.id === cid; });
+      if (st) st.emoji = val;
+      openPaletteId = null;
+      save(); renderStations(); scheduleRender();
+      return;
+    }
+    if (upBtn || downBtn) {
+      var mid = (upBtn || downBtn).getAttribute(upBtn ? 'data-move-up' : 'data-move-down');
+      var idx = state.stations.findIndex(function (s) { return s.id === mid; });
+      var swapWith = upBtn ? idx - 1 : idx + 1;
+      if (idx === -1 || swapWith < 0 || swapWith >= state.stations.length) return;
+      var tmp = state.stations[idx];
+      state.stations[idx] = state.stations[swapWith];
+      state.stations[swapWith] = tmp;
+      save(); renderStations(); scheduleRender();
+      return;
+    }
+    if (dupBtn) {
+      var did = dupBtn.getAttribute('data-duplicate');
+      var didx = state.stations.findIndex(function (s) { return s.id === did; });
+      if (didx === -1) return;
+      var orig = state.stations[didx];
+      var copy = { id: uid(), emoji: orig.emoji, name: orig.name, duration: orig.duration, instructions: orig.instructions };
+      state.stations.splice(didx + 1, 0, copy);
+      save(); renderStations(); scheduleRender();
+      return;
+    }
+    if (!ev.target.closest('.emoji-palette') && !ev.target.closest('[data-emoji-pick]') && openPaletteId) {
+      openPaletteId = null;
+      renderStations();
+    }
   });
 
   els.addStationBtn.addEventListener('click', function () {
     state.stations.push(blankStation());
+    openPaletteId = null;
     save(); renderStations(); scheduleRender();
+  });
+
+  document.addEventListener('click', function (ev) {
+    if (!openPaletteId) return;
+    if (ev.target.closest('.emoji-palette') || ev.target.closest('[data-emoji-pick]')) return;
+    openPaletteId = null;
+    renderStations();
   });
 
   els.circuitTitle.addEventListener('input', function () { state.title = els.circuitTitle.value; save(); });

@@ -21,30 +21,55 @@ add category, print with a mocked `window.print`) — no console errors.
 
 Nothing below has been started.
 
+**2026-08-11 — Round 2 (session `4o6xmy`).** Two of the four Quick Wins
+shipped, verified with a headless Chromium smoke test (real interactions,
+`window.print` mocked) with zero console errors:
+
+- **Reorder categories and items** via up/down buttons on both the
+  category header and each item row.
+- **Print layout QA**, addressed as a hybrid of the two options the file's
+  own Open Questions posed rather than picking one: an on-screen warning
+  banner appears once a checklist's total category+item count crosses a
+  threshold ("on the larger side" at 12+, "long for a half-sheet" at 18+),
+  *and* the print CSS now scales font-size/spacing down in two steps
+  (`.compact`, `.tight`) at those same thresholds so a bigger checklist
+  both warns the teacher and is measurably less likely to clip. This is
+  still a heuristic (line-count based, not a true rendered-height
+  measurement), not the fully "measured" two-per-page layout the Open
+  Questions described as the more robust option — that remains open if a
+  real-world checklist still clips at the `tight` tier.
+
+**Where the next round should pick up:** the per-item rating scale
+(yes/no/somewhat) and "duplicate template as a starting point" are the two
+Quick Wins still unbuilt — rating scale is probably the higher-value one
+since it's a description-level change ("captures degree, not just
+presence"), and duplicate-template only matters once multiple named
+checklists exist (see Major Features), so consider building them together.
+
 ## What it does today
 
 - 4 templates, each with 3 categories and pre-filled checklist items
-- Fully editable: rename/add/remove categories, edit/add/remove items
+- Fully editable: rename/add/remove/reorder categories, edit/add/remove/
+  reorder items
+- An on-screen size warning once a checklist is likely too long for a
+  half-sheet, with print text that shrinks in two steps to help it fit
 - Print N copies as half-sheets, each with blank author/reviewer name lines
   and a comments area
 
 ## Quick Wins
 
-- **Reorder categories and items** (up/down buttons, matching Formula Sheet
-  Builder / Rubric Builder's existing pattern) — order is currently fixed
-  by template/insertion order.
+- **Done — Reorder categories and items** (up/down buttons).
 - **A short rating option per item** (yes/no/somewhat, or a 1&ndash;3 scale)
   instead of a bare checkbox, so feedback captures degree, not just
-  presence.
-- **Print layout QA**: the half-sheet print CSS currently caps each block at
-  a fixed height (`47vh`) and hides overflow — a checklist with many
-  categories/items risks getting visually cut off. Should switch to a
-  measured two-per-page layout or explicitly warn when a checklist is too
-  long for a half-sheet.
+  presence. *(Still open.)*
+- **Done — Print layout QA** — on-screen size warning plus two-tier print
+  font/spacing scaling. *(A true measured-height layout is still the more
+  robust option if this heuristic proves insufficient in practice.)*
 - **A "duplicate template as starting point" option** — right now loading
   a template always fully replaces the current checklist; cloning it into
   an editable copy under a new name would let a teacher build variations
-  faster.
+  faster. *(Still open — most useful once multiple named checklists exist,
+  see Major Features.)*
 
 ## Major Features
 
