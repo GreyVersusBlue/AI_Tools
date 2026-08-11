@@ -46,6 +46,9 @@
   <script type="module">
     import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
     window.SVHandoff = { drawQR, startHost, startJoin };
+    import * as SVRecovery from './schedule-visualizer/sv-recovery.js';
+    window.SVRecovery = SVRecovery;
+    window.dispatchEvent(new Event('sv-recovery-ready'));
   </script>
   <style>
     :root {
@@ -2609,6 +2612,33 @@
       margin-top: var(--sp-2); text-align: right;
     }
 
+    /* Page-level banners: the storage-quota warning (R58, which shipped its
+       markup with no stylesheet at all) and the crash-recovery offer. Both are
+       appended to <body> and pinned above everything, because both are about
+       work the teacher is at risk of losing right now. */
+    .stviz-storage-banner, .stviz-recovery-banner {
+      position: fixed; left: 50%; transform: translateX(-50%); top: 12px; z-index: 900;
+      display: none; align-items: flex-start; gap: var(--sp-3);
+      max-width: min(760px, calc(100vw - 24px));
+      padding: 10px var(--sp-4); border-radius: var(--r-md);
+      font-family: var(--font-ui); font-size: 12.5px; line-height: 1.45;
+      box-shadow: var(--shadow-lg, 0 10px 30px rgba(15,26,46,0.18));
+      border: 1.5px solid transparent; background: var(--white); color: var(--slate-800);
+    }
+    .stviz-storage-banner.warn { background: #fffbeb; border-color: #fcd34d; color: #78350f; }
+    .stviz-storage-banner.fail { background: #fef2f2; border-color: #fca5a5; color: #7f1d1d; }
+    .stviz-recovery-banner { background: #eff6ff; border-color: #bfdbfe; color: var(--slate-800); }
+    .stviz-storage-banner button, .stviz-recovery-banner button {
+      flex-shrink: 0; font-family: var(--font-ui); font-size: 11.5px; font-weight: 600;
+      padding: 4px 10px; border-radius: var(--r-sm); cursor: pointer;
+      border: 1.5px solid var(--slate-200); background: var(--white); color: var(--slate-700);
+    }
+    .stviz-storage-banner button:hover, .stviz-recovery-banner button:hover { background: var(--slate-50); }
+    .stviz-recovery-banner button.primary { color: var(--accent-dk); border-color: #bfdbfe; background: #dbeafe; }
+    .stviz-recovery-banner button.primary:hover { background: var(--accent-lt); border-color: var(--accent); }
+    .stviz-recovery-banner .banner-actions { display: flex; gap: var(--sp-2); flex-shrink: 0; }
+    .recovery-empty { font-size: 12px; color: var(--slate-400); padding: var(--sp-3) 0; text-align: center; }
+
     /* ── Viz loading overlay ── */
     #viz-loading {
       position: absolute; inset: 0; z-index: 30; display: none;
@@ -4540,6 +4570,18 @@
           </div>
         </div>
 
+        <!-- Automatic recovery points (crash recovery) -->
+        <div class="settings-section" id="settings-recovery-section">
+          <h3 class="settings-section-title">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 9 9 9"/></svg>
+            Automatic Recovery Points
+          </h3>
+          <p class="form-hint" style="margin-bottom:var(--sp-4);">Kept on their own, without you asking: the whole project is copied every few minutes while you work, and again when you leave the page. Three are held at a time, oldest dropped. If the browser dies, or the saved layout comes back unreadable, you'll be offered the newest one on the next open. These live in this browser's IndexedDB, separate from the auto-save above, so a full-storage failure can't take both.</p>
+          <div id="recovery-list">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
         <!-- Danger Zone -->
         <div class="settings-danger-zone">
           <div class="settings-danger-zone-title">⚠ Danger Zone</div>
@@ -5783,6 +5825,11 @@ function hideStorageBanner() {
  * Debounce wrapper — saves within 800ms of the last change.
  */
 function scheduleBlueprintAutosave() {
+  // Same funnel every change already goes through, so the recovery ring's idea
+  // of "something changed" can't drift from the autosave's. Reached via window
+  // because RecoveryManager is a `const` declared much further down this file —
+  // a bare reference here would be a temporal-dead-zone throw, not undefined.
+  if (window.RecoveryManager) window.RecoveryManager.markDirty();
   const indicator = document.getElementById('bp-autosave-indicator');
   if (indicator) { indicator.className = 'bp-autosave-indicator saving'; }
   const textEl = document.getElementById('bp-autosave-text');
@@ -5813,13 +5860,19 @@ function updateSaveIndicator() {
   }
 }
 
+/* Why the last load did what it did: 'restored', 'empty' (nothing saved yet —
+   a genuine first run) or 'corrupt' (there WAS a payload and it could not be
+   read). Only the third case means work is missing, and it's the one that used
+   to look identical to a first run — a console warning and an empty editor. */
+let _blueprintLoadStatus = 'empty';
+
 /**
  * Load blueprint from localStorage on startup.
  */
 function loadBlueprintFromLocalStorage() {
   try {
     const raw = localStorage.getItem(BLUEPRINT_KEY);
-    if (!raw) return false;
+    if (!raw) { _blueprintLoadStatus = 'empty'; return false; }
 
     const data = JSON.parse(raw);
     validateBlueprintData(data);
@@ -5832,9 +5885,18 @@ function loadBlueprintFromLocalStorage() {
 
     _lastBlueprintSaveTime = data.savedAt ? new Date(data.savedAt) : new Date();
     updateSaveIndicator();
+    _blueprintLoadStatus = 'restored';
     return true;
   } catch(e) {
     console.warn('[STVIZ] Could not restore blueprint from localStorage:', e);
+    _blueprintLoadStatus = 'corrupt';
+    // Park the unreadable payload somewhere the autosave can't tread on it.
+    // It may still be salvageable by hand, and the very next edit would
+    // otherwise overwrite the only copy of it that exists.
+    try {
+      const raw = localStorage.getItem(BLUEPRINT_KEY);
+      if (raw) localStorage.setItem(BLUEPRINT_KEY + '_unreadable', raw);
+    } catch (e2) { /* no room to quarantine it — nothing more we can do */ }
     return false;
   }
 }
@@ -5936,6 +5998,7 @@ document.getElementById('btn-clear-saved-blueprint').addEventListener('click', (
     'This will permanently delete the blueprint saved in your browser.\n\nYour exported JSON files are not affected.\n\nContinue?'
   )) return;
 
+  if (window.RecoveryManager) RecoveryManager.capture('before clearing saved blueprint', true);
   localStorage.removeItem(BLUEPRINT_KEY);
   _lastBlueprintSaveTime = null;
   updateSaveIndicator();
@@ -16813,6 +16876,10 @@ function initFullProjectIO() {
       let data;
       try { data = JSON.parse(evt.target.result); }
       catch { showToast('Import failed: file is not valid JSON.', 'error'); return; }
+      // Capture what's about to be replaced — an import over a real project is
+      // the most destructive thing this tool does, and the confirm above is the
+      // only thing standing in front of it.
+      if (window.RecoveryManager) RecoveryManager.capture('before import', true);
       try {
         const res = applyFullProject(data);
         showToast(`Project imported: ${res.rooms} room${res.rooms !== 1 ? 's' : ''}, ${res.groups} group${res.groups !== 1 ? 's' : ''}.`, 'success');
@@ -16942,6 +17009,12 @@ function init() {
   initRoomSearch();      // R39
   initWhatIfModule();    // R51
   initPresentationMode(); // R58
+
+  // Recovery points live in an ES module, which evaluates after this classic
+  // script. If it hasn't landed yet, wait for its ready event rather than
+  // silently starting with no ring.
+  if (window.SVRecovery) RecoveryManager.init();
+  else window.addEventListener('sv-recovery-ready', () => RecoveryManager.init(), { once: true });
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -17085,6 +17158,210 @@ function renderSnapshotList() {
       deleteSnapshot(slot);
     });
   });
+}
+
+/* ==============================================
+   AUTOMATIC RECOVERY POINTS (crash recovery)
+
+   The blueprint autosave answers "I closed the tab". This answers the rest:
+   an autosaved payload that comes back unreadable, a quota failure that meant
+   the last stretch of work never landed, a destructive action, or a browser
+   that simply died. sv-recovery.js keeps three generations of the FULL
+   project (blueprint + groups + settings + what-if) in IndexedDB — deliberately
+   not localStorage, where a traced floor plan times three would compete with
+   the live autosave for the same ~5MB (P12).
+
+   Capture points: every RECOVERY_INTERVAL_MS while there have been changes,
+   on pagehide, and immediately before an import replaces everything.
+=============================================== */
+const RECOVERY_INTERVAL_MS = 5 * 60 * 1000;
+
+const RecoveryManager = {
+  _dirty: false,
+  _timer: null,
+  _capturing: false,
+  _prevSession: null,
+
+  /** True once sv-recovery.js has been evaluated (it's a deferred module). */
+  get api() { return window.SVRecovery || null; },
+
+  init() {
+    const api = this.api;
+    if (!api) return;                       // module blocked — live autosave is untouched
+    this._prevSession = api.markSessionOpen();
+
+    // pagehide covers tab close, navigation and (on mobile) the app being
+    // backgrounded; visibilitychange catches the switch-away that often
+    // precedes a machine going to sleep and never waking as the same session.
+    window.addEventListener('pagehide', () => {
+      this.capture('leaving');
+      api.markSessionClosed();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.capture('leaving');
+    });
+
+    this._timer = setInterval(() => this.capture('periodic'), RECOVERY_INTERVAL_MS);
+
+    this.renderList();
+    this.offerIfNeeded();
+  },
+
+  /** Called from the autosave funnel, so "changed" means exactly what it does
+   *  for the blueprint autosave. */
+  markDirty() { this._dirty = true; },
+
+  /**
+   * Writes one recovery point. `force` skips the dirty check (used before a
+   * destructive action, where the point is the whole reason for capturing).
+   */
+  capture(reason, force) {
+    const api = this.api;
+    if (!api) return Promise.resolve(null);
+    if (!force && !this._dirty) return Promise.resolve(null);
+    if (this._capturing) return Promise.resolve(null);
+    let payload;
+    try { payload = serializeFullProject(); }
+    catch (e) { return Promise.resolve(null); }   // never let this break an edit
+    this._capturing = true;
+    this._dirty = false;
+    return api.putPoint(payload, {
+      reason: reason || 'periodic',
+      rooms: roomRegistry.length,
+      groups: AppState.schedules.groups.length,
+      floors: (AppState.blueprint.floors && AppState.blueprint.floors.length) || 1,
+    }).then(rec => {
+      this._capturing = false;
+      if (rec) this.renderList();
+      return rec;
+    }).catch(() => { this._capturing = false; return null; });
+  },
+
+  /**
+   * Decides whether to put a recovery offer in front of the teacher, and says
+   * plainly which of the two reasons it is. Anything else stays quiet — the
+   * recovery list in Settings is always there for a deliberate rollback.
+   */
+  offerIfNeeded() {
+    const api = this.api;
+    if (!api) return;
+    const crashed = !!this._prevSession;
+    const corrupt = _blueprintLoadStatus === 'corrupt';
+    if (!crashed && !corrupt) return;
+    api.listPointHeaders().then(points => {
+      if (!points.length) {
+        if (corrupt) {
+          this.showBanner('The layout saved in this browser could not be read, and there is no recovery point to fall back on. ' +
+            'The unreadable copy has been set aside rather than overwritten. Import your last exported project file if you have one.', null);
+        }
+        return;
+      }
+      const newest = points[0];
+      const when = formatRecoveryTime(newest.savedAt);
+      this.showBanner(corrupt
+        ? 'The layout saved in this browser could not be read. A recovery point from ' + when +
+          ' is available (' + newest.rooms + ' room' + (newest.rooms !== 1 ? 's' : '') + ', ' +
+          newest.groups + ' group' + (newest.groups !== 1 ? 's' : '') + ').'
+        : 'This project wasn’t closed cleanly last time. If anything looks missing, a recovery point from ' + when +
+          ' is available (' + newest.rooms + ' room' + (newest.rooms !== 1 ? 's' : '') + ', ' +
+          newest.groups + ' group' + (newest.groups !== 1 ? 's' : '') + ').',
+        newest.id);
+    });
+  },
+
+  showBanner(message, restoreId) {
+    let el = document.getElementById('stviz-recovery-offer');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'stviz-recovery-offer';
+      el.setAttribute('role', 'alert');
+      document.body.appendChild(el);
+    }
+    el.className = 'stviz-recovery-banner';
+    el.innerHTML = '<span>' + escHtml(message) + '</span><span class="banner-actions">' +
+      (restoreId ? '<button type="button" class="primary" id="stviz-recovery-restore">Restore it</button>' : '') +
+      '<button type="button" id="stviz-recovery-dismiss">Dismiss</button></span>';
+    el.style.display = 'flex';
+    const dismiss = () => { el.style.display = 'none'; };
+    document.getElementById('stviz-recovery-dismiss').addEventListener('click', dismiss);
+    if (restoreId) {
+      document.getElementById('stviz-recovery-restore').addEventListener('click', () => {
+        this.restore(restoreId).then(ok => { if (ok) dismiss(); });
+      });
+    }
+  },
+
+  /**
+   * Restores a recovery point over the current project. Captures the state
+   * being replaced first (forced), so "restore" is itself undoable — the
+   * whole point of this feature is that nothing disappears silently.
+   */
+  restore(id) {
+    const api = this.api;
+    if (!api) return Promise.resolve(false);
+    return this.capture('before restore', true)
+      .then(() => api.getPoint(id))
+      .then(point => {
+        if (!point || !point.data) { showToast('That recovery point could not be read.', 'error'); return false; }
+        try {
+          const res = applyFullProject(point.data);
+          showToast('Recovered the project from ' + formatRecoveryTime(point.savedAt) +
+            ' (' + res.rooms + ' room' + (res.rooms !== 1 ? 's' : '') + ', ' +
+            res.groups + ' group' + (res.groups !== 1 ? 's' : '') + ').', 'success');
+          this.renderList();
+          return true;
+        } catch (e) {
+          showToast('Recovery failed: ' + e.message, 'error');
+          return false;
+        }
+      });
+  },
+
+  renderList() {
+    const listEl = document.getElementById('recovery-list');
+    if (!listEl) return;
+    const api = this.api;
+    if (!api) {
+      listEl.innerHTML = '<div class="recovery-empty">Recovery points are unavailable in this browser.</div>';
+      return;
+    }
+    api.listPointHeaders().then(points => {
+      if (!points.length) {
+        listEl.innerHTML = '<div class="recovery-empty">No recovery points yet — the first one is taken a few minutes into editing.</div>';
+        return;
+      }
+      listEl.innerHTML = points.map(p => `<div class="snapshot-item auto">
+        <span class="snapshot-item-icon">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 9 9 9"/></svg>
+        </span>
+        <div class="snapshot-item-info">
+          <div class="snapshot-item-name">${escHtml(formatRecoveryTime(p.savedAt))} · ${escHtml(p.reason)}</div>
+          <div class="snapshot-item-ts">${p.rooms} room${p.rooms !== 1 ? 's' : ''} · ${p.groups} group${p.groups !== 1 ? 's' : ''} · ${(p.sizeBytes / 1024).toFixed(1)} KB</div>
+        </div>
+        <div class="snapshot-item-actions">
+          <button class="snapshot-action-btn restore" data-recovery-restore="${escHtml(p.id)}">Restore</button>
+        </div>
+      </div>`).join('');
+      listEl.querySelectorAll('[data-recovery-restore]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!confirm('Restore this recovery point? The project as it stands now is captured as a recovery point first, so this can be undone.')) return;
+          this.restore(btn.dataset.recoveryRestore);
+        });
+      });
+    });
+  },
+};
+
+window.RecoveryManager = RecoveryManager;
+
+function formatRecoveryTime(iso) {
+  try {
+    const d = new Date(iso);
+    const today = new Date();
+    const sameDay = d.toDateString() === today.toDateString();
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return sameDay ? time : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + time;
+  } catch (e) { return String(iso); }
 }
 
 function initSnapshotManager() {
