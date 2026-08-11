@@ -131,6 +131,15 @@
         <button id="generateBtn">Generate</button>
       </div>
     </div>
+    <div class="controls" style="margin-bottom:0;">
+      <div class="field" style="min-width:10rem;">
+        <label for="seedDisplay">Sheet seed</label>
+        <input type="text" id="seedDisplay" readonly aria-label="Sheet seed, used to reprint this exact set">
+      </div>
+      <div class="field" style="min-width:16rem;">
+        <label class="op-check" style="font-weight:600;"><input type="checkbox" id="lockSeed"> Lock seed &mdash; reprint this exact set</label>
+      </div>
+    </div>
   </div>
 
   <div class="tabs">
@@ -181,63 +190,90 @@
     middle: { add: [15, 400], mult: [6, 15], divDividendMax: 900 }
   };
 
-  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-  function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+  /* mulberry32 — small, fast, seedable PRNG so a set can be reprinted
+     identically for a make-up (same seed = same problems, in order). */
+  function makeRng(seed) {
+    if (seed == null) return Math.random;
+    var state = seed >>> 0;
+    return function () {
+      state |= 0; state = (state + 0x6D2B79F5) | 0;
+      var t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function randInt(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
+  function pick(rng, arr) { return arr[randInt(rng, 0, arr.length - 1)]; }
 
   var TEMPLATES = {
     addition: [
       function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + '. Then ' + name + ' gets ' + b + ' more. How many ' + item + ' does ' + name + ' have now?', answer: a + b }; },
       function (a, b, name, item) { return { text: 'On Monday, ' + name + ' collected ' + a + ' ' + item + '. On Tuesday, ' + name + ' collected ' + b + ' more ' + item + '. How many ' + item + ' has ' + name + ' collected in total?', answer: a + b }; },
-      function (a, b, name, item) { return { text: 'A box has ' + a + ' ' + item + ' in it. Someone adds another ' + b + ' ' + item + ' to the box. How many ' + item + ' are in the box now?', answer: a + b }; }
+      function (a, b, name, item) { return { text: 'A box has ' + a + ' ' + item + ' in it. Someone adds another ' + b + ' ' + item + ' to the box. How many ' + item + ' are in the box now?', answer: a + b }; },
+      function (a, b, name, item) { return { text: name + ' had ' + a + ' ' + item + ' in one bag and ' + b + ' ' + item + ' in another bag. If ' + name + ' combines both bags, how many ' + item + ' are there altogether?', answer: a + b }; },
+      function (a, b, name, item) { return { text: 'Two friends are collecting ' + item + '. ' + name + ' has ' + a + ' and a friend has ' + b + '. How many ' + item + ' do they have combined?', answer: a + b }; },
+      function (a, b, name, item) { return { text: name + ' started with ' + a + ' ' + item + ' and earned ' + b + ' more for doing chores. How many ' + item + ' does ' + name + ' have now?', answer: a + b }; }
     ],
     subtraction: [
       function (a, b, name, item) { return { text: name + ' had ' + a + ' ' + item + '. ' + name + ' gave away ' + b + ' ' + item + '. How many ' + item + ' does ' + name + ' have left?', answer: a - b }; },
       function (a, b, name, item) { return { text: 'A shelf had ' + a + ' ' + item + ' on it. ' + b + ' ' + item + ' were sold. How many ' + item + ' are left on the shelf?', answer: a - b }; },
-      function (a, b, name, item) { return { text: name + ' wants ' + a + ' ' + item + ' for a collection and already has ' + b + '. How many more ' + item + ' does ' + name + ' need?', answer: a - b }; }
+      function (a, b, name, item) { return { text: name + ' wants ' + a + ' ' + item + ' for a collection and already has ' + b + '. How many more ' + item + ' does ' + name + ' need?', answer: a - b }; },
+      function (a, b, name, item) { return { text: name + ' had ' + a + ' ' + item + ' but lost ' + b + ' of them. How many ' + item + ' does ' + name + ' have left?', answer: a - b }; },
+      function (a, b, name, item) { return { text: 'A store had ' + a + ' ' + item + ' in stock. Customers bought ' + b + ' ' + item + ' during the day. How many ' + item + ' remain in stock?', answer: a - b }; },
+      function (a, b, name, item) { return { text: 'A recipe calls for ' + a + ' ' + item + ', but ' + name + ' only wants to use ' + b + ' of them this time. How many fewer ' + item + ' will ' + name + ' use?', answer: a - b }; }
     ],
     multiplication: [
       function (a, b, name, item) { return { text: name + ' has ' + a + ' bags with ' + b + ' ' + item + ' in each bag. How many ' + item + ' does ' + name + ' have in all?', answer: a * b }; },
       function (a, b, name, item) { return { text: 'There are ' + a + ' tables, and each table has ' + b + ' ' + item + ' on it. How many ' + item + ' are there in total?', answer: a * b }; },
-      function (a, b, name, item) { return { text: name + ' buys ' + a + ' packs of ' + item + '. Each pack has ' + b + ' in it. How many ' + item + ' did ' + name + ' buy altogether?', answer: a * b }; }
+      function (a, b, name, item) { return { text: name + ' buys ' + a + ' packs of ' + item + '. Each pack has ' + b + ' in it. How many ' + item + ' did ' + name + ' buy altogether?', answer: a * b }; },
+      function (a, b, name, item) { return { text: 'Each student needs ' + b + ' ' + item + ' for an activity, and there are ' + a + ' students. How many ' + item + ' are needed in total?', answer: a * b }; },
+      function (a, b, name, item) { return { text: name + ' arranges ' + item + ' into ' + a + ' rows of ' + b + ' each. How many ' + item + ' are there in all?', answer: a * b }; },
+      function (a, b, name, item) { return { text: 'A recipe makes ' + b + ' ' + item + ' per batch. If ' + name + ' makes ' + a + ' batches, how many ' + item + ' will there be?', answer: a * b }; }
     ],
     division: [
       function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + ' and wants to split them evenly into ' + b + ' groups. How many ' + item + ' will be in each group?', answer: a / b }; },
       function (a, b, name, item) { return { text: 'A total of ' + a + ' ' + item + ' need to be shared equally among ' + b + ' students. How many ' + item + ' does each student get?', answer: a / b }; },
-      function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + ' to pack into boxes of ' + b + '. How many boxes will ' + name + ' fill?', answer: a / b }; }
+      function (a, b, name, item) { return { text: name + ' has ' + a + ' ' + item + ' to pack into boxes of ' + b + '. How many boxes will ' + name + ' fill?', answer: a / b }; },
+      function (a, b, name, item) { return { text: name + ' organizes ' + a + ' ' + item + ' into bags with ' + b + ' in each bag. How many bags does ' + name + ' need?', answer: a / b }; },
+      function (a, b, name, item) { return { text: 'A charity received ' + a + ' ' + item + ' and wants to give an equal number to ' + b + ' families. How many ' + item + ' will each family receive?', answer: a / b }; },
+      function (a, b, name, item) { return { text: a + ' ' + item + ' will be divided evenly among ' + b + ' classrooms. How many ' + item + ' will each classroom get?', answer: a / b }; }
     ]
   };
 
-  function makeProblem(op, band) {
+  function makeProblem(op, band, rng) {
     var r = RANGES[band];
-    var name = pick(NAMES), item = pick(ITEMS);
+    var name = pick(rng, NAMES), item = pick(rng, ITEMS);
     var a, b, fn;
     if (op === 'addition' || op === 'subtraction') {
-      a = randInt(r.add[0], r.add[1]);
-      b = randInt(r.add[0], Math.max(r.add[0], Math.floor(a * 0.8)));
+      a = randInt(rng, r.add[0], r.add[1]);
+      b = randInt(rng, r.add[0], Math.max(r.add[0], Math.floor(a * 0.8)));
       if (op === 'subtraction' && b > a) { var t = a; a = b; b = t; }
-      if (op === 'subtraction' && a === b) a = b + randInt(1, 10);
+      if (op === 'subtraction' && a === b) a = b + randInt(rng, 1, 10);
     } else if (op === 'multiplication') {
-      a = randInt(r.mult[0], r.mult[1]);
-      b = randInt(r.mult[0], r.mult[1]);
+      a = randInt(rng, r.mult[0], r.mult[1]);
+      b = randInt(rng, r.mult[0], r.mult[1]);
     } else {
-      b = randInt(r.mult[0], r.mult[1]);
-      var quotient = randInt(2, Math.max(2, Math.floor(r.divDividendMax / b)));
+      b = randInt(rng, r.mult[0], r.mult[1]);
+      var quotient = randInt(rng, 2, Math.max(2, Math.floor(r.divDividendMax / b)));
       a = b * quotient;
     }
-    fn = pick(TEMPLATES[op]);
+    fn = pick(rng, TEMPLATES[op]);
     var p = fn(a, b, name, item);
     p.op = op;
     return p;
   }
 
+  var STORE_KEY = 'wpwg_settings_v1';
   var els = {};
   ['gradeBand', 'problemCount', 'generateBtn', 'displayNum', 'displayText', 'displayAnswer',
-   'prevBtn', 'revealBtn', 'nextBtn', 'printBtn', 'sheetProblems', 'sheetKey'].forEach(function (id) {
+   'prevBtn', 'revealBtn', 'nextBtn', 'printBtn', 'sheetProblems', 'sheetKey',
+   'seedDisplay', 'lockSeed'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var problems = [];
   var idx = 0;
+  var settings = { seed: null };
 
   function selectedOps() {
     return Array.prototype.slice.call(document.querySelectorAll('[data-op]'))
@@ -245,16 +281,50 @@
       .map(function (cb) { return cb.getAttribute('data-op'); });
   }
 
+  function loadSettings() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (!saved || typeof saved !== 'object') return;
+      if (saved.gradeBand) els.gradeBand.value = saved.gradeBand;
+      if (Array.isArray(saved.ops)) {
+        document.querySelectorAll('[data-op]').forEach(function (cb) {
+          cb.checked = saved.ops.indexOf(cb.getAttribute('data-op')) >= 0;
+        });
+      }
+      if (saved.problemCount) els.problemCount.value = saved.problemCount;
+      els.lockSeed.checked = !!saved.lockSeed;
+      settings.lockSeed = !!saved.lockSeed;
+      settings.seed = (typeof saved.seed === 'number') ? saved.seed : null;
+    } catch (e) { /* ignore */ }
+  }
+
+  function saveSettings(ops, band, count) {
+    settings.gradeBand = band;
+    settings.ops = ops;
+    settings.problemCount = count;
+    settings.lockSeed = els.lockSeed.checked;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function nextSeed() {
+    if (settings.lockSeed && settings.seed != null) return settings.seed;
+    return Math.floor(Math.random() * 0xFFFFFFFF);
+  }
+
   function generate() {
     var ops = selectedOps();
     if (!ops.length) { alert('Pick at least one operation.'); return; }
     var count = Math.max(1, Math.min(20, parseInt(els.problemCount.value, 10) || 6));
     var band = els.gradeBand.value;
+    settings.seed = nextSeed();
+    saveSettings(ops, band, count);
+    var rng = makeRng(settings.seed);
     problems = [];
     for (var i = 0; i < count; i++) {
-      problems.push(makeProblem(pick(ops), band));
+      problems.push(makeProblem(pick(rng, ops), band, rng));
     }
     idx = 0;
+    els.seedDisplay.value = settings.seed;
     renderDisplay();
     renderSheet();
   }
@@ -278,6 +348,7 @@
   }
 
   els.generateBtn.addEventListener('click', generate);
+  els.lockSeed.addEventListener('change', function () { settings.lockSeed = els.lockSeed.checked; });
 
   els.prevBtn.addEventListener('click', function () {
     if (!problems.length) return;
@@ -306,6 +377,7 @@
   els.printBtn.addEventListener('click', function () { window.print(); });
 
   /* ---------- boot ---------- */
+  loadSettings();
   generate();
 })();
 </script>

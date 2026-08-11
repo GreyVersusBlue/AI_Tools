@@ -20,7 +20,31 @@ selection, toggling a template, adding a custom line) — no console errors.
 
 This intentionally does not do unit *math* (converting an actual number the
 teacher types in) — it's a reference chart, not a calculator, matching the
-backlog description. Nothing below has been started.
+backlog description.
+
+**2026-08-11 — Round 1 (session `h4rwxn`).** Shipped two of the Quick Wins
+below. Per-line delete for template-sourced lines: every line in the chart
+preview now has a &times; button (not just custom lines) — clicking it
+hides just that instance via a new `state.hidden[templateKey][lineIndex]`
+map, checked in `activeGroups()` before a template's line is included.
+Unchecking then re-checking a template's own checkbox clears its hidden
+entries, so "start over with the full template" is one click rather than a
+dead end. Column-count control: a new "Print layout" card lets a teacher
+pick 1/2/3 columns, applied to the print sheet via an inline
+`grid-template-columns` set on `#printGroups` right before `window.print()`
+(the on-screen preview stays a single list, matching the existing design —
+only the print view was ever columned). Both settings persist in the
+existing `ucb_chart_v1` localStorage blob (`state.hidden`, `state.columns`).
+Verified with a headless Playwright test: hide a line and confirm the row
+count drops by one, uncheck/recheck the template and confirm it's back,
+switch to 3 columns and confirm both the DOM style and the post-reload
+`<select>` value reflect it.
+
+Multiple named saved charts, group/line reordering, and JSON export/import
+remain unbuilt — all three are the "match Formula Sheet Builder's pattern"
+items and are naturally a matched set for a future round, since it's the
+same underlying save-model change (single object &rarr; named collection)
+that unlocks reordering and export together.
 
 ## What it does today
 
@@ -29,6 +53,10 @@ backlog description. Nothing below has been started.
 - Checkbox-driven chart assembly, grouped by category with a print-safe
   two-column layout
 - Custom lines can be added to any existing group or a brand-new one
+- Any individual line — template-sourced or custom — can be removed from
+  the chart without dropping its whole group/template
+- Print column count (1/2/3) is chooser-controlled and persists across
+  visits
 
 ## Quick Wins
 
@@ -38,13 +66,6 @@ backlog description. Nothing below has been started.
 - **Reorder groups and lines** (up/down buttons, matching Formula Sheet
   Builder's item reordering) — right now group and line order is fixed by
   template/insertion order.
-- **A one-line delete for template-sourced lines**, not just custom ones —
-  currently unchecking the whole template is the only way to drop a single
-  built-in line, so "everything from Length (Customary) except the mile
-  conversion" isn't possible without going custom.
-- **Column-count control** (1, 2, or 3 columns) for the print layout,
-  depending on how many unit sets are selected — a 1-set chart looks sparse
-  in two columns, a 6-set chart may want three.
 - **JSON export/import**, the same convention Formula Sheet Builder and
   Rubric Builder use, so a chart can be shared between two teachers' Ideas
   Backlog-graduated setups.

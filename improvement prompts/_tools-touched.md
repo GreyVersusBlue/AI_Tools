@@ -687,6 +687,32 @@ Wins but still has open Major Features/Moonshot) — so none moved to
 `stable tools/` this round. See each tool's own file for exactly what's
 still open and where the next round should pick up.
 
+### Pass 2 — Round 3 — 2026-08-11 01:43 UTC — session `h4rwxn` — PR #78
+
+Tools 078–081, assigned directly by Devon rather than picked from the
+"Not yet touched" list below — these four are part of the 35-tool batch
+the Pass 2 reset note (above) explicitly held out of the round-robin, so
+this round doesn't count toward that list's "26 to go" and none of the
+four were removed from it. One scoped, independently-verified item (or
+two, where both were small) per tool, each checked with `node --check` and
+a headless Playwright smoke test before committing. The 080 fix turned out
+broader than its own file's Status had flagged: the "ten/hundred blocks
+snapshot as blank" bug was actually one instance of a bug affecting three
+piece types (fraction tiles hit the same root cause; number-line markers
+had an unrelated instance of the identical pattern) — all three fixed in
+the same pass since they shared one function.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Unit Conversion Reference Chart Builder | `078-unit-conversion-chart-builder.md` | Per-line delete for template-sourced lines (not just custom ones); print column-count control (1/2/3), both persisted. |
+| Verb Conjugation Reference Poster Generator | `079-verb-conjugation-poster-generator.md` | 5 new starter templates (Spanish imperfect/future/irregulars, French imperfect/irregulars, doubling 3→8); print column-count control (1/2/3 panels per row), persisted. |
+| Virtual Manipulatives Board | `080-virtual-manipulatives-board.md` | Fixed the snapshot color bug for segmented pieces (ten/hundred blocks *and* fraction tiles) and number-line markers; added a duplicate-piece button. |
+| Word Problem Warm-Up Generator | `081-word-problem-warmup-generator.md` | Doubled templates per operation (3→6, 24 total); seeded generation (mulberry32 + lock-seed checkbox, matching Math Fact Drill Sheet Generator's pattern); settings persistence (grade band, operations, count, lock state). |
+
+None of the four cleared their list — each still has substantial Major
+Features/Moonshot items open in its own file — so none moved to
+`stable tools/` this round.
+
 ---
 
 ## Not yet touched
