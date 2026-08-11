@@ -185,11 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Grammar Mad Libs Generator | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
-| Historical Figure / Country Trading Card Maker | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
-| Lab Report Template Builder | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
-| Math "Find the Mistake" Warm-Up Generator | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
-| Music Sight-Reading / Rhythm Warm-Up Generator | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
+| *(none)* | | | |
 
 ---
 
@@ -396,7 +392,11 @@ has shipped and sits empty. Each new tool already has its own `improvement
 prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
 "Not yet touched" list below yet — Devon wants to fold them into the round
 system as a deliberate batch rather than mixed in silently with this reset.
-Leave them out until told otherwise:
+Leave them out until told otherwise. **Exception:** 063–067 were pulled out
+of this batch and given a round at Devon's direct request (see the
+"063–067" round entry below, in the same spirit as tool 046's extra
+Rounds 9–10 in Pass 1) — they are done and out of this list; the other 30
+are still untouched:
 
 Art Critique Worksheet Generator (`047-art-critique-worksheet-generator.md`) ·
 Student Art Portfolio Label & QR Tag Maker (`048-art-portfolio-label-maker.md`) ·
@@ -414,11 +414,6 @@ Scientific Method / Experiment Design Planner (`059-experiment-design-planner.md
 Fitness & Skill Assessment Tracker (`060-fitness-skill-assessment-tracker.md`) ·
 Fraction–Decimal–Percent Conversion Drill Generator (`061-fraction-decimal-percent-drill-generator.md`) ·
 Geography Bee / Map Skills Quiz Generator (`062-geography-bee-quiz-generator.md`) ·
-Grammar Mad Libs Generator (`063-grammar-mad-libs-generator.md`) ·
-Historical Figure / Country Trading Card Maker (`064-historical-trading-card-maker.md`) ·
-Lab Report Template Builder (`065-lab-report-template-builder.md`) ·
-Math "Find the Mistake" Warm-Up Generator (`066-math-find-the-mistake-generator.md`) ·
-Music Sight-Reading / Rhythm Warm-Up Generator (`067-music-sightreading-generator.md`) ·
 Parent/Guardian Contact Log (`068-parent-contact-log.md`) ·
 PE Warm-Up Circuit Card Generator (`069-pe-warmup-circuit-generator.md`) ·
 Peer Feedback / Editing Checklist Generator (`070-peer-feedback-checklist-generator.md`) ·
@@ -523,6 +518,34 @@ download).
 `yjj7k6`'s + these 5). **26 to go.** None of the five cleared their
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
+
+### 063–067 — 2026-08-11 01:30–~03:20 UTC — session `9iiyas` — branch `claude/tools-063-067-improvements-9iiyas`
+
+Devon assigned this session tools 063–067 directly, pulling them out of the
+35-tool Ideas-Backlog batch that's otherwise being held back from the round
+system (see the "Exception" note above) — so this round is **not** part of
+the 46-tool Pass 2 count/tally above, and doesn't move that "N to go"
+number. Each tool got its top 2–3 Quick Wins from its own `improvement
+prompts/<tool>.md`, implemented by five parallel subagents (one per tool,
+each scoped to touch only its own `.html` file), independently reviewed and
+re-verified with a fresh headless-Playwright pass by the orchestrating
+session before each commit (not just trusting the sub-agent's own
+self-report) — one bug in the reviewer's own beat-accuracy test script
+turned up a wrong Unicode codepoint for the half-note glyph, not a bug in
+the shipped code, worth noting so a future reviewer doesn't chase the same
+false lead.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Grammar Mad Libs Generator | `063-grammar-mad-libs-generator.md` | Custom stories now persist to `localStorage`; a visible, click-to-insert tag reference row next to the custom-story textarea; 3 new built-in templates (7 total). |
+| Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` | Row-mirrored duplex front/back printing (adapted from Vocabulary Flashcard Generator's `VocabLayout.mirrorPageRows`, copied in rather than shared, so the file stays self-contained); edit-an-existing-card in place; a stat-overflow warning before print. |
+| Lab Report Template Builder | `065-lab-report-template-builder.md` | Up/down reorder buttons on every list (materials, procedure, columns, conclusion); multiple named saved templates (mirrors Formula Sheet Builder / Rubric Builder's storage shape) with automatic one-time migration of the old single-template key; a print preview modal that reuses the real print markup. |
+| Math "Find the Mistake" Warm-Up Generator | `066-math-find-the-mistake-generator.md` | An 8-category topic taxonomy with a filter panel scoping both projector shuffle and worksheet generation; a two-stage reveal (corrected work, then explanation, as separate clicks) in projector mode only — worksheet/answer-key mode still shows both together; per-built-in disable/enable without deleting. |
+| Music Sight-Reading / Rhythm Warm-Up Generator | `067-music-sightreading-generator.md` | Generation settings (time signature, note pool, clef, range, counts, active tab) now persist to `localStorage` — the only tool in the toolkit that previously had zero persistence; a "lock this pattern for printing" toggle per tab so a new on-screen pattern doesn't overwrite what's about to print; a big single-measure step-through display for call-and-response clapping drills. |
+
+None of the five cleared their own improvement-prompt list — each still has
+real Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each tool's own file for what's next.
 
 ---
 

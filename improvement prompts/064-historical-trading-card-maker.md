@@ -33,27 +33,45 @@ depending on their printer's duplex behavior. This was a deliberate MVP
 scope cut to avoid re-deriving that mirroring logic under this round's
 time constraints — see Quick Wins.
 
+**2026-08-11 — Round 2 (session `9iiyas`).** Shipped three of the four
+Quick Wins below. Row-mirrored duplex printing was adapted from
+Vocabulary Flashcard & Word Wall Generator's `VocabLayout.mirrorPageRows`
+— copied into this file's own script (not loaded via a shared `<script>`
+tag, so this file stays self-contained) — and required switching from a
+continuously-flowing card grid to explicit 3&times;2 (6-card) paginated
+pages with `null`-padded blanks, since mirroring needs known row
+boundaries; verified by screenshot that fronts render left-to-right in
+entry order and the matching back page renders in reverse per row. Editing
+an existing card now works in place (Edit button per card loads the form
+into edit mode; `<input type="file">` can't be prefilled, so a `KEEP_IMAGE`
+sentinel preserves the existing image unless a new one is chosen). A
+stat-overflow warning (`statOverflowRisk`, a coarse 6-lines-with-photo /
+11-lines-without-photo heuristic, not measured against real font metrics)
+now shows live while typing and as a badge per card in the list. Card size
+options (the fourth Quick Win) is not yet started. Verified with headless
+Playwright — add/edit/no-duplicate, overflow warning triggering, and print
+DOM structure — no console errors.
+
+**Worth a human sanity check next round:** the switch to explicit 6-cards-
+per-page pagination changes how many physical sheets a given card count
+produces versus the old continuously-flowing layout — worth confirming
+against real printer output, not just DOM structure.
+
 ## What it does today
 
 - Batch-add cards: name, optional image, `Label: Value` stats, one-per-
   line facts
-- Print: two grids (fronts, then backs) in matching order
+- Edit an existing card in place
+- Row-mirrored duplex print: 6-card front pages, then row-mirrored back
+  pages, so a flipped physical stack lines up automatically
+- A live stat-overflow warning in the editor, before print
 
 ## Quick Wins
 
-- **Adopt Vocabulary Flashcard & Word Wall Generator's row-mirrored duplex
-  layout** — the single highest-value fix, since it's a proven pattern
-  already built elsewhere in this toolkit and would make double-sided
-  printing actually line up automatically instead of requiring a manual
-  stack-flip.
-- **Edit an existing card** (currently delete-and-re-add is the only
-  option) — a real gap versus most other list-builder tools in this round.
 - **Card size options** (e.g. 2.5"&times;3.5" standard trading-card size
   vs. the current larger custom size) for a teacher who wants an actual
-  pocket-sized trading card rather than a bigger reference card.
-- **A stat-overflow warning**: right now `.cstats { overflow: hidden }`
-  silently clips content if a card has too many stats to fit — should at
-  minimum warn the teacher rather than silently truncating on print.
+  pocket-sized trading card rather than a bigger reference card. (Carried
+  over from last round — not yet started.)
 
 ## Major Features
 
@@ -101,11 +119,13 @@ country-card use case specifically.
 
 ## Open Questions
 
-- Should `VocabLayout.mirrorPageRows` be extracted into a genuinely shared
-  module (e.g. `_shared/duplex-print.js`) that both Vocabulary Flashcard
-  Generator and this tool import, or is copying/adapting the logic into
-  this tool's own support folder simpler and sufficiently DRY given how
-  small the function is?
+- ~~Should `VocabLayout.mirrorPageRows` be extracted into a genuinely
+  shared module~~ **Resolved this round:** copied/adapted in place rather
+  than extracted — the function is small, and copying kept this file
+  self-contained per this round's own scope constraint (no edits to
+  `040-vocab-flashcard-generator.html`). Worth revisiting as a real shared
+  `_shared/duplex-print.js` if a *third* tool ever needs front/back
+  mirroring, so the logic isn't hand-copied a third time.
 - Is a small built-in flag image library (a fixed set of common countries)
   worth maintaining as static assets in this repo, or does that risk
   scope creep/staleness (new countries, disputed flags, political
