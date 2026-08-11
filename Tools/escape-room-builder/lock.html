@@ -10,6 +10,7 @@
 <script src="../../_shared/a11y.js"></script>
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="er-match.js"></script>
 <link rel="stylesheet" href="../../_shared/ink-paper.css">
 <link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
@@ -142,54 +143,11 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
   }
 
-  // Digit-lock and cipher answers are compared exactly as before (this is the
-  // matching used for those two types) — untouched by the free-text forgiveness
-  // added below, since a digit code or a decoded cipher phrase isn't the kind of
-  // free typing that benefits from punctuation/typo tolerance.
-  function normalizeAnswer(s) {
-    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,!?'"]/g, '');
-  }
-
-  // Text-type answers get a more forgiving comparison: case, leading/trailing
-  // and repeated whitespace, and *all* punctuation are ignored, so "It's a
-  // KEYBOARD!" and "its a keyboard" both match an accepted answer of
-  // "a keyboard".
-  function normalizeTextAnswer(s) {
-    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '');
-  }
-
-  // Plain Levenshtein edit distance — used only to decide whether a wrong
-  // text answer is a near miss (a small typo) worth a gentler message, never
-  // to accept an answer as correct.
-  function levenshtein(a, b) {
-    var m = a.length, n = b.length;
-    if (!m) return n;
-    if (!n) return m;
-    var prev = new Array(n + 1);
-    var curr = new Array(n + 1);
-    for (var j = 0; j <= n; j++) prev[j] = j;
-    for (var i = 1; i <= m; i++) {
-      curr[0] = i;
-      for (var k = 1; k <= n; k++) {
-        var cost = a.charAt(i - 1) === b.charAt(k - 1) ? 0 : 1;
-        curr[k] = Math.min(prev[k] + 1, curr[k - 1] + 1, prev[k - 1] + cost);
-      }
-      var tmp = prev; prev = curr; curr = tmp;
-    }
-    return prev[n];
-  }
-
-  // "Close but not correct" — within a couple of edits of some accepted
-  // answer, scaled a little for longer answers, but never so loose that a
-  // genuinely different answer counts as a near miss.
-  function isNearMiss(given, acceptedList) {
-    if (!given) return false;
-    return acceptedList.some(function (accepted) {
-      if (!accepted || accepted === given) return false;
-      var dist = levenshtein(given, accepted);
-      return dist > 0 && dist <= Math.max(1, Math.min(3, Math.ceil(accepted.length * 0.3)));
-    });
-  }
+  // Answer matching lives in er-match.js, shared with the builder's teacher
+  // test-run mode. Both pages have to agree exactly on whether a typed answer
+  // is right, and a test run that used a second implementation would be
+  // testing the wrong thing.
+  var checkAnswer = window.EscapeRoomMatch.checkAnswer;
 
   function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -625,35 +583,11 @@
       var rawGiven = digitBoxes
         ? digitBoxes.map(function (b) { return b.value || ''; }).join('')
         : input.value;
-      var correct, nearMiss = false;
-
-      if (type === 'text') {
-        // Free-text matching forgives case, whitespace, and punctuation (see
-        // normalizeTextAnswer), plus an optional numeric-with-tolerance match
-        // for a station where the teacher set `numericTolerance` — e.g. an
-        // accepted answer of "3.14" with a tolerance of "0.05" also accepts
-        // "3.1" or "3.19".
-        var givenNorm = normalizeTextAnswer(rawGiven);
-        var acceptedNorm = (station.answers || []).map(normalizeTextAnswer);
-        correct = givenNorm.length > 0 && acceptedNorm.indexOf(givenNorm) !== -1;
-        if (!correct && station.numericTolerance !== undefined && station.numericTolerance !== null) {
-          var givenNum = parseFloat(rawGiven);
-          if (!isNaN(givenNum) && rawGiven.trim() !== '') {
-            correct = (station.answers || []).some(function (a) {
-              var accNum = parseFloat(a);
-              return !isNaN(accNum) && Math.abs(accNum - givenNum) <= station.numericTolerance;
-            });
-          }
-        }
-        if (!correct) nearMiss = isNearMiss(givenNorm, acceptedNorm);
-      } else {
-        // Digit-lock and cipher matching is unchanged from before this round —
-        // exact after only the original light normalization (case/whitespace),
-        // since a digit code or a decoded cipher phrase isn't free typing.
-        var givenOld = normalizeAnswer(rawGiven);
-        var acceptedOld = (station.answers || []).map(normalizeAnswer);
-        correct = givenOld.length > 0 && acceptedOld.indexOf(givenOld) !== -1;
-      }
+      // `type` is already read off the station above; checkAnswer() reads it
+      // again from the station itself, so the two can't disagree.
+      var verdict = checkAnswer(station, rawGiven);
+      var correct = verdict.correct;
+      var nearMiss = verdict.nearMiss;
 
       if (correct) {
         progress.solved = progress.solved || {};

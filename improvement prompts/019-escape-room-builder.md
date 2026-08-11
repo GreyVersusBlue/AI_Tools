@@ -25,6 +25,11 @@ a single session; items confirmed shipped are tagged **Done** below.
 - Station images with automatic downscaling (`downscaleStationImage`)
 - Print **station QR codes** at 1–8 per page with selectable error correction
 - Print a separate **answer key**; live chain preview
+- **Teacher test run** (`startTestRun`, `renderTestRun`, `unreachableStations`)
+  — walk the chain in the builder, answering as a student would, with the
+  answer key one click away and unreachable stations named at the end
+- **Shared answer matcher** (`escape-room-builder/er-match.js`) used by both
+  `lock.html` and the builder's test run, so the two cannot disagree
 - Multiple saved rooms (`escape-room-builder:rooms`)
 
 ## Quick Wins
@@ -42,8 +47,10 @@ a single session; items confirmed shipped are tagged **Done** below.
 - **Non-QR fallback.** A printed short code students type into `lock.html` on
   a shared device — QR requires every student to have a camera, which is not
   a safe assumption.
-- **Preview / test-run mode** for the teacher, walking the chain without
-  printing anything.
+- **Done — 2026-08-11.** **Preview / test-run mode** for the teacher, walking
+  the chain without printing anything. *(A "Test run (no printing)" button
+  opens a modal that walks the real payload through the real matcher, ending
+  with any station the chain can never reach. See the test-run round below.)*
 - **Skipped — Round 4 considered this and passed.** **Estimated payload size warning.** The whole room rides in the QR; a room
   with several images will silently produce an unscannable code (P3). *(The
   new per-station fields are all a few bytes and omitted when unused, so the
@@ -316,3 +323,56 @@ box count from accepted-answer strings.
   packet and a typed short code on one shared classroom device are the
   teacher-facing alternatives, and it's worth deciding whether they become the
   primary path.
+
+## Test-run round — 2026-08-11 (backlog rank 1)
+
+Shipped **"Preview / test-run mode for the teacher"**.
+
+**"▶ Test run (no printing)"** sits with the print buttons and enables under
+exactly the same condition they do. It opens a modal that walks the chain the
+way a student meets it — one station at a time, the real clue, the real image,
+the ciphertext a cipher station actually shows, the hint behind its own button
+with its point cost, the same near-miss wording, and the same branching.
+
+Three decisions worth keeping:
+
+- **It walks the real payload.** The modal runs `buildRoomPayload(validStations())`
+  — byte-for-byte what gets encoded into the QR — rather than reading the
+  editor rows. A test run against the editor's raw state would not catch the
+  index remapping that happens when a blank row is dropped, which is precisely
+  the class of bug worth catching.
+- **One matcher, extracted.** Answer checking moved out of `lock.html` into
+  `escape-room-builder/er-match.js`, loaded by both pages. A test run using a
+  second implementation of "is this correct" would be testing the wrong thing,
+  and the two would drift. The suite asserts both pages agree case by case.
+- **It ends by naming unreachable stations.** A breadth-first walk from station
+  1 over the `next` rules finds stations nothing ever routes to — a real
+  authoring bug that the answer key cannot show you, because every station
+  looks fine on its own row.
+
+It is a dry run: nothing is written to storage, unlike opening the player link,
+which starts real progress for that room on that device. Reopening starts clean.
+
+New suite `Tools/escape-room-builder/test/smoke-test-run.mjs` (39 checks) as
+`npm run test:escape-room`: seven matcher cases asserted identical in the
+builder and in `lock.html`, then a real three-station room whose first station
+jumps past the second — the walk, the branch, the miss counter, the near-miss
+message, the hint, the teacher answer reveal, the finish summary naming the
+orphaned station, no storage written, and a clean reopen.
+
+`sw.js`: `er-match.js` added to `PRECACHE_URLS` (lock.html now depends on it
+offline), `CACHE_VERSION` v90 → v91.
+
+### Where the next round should pick up
+
+- **Non-QR fallback** (a printed short code students type into `lock.html`) is
+  now the most valuable open Quick Win — QR assumes every student has a working
+  camera, which is not safe.
+- **Attempt limits and feedback** partly shipped earlier (`maxAttempts`); the
+  test run displays it but does not simulate the lockout cooldown, since the
+  cooldown is wall-clock and a teacher proofreading a room should not be made
+  to wait it out. If that turns out to matter, simulate it with a fake clock
+  rather than a real one.
+- The test run does not simulate scoring or the countdown timer. Both are
+  observable on the real player link and neither affects whether the chain is
+  correct, which is what this mode is for.
