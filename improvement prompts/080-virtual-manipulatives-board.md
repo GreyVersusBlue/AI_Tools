@@ -1,7 +1,9 @@
 # Improvement Prompts — 080 — Virtual Manipulatives Board
 
 **Tool file:** `Tools/080-virtual-manipulatives-board.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/virtual-manipulatives-board/test/` — the browser
+suite (`smoke-boards.mjs`, wired into `npm test` as `test:manipulatives`).
+Everything the page itself needs is still inline in the one file.
 
 **Current description (from README):** Draggable base-ten blocks, fraction tiles, and algebra tiles on a shared board, plus a separate draggable number line, each with a one-click PNG snapshot.
 
@@ -67,6 +69,49 @@ errors).
 Snap-to-grid, touch-device tuning, and everything under Major Features
 below remain unbuilt.
 
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **saved board states**
+(backlog rank 1), which also settles the Open Question below about
+persistence: the answer turned out to be *both*. A named-boards bar above
+the tabs does New/Save/Save as new/Rename/Delete plus `‹ Prev` / `Next ›`
+stepping, so a teacher preps three demonstrations before class and walks
+them in order; separately, the board in front of you is autosaved to
+`vmb_working_v1` on every mutation and restored on load, so a reload or a
+closed lid no longer discards the period's setup.
+
+- **Storage.** `vmb_boards_v1` = `{v:1, boards:[{name, savedAt, state}]}`;
+  `vmb_working_v1` = `{v:1, name, state}` where `name` remembers which saved
+  board the working copy came from. A board's `state` is
+  `{pieces:[{type,left,top}], line:{min,max,markers}}` — the number line
+  travels with the board, which matters because a place-value demo and its
+  number line are one demonstration, not two.
+- **Serialization is DOM-derived**, since the DOM was already the only
+  model: `serializeState()` reads `data-piece-type` plus `style.left/top`
+  off each `.piece`, and `applyState()` replays them through the palette's
+  own `addByType()` then repositions. That meant making `addUnit`/`addTen`/
+  `addHundred`/`addFraction`/`addAlgebra`/`addByType` all *return* their
+  element (they previously returned nothing) and hardening `addByType`
+  against junk types from storage — an unknown type now returns `null`
+  instead of falling through to `addAlgebra` and appending `undefined`.
+- **What was fiddly.** (a) The autosave hook `touch()` has to be suppressed
+  while `applyState()` rebuilds the board, or restoring a board immediately
+  overwrites the working record mid-replay — hence the `restoring` flag.
+  (b) Drag has no "changed" event, so `touch()` hangs off `pointerup` in
+  `makeDraggable`, guarded on `dragging` so a stray pointerup doesn't write.
+  (c) Loading over unsaved work is confirm-gated (P11), and *declining* has
+  to snap the `<select>` back to the loaded board — otherwise the picker
+  lies about what's on screen. (d) A rename onto a name that already exists
+  is suffixed via `uniqueName()` rather than merging the two boards.
+- **Deliberately not done:** no thumbnail/preview of a saved board in the
+  picker (would mean storing a snapshot PNG per board — straight into the
+  P12 quota problem), and Delete intentionally leaves what's on screen
+  alone, deleting only the stored record.
+- **Verified** with a new browser suite,
+  `Tools/virtual-manipulatives-board/test/smoke-boards.mjs` (20 checks,
+  `npm run test:manipulatives`): save/step/rename/delete, piece positions
+  surviving a round trip, the number line saving with the board, the
+  working board surviving a real `page.reload()`, the confirm gate being
+  honored when declined, and zero console errors or offsite requests.
+
 ## What it does today
 
 - Base-ten blocks (unit/ten/hundred), fraction tiles (2&ndash;12
@@ -79,6 +124,11 @@ below remain unbuilt.
   with every piece type (including segmented ten/hundred blocks and
   fraction tiles) and number-line markers now rendering their real
   on-screen color/shape in the exported PNG
+- Saved boards: name a board (pieces + number line together), save,
+  rename, delete, and step through the saved set with Prev/Next to run a
+  prepped sequence of demonstrations
+- The working board autosaves and comes back after a reload; loading a
+  saved board over unsaved work asks first
 
 ## Quick Wins
 
@@ -100,9 +150,6 @@ below remain unbuilt.
 - **A labeled equation/expression readout** that updates live from what's
   on the board (e.g. "+2x + 3" from the current algebra tiles) — turns the
   board into a live worked-example generator, not just a visual aid.
-- **Saved board states** (name and reload a board setup), so a teacher can
-  prep several demonstrations ahead of class and step through them instead
-  of rebuilding each live.
 - **A proper zero-pair/cancel animation** for algebra tiles (drag a +1 onto
   a -1 and both disappear) — the standard way algebra tiles demonstrate
   simplification, and currently unsupported (they just sit next to each
@@ -128,11 +175,15 @@ instead of just displaying icons that represent it.
 
 ## Open Questions
 
-- Should board state persist across reloads (`localStorage`, matching
-  every other tool in this toolkit) or is "always starts blank" actually
-  the right default for a live-demonstration tool that's reset before every
-  class period anyway? If saved boards (Major Features) ship, persistence
-  becomes necessary either way.
+- ~~Should board state persist across reloads?~~ **Answered in Round 2:**
+  both. The working board autosaves and restores; named boards are
+  explicit. A "start fresh each period" button was not added — Clear board
+  already does that, and it is now autosaved like any other change.
+- Should a saved board carry a small preview image in the picker? It would
+  make stepping through six prepped demos much faster to navigate, but a
+  snapshot PNG per board is exactly the localStorage-quota trap P12
+  describes. IndexedDB (the `bmg-map-cache.js` pattern) would be the honest
+  way to do it.
 - Is snap/cancel worth the real interaction-design complexity (detecting
   proximity, animating a merge/removal, handling ambiguous overlaps) for
   an MVP-grade tool, or does a simpler "align to grid" toggle deliver
