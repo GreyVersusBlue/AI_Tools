@@ -317,7 +317,7 @@ is 56,963 bytes (SHA-256 `bdee8deb723d3b76015ecaefb974a0a438fe8889280914a06b60d7
 
 ### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
 - [x] Create `_shared/sw-register.js` (the existing 5-line snippet).
-- [~] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR.
+- [~] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR. (45/81 numbered tools done: Rounds 2a–2c.)
 - [x] Verify snippet is byte-identical everywhere first (`grep -B0 -A4 serviceWorker`); any variant gets reviewed, not blindly replaced.
 
 **Round 2a (2026-08-11):** hashed the extracted snippet (CRLF-normalized) across
@@ -364,6 +364,28 @@ Round 2a's own note about pre-existing, unrelated console errors.
 
 **Remaining after this round: 51 numbered tools** still carry the inline
 snippet (`031`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
+`escape-room-builder/monitor.html`) still pending a decision on their relative
+path.
+
+**Round 2c (2026-08-11):** re-hashed the inline snippet (CRLF-normalized) in
+the next 15 numbered tools, `031`–`045` — all 15 identical to the Round 2a/2b
+block, none set aside. Migrated all 15 to
+`<script src="../_shared/sw-register.js" defer></script>`; no new files
+needed in `PRECACHE_URLS` (`_shared/sw-register.js` was already added in
+Round 2a). `CACHE_VERSION` bumped v48 → v49 since the content of 15
+already-precached pages changed.
+
+Verified in a real browser (local static server) for all 15 migrated tools:
+`_shared/sw-register.js` requested and returned 200 on every page. Console
+errors on every page were the same 4 `404` messages also present on
+`001-hall-pass-log.html` (used as a control, re-checked this round) — a
+pre-existing, page-independent baseline unrelated to this change, consistent
+with Rounds 2a/2b's notes (their write-ups say 6; this round observed 4 —
+not re-investigated, since the point of the control check is that the count
+is identical between an untouched baseline tool and the newly migrated ones).
+
+**Remaining after this round: 36 numbered tools** still carry the inline
+snippet (`046`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
 `escape-room-builder/monitor.html`) still pending a decision on their relative
 path.
 
