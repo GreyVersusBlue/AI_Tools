@@ -185,12 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Formula Reference Sheet Builder | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
-| Certificate & Award Maker | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
-| Field Trip Permission Slip Generator | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
-| Sub Plan Builder | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
-| Sub Binder / Day Bundle Generator | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
-| Blank Map Generator | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
+| *(none)* | | | |
 
 ---
 
@@ -555,6 +550,36 @@ Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
 into a shared `lib/qrcode.js` next time any of the three is touched again
 (see 048's and 051's own files for the detail).
 
+### Pass 2 — Round 3 — 2026-08-11 02:20 UTC — session `gb5c6e` — branch `claude/tools-041-046-improvements-gb5c6e`
+
+Tools 041–046: the school-office print cluster (formula sheets,
+certificates, field trip slips) plus the sub-coverage pair (Sub Plan
+Builder, Sub Binder Generator) plus the Blank Map Generator. One scoped
+Quick Win or Major Feature per tool, picked from each tool's own
+"where the next round should pick up" note. Every change was verified with
+`node --check`/syntax checks and a headless Playwright pass exercising the
+actual new interaction (not just page load) — an .ics file byte-parsed for
+correct VEVENT structure, a real worksheet+answer-key PDF generated
+end-to-end through the actual UI with long place-name labels, per-day state
+round-tripped through Sub Plan Builder's history storage, etc. — zero
+console errors across all six.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Formula Reference Sheet Builder | `041-formula-sheet-builder.md` | Print size selector (Full page / Half sheet 2-up / Index card 4-up) tiling identical copies onto one physical letter page with cut lines; auto-fit now targets the selected page's actual height. |
+| Certificate & Award Maker | `042-certificate-award-maker.md` | Uploadable signature image printed above the signature line (reuses the logo downscaler); toggleable print alignment guides (corner registration marks) for pre-printed certificate stock. |
+| Field Trip Permission Slip Generator | `043-field-trip-permission-slip.md` | `.ics` calendar export — one event for the trip, plus a separate slip-due reminder event with a live missing-count snapshot, reusing Lab Safety Contract Tracker's VCALENDAR pattern. |
+| Sub Plan Builder | `044-sub-plan-builder.md` | Per-day "Day type" template selector (Testing / Video / Emergency no-notice) that fills Overview/Schedule/Materials with confirm-gated starter content; tracked per-day and round-tripped through history. |
+| Sub Binder / Day Bundle Generator | `045-sub-binder-generator.md` | "Print bundle for all N days" — shared sections print once, the date-specific Calendar+Lesson sections print once per day with a divider header, reusing the single-day render functions. |
+| Blank Map Generator | `046-blank-map-generator.md` | Answer-key page no longer prints a redundant word bank; answer-key text now shrinks to fit its column instead of overflowing on long place names. |
+
+**26 of 46 (Pass 2) tools done** (20 before this round + these 6). **20 to
+go.** None of the six cleared their list — each still has substantial
+Major Features/Moonshot items open in its own file — so none moved to
+`stable tools/` this round. Sub Binder Generator's own file flags the P8
+cross-tool handoff interface as now due for a third consecutive round; see
+its Open Questions.
+
 ---
 
 ## Not yet touched
@@ -584,12 +609,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Data Table → Chart Builder — `038-data-chart-builder.md`
 - Vocab & Conjugation Drill Generator — `039-vocab-conjugation-drill.md`
 - Vocabulary Flashcard & Word Wall Generator — `040-vocab-flashcard-generator.md`
-- Formula Reference Sheet Builder — `041-formula-sheet-builder.md`
-- Certificate & Award Maker — `042-certificate-award-maker.md`
-- Field Trip Permission Slip Generator — `043-field-trip-permission-slip.md`
-- Sub Plan Builder — `044-sub-plan-builder.md`
-- Sub Binder / Day Bundle Generator — `045-sub-binder-generator.md`
-- Blank Map Generator — `046-blank-map-generator.md`
 
 ---
 
