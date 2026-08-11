@@ -63,23 +63,33 @@
      a REAL (built, clickable) tool row must manually update both of these to
      match the new row count. See note 6 below for why placeholders don't count.
 
-  6. "COMING SOON" PLACEHOLDER ROWS (added 2026-08-07)
-     #rows now also contains .section-head dividers (General / Classroom
-     Logistics, Math, ELA, Science, Social Studies, World Language, Arts & PE)
-     and .row.soon entries — same markup as a real row, but a <div> instead of
-     an <a> (no href), styled muted, with a "Soon"/"Idea" badge instead of a
-     real grade/Open link. These are backlog ideas, not built tools:
-       - They intentionally do NOT count toward "N records"/"N files" above.
-       - They DO still participate in the live filter/search (they're .row
-         elements with data-tags), so searching still surfaces them.
-       - The master list of ideas lives in /IDEAS_BACKLOG.md (repo root) and
-         on ideas-backlog.html (linked from the footer's C5 line). Keep those
-         two in sync with whatever's reflected here.
-     To graduate a placeholder into a real tool: delete its .row.soon div,
-     add a normal <a class="row ink" href="Tools/...">  in its place (reuse
-     its data-tool/data-tags), remove the matching entry from
-     IDEAS_BACKLOG.md / ideas-backlog.html, and THEN apply notes 4 and 5 above
-     (bump N records/N files, memo/footer dates, changelog entry).
+  6. CATEGORY SECTIONS, TAGS, AND PINS (rewritten 2026-08-11; replaces the
+     retired "coming soon" placeholder note — all placeholders graduated)
+     #rows contains 8 <details class="cat" data-cat="..."> category wrappers
+     (general, math, ela, science, social-studies, world-language, arts-pe,
+     platform), each with a <summary class="section-head"> (caret + name +
+     "N tools" count) and that category's <a class="row ink"> entries, plus a
+     JS-populated <details id="pinnedCat"> "My Tools" section at the top.
+       - A NEW TOOL ROW goes inside its category's <details>, and its
+         summary's "N tools" count must be bumped by hand (notes 4/5 still
+         apply too).
+       - Every row carries TWO tag attributes: data-tags (free-text search
+         keywords for the live filter + Cmd+K — legacy vocabulary, fine to
+         extend) and data-filter-tags (curated canonical tags that drive the
+         "Filter by tag" panel; taxonomy = 8 subject tags + function tags like
+         timer/printable/review-game + output tags). Give a new tool 2–6
+         data-filter-tags; subject tag LAST (general tools get none). The
+         panel is built at runtime from these attributes — no list to update.
+       - The 3 visible chips in .tags must be <span data-tag="x">x</span>
+         using the row's FIRST THREE data-filter-tags, in order — they are
+         click-to-filter shortcuts, so chip text and filter tags must match.
+       - Each row's .per cell contains a pin star: a span[role=button] with
+         data-pin (spans, not <button>, because buttons are invalid inside
+         the row <a>; this nested-interactive setup is deliberate).
+       - localStorage: gvb-home-cats (per-category open state; categories
+         ship closed in markup), gvb-home-pins (array of data-tool slugs).
+     The old .row.soon placeholder convention is retired; IDEAS_BACKLOG.md /
+     ideas-backlog.html still track future ideas.
 -->
 
 <style>
@@ -171,6 +181,11 @@
   .ink{animation:inkon .45s var(--ease) both;animation-delay:var(--d,0ms);}
   .row.ink{animation:inkon .45s var(--ease) both, saveflash .9s ease-out both;
            animation-delay:var(--d,0ms), calc(var(--d,0ms) + 450ms);}
+  /* rows sit inside <details> now: a closed category is display:none, so the
+     entrance animation re-runs every time it opens — keep the effect but
+     zero the page-load stagger there, or opening a section looks empty
+     for over a second */
+  .cat .row.ink{--d:0ms;}
 
   /* grade chips type on after their row lands */
   .grade{opacity:0;animation:inkon .3s var(--ease) both;animation-delay:calc(var(--d,0ms) + 620ms);}
@@ -314,6 +329,51 @@
   }
   .count b{color:var(--good);font-weight:500;}
 
+  /* ============ tag filter bar + expand/collapse all ============ */
+  .listbar{display:flex;align-items:flex-start;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem;}
+  .tagbar{
+    flex:1;min-width:16rem;
+    border:1px solid var(--line);border-radius:6px;
+    background:var(--panel);overflow:hidden;
+  }
+  .tagbar summary{
+    list-style:none;cursor:pointer;
+    display:flex;align-items:center;gap:.6rem;
+    padding:.55rem .9rem;
+    font-family:var(--mono);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--dim);transition:color .2s var(--ease);
+  }
+  .tagbar summary::-webkit-details-marker{display:none;}
+  .tagbar summary:hover{color:var(--ink);}
+  .tagbar summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .tagbar .caret{color:var(--accent);transition:transform .25s var(--ease);display:inline-flex;}
+  .tagbar[open] .caret{transform:rotate(90deg);}
+  .tagbar summary .tally{margin-left:auto;color:var(--faint);letter-spacing:.03em;text-transform:none;}
+  .tagchips{display:flex;flex-wrap:wrap;gap:.34rem;padding:.15rem .9rem .55rem;}
+  .tagchip{
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.04em;
+    color:var(--dim);background:var(--paper);
+    border:1px solid var(--line);border-radius:3px;
+    padding:.18rem .5rem;white-space:nowrap;cursor:pointer;
+    transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+  }
+  .tagchip:hover{color:var(--ink);border-color:var(--line-strong);}
+  .tagchip:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .tagchip[aria-pressed="true"]{color:var(--panel);background:var(--accent);border-color:var(--accent);}
+  .tagchip .n{opacity:.65;margin-left:.3em;}
+  .tagchip.is-zero{opacity:.45;}
+  .tagactions{padding:0 .9rem .7rem;}
+  .tagclear,.expandall{
+    font-family:var(--mono);font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--dim);background:var(--panel);
+    border:1px solid var(--line);border-radius:6px;
+    padding:.45rem .8rem;cursor:pointer;white-space:nowrap;
+    transition:color .15s var(--ease),border-color .15s var(--ease);
+  }
+  .tagclear{border-radius:3px;padding:.18rem .5rem;background:var(--paper);}
+  .tagclear:hover,.expandall:hover{color:var(--accent);border-color:var(--line-strong);}
+  .tagclear:focus-visible,.expandall:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
   /* ============ gradebook table ============ */
   .table-head{
     display:grid;
@@ -381,6 +441,21 @@
     border:1px solid var(--line);border-radius:3px;
     padding:.12rem .42rem;white-space:nowrap;
   }
+  .tags [data-tag]{cursor:pointer;transition:color .15s var(--ease),border-color .15s var(--ease);}
+  .tags [data-tag]:hover{color:var(--accent);border-color:var(--accent);}
+  .tags [data-tag].on{color:var(--panel);background:var(--accent);border-color:var(--accent);}
+
+  /* pin-to-My-Tools star */
+  .pin{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:1.2rem;height:1.2rem;margin-top:.22rem;border-radius:3px;
+    color:var(--faint);cursor:pointer;
+    transition:color .15s var(--ease);
+  }
+  .pin:hover{color:var(--accent);}
+  .pin:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .pin[aria-pressed="true"]{color:var(--accent);}
+  .pin[aria-pressed="true"] svg path{fill:currentColor;}
 
   /* grade + the red-pen circle */
   .grade{
@@ -424,7 +499,22 @@
     color:var(--dim);background:var(--paper);
     padding:.6rem 1rem;border-bottom:1px solid var(--line-strong);
   }
-  .section-head:not(:first-child){border-top:1px solid var(--line-strong);}
+  .cat + .cat > summary{border-top:1px solid var(--line-strong);}
+
+  /* collapsible category wrappers */
+  summary.section-head{
+    list-style:none;cursor:pointer;
+    display:flex;align-items:center;gap:.6rem;
+    transition:color .2s var(--ease);
+  }
+  summary.section-head::-webkit-details-marker{display:none;}
+  summary.section-head:hover{color:var(--ink);}
+  summary.section-head:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .cat > summary .caret{color:var(--accent);transition:transform .25s var(--ease);display:inline-flex;}
+  .cat[open] > summary .caret{transform:rotate(90deg);}
+  .cat:not([open]) > summary.section-head{border-bottom-color:var(--line);}
+  .cat > summary .cat-count{margin-left:auto;color:var(--faint);letter-spacing:.03em;text-transform:none;}
+  .cat-pinned > summary .caret{color:var(--pen);}
 
   .row.soon{cursor:default;}
   .row.soon:hover,.row.soon:focus-visible{background:transparent;}
@@ -678,23 +768,53 @@
     <p class="count" id="count" role="status" aria-live="polite"><b>37 / 37</b> present</p>
   </div>
 
+  <div class="listbar ink" style="--d:400ms">
+    <details class="tagbar" id="tagbar">
+      <summary>
+        <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        Filter by tag
+        <span class="tally" id="tagTally"></span>
+      </summary>
+      <div class="tagchips" id="tagChips"></div>
+      <div class="tagactions">
+        <button type="button" class="tagclear" id="tagClear" hidden>Clear tags</button>
+      </div>
+    </details>
+    <button type="button" class="expandall" id="expandAll">Expand all</button>
+  </div>
+
   <div class="table-head ink" style="--d:420ms">
     <span>Per.</span><span>Tool</span><span class="th-tags" style="text-align:right">Tags</span><span class="th-grade">Grade</span><span class="th-open">Open</span>
   </div>
 
   <div class="rows" id="rows">
 
-    <div class="section-head ink" style="--d:460ms">General / Classroom Logistics</div>
+    <details class="cat cat-pinned" id="pinnedCat" data-cat="pinned" hidden>
+    <summary class="section-head ink">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      My Tools
+      <span class="cat-count" id="pinnedCount"></span>
+    </summary>
+    <div id="pinnedRows"></div>
+    </details>
+
+    <details class="cat" data-cat="general">
+    <summary class="section-head ink" style="--d:460ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      General / Classroom Logistics
+      <span class="cat-count">32 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:480ms" href="Tools/007-Name%20Picker.html"
-       data-tool="name-picker" data-tags="random cold call participation groups shuffle roster who goes first">
-      <span class="per"><span class="lbl">Per</span><b>1</b></span>
+       data-tool="name-picker" data-tags="random cold call participation groups shuffle roster who goes first"
+       data-filter-tags="randomizer roster projector groups">
+      <span class="per"><span class="lbl">Per</span><b>1</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Name Picker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Name Picker</span>
         <span class="pitch">5 seconds. Pick a name, move on.</span>
         <span class="comment" aria-hidden="true">The wheel doesn&rsquo;t lie. Mostly.</span>
       </span>
-      <span class="tags"><span>random</span><span>cold-call</span><span>groups</span></span>
+      <span class="tags"><span data-tag="randomizer">randomizer</span><span data-tag="roster">roster</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: a pleasure to have in class.">A+
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -702,14 +822,15 @@
     </a>
 
     <a class="row ink" style="--d:550ms" href="Tools/005-Seating%20Chart%20Generator.html"
-       data-tool="seating-chart" data-tags="seating chart roster groups shuffle reshuffle desks layout pairs">
-      <span class="per"><span class="lbl">Per</span><b>2</b></span>
+       data-tool="seating-chart" data-tags="seating chart roster groups shuffle reshuffle desks layout pairs"
+       data-filter-tags="seating roster groups printable">
+      <span class="per"><span class="lbl">Per</span><b>2</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Seating Chart Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Seating Chart Generator</span>
         <span class="pitch">Build it once, reshuffle whenever you need to.</span>
         <span class="comment" aria-hidden="true">Never once caused a diplomatic incident. Allegedly.</span>
       </span>
-      <span class="tags"><span>seating</span><span>roster</span><span>shuffle</span></span>
+      <span class="tags"><span data-tag="seating">seating</span><span data-tag="roster">roster</span><span data-tag="groups">groups</span></span>
       <span class="grade" title="Comment: works well with others. Rearranges them, actually.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -717,14 +838,15 @@
     </a>
 
     <a class="row ink" style="--d:620ms" href="Tools/034-schedule-browser.html"
-       data-tool="schedule-browser" data-tags="schedule teacher room period blocks a/b day lookup coverage substitute">
-      <span class="per"><span class="lbl">Per</span><b>3</b></span>
+       data-tool="schedule-browser" data-tags="schedule teacher room period blocks a/b day lookup coverage substitute"
+       data-filter-tags="schedule reference">
+      <span class="per"><span class="lbl">Per</span><b>3</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Schedule Browser to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Schedule Browser</span>
         <span class="pitch">Look up any teacher, room, or period in seconds.</span>
         <span class="comment" aria-hidden="true">Knows where everyone is. Even you.</span>
       </span>
-      <span class="tags"><span>schedule</span><span>rooms</span><span>periods</span></span>
+      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
       <span class="grade" title="Comment: always knows where everyone is supposed to be.">A+
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -732,14 +854,15 @@
     </a>
 
     <a class="row ink" style="--d:690ms" href="Tools/035-schedule-visualizer.html"
-       data-tool="layout-visualizer" data-tags="building map layout rooms clusters hallways floors wayfinding schedule">
-      <span class="per"><span class="lbl">Per</span><b>4</b></span>
+       data-tool="layout-visualizer" data-tags="building map layout rooms clusters hallways floors wayfinding schedule"
+       data-filter-tags="maps schedule reference">
+      <span class="per"><span class="lbl">Per</span><b>4</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Layout Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">School Layout Visualizer</span>
         <span class="pitch">See the whole building&rsquo;s schedule, hyperlinked.</span>
         <span class="comment" aria-hidden="true">Finds every hallway shortcut you&rsquo;ve been hiding.</span>
       </span>
-      <span class="tags"><span>building</span><span>map</span><span>clusters</span></span>
+      <span class="tags"><span data-tag="maps">maps</span><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
       <span class="grade" title="Comment: sees the big picture.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -747,14 +870,15 @@
     </a>
 
     <a class="row ink" style="--d:760ms" href="Tools/036-final_grade_checker.html"
-       data-tool="grade-checker" data-tags="grades grading report cards math weights averages quarter exam gradebook export">
-      <span class="per"><span class="lbl">Per</span><b>5</b></span>
+       data-tool="grade-checker" data-tags="grades grading report cards math weights averages quarter exam gradebook export"
+       data-filter-tags="grades reference export">
+      <span class="per"><span class="lbl">Per</span><b>5</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Final Grade Checker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Final Grade Checker</span>
         <span class="pitch">Double-check the math before report cards go out.</span>
         <span class="comment" aria-hidden="true">Catches my math before the parents do.</span>
       </span>
-      <span class="tags"><span>grades</span><span>report-cards</span><span>math</span></span>
+      <span class="tags"><span data-tag="grades">grades</span><span data-tag="reference">reference</span><span data-tag="export">export</span></span>
       <span class="grade" title="Comment: shows all work.">A+
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -762,14 +886,15 @@
     </a>
 
     <a class="row ink" style="--d:830ms" href="Tools/011-image-to-pdf.html"
-       data-tool="image-to-pdf" data-tags="pdf images photos scans handouts merge combine documents">
-      <span class="per"><span class="lbl">Per</span><b>6</b></span>
+       data-tool="image-to-pdf" data-tags="pdf images photos scans handouts merge combine documents"
+       data-filter-tags="export printable">
+      <span class="per"><span class="lbl">Per</span><b>6</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Image &rarr; PDF Assembler to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Image &rarr; PDF Assembler</span>
         <span class="pitch">Turn a stack of photos into one clean PDF.</span>
         <span class="comment" aria-hidden="true">Turns chaos into one PDF. Occasionally sideways.</span>
       </span>
-      <span class="tags"><span>pdf</span><span>images</span><span>scans</span></span>
+      <span class="tags"><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: turns work in on time, stapled.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -777,14 +902,15 @@
     </a>
 
     <a class="row ink" style="--d:900ms" href="Tools/029-prompt-builder.html"
-       data-tool="prompt-builder" data-tags="prompt ai writing template builder chatgpt claude questions">
-      <span class="per"><span class="lbl">Per</span><b>7</b></span>
+       data-tool="prompt-builder" data-tags="prompt ai writing template builder chatgpt claude questions"
+       data-filter-tags="planning writing reference">
+      <span class="per"><span class="lbl">Per</span><b>7</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Prompt Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Prompt Builder</span>
         <span class="pitch">Answer a few questions, get a ready-to-use AI prompt.</span>
         <span class="comment" aria-hidden="true">Better at asking questions than most staff meetings.</span>
       </span>
-      <span class="tags"><span>prompt</span><span>ai</span><span>template</span></span>
+      <span class="tags"><span data-tag="planning">planning</span><span data-tag="writing">writing</span><span data-tag="reference">reference</span></span>
       <span class="grade" title="Comment: asks good questions.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -792,14 +918,15 @@
     </a>
 
     <a class="row ink" style="--d:970ms" href="Tools/031-docx-merger.html"
-       data-tool="docx-merger" data-tags="word docx merge combine documents template letters">
-      <span class="per"><span class="lbl">Per</span><b>8</b></span>
+       data-tool="docx-merger" data-tags="word docx merge combine documents template letters"
+       data-filter-tags="export communication">
+      <span class="per"><span class="lbl">Per</span><b>8</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Word Doc Merger to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Word Doc Merger</span>
         <span class="pitch">Combine multiple Word docs into one, in order.</span>
         <span class="comment" aria-hidden="true">Plays well with others. Literally.</span>
       </span>
-      <span class="tags"><span>word</span><span>docx</span><span>merge</span></span>
+      <span class="tags"><span data-tag="export">export</span><span data-tag="communication">communication</span></span>
       <span class="grade" title="Comment: works well with others.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -807,14 +934,15 @@
     </a>
 
     <a class="row ink" style="--d:1040ms" href="Tools/044-Sub%20Plan%20Builder.html"
-       data-tool="sub-plan-builder" data-tags="sub plans substitute lesson word docx emergency">
-      <span class="per"><span class="lbl">Per</span><b>9</b></span>
+       data-tool="sub-plan-builder" data-tags="sub plans substitute lesson word docx emergency"
+       data-filter-tags="sub-plans export printable">
+      <span class="per"><span class="lbl">Per</span><b>9</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Plan Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Sub Plan Builder</span>
         <span class="pitch">Fill in the boilerplate once, then export a ready-to-print sub plan.</span>
         <span class="comment" aria-hidden="true">Covers your class. Doesn't cover for you.</span>
       </span>
-      <span class="tags"><span>sub plans</span><span>docx</span><span>emergency</span></span>
+      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: leaves detailed instructions.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -822,14 +950,15 @@
     </a>
 
     <a class="row ink" style="--d:1110ms" href="Tools/016-qr-code-generator.html"
-       data-tool="qr-code-generator" data-tags="qr code generator link station schoology forms logo">
-      <span class="per"><span class="lbl">Per</span><b>10</b></span>
+       data-tool="qr-code-generator" data-tags="qr code generator link station schoology forms logo"
+       data-filter-tags="qr printable">
+      <span class="per"><span class="lbl">Per</span><b>10</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin QR Code Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">QR Code Generator</span>
         <span class="pitch">Turn a link or short text into a printable QR code, with an optional logo in the center.</span>
         <span class="comment" aria-hidden="true">Scans on the first try. Unlike the fire alarm.</span>
       </span>
-      <span class="tags"><span>qr code</span><span>links</span><span>stations</span></span>
+      <span class="tags"><span data-tag="qr">qr</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: scans on the first try.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -837,14 +966,15 @@
     </a>
 
     <a class="row ink" style="--d:1180ms" href="Tools/032-School%20Calendar%20Visualizer.html"
-       data-tool="school-calendar-visualizer" data-tags="calendar pacing holidays half days grading periods testing windows template">
-      <span class="per"><span class="lbl">Per</span><b>11</b></span>
+       data-tool="school-calendar-visualizer" data-tags="calendar pacing holidays half days grading periods testing windows template"
+       data-filter-tags="schedule planning charts">
+      <span class="per"><span class="lbl">Per</span><b>11</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Calendar Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">School Calendar Visualizer</span>
         <span class="pitch">Build a full-year calendar template — holidays, half days, workdays, grading periods — and lay lesson pacing on top.</span>
         <span class="comment" aria-hidden="true">Sees the whole year coming. Still not ready for it.</span>
       </span>
-      <span class="tags"><span>calendar</span><span>pacing</span><span>template</span></span>
+      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="planning">planning</span><span data-tag="charts">charts</span></span>
       <span class="grade" title="Comment: plans ahead.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -852,14 +982,15 @@
     </a>
 
     <a class="row ink" style="--d:1250ms" href="Tools/004-Classroom%20Timer.html"
-       data-tool="classroom-timer" data-tags="timer countdown transition random interval stopwatch round robin stations projector">
-      <span class="per"><span class="lbl">Per</span><b>12</b></span>
+       data-tool="classroom-timer" data-tags="timer countdown transition random interval stopwatch round robin stations projector"
+       data-filter-tags="timer projector randomizer">
+      <span class="per"><span class="lbl">Per</span><b>12</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Classroom Timer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Classroom Timer</span>
         <span class="pitch">Big-digit projector timer with countdown, transition, random-interval, stopwatch, and round-robin modes.</span>
         <span class="comment" aria-hidden="true">Readable from the back row. Even without your glasses.</span>
       </span>
-      <span class="tags"><span>timer</span><span>countdown</span><span>stations</span></span>
+      <span class="tags"><span data-tag="timer">timer</span><span data-tag="projector">projector</span><span data-tag="randomizer">randomizer</span></span>
       <span class="grade" title="Comment: readable from the back row.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -867,14 +998,15 @@
     </a>
 
     <a class="row ink" style="--d:1260ms" href="Tools/020-bracket-tournament-generator.html"
-       data-tool="bracket-tournament-generator" data-tags="bracket tournament review game elimination groups teams">
-      <span class="per"><span class="lbl">Per</span><b>13</b></span>
+       data-tool="bracket-tournament-generator" data-tags="bracket tournament review game elimination groups teams"
+       data-filter-tags="review-game groups printable projector">
+      <span class="per"><span class="lbl">Per</span><b>13</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Bracket / Tournament Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Bracket / Tournament Generator</span>
         <span class="pitch">Build a single-elimination bracket, run it live, and pick winners as rounds finish.</span>
         <span class="comment" aria-hidden="true">Somebody has to lose in the first round. Sorry, Eve.</span>
       </span>
-      <span class="tags"><span>bracket</span><span>tournament</span><span>review game</span></span>
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="groups">groups</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: handles elimination gracefully.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -882,14 +1014,15 @@
     </a>
 
     <a class="row ink" style="--d:1272ms" href="Tools/030-review-game-board.html"
-       data-tool="review-game-board" data-tags="jeopardy review game quiz board projector excel import">
-      <span class="per"><span class="lbl">Per</span><b>14</b></span>
+       data-tool="review-game-board" data-tags="jeopardy review game quiz board projector excel import"
+       data-filter-tags="review-game projector">
+      <span class="per"><span class="lbl">Per</span><b>14</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Quiz / Review Game Board to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Quiz / Review Game Board</span>
         <span class="pitch">A Jeopardy-style board for the projector &mdash; type in questions or import them from a spreadsheet.</span>
         <span class="comment" aria-hidden="true">Daily Double energy, minus the Sony lawyers.</span>
       </span>
-      <span class="tags"><span>review game</span><span>quiz</span><span>excel import</span></span>
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: knows the answer, in the form of a question.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -897,14 +1030,15 @@
     </a>
 
     <a class="row ink" style="--d:1284ms" href="Tools/042-certificate-award-maker.html"
-       data-tool="certificate-award-maker" data-tags="certificate award printable recognition batch">
-      <span class="per"><span class="lbl">Per</span><b>15</b></span>
+       data-tool="certificate-award-maker" data-tags="certificate award printable recognition batch"
+       data-filter-tags="printable cards communication">
+      <span class="per"><span class="lbl">Per</span><b>15</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Certificate &amp; Award Maker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Certificate &amp; Award Maker</span>
         <span class="pitch">Pick a template and border, type in the details, print one certificate or a whole class set.</span>
         <span class="comment" aria-hidden="true">Everyone&rsquo;s a winner. Some more officially than others.</span>
       </span>
-      <span class="tags"><span>certificate</span><span>award</span><span>printable</span></span>
+      <span class="tags"><span data-tag="printable">printable</span><span data-tag="cards">cards</span><span data-tag="communication">communication</span></span>
       <span class="grade" title="Comment: everyone&rsquo;s a winner.">A+
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -912,14 +1046,15 @@
     </a>
 
     <a class="row ink" style="--d:1296ms" href="Tools/002-group-team-generator.html"
-       data-tool="group-team-generator" data-tags="groups teams randomizer constraints balance random">
-      <span class="per"><span class="lbl">Per</span><b>16</b></span>
+       data-tool="group-team-generator" data-tags="groups teams randomizer constraints balance random"
+       data-filter-tags="groups randomizer roster">
+      <span class="per"><span class="lbl">Per</span><b>16</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Group / Team Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Group / Team Generator</span>
         <span class="pitch">Random groups with constraints &mdash; keep certain students apart, balance skill levels.</span>
         <span class="comment" aria-hidden="true">Never puts the same two together twice. Mostly by request.</span>
       </span>
-      <span class="tags"><span>groups</span><span>random</span><span>teams</span></span>
+      <span class="tags"><span data-tag="groups">groups</span><span data-tag="randomizer">randomizer</span><span data-tag="roster">roster</span></span>
       <span class="grade" title="Comment: never puts the same two together twice.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -927,14 +1062,15 @@
     </a>
 
     <a class="row ink" style="--d:1308ms" href="Tools/008-behavior-points-tracker.html"
-       data-tool="behavior-points-tracker" data-tags="behavior points tracker classroom management incentives">
-      <span class="per"><span class="lbl">Per</span><b>17</b></span>
+       data-tool="behavior-points-tracker" data-tags="behavior points tracker classroom management incentives"
+       data-filter-tags="behavior tracker roster">
+      <span class="per"><span class="lbl">Per</span><b>17</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Behavior &amp; Points Tracker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Behavior &amp; Points Tracker</span>
         <span class="pitch">Tap a behavior, then tap a student &mdash; a running per-student point tally you can project during class.</span>
         <span class="comment" aria-hidden="true">Never forgets who was helping. Or who wasn&rsquo;t.</span>
       </span>
-      <span class="tags"><span>behavior</span><span>points</span><span>tracker</span></span>
+      <span class="tags"><span data-tag="behavior">behavior</span><span data-tag="tracker">tracker</span><span data-tag="roster">roster</span></span>
       <span class="grade" title="Comment: never forgets who was helping, or who wasn't.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -942,14 +1078,15 @@
     </a>
 
     <a class="row ink" style="--d:1320ms" href="Tools/023-exit-ticket-generator.html"
-       data-tool="exit-ticket-generator" data-tags="exit ticket bell ringer warm up printable">
-      <span class="per"><span class="lbl">Per</span><b>18</b></span>
+       data-tool="exit-ticket-generator" data-tags="exit ticket bell ringer warm up printable"
+       data-filter-tags="warm-up printable writing">
+      <span class="per"><span class="lbl">Per</span><b>18</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Exit Ticket / Bell Ringer Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Exit Ticket / Bell Ringer Generator</span>
         <span class="pitch">A bank of short warm-up and exit-ticket prompts with a projector display, or print half- or quarter-sheet handouts for the whole class.</span>
         <span class="comment" aria-hidden="true">Three minutes of writing. Zero minutes of grading.</span>
       </span>
-      <span class="tags"><span>exit ticket</span><span>bell ringer</span><span>printable</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="printable">printable</span><span data-tag="writing">writing</span></span>
       <span class="grade" title="Comment: three minutes of writing, zero minutes of grading.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -957,14 +1094,15 @@
     </a>
 
     <a class="row ink" style="--d:1332ms" href="Tools/003-rubric-builder.html"
-       data-tool="rubric-builder" data-tags="rubric grading criteria printable">
-      <span class="per"><span class="lbl">Per</span><b>19</b></span>
+       data-tool="rubric-builder" data-tags="rubric grading criteria printable"
+       data-filter-tags="grades reference printable">
+      <span class="per"><span class="lbl">Per</span><b>19</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Rubric Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Rubric Builder</span>
         <span class="pitch">Build, save, and print grading rubrics &mdash; editable criteria and performance levels, from a template or from scratch.</span>
         <span class="comment" aria-hidden="true">Grades the assignment. Not you.</span>
       </span>
-      <span class="tags"><span>rubric</span><span>grading</span><span>printable</span></span>
+      <span class="tags"><span data-tag="grades">grades</span><span data-tag="reference">reference</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: grades the assignment, not you.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -972,14 +1110,15 @@
     </a>
 
     <a class="row ink" style="--d:1344ms" href="Tools/043-field-trip-permission-slip.html"
-       data-tool="field-trip-permission-slip" data-tags="field trip permission slip printable">
-      <span class="per"><span class="lbl">Per</span><b>20</b></span>
+       data-tool="field-trip-permission-slip" data-tags="field trip permission slip printable"
+       data-filter-tags="printable communication">
+      <span class="per"><span class="lbl">Per</span><b>20</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Field Trip Permission Slip Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Field Trip Permission Slip Generator</span>
         <span class="pitch">Fill in the trip details once, then print one slip, a whole class set, or blank copies to hand-write &mdash; save the trip as a template for next year.</span>
         <span class="comment" aria-hidden="true">Fills in the fine print. You still chase the signatures.</span>
       </span>
-      <span class="tags"><span>field trip</span><span>permission slip</span><span>printable</span></span>
+      <span class="tags"><span data-tag="printable">printable</span><span data-tag="communication">communication</span></span>
       <span class="grade" title="Comment: fills in the fine print, you still chase the signatures.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -987,14 +1126,15 @@
     </a>
 
     <a class="row ink" style="--d:1356ms" href="Tools/037-grade-distribution-visualizer.html"
-       data-tool="grade-distribution-visualizer" data-tags="grades distribution histogram stats gradebook">
-      <span class="per"><span class="lbl">Per</span><b>21</b></span>
+       data-tool="grade-distribution-visualizer" data-tags="grades distribution histogram stats gradebook"
+       data-filter-tags="grades charts">
+      <span class="per"><span class="lbl">Per</span><b>21</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Grade Distribution Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Grade Distribution Visualizer</span>
         <span class="pitch">Paste a gradebook export and see class-wide stats, a letter-grade breakdown, and a score histogram &mdash; a companion to the Final Grade Checker.</span>
         <span class="comment" aria-hidden="true">The curve, visualized. No promises about the curve itself.</span>
       </span>
-      <span class="tags"><span>grades</span><span>distribution</span><span>stats</span></span>
+      <span class="tags"><span data-tag="grades">grades</span><span data-tag="charts">charts</span></span>
       <span class="grade" title="Comment: the curve, visualized.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1002,14 +1142,15 @@
     </a>
 
     <a class="row ink" style="--d:1368ms" href="Tools/018-qr-scavenger-hunt-builder.html"
-       data-tool="qr-scavenger-hunt-builder" data-tags="qr code scavenger hunt stations answer key">
-      <span class="per"><span class="lbl">Per</span><b>22</b></span>
+       data-tool="qr-scavenger-hunt-builder" data-tags="qr code scavenger hunt stations answer key"
+       data-filter-tags="qr review-game printable">
+      <span class="per"><span class="lbl">Per</span><b>22</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin QR Scavenger Hunt Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">QR Scavenger Hunt Builder</span>
         <span class="pitch">Batch-generate a set of station QR codes plus an answer key.</span>
         <span class="comment" aria-hidden="true">Sends them all over the building. Keeps the answers to itself.</span>
       </span>
-      <span class="tags"><span>qr code</span><span>scavenger hunt</span><span>stations</span></span>
+      <span class="tags"><span data-tag="qr">qr</span><span data-tag="review-game">review-game</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: keeps the answers to itself.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1017,14 +1158,15 @@
     </a>
 
     <a class="row ink" style="--d:1380ms" href="Tools/001-hall-pass-log.html"
-       data-tool="hall-pass-log" data-tags="hall pass sign out log tracking">
-      <span class="per"><span class="lbl">Per</span><b>23</b></span>
+       data-tool="hall-pass-log" data-tags="hall pass sign out log tracking"
+       data-filter-tags="tracker behavior">
+      <span class="per"><span class="lbl">Per</span><b>23</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Digital Hall Pass / Sign-Out Log to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Digital Hall Pass / Sign-Out Log</span>
         <span class="pitch">Tap a destination, tap a student, and the live board tracks who&rsquo;s out and for how long &mdash; sign them back in and print the day&rsquo;s log.</span>
         <span class="comment" aria-hidden="true">Knows exactly how long &ldquo;just the bathroom&rdquo; really takes.</span>
       </span>
-      <span class="tags"><span>hall pass</span><span>sign-out</span><span>log</span></span>
+      <span class="tags"><span data-tag="tracker">tracker</span><span data-tag="behavior">behavior</span></span>
       <span class="grade" title="Comment: knows exactly how long &ldquo;just the bathroom&rdquo; really takes.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1032,14 +1174,15 @@
     </a>
 
     <a class="row ink" style="--d:1388ms" href="Tools/006-class-roster-hub.html"
-       data-tool="class-roster-hub" data-tags="roster class list shared students sync">
-      <span class="per"><span class="lbl">Per</span><b>24</b></span>
+       data-tool="class-roster-hub" data-tags="roster class list shared students sync"
+       data-filter-tags="roster reference tracker">
+      <span class="per"><span class="lbl">Per</span><b>24</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Class Roster Hub to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Class Roster Hub</span>
         <span class="pitch">Build and save a class roster once &mdash; Name Picker, Seating Chart, Group/Team Generator, and four more tools can all load it straight in instead of starting over.</span>
         <span class="comment" aria-hidden="true">Types your roster once. Remembers it everywhere.</span>
       </span>
-      <span class="tags"><span>roster</span><span>shared</span><span>sync</span></span>
+      <span class="tags"><span data-tag="roster">roster</span><span data-tag="reference">reference</span><span data-tag="tracker">tracker</span></span>
       <span class="grade" title="Comment: types your roster once, remembers it everywhere.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1047,14 +1190,15 @@
     </a>
 
     <a class="row ink" style="--d:1396ms" href="Tools/045-sub-binder-generator.html"
-       data-tool="sub-binder-generator" data-tags="sub plans bundle print pdf combine emergency seating schedule">
-      <span class="per"><span class="lbl">Per</span><b>25</b></span>
+       data-tool="sub-binder-generator" data-tags="sub plans bundle print pdf combine emergency seating schedule"
+       data-filter-tags="sub-plans export printable seating schedule">
+      <span class="per"><span class="lbl">Per</span><b>25</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Binder / Day Bundle Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Sub Binder / Day Bundle Generator</span>
         <span class="pitch">Pulls the standing details saved in Sub Plan Builder and the current Seating Chart into one two-page printable packet, plus today&rsquo;s lesson.</span>
         <span class="comment" aria-hidden="true">One stack for the sub. Not three separate tabs.</span>
       </span>
-      <span class="tags"><span>sub plans</span><span>bundle</span><span>printable</span></span>
+      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: one stack for the sub, not three separate tabs.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1062,14 +1206,15 @@
     </a>
 
     <a class="row ink" style="--d:1404ms" href="Tools/010-command-center-dashboard.html"
-       data-tool="command-center-dashboard" data-tags="dashboard timer schedule today overview projector">
-      <span class="per"><span class="lbl">Per</span><b>26</b></span>
+       data-tool="command-center-dashboard" data-tags="dashboard timer schedule today overview projector"
+       data-filter-tags="projector timer schedule">
+      <span class="per"><span class="lbl">Per</span><b>26</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Command Center (Daily Dashboard) to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Command Center (Daily Dashboard)</span>
         <span class="pitch">A timer, today&rsquo;s school-calendar day type and pacing note, and a no-repeats roster quick-call, side by side on one projector page.</span>
         <span class="comment" aria-hidden="true">Runs the whole period without a single tab switch.</span>
       </span>
-      <span class="tags"><span>dashboard</span><span>timer</span><span>schedule</span></span>
+      <span class="tags"><span data-tag="projector">projector</span><span data-tag="timer">timer</span><span data-tag="schedule">schedule</span></span>
       <span class="grade" title="Comment: runs the whole period without a single tab switch.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1077,14 +1222,15 @@
     </a>
 
     <a class="row ink" style="--d:1412ms" href="Tools/019-escape-room-builder.html"
-       data-tool="escape-room-builder" data-tags="escape room puzzle lock qr code stations game">
-      <span class="per"><span class="lbl">Per</span><b>27</b></span>
+       data-tool="escape-room-builder" data-tags="escape room puzzle lock qr code stations game"
+       data-filter-tags="review-game qr projector">
+      <span class="per"><span class="lbl">Per</span><b>27</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Digital Escape Room / Puzzle Lock Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Digital Escape Room / Puzzle Lock Builder</span>
         <span class="pitch">Chain QR-code puzzle stations into a linear or branching escape room &mdash; scanning one out of order sends a student back instead of giving away the clue.</span>
         <span class="comment" aria-hidden="true">The only lock in the building that&rsquo;s supposed to be picked.</span>
       </span>
-      <span class="tags"><span>escape room</span><span>puzzle</span><span>qr code</span></span>
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="qr">qr</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: the only lock in the building that&rsquo;s supposed to be picked.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1092,14 +1238,15 @@
     </a>
 
     <a class="row ink" style="--d:1416ms" href="Tools/068-parent-contact-log.html"
-       data-tool="parent-contact-log" data-tags="general parent contact log communication tracker conference">
-      <span class="per"><span class="lbl">Per</span><b>28</b></span>
+       data-tool="parent-contact-log" data-tags="general parent contact log communication tracker conference"
+       data-filter-tags="communication tracker">
+      <span class="per"><span class="lbl">Per</span><b>28</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Parent/Guardian Contact Log to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Parent/Guardian Contact Log</span>
         <span class="pitch">Log a call, email, or note home per student &mdash; date, method, and outcome &mdash; for quick reference before a conference or a difficult phone call.</span>
         <span class="comment" aria-hidden="true">Remembers so you don&rsquo;t have to, right before that call.</span>
       </span>
-      <span class="tags"><span>parent contact</span><span>communication</span><span>log</span></span>
+      <span class="tags"><span data-tag="communication">communication</span><span data-tag="tracker">tracker</span></span>
       <span class="grade" title="Comment: remembers so you don't have to.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1107,14 +1254,15 @@
     </a>
 
     <a class="row ink" style="--d:1304ms" href="Tools/058-duty-roster-builder.html"
-       data-tool="duty-roster-builder" data-tags="general duty roster hallway cafeteria bus rotation printable">
-      <span class="per"><span class="lbl">Per</span><b>29</b></span>
+       data-tool="duty-roster-builder" data-tags="general duty roster hallway cafeteria bus rotation printable"
+       data-filter-tags="schedule planning printable">
+      <span class="per"><span class="lbl">Per</span><b>29</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Duty Roster Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Duty Roster Builder</span>
         <span class="pitch">Build a rotating weekly hallway/cafeteria/bus duty assignment grid across staff and print it for the workroom board.</span>
         <span class="comment" aria-hidden="true">Nobody &ldquo;forgets&rdquo; cafeteria duty again.</span>
       </span>
-      <span class="tags"><span>duty roster</span><span>hallway</span><span>rotation</span></span>
+      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="planning">planning</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: nobody forgets cafeteria duty again.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1122,14 +1270,15 @@
     </a>
 
     <a class="row ink" style="--d:1308ms" href="Tools/076-sub-note-feedback-slip-generator.html"
-       data-tool="sub-note-feedback-slip" data-tags="general substitute feedback note printable sub plan">
-      <span class="per"><span class="lbl">Per</span><b>30</b></span>
+       data-tool="sub-note-feedback-slip" data-tags="general substitute feedback note printable sub plan"
+       data-filter-tags="sub-plans communication printable">
+      <span class="per"><span class="lbl">Per</span><b>30</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Note / Feedback Slip Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Sub Note / Feedback Slip Generator</span>
         <span class="pitch">A short printable slip a substitute fills out by hand before leaving for the day &mdash; what worked, what didn&rsquo;t, and any names to know for tomorrow.</span>
         <span class="comment" aria-hidden="true">The sub-day debrief that actually gets written.</span>
       </span>
-      <span class="tags"><span>sub feedback</span><span>note</span><span>printable</span></span>
+      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="communication">communication</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: the sub-day debrief that actually gets written.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1137,14 +1286,15 @@
     </a>
 
     <a class="row ink" style="--d:1312ms" href="Tools/075-staff-directory-builder.html"
-       data-tool="staff-directory-builder" data-tags="general staff directory extension list printable reference">
-      <span class="per"><span class="lbl">Per</span><b>31</b></span>
+       data-tool="staff-directory-builder" data-tags="general staff directory extension list printable reference"
+       data-filter-tags="reference printable communication">
+      <span class="per"><span class="lbl">Per</span><b>31</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Staff Directory / Quick-Reference Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Staff Directory / Quick-Reference Builder</span>
         <span class="pitch">Build a printable staff directory (name, room, extension, subject) for the workroom wall or a new teacher&rsquo;s binder.</span>
         <span class="comment" aria-hidden="true">Never asks &ldquo;what room are you in again?&rdquo; twice.</span>
       </span>
-      <span class="tags"><span>staff directory</span><span>extensions</span><span>reference</span></span>
+      <span class="tags"><span data-tag="reference">reference</span><span data-tag="printable">printable</span><span data-tag="communication">communication</span></span>
       <span class="grade" title="Comment: never asks what room twice.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1152,31 +1302,40 @@
     </a>
 
     <a class="row ink" style="--d:1316ms" href="Tools/077-testing-accommodations-card-generator.html"
-       data-tool="testing-accommodations-card-generator" data-tags="general testing accommodations reference card printable">
-      <span class="per"><span class="lbl">Per</span><b>32</b></span>
+       data-tool="testing-accommodations-card-generator" data-tags="general testing accommodations reference card printable"
+       data-filter-tags="reference cards printable">
+      <span class="per"><span class="lbl">Per</span><b>32</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Testing Accommodations Reference Card Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Testing Accommodations Reference Card Generator</span>
         <span class="pitch">Print small per-student reference cards (extended time, separate setting, read-aloud) to keep testing day accommodations straight &mdash; stays entirely local, like the Final Grade Checker.</span>
         <span class="comment" aria-hidden="true">No more sticky notes on the desk.</span>
       </span>
-      <span class="tags"><span>testing accommodations</span><span>reference card</span><span>printable</span></span>
+      <span class="tags"><span data-tag="reference">reference</span><span data-tag="cards">cards</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: no more sticky notes on the desk.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1420ms">Math</div>
+    </details>
+
+    <details class="cat" data-cat="math">
+    <summary class="section-head ink" style="--d:500ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Math
+      <span class="cat-count">9 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1428ms" href="Tools/012-graph-paper-generator.html"
-       data-tool="graph-paper-generator" data-tags="math graph paper number line coordinate plane printable">
-      <span class="per"><span class="lbl">Per</span><b>33</b></span>
+       data-tool="graph-paper-generator" data-tags="math graph paper number line coordinate plane printable"
+       data-filter-tags="printable math">
+      <span class="per"><span class="lbl">Per</span><b>33</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Graph Paper &amp; Number Line Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Graph Paper &amp; Number Line Generator</span>
         <span class="pitch">Printable graph paper, number lines, and coordinate planes, sized true-to-scale for printing.</span>
         <span class="comment" aria-hidden="true">Never draws outside the lines.</span>
       </span>
-      <span class="tags"><span>math</span><span>graph paper</span><span>printable</span></span>
+      <span class="tags"><span data-tag="printable">printable</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: never draws outside the lines.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1184,14 +1343,15 @@
     </a>
 
     <a class="row ink" style="--d:1412ms" href="Tools/026-math-drill-generator.html"
-       data-tool="math-drill-generator" data-tags="math fluency drill facts timed printable">
-      <span class="per"><span class="lbl">Per</span><b>34</b></span>
+       data-tool="math-drill-generator" data-tags="math fluency drill facts timed printable"
+       data-filter-tags="warm-up printable math">
+      <span class="per"><span class="lbl">Per</span><b>34</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Math Fact Drill Sheet Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Math Fact Drill Sheet Generator</span>
         <span class="pitch">Randomized timed drill sheets with a matching answer key &mdash; a fresh sheet every time.</span>
         <span class="comment" aria-hidden="true">Shows its work. All of it.</span>
       </span>
-      <span class="tags"><span>math</span><span>fluency</span><span>drill</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="printable">printable</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: shows its work.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1199,14 +1359,15 @@
     </a>
 
     <a class="row ink" style="--d:1424ms" href="Tools/041-formula-sheet-builder.html"
-       data-tool="formula-sheet-builder" data-tags="math formulas reference sheet printable">
-      <span class="per"><span class="lbl">Per</span><b>35</b></span>
+       data-tool="formula-sheet-builder" data-tags="math formulas reference sheet printable"
+       data-filter-tags="reference printable math">
+      <span class="per"><span class="lbl">Per</span><b>35</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Formula Reference Sheet Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Formula Reference Sheet Builder</span>
         <span class="pitch">Pick a topic template or start blank, customize the list, print a one-page reference sheet.</span>
         <span class="comment" aria-hidden="true">Keeps a formula sheet. Unlike some students.</span>
       </span>
-      <span class="tags"><span>math</span><span>formulas</span><span>printable</span></span>
+      <span class="tags"><span data-tag="reference">reference</span><span data-tag="printable">printable</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: keeps a formula sheet.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1214,14 +1375,15 @@
     </a>
 
     <a class="row ink" style="--d:1432ms" href="Tools/024-number-talks-board.html"
-       data-tool="number-talks-board" data-tags="math number talks mental math routine projector strategies">
-      <span class="per"><span class="lbl">Per</span><b>36</b></span>
+       data-tool="number-talks-board" data-tags="math number talks mental math routine projector strategies"
+       data-filter-tags="warm-up projector math">
+      <span class="per"><span class="lbl">Per</span><b>36</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Number Talks / Mental Math Routine Board to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Number Talks / Mental Math Routine Board</span>
         <span class="pitch">Reveal a number string one expression at a time, then jot a few students&rsquo; strategies on a lightweight board as they share out.</span>
         <span class="comment" aria-hidden="true">Shows the string one piece at a time. Keeps the guessing to the students.</span>
       </span>
-      <span class="tags"><span>number talks</span><span>mental math</span><span>routine</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="projector">projector</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: shows the string one piece at a time, keeps the guessing to the students.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1229,14 +1391,15 @@
     </a>
 
     <a class="row ink" style="--d:1436ms" href="Tools/080-virtual-manipulatives-board.html"
-       data-tool="virtual-manipulatives-board" data-tags="math manipulatives base ten blocks fraction tiles algebra tiles number line projector">
-      <span class="per"><span class="lbl">Per</span><b>37</b></span>
+       data-tool="virtual-manipulatives-board" data-tags="math manipulatives base ten blocks fraction tiles algebra tiles number line projector"
+       data-filter-tags="projector math">
+      <span class="per"><span class="lbl">Per</span><b>37</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Virtual Manipulatives Board to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Virtual Manipulatives Board</span>
         <span class="pitch">A projector-friendly board of draggable base-ten blocks, fraction tiles, algebra tiles, and a number line for demonstrating a concept live, with a one-click snapshot of whatever&rsquo;s on the board.</span>
         <span class="comment" aria-hidden="true">No more digging through the manipulatives bin.</span>
       </span>
-      <span class="tags"><span>manipulatives</span><span>base ten blocks</span><span>fraction tiles</span></span>
+      <span class="tags"><span data-tag="projector">projector</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: no more digging through the manipulatives bin.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1244,14 +1407,15 @@
     </a>
 
     <a class="row ink" style="--d:1320ms" href="Tools/081-word-problem-warmup-generator.html"
-       data-tool="word-problem-warmup-generator" data-tags="math word problems warm up projector printable randomized">
-      <span class="per"><span class="lbl">Per</span><b>38</b></span>
+       data-tool="word-problem-warmup-generator" data-tags="math word problems warm up projector printable randomized"
+       data-filter-tags="warm-up projector printable randomizer math">
+      <span class="per"><span class="lbl">Per</span><b>38</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Word Problem Warm-Up Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Word Problem Warm-Up Generator</span>
         <span class="pitch">Templated word problems with randomized numbers per operation and grade band, for a projector display or a printable warm-up sheet.</span>
         <span class="comment" aria-hidden="true">Word problems, minus the writer&rsquo;s block.</span>
       </span>
-      <span class="tags"><span>word problems</span><span>warm up</span><span>printable</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="projector">projector</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: minus the writer's block.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1259,14 +1423,15 @@
     </a>
 
     <a class="row ink" style="--d:1324ms" href="Tools/078-unit-conversion-chart-builder.html"
-       data-tool="unit-conversion-chart-builder" data-tags="math unit conversion reference chart printable metric customary">
-      <span class="per"><span class="lbl">Per</span><b>39</b></span>
+       data-tool="unit-conversion-chart-builder" data-tags="math unit conversion reference chart printable metric customary"
+       data-filter-tags="reference printable math">
+      <span class="per"><span class="lbl">Per</span><b>39</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Unit Conversion Reference Chart Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Unit Conversion Reference Chart Builder</span>
         <span class="pitch">A printable customary/metric conversion chart, customizable by unit set &mdash; the measurement-focused cousin of the Formula Reference Sheet Builder.</span>
         <span class="comment" aria-hidden="true">Metric panic, cured.</span>
       </span>
-      <span class="tags"><span>unit conversion</span><span>reference chart</span><span>printable</span></span>
+      <span class="tags"><span data-tag="reference">reference</span><span data-tag="printable">printable</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: metric panic, cured.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1274,14 +1439,15 @@
     </a>
 
     <a class="row ink" style="--d:1328ms" href="Tools/066-math-find-the-mistake-generator.html"
-       data-tool="math-find-the-mistake-generator" data-tags="math error analysis find the mistake warm up projector printable">
-      <span class="per"><span class="lbl">Per</span><b>40</b></span>
+       data-tool="math-find-the-mistake-generator" data-tags="math error analysis find the mistake warm up projector printable"
+       data-filter-tags="warm-up projector printable math">
+      <span class="per"><span class="lbl">Per</span><b>40</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator</span>
         <span class="pitch">Worked-out problems with one intentional error each, for students to spot and correct &mdash; reveal the fix on the projector or print as a worksheet.</span>
         <span class="comment" aria-hidden="true">Grades the teacher&rsquo;s (fake) work for once.</span>
       </span>
-      <span class="tags"><span>find the mistake</span><span>error analysis</span><span>warm up</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="projector">projector</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: grades the teacher's fake work for once.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1289,31 +1455,40 @@
     </a>
 
     <a class="row ink" style="--d:1332ms" href="Tools/061-fraction-decimal-percent-drill-generator.html"
-       data-tool="fraction-decimal-percent-drill-generator" data-tags="math fractions decimals percents conversion drill printable">
-      <span class="per"><span class="lbl">Per</span><b>41</b></span>
+       data-tool="fraction-decimal-percent-drill-generator" data-tags="math fractions decimals percents conversion drill printable"
+       data-filter-tags="warm-up printable math">
+      <span class="per"><span class="lbl">Per</span><b>41</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator</span>
         <span class="pitch">A randomized drill sheet just for converting between fractions, decimals, and percents, with a matching answer key.</span>
         <span class="comment" aria-hidden="true">Three ways to say the same number, drilled straight.</span>
       </span>
-      <span class="tags"><span>fractions</span><span>decimals</span><span>percents</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="printable">printable</span><span data-tag="math">math</span></span>
       <span class="grade" title="Comment: three ways to say the same number.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1440ms">English / Language Arts</div>
+    </details>
+
+    <details class="cat" data-cat="ela">
+    <summary class="section-head ink" style="--d:540ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      English / Language Arts
+      <span class="cat-count">9 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1448ms" href="Tools/040-vocab-flashcard-generator.html"
-       data-tool="vocab-flashcard-generator" data-tags="ela vocabulary flashcards word wall printable">
-      <span class="per"><span class="lbl">Per</span><b>42</b></span>
+       data-tool="vocab-flashcard-generator" data-tags="ela vocabulary flashcards word wall printable"
+       data-filter-tags="vocab cards printable ela">
+      <span class="per"><span class="lbl">Per</span><b>42</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Vocabulary Flashcard &amp; Word Wall Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Vocabulary Flashcard &amp; Word Wall Generator</span>
         <span class="pitch">Turn a word list into printable flashcards (front/back) or big word-wall cards.</span>
         <span class="comment" aria-hidden="true">Never mixes up its cards. Mostly.</span>
       </span>
-      <span class="tags"><span>vocabulary</span><span>flashcards</span><span>word wall</span></span>
+      <span class="tags"><span data-tag="vocab">vocab</span><span data-tag="cards">cards</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: never mixes up its cards.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1321,14 +1496,15 @@
     </a>
 
     <a class="row ink" style="--d:1456ms" href="Tools/025-writing-prompt-generator.html"
-       data-tool="writing-prompt-generator" data-tags="ela writing prompt generator genre">
-      <span class="per"><span class="lbl">Per</span><b>43</b></span>
+       data-tool="writing-prompt-generator" data-tags="ela writing prompt generator genre"
+       data-filter-tags="writing randomizer projector ela">
+      <span class="per"><span class="lbl">Per</span><b>43</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Writing Prompt Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Writing Prompt Generator</span>
         <span class="pitch">200 prompts across 5 genres, split by middle school / high school &mdash; pick a genre, hit generate.</span>
         <span class="comment" aria-hidden="true">Never has writer's block.</span>
       </span>
-      <span class="tags"><span>writing</span><span>prompt</span><span>genre</span></span>
+      <span class="tags"><span data-tag="writing">writing</span><span data-tag="randomizer">randomizer</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: never has writer&rsquo;s block.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1336,14 +1512,15 @@
     </a>
 
     <a class="row ink" style="--d:1468ms" href="Tools/033-ssr-log-tracker.html"
-       data-tool="ssr-log-tracker" data-tags="ela reading log ssr independent reading">
-      <span class="per"><span class="lbl">Per</span><b>44</b></span>
+       data-tool="ssr-log-tracker" data-tags="ela reading log ssr independent reading"
+       data-filter-tags="reading tracker ela">
+      <span class="per"><span class="lbl">Per</span><b>44</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Silent Reading (SSR) Log Tracker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Silent Reading (SSR) Log Tracker</span>
         <span class="pitch">Track books and pages read during independent reading time, per student or for the whole class.</span>
         <span class="comment" aria-hidden="true">Knows who&rsquo;s still on chapter 3.</span>
       </span>
-      <span class="tags"><span>reading log</span><span>ssr</span><span>independent reading</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="tracker">tracker</span><span data-tag="ela">ela</span></span>
       <span class="grade" title="Comment: knows who&rsquo;s still on chapter 3.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1351,14 +1528,15 @@
     </a>
 
     <a class="row ink" style="--d:1472ms" href="Tools/027-novel-study-circles-manager.html"
-       data-tool="novel-study-reading-circles" data-tags="ela novel study reading circles roles groups pacing">
-      <span class="per"><span class="lbl">Per</span><b>45</b></span>
+       data-tool="novel-study-reading-circles" data-tags="ela novel study reading circles roles groups pacing"
+       data-filter-tags="reading groups planning ela">
+      <span class="per"><span class="lbl">Per</span><b>45</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Novel Study / Reading Circles Manager to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Novel Study / Reading Circles Manager</span>
         <span class="pitch">Splits a roster into reading circles and rotates discussion roles meeting after meeting, with a chapter checkpoint logged each time &mdash; the group cousin of the SSR Log Tracker.</span>
         <span class="comment" aria-hidden="true">Nobody&rsquo;s the Word Wizard two meetings running.</span>
       </span>
-      <span class="tags"><span>novel study</span><span>reading circles</span><span>groups</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="groups">groups</span><span data-tag="planning">planning</span></span>
       <span class="grade" title="Comment: nobody's the word wizard two meetings running.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1366,14 +1544,15 @@
     </a>
 
     <a class="row ink" style="--d:1476ms" href="Tools/055-daily-editing-warmup-generator.html"
-       data-tool="daily-editing-warmup-generator" data-tags="ela editing daily oral language grammar warm up projector">
-      <span class="per"><span class="lbl">Per</span><b>46</b></span>
+       data-tool="daily-editing-warmup-generator" data-tags="ela editing daily oral language grammar warm up projector"
+       data-filter-tags="warm-up writing projector ela">
+      <span class="per"><span class="lbl">Per</span><b>46</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Daily Editing / DOL Warm-Up Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Daily Editing / DOL Warm-Up Generator</span>
         <span class="pitch">A bank of broken sentences reveals one at a time on the projector with a click-to-show corrected version, plus a printable worksheet mode and a teacher-added custom sentence bank.</span>
         <span class="comment" aria-hidden="true">Catches the typo before third period does.</span>
       </span>
-      <span class="tags"><span>editing</span><span>grammar</span><span>warm up</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="writing">writing</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: catches the typo before third period does.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1381,14 +1560,15 @@
     </a>
 
     <a class="row ink" style="--d:1336ms" href="Tools/070-peer-feedback-checklist-generator.html"
-       data-tool="peer-feedback-checklist-generator" data-tags="ela peer feedback editing checklist writing printable">
-      <span class="per"><span class="lbl">Per</span><b>47</b></span>
+       data-tool="peer-feedback-checklist-generator" data-tags="ela peer feedback editing checklist writing printable"
+       data-filter-tags="writing printable ela">
+      <span class="per"><span class="lbl">Per</span><b>47</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Peer Feedback / Editing Checklist Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Peer Feedback / Editing Checklist Generator</span>
         <span class="pitch">Build a custom peer-review checklist (grammar, structure, argument) tied to a specific writing assignment, printed as a half-sheet per student.</span>
         <span class="comment" aria-hidden="true">Turns &ldquo;it&rsquo;s good&rdquo; into actual feedback.</span>
       </span>
-      <span class="tags"><span>peer feedback</span><span>editing</span><span>checklist</span></span>
+      <span class="tags"><span data-tag="writing">writing</span><span data-tag="printable">printable</span><span data-tag="ela">ela</span></span>
       <span class="grade" title="Comment: turns it's good into actual feedback.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1396,14 +1576,15 @@
     </a>
 
     <a class="row ink" style="--d:1340ms" href="Tools/049-book-tasting-menu-generator.html"
-       data-tool="book-tasting-menu-generator" data-tags="ela book tasting reading recommendation menu printable">
-      <span class="per"><span class="lbl">Per</span><b>48</b></span>
+       data-tool="book-tasting-menu-generator" data-tags="ela book tasting reading recommendation menu printable"
+       data-filter-tags="reading printable ela">
+      <span class="per"><span class="lbl">Per</span><b>48</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Book Tasting Menu Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Book Tasting Menu Generator</span>
         <span class="pitch">Turn a stack of book blurbs into a printable &ldquo;menu&rdquo; or table tents for a book-tasting activity, so students can browse titles before choosing one.</span>
         <span class="comment" aria-hidden="true">Serves 30, no reservations needed.</span>
       </span>
-      <span class="tags"><span>book tasting</span><span>recommendations</span><span>printable</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="printable">printable</span><span data-tag="ela">ela</span></span>
       <span class="grade" title="Comment: serves 30, no reservations needed.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1411,14 +1592,15 @@
     </a>
 
     <a class="row ink" style="--d:1344ms" href="Tools/063-grammar-mad-libs-generator.html"
-       data-tool="grammar-mad-libs-generator" data-tags="ela grammar parts of speech mad libs printable">
-      <span class="per"><span class="lbl">Per</span><b>49</b></span>
+       data-tool="grammar-mad-libs-generator" data-tags="ela grammar parts of speech mad libs printable"
+       data-filter-tags="writing printable ela">
+      <span class="per"><span class="lbl">Per</span><b>49</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Grammar Mad Libs Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Grammar Mad Libs Generator</span>
         <span class="pitch">Printable fill-in-the-blank Mad-Libs-style worksheets built around a chosen part of speech, with a word bank and a reveal.</span>
         <span class="comment" aria-hidden="true">Nouns and verbs, now with jokes.</span>
       </span>
-      <span class="tags"><span>grammar</span><span>mad libs</span><span>printable</span></span>
+      <span class="tags"><span data-tag="writing">writing</span><span data-tag="printable">printable</span><span data-tag="ela">ela</span></span>
       <span class="grade" title="Comment: nouns and verbs, now with jokes.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1426,31 +1608,40 @@
     </a>
 
     <a class="row ink" style="--d:1348ms" href="Tools/072-plot-diagram-builder.html"
-       data-tool="plot-diagram-builder" data-tags="ela story elements plot diagram novel printable">
-      <span class="per"><span class="lbl">Per</span><b>50</b></span>
+       data-tool="plot-diagram-builder" data-tags="ela story elements plot diagram novel printable"
+       data-filter-tags="reading printable charts ela">
+      <span class="per"><span class="lbl">Per</span><b>50</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Story Elements / Plot Diagram Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Story Elements / Plot Diagram Builder</span>
         <span class="pitch">Build a plot-mountain diagram (exposition through resolution) for a novel or story with your own class, then print or project it as a shared reference.</span>
         <span class="comment" aria-hidden="true">Climbs the mountain, sticks the landing.</span>
       </span>
-      <span class="tags"><span>plot diagram</span><span>story elements</span><span>printable</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="printable">printable</span><span data-tag="charts">charts</span></span>
       <span class="grade" title="Comment: climbs the mountain, sticks the landing.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1480ms">Science</div>
+    </details>
+
+    <details class="cat" data-cat="science">
+    <summary class="section-head ink" style="--d:580ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Science
+      <span class="cat-count">8 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1488ms" href="Tools/022-lab-group-role-randomizer.html"
-       data-tool="lab-group-role-randomizer" data-tags="science lab groups roles randomizer">
-      <span class="per"><span class="lbl">Per</span><b>51</b></span>
+       data-tool="lab-group-role-randomizer" data-tags="science lab groups roles randomizer"
+       data-filter-tags="groups randomizer lab science">
+      <span class="per"><span class="lbl">Per</span><b>51</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Lab Group &amp; Role Randomizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Lab Group &amp; Role Randomizer</span>
         <span class="pitch">Randomize lab groups and assign roles &mdash; recorder, materials, safety, etc. &mdash; and remembers who&rsquo;s had which.</span>
         <span class="comment" aria-hidden="true">Recorder isn&rsquo;t anyone&rsquo;s permanent job here.</span>
       </span>
-      <span class="tags"><span>lab groups</span><span>roles</span><span>randomizer</span></span>
+      <span class="tags"><span data-tag="groups">groups</span><span data-tag="randomizer">randomizer</span><span data-tag="lab">lab</span></span>
       <span class="grade" title="Comment: recorder isn&rsquo;t anyone&rsquo;s permanent job here.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1458,14 +1649,15 @@
     </a>
 
     <a class="row ink" style="--d:1500ms" href="Tools/013-lab-safety-contract-tracker.html"
-       data-tool="lab-safety-contract-tracker" data-tags="science lab safety contract tracker signature">
-      <span class="per"><span class="lbl">Per</span><b>52</b></span>
+       data-tool="lab-safety-contract-tracker" data-tags="science lab safety contract tracker signature"
+       data-filter-tags="lab tracker science">
+      <span class="per"><span class="lbl">Per</span><b>52</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Lab Safety Contract Tracker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Lab Safety Contract Tracker</span>
         <span class="pitch">One tap marks a contract signed and stamps the date &mdash; a live &ldquo;N of M signed&rdquo; count and a missing-list keep lab day honest.</span>
         <span class="comment" aria-hidden="true">Knows exactly who can&rsquo;t touch the Bunsen burner yet.</span>
       </span>
-      <span class="tags"><span>lab safety</span><span>contract</span><span>tracker</span></span>
+      <span class="tags"><span data-tag="lab">lab</span><span data-tag="tracker">tracker</span><span data-tag="science">science</span></span>
       <span class="grade" title="Comment: knows exactly who can't touch the bunsen burner yet.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1473,14 +1665,15 @@
     </a>
 
     <a class="row ink" style="--d:1512ms" href="Tools/038-data-chart-builder.html"
-       data-tool="data-chart-builder" data-tags="science data table chart graph lab report">
-      <span class="per"><span class="lbl">Per</span><b>53</b></span>
+       data-tool="data-chart-builder" data-tags="science data table chart graph lab report"
+       data-filter-tags="charts lab export science">
+      <span class="per"><span class="lbl">Per</span><b>53</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Data Table &rarr; Chart Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Data Table &rarr; Chart Builder</span>
         <span class="pitch">Turn lab data into a quick chart to paste into a report.</span>
         <span class="comment" aria-hidden="true">Turns a spreadsheet into a chart before the bell rings.</span>
       </span>
-      <span class="tags"><span>data table</span><span>chart</span><span>lab report</span></span>
+      <span class="tags"><span data-tag="charts">charts</span><span data-tag="lab">lab</span><span data-tag="export">export</span></span>
       <span class="grade" title="Comment: turns a spreadsheet into a chart before the bell rings.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1488,14 +1681,15 @@
     </a>
 
     <a class="row ink" style="--d:1520ms" href="Tools/065-lab-report-template-builder.html"
-       data-tool="lab-report-template-builder" data-tags="science lab report template hypothesis procedure data conclusion printable">
-      <span class="per"><span class="lbl">Per</span><b>54</b></span>
+       data-tool="lab-report-template-builder" data-tags="science lab report template hypothesis procedure data conclusion printable"
+       data-filter-tags="lab writing printable science">
+      <span class="per"><span class="lbl">Per</span><b>54</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Lab Report Template Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Lab Report Template Builder</span>
         <span class="pitch">Build a reusable lab report template &mdash; hypothesis, materials, procedure, data table, and conclusion prompts &mdash; from a topic starter or from scratch, and print a fillable packet for each lab.</span>
         <span class="comment" aria-hidden="true">Hypothesis: this saves you a prep period. Confirmed.</span>
       </span>
-      <span class="tags"><span>lab report</span><span>template</span><span>printable</span></span>
+      <span class="tags"><span data-tag="lab">lab</span><span data-tag="writing">writing</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: saves you a prep period. Confirmed.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1503,14 +1697,15 @@
     </a>
 
     <a class="row ink" style="--d:1352ms" href="Tools/074-science-safety-label-maker.html"
-       data-tool="science-safety-label-maker" data-tags="science safety symbols equipment labels lab printable">
-      <span class="per"><span class="lbl">Per</span><b>55</b></span>
+       data-tool="science-safety-label-maker" data-tags="science safety symbols equipment labels lab printable"
+       data-filter-tags="labels lab printable science">
+      <span class="per"><span class="lbl">Per</span><b>55</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Science Safety Symbol &amp; Equipment Label Maker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Science Safety Symbol &amp; Equipment Label Maker</span>
         <span class="pitch">Printable hazard and equipment labels for lab storage, bins, and stations &mdash; pairs with the Lab Safety Contract Tracker.</span>
         <span class="comment" aria-hidden="true">Every bin knows exactly what it is now.</span>
       </span>
-      <span class="tags"><span>safety symbols</span><span>equipment labels</span><span>printable</span></span>
+      <span class="tags"><span data-tag="labels">labels</span><span data-tag="lab">lab</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: every bin knows what it is now.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1518,14 +1713,15 @@
     </a>
 
     <a class="row ink" style="--d:1356ms" href="Tools/059-experiment-design-planner.html"
-       data-tool="scientific-method-planner" data-tags="science scientific method experiment design planner printable">
-      <span class="per"><span class="lbl">Per</span><b>56</b></span>
+       data-tool="scientific-method-planner" data-tags="science scientific method experiment design planner printable"
+       data-filter-tags="lab planning printable science">
+      <span class="per"><span class="lbl">Per</span><b>56</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Scientific Method / Experiment Design Planner to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Scientific Method / Experiment Design Planner</span>
         <span class="pitch">A guided pre-lab worksheet (question, hypothesis, variables, materials, procedure) &mdash; the planning-stage companion to the Lab Report Template Builder.</span>
         <span class="comment" aria-hidden="true">Plans the experiment before it plans you.</span>
       </span>
-      <span class="tags"><span>scientific method</span><span>experiment design</span><span>planner</span></span>
+      <span class="tags"><span data-tag="lab">lab</span><span data-tag="planning">planning</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: plans the experiment before it plans you.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1533,14 +1729,15 @@
     </a>
 
     <a class="row ink" style="--d:1360ms" href="Tools/073-science-fair-project-tracker.html"
-       data-tool="science-fair-project-tracker" data-tags="science fair project tracker milestones checkpoints printable">
-      <span class="per"><span class="lbl">Per</span><b>57</b></span>
+       data-tool="science-fair-project-tracker" data-tags="science fair project tracker milestones checkpoints printable"
+       data-filter-tags="tracker planning science">
+      <span class="per"><span class="lbl">Per</span><b>57</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Science Fair Project Tracker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Science Fair Project Tracker</span>
         <span class="pitch">Track milestones and checkpoints for a science-fair project (question, background research, experiment, board, presentation) with due dates and a printable progress report.</span>
         <span class="comment" aria-hidden="true">Finds the kid who hasn&rsquo;t started the board.</span>
       </span>
-      <span class="tags"><span>science fair</span><span>project tracker</span><span>milestones</span></span>
+      <span class="tags"><span data-tag="tracker">tracker</span><span data-tag="planning">planning</span><span data-tag="science">science</span></span>
       <span class="grade" title="Comment: finds who hasn't started the board.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1548,31 +1745,40 @@
     </a>
 
     <a class="row ink" style="--d:1364ms" href="Tools/057-dichotomous-key-builder.html"
-       data-tool="dichotomous-key-builder" data-tags="science dichotomous key classification lab printable">
-      <span class="per"><span class="lbl">Per</span><b>58</b></span>
+       data-tool="dichotomous-key-builder" data-tags="science dichotomous key classification lab printable"
+       data-filter-tags="lab printable science">
+      <span class="per"><span class="lbl">Per</span><b>58</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Dichotomous Key Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Dichotomous Key Builder</span>
         <span class="pitch">Build a custom dichotomous key for a classification lab, then print it as a student worksheet with an answer key.</span>
         <span class="comment" aria-hidden="true">Backbone or not, it&rsquo;ll figure you out.</span>
       </span>
-      <span class="tags"><span>dichotomous key</span><span>classification</span><span>printable</span></span>
+      <span class="tags"><span data-tag="lab">lab</span><span data-tag="printable">printable</span><span data-tag="science">science</span></span>
       <span class="grade" title="Comment: backbone or not, it'll figure you out.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1524ms">Social Studies</div>
+    </details>
+
+    <details class="cat" data-cat="social-studies">
+    <summary class="section-head ink" style="--d:620ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Social Studies
+      <span class="cat-count">8 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1532ms" href="Tools/046-blank-map-generator.html"
-       data-tool="blank-map-generator" data-tags="social studies map blank printable geography labeling shaded regions legend key">
-      <span class="per"><span class="lbl">Per</span><b>59</b></span>
+       data-tool="blank-map-generator" data-tags="social studies map blank printable geography labeling shaded regions legend key"
+       data-filter-tags="maps printable social-studies">
+      <span class="per"><span class="lbl">Per</span><b>59</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Blank Map Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Blank Map Generator</span>
         <span class="pitch">Pull a map from Wikimedia Commons, zoom into a region, and label it with markers, a legend, and a compass — then print it.</span>
         <span class="comment" aria-hidden="true">Always knows where things are.</span>
       </span>
-      <span class="tags"><span>maps</span><span>geography</span><span>printable</span></span>
+      <span class="tags"><span data-tag="maps">maps</span><span data-tag="printable">printable</span><span data-tag="social-studies">social-studies</span></span>
       <span class="grade" title="Comment: always knows where things are.">A+
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1580,14 +1786,15 @@
     </a>
 
     <a class="row ink" style="--d:1544ms" href="Tools/015-timeline-builder.html"
-       data-tool="timeline-builder" data-tags="social studies timeline events history">
-      <span class="per"><span class="lbl">Per</span><b>60</b></span>
+       data-tool="timeline-builder" data-tags="social studies timeline events history"
+       data-filter-tags="charts printable projector social-studies">
+      <span class="per"><span class="lbl">Per</span><b>60</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Timeline Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Timeline Builder</span>
         <span class="pitch">Add events with photos, pick a line style, view it on screen or print it.</span>
         <span class="comment" aria-hidden="true">Never late to history class.</span>
       </span>
-      <span class="tags"><span>timeline</span><span>events</span><span>history</span></span>
+      <span class="tags"><span data-tag="charts">charts</span><span data-tag="printable">printable</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: never late to history class.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1595,14 +1802,15 @@
     </a>
 
     <a class="row ink" style="--d:1548ms" href="Tools/028-primary-source-analysis-generator.html"
-       data-tool="primary-source-analysis-generator" data-tags="social studies primary source document analysis worksheet">
-      <span class="per"><span class="lbl">Per</span><b>61</b></span>
+       data-tool="primary-source-analysis-generator" data-tags="social studies primary source document analysis worksheet"
+       data-filter-tags="reading printable social-studies">
+      <span class="per"><span class="lbl">Per</span><b>61</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Primary Source Analysis Worksheet Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Primary Source Analysis Worksheet Generator</span>
         <span class="pitch">Describe or paste in a source and build a printable OPTIC or SOAPSTone worksheet with the real guiding questions, plus an answer key built from your own notes.</span>
         <span class="comment" aria-hidden="true">Knows the difference between a photo and a speech. Do your students?</span>
       </span>
-      <span class="tags"><span>primary source</span><span>document analysis</span><span>worksheet</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="printable">printable</span><span data-tag="social-studies">social-studies</span></span>
       <span class="grade" title="Comment: knows the difference between a photo and a speech.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1610,14 +1818,15 @@
     </a>
 
     <a class="row ink" style="--d:1552ms" href="Tools/056-dbq-source-packet-builder.html"
-       data-tool="dbq-source-packet-builder" data-tags="social studies dbq document based question sources packet printable">
-      <span class="per"><span class="lbl">Per</span><b>62</b></span>
+       data-tool="dbq-source-packet-builder" data-tags="social studies dbq document based question sources packet printable"
+       data-filter-tags="reading writing printable social-studies">
+      <span class="per"><span class="lbl">Per</span><b>62</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin DBQ / Source Packet Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">DBQ / Source Packet Builder</span>
         <span class="pitch">Assemble several primary or secondary sources, text or image, into one printable document-based-question packet with a shared set of guiding questions per source &mdash; pairs with the Primary Source Analysis Worksheet Generator.</span>
         <span class="comment" aria-hidden="true">One packet, every source, zero photocopier jams.</span>
       </span>
-      <span class="tags"><span>dbq</span><span>sources</span><span>packet</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="writing">writing</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: zero photocopier jams.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1625,14 +1834,15 @@
     </a>
 
     <a class="row ink" style="--d:1368ms" href="Tools/064-historical-trading-card-maker.html"
-       data-tool="historical-trading-card-maker" data-tags="social studies trading card historical figure country research printable">
-      <span class="per"><span class="lbl">Per</span><b>63</b></span>
+       data-tool="historical-trading-card-maker" data-tags="social studies trading card historical figure country research printable"
+       data-filter-tags="cards printable social-studies">
+      <span class="per"><span class="lbl">Per</span><b>63</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Historical Figure / Country Trading Card Maker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Historical Figure / Country Trading Card Maker</span>
         <span class="pitch">Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list.</span>
         <span class="comment" aria-hidden="true">Gotta research &lsquo;em all.</span>
       </span>
-      <span class="tags"><span>trading cards</span><span>historical figures</span><span>printable</span></span>
+      <span class="tags"><span data-tag="cards">cards</span><span data-tag="printable">printable</span><span data-tag="social-studies">social-studies</span></span>
       <span class="grade" title="Comment: gotta research 'em all.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1640,14 +1850,15 @@
     </a>
 
     <a class="row ink" style="--d:1372ms" href="Tools/054-current-events-discussion-guide-generator.html"
-       data-tool="current-events-discussion-guide" data-tags="social studies current events discussion guide article printable">
-      <span class="per"><span class="lbl">Per</span><b>64</b></span>
+       data-tool="current-events-discussion-guide" data-tags="social studies current events discussion guide article printable"
+       data-filter-tags="reading printable communication social-studies">
+      <span class="per"><span class="lbl">Per</span><b>64</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Current Events Discussion Guide Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Current Events Discussion Guide Generator</span>
         <span class="pitch">Turn a pasted news article into a printable discussion guide (summary box, vocabulary, guiding questions).</span>
         <span class="comment" aria-hidden="true">Turns today&rsquo;s headline into tomorrow&rsquo;s bell ringer.</span>
       </span>
-      <span class="tags"><span>current events</span><span>discussion guide</span><span>printable</span></span>
+      <span class="tags"><span data-tag="reading">reading</span><span data-tag="printable">printable</span><span data-tag="communication">communication</span></span>
       <span class="grade" title="Comment: tomorrow's bell ringer.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1655,14 +1866,15 @@
     </a>
 
     <a class="row ink" style="--d:1376ms" href="Tools/050-civics-role-card-generator.html"
-       data-tool="civics-simulation-role-cards" data-tags="social studies civics government simulation role cards mock trial printable">
-      <span class="per"><span class="lbl">Per</span><b>65</b></span>
+       data-tool="civics-simulation-role-cards" data-tags="social studies civics government simulation role cards mock trial printable"
+       data-filter-tags="cards groups printable social-studies">
+      <span class="per"><span class="lbl">Per</span><b>65</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Government/Civics Simulation Role Card Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Government/Civics Simulation Role Card Generator</span>
         <span class="pitch">Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.</span>
         <span class="comment" aria-hidden="true">Objection! (Sustained, per the card.)</span>
       </span>
-      <span class="tags"><span>civics</span><span>simulation</span><span>role cards</span></span>
+      <span class="tags"><span data-tag="cards">cards</span><span data-tag="groups">groups</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: objection, sustained, per the card.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1670,31 +1882,40 @@
     </a>
 
     <a class="row ink" style="--d:1380ms" href="Tools/062-geography-bee-quiz-generator.html"
-       data-tool="geography-bee-quiz-generator" data-tags="social studies geography bee map skills quiz printable">
-      <span class="per"><span class="lbl">Per</span><b>66</b></span>
+       data-tool="geography-bee-quiz-generator" data-tags="social studies geography bee map skills quiz printable"
+       data-filter-tags="maps review-game projector printable social-studies">
+      <span class="per"><span class="lbl">Per</span><b>66</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Geography Bee / Map Skills Quiz Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Geography Bee / Map Skills Quiz Generator</span>
         <span class="pitch">A question bank generator for geography practice (capitals, landmarks, map reading) &mdash; the quiz-format companion to the Blank Map Generator.</span>
         <span class="comment" aria-hidden="true">Finds Waldo AND the capital of Peru.</span>
       </span>
-      <span class="tags"><span>geography bee</span><span>map skills</span><span>quiz</span></span>
+      <span class="tags"><span data-tag="maps">maps</span><span data-tag="review-game">review-game</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: finds Waldo and the capital of Peru.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1556ms">World Language</div>
+    </details>
+
+    <details class="cat" data-cat="world-language">
+    <summary class="section-head ink" style="--d:660ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      World Language
+      <span class="cat-count">7 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1564ms" href="Tools/039-vocab-conjugation-drill.html"
-       data-tool="vocab-conjugation-drill" data-tags="world language vocabulary conjugation drill flashcards">
-      <span class="per"><span class="lbl">Per</span><b>67</b></span>
+       data-tool="vocab-conjugation-drill" data-tags="world language vocabulary conjugation drill flashcards"
+       data-filter-tags="vocab warm-up cards world-language">
+      <span class="per"><span class="lbl">Per</span><b>67</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Vocab &amp; Conjugation Drill Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Vocab &amp; Conjugation Drill Generator</span>
         <span class="pitch">Quiz-style vocabulary drills plus blank verb-conjugation tables for any language, each with a matching answer key.</span>
         <span class="comment" aria-hidden="true">Conjugates verbs. Doesn&rsquo;t conjugate your patience.</span>
       </span>
-      <span class="tags"><span>vocabulary</span><span>conjugation</span><span>flashcards</span></span>
+      <span class="tags"><span data-tag="vocab">vocab</span><span data-tag="warm-up">warm-up</span><span data-tag="cards">cards</span></span>
       <span class="grade" title="Comment: conjugates verbs, not your patience.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1702,14 +1923,15 @@
     </a>
 
     <a class="row ink" style="--d:1572ms" href="Tools/014-roleplay-scenario-generator.html"
-       data-tool="roleplay-scenario-generator" data-tags="world language roleplay dialogue scenario speaking practice">
-      <span class="per"><span class="lbl">Per</span><b>68</b></span>
+       data-tool="roleplay-scenario-generator" data-tags="world language roleplay dialogue scenario speaking practice"
+       data-filter-tags="randomizer groups projector world-language">
+      <span class="per"><span class="lbl">Per</span><b>68</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Immersion Roleplay Scenario Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Immersion Roleplay Scenario Generator</span>
         <span class="pitch">Real-life dialogue scenarios with roles and vocabulary scaffolding cards you fill in for whatever language you teach &mdash; pairs with the Vocab &amp; Conjugation Drill Generator.</span>
         <span class="comment" aria-hidden="true">Orders the coffee. Directions to the station are on you.</span>
       </span>
-      <span class="tags"><span>roleplay</span><span>dialogue</span><span>speaking practice</span></span>
+      <span class="tags"><span data-tag="randomizer">randomizer</span><span data-tag="groups">groups</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: orders the coffee, directions to the station are on you.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1717,14 +1939,15 @@
     </a>
 
     <a class="row ink" style="--d:1568ms" href="Tools/051-classroom-label-maker.html"
-       data-tool="classroom-label-maker" data-tags="world language labels vocabulary classroom objects qr code pronunciation">
-      <span class="per"><span class="lbl">Per</span><b>69</b></span>
+       data-tool="classroom-label-maker" data-tags="world language labels vocabulary classroom objects qr code pronunciation"
+       data-filter-tags="labels qr vocab printable world-language">
+      <span class="per"><span class="lbl">Per</span><b>69</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Classroom Label Maker (Target Language) to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Classroom Label Maker (Target Language)</span>
         <span class="pitch">Print vocabulary labels for real classroom objects in the target language, each with a QR code linking to a text-to-speech pronunciation clip, plus a plain reference sheet of the whole label set.</span>
         <span class="comment" aria-hidden="true">Every desk and doorknob, fluent now.</span>
       </span>
-      <span class="tags"><span>labels</span><span>vocabulary</span><span>pronunciation</span></span>
+      <span class="tags"><span data-tag="labels">labels</span><span data-tag="qr">qr</span><span data-tag="vocab">vocab</span></span>
       <span class="grade" title="Comment: every desk and doorknob, fluent now.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1732,14 +1955,15 @@
     </a>
 
     <a class="row ink" style="--d:1384ms" href="Tools/079-verb-conjugation-poster-generator.html"
-       data-tool="verb-conjugation-poster-generator" data-tags="world language verb conjugation poster reference printable">
-      <span class="per"><span class="lbl">Per</span><b>70</b></span>
+       data-tool="verb-conjugation-poster-generator" data-tags="world language verb conjugation poster reference printable"
+       data-filter-tags="reference printable world-language">
+      <span class="per"><span class="lbl">Per</span><b>70</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Verb Conjugation Reference Poster Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Verb Conjugation Reference Poster Generator</span>
         <span class="pitch">A printable large-format wall poster of conjugation patterns &mdash; a visual reference to hang up, distinct from the drill worksheets.</span>
         <span class="comment" aria-hidden="true">Conjugates so nobody has to guess twice.</span>
       </span>
-      <span class="tags"><span>conjugation</span><span>poster</span><span>reference</span></span>
+      <span class="tags"><span data-tag="reference">reference</span><span data-tag="printable">printable</span><span data-tag="world-language">world-language</span></span>
       <span class="grade" title="Comment: conjugates so nobody has to guess twice.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1747,14 +1971,15 @@
     </a>
 
     <a class="row ink" style="--d:1388ms" href="Tools/053-cultural-trivia-card-generator.html"
-       data-tool="cultural-trivia-card-generator" data-tags="world language culture trivia cards printable">
-      <span class="per"><span class="lbl">Per</span><b>71</b></span>
+       data-tool="cultural-trivia-card-generator" data-tags="world language culture trivia cards printable"
+       data-filter-tags="review-game cards projector printable world-language">
+      <span class="per"><span class="lbl">Per</span><b>71</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Cultural Trivia Card Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Cultural Trivia Card Generator</span>
         <span class="pitch">Printable trivia cards about target-language countries and cultures, for warm-ups or feeding into the Quiz / Review Game Board.</span>
         <span class="comment" aria-hidden="true">30 facts, zero stereotypes.</span>
       </span>
-      <span class="tags"><span>culture</span><span>trivia</span><span>cards</span></span>
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="cards">cards</span><span data-tag="projector">projector</span></span>
       <span class="grade" title="Comment: 30 facts, zero stereotypes.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1762,14 +1987,15 @@
     </a>
 
     <a class="row ink" style="--d:1392ms" href="Tools/071-picture-prompt-generator.html"
-       data-tool="picture-prompt-task-generator" data-tags="world language picture prompt speaking writing task projector">
-      <span class="per"><span class="lbl">Per</span><b>72</b></span>
+       data-tool="picture-prompt-task-generator" data-tags="world language picture prompt speaking writing task projector"
+       data-filter-tags="writing projector printable world-language">
+      <span class="per"><span class="lbl">Per</span><b>72</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Picture-Prompt Speaking/Writing Task Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Picture-Prompt Speaking/Writing Task Generator</span>
         <span class="pitch">A random image prompt for describing-in-the-target-language speaking or writing tasks, projector-friendly or printable.</span>
         <span class="comment" aria-hidden="true">A picture&rsquo;s worth a thousand conjugated words.</span>
       </span>
-      <span class="tags"><span>picture prompt</span><span>speaking</span><span>writing</span></span>
+      <span class="tags"><span data-tag="writing">writing</span><span data-tag="projector">projector</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: a thousand conjugated words.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1777,31 +2003,40 @@
     </a>
 
     <a class="row ink" style="--d:1396ms" href="Tools/052-cognates-false-friends-builder.html"
-       data-tool="cognates-false-friends-builder" data-tags="world language cognates false friends vocabulary reference printable">
-      <span class="per"><span class="lbl">Per</span><b>73</b></span>
+       data-tool="cognates-false-friends-builder" data-tags="world language cognates false friends vocabulary reference printable"
+       data-filter-tags="vocab reference printable world-language">
+      <span class="per"><span class="lbl">Per</span><b>73</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Cognates &amp; False Friends Reference List Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Cognates &amp; False Friends Reference List Builder</span>
         <span class="pitch">Build and print a reference list of cognates and false friends for whatever language you teach.</span>
         <span class="comment" aria-hidden="true">&ldquo;Embarazada&rdquo; is not what you think.</span>
       </span>
-      <span class="tags"><span>cognates</span><span>false friends</span><span>vocabulary</span></span>
+      <span class="tags"><span data-tag="vocab">vocab</span><span data-tag="reference">reference</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: embarazada is not what you think.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1576ms">Arts &amp; PE</div>
+    </details>
+
+    <details class="cat" data-cat="arts-pe">
+    <summary class="section-head ink" style="--d:700ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Arts &amp; PE
+      <span class="cat-count">7 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1584ms" href="Tools/021-pe-tournament-stations.html"
-       data-tool="pe-tournament-station-rotation" data-tags="pe tournament bracket station rotation">
-      <span class="per"><span class="lbl">Per</span><b>74</b></span>
+       data-tool="pe-tournament-station-rotation" data-tags="pe tournament bracket station rotation"
+       data-filter-tags="groups projector review-game pe">
+      <span class="per"><span class="lbl">Per</span><b>74</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Tournament Bracket &amp; Station Rotation to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Tournament Bracket &amp; Station Rotation</span>
         <span class="pitch">A projector-friendly station rotation timer with named stations and groups, plus a tournament bracket for whatever competition is running inside the unit.</span>
         <span class="comment" aria-hidden="true">Rotates the groups. The trash talk rotates itself.</span>
       </span>
-      <span class="tags"><span>pe</span><span>tournament</span><span>stations</span></span>
+      <span class="tags"><span data-tag="groups">groups</span><span data-tag="projector">projector</span><span data-tag="review-game">review-game</span></span>
       <span class="grade" title="Comment: rotates the groups, the trash talk rotates itself.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1809,14 +2044,15 @@
     </a>
 
     <a class="row ink" style="--d:1596ms" href="Tools/017-gallery-walk-qr.html"
-       data-tool="gallery-walk-qr" data-tags="art gallery walk qr code student work">
-      <span class="per"><span class="lbl">Per</span><b>75</b></span>
+       data-tool="gallery-walk-qr" data-tags="art gallery walk qr code student work"
+       data-filter-tags="qr printable art">
+      <span class="per"><span class="lbl">Per</span><b>75</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Gallery Walk QR Codes to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Gallery Walk QR Codes</span>
         <span class="pitch">Batch QR codes linking to student work for a gallery walk, plus a plain-text reference sheet for you.</span>
         <span class="comment" aria-hidden="true">Sends them to the work. Not to a 404.</span>
       </span>
-      <span class="tags"><span>art</span><span>gallery walk</span><span>qr code</span></span>
+      <span class="tags"><span data-tag="qr">qr</span><span data-tag="printable">printable</span><span data-tag="art">art</span></span>
       <span class="grade" title="Comment: sends them to the work, not a 404.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1824,14 +2060,15 @@
     </a>
 
     <a class="row ink" style="--d:1600ms" href="Tools/047-art-critique-worksheet-generator.html"
-       data-tool="art-critique-worksheet-generator" data-tags="art critique worksheet describe analyze interpret judge gallery walk">
-      <span class="per"><span class="lbl">Per</span><b>76</b></span>
+       data-tool="art-critique-worksheet-generator" data-tags="art critique worksheet describe analyze interpret judge gallery walk"
+       data-filter-tags="writing printable art">
+      <span class="per"><span class="lbl">Per</span><b>76</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Art Critique Worksheet Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Art Critique Worksheet Generator</span>
         <span class="pitch">A structured describe/analyze/interpret/judge critique worksheet for student artwork or a gallery walk, with editable prompts per step and a printable half-sheet per student &mdash; pairs with Gallery Walk QR Codes.</span>
         <span class="comment" aria-hidden="true">Describe, analyze, interpret, judge &mdash; no blank stares.</span>
       </span>
-      <span class="tags"><span>art</span><span>critique</span><span>worksheet</span></span>
+      <span class="tags"><span data-tag="writing">writing</span><span data-tag="printable">printable</span><span data-tag="art">art</span></span>
       <span class="grade" title="Comment: no blank stares.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1839,14 +2076,15 @@
     </a>
 
     <a class="row ink" style="--d:1400ms" href="Tools/060-fitness-skill-assessment-tracker.html"
-       data-tool="fitness-skill-assessment-tracker" data-tags="pe fitness assessment tracker stats printable">
-      <span class="per"><span class="lbl">Per</span><b>77</b></span>
+       data-tool="fitness-skill-assessment-tracker" data-tags="pe fitness assessment tracker stats printable"
+       data-filter-tags="tracker grades printable pe">
+      <span class="per"><span class="lbl">Per</span><b>77</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Fitness &amp; Skill Assessment Tracker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Fitness &amp; Skill Assessment Tracker</span>
         <span class="pitch">Track per-student fitness-test results (mile time, push-ups, sit-ups) across the year, with simple stats and a printable report.</span>
         <span class="comment" aria-hidden="true">The mile time that got faster every retell.</span>
       </span>
-      <span class="tags"><span>fitness</span><span>assessment</span><span>tracker</span></span>
+      <span class="tags"><span data-tag="tracker">tracker</span><span data-tag="grades">grades</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: the mile time that got faster every retell.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1854,14 +2092,15 @@
     </a>
 
     <a class="row ink" style="--d:1404ms" href="Tools/048-art-portfolio-label-maker.html"
-       data-tool="art-portfolio-label-maker" data-tags="art portfolio label qr tag printable">
-      <span class="per"><span class="lbl">Per</span><b>78</b></span>
+       data-tool="art-portfolio-label-maker" data-tags="art portfolio label qr tag printable"
+       data-filter-tags="labels qr printable art">
+      <span class="per"><span class="lbl">Per</span><b>78</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Student Art Portfolio Label &amp; QR Tag Maker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Student Art Portfolio Label &amp; QR Tag Maker</span>
         <span class="pitch">Printable labels and QR tags for physical student art portfolios, each code carrying a photo thumbnail or artist statement &mdash; pairs with Gallery Walk QR Codes.</span>
         <span class="comment" aria-hidden="true">A QR code for the kid who ate the artist statement.</span>
       </span>
-      <span class="tags"><span>portfolio</span><span>labels</span><span>qr code</span></span>
+      <span class="tags"><span data-tag="labels">labels</span><span data-tag="qr">qr</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: a QR code for the kid who ate the artist statement.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1869,14 +2108,15 @@
     </a>
 
     <a class="row ink" style="--d:1408ms" href="Tools/067-music-sightreading-generator.html"
-       data-tool="music-sightreading-generator" data-tags="music sight reading rhythm warm up projector">
-      <span class="per"><span class="lbl">Per</span><b>79</b></span>
+       data-tool="music-sightreading-generator" data-tags="music sight reading rhythm warm up projector"
+       data-filter-tags="warm-up projector printable music">
+      <span class="per"><span class="lbl">Per</span><b>79</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Music Sight-Reading / Rhythm Warm-Up Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Music Sight-Reading / Rhythm Warm-Up Generator</span>
         <span class="pitch">Randomized rhythm or sight-reading warm-up patterns for a projector display, for band, chorus, or general music class.</span>
         <span class="comment" aria-hidden="true">Random, but never on the beat you'd guess.</span>
       </span>
-      <span class="tags"><span>music</span><span>sight reading</span><span>rhythm</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="projector">projector</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: random, but never on the beat you'd guess.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
@@ -1884,36 +2124,46 @@
     </a>
 
     <a class="row ink" style="--d:1412ms" href="Tools/069-pe-warmup-circuit-generator.html"
-       data-tool="pe-warmup-circuit-generator" data-tags="pe warm up circuit cards stations printable">
-      <span class="per"><span class="lbl">Per</span><b>80</b></span>
+       data-tool="pe-warmup-circuit-generator" data-tags="pe warm up circuit cards stations printable"
+       data-filter-tags="warm-up cards printable pe">
+      <span class="per"><span class="lbl">Per</span><b>80</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin PE Warm-Up Circuit Card Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">PE Warm-Up Circuit Card Generator</span>
         <span class="pitch">Printable warm-up/calisthenics circuit cards to post at stations before a rotation or tournament begins.</span>
         <span class="comment" aria-hidden="true">Station 4 is just a water break in disguise.</span>
       </span>
-      <span class="tags"><span>warm up</span><span>circuit</span><span>stations</span></span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="cards">cards</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: station 4 is just a water break in disguise.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <div class="section-head ink" style="--d:1604ms">Platform-Wide</div>
+    </details>
+
+    <details class="cat" data-cat="platform">
+    <summary class="section-head ink" style="--d:740ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Platform-Wide
+      <span class="cat-count">1 tools</span>
+    </summary>
 
     <a class="row ink" style="--d:1612ms" href="Tools/009-backup-restore.html"
-       data-tool="backup-restore" data-tags="backup restore export import data local storage safety new computer">
-      <span class="per"><span class="lbl">Per</span><b>81</b></span>
+       data-tool="backup-restore" data-tags="backup restore export import data local storage safety new computer"
+       data-filter-tags="export reference">
+      <span class="per"><span class="lbl">Per</span><b>81</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Backup &amp; Restore to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
         <span class="name">Backup &amp; Restore</span>
         <span class="pitch">Download everything every tool on this site has saved in your browser to one file, or restore it on a new computer.</span>
         <span class="comment" aria-hidden="true">A wiped cache is no longer a re-do of the whole semester.</span>
       </span>
-      <span class="tags"><span>backup</span><span>restore</span><span>local data</span></span>
+      <span class="tags"><span data-tag="export">export</span><span data-tag="reference">reference</span></span>
       <span class="grade" title="Comment: a wiped cache is no longer a re-do of the whole semester.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
+    </details>
 
   </div>
 
@@ -1928,9 +2178,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       Progress report
-      <span class="tally">54 recent entries</span>
+      <span class="tally">55 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-11">Aug 11, 2026</time>
+        <span><b>Home screen reorganized.</b> The 81-row list is now grouped into collapsible category sections (closed by default; whatever you open is remembered on this device), with an Expand all / Collapse all control. New &ldquo;Filter by tag&rdquo; panel: every tool got a curated set of behind-the-scenes tags (<code>data-filter-tags</code>); pick one or more tags to narrow the list (multiple tags = tools matching all of them), with live match counts on each tag button. The three little tag chips on each row were regenerated from the new tag set and are now clickable shortcuts to the same filter. A star on each row pins tools to a &ldquo;My Tools&rdquo; section at the top (saved on this device only). Known caveat, on purpose: the star and chips are interactive elements nested inside each row&rsquo;s link &mdash; spans with <code>role=button</code>, since real buttons are invalid inside anchors. Text search is unchanged and composes with the tag filter.</span>
+      </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
         <span><b>PE Warm-Up Circuit Card Generator.</b> A default 8-station calisthenics circuit (or build from scratch), each station with an emoji, duration/reps, and instructions, printed as a set of large station cards to post around the gym. Closes out the &ldquo;coming soon&rdquo; list &mdash; every idea that was on the board has shipped. 81 real tools now, 0 &ldquo;coming soon&rdquo; ideas left.</span>
@@ -2186,7 +2440,7 @@
   var input = document.getElementById('filter');
   var count = document.getElementById('count');
   var empty = document.getElementById('empty');
-  var rows  = Array.prototype.slice.call(document.querySelectorAll('#rows .row'));
+  var rows  = Array.prototype.slice.call(document.querySelectorAll('#rows .cat:not(.cat-pinned) .row'));
 
   var haystack = rows.map(function (row) {
     return (row.getAttribute('data-tags') + ' ' + row.textContent)
@@ -2194,6 +2448,101 @@
   });
 
   var DEFAULT_EMPTY_HTML = empty.innerHTML;
+
+  /* ---------- categories, tag filters, pins ---------- */
+  var LS_CATS = 'gvb-home-cats', LS_PINS = 'gvb-home-pins';
+  function lsGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+  function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+
+  var cats = Array.prototype.slice.call(document.querySelectorAll('#rows .cat:not(.cat-pinned)'));
+  var pinnedCat = document.getElementById('pinnedCat');
+  var pinnedRows = document.getElementById('pinnedRows');
+  var pinnedCount = document.getElementById('pinnedCount');
+  var tagChipsEl = document.getElementById('tagChips');
+  var tagClear = document.getElementById('tagClear');
+  var tagTally = document.getElementById('tagTally');
+  var expandAllBtn = document.getElementById('expandAll');
+
+  /* padded so ' tag ' substring checks can't match partial words */
+  var rowTags = rows.map(function (row) {
+    return ' ' + (row.getAttribute('data-filter-tags') || '') + ' ';
+  });
+  var selectedTags = [];
+
+  var savedCatState = lsGet(LS_CATS) || {};
+  var pins = lsGet(LS_PINS) || [];
+  if (Object.prototype.toString.call(pins) !== '[object Array]') pins = [];
+
+  /* markup ships all categories closed; restore what the user left open */
+  cats.forEach(function (cat) {
+    cat.open = !!savedCatState[cat.getAttribute('data-cat')];
+  });
+
+  /* build the tag filter panel: subjects first, then the rest alphabetically */
+  var SUBJECT_TAGS = ['math', 'ela', 'science', 'social-studies', 'world-language', 'art', 'music', 'pe'];
+  var allTags = (function () {
+    var seen = {}, list = [];
+    rowTags.forEach(function (t) {
+      t.trim().split(/\s+/).forEach(function (tag) {
+        if (tag && !seen[tag]) { seen[tag] = true; list.push(tag); }
+      });
+    });
+    var subjects = SUBJECT_TAGS.filter(function (t) { return seen[t]; });
+    var rest = list.filter(function (t) { return SUBJECT_TAGS.indexOf(t) === -1; }).sort();
+    return subjects.concat(rest);
+  })();
+  allTags.forEach(function (tag) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tagchip';
+    btn.setAttribute('data-tag', tag);
+    btn.setAttribute('aria-pressed', 'false');
+    btn.textContent = tag;
+    var n = document.createElement('span');
+    n.className = 'n';
+    btn.appendChild(n);
+    tagChipsEl.appendChild(btn);
+  });
+  tagTally.textContent = allTags.length + ' tags · pick more than one to narrow';
+
+  function rowMatchesTags(i) {
+    for (var t = 0; t < selectedTags.length; t++) {
+      if (rowTags[i].indexOf(' ' + selectedTags[t] + ' ') === -1) return false;
+    }
+    return true;
+  }
+
+  function findRow(slug) {
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].getAttribute('data-tool') === slug) return rows[i];
+    }
+    return null;
+  }
+
+  function syncPinStars() {
+    rows.forEach(function (row) {
+      var btn = row.querySelector('[data-pin]');
+      if (!btn) return;
+      btn.setAttribute('aria-pressed', pins.indexOf(row.getAttribute('data-tool')) !== -1 ? 'true' : 'false');
+    });
+  }
+
+  function rebuildPinned() {
+    pinnedRows.innerHTML = '';
+    pins.forEach(function (slug) {
+      var orig = findRow(slug);
+      if (!orig) return;
+      var clone = orig.cloneNode(true);
+      clone.style.setProperty('--d', '0ms');
+      var pinBtn = clone.querySelector('[data-pin]');
+      if (pinBtn) {
+        pinBtn.setAttribute('aria-pressed', 'true');
+        pinBtn.setAttribute('aria-label', 'Unpin ' + (orig.querySelector('.name') ? orig.querySelector('.name').textContent : slug) + ' from My Tools');
+      }
+      pinnedRows.appendChild(clone);
+    });
+    pinnedCount.textContent = pins.length + (pins.length === 1 ? ' tool' : ' tools');
+  }
 
   /* ---------- toast ---------- */
   var toastEl = document.createElement('div');
@@ -2279,14 +2628,18 @@
     'curve':             { msg: 'Curve applied. Don\u2019t tell the department chair.', effect: 'curve' }
   };
 
-  function apply() {
+  function applyFilters() {
     var raw = input.value;
     var q = raw.trim().toLowerCase();
+    var filterActive = q !== '' || selectedTags.length > 0;
 
     var gag = GAGS[q];
     if (gag) {
       var msg = typeof gag === 'string' ? gag : gag.msg;
       rows.forEach(function (row) { row.hidden = true; });
+      cats.forEach(function (cat) { cat.hidden = true; });
+      pinnedCat.hidden = true;
+      expandAllBtn.hidden = true;
       count.innerHTML = '<b>0 / ' + rows.length + '</b> present';
       empty.innerHTML = msg;
       empty.hidden = false;
@@ -2299,17 +2652,141 @@
 
     var shown = [];
     rows.forEach(function (row, i) {
-      var hit = !q || haystack[i].indexOf(q) !== -1;
+      var hit = (!q || haystack[i].indexOf(q) !== -1) && rowMatchesTags(i);
       row.hidden = !hit;
       if (hit) shown.push(row);
     });
+
+    /* categories: while filtering, open the ones with matches and hide the
+       rest; when the filter clears, restore what the user had open */
+    cats.forEach(function (cat) {
+      var any = !!cat.querySelector('.row:not([hidden])');
+      if (filterActive) {
+        cat.hidden = !any;
+        if (any) cat.open = true;
+      } else {
+        cat.hidden = false;
+        cat.open = !!savedCatState[cat.getAttribute('data-cat')];
+      }
+    });
+
+    /* pinned clones mirror their originals' visibility */
+    var anyPinnedVisible = false;
+    Array.prototype.slice.call(pinnedRows.children).forEach(function (clone) {
+      var orig = findRow(clone.getAttribute('data-tool'));
+      var vis = !!orig && !orig.hidden;
+      clone.hidden = !vis;
+      if (vis) anyPinnedVisible = true;
+    });
+    pinnedCat.hidden = !anyPinnedVisible;
+
+    /* tag chips: count = result size if this tag were added to the current
+       selection; zero-result chips grey out but stay clickable */
+    Array.prototype.slice.call(tagChipsEl.children).forEach(function (btn) {
+      var tag = btn.getAttribute('data-tag');
+      var on = selectedTags.indexOf(tag) !== -1;
+      var n = 0;
+      rows.forEach(function (row, i) {
+        if (q && haystack[i].indexOf(q) === -1) return;
+        if (!rowMatchesTags(i)) return;
+        if (rowTags[i].indexOf(' ' + tag + ' ') !== -1) n++;
+      });
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.lastChild.textContent = '· ' + n;
+      btn.classList.toggle('is-zero', n === 0 && !on);
+    });
+
+    /* highlight selected tags on the row chips too (originals + clones) */
+    Array.prototype.slice.call(document.querySelectorAll('#rows .tags [data-tag]')).forEach(function (chip) {
+      chip.classList.toggle('on', selectedTags.indexOf(chip.getAttribute('data-tag')) !== -1);
+    });
+
+    tagClear.hidden = selectedTags.length === 0;
+    expandAllBtn.hidden = filterActive;
+    if (!filterActive) updateExpandAllLabel();
 
     count.innerHTML = '<b>' + shown.length + ' / ' + rows.length + '</b> present';
     empty.hidden = shown.length > 0;
   }
 
-  input.addEventListener('input', apply);
-  apply();
+  function toggleTag(tag) {
+    var i = selectedTags.indexOf(tag);
+    if (i === -1) selectedTags.push(tag); else selectedTags.splice(i, 1);
+    applyFilters();
+  }
+
+  function togglePin(pinEl) {
+    var row = pinEl.closest('.row');
+    if (!row) return;
+    var slug = row.getAttribute('data-tool');
+    var i = pins.indexOf(slug);
+    if (i === -1) pins.push(slug); else pins.splice(i, 1);
+    lsSet(LS_PINS, pins);
+    rebuildPinned();
+    syncPinStars();
+    if (pins.length) pinnedCat.open = true;
+    applyFilters();
+  }
+
+  function updateExpandAllLabel() {
+    var anyClosed = false;
+    cats.forEach(function (cat) { if (!cat.open) anyClosed = true; });
+    expandAllBtn.textContent = anyClosed ? 'Expand all' : 'Collapse all';
+  }
+
+  /* pin + row-chip clicks, delegated (works for pinned clones too) */
+  var rowsWrap = document.getElementById('rows');
+  rowsWrap.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    var pin = e.target.closest('[data-pin]');
+    if (pin) { e.preventDefault(); togglePin(pin); return; }
+    var chip = e.target.closest('.tags [data-tag]');
+    if (chip) { e.preventDefault(); toggleTag(chip.getAttribute('data-tag')); }
+  });
+  rowsWrap.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    if (!e.target.closest) return;
+    var pin = e.target.closest('[data-pin]');
+    if (pin) { e.preventDefault(); togglePin(pin); }
+  });
+
+  tagChipsEl.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.tagchip') : null;
+    if (btn) toggleTag(btn.getAttribute('data-tag'));
+  });
+  tagClear.addEventListener('click', function () {
+    selectedTags = [];
+    applyFilters();
+  });
+
+  /* persist manual open/close. NOTE: 'toggle' fires async, so programmatic
+     changes land here too — skip persistence while a filter is forcing state
+     (restores rewrite identical values, which is harmless). */
+  cats.forEach(function (cat) {
+    cat.addEventListener('toggle', function () {
+      if (input.value.trim() !== '' || selectedTags.length > 0) return;
+      savedCatState[cat.getAttribute('data-cat')] = cat.open;
+      lsSet(LS_CATS, savedCatState);
+      updateExpandAllLabel();
+    });
+  });
+
+  expandAllBtn.addEventListener('click', function () {
+    var anyClosed = false;
+    cats.forEach(function (cat) { if (!cat.open) anyClosed = true; });
+    cats.forEach(function (cat) {
+      cat.open = anyClosed;
+      savedCatState[cat.getAttribute('data-cat')] = anyClosed;
+    });
+    lsSet(LS_CATS, savedCatState);
+    updateExpandAllLabel();
+  });
+
+  syncPinStars();
+  rebuildPinned();
+  if (pins.length) pinnedCat.open = true;
+  input.addEventListener('input', applyFilters);
+  applyFilters();
 
   /* ---------- command palette (Ctrl/Cmd+K) ---------- */
   var cmdkOverlay = document.getElementById('cmdkOverlay');
@@ -2481,7 +2958,7 @@
       return;
     }
     if (e.key === 'Escape' && document.activeElement === input) {
-      if (input.value) { input.value = ''; apply(); }
+      if (input.value) { input.value = ''; applyFilters(); }
       else { input.blur(); }
     }
   });
