@@ -285,10 +285,11 @@
     body.quiz-projector .bmg-label .lbl-dot { width: 20px; height: 20px; }
   }
 
-  #batchPanel textarea {
+  #batchPanel textarea, #labelSetEditor textarea {
     width: 100%; font-family: inherit; font-size: 0.85rem; padding: 8px; border: 1px solid var(--line);
     border-radius: 6px; resize: vertical; color: var(--ink); background: #fff;
   }
+  #labelSetEditor { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
   #batchPanel code { background: #f2f0ea; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
 
   #latLonReadout {
@@ -458,6 +459,7 @@
       <button id="btnAddLabel" class="small toggle">+ Add Label</button>
       <button id="btnLabelSets" class="small" title="Drop a ready-made list of places (the 13 colonies, the 50 states, the countries of Europe…) onto this map at once, or reuse a list you saved yourself">Label Sets&hellip;</button>
       <button id="btnTidyLabels" class="small" title="Nudge overlapping labels apart until they're all readable, keeping each as close to where it was as the crowding allows">Tidy Labels</button>
+      <button id="btnShrinkLabels" class="small" title="For a map too crowded for Tidy Labels alone: steps overlapping labels' text down one size, then spreads them out. Ctrl+Z undoes the whole pass.">Shrink to Fit</button>
       <button id="btnAddMarker" class="small toggle">+ Add Marker</button>
       <select id="markerStyleSelect" class="styleSelect" hidden>
         <option value="pin">Pin</option>
@@ -584,6 +586,11 @@
         </label>
         <button id="btnPlaceLabelSet" class="small primary">Place these labels</button>
         <button id="btnSaveLabelSet" class="small" title="Save this map's labels, by latitude/longitude, as a reusable set of your own">Save current labels as a set&hellip;</button>
+        <button id="btnRenameLabelSet" class="small" hidden>Rename&hellip;</button>
+        <button id="btnEditLabelSet" class="small" title="Open this set's place list as editable text — fix a coordinate, trim places, or add more. Edits to a built-in set are saved as a copy of your own.">Edit places&hellip;</button>
+        <button id="btnExportLabelSet" class="small" title="Download this set as a small JSON file — hand it to a colleague, who can Import it into their own copy of this tool">Export set&hellip;</button>
+        <button id="btnImportLabelSet" class="small" title="Load a label-set JSON file exported from this tool">Import set&hellip;</button>
+        <input type="file" id="importLabelSetInput" accept="application/json,.json" hidden data-no-pan>
         <button id="btnDeleteLabelSet" class="small" hidden>Delete this saved set</button>
         <button id="btnLabelSetClose" class="small">Close</button>
       </div>
@@ -593,15 +600,24 @@
         <label class="checkLabel"><input type="checkbox" id="labelSetMarkers" data-no-pan> Also place a marker at each place</label>
       </div>
       <p id="labelSetHint" class="hint"></p>
+      <div id="labelSetEditor" hidden>
+        <p id="labelSetEditorHint" class="hint"></p>
+        <textarea id="labelSetEditorText" rows="8" data-no-pan></textarea>
+        <div class="panelRow">
+          <button id="btnLabelSetEditorSave" class="small primary">Save places</button>
+          <button id="btnLabelSetEditorCancel" class="small">Cancel</button>
+        </div>
+      </div>
       <div id="labelSetStatus" class="status" hidden></div>
     </div>
     <div id="worksheetPanel" class="card no-print" hidden>
       <h2>Numbered worksheet &amp; answer key</h2>
       <p class="hint">
-        Turns this map into the standard social-studies labeling worksheet: every text label on the map becomes a
-        numbered circle, with a numbered answer line for each one beside or below the map, an optional shuffled
-        word bank, and a matching answer key. Ask for more than one version and each gets its own numbering and
-        word-bank order &mdash; one map, a whole set of non-copyable papers.
+        Turns this map into the standard social-studies labeling worksheet: every text label on the map &mdash;
+        and every numbered marker whose key caption holds its answer &mdash; becomes a numbered item, with a
+        numbered answer line for each one beside or below the map, an optional shuffled word bank, and a matching
+        answer key. Ask for more than one version and each gets its own numbering and word-bank order &mdash; one
+        map, a whole set of non-copyable papers.
       </p>
       <div class="panelRow">
         <label class="wide">Title <input type="text" id="wsTitle" data-no-pan placeholder="e.g. The Thirteen Colonies"></label>
@@ -715,7 +731,7 @@ import {
   createLineLayer, createMeasureLayer, LINE_COLORS, lineColorHex, lineSwatchSvg,
   LINE_TYPES, findLineType,
 } from './blank-map-generator/bmg-lines.js';
-import { BUILT_IN_LABEL_SETS, findBuiltInSet } from './blank-map-generator/bmg-label-sets.js';
+import { BUILT_IN_LABEL_SETS, findBuiltInSet, isValidPlaceList } from './blank-map-generator/bmg-label-sets.js';
 import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } from './blank-map-generator/bmg-legend.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
@@ -1173,6 +1189,24 @@ el('btnTidyLabels').addEventListener('click', () => {
     : 'No labels were overlapping.');
 });
 
+// Shrink to Fit: the honest fix when Tidy Labels runs out of room — on a
+// really dense map (all fifty states on one letter page) separation alone
+// just shoves labels off their places, and what's actually needed is
+// smaller type. Steps only the *overlapping* labels down one size and then
+// re-tidies, all committed as a single undoable edit (see
+// bmg-labels.js shrinkToFit()).
+el('btnShrinkLabels').addEventListener('click', () => {
+  if (!currentSize.width) return;
+  const { colliding, shrunk, moved } = labelLayer.shrinkToFit();
+  if (!colliding) { showToolMsg('No labels were overlapping.'); return; }
+  if (!shrunk && !moved) { showToolMsg('The overlapping labels are already at the smallest text size — from here it takes dragging (or a bigger page).'); return; }
+  const parts = [];
+  if (shrunk) parts.push(`shrunk ${shrunk} label${shrunk === 1 ? '' : 's'} one size`);
+  if (moved) parts.push(`nudged ${moved} apart`);
+  const msg = parts.join(' and ');
+  showToolMsg(`${msg.charAt(0).toUpperCase()}${msg.slice(1)} — Ctrl+Z puts them back.`);
+});
+
 function setScaleBarEnabled(on) {
   project.scaleBarEnabled = on;
   el('btnScaleBar').classList.toggle('active', on);
@@ -1350,8 +1384,11 @@ function refreshLabelSetSelect(keepValue) {
 
 function syncLabelSetPanel() {
   const set = selectedLabelSet();
+  const isSaved = el('labelSetSelect').value.startsWith(SAVED_SET_PREFIX);
   el('labelSetHint').textContent = set ? (set.hint || `${set.places.length} places, saved from one of your maps.`) : '';
-  el('btnDeleteLabelSet').hidden = !el('labelSetSelect').value.startsWith(SAVED_SET_PREFIX);
+  el('btnDeleteLabelSet').hidden = !isSaved;
+  el('btnRenameLabelSet').hidden = !isSaved;
+  el('labelSetEditor').hidden = true; // switching sets closes an open editor rather than saving stale text into the new pick
 }
 
 function setLabelSetStatus(msg, isErr) {
@@ -1434,6 +1471,120 @@ el('btnDeleteLabelSet').addEventListener('click', () => {
   store.deleteLabelSet(set.id);
   refreshLabelSetSelect();
   setLabelSetStatus(`Deleted "${set.name}".`, false);
+});
+
+el('btnRenameLabelSet').addEventListener('click', () => {
+  const value = el('labelSetSelect').value;
+  if (!value.startsWith(SAVED_SET_PREFIX)) return;
+  const set = selectedLabelSet();
+  if (!set) return;
+  const name = prompt('Rename this label set:', set.name);
+  if (name === null || !name.trim()) return;
+  store.renameLabelSet(set.id, name.trim());
+  refreshLabelSetSelect(value);
+  setLabelSetStatus(`Renamed to "${name.trim()}".`, false);
+});
+
+// --- Label set editing / sharing ----------------------------------------
+// The editor round-trips a set through the same "name, latitude, longitude"
+// one-place-per-line text the batch coordinate paste already taught
+// teachers (and the same parseCoordLine() parses it) — so fixing one
+// coordinate, trimming places, or adding a few is a text edit, not a
+// special UI. Editing a built-in set saves the result as a copy of the
+// teacher's own (the shipped data stays as shipped); export/import moves a
+// set between colleagues — or carries a corrected version of a built-in
+// back to whoever maintains this tool — as a small JSON file.
+
+el('btnEditLabelSet').addEventListener('click', () => {
+  const set = selectedLabelSet();
+  if (!set) return;
+  const isSaved = el('labelSetSelect').value.startsWith(SAVED_SET_PREFIX);
+  el('labelSetEditorText').value = set.places.map(p => `${p.name}, ${p.lat}, ${p.lon}`).join('\n');
+  el('labelSetEditorHint').textContent = isSaved
+    ? `Editing "${set.name}" — one place per line as name, latitude, longitude. Saving replaces this set's places.`
+    : `"${set.name}" is a built-in set, so your edits will be saved as a new set of your own — the built-in stays as shipped.`;
+  el('labelSetEditor').hidden = false;
+  setLabelSetStatus('');
+});
+
+el('btnLabelSetEditorCancel').addEventListener('click', () => { el('labelSetEditor').hidden = true; });
+
+el('btnLabelSetEditorSave').addEventListener('click', () => {
+  const set = selectedLabelSet();
+  if (!set) return;
+  const isSaved = el('labelSetSelect').value.startsWith(SAVED_SET_PREFIX);
+  const lines = el('labelSetEditorText').value.split('\n').map(l => l.trim()).filter(Boolean);
+  const places = [];
+  const bad = [];
+  lines.forEach(line => {
+    const parsed = parseCoordLine(line);
+    if (parsed) places.push(parsed);
+    else bad.push(line);
+  });
+  if (bad.length) {
+    setLabelSetStatus(`${bad.length} line${bad.length === 1 ? " doesn't" : "s don't"} parse as "name, latitude, longitude" — first one: "${bad[0]}". Fix or delete ${bad.length === 1 ? 'it' : 'them'}, then save again.`, true);
+    return;
+  }
+  if (!places.length) { setLabelSetStatus('A set needs at least one place — add some lines, or Cancel.', true); return; }
+  if (isSaved) {
+    store.updateLabelSetPlaces(set.id, places);
+    refreshLabelSetSelect(el('labelSetSelect').value);
+    setLabelSetStatus(`Saved ${places.length} place${places.length === 1 ? '' : 's'} to "${set.name}".`, false);
+  } else {
+    const saved = store.saveLabelSet(`${set.name} (edited)`, places);
+    refreshLabelSetSelect(`${SAVED_SET_PREFIX}${saved.id}`);
+    setLabelSetStatus(`Saved your edited copy as "${saved.name}" — the built-in "${set.name}" stays as shipped.`, false);
+  }
+  el('labelSetEditor').hidden = true;
+});
+
+el('btnExportLabelSet').addEventListener('click', () => {
+  const set = selectedLabelSet();
+  if (!set) return;
+  const blob = new Blob(
+    [JSON.stringify({ name: set.name, places: set.places.map(p => ({ name: p.name, lat: p.lat, lon: p.lon })) }, null, 2)],
+    { type: 'application/json' }
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${sanitizeProjectFilename(set.name)}-label-set.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setLabelSetStatus(`Exported "${set.name}" — a colleague can load it with "Import set…" in their own copy of this tool.`, false);
+});
+
+el('btnImportLabelSet').addEventListener('click', () => el('importLabelSetInput').click());
+
+el('importLabelSetInput').addEventListener('change', () => {
+  const file = el('importLabelSetInput').files && el('importLabelSetInput').files[0];
+  el('importLabelSetInput').value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try { parsed = JSON.parse(reader.result); } catch (e) {
+      setLabelSetStatus("That file isn't valid JSON.", true);
+      return;
+    }
+    const places = parsed && Array.isArray(parsed.places)
+      ? parsed.places.map(p => (p && typeof p === 'object' ? { name: String(p.name || '').trim(), lat: Number(p.lat), lon: Number(p.lon) } : null))
+      : null;
+    if (!places || !isValidPlaceList(places)) {
+      setLabelSetStatus("That doesn't look like a label-set file exported from this tool.", true);
+      return;
+    }
+    // saveLabelSet's same-name save-over behavior is exactly right here: a
+    // re-imported corrected file updates the earlier import instead of
+    // piling up "My places (2)" duplicates.
+    const saved = store.saveLabelSet(String(parsed.name || file.name.replace(/\.json$/i, '')).trim() || 'Imported places', places);
+    refreshLabelSetSelect(`${SAVED_SET_PREFIX}${saved.id}`);
+    setLabelSetStatus(`Imported "${saved.name}" — ${places.length} place${places.length === 1 ? '' : 's'}, ready to drop onto any calibrated map.`, false);
+  };
+  reader.onerror = () => setLabelSetStatus("Couldn't read that file.", true);
+  reader.readAsText(file);
 });
 
 // --- Page shape / aspect ratio ------------------------------------------
@@ -2385,7 +2536,13 @@ async function drawPngCompassFixed(ctx, cssW) {
 // label layer from "text in a box" to "numbered circle", which is what
 // turns a finished map into a fill-in-the-blank worksheet; with
 // `opts.showAnswers` the same numbered circles keep their text, which is
-// the answer key. Both are export-only — nothing on screen changes.
+// the answer key. `opts.markerNumbers` does the same for numbered pins —
+// on a worksheet each pin shows its item number for *that version* instead
+// of its natural placement order (a pin with no worksheet number, i.e. one
+// with no key caption to be the answer, renders "?" rather than a stray
+// number from the wrong sequence), and `opts.markerAnswers` puts the
+// caption beside the pin on the answer key. All export-only — nothing on
+// screen changes.
 async function drawMapContent(ctx, cssW, cssH, opts = {}) {
   ctx.fillStyle = '#eef0ec';
   ctx.fillRect(0, 0, cssW, cssH);
@@ -2451,11 +2608,18 @@ async function drawMapContent(ctx, cssW, cssH, opts = {}) {
   numberedOrder(project.markers).forEach((m, i) => markerNumbers.set(m.id, i + 1));
   for (const m of project.markers) {
     const size = markerSizePx(m.size);
-    const number = m.style === 'number' ? markerNumbers.get(m.id) : null;
+    let number = m.style === 'number' ? markerNumbers.get(m.id) : null;
+    // A worksheet render renumbers the pins to that version's own item
+    // numbers; a pin that isn't a worksheet item gets null, which
+    // markerIconSvg renders as "?".
+    if (m.style === 'number' && opts.markerNumbers) number = opts.markerNumbers.get(m.id) ?? null;
     const img = await svgToImage(markerIconSvg(m.style, size, markerColorHex(m.color), number));
     const pt = viewer.stageToScreen(m.x, m.y);
     const anchor = markerAnchor(m.style);
     ctx.drawImage(img, pt.x - size / 2, anchor === 'bottom' ? pt.y - size : pt.y - size / 2, size, size);
+    if (opts.showAnswers && opts.markerAnswers && opts.markerAnswers.has(m.id)) {
+      drawPngTextBox(ctx, { text: opts.markerAnswers.get(m.id), size: 'small' }, pt.x + size / 2 + 4, pt.y, false);
+    }
   }
 
   project.labels.forEach(l => {
@@ -2501,6 +2665,7 @@ async function renderMapCanvas(cssW, cssH, dpr = 1, opts = {}) {
   await drawPngCompass(ctx);
   await drawPngLocator(ctx, cssW, cssH);
   drawPngScaleBar(ctx, cssH);
+  drawPngCredit(ctx, cssW, cssH);
 
   return canvas;
 }
@@ -2691,11 +2856,24 @@ function worksheetLabels() {
   return project.labels.filter(l => l.text);
 }
 
+/** The numbered (style "number") markers that become worksheet items: the ones whose key caption holds the answer. An uncaptioned numbered pin has no answer to put on the key, so it can't be an item — the worksheet panel says so, and its circle prints with a "?" instead of a stray number from a different sequence. */
+function worksheetMarkers() {
+  return numberedOrder(project.markers).filter(m => (project.legendText[m.id] || '').trim());
+}
+
+/** Everything that becomes a numbered blank — text labels plus captioned numbered markers — each flattened to {kind, ref, text, x, y} so numbering, answer lines, and the word bank treat both the same. */
+function worksheetEntries() {
+  return [
+    ...worksheetLabels().map(l => ({ kind: 'label', ref: l, text: l.text, x: l.x, y: l.y })),
+    ...worksheetMarkers().map(m => ({ kind: 'marker', ref: m, text: project.legendText[m.id].trim(), x: m.x, y: m.y })),
+  ];
+}
+
 /** Numbering for one version: version 1 numbers top-to-bottom, left-to-right (how a student reads a map); later versions shuffle, so two students side by side can't copy numbers across. */
 function worksheetItems(version) {
-  const ordered = worksheetLabels().slice().sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const ordered = worksheetEntries().sort((a, b) => (a.y - b.y) || (a.x - b.x));
   const list = version > 1 ? shuffled(ordered, version * 9973) : ordered;
-  return list.map((label, i) => ({ number: i + 1, label }));
+  return list.map((entry, i) => ({ number: i + 1, ...entry }));
 }
 
 /**
@@ -2780,10 +2958,10 @@ function drawAnswerLines(ctx, box, items, showAnswers, plan) {
     ctx.stroke();
     if (showAnswers) {
       const availW = Math.max(20, colW - numW - 2 - 4);
-      const fitPx = fitFontSizeToWidth(ctx, item.label.text, availW, fontPx, 8, 'sans-serif');
+      const fitPx = fitFontSizeToWidth(ctx, item.text, availW, fontPx, 8, 'sans-serif');
       ctx.font = `${fitPx}px sans-serif`;
       ctx.fillStyle = '#1f2430';
-      ctx.fillText(item.label.text, x + numW + 2, y);
+      ctx.fillText(item.text, x + numW + 2, y);
     }
   });
 }
@@ -2817,11 +2995,31 @@ function drawWordBank(ctx, box, words, plan) {
   });
 }
 
-/** The Commons title/licence line for the map on screen, so a handed-out worksheet carries its own credit. */
-function worksheetCreditLine() {
+/** The credit line every export carries: the Commons title/artist/licence for the map on screen. For a teacher's own uploaded image there's no licence to reprint (the stored "license" text is advice to the teacher, not attribution), so it credits the source plainly instead. */
+function mapCreditLine() {
   if (!currentRecord) return '';
+  if (String(currentRecord.id || '').startsWith('upload:')) return `Map: ${currentRecord.title} (teacher-supplied image)`;
   const a = currentRecord.attribution || {};
   return [`Map: ${currentRecord.title}`, a.artist, a.license].filter(Boolean).join(' · ');
+}
+
+/** Stamps the credit line along the bottom-left edge of an export canvas, on a translucent white strip so it stays readable over the map. Drawn on every plain map export (PNG / Print / PDF / tiled poster) automatically — the licence line is the price of using a Commons map, and carrying it on the handout both protects the teacher and models good practice. The worksheet builder draws its own copy in its page footer instead (see renderWorksheetPage). */
+function drawPngCredit(ctx, cssW, cssH, fontPx = 11) {
+  const text = mapCreditLine();
+  if (!text) return;
+  ctx.font = `${fontPx}px sans-serif`;
+  const padX = 6, padY = 4;
+  const stripW = Math.min(ctx.measureText(text).width + padX * 2, cssW);
+  const stripH = fontPx + padY * 2;
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillRect(0, cssH - stripH, stripW, stripH);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, cssH - stripH, cssW, stripH);
+  ctx.clip(); // an unusually long credit clips at the page edge rather than painting outside the strip
+  ctx.fillStyle = '#4a4941';
+  ctx.fillText(text, padX, cssH - padY - fontPx * 0.18);
+  ctx.restore();
 }
 
 /**
@@ -2884,7 +3082,7 @@ async function renderWorksheetPage({ version, versions, showAnswers, settings, d
   }
   y += 6;
 
-  const creditText = settings.credit ? worksheetCreditLine() : '';
+  const creditText = settings.credit ? mapCreditLine() : '';
   const contentBottom = H - margin - (creditText ? 16 : 0);
 
   // Word bank sits directly under the header, full width, so both the map
@@ -2893,7 +3091,7 @@ async function renderWorksheetPage({ version, versions, showAnswers, settings, d
   // lines there, so the bank is a redundant wasted inch of paper on that
   // page specifically (the worksheet page still gets it).
   if (settings.wordBank && items.length && !showAnswers) {
-    const words = shuffled(items.map(i => i.label.text), version * 7717 + 13);
+    const words = shuffled(items.map(i => i.text), version * 7717 + 13);
     const plan = planWordBank(ctx, contentW, words);
     drawWordBank(ctx, { x: margin, y, w: contentW }, words, plan);
     y += plan.height + 12;
@@ -2928,8 +3126,10 @@ async function renderWorksheetPage({ version, versions, showAnswers, settings, d
   }
 
   if (currentSize.width && mapBox.w > 20 && mapBox.h > 20) {
-    const labelNumbers = new Map(items.map(i => [i.label.id, i.number]));
-    const mapCanvas = await renderWorksheetMapCanvas(mapBox.w, mapBox.h, dpr, { labelNumbers, showAnswers });
+    const labelNumbers = new Map(items.filter(i => i.kind === 'label').map(i => [i.ref.id, i.number]));
+    const markerNumbers = new Map(items.filter(i => i.kind === 'marker').map(i => [i.ref.id, i.number]));
+    const markerAnswers = new Map(items.filter(i => i.kind === 'marker').map(i => [i.ref.id, i.text]));
+    const mapCanvas = await renderWorksheetMapCanvas(mapBox.w, mapBox.h, dpr, { labelNumbers, markerNumbers, markerAnswers, showAnswers });
     ctx.drawImage(mapCanvas, mapBox.x, mapBox.y, mapBox.w, mapBox.h);
     ctx.strokeStyle = '#c9c6bc';
     ctx.lineWidth = 1;
@@ -2997,25 +3197,45 @@ function setWorksheetStatus(msg, isErr) {
   box.innerHTML = msg;
 }
 
+/** The message shown when the worksheet panel opens — in particular, tells a teacher who built their map from numbered pins why some (or all) of them aren't worksheet items yet, right where they'll see it. */
+function worksheetPanelStatus() {
+  const entries = worksheetEntries();
+  const uncaptioned = numberedOrder(project.markers).length - worksheetMarkers().length;
+  if (!entries.length) {
+    return {
+      msg: uncaptioned
+        ? `This map's ${uncaptioned} numbered marker${uncaptioned === 1 ? ' has' : 's have'} no caption in the key yet — a numbered marker becomes a worksheet item once its key caption holds the answer. (Text labels become items too.)`
+        : 'This map has no text labels yet — add the labels students will fill in, then come back.',
+      isErr: true,
+    };
+  }
+  if (uncaptioned) {
+    return {
+      msg: `${entries.length} item${entries.length === 1 ? '' : 's'} ready. ${uncaptioned} numbered marker${uncaptioned === 1 ? '' : 's'} with no key caption won't be on the worksheet (${uncaptioned === 1 ? 'its circle' : 'their circles'} will print with a "?") — caption ${uncaptioned === 1 ? 'it' : 'them'} in the key to include ${uncaptioned === 1 ? 'it' : 'them'}.`,
+      isErr: false,
+    };
+  }
+  return { msg: '', isErr: false };
+}
+
 el('btnWorksheet').addEventListener('click', () => {
   if (!currentSize.width) return;
   const open = el('worksheetPanel').hidden;
   el('worksheetPanel').hidden = !open;
   if (!open) return;
   syncWorksheetControls();
-  setWorksheetStatus(worksheetLabels().length
-    ? ''
-    : 'This map has no text labels yet — add the labels students will fill in, then come back.', !worksheetLabels().length);
+  const { msg, isErr } = worksheetPanelStatus();
+  setWorksheetStatus(msg, isErr);
 });
 el('btnWorksheetClose').addEventListener('click', () => { el('worksheetPanel').hidden = true; });
 ['wsTitle', 'wsInstructions', 'wsNameLine', 'wsWordBank', 'wsAnswerKey', 'wsCredit', 'wsPlacement', 'wsVersions']
   .forEach(id => el(id).addEventListener('change', saveWorksheetSettings));
 
-/** Guard shared by both worksheet exports: there's nothing to number without labels. */
+/** Guard shared by both worksheet exports: there's nothing to number without items. */
 function worksheetReady() {
   if (!currentSize.width) return false;
-  if (!worksheetLabels().length) {
-    setWorksheetStatus('Add at least one text label to the map first — those labels are what become the numbered blanks.', true);
+  if (!worksheetEntries().length) {
+    setWorksheetStatus('Add at least one text label (or caption a numbered marker in the key) first — those are what become the numbered blanks.', true);
     return false;
   }
   return true;
@@ -3124,6 +3344,11 @@ async function printTiledPages(cols, rows) {
     // which wouldn't mean anything relative to this virtual poster view.
     await drawPngCompassFixed(pctx, tileW);
     drawPngScaleBar(pctx, tileH);
+    // Credit line on the poster's bottom-left corner — that region lands on
+    // the bottom-left page of the assembled poster. Larger type than the
+    // single-page exports because each poster pixel prints physically
+    // larger (a 1200px-wide tile fills a whole letter page).
+    drawPngCredit(pctx, posterW, posterH, 16);
     viewer.setView(originalView);
 
     const legendPageNeeded = !el('legendPanel').hidden;
