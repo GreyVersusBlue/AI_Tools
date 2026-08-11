@@ -522,13 +522,13 @@ const METHOD_NAME = { QP: 'quality points', PCT: 'percentage average' };
 let currentStudents = [];
 
 // ── Libraries, loaded on demand ─────────────────────────────
-// Vendored under final-grade-checker/libs/ — see the README there. They are
-// 1.22 MB between them, so nothing loads until an export button is pressed,
-// and each button pulls only what it needs.
+// Vendored under _shared/vendor/ — see the READMEs there. They are 1.22 MB
+// between them, so nothing loads until an export button is pressed, and each
+// button pulls only what it needs.
 const LIBS = {
-  pdf:   ['./final-grade-checker/libs/jspdf.umd.min.js',
-          './final-grade-checker/libs/jspdf.plugin.autotable.min.js'],
-  excel: ['./final-grade-checker/libs/xlsx.full.min.js'],
+  pdf:   ['../_shared/vendor/jspdf/jspdf.umd.min.js',
+          '../_shared/vendor/jspdf/jspdf.plugin.autotable.min.js'],
+  excel: ['../_shared/vendor/xlsx/xlsx.full.min.js'],
 };
 const loaded = new Map();
 

@@ -104,7 +104,7 @@ ok(headerVer.shown === headerVer.constant && !!headerVer.constant,
 /* ── 2. jsPDF is present and produces a real PDF ───────────────────────── */
 // A vendored library with a wrong path fails when you click, not when you
 // load. Break it on purpose to watch this fail: change the src in the head to
-// schedule/libs/jspdf/nope.js and re-run.
+// ../_shared/vendor/jspdf/nope.js and re-run.
 
 const pdf = await run.page.evaluate(() => {
   const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
