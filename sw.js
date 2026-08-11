@@ -10,9 +10,10 @@
 //   - Any same-origin GET request that lands anyway (a file missed above, or
 //     one added later without updating this list) is cached opportunistically
 //     the first time it succeeds online, so it still works offline next time.
-//   - Requests to the small CDN allowlist (cdnjs, for the couple of tools
-//     that load jsPDF/JSZip from a CDN instead of a vendored copy) get the
-//     same cache-first-then-network treatment.
+//   - Requests to the small CDN allowlist (cdnjs) get the same
+//     cache-first-then-network treatment. Legacy: as of v45 no shipping tool
+//     hotlinks a library any more — every vendored library lives under
+//     _shared/vendor/. Kept as a safety net, but don't add to it.
 //   - Blank Map Generator downloads map images from Wikimedia at runtime.
 //     Those are NOT precached (that would mean trying to cache the whole
 //     internet) — instead they land in a capped runtime cache as they're
@@ -23,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v44';
+const CACHE_VERSION = 'v45';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -65,7 +66,6 @@ const PRECACHE_URLS = [
   "Tools/blank-map-generator/data/world-countries-110m.json",
   "Tools/blank-map-generator/data/us-nation-10m.json",
   "Tools/blank-map-generator/data/us-states-10m.json",
-  "Tools/blank-map-generator/lib/jspdf.umd.min.js",
   "Tools/049-book-tasting-menu-generator.html",
   "Tools/020-bracket-tournament-generator.html",
   "Tools/bracket-tournament-generator/bt-store.js",
@@ -83,7 +83,6 @@ const PRECACHE_URLS = [
   "Tools/classroom-timer/ct-mirror.js",
   "Tools/classroom-timer/ct-sounds.js",
   "Tools/classroom-timer/ct-store.js",
-  "Tools/classroom-timer/lib/jsqr.js",
   "Tools/classroom-timer/lib/qrcode.js",
   "Tools/classroom-timer/mirror.html",
   "Tools/052-cognates-false-friends-builder.html",
@@ -97,7 +96,6 @@ const PRECACHE_URLS = [
   "Tools/031-docx-merger.html",
   "Tools/058-duty-roster-builder.html",
   "Tools/019-escape-room-builder.html",
-  "Tools/escape-room-builder/lib/jsqr.js",
   "Tools/escape-room-builder/lib/qrcode.js",
   "Tools/escape-room-builder/lock.html",
   "Tools/escape-room-builder/monitor.html",
@@ -106,9 +104,6 @@ const PRECACHE_URLS = [
   "Tools/043-field-trip-permission-slip.html",
   "Tools/field-trip-permission-slip/lib/qrcode.js",
   "Tools/final-grade-checker/grade-math.mjs",
-  "Tools/final-grade-checker/libs/jspdf.plugin.autotable.min.js",
-  "Tools/final-grade-checker/libs/jspdf.umd.min.js",
-  "Tools/final-grade-checker/libs/xlsx.full.min.js",
   "Tools/036-final_grade_checker.html",
   "Tools/060-fitness-skill-assessment-tracker.html",
   "Tools/061-fraction-decimal-percent-drill-generator.html",
@@ -127,7 +122,6 @@ const PRECACHE_URLS = [
   "Tools/001-hall-pass-log.html",
   "Tools/064-historical-trading-card-maker.html",
   "Tools/011-image-to-pdf.html",
-  "Tools/image-to-pdf/lib/jspdf.umd.min.js",
   "Tools/022-lab-group-role-randomizer.html",
   "Tools/065-lab-report-template-builder.html",
   "Tools/013-lab-safety-contract-tracker.html",
@@ -160,12 +154,10 @@ const PRECACHE_URLS = [
   "Tools/028-primary-source-analysis-generator.html",
   "Tools/029-prompt-builder.html",
   "Tools/016-qr-code-generator.html",
-  "Tools/qr-code-generator/lib/jsqr.js",
   "Tools/qr-code-generator/lib/qrcode.js",
   "Tools/018-qr-scavenger-hunt-builder.html",
   "Tools/qr-scavenger-hunt-builder/lib/qrcode.js",
   "Tools/030-review-game-board.html",
-  "Tools/review-game-board/libs/xlsx.full.min.js",
   "Tools/review-game-board/rgb-store.js",
   "Tools/014-roleplay-scenario-generator.html",
   "Tools/003-rubric-builder.html",
@@ -173,7 +165,6 @@ const PRECACHE_URLS = [
   "Tools/rubric-builder/rb-templates.js",
   "Tools/034-schedule-browser.html",
   "Tools/035-schedule-visualizer.html",
-  "Tools/schedule-visualizer/lib/jsqr.js",
   "Tools/schedule-visualizer/lib/qrcode.js",
   "Tools/schedule-visualizer/sv-handoff.js",
   "Tools/schedule/fonts/dm-mono-latin-400-normal.woff2",
@@ -189,7 +180,6 @@ const PRECACHE_URLS = [
   "Tools/schedule/fonts/public-sans-latin-600-normal.woff2",
   "Tools/schedule/fonts/public-sans-latin-700-normal.woff2",
   "Tools/schedule/fonts/published-fonts.js",
-  "Tools/schedule/libs/jspdf/jspdf.umd.min.js",
   "Tools/school-calendar/scv-seed.js",
   "Tools/school-calendar/scv-store.js",
   "Tools/073-science-fair-project-tracker.html",
@@ -222,6 +212,10 @@ const PRECACHE_URLS = [
   "_shared/state-link.js",
   "_shared/theme.css",
   "_shared/webrtc-pair.js",
+  "_shared/vendor/jspdf/jspdf.umd.min.js",
+  "_shared/vendor/jspdf/jspdf.plugin.autotable.min.js",
+  "_shared/vendor/xlsx/xlsx.full.min.js",
+  "_shared/vendor/jsqr/jsqr.js",
   "assets/icons/icon-192.png",
   "assets/icons/icon-512.png",
   "assets/js/gvb-save.js",

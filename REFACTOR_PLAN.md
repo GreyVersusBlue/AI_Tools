@@ -20,6 +20,21 @@ Measured across `Tools/*.html` (114 files) and per-tool subfolders:
 | `jspdf.umd.min.js` | 5 | image-to-pdf (has BOTH `lib/` AND `libs/` copies), blank-map-generator/lib, schedule/libs, final-grade-checker/libs | at least 3 different builds (365730 / 364861 / 364463 bytes) |
 | `jsqr.js` | 4 | schedule-visualizer, escape-room-builder, classroom-timer, qr-code-generator (all `lib/`) | 3 identical + 1 older (256723 bytes) |
 
+**Correction (Phase 1, 2026-08-11):** the "different builds" column above was
+inferred from byte counts and was mostly wrong. Normalizing CRLF→LF before
+hashing, there were only **two** genuinely different builds site-wide, both of
+jsPDF:
+
+| Library | Distinct builds actually found | Detail |
+|---|---|---|
+| `xlsx.full.min.js` | 1 | both copies are 0.18.5; the 22-byte gap was 22 CRLF line endings |
+| `jspdf.umd.min.js` | 2 | 2.5.1 (four copies, two line-ending variants) and 2.5.2 (one copy, `image-to-pdf/libs/` — which was *orphaned*: the tool loaded the 2.5.1 copy from its `lib/` folder) |
+| `jsqr.js` | 1 | all four identical; the 10,099-byte gap was CRLF line endings, not an older build |
+
+Worth remembering for Phases 3–6: **compare content hashes with line endings
+normalized, not file sizes.** Raw byte counts overstated the drift here by a
+factor of three.
+
 Folder naming is inconsistent: some tools use `lib/`, some `libs/`.
 
 **Inline boilerplate duplicated across tool HTML files:**
@@ -73,13 +88,92 @@ present, print preview, save/reload state).
   `CLAUDE.md`. `_shared/sw-register.js` itself is deliberately NOT created in
   this phase — that's Phase 2; CLAUDE.md documents the fallback until then.)
 
-### Phase 1 — Consolidate vendored libraries (low risk, big win)
-- [ ] Pick one canonical build of each: xlsx, jspdf, jsqr (prefer newest; verify version strings in file headers).
-- [ ] Move to `_shared/vendor/`, update `<script src>` paths in the ~10 affected tools.
-- [ ] Delete the duplicate in image-to-pdf (`lib/` vs `libs/` — it ships two jspdf copies).
-- [ ] Tools on an older build than the canonical one get individually smoke-tested against the newer build; if broken, keep the old build tool-locally and note why.
-- [ ] Run existing smoke tests for schedule, image-to-pdf, final-grade-checker, review-game-board.
-- [ ] Update sw.js precache list, bump CACHE_VERSION.
+### Phase 1 — Consolidate vendored libraries (low risk, big win) — ✅ DONE 2026-08-11
+- [x] Pick one canonical build of each: xlsx, jspdf, jsqr (prefer newest; verify version strings in file headers).
+- [x] Move to `_shared/vendor/`, update `<script src>` paths in the ~10 affected tools.
+- [x] Delete the duplicate in image-to-pdf (`lib/` vs `libs/` — it ships two jspdf copies).
+- [x] Tools on an older build than the canonical one get individually smoke-tested against the newer build; if broken, keep the old build tool-locally and note why. **Nothing broke — no tool kept a local build.**
+- [~] Run existing smoke tests for schedule, image-to-pdf, final-grade-checker, review-game-board. **Could not run — see "Smoke tests" below.**
+- [x] Update sw.js precache list, bump CACHE_VERSION (v44 → v45).
+
+**Canonical builds chosen:**
+
+| Path | Library | Version | Chosen because |
+|---|---|---|---|
+| `_shared/vendor/jspdf/jspdf.umd.min.js` | jsPDF | **2.5.2** | newest of the two real builds; last patch on the 2.x line, no API changes vs 2.5.1 |
+| `_shared/vendor/jspdf/jspdf.plugin.autotable.min.js` | jsPDF-AutoTable | 3.6.0 | only copy; moved with jsPDF so the plugin stays next to the engine it registers against |
+| `_shared/vendor/xlsx/xlsx.full.min.js` | SheetJS CE | 0.18.5 | only build; took the LF copy |
+| `_shared/vendor/jsqr/jsqr.js` | jsQR | (unversioned build) | only build; took the LF copy |
+
+Four tools moved from jsPDF 2.5.1 to 2.5.2: `011-image-to-pdf`,
+`035-schedule-visualizer`, `036-final_grade_checker`, `046-blank-map-generator`.
+
+**Nine files repointed:** `004-Classroom Timer`, `011-image-to-pdf`,
+`016-qr-code-generator`, `030-review-game-board`, `035-schedule-visualizer`,
+`036-final_grade_checker`, `046-blank-map-generator`,
+`classroom-timer/mirror.html`, `escape-room-builder/monitor.html`. Companion
+pages inside a tool folder need `../../_shared/vendor/…`; the numbered pages in
+`Tools/` need `../_shared/vendor/…`.
+
+**Deleted:** 11 duplicate library files plus 5 now-orphaned per-tool lib
+READMEs, removing `blank-map-generator/lib/`, `image-to-pdf/lib/`,
+`image-to-pdf/libs/`, `final-grade-checker/libs/`, `schedule/libs/`, and
+`review-game-board/libs/` entirely. **~2.4 MB** of duplicate minified JS gone.
+
+**Verification actually performed** (real browser, site served over HTTP,
+service worker active):
+
+| Tool | Exercised | Result |
+|---|---|---|
+| `011-image-to-pdf` | fed 2 generated PNGs through the file input, pressed Generate PDF | 20,993-byte `%PDF-1.3` blob, offered as `assembled.pdf` |
+| `046-blank-map-generator` | loaded the built-in World vector base map, pressed Save PDF | 212,436-byte `%PDF-` blob |
+| `035-schedule-visualizer` | the exact assertion from `Tools/schedule/test/smoke.mjs` §2, plus the real Blueprint PDF button | 3,168-byte `application/pdf`; button produced a 24 MB PDF |
+| `036-final_grade_checker` | typed 3 fictional students, pressed Export PDF **and** Export Excel | AutoTable registered against 2.5.2, 15,887-byte PDF; 18,021-byte `final_grades.xlsx` with `PK\x03\x04` magic |
+| `030-review-game-board` | pressed Download template (on-demand xlsx load) | 16,329-byte xlsx, `PK\x03\x04` |
+| `016-qr-code-generator` | typed text, let the tool render, decoded the on-screen canvas with the moved jsQR | round-tripped the exact string back |
+| `004-Classroom Timer`, `classroom-timer/mirror.html`, `escape-room-builder/monitor.html` | page load | `window.jsQR` is a function on all three |
+
+Server log for the whole session: **zero 404s from any tool page**, and the
+service worker installed cleanly as `aplp-precache-v45` with all 186 entries
+cached, including the four new `_shared/vendor/` files — so offline is intact.
+
+**Smoke tests: could not be run on Windows, and this is pre-existing.**
+- `Tools/schedule/test/smoke.mjs` and `publish.mjs` import
+  `../../board-check/harness.mjs`. **`Tools/board-check/` is not in the
+  repository** — not present on disk and not tracked by git (only `.claude/` is
+  gitignored). `CLAUDE.md` also tells future sessions to run
+  `Tools/board-check/sync-social-tags.mjs`, which likewise doesn't exist. Either
+  that folder was never committed or it was dropped; it needs restoring before
+  any of this is runnable.
+- `Tools/image-to-pdf/test/smoke.mjs` hardcodes a Linux sandbox: Playwright at
+  `/opt/node22/lib/node_modules` and Chromium at `/opt/pw-browsers/chromium`.
+  Neither exists on Windows, and the repo has no `package.json`/`node_modules`.
+- `final-grade-checker` and `review-game-board` have **no `test/` folder at
+  all**, despite both being named as having one in the audit above.
+
+The browser verification in the table above was done in place of these, and is
+end-to-end rather than unit-level. **Restoring `Tools/board-check/` and making
+the two suites runnable off a hardcoded Linux path is worth its own round** —
+Phases 2–4 all say "browser check every migrated tool", and doing that by hand
+across ~84 files without a harness is where this refactor will start slipping.
+
+**Also found in passing (not fixed, not in Phase 1 scope):**
+- `qrcode.js` is duplicated across **14** per-tool `lib/` folders and
+  `jszip.min.js` across 2 — same problem as this phase, same fix, and together
+  they are now the largest remaining duplication on the site. Worth a Phase 1b.
+  Add both filenames to Phase 6's guard list once consolidated.
+- No shipping tool hotlinks a CDN any more, so `CDN_ALLOWLIST` in `sw.js` is now
+  dead weight (left in place, comment updated). Candidate for deletion in Phase 6.
+- `_shared/theme-toggle.js` is **not** in `PRECACHE_URLS`. Harmless today (no
+  tool references it yet) but Phase 3 must add it before migrating the first tool.
+- `index.html` and the `v1–v4` landing-page variants request six
+  `assets/fonts/*.woff2` files that don't exist in the repo — six 404s on every
+  visit to the landing page. Unrelated to this phase; pre-existing.
+- `Tools/Old Designs/` and `Tools/New Designs/` reference the old lib paths, but
+  their references were **already broken** before this phase (they point at
+  `./final-grade-checker/libs/…` relative to their own folder, which has never
+  existed) and neither folder is linked from `index.html` or precached. Left
+  untouched as dead archives.
 
 ### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
 - [ ] Create `_shared/sw-register.js` (the existing 5-line snippet).
