@@ -220,23 +220,41 @@ export function findQuarterWindow(cols) {
 /**
  * Parse a whole paste. Returns { students, warnings }. Every row that is
  * dropped or altered produces a warning; nothing is adjusted silently.
+ *
+ * `colOpts` is an optional explicit column mapping — `{ nameCol, q1Col }`,
+ * both 0-indexed — for a gradebook export whose column order doesn't match
+ * the documented layout and that `findQuarterWindow`'s heuristic guesses
+ * wrong for. Omit it (or pass null/undefined) to keep the default behavior:
+ * name at column 1, quarter window auto-detected per row.
  */
-export function parsePastedData(raw) {
+export function parsePastedData(raw, colOpts) {
   const lines = String(raw ?? '').split('\n').filter(l => l.trim().length > 0);
   const students = [], warnings = [];
+  const nameColOverride = colOpts && Number.isInteger(colOpts.nameCol) ? colOpts.nameCol : null;
+  const q1ColOverride   = colOpts && Number.isInteger(colOpts.q1Col)   ? colOpts.q1Col   : null;
 
   lines.forEach((line, li) => {
     const row = `Row ${li + 1}`;
     const cols = splitRow(line);
+    const nameCol = nameColOverride !== null ? nameColOverride : 1;
+    const minNeeded = q1ColOverride !== null
+      ? Math.max(MIN_COLUMNS, q1ColOverride + QUARTERS, nameCol + 1)
+      : MIN_COLUMNS;
 
-    if (cols.length < MIN_COLUMNS) {
-      warnings.push(`${row}: ${cols.length} column(s), need at least ${MIN_COLUMNS} (skipped)`);
+    if (cols.length < minNeeded) {
+      warnings.push(`${row}: ${cols.length} column(s), need at least ${minNeeded} (skipped)`);
       return;
     }
 
-    const name = cols[1] || `Row ${li + 1}`;
-    const { start, moved } = findQuarterWindow(cols);
-    if (moved) warnings.push(`${row} (${name}): quarter columns found at position ${start + 1}, not ${Q1_COLUMN + 1}`);
+    const name = cols[nameCol] || `Row ${li + 1}`;
+    let start;
+    if (q1ColOverride !== null) {
+      start = q1ColOverride;
+    } else {
+      const found = findQuarterWindow(cols);
+      start = found.start;
+      if (found.moved) warnings.push(`${row} (${name}): quarter columns found at position ${start + 1}, not ${Q1_COLUMN + 1}`);
+    }
 
     const raws   = [0, 1, 2, 3].map(q => cols[start + q] ?? '');
     const scores = raws.map(parseGradeToken);
