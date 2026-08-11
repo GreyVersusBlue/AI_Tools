@@ -17,6 +17,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='9' width='20' height='14' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cline x1='6' y1='16' x2='26' y2='16' stroke='%232A6DB0' stroke-width='1.4' stroke-dasharray='2 2'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="vocab-flashcard-generator/vfg-layout.js"></script>
 <script src="vocab-flashcard-generator/vfg-store.js"></script>
 <script src="vocab-flashcard-generator/vfg-conjdrill-link.js"></script>
@@ -134,6 +136,20 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  /* ---- share a list by link or QR ---- */
+  .share-overlay { position: fixed; inset: 0; background: rgba(10,10,14,.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  .share-head button { width: auto; margin: 0; padding: .2rem .6rem; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+  .share-modal .hint { margin: .6rem 0 0; }
+  #shareNote { font-size: .82rem; margin: .6rem 0 0; }
+  #shareNote.err { color: var(--err); }
+  /* A list that arrived by link is somebody else's; say so, because it lands
+     beside the teacher's own saved lists in the same switcher. */
+  .shared-banner { font-size: .82rem; padding: .6rem .8rem; border-radius: 6px; margin-bottom: .9rem; background: #eaf1f6; border: 1px solid #c9dce6; line-height: 1.5; }
+
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -161,8 +177,12 @@
     <button class="danger" style="width:auto;" id="deleteListBtn">Delete</button>
     <button class="secondary" style="width:auto;" id="exportListBtn">Export list</button>
     <button class="secondary" style="width:auto;" id="importListBtn">Import list</button>
+    <button class="secondary" style="width:auto;" id="shareLinkBtn">&#128279; Copy link</button>
+    <button class="secondary" style="width:auto;" id="shareQrBtn">&#9638; QR code</button>
     <input type="file" id="importListFile" accept="application/json,.json" style="display:none;">
   </div>
+  <p id="shareNote" style="display:none;"></p>
+  <div id="sharedBanner" class="shared-banner" style="display:none;"></div>
 
   <div class="layout">
     <div class="editor">
@@ -265,6 +285,17 @@
 
 <div id="printArea" style="display:none;"></div>
 
+<div class="share-overlay" id="shareOverlay" hidden>
+  <div class="share-modal" role="dialog" aria-modal="true" aria-label="Word list QR code">
+    <div class="share-head">
+      <span>Scan to open this list</span>
+      <button type="button" class="secondary" id="shareCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <canvas id="shareCanvas"></canvas>
+    <p class="hint">Point a phone or another laptop at this. The whole list rides inside the link &mdash; nothing is uploaded.</p>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -274,7 +305,8 @@
    'importBridgeRow','conjDrillSetSelect','importConjDrillBtn',
    'flashOptions','wallOptions','quizOptions','flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides',
-   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView'
+   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView',
+   'shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn','sharedBanner'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
@@ -647,6 +679,10 @@
     quizIndex = 0; quizFlipped = false;
     applyStateToForm();
     refreshSwitcher();
+    // newList() showed the toolbar; loading a saved list has to as well, or
+    // the switcher, export/import and share controls vanish on every return
+    // visit — the only path that ever reached them was a first run.
+    els.toolbar.style.display = '';
     renderPreview();
   }
 
@@ -766,6 +802,27 @@
     else newList('New List');
   });
 
+  /** Turns an untrusted list object — from an exported JSON file or from a
+      shared link — into a state object this tool will actually accept. Every
+      field is either validated or replaced with the default, so a mangled or
+      hand-edited payload can't put the tool into a state it can't render. */
+  function sanitizeIncomingList(parsed, name) {
+    return {
+      name: name,
+      words: String(parsed.words || ''),
+      mode: (parsed.mode === 'wordwall' || parsed.mode === 'quiz') ? parsed.mode : 'flashcards',
+      flashCols: Math.max(1, parseInt(parsed.flashCols, 10) || 2),
+      flashRows: Math.max(1, parseInt(parsed.flashRows, 10) || 4),
+      cardSizePreset: CARD_SIZE_PRESETS[parsed.cardSizePreset] ? parsed.cardSizePreset : 'grid',
+      flashLayout: parsed.flashLayout === 'fold' ? 'fold' : 'duplex',
+      wallPerPage: parseInt(parsed.wallPerPage, 10) || 2,
+      wallShowDef: parsed.wallShowDef !== false,
+      sortOrder: (parsed.sortOrder === 'az' || parsed.sortOrder === 'za') ? parsed.sortOrder : 'none',
+      shuffle: !!parsed.shuffle,
+      showGuides: parsed.showGuides !== false
+    };
+  }
+
   function uniqueListName(base) {
     var names = VocabStore.listSets();
     if (names.indexOf(base) === -1) return base;
@@ -809,20 +866,7 @@
         return;
       }
       var importedName = uniqueListName((typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : 'Imported list') + ' (imported)');
-      var imported = {
-        name: importedName,
-        words: parsed.words,
-        mode: (parsed.mode === 'wordwall' || parsed.mode === 'quiz') ? parsed.mode : 'flashcards',
-        flashCols: Math.max(1, parseInt(parsed.flashCols, 10) || 2),
-        flashRows: Math.max(1, parseInt(parsed.flashRows, 10) || 4),
-        cardSizePreset: CARD_SIZE_PRESETS[parsed.cardSizePreset] ? parsed.cardSizePreset : 'grid',
-        flashLayout: parsed.flashLayout === 'fold' ? 'fold' : 'duplex',
-        wallPerPage: parseInt(parsed.wallPerPage, 10) || 2,
-        wallShowDef: parsed.wallShowDef !== false,
-        sortOrder: (parsed.sortOrder === 'az' || parsed.sortOrder === 'za') ? parsed.sortOrder : 'none',
-        shuffle: !!parsed.shuffle,
-        showGuides: parsed.showGuides !== false
-      };
+      var imported = sanitizeIncomingList(parsed, importedName);
       VocabStore.saveSet(importedName, imported);
       loadListByName(importedName);
       els.importListFile.value = '';
@@ -843,8 +887,118 @@
     window.print();
   });
 
+  /* ---------- share a list by link or QR (P3) ------------------------------
+     Export/Import already moved a list between machines, but only through a
+     file: save it, find it, attach it, and hope the other teacher opens it on
+     the machine they actually teach from. A link needs none of that, and the
+     QR turns it into something you can hold up at a department meeting.
+
+     What travels is the same object the JSON export writes — the words plus
+     the layout settings — so a shared deck arrives ready to print, not just
+     ready to retype. It lands as a NEW saved list on the receiving machine,
+     matching what Import list does with a file, rather than overwriting
+     whatever that teacher happens to have open.
+  ------------------------------------------------------------------------- */
+  var SHARE_PARAM = 'list';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.className = isError ? 'err' : '';
+  }
+
+  function buildSharePayload() {
+    if (!state) return null;
+    readFormIntoState();
+    if (!VocabLayout.parseWordList(state.words).length) return null;
+    return {
+      v: 1, name: state.name, words: state.words, mode: state.mode,
+      flashCols: state.flashCols, flashRows: state.flashRows,
+      cardSizePreset: state.cardSizePreset, flashLayout: state.flashLayout,
+      wallPerPage: state.wallPerPage, wallShowDef: state.wallShowDef,
+      sortOrder: state.sortOrder, shuffle: state.shuffle, showGuides: state.showGuides
+    };
+  }
+
+  function shareUrl() {
+    var payload = buildSharePayload();
+    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Add some words first, then there is a list to share.', true); return; }
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote('Link copied — opening it saves this list, with these settings, on the other machine.'); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Add some words first, then there is a list to share.', true); return; }
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR holds far less than a URL bar does. A long unit list with
+      // examples and pronunciations runs past it — say so, with a number,
+      // instead of showing a square nobody's phone can read.
+      setShareNote('This list is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead — a link has no such limit — or trim the optional example ' +
+        'and pronunciation columns.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote('');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  /** Consumes a ?list= param, if there is one. Returns the saved list's name
+      so boot can open it, or null so boot falls through to normal startup. */
+  function importSharedList() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return null;
+    StateLink.clearParam(SHARE_PARAM);   // consumed up front so a refresh cannot re-import it
+    var decoded = StateLink.decodeState(raw);
+    if (!decoded || typeof decoded !== 'object' || typeof decoded.words !== 'string' ||
+        !VocabLayout.parseWordList(decoded.words).length) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted.', true);
+      return null;
+    }
+    var senderName = (typeof decoded.name === 'string' && decoded.name.trim()) ? decoded.name.trim() : 'Shared list';
+    var name = uniqueListName(senderName + ' (shared)');
+    VocabStore.saveSet(name, sanitizeIncomingList(decoded, name));
+    els.sharedBanner.style.display = '';
+    els.sharedBanner.textContent = 'Opened from a shared link and saved here as “' + name +
+      '”. Your own lists are untouched — rename it, edit it, or delete it like any other list.';
+    return name;
+  }
+
   /* ---------- boot ---------- */
-  var current = VocabStore.getCurrentName();
+  var shared = importSharedList();
+  var current = shared || VocabStore.getCurrentName();
   if (current && VocabStore.loadSet(current)) {
     loadListByName(current);
   } else {

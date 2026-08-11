@@ -1,13 +1,55 @@
 # Improvement Prompts — 040 — Vocabulary Flashcard & Word Wall Generator
 
 **Tool file:** `Tools/040-vocab-flashcard-generator.html`
-**Support folder:** `Tools/vocab-flashcard-generator/` — `vfg-layout.js`, `vfg-store.js`
+**Support folder:** `Tools/vocab-flashcard-generator/` — `vfg-layout.js`, `vfg-store.js`, `vfg-conjdrill-link.js`, `test/smoke-share.mjs`
 
 **Current description (from README):** Paste a "term: definition" word list, print cut-apart flashcards (front/back pages, mirrored for double-siding) or large word-wall cards. Saves multiple named word lists.
 
 ---
 
 ## Status
+
+**2026-08-11 — Share a word list by link or QR (backlog rank 2).** Shipped
+P3 for this tool. Two toolbar buttons, "Copy link" and "QR code", encode the
+current list with `_shared/state-link.js` into a `?list=` parameter; the QR
+uses the shared `_shared/vendor/qrcode/qrcode.js` encoder drawn into a modal,
+same pattern as `002-group-team-generator.html`.
+
+Decisions worth keeping:
+
+- **What travels is the same object the JSON export writes** — the words plus
+  every layout setting (mode, grid, card stock, fold vs duplex, sort,
+  shuffle, guides). A deck that arrived without its layout would arrive ready
+  to reconfigure rather than ready to print.
+- **A received list is saved as a new named list**, `"<their name> (shared)"`
+  through the existing `uniqueListName`, exactly like Import list does with a
+  file — never overwriting whatever the receiving teacher had open. A banner
+  says where it came from, since it lands in the same switcher as their own.
+- The file-import sanitizer was extracted into `sanitizeIncomingList` and is
+  now shared by both paths, so a hand-edited link can't reach a state the
+  tool won't render.
+- An over-long list is refused by name with a KB figure and pointed at Copy
+  link, instead of drawing a QR nobody's phone can decode.
+
+**Fixed along the way:** the whole toolbar (list switcher, Export, Import —
+and now the share buttons) was only ever revealed by `newList()`, so it
+vanished on every return visit; a teacher with a saved list could not reach
+their own switcher. `loadListByName` now shows it too. This was pre-existing,
+and worth flagging: it means the multi-list feature has probably been
+invisible to anyone past their first session.
+
+New test: `Tools/vocab-flashcard-generator/test/smoke-share.mjs` (38
+assertions, wired into `npm test` and `npm run test:vocab-flashcards`) —
+covers payload contents, the receiving browser's own lists surviving, the
+param being consumed so a refresh can't duplicate, a second arrival being
+numbered rather than clobbering, the mangled-link path, both QR outcomes, and
+the toolbar regression above.
+
+**Where the next round should pick up:** image on a card is still the open
+Quick Win (needs `041-formula-sheet-builder.html`'s `readAndDownscaleImage`
+treatment plus a P12 quota consideration). The other backlog row for this
+tool — more printables from one list (word search, crossword, bingo, matching
+quiz) — is untouched and is the bigger prize.
 
 **2026-08-11 — Pass 2 round.** Shipped **the alignment test page**, the
 smaller of the two Quick Wins this file's Pass 1 round left deferred: a
@@ -111,6 +153,10 @@ Features / Moonshot.
 - A quiz preview (`renderQuiz`)
 - **Read-only import bridge** from Vocab & Conjugation Drill Generator's
   saved drill sets (`vfg-conjdrill-link.js`)
+- **Share a list by link or QR** (`buildSharePayload`, `importSharedList`) via
+  `_shared/state-link.js` and the shared QR encoder — the words plus the
+  layout settings ride inside a `?list=` URL and arrive as a new saved list on
+  the other machine
 
 ## Quick Wins
 
