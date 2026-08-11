@@ -492,7 +492,7 @@ the full list). A future session — ideally one picking up the 001–010 range
 again, but anyone is fine — should finish these five so the range gets a
 complete Pass 2 first pass before other tools get a second round.
 
-### Pass 2 — Round 2 — 2026-08-11 00:49 UTC — session `j6ok2v` — PR TBD
+### Pass 2 — Round 2 — 2026-08-11 00:49 UTC — session `j6ok2v` — PR #73
 
 Tools 031–035: a document merger, a calendar, a reading log, and the
 schedule-browser/visualizer pair. One scoped, independently-verified
