@@ -232,8 +232,15 @@
   .slip-grid.pp2 .slip-meta-line { font-size: .68rem; }
   .slip-qr { width: .4in; height: .4in; flex-shrink: 0; margin-left: auto; image-rendering: pixelated; }
   .slip-grid.pp2 .slip-qr { width: .55in; height: .55in; }
-  .slip-answer-lines { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: .28rem; }
-  .slip-answer-line { border-bottom: 1px solid #999; height: 0; }
+  /* Response area. The spacer above it takes the rest of the slip, so the two
+     flex weights are literally "how much of this slip is for writing" — a
+     one-word answer gets a third of it, an explanation gets all of it. */
+  .slip-answer-spacer { flex: 0 0 auto; }
+  .slip-answer-box { display: flex; flex-direction: column; min-height: 0; }
+  /* Each rule takes an equal share of the box, so the lines fill whatever
+     height the box got instead of bunching at one end of it. */
+  .slip-answer-line { flex: 1 1 0; min-height: .22in; border-bottom: 1px solid #999; }
+  .slip-answer-box.boxed { border: 1px solid #999; border-radius: 3px; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -256,7 +263,8 @@
     .print-only .slip-meta-row { margin-bottom: .5rem; }
     .print-only .slip-grid.pp2 .slip-qr { width: .8in; height: .8in; }
     .print-only .slip-grid.pp4 .slip-qr { width: .55in; height: .55in; }
-    .print-only .slip-answer-line { border-bottom: 1px solid #555; }
+    .print-only .slip-answer-line { border-bottom: 1px solid #555; min-height: .3in; }
+    .print-only .slip-answer-box.boxed { border: 1px solid #666; }
     .print-only .triage-print-page { padding: .3in; font-family: Georgia, serif; }
     .print-only .triage-print-page h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
     .print-only .triage-print-page .triage-print-sub { font-size: .95rem; color: #333; margin: 0 0 1.1rem; }
@@ -477,6 +485,26 @@
           </div>
         </div>
       </div>
+      <div class="row2" style="margin-bottom:.3rem;">
+        <div>
+          <label for="answerStyleSelect">Response area</label>
+          <select id="answerStyleSelect" style="width:100%;">
+            <option value="lines">Ruled lines to write on</option>
+            <option value="boxed">Blank box (for a sketch, diagram, or graph)</option>
+            <option value="plain">Plain space, no lines or box</option>
+          </select>
+        </div>
+        <div>
+          <label for="answerSpaceSelect">How much room to leave</label>
+          <select id="answerSpaceSelect" style="width:100%;">
+            <option value="auto">Match the prompt (automatic)</option>
+            <option value="short">Short &mdash; about a third of the slip</option>
+            <option value="medium">Medium &mdash; about half</option>
+            <option value="full">Full &mdash; all the room there is</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint" id="answerSpaceNote" style="margin-bottom:.9rem;"></p>
       <div class="check-row" style="margin-bottom:.9rem;">
         <label class="check-inline"><input type="checkbox" id="qrEnabledCheck"> Include a QR code on each slip</label>
       </div>
@@ -534,7 +562,7 @@
   var els = {};
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
-   'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
+   'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect', 'answerStyleSelect', 'answerSpaceSelect', 'answerSpaceNote',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
    'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
@@ -669,7 +697,7 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false, answerStyle: 'lines', answerSpace: 'auto' };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
   var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
@@ -712,6 +740,10 @@
     if (typeof saved.qrEnabled === 'boolean') settings.qrEnabled = saved.qrEnabled;
     if (typeof saved.qrUrl === 'string') settings.qrUrl = saved.qrUrl;
     if (typeof saved.batchMode === 'boolean') settings.batchMode = saved.batchMode;
+    // Added in the sized-response round — absent in every settings blob saved
+    // before it, which is why these are defaulted above rather than assumed.
+    if (ANSWER_STYLES.indexOf(saved.answerStyle) !== -1) settings.answerStyle = saved.answerStyle;
+    if (Object.prototype.hasOwnProperty.call(ANSWER_SPACE, saved.answerSpace)) settings.answerSpace = saved.answerSpace;
   }
 
   function loadCustomBank() {
@@ -1542,6 +1574,62 @@
     return qrCache.url;
   }
 
+  /* ── Response area: style, and how much of the slip it gets ──────────────
+     One fixed slip layout asked every question the same way. "Name one thing
+     you learned" and "Explain why the Nile mattered to Egypt, with evidence"
+     need different amounts of paper, and a diagram question needs no ruled
+     lines at all.
+
+     The space setting is a pair of flex weights: a spacer above the response
+     box takes the rest of the slip, so "short" literally means the box is a
+     third of the room below the prompt. Line count follows the box height at
+     roughly constant line pitch, so a shorter box doesn't just squeeze the
+     same number of lines closer together.
+  ------------------------------------------------------------------------ */
+  var ANSWER_STYLES = ['lines', 'boxed', 'plain'];
+  // fraction of the leftover slip height the response box gets
+  var ANSWER_SPACE = { auto: null, short: 1 / 3, medium: 1 / 2, full: 1 };
+  var ANSWER_SPACE_LABEL = { short: 'a third of the slip', medium: 'about half the slip', full: 'the whole slip' };
+
+  // Deliberately a keyword heuristic on the prompt's own wording, not a
+  // guess from length alone: "Explain why" is a paragraph whether it's six
+  // words or sixty, and "List three" is short either way. Length only breaks
+  // the tie when no verb gives it away.
+  var LONG_ANSWER_RE = /\b(explain|why|justify|describe|compare|contrast|argue|elaborate|evidence|paragraph|in your own words|how (did|does|would|might)|what would happen|defend)\b/i;
+  var SHORT_ANSWER_RE = /\b(list|name (one|two|three|a)|define|rate|circle|true or false|how many|one word|which|yes or no|thumbs)\b/i;
+
+  function autoAnswerSpace(text) {
+    var t = String(text || '');
+    if (SHORT_ANSWER_RE.test(t) && !LONG_ANSWER_RE.test(t)) return 'short';
+    if (LONG_ANSWER_RE.test(t)) return 'full';
+    return t.length > 120 ? 'full' : 'medium';
+  }
+
+  /** The space key actually in force for a given prompt — the teacher's
+      explicit choice, or what the prompt's wording suggests. */
+  function effectiveAnswerSpace(text) {
+    return settings.answerSpace === 'auto' ? autoAnswerSpace(text) : settings.answerSpace;
+  }
+
+  function answerAreaHtml(text) {
+    var key = effectiveAnswerSpace(text);
+    var frac = ANSWER_SPACE[key] || 1;
+    var inner = '';
+    if (settings.answerStyle === 'lines') {
+      // Base line counts are what the old fixed layout used for a full slip;
+      // a smaller box gets proportionally fewer, rounded up so "list three"
+      // never ends up with a single line to hold three things.
+      var base = settings.perPage === 4 ? 3 : 4;
+      var lineCount = Math.max(1, Math.ceil(base * frac));
+      inner = repeatHtml('<div class="slip-answer-line"></div>', lineCount);
+    }
+    // The leftover paper goes BELOW the writing area, not above it: the space
+    // to write in should start right under the question, and the slack should
+    // read as margin rather than as a gap somebody forgot to fill.
+    var spacer = frac >= 1 ? '' : '<div class="slip-answer-spacer" style="flex:' + (1 - frac) + ';"></div>';
+    return '<div class="slip-answer-box ' + settings.answerStyle + '" style="flex:' + frac + ';">' + inner + '</div>' + spacer;
+  }
+
   function slipHtml(text, studentName) {
     var metaBits = [];
     if (studentName) {
@@ -1555,12 +1643,11 @@
     var qrDataUrl = settings.qrEnabled ? getQrDataUrl() : null;
     var qrHtml = qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code linking to the digital response form">' : '';
     var metaRow = (metaLine || qrHtml) ? '<div class="slip-meta-row">' + metaLine + qrHtml + '</div>' : '';
-    var lineCount = settings.perPage === 4 ? 3 : 4;
     return (
       '<div class="slip">' +
         '<div class="slip-prompt">' + escapeHtml(text) + '</div>' +
         metaRow +
-        '<div class="slip-answer-lines">' + repeatHtml('<div class="slip-answer-line"></div>', lineCount) + '</div>' +
+        answerAreaHtml(text) +
       '</div>'
     );
   }
@@ -1629,10 +1716,32 @@
     els.printBtn.textContent = settings.batchMode ? 'Print Class Set' : 'Print Handout';
   }
 
+  /** Says out loud what "Match the prompt" decided, so the automatic choice is
+      inspectable rather than mysterious — and stays quiet when the teacher has
+      picked a size themselves. */
+  function renderAnswerSpaceNote() {
+    if (settings.answerSpace !== 'auto') {
+      els.answerSpaceNote.textContent = settings.answerStyle === 'plain'
+        ? 'No lines or box — just the space itself.' : '';
+      return;
+    }
+    if (settings.slipMode === 'different') {
+      els.answerSpaceNote.textContent = 'Each slip is sized to its own prompt — a quick answer gets a third of the slip, an explanation gets all of it.';
+      return;
+    }
+    var text = currentPrompt.text || '';
+    if (!text) { els.answerSpaceNote.textContent = 'Pick a prompt and the response area sizes itself to it.'; return; }
+    var key = autoAnswerSpace(text);
+    els.answerSpaceNote.textContent = 'This prompt reads as ' +
+      (key === 'short' ? 'a quick answer' : key === 'full' ? 'an explanation' : 'a sentence or two') +
+      ', so each slip leaves ' + ANSWER_SPACE_LABEL[key] + ' to write in.';
+  }
+
   function renderHandout() {
     var html = settings.batchMode ? buildBatchHandoutHtml() : buildHandoutHtml();
     els.handoutPreview.innerHTML = html;
     els.printArea.innerHTML = html;
+    renderAnswerSpaceNote();
   }
 
   els.perPageSelect.addEventListener('change', function () {
@@ -1640,6 +1749,18 @@
     saveSettings();
     if (settings.slipMode === 'different' && !settings.batchMode) refreshDifferentSlipPrompts();
     else renderHandout();
+  });
+  els.answerStyleSelect.addEventListener('change', function () {
+    var v = els.answerStyleSelect.value;
+    settings.answerStyle = ANSWER_STYLES.indexOf(v) !== -1 ? v : 'lines';
+    saveSettings();
+    renderHandout();
+  });
+  els.answerSpaceSelect.addEventListener('change', function () {
+    var v = els.answerSpaceSelect.value;
+    settings.answerSpace = Object.prototype.hasOwnProperty.call(ANSWER_SPACE, v) ? v : 'auto';
+    saveSettings();
+    renderHandout();
   });
   els.showNameCheck.addEventListener('change', function () {
     settings.showName = els.showNameCheck.checked;
@@ -1743,6 +1864,8 @@
   els.categorySelect.value = settings.category;
   els.includeMineCheck.checked = settings.includeMine;
   els.perPageSelect.value = String(settings.perPage);
+  els.answerStyleSelect.value = settings.answerStyle;
+  els.answerSpaceSelect.value = settings.answerSpace;
   els.showNameCheck.checked = settings.showName;
   els.showDateCheck.checked = settings.showDate;
   els.thinkTimeSelect.value = String(settings.thinkTime);
