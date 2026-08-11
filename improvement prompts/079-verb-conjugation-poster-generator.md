@@ -24,32 +24,50 @@ JS string destined for an `<input>` value (not HTML-parsed there), which
 would have displayed as literal "&mdash;" instead of an em dash — fixed by
 using the actual em dash character in the JS string literals.
 
-Nothing below has been started.
+**2026-08-11 — Round 1 (session `h4rwxn`).** Shipped two of the Quick Wins
+below. More starter templates: added 5 — Spanish imperfect, Spanish
+future, Spanish irregulars (ser/estar present), French imperfect, French
+irregulars (avoir/être present) — bringing the template select from 3 to
+8 (plus blank/custom). Conjugations were hand-verified against standard
+regular-verb paradigms and the two most commonly taught irregular-verb
+pairs per language; not proofread by a native speaker. Conditional tense
+and German/Italian are still gaps. Column-count control: a new "Print
+layout" card lets a teacher pick 1/2/3 panels per row, applied via an
+inline `grid-template-columns` on `.poster-grid` at print time; persisted
+separately from the poster itself (`vcp_columns_v1` in localStorage, not
+folded into the `vcp_poster_v1` blob, since column count is a print
+preference independent of poster content and template-loading replaces
+the poster state wholesale). Verified with headless Playwright: loaded
+each new template and confirmed panel count and conjugated forms match
+what was hand-written above, selected 1 column and confirmed both the
+print DOM and the post-reload `<select>` value reflect it.
+
+Multiple named saved posters, per-panel color-coding, irregular-verb
+call-out boxes, JSON export/import, shrink-to-fit, and QR-to-audio all
+remain unbuilt.
 
 ## What it does today
 
-- 3 starter templates (Spanish present, Spanish preterite, French present)
-  plus a blank/custom option
+- 8 starter templates (Spanish present/preterite/imperfect/future/
+  irregulars, French present/imperfect/irregulars) plus a blank/custom
+  option
 - Editable subject/person labels, shared across all panels on one poster
 - Editable panels (verb group name + one form per person)
-- Print: large-font, two-column poster layout sized for a wall, distinct
-  styling from the toolkit's worksheet-style print views
+- Print: large-font poster layout sized for a wall, distinct styling from
+  the toolkit's worksheet-style print views, with a chooser-controlled
+  1/2/3-panels-per-row layout that persists across visits
 
 ## Quick Wins
 
-- **More starter templates** — irregular verbs (ser/estar, avoir/être),
-  more tenses (imperfect, future, conditional), and other commonly-taught
-  languages (German, Italian) are the highest-value next content addition.
 - **Multiple named saved posters**, matching the multi-save convention in
   Formula Sheet Builder / Rubric Builder — right now one poster per
   browser, so a present-tense poster and a preterite poster can't both be
   kept ready.
-- **Column-count control** (1, 2, or 3 panels per row) since the print
-  layout is fixed at 2 columns regardless of how many panels exist — a
-  single-panel poster and a 6-panel poster both want different layouts.
 - **A color-code option per panel** (e.g. one accent color per verb
   ending group) to make the poster easier to scan from across a room,
   which is the whole point of a wall reference.
+- **Conditional tense and German/Italian starter templates**, to close the
+  remaining content gaps the first content pass didn't reach.
 
 ## Major Features
 
@@ -96,4 +114,12 @@ every year the same unit comes around.
 - Should irregular verbs live as an optional add-on section within the same
   poster/panel model, or does "irregular verb reference" deserve its own
   distinct template type given how differently they're taught (usually
-  memorized individually, not by pattern)?
+  memorized individually, not by pattern)? **Partially answered this
+  round**: the new `es_irregulars`/`fr_irregulars` templates went with
+  "own distinct template" (a poster made entirely of irregular-verb panels,
+  loaded like any other template) rather than a call-out box grafted onto
+  a regular-pattern poster — simpler to build with the existing panel
+  model and keeps a teacher's "irregulars" poster separately printable
+  from their "regular pattern" one. The Major Features item calling for a
+  *combined* poster (regular panels + a small irregular-verb side box on
+  the same page) is still open if that's the better pedagogical shape.
