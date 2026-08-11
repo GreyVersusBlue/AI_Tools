@@ -243,6 +243,78 @@ the `qrcode.js`/`jszip.min.js` duplicates (Phase 1b's job); fix the seating
 chart mobile toolbar (tool behavior change, out of round scope); touch sw.js
 (nothing this round lands in a precached path).
 
+### Phase 1b — Consolidate qrcode.js and jszip.min.js (2026-08-11) — ✅ DONE
+
+The two libraries Phase 1 found but left for later: `qrcode.js` (QR *encoder*,
+MIT, Kazuhiko Arase) duplicated across 14 per-tool `lib/` folders, and
+`jszip.min.js` (v3.10.1, dual MIT/GPLv3) duplicated across 2. Unlike Phase 1,
+there was no version choice to make: hashed with line endings normalized
+(`tr -d '\r'`), all 14 `qrcode.js` copies are one identical build
+(SHA-256 `bdee8deb…`) and both `jszip.min.js` copies are one identical build
+(SHA-256 `acc7e414…`) — confirmed before deleting anything, per this round's
+brief.
+
+**Moved:** one canonical copy of each to `_shared/vendor/qrcode/` (with its
+`LICENSE.txt`) and `_shared/vendor/jszip/`, each with a README in the same
+shape as the existing `_shared/vendor/*/README.md` files — version/hash/
+licence/consumer table/update instructions, with `qrcode/README.md` calling
+out that `_shared/vendor/jsqr/` is the decoder so the two aren't confused.
+Deleted the 15 now-empty per-tool `lib/` folders (one docx-merger orphaned
+`lib/README.md` went with it — its content was folded into the new
+`_shared/vendor/jszip/README.md`).
+
+**Repointed 19 script references** — 16 numbered `Tools/*.html` pages plus 3
+companion pages (`classroom-timer/mirror.html`, `escape-room-builder/lock.html`,
+`escape-room-builder/monitor.html`) — to `../_shared/vendor/…` from the
+numbered pages and `../../_shared/vendor/…` from the companion pages one
+level deeper. A repo-wide grep for any surviving `lib/qrcode.js` or
+`lib/jszip` reference afterward found none in any HTML, JS, or `sw.js` file;
+the only remaining hits are historical mentions inside dated
+`improvement prompts/*.md` round write-ups, which were left alone as archived
+history (same treatment Phase 1's own audit table gives its own superseded
+numbers above) — CLAUDE.md and this plan, which are living documentation, were
+both updated.
+
+**sw.js:** removed the 12 stale per-tool `qrcode.js` precache entries (two of
+the 14 consuming tools, `certificate-award-maker` and `exit-ticket-generator`,
+had never been in `PRECACHE_URLS` at all — a pre-existing gap this
+consolidation incidentally closes, since one shared entry now covers every
+consumer) and added the two new canonical entries next to the other
+`_shared/vendor/` lines. `jszip.min.js` had never been precached for either
+consumer before this round either. `CACHE_VERSION` bumped v45 → v46.
+
+**Verification actually performed** (real browser, Playwright/Chromium
+against a local static server, service worker active):
+
+| Check | Result |
+|---|---|
+| All 176 `PRECACHE_URLS` entries exist on disk | confirmed programmatically, 0 missing |
+| Every local `<script src>` in every tool resolves | confirmed programmatically; the only 6 broken ones are the pre-existing dead `Tools/Old Designs/` and `Tools/New Designs/` archive references Phase 1 already documented — unrelated to this round |
+| All 14 qrcode.js consumer pages + 3 companion pages | loaded with zero console errors, `window.qrcode` defined, vendor script served 200 |
+| `016-qr-code-generator.html` | typed a random string, rendered a QR code, decoded the on-canvas pixels with jsQR — round-tripped the exact string back |
+| `031-docx-merger.html` | fed two real, independently-constructed minimal `.docx` fixtures through the file input, pressed Merge, downloaded the result: 2,297-byte file, `PK\x03\x04` signature, valid zip (`testzip()` clean), `word/document.xml` contains both source documents' text |
+| `044-Sub Plan Builder.html` | pressed Generate then Download with default field values: 11,986-byte file, `PK\x03\x04` signature, valid zip, well-formed `word/document.xml` |
+| Service worker install | fresh context, full site load: `aplp-precache-v46` installed with all 176/176 entries present (confirmed by polling `caches.keys()`/`cache.keys()` to a stable count), zero `console.warn` precache-miss messages from the SW, both new vendor files present |
+
+**Not run:** the repo's `npm test` suite (name-picker, seating-chart ×2,
+schedule, image-to-pdf) — this session's sandbox has Playwright 1.62.1
+resolved from `package.json`'s `^1.62.1` range, which expects a newer
+Chromium revision than the one preinstalled at `/opt/pw-browsers/`, and
+outbound download of the matching browser build is blocked by the network
+policy here. Patching the shared `harness.mjs` to pin an `executablePath`
+was judged out of scope for a library-path change — that tradeoff belongs to
+whoever next needs the suites runnable in this kind of sandbox. All of
+`name-picker`'s and the other affected tools' actual QR behavior was still
+verified directly via the ad hoc Playwright checks in the table above, using
+`chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })` against
+the same `harness.mjs` helpers (`serve`, `prepPage`, `settle`) without
+modifying the shared file.
+
+**Byte sizes and signatures, for the record:** `_shared/vendor/qrcode/qrcode.js`
+is 56,963 bytes (SHA-256 `bdee8deb723d3b76015ecaefb974a0a438fe8889280914a06b60d755bcaa2909`);
+`_shared/vendor/jszip/jszip.min.js` is 97,630 bytes (SHA-256
+`acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e`).
+
 ### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
 - [ ] Create `_shared/sw-register.js` (the existing 5-line snippet).
 - [ ] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR.
@@ -269,7 +341,10 @@ chart mobile toolbar (tool behavior change, out of round scope); touch sw.js
 ### Phase 6 — Sweep and guard
 - [ ] Re-run the duplication audit (long-line uniq count) and record before/after numbers.
 - [ ] Add a small check script (e.g. `Tools/board-check/check-dedupe.mjs`) that fails if a
-  vendored lib filename appears outside `_shared/vendor/`, so duplication can't creep back.
+  vendored lib filename — `jspdf.umd.min.js`, `jspdf.plugin.autotable.min.js`,
+  `xlsx.full.min.js`, `jsqr.js`, `qrcode.js`, or `jszip.min.js` — appears
+  anywhere outside `_shared/vendor/`, so duplication can't creep back for any
+  of the six libraries Phases 1 and 1b consolidated.
 
 ---
 

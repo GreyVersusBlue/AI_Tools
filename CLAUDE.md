@@ -33,11 +33,11 @@ every edit. The deduplication work that established them is tracked in
   version visible in the file header if possible), not in the tool's folder,
   and give it a README recording version, source URL, SHA-256, and consumers —
   see `_shared/vendor/README.md`.
-- Phase 1 of `REFACTOR_PLAN.md` has landed: **jsPDF (+ AutoTable), SheetJS
-  (`xlsx`), and jsQR now live only in `_shared/vendor/`.** Two libraries are
-  still duplicated per-tool and have not been migrated yet — `qrcode.js` (14
-  copies) and `jszip.min.js` (2). Don't add copies of those either; if you're
-  touching a tool that uses one, consolidating it is a welcome bonus.
+- Phases 1 and 1b of `REFACTOR_PLAN.md` have landed: **jsPDF (+ AutoTable),
+  SheetJS (`xlsx`), jsQR, qrcode.js, and jszip.min.js now live only in
+  `_shared/vendor/`.** Nothing vendored is left duplicated in a per-tool
+  `lib/` folder. `_shared/vendor/qrcode/` is the QR *encoder*;
+  `_shared/vendor/jsqr/` is the *decoder* — easy to confuse by name.
 - When comparing two copies of a library to see whether they're really
   different builds, hash them with line endings normalized (`tr -d '\r'`).
   Raw file sizes differ by CRLF alone and will fool you.
