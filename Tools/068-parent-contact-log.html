@@ -17,6 +17,7 @@
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
 <style>
   :root { --ok: #2c6e3f; }
   * { box-sizing: border-box; }
@@ -26,7 +27,6 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 1200px; margin: 0 auto; }
-  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
@@ -35,7 +35,6 @@
   .layout { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
