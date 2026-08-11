@@ -79,7 +79,9 @@
   button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
   button.small { width: auto; padding: .3rem .6rem; font-size: .78rem; margin-bottom: 0; }
-  .chart-dl-row { display: flex; gap: .4rem; margin: -.4rem 0 .9rem; }
+  .chart-dl-row { display: flex; gap: .4rem; margin: -.4rem 0 .9rem; align-items: center; flex-wrap: wrap; }
+  .chart-dl-row .copy-status { font-size: .78rem; color: var(--muted); }
+  .chart-dl-row .copy-status.error { color: #a3372b; }
   button.danger:hover { background: var(--err); color: #fff; }
 
   .output-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.4rem; }
@@ -579,7 +581,11 @@
     downloadBlob(new Blob([svgString], { type: 'image/svg+xml' }), filenameBase + '.svg');
   }
 
-  function downloadSvgAsPng(svgString, filenameBase, w, h) {
+  /** Rasterise one of the standalone SVG builders above to a PNG blob at 2x,
+      on a white background (a transparent chart pasted into a document with a
+      dark theme is unreadable). Shared by the download and the copy paths so
+      the image on the clipboard is byte-for-byte the image on disk. */
+  function svgToPngBlob(svgString, w, h, onBlob, onError) {
     var img = new Image();
     var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
     var url = URL.createObjectURL(svgBlob);
@@ -591,20 +597,74 @@
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      canvas.toBlob(function (blob) { downloadBlob(blob, filenameBase + '.png'); }, 'image/png');
+      canvas.toBlob(function (blob) {
+        if (blob) onBlob(blob); else onError();
+      }, 'image/png');
     };
-    img.onerror = function () { URL.revokeObjectURL(url); alert('Could not render a PNG — try downloading the SVG instead.'); };
+    img.onerror = function () { URL.revokeObjectURL(url); onError(); };
     img.src = url;
+  }
+
+  function downloadSvgAsPng(svgString, filenameBase, w, h) {
+    svgToPngBlob(svgString, w, h,
+      function (blob) { downloadBlob(blob, filenameBase + '.png'); },
+      function () { alert('Could not render a PNG — try downloading the SVG instead.'); });
+  }
+
+  /* ---------- copy the chart straight to the clipboard --------------------
+     A downloaded PNG is three steps from where it is going: save, find it in
+     Downloads, insert it. A PLC agenda or a data-meeting doc wants it pasted.
+     `navigator.clipboard.write` with an image ClipboardItem does that, but it
+     is not universal — it needs a secure context and is unsupported or
+     permission-gated in some browsers — so a failure falls back to the
+     download that already worked and says so, rather than silently doing
+     nothing.
+
+     The status message goes next to the button rather than into an alert:
+     this is a "did that work?" confirmation, not something to dismiss. */
+  function setCopyStatus(row, text, isError) {
+    if (!row) return;
+    var el = row.querySelector('.copy-status');
+    if (!el) {
+      el = document.createElement('span');
+      el.className = 'copy-status';
+      row.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.toggle('error', !!isError);
+  }
+
+  function copyChartImage(svgString, filenameBase, w, h, row) {
+    var canWrite = !!(navigator.clipboard && window.ClipboardItem && navigator.clipboard.write);
+    setCopyStatus(row, 'Copying…');
+    svgToPngBlob(svgString, w, h, function (blob) {
+      if (!canWrite) {
+        downloadBlob(blob, filenameBase + '.png');
+        setCopyStatus(row, 'This browser can’t put an image on the clipboard — downloaded the PNG instead.', true);
+        return;
+      }
+      navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]).then(function () {
+        setCopyStatus(row, 'Copied — paste it straight into your document.');
+      }, function () {
+        downloadBlob(blob, filenameBase + '.png');
+        setCopyStatus(row, 'The clipboard was blocked here — downloaded the PNG instead.', true);
+      });
+    }, function () {
+      setCopyStatus(row, 'Could not render the chart as an image. The SVG download still works.', true);
+    });
   }
 
   els.outputBody.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-dl]');
     if (!btn || !lastChartData) return;
     var base = (lastChartData.name || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
+    var row = btn.closest('.chart-dl-row');
     if (btn.dataset.dl === 'letter-svg') downloadSvgString(buildStackedBarSvg(lastChartData), base + '-letter-grades');
     else if (btn.dataset.dl === 'letter-png') downloadSvgAsPng(buildStackedBarSvg(lastChartData), base + '-letter-grades', 640, 168);
+    else if (btn.dataset.dl === 'letter-copy') copyChartImage(buildStackedBarSvg(lastChartData), base + '-letter-grades', 640, 168, row);
     else if (btn.dataset.dl === 'hist-svg') downloadSvgString(buildHistogramSvg(lastChartData), base + '-histogram');
     else if (btn.dataset.dl === 'hist-png') downloadSvgAsPng(buildHistogramSvg(lastChartData), base + '-histogram', 640, 330);
+    else if (btn.dataset.dl === 'hist-copy') copyChartImage(buildHistogramSvg(lastChartData), base + '-histogram', 640, 330, row);
   });
 
   function readCutoffs() {
@@ -717,6 +777,7 @@
       '<tbody>' + letterRows + '</tbody></table>' +
       '<div class="stack-bar">' + stackSegs + '</div>' +
       '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-dl="letter-copy">📋 Copy image</button>' +
         '<button type="button" class="secondary small" data-dl="letter-svg">Download SVG</button>' +
         '<button type="button" class="secondary small" data-dl="letter-png">Download PNG</button>' +
       '</div>';
@@ -737,6 +798,7 @@
       '<div class="hist">' + histBars + '</div>' +
       '<div class="hist-labels">' + histLabels + '</div>' +
       '<div class="chart-dl-row">' +
+        '<button type="button" class="secondary small" data-dl="hist-copy">📋 Copy image</button>' +
         '<button type="button" class="secondary small" data-dl="hist-svg">Download SVG</button>' +
         '<button type="button" class="secondary small" data-dl="hist-png">Download PNG</button>' +
       '</div>';

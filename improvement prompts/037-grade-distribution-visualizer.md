@@ -88,7 +88,8 @@ Wins in the backlog below), and everything under Major Features / Moonshot.
   `buildHistogramSvg`)
 - **Comparison mode** (`renderComparison`, `refreshCompareOptions`) — compare
   one assignment against another
-- SVG-native rendering with **PNG and SVG download**; print
+- SVG-native rendering with **PNG and SVG download**, **copy-to-clipboard as a
+  PNG** (`copyChartImage`, `svgToPngBlob`); print
 
 ## Quick Wins
 
@@ -111,8 +112,10 @@ Wins in the backlog below), and everything under Major Features / Moonshot.
 - **Done —** **Cutoff presets** (district scale, 10-point scale, custom) rather than
   typing four numbers each time. *(A dropdown with Standard 10-point and
   Seven-point presets; hand-editing a cutoff box flips it to "Custom".)*
-- **Skipped — deferred.** **Copy the chart to clipboard** for pasting into a PLC document or an email.
-  *(Not part of this round's scoped list.)*
+- **Done — 2026-08-11.** **Copy the chart to clipboard** for pasting into a PLC
+  document or an email. *(A "Copy image" button on each chart, sharing the
+  existing PNG rasteriser, with a download fallback when the clipboard is
+  unavailable or blocked — see the copy-chart round below.)*
 - **Done — 2026-08-11.** **Undo / confirm on Delete assignment** (P11). *(Confirm already existed;
   added a 15-second in-memory undo, same pattern as the QR Scavenger Hunt
   Builder's "Undo clear" — see Status.)*
@@ -168,3 +171,40 @@ list — locally, privately, with no gradebook integration required.
   same input and are described in the README as companions?
 - Is per-question item analysis realistic given what the gradebook exports, or
   would it require a separate paste from the assessment platform?
+
+## Copy-chart round — 2026-08-11 (backlog rank 1)
+
+Shipped **copy the chart to the clipboard** — the last deferred Quick Win in
+this file.
+
+A downloaded PNG is three steps from where it is going: save it, find it in
+Downloads, insert it. A PLC agenda or a data-meeting doc wants it pasted. Each
+chart's button row gained **📋 Copy image**, which rasterises the same
+standalone SVG the PNG download uses and writes it to the clipboard as
+`image/png`.
+
+- **The rasteriser is now shared.** `downloadSvgAsPng` was refactored into
+  `svgToPngBlob` + a caller, so the image on the clipboard is byte-for-byte the
+  image on disk — 2x scale, white background (a transparent chart pasted into a
+  dark-themed doc is unreadable).
+- **The failure path is the real work.** Clipboard image writes need a secure
+  context and are unsupported or permission-gated in some browsers. Both
+  failures — no `ClipboardItem` at all, and a rejected `write()` — fall back to
+  downloading the PNG and say so in a status line next to the button. A
+  "Copy" that silently does nothing is worse than no button.
+- The status is an inline message rather than an `alert()`: it is a "did that
+  work?" confirmation, not something to dismiss.
+
+New suite `Tools/grade-distribution-visualizer/test/smoke-copy-chart.mjs`
+(21 checks) as `npm run test:grade-dist`. It stubs three browsers — working,
+no-ClipboardItem, and refusing — and checks the PNG file signature on the blob
+that reaches the clipboard, that nothing downloads on the happy path, and that
+both failure paths download the *right* chart with an error-styled message.
+
+### Where the next round should pick up
+
+- **Per-question item analysis** (backlog) is the biggest open idea here and is
+  untouched.
+- Copying is per chart. A "copy both charts plus the stats as one image" would
+  suit a PLC agenda better than two pastes, but it needs a composite layout
+  that does not exist yet.
