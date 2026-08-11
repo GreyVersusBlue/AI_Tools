@@ -1,13 +1,58 @@
 # Improvement Prompts — 030 — Quiz / Review Game Board
 
 **Tool file:** `Tools/030-review-game-board.html`
-**Support folder:** `Tools/review-game-board/` — `rgb-store.js`
+**Support folder:** `Tools/review-game-board/` — `rgb-store.js`, `test/smoke-clue-image.mjs`
 
 **Current description (from README):** A Jeopardy-style review board — type in questions or import them from an Excel sheet (Category/Points/Question/Answer columns), click a cell to reveal it, award points per team.
 
 ---
 
 ## Status
+
+**2026-08-11 — Images inside a clue (backlog rank 3).** Shipped the image
+half of the "Images and audio in a clue" Quick Win. Each row of the question
+editor gained an image cell (+ Image / thumbnail / size / Remove); the picture
+rides with the clue through Save board, the board switcher, JSON export and
+import, the projector overlay, the answer key and the practice quiz.
+
+The storage question is the whole design, and P12 got taken seriously rather
+than deferred:
+
+- **Downscaled hard on import** — 900px long edge, JPEG at 0.78. Sized for a
+  projector, not for print. JPEG rather than PNG because these are photos and
+  screenshots far more often than line art; the canvas is filled white first,
+  or a transparent PNG comes out black.
+- **A visible usage readout** under the editor, plus a warning past ~3.5 MB.
+- **A graceful failure.** `ReviewBoardStore.saveBoard` now returns a boolean
+  instead of throwing, and only adds the board to the list once the payload
+  has actually landed — so a refused write can't leave a name in the switcher
+  pointing at nothing. `save()` surfaces the failure once, by alert, because
+  the storage note lives in the editor and the editor is hidden mid-game.
+  Before this a full store threw out of `saveBoard` and a period of scoring
+  disappeared with no warning at all.
+
+Two smaller decisions: a Daily Double keeps its image hidden until the wager
+is placed (otherwise the map on screen tells the class what to bet), and
+`normalizeBoard` accepts only `data:image/` URLs from an imported JSON file —
+a remote `src` would break offline use and would quietly phone home from a
+tool whose whole promise is that it doesn't.
+
+An image on its own now counts as clue content, so "what is this a map of?"
+with no typed question is a legal clue.
+
+New test: `Tools/review-game-board/test/smoke-clue-image.mjs` (28 assertions,
+wired into `npm test` and `npm run test:review-board`) — covers the downscale
+actually shrinking a 2400×1800 noise PNG, the exact output dimensions,
+persistence across a reload, the overlay showing and clearing, the Daily
+Double hide/reveal (pinned rather than left to the random draw), both
+printouts, the refused-save path with a stubbed quota, and the remote-URL
+rejection.
+
+**Where the next round should pick up:** audio in a clue is the remaining half
+and is genuinely harder — it wants IndexedDB (the `blank-map-generator`
+pattern) rather than localStorage, plus a player on the overlay. The reusable
+tagged question bank (backlog) would also want to carry images, so whoever
+takes that should read `normalizeBoard` first.
 
 **2026-08-10 — Round 5 (PR #56): four Quick Wins shipped, one of which
 replaced an existing mechanic rather than adding to it.**
@@ -67,7 +112,13 @@ wager round from this round's Quick Win is also still open — see above.
   `:data:*`)
 - **Daily Double** assignment with a redraw (`assignDailyDouble`)
 - **Lightning timer** per clue (`startLightningTimer`)
-- Scoreboard; reset game; print **answer key**
+- **An image per clue** (`readAndDownscaleImage`, `buildClueImageCell`) —
+  downscaled to 900px JPEG on import, stored inline with the board, shown on
+  the projector overlay, thumbnailed on the answer key and printed full size
+  on the practice quiz
+- **Storage-usage readout and a graceful full-storage failure**
+  (`ReviewBoardStore.usageBytes`, `save()` returning a boolean)
+- Scoreboard; reset game; print **answer key** and **practice quiz**
 
 ## Quick Wins
 
@@ -82,8 +133,11 @@ wager round from this round's Quick Win is also still open — see above.
   *(Daily Double now prompts for team + wager before showing the question,
   replacing the old fixed ×2. A separate final-round wager phase is a bigger,
   distinct feature — see Status.)*
-- **Images and audio in a clue.** A map, a diagram, a primary source, a
+- **Partly done —** **Images and audio in a clue.** A map, a diagram, a primary source, a
   pronunciation — a text-only clue limits the tool to recall questions.
+  *(Images shipped 2026-08-11 — see the Status entry. Audio is untouched and
+  is the harder half: it needs a player on the overlay, a much bigger storage
+  budget than an image, and probably IndexedDB rather than localStorage.)*
 - **Done —** **Keyboard control** (P10) — number keys to award, space to reveal, Esc to
   close. Running a game by mouse from a laptop is slow.
 - **Done — Pass 2, Round 2.** **Load a roster to build teams** (P2) rather than typing team names.

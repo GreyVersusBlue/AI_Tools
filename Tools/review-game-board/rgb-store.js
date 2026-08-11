@@ -25,14 +25,39 @@
     return safeParse(localStorage.getItem(LIST_KEY), []);
   }
 
+  /* Returns true on success, false if the write was refused — which since
+     clues can carry images (see P12) is a real, reachable outcome rather
+     than a theoretical one. localStorage is capped around 5 MB and a board
+     with a dozen projected maps in it can get there. The board list is only
+     amended after the payload lands, so a refused save never leaves a name
+     in the switcher pointing at nothing. */
   function saveBoard(name, state) {
+    try {
+      localStorage.setItem(DATA_PREFIX + name, JSON.stringify(state));
+    } catch (e) {
+      return false;
+    }
     var names = listBoards();
     if (names.indexOf(name) === -1) {
       names.push(name);
       localStorage.setItem(LIST_KEY, JSON.stringify(names));
     }
-    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(state));
     localStorage.setItem(CURRENT_KEY, name);
+    return true;
+  }
+
+  /** Rough bytes this tool is holding in localStorage, for a usage readout.
+      Counts the UTF-16 characters of every value under our own prefixes —
+      exact enough to warn on, and it never touches another tool's keys. */
+  function usageBytes() {
+    var total = 0;
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && (k === LIST_KEY || k === CURRENT_KEY || k.indexOf(DATA_PREFIX) === 0)) {
+        total += (localStorage.getItem(k) || '').length * 2;
+      }
+    }
+    return total;
   }
 
   function loadBoard(name) {
@@ -63,6 +88,7 @@
     loadBoard: loadBoard,
     deleteBoard: deleteBoard,
     getCurrentName: getCurrentName,
-    setCurrentName: setCurrentName
+    setCurrentName: setCurrentName,
+    usageBytes: usageBytes
   };
 })(window);

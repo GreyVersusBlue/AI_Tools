@@ -77,9 +77,18 @@
 
   .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: #fdfdfb; }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
-  .clue-row { display: grid; grid-template-columns: 5.5rem 1fr 1fr auto; gap: .5rem; margin-bottom: .5rem; align-items: start; }
+  .clue-row { display: grid; grid-template-columns: 5.5rem 1fr 1fr 5.5rem auto; gap: .5rem; margin-bottom: .5rem; align-items: start; }
   .clue-row input, .clue-row textarea { font-size: .88rem; }
   .clue-row textarea { min-height: 2.4rem; resize: vertical; }
+  @media (max-width: 700px) { .clue-row { grid-template-columns: 4.5rem 1fr auto; } }
+
+  /* ---- image attached to a clue ---- */
+  .clue-image-cell { display: flex; flex-direction: column; align-items: stretch; gap: .25rem; }
+  .clue-image-cell button { font-size: .74rem; padding: .35rem .3rem; }
+  .clue-image-cell img { width: 100%; height: 2.6rem; object-fit: cover; border: 1px solid var(--line-strong); border-radius: 5px; display: block; }
+  .clue-image-cell .img-size { font-size: .66rem; color: var(--muted); text-align: center; }
+  .storage-note { font-size: .78rem; color: var(--muted); margin: .4rem 0 0; }
+  .storage-note.warn { color: var(--err); font-weight: 600; }
   .cat-actions, .board-actions { display: flex; gap: .6rem; margin-top: .5rem; flex-wrap: wrap; }
 
   .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
@@ -146,6 +155,11 @@
   .overlay .countdown.show { display: block; }
   .overlay .countdown.low { color: var(--err); }
   .overlay .question-text { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 700; max-width: 50rem; margin-bottom: 1.6rem; }
+  /* The image is the point of the clue when there is one, so it gets the room:
+     capped by viewport height so a tall map can't push the answer buttons off
+     the bottom of a projector screen. */
+  .overlay .clue-image { display: none; max-width: min(52rem, 88vw); max-height: 46vh; object-fit: contain; border-radius: 8px; background: #fff; margin-bottom: 1.2rem; }
+  .overlay .clue-image.show { display: block; }
   .overlay .answer-text {
     font-size: clamp(1.3rem, 3vw, 2rem); color: var(--gold); max-width: 50rem;
     margin-bottom: 1.8rem; display: none; border-top: 2px solid rgba(255,255,255,.25); padding-top: 1.4rem;
@@ -174,6 +188,8 @@
   .quiz-item { break-inside: avoid; margin-bottom: 1.1rem; }
   .quiz-q { margin: 0 0 .4rem; font-size: .95rem; }
   .quiz-lines .quiz-line { border-bottom: 1px solid #999; height: 1.3rem; margin-bottom: .2rem; }
+  .quiz-image { display: block; max-width: 3.2in; max-height: 2.4in; object-fit: contain; margin: 0 0 .5rem; }
+  .key-thumb { display: block; max-width: 1.1in; max-height: .85in; object-fit: contain; margin-bottom: .25rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -244,6 +260,8 @@
         <span class="spacer" style="flex:1 1 auto;"></span>
         <button type="button" id="buildFromManualBtn">Save board</button>
       </div>
+      <p class="storage-note" id="storageNote"></p>
+      <input type="file" id="clueImageFile" accept="image/*" style="display:none;">
     </div>
 
     <div class="tab-panel" id="tab-import">
@@ -295,6 +313,7 @@
     <button type="button" id="wagerStartBtn">Reveal the question</button>
   </div>
   <div class="countdown" id="overlayCountdown"></div>
+  <img class="clue-image" id="overlayImage" alt="">
   <div class="question-text" id="overlayQuestion"></div>
   <div class="answer-text" id="overlayAnswer"></div>
   <div class="overlay-actions">
@@ -333,7 +352,8 @@
    'rosterSelect','rosterTeamCount','buildTeamsFromRosterBtn','rosterTeamsStatus',
    'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','lightningRoundToggle','lightningRoundSeconds',
    'scoreboard','boardCols','undoScoreBtn',
-   'overlay','overlayCatPoints','overlayCountdown','overlayQuestion','overlayAnswer',
+   'storageNote','clueImageFile',
+   'overlay','overlayCatPoints','overlayCountdown','overlayImage','overlayQuestion','overlayAnswer',
    'wagerPanel','wagerTeamSelect','wagerAmount','wagerStartBtn',
    'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -399,9 +419,26 @@
   }
 
   /* ---------- persistence ---------- */
+  /** Returns whether the write landed. A board carrying images can now
+      genuinely exceed the storage cap, and a save that fails silently loses
+      a period's worth of scoring — so the failure is surfaced, with the two
+      things a teacher can actually do about it. */
+  var lastSaveFailed = false;
   function save() {
-    if (!state) return;
-    ReviewBoardStore.saveBoard(state.name, state);
+    if (!state) return true;
+    var okSaved = ReviewBoardStore.saveBoard(state.name, state);
+    // Only recomputed on failure: save() runs on every score tap, and
+    // usageBytes() walks the whole of localStorage.
+    if (!okSaved) renderStorageNote('Could not save — this browser’s storage is full. Remove an image from a question, or delete an old board, then save again.', true);
+    if (!okSaved && !lastSaveFailed) {
+      // The storage note lives in the editor, which is hidden while the board
+      // is being played — so the first failure gets said out loud. Only the
+      // first: save() runs on every score change, and an alert per tap would
+      // be worse than the problem.
+      alert('This browser’s storage is full, so the board could not be saved.\n\nRemove an image from one of the questions, or delete an old board, then try again. The game on screen still works — it just is not being written down.');
+    }
+    lastSaveFailed = !okSaved;
+    return okSaved;
   }
 
   function refreshSwitcher() {
@@ -422,7 +459,129 @@
     });
   }
 
-  function newClueRow(points, question, answer) {
+  /* ---------- images inside a clue (P12) --------------------------------
+     A map, a diagram, or a primary source is often the whole question, and
+     until now the only way to project one was to describe it. Images are
+     downscaled hard on import and stored inline in the board's own
+     localStorage record — the same place everything else about the board
+     lives, so export/import and the board switcher keep working unchanged.
+
+     "Downscaled hard" is doing real work: localStorage caps out around 5 MB
+     across the whole origin, a phone photo is several MB on its own, and
+     base64 adds a third again on top. IMAGE_MAX_DIM is sized for a
+     projector, not for print, and JPEG is used rather than PNG because
+     these are photographs and screenshots far more often than they are
+     line art.
+  ---------------------------------------------------------------------- */
+  var IMAGE_MAX_DIM = 900;
+  var IMAGE_QUALITY = 0.78;
+  var STORAGE_WARN_BYTES = 3.5 * 1024 * 1024;   // ~70% of a typical 5 MB cap
+
+  function readAndDownscaleImage(file, maxDim, cb) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.max(1, Math.round(img.naturalWidth * scale));
+        var h = Math.max(1, Math.round(img.naturalHeight * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        // JPEG has no alpha; without this, a transparent PNG comes out black.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        cb(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
+      };
+      img.onerror = function () { alert('Could not read that image.'); };
+      img.src = reader.result;
+    };
+    reader.onerror = function () { alert('Could not read that file.'); };
+    reader.readAsDataURL(file);
+  }
+
+  function humanBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  /** Rough decoded size of a data URL, for the per-image and total readouts. */
+  function dataUrlBytes(dataUrl) {
+    if (!dataUrl) return 0;
+    var comma = dataUrl.indexOf(',');
+    return Math.round((dataUrl.length - comma - 1) * 3 / 4);
+  }
+
+  function renderStorageNote(extra, isWarning) {
+    if (!els.storageNote) return;
+    var used = ReviewBoardStore.usageBytes();
+    var text = 'Saved boards are using about ' + humanBytes(used) + ' of this browser’s storage.';
+    if (used > STORAGE_WARN_BYTES) {
+      text += ' That is close to the browser’s limit — remove an image or delete an old board before adding more.';
+      isWarning = true;
+    }
+    els.storageNote.textContent = extra ? (extra + ' ' + text) : text;
+    els.storageNote.className = 'storage-note' + (isWarning ? ' warn' : '');
+  }
+
+  /** The image cell of one editor row. The data URL lives on the row element
+      rather than in a parallel array, so removing or reordering rows can't
+      desynchronise an image from its question. */
+  function buildClueImageCell(row) {
+    var cell = document.createElement('div');
+    cell.className = 'clue-image-cell';
+
+    function paint() {
+      cell.innerHTML = '';
+      if (row.__clueImage) {
+        var thumb = document.createElement('img');
+        thumb.src = row.__clueImage;
+        thumb.alt = 'Image attached to this question';
+        cell.appendChild(thumb);
+        var size = document.createElement('div');
+        size.className = 'img-size';
+        size.textContent = humanBytes(dataUrlBytes(row.__clueImage));
+        cell.appendChild(size);
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button'; removeBtn.className = 'secondary small';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', function () { row.__clueImage = null; paint(); renderStorageNote(); });
+        cell.appendChild(removeBtn);
+      } else {
+        var addBtn = document.createElement('button');
+        addBtn.type = 'button'; addBtn.className = 'secondary small';
+        addBtn.textContent = '+ Image';
+        addBtn.addEventListener('click', function () {
+          pendingImageRow = row;
+          pendingImagePaint = paint;
+          els.clueImageFile.click();
+        });
+        cell.appendChild(addBtn);
+      }
+    }
+    paint();
+    return cell;
+  }
+
+  var pendingImageRow = null;
+  var pendingImagePaint = null;
+
+  els.clueImageFile.addEventListener('change', function () {
+    var file = els.clueImageFile.files && els.clueImageFile.files[0];
+    els.clueImageFile.value = '';
+    if (!file || !pendingImageRow) return;
+    var row = pendingImageRow, paint = pendingImagePaint;
+    pendingImageRow = null; pendingImagePaint = null;
+    readAndDownscaleImage(file, IMAGE_MAX_DIM, function (dataUrl) {
+      row.__clueImage = dataUrl;
+      if (paint) paint();
+      renderStorageNote('Image added (' + humanBytes(dataUrlBytes(dataUrl)) + ' after downscaling).');
+    });
+  });
+
+  function newClueRow(points, question, answer, image) {
     var row = document.createElement('div');
     row.className = 'clue-row';
     row.innerHTML =
@@ -430,7 +589,9 @@
       '<textarea class="clue-question" placeholder="Question">' + escapeHtml(question) + '</textarea>' +
       '<textarea class="clue-answer" placeholder="Answer">' + escapeHtml(answer) + '</textarea>' +
       '<button type="button" class="secondary small remove-clue">&times;</button>';
-    row.querySelector('.remove-clue').addEventListener('click', function () { row.remove(); });
+    row.__clueImage = image || null;
+    row.insertBefore(buildClueImageCell(row), row.querySelector('.remove-clue'));
+    row.querySelector('.remove-clue').addEventListener('click', function () { row.remove(); renderStorageNote(); });
     return row;
   }
 
@@ -447,7 +608,7 @@
     var clueList = document.createElement('div');
     clueList.className = 'clue-list';
     (clues && clues.length ? clues : [null]).forEach(function (c) {
-      clueList.appendChild(c ? newClueRow(c.points, c.question, c.answer) : newClueRow());
+      clueList.appendChild(c ? newClueRow(c.points, c.question, c.answer, c.image) : newClueRow());
     });
     block.appendChild(clueList);
 
@@ -483,8 +644,10 @@
         var points = parseInt(row.querySelector('.clue-points').value, 10);
         var question = row.querySelector('.clue-question').value.trim();
         var answer = row.querySelector('.clue-answer').value.trim();
-        if (!question && !answer && isNaN(points)) return;
-        clues.push({ points: isNaN(points) ? 0 : points, question: question, answer: answer, used: false });
+        // An image alone is a legitimate clue ("what is this a map of?"), so
+        // it counts as content when deciding whether the row is empty.
+        if (!question && !answer && !row.__clueImage && isNaN(points)) return;
+        clues.push({ points: isNaN(points) ? 0 : points, question: question, answer: answer, image: row.__clueImage || null, used: false });
       });
       clues.sort(function (a, b) { return a.points - b.points; });
       if (clues.length) categories.push({ name: name, clues: clues });
@@ -717,8 +880,11 @@
     var rows = [];
     state.categories.forEach(function (cat) {
       cat.clues.forEach(function (cl) {
+        // The key is the teacher's own copy, so a thumbnail is enough to tell
+        // one map question from another at a glance without eating the page.
+        var thumb = cl.image ? '<img class="key-thumb" src="' + escapeHtml(cl.image) + '" alt="">' : '';
         rows.push('<tr><td>' + escapeHtml(cat.name) + '</td><td>' + (cl.dailyDouble ? '★ ' : '') + cl.points +
-          '</td><td>' + escapeHtml(cl.question) + '</td><td>' + escapeHtml(cl.answer) + '</td></tr>');
+          '</td><td>' + thumb + escapeHtml(cl.question) + '</td><td>' + escapeHtml(cl.answer) + '</td></tr>');
       });
     });
     return '<h2>' + escapeHtml(state.name) + ' — Answer Key</h2>' +
@@ -741,9 +907,12 @@
     state.categories.forEach(function (cat) {
       cat.clues.forEach(function (cl) {
         n++;
+        // On the student sheet the image IS the question, so it prints at a
+        // size a student can actually read rather than as a thumbnail.
+        var pic = cl.image ? '<img class="quiz-image" src="' + escapeHtml(cl.image) + '" alt="">' : '';
         items.push(
           '<div class="quiz-item"><p class="quiz-q"><b>' + n + '.</b> [' + escapeHtml(cat.name) + ' &mdash; ' + cl.points + ' pts] ' +
-          escapeHtml(cl.question) + '</p><div class="quiz-lines"><div class="quiz-line"></div><div class="quiz-line"></div></div></div>'
+          escapeHtml(cl.question) + '</p>' + pic + '<div class="quiz-lines"><div class="quiz-line"></div><div class="quiz-line"></div></div></div>'
         );
       });
     });
@@ -787,10 +956,14 @@
           points: Number(cl && cl.points) || 0,
           question: String((cl && cl.question) || ''),
           answer: String((cl && cl.answer) || ''),
+          // Only same-document data URLs are accepted: an imported board is
+          // an untrusted file, and a remote src would both break offline use
+          // and quietly phone home from a tool that promises it never does.
+          image: (cl && typeof cl.image === 'string' && /^data:image\//.test(cl.image)) ? cl.image : null,
           used: !!(cl && cl.used),
           dailyDouble: false
         };
-      }).filter(function (cl) { return cl.question || cl.answer; });
+      }).filter(function (cl) { return cl.question || cl.answer || cl.image; });
       return { name: String((c && c.name) || ''), clues: clues };
     }).filter(function (c) { return c.name && c.clues.length; });
     var teams = (Array.isArray(loaded.teams) ? loaded.teams : []).map(function (t) {
@@ -873,6 +1046,7 @@
     } else {
       addCategoryBlock();
     }
+    renderStorageNote();
     refreshSwitcher();
   }
 
@@ -973,6 +1147,14 @@
     var clue = cat.clues[clueIdx];
     els.overlayQuestion.textContent = clue.question;
     els.overlayAnswer.textContent = clue.answer;
+    if (clue.image) {
+      els.overlayImage.src = clue.image;
+      els.overlayImage.alt = clue.question ? ('Image for: ' + clue.question) : 'Image for this question';
+      els.overlayImage.classList.add('show');
+    } else {
+      els.overlayImage.classList.remove('show');
+      els.overlayImage.removeAttribute('src');
+    }
     els.overlayAnswer.classList.remove('show');
     els.awardRow.classList.remove('show');
     els.closeUsedRow.style.display = 'none';
@@ -983,6 +1165,9 @@
     if (clue.dailyDouble) {
       els.overlayCatPoints.innerHTML = '🌟 DAILY DOUBLE! 🌟<br>' + escapeHtml(cat.name);
       els.overlayQuestion.style.display = 'none';
+      // The image is part of the question, so it stays hidden until the
+      // wager is in — otherwise the map on screen tells them what to bet.
+      els.overlayImage.classList.remove('show');
       els.showAnswerBtn.style.display = 'none';
       els.closeNoAskBtn.style.display = '';
       els.wagerTeamSelect.innerHTML = state.teams.map(function (t, i) {
@@ -1007,6 +1192,7 @@
     els.overlayCatPoints.innerHTML = '🌟 DAILY DOUBLE! 🌟<br>' + escapeHtml(team.name) + ' wagers ' + amount;
     els.wagerPanel.style.display = 'none';
     els.overlayQuestion.style.display = '';
+    if (els.overlayImage.getAttribute('src')) els.overlayImage.classList.add('show');
     els.showAnswerBtn.style.display = '';
     els.closeNoAskBtn.style.display = '';
     startLightningTimer();
