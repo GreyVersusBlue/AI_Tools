@@ -339,12 +339,14 @@
       <span>Strategy-Sharing Board</span>
       <button class="link-btn" type="button" id="addStrategyBtn">+ Add strategy card</button>
     </div>
-    <div class="hint">One card per student who shares. Jot the gist only &mdash; a name (optional) and a line or two of their reasoning. This is meant to be fast to fill in while class is running.</div>
+    <div class="hint">One card per student who shares. Jot the gist only &mdash; a name (optional &mdash; start typing to autocomplete from any roster saved on this device via Class Roster Hub or Name Picker) and a line or two of their reasoning. This is meant to be fast to fill in while class is running.</div>
+    <datalist id="strategyNameOptions"></datalist>
     <div class="strategy-grid" id="strategyGrid">
       <p class="empty-hint">No strategies stamped up yet &mdash; add a card as students share out.</p>
     </div>
     <div class="btn-row" style="margin-top:0;">
       <button type="button" class="danger" id="clearBoardBtn">Clear board</button>
+      <button type="button" class="secondary" id="undoClearBtn" disabled>Undo clear</button>
     </div>
   </div>
 
@@ -382,6 +384,7 @@
   var STORAGE_KEY = 'gvb-number-talks:settings';
   var BANK_KEY = 'gvb-number-talks:myBank';
   var STRING_HISTORY_KEY = 'gvb-number-talks:stringHistory';
+  var NP_ROSTERS_KEY = 'np_rosters'; // shared, read-only — written by Class Roster Hub / Name Picker and read by many other tools
   var MINE_KEY = 'mine';
   var HISTORY_LIMIT = 20;
   var AVOID_REPEAT_WINDOW = 15;
@@ -504,6 +507,7 @@
   var myBank = [];         // [{id, category, exprs, note}]  the teacher's own saved favorites — persists in localStorage
   var strategies = [];    // [{id, name, text}]  (in-memory only, session-only)
   var strategyIdCounter = 0;
+  var boardUndoSnapshot = null; // single-level undo for "Clear board" — module-level only, never persisted
   var stringHistory = []; // [{text, category, ts}]  persists across reloads/sessions for this term
   var answerKeyVisible = false; // teacher-only reveal toggle; resets on each new prompt
   var mode = 'strings';   // 'strings' | 'dots' — which routine is active
@@ -514,7 +518,7 @@
 
   var els = {};
   ['categorySelect', 'nextPromptBtn', 'stage', 'metaRow', 'revealRow', 'revealBtn', 'revealAllBtn',
-   'customInput', 'customNoteInput', 'useCustomBtn', 'saveToBankBtn', 'bankList', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn',
+   'customInput', 'customNoteInput', 'useCustomBtn', 'saveToBankBtn', 'bankList', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn', 'undoClearBtn', 'strategyNameOptions',
    'historyList', 'historyEmptyHint', 'exportSessionBtn',
    'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn',
    'printRow', 'printHandoutBtn', 'printArea',
@@ -1175,8 +1179,49 @@
   /* ---------- strategy board ---------- */
   function nextStrategyId() { strategyIdCounter++; return 's' + strategyIdCounter; }
 
+  function deepClone(obj) {
+    return obj === undefined ? obj : JSON.parse(JSON.stringify(obj));
+  }
+
+  /* Shared roster (np_rosters), read-only — same convention as
+     023-exit-ticket-generator.html / 025-writing-prompt-generator.html /
+     003-rubric-builder.html. Feeds a <datalist> so the name field on a
+     strategy card autocompletes from any roster saved on this device, while
+     still accepting a free-typed name (or none) when no roster exists. */
+  function loadNpRosters() {
+    try {
+      var v = JSON.parse(localStorage.getItem(NP_ROSTERS_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
+  }
+
+  function rosterNameOptions() {
+    var rosters = loadNpRosters();
+    var names = [];
+    Object.keys(rosters).forEach(function (key) {
+      var list = rosters[key];
+      if (!Array.isArray(list)) return;
+      list.forEach(function (n) {
+        var name = typeof n === 'string' ? n.trim() : '';
+        if (name && names.indexOf(name) === -1) names.push(name);
+      });
+    });
+    names.sort(function (a, b) { return a.localeCompare(b); });
+    return names;
+  }
+
+  function populateRosterNameOptions() {
+    if (!els.strategyNameOptions) return;
+    els.strategyNameOptions.innerHTML = rosterNameOptions().map(function (n) {
+      return '<option value="' + escapeAttr(n) + '">';
+    }).join('');
+  }
+
   function addStrategyCard() {
     strategies.push({ id: nextStrategyId(), name: '', text: '' });
+    boardUndoSnapshot = null;
+    els.undoClearBtn.disabled = true;
+    populateRosterNameOptions();
     renderStrategies();
     // focus the newest card's name field
     var cards = els.strategyGrid.querySelectorAll('.strategy-card');
@@ -1195,7 +1240,7 @@
     els.strategyGrid.innerHTML = strategies.map(function (s) {
       return '<div class="strategy-card" data-id="' + escapeAttr(s.id) + '">' +
         '<div class="s-card-head">' +
-          '<input type="text" class="s-name" placeholder="Student name (optional)" value="' + escapeAttr(s.name) + '">' +
+          '<input type="text" class="s-name" list="strategyNameOptions" placeholder="Student name (optional)" value="' + escapeAttr(s.name) + '">' +
           '<button type="button" class="remove-row-btn" data-remove="' + escapeAttr(s.id) + '" title="Remove card">&#10005;</button>' +
         '</div>' +
         '<textarea class="s-text" placeholder="Broke 36 into 30 + 6, doubled each, added…">' + escapeHtml(s.text) + '</textarea>' +
@@ -1220,8 +1265,20 @@
   });
 
   function clearBoard() {
+    if (!strategies.length) return;
+    boardUndoSnapshot = { strategies: deepClone(strategies), strategyIdCounter: strategyIdCounter };
     strategies = [];
     renderStrategies();
+    els.undoClearBtn.disabled = false;
+  }
+
+  function undoClearBoard() {
+    if (!boardUndoSnapshot) return;
+    strategies = boardUndoSnapshot.strategies;
+    strategyIdCounter = boardUndoSnapshot.strategyIdCounter;
+    boardUndoSnapshot = null;
+    renderStrategies();
+    els.undoClearBtn.disabled = true;
   }
 
   /* ---------- helpers ---------- */
@@ -1333,6 +1390,7 @@
   els.saveToBankBtn.addEventListener('click', saveCustomToBank);
   els.addStrategyBtn.addEventListener('click', addStrategyCard);
   els.clearBoardBtn.addEventListener('click', clearBoard);
+  els.undoClearBtn.addEventListener('click', undoClearBoard);
   els.exportSessionBtn.addEventListener('click', exportSession);
   els.printHandoutBtn.addEventListener('click', printHandout);
   els.clearStringHistoryBtn.addEventListener('click', clearStringHistory);
@@ -1376,6 +1434,7 @@
   els.dotExactRow.style.display = settings.dotCountMode === 'exact' ? '' : 'none';
   els.dotLayoutSelect.value = settings.dotLayout;
   els.dotDurationSelect.value = settings.dotDuration;
+  populateRosterNameOptions();
   renderStage();
   renderHistory();
   renderStrategies();

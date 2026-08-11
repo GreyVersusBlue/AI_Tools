@@ -896,6 +896,42 @@ sections remain open (time-slice maps, vector phase 2 — live rendering,
 per-region hit-testing, choropleth — and map+timeline pairing), so it does
 not move to `stable tools/`.
 
+### Pass 2 — Round 2 — 2026-08-11 03:10 UTC — session `mxpfjs` — PR #89
+
+Tools 021–030, picked from "Not yet touched" before any of the concurrent
+rounds above had merged (no tool overlap with any of them). Ten tools, all
+print/projector/data tools that each already had a Pass 1 round (Round 4 or
+Round 5 — see each file's own history) — this round picked up specifically
+where each file's own "Where the next round should pick up" notes left
+off, two scoped improvements per tool, each independently verified via
+`node --check` and a headless Playwright pass before being committed. No
+tool outside this list was touched.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Tournament Bracket & Station Rotation (PE) | `021-pe-tournament-stations.md` | Rest/water stations as a first-class station type (`isRest` flag — no scored toggle, distinct tile/print-card badge, excluded from score capture); single-level undo on Reset and New Unit. |
+| Lab Group & Role Randomizer | `022-lab-group-role-randomizer.md` | Absent-student handling (per-shuffle toggle, role redistributes round-robin to a present groupmate, absent students drop off printed tents); a printable per-student × per-role fairness grid, including zero-history students and zero-count roles. |
+| Exit Ticket / Bell Ringer Generator | `023-exit-ticket-generator.md` | Batch class-set printing on the Printable Handout tab (one slip per `np_rosters` name, name + date pre-filled); a second, renamable-category tally alongside Quick Tally, with a dated save/reset history. |
+| Number Talks / Mental Math Routine Board | `024-number-talks-board.md` | Strategy-card name field now autocompletes from `np_rosters` via a `<datalist>`; single-level undo on Clear board. |
+| Writing Prompt Generator | `025-writing-prompt-generator.md` | A writing-timer widget (presets + custom, epoch-based countdown, WebAudio chime) and an optional word-count goal display, both living inside `.stage` so they survive fullscreen; goal also prints on the poster. |
+| Math Fact Drill Sheet Generator | `026-math-drill-generator.md` | An optional same-sheet corner answer key (with a toggle to also drop the separate key page); a "same problems, reordered per version" anti-copying mode distinct from the existing different-problems version tabs. |
+| Novel Study / Reading Circles Manager | `027-novel-study-circles-manager.md` | "Export vocabulary to Flashcard Generator" — writes a deduped word list directly into `040-vocab-flashcard-generator.html`'s own storage contract (mirroring the `wpg-rubric-link.js` read-only cross-tool bridge pattern); single-level undo on Delete-meeting and Reset-role-history. |
+| Primary Source Analysis Worksheet Generator | `028-primary-source-analysis-generator.md` | An off-by-default reading-support card (summary + simplified paraphrase, printed with the source); uploaded source images now downscale to a 1600px max dimension before storage, with a visible size warning (P12). |
+| Prompt Builder | `029-prompt-builder.md` | A standalone redaction helper (manual name list + opt-in best-effort auto-detect, consistent "Student A/B/C" placeholders); prompt-history text search and per-entry pinning. |
+| Quiz / Review Game Board | `030-review-game-board.md` | Scoreboard is now sticky, larger, and flashes green/red on any score change; teams can be built from a saved `np_rosters` roster, split into N count-based groups with editable, pre-filled names. |
+
+**41 of 46 (Pass 2) tools done** (31 from the concurrent rounds above —
+`v19h3x` 10 + `yjj7k6` 5 + `j6ok2v` 5 + `yar0mb` 5 + `gb5c6e` 6 — + these
+10, none overlapping). **5 to go**: 001, 004, 005, 007, 008 — the same five
+`yjj7k6`'s Round 1 flagged as leftover from the 001–010 range. None of the
+ten cleared their own backlog file — each still carries open Major
+Features/Moonshot items — so none moved to `stable tools/` this round
+either. Two site-wide findings from this round were added to
+`_site-requests.md`: a likely-wider P12 image-storage risk beyond the tools
+already named there, and a new wrinkle on the recurring fullscreen-stage
+duplication (interactive controls, not just static display, now need to
+live inside the fullscreened subtree in at least four tools).
+
 ---
 
 ## Not yet touched
@@ -910,16 +946,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Seating Chart Generator — `005-seating-chart-generator.md`
 - Name Picker — `007-name-picker.md`
 - Behavior & Points Tracker — `008-behavior-points-tracker.md`
-- Tournament Bracket & Station Rotation (PE) — `021-pe-tournament-stations.md`
-- Lab Group & Role Randomizer — `022-lab-group-role-randomizer.md`
-- Exit Ticket / Bell Ringer Generator — `023-exit-ticket-generator.md`
-- Number Talks / Mental Math Routine Board — `024-number-talks-board.md`
-- Writing Prompt Generator — `025-writing-prompt-generator.md`
-- Math Fact Drill Sheet Generator — `026-math-drill-generator.md`
-- Novel Study / Reading Circles Manager — `027-novel-study-circles-manager.md`
-- Primary Source Analysis Worksheet Generator — `028-primary-source-analysis-generator.md`
-- Prompt Builder — `029-prompt-builder.md`
-- Quiz / Review Game Board — `030-review-game-board.md`
 
 ---
 

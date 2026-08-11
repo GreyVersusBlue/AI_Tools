@@ -50,13 +50,58 @@ from an unrelated network probe the sandboxed test environment itself
 generates).
 
 **Where a future round should pick up:** prompt versioning/comparison,
-`{{variable}}` templates with saved defaults, the redaction helper, and a
-task-organized prompt library are all still open (Major Features below). The
-output-shape-preset idea could go much further — e.g. matching Rubric
-Builder's actual JSON export shape, not just a CSV/text convention.
+`{{variable}}` templates with saved defaults, and a task-organized prompt
+library are all still open (Major Features below). The output-shape-preset
+idea could go much further — e.g. matching Rubric Builder's actual JSON
+export shape, not just a CSV/text convention.
 
 Ideas below are deliberately ambitious and are **not** scoped to a single
 session.
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Two still-open Quick Win / Major Feature items shipped, both fully wired
+(no orphaned CSS or scaffolding):
+
+- **Redaction helper.** New standalone card below the main form (outside
+  `<form id="promptForm">` so "Clear everything" doesn't touch it): paste
+  text, list names to redact (comma or line separated), optionally check
+  "Also try auto-detecting capitalized names." Clicking **Redact** produces
+  a result box with each unique name replaced consistently by `Student A`,
+  `Student B`, etc. (longest names replaced first so a full name and a bare
+  first name don't double-match), plus a copy button. The auto-detect
+  checkbox and the hint text under it are explicit that it's a blunt
+  capitalized-word heuristic — it will miss real names and flag non-names —
+  and the result hint repeats that caveat whenever auto-detect was used.
+  Nothing here is persisted; it only runs on click.
+- **Prompt history search and pinning.** A search box above the history
+  list (`#historySearch`) filters visible entries by substring match
+  against either the saved prompt or its saved result. Each history entry
+  now has a pin toggle (📌 button); pinned entries render above unpinned
+  ones regardless of recency, survive being pushed out when the list is
+  trimmed to `PROMPT_HISTORY_MAX`, and the `pinned` flag persists in
+  `promptBuilderHistory_v1` across reloads. History rows switched from
+  index-based `data-*-i` attributes to a stable per-entry `id` (existing
+  entries without one get one assigned on first load) so pin/search
+  re-sorting doesn't desync row actions from the wrong entry.
+
+**Testing performed:** `node --check` on all three inline `<script>` blocks
+(the two ran clean). Headless Chromium smoke test via
+`/opt/pw-browsers/chromium` over `file://`, covering: redacting a repeated
+name and a second name across one passage replaces both consistently and
+distinctly (`Student A` / `Student B`, no leftover raw names); adding five
+prompts to history, pinning one, then adding two more, newer prompts —
+pinned entry stays first; the search box filters the list down to exactly
+the matching entry; and a full page reload after all of that still shows
+the pinned entry on top (confirms the localStorage round-trip). Zero
+console errors from page script — the only network failure seen was the
+sandboxed test environment's own blocked Google Fonts request, unrelated
+to this change and pre-existing on the page.
+
+**Still open** (see Major Features below): output-shape presets matched to
+more of the toolkit's actual JSON/export shapes (not just CSV/text
+conventions), a task-organized prompt library, prompt versioning/
+comparison, and `{{variable}}` templates with saved defaults.
 
 ## What it does today
 
@@ -93,7 +138,8 @@ session.
   student names or grades into a third-party AI service — this site's entire
   premise is that data stays local, and this is the one tool that sends the
   user somewhere it won't.
-- **Prompt history search and pinning**; export the whole history.
+- **Done — Pass 2, Round 2.** **Prompt history search and pinning.** Export the
+  whole history is still open.
 
 ## Major Features
 
@@ -114,9 +160,10 @@ session.
 - **Templates with variables.** `{{subject}}`, `{{grade}}`, `{{unit}}` filled
   from saved defaults, so a teacher's standing context (7th grade, social
   studies, this district) is never retyped.
-- **Redaction helper.** Paste text containing student names, and have the tool
-  replace them with Student A / Student B before you send it anywhere — a
-  small feature that directly serves the site's privacy stance.
+- **Done — Pass 2, Round 2.** **Redaction helper.** Paste text containing
+  student names, and have the tool replace them with Student A / Student B
+  before you send it anywhere — a small feature that directly serves the
+  site's privacy stance.
 
 ## Moonshot / North Star
 

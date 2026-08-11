@@ -136,6 +136,10 @@
   .station-tile .none-here { font-size: .78rem; color: var(--muted); font-style: italic; }
   .station-tile .next-line { font-size: .74rem; color: var(--muted); margin-top: .4rem; padding-top: .35rem; border-top: 1px dashed var(--line); }
   .station-tile .next-line strong { color: var(--accent-2); }
+  .station-tile.is-rest { border-left-color: var(--good); background: #f3f9f5; }
+  .station-tile.is-rest h3 { color: var(--good); }
+  .rest-badge { display: inline-block; background: var(--good); color: #fff; border-radius: 999px; padding: .1rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: .35rem; }
+  .stage:fullscreen .rest-badge { font-size: clamp(.85rem, 1.5vw, 1.2rem); padding: .3rem 1rem; }
 
   .stage:fullscreen .stage-time { font-size: clamp(6rem, 20vw, 15rem); }
   .stage:fullscreen .stage-sub { font-size: clamp(1.4rem, 3vw, 2.4rem); }
@@ -154,6 +158,8 @@
   .station-meta-row select, .station-meta-row input { margin-bottom: 0; }
   .station-scored-check { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0 !important; }
   .station-scored-check input { width: auto; margin: 0; }
+  .station-rest-check { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0 !important; color: var(--good); }
+  .station-rest-check input { width: auto; margin: 0; }
 
   /* ── Fitness / skill score capture ────────────────────────────────── */
   .score-station { border-bottom: 1px solid var(--line); padding-bottom: .8rem; margin-bottom: .8rem; }
@@ -237,6 +243,8 @@
     #printCardsArea .card-activity { font-size: clamp(1.3rem, 4vw, 2.2rem); color: #333; line-height: 1.35; margin: 0; max-width: 90%; }
     #printCardsArea .card-equipment { font-size: clamp(.95rem, 2.4vw, 1.3rem); color: #666; margin: .8rem 0 0; max-width: 90%; }
     #printCardsArea .card-scored-tag { font-size: 1rem; color: #a3372b; margin: .6rem 0 0; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    #printCardsArea .card-page-rest { border: 6px solid #2f7d4f; }
+    #printCardsArea .card-rest-tag { font-size: 1rem; color: #2f7d4f; margin: .6rem 0 0; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
     #printCardsArea .card-empty-msg { font-size: 1.2rem; color: #555; }
   }
 </style>
@@ -257,6 +265,7 @@
     <select id="projectSwitch"></select>
     <button class="secondary" id="newProjectBtn" type="button">New unit</button>
     <button class="danger" id="deleteProjectBtn" type="button">Delete</button>
+    <button class="secondary" id="undoBtn" type="button" disabled>Undo</button>
     <span class="spacer"></span>
     <button id="printBtn" type="button">Print</button>
     <button class="secondary" id="printCardsBtn" type="button">Print station cards</button>
@@ -426,7 +435,7 @@
   var TICK_MS = 250;
 
   var els = {};
-  ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'printBtn', 'printCardsBtn',
+  ['toolbar', 'projectSwitch', 'newProjectBtn', 'deleteProjectBtn', 'undoBtn', 'printBtn', 'printCardsBtn',
    'projectName', 'addStationBtn', 'stationsList', 'templateSelect', 'loadTemplateBtn', 'templateHint',
    'rosterText', 'splitCount', 'splitBtn', 'addGroupBtn', 'groupsList',
    'rotMinutes', 'rotSeconds', 'soundToggle', 'hiContrastToggle',
@@ -451,6 +460,12 @@
   var state = null;
   var idCounter = 0;
 
+  // Single-level undo for the two destructive actions (Reset, New unit). Kept
+  // module-level and out of `state`/localStorage on purpose — undo is a
+  // same-session convenience, not part of a unit's saved data (mirrors the
+  // undoSnapshot pattern in 022-lab-group-role-randomizer.html).
+  var undoSnapshot = null;
+
   function uid(prefix) { idCounter++; return prefix + '_' + Date.now().toString(36) + idCounter; }
 
   /* ---------- shipped station templates ---------- */
@@ -463,7 +478,7 @@
       { name: 'Bodyweight Squats', activity: 'Squat to a comfortable depth, chest up, then stand; repeat for the station time.', equipment: 'None' },
       { name: 'High Knees', activity: 'Run in place bringing knees up to hip height, moving down a marked lane and back.', equipment: 'Cones to mark a lane' },
       { name: 'Burpees', activity: 'Squat, kick back to a plank, return, and jump — at your own pace for the station time.', equipment: 'Mats' },
-      { name: 'Rest / Water', activity: 'Catch your breath and get water. No equipment set-up needed.', equipment: 'Water bottles' }
+      { name: 'Rest / Water', activity: 'Catch your breath and get water. No equipment set-up needed.', equipment: 'Water bottles', isRest: true }
     ] },
     { id: 'volleyball', name: 'Volleyball Skills Circuit', stations: [
       { name: 'Forearm Bump (Pass)', activity: 'Partner or wall passing — platform arms, contact the ball on the forearms, redirect it upward.', equipment: 'Volleyballs (or trainer balls), a wall' },
@@ -490,7 +505,7 @@
       { name: 'Curl-Ups', activity: 'Complete as many controlled curl-ups as possible in the station time, feet flat, knees bent.', equipment: 'Mats', scored: true, scoreUnit: 'reps' },
       { name: 'Push-Ups', activity: 'Complete as many push-ups as possible in the station time; knees-down is a valid modification.', equipment: 'Mats', scored: true, scoreUnit: 'reps' },
       { name: 'Sit-and-Reach', activity: 'Reach forward along the box or taped line as far as possible; hold the farthest point for one second.', equipment: 'Sit-and-reach box, or a ruler taped to the floor', scored: true, scoreUnit: 'inches' },
-      { name: 'Rest / Record', activity: 'Catch your breath and record scores from the last station on your card before rotating.', equipment: 'Pencils, score cards', scored: false }
+      { name: 'Rest / Record', activity: 'Catch your breath and record scores from the last station on your card before rotating.', equipment: 'Pencils, score cards', scored: false, isRest: true }
     ] }
   ];
 
@@ -531,6 +546,8 @@
       if (typeof st.equipment !== 'string') st.equipment = '';
       st.scored = !!st.scored;
       if (typeof st.scoreUnit !== 'string') st.scoreUnit = '';
+      st.isRest = !!st.isRest;
+      if (st.isRest) st.scored = false; // rest/water stations never carry a score, even if old data set both flags
     });
     if (!Array.isArray(s.groups)) s.groups = [];
     s.groups.forEach(function (g) { if (!g.id) g.id = uid('grp'); if (typeof g.name !== 'string') g.name = ''; if (typeof g.members !== 'string') g.members = ''; });
@@ -572,6 +589,7 @@
   }
 
   /* ---------- misc helpers ---------- */
+  function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
   function shuffle(arr) {
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
@@ -614,8 +632,10 @@
         '</div>' +
         '<div class="row-line station-meta-row">' +
         '<div class="grow"><input type="text" class="st-equipment" placeholder="Equipment (optional)" value="' + escapeAttr(st.equipment) + '"></div>' +
-        '<label class="checkline station-scored-check"><input type="checkbox" class="st-scored"' + (st.scored ? ' checked' : '') + '> Scored station</label>' +
-        '<div style="flex:0 0 9rem;"><input type="text" class="st-unit" placeholder="unit e.g. reps" value="' + escapeAttr(st.scoreUnit) + '"' + (st.scored ? '' : ' disabled') + '></div>' +
+        '<label class="checkline station-rest-check"><input type="checkbox" class="st-rest"' + (st.isRest ? ' checked' : '') + '> Rest / water station</label>' +
+        (st.isRest ? '' :
+          '<label class="checkline station-scored-check"><input type="checkbox" class="st-scored"' + (st.scored ? ' checked' : '') + '> Scored station</label>' +
+          '<div style="flex:0 0 9rem;"><input type="text" class="st-unit" placeholder="unit e.g. reps" value="' + escapeAttr(st.scoreUnit) + '"' + (st.scored ? '' : ' disabled') + '></div>') +
         '</div>' +
         '</div>';
     }).join('');
@@ -645,6 +665,12 @@
       if (unitInput) unitInput.disabled = !st.scored;
       save();
       renderStage();
+    } else if (e.target.classList.contains('st-rest')) {
+      st.isRest = e.target.checked;
+      if (st.isRest) st.scored = false; // rest stations never get a scored toggle
+      renderStationsEditor();
+      save();
+      renderStage();
     }
   });
   els.stationsList.addEventListener('click', function (e) {
@@ -658,7 +684,7 @@
     renderStage();
   });
   els.addStationBtn.addEventListener('click', function () {
-    state.stations.push({ id: uid('st'), name: 'Station ' + (state.stations.length + 1), activity: '', equipment: '', scored: false, scoreUnit: '' });
+    state.stations.push({ id: uid('st'), name: 'Station ' + (state.stations.length + 1), activity: '', equipment: '', scored: false, scoreUnit: '', isRest: false });
     renderStationsEditor();
     save();
     renderStage();
@@ -678,7 +704,7 @@
     if (!t) { showMsg('Choose a template first.'); return; }
     if (state.stations.length && !confirm('Replace the current ' + state.stations.length + ' station(s) with the "' + t.name + '" template (' + t.stations.length + ' stations)?')) return;
     state.stations = t.stations.map(function (st) {
-      return { id: uid('st'), name: st.name, activity: st.activity || '', equipment: st.equipment || '', scored: !!st.scored, scoreUnit: st.scoreUnit || '' };
+      return { id: uid('st'), name: st.name, activity: st.activity || '', equipment: st.equipment || '', scored: !st.isRest && !!st.scored, scoreUnit: st.scoreUnit || '', isRest: !!st.isRest };
     });
     clearMsg();
     renderStationsEditor();
@@ -862,7 +888,8 @@
         var nextLine = state.stations.length > 1
           ? '<div class="next-line">Next: <strong>' + (upNext.length ? upNext.map(function (g) { return escapeHtml(g.name || 'Group'); }).join(', ') : '&mdash;') + '</strong></div>'
           : '';
-        return '<div class="station-tile"><h3>' + escapeHtml(st.name || ('Station ' + (i + 1))) + '</h3>' +
+        var restBadge = st.isRest ? '<span class="rest-badge">Rest / Water</span>' : '';
+        return '<div class="station-tile' + (st.isRest ? ' is-rest' : '') + '">' + restBadge + '<h3>' + escapeHtml(st.name || ('Station ' + (i + 1))) + '</h3>' +
           '<div class="activity">' + (st.activity ? escapeHtml(st.activity) : '&nbsp;') + '</div>' + chips + nextLine + '</div>';
       }).join('');
     }
@@ -874,7 +901,7 @@
 
   /* ---------- fitness / skill score capture ---------- */
   function renderScoresCard() {
-    var scored = state.stations.filter(function (st) { return st.scored; });
+    var scored = state.stations.filter(function (st) { return st.scored && !st.isRest; });
     if (!scored.length) {
       els.scoresCard.style.display = 'none';
       return;
@@ -1022,6 +1049,7 @@
   els.rotateNowBtn.addEventListener('click', doRotateNow);
   els.resetRotationBtn.addEventListener('click', function () {
     if (!confirm('Reset the rotation back to the starting positions?')) return;
+    captureUndoSnapshot();
     doReset();
   });
 
@@ -1383,10 +1411,11 @@
       var activity = st.activity ? '<p class="card-activity">' + escapeHtml(st.activity) + '</p>' : '';
       var equipment = st.equipment ? '<p class="card-equipment">Equipment: ' + escapeHtml(st.equipment) + '</p>' : '';
       var scoredTag = st.scored ? '<p class="card-scored-tag">Scored station' + (st.scoreUnit ? ' &mdash; record ' + escapeHtml(st.scoreUnit) : '') + '</p>' : '';
-      return '<div class="card-page">' +
+      var restTag = st.isRest ? '<p class="card-rest-tag">Rest / Water &mdash; not scored</p>' : '';
+      return '<div class="card-page' + (st.isRest ? ' card-page-rest' : '') + '">' +
         '<div class="card-number">Station ' + (i + 1) + '</div>' +
         '<h2 class="card-station-name">' + name + '</h2>' +
-        activity + equipment + scoredTag +
+        activity + equipment + scoredTag + restTag +
         '</div>';
     }).join('');
   }
@@ -1400,7 +1429,7 @@
 
   /* ---------- print: fitness / skill class score record ---------- */
   function buildPrintScores() {
-    var scored = state.stations.filter(function (st) { return st.scored; });
+    var scored = state.stations.filter(function (st) { return st.scored && !st.isRest; });
     if (!scored.length) return '<p>No scored stations set up.</p>';
     var students = [];
     state.groups.forEach(function (g) {
@@ -1428,6 +1457,27 @@
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printScoresArea.classList.add('active');
     window.print();
+  });
+
+  /* ---------- undo (Reset / New unit) ---------- */
+  function captureUndoSnapshot() {
+    if (!state) return;
+    undoSnapshot = deepClone(state);
+    if (els.undoBtn) els.undoBtn.disabled = false;
+  }
+  function clearUndoSnapshot() {
+    undoSnapshot = null;
+    if (els.undoBtn) els.undoBtn.disabled = true;
+  }
+
+  els.undoBtn.addEventListener('click', function () {
+    if (!undoSnapshot) return;
+    state = normalizeState(undoSnapshot);
+    undoSnapshot = null;
+    els.undoBtn.disabled = true;
+    applyStateToForm();
+    refreshSwitcher();
+    save();
   });
 
   /* ---------- project lifecycle ---------- */
@@ -1493,17 +1543,19 @@
     }
   });
 
-  els.projectSwitch.addEventListener('change', function () { loadProjectByName(els.projectSwitch.value); });
+  els.projectSwitch.addEventListener('change', function () { clearUndoSnapshot(); loadProjectByName(els.projectSwitch.value); });
 
   els.newProjectBtn.addEventListener('click', function () {
     var name = prompt('Name for the new PE unit:', 'New Unit');
     if (!name) return;
+    captureUndoSnapshot();
     newProject(name.trim());
   });
 
   els.deleteProjectBtn.addEventListener('click', function () {
     if (!state) return;
     if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    clearUndoSnapshot();
     var store = loadStore();
     delete store.projects[state.name];
     var remaining = Object.keys(store.projects);

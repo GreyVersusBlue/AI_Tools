@@ -46,6 +46,51 @@ rather than take on that larger restructuring. Reading-support variant,
 image cropping/zoom, a source library, and projected analysis mode are also
 all still open.
 
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Two more Quick Wins shipped, both additive and fully wired:
+
+- **Done — Reading-support version.** A new "Reading support (optional)" card
+  adds an off-by-default checkbox that reveals two teacher-typed fields: a
+  short **summary** (prints as a highlighted callout near the top of the
+  worksheet, before the source box) and a **simplified paraphrase** of the
+  source text (prints in its own box directly under the original source
+  text). When the checkbox is off, the worksheet prints exactly as it did
+  before this round — nothing renders even if the fields have saved text.
+  The existing line-numbering checkbox is reused as-is (a hint next to the
+  new toggle points teachers to it) rather than duplicated, since it already
+  does the "text references" job this Quick Win asked for.
+- **Done — Downscale and warn on image size (P12).** Uploaded source images
+  are now run through a canvas resize (capped at 1600px on the long edge,
+  re-encoded as JPEG at quality 0.82, matching the pattern already used by
+  `Tools/timeline-builder/tlb-photo.js` and `Tools/seating-chart/scg-photo.js`)
+  before being stored as the worksheet's `imageDataUrl`, instead of storing
+  the raw uploaded file. A visible warning banner appears under the image
+  preview if the resulting stored payload is still large (over ~1.5MB, a
+  sizeable share of localStorage's ~5MB cap once the rest of the worksheet's
+  data is counted) rather than failing silently later. This is the scoped
+  "downscale + warn" fix, not the bigger IndexedDB migration P12 ultimately
+  wants — that's still open.
+
+**Testing:** `node --check` on both extracted inline `<script>` blocks.
+Headless Chromium (`/opt/pw-browsers/chromium`) smoke test via `file://`
+covering: reading-support fields hidden by default and only rendering when
+the toggle is on; summary and paraphrase boxes appear correctly in both the
+live preview and the actual print output; line numbering renders correctly
+alongside the paraphrase box; toggling reading-support back off removes the
+printed markup again. Separately: a normal-sized (800×600) uploaded PNG is
+re-encoded to JPEG with no size warning; a large (4000×3000) uploaded PNG is
+downscaled to a 1600×1200 JPEG; a high-entropy 1600×1600 PNG (resists JPEG
+compression, to reliably exceed the warning threshold) triggers the visible
+size warning, which then clears when the image is removed. Zero console
+errors throughout. No test scripts were left in the repo.
+
+**What remains open:** the DBQ / multi-source packet idea (still explicitly
+deferred — it's the single biggest lever left and deliberately out of scope
+for a scoped round), a source library, image cropping/zoom with a detail
+callout, projected analysis mode, and corroboration exercises. See Major
+Features below for the current, accurate list.
+
 Ideas below are deliberately ambitious and are **not** scoped to a single
 session. This is a social-studies-teacher's tool written by a social studies
 teacher, and it has the most room to grow of any content tool on the site.
@@ -75,13 +120,13 @@ teacher, and it has the most room to grow of any content tool on the site.
   exercise and it's currently absent.
 - **Done —** **Vocabulary / glossary box** for a hard text, since primary sources are
   usually above grade reading level.
-- **Reading-support version**: the same source with a summary sidebar, a
-  simplified paraphrase field, or line numbers for text references.
+- **Done — Pass 2, Round 2.** **Reading-support version**: the same source with a summary
+  sidebar, a simplified paraphrase field, or line numbers for text references.
 - **Done —** **Line numbering** on pasted text — the single most useful formatting
   feature for discussing a document with a class.
 - **Image cropping and zoom** for the uploaded source, plus a
   "detail callout" that prints an enlarged region next to the whole image.
-- **Downscale and warn on image size** (P12).
+- **Done — Pass 2, Round 2.** **Downscale and warn on image size** (P12).
 
 ## Major Features
 

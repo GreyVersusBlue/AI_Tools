@@ -31,9 +31,11 @@ are **not** scoped to a single session; items confirmed shipped are tagged
 
 ## Quick Wins
 
-- **Attribute strategies to students.** "Maya's way" is how number talks
+- **Done — Pass 2, Round 2.** **Attribute strategies to students.** "Maya's way" is how number talks
   actually work, and a name field on a strategy card (optionally pulled from
   `np_rosters`, P2) would make the board match the classroom practice.
+  *(Shipped as a `<datalist>`-backed autocomplete on the existing name field —
+  see the Pass 2 — Round 2 update below.)*
 - **Done — Round 4.** **Bigger projector rendering and fullscreen** (P1). This is a projector tool
   without a projector mode. *(Shipped as `#stageArea`-scoped
   `requestFullscreen()` with a near-black background and blown-up type; see
@@ -46,7 +48,9 @@ are **not** scoped to a single session; items confirmed shipped are tagged
   depends on silent think time.
 - **Save a whole session as a printable record** — the board, the strategies,
   and who contributed — which the export partly does but not as a handout.
-- **Undo on Clear board** (P11) — it destroys a live discussion.
+- **Done — Pass 2, Round 2.** **Undo on Clear board** (P11) — it destroys a live discussion.
+  *(Shipped as a single-level, unpersisted undo — see the Pass 2 — Round 2
+  update below.)*
 
 ## Major Features
 
@@ -92,7 +96,8 @@ well but doesn't have a math coach.
   tradeoff (only the stage subtree renders while fullscreened).
 - **P7 (cross-tool)** — shares an architecture with two other prompt-bank
   tools and needs the timer.
-- **P2 (shared roster)** — strategy attribution.
+- **P2 (shared roster)** — **addressed 2026-08-11 (Pass 2, Round 2)**: strategy
+  attribution via `np_rosters`-backed autocomplete; see below.
 - **P15 (first run)** — the shipped content library is the product here.
 
 ## Open Questions
@@ -200,3 +205,77 @@ worth converging into a shared `_shared/` display-stage or print-handout
 helper in a dedicated cross-tool round — but doing it well means diffing all
 three implementations side by side first, which didn't fit in this
 single-tool round.
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Shipped both remaining Quick Wins flagged as next-round work at the end of
+Round 4: strategy attribution (P2) and undo on Clear board (P11). No other
+behavior touched.
+
+**1. Attribute strategies to students.** The strategy card already had a
+free-text name field (`.s-name`); this pass wired it to the shared roster
+instead of adding a new one. A `<datalist id="strategyNameOptions">` is
+populated from `np_rosters` (read-only — same key and shape,
+`{ rosterName: [names...] }`, that `023-exit-ticket-generator.html`,
+`025-writing-prompt-generator.html`, and `003-rubric-builder.html` already
+read) via `list="strategyNameOptions"` on the name input. `rosterNameOptions()`
+merges and dedupes names across every saved roster (a teacher may have more
+than one, e.g. different periods) rather than adding a "which roster" picker
+— the earlier interrupted attempt at this same task had added a roster-select
+dropdown that was reverted along with the rest of its partial work, and a
+plain merged datalist covers the "start typing a name" use case with less
+surface area. The datalist repopulates on boot and whenever a new card is
+added, so a roster saved in Class Roster Hub / Name Picker moments earlier
+still shows up without a reload. Typing a name not in any roster (or typing
+nothing) still works exactly as before — `<datalist>` only suggests, never
+constrains. No roster loaded means an empty, harmless datalist. The name
+already flowed into `buildSessionExportText()`'s "STRATEGY BOARD" section
+(`Name: text`, falling back to "Student N" when blank) before this pass, so
+the session-record requirement was already satisfied by the existing data
+model — confirmed still correct by the Playwright pass below rather than
+changed.
+
+**2. Undo on Clear board.** A single-level, module-level `boardUndoSnapshot`
+(not persisted, not part of `state`/localStorage — the same pattern as
+`022-lab-group-role-randomizer.html`'s `undoSnapshot`) is captured
+(deep-cloned) right before `clearBoard()` empties the `strategies` array. A
+new "Undo clear" button next to "Clear board" is disabled by default, enables
+the instant a clear happens, and disables itself again either when clicked
+(restoring the exact prior cards and IDs) or when a new strategy card is
+added post-clear (`addStrategyCard()` discards the snapshot) — matching the
+spec exactly. Clicking Clear on an already-empty board is a no-op and does
+not touch the snapshot, so an accidental double-clear can't stomp a still-
+useful undo.
+
+**Compatibility notes**: both features are additive — no existing function
+signature, storage key, or render path changed shape. `renderStrategies()`
+still emits the same card markup plus one new `list` attribute; `clearBoard()`
+still empties `strategies` and re-renders, just with a snapshot taken first.
+Nothing here touched `dot-images.js`.
+
+**Testing performed**: `node --check` on both extracted inline `<script>`
+blocks (clean). Headless Chromium (Playwright, `/opt/pw-browsers/chromium`)
+against the `file://` page: seeded a two-roster `np_rosters` entry in
+localStorage and reloaded → confirmed the datalist contains the merged,
+deduped roster names → added a strategy card, filled in a roster-sourced name
+and reasoning, confirmed the `list` attribute and value stuck → drew a number
+talk, printed its handout (`window.print` stubbed) and confirmed
+`#printArea` rendered → exported the session and read the downloaded `.txt`,
+confirming the attributed line appeared as `Maya Chen: Broke 36 into 30 + 6,
+doubled each, added.` → added a second named card → confirmed Undo starts
+disabled → Clear board → confirmed the board emptied and Undo enabled →
+clicked Undo → confirmed both cards (name + text, in original order) came
+back byte-for-byte → confirmed Undo disabled itself after use → cleared
+again and added a new card → confirmed Undo stayed disabled (invalidated by
+the new card, per spec) instead of offering to restore stale content. Zero
+console errors across the whole pass. No test scripts left behind.
+
+**Where the next round should pick up**: everything else noted at the end of
+Round 4 is still open — the "generate a string from a strategy" idea; a
+"teacher HUD" inside fullscreen for single-screen projector setups; a real
+printable *session* record (board + strategies + attribution as a handout,
+not just the `.txt` export — now a slightly better handout candidate since
+names are roster-backed); including dot images in the session `.txt` export;
+roster/name attribution for *who answered* a quick image (distinct from
+strategy-card attribution, still untouched); and the cross-tool convergence
+with `023`/`025` noted above.

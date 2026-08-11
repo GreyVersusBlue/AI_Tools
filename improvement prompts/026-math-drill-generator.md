@@ -52,6 +52,51 @@ word problems, "find the mistake" mode, and the self-checking formats
 (riddle/colour-by-answer/maze) are all still open. The Open Questions below
 are unresolved by this round.
 
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Both remaining open Quick Wins shipped, fully wired end-to-end (no orphaned
+functions or CSS):
+
+- **Answer key on same sheet, in a corner.** A "same-sheet-key" checkbox adds
+  a compact bordered `.same-sheet-key` box to the worksheet itself, right
+  after the sheet meta/fluency header and before the problems grid. It's
+  computed per page (not per sheet), so it works correctly with
+  problems-per-page pagination — each page's box only lists the answers for
+  the problems actually on that page, numbered to match. It's independent of
+  vertical vs. horizontal format since it's driven off `p.answer`, not the
+  problem layout. A second control ("Also keep the separate answer key
+  page" / "Replace it — corner box only") lets the teacher choose whether
+  `buildPrintArea()` still emits the separate teacher-facing answer-key page
+  alongside it, satisfying "instead of, or in addition to."
+- **Same problems, reordered per version (anti-copying).** `mdg-generate.js`
+  gained `shuffleWithRng()` (seeded Fisher-Yates) and `reorderVersions(
+  problems, count, seed)`, which takes one already-generated problem list and
+  returns `count` copies of it reordered — a transform, not a new generation
+  mode. Wired via a "Same problems, reordered per version" checkbox: when
+  checked with more than one version, `generate()` produces the base list
+  once and calls `reorderVersions()` instead of generating `versions`
+  independent random sheets. Version A keeps the original order; later
+  versions are independently reshuffled from the seed. Each version's answer
+  key numbering is derived from that version's own (reordered) problem
+  array, so it always matches.
+
+**Testing performed:** `node --check` on all three support modules and the
+extracted inline `<script>` block (all pass). Headless Chromium smoke test
+(`/opt/pw-browsers/chromium`) via `file://`, covering: same-sheet key +
+vertical format + 8-per-page pagination across a 3-page worksheet (box
+present on every page, numbering matches, corner-key answers byte-match the
+separate answer key); "replace" mode confirmed to drop the separate
+answer-key page from the built print area; reordered-versions mode with 3
+versions confirmed to share the exact same (problem → answer) pairing set
+while differing in order, with per-version answer keys matching each
+version's own order. Zero console errors throughout.
+
+**Where a future round should pick up:** everything under Major Features
+below remains untouched — targeted practice from missed facts, fluency
+history/tracking, word problems, "find the mistake" mode, and the
+self-checking formats (riddle/colour-by-answer/maze) are all still open, as
+are both Open Questions below. All Quick Wins are now Done.
+
 Ideas below are deliberately ambitious and are **not** scoped to a single
 session.
 
@@ -82,14 +127,23 @@ session.
 - **Done —** **Avoid trivial and repeated problems.** Filter out `n × 1` and `n × 0` if
   wanted, and don't emit the same problem twice on one sheet. *(Per-sheet
   dedup already existed; added an "Avoid trivial facts" checkbox.)*
-- **Answer key on the same sheet, in a corner**, as an option — for
-  self-checking stations.
+- **Done — Pass 2, Round 2 —** **Answer key on the same sheet, in a corner**, as an
+  option — for self-checking stations. *("Answer key on same sheet" checkbox
+  prints a compact bordered box, per-page, matching that page's problems and
+  numbering; a "Replace it / Also keep the separate page" select controls
+  whether the teacher-facing answer-key page still prints alongside it.)*
 - **Done —** **Seeded generation.** Save a seed so an identical sheet can be reprinted
   next year or for a make-up test, which "a fresh sheet every time" currently
   prevents. *(Mulberry32 seeded RNG; "Lock seed" checkbox + visible seed
   field, carried through settings export/import.)*
-- **Multiple versions with the same problems in a different order** — the
-  anti-copying pattern for a quiz, distinct from the existing version tabs.
+- **Done — Pass 2, Round 2 —** **Multiple versions with the same problems in a
+  different order** — the anti-copying pattern for a quiz, distinct from the
+  existing version tabs. *("Same problems, reordered per version" checkbox;
+  `mdg-generate.js` gained `reorderVersions()`/`shuffleWithRng()`, a
+  seeded-shuffle transform over one already-generated problem list rather
+  than a new generation mode. Version A keeps the original order; later
+  versions are independently reshuffled but the whole problem/answer set —
+  and per-version answer key numbering — stays identical across versions.)*
 
 ## Major Features
 

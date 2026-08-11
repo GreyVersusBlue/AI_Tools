@@ -71,7 +71,7 @@ wager round from this round's Quick Win is also still open — see above.
 
 ## Quick Wins
 
-- **Team names and a bigger scoreboard.** The scoreboard is the thing thirty
+- **Done — Pass 2, Round 2.** **Team names and a bigger scoreboard.** The scoreboard is the thing thirty
   students stare at; it should be large, persistent, and animated when it
   changes.
 - **Done —** **Undo the last score change** (P11) — a mis-tap in front of a competitive
@@ -86,7 +86,7 @@ wager round from this round's Quick Win is also still open — see above.
   pronunciation — a text-only clue limits the tool to recall questions.
 - **Done —** **Keyboard control** (P10) — number keys to award, space to reveal, Esc to
   close. Running a game by mouse from a laptop is slow.
-- **Load a roster to build teams** (P2) rather than typing team names.
+- **Done — Pass 2, Round 2.** **Load a roster to build teams** (P2) rather than typing team names.
 - **Projector styling** (P1). This is a projector-first tool with neither
   fullscreen nor the shared theme.
 
@@ -158,3 +158,50 @@ work, and don't promote one without Devon saying so.
 - ~~Is buzzer mode worth building?~~ **Answered: out of scope** — it requires
   student devices. The open question that replaces it: is a teacher-tapped
   buzz-order row enough to settle "who was first" disputes in practice?
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Two still-open Quick Wins from the list above shipped this round.
+
+- **Team names and a bigger scoreboard.** The scoreboard bar is now
+  `position: sticky; top: 0`, so it stays visible at the top of the viewport
+  while scrolling a tall board instead of scrolling away with it. Team name
+  and score type are both noticeably larger (the score uses a `clamp()` so it
+  scales further on a wider display), and every score change — the
+  scoreboard's own +/− buttons, a normal clue award, a Daily Double
+  Correct/Incorrect, and an undo — briefly flashes that team's chip green
+  (increase) or red (decrease) via a CSS keyframe animation, so a change
+  reads from across a room even when the number itself is small.
+- **Load a roster to build teams (P2).** The board-setup screen now has a
+  "Build teams from a saved roster" control (a dropdown of `np_rosters`
+  entries, read-only, same pattern as the exit-ticket and writing-prompt
+  tools' roster pickers, plus a team-count field and a "Split into teams"
+  button). It does a simple count-based contiguous split — no
+  fairness/recency logic, that's a different tool's job — capping the team
+  count at the roster size so a small class can't produce empty teams. Each
+  resulting team's name lists its actual students (e.g. "Team 2: Dave, Eve,
+  Frank") and is fully editable afterward on the scoreboard exactly like a
+  typed-in team name. Works from both the manual "Type it in" tab and the
+  Excel import tab, since teams are independent of where the questions come
+  from.
+
+**Testing performed:** `node --check` on `rgb-store.js` and the extracted
+inline `<script>` block — both clean. A headless Chromium smoke test
+(`/opt/pw-browsers/chromium`) seeded a fake `np_rosters` entry (8 names),
+split it into 3 teams before saving a manual 2-category board, and confirmed
+all 3 teams were created with all 8 names distributed across them and none
+duplicated or dropped. It then confirmed the scoreboard's computed
+`position` is `sticky` and its score font-size is scaled up from the
+pre-round baseline, opened a clue, awarded it, and confirmed the awarded
+team's chip briefly carried a `flash-up` class (removed again after the
+900ms animation) while its score updated correctly. Zero console/page
+errors throughout.
+
+**What remains open:** the moonshot — **one question bank, played six
+ways** — is still explicitly deferred as too big for one round. Also still
+open: images/audio in a clue, difficulty-aware/pass-along-on-wrong scoring,
+a real separate question bank, every-team-answers mode, teacher-side buzz
+order, and the final-question wager round noted as open back in Round 5
+(the Daily Double wager itself is done; the separate final-round wager
+phase — single question, every team wagers simultaneously — was not built).
+Projector styling (P1, fullscreen + shared theme) is also still untouched.

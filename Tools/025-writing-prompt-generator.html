@@ -61,11 +61,41 @@
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 3rem 2rem; text-align: center; margin-bottom: 1.2rem; min-height: 14rem;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem;
   }
+  .stage-prompt { display: flex; align-items: center; justify-content: center; }
   .stage .prompt-text { font-size: clamp(1.4rem, 4vw, 2.1rem); font-weight: 600; max-width: 44rem; }
   .stage .empty { color: var(--muted); font-size: 1.1rem; }
   .stage:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
+
+  /* ── Word-count goal (static target, displayed with the prompt) ───────── */
+  .word-goal { font-size: clamp(1rem, 2.4vw, 1.6rem); font-weight: 700; color: var(--accent-2); margin: 0; }
+  .word-goal:empty { display: none; }
+  .goal-row { display: flex; align-items: center; justify-content: center; gap: .6rem; flex-wrap: wrap; margin: -.6rem 0 1.4rem; font-size: .85rem; color: var(--muted); }
+  .goal-row input[type="number"] { width: 5.5rem; font-family: inherit; font-size: .85rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink); }
+  .goal-row .toggle-btn { font-size: .8rem; padding: .4rem .8rem; }
+
+  /* ── Writing timer (lives inside .stage so it fullscreens with the prompt) ── */
+  .stage-timer { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+  .timer-display {
+    font-family: Consolas, monospace; font-size: clamp(1.7rem, 5vw, 3.2rem); font-weight: 800;
+    color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .timer-display.timer-done { color: #a3372b; animation: timer-flash 1s steps(2, start) infinite; }
+  @keyframes timer-flash { 50% { opacity: .25; } }
+  .timer-presets { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: center; }
+  .timer-presets button { font-size: .8rem; font-weight: 700; padding: .4rem .8rem; background: #fff; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 7px; }
+  .timer-presets button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .timer-presets button:hover { color: var(--accent-2); border-color: var(--accent-2); }
+  .timer-presets input[type="number"] {
+    width: 4.6rem; font-family: inherit; font-size: .85rem; padding: .4rem .5rem;
+    border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink);
+  }
+  .timer-controls { display: flex; gap: .5rem; }
+  .timer-controls button { font-size: .85rem; padding: .5rem 1.1rem; }
+  .timer-controls button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+  .timer-controls button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .timer-controls button:disabled { opacity: .45; cursor: not-allowed; }
 
   .meta-row { display: flex; justify-content: center; gap: .5rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
   .meta-row .tag {
@@ -279,6 +309,7 @@
     .poster-meta span { margin: 0 .35in; }
     .poster-rubric { font-size: 13pt; color: #333; margin-top: .35in; }
     .poster-rubric b { font-weight: 800; }
+    .poster-goal { font-size: 14pt; font-weight: 800; color: #1f3550; margin-top: .3in; }
 
     @page { size: letter portrait; margin: 0.5in; }
   }
@@ -322,7 +353,24 @@
   </div>
 
   <div class="stage" id="stage" data-a11y-read>
-    <p class="empty">Press Generate to get a prompt.</p>
+    <div class="stage-prompt" id="stagePrompt"><p class="empty">Press Generate to get a prompt.</p></div>
+    <p class="word-goal" id="wordGoalDisplay"></p>
+    <div class="stage-timer" id="stageTimer">
+      <div class="timer-display" id="timerDisplay">5:00</div>
+      <div class="timer-presets" id="timerPresetsRow">
+        <button type="button" class="timer-preset" data-min="3">3 min</button>
+        <button type="button" class="timer-preset" data-min="5">5 min</button>
+        <button type="button" class="timer-preset" data-min="10">10 min</button>
+        <button type="button" class="timer-preset" data-min="15">15 min</button>
+        <input type="number" id="timerCustomInput" min="1" max="180" placeholder="Custom min">
+        <button type="button" class="secondary" id="timerCustomSetBtn">Set</button>
+      </div>
+      <div class="timer-controls">
+        <button type="button" id="timerStartBtn">&#9654; Start</button>
+        <button type="button" class="secondary" id="timerPauseBtn" hidden>&#10074;&#10074; Pause</button>
+        <button type="button" class="secondary" id="timerResetBtn">&#8635; Reset</button>
+      </div>
+    </div>
   </div>
 
   <div class="meta-row" id="metaRow"></div>
@@ -334,6 +382,13 @@
     <button type="button" class="toggle-btn" id="openRubricBtn" disabled>Open in Rubric Builder</button>
     <a href="003-rubric-builder.html" target="_blank" rel="noopener" class="rubric-build-link">+ Build a new rubric</a>
     <span class="rubric-summary" id="rubricSummary"></span>
+  </div>
+
+  <div class="goal-row" id="goalRow">
+    <label for="wordGoalInput">Word-count goal</label>
+    <input type="number" id="wordGoalInput" min="0" step="25" placeholder="e.g. 150">
+    <span>words &mdash; optional, shown with the prompt and on the poster</span>
+    <button type="button" class="toggle-btn" id="clearWordGoalBtn">Clear</button>
   </div>
 
   <div class="generate-row" id="generateRow">
@@ -472,8 +527,10 @@
   'use strict';
 
   var els = {};
-  ['bandTabs','genreSelect','stage','metaRow','generateBtn','generateRow','historyList','fullscreenBtn',
+  ['bandTabs','genreSelect','stage','stagePrompt','metaRow','generateBtn','generateRow','historyList','fullscreenBtn',
    'printPosterBtn','posterPrintArea',
+   'wordGoalDisplay','wordGoalInput','clearWordGoalBtn',
+   'timerDisplay','timerPresetsRow','timerCustomInput','timerCustomSetBtn','timerStartBtn','timerPauseBtn','timerResetBtn',
    'includeCustomToggle','togglePromptsBtn','myPromptsPanel','customPromptText','customPromptBand',
    'customPromptGenre','addCustomPromptBtn','customPromptsList',
    'rosterLoadSelect','rosterNamesInput','rosterCount','buildRosterSheetBtn','printRosterSheetBtn',
@@ -489,7 +546,7 @@
     els[id] = document.getElementById(id);
   });
 
-  var settings = { bands: ['ms', 'hs'], genre: 'all', includeCustom: true, mode: 'draw', anonView: 'one' };
+  var settings = { bands: ['ms', 'hs'], genre: 'all', includeCustom: true, mode: 'draw', anonView: 'one', timerMinutes: 5, wordGoal: null };
   var history = []; // {band, genre, text, date} — persisted across sessions, newest first
   var customPrompts = []; // {id, text, band: 'ms'|'hs'|'both', genre} — teacher-added, persisted across sessions
   var HISTORY_LIMIT = 200; // keep a school-year's worth of entries without growing unbounded
@@ -504,6 +561,14 @@
 
   var anonResponses = ['']; // plain strings, no names — intentionally NOT persisted, so nothing a student wrote lingers in localStorage between class periods
   var anonIndex = 0; // position within the filtered (non-blank) list while projecting in "one at a time" mode
+
+  var TIMER_PRESETS = [3, 5, 10, 15]; // minutes
+  var timerTotalMs = 0; // the configured duration; restored on reset
+  var timerRemainingMs = 0;
+  var timerRunning = false;
+  var timerDone = false; // true from 0:00 until Reset or a new duration is picked
+  var timerEndAt = null; // Date.now()-based epoch, not a decrementing counter, so background-tab throttling can't drift the display
+  var timerIntervalId = null;
 
   function todayStr() {
     var d = new Date();
@@ -527,6 +592,12 @@
     if (saved && typeof saved.includeCustom === 'boolean') settings.includeCustom = saved.includeCustom;
     if (saved && (saved.mode === 'draw' || saved.mode === 'sequence')) settings.mode = saved.mode;
     if (saved && (saved.anonView === 'one' || saved.anonView === 'grid')) settings.anonView = saved.anonView;
+    if (saved && typeof saved.timerMinutes === 'number' && saved.timerMinutes >= 1 && saved.timerMinutes <= 180) {
+      settings.timerMinutes = Math.round(saved.timerMinutes);
+    }
+    if (saved && (saved.wordGoal === null || (typeof saved.wordGoal === 'number' && saved.wordGoal > 0 && saved.wordGoal <= 100000))) {
+      settings.wordGoal = saved.wordGoal;
+    }
 
     var savedHistory = WritingPromptStore.loadHistory();
     history = savedHistory.filter(function (h) {
@@ -668,7 +739,7 @@
   function generate() {
     var items = pool();
     if (!items.length) {
-      els.stage.innerHTML = '<p class="empty">Pick at least one grade band.</p>';
+      els.stagePrompt.innerHTML = '<p class="empty">Pick at least one grade band.</p>';
       return;
     }
     var avoid = recentTexts();
@@ -688,7 +759,7 @@
 
   function renderDrawStage(pick) {
     currentPrompt = pick;
-    els.stage.innerHTML = '<p class="prompt-text">' + escapeHtml(pick.text) + '</p>';
+    els.stagePrompt.innerHTML = '<p class="prompt-text">' + escapeHtml(pick.text) + '</p>';
     els.metaRow.innerHTML =
       '<span class="tag">' + (pick.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
       '<span class="tag">' + escapeHtml(genreLabel(pick.genre)) + '</span>';
@@ -713,10 +784,15 @@
     if (currentPrompt.rubricName) {
       rubricHtml = '<p class="poster-rubric"><b>Rubric:</b> ' + escapeHtml(currentPrompt.rubricName) + '</p>';
     }
+    var goalHtml = '';
+    if (settings.wordGoal) {
+      goalHtml = '<p class="poster-goal">Aim for ' + settings.wordGoal + '+ words</p>';
+    }
     els.posterPrintArea.innerHTML =
       '<div class="poster-inner">' +
         '<p class="poster-text">' + escapeHtml(currentPrompt.text) + '</p>' +
         '<p class="poster-meta">' + metaSpans + '</p>' +
+        goalHtml +
         rubricHtml +
       '</div>';
   }
@@ -791,7 +867,7 @@
         renderDrawStage(drawPrompt);
       } else {
         currentPrompt = null;
-        els.stage.innerHTML = '<p class="empty">Press Generate to get a prompt.</p>';
+        els.stagePrompt.innerHTML = '<p class="empty">Press Generate to get a prompt.</p>';
         els.metaRow.innerHTML = '';
         els.printPosterBtn.disabled = true;
         renderRubricRow();
@@ -1013,7 +1089,7 @@
     var set = currentSet();
     if (!set || !set.items.length) {
       currentPrompt = null;
-      els.stage.innerHTML = '<p class="empty">' + (promptSets.length ? 'Pick a prompt set above, or add prompts to it below.' : 'Create a prompt set below, then come back here.') + '</p>';
+      els.stagePrompt.innerHTML = '<p class="empty">' + (promptSets.length ? 'Pick a prompt set above, or add prompts to it below.' : 'Create a prompt set below, then come back here.') + '</p>';
       els.metaRow.innerHTML = '';
       els.seqDayLabel.textContent = '';
       els.seqPrevBtn.disabled = true;
@@ -1030,7 +1106,7 @@
       band: item.band, genre: item.genre, text: item.text, date: todayStr(),
       rubricName: item.rubricName || null, setName: set.name, setDay: idx + 1, setTotal: set.items.length
     };
-    els.stage.innerHTML = '<p class="prompt-text">' + escapeHtml(item.text) + '</p>';
+    els.stagePrompt.innerHTML = '<p class="prompt-text">' + escapeHtml(item.text) + '</p>';
     els.metaRow.innerHTML =
       '<span class="tag">' + (item.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
       '<span class="tag">' + escapeHtml(genreLabel(item.genre)) + '</span>';
@@ -1288,6 +1364,117 @@
     });
   }
 
+  /* ---------- Word-count goal (static display, not live tracking) ---------- */
+  function renderWordGoalDisplay() {
+    var n = settings.wordGoal;
+    els.wordGoalDisplay.textContent = (n && n > 0) ? ('Aim for ' + n + '+ words') : '';
+  }
+
+  /* ---------- Writing timer ---------- */
+  function formatTimerTime(ms) {
+    var totalSec = Math.max(0, Math.round(ms / 1000));
+    var m = Math.floor(totalSec / 60), s = totalSec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function playTimerChime() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      [0, 0.5].forEach(function (delay) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.frequency.value = 880;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.16, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.4);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.4);
+      });
+    } catch (e) { /* WebAudio unavailable — the flashing "0:00" is still a cue */ }
+  }
+
+  function stopTimerInterval() {
+    if (timerIntervalId) { clearInterval(timerIntervalId); timerIntervalId = null; }
+  }
+
+  function renderTimerDisplay() {
+    els.timerDisplay.textContent = formatTimerTime(timerRemainingMs);
+    els.timerDisplay.classList.toggle('timer-done', timerDone);
+  }
+
+  function renderTimerButtons() {
+    els.timerStartBtn.hidden = timerRunning;
+    els.timerPauseBtn.hidden = !timerRunning;
+    els.timerStartBtn.disabled = timerRemainingMs <= 0;
+    Array.prototype.forEach.call(els.timerPresetsRow.querySelectorAll('.timer-preset'), function (btn) {
+      btn.classList.toggle('active', parseInt(btn.dataset.min, 10) === settings.timerMinutes);
+    });
+  }
+
+  // Sets the configured duration (from a preset or the custom box) without starting it —
+  // matches 004-classroom-timer.html: pick a duration, then press Start separately.
+  function setTimerDuration(minutes) {
+    var m = Math.max(1, Math.min(180, Math.round(minutes) || 5));
+    stopTimerInterval();
+    timerRunning = false;
+    timerDone = false;
+    settings.timerMinutes = m;
+    persist();
+    timerTotalMs = m * 60000;
+    timerRemainingMs = timerTotalMs;
+    els.timerCustomInput.value = '';
+    renderTimerDisplay();
+    renderTimerButtons();
+  }
+
+  function tickTimer() {
+    var remaining = timerEndAt - Date.now();
+    if (remaining <= 0) {
+      timerRemainingMs = 0;
+      stopTimerInterval();
+      timerRunning = false;
+      timerDone = true;
+      renderTimerDisplay();
+      renderTimerButtons();
+      playTimerChime();
+      return;
+    }
+    timerRemainingMs = remaining;
+    renderTimerDisplay();
+  }
+
+  function startTimer() {
+    if (timerRunning || timerRemainingMs <= 0) return;
+    timerDone = false;
+    timerEndAt = Date.now() + timerRemainingMs;
+    timerRunning = true;
+    stopTimerInterval();
+    timerIntervalId = setInterval(tickTimer, 250);
+    renderTimerButtons();
+    renderTimerDisplay();
+  }
+
+  function pauseTimer() {
+    if (!timerRunning) return;
+    timerRemainingMs = Math.max(0, timerEndAt - Date.now());
+    stopTimerInterval();
+    timerRunning = false;
+    renderTimerButtons();
+    renderTimerDisplay();
+  }
+
+  function resetTimer() {
+    stopTimerInterval();
+    timerRunning = false;
+    timerDone = false;
+    timerRemainingMs = timerTotalMs;
+    renderTimerDisplay();
+    renderTimerButtons();
+  }
+
   function updateFullscreenLabel() {
     var active = document.fullscreenElement === els.stage;
     els.fullscreenBtn.innerHTML = active ? '&#10530; Exit Fullscreen' : '&#9970; Fullscreen';
@@ -1358,6 +1545,36 @@
 
   els.fullscreenBtn.addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', updateFullscreenLabel);
+
+  /* ---------- Word-count goal ---------- */
+  els.wordGoalInput.addEventListener('input', function () {
+    var v = parseInt(els.wordGoalInput.value, 10);
+    settings.wordGoal = (v && v > 0) ? v : null;
+    persist();
+    renderWordGoalDisplay();
+  });
+  els.clearWordGoalBtn.addEventListener('click', function () {
+    els.wordGoalInput.value = '';
+    settings.wordGoal = null;
+    persist();
+    renderWordGoalDisplay();
+  });
+
+  /* ---------- Writing timer ---------- */
+  Array.prototype.forEach.call(els.timerPresetsRow.querySelectorAll('.timer-preset'), function (btn) {
+    btn.addEventListener('click', function () { setTimerDuration(parseInt(btn.dataset.min, 10)); });
+  });
+  els.timerCustomSetBtn.addEventListener('click', function () {
+    var v = parseInt(els.timerCustomInput.value, 10);
+    if (!v || v < 1) return;
+    setTimerDuration(v);
+  });
+  els.timerCustomInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); els.timerCustomSetBtn.click(); }
+  });
+  els.timerStartBtn.addEventListener('click', startTimer);
+  els.timerPauseBtn.addEventListener('click', pauseTimer);
+  els.timerResetBtn.addEventListener('click', resetTimer);
 
   document.addEventListener('keydown', function (e) {
     if (els.anonOverlay.classList.contains('active')) {
@@ -1447,6 +1664,12 @@
   Array.prototype.slice.call(els.anonViewTabs.querySelectorAll('.pill')).forEach(function (p) {
     p.classList.toggle('active', p.dataset.view === settings.anonView);
   });
+  els.wordGoalInput.value = settings.wordGoal || '';
+  renderWordGoalDisplay();
+  timerTotalMs = settings.timerMinutes * 60000;
+  timerRemainingMs = timerTotalMs;
+  renderTimerDisplay();
+  renderTimerButtons();
   switchMode(settings.mode);
 })();
 </script>

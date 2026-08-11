@@ -144,6 +144,21 @@
   .mode-btn.active{ background: var(--color-accent); color: var(--color-bg); opacity: 1; }
   .mode-btn:not(.active):hover{ background: var(--color-surface); opacity: 1; }
   .mode-note{ font-size: 12.5px; opacity: 0.55; margin: var(--space-2) 0 0; }
+
+  .history-search-wrap{ margin-bottom: var(--space-2); }
+  .history-pin-btn{
+    background: none; border: none; opacity: 0.35; cursor: pointer;
+    font-size: 13px; padding: 2px 4px; line-height: 1;
+  }
+  .history-pin-btn:hover{ opacity: 1; }
+  .history-pin-btn.active{ opacity: 1; }
+  .history-item.pinned{ background: var(--color-accent-100); }
+  .history-pin-badge{ font-size: 11px; }
+
+  .redact-tool{ max-width: 1180px; margin: var(--space-6) auto 0; }
+  .redact-tool textarea{ min-height: 7em; }
+  .redact-check-row{ display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); font-weight: 400; font-size: 12.5px; }
+  .redact-check-row input[type="checkbox"]{ width: auto; }
 </style>
 </head>
 <body class="mode-simple">
@@ -423,6 +438,9 @@
 
     <div class="card blueprint index-card" style="margin-top: var(--space-4);">
       <div class="card-label"><span>Recent prompts</span></div>
+      <div class="history-search-wrap" id="historySearchWrap">
+        <input class="input" type="text" id="historySearch" placeholder="Search history by prompt or result&hellip;" aria-label="Search prompt history">
+      </div>
       <div id="promptHistoryWrap"></div>
     </div>
 
@@ -432,6 +450,39 @@
     <div class="autosave-note" id="autosaveNote">Draft saved in this browser</div>
   </div>
 </main>
+
+<div class="card blueprint section redact-tool">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <h2><span class="eyebrow">Bonus</span> Redact names before you send</h2>
+  <p class="section-hint">Paste text below and swap out student names for &ldquo;Student A,&rdquo; &ldquo;Student B,&rdquo; and so on before you paste anything into an AI tool. This runs entirely in your browser &mdash; nothing here is saved or sent anywhere.</p>
+  <div class="two-col">
+    <div class="field">
+      <label for="redactInput">Text to check <span class="optional">(optional)</span></label>
+      <textarea class="input" id="redactInput" placeholder="Paste text here that might contain student names"></textarea>
+    </div>
+    <div class="field">
+      <label for="redactNames">Names to redact <span class="optional">(comma or line separated)</span></label>
+      <textarea class="input" id="redactNames" placeholder="e.g. Maria Lopez, Jaden, Priya" style="min-height: 4.2em;"></textarea>
+      <label class="redact-check-row" for="redactAutoDetect">
+        <input type="checkbox" id="redactAutoDetect">
+        Also try auto-detecting capitalized names
+      </label>
+      <p class="section-hint" style="margin: var(--space-1) 0 0;">Best-effort guess only &mdash; it just looks for capitalized words, so it will miss real names and flag things that aren't names. Always check the result before you send anything.</p>
+    </div>
+  </div>
+  <div class="action-row">
+    <button type="button" class="btn btn-primary" id="redactBtn">Redact</button>
+  </div>
+  <div class="field" id="redactResultWrap" style="display:none;">
+    <label for="redactOutput">Redacted result</label>
+    <textarea class="input" id="redactOutput" readonly></textarea>
+    <div class="action-row">
+      <button type="button" class="btn btn-secondary" id="redactCopyBtn">Copy redacted text</button>
+      <span id="redactCopyStatus" class="result-badge" style="opacity:0; transition: opacity 0.2s ease;">Copied!</span>
+    </div>
+    <p class="section-hint" id="redactMapHint" style="margin-top: var(--space-2);"></p>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -912,81 +963,225 @@
   //      keystroke, so the list stays a handful of intentional snapshots) ----
   const PROMPT_HISTORY_KEY = 'promptBuilderHistory_v1';
   const PROMPT_HISTORY_MAX = 5;
+  const historySearchInput = $('historySearch');
+  const historySearchWrap = $('historySearchWrap');
+  let historyFilterQuery = '';
+
+  function genHistoryId(){ return 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // Pinned entries always sort above unpinned ones; within each group,
+  // newest first — this is the order rendered, independent of storage order.
+  function sortHistory(list){
+    return list.slice().sort((a, b) => {
+      const pa = a.pinned ? 1 : 0, pb = b.pinned ? 1 : 0;
+      if (pa !== pb) return pb - pa;
+      return (b.ts || 0) - (a.ts || 0);
+    });
+  }
+  // When trimming to the max, keep pinned entries first so pinning actually
+  // protects an entry from being pushed out by newer, unpinned ones.
+  function trimHistory(list){
+    if (list.length <= PROMPT_HISTORY_MAX) return list;
+    return sortHistory(list).slice(0, PROMPT_HISTORY_MAX);
+  }
 
   function loadPromptHistory(){
-    try { const v = JSON.parse(localStorage.getItem(PROMPT_HISTORY_KEY) || '[]'); return Array.isArray(v) ? v : []; }
-    catch(e){ return []; }
+    try {
+      const v = JSON.parse(localStorage.getItem(PROMPT_HISTORY_KEY) || '[]');
+      if (!Array.isArray(v)) return [];
+      let changed = false;
+      v.forEach(h => { if (!h.id){ h.id = genHistoryId(); changed = true; } });
+      if (changed) savePromptHistory(v);
+      return v;
+    } catch(e){ return []; }
   }
   function savePromptHistory(list){
-    try { localStorage.setItem(PROMPT_HISTORY_KEY, JSON.stringify(list.slice(0, PROMPT_HISTORY_MAX))); } catch(e) {}
+    try { localStorage.setItem(PROMPT_HISTORY_KEY, JSON.stringify(trimHistory(list))); } catch(e) {}
   }
   function addPromptToHistory(text){
     if (!text) return;
     const list = loadPromptHistory();
     const existing = list.find(h => h.text === text);
     const filtered = list.filter(h => h.text !== text);
-    filtered.unshift({ text: text, ts: Date.now(), result: existing ? (existing.result || '') : '' });
+    filtered.unshift({
+      id: existing ? existing.id : genHistoryId(),
+      text: text,
+      ts: Date.now(),
+      result: existing ? (existing.result || '') : '',
+      pinned: existing ? !!existing.pinned : false
+    });
     savePromptHistory(filtered);
     renderPromptHistory();
   }
   function renderPromptHistory(){
-    const list = loadPromptHistory();
-    if (!list.length){
+    const all = loadPromptHistory();
+    historySearchWrap.style.display = all.length ? '' : 'none';
+    const query = historyFilterQuery.trim().toLowerCase();
+    const filtered = query
+      ? all.filter(h => (h.text || '').toLowerCase().includes(query) || (h.result || '').toLowerCase().includes(query))
+      : all;
+    if (!all.length){
       promptHistoryWrap.innerHTML = '<p class="section-hint" style="margin:0;">Prompts you copy, download, or send to an AI tool are kept here for quick recovery — paste back what the AI gave you and it’s saved right alongside.</p>';
       return;
     }
-    promptHistoryWrap.innerHTML = list.map((h, i) => (
-      '<div class="history-item">' +
+    if (!filtered.length){
+      promptHistoryWrap.innerHTML = '<p class="section-hint" style="margin:0;">No history matches “' + esc(historyFilterQuery.trim()) + '”.</p>';
+      return;
+    }
+    const sorted = sortHistory(filtered);
+    promptHistoryWrap.innerHTML = sorted.map(h => (
+      '<div class="history-item' + (h.pinned ? ' pinned' : '') + '">' +
         '<div style="flex:1;min-width:0;">' +
-          '<div class="history-text">' + esc(h.text.slice(0, 140)) + (h.text.length > 140 ? '…' : '') + '</div>' +
-          '<button type="button" class="result-toggle" data-toggle-result-i="' + i + '">' + (h.result ? '✓ Result saved — view/edit' : '+ Add what it gave you') + '</button>' +
-          '<div class="result-wrap" data-result-wrap-i="' + i + '">' +
-            '<textarea data-result-i="' + i + '" placeholder="Paste the AI\'s response here to keep it with this prompt">' + esc(h.result || '') + '</textarea>' +
+          '<div class="history-text">' + (h.pinned ? '<span class="history-pin-badge" aria-hidden="true">📌</span> ' : '') +
+            esc(h.text.slice(0, 140)) + (h.text.length > 140 ? '…' : '') + '</div>' +
+          '<button type="button" class="result-toggle" data-toggle-result-id="' + h.id + '">' + (h.result ? '✓ Result saved — view/edit' : '+ Add what it gave you') + '</button>' +
+          '<div class="result-wrap" data-result-wrap-id="' + h.id + '">' +
+            '<textarea data-result-id="' + h.id + '" placeholder="Paste the AI\'s response here to keep it with this prompt">' + esc(h.result || '') + '</textarea>' +
           '</div>' +
         '</div>' +
         '<div class="history-meta">' +
-          '<button type="button" class="btn btn-secondary" data-copy-hist-i="' + i + '">Copy</button>' +
-          '<button type="button" class="history-remove" data-remove-hist-i="' + i + '" aria-label="Remove this prompt from history">&times;</button>' +
+          '<button type="button" class="history-pin-btn' + (h.pinned ? ' active' : '') + '" data-pin-id="' + h.id + '" aria-pressed="' + (h.pinned ? 'true' : 'false') + '" title="' + (h.pinned ? 'Unpin' : 'Pin to top') + '">📌</button>' +
+          '<button type="button" class="btn btn-secondary" data-copy-hist-id="' + h.id + '">Copy</button>' +
+          '<button type="button" class="history-remove" data-remove-hist-id="' + h.id + '" aria-label="Remove this prompt from history">&times;</button>' +
         '</div>' +
       '</div>'
     )).join('');
   }
+  if (historySearchInput){
+    historySearchInput.addEventListener('input', () => {
+      historyFilterQuery = historySearchInput.value;
+      renderPromptHistory();
+    });
+  }
   promptHistoryWrap.addEventListener('click', (e) => {
-    const copyBtn = e.target.closest('[data-copy-hist-i]');
+    const copyBtn = e.target.closest('[data-copy-hist-id]');
     if (copyBtn){
-      const h = loadPromptHistory()[Number(copyBtn.dataset.copyHistI)];
+      const h = loadPromptHistory().find(x => x.id === copyBtn.dataset.copyHistId);
       if (!h) return;
       const done = () => showTempLabel(copyBtn, 'Copied!');
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(h.text).then(done).catch(() => fallbackCopy(h.text, done));
       else fallbackCopy(h.text, done);
       return;
     }
-    const removeBtn = e.target.closest('[data-remove-hist-i]');
+    const removeBtn = e.target.closest('[data-remove-hist-id]');
     if (removeBtn){
       const list = loadPromptHistory();
-      list.splice(Number(removeBtn.dataset.removeHistI), 1);
+      const idx = list.findIndex(x => x.id === removeBtn.dataset.removeHistId);
+      if (idx > -1) list.splice(idx, 1);
       savePromptHistory(list);
       renderPromptHistory();
       return;
     }
-    const toggleBtn = e.target.closest('[data-toggle-result-i]');
+    const pinBtn = e.target.closest('[data-pin-id]');
+    if (pinBtn){
+      const list = loadPromptHistory();
+      const item = list.find(x => x.id === pinBtn.dataset.pinId);
+      if (item) item.pinned = !item.pinned;
+      savePromptHistory(list);
+      renderPromptHistory();
+      return;
+    }
+    const toggleBtn = e.target.closest('[data-toggle-result-id]');
     if (toggleBtn){
-      const wrap = promptHistoryWrap.querySelector('[data-result-wrap-i="' + toggleBtn.dataset.toggleResultI + '"]');
+      const wrap = promptHistoryWrap.querySelector('[data-result-wrap-id="' + toggleBtn.dataset.toggleResultId + '"]');
       if (wrap) wrap.classList.toggle('open');
     }
   });
   // Debounced-by-nature (plain input, no full rerender) so pasting a long
   // result doesn't fight the cursor — only the toggle button's label updates.
   promptHistoryWrap.addEventListener('input', (e) => {
-    const ta = e.target.closest('[data-result-i]');
+    const ta = e.target.closest('[data-result-id]');
     if (!ta) return;
-    const i = Number(ta.dataset.resultI);
     const list = loadPromptHistory();
-    if (!list[i]) return;
-    list[i].result = ta.value;
+    const item = list.find(x => x.id === ta.dataset.resultId);
+    if (!item) return;
+    item.result = ta.value;
     savePromptHistory(list);
-    const toggleBtn = promptHistoryWrap.querySelector('[data-toggle-result-i="' + i + '"]');
+    const toggleBtn = promptHistoryWrap.querySelector('[data-toggle-result-id="' + ta.dataset.resultId + '"]');
     if (toggleBtn) toggleBtn.textContent = ta.value.trim() ? '✓ Result saved — view/edit' : '+ Add what it gave you';
+  });
+
+  // ---- redaction helper (best-effort only — see UI copy for the caveat) ----
+  const REDACT_COMMON_WORDS = new Set([
+    'I','The','A','An','This','That','These','Those','It','He','She','They','We','You',
+    'My','Our','Your','His','Her','Their','Mr','Mrs','Ms','Dr',
+    'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday',
+    'January','February','March','April','May','June','July','August','September','October','November','December'
+  ]);
+  function escapeRegExp(str){ return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function letterLabel(i){
+    let n = i + 1, s = '';
+    while (n > 0){
+      const rem = (n - 1) % 26;
+      s = String.fromCharCode(65 + rem) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  }
+  // Flags capitalized-looking single or double words. This is a blunt
+  // heuristic, not name detection — it will miss real names and flag
+  // plenty of non-names. The UI says so; this list is just a first pass.
+  function autoDetectNames(text){
+    const matches = text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b/g) || [];
+    const seen = new Set();
+    const result = [];
+    matches.forEach(m => {
+      const firstWord = m.split(' ')[0];
+      if (REDACT_COMMON_WORDS.has(firstWord)) return;
+      const key = m.toLowerCase();
+      if (!seen.has(key)){ seen.add(key); result.push(m); }
+    });
+    return result;
+  }
+  function performRedaction(){
+    const text = $('redactInput').value;
+    const resultWrap = $('redactResultWrap');
+    const redactOutput = $('redactOutput');
+    const hint = $('redactMapHint');
+    resultWrap.style.display = 'block';
+    if (!text.trim()){
+      redactOutput.value = '';
+      hint.textContent = 'Paste some text above first.';
+      return;
+    }
+    const manual = ($('redactNames').value || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+    const auto = $('redactAutoDetect').checked ? autoDetectNames(text) : [];
+    const seen = new Set();
+    const names = [];
+    manual.concat(auto).forEach(n => {
+      const key = n.toLowerCase();
+      if (!seen.has(key)){ seen.add(key); names.push(n); }
+    });
+    if (!names.length){
+      redactOutput.value = text;
+      hint.textContent = 'No names to redact yet — list names above, or check auto-detect.';
+      return;
+    }
+    const labelMap = new Map();
+    names.forEach((n, i) => labelMap.set(n.toLowerCase(), 'Student ' + letterLabel(i)));
+    let redacted = text;
+    // Longest names first so "Maria Lopez" is replaced whole before a
+    // separate standalone "Maria" pass runs on what's left.
+    names.slice().sort((a, b) => b.length - a.length).forEach(n => {
+      const label = labelMap.get(n.toLowerCase());
+      const re = new RegExp('\\b' + escapeRegExp(n) + '\\b', 'gi');
+      redacted = redacted.replace(re, label);
+    });
+    redactOutput.value = redacted;
+    hint.textContent = 'Replaced ' + names.length + ' name' + (names.length === 1 ? '' : 's') + ' with consistent placeholders' +
+      ($('redactAutoDetect').checked ? ' — double-check the result, auto-detect is a best-effort guess and may have missed names or flagged non-names.' : '.');
+  }
+  $('redactBtn').addEventListener('click', performRedaction);
+  $('redactCopyBtn').addEventListener('click', () => {
+    const text = $('redactOutput').value;
+    if (!text) return;
+    const done = () => {
+      const status = $('redactCopyStatus');
+      status.style.opacity = '1';
+      setTimeout(() => { status.style.opacity = '0'; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    else fallbackCopy(text, done);
   });
 
   function copyPromptText(cb){

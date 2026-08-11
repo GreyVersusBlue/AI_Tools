@@ -47,12 +47,15 @@ are tagged **Done** below.
   fewer groups than stations already wraps via `computeAssignment`; a station
   taking two full rotations, or locking a group out of the cycle, is still
   unmodeled.)*
-- **Skipped — deferred, Round 4.** **Rest stations** and a water break as a first-class station type. *(The
-  shipped templates include a "Rest / Water" station as ordinary content, but
-  there's no special handling — e.g. skip-scoring — yet.)*
+- **Done — Pass 2, Round 2.** **Rest stations** and a water break as a first-class station type. *(An
+  `isRest` flag on the station schema, editable per station; rest stations
+  hide the scored checkbox, render with a distinct badge/tile styling on the
+  live stage and on the printed wall cards, and are excluded from the
+  Fitness/skill scores card.)*
 - **Print a wall-sized station card**, one per page, with the activity
   instructions and a diagram space.
-- **Skipped — deferred, Round 4.** **Undo on Reset / New unit** (P11).
+- **Done — Pass 2, Round 2.** **Undo on Reset / New unit** (P11). *(A single-level,
+  module-level undo snapshot with an Undo button in the toolbar.)*
 
 ## Major Features
 
@@ -217,9 +220,113 @@ overselling it.
   seems genuinely warranted — this round intentionally left both alone to
   avoid stepping on that parallel work.
 
-**Where the next round should pick up:** a true phone-to-separate-display
-remote (would need a deliberate decision on backend/relay, since the site's
-"no backend" constraint is precisely what blocks it); rest-station and
-uneven-rotation modeling; undo; and the cross-tool engine unification once
+**Where the next round should pick up (superseded by the Pass 2 — Round 2
+update below):** rest-station and uneven-rotation modeling; undo; a true
+phone-to-separate-display remote (would need a deliberate decision on
+backend/relay, since the site's "no backend" constraint is precisely what
+blocks it); and the cross-tool engine unification once
 `bracket-tournament-generator`'s parallel work has landed and the two can be
 reconciled deliberately rather than by accident.
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Implemented the two remaining Quick Wins flagged as deliberately deferred at
+the end of Round 4: rest/water stations as a first-class station type, and a
+single-level undo on Reset / New unit. Still single-file, no support folder
+added.
+
+**Rest/water stations (`isRest`).** Every station gained an `isRest` boolean
+alongside the existing `equipment`/`scored`/`scoreUnit` fields
+(`normalizeState`). A station's editor row (`renderStationsEditor`) now shows
+a "Rest / water station" checkbox; checking it forces `scored` to `false` and
+removes the scored checkbox and unit input from that row entirely (rather
+than merely disabling them) — un-checking it brings them back on the next
+re-render. The `st-rest` change handler lives next to the existing `st-scored`
+one in the same delegated `stationsList` `change` listener. On the live stage
+(`renderStage`), a rest station's tile gets an `is-rest` class (distinct
+background/border, styled to match the site's `--good` green) plus a "Rest /
+Water" badge chip. Printed wall station cards (`buildPrintCards`) gained a
+matching `card-page-rest` border treatment and a "Rest / Water — not scored"
+tag in place of the scored tag. The Fitness/skill scores card
+(`renderScoresCard`) and the printable class record (`buildPrintScores`) both
+filter on `st.scored && !st.isRest`, so a rest station can never produce a
+score row even if old/malformed data somehow set both flags — `normalizeState`
+also defensively forces `scored = false` whenever `isRest` is true. The two
+shipped "Rest / Water" / "Rest / Record" stations in `STATION_TEMPLATES`
+(Fitness Circuit and Fitness Testing Battery) are now flagged `isRest: true`
+so the shipped content actually exercises the new first-class type instead of
+just adding the plumbing for it; `loadTemplateBtn`'s station-copy logic carries
+`isRest` through from the template.
+
+**Undo on Reset / New unit.** Added a module-level `undoSnapshot` variable
+(mirroring the pattern in `022-lab-group-role-randomizer.html`) — deliberately
+kept out of `state` and never written to localStorage, since undo here is a
+same-session convenience over a unit's live in-memory state, not part of the
+unit's saved data. `captureUndoSnapshot()` deep-clones (`deepClone`, a plain
+`JSON.parse(JSON.stringify(...))`) the *entire* active `state` object and
+enables a new toolbar "Undo" button; `clearUndoSnapshot()` disables it. Both
+the Reset confirm handler (`resetRotationBtn`) and the New Unit handler
+(`newProjectBtn`) call `captureUndoSnapshot()` right after their confirm/prompt
+is accepted and before the destructive call (`doReset()` / `newProject()`)
+runs. Capturing the whole state rather than just the rotation fields keeps one
+mechanism working for both actions, since New Unit replaces everything.
+Clicking Undo restores the snapshot as the current state
+(`normalizeState(undoSnapshot)` → `applyStateToForm()` → `refreshSwitcher()` →
+`save()`), which correctly re-saves the prior unit under its own name and
+switches the project dropdown back to it — including the case where New Unit
+had switched to a brand-new project name in between. It's single-level by
+construction: a second Reset or New Unit simply overwrites `undoSnapshot`, so
+using Undo or triggering another destructive action both leave at most one
+usable snapshot, and the button is disabled the moment either happens.
+Switching projects via the dropdown or deleting the current unit also clears
+the snapshot (`clearUndoSnapshot()`), since silently jumping the teacher back
+to an unrelated unit on a later Undo click would be more confusing than
+helpful and was outside what P11 asked for.
+
+**Compatibility.** `normalizeState` defaults `isRest` to `false` for any
+station missing the field, so every unit saved before this round (including
+ones with `scored`/`scoreUnit` already but no `isRest`) loads unchanged with
+no rest stations misclassified. The undo mechanism touches no persisted
+schema at all.
+
+**Testing.** `node --check` on both extracted `<script>` blocks (syntax only —
+this file has no inline-script-changing structural edits beyond the one
+inline script block that already existed). A throwaway Playwright script
+(deleted after the run, not committed) using the pre-installed Chromium at
+`/opt/pw-browsers/chromium` via `file://`: loaded the Fitness Circuit template
+and confirmed the shipped "Rest / Water" station's rest checkbox is
+pre-checked and its scored checkbox is absent; marked a different station
+scored and confirmed the scores card lists only that station's header, not
+the rest station's; confirmed exactly one `.station-tile.is-rest` and one
+`.rest-badge` render on the live stage; printed station cards and confirmed
+`card-rest-tag`/`card-page-rest` markup is present while the rest flag is set,
+then un-checked it and confirmed the scored checkbox reappears and the tile
+loses the `is-rest` class. Separately for undo: started the rotation, reset
+it, confirmed the rotation state actually cleared in `localStorage` and the
+Undo button became enabled, clicked Undo, and confirmed the pre-reset running
+state came back and the button disabled itself; then repeated the same
+before/after/undo check for New Unit, confirming the original 8-station unit
+and its name were restored as the active project after undoing a New Unit
+that had switched to a different, blank project. A second throwaway script
+seeded `localStorage` directly with a hand-written legacy-shaped save (no
+`isRest` field on its stations, a `scored: true` station and a bare "Rest /
+Water" station with no flags at all) and confirmed it loads with no console
+errors, the legacy scored station stays scored, and the legacy rest station
+defaults to `isRest: false` (not silently reclassified) exactly as the
+backward-compatibility requirement asks. Both runs reported zero console
+errors (`console.error`/`pageerror`) throughout. All test scripts were deleted
+after the run; no test artifacts were left in the repo.
+
+**What's still open for the next round:** uneven groups/stations modeling (a
+station taking two full rotations, or locking a group out of the cycle); a
+true phone-to-separate-display remote (needs a deliberate backend/relay
+decision); team/group memory across a unit (the `002-group-team-generator.html`
+recency logic); and the cross-tool rotation/bracket engine unification (P7),
+still intentionally untouched pending `020-bracket-tournament-generator.html`'s
+parallel work landing. Also newly worth a look, noticed but out of this
+round's scope: `newProject()`/`save()` will silently overwrite an existing
+saved unit's data if a teacher types a "New unit" name that collides with one
+already in the switcher dropdown (no existence check before it clobbers
+`store.projects[name]`) — the single-level undo added this round covers the
+*immediately preceding* New Unit call, but not a rename/name-collision
+scenario discovered later.
