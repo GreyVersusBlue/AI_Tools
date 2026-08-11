@@ -135,6 +135,23 @@
     .print-only th { background: #eee; }
     .print-only td.status-yes { font-weight: 700; }
     .print-only td.status-no { font-weight: 700; color: #a3372b; }
+
+    /* Contact log: a form to fill in by hand while chasing, not a report to
+       read. Rows are sized to be writable in, and never split across pages —
+       half a student's contact history on the next sheet is worse than
+       useless as documentation. */
+    .contact-table { table-layout: fixed; }
+    .contact-table th { font-size: .8rem; }
+    .contact-table td { height: .78in; vertical-align: top; font-size: .85rem; }
+    .contact-table tr { break-inside: avoid; page-break-inside: avoid; }
+    .contact-table .c-name { width: 18%; }
+    .contact-table .c-missing { width: 20%; }
+    .contact-table .c-attempt { width: 17%; }
+    .contact-table .c-outcome { width: 28%; }
+    .contact-table td.c-name { font-weight: 700; }
+    .attempt-box { font-size: .68rem; color: #333; line-height: 1.5; }
+    .attempt-box .a-date { display: block; margin-top: .12in; }
+    .print-only .p-foot { font-size: .78rem; color: #555; margin-top: .5rem; }
     @page { size: letter portrait; margin: 0.4in; }
   }
 
@@ -245,6 +262,7 @@
         <button type="button" class="secondary small" id="markAllSignedBtn">Mark all as signed</button>
         <button type="button" class="secondary small" id="printFullBtn">Print full report</button>
         <button type="button" class="secondary small" id="printMissingBtn">Print missing list</button>
+        <button type="button" class="secondary small" id="printContactBtn">Print contact log</button>
         <button type="button" class="secondary small" id="printSlipsBtn">Print reminder slips</button>
       </div>
     </div>
@@ -276,6 +294,23 @@
   </table>
 </div>
 
+<div class="print-only" id="printContactArea">
+  <h2 id="printContactTitle">Parent Contact Log</h2>
+  <p class="p-sub" id="printContactSub"></p>
+  <table class="contact-table">
+    <thead><tr>
+      <th class="c-name">Student</th>
+      <th class="c-missing">Still missing</th>
+      <th class="c-attempt">Attempt 1</th>
+      <th class="c-attempt">Attempt 2</th>
+      <th class="c-outcome">Outcome / what was said</th>
+    </tr></thead>
+    <tbody id="printContactBody"></tbody>
+  </table>
+  <p class="p-foot">Keep this sheet &mdash; it is the record of the attempts, which is what an administrator or a
+    parent conference actually asks for. Nothing on it is stored in this tool.</p>
+</div>
+
 <div class="print-only" id="printFormsArea">
   <div id="printFormsBody"></div>
 </div>
@@ -303,6 +338,7 @@
     'printFullBtn', 'printMissingBtn', 'printSlipsBtn',
     'printFullArea', 'printFullTitle', 'printFullSub', 'printFullBody',
     'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody',
+    'printContactBtn', 'printContactArea', 'printContactTitle', 'printContactSub', 'printContactBody',
     'printFormsArea', 'printFormsBody', 'printSlipsArea', 'printSlipsBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -926,6 +962,48 @@
       return '<tr>' + cells + '</tr>';
     }).join('') : ('<tr><td colspan="' + colCount + '">Everyone has turned theirs in.</td></tr>'));
     activatePrint(els.printMissingArea);
+  });
+
+  /* ---------- parent-contact follow-up sheet ----------
+     The missing list answers "who hasn't turned it in". This answers the next
+     question, which is the one that actually takes a week: who has been
+     chased, how, when, and what came of it. It prints as a form to fill in by
+     hand while working down the list with a phone in the other hand — two
+     attempt columns because a single attempt is rarely what gets asked about,
+     and an outcome column because "left a voicemail on the 12th" is the part
+     that matters at a conference.
+
+     Deliberately not stored. Contact notes about a family are the most
+     sensitive thing this tool could hold, and it has no business keeping them
+     in a browser that a substitute might be sitting at. Paper goes in the
+     teacher's own file. */
+  els.printContactBtn.addEventListener('click', function () {
+    if (!state) return;
+    var data = summaryData();
+    var multiDoc = state.documents.length > 1;
+    els.printContactTitle.textContent = state.name + ' — Parent Contact Log';
+    var dueBit = state.dueDate ? (' · Needed before ' + formatDate(state.dueDate)) : '';
+    els.printContactSub.textContent = 'Printed ' + formatDate(todayStr()) + dueBit + ' · ' +
+      data.missing.length + ' student' + (data.missing.length === 1 ? '' : 's') + ' to follow up with';
+
+    var attemptCell = '<td><div class="attempt-box">&#9744; call &nbsp; &#9744; email &nbsp; &#9744; note home' +
+      '<span class="a-date">Date: ______________</span></div></td>';
+
+    els.printContactBody.innerHTML = data.missing.length
+      ? data.missing.map(function (name) {
+          var missingLabels = multiDoc
+            ? state.documents.filter(function (d) { return !getDoc(name, d.id).signed; })
+                .map(function (d) { return d.label; }).join(', ')
+            : (state.documents[0] ? state.documents[0].label : 'Contract');
+          var unpaid = unpaidLabelsFor(name);
+          if (unpaid.length) missingLabels += ' · unpaid ' + formatMoney(unpaidAmountFor(name));
+          return '<tr><td class="c-name">' + escapeHtml(name) + '</td>' +
+            '<td>' + escapeHtml(missingLabels) + '</td>' +
+            attemptCell + attemptCell +
+            '<td></td></tr>';
+        }).join('')
+      : '<tr><td colspan="5">Everyone has turned theirs in — nothing to chase.</td></tr>';
+    activatePrint(els.printContactArea);
   });
 
   /* ---------- print blank forms (one signable copy per document) ---------- */

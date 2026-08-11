@@ -1,7 +1,7 @@
 # Improvement Prompts — 013 — Lab Safety Contract Tracker
 
 **Tool file:** `Tools/013-lab-safety-contract-tracker.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/lab-safety-contract-tracker/` — `test/smoke-contact-log.mjs`
 
 **Current description (from README):** One-tap signed/not-signed tracking per student, with a live "N of M signed" count and a missing-list before lab day.
 
@@ -9,7 +9,43 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
+**2026-08-11 — Parent-contact follow-up sheet (backlog rank 8).** Shipped the
+Quick Win. "Print contact log" sits beside the missing list and prints a form,
+not a report: one row per student still missing something, with what is
+outstanding (including any unpaid fee), **two** attempt columns each offering
+call / email / note home to tick and a date to write, and a wide outcome
+column. Rows are 0.78in tall so they can actually be written in.
+
+Three decisions:
+
+- **Two attempt columns, not one.** A single attempt is rarely what gets
+  asked about; "called on the 9th, emailed on the 12th, no response" is the
+  shape the conversation with an administrator actually takes.
+- **Nothing is stored.** Contact notes about a family are the most sensitive
+  thing this tool could hold, and it has no business keeping them in a
+  browser a substitute might sit at. The sheet is paper, the footer says so,
+  and the test asserts no contact field reaches localStorage.
+- **`break-inside: avoid` per row.** Half a student's contact history on the
+  next sheet is worse than useless as documentation.
+
+A class with nothing outstanding prints "nothing to chase" rather than an
+empty grid.
+
+New test: `Tools/lab-safety-contract-tracker/test/smoke-contact-log.mjs` (23
+assertions, wired into `npm test` and `npm run test:lab-safety`) — the right
+students on the list and only those, the five columns and their tickable
+contents, nothing written to storage, the page-break rule and row height under
+print emulation, and the all-collected case. Worth knowing for the next
+session: marking a student in re-renders the whole roster list, so a test that
+captures a NodeList of rows and clicks through it silently stops working after
+the first click.
+
+**Where the next round should pick up:** scanning returned forms with
+`_shared/qr-scan.js` is the remaining big one here, and it is already on the
+backlog. It would pair naturally with this sheet — scan the stack, and
+whoever is left is exactly who the contact log prints.
+
+Earlier: reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
@@ -177,6 +213,9 @@ produces 2 slips naming the 2 missing students with the due date shown.
   saves `np_rosters`
 - **Mark all as signed**; per-document date setting
 - Print a **full report** and a **missing list**
+- Print a **parent-contact follow-up sheet** — one row per straggler with two
+  tickable attempt columns (call / email / note home, each with a date) and an
+  outcome column, filled in by hand and never stored
 - **`.ics` export** — "add lab-day reminder to calendar"
   (`buildIcsForDueDate`), with a days-until countdown
 - **Optional per-document fee with a paid/unpaid toggle** per student,
@@ -226,9 +265,9 @@ produces 2 slips naming the 2 missing students with the due date shown.
   reminder slips.)*
 - **Scan returned forms** with `_shared/qr-scan.js` if each printed form
   carries a per-student code — ticking off thirty returns in under a minute.
-- **Parent contact list for the stragglers** — print the missing list with a
+- **Done — 2026-08-11.** **Parent contact list for the stragglers** — print the missing list with a
   place to record call/email attempts, which is what the follow-up actually
-  requires.
+  requires. *(See the Status entry at the top of this file.)*
 
 ## Moonshot / North Star
 
