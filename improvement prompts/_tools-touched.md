@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Grammar Mad Libs Generator | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
+| Historical Figure / Country Trading Card Maker | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
+| Lab Report Template Builder | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
+| Math "Find the Mistake" Warm-Up Generator | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
+| Music Sight-Reading / Rhythm Warm-Up Generator | `9iiyas` | 2026-08-11 01:30 UTC | `claude/tools-063-067-improvements-9iiyas` |
 
 ---
 
