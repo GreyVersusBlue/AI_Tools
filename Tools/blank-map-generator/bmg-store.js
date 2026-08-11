@@ -295,10 +295,28 @@ export function createStore() {
     saveWorkspace();
   }
 
+  function renameLabelSet(id, name) {
+    const set = workspace.labelSets.find(s => s.id === id);
+    const clean = String(name || "").trim();
+    if (set && clean) set.name = clean;
+    saveWorkspace();
+    return set || null;
+  }
+
+  /** Replaces a saved set's place list in place (the label-set editor's save path) — keeps the set's id and name, so the select stays pointed at it. */
+  function updateLabelSetPlaces(id, places) {
+    const set = workspace.labelSets.find(s => s.id === id);
+    if (!set) return null;
+    set.places = places.map(p => ({ name: p.name, lat: p.lat, lon: p.lon }));
+    set.savedAt = Date.now();
+    saveWorkspace();
+    return set;
+  }
+
   return {
     getActiveProject, setActiveProject, listProjects, getActiveId,
     createProject, switchProject, renameProject, deleteProject, importProject, duplicateProject,
-    listLabelSets, saveLabelSet, deleteLabelSet,
+    listLabelSets, saveLabelSet, deleteLabelSet, renameLabelSet, updateLabelSetPlaces,
     get isMemoryOnly() { return blocked; },
   };
 }
