@@ -201,6 +201,9 @@
   </div>
 
   <div id="msg"></div>
+  <div class="btn-row" id="undoRow" style="margin-bottom:.8rem;">
+    <button type="button" class="secondary" id="undoBtn" disabled>Undo</button>
+  </div>
 
   <div class="layout">
     <div class="editor">
@@ -319,7 +322,10 @@
         <div class="card-title">Vocabulary Log</div>
         <p class="hint">Every word logged with a meeting, grouped by that meeting's chapter checkpoint &mdash; a running glossary for the whole novel study.</p>
         <div id="vocabLog"><p class="empty-hint">No vocabulary logged yet.</p></div>
-        <button type="button" class="secondary" id="printVocabBtn" style="margin-top:.6rem;">Print vocabulary list</button>
+        <div class="btn-row" style="margin-top:.6rem;">
+          <button type="button" class="secondary" id="printVocabBtn">Print vocabulary list</button>
+          <button type="button" class="secondary" id="exportVocabBtn">Export vocabulary to Flashcard Generator</button>
+        </div>
       </div>
     </div>
   </div>
@@ -440,7 +446,7 @@
    'splitValueLabel', 'splitValue', 'splitBtn', 'groupEditList',
    'roleList', 'addRoleBtn',
    'meetingDate', 'checkpointInputs', 'meetingVocab', 'logMeetingBtn', 'printBtn', 'printLogBtn', 'resetHistoryBtn', 'historyHint',
-   'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'msg',
+   'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'exportVocabBtn', 'msg', 'undoRow', 'undoBtn',
    'printArea', 'printTitle', 'printSub', 'printGroups',
    'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings',
    'printVocabArea', 'printVocabTitle', 'printVocabSub', 'printVocabBody',
@@ -462,6 +468,53 @@
   //                 groups: [ { id, label, checkpoint, assignment: [{name, role}] } ] } ] (newest first)
   // }
   var state = null;
+
+  // Single-level undo for "Delete this meeting" and "Reset role history" —
+  // adapted from 022-lab-group-role-randomizer.html's undoSnapshot pattern.
+  // Kept out of `state` (and so out of localStorage/export) on purpose: it's
+  // a scratch copy of just the field the last destructive action touched,
+  // { type: 'meeting-delete'|'history-reset', meetings|history: <deep clone> }.
+  // Overwritten by the next destructive action (single level, not a stack)
+  // and cleared by anything that could make it stale — logging a new
+  // meeting (touches both meetings and history) or switching/loading a
+  // project.
+  var undoSnapshot = null;
+
+  function deepClone(obj) {
+    return obj === undefined ? obj : JSON.parse(JSON.stringify(obj));
+  }
+
+  function invalidateUndo() {
+    undoSnapshot = null;
+    els.undoBtn.disabled = true;
+    els.undoBtn.textContent = 'Undo';
+  }
+
+  function armUndo(type, label) {
+    if (type === 'meeting-delete') undoSnapshot = { type: type, meetings: deepClone(state.meetings) };
+    else if (type === 'history-reset') undoSnapshot = { type: type, history: deepClone(state.history) };
+    else return;
+    els.undoBtn.disabled = false;
+    els.undoBtn.textContent = 'Undo: ' + label;
+  }
+
+  els.undoBtn.addEventListener('click', function () {
+    if (!undoSnapshot || !state) return;
+    if (undoSnapshot.type === 'meeting-delete') {
+      state.meetings = undoSnapshot.meetings || [];
+      saveCurrent();
+      renderResults();
+      renderMeetingHistory();
+      renderVocabLog();
+      showMsg('Restored the deleted meeting.', true);
+    } else if (undoSnapshot.type === 'history-reset') {
+      state.history = undoSnapshot.history || {};
+      saveCurrent();
+      renderHistoryHint();
+      showMsg('Restored role history for this project.', true);
+    }
+    invalidateUndo();
+  });
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -865,6 +918,7 @@
 
   els.resetHistoryBtn.addEventListener('click', function () {
     if (!confirm('Clear role history for "' + state.name + '"? Everyone will look brand-new to the fairness algorithm.')) return;
+    armUndo('history-reset', 'reset role history');
     state.history = {};
     saveCurrent();
     renderHistoryHint();
@@ -876,6 +930,10 @@
     if (!state.groups || !state.groups.length) { showMsg('Split the class into groups first.'); return; }
     var roles = state.roles.map(function (r) { return r.name.trim(); }).filter(Boolean);
     if (!roles.length) { showMsg('Add at least one discussion role first.'); return; }
+
+    // Logging a meeting appends to state.meetings AND records role history,
+    // so any pending undo snapshot (of either type) is now stale.
+    invalidateUndo();
 
     var date = els.meetingDate.value || todayStr();
     var wholeClassCheckpoint = '';
@@ -1043,11 +1101,13 @@
     var btn = e.target.closest('[data-del-meeting]');
     if (!btn) return;
     if (!confirm('Delete this meeting from the log? This does not undo its effect on role fairness history.')) return;
+    armUndo('meeting-delete', 'delete meeting');
     var id = btn.dataset.delMeeting;
     state.meetings = (state.meetings || []).filter(function (m) { return m.id !== id; });
     saveCurrent();
     renderResults();
     renderMeetingHistory();
+    renderVocabLog();
   });
 
   // ── Print ────────────────────────────────────────────────────────────────
@@ -1114,6 +1174,92 @@
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
     els.printVocabArea.classList.add('active');
     window.print();
+  });
+
+  // ── Vocabulary handoff to Flashcard Generator ───────────────────────────
+  // Writes into 040-vocab-flashcard-generator.html's own localStorage
+  // contract (Tools/vocab-flashcard-generator/vfg-store.js): a list of
+  // saved-list names under 'gvb-vocab-flashcards:list', one JSON blob per
+  // name under 'gvb-vocab-flashcards:data:<name>', and a
+  // 'gvb-vocab-flashcards:current' pointer that tool reads on boot to decide
+  // which list to load. Unlike wpg-rubric-link.js (which only ever points
+  // the target's :current pointer at a rubric the *user* already saved
+  // there), there's no pre-existing Flashcard Generator list for this
+  // novel-study project's vocabulary — so this always mints one new,
+  // uniquely-named list (never overwriting any existing saved list there)
+  // and then points :current at it, same as that tool's own import flow.
+  var FLASHCARD_LIST_KEY = 'gvb-vocab-flashcards:list';
+  var FLASHCARD_DATA_PREFIX = 'gvb-vocab-flashcards:data:';
+  var FLASHCARD_CURRENT_KEY = 'gvb-vocab-flashcards:current';
+
+  function flashcardListNames() {
+    try {
+      var names = JSON.parse(localStorage.getItem(FLASHCARD_LIST_KEY) || '[]');
+      return Array.isArray(names) ? names : [];
+    } catch (e) { return []; }
+  }
+
+  function uniqueFlashcardListName(base, existingNames) {
+    if (existingNames.indexOf(base) === -1) return base;
+    var n = 2, candidate = base + ' (' + n + ')';
+    while (existingNames.indexOf(candidate) !== -1) { n++; candidate = base + ' (' + n + ')'; }
+    return candidate;
+  }
+
+  // Every vocab word logged across every meeting (state.meetings is
+  // newest-first; walk it in chronological order), deduped case-insensitively
+  // on the word, keeping the earliest definition and backfilling it from a
+  // later meeting if the word was first logged without one.
+  function collectVocabForExport() {
+    var chronological = (state.meetings || []).slice().reverse();
+    var seen = {}; // word.toLowerCase() -> index into out
+    var out = [];
+    chronological.forEach(function (m) {
+      (m.vocab || []).forEach(function (v) {
+        var word = (v.word || '').trim();
+        if (!word) return;
+        var key = word.toLowerCase();
+        var definition = (v.definition || '').trim();
+        if (seen.hasOwnProperty(key)) {
+          if (!out[seen[key]].definition && definition) out[seen[key]].definition = definition;
+          return;
+        }
+        seen[key] = out.length;
+        out.push({ word: word, definition: definition });
+      });
+    });
+    return out;
+  }
+
+  // "term: definition" per line — the format Flashcard Generator's own
+  // VocabLayout.parseWordList reads (same convention this tool already
+  // uses for typing vocab in, via parseVocabLines).
+  function vocabExportText(items) {
+    return items.map(function (it) { return it.definition ? (it.word + ': ' + it.definition) : it.word; }).join('\n');
+  }
+
+  els.exportVocabBtn.addEventListener('click', function () {
+    var items = collectVocabForExport();
+    if (!items.length) { showMsg('Log some vocabulary words with a meeting before exporting.'); return; }
+    var existingNames = flashcardListNames();
+    var baseName = (state.bookTitle || state.name || 'Novel Study') + ' Vocabulary';
+    var listName = uniqueFlashcardListName(baseName, existingNames);
+    var flashState = {
+      name: listName, words: vocabExportText(items), mode: 'flashcards',
+      flashCols: 2, flashRows: 4, cardSizePreset: 'grid', flashLayout: 'duplex',
+      wallPerPage: 2, wallShowDef: true, sortOrder: 'none', shuffle: false, showGuides: true
+    };
+    try {
+      existingNames.push(listName);
+      localStorage.setItem(FLASHCARD_LIST_KEY, JSON.stringify(existingNames));
+      localStorage.setItem(FLASHCARD_DATA_PREFIX + listName, JSON.stringify(flashState));
+      localStorage.setItem(FLASHCARD_CURRENT_KEY, listName);
+    } catch (e) {
+      showMsg("Could not save to this browser's storage (private browsing, or storage full?).");
+      return;
+    }
+    showMsg('Exported ' + items.length + ' word' + (items.length === 1 ? '' : 's') + ' to the Flashcard Generator as "' + listName + '".', true);
+    window.open('040-vocab-flashcard-generator.html', '_blank');
   });
 
   els.printRoleCardsBtn.addEventListener('click', function () {
@@ -1221,6 +1367,7 @@
     renderHistoryHint();
     renderVocabLog();
     restoreScheduleForm();
+    invalidateUndo();
   }
 
   function newProject(name) {

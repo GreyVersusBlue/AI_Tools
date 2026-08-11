@@ -84,10 +84,13 @@ session.
 - **Done —** **Individual accountability sheet** — a per-student half sheet for the
   reading between meetings, which is where reading circles usually fall apart.
   *(Shipped as "Print reading logs.")*
-- **Vocabulary handoff** (P7). The vocabulary log should export directly to
-  `040-vocab-flashcard-generator.html` and `030-review-game-board.html` rather than
-  ending as a printed list.
-- **Undo on "Delete this meeting"** and on role-history reset (P11).
+- **Done — Pass 2, Round 2 — Vocabulary handoff** (P7). The vocabulary log
+  now exports directly to `040-vocab-flashcard-generator.html` via an
+  "Export vocabulary to Flashcard Generator" button, in addition to the
+  printed list. *(`030-review-game-board.html` handoff still open — see
+  update below.)*
+- **Done — Pass 2, Round 2 — Undo on "Delete this meeting"** and on
+  role-history reset (P11).
 
 ## Major Features
 
@@ -146,3 +149,61 @@ work, and don't promote one without Devon saying so.
   only the recency algorithm is worth sharing?
 - Is discussion assessment something to build here, or is it a rubric problem
   that `003-rubric-builder.html` should own with this tool calling it?
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Shipped the two remaining Quick Wins.
+
+**1. Vocabulary handoff to Flashcard Generator (P7).** New "Export
+vocabulary to Flashcard Generator" button next to "Print vocabulary list."
+Every vocab word logged across every meeting (`state.meetings`, oldest-first)
+is deduped case-insensitively on the word, keeping the earliest non-empty
+definition, and formatted as `term: definition` per line — the same colon
+convention this tool already uses for typing vocab in
+(`parseVocabLines`) and the one `040-vocab-flashcard-generator.html`'s own
+`VocabLayout.parseWordList` reads. It's written directly into that tool's own
+localStorage contract (`Tools/vocab-flashcard-generator/vfg-store.js`): a new,
+uniquely-named entry appended to the name list at `gvb-vocab-flashcards:list`,
+the full list-state blob at `gvb-vocab-flashcards:data:<name>` (`{name, words,
+mode: 'flashcards', flashCols: 2, flashRows: 4, cardSizePreset: 'grid',
+flashLayout: 'duplex', wallPerPage: 2, wallShowDef: true, sortOrder: 'none',
+shuffle: false, showGuides: true}`), and the `gvb-vocab-flashcards:current`
+pointer that tool reads on boot — same mechanics as
+`wpg-rubric-link.js`/`vfg-conjdrill-link.js`, except there's no pre-existing
+Flashcard Generator list to point at for a brand-new novel-study project's
+vocabulary, so this mints one (never overwriting any existing saved list
+there) rather than only writing a `:current` pointer. Opens
+`040-vocab-flashcard-generator.html` in a new tab afterward. The
+`030-review-game-board.html` half of the original idea is still open.
+
+**2. Undo on "Delete this meeting" and role-history reset (P11).** New
+single-level `undoSnapshot` module variable (not persisted, same pattern as
+`022-lab-group-role-randomizer.html`) plus one shared "Undo" button under the
+message bar, disabled by default. Deleting a meeting or resetting role
+history snapshots the field it's about to overwrite (`state.meetings` or
+`state.history`) before mutating it, arms the button with a matching label
+("Undo: delete meeting" / "Undo: reset role history"), and clicking it
+restores that field, re-renders, and disables the button again. The button
+also disables itself (snapshot invalidated) when logging a new meeting —
+which mutates both meetings and role history — or when switching/loading/
+creating a project, since either would make the snapshot stale. Only the
+most recent destructive action is undoable (single level, not a stack).
+
+**Testing.** `node --check` on the extracted inline script. Headless
+Chromium (`/opt/pw-browsers/chromium`) smoke test: built a roster, split
+into groups, logged two meetings with overlapping vocabulary, exported to
+Flashcard Generator and inspected the exact localStorage keys/shape written,
+then loaded `040-vocab-flashcard-generator.html` in a second page with that
+same storage and confirmed it booted straight into the exported list (name,
+word text, and rendered preview cards all matched) — a real round-trip, not
+just a write. Then deleted a meeting and undid it (meeting restored, button
+re-disabled), deleted again and confirmed logging a new meeting invalidated
+the undo, and reset role history and undid that (history restored, button
+re-disabled). Zero console errors on either page throughout.
+
+**What's still open** (see Major Features above for the full picture):
+multiple books at once (differentiated circles reading different books in
+one class), discussion assessment (a per-meeting participation rubric),
+book/reading-log integration with `033-ssr-log-tracker.html`, reusable
+templates for roles/question banks/schedules across the year, and the
+`030-review-game-board.html` half of the vocabulary handoff.
