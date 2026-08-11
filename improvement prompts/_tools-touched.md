@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Parent/Guardian Contact Log | `4o6xmy` | 2026-08-11 01:31 UTC | `claude/tools-068-072-improvements-4o6xmy` |
+| PE Warm-Up Circuit Card Generator | `4o6xmy` | 2026-08-11 01:31 UTC | `claude/tools-068-072-improvements-4o6xmy` |
+| Peer Feedback / Editing Checklist Generator | `4o6xmy` | 2026-08-11 01:31 UTC | `claude/tools-068-072-improvements-4o6xmy` |
+| Picture-Prompt Speaking/Writing Task Generator | `4o6xmy` | 2026-08-11 01:31 UTC | `claude/tools-068-072-improvements-4o6xmy` |
+| Story Elements / Plot Diagram Builder | `4o6xmy` | 2026-08-11 01:31 UTC | `claude/tools-068-072-improvements-4o6xmy` |
 
 ---
 
