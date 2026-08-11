@@ -23,9 +23,42 @@ questions can be added. Everything autosaves to one localStorage key
 (`cedg_guide_v1`). Verified with a headless Chromium smoke test (analyze,
 add a suggested word, add a custom question, print) — no console errors.
 
-Nothing below has been started. The gap between "vocabulary suggestions"
-and "actual summarization" is real and worth being explicit about with
-whoever picks this up next — see Open Questions.
+The gap between "vocabulary suggestions" and "actual summarization" is
+real and worth being explicit about with whoever picks this up next —
+see Open Questions.
+
+**2026-08-11 — Round 2 (session `qer21r`).** Three Quick Wins shipped:
+
+- **A much larger curated stopword list** — grew from 20 entries to
+  roughly 100, covering common long words (`yesterday`, `different`,
+  `however`, `government`, `important`, `information`, `continued`,
+  `community`, `students`, `problem`, `develop`, `become`, `believe`,
+  and their inflections, among others) that were previously surfacing
+  as "vocabulary" alongside genuinely useful words. Not a frequency-list
+  vendoring exercise (that's still an Open Question below) — this is a
+  hand-curated addition scoped to the kind of words that showed up in
+  quick manual testing.
+- **Live word count and read-time estimate** while pasting/typing, not
+  only after clicking "Pull out vocabulary" — `updateWordCount()` now
+  runs on every `articleText` input, and `analyzeArticle()` calls the
+  same function instead of duplicating the calculation.
+- **A "Clear & start over" button** (with a confirm prompt) that resets
+  every field and the underlying `localStorage` state in one click,
+  instead of requiring a teacher to manually clear title/source/text/
+  summary/vocab/questions one at a time.
+
+All three verified with a headless Chromium smoke test (live count shows
+before analyzing, stopword-filtered words like "yesterday"/"different"
+don't appear as suggestion chips, clear button empties the title field)
+plus a separate print-path check — zero console errors in either pass.
+
+**Not started this round:** multiple named saved guides, reading-level
+estimate, a question-set library, multi-article comparison mode, the
+AI-assisted-mode Open Question. See Major Features/Moonshot below —
+multiple named saved guides is the natural next pickup, since it's the
+most-repeated pattern flagged on sibling builder tools this round and
+this file explicitly calls it out as the biggest remaining first-run
+friction (one guide per browser, still overwritten week to week).
 
 ## What it does today
 
@@ -39,18 +72,15 @@ whoever picks this up next — see Open Questions.
 
 ## Quick Wins
 
-- **A better stopword/heuristic list.** The current 7-letter-plus filter
-  will surface a lot of ordinary long words (e.g. "yesterday",
-  "different") alongside genuinely useful vocabulary. A curated exclusion
-  list or a simple frequency-based common-words filter would raise the
-  suggestion quality a lot for very little added complexity.
+- ~~**A better stopword/heuristic list.**~~ — **done, Round 2** (hand-
+  curated expansion, not the vendored-frequency-list approach — see the
+  Open Questions note on whether that's still worth doing on top of this).
 - **Multiple named saved guides**, matching the multi-save convention in
   Formula Sheet Builder / Rubric Builder — right now there's exactly one
   guide per browser, so last week's article is overwritten by this week's.
-- **A "clear and start over" button** — right now the only way to start a
-  fresh guide is to manually clear every field.
-- **Show word count and read time even before analyzing** (live as the
-  teacher pastes/types), not only after clicking the analyze button.
+- ~~**A "clear and start over" button**~~ — **done, Round 2.**
+- ~~**Show word count and read time even before analyzing**~~ — **done,
+  Round 2.**
 
 ## Major Features
 
