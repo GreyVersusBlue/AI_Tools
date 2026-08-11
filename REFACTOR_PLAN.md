@@ -317,7 +317,7 @@ is 56,963 bytes (SHA-256 `bdee8deb723d3b76015ecaefb974a0a438fe8889280914a06b60d7
 
 ### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
 - [x] Create `_shared/sw-register.js` (the existing 5-line snippet).
-- [~] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR. (45/81 numbered tools done: Rounds 2a–2c.)
+- [~] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR. (60/81 numbered tools done: Rounds 2a–2d.)
 - [x] Verify snippet is byte-identical everywhere first (`grep -B0 -A4 serviceWorker`); any variant gets reviewed, not blindly replaced.
 
 **Round 2a (2026-08-11):** hashed the extracted snippet (CRLF-normalized) across
@@ -386,6 +386,25 @@ is identical between an untouched baseline tool and the newly migrated ones).
 
 **Remaining after this round: 36 numbered tools** still carry the inline
 snippet (`046`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
+`escape-room-builder/monitor.html`) still pending a decision on their relative
+path.
+
+**Round 2d (2026-08-11):** re-hashed the inline snippet (CRLF-normalized) in
+all 36 remaining numbered tools, `046`–`081` — all 36 identical to the Round
+2a/2b/2c block, none set aside. Migrated the next 15, `046`–`060`, to
+`<script src="../_shared/sw-register.js" defer></script>`; no new files
+needed in `PRECACHE_URLS` (`_shared/sw-register.js` was already added in
+Round 2a). `CACHE_VERSION` bumped v49 → v50 since the content of 15
+already-precached pages changed.
+
+Verified in a real browser (local static Node server on port 8123) for all
+15 migrated tools: `_shared/sw-register.js` requested and returned 200 on
+every page, and zero console errors on any of the 15 — a cleaner baseline
+than Rounds 2a–2c, which each noted a handful of pre-existing unrelated
+404s on their control tool.
+
+**Remaining after this round: 21 numbered tools** still carry the inline
+snippet (`061`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
 `escape-room-builder/monitor.html`) still pending a decision on their relative
 path.
 
