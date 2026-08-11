@@ -102,6 +102,20 @@
 
   .page-label { color: var(--muted); font-size: .7em; font-weight: 400; }
 
+  .same-sheet-key {
+    border: 1px solid var(--line-strong); border-radius: 6px; background: #fbfbf8;
+    padding: .4rem .6rem; margin: 0 0 1rem auto; max-width: 3.4in;
+  }
+  .same-sheet-key .ssk-title {
+    font-weight: 700; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); margin-bottom: .25rem;
+  }
+  .same-sheet-key .ssk-grid {
+    display: flex; flex-wrap: wrap; gap: .1rem .55rem;
+    font-family: Consolas, monospace; font-size: .68rem; line-height: 1.55;
+  }
+  .same-sheet-key .ssk-grid .num { color: var(--muted); margin-right: .15rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   @media print {
@@ -188,9 +202,26 @@
         </label>
         <p class="hint" id="lockSeedHint" style="display:none;">Every "Generate" will now rebuild the identical sheet above. Export settings to save the seed for a make-up test or next year.</p>
 
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="sameSheetKey" style="width:auto;margin:0;"> Answer key on same sheet, in a corner
+        </label>
+        <p class="hint">For self-checking stations &mdash; prints a compact answer key box on the worksheet itself instead of making students hunt for a separate page.</p>
+        <div id="sameSheetKeyModeRow" style="display:none;">
+          <label for="sameSheetKeyMode">Separate answer key page</label>
+          <select id="sameSheetKeyMode">
+            <option value="both" selected>Also keep the separate answer key page</option>
+            <option value="replace">Replace it &mdash; corner box only</option>
+          </select>
+        </div>
+
         <label for="versionCount">Number of versions</label>
         <input type="number" id="versionCount" value="1" min="1" max="6">
-        <p class="hint">Generates that many distinct randomized sheets (Version A/B/C&hellip;) back to back &mdash; useful for preventing copying during a timed drill.</p>
+        <p class="hint">Generates that many randomized sheets (Version A/B/C&hellip;) back to back &mdash; useful for preventing copying during a timed drill.</p>
+
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="reorderedVersions" style="width:auto;margin:0;"> Same problems, reordered per version (anti-copying)
+        </label>
+        <p class="hint">Instead of different random problems per version, every version above gets the exact same problem/answer set &mdash; just shuffled into a different order and renumbered. A neighbor's "#1" is a different problem, but the whole room is graded on the same set.</p>
 
         <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
           <input type="checkbox" id="timedFluency" style="width:auto;margin:0;"> Add timed-fluency header
@@ -245,12 +276,14 @@
    'exportSettingsBtn','importSettingsBtn','importSettingsFile',
    'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn',
    'timedFluency','fluencyTargetRow','fluencyTargetSeconds',
-   'format','fontSize','perPage','seedDisplay','avoidTrivial','lockSeed','lockSeedHint'
+   'format','fontSize','perPage','seedDisplay','avoidTrivial','lockSeed','lockSeedHint',
+   'sameSheetKey','sameSheetKeyModeRow','sameSheetKeyMode','reorderedVersions'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, versions: 1, rangesByTemplate: {},
     timedFluency: false, fluencyTargetSeconds: '',
-    format: 'horizontal', fontSize: 'md', perPage: '', avoidTrivial: false, lockSeed: false, seed: null };
+    format: 'horizontal', fontSize: 'md', perPage: '', avoidTrivial: false, lockSeed: false, seed: null,
+    sameSheetKey: false, sameSheetKeyMode: 'both', reorderedVersions: false };
   var problemSets = []; // [{ label: 'Version A'|null, problems: [...] }, ...]
   var currentVersionIndex = 0;
   var isLeveledSet = false; // true when problemSets came from "Generate Leveled Set" — just changes preview/print copy
@@ -365,6 +398,18 @@
     return '<div class="p"><span class="num">' + num + '.</span>' + body + '</div>';
   }
 
+  /** Compact corner answer key for one page's worth of problems (self-checking
+      stations) — independent of the worksheet's format/font settings and of
+      pagination, since it's keyed off startNum and only the problems actually
+      on this page. */
+  function sameSheetKeyHtml(pageProblems, startNum) {
+    if (!settings.sameSheetKey) return '';
+    var items = pageProblems.map(function (p, i) {
+      return '<span><span class="num">' + (startNum + i) + '.</span>' + p.answer + '</span>';
+    }).join('');
+    return '<div class="same-sheet-key"><div class="ssk-title">Answer key</div><div class="ssk-grid">' + items + '</div></div>';
+  }
+
   /** Split a problem list into pages of `perPage` (or one page if unset/invalid). */
   function paginate(problems) {
     var perPage = parseInt(settings.perPage, 10);
@@ -381,6 +426,7 @@
     var pages = paginate(set.problems);
     var num = 0;
     return pages.map(function (pageProblems, pageIndex) {
+      var startNum = num + 1;
       var items = pageProblems.map(function (p) { num++; return problemItemHtml(p, num); }).join('');
       var pageLabel = pages.length > 1 ? ' <span class="page-label">(page ' + (pageIndex + 1) + ' of ' + pages.length + ')</span>' : '';
       return (
@@ -388,6 +434,7 @@
           '<div class="sheet-title">' + sheetTitleFor(set.label) + pageLabel + '</div>' +
           '<div class="sheet-meta"><span>Name: <span class="fill-line">&nbsp;</span></span><span>Date: ' + todayStr + '</span></div>' +
           (pageIndex === 0 ? fluencyHeaderHtml() : '') +
+          sameSheetKeyHtml(pageProblems, startNum) +
           '<div class="problems' + vertClass + fsClass + '" style="column-count:' + cols + ';--vcols:' + cols + ';">' + items + '</div>' +
         '</div>'
       );
@@ -470,6 +517,9 @@
     settings.perPage = els.perPage.value;
     settings.avoidTrivial = els.avoidTrivial.checked;
     settings.lockSeed = els.lockSeed.checked;
+    settings.sameSheetKey = els.sameSheetKey.checked;
+    settings.sameSheetKeyMode = els.sameSheetKeyMode.value === 'replace' ? 'replace' : 'both';
+    settings.reorderedVersions = els.reorderedVersions.checked;
   }
 
   /** Fresh 32-bit seed unless the sheet is locked, in which case the last
@@ -487,13 +537,27 @@
     persist();
     var template = effectiveTemplate(settings.templateKey);
     problemSets = [];
-    for (var i = 0; i < settings.versions; i++) {
-      problemSets.push({
-        label: settings.versions > 1 ? 'Version ' + String.fromCharCode(65 + i) : null,
-        problems: MathDrillGenerate.generateProblems(template, settings.problemCount, {
-          seed: settings.seed + i, avoidTrivial: settings.avoidTrivial
-        })
+    if (settings.reorderedVersions && settings.versions > 1) {
+      // Anti-copying quiz pattern: ONE generated problem set, reordered into
+      // `versions` copies — same problems/answers everywhere, different
+      // positions, so grading stays uniform but neighbors can't just copy
+      // "#1, #2, #3...".
+      var baseProblems = MathDrillGenerate.generateProblems(template, settings.problemCount, {
+        seed: settings.seed, avoidTrivial: settings.avoidTrivial
       });
+      var reordered = MathDrillGenerate.reorderVersions(baseProblems, settings.versions, settings.seed + 1);
+      problemSets = reordered.map(function (probs, i) {
+        return { label: 'Version ' + String.fromCharCode(65 + i), problems: probs };
+      });
+    } else {
+      for (var i = 0; i < settings.versions; i++) {
+        problemSets.push({
+          label: settings.versions > 1 ? 'Version ' + String.fromCharCode(65 + i) : null,
+          problems: MathDrillGenerate.generateProblems(template, settings.problemCount, {
+            seed: settings.seed + i, avoidTrivial: settings.avoidTrivial
+          })
+        });
+      }
     }
     isLeveledSet = false;
     currentVersionIndex = 0;
@@ -524,8 +588,9 @@
   }
 
   function buildPrintArea() {
+    var skipSeparateKey = settings.sameSheetKey && settings.sameSheetKeyMode === 'replace';
     var html = problemSets.map(function (set) {
-      return worksheetHtml(set) + answersHtml(set);
+      return worksheetHtml(set) + (skipSeparateKey ? '' : answersHtml(set));
     }).join('');
     document.getElementById('printArea').innerHTML = html;
   }
@@ -567,6 +632,10 @@
     els.avoidTrivial.checked = !!obj.avoidTrivial;
     els.lockSeed.checked = !!obj.lockSeed;
     els.lockSeedHint.style.display = els.lockSeed.checked ? '' : 'none';
+    els.sameSheetKey.checked = !!obj.sameSheetKey;
+    els.sameSheetKeyMode.value = obj.sameSheetKeyMode === 'replace' ? 'replace' : 'both';
+    els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
+    els.reorderedVersions.checked = !!obj.reorderedVersions;
     settings.seed = (typeof obj.seed === 'number') ? obj.seed : null;
     loadRangeInputs();
     generate();
@@ -625,6 +694,13 @@
     persist();
   });
 
+  els.sameSheetKey.addEventListener('change', function () {
+    els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
+    readFormIntoSettings(); persist(); renderPreview();
+  });
+  els.sameSheetKeyMode.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
+  els.reorderedVersions.addEventListener('change', generate);
+
   els.viewWorksheetBtn.addEventListener('click', function () {
     view = 'worksheet';
     els.viewWorksheetBtn.classList.add('active');
@@ -667,6 +743,10 @@
   els.avoidTrivial.checked = !!settings.avoidTrivial;
   els.lockSeed.checked = !!settings.lockSeed;
   els.lockSeedHint.style.display = els.lockSeed.checked ? '' : 'none';
+  els.sameSheetKey.checked = !!settings.sameSheetKey;
+  els.sameSheetKeyMode.value = settings.sameSheetKeyMode === 'replace' ? 'replace' : 'both';
+  els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
+  els.reorderedVersions.checked = !!settings.reorderedVersions;
   loadRangeInputs();
   generate();
 })();

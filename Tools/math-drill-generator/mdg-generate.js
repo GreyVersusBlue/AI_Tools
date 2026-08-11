@@ -114,8 +114,41 @@
     return problems;
   }
 
+  /** Fisher-Yates shuffle driven by a supplied RNG, so it's reproducible
+      when the RNG is seeded. Returns a new array; never mutates `arr`. */
+  function shuffleWithRng(arr, rng) {
+    var out = arr.slice();
+    for (var i = out.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var tmp = out[i]; out[i] = out[j]; out[j] = tmp;
+    }
+    return out;
+  }
+
+  /**
+   * The anti-copying quiz pattern: take ONE already-generated problem list
+   * and produce `count` versions containing the exact same problems, just
+   * reordered — distinct from generateProblems() making distinct versions
+   * with different random problems. A neighbor's "#1" is a different
+   * problem in a different position, but every version shares the same
+   * problem/answer set, so the whole room is still graded uniformly.
+   *
+   * Version 0 keeps the original order (so "Version A" matches what was
+   * already previewed); later versions are independently reshuffled from a
+   * seeded RNG so the whole set of versions stays reproducible together.
+   */
+  function reorderVersions(problems, count, seed) {
+    var rng = makeRng(seed);
+    var versions = [];
+    for (var i = 0; i < count; i++) {
+      versions.push(i === 0 ? problems.slice() : shuffleWithRng(problems, rng));
+    }
+    return versions;
+  }
+
   global.MathDrillGenerate = {
     generateProblems: generateProblems, makeProblem: makeProblem, SYMBOL: SYMBOL,
-    makeRng: makeRng, isTrivial: isTrivial
+    makeRng: makeRng, isTrivial: isTrivial,
+    shuffleWithRng: shuffleWithRng, reorderVersions: reorderVersions
   };
 })(typeof window !== 'undefined' ? window : global);
