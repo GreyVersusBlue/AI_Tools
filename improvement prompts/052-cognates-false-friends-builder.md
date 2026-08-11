@@ -24,7 +24,20 @@ Spanish examples, template swap to French with confirm-dialog accepted,
 add a cognate, print, confirm the French-specific false friend appears and
 the Spanish-specific one correctly doesn't) — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped both
+top Quick Wins: **three more starter language sets** (German, Italian,
+Portuguese — six languages total now, each with real, well-known cognate
+and false-friend examples in the same style as the existing Spanish/French
+sets, e.g. German "Gift" looks like "gift" but means "poison"; Italian
+"camera" looks like "camera" but means "room"; Portuguese "puxar" looks
+like "push" but means "pull"), and **reorder list items** via up/down
+buttons on both the cognates list and the false-friends list independently.
+Verified with a headless Chromium pass: loaded all three new templates and
+confirmed the language name and first two cognates populated correctly for
+each, reordered a false-friend pair, printed and confirmed the printed
+language header matched — no console errors.
+
+Nothing else below has been started.
 
 ## What it does today
 
@@ -35,11 +48,9 @@ Nothing below has been started.
 
 ## Quick Wins
 
-- **More starter language example sets** (German, Italian, Portuguese) —
-  pure content work, the highest-leverage next step given only two
-  languages are covered today.
-- **Reorder list items** via up/down buttons, matching the pattern used
-  elsewhere in this toolkit.
+- ~~More starter language example sets~~ — **shipped 2026-08-11**
+  (German, Italian, Portuguese; six languages total).
+- ~~Reorder list items~~ — **shipped 2026-08-11**, both lists.
 - **Multiple named saved lists**, matching the multi-save convention used
   by most builder tools in this round — one flat pair of lists per browser
   right now, so a "Spanish 1" list and a "Spanish 2 (advanced)" list can't
@@ -82,6 +93,13 @@ friction of building a large list one row at a time.
 - **P15 (first run)** — more starter language sets is the single biggest
   first-run improvement, since only two of the many languages taught in
   U.S. schools currently have example content.
+
+**Where the next round should pick up:** multiple named saved lists is the
+remaining Quick Win and matches this round's 047/048/051 selector pattern
+directly; the quiz-me reveal mode under Major Features is the highest-
+leverage next step after that, and the Open Question below about where it
+belongs (here vs. Vocab & Conjugation Drill Generator) should get answered
+before building it.
 
 ## Open Questions
 

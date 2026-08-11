@@ -30,8 +30,15 @@
    push that claim-only change by itself, before writing any implementation
    code, so a concurrent session sees your claim before picking its own
    batch.
-3. Do the work; update that tool's own `improvement prompts/<tool>.md` with
-   what shipped, what was hard, and where the next round should pick up.
+3. Do the work, following the repo conventions in the root `CLAUDE.md` —
+   in particular: vendored third-party libraries live in `_shared/vendor/`
+   (one canonical copy, never a fresh per-tool copy); tool subfolders use
+   `lib/`, never `libs/`; link `_shared/` boilerplate (theme, a11y,
+   sw-register) instead of inlining a copy; and any file you add, rename,
+   or delete means updating `PRECACHE_URLS` in `sw.js` and bumping
+   `CACHE_VERSION` in the same commit. Then update that tool's own
+   `improvement prompts/<tool>.md` with what shipped, what was hard, and
+   where the next round should pick up.
 4. When you finish: remove the tool's row from **Currently claimed** and
    from **Not yet touched**, and add it to **Already done**, in the table
    for your round — header the round like
@@ -392,29 +399,19 @@ has shipped and sits empty. Each new tool already has its own `improvement
 prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
 "Not yet touched" list below yet — Devon wants to fold them into the round
 system as a deliberate batch rather than mixed in silently with this reset.
-Leave them out until told otherwise:
+Leave them out until told otherwise. **Exceptions:** 047–051, 053–057, and
+063–067 were each pulled out of this batch and given a round at Devon's
+direct request (see the "Held-out batch" and "063–067" round entries
+below, in the same spirit as tool 046's extra Rounds 9–10 in Pass 1) — all
+three groups are done and out of this list; the other 20 are still
+untouched:
 
-Art Critique Worksheet Generator (`047-art-critique-worksheet-generator.md`) ·
-Student Art Portfolio Label & QR Tag Maker (`048-art-portfolio-label-maker.md`) ·
-Book Tasting Menu Generator (`049-book-tasting-menu-generator.md`) ·
-Government/Civics Simulation Role Card Generator (`050-civics-role-card-generator.md`) ·
-Classroom Label Maker, Target Language (`051-classroom-label-maker.md`) ·
 Cognates & False Friends Reference List Builder (`052-cognates-false-friends-builder.md`) ·
-Cultural Trivia Card Generator (`053-cultural-trivia-card-generator.md`) ·
-Current Events Discussion Guide Generator (`054-current-events-discussion-guide-generator.md`) ·
-Daily Editing / DOL Warm-Up Generator (`055-daily-editing-warmup-generator.md`) ·
-DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`) ·
-Dichotomous Key Builder (`057-dichotomous-key-builder.md`) ·
 Duty Roster Builder (`058-duty-roster-builder.md`) ·
 Scientific Method / Experiment Design Planner (`059-experiment-design-planner.md`) ·
 Fitness & Skill Assessment Tracker (`060-fitness-skill-assessment-tracker.md`) ·
 Fraction–Decimal–Percent Conversion Drill Generator (`061-fraction-decimal-percent-drill-generator.md`) ·
 Geography Bee / Map Skills Quiz Generator (`062-geography-bee-quiz-generator.md`) ·
-Grammar Mad Libs Generator (`063-grammar-mad-libs-generator.md`) ·
-Historical Figure / Country Trading Card Maker (`064-historical-trading-card-maker.md`) ·
-Lab Report Template Builder (`065-lab-report-template-builder.md`) ·
-Math "Find the Mistake" Warm-Up Generator (`066-math-find-the-mistake-generator.md`) ·
-Music Sight-Reading / Rhythm Warm-Up Generator (`067-music-sightreading-generator.md`) ·
 Parent/Guardian Contact Log (`068-parent-contact-log.md`) ·
 PE Warm-Up Circuit Card Generator (`069-pe-warmup-circuit-generator.md`) ·
 Peer Feedback / Editing Checklist Generator (`070-peer-feedback-checklist-generator.md`) ·
@@ -457,14 +454,458 @@ was touched.
 list — each still has substantial Major Features/Moonshot items open in its
 own file — so none moved to `stable tools/` this round.
 
-### Pass 2 — Round 2 — 2026-08-11 03:10 UTC — session `mxpfjs`
+### Pass 2 — Round 1 — 2026-08-10 23:49 UTC — session `yjj7k6` — PR #72
 
-Ten tools, all print/projector/data tools that each already had a Pass 1
-round (Round 4 or Round 5 — see each file's own history) — this round picked
-up specifically where each file's own "Where the next round should pick up"
-notes left off, two scoped improvements per tool, each independently
-verified via `node --check` and a headless Playwright pass before being
-committed. No tool outside this list was touched.
+Bounded follow-ups on five of the ten tools assigned to this session (001,
+004, 005, 007, 008 are left for a future round from the same session or
+another) — each tool's own "where the next round should pick up" note named
+the specific gap picked up here, so this round stayed narrow and verified
+rather than spreading thin across all ten. Every change was smoke-tested in
+a headless browser (page load + a realistic interaction) with zero console
+errors, and every touched file's inline scripts were confirmed to still
+parse.
+
+| Tool | File |
+|---|---|
+| Group / Team Generator | `002-group-team-generator.md` |
+| Rubric Builder | `003-rubric-builder.md` |
+| Class Roster Hub | `006-class-roster-hub.md` |
+| Backup & Restore | `009-backup-restore.md` |
+| Command Center | `010-command-center-dashboard.md` |
+
+**Leftover from this round — pick these up before starting a fresh round
+elsewhere:** session `yjj7k6` was assigned the 001–010 range and completed
+five of them; **001 Hall Pass Log, 004 Classroom Timer, 005 Seating Chart
+Generator, 007 Name Picker, and 008 Behavior & Points Tracker are still
+sitting in "Not yet touched" below.** They weren't skipped for lack of
+ideas — each one's own `improvement prompts/<tool>.md` "where the next round
+should pick up" note names something real, it's just each is a full
+session's worth on its own rather than a bounded fix (stable per-student
+IDs / bell-schedule correlation for 001; bell-schedule awareness, a
+multi-timer board, or real sound assets for 004; the base64→IndexedDB photo
+migration for 005; splitting the 2,400-line file or the history-cap rollup
+for 007; the seating-chart-based board layout for 008 — see each file for
+the full list). A future session — ideally one picking up the 001–010 range
+again, but anyone is fine — should finish these five so the range gets a
+complete Pass 2 first pass before other tools get a second round.
+
+### Pass 2 — Round 2 — 2026-08-11 00:49 UTC — session `j6ok2v` — PR #73
+
+Tools 031–035: a document merger, a calendar, a reading log, and the
+schedule-browser/visualizer pair. One scoped, independently-verified
+Quick Win per tool (031 got two), plus — the main event — the first
+phase of the R61–R63 backport into 035's publisher that two prior
+rounds (Pass 1 Round 7 on both 034 and 035) had explicitly flagged as
+the single highest-value item outstanding for that tool pair, and
+explicitly deferred as too large for a single sitting. Given that same
+sizing concern, this round ported one self-contained piece (the
+staleness banner) rather than rushing all four remaining features;
+`035-schedule-visualizer.md`'s Status has the recommended order for
+the rest (copy/share links next, then Compare mode, then PNG
+download).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Word Doc Merger | `031-docx-merger.md` | Remember-last-session file list (names/order/headings, resume banner); explicit "keep or normalize styles" choice with a full style-merge implementation. |
+| School Calendar Visualizer | `032-school-calendar-visualizer.md` | A/B day cycle overlay — badges every day, skips weekends/no-school days without losing sync, "today is an X day" in the stats line. |
+| Silent Reading (SSR) Log Tracker | `033-ssr-log-tracker.md` | Printable finished-books wall; fixed a real bug (single-entry form never refreshed the Books checklist) found while testing it. |
+| East Middle Schedule Browser | `034-schedule-browser.md` | No direct changes — see 035; this file remains the source of truth for still-unported features. |
+| School Layout Visualizer | `035-schedule-visualizer.md` | R61–R63 backport, phase 1 of 4: staleness banner ported into the publish pipeline and live preview, verified end-to-end. |
+
+**20 of 46 (Pass 2) tools done** (10 from `v19h3x`'s round + 5 from
+`yjj7k6`'s + these 5). **26 to go.** None of the five cleared their
+list — each still has substantial Major Features/Moonshot items open in
+its own file — so none moved to `stable tools/` this round.
+
+### Pass 2 — Round 3 — 2026-08-11 01:29 UTC — session `yar0mb` — PR #82
+
+Tools 036–040: the grade/data cluster (Final Grade Checker, Grade
+Distribution Visualizer, Data Table → Chart Builder) plus the
+vocabulary-drill pair (Vocab & Conjugation Drill Generator, Vocabulary
+Flashcard & Word Wall Generator). One scoped, independently-verified Quick
+Win per tool, each picked up from that tool's own Pass 1 "Skipped —
+deferred" list rather than invented fresh. Every change was verified with
+`node --check` (or the full 150-test `grade-math.test.mjs` suite for 036)
+plus a headless Playwright pass (page load, the actual interaction, zero
+console errors) served over a local HTTP server — `file://` module imports
+are blocked by CORS in a headless Chromium sandbox, which is worth knowing
+before assuming a smoke test needs a real server for this codebase's
+`<script type="module">` tools specifically (`Tools/036-final_grade_checker.html`
+is the only one of the five; the other four are classic non-module
+`<script>` tags and load fine over `file://`, though the shared
+Google-Fonts `@import` failure noted in `_site-requests.md` still fires
+and was filtered out of the pass/fail check rather than fixed).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Final Grade Checker | `036-final-grade-checker.md` | Explicit column mapping on import (P13) — an optional `{nameCol, q1Col}` override in `parsePastedData`, plus a UI panel that previews the first row and lets a teacher override auto-detect when a gradebook export's column order changes. |
+| Grade Distribution Visualizer | `037-grade-distribution-visualizer.md` | 15-second in-memory undo on Delete assignment (P11), same pattern as `018-qr-scavenger-hunt-builder.html`'s "Undo clear"; the existing confirm dialog stays. |
+| Data Table → Chart Builder | `038-data-chart-builder.md` | Same undo pattern (P11) applied to Delete dataset. |
+| Vocab & Conjugation Drill Generator | `039-vocab-conjugation-drill.md` | Accent-tolerant answer checking on the conjugation self-quiz — a three-state `answerMatch()` (correct/close/wrong) via Unicode NFD diacritic-stripping; scoring stays strict, only the feedback message changed. |
+| Vocabulary Flashcard & Word Wall Generator | `040-vocab-flashcard-generator.md` | Alignment test page — one numbered front/back sheet pair reusing the real double-sided print's own mirroring math, to check duplex settings before a full class set. |
+
+**25 of 46 (Pass 2) tools done** (20 from the prior three rounds + these
+5). **21 to go.** None of the five cleared their own list — each still has
+at least one deferred Quick Win or a full Major Features/Moonshot section
+open — so none moved to `stable tools/` this round. Two tools (037, 038)
+independently picked up the identical P11 undo pattern this round; nothing
+shared was extracted, matching how the rest of this file's "Threads left
+open" section already treats the read-only cross-tool bridge pattern —
+copy-paste-and-adapt, not a shared library, until a third or fourth tool
+wants the same thing.
+
+### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — PR #74
+
+Devon directly assigned tools 047-051 to this session, ahead of the
+Pass-2-reset note above that holds the 35-tool Ideas Backlog batch out of
+the round system until folded in deliberately — an explicit per-tool
+override per this file's own top-of-file rule ("Devon may also reset it
+early, or move a specific tool back up, and that overrides everything
+here"). This is **not** a Pass 2 round pulled from "Not yet touched" —
+these five remain outside that list, per the held-out-batch note below,
+until Devon folds the rest of the 35 in. One or two scoped Quick Wins
+shipped per tool (each tool's own file has the full breakdown), verified
+with a single combined headless Chromium smoke test covering all five
+tools' new interactions (24 checks, zero console errors).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | Multiple named saved worksheets (New/Duplicate/Delete + switcher, legacy-save auto-migration); fixed half-sheet print CSS that clipped worksheets with many follow-up questions. |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Reorder entries via up/down buttons; live character-count warning on the artist-statement field (QR density heads-up past ~220 chars). |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | Menu print now groups books into genre-named course sections instead of one flat list; cover images now render in both menu and table-tent print output. |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Per-role "copies" count so a role shared by several students (jurors, witnesses) prints that many cards; Duplicate-role button. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | "Test ▶" link per word opening the pronunciation companion page directly; a prominent `file://` warning banner alongside the existing hint line. |
+
+None of the five cleared their list — each still has open Quick Wins and
+full Major Features/Moonshot sections — so none moved to `stable tools/`
+this round. A cross-tool note surfaced this round: three tools now carry
+their own copy-pasted `buildQR`/`drawQR` (Gallery Walk QR Codes, Art
+Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
+into a shared `lib/qrcode.js` next time any of the three is touched again
+(see 048's and 051's own files for the detail).
+
+### Held-out batch — Round 2 — 2026-08-11 01:29–03:10 UTC — session `szyio3` — tools 047–052
+
+**Genuine claim collision with the round directly above.** Devon assigned
+this session tools 047–052 at essentially the same moment `8vo65u` was
+assigned 047–051 — both sessions read this file's empty claim table and
+pushed a claim row in the same UTC minute (01:29), so neither saw the
+other's before starting. `8vo65u` merged first as PR #74. This session's
+own PR (#75) then hit real merge conflicts against 047, 049, 050, and 051
+— not just this tracker file. Rather than blindly resolving in either
+direction, each conflicting tool file was diffed against `8vo65u`'s merged
+version to check for genuine overlap before touching anything:
+
+- **047, 049, 051** — `8vo65u` had independently picked the *same* Quick
+  Wins this session also built (multi-save worksheets + the print fix for
+  047; genre grouping + cover images for 049; the test link + file://
+  banner for 051), so this session's redundant reimplementation of all
+  three was discarded in favor of the already-merged version. No further
+  changes needed.
+- **048, 050** — `8vo65u` had picked a *different* second Quick Win than
+  this session for both (048: character-count warning vs. this session's
+  named/multiple saved portfolios; 050: Duplicate-role button vs. this
+  session's reorder buttons) — genuinely complementary, not conflicting,
+  work. Git's automatic 3-way merge on 048 silently duplicated the reorder
+  buttons and click handlers instead of combining the two feature sets
+  (confirmed by inspection — not caught until reading the merged file
+  directly), and 050 left literal conflict markers mid-function. Both
+  files were rebuilt from `8vo65u`'s merged `main` state with this
+  session's addition re-applied by hand, then re-verified end to end.
+- **052** — untouched by `8vo65u`; merged in cleanly as new work.
+
+| Tool | File | What shipped this round |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | No changes beyond PR #74 (redundant work discarded). |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Named/multiple saved portfolios (New/Duplicate/Rename/Delete, migrates the old single-portfolio save), layered on top of PR #74's reorder buttons and character-count warning. Clears this tool's Quick Wins list except the roster-bulk-add idea. |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | No changes beyond PR #74 (redundant work discarded). |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Reorder roles and talking points via up/down buttons, layered on top of PR #74's per-role Copies field and Duplicate-role button. Clears this tool's Quick Wins list except assigned-student-name. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | No changes beyond PR #74 (redundant work discarded). |
+| Cognates & False Friends Reference List Builder | `052-cognates-false-friends-builder.md` | Three more starter language sets (German, Italian, Portuguese — six total); reorder list items via up/down buttons on both lists. |
+
+**7 of the 35 held-out Ideas-Backlog tools now have at least one round**
+(047–052 from the combined work of both sessions above, none from the
+remaining 29). None cleared their full Quick Wins list — 048 and 050 came
+closest, one item each remains — so none moved to `stable tools/` this
+round, and none are added to "Not yet touched" below per this file's own
+convention (a tool moves to **Already done** after its round, not into
+both lists at once).
+
+**Process note for future sessions**, also logged in `_site-requests.md`:
+the claim table only prevents collisions when a claim is visible before
+the next session commits its own — two claims landing in the same
+UTC minute are invisible to each other. This is a real, now-observed
+failure mode of the claim system, not just a theoretical gap.
+
+### Held-out batch — 2026-08-11 01:31 UTC — session `4o6xmy` — tools 068-072
+
+Direct assignment (not picked from "Not yet touched") — these five sit in
+the 35-tool batch Devon deliberately held out of the round system pending
+a future decision to fold them in as a group (see the "Pass 2 — reset"
+note above); this round works them anyway per explicit instruction, which
+overrides the default picking order per this file's own header, the same
+override several other held-out-batch rounds in this section also used.
+Does not count toward the "X of 46 (Pass 2)" tallies, which track only the
+original 46 Pass 1 tools' second pass — these 35 aren't part of that count
+either way yet. One scoped round each, independently verified with a
+headless Chromium smoke test per tool (real interactions — including a
+real generated-PNG upload for 071's downscale test and a seeded-legacy-
+storage test for 072's migration path — `window.print` mocked where
+printing was involved) with zero console errors.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Parent/Guardian Contact Log | `068-parent-contact-log.md` | Date-range filter, CSV export (respects current filter), roster sort-by-fewest-contacts, confirmation toast, Enter-to-submit logging. |
+| PE Warm-Up Circuit Card Generator | `069-pe-warmup-circuit-generator.md` | Reorder stations (up/down), duplicate station, a small click-to-pick emoji palette. |
+| Peer Feedback / Editing Checklist Generator | `070-peer-feedback-checklist-generator.md` | Reorder categories and items (up/down); print-layout QA as an on-screen size warning plus two-tier print font/spacing scaling, plus a `min-height`/no-`overflow:hidden` fix for the same print-clipping bug pattern independently found and fixed in 047 by a concurrent session. |
+| Picture-Prompt Speaking/Writing Task Generator | `071-picture-prompt-generator.md` | Cleared its whole Quick Wins list: fixed the reset-hint wording inconsistency, pin-a-prompt-to-an-image, silent image downscale-on-upload (≤1400px, JPEG), and a persisted print-count-subset field. Also folded in its most-called-out Major Feature (image downscaling) rather than leaving it for a later round. |
+| Story Elements / Plot Diagram Builder | `072-plot-diagram-builder.md` | Fixed a real bug — literal `&mdash;` text printing instead of an em dash, the sixth instance of the same bug class flagged elsewhere this round (see `_site-requests.md`); multiple named saved diagrams (with automatic migration of the prior single-diagram data, verified in a dedicated test); a filled/empty stage visual highlight. |
+
+None of the five cleared their own file's full list — 071 is the
+exception, having cleared its Quick Wins entirely including one Major
+Feature, but its Major Features/Moonshot sections still have real items
+open — so none moved to `stable tools/` this round.
+
+### Pass 2 — Round 4 — 2026-08-11 02:20 UTC — session `gb5c6e` — branch `claude/tools-041-046-improvements-gb5c6e`
+
+Tools 041–046: the school-office print cluster (formula sheets,
+certificates, field trip slips) plus the sub-coverage pair (Sub Plan
+Builder, Sub Binder Generator) plus the Blank Map Generator. One scoped
+Quick Win or Major Feature per tool, picked from each tool's own
+"where the next round should pick up" note. Every change was verified with
+`node --check`/syntax checks and a headless Playwright pass exercising the
+actual new interaction (not just page load) — an .ics file byte-parsed for
+correct VEVENT structure, a real worksheet+answer-key PDF generated
+end-to-end through the actual UI with long place-name labels, per-day state
+round-tripped through Sub Plan Builder's history storage, etc. — zero
+console errors across all six.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Formula Reference Sheet Builder | `041-formula-sheet-builder.md` | Print size selector (Full page / Half sheet 2-up / Index card 4-up) tiling identical copies onto one physical letter page with cut lines; auto-fit now targets the selected page's actual height. |
+| Certificate & Award Maker | `042-certificate-award-maker.md` | Uploadable signature image printed above the signature line (reuses the logo downscaler); toggleable print alignment guides (corner registration marks) for pre-printed certificate stock. |
+| Field Trip Permission Slip Generator | `043-field-trip-permission-slip.md` | `.ics` calendar export — one event for the trip, plus a separate slip-due reminder event with a live missing-count snapshot, reusing Lab Safety Contract Tracker's VCALENDAR pattern. |
+| Sub Plan Builder | `044-sub-plan-builder.md` | Per-day "Day type" template selector (Testing / Video / Emergency no-notice) that fills Overview/Schedule/Materials with confirm-gated starter content; tracked per-day and round-tripped through history. |
+| Sub Binder / Day Bundle Generator | `045-sub-binder-generator.md` | "Print bundle for all N days" — shared sections print once, the date-specific Calendar+Lesson sections print once per day with a divider header, reusing the single-day render functions. |
+| Blank Map Generator | `046-blank-map-generator.md` | Answer-key page no longer prints a redundant word bank; answer-key text now shrinks to fit its column instead of overflowing on long place names. |
+
+**31 of 46 (Pass 2) tools done** (25 before this round, including session
+`yar0mb`'s concurrent Round 3 on tools 036–040, + these 6). **15 to go.**
+None of the six cleared their list — each still has substantial Major
+Features/Moonshot items open in its own file — so none moved to
+`stable tools/` this round. Sub Binder Generator's own file flags the P8
+cross-tool handoff interface as now due for a third consecutive round; see
+its Open Questions.
+
+### 063–067 — 2026-08-11 01:30–~03:20 UTC — session `9iiyas` — branch `claude/tools-063-067-improvements-9iiyas`
+
+Devon assigned this session tools 063–067 directly, pulling them out of the
+35-tool Ideas-Backlog batch that's otherwise being held back from the round
+system (see the "Exception" note above) — so this round is **not** part of
+the 46-tool Pass 2 count/tally above, and doesn't move that "N to go"
+number. Each tool got its top 2–3 Quick Wins from its own `improvement
+prompts/<tool>.md`, implemented by five parallel subagents (one per tool,
+each scoped to touch only its own `.html` file), independently reviewed and
+re-verified with a fresh headless-Playwright pass by the orchestrating
+session before each commit (not just trusting the sub-agent's own
+self-report) — one bug in the reviewer's own beat-accuracy test script
+turned up a wrong Unicode codepoint for the half-note glyph, not a bug in
+the shipped code, worth noting so a future reviewer doesn't chase the same
+false lead.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Grammar Mad Libs Generator | `063-grammar-mad-libs-generator.md` | Custom stories now persist to `localStorage`; a visible, click-to-insert tag reference row next to the custom-story textarea; 3 new built-in templates (7 total). |
+| Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` | Row-mirrored duplex front/back printing (adapted from Vocabulary Flashcard Generator's `VocabLayout.mirrorPageRows`, copied in rather than shared, so the file stays self-contained); edit-an-existing-card in place; a stat-overflow warning before print. |
+| Lab Report Template Builder | `065-lab-report-template-builder.md` | Up/down reorder buttons on every list (materials, procedure, columns, conclusion); multiple named saved templates (mirrors Formula Sheet Builder / Rubric Builder's storage shape) with automatic one-time migration of the old single-template key; a print preview modal that reuses the real print markup. |
+| Math "Find the Mistake" Warm-Up Generator | `066-math-find-the-mistake-generator.md` | An 8-category topic taxonomy with a filter panel scoping both projector shuffle and worksheet generation; a two-stage reveal (corrected work, then explanation, as separate clicks) in projector mode only — worksheet/answer-key mode still shows both together; per-built-in disable/enable without deleting. |
+| Music Sight-Reading / Rhythm Warm-Up Generator | `067-music-sightreading-generator.md` | Generation settings (time signature, note pool, clef, range, counts, active tab) now persist to `localStorage` — the only tool in the toolkit that previously had zero persistence; a "lock this pattern for printing" toggle per tab so a new on-screen pattern doesn't overwrite what's about to print; a big single-measure step-through display for call-and-response clapping drills. |
+
+None of the five cleared their own improvement-prompt list — each still has
+real Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each tool's own file for what's next.
+
+### Held-out batch — Round 2 — 2026-08-11 01:40 UTC — session `qer21r` — tools 053-057
+
+Not picked from the "Not yet touched" list below — these five are part
+of the 35 tools added at the Pass 2 reset and explicitly held out of the
+round system pending a deliberate fold-in (see the reset note above).
+Assigned directly by Devon rather than self-picked, same as Rounds 9/10
+in Pass 1. One or two scoped Quick Wins
+per tool, each independently verified via `node --check`-equivalent
+syntax parsing, a headless Playwright interaction smoke test (including a
+reload to confirm `localStorage` persistence survives), and a separate
+print-path smoke test confirming each new feature reaches the printed
+output — zero console errors across all of it.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Cultural Trivia Card Generator | `053-cultural-trivia-card-generator.md` | Category filter + card count settings persist across reloads; per-built-in Hide/Unhide toggle. |
+| Current Events Discussion Guide Generator | `054-current-events-discussion-guide-generator.md` | Stopword list grown ~5x to cut vocabulary-suggestion noise; live word count/read-time while pasting; "Clear & start over" button. |
+| Daily Editing / DOL Warm-Up Generator | `055-daily-editing-warmup-generator.md` | Built-ins tagged by error type with a filter (display + worksheet); error-type label shown alongside the reveal; worksheet count + filter persist; custom sentences editable in place. |
+| DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` | Reorder sources via up/down; dedicated final synthesis/essay-prompt field, printed as its own closing page. |
+| Dichotomous Key Builder | `057-dichotomous-key-builder.md` | Reorder steps via up/down; non-blocking validation warnings (unreachable steps, no-specimen results, dead-end choices); print-without-specimens checkbox. |
+
+None of the five cleared their Quick Wins list entirely, and all five
+still have open Major Features/Moonshot items, so none moved to
+`stable tools/` this round. See each file's own Status section for what's
+recommended next.
+
+### Tools 058–062 — 2026-08-11 01:41 UTC — session `kq3g3h` — Devon's direct request
+
+Devon directed this session to work tools 058&ndash;062 specifically,
+outside the normal pick-from-"Not yet touched" flow — these five are part
+of the 35-tool batch held out at the Pass 2 reset above ("Devon wants to
+fold them into the round system as a deliberate batch rather than mixed
+in silently with this reset"), so this round does **not** count toward
+the "N of 46 (Pass 2)" tally above and the 35-tool batch is still not
+folded into that rotation. One or two independently-verified Quick Wins
+per tool, each confirmed with a headless Chromium smoke test (Playwright,
+installed fresh into the scratchpad for this session since no
+`package.json` exists in the repo) covering the new behavior plus a
+reload to confirm `localStorage` persistence, with zero console errors.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Duty Roster Builder | `058-duty-roster-builder.md` | Live per-staff assignment counts; a per-staff "skip this week" flag that auto-fill respects; fixed a latent bug where deleting a duty location left orphaned assignments still counting toward staff totals. |
+| Scientific Method / Experiment Design Planner | `059-experiment-design-planner.md` | Up/down reordering for controlled variables, materials, and procedure steps; a sanity hint when the independent and dependent variable fields match; fixed a print-output bug where empty-field HTML-entity placeholders were being double-escaped into literal text. |
+| Fitness & Skill Assessment Tracker | `060-fitness-skill-assessment-tracker.md` | Time-value (`mm:ss`) parsing so class average/min/max stats now work for time-type events, not just count-type; CSV export of the full results grid. |
+| Fraction–Decimal–Percent Conversion Drill Generator | `061-fraction-decimal-percent-drill-generator.md` | Seeded generation (mulberry32, ported from Math Fact Drill Sheet Generator's pattern) with a "Lock seed" checkbox for reproducible reprints; settings (difficulty/given-form/row count/seed lock) now persist across page loads. |
+| Geography Bee / Map Skills Quiz Generator | `062-geography-bee-quiz-generator.md` | Category filter and quiz question count persist across page loads; built-in questions can now be hidden/shown individually (not just deleted, which only ever applied to custom questions) and hidden ones are excluded from the projector/shuffle/quiz pools. |
+
+None of the five cleared their own Quick Wins list — each still has
+Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each file's own Status section for exactly where the
+next round should pick up.
+
+### Devon-assigned round — tools 073–077 — 2026-08-11 ~01:45 UTC — session `b4zswl`
+
+**Not part of the Pass 2 001–046 rotation above** — these five come from
+the 35-tool batch the Pass 2 reset note explicitly held back ("leave them
+out until told otherwise"). Devon directly assigned this range for this
+session rather than picking from the Pass 2 "Not yet touched" list, so
+this round is recorded separately and does **not** change the "X of 46
+(Pass 2)" tallies above. Whether/when the rest of the 35-tool batch joins
+the Pass 2 rotation is still Devon's call, per that note.
+
+One or two scoped Quick Wins per tool, each independently verified with
+`node --check` on every inline `<script>` block and a headless
+Chromium/Playwright smoke test (interact with the real DOM, assert on
+real state, zero console errors) before committing.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Science Fair Project Tracker | `073-science-fair-project-tracker.md` | Overdue-milestone highlighting (red cell + non-color ⚠ marker); a whole-class per-milestone summary bar; "sort: least complete first"; milestone up/down reorder. |
+| Science Safety Symbol & Equipment Label Maker | `074-science-safety-label-maker.md` | Edit-in-place and Duplicate buttons on queued labels (previously delete-and-re-add only); a small/medium/large label-size control affecting both print columns and card height. |
+| Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` | CSV and JSON export/import (hand-rolled quoted-CSV parser, no library); duplicate-detection on bulk paste and CSV import (same name + room), with an "Added N, skipped M" report. |
+| Sub Note / Feedback Slip Generator | `076-sub-note-feedback-slip-generator.md` | Fixed a real print bug — long prompt lists were silently clipped by a fixed-height `overflow:hidden` half-sheet; now falls back to one full page per slip past a 5-prompt threshold. Added an optional Class/Period field that pre-fills every printed copy. |
+| Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` | "N of M students have an accommodation checked" summary (fixed a bug where it didn't update on checkbox change); "print one student only" option; 2/3/4-column print-size control. |
+
+None of the five cleared their own Quick Wins list entirely (074 and 075
+each have 2–3 items left; 076 and 077 have 1 each; 073 cleared its Quick
+Wins but still has open Major Features/Moonshot) — so none moved to
+`stable tools/` this round. See each tool's own file for exactly what's
+still open and where the next round should pick up.
+
+### Pass 2 — Round 3 — 2026-08-11 01:43 UTC — session `h4rwxn` — PR #78
+
+Tools 078–081, assigned directly by Devon rather than picked from the
+"Not yet touched" list below — these four are part of the 35-tool batch
+the Pass 2 reset note (above) explicitly held out of the round-robin, so
+this round doesn't count toward that list's "26 to go" and none of the
+four were removed from it. One scoped, independently-verified item (or
+two, where both were small) per tool, each checked with `node --check` and
+a headless Playwright smoke test before committing. The 080 fix turned out
+broader than its own file's Status had flagged: the "ten/hundred blocks
+snapshot as blank" bug was actually one instance of a bug affecting three
+piece types (fraction tiles hit the same root cause; number-line markers
+had an unrelated instance of the identical pattern) — all three fixed in
+the same pass since they shared one function.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Unit Conversion Reference Chart Builder | `078-unit-conversion-chart-builder.md` | Per-line delete for template-sourced lines (not just custom ones); print column-count control (1/2/3), both persisted. |
+| Verb Conjugation Reference Poster Generator | `079-verb-conjugation-poster-generator.md` | 5 new starter templates (Spanish imperfect/future/irregulars, French imperfect/irregulars, doubling 3→8); print column-count control (1/2/3 panels per row), persisted. |
+| Virtual Manipulatives Board | `080-virtual-manipulatives-board.md` | Fixed the snapshot color bug for segmented pieces (ten/hundred blocks *and* fraction tiles) and number-line markers; added a duplicate-piece button. |
+| Word Problem Warm-Up Generator | `081-word-problem-warmup-generator.md` | Doubled templates per operation (3→6, 24 total); seeded generation (mulberry32 + lock-seed checkbox, matching Math Fact Drill Sheet Generator's pattern); settings persistence (grade band, operations, count, lock state). |
+
+None of the four cleared their list — each still has substantial Major
+Features/Moonshot items open in its own file — so none moved to
+`stable tools/` this round.
+
+### Devon-assigned round — tool 046 (Round 12) — 2026-08-11 02:07 UTC — session `albm3m` — branch `claude/tool-46-blank-map-generator-albm3m`
+
+Devon directed this session at the Blank Map Generator specifically —
+the same per-tool override as its Rounds 9–11 — so this does **not**
+change the Pass 2 tally (046 already counted in session `gb5c6e`'s
+Round 4 above). Cleared the tool's entire remaining Quick Wins list plus
+one Major Feature, all verified with a 27-check headless Chromium pass
+driving the real UI (worksheet PDF byte-parsed for page count, label-set
+export/import round-tripped through real downloads/uploads, undo
+exercised via real Ctrl+Z) plus direct visual inspection of the rendered
+worksheet, answer key, PNG, and poster-tile output.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Blank Map Generator | `046-blank-map-generator.md` | Numbered markers with key captions are now worksheet items (uncaptioned ones print "?" and the panel says why, with a count); label sets gained rename / edit-as-text / JSON export / import (built-ins edit as copy-on-save); a "Shrink to Fit" companion to Tidy Labels (one undoable edit); the Commons credit line now stamps automatically on every raster export (PNG, Print, PDF, tiled poster). |
+
+The tool's Quick Wins list is now empty — but its Major Features /
+Moonshot sections (time-slice maps, vector base maps, choropleth,
+map+timeline pairing) are substantial and open, so it does not move to
+`stable tools/`.
+
+### Devon-assigned round — tool 046 (Round 13) — 2026-08-11 02:44 UTC — session `mn6d5m` — branch `claude/vector-base-maps-phase-1-mn6d5m`
+
+Devon directed this session at the Blank Map Generator specifically — the
+same per-tool override as its Rounds 9–12 — so this is **not** picked from
+"Not yet touched" and does **not** change the Pass 2 tally (046 already
+counted in session `gb5c6e`'s Round 4 above). Round 12's branch had not
+merged to `main` when this round started, and this round's work builds
+directly on its `mapCreditLine()` export-stamping, so this branch was based
+on `claude/tool-46-blank-map-generator-albm3m` rather than `main` — it
+carries Round 12's commits as well as its own.
+
+Phase 1 of the **vector base maps** Major Feature, the first item off that
+list rather than a Quick Win (there were none left after Round 12).
+Verified with `node --check` on every touched module plus a **19-check
+headless Chromium pass** over the real UI served on local HTTP, and direct
+visual inspection of the generated rasters and both PDF worksheet pages.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Blank Map Generator | `046-blank-map-generator.md` | Nine built-in, offline base maps (World, six continents, USA lower-48 and all-50) rendered from ~670 KB of vendored public-domain Natural Earth GeoJSON, in outline or land-fill style with borders on/off. They go through the *existing* raster/IndexedDB pipeline as an upload-shaped cache record, so every feature works unchanged — and because the renderer owns the projection, each one **calibrates itself**, verified at 0.01 map px against the projection math. Exports credit Natural Earth via Round 12's automatic stamping. |
+
+Two notes worth carrying forward:
+
+- **npm is the working route for third-party data and libraries** when the
+  open web is blocked from a session's sandbox — twice now (jsPDF/JSZip
+  vendoring in earlier rounds via `npm pack`, and this round's Natural
+  Earth TopoJSON via `world-atlas`/`us-atlas` + `topojson-client`).
+  Wikimedia was unreachable in both Round 12's and this round's sandbox.
+- **Look at the rendered output, don't just assert on it.** This round's
+  first render had three stray full-width lines across the world map
+  (Natural Earth clamps antimeridian-crossing rings to ±180, which plate
+  carrée turns into a `lineTo` across the whole canvas), and the *first
+  fix* for that introduced a hard line along every world map's bottom
+  edge. Both were found by looking at the image; only afterwards was a
+  full-raster row scan added to catch the class automatically. Every
+  numeric check in the suite passed the whole time.
+
+The tool's Quick Wins list is still empty and its Major Features / Moonshot
+sections remain open (time-slice maps, vector phase 2 — live rendering,
+per-region hit-testing, choropleth — and map+timeline pairing), so it does
+not move to `stable tools/`.
+
+### Pass 2 — Round 2 — 2026-08-11 03:10 UTC — session `mxpfjs` — PR #89
+
+Tools 021–030, picked from "Not yet touched" before any of the concurrent
+rounds above had merged (no tool overlap with any of them). Ten tools, all
+print/projector/data tools that each already had a Pass 1 round (Round 4 or
+Round 5 — see each file's own history) — this round picked up specifically
+where each file's own "Where the next round should pick up" notes left
+off, two scoped improvements per tool, each independently verified via
+`node --check` and a headless Playwright pass before being committed. No
+tool outside this list was touched.
 
 | Tool | File | What shipped |
 |---|---|---|
@@ -479,10 +920,13 @@ committed. No tool outside this list was touched.
 | Prompt Builder | `029-prompt-builder.md` | A standalone redaction helper (manual name list + opt-in best-effort auto-detect, consistent "Student A/B/C" placeholders); prompt-history text search and per-entry pinning. |
 | Quiz / Review Game Board | `030-review-game-board.md` | Scoreboard is now sticky, larger, and flashes green/red on any score change; teams can be built from a saved `np_rosters` roster, split into N count-based groups with editable, pre-filled names. |
 
-**10 of 46 (Pass 2) tools done this round; 20 of 46 done overall in Pass 2. 26
-to go.** None of the ten cleared their own backlog file — each still carries
-open Major Features/Moonshot items — so none moved to `stable tools/` this
-round either. Two site-wide findings from this round were added to
+**41 of 46 (Pass 2) tools done** (31 from the concurrent rounds above —
+`v19h3x` 10 + `yjj7k6` 5 + `j6ok2v` 5 + `yar0mb` 5 + `gb5c6e` 6 — + these
+10, none overlapping). **5 to go**: 001, 004, 005, 007, 008 — the same five
+`yjj7k6`'s Round 1 flagged as leftover from the 001–010 range. None of the
+ten cleared their own backlog file — each still carries open Major
+Features/Moonshot items — so none moved to `stable tools/` this round
+either. Two site-wide findings from this round were added to
 `_site-requests.md`: a likely-wider P12 image-storage risk beyond the tools
 already named there, and a new wrinkle on the recurring fullscreen-stage
 duplication (interactive controls, not just static display, now need to
@@ -498,31 +942,10 @@ data-heavy), and say why in the PR. Skip anything already listed in
 **Currently claimed**.
 
 - Digital Hall Pass / Sign-Out Log — `001-hall-pass-log.md`
-- Group / Team Generator — `002-group-team-generator.md`
-- Rubric Builder — `003-rubric-builder.md`
 - Classroom Timer — `004-classroom-timer.md`
 - Seating Chart Generator — `005-seating-chart-generator.md`
-- Class Roster Hub — `006-class-roster-hub.md`
 - Name Picker — `007-name-picker.md`
 - Behavior & Points Tracker — `008-behavior-points-tracker.md`
-- Backup & Restore — `009-backup-restore.md`
-- Command Center — `010-command-center-dashboard.md`
-- Word Doc Merger — `031-docx-merger.md`
-- School Calendar Visualizer — `032-school-calendar-visualizer.md`
-- Silent Reading (SSR) Log Tracker — `033-ssr-log-tracker.md`
-- East Middle Schedule Browser — `034-schedule-browser.md`
-- School Layout Visualizer — `035-schedule-visualizer.md`
-- Final Grade Checker — `036-final-grade-checker.md`
-- Grade Distribution Visualizer — `037-grade-distribution-visualizer.md`
-- Data Table → Chart Builder — `038-data-chart-builder.md`
-- Vocab & Conjugation Drill Generator — `039-vocab-conjugation-drill.md`
-- Vocabulary Flashcard & Word Wall Generator — `040-vocab-flashcard-generator.md`
-- Formula Reference Sheet Builder — `041-formula-sheet-builder.md`
-- Certificate & Award Maker — `042-certificate-award-maker.md`
-- Field Trip Permission Slip Generator — `043-field-trip-permission-slip.md`
-- Sub Plan Builder — `044-sub-plan-builder.md`
-- Sub Binder / Day Bundle Generator — `045-sub-binder-generator.md`
-- Blank Map Generator — `046-blank-map-generator.md`
 
 ---
 
@@ -593,6 +1016,30 @@ lands naturally inside a tool you are already working on, take it.
   tool that hides a flex/grid-displayed element by attribute needs an
   explicit `[hidden] { display: none; }` rule; worth a grep wherever a
   toolbar control is toggled this way.
+- **`height` + `overflow: hidden` on a print block silently clips content.**
+  `047-art-critique-worksheet-generator.html`'s half-sheet print CSS used
+  `height: 47vh; overflow: hidden`, which cut off a worksheet's later
+  follow-up questions with zero visual warning on screen — the printed
+  page just quietly lost content. Fixed there by switching to
+  `min-height: 47vh` (no `overflow: hidden`), letting normal page flow
+  carry any overflow onto the next printed page instead of eating it.
+  `070-peer-feedback-checklist-generator.html` had the exact same pattern
+  and has since picked up the identical `min-height` fix (session
+  `4o6xmy`'s held-out-batch round), layered on top of that same round's
+  own on-screen size warning and two-tier print font/spacing scaling —
+  see `_site-requests.md`'s matching entry for the fuller writeup and a
+  third variant of the same fix in `076-sub-note-feedback-slip-generator.html`.
+- **Multi-save localStorage convention: `list` / `data:<name>` / `current`.**
+  Formula Sheet Builder (`Tools/formula-sheet-builder/fsb-store.js`) was
+  the first to name this pattern explicitly — a `list` key holding an
+  array of saved names, a `data:<name>`-prefixed key per saved item, and a
+  `current` key pointing at whichever one is open. Plot Diagram Builder
+  (072, session `4o6xmy`'s held-out-batch round) copied the same
+  three-key shape inline (no support folder yet) to add multiple named
+  diagrams, including a one-time migration path for any pre-existing
+  single-document data under the old key. Any tool moving from "one
+  document per browser" to "multiple named documents" should copy this
+  shape rather than invent a new one.
 - **Generated-output drift is a real failure mode, not just a theoretical
   one.** Round 7 found that `035-schedule-visualizer.html`'s "Publish" button
   would produce a broken `034-schedule-browser.html` (undefined `escHtml`/

@@ -320,6 +320,19 @@
     <div id="dayTabs" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
   </div>
 
+  <div class="toggle-row" style="align-items:flex-end; gap:10px; margin-bottom: 14px;">
+    <div style="flex:1;">
+      <label for="dayType">Day type <span class="opt">(optional — fills in a starter template for Overview / Schedule / Materials below)</span></label>
+      <select id="dayType">
+        <option value="lesson" selected>Regular lesson day</option>
+        <option value="testing">Testing day</option>
+        <option value="video">Video day</option>
+        <option value="emergency">Emergency plan (no notice)</option>
+      </select>
+    </div>
+    <button type="button" class="small" id="insertDayTypeTemplateBtn" style="flex:0 0 auto;">Insert template</button>
+  </div>
+
   <label for="announcement">One-off announcement banner <span class="opt">(optional — e.g. a club cancellation, schedule change)</span></label>
   <textarea id="announcement" rows="2" placeholder="Leave blank if there's nothing extra to flag"></textarea>
 
@@ -689,8 +702,38 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   }
 
   function blankDayPlan() {
-    return { lessonTitle: '', announcement: '', overviewText: '', scheduleText: '', samePeriods: true, sharedPeriodNotes: '', perPeriodValues: {}, materialsNote: '' };
+    return { lessonTitle: '', announcement: '', overviewText: '', scheduleText: '', samePeriods: true, sharedPeriodNotes: '', perPeriodValues: {}, materialsNote: '', dayType: 'lesson' };
   }
+
+  // Generic starter content for the day types that recur across a school
+  // year — inserted into the Overview/Schedule/Materials fields on request
+  // (never automatically), so a teacher isn't typing an emergency plan from
+  // scratch at 6:40am. lessonTitle is only filled in when that field is
+  // still blank; the rest always replaces (the button asks first if there's
+  // anything to lose — see insertDayTypeTemplateBtn's click handler).
+  const DAY_TYPE_TEMPLATES = {
+    testing: {
+      label: 'Testing day',
+      lessonTitle: 'Testing Day',
+      overviewText: 'Students are taking a test today. Please follow strict testing protocols: no phones, no talking, no early finishers helping others. See the schedule below for exact steps, and the extra activity for anyone who finishes early.',
+      scheduleText: '**Before testing:** Read the testing instructions aloud exactly as written on the cover sheet/screen. Confirm every student has what they need before starting the clock.\n**During testing:** Circulate silently. Do not answer content questions — redirect any academic question to "just do your best." No talking, no devices, no early dismissal.\n**Early finishers:** Silent reading only, or the extra activity noted under Materials below — no talking, no devices, no leaving their seat.\n**After testing:** Collect all test materials before dismissal and count them against the class roster. Report any discrepancy to the front office immediately.',
+      materialsNote: 'Testing materials are [where]. Count booklets/answer sheets before and after testing — report any discrepancy right away.'
+    },
+    video: {
+      label: 'Video day',
+      lessonTitle: 'Video Day',
+      overviewText: 'Students are watching a video today as part of our current unit. Play it from where indicated below and pause only where noted.',
+      scheduleText: '**Setup (2 min):** Start the video, confirm volume and captions are on.\n**Viewing:** Play from [start point] to [stop point]. A short pause if students need a break is fine, but keep it moving.\n**After viewing:** Students complete the viewing guide/questions individually and silently — see Materials below.',
+      materialsNote: 'Viewing guide handouts are [where]. Video link/DVD is [where].'
+    },
+    emergency: {
+      label: 'Emergency plan (no notice)',
+      lessonTitle: 'Emergency Plan — No Advance Notice',
+      overviewText: 'This is a general-purpose plan for a day I\'m unexpectedly out with no time to prepare something specific. It does not depend on whatever unit we\'re currently in.',
+      scheduleText: '**Warm-up (5 min):** Silent reading from a book of the student\'s choice.\n**Main activity (30+ min):** Students complete the general worksheet packet described below.\n**Early finishers:** Continue silent reading.\n**Wrap-up (5 min):** Collect all completed work with names on it before the bell.',
+      materialsNote: 'A stack of general worksheet packets is kept in [where], specifically for this situation — refresh the supply each grading period. Silent reading books are the classroom library.'
+    }
+  };
 
   function captureCurrentDayFields() {
     if (!currentDay) return;
@@ -702,7 +745,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       samePeriods: samePeriodsBox.checked,
       sharedPeriodNotes: el('sharedPeriodNotes').value,
       perPeriodValues: Object.assign({}, perPeriodValues),
-      materialsNote: el('materialsNote').value
+      materialsNote: el('materialsNote').value,
+      dayType: el('dayType').value
     };
   }
 
@@ -716,6 +760,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     el('sharedPeriodNotes').value = dp.sharedPeriodNotes;
     perPeriodValues = Object.assign({}, dp.perPeriodValues || {});
     el('materialsNote').value = dp.materialsNote;
+    el('dayType').value = dp.dayType || 'lesson';
     renderPerPeriodBlocks();
   }
 
@@ -766,6 +811,18 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   el('numDays').addEventListener('input', renderDayTabs);
   renderDayTabs();
 
+  el('insertDayTypeTemplateBtn').addEventListener('click', () => {
+    const type = el('dayType').value;
+    const tmpl = DAY_TYPE_TEMPLATES[type];
+    if (!tmpl) { alert('Pick a day type above (Testing, Video, or Emergency) to insert a starter template.'); return; }
+    const hasContent = el('overviewText').value.trim() || el('scheduleText').value.trim() || el('materialsNote').value.trim();
+    if (hasContent && !confirm('Replace the Overview, Schedule, and Materials fields with the "' + tmpl.label + '" starter template? This can\'t be undone.')) return;
+    if (!el('lessonTitle').value.trim()) el('lessonTitle').value = tmpl.lessonTitle;
+    el('overviewText').value = tmpl.overviewText;
+    el('scheduleText').value = tmpl.scheduleText;
+    el('materialsNote').value = tmpl.materialsNote;
+  });
+
   // ---------- Dated plan history (opt-in; never includes Student Notes) ----------
 
   const HISTORY_KEY = 'subPlanBuilder.history.v1';
@@ -796,7 +853,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
         samePeriods: dp.samePeriods,
         sharedPeriodNotes: dp.sharedPeriodNotes,
         perPeriodValues: Object.assign({}, dp.perPeriodValues),
-        materialsNote: dp.materialsNote
+        materialsNote: dp.materialsNote,
+        dayType: dp.dayType || 'lesson'
       };
       // Re-saving the same date replaces that day's entry rather than duplicating it.
       entries = entries.filter(en => en.date !== dateVal);
@@ -836,7 +894,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       samePeriods: en.samePeriods !== false,
       sharedPeriodNotes: en.sharedPeriodNotes || '',
       perPeriodValues: Object.assign({}, en.perPeriodValues || {}),
-      materialsNote: en.materialsNote || ''
+      materialsNote: en.materialsNote || '',
+      dayType: en.dayType || 'lesson'
     };
     applyDayFieldsToForm(currentDay);
   }

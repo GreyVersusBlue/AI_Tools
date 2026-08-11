@@ -39,12 +39,47 @@ consistent with each other and free of floating-point noise. Verified with
 a per-cell (not concatenated-text) regex check across 20 generated "hard"
 rows with no matches.
 
+**2026-08-11 — Round 2 (session `kq3g3h`).** Shipped the two Quick Wins
+flagged as the most obvious first-run gap versus sibling generators.
+
+- **Done — Seeded generation.** Ported the same `makeRng()` mulberry32
+  pattern already used by Math Fact Drill Sheet Generator: `randInt`/`pick`
+  now take an explicit `rng` argument instead of calling `Math.random()`
+  directly, a read-only "Sheet seed" field displays the active seed, and a
+  "Lock seed" checkbox keeps reusing it across "Generate" clicks so a
+  sheet can be reprinted byte-identical for a make-up.
+- **Done — Settings persistence.** Difficulty, given-form, row count, and
+  the lock-seed state (plus the locked seed value itself) now persist to
+  `localStorage` (`fdp_settings_v1`) and restore on page load, matching
+  the convention used by sibling drill/generator tools.
+- Verified with a headless Chromium smoke test: generated a locked-seed
+  hard-difficulty sheet, generated again and confirmed both the seed and
+  the full worksheet markup were byte-identical, reloaded the page and
+  confirmed difficulty/lock-seed/seed all survived, then unlocked and
+  confirmed the seed changes again on the next generate.
+
+Not started this round: the "odd one out" spot-the-error mode, repeating-
+decimal notation, negative/improper-fraction support, and word-problem
+wrapping. The Open Questions (repeating-decimal notation for MVP-tier
+correctness; where "odd one out" mode should live) are both still
+unresolved.
+
+**Where the next round should pick up:** repeating-decimal notation for
+hard-tier thirds/sixths/sevenths is the next-highest-value correctness fix
+now that seeded generation makes any given "wrong-looking" row reproducible
+for debugging. The "odd one out" mode is the next-highest-value net-new
+feature, given the explicit overlap already identified with Math "Find the
+Mistake" Warm-Up Generator.
+
 ## What it does today
 
 - 3 difficulty tiers (denominator pools)
 - Given-form control: random per row, or fixed to one form
 - Worksheet + matching answer key from the same generated set, printed
   together
+- Seeded generation with a "Lock seed" checkbox for reproducible reprints
+- Settings (difficulty, given-form, row count, seed lock) persist across
+  page loads
 
 ## Quick Wins
 

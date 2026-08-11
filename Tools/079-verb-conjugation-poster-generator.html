@@ -107,7 +107,12 @@
         <select id="templateSelect">
           <option value="es_present">Spanish &mdash; Present Tense (-AR/-ER/-IR)</option>
           <option value="es_preterite">Spanish &mdash; Preterite (-AR/-ER/-IR)</option>
+          <option value="es_imperfect">Spanish &mdash; Imperfect (-AR/-ER/-IR)</option>
+          <option value="es_future">Spanish &mdash; Future (-AR/-ER/-IR)</option>
+          <option value="es_irregulars">Spanish &mdash; Irregulars (ser / estar, present)</option>
           <option value="fr_present">French &mdash; Present Tense (-ER/-IR/-RE)</option>
+          <option value="fr_imperfect">French &mdash; Imperfect (-ER/-IR/-RE)</option>
+          <option value="fr_irregulars">French &mdash; Irregulars (avoir / &ecirc;tre, present)</option>
           <option value="blank">Blank / Custom</option>
         </select>
         <button class="secondary full" id="loadTemplateBtn">Load template (replaces current poster)</button>
@@ -116,6 +121,17 @@
       <div class="card">
         <h2>Poster title</h2>
         <input type="text" id="posterTitle" placeholder="e.g. Present Tense Verb Endings">
+      </div>
+
+      <div class="card">
+        <h2>Print layout</h2>
+        <label for="colCount">Panels per row</label>
+        <select id="colCount">
+          <option value="1">1 per row</option>
+          <option value="2" selected>2 per row</option>
+          <option value="3">3 per row</option>
+        </select>
+        <p class="hint" style="margin-bottom:0;">A single-panel poster reads bigger at 1 per row; a poster with many panels fits more on one page at 3.</p>
       </div>
 
       <div class="card">
@@ -162,6 +178,32 @@
         { name: '-IR: vivir (to live)', forms: ['viví', 'viviste', 'vivió', 'vivimos', 'vivisteis', 'vivieron'] }
       ]
     },
+    es_imperfect: {
+      title: 'Imperfect Tense — Regular Verbs',
+      persons: DEFAULT_PERSONS,
+      panels: [
+        { name: '-AR: hablar (to speak)', forms: ['hablaba', 'hablabas', 'hablaba', 'hablábamos', 'hablabais', 'hablaban'] },
+        { name: '-ER: comer (to eat)', forms: ['comía', 'comías', 'comía', 'comíamos', 'comíais', 'comían'] },
+        { name: '-IR: vivir (to live)', forms: ['vivía', 'vivías', 'vivía', 'vivíamos', 'vivíais', 'vivían'] }
+      ]
+    },
+    es_future: {
+      title: 'Future Tense — Regular Verbs',
+      persons: DEFAULT_PERSONS,
+      panels: [
+        { name: '-AR: hablar (to speak)', forms: ['hablaré', 'hablarás', 'hablará', 'hablaremos', 'hablaréis', 'hablarán'] },
+        { name: '-ER: comer (to eat)', forms: ['comeré', 'comerás', 'comerá', 'comeremos', 'comeréis', 'comerán'] },
+        { name: '-IR: vivir (to live)', forms: ['viviré', 'vivirás', 'vivirá', 'viviremos', 'viviréis', 'vivirán'] }
+      ]
+    },
+    es_irregulars: {
+      title: 'Irregular Verbs — Present Tense',
+      persons: DEFAULT_PERSONS,
+      panels: [
+        { name: 'ser (to be)', forms: ['soy', 'eres', 'es', 'somos', 'sois', 'son'] },
+        { name: 'estar (to be)', forms: ['estoy', 'estás', 'está', 'estamos', 'estáis', 'están'] }
+      ]
+    },
     fr_present: {
       title: 'Present Tense — Regular Verbs',
       persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
@@ -169,6 +211,23 @@
         { name: '-ER: parler (to speak)', forms: ['parle', 'parles', 'parle', 'parlons', 'parlez', 'parlent'] },
         { name: '-IR: finir (to finish)', forms: ['finis', 'finis', 'finit', 'finissons', 'finissez', 'finissent'] },
         { name: '-RE: vendre (to sell)', forms: ['vends', 'vends', 'vend', 'vendons', 'vendez', 'vendent'] }
+      ]
+    },
+    fr_imperfect: {
+      title: 'Imperfect Tense — Regular Verbs',
+      persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
+      panels: [
+        { name: '-ER: parler (to speak)', forms: ['parlais', 'parlais', 'parlait', 'parlions', 'parliez', 'parlaient'] },
+        { name: '-IR: finir (to finish)', forms: ['finissais', 'finissais', 'finissait', 'finissions', 'finissiez', 'finissaient'] },
+        { name: '-RE: vendre (to sell)', forms: ['vendais', 'vendais', 'vendait', 'vendions', 'vendiez', 'vendaient'] }
+      ]
+    },
+    fr_irregulars: {
+      title: 'Irregular Verbs — Present Tense',
+      persons: ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
+      panels: [
+        { name: 'avoir (to have)', forms: ['ai', 'as', 'a', 'avons', 'avez', 'ont'] },
+        { name: 'être (to be)', forms: ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'] }
       ]
     },
     blank: {
@@ -180,7 +239,10 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'posterTitle', 'personsWrap', 'panelsWrap', 'addPanelBtn',
-   'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printArea', 'colCount'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var COLS_KEY = 'vcp_columns_v1';
+  var columns = parseInt(localStorage.getItem(COLS_KEY), 10) || 2;
 
   var state = null;
 
@@ -286,7 +348,7 @@
       }).join('');
       return '<div class="poster-panel"><h3>' + escapeHtml(panel.name) + '</h3><table>' + rows + '</table></div>';
     }).join('');
-    return '<h1 class="poster-title">' + title + '</h1><div class="poster-grid">' + panels + '</div>';
+    return '<h1 class="poster-title">' + title + '</h1><div class="poster-grid" style="grid-template-columns: repeat(' + columns + ', 1fr);">' + panels + '</div>';
   }
 
   els.printBtn.addEventListener('click', function () {
@@ -295,9 +357,15 @@
     window.print();
   });
 
+  els.colCount.addEventListener('change', function () {
+    columns = parseInt(els.colCount.value, 10) || 2;
+    try { localStorage.setItem(COLS_KEY, String(columns)); } catch (e) { /* storage full/blocked */ }
+  });
+
   /* ---------- boot ---------- */
   load();
   if (!state) fromTemplate('es_present');
+  els.colCount.value = String(columns);
   renderAll();
 })();
 </script>

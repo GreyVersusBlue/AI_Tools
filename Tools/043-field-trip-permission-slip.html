@@ -264,6 +264,10 @@
 
         <label for="dueDate">Return this slip by</label>
         <input type="date" id="dueDate">
+
+        <button type="button" class="secondary full" id="downloadIcsBtn">Add trip to calendar (.ics)</button>
+        <p class="hint">Downloads a calendar file with the trip date(s) &mdash; and, if a return-by date is set,
+          a separate reminder event for when slips are due.</p>
       </div>
 
       <div class="card">
@@ -389,7 +393,7 @@
     'deleteUndoBar', 'deleteUndoName', 'undoDeleteTripBtn',
     'tripName', 'schoolTeacher', 'destination', 'tripStartDate', 'tripEndDate',
     'departureTime', 'returnTime', 'purpose', 'cost', 'whatToBring',
-    'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate',
+    'chaperoneName', 'chaperonePhone', 'emergencyInstructions', 'dueDate', 'downloadIcsBtn',
     'singleFields', 'batchFields', 'blankFields',
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
     'printBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
@@ -464,6 +468,93 @@
     var end = formatDate(state.tripEndDate);
     if (start && end && end !== start) return start + ' &ndash; ' + end;
     return start || '';
+  }
+
+  /* ---------- add to calendar (.ics) ---------- */
+  // Same pattern as 013-lab-safety-contract-tracker.html's due-date
+  // reminder: plain-text VCALENDAR built by hand, all-day events only (no
+  // timezone to get wrong), so this works identically everywhere.
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function icsTimestamp() {
+    var d = new Date();
+    return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + 'T' +
+      pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + pad2(d.getUTCSeconds()) + 'Z';
+  }
+  function icsEscape(s) {
+    return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  }
+  function icsCompactDate(iso) { return String(iso || '').replace(/-/g, ''); }
+  // The .ics all-day convention is exclusive: DTEND is the day *after* the
+  // last day the event covers.
+  function icsDayAfter(iso) {
+    var d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  }
+  function icsUid(suffix) {
+    return 'ftps-' + icsCompactDate(state.tripStartDate) + '-' + sanitizeFilename(state.name).replace(/[^a-zA-Z0-9]/g, '') +
+      '-' + suffix + '@aspermylessonplan.com';
+  }
+
+  function buildTripIcs() {
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AsPerMyLessonPlan.com//Field Trip Permission Slip Generator//EN'];
+    var tripStart = icsCompactDate(state.tripStartDate);
+    var tripEnd = icsDayAfter(state.tripEndDate || state.tripStartDate);
+    var descParts = [];
+    if (state.purpose) descParts.push(state.purpose);
+    var timesLine = [];
+    if (state.departureTime) timesLine.push('Depart ' + formatTime(state.departureTime));
+    if (state.returnTime) timesLine.push('Return ' + formatTime(state.returnTime));
+    if (timesLine.length) descParts.push(timesLine.join(', '));
+    if (state.cost && state.cost.trim()) descParts.push('Cost: ' + state.cost.trim());
+    if (state.chaperoneName) descParts.push('Trip contact: ' + state.chaperoneName + (state.chaperonePhone ? ' (' + state.chaperonePhone + ')' : ''));
+    lines.push(
+      'BEGIN:VEVENT',
+      'UID:' + icsUid('trip'),
+      'DTSTAMP:' + icsTimestamp(),
+      'DTSTART;VALUE=DATE:' + tripStart,
+      'DTEND;VALUE=DATE:' + tripEnd,
+      'SUMMARY:' + icsEscape((state.name || 'Field Trip') + (state.destination ? ' — ' + state.destination : '')),
+      'DESCRIPTION:' + icsEscape(descParts.join('\n')),
+      state.destination ? 'LOCATION:' + icsEscape(state.destination) : null,
+      'END:VEVENT'
+    );
+    // A second, separate reminder event on the slip-return due date — only
+    // when it's set and isn't the same day as the trip itself (a same-day
+    // due date would just duplicate the trip event above).
+    if (state.dueDate && state.dueDate !== state.tripStartDate) {
+      var missing = missingStudents();
+      var total = batchNamesList().length;
+      var dueDesc = total
+        ? (missing.length + ' of ' + total + ' students still missing a signed slip as of the day this reminder was downloaded' +
+           (missing.length ? ': ' + missing.join(', ') : '.'))
+        : 'Field trip permission slips due back today.';
+      lines.push(
+        'BEGIN:VEVENT',
+        'UID:' + icsUid('due'),
+        'DTSTAMP:' + icsTimestamp(),
+        'DTSTART;VALUE=DATE:' + icsCompactDate(state.dueDate),
+        'DTEND;VALUE=DATE:' + icsDayAfter(state.dueDate),
+        'SUMMARY:' + icsEscape('Field trip slips due — ' + (state.name || 'Field Trip')),
+        'DESCRIPTION:' + icsEscape(dueDesc),
+        'END:VEVENT'
+      );
+    }
+    lines.push('END:VCALENDAR');
+    return lines.filter(Boolean).join('\r\n');
+  }
+
+  function downloadTripIcs() {
+    if (!state.tripStartDate) { alert('Set a trip date first.'); return; }
+    var blob = new Blob([buildTripIcs()], { type: 'text/calendar' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(state.name) + '-trip.ics';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   function save() {
@@ -982,6 +1073,11 @@
   els.printBtn.addEventListener('click', function () {
     buildPrintArea();
     window.print();
+  });
+
+  els.downloadIcsBtn.addEventListener('click', function () {
+    if (!state) return;
+    downloadTripIcs();
   });
 
   els.tripName.addEventListener('change', function () {

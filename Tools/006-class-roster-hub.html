@@ -191,6 +191,12 @@
     .p-table tr { page-break-inside: avoid; }
     .p-grid { display: grid; gap: .25rem; }
     .p-grid .box { border: 1px solid #666; height: 3.1rem; padding: .15rem .25rem; font-size: .7rem; color: #666; page-break-inside: avoid; }
+    .p-seat-front { text-align: center; border: 1px solid #666; border-radius: 3px; padding: .25rem; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: #555; margin-bottom: .5rem; }
+    .p-seatgrid { position: relative; width: 100%; aspect-ratio: 1280 / 900; border: 1px solid #999; page-break-inside: avoid; }
+    .p-seat { position: absolute; border: 1px solid #666; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: .75rem; color: #555; }
+    .p-seat-legend { margin-top: .8rem; font-size: .85rem; }
+    .p-seat-legend .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: #555; margin-bottom: .25rem; }
+    .p-seat-legend .names { line-height: 1.9; }
   }
 </style>
 </head>
@@ -351,6 +357,7 @@
             <option value="numbered">Numbered class list</option>
             <option value="checklist">Blank checklist</option>
             <option value="blank">Blank name grid (seating quiz)</option>
+            <option value="seatgrid">Seating chart shape (from Seating Chart Generator)</option>
           </select>
           <button class="secondary" id="printBtn" type="button">Print</button>
         </div>
@@ -1679,6 +1686,78 @@
     }
   });
 
+  // ── Print: seating-chart-shaped blank (reads Seating Chart Generator) ─────
+  // Read-only, one-way: this tool never writes `seating-chart-v1`. The room
+  // constants below (1280x900 layout px) mirror `Tools/seating-chart/seating.mjs`'s
+  // `ROOM` export — if that ever changes, this print shape drifts out of sync
+  // with the real floor plan until updated here too.
+  var SEAT_ROOM = { width: 1280, height: 900, deskW: 106, deskH: 70 };
+
+  function loadSeatingChartData() {
+    try {
+      var raw = localStorage.getItem('seating-chart-v1');
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.sections)) return null;
+      return parsed;
+    } catch (e) { return null; }
+  }
+
+  function normNameForMatch(n) { return String(n || '').trim().toLowerCase(); }
+
+  /** Picks the Seating Chart Generator section whose roster overlaps this
+      roster's names the most, so "Print seating quiz" doesn't require the
+      teacher to know which section name corresponds to which class. Requires
+      at least 3 matching names and at least 40% overlap to avoid matching an
+      unrelated section. */
+  function bestMatchingSeatingSection(names) {
+    var data = loadSeatingChartData();
+    if (!data || !names.length) return null;
+    var wanted = {};
+    names.forEach(function (n) { wanted[normNameForMatch(n)] = true; });
+    var best = null, bestScore = 0, bestMatches = 0;
+    data.sections.forEach(function (section) {
+      var students = Array.isArray(section.students) ? section.students : [];
+      if (!students.length) return;
+      var matches = students.filter(function (s) { return wanted[normNameForMatch(s.name)]; }).length;
+      var score = matches / students.length;
+      if (matches >= 3 && score >= 0.4 && score > bestScore) { best = section; bestScore = score; bestMatches = matches; }
+    });
+    return best;
+  }
+
+  function seatGridPrintHtml(section) {
+    var students = Array.isArray(section.students) ? section.students : [];
+    var desks = Array.isArray(section.desks) ? section.desks : [];
+    var byId = {};
+    students.forEach(function (s) { byId[s.id] = s; });
+    var ordered = desks.slice().sort(function (a, b) {
+      var ay = a.y || 0, by = b.y || 0;
+      if (ay !== by) return ay - by;
+      return (a.x || 0) - (b.x || 0);
+    });
+    var seatsHtml = ordered.map(function (d, i) {
+      var left = ((d.x || 0) / SEAT_ROOM.width) * 100;
+      var top = ((d.y || 0) / SEAT_ROOM.height) * 100;
+      var w = (SEAT_ROOM.deskW / SEAT_ROOM.width) * 100;
+      var h = (SEAT_ROOM.deskH / SEAT_ROOM.height) * 100;
+      var rot = d.rot ? ' transform:rotate(' + d.rot + 'deg);' : '';
+      return '<div class="p-seat" style="left:' + left + '%;top:' + top + '%;width:' + w + '%;height:' + h + '%;' + rot + '">' + (i + 1) + '</div>';
+    }).join('');
+    var seatedIds = {};
+    ordered.forEach(function (d) { var sid = section.assign && section.assign[d.id]; if (sid) seatedIds[sid] = true; });
+    var nameList = students.map(function (s) { return s.name; }).filter(Boolean);
+    // Shuffle so the printed name bank isn't in seat order, which would give the quiz away.
+    for (var i = nameList.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = nameList[i]; nameList[i] = nameList[j]; nameList[j] = t;
+    }
+    return '<div class="p-seat-front">Front of room</div>' +
+      '<div class="p-seatgrid">' + seatsHtml + '</div>' +
+      '<div class="p-seat-legend"><div class="lbl">Names to place (not in seat order)</div>' +
+      '<div class="names">' + nameList.map(escapeHtml).join(' &nbsp;&middot;&nbsp; ') + '</div></div>';
+  }
+
   // ── Print ────────────────────────────────────────────────────────────────
   function printHeaderLine(count) {
     var bits = [];
@@ -1699,7 +1778,14 @@
     document.getElementById('printSub').textContent = printHeaderLine(names.length);
 
     var body = '';
-    if (format === 'numbered') {
+    if (format === 'seatgrid') {
+      var section = bestMatchingSeatingSection(names);
+      if (!section) {
+        showMsg('No matching Seating Chart Generator section found for this roster. Build seats for this class in Seating Chart Generator first, or pick a different print format.');
+        return;
+      }
+      body = seatGridPrintHtml(section);
+    } else if (format === 'numbered') {
       body = '<ol>' + names.map(function (n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('') + '</ol>';
     } else if (format === 'checklist') {
       var cols = 6;

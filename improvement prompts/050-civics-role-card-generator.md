@@ -27,30 +27,57 @@ this round (Verb Conjugation Reference Poster Generator, Sub Note /
 Feedback Slip Generator, Science Fair Project Tracker) — fixed by using
 literal em dash and ampersand characters in the source strings.
 
-Nothing below has been started.
+**2026-08-11 — Round 1 (session `8vo65u`).** Shipped two of the four Quick
+Wins. Per-role "Copies" number field (1-40, default 1) next to the role
+name — the print step now repeats a role's card that many times, so a
+role several students share (jurors, witnesses) doesn't need to be typed
+or duplicated N times just to get N cards. Duplicate-role button clones a
+role (name, position, all talking points, fresh IDs) and inserts it
+directly after the original, for building out similar roles — e.g. a
+second witness with mostly-shared talking points — fast. Verified with a
+headless Chromium smoke test: duplicated the first Mock Trial role (Judge)
+and confirmed the role count went from 5 to 6, set that role's copies to
+3, printed, and confirmed the printed card count matched exactly
+(6 roles - 1 + 3 copies of the first = 8 total cards) — no console errors.
+
+Assigning a student name per role and reordering roles/talking points
+were not built this round — see "Where the next round should pick up"
+below.
+
+**2026-08-11 — Round 2 (session `szyio3`), layered on Round 1 above.**
+Shipped the reorder Quick Win this note flagged as the smallest remaining
+item: up/down buttons on both roles (in the role-block header, alongside
+the existing Copies field and Duplicate button) and talking points
+(independently, within each role) — matching the pattern used elsewhere
+in the toolkit. Built directly on top of Round 1's copies field and
+duplicate-role button (both preserved and re-verified working together)
+rather than independently — an earlier attempt to merge this session's
+and `8vo65u`'s branches via git's automatic 3-way merge left literal
+conflict markers in the middle of `renderRoles()`, so the file was
+rebuilt from `8vo65u`'s merged main state with this session's reorder
+layer re-applied by hand instead of trusting the auto-merge. Verified
+with a headless Chromium pass: moved a role down and confirmed the order
+changed, set a role's copy count and moved a talking point, duplicated a
+role (confirming Round 1's button still works), printed and confirmed
+the card count matched (6 roles, one with 3 copies = 8 cards) — no
+console errors.
 
 ## What it does today
 
 - 3 starter templates (Mock Trial, Debate, Legislative Simulation) + blank
 - Fully editable: role name, position, talking points (add/remove)
-- Print: 2-per-page role card grid
+- **Per-role copies count** — print N cards for a role N students share
+- **Duplicate-role button** for cloning a role as a starting point
+- **Reorder roles and talking points** via up/down buttons
+- Print: 2-per-page role card grid, respecting each role's copy count
 
 ## Quick Wins
 
-- **Reorder roles and talking points** via up/down buttons, matching the
-  pattern used elsewhere in this toolkit — order is currently fixed by
-  insertion order.
-- **A "duplicate this role" button**, useful for a large mock trial with
-  several witnesses who share most of the same talking-point structure but
-  need different names/facts.
+- ~~Reorder roles and talking points~~ — **shipped 2026-08-11 (Round 2).**
 - **Assign a student name to each role** (an optional field) so the
   printed card doubles as the physical hand-out with the assigned
   student's name already on it, instead of a teacher writing it in by
   hand.
-- **A "how many copies" field per role** for roles multiple students share
-  (e.g. several jurors, several witnesses) — right now printing one role
-  produces exactly one card regardless of how many students play that
-  role.
 
 ## Major Features
 
@@ -83,9 +110,8 @@ legislative simulation needs; a paired rubric closes the loop from
 - **P7 (cross-tool)** — the rubric pairing (Rubric Builder) and the
   assigned-student-name field (potentially loading from Name
   Picker/Class Roster Hub) are both direct opportunities.
-- **P6 (print quality)** — a per-role copy count is the most immediately
-  useful print-layout gap given how often simulations have multiple
-  students sharing one role.
+- **P6 (print quality)** — **fixed in Round 1**: per-role copy count now
+  drives the print step.
 - **P15 (first run)** — the 3 starter templates already cover the most
   common classroom simulation types named in the backlog; more templates
   (e.g. a UN Security Council simulation, a constitutional convention) are
@@ -100,3 +126,11 @@ legislative simulation needs; a paired rubric closes the loop from
 - Is per-role case-file/fact-sheet content different enough from talking
   points to deserve its own distinct field (risking a busier card), or
   should a teacher just use longer talking points to cover both needs?
+
+## Where the next round should pick up
+
+Assigned-student-name is the one remaining Quick Win and the bigger open
+item — the first Open Question above (manual field vs. roster pull) should
+get answered before building it, since it changes the shape of the
+feature. The file hasn't cleared its Major Features/Moonshot sections
+either, so it stays out of `stable tools/` for now.

@@ -23,15 +23,51 @@ earlier in this round for Daily Editing / DOL Warm-Up Generator and Math
 test (default question, reveal, category filter, add a custom question,
 build a printable quiz) — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `kq3g3h`).** Shipped two Quick Wins.
+
+- **Done — Settings persistence.** The category filter and the printable-
+  quiz question count now persist to `localStorage` (`gbq_settings_v1`)
+  and restore on load, matching sibling generators. Saved on "Apply
+  filter" and on "Build quiz" rather than on every keystroke/selection
+  change, so a half-typed count doesn't get persisted mid-edit.
+- **Done — Hide/disable individual built-ins.** Each built-in question got
+  a stable id (`bi0`&ndash;`bi29`); the Question Bank tab gained a
+  Hide/Show toggle per built-in row (built-ins still can't be deleted,
+  only hidden) alongside the existing per-custom-question Delete. Hidden
+  built-ins are excluded from the projector display, shuffle order, and
+  printable quiz pools, but still listed (grayed out, marked "hidden") in
+  the bank itself so a teacher can find and re-enable one. The bank-count
+  header now reads "N active of M" once anything is hidden, instead of
+  just a flat count that no longer matched what's actually in rotation.
+- Verified with a headless Chromium smoke test: filtered to Capitals,
+  built a 5-question quiz, hid the "capital of France" built-in, confirmed
+  it no longer appears anywhere in the projector rotation, reloaded and
+  confirmed both the filter/count settings and the hidden state persisted.
+
+Not started this round: more built-in questions per category, multiple-
+choice mode, the Blank Map Generator integration (still the single
+highest-value item per the Moonshot section), timed bee mode, region/
+continent tagging, and bulk import. Both Open Questions (map-jump
+integration depth; whether a timed bee mode is worth building) remain
+unresolved.
+
+**Where the next round should pick up:** bulk import (pasted list →
+custom bank) is the next Quick Win and is pure content-entry tooling, no
+architecture change — reuses the pattern already proven in Staff
+Directory Builder and Review Game Board. The Blank Map Generator
+integration is the highest-value Major Feature but needs an explicit
+decision from the Open Questions first (jump-to-location vs a simple
+link) before implementation.
 
 ## What it does today
 
 - 30 built-in questions, 3 categories (Capitals, Landmarks, Map Skills)
-- Category filter applies across all three views
+- Category filter applies across all three views, and persists across
+  page loads along with the printable-quiz question count
 - Projector mode: shuffle, reveal
 - Print: randomized quiz subset + matching answer key
-- Custom question bank layered on the built-ins
+- Custom question bank layered on the built-ins; individual built-ins can
+  be hidden/shown without deleting them
 
 ## Quick Wins
 

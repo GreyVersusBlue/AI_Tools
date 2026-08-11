@@ -9,7 +9,31 @@
 
 ## Status
 
-**2026-08-10 — Quick Wins and the two scoped Major Features implemented.**
+### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
+
+Small, targeted follow-up on the one loose end this tool's own Round-1 notes
+called out: *"changing the split-count field while a lock is active has no
+effect until the teacher does a fresh 'Make Groups' — this isn't stated
+explicitly in the UI; a future round could disable/gray the split fields
+while any group is locked, or add a hint."*
+
+Shipped exactly that — `syncSplitLockUI()` disables the "Number of
+groups"/"Students per group" radios and the split-value number input
+whenever any group is locked, and shows a hint below the input explaining
+why: *"Split settings are locked while a group is locked — unlock every
+group, or generate fresh groups, to change how many groups or
+students-per-group."* Wired into `renderResults` (so it re-evaluates after
+every lock toggle, reshuffle, and undo) and into `clearTransientGroupState`
+(so a fresh "Make Groups" or switching classes clears it immediately). No
+storage shape changed; verified the file's inline scripts still parse and
+smoke-tested the page in a headless browser with no console errors.
+
+Nothing else from this tool's open backlog was attempted this round — the
+P7 group-engine consolidation, seating-aware grouping, project-team mode,
+and group-history visualization are all still open, per the Round-1 notes
+below.
+
+### Round 1 (Pass 1) — 2026-08-10 — Quick Wins and the two scoped Major Features implemented.
 All seven Quick Wins and the two Major Features called out for this round
 (grouping strategies as first-class modes; a printable group sheet) are done.
 Roles-in-tool, group history visualization, seating-aware grouping,
@@ -72,9 +96,9 @@ Real tradeoffs and things a future round should know about:
 - **Locked reshuffle re-derives group count from the previous result**, not
   from the count/size fields, by design (that's what "reshuffle the rest"
   means) — but this means changing the split-count field while a lock is
-  active has no effect until the teacher does a fresh "Make Groups". This
-  isn't stated explicitly in the UI; a future round could disable/gray the
-  split fields while any group is locked, or add a hint.
+  active has no effect until the teacher does a fresh "Make Groups". **Fixed
+  Pass 2 Round 1** — the split fields now disable and show a hint while any
+  group is locked; see the Pass 2 note at the top of Status.
 - The **pair-mode bonus group** and **floater list** are recomputed fresh on
   every generation (they are never "locked" as a concept, only regular
   groups can be locked) — this is intentional and matches how a teacher

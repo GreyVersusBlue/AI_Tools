@@ -9,7 +9,49 @@
 
 ## Status
 
-**2026-08-10 — The student record schema, the dependency guardrail, sections,
+### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
+
+Picked up item 4 from Round 1's "where the next round should pick up" list:
+*"the numbered list, blank checklist, and blank name grid are in; a
+seating-quiz variant that actually matches the Seating Chart layout would
+need to read `seating-chart-v1` (P7)."*
+
+Shipped as a new print format, **"Seating chart shape (from Seating Chart
+Generator)"**, added to the existing print-format dropdown alongside the
+three that already shipped. Read-only, one-way — this tool never writes
+`seating-chart-v1`:
+
+- `bestMatchingSeatingSection(names)` scans every section in
+  `seating-chart-v1` and picks whichever one's student list overlaps this
+  roster the most (by name, case/whitespace-insensitive), requiring at
+  least 3 matching names and 40% overlap before it will match at all — so a
+  roster with no corresponding seating chart gets a clear message instead of
+  a nonsense match, and the teacher never has to know or type which Seating
+  Chart Generator section name corresponds to which roster.
+- The print itself (`seatGridPrintHtml`) reproduces the room's actual desk
+  layout as blank, numbered boxes — positioned by the desks' real `x`/`y`
+  (scaled as percentages of the same 1280×900 room space
+  `Tools/seating-chart/seating.mjs`'s `ROOM` constant uses, including desk
+  rotation) rather than a generic N-column grid — with a "Front of room"
+  bar at the top and a shuffled (not seat-ordered) word bank of names below,
+  so a student has to actually work out where they sit rather than reading
+  it straight down a list.
+- **Real risk, noted rather than hidden**: the 1280×900/106×70 room
+  constants are copied, not imported (this tool doesn't load
+  `seating.mjs`), so if Seating Chart Generator's `ROOM` export ever
+  changes, this print silently drifts out of shape until someone updates
+  the copy here too. Left a comment at the constant pointing at the source
+  of truth.
+
+Verified with a headless-browser pass: seeded a roster and a matching
+`seating-chart-v1` section with four desks (one rotated), loaded the
+roster, picked the new print format, and confirmed all four seats rendered
+at the right positions with the shuffled name legend and no console errors.
+
+Everything else on this tool's backlog (rename-propagation, roster
+device-to-device transfer, photos/flags) is unchanged from Round 1.
+
+### Round 1 (Pass 1) — 2026-08-10 — The student record schema, the dependency guardrail, sections,
 and year rollover all shipped.** This was the round that turned the tool from
 "a textarea that writes `np_rosters`" into something that behaves like a
 system of record. Nothing about `np_rosters` changed shape — see the schema
@@ -117,9 +159,10 @@ What shipped, against the backlog below:
 3. **Apply a rename across all tools** — the last unbuilt bullet under Bulk
    operations, and the one that would make the dependency scan actionable
    rather than only informative.
-4. **The remaining print formats** — the numbered list, blank checklist, and
-   blank name grid are in; a seating-quiz variant that actually matches the
-   Seating Chart layout would need to read `seating-chart-v1` (P7).
+4. ~~**The remaining print formats**~~ — **done Pass 2 Round 1.** A
+   seating-chart-shaped blank print now reads `seating-chart-v1` and matches
+   the roster to the right section by name overlap; see the Pass 2 note at
+   the top of Status.
 5. **Photos and flags are still deliberately unbuilt** — see Open Questions;
    they need the storage-quota answer (P12) and an explicit decision about
    what belongs on this device at all, which is Devon's call, not an
@@ -157,10 +200,10 @@ What shipped, against the backlog below:
 - **Done —** **Roster stats on the card**: 28 students, last edited 3 weeks ago, used by
   6 tools. *(Shipped — students, archived, how many carry details, last
   saved.)*
-- **Done — numbered list, blank checklist, and blank grid only.** **Print a numbered class list**, a blank checklist, and a seating-quiz style
-  blank — the three paper formats every teacher prints. *(The numbered list,
-  blank checklist, and blank name grid are shipped; the seating-quiz variant
-  is still open — see "Where the next round should pick up" above.)*
+- **Done —** **Print a numbered class list**, a blank checklist, and a seating-quiz style
+  blank — the three paper formats every teacher prints. *(All four formats
+  now ship, including the real seating-chart-shaped seating-quiz variant
+  added Pass 2 Round 1 — see Status.)*
 - **Done —** **Archive rather than delete** (P11) — deleting a roster silently orphans
   history in a dozen other tools. *(Shipped — a roster can leave every other
   tool's roster list without its names being destroyed.)*

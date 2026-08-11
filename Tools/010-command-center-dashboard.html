@@ -143,6 +143,14 @@
   .out-list li.over { color: var(--err); font-weight: 700; }
   .out-list .who { flex: 1; min-width: 0; }
   .out-list .where { color: var(--muted); font-size: .82rem; }
+  .donow-current { font-size: clamp(1.4rem, 4.5vw, 2rem); font-weight: 700; text-align: center; }
+  .donow-remaining { text-align: center; color: var(--accent); font-weight: 600; font-size: 1.1rem; margin-top: .15rem; }
+  .donow-next { text-align: center; color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+  .donow-bar-track { height: 6px; border-radius: 4px; background: var(--line); margin-top: .7rem; overflow: hidden; }
+  .donow-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+  .donow-plan { list-style: none; margin: .7rem 0 0; padding: 0; }
+  .donow-plan li { display: flex; justify-content: space-between; gap: .6rem; padding: .3rem 0; border-top: 1px dashed var(--line); font-size: .88rem; }
+  .donow-plan li.is-current { color: var(--accent); font-weight: 700; }
 
   /* ── Bell schedule ─────────────────────────────────────────────────── */
   .period-row { display: grid; grid-template-columns: minmax(0,1.1fr) 6.4rem 6.4rem minmax(0,1.2fr) 1.9rem; gap: .35rem; align-items: center; margin-bottom: .35rem; }
@@ -269,7 +277,7 @@
      another tool's storage.
      ===================================================================== */
   var PANELS = {};
-  var DEFAULT_PANELS = ['motd', 'schedule', 'startday', 'timer', 'today', 'roster', 'hallpass'];
+  var DEFAULT_PANELS = ['motd', 'schedule', 'startday', 'timer', 'donow', 'today', 'roster', 'hallpass'];
 
   function panelSettings() {
     var stored = Array.isArray(settings.panels) ? settings.panels : [];
@@ -951,6 +959,73 @@
     link: { href: '001-hall-pass-log.html', label: 'Open Hall Pass Log' },
     build: buildHallPassPanel,
     refresh: buildHallPassPanel
+  };
+
+  /* =====================================================================
+     PANEL: Do Now / Agenda strip
+     Reads Classroom Timer's own storage read-only: `ct_prefs` for the
+     configured plan (segment names/durations) and `ct_running_v1` for a
+     live run, the way `004-Classroom Timer.html` itself writes it (an
+     in-progress `phase` snapshot, only present while running or paused).
+     This panel never writes to either key — unlike the Hall Pass panel
+     above, there's no obvious "do the thing from here" action for an
+     agenda, so it stays read-only.
+     ===================================================================== */
+  function loadAgendaPlan() {
+    try {
+      var raw = localStorage.getItem('ct_prefs');
+      if (!raw) return [];
+      var prefs = JSON.parse(raw);
+      var segs = prefs && prefs.agenda && Array.isArray(prefs.agenda.segments) ? prefs.agenda.segments : [];
+      return segs.filter(function (s) { return s && ((s.minutes || 0) > 0 || (s.seconds || 0) > 0); });
+    } catch (e) { return []; }
+  }
+  function loadAgendaRun() {
+    try {
+      var raw = localStorage.getItem('ct_running_v1');
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || parsed.mode !== 'agenda' || !parsed.phase) return null;
+      if (parsed.phase.status !== 'running' && parsed.phase.status !== 'paused') return null;
+      return parsed.phase;
+    } catch (e) { return null; }
+  }
+  function buildDoNowPanel(el) {
+    var run = loadAgendaRun();
+    if (run && Array.isArray(run.segments) && run.segments.length) {
+      var idx = run.segIndex || 0;
+      var seg = run.segments[idx] || {};
+      var remainingMs = run.status === 'paused'
+        ? Math.max(0, run.remainingAtPause || 0)
+        : Math.max(0, (run.endAt || Date.now()) - Date.now());
+      var next = idx < run.segments.length - 1 ? run.segments[idx + 1].name : null;
+      var doneMs = (run.agendaElapsedBase || 0) + Math.max(0, (run.totalMs || 0) - remainingMs);
+      var frac = run.agendaTotalMs ? Math.min(1, doneMs / run.agendaTotalMs) : 0;
+      el.innerHTML = '<div class="donow-current">' + escapeHtml(seg.name || 'Segment') +
+        (run.status === 'paused' ? ' <span style="color:var(--muted);font-size:.7em;">(paused)</span>' : '') + '</div>' +
+        '<div class="donow-remaining">' + formatTime(remainingMs / 1000) + ' left</div>' +
+        '<div class="donow-next">' + (next ? 'Next: ' + escapeHtml(next) : 'Last segment') + '</div>' +
+        '<div class="donow-bar-track"><div class="donow-bar-fill" style="width:' + Math.round(frac * 100) + '%"></div></div>';
+      return;
+    }
+    var plan = loadAgendaPlan();
+    if (plan.length) {
+      var totalMin = plan.reduce(function (sum, s) { return sum + (s.minutes || 0) + (s.seconds || 0) / 60; }, 0);
+      el.innerHTML = '<p class="empty-hint">Not running yet — today’s agenda is ' + plan.length + ' segment' +
+        (plan.length === 1 ? '' : 's') + ', ' + Math.round(totalMin) + ' min total. Start it in Classroom Timer’s Agenda tab.</p>' +
+        '<ul class="donow-plan">' + plan.map(function (s) {
+          return '<li><span>' + escapeHtml(s.name) + '</span><span>' + (s.minutes || 0) + 'm' +
+            (s.seconds ? ' ' + s.seconds + 's' : '') + '</span></li>';
+        }).join('') + '</ul>';
+      return;
+    }
+    el.innerHTML = '<p class="empty-hint">No agenda set up yet. Build one in Classroom Timer’s Agenda tab &mdash; Do Now, Notes, Practice, Exit Ticket &mdash; and it shows here, live, once you start it.</p>';
+  }
+  PANELS.donow = {
+    id: 'donow', title: 'Do Now / Agenda',
+    link: { href: '004-Classroom Timer.html', label: 'Open Classroom Timer' },
+    build: buildDoNowPanel,
+    refresh: buildDoNowPanel
   };
 
   /* =====================================================================

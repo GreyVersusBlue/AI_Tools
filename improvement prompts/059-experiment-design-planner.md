@@ -22,18 +22,55 @@ editable procedure list. Autosaves to `localStorage`
 (`edp_planner_v1`). Verified with a headless Chromium smoke test (fill
 every field, print, reload and confirm persistence) — no console errors.
 
-Nothing below has been started. See the direct overlap question already
-raised in Lab Report Template Builder's improvement prompt — this tool
-ships as the answer to "should it be a separate tool," but the underlying
-tension (should planning and reporting share one tool with two modes)
-remains open.
+**2026-08-11 — Round 2 (session `kq3g3h`).** Shipped two Quick Wins.
+
+- **Done — Reorder list items.** Controlled variables, materials, and
+  procedure steps each gained up/down buttons per row (disabled at the
+  top/bottom edge of their own list), so fixing step order no longer
+  requires deleting and re-adding items. Reuses the existing per-list
+  `bindList()`/`renderList()` plumbing rather than adding new state shape.
+- **Done — Independent/dependent variable sanity hint.** A warning line
+  appears under the Variables card whenever the independent and dependent
+  variable fields are the same text (case-insensitive, trimmed) — a
+  concrete "you probably mixed these up" catch aimed at the exact mistake
+  the prompt file called out. Recomputed on every keystroke in either
+  field and also on load, so a saved-then-reopened plan with the mistake
+  still already in it shows the hint immediately rather than only after
+  the next edit.
+- **Bug fix, found while touching the print handler:** the print view's
+  fallback placeholders for empty fields (`'&hellip;'`, `'&mdash;'`) were
+  HTML entities passed through `escapeHtml()`, which escapes `&` and so
+  turned them into the literal visible text `&hellip;`/`&mdash;` on the
+  printed page instead of an ellipsis/dash — any blank field printed with
+  broken-looking placeholder text. Fixed by using the actual Unicode
+  characters (`…`, `—`) as the fallback values instead of entities, since
+  those pass through `escapeHtml()` unchanged.
+- Verified with a headless Chromium smoke test: added and reordered
+  materials, confirmed the sanity hint shows/hides correctly as the two
+  variable fields are edited, reloaded and confirmed both the reorder and
+  the (correctly absent) hint state persisted, and exercised the print
+  handler without errors.
+
+Not started this round: multiple named saved plans, the Lab Report
+Template Builder hand-off (still the single highest-value item per the
+Moonshot section), the subject hint/example toggle, and peer-review mode.
+The Open Questions about a possible planning+reporting merge and where a
+peer-review checklist should live are both still unresolved — nothing this
+round narrows either decision.
+
+**Where the next round should pick up:** multiple named saved plans is the
+next Quick Win and is a prerequisite for the Lab Report Template Builder
+hand-off to make sense (a hand-off from a single flat plan is fine today,
+but once a teacher has several saved plans, the hand-off needs to name
+which one).
 
 ## What it does today
 
 - Testable question prompt
 - Structured If/then/because hypothesis (3 separate fields)
-- Independent/dependent variables + an editable controlled-variables list
-- Editable materials and procedure lists
+- Independent/dependent variables + an editable controlled-variables list,
+  with a sanity hint if the two variable fields match
+- Editable materials and procedure lists, each reorderable via up/down
 - Print: a fillable one-page planning packet
 
 ## Quick Wins

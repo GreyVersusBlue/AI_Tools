@@ -66,8 +66,16 @@
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table input[type="text"].note-input { width: 6rem; margin: 0; font-size: .78rem; padding: .2rem .3rem; }
 
+  .summary-line { font-size: .86rem; color: var(--muted); margin: -.2rem 0 .8rem; }
+  .summary-line strong { color: var(--ink); }
+  .print-controls { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: end; margin-bottom: .8rem; font-size: .84rem; }
+  .print-controls select { width: auto; font-family: inherit; font-size: .85rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; }
+
   #printArea { display: none; }
-  .card-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .5rem; }
+  .card-grid { display: grid; gap: .5rem; }
+  .card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
   .accom-card { border: 1.5px solid #333; border-radius: 8px; padding: .6rem .7rem; height: 2.6in; overflow: hidden; }
   .accom-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; border-bottom: 1px solid #999; padding-bottom: .2rem; }
   .accom-card ul { margin: 0; padding-left: 1.1rem; font-size: .82rem; }
@@ -109,6 +117,21 @@
 
   <div class="card">
     <h2>Assign accommodations</h2>
+    <p class="summary-line" id="summaryLine"></p>
+    <div class="print-controls">
+      <div>
+        <label for="printWhoSelect" style="margin-bottom:.2rem;">Print</label>
+        <select id="printWhoSelect"><option value="">All students</option></select>
+      </div>
+      <div>
+        <label for="printColsSelect" style="margin-bottom:.2rem;">Cards per row</label>
+        <select id="printColsSelect">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+        </select>
+      </div>
+    </div>
     <div style="overflow-x:auto;">
       <table class="grid-table" id="assignTable"></table>
     </div>
@@ -127,7 +150,8 @@
   var DEFAULT_TYPES = ['Extended time', 'Separate setting', 'Read-aloud', 'Breaks as needed', 'Use of calculator', 'Preferential seating'];
 
   var els = {};
-  ['rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printGrid'].forEach(function (id) {
+  ['rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printGrid',
+   'summaryLine', 'printWhoSelect', 'printColsSelect'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -190,7 +214,24 @@
     save(); renderTable();
   });
 
+  function hasAnyAccommodation(name) {
+    return state.types.some(function (t) { return state.assignments[assignKey(name, t.id)]; });
+  }
+
+  function renderSummary() {
+    var withAccom = state.roster.filter(hasAnyAccommodation).length;
+    els.summaryLine.textContent = state.roster.length
+      ? '✓ ' + withAccom + ' of ' + state.roster.length + ' students have at least one accommodation checked.'
+      : '';
+    var current = els.printWhoSelect.value;
+    els.printWhoSelect.innerHTML = '<option value="">All students</option>' + state.roster.map(function (name) {
+      return '<option value="' + escapeAttr(name) + '">' + escapeHtml(name) + '</option>';
+    }).join('');
+    if (current && state.roster.indexOf(current) !== -1) els.printWhoSelect.value = current;
+  }
+
   function renderTable() {
+    renderSummary();
     if (!state.roster.length) {
       els.assignTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
       return;
@@ -215,6 +256,7 @@
     if (student && typeId) {
       state.assignments[assignKey(student, typeId)] = ev.target.checked;
       save();
+      renderSummary();
     }
   });
   els.assignTable.addEventListener('input', function (ev) {
@@ -227,7 +269,11 @@
 
   els.printBtn.addEventListener('click', function () {
     if (!state.roster.length) { alert('Save a roster first.'); return; }
-    els.printGrid.innerHTML = state.roster.map(function (name) {
+    var who = els.printWhoSelect.value;
+    var names = who ? [who] : state.roster;
+    var cols = els.printColsSelect.value || '3';
+    els.printGrid.className = 'card-grid cols-' + cols;
+    els.printGrid.innerHTML = names.map(function (name) {
       var checkedTypes = state.types.filter(function (t) { return state.assignments[assignKey(name, t.id)]; });
       var items = checkedTypes.length
         ? checkedTypes.map(function (t) { return '<li>' + escapeHtml(t.name) + '</li>'; }).join('')

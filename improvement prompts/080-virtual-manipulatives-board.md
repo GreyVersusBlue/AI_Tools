@@ -38,27 +38,53 @@ look. Fixing this means either drawing each segment individually in the
 snapshot loop, or giving the wrapper itself a representative fill color as
 a simplification.
 
+**2026-08-11 — Round 1 (session `h4rwxn`).** Fixed the snapshot color bug
+above, and found it was actually broader than described: fraction tiles
+are *also* built from `.seg` children with no background color on their
+own wrapper, so they were rendering as blank rectangles in a snapshot too
+(not just ten/hundred blocks) — same root cause, same fix. Number-line
+marker snapshots had an unrelated instance of the identical bug pattern
+(`.nl-marker` has no `background-color`, only a `color` CSS property for
+its glyph, so the old code's `getComputedStyle(...).backgroundColor` read
+was always transparent there too) — fixed as part of the same pass by
+drawing a small filled triangle from the marker's `color` instead. `snapshotEl`
+now special-cases any piece with `.seg` children (draws each segment
+individually, its own color, its own border) and draws markers as a
+triangle rather than a transparent rect. Verified with a headless
+Playwright test that samples actual canvas pixel colors after a snapshot —
+ten-block and hundred-block segments now paint their real on-screen colors
+(`rgb(46,107,143)` and `rgb(31,53,80)` respectively, matching CSS exactly)
+instead of leaving those regions blank.
+
+Also shipped the duplicate-piece quick win: every piece now has a second
+hover button (&#10064;) next to the delete &times; that re-adds an
+identical fresh piece of the same type via the palette's own add
+functions (`addByType`), landing at the board's next grid position rather
+than exactly on top of the original. Verified via Playwright (add three
+piece types, duplicate one, confirm piece count increments and no console
+errors).
+
+Snap-to-grid, touch-device tuning, and everything under Major Features
+below remain unbuilt.
+
 ## What it does today
 
 - Base-ten blocks (unit/ten/hundred), fraction tiles (2&ndash;12
   denominators), algebra tiles (&plusmn;1/&plusmn;x/&plusmn;x&sup2;) —
-  add via palette buttons, drag freely, delete via hover-x
+  add via palette buttons, drag freely, delete via hover-x, duplicate via
+  hover-&#10064;
 - Separate number line: configurable range, click-to-add/drag/click-to-
   remove markers
-- PNG snapshot + download for either the block board or the number line
+- PNG snapshot + download for either the block board or the number line,
+  with every piece type (including segmented ten/hundred blocks and
+  fraction tiles) and number-line markers now rendering their real
+  on-screen color/shape in the exported PNG
 
 ## Quick Wins
 
-- **Fix the ten/hundred snapshot color bug** described above — the
-  highest-priority fix, since it's a visible gap between what's on screen
-  and what gets exported.
 - **Snap-to-grid for base-ten blocks** (optional toggle) so demonstrating
   "these ten units make a ten-rod" lines up visually without careful manual
   dragging.
-- **A "duplicate this piece" button** next to delete, since demonstrating
-  most base-ten/algebra concepts needs several of the same piece (e.g. 23
-  = 2 tens + 3 units) and clicking the palette repeatedly for identical
-  pieces is more friction than it needs to be.
 - **Touch-device testing and tuning** — Pointer Events should work on
   tablets already, but this hasn't been verified on an actual touchscreen,
   and a projector setup often pairs with a touch-enabled front-of-room

@@ -9,7 +9,38 @@
 
 ## Status
 
-**2026-08-10 — implementation round.** Implemented every Quick Win, plus the
+### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
+
+Picked up the one "next round should pick up" item from Round 1: *"Half-credit
+and per-criterion comments in the class-wide grid"* were flagged as
+single-student-mode-only.
+
+Investigating found **half-credit was actually already there** — the class
+grid's per-cell `<select>` (`levelSelectOptions`) has always included a
+combined "Level + ½ (N pts)" option alongside each plain level, so a teacher
+could already award half credit from the grid; the Round 1 status note
+undersold what existed, similar to the weighted-criteria finding from that
+same round. Left it as-is rather than adding a second, redundant half-credit
+control next to it.
+
+**Per-criterion comments in the grid were genuinely missing** and are now
+shipped: each grid cell gets a small 💬 button next to its level select.
+Clicking it prompts for a comment (pre-filled with the existing one, if any);
+the button turns gold and its tooltip shows the comment text once one is
+set. It writes to the same `selections[critId].comment` field the
+single-student Score mode already uses — `normalizeSelectionValue`,
+`earnedPoints`, and the printed scored-rubric sheet (`scoreTableHtml`, which
+already renders a `comment-row` under any criterion with a comment) all pick
+it up with no further changes, since the shape was already there. Verified
+with a headless-browser pass: created a rubric, added a criterion, added a
+student to the class grid, set a comment via the button, and confirmed it
+persisted and the button reflected the active state, with no console errors.
+
+Everything else on this tool's backlog — feeding the grade tools (P7),
+peer-review mode, and standards alignment/tagging — is still open, unchanged
+from Round 1.
+
+### Round 1 (Pass 1) — 2026-08-10 — implementation round. Implemented every Quick Win, plus the
 student-readable print, single-point/checklist alternate formats, and rubric
 analytics from Major Features. See below for what's marked **Done**.
 
@@ -68,7 +99,8 @@ Real findings from this pass:
 - **Moonshot section** — untouched, as instructed.
 
 **Where a future round should pick up:**
-- Half-credit and per-criterion comments in the class-wide grid (see above).
+- ~~Half-credit and per-criterion comments in the class-wide grid~~ — **done
+  Pass 2 Round 1**; see the note at the top of Status.
 - Standards alignment/tagging, if Devon decides points-based isn't the only
   model this district needs (see Open Questions).
 - P7 cross-tool handoff: a documented format so rubric CSV scores could flow

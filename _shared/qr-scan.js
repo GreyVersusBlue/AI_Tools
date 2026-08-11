@@ -1,9 +1,9 @@
 /* qr-scan.js — point a device camera at a QR code and get the decoded text
    back, using getUserMedia + jsQR. jsQR itself is NOT bundled here: it's
-   ~250KB, and every tool that generates or reads QR codes on this site
-   already vendors its own copy (one lib/jsqr.js per tool folder) rather than sharing
-   one file across tool folders — this just expects window.jsQR to already
-   be loaded by whichever page calls scanQRFromCamera().
+   ~250KB and not every page that wants this wrapper wants that payload, so
+   the page loads it itself from _shared/vendor/jsqr/jsqr.js — this just
+   expects window.jsQR to already be there by the time something calls
+   scanQRFromCamera().
 
    Plain global script, matching this site's classic-script tools. */
 (function (global) {

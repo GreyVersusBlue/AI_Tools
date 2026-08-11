@@ -21,9 +21,34 @@ questions persist in `localStorage` (`ctcg_custom_v1`). Verified with a
 headless Chromium smoke test (default question, reveal, category filter,
 print and confirm matching front/back card counts) — no console errors.
 
-Nothing below has been started. Category choice ("Hispanic World" /
-"Francophone World" / "Global Culture" rather than naming specific target
-languages) was a deliberate scoping decision — see Open Questions.
+Category choice ("Hispanic World" / "Francophone World" / "Global
+Culture" rather than naming specific target languages) was a deliberate
+scoping decision — see Open Questions.
+
+**2026-08-11 — Round 2 (session `qer21r`).** Two Quick Wins shipped:
+
+- **Settings persistence for the category filter and card count**
+  (`ctcg_settings_v1`) — both now survive a page reload, matching the
+  behavior of sibling generators built earlier in this round.
+- **Hide/disable individual built-ins** — each built-in question got a
+  stable id (`b0`&ndash;`b29`); a new "Hide"/"Unhide" toggle button on
+  each built-in row in the bank view lets a teacher drop a question from
+  rotation (`ctcg_hidden_v1`) without deleting it, and without touching
+  the custom bank. Hidden built-ins are excluded from the projector
+  display, the category filter counts, and print, but still show (dimmed,
+  labeled "(hidden)") in the bank view so they can be restored.
+
+Both verified with a headless Chromium smoke test: settings survive a
+reload, hiding a built-in drops the active bank count by exactly one and
+unhiding restores it, plus a separate print-path check confirming card
+generation still works — zero console errors in either pass.
+
+**Not started this round:** more categories (German/Portuguese/Sinophone
+World), more built-in questions per category, the Review Game Board
+.xlsx export, bulk import, difficulty tiers, per-card images. See Major
+Features/Moonshot below — the Review Game Board export is still the
+single most valuable item on this file, since it's the explicit backlog
+pairing and hasn't been touched yet.
 
 ## What it does today
 
@@ -43,10 +68,9 @@ languages) was a deliberate scoping decision — see Open Questions.
 - **More built-in questions per category** — 10 each will repeat with
   regular use, the same gap flagged on other bank-based generators built
   this round.
-- **Settings persistence** for the category filter and card count, unlike
-  most sibling generators built earlier in this round.
-- **Hide/disable individual built-ins**, matching the same gap flagged on
-  other custom-bank tools in this round.
+- ~~**Settings persistence** for the category filter and card count~~ —
+  **done, Round 2.**
+- ~~**Hide/disable individual built-ins**~~ — **done, Round 2.**
 
 ## Major Features
 

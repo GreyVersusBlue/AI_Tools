@@ -73,7 +73,21 @@
 
   .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
   .toolbar select, .toolbar input[type="text"], .toolbar input[type="date"] { width: auto; margin-bottom: 0; min-width: 9rem; }
+  .toolbar input[type="date"] { min-width: 8rem; }
   .toolbar .spacer { flex: 1; }
+  .toolbar .date-sep { color: var(--muted); font-size: .82rem; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: var(--ok); color: #fff; font-weight: 600; font-size: .88rem;
+    padding: .6rem 1.1rem; border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .roster-sort { display: flex; align-items: center; gap: .4rem; margin-bottom: .6rem; }
+  .roster-sort label { margin: 0; font-weight: 600; font-size: .78rem; white-space: nowrap; }
+  .roster-sort select { width: auto; margin-bottom: 0; font-size: .82rem; padding: .3rem .5rem; }
 
   table { width: 100%; border-collapse: collapse; font-size: .88rem; }
   th, td { text-align: left; padding: .5rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -124,6 +138,13 @@
 
       <div class="card">
         <h2>Students &amp; contact counts</h2>
+        <div class="roster-sort">
+          <label for="rosterSort">Sort by</label>
+          <select id="rosterSort">
+            <option value="name">Name</option>
+            <option value="fewest">Fewest contacts first</option>
+          </select>
+        </div>
         <ul class="roster-list" id="rosterList"></ul>
         <p class="roster-empty" id="rosterEmptyMsg" style="display:none;">No roster saved yet — add names on the left.</p>
       </div>
@@ -159,6 +180,7 @@
         </div>
         <label for="entryOutcome">Reason / outcome</label>
         <textarea id="entryOutcome" placeholder="e.g. Called about missing homework — spoke with mom, she'll check in tonight."></textarea>
+        <p class="hint">Tip: press Enter in the field above to log the contact (Shift+Enter for a new line).</p>
         <button id="logEntryBtn" class="full">Log contact</button>
         <p class="hint" id="editingHint" style="display:none;"></p>
       </div>
@@ -176,7 +198,14 @@
             <option>Text message</option>
             <option>Other</option>
           </select>
+          <label for="filterFrom" class="sr-only" style="display:none;">From date</label>
+          <input type="date" id="filterFrom" title="From date">
+          <span class="date-sep">&ndash;</span>
+          <label for="filterTo" class="sr-only" style="display:none;">To date</label>
+          <input type="date" id="filterTo" title="To date">
+          <button type="button" class="secondary small" id="clearDateRangeBtn">Clear dates</button>
           <div class="spacer"></div>
+          <button class="secondary small" id="exportCsvBtn">Export CSV</button>
           <button class="secondary small" id="printAllBtn">Print this list</button>
         </div>
         <table>
@@ -197,6 +226,8 @@
   <table class="print-table" id="printTable"></table>
 </div>
 
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
 (function () {
   'use strict';
@@ -205,10 +236,10 @@
   var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
 
   var els = {};
-  ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg',
+  ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg','rosterSort',
    'entryStudent','entryDate','entryMethod','entryInitials','entryOutcome','logEntryBtn','editingHint',
-   'filterStudent','filterMethod','printAllBtn','entryRows','entriesEmptyMsg',
-   'printArea','printTitle','printSub','printTable'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'filterStudent','filterMethod','filterFrom','filterTo','clearDateRangeBtn','exportCsvBtn','printAllBtn','entryRows','entriesEmptyMsg',
+   'printArea','printTitle','printSub','printTable','toast'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var roster = [];
   var entries = [];
@@ -253,7 +284,15 @@
   function renderRosterList() {
     els.rosterList.innerHTML = '';
     els.rosterEmptyMsg.style.display = roster.length ? 'none' : 'block';
-    roster.slice().sort(function (a, b) { return a.localeCompare(b); }).forEach(function (name) {
+    var sortMode = els.rosterSort.value;
+    var sorted = roster.slice().sort(function (a, b) {
+      if (sortMode === 'fewest') {
+        var diff = countFor(a) - countFor(b);
+        if (diff !== 0) return diff;
+      }
+      return a.localeCompare(b);
+    });
+    sorted.forEach(function (name) {
       var li = document.createElement('li');
       var c = countFor(name);
       li.innerHTML = '<span>' + escapeHtml(name) + '</span>' +
@@ -284,9 +323,13 @@
   function filteredEntries() {
     var studentFilter = els.filterStudent.value.trim().toLowerCase();
     var methodFilter = els.filterMethod.value;
+    var fromDate = els.filterFrom.value;
+    var toDate = els.filterTo.value;
     return entries.filter(function (e) {
       if (studentFilter && e.student.toLowerCase().indexOf(studentFilter) === -1) return false;
       if (methodFilter && e.method !== methodFilter) return false;
+      if (fromDate && e.date < fromDate) return false;
+      if (toDate && e.date > toDate) return false;
       return true;
     }).sort(function (a, b) { return (b.date + b.id).localeCompare(a.date + a.id); });
   }
@@ -315,6 +358,32 @@
     renderRosterList();
     renderStudentSelect();
     renderEntries();
+  }
+
+  var toastTimer = null;
+  function showToast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { els.toast.classList.remove('show'); }, 2200);
+  }
+
+  function csvCell(s) {
+    var v = String(s == null ? '' : s);
+    if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+  function downloadCsv(filename, rows) {
+    var header = ['Date', 'Student', 'Method', 'Outcome', 'By'];
+    var lines = [header.map(csvCell).join(',')].concat(rows.map(function (e) {
+      return [e.date, e.student, e.method, e.outcome, e.initials || ''].map(csvCell).join(',');
+    }));
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   els.saveRosterBtn.addEventListener('click', function () {
@@ -371,9 +440,18 @@
         method: els.entryMethod.value, initials: els.entryInitials.value.trim(), outcome: outcome
       });
     }
+    var wasEditing = !!editingId;
     saveEntries();
     resetForm();
     renderAll();
+    showToast(wasEditing ? 'Contact updated.' : 'Contact logged.');
+  });
+
+  els.entryOutcome.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      ev.preventDefault();
+      els.logEntryBtn.click();
+    }
   });
 
   els.entryRows.addEventListener('click', function (ev) {
@@ -402,6 +480,16 @@
 
   els.filterStudent.addEventListener('input', renderEntries);
   els.filterMethod.addEventListener('change', renderEntries);
+  els.filterFrom.addEventListener('change', renderEntries);
+  els.filterTo.addEventListener('change', renderEntries);
+  els.clearDateRangeBtn.addEventListener('click', function () {
+    els.filterFrom.value = ''; els.filterTo.value = '';
+    renderEntries();
+  });
+  els.rosterSort.addEventListener('change', renderRosterList);
+  els.exportCsvBtn.addEventListener('click', function () {
+    downloadCsv('parent-contact-log_' + todayISO() + '.csv', filteredEntries());
+  });
 
   function doPrint(title, sub, rows) {
     els.printTitle.textContent = title;

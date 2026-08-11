@@ -9,6 +9,56 @@
 
 ## Status
 
+### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
+
+**Started the R61–R63 backport — the item both this file's and
+`034-schedule-browser.md`'s Round 7 notes named as the clearest,
+best-documented, highest-value item in the whole programme for this tool
+pair.** Given the size of the remaining gap (four features: staleness
+banner, copy/share links + deep linking, Common Planning/Compare mode,
+PNG download — each touching different parts of a 19,400-line file) and
+the standing recommendation that this be "its own dedicated round with
+room to actually drive the visualizer's UI," this round deliberately
+ported **one** self-contained piece rather than rushing all four:
+
+- **Done — Phase 1: staleness banner.** Ported `BR_STALE_DAYS`,
+  `brFormatDateLong()`, and `brCheckStaleness()` from
+  `034-schedule-browser.html`, plus the `#br-stale-banner` div and its
+  CSS (now in the shared `BR_CSS` both the live preview and the publisher
+  draw from). Wired into both the live preview markup (harmless there —
+  the live editor never sets `PUBLISHED_DATA`, so `brCheckStaleness()`
+  no-ops via a `typeof` guard) and `brBuildPublishedHTML()`'s actual
+  publish pipeline, so a fresh Publish no longer silently drops it the
+  way a fresh Publish would have dropped all four before this round.
+- **Not done — copy/share links, Compare/Common Planning mode, PNG
+  download.** All three remain unported. Recommended order for the next
+  round: copy/share links next (self-contained like staleness, but needs
+  `brRenderTeacher`/`brRenderGroup` output changes to add the buttons —
+  worth doing before Compare mode since Compare's UI reuses the same
+  share-button pattern), then Compare/Common Planning mode (the biggest
+  single piece — a new toolbar mode, bell-time parsing for "current
+  period," and its own render functions), then PNG download last (most
+  self-contained of the three, touches canvas drawing code with no
+  overlap with the others, and is the lowest-urgency of the four —
+  losing a download button on republish is a smaller problem than losing
+  a warning that the data is stale or losing Compare mode entirely).
+
+Verified end-to-end in headless Chromium, following the same two-step
+method Round 7 used to verify the `escHtml`/`escJsAttr` crash fix: (1)
+called `brBuildPublishedHTML()` directly in a live session and confirmed
+the output contains the function, the div, and the const; (2) loaded that
+*actual generated HTML* fresh in a new page — once with `publishedOn`
+backdated 200 days (banner appears, with the correct computed day count
+and date in the text) and once with today's date (banner stays hidden) —
+and confirmed opening a teacher still works in both (no regression on the
+Round 7 fix). The live editor's own preview was also loaded and toggled
+open with zero console errors.
+
+**Where a future round should pick up:** copy/share links, in the order
+above — this is now the best-scoped remaining phase of the single
+highest-priority item on this tool pair's list. Everything else in Quick
+Wins and Major Features below is untouched.
+
 **2026-08-10 — Round 7 (PR #60): a critical publish-pipeline crash fixed,
 plus the storage headroom warning Quick Win.**
 

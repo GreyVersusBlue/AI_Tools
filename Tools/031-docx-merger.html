@@ -38,6 +38,15 @@
 
   .count-line { font-size: 13px; opacity: 0.65; margin: var(--space-1) 0 var(--space-3); }
 
+  #resumeBanner {
+    display: none; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+    border: 1px solid var(--color-accent); border-radius: var(--radius, 8px);
+    padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); font-size: 13.5px;
+  }
+  #resumeBanner .msg { flex: 1; min-width: 220px; }
+  #resumeBanner .names { opacity: 0.7; font-size: 12.5px; margin-top: 2px; }
+
   ul#fileList {
     list-style: none; margin: 0; padding: 0;
     max-height: 460px; overflow-y: auto;
@@ -111,6 +120,14 @@
 <h1>Word Doc Merger</h1>
 <p class="sub">Combine a big stack of .docx files into one document, in whatever order you like. Everything runs in your browser — files never leave your computer.</p>
 
+<div id="resumeBanner">
+  <div class="msg">
+    <strong>Restore your last session?</strong> You had <span id="resumeCount"></span> files in progress before this page reloaded.
+    <div class="names" id="resumeNames"></div>
+  </div>
+  <button class="btn btn-secondary" id="btnDismissResume">Dismiss</button>
+</div>
+
 <div class="card blueprint section-card">
   <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
   <div class="dropzone" id="dropzone">
@@ -150,6 +167,18 @@
     <input type="checkbox" id="optToc">
     <span>Add a table of contents page at the front
       <span class="hint">Lists each file's heading. Requires the file-name headings above; opens in Word ready for you to right-click and "Update Field" to fill in page numbers.</span>
+    </span>
+  </label>
+  <label>
+    <input type="radio" name="styleMode" id="optStyleNormalize" value="normalize" checked>
+    <span>Normalize to the first file's styles <em>(default)</em>
+      <span class="hint">Simplest and smallest output. Other files' custom styles (Heading colors, table styles, etc.) that aren't already in the first file may fall back to a plain default look.</span>
+    </span>
+  </label>
+  <label>
+    <input type="radio" name="styleMode" id="optStylePreserve" value="preserve">
+    <span>Preserve each file's original styles
+      <span class="hint">Carries every file's own style definitions into the merged document, renaming any that collide by name. Keeps each section looking like its source file, at the cost of a larger file and possible duplicate style names in Word's style list.</span>
     </span>
   </label>
   <div class="outname">
@@ -214,19 +243,23 @@
   const optHeading = document.getElementById('optHeading');
   const optToc = document.getElementById('optToc');
   const optTocLabel = document.getElementById('optTocLabel');
+  const optStyleNormalize = document.getElementById('optStyleNormalize');
+  const optStylePreserve = document.getElementById('optStylePreserve');
   (function loadOptionPrefs() {
     let raw;
     try { raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}'); } catch (e) { raw = {}; }
     if (typeof raw.pageBreak === 'boolean') optPageBreak.checked = raw.pageBreak;
     if (typeof raw.heading === 'boolean') optHeading.checked = raw.heading;
     if (typeof raw.toc === 'boolean') optToc.checked = raw.toc;
+    if (raw.styleMode === 'preserve') optStylePreserve.checked = true;
   })();
   function saveOptionPrefs() {
     try {
       localStorage.setItem(OPTIONS_KEY, JSON.stringify({
         pageBreak: optPageBreak.checked,
         heading: optHeading.checked,
-        toc: optToc.checked
+        toc: optToc.checked,
+        styleMode: optStylePreserve.checked ? 'preserve' : 'normalize'
       }));
     } catch (e) { /* storage full/blocked */ }
   }
@@ -236,6 +269,8 @@
   }
   optPageBreak.addEventListener('change', saveOptionPrefs);
   optHeading.addEventListener('change', () => { syncTocAvailability(); saveOptionPrefs(); });
+  optStyleNormalize.addEventListener('change', saveOptionPrefs);
+  optStylePreserve.addEventListener('change', saveOptionPrefs);
   optToc.addEventListener('change', saveOptionPrefs);
   syncTocAvailability();
 
@@ -248,9 +283,56 @@
   fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.value = ''; });
   document.getElementById('btnAddMore').addEventListener('click', () => fileInput.click());
 
+  // Browsers never let a page silently re-read a file after reload — File
+  // objects don't survive a refresh — so "remember the file list" means
+  // remembering names, order, and heading text only, and re-applying that
+  // order/heading whenever files matching those names get re-added by hand.
+  const LAST_LIST_KEY = 'docx-merger-last-filelist';
+  const resumeBanner = document.getElementById('resumeBanner');
+  const resumeCountEl = document.getElementById('resumeCount');
+  const resumeNamesEl = document.getElementById('resumeNames');
+  let rememberedList = [];
+  (function loadRememberedList() {
+    try { rememberedList = JSON.parse(localStorage.getItem(LAST_LIST_KEY) || '[]'); } catch (e) { rememberedList = []; }
+    if (!Array.isArray(rememberedList) || !rememberedList.length) { rememberedList = []; return; }
+    resumeCountEl.textContent = rememberedList.length;
+    const names = rememberedList.map(e => e.name);
+    resumeNamesEl.textContent = names.slice(0, 6).join(', ') + (names.length > 6 ? `, +${names.length - 6} more` : '');
+    resumeBanner.style.display = 'flex';
+  })();
+  document.getElementById('btnDismissResume').addEventListener('click', () => {
+    rememberedList = [];
+    resumeBanner.style.display = 'none';
+    try { localStorage.removeItem(LAST_LIST_KEY); } catch (e) { /* storage blocked */ }
+  });
+  function persistFileList() {
+    try {
+      localStorage.setItem(LAST_LIST_KEY, JSON.stringify(filesArr.map(e => ({ name: e.name, heading: e.heading || '' }))));
+    } catch (e) { /* storage full/blocked */ }
+  }
+  /** Re-sorts filesArr to match rememberedList's order wherever a re-added
+      file's name matches a remembered one, and restores that file's saved
+      heading text if it hasn't already been typed this session. Files with
+      no remembered match keep their relative add order at the end. */
+  function applyRememberedOrder() {
+    if (!rememberedList.length) return;
+    const remembered = new Map();
+    rememberedList.forEach((e, i) => { if (!remembered.has(e.name)) remembered.set(e.name, { i, heading: e.heading }); });
+    filesArr.forEach(entry => {
+      const match = remembered.get(entry.name);
+      if (match && !entry.heading && match.heading) entry.heading = match.heading;
+    });
+    filesArr = filesArr
+      .map((entry, i) => ({ entry, i, ord: remembered.has(entry.name) ? remembered.get(entry.name).i : Infinity }))
+      .sort((a, b) => (a.ord - b.ord) || (a.i - b.i))
+      .map(x => x.entry);
+    resumeBanner.style.display = 'none';
+  }
+
   function addFiles(fileListLike) {
     const incoming = Array.from(fileListLike).filter(f => /\.docx$/i.test(f.name));
     incoming.forEach(f => filesArr.push({ id: nextEntryId++, file: f, name: f.name, size: f.size }));
+    if (rememberedList.length) applyRememberedOrder();
     render();
     scanFiles();
   }
@@ -424,8 +506,12 @@
       input.addEventListener('input', () => {
         const i = +input.closest('li').dataset.index;
         if (filesArr[i]) filesArr[i].heading = input.value;
+        clearTimeout(persistFileList._t);
+        persistFileList._t = setTimeout(persistFileList, 400);
       });
     });
+
+    persistFileList();
   }
 
   function escapeHtml(s) {
@@ -643,7 +729,7 @@
     numNodes.forEach(n => root.appendChild(baseDoc.importNode(n, true)));
   }
 
-  function updateReferences(bodyEl, relIdMap, numIdMap) {
+  function updateReferences(bodyEl, relIdMap, numIdMap, styleIdMap) {
     const all = bodyEl.getElementsByTagName('*');
     for (const el of Array.from(all)) {
       ['r:id', 'r:embed', 'r:link'].forEach(attr => {
@@ -656,7 +742,62 @@
         const val = el.getAttribute('w:val');
         if (numIdMap[val] !== undefined) el.setAttribute('w:val', String(numIdMap[val]));
       }
+      if (styleIdMap && (el.tagName === 'w:pStyle' || el.tagName === 'w:rStyle' || el.tagName === 'w:tblStyle')) {
+        const val = el.getAttribute('w:val');
+        if (styleIdMap[val] !== undefined) el.setAttribute('w:val', styleIdMap[val]);
+      }
     }
+  }
+
+  /** "Preserve each file's original styles": imports a source document's
+      word/styles.xml definitions into the base document's styles.xml, one
+      file at a time, renaming any styleId that's already in use (by the
+      base file or an earlier merged file) so it can't silently clobber or
+      be shadowed by another file's style of the same name — e.g. two files
+      both defining "Heading1" with different colors. Unclaimed IDs (the
+      common case — most .docx files share the same handful of built-in
+      style IDs from the same Word template) are kept as-is, so files using
+      a shared template don't grow needless duplicates.
+      Returns a styleIdMap of {oldId: newId} for just the IDs that were
+      renamed in *this* file, for updateReferences() to apply to its body. */
+  function mergeStylesForEntry(baseStylesDoc, incomingStylesDoc, usedStyleIds, fileIndex) {
+    const baseRoot = baseStylesDoc.documentElement;
+    const styleIdMap = {};
+    const localIdMap = {}; // every id in *this* incoming file, renamed or not — for basedOn/next/link fixups
+    const styleEls = Array.from(incomingStylesDoc.getElementsByTagName('w:style'));
+    styleEls.forEach(el => {
+      const oldId = el.getAttribute('w:styleId');
+      if (!oldId) return;
+      let newId = oldId;
+      if (usedStyleIds.has(oldId)) {
+        newId = oldId + '_f' + fileIndex;
+        let n = 2;
+        while (usedStyleIds.has(newId)) { newId = oldId + '_f' + fileIndex + '_' + n; n++; }
+        styleIdMap[oldId] = newId;
+        el.setAttribute('w:styleId', newId);
+      }
+      localIdMap[oldId] = newId;
+      usedStyleIds.add(newId);
+    });
+    // Second pass: basedOn/next/link only need fixing when the id they
+    // point at was itself renamed above (a style referencing an id this
+    // file never defined — e.g. Word's built-in "Normal" — is left alone,
+    // since that id still resolves correctly either way).
+    styleEls.forEach(el => {
+      ['w:basedOn', 'w:next', 'w:link'].forEach(tag => {
+        const ref = el.getElementsByTagName(tag)[0];
+        if (!ref) return;
+        const val = ref.getAttribute('w:val');
+        if (localIdMap[val] !== undefined) ref.setAttribute('w:val', localIdMap[val]);
+      });
+      baseRoot.appendChild(baseStylesDoc.importNode(el, true));
+    });
+    // A source file may also set a default document-wide style via
+    // w:docDefaults or list its default paragraph/character style ids on
+    // <w:style w:default="1">; those are already carried over by the loop
+    // above (the base file's own w:default styles are untouched since we
+    // only ever import from the incoming doc), so no extra step is needed.
+    return styleIdMap;
   }
 
   function stripTrailingSectPr(body) {
@@ -722,6 +863,7 @@
 
     const addHeadings = document.getElementById('optHeading').checked;
     const addPageBreak = document.getElementById('optPageBreak').checked;
+    const preserveStyles = optStylePreserve.checked;
 
     // find a working base file
     let baseZip = null, baseIndex = -1, baseHeading = '';
@@ -762,6 +904,17 @@
     let abstractIdCounter = baseNumberingDoc ? Math.max(0, ...Array.from(baseNumberingDoc.getElementsByTagName('w:abstractNum')).map(el => parseInt(el.getAttribute('w:abstractNumId'), 10) || 0)) : -1;
     let numIdCounter = baseNumberingDoc ? Math.max(0, ...Array.from(baseNumberingDoc.getElementsByTagName('w:num')).map(el => parseInt(el.getAttribute('w:numId'), 10) || 0)) : -1;
     let createdNewNumbering = false;
+
+    let baseStylesDoc = null, usedStyleIds = null;
+    if (preserveStyles && baseZip.file('word/styles.xml')) {
+      baseStylesDoc = parseXml(await baseZip.file('word/styles.xml').async('string'));
+      usedStyleIds = new Set(
+        Array.from(baseStylesDoc.getElementsByTagName('w:style'))
+          .map(el => el.getAttribute('w:styleId')).filter(Boolean)
+      );
+    } else if (preserveStyles) {
+      errors.push(`${filesArr[baseIndex].name}: has no word/styles.xml — styles were normalized instead of preserved.`);
+    }
 
     let finalSectPr = stripTrailingSectPr(baseBody);
     const allExtensions = new Set();
@@ -827,7 +980,13 @@
           mergeNumberingNodes(baseNumberingDoc, numDoc);
         }
 
-        updateReferences(body, relIdMap, numIdMap);
+        let styleIdMap = null;
+        if (baseStylesDoc && zip.file('word/styles.xml')) {
+          const incomingStylesDoc = parseXml(await zip.file('word/styles.xml').async('string'));
+          styleIdMap = mergeStylesForEntry(baseStylesDoc, incomingStylesDoc, usedStyleIds, idx + 1);
+        }
+
+        updateReferences(body, relIdMap, numIdMap, styleIdMap);
 
         const sectPr = stripTrailingSectPr(body);
         const isLast = idx === remaining.length - 1;
@@ -861,6 +1020,8 @@
     }
 
     await updateContentTypes(baseZip, allExtensions, createdNewNumbering);
+
+    if (baseStylesDoc) baseZip.file('word/styles.xml', xmlToString(baseStylesDoc));
 
     baseZip.file('word/document.xml', xmlToString(baseDoc));
     baseZip.file(relsPath, xmlToString(baseRelsDoc));

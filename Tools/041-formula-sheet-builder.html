@@ -114,6 +114,7 @@
 
   .preview-wrap { background: #d9d7cd; border-radius: 10px; padding: 1.4rem; overflow: auto; }
   .preview-note { font-size: .8rem; color: var(--muted); margin-bottom: .3rem; }
+  .pagesize-note { font-size: .78rem; color: var(--muted); margin: -.15rem 0 .8rem; }
   .autofit-note { font-size: .78rem; color: var(--muted); margin-bottom: .8rem; }
   .autofit-note.warn { color: var(--err); font-weight: 700; }
 
@@ -142,6 +143,11 @@
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
     #printArea .sheet { box-shadow: none; }
+    .print-page-grid { display: grid; width: 8.5in; height: 11in; }
+    .print-page-grid.pp-2 { grid-template-rows: repeat(2, 1fr); }
+    .print-page-grid.pp-4 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+    .print-page-grid .cut-cell { border: 1px dashed #999; overflow: hidden; }
+    .print-page-grid .sheet { width: 100% !important; height: 100% !important; min-height: 0 !important; box-shadow: none; }
     @page { size: letter portrait; margin: 0; }
   }
 </style>
@@ -183,6 +189,13 @@
           <option value="3">3 columns</option>
         </select>
 
+        <label for="pageSize">Print size</label>
+        <select id="pageSize">
+          <option value="full">Full page (8.5&times;11")</option>
+          <option value="half">Half sheet (8.5&times;5.5") &mdash; 2 per printed page</option>
+          <option value="card">Index card size (4.25&times;5.5") &mdash; 4 per printed page</option>
+        </select>
+
         <label for="templatePicker">Start from a template</label>
         <select id="templatePicker"></select>
         <button type="button" class="secondary full" id="loadTemplateBtn">Load template (replaces current list)</button>
@@ -211,6 +224,7 @@
 
     <div class="preview-wrap">
       <p class="preview-note">Live preview &mdash; this is what prints (auto-fit to one page).</p>
+      <p class="pagesize-note" id="pageSizeNote"></p>
       <p class="autofit-note" id="autofitNote"></p>
       <div id="previewArea"></div>
     </div>
@@ -241,11 +255,22 @@
 
   var els = {};
   ['toolbar','sheetSwitch','newSheetBtn','deleteSheetBtn','exportSheetBtn','importSheetBtn','importSheetFile',
-   'sheetName','sheetTitle','columnCount','templatePicker','loadTemplateBtn','browsePickerBtn',
+   'sheetName','sheetTitle','columnCount','pageSize','templatePicker','loadTemplateBtn','browsePickerBtn',
    'itemsList','emptyHint','newName','newExpr','newNote','addItemBtn',
-   'printBtn','previewArea','autofitNote',
+   'printBtn','previewArea','autofitNote','pageSizeNote',
    'formulaPickerModal','closePickerBtn','pickerList'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  /** Physical print sizes. "half"/"card" tile several copies of the same
+      sheet onto one physical letter page (with dashed cut lines) rather
+      than shrinking the printer's paper — a teacher still loads plain
+      letter paper and cuts the copies apart afterward. */
+  var PAGE_SIZES = {
+    full: { w: 8.5, h: 11, perPage: 1 },
+    half: { w: 8.5, h: 5.5, perPage: 2 },
+    card: { w: 4.25, h: 5.5, perPage: 4 }
+  };
+  function pageDims() { return PAGE_SIZES[state && state.pageSize] || PAGE_SIZES.full; }
 
   // { name, title, columns, items: [{name, expression, note, image, workedExample, variables: [{symbol, meaning}]}] }
   var state = null;
@@ -490,8 +515,16 @@
         }).join('')
       : '<div class="empty-sheet">No formulas yet.</div>';
     var scaleStyle = 'column-count:' + (state.columns || 2) + ';';
+    var dims = pageDims();
+    // Padding scales down with the physical page so a card-sized sheet
+    // isn't mostly margin; same ratio as the original fixed 0.7in/0.65in
+    // full-page padding.
+    var padV = Math.round((dims.h * (0.7 / 11)) * 100) / 100;
+    var padH = Math.round((dims.w * (0.65 / 8.5)) * 100) / 100;
+    var sheetStyle = '--fs-scale:' + (scale == null ? lastFitScale : scale) + ';' +
+      'width:' + dims.w + 'in;min-height:' + dims.h + 'in;padding:' + padV + 'in ' + padH + 'in;';
     return (
-      '<div class="sheet" style="--fs-scale:' + (scale == null ? lastFitScale : scale) + ';">' +
+      '<div class="sheet" style="' + sheetStyle + '">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
         '<div class="sheet-sub">Name: _______________________&emsp;&emsp;Period: _____</div>' +
         '<div class="formulas" style="' + scaleStyle + '">' + itemsHtml + '</div>' +
@@ -508,7 +541,7 @@
   function applyAutoFit() {
     var sheetEl = els.previewArea.querySelector('.sheet');
     if (!sheetEl) { els.autofitNote.textContent = ''; els.autofitNote.className = 'autofit-note'; return; }
-    var maxPx = 11 * 96;
+    var maxPx = pageDims().h * 96;
     var scale = 1;
     var minScale = 0.6;
     sheetEl.style.setProperty('--fs-scale', scale);
@@ -537,9 +570,18 @@
     els.sheetName.value = state.name;
     els.sheetTitle.value = state.title;
     els.columnCount.value = state.columns || 2;
+    els.pageSize.value = state.pageSize || 'full';
     renderItemsEditor();
     els.previewArea.innerHTML = sheetHtml(1);
     applyAutoFit();
+    updatePageSizeNote();
+  }
+
+  function updatePageSizeNote() {
+    var dims = pageDims();
+    els.pageSizeNote.textContent = dims.perPage > 1
+      ? 'Prints ' + dims.perPage + ' copies of this sheet on one physical letter page, with dashed cut lines.'
+      : '';
   }
 
   function normalizeItem(i) {
@@ -551,7 +593,7 @@
   }
 
   function newSheet(name) {
-    state = { name: name, title: '', columns: 2, items: [] };
+    state = { name: name, title: '', columns: 2, pageSize: 'full', items: [] };
     FormulaSheetStore.setCurrentName(name);
     openEditIndex = -1;
     renderAll();
@@ -562,6 +604,7 @@
     if (!loaded) return;
     state = loaded;
     if (!state.columns) state.columns = 2; // sheets saved before this field existed
+    if (!state.pageSize || !PAGE_SIZES[state.pageSize]) state.pageSize = 'full'; // sheets saved before this round
     state.items = (state.items || []).map(normalizeItem); // additive fields for sheets saved before this round
     FormulaSheetStore.setCurrentName(name);
     openEditIndex = -1;
@@ -592,6 +635,14 @@
     save();
     els.previewArea.innerHTML = sheetHtml(1);
     applyAutoFit();
+  });
+  els.pageSize.addEventListener('change', function () {
+    if (!state) return;
+    state.pageSize = PAGE_SIZES[els.pageSize.value] ? els.pageSize.value : 'full';
+    save();
+    els.previewArea.innerHTML = sheetHtml(1);
+    applyAutoFit();
+    updatePageSizeNote();
   });
 
   // Load template already discards the current list, so — same as the
@@ -675,7 +726,16 @@
   });
 
   els.printBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = sheetHtml();
+    var dims = pageDims();
+    var printArea = document.getElementById('printArea');
+    if (dims.perPage <= 1) {
+      printArea.innerHTML = sheetHtml();
+    } else {
+      var oneCopy = sheetHtml();
+      var cells = '';
+      for (var k = 0; k < dims.perPage; k++) { cells += '<div class="cut-cell">' + oneCopy + '</div>'; }
+      printArea.innerHTML = '<div class="print-page-grid pp-' + dims.perPage + '">' + cells + '</div>';
+    }
     window.print();
   });
 
@@ -734,6 +794,7 @@
         name: name,
         title: decoded.title || '',
         columns: decoded.columns || 2,
+        pageSize: PAGE_SIZES[decoded.pageSize] ? decoded.pageSize : 'full',
         items: decoded.items.map(normalizeItem)
       };
       FormulaSheetStore.setCurrentName(name);

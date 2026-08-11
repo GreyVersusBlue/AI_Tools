@@ -26,22 +26,23 @@
 <meta name="twitter:image" content="https://greyversusblue.com/assets/og/guild-board.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%233B2A1A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%237E2A20'/%3E%3Ccircle cx='13' cy='13' r='3.5' fill='%23A8443A'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
-  <!-- Fonts and jsPDF are vendored under schedule/. This page makes no offsite
-       requests. See schedule/fonts/README.md and schedule/libs/jspdf/README.md. -->
+  <!-- Fonts are vendored under schedule/, jsPDF under _shared/vendor/. This
+       page makes no offsite requests. See schedule/fonts/README.md and
+       ../_shared/vendor/jspdf/README.md. -->
   <link href="schedule/fonts/fonts.css" rel="stylesheet" />
-  <script src="schedule/libs/jspdf/jspdf.umd.min.js" defer></script>
+  <script src="../_shared/vendor/jspdf/jspdf.umd.min.js" defer></script>
   <!-- Font bytes for the files this tool publishes. Those are standalone HTML
        files with no folder next to them, so they carry their fonts inline.
        Generated: node Tools/schedule/fonts/build-published-fonts.mjs -->
   <script src="schedule/fonts/published-fonts.js" defer></script>
   <!-- R61: "Hand off an in-progress layout" — WebRTC/QR device pairing, same
-       vendored libs as Tools/classroom-timer's mirror feature (each tool
-       keeps its own copy per this site's convention; see
-       Tools/schedule-visualizer/lib/). -->
+       vendored libs as Tools/classroom-timer's mirror feature. The QR decoder
+       is shared site-wide (../_shared/vendor/jsqr/); the qrcode.js encoder is
+       still a per-tool copy under Tools/schedule-visualizer/lib/. -->
   <script src="../_shared/webrtc-pair.js" defer></script>
   <script src="../_shared/qr-scan.js" defer></script>
   <script src="schedule-visualizer/lib/qrcode.js" defer></script>
-  <script src="schedule-visualizer/lib/jsqr.js" defer></script>
+  <script src="../_shared/vendor/jsqr/jsqr.js" defer></script>
   <script type="module">
     import { drawQR, startHost, startJoin } from './schedule-visualizer/sv-handoff.js';
     window.SVHandoff = { drawQR, startHost, startJoin };
@@ -18281,6 +18282,7 @@ window.wiComputeDiff    = wiComputeDiff;
         Back to Visualizer
       </button>
     </header>
+    <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <div class="panel">
       <div class="toolbar">
         <div class="mode" role="tablist">
@@ -18387,6 +18389,12 @@ const BR_CSS = `#app-browser {
 #app-browser .btn-print{font:inherit;font-weight:600;font-size:13.5px;border:1px solid var(--br-gold-soft);background:#fff;
   color:var(--br-forest);padding:11px 17px;border-radius:10px;cursor:pointer;transition:.18s}
 #app-browser .btn-print:hover{background:var(--br-forest);color:#fff;border-color:var(--br-forest)}
+/* ── Staleness banner (ported from 034-schedule-browser.html R62; see
+   improvement prompts/035-schedule-visualizer.md, Round 8) ── */
+#app-browser .stale-banner{display:none;margin:0 0 16px;padding:14px 20px;border-radius:0 0 10px 10px;
+  background:#fbe4c8;border:2px solid #c96a1f;border-top:none;color:#7a3c0e;font-size:14.5px;font-weight:700;line-height:1.5;text-align:center}
+#app-browser .stale-banner.show{display:block}
+#app-browser .stale-banner::before{content:"⚠ "}
 #app-browser .stage{padding:34px 34px 30px}
 #app-browser .br-empty{text-align:center;color:var(--br-muted);padding:40px 20px}
 /* font-weight:600 is explicit so this matches the other nine Fraunces rules.
@@ -18503,7 +18511,7 @@ const BR_CSS = `#app-browser {
 @media(max-width:620px){#app-browser .mini-side{flex:1 1 100%}}
 @media print{
   #app-browser .toolbar,#app-browser .btn-print,#app-browser .br-menu,
-  #app-browser .overview,#app-browser .footnote,#btn-toggle-app,#btn-open-schedule-browser{display:none!important}
+  #app-browser .overview,#app-browser .footnote,#app-browser .stale-banner,#btn-toggle-app,#btn-open-schedule-browser{display:none!important}
   #app-browser .mast,#app-browser .panel{box-shadow:none;border-radius:0;border:none}
   #app-browser .tcard,#app-browser .gchip{cursor:default}
   #app-browser .br-view{display:none!important}#app-browser .br-view.show{display:block!important}
@@ -18589,6 +18597,10 @@ let BR_DEPT = {
 let BR_ORDER = {ELA:0,MATH:1,SCI:2,SS:3,'SCI/SS':4};
 const BR_LEGACY_SHORT = {ELA:'ELA',MATH:'Math',SCI:'Science',SS:'Soc Studies','SCI/SS':'Sci / SS'};
 const BR_DEPT_FALLBACK = { c:'#64748b', name:null };
+/* How many days past a published file's publishedOn before brCheckStaleness()
+   shows the "may be stale" banner. No effect in the live editor preview,
+   which never sets PUBLISHED_DATA — see brCheckStaleness() below. */
+const BR_STALE_DAYS = 60;
 function brSyncDeptFromSettings() {
   try {
     const subjects = (typeof getSubjects === 'function') ? getSubjects() : null;
@@ -18801,6 +18813,33 @@ function brLoadFromVisualizer() {
     BR_TEACHERS = {}; BR_SECTIONS = {}; BR_ROOM2TEACHER = {};
     BR_GROUPROOMS = {}; BR_BELL = null; BR_GEOM = null;
   }
+}
+
+/* ── Staleness banner (ported from 034-schedule-browser.html R62; see
+   improvement prompts/035-schedule-visualizer.md, Round 8). Drives the
+   #br-stale-banner div wired into both the live preview markup above and
+   brBuildPublishedMarkup() below, and shares one CSS rule (BR_CSS) so a
+   published file's banner never drifts from what this app previews. If a
+   future export has no publishedOn field — or this runs in the live editor,
+   which never sets PUBLISHED_DATA at all — it quietly does nothing rather
+   than throwing. ── */
+function brFormatDateLong(d) {
+  try { return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch (e) { return d.toISOString().slice(0, 10); }
+}
+function brCheckStaleness() {
+  const el = document.getElementById('br-stale-banner');
+  if (!el) return;
+  if (typeof PUBLISHED_DATA === 'undefined') return;
+  const raw = PUBLISHED_DATA && PUBLISHED_DATA.publishedOn;
+  if (!raw) return;
+  const pub = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw + 'T00:00:00' : raw);
+  if (isNaN(pub.getTime())) return;
+  const days = Math.floor((Date.now() - pub.getTime()) / 86400000);
+  if (days <= BR_STALE_DAYS) return;
+  el.textContent = 'This schedule was published on ' + brFormatDateLong(pub) + ' — ' + days + ' days ago. '
+    + 'It may be out of date — check with the office or ask for a fresh export if anything looks off.';
+  el.classList.add('show');
 }
 
 /* === Search menu === */
@@ -19284,7 +19323,8 @@ function brPublishFnList() {
     brWireDocClick, brSetMode, brChoose, brJumpTeacher, brJumpGroup,
     brDayRows, brRenderTeacher, brRenderGroup, brOverviewHTML,
     brGeoFindRoom, brGeoFloorSVG, brMiniMapHTML, brGroupMapHTML, brSetGrpDay,
-    brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMap, brRenderMapDyn
+    brOpenMapFloorIdx, brSetMapFloorIdx, brRenderMap, brRenderMapDyn,
+    brFormatDateLong, brCheckStaleness
   ];
 }
 
@@ -19299,6 +19339,7 @@ function brBuildPublishedMarkup(school, dateStr) {
         <p class="sub">Teacher Schedule Browser</p>
       </div>
     </header>
+    <div id="br-stale-banner" class="stale-banner" role="note"></div>
     <div class="panel">
       <div class="toolbar">
         <div class="mode" role="tablist">
@@ -19359,7 +19400,8 @@ function brBuildPublishedHTML() {
        ReferenceError the instant anyone opens a teacher or group: this was
        missing (see improvement prompts/035-schedule-visualizer.md, Round 7). */
     'const escHtml = '   + escHtml.toString()   + ';',
-    'const escJsAttr = ' + escJsAttr.toString() + ';'
+    'const escJsAttr = ' + escJsAttr.toString() + ';',
+    'const BR_STALE_DAYS = ' + BR_STALE_DAYS + ';'
   ].join('\n');
 
   const js = [
@@ -19379,6 +19421,7 @@ function brBuildPublishedHTML() {
     'brWireDocClick();',
     'brBuildOpts();',
     'brRenderMenu();',
+    'brCheckStaleness();',
     'if (!Object.keys(BR_TEACHERS).length) {',
     "  document.getElementById('br-empty-title').textContent = 'No schedule data in this file.';",
     "  document.getElementById('br-empty-sub').textContent = 'Ask the publisher to re-export after adding rooms and groups.';",

@@ -9,6 +9,30 @@
 
 ## Status
 
+**2026-08-11 — Round 2 (session `gb5c6e`).** Shipped `.ics` calendar export
+(Major Features), reusing the exact hand-built-VCALENDAR pattern already
+proven in `013-lab-safety-contract-tracker.html`: `icsEscape`/`icsTimestamp`/
+compact-date helpers, all-day events only (no timezone to get wrong). A new
+"Add trip to calendar (.ics)" button in the trip-details card downloads a
+file containing **one event for the trip itself** (date range, or a single
+day; departure/return times and cost/contact info folded into the
+description rather than making it a timed event, to avoid timezone bugs) and
+**a second, separate event on the slip-return due date** when one is set and
+differs from the trip date — its description reuses the tool's own
+`missingStudents()`/`batchNamesList()` to report who's still missing a slip
+as of the moment it's downloaded, the same "live snapshot" approach the lab
+safety tracker's reminder already uses. Clicking with no trip date set shows
+an alert rather than downloading an empty/broken file. Verified with a
+headless Playwright pass: the no-date guard alert, and the full two-event
+`.ics` output (parsed and printed) for a trip with a due date, departure/
+return times, cost, and chaperone contact — zero console errors.
+
+Not attempted this round: everything else in Major Features (still
+deferred), and the medical/allergy and second-language Quick Wins already
+flagged as out of scope for a single round.
+
+---
+
 **2026-08-10 — Quick Wins mostly implemented; Major Features deferred.**
 Storage stayed additive: `state.chaperones` and `state.chaperoneAssignments`
 are new arrays/objects defaulting to empty, and each `collected[name]` record
@@ -88,6 +112,8 @@ checklist, name tags, and day schedule are all still unbuilt.
 - **Chaperone section** — multiple named chaperones with phone numbers,
   per-student group assignment, and a printable trip-day roster grouped by
   chaperone
+- **`.ics` calendar export** — one event for the trip, plus a separate
+  slip-due reminder event with a live missing-count snapshot
 - QR code on the slip; print
 
 ## Quick Wins
@@ -125,9 +151,11 @@ checklist, name tags, and day schedule are all still unbuilt.
   the several pieces this item describes. The parent letter, emergency
   sheet, headcount checklist, name tags, and day schedule are still
   unbuilt.)*
-- **Skipped — deferred.** **Add the trip to the calendar** — an `.ics` export, which
+- **Done —** **Add the trip to the calendar** — an `.ics` export, which
   `school-calendar-visualizer.html` and `013-lab-safety-contract-tracker.html`
-  both already know how to build.
+  both already know how to build. *(Reused `013-lab-safety-contract-tracker.html`'s
+  hand-built VCALENDAR pattern; ships one trip event plus a separate
+  slip-due reminder event.)*
 - **Skipped — deferred.** **Trip-day mode.** A projector/phone view: the headcount, the groups, the
   schedule, the "who's on the bus" checklist, and emergency numbers — usable
   while standing in a parking lot.
@@ -158,8 +186,8 @@ thing forward to next year's dates in two clicks.
   through an actual print test on paper this round.
 - **P14 (year lifecycle)** — trips repeat annually; this is the clearest case
   for rollover.
-- **P7 (cross-tool)** — `.ics` generation and QR scanning both already exist
-  elsewhere on the site.
+- **P7 (cross-tool)** — **addressed 2026-08-11** for `.ics` generation (see
+  Status); QR scanning still exists only elsewhere on the site, not here.
 
 ## Open Questions
 

@@ -9,7 +9,49 @@
 
 ## Status
 
-**2026-08-10 — The widget architecture, the bell schedule, the morning
+### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
+
+Picked up item 3 from Round 1's "where the next round should pick up" list:
+*"Do Now / agenda strip (Major) — pairs with the Classroom Timer's agenda
+mode, which shipped in an earlier round and is not read here yet. That is
+the most obvious next panel and it is a small one."* — and it was, thanks
+to Round 1's own panel-registry refactor.
+
+Shipped as a new **"Do Now / Agenda"** panel, on by default
+(`DEFAULT_PANELS`), reading `004-Classroom Timer.html`'s own storage
+**read-only**:
+
+- `ct_running_v1` (the live `{mode, phase}` snapshot Classroom Timer writes
+  only while a timer is running or paused) — when `mode === 'agenda'`, shows
+  the current segment name large, minutes:seconds remaining, "Next: …" (or
+  "Last segment"), and a thin whole-period progress bar computed the same
+  way Classroom Timer's own agenda bar is (`agendaElapsedBase` plus progress
+  through the current segment, over `agendaTotalMs`).
+- `ct_prefs` (the configured plan, whether or not anything is running) — when
+  nothing is currently running, falls back to listing the configured agenda
+  segments and total time with a "start it in Classroom Timer" hint, rather
+  than an empty panel.
+- If neither exists, a plain empty-state pointing at Classroom Timer's
+  Agenda tab.
+
+Deliberately **read-only**, unlike the Hall Pass panel this tool already
+writes to — there's no single obvious action a "sign in" button has here
+(pause? skip to next segment? both would need Classroom Timer's own control
+functions, not just its storage), so this round didn't invent one. Refreshes
+on the same panel-refresh timer (`HALLPASS_REFRESH_MS`, 20s) the Hall Pass
+panel already uses.
+
+Verified with a headless-browser pass: seeded a configured-but-not-running
+`ct_prefs.agenda.segments` and confirmed the plan-preview list rendered;
+then seeded a running `ct_running_v1` (segment index 1 of 3, mid-segment)
+and confirmed the live current-segment name rendered correctly. No console
+errors in either state, or on the three other pages this round touched.
+
+Everything else on this tool's backlog (extracting the shared timer,
+phone-as-remote control, the shared read API, the landing-page question) is
+unchanged from Round 1.
+
+### Round 1 (Pass 1) — 2026-08-10 — The widget architecture, the bell schedule, the morning
 routine, projector mode and an actionable Hall Pass panel all shipped.** The
 page was restructured around a panel registry, which is the refactor the
 backlog identified as the enabling one, and everything else this round was
@@ -97,9 +139,9 @@ What shipped, against the backlog below:
    tractable now: a paired phone needs to drive four or five named actions
    (start/pause the timer, pick the next student, sign someone in, advance the
    period), not mirror a whole page. `_shared/webrtc-pair.js` is waiting.
-3. **Do Now / agenda strip (Major)** — pairs with the Classroom Timer's agenda
-   mode, which shipped in an earlier round and is not read here yet. That is
-   the most obvious next panel and it is a small one.
+3. ~~**Do Now / agenda strip (Major)**~~ — **done Pass 2 Round 1**; see the
+   note at the top of Status. Read-only for now — advancing/pausing the
+   agenda from here, not just watching it, is a reasonable follow-up.
 4. **More panels, now that they are cheap**: behaviour totals for the current
    period, the day's exit-ticket prompt, the number talk of the day, the
    current seating chart.

@@ -144,6 +144,11 @@
   .slip-card .slip-field { font-size: .85rem; margin-bottom: .5rem; }
   .slip-card .slip-line { display: block; border-bottom: 1px solid #999; height: 1.1rem; margin-top: .1rem; }
 
+  .wall-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-top: .6rem; }
+  .wall-card { border: 1px solid #999; border-radius: 6px; padding: .6rem .8rem; break-inside: avoid; }
+  .wall-card .wall-name { font-weight: 700; font-size: 1rem; margin: 0 0 .3rem; }
+  .wall-card .wall-books { margin: 0; padding-left: 1.1rem; font-size: .85rem; line-height: 1.5; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   #printArea { display: none; }
@@ -282,6 +287,7 @@
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
         <button type="button" class="secondary small" id="exportCsvBtn">Export CSV</button>
         <button type="button" class="secondary small" id="printSummaryBtn">Print class summary</button>
+        <button type="button" class="secondary small" id="printWallBtn">Print finished-books wall</button>
       </div>
     </div>
     <div class="summary-filter" style="margin-bottom:.9rem;">
@@ -340,7 +346,7 @@
     'addEntryBtn', 'cancelEditBtn',
     'bookProgress', 'bookProgressList',
     'logTable', 'logTableBody', 'noEntriesHint', 'noStudentCard',
-    'printSummaryBtn', 'filterFrom', 'filterTo', 'clearFilterBtn',
+    'printSummaryBtn', 'printWallBtn', 'filterFrom', 'filterTo', 'clearFilterBtn',
     'goalPages', 'goalMinutes',
     'summaryTable', 'summaryTableBody', 'noSummaryHint', 'exportCsvBtn',
     'printArea',
@@ -881,6 +887,7 @@
     saveCurrentState();
     resetForm();
     renderStudentList();
+    renderBookProgress();
     renderLogTable();
     renderSummaryTable();
     renderReadingRate();
@@ -1215,8 +1222,48 @@
     window.print();
   }
 
+  /** The titles a student has checked off as finished (see the Books list
+      in their log card), resolved from bookKey back to the actual title
+      text they typed — studentBookList() already builds that {key,title}
+      mapping for the checkbox list, so this reuses it instead of
+      duplicating the lookup. */
+  function finishedBooksForStudent(name) {
+    var finishedKeys = studentFinished(name);
+    if (!finishedKeys.length) return [];
+    return studentBookList(studentEntries(name))
+      .filter(function (b) { return finishedKeys.indexOf(b.key) !== -1; })
+      .map(function (b) { return b.title; });
+  }
+
+  /** A posted "our finished books" wall — one card per student who has at
+      least one book checked off, listing every title they've finished.
+      This is the motivating, showable artifact behind the "Books
+      completed" count already in the summary table above. */
+  function printFinishedBooksWall() {
+    if (!state) return;
+    var rows = state.roster
+      .map(function (name) { return { name: name, books: finishedBooksForStudent(name) }; })
+      .filter(function (r) { return r.books.length; });
+    if (!rows.length) {
+      alert('No finished books yet. Check a book as finished in a student’s "Books" list, then print the wall.');
+      return;
+    }
+    var totalBooks = rows.reduce(function (sum, r) { return sum + r.books.length; }, 0);
+    var cards = rows.map(function (r) {
+      return '<div class="wall-card"><p class="wall-name">' + escapeHtml(r.name) + '</p>' +
+        '<ul class="wall-books">' + r.books.map(function (b) { return '<li>' + escapeHtml(b) + '</li>'; }).join('') + '</ul></div>';
+    }).join('');
+    els.printArea.innerHTML =
+      '<div class="print-title">' + escapeHtml(state.name) + ' &mdash; Finished Books Wall</div>' +
+      '<div class="print-sub">' + totalBooks + ' book' + (totalBooks === 1 ? '' : 's') + ' finished so far by ' +
+        rows.length + ' reader' + (rows.length === 1 ? '' : 's') + ' &middot; Printed ' + escapeHtml(todayStr()) + '</div>' +
+      '<div class="wall-grid">' + cards + '</div>';
+    window.print();
+  }
+
   els.printStudentBtn.addEventListener('click', printStudentLog);
   els.printSummaryBtn.addEventListener('click', printSummary);
+  els.printWallBtn.addEventListener('click', printFinishedBooksWall);
 
   /* ---------- boot ---------- */
   var current = getCurrentName();
