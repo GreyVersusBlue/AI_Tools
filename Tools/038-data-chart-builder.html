@@ -144,8 +144,12 @@
         <textarea id="data-input" placeholder="Trial	Temperature (C)	Reaction Time (s)&#10;1	20	45&#10;2	30	31&#10;3	40	22" spellcheck="false"></textarea>
         <div class="file-drop-row">
           <button type="button" class="btn-file" id="btn-choose-file">Choose a file…</button>
-          <input type="file" id="file-input" accept=".csv,.tsv,text/csv,text/tab-separated-values" style="display:none;">
-          <p class="hint">or drag a .csv / .tsv file onto the box above</p>
+          <input type="file" id="file-input" accept=".csv,.tsv,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
+          <p class="hint">or drag a .csv / .tsv / .xlsx file onto the box above</p>
+        </div>
+        <div class="file-drop-row" id="sheet-picker-row" style="display:none;">
+          <label for="sheet-picker" style="margin:0;">Sheet</label>
+          <select id="sheet-picker" style="flex:1;"></select>
         </div>
       </div>
       <div class="option-row">
@@ -579,11 +583,99 @@
     els.fileInput.value = '';
   });
 
+  /* ── Spreadsheet import ────────────────────────────────────────────────────
+     Every sibling tool that takes tabular data reads .xlsx as well as .csv —
+     this one asked for a paste or a plain-text file, which meant a teacher with
+     a lab-data workbook had to open it, select, copy, and come back. SheetJS is
+     already vendored site-wide; it is lazy-loaded here so the common paste path
+     still costs nothing.
+
+     A workbook is converted to the tab-separated text the tool already parses,
+     rather than to a second internal representation: one parser, one set of
+     rules about headers and numbers, nothing to keep in sync. */
+  var XLSX_LIB = '../_shared/vendor/xlsx/xlsx.full.min.js';
+  var xlsxLoadPromise = null;
+  function loadXlsx() {
+    if (xlsxLoadPromise) return xlsxLoadPromise;
+    xlsxLoadPromise = new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = XLSX_LIB;
+      el.onload = function () { resolve(); };
+      el.onerror = function () { xlsxLoadPromise = null; reject(new Error('library failed to load')); };
+      document.head.appendChild(el);
+    });
+    return xlsxLoadPromise;
+  }
+
+  var loadedWorkbook = null;   // kept so the sheet picker can switch without re-reading the file
+
+  /** One sheet as tab-separated text. Any tab or newline inside a cell becomes
+      a space: the tool's parser splits on those, and a cell that contains one
+      would otherwise silently become two columns. */
+  function sheetToTsv(ws) {
+    var rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+    // Trailing all-empty columns are common in hand-built workbooks (a stray
+    // formatted cell far to the right) and would show up as empty series.
+    var width = 0;
+    rows.forEach(function (r) {
+      for (var i = r.length - 1; i >= 0; i--) {
+        if (String(r[i]).trim() !== '') { width = Math.max(width, i + 1); break; }
+      }
+    });
+    return rows.map(function (r) {
+      var out = [];
+      for (var i = 0; i < width; i++) out.push(String(r[i] === undefined ? '' : r[i]).replace(/[\t\r\n]+/g, ' ').trim());
+      return out.join('\t');
+    }).filter(function (line) { return line.replace(/\t/g, '').trim() !== ''; }).join('\n');
+  }
+
+  function useSheet(name) {
+    if (!loadedWorkbook || !loadedWorkbook.Sheets[name]) return;
+    var text = sheetToTsv(loadedWorkbook.Sheets[name]);
+    if (!text.trim()) { showMsg('Sheet "' + name + '" is empty.'); return; }
+    els.dataInput.value = text;
+    handleParse();
+  }
+
+  function showSheetPicker(names) {
+    var row = document.getElementById('sheet-picker-row');
+    var sel = document.getElementById('sheet-picker');
+    if (names.length < 2) { row.style.display = 'none'; return; }
+    sel.innerHTML = names.map(function (n) {
+      return '<option value="' + n.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">' +
+        n.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</option>';
+    }).join('');
+    row.style.display = '';
+  }
+
+  function loadWorkbook(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      loadXlsx().then(function () {
+        var wb;
+        try { wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); }
+        catch (err) { showMsg('That file could not be read as a spreadsheet.'); return; }
+        if (!wb.SheetNames || !wb.SheetNames.length) { showMsg('That workbook has no sheets.'); return; }
+        loadedWorkbook = wb;
+        showSheetPicker(wb.SheetNames);
+        useSheet(wb.SheetNames[0]);
+      }).catch(function () {
+        showMsg('Could not load the spreadsheet reader. A .csv export of the same sheet works without it.');
+      });
+    };
+    reader.onerror = function () { showMsg('Could not read that file.'); };
+    reader.readAsArrayBuffer(file);
+  }
+
   function loadFileIntoTextarea(file) {
-    if (!/\.(csv|tsv)$/i.test(file.name || '')) {
-      showMsg('Please choose a .csv or .tsv file.');
+    var name = file.name || '';
+    if (/\.(xlsx|xlsm|xls)$/i.test(name)) { loadWorkbook(file); return; }
+    if (!/\.(csv|tsv|txt)$/i.test(name)) {
+      showMsg('Please choose a .csv, .tsv or .xlsx file.');
       return;
     }
+    document.getElementById('sheet-picker-row').style.display = 'none';
+    loadedWorkbook = null;
     var reader = new FileReader();
     reader.onload = function (e) {
       els.dataInput.value = String(e.target.result || '');
@@ -592,6 +684,10 @@
     reader.onerror = function () { showMsg('Could not read that file.'); };
     reader.readAsText(file);
   }
+
+  document.getElementById('sheet-picker').addEventListener('change', function () {
+    useSheet(this.value);
+  });
   els.categoryCol.addEventListener('change', scheduleRender);
   els.valueColsList.addEventListener('change', function () { renderErrorBarConfig(); scheduleRender(); });
   els.scatterXCol.addEventListener('change', scheduleRender);
