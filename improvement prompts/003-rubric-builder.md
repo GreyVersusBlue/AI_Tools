@@ -131,12 +131,14 @@ Real findings from this pass:
 - **Rubric analytics** — class average per criterion, lowest first, as the
   reteaching signal (`classAnalytics`, `renderAnalytics`)
 - **Export all scores as CSV** for the gradebook
-- **Four print/preview formats**, chosen from one dropdown that drives both
+- **Five print/preview formats**, chosen from one dropdown that drives both
   the live preview and the print output (`currentPreviewHtml`): the standard
   grid, a **student-friendly version with an "I can…" per-level option and a
   self-assessment column**, a **single-point rubric** (target-level
-  description with blank "concerns"/"advanced" margins), and a **checklist**
-- Print the blank rubric (in any of the four formats above) or **this
+  description with blank "concerns"/"advanced" margins), a **checklist**, and a
+  **peer feedback form** (`peerReviewTableHtml`) — criteria plus two ruled
+  lines each, no points anywhere, printed portrait
+- Print the blank rubric (in any of the five formats above) or **this
   student's scored rubric**; print rows never split across a page break
 - Shareable by `state-link.js` URL; student name autocomplete
   (`populateStudentDatalist`), now merged with a loaded roster
@@ -224,7 +226,9 @@ work, and don't promote one without Devon saying so.
   sharing a rubric with a co-teacher or a department.
 - **P6 (print quality)** — **Addressed 2026-08-10.** Table rows now carry
   `break-inside: avoid` so a criterion row never splits across a page break,
-  across all four print formats.
+  across all five print formats. The peer form additionally overrides `@page`
+  to portrait for its own print only (`setPrintOrientation`), since it is a
+  handout rather than a wide grid.
 
 ## Open Questions
 
@@ -237,3 +241,45 @@ work, and don't promote one without Devon saying so.
   points-based the only realistic model? **Still open** — standards
   alignment/tagging was explicitly skipped this round rather than
   half-implemented; needs a decision before any schema work starts.
+
+## Peer-feedback round — 2026-08-11 (backlog rank 1)
+
+Shipped the **peer feedback print format** — a fifth entry in the existing
+print-format dropdown, so it drives the live preview and the print output
+through the same `currentPreviewHtml()` switch as the other four.
+
+The format is the rubric with the scoring taken out, and that is the design
+argument: a student reviewing a partner's draft cannot award 4/4 for
+"organization" in any way that means something, and asking them to try teaches
+them to grade instead of to read. So the sheet carries the criteria, the
+wording of whichever level the teacher picked as the target (so the reviewer
+knows what to look for), and two ruled lines per criterion — *Works well* and
+*One thing to try* — plus one overall comment box. No point column, no level
+columns, no totals. The suite's central assertion is that negative one, checked
+against a template whose levels carry real point values.
+
+Two smaller decisions:
+
+- The **target-level picker** (previously single-point only) now serves this
+  format too, relabelled "Level whose wording tells the reviewer what to look
+  for". Reusing it beat adding a second selector that means the same thing.
+- **It prints portrait.** Every other format is a wide grid and the tool's
+  `@page` is landscape; a peer feedback form is a handout. `setPrintOrientation()`
+  injects a portrait `@page` into `#printPageStyle` just for this print and
+  clears it on `afterprint`, so nothing else changed.
+- The name line is *Writer / Reviewer / Date*, not the usual *Name / Date* —
+  peer review is the one format where two names matter.
+
+New suite `Tools/rubric-builder/test/smoke-peer-form.mjs` (29 checks) as
+`npm run test:rubric`.
+
+### Where the next round should pick up
+
+- The peer form is blank-only. Scoring a peer review is deliberately not a
+  thing, but **printing one per student from a loaded roster**, with the
+  writer's name already filled in, would be a small addition and matches what
+  Exit Ticket's class-set toggle already does.
+- The teacher's own rubric title prints on the peer sheet as-is. A separate
+  "title for student-facing prints" would avoid "4-Point Standard" appearing on
+  a form that has no points on it — noticed while writing the suite, and left
+  alone rather than rewriting a teacher's words behind their back.
