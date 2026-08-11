@@ -9,6 +9,18 @@
 
 ## Status
 
+**2026-08-11 — note only (session `m3r8ro`, no behaviour change here).**
+`np-details.js`'s implementation moved to `_shared/student-details.js` when the
+Behavior & Points Tracker needed the same read of `crh_students_v1`; two copies
+of the name-matching rule would have been the drift `CLAUDE.md` exists to stop.
+`Tools/name-picker/np-details.js` is now a thin re-export with the same
+exports, so this tool's import path and the 261-check Node suite are unchanged
+(the suite was re-run and still passes). The shared file also gained
+`parseIds`/`loadIds`/`lookupId` for following a student through a rename —
+unused here so far, but available if the equity history ever wants the same
+protection. Separately, `np-details.js` was never in `sw.js`'s `PRECACHE_URLS`
+despite being imported by this page; both files are precached now.
+
 **2026-08-10 — The equity dashboard, question-attached picks, reduced motion,
 undo, dated absences, and the first read of Class Roster Hub's student record
 all shipped.** Two new DOM-free modules (`np-equity.js`, `np-details.js`) and
