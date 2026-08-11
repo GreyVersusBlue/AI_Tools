@@ -1,1 +1,7 @@
 .claude/
+
+# Dev-only test tooling (see CLAUDE.md "Test tooling"). Never served, never precached.
+node_modules/
+
+# Test byproducts
+Tools/seating-chart/shots/

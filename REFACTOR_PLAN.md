@@ -93,7 +93,7 @@ present, print preview, save/reload state).
 - [x] Move to `_shared/vendor/`, update `<script src>` paths in the ~10 affected tools.
 - [x] Delete the duplicate in image-to-pdf (`lib/` vs `libs/` — it ships two jspdf copies).
 - [x] Tools on an older build than the canonical one get individually smoke-tested against the newer build; if broken, keep the old build tool-locally and note why. **Nothing broke — no tool kept a local build.**
-- [~] Run existing smoke tests for schedule, image-to-pdf, final-grade-checker, review-game-board. **Could not run — see "Smoke tests" below.**
+- [x] Run existing smoke tests for schedule, image-to-pdf, final-grade-checker, review-game-board. **Could not run at the time — see "Smoke tests" below. Resolved by Round 1c: schedule and image-to-pdf suites now pass; final-grade-checker and review-game-board have no suites to run.**
 - [x] Update sw.js precache list, bump CACHE_VERSION (v44 → v45).
 
 **Canonical builds chosen:**
@@ -174,6 +174,74 @@ across ~84 files without a harness is where this refactor will start slipping.
   `./final-grade-checker/libs/…` relative to their own folder, which has never
   existed) and neither folder is linked from `index.html` or precached. Left
   untouched as dead archives.
+
+### Round 1c — Make the test suites runnable (2026-08-11) — ✅ DONE
+
+No tool features, no tool behavior changes. This round exists because Phases
+2–4 each say "browser check every migrated tool" across ~84 files, and that is
+not doable by hand without a working harness.
+
+**What landed:**
+
+- **`Tools/board-check/harness.mjs`, written from scratch.** The original
+  board-check folder was never committed to this repo (verified with
+  `git log --all` across every path — it belonged to another thread's
+  environment). The new harness exports exactly what the three existing
+  consumers import — `serve(port)`, `launch()`, `prepPage(browser, base,
+  {width, height, dsf, mobile})`, `settle`, `SITE` — with every signature
+  inferred from actual call sites in `schedule/test/smoke.mjs`,
+  `schedule/test/publish.mjs` and `seating-chart/test/drive-seating.mjs`.
+  No test import lines were changed. Two behaviors turned out to be
+  load-bearing and are documented in the file:
+  - contexts are created with `serviceWorkers: 'block'` — a SW-controlled
+    page serves reloads from the precache, silently bypassing Playwright
+    route interception (the offsite-request bookkeeping stops working from
+    the second load on);
+  - the known `_ds` stylesheet `@import` of Google Fonts is stripped from
+    served CSS so the request is never issued (same pre-existing site-wide
+    gap the image-to-pdf suite already documents and works around).
+- **Playwright via a root `package.json`, devDependencies only** — decision
+  and reasoning recorded in `CLAUDE.md` § Test tooling. `node_modules` is
+  gitignored, nothing about how the site is served changed, sw.js untouched
+  (test files are not precached). Setup: `npm ci && npx playwright install
+  chromium`.
+- **`Tools/image-to-pdf/test/smoke.mjs` unhardcoded** from its Linux sandbox
+  (`/opt/node22/lib/node_modules`, `/opt/pw-browsers/chromium`): Playwright
+  now resolves normally and picks its own Chromium, with a clear
+  "run npm ci" message if missing. No assertions changed.
+- **`Tools/board-check/check-social.mjs`** — a read-only validator for the
+  `gvb:social` blocks (no write path). `sync-social-tags.mjs` was NOT
+  reconstructed: guessing at a missing generator would rewrite meta blocks
+  across ~114 files in one blind diff. The checker found the blocks are NOT
+  one consistent generation: 11 tools carry greyversusblue.com branding with
+  the guild-board image, 29 carry AsPerMyLessonPlan.com branding with no
+  image (28 of which still declare `twitter:card` summary_large_image),
+  one (019-escape-room-builder) is a hybrid missing only `og:image:alt`,
+  and 41 tools have no block at all. Recorded in CLAUDE.md; rebuilding the
+  generator needs a branding/image-policy decision first.
+
+**Suite results on Windows (real runs, 2026-08-11):**
+
+| Suite | Result |
+|---|---|
+| `name-picker/test/smoke.mjs` (regression baseline) | **261 passed, 0 failed** |
+| `seating-chart/test/smoke-seating.mjs` (regression baseline) | **163 passed, 0 failed** |
+| `schedule/test/smoke.mjs` | **42 passed, 0 failed** |
+| `image-to-pdf/test/smoke.mjs` | **19 passed, 0 failed** |
+| `seating-chart/test/drive-seating.mjs` | **79 passed, 1 failed** |
+
+The one drive-seating failure is real and was left red rather than loosened:
+"the chart is within one swipe of the top (1052px down a 812px screen)". The
+toolbar has grown to ~15 controls with no mobile height cap, so at 375px it
+wraps to ~380px tall (header nav 140px + stacked sidebar 491px + toolbar
+382px puts `#stage` at 1052px, vs. the asserted < 812px). That is a seating
+chart mobile-layout bug for an improvement round, not a harness or test
+problem.
+
+**Chose not to do:** reconstruct `sync-social-tags.mjs` (above); consolidate
+the `qrcode.js`/`jszip.min.js` duplicates (Phase 1b's job); fix the seating
+chart mobile toolbar (tool behavior change, out of round scope); touch sw.js
+(nothing this round lands in a precached path).
 
 ### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
 - [ ] Create `_shared/sw-register.js` (the existing 5-line snippet).
