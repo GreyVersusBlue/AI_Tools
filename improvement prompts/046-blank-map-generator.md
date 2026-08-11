@@ -9,6 +9,119 @@
 
 ## Status
 
+### Round 13 (2026-08-11, session `mn6d5m`) — shipped
+
+**Vector base maps, phase 1** (Major Feature) — built-in, offline,
+perfectly-calibrated blank maps, so a teacher gets a world/continent/USA
+map with zero searching and no Wikimedia dependency. Devon-assigned round,
+same per-tool override as Rounds 9–12.
+
+- **Nine built-in base maps** in a new "Built-in base maps" strip at the
+  top of the Find a map card: World, six continents (Africa, Europe, Asia,
+  North America, South America, Australia & Oceania), and two USA crops
+  (lower 48, and all 50 states with Alaska and Hawaii at their true
+  coordinates rather than in inset boxes). Two styles — outline-only blank,
+  or light land fill with a pale ocean — and a Show borders toggle
+  (country/state boundaries on, or coastline/national outline only).
+- **The architecture is deliberately unambitious, and that's the point.**
+  The viewer was *not* rebuilt around vectors. New `bmg-vector.js` renders
+  the chosen dataset and crop once, at high resolution (4000 px on the long
+  side), in plate carrée, and returns **exactly the cache record
+  `useUploadedFile()` already builds** — same fields, same IndexedDB store,
+  same `displayMap()`. Every existing feature (labels, label sets, tidy,
+  shrink, worksheets, answer keys, undo/redo, legend, all four export paths,
+  tiled poster) therefore works on a built-in base map without knowing one
+  exists. Total change to the main file: the picker's markup/CSS, ~50 lines
+  of wiring, one clause in `displayMap()`, and one clause in
+  `mapCreditLine()`. The record id is `vector:<preset>:<bounds>:<style>`, so
+  the same choice regenerates to the same key and comes back out of the
+  cache rather than being re-rendered.
+- **Auto-calibration — the actual payoff.** Because the renderer chooses the
+  projection and the bounds, it *knows* them; the record carries a
+  `calibration` field and `displayMap()` applies it on load. The lat/long
+  grid, scale bar, distance measurer, batch coordinate placement and the
+  built-in label sets all work the instant a base map appears, with no
+  eyeballing of the map's edges. Verified to **0.01 map pixels**: Paris,
+  Sydney and Quito batch-placed onto the World map land exactly where the
+  projection math says (the viewer transform was inverted to compare in map
+  space), and the 50-state label set drops onto the USA map at 0.00 px
+  error before tidy runs.
+- **Data: vendored, public domain, documented.** Natural Earth via npm
+  (`world-atlas@2` countries-110m, `us-atlas@3` states-10m), converted
+  TopoJSON→GeoJSON with `topojson-client` in a one-off Node script, four
+  files totalling ~670 KB under `Tools/blank-map-generator/data/` with a
+  README covering provenance, the exact conversion (coordinates rounded to
+  3 dp ≈ 110 m, only `name` kept), how to regenerate, and the public-domain
+  terms. The open web was blocked from this sandbox again this round —
+  npm was not, which is now twice this repo has routed a dependency that
+  way (see `031-docx-merger.md`).
+- **A real rendering bug found and fixed on the way.** Natural Earth stores
+  rings that straddle the antimeridian with their vertices clamped to ±180,
+  so a ring steps from −180 straight to +179.4 (Fiji), or +180 to −180
+  (Antarctica's closing edge). Drawn naively in plate carrée each of those
+  is a `lineTo` clean across the entire map — three stray full-width
+  horizontal lines through the South Pacific and northern Siberia, which
+  the first render had and which were only caught by *looking at the
+  output*. Fixed in `drawableRings()`: rings are unwrapped into continuous
+  longitude; a ring that encircles the globe is closed through the pole for
+  filling (so Antarctica fills as a proper polar cap to the bottom of the
+  map instead of a sliver cut off at the data's own clip latitude) but
+  **not** for stroking (or every world map gets a hard line along its
+  bottom edge — the first fix did exactly that, caught by a full-raster
+  row scan); and a ring poking past ±180 is additionally drawn shifted
+  360°, so the part belonging at the opposite edge appears there. The test
+  suite now scans every row of the world raster for this class of artefact
+  rather than trusting the eye on a downscaled preview.
+- **Attribution.** `mapCreditLine()` gained a `vector:` branch producing
+  "Base map: … — Natural Earth (public domain)", which Round 12's
+  automatic stamping then carries onto PNG, Print, Save PDF, the poster
+  tiles and the worksheet footer with no further work. Natural Earth asks
+  for no credit at all; it's given because a handout should say where its
+  map came from.
+- Data files and the new module were added to `sw.js`'s precache list
+  (`CACHE_VERSION` v43 → v44), so a PWA install carries the base maps.
+
+Verified with `node --check` on `bmg-vector.js`, `sw.js` and the extracted
+inline module script, plus a **19-check headless Chromium pass** driving the
+real UI over local HTTP: render + auto-calibration + grid-works-immediately;
+coordinate accuracy against the projection math; rendered-pixel land/ocean
+probes at known points on three presets; the full-raster wrap-artefact scan;
+the 50-state label set placed and tidied; a real worksheet + answer-key PDF
+built end-to-end (both pages extracted and visually inspected — 50 numbered
+circles, word bank, red ANSWER KEY, credit line in the footer); PNG credit
+stamping read back out of the exported pixels; an **offline reload with the
+vendored vector data and every remote host route-aborted**, confirming the
+map, its 50 labels and its calibration all come back from IndexedDB without
+touching the data files; and a regression guard that an ordinary uploaded
+map is still *not* auto-calibrated. Zero unexpected console errors. The
+rendered world/Europe/USA rasters were saved and looked at directly.
+
+**Where phase 2 picks up** (all deliberately out of scope this round):
+
+1. **Live vector rendering in the viewer** — the map is a raster once
+   generated, so zooming past the render resolution softens. 4000 px covers
+   a 300 dpi Letter page and the tiled poster, so this is a quality ceiling
+   rather than a bug, but it's the precondition for everything below.
+2. **Per-region hit-testing → click-to-shade.** The GeoJSON carries a
+   `name` per country/state and is already in memory; point-in-polygon
+   against the same projection is the whole mechanism. This is the feature
+   that would replace hand-drawn `+ Shade Region` polygons.
+3. **Choropleth from a data table** (P7) — needs (2) first, then reuses
+   `038-data-chart-builder.html`'s parsing.
+4. **Page shape vs. map shape.** A wide base map on the default US Letter
+   *portrait* page letterboxes in the worksheet's map panel (visible in
+   this round's inspected output). The Page shape control's Flip button is
+   the workaround today; auto-suggesting a shape when a built-in map loads
+   was left alone deliberately, since page shape is a printing decision the
+   teacher owns.
+5. **Finer resolutions.** 110m world data is coarse for a single small
+   country; `world-atlas` ships 50m and 10m. Loading a finer file only for
+   tight crops would cost ~750 KB (50m) more vendored.
+6. **More crops** — the preset list is a plain array in `bmg-vector.js`, and
+   a teacher-defined crop (type four bounds, get a calibrated map) is a
+   small addition to the same machinery. Also: the all-50-states crop cuts
+   the Aleutians west of 170°W.
+
 ### Round 12 (2026-08-11, session `albm3m`) — shipped
 
 Cleared the Quick Wins list (all three that Round 11 left open) plus the
@@ -225,6 +338,11 @@ the projected half of the quiz-mode major feature.
 
 ## What it does today
 
+- **Built-in base maps** — World, six continents and two USA crops, drawn
+  offline from vendored Natural Earth data in outline-only or land-fill
+  style, with borders on or off. They **calibrate themselves**, so the
+  grid, scale bar, distance tool, coordinate placement and label sets work
+  the moment one loads
 - **Wikimedia Commons search** with continent browsing and "load more", plus
   upload-your-own-image
 - Annotation layers: labels, markers (pin / numbered pin / star / dot / flag),
@@ -297,10 +415,18 @@ where. New quick wins surfaced by future rounds go here.
   — that print as a sequence or animate on screen. Territorial change over
   time is the core visual argument of most history units and there is no good
   classroom tool for it.
-- **Vector base maps.** Wikimedia raster maps limit zoom quality and file
-  size. Shipping or importing simple GeoJSON outlines (continents, countries,
-  US states) would give infinitely scalable printing, real per-region
-  click-to-shade, and choropleth colouring from pasted data.
+- **Vector base maps — *phase 1 shipped in Round 13*.** Nine built-in
+  base maps (World, six continents, two USA crops) render offline from
+  vendored Natural Earth GeoJSON and, because the renderer owns the
+  projection, **calibrate themselves** — which is what makes the label
+  sets, grid, scale bar and coordinate placement work the moment one
+  loads. They go through the existing raster pipeline, so every feature
+  works on them unchanged. Still open, and the reason this stays on the
+  list: **live vector rendering in the viewer** (the generated map is a
+  raster, so zoom quality has a ceiling), **per-region hit-testing and
+  click-to-shade**, and **choropleth from a data table** — see Round 13's
+  "where phase 2 picks up" for the order and why hit-testing is the
+  keystone.
 - **Choropleth from a data table.** Paste "state, value" and shade
   accordingly — directly reusing the parsing already in
   `038-data-chart-builder.html` (P7).
@@ -355,13 +481,38 @@ work, and don't promote one without Devon saying so.
 
 - How much of the geography data (`bmg-geography.js`) should be shipped
   locally versus fetched? Fully local is better offline and bigger.
-- **How accurate do the built-in label-set coordinates need to be?** They're
-  deliberately approximate label anchors (a readable spot inside each area),
-  and they land well on equirectangular/Mercator maps, but a Robinson or
-  conic Commons map will need dragging. The alternative — per-projection
-  anchor sets, or real centroids from GeoJSON — is most of the way to the
-  "vector base maps" moonshot, so it may be the wrong problem to solve
-  twice.
-- Is Wikimedia Commons search reliable enough long-term to be the primary
-  map source, or should shipped base maps become the default with Commons as
-  the fallback?
+  Round 13 set a precedent worth reusing: ~670 KB of vendored Natural Earth
+  GeoJSON, checked in as data with a provenance README, no build step, and
+  added to the service-worker precache. That was a comfortable size; the
+  next decision point is the 50m world data (~750 KB more) if finer crops
+  are wanted.
+- **How accurate do the built-in label-set coordinates need to be?**
+  *Answered for built-in base maps (Round 13), still open elsewhere.* This
+  question guessed right: the fix was not per-projection anchor sets but
+  the vector base maps themselves. On a built-in base map the anchors land
+  at **0.00 px** error against the projection math (measured on all 50
+  states), because the map is drawn in the projection those anchors were
+  written for and calibrates itself to it — no dragging, no eyeballed
+  calibration, nothing to correct. The anchors stay deliberately
+  approximate *as anchors* (a readable spot inside each area, not a
+  centroid), which is the right shape for a label. What remains open is
+  unchanged and now clearly separable: a Robinson or conic **Commons**
+  map will still need dragging, and nothing in phase 1 helps there. The
+  honest answer for that case is "use a built-in base map instead", which
+  is now a real option rather than advice.
+- **Is Wikimedia Commons search reliable enough long-term to be the primary
+  map source?** *Answered in practice, not yet in the UI (Round 13).* Two
+  consecutive sessions found Commons unreachable from their sandbox, and a
+  teacher on school wifi with a filtered connection is in the same
+  position — a map source that can simply be absent cannot be the primary
+  one. Built-in base maps now cover the common classroom cases (world,
+  continents, USA) with better results than search: correctly projected,
+  self-calibrating, no licence to check, no results to sift. The strip is
+  placed **above** the search box for that reason. What was *not* done is
+  demoting Commons any further — it stays a full first-class path, because
+  it covers everything the nine presets don't (historical maps, physical
+  maps, thematic maps, individual countries) and a teacher who wants a
+  specific map should still get one. The open part is whether the search
+  card should eventually collapse Commons behind a disclosure; that's a
+  judgement about the *card*, not about the data, and it can wait until
+  the preset list stops growing.

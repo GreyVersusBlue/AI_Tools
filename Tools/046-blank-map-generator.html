@@ -51,6 +51,15 @@
 
   .searchRow { display: flex; gap: 8px; }
   .searchRow input { flex: 1; }
+  .baseMapStrip { margin-bottom: 4px; }
+  .baseMapRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .baseMapTitle { font-size: 0.82rem; }
+  .baseMapRow select { min-width: 150px; }
+  .baseMapCheck { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--ink); }
+  .baseMapCheck input { margin: 0; }
+  .baseMapDivider { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
+  .baseMapDivider::before, .baseMapDivider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .baseMapDivider span { font-size: 0.72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
   .licenseFilterRow { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.8rem; color: var(--ink); }
   .licenseFilterRow input { margin: 0; }
@@ -421,6 +430,17 @@
 
   <div class="card search-card no-print">
     <h2>Find a map</h2>
+    <div class="baseMapStrip">
+      <div class="baseMapRow">
+        <strong class="baseMapTitle">Built-in base maps</strong>
+        <select id="baseMapSelect" class="styleSelect" data-no-pan></select>
+        <select id="baseMapStyleSelect" class="styleSelect" data-no-pan></select>
+        <label class="baseMapCheck"><input type="checkbox" id="baseMapBorders" checked data-no-pan> Show borders</label>
+        <button id="btnBaseMap" class="small primary">Use this base map</button>
+      </div>
+      <p class="hint" id="baseMapHint">Drawn here on your own machine from map data that ships with this tool &mdash; no internet, no searching, and the map arrives already calibrated, so the lat/long grid, scale bar, distance tool and label sets all work straight away.</p>
+    </div>
+    <div class="baseMapDivider"><span>or search the web</span></div>
     <div class="searchRow">
       <input type="text" id="searchInput" placeholder="e.g. world map, South America, blank United States map" data-no-pan>
       <button id="btnSearch" class="primary">Search Wikimedia Commons</button>
@@ -736,6 +756,7 @@ import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } fr
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
+import { BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord } from './blank-map-generator/bmg-vector.js';
 
 const store = createStore();
 let project = store.getActiveProject();
@@ -2017,6 +2038,64 @@ async function useUploadedFile(file) {
   }
 }
 
+// --- Built-in base maps ---------------------------------------------------
+// Renders a vendored Natural Earth GeoJSON dataset to a high-resolution
+// raster (bmg-vector.js) and feeds it through the exact same path an
+// uploaded image takes: one cache record, then displayMap(). Nothing
+// downstream — annotation, worksheets, exports — knows or needs to know that
+// this map was generated rather than downloaded. The only extra ingredient
+// is the record's `calibration`, which displayMap() applies automatically.
+
+BASE_MAP_PRESETS.forEach(preset => {
+  const opt = document.createElement('option');
+  opt.value = preset.key;
+  opt.textContent = preset.label;
+  el('baseMapSelect').appendChild(opt);
+});
+BASE_MAP_STYLES.forEach(style => {
+  const opt = document.createElement('option');
+  opt.value = style.key;
+  opt.textContent = style.label;
+  el('baseMapStyleSelect').appendChild(opt);
+});
+
+const BASE_MAP_DEFAULT_HINT = el('baseMapHint').textContent;
+
+function renderBaseMapHint() {
+  const preset = findPreset(el('baseMapSelect').value);
+  el('baseMapHint').textContent = (preset && preset.note) ? preset.note : BASE_MAP_DEFAULT_HINT;
+}
+el('baseMapSelect').addEventListener('change', renderBaseMapHint);
+renderBaseMapHint();
+
+async function useBuiltInBaseMap() {
+  const preset = findPreset(el('baseMapSelect').value);
+  if (!preset) return;
+  const style = el('baseMapStyleSelect').value;
+  const borders = el('baseMapBorders').checked;
+  const btn = el('btnBaseMap');
+  btn.disabled = true;
+  setStatus('<span class="spinner"></span>Drawing that base map&hellip;');
+  try {
+    const id = baseMapId(preset, style, borders);
+    // Cache-stable id: the same choice regenerates to the same key, so a
+    // second visit reuses the stored raster rather than re-rendering it (and
+    // never re-reads the vector data).
+    let record = await cache.getCachedMap(id).catch(() => null);
+    if (!record) {
+      record = await buildBaseMapRecord(preset, { style, borders });
+      await cache.putCachedMap(record).catch(() => {});
+    }
+    displayMap(record);
+    setStatus('');
+  } catch (err) {
+    setStatus(`Couldn't draw that base map (${escapeHtml(err.message)}).`, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+el('btnBaseMap').addEventListener('click', useBuiltInBaseMap);
+
 el('btnUploadMap').addEventListener('click', () => el('uploadMapInput').click());
 el('uploadMapInput').addEventListener('change', () => {
   const file = el('uploadMapInput').files[0];
@@ -2087,6 +2166,16 @@ function displayMap(record) {
     project.calibration = null;
     project.gridEnabled = false;
     project.scaleBarEnabled = false;
+  }
+  // A built-in base map knows its own projection and extent exactly — it was
+  // drawn to them (see bmg-vector.js) — so it calibrates itself instead of
+  // asking the teacher to eyeball the map's edges. This is what makes the
+  // grid, scale bar, distance tool, batch coordinate placement and the
+  // built-in label sets work the instant such a map loads. Only a fresh load
+  // sets it: if this is the same map the project already had, whatever the
+  // teacher has since adjusted stays put.
+  if (!isSameMap && record.calibration && isCalibrated(record.calibration)) {
+    project.calibration = { ...record.calibration };
   }
   resetHistory(); // fresh undo/redo baseline for whichever map is now showing
   labelLayer.setLabels(project.labels);
@@ -2995,10 +3084,11 @@ function drawWordBank(ctx, box, words, plan) {
   });
 }
 
-/** The credit line every export carries: the Commons title/artist/licence for the map on screen. For a teacher's own uploaded image there's no licence to reprint (the stored "license" text is advice to the teacher, not attribution), so it credits the source plainly instead. */
+/** The credit line every export carries: the Commons title/artist/licence for the map on screen. For a teacher's own uploaded image there's no licence to reprint (the stored "license" text is advice to the teacher, not attribution), so it credits the source plainly instead. A built-in base map credits Natural Earth, which asks for no credit at all — it's given because the handout should say where the map came from. */
 function mapCreditLine() {
   if (!currentRecord) return '';
   if (String(currentRecord.id || '').startsWith('upload:')) return `Map: ${currentRecord.title} (teacher-supplied image)`;
+  if (String(currentRecord.id || '').startsWith('vector:')) return `Base map: ${currentRecord.title} — Natural Earth (public domain)`;
   const a = currentRecord.attribution || {};
   return [`Map: ${currentRecord.title}`, a.artist, a.license].filter(Boolean).join(' · ');
 }
