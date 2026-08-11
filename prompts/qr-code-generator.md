@@ -7,6 +7,20 @@ to everything; `README.md` has a table describing each tool.
 
 Conventions already established in this repo (look at existing tools before
 building):
+- Repo-wide conventions are documented in `CLAUDE.md` at the repo root — read
+  it first, and treat it as the authority if anything below conflicts with it.
+  The rules that matter most when generating a new tool:
+  - Third-party libraries come from `_shared/vendor/<name>/` — one canonical
+    copy site-wide. Use the copy that's there; if the library isn't vendored
+    yet, add it there, never as a per-tool copy and never from a CDN.
+  - If the tool's subfolder needs a folder for remaining tool-specific
+    vendored files, name it `lib/`, never `libs/`.
+  - Link the shared boilerplate instead of inlining it: `_shared/theme.css`,
+    `_shared/theme-toggle.js`, `_shared/a11y.css` + `_shared/a11y.js`, and
+    `_shared/sw-register.js` for service-worker registration (see CLAUDE.md
+    if that file doesn't exist yet).
+  - Every file the tool adds must go into `PRECACHE_URLS` in `sw.js` with
+    `CACHE_VERSION` bumped, or the tool silently breaks offline.
 - Each tool's entry point is one `.html` file directly under `Tools/` (e.g.
   `Tools/036-final_grade_checker.html`, `Tools/007-Name Picker.html`).
 - Supporting JS/assets for a tool live in a matching subfolder, e.g.
@@ -19,8 +33,8 @@ building):
 - Update the root `README.md` tools table and `index.html` landing page to link
   the new tool once it's built.
 - No CDN-only dependencies that could fail on the school network — vendor any
-  JS libraries locally in the tool's subfolder like the fonts are vendored in
-  `Tools/name-picker/fonts/`.
+  JS libraries locally in `_shared/vendor/` (tool-specific assets like fonts
+  stay in the tool's subfolder, the way `Tools/name-picker/fonts/` does it).
 
 ## The tool: QR Code Generator
 
