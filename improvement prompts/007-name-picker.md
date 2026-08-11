@@ -9,6 +9,48 @@
 
 ## Status
 
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **weighted fairness
+picking** (backlog rank 10): an optional persistent lean toward whoever the
+lifetime pick counts say has been called least.
+
+- **Why it is not the same thing as fair rotation.** Fair rotation solves
+  fairness *within a round* — everybody once before anybody twice — and says
+  nothing across rounds. Across a term that is where the drift lives: a student
+  who joined in October, or who was out for the two rounds everybody else was
+  called in, stays behind for good. `np_stats` had been recording exactly the
+  counts needed to fix that and nothing had ever read them back.
+- **Two new pure functions in `np-pick.js`.** `fairnessWeights(names, stats)`
+  returns `(max − count + 1)` per student, so the least-called student in the
+  room always has the largest weight and the most-called always has weight 1 —
+  never zero. `weightedChoice(candidates, weights, rng)` does the draw, and
+  treats a missing, zero, negative or non-finite weight as 1: a weighting bug
+  must never silently make a student uncallable. `fairPick`, `uniformPick`,
+  `pickOne` and `pickMany` all take an optional `weights` and default to
+  exactly their old behaviour without one.
+- **It composes with rotation rather than replacing it.** Rotation decides who
+  is still owed a turn this round; weighting decides which of them comes up
+  next. With both on, a round still calls everybody exactly once, but the
+  students furthest behind come up at the front of it — measured at an average
+  position of 2.05 of 8 versus 6.14 for the most-called.
+- **The one thing weighting cannot override is the no-repeat rule.** Both
+  pickers exclude whoever was called last, so even a student sixty calls behind
+  tops out at every *other* pick. That is deliberate — being called twice
+  running is precisely what a teacher does not want — and it caps the lean at
+  50% in the browser suite.
+- **The lean self-corrects**, because each pick increments the count it is
+  weighing. A student who is far behind is drawn hard until they are not.
+- Off by default: it changes odds a teacher may have got used to. Flipping it
+  starts the rotation over, so the setting means the same thing whenever it is
+  flipped. Stored as `weighted` in `np_options` alongside the others, with the
+  store's own repair filling it in for anyone whose options predate it.
+- **Verified twice.** `test/smoke.mjs` gained 15 assertions measuring the
+  distribution over tens of thousands of draws (a student six calls behind goes
+  from 16.8% to 58.4% of the next call; a 9:1 weight really draws 9:1; zero and
+  negative weights read as 1). New `test/drive-weighting.mjs` (11 checks) then
+  drives the actual page — seeded lopsided stats, the real button, forty real
+  picks — because a checkbox that persists nicely and changes nothing is the
+  obvious way for this feature to be wrong.
+
 **2026-08-11 — note only (session `m3r8ro`, no behaviour change here).**
 `np-details.js`'s implementation moved to `_shared/student-details.js` when the
 Behavior & Points Tracker needed the same read of `crh_students_v1`; two copies
@@ -141,7 +183,10 @@ This is the largest and most feature-dense tool on the site (~2,400 lines).
   roster key the rest of the site reads), absent toggling, sort A→Z
 - Post-pick actions: Roll Again, Remove & Roll, Eliminate & Roll, Done
 - **Stats & fairness**: per-student pick counts, Most/Least Picked sort,
-  today's picks, history, Hall of Fame, achievements, combo tracking
+  today's picks, history, Hall of Fame, achievements, combo tracking; **fair
+  rotation** (everybody once before anybody twice) and an optional **lean
+  toward who has been called least**, weighting each draw by the lifetime
+  counts so a student who joined late or was absent catches up across the term
 - Groups: Make Random Groups, Reshuffle, print rosters
 - Discussion prompts bank with its own save/load
 - Heavy presentation layer: themes (Space, Ocean, Forest, Medieval, Ancient

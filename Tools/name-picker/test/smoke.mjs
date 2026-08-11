@@ -20,7 +20,8 @@ import {
   createStore, KEYS, OPTION_DEFAULTS, liftLegacyBackup, fixBundle, memoryStorage
 } from "../np-store.js";
 import {
-  shuffle, freshRotation, fairPick, uniformPick, pickMany, makeGroups, leastPicked
+  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, makeGroups, leastPicked,
+  weightedChoice, fairnessWeights
 } from "../np-pick.js";
 import { report, overdue, summaryLine, daysBetween, shiftDay, dayKey } from "../np-equity.js";
 import { DETAILS_KEY, loadDetails, parseDetails, lookupDetail, displayName } from "../np-details.js";
@@ -781,6 +782,102 @@ console.log("name-picker smoke\n");
          "a roster whose students are not an array is skipped");
   assert(loadDetails({ getItem() { throw new Error("blocked"); } }).order.length === 0,
          "storage that throws on read is survivable");
+}
+
+/* ── weighted fairness ─────────────────────────────────────────────────────
+   Fair rotation is fairness *within a round*. This is fairness across a term:
+   a student who joined in October, or was absent for the two rounds everybody
+   else was called in, otherwise stays behind for good. The assertions below
+   run real draws rather than trusting the formula, because the property that
+   matters ("the student furthest behind comes up first, and nobody is ever
+   locked out") is a distribution claim.                                       */
+{
+  const rows = fairnessWeights(["A", "B", "C"], { A: 0, B: 3, C: 6 });
+  assert(rows.A === 7 && rows.B === 4 && rows.C === 1,
+         `weight is (max - count + 1): got ${JSON.stringify(rows)}`);
+  assert(Math.min(...Object.values(rows)) > 0,
+         "the most-called student still has a positive weight — a lean, not a lockout");
+  assert(fairnessWeights(["A", "B"], {}).A === 1 && fairnessWeights(["A", "B"], {}).B === 1,
+         "with no counts on file every student weighs the same");
+  assert(Object.keys(fairnessWeights([], { A: 3 })).length === 0, "an empty roster weighs nothing");
+  assert(fairnessWeights(["A"], { A: "banana" }).A === 1,
+         "a junk count reads as zero rather than poisoning every weight");
+  const strong = fairnessWeights(["A", "C"], { A: 0, C: 6 }, { strength: 2 });
+  assert(strong.A === 49 && strong.C === 1, "strength squares the gap for a harder lean");
+
+  // weightedChoice: the odds actually follow the weights.
+  const rng = seeded(7);
+  const hits = { A: 0, B: 0 };
+  for (let i = 0; i < 20000; i++) hits[weightedChoice(["A", "B"], { A: 9, B: 1 }, rng)]++;
+  assert(near(hits.A / 20000, 0.9, 0.02), `a 9:1 weight draws about 9:1 (got ${hits.A}/20000)`);
+  assert(hits.B > 0, "and the light side is still drawn — never excluded");
+
+  assert(weightedChoice([], { A: 1 }, seeded(1)) === null, "nothing to choose from picks nobody");
+  const noWeights = { A: 0, B: 0 };
+  const rng2 = seeded(11);
+  for (let i = 0; i < 10000; i++) noWeights[weightedChoice(["A", "B"], null, rng2)]++;
+  assert(near(noWeights.A / 10000, 0.5, 0.03), "with no weights it is a plain uniform draw");
+  const junk = { A: 0, B: 0 };
+  const rng3 = seeded(13);
+  for (let i = 0; i < 10000; i++) junk[weightedChoice(["A", "B"], { A: 0, B: -4 }, rng3)]++;
+  assert(near(junk.A / 10000, 0.5, 0.03),
+         "zero and negative weights both read as 1 — a weighting bug cannot silence a student");
+
+  /* The behaviour a teacher would actually notice. One student in a class of
+     six has never been called; everybody else has been called six times. How
+     often does the next draw land on the student who is behind?
+       - no lean: 1 in 6, 16.7%
+       - lean:    weight 7 against five weights of 1, 7 in 12, 58%
+     Measured over 20,000 rounds rather than asserted on one lucky draw. */
+  const roster6 = CLASS_OF_28.slice(0, 6);
+  const behindStats = {};
+  roster6.forEach((n, i) => { behindStats[n] = i === 0 ? 0 : 6; });
+  const firstCallRate = (weights) => {
+    const rng = seeded(21);
+    let hits = 0;
+    for (let i = 0; i < 20000; i++) {
+      if (pickOne(freshRotation(), roster6, { fair: false, rng, weights }).name === roster6[0]) hits++;
+    }
+    return hits / 20000;
+  };
+  const plainRate = firstCallRate(null);
+  const leanRate = firstCallRate(fairnessWeights(roster6, behindStats));
+  assert(near(plainRate, 1 / 6, 0.02), `without the lean the student behind is 1-in-6 (got ${plainRate.toFixed(3)})`);
+  assert(near(leanRate, 7 / 12, 0.02), `with it, better than half the time (got ${leanRate.toFixed(3)})`);
+  console.log(`  next call lands on the student six behind: ${(plainRate * 100).toFixed(1)}% plain, ${(leanRate * 100).toFixed(1)}% leaning`);
+
+  /* Rotation and weighting compose. A weighted round must still call everybody
+     exactly once — the lean decides the order inside the round, not who is in
+     it — and the least-called student must sit earlier in that order on
+     average than the most-called one. */
+  {
+    const rng = seeded(31);
+    const roster8 = CLASS_OF_28.slice(0, 8);
+    const stats = {};
+    roster8.forEach((n, i) => { stats[n] = i * 2; });    // 0, 2, 4 ... 14
+    const weights = fairnessWeights(roster8, stats);
+    let posLeast = 0, posMost = 0;
+    const ROUNDS = 4000;
+    for (let r = 0; r < ROUNDS; r++) {
+      let state = freshRotation();
+      const called = [];
+      for (let i = 0; i < 8; i++) {
+        const step = pickOne(state, roster8, { fair: true, rng, weights });
+        state = step.state;
+        called.push(step.name);
+      }
+      if (r === 0) {
+        assert(new Set(called).size === 8,
+               "with rotation on, a weighted round still calls all eight exactly once");
+      }
+      posLeast += called.indexOf(roster8[0]);
+      posMost += called.indexOf(roster8[7]);
+    }
+    const avgLeast = posLeast / ROUNDS, avgMost = posMost / ROUNDS;
+    assert(avgLeast < avgMost - 1.5,
+           `the least-called student sits earlier in the round than the most-called (${avgLeast.toFixed(2)} vs ${avgMost.toFixed(2)})`);
+    console.log(`  average position in a weighted round: least-called ${avgLeast.toFixed(2)}, most-called ${avgMost.toFixed(2)} of 8`);
+  }
 }
 
 console.log(`\nname-picker: ${pass} passed, ${fail} failed`);

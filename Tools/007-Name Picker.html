@@ -581,6 +581,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   <div class="tab-content" id="tab-options">
     <div class="option-row"><input type="checkbox" id="soundToggle" checked><label for="soundToggle" class="option-label">Sound effects<small>Beeps, fanfare, slot clicks</small></label></div>
     <div class="option-row"><input type="checkbox" id="fairRotation" checked><label for="fairRotation" class="option-label">⚖️ Fair rotation<small>Everyone gets called once before anyone gets called twice. Turn it off for independent random draws, which will repeat students and skip others.</small></label></div>
+    <div class="option-row"><input type="checkbox" id="weightedFairness"><label for="weightedFairness" class="option-label">📈 Lean toward who's been called least<small>Uses the lifetime pick counts on the Stats tab, so a student who joined late or was out for a few rounds catches up instead of staying behind all term. Nobody is ever excluded — it changes the odds, not who is eligible. Works alongside fair rotation.</small></label></div>
     <div class="option-row"><input type="checkbox" id="coldCallMode"><label for="coldCallMode" class="option-label">Cold-call mode<small>Automatically removes picked names</small></label></div>
     <div class="option-row"><input type="checkbox" id="confettiToggle" checked><label for="confettiToggle" class="option-label">Celebration confetti<small>Confetti burst on win</small></label></div>
     <div class="option-row"><input type="checkbox" id="calmMode"><label for="calmMode" class="option-label">🌙 Calm mode — no moving effects<small>Replaces confetti, fireworks, lightning, screen-shake and chaos particles with a still flash. Turns itself on automatically when this device asks for reduced motion.</small></label></div>
@@ -668,7 +669,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
    lets gvb-save do the probing, because reading the `localStorage` property
    throws outright in a browser configured to block storage. */
 import { createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
-import { freshRotation, pickOne, pickMany, shuffle, makeGroups as splitGroups, leastPicked } from './name-picker/np-pick.js';
+import { freshRotation, pickOne, pickMany, shuffle, makeGroups as splitGroups, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName } from './name-picker/np-details.js';
 
@@ -1038,8 +1039,16 @@ function bumpCombo(){
    rotation impossible to honour in those modes, because nothing chose a winner
    there was anything to be fair about.
    ===================================================================== */
+/* Weights for one draw, or null when the option is off. Recomputed per draw
+   rather than cached: statsCache moves with every pick, and a weighting that
+   lagged a pick behind would keep favouring the student who was just called. */
+function drawWeights(names){
+  return opts.weighted ? fairnessWeights(names, statsCache) : null;
+}
+
 function chooseWinner(cards){
-  const step=pickOne(rotation,cards.map(c=>c.name),{fair:opts.fair});
+  const pool=cards.map(c=>c.name);
+  const step=pickOne(rotation,pool,{fair:opts.fair,weights:drawWeights(pool)});
   rotation=step.state;
   if(!step.name)return null;
   return cards.find(c=>c.name===step.name)||null;
@@ -1166,7 +1175,7 @@ async function multiPick(count){
   const activeNames=nameCards.filter(c=>c.active).map(c=>c.name).filter(n=>!absentSet.has(n));
   /* Draws through the same rotation, so picking four partners spends four turns
      rather than sidestepping the round. */
-  const drawn=pickMany(rotation,activeNames,count,{fair:opts.fair});
+  const drawn=pickMany(rotation,activeNames,count,{fair:opts.fair,weights:drawWeights(activeNames)});
   rotation=drawn.state;
   const winners=drawn.names;
   if(!winners.length){finishRolling();return;}
@@ -2464,7 +2473,7 @@ function eraseEverything(){
    ===================================================================== */
 const OPTION_BOXES={
   sound:'soundToggle', confetti:'confettiToggle', dramatic:'dramaticPause',
-  rarity:'rarityEnabled', hof:'hofEnabled', fair:'fairRotation',
+  rarity:'rarityEnabled', hof:'hofEnabled', fair:'fairRotation', weighted:'weightedFairness',
   coldCall:'coldCallMode', suddenDeath:'suddenDeath', promptsOn:'promptsEnabled',
   calm:'calmMode'
 };
@@ -2516,6 +2525,10 @@ document.getElementById('theme').addEventListener('change',(e)=>applyTheme(e.tar
 document.getElementById('speed').addEventListener('input',(e)=>{speed=parseInt(e.target.value,10);document.getElementById('speedVal').textContent=speed+'ms';});
 document.getElementById('speed').addEventListener('change',persistOptions);
 document.getElementById('fairRotation').addEventListener('change',()=>{rotation=freshRotation();});
+/* Switching the lean on or off mid-round would otherwise apply to whatever is
+   left of the current rotation only — start the round over so the setting means
+   the same thing whenever it is flipped. */
+document.getElementById('weightedFairness').addEventListener('change',()=>{rotation=freshRotation();});
 document.getElementById('pickBtn').addEventListener('click',pickName);
 /* Reset Board puts everyone back on the board, so it starts the rotation round
    over too. Without that, students restored by a reset would sit at the back of

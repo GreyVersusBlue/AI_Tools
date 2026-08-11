@@ -80,6 +80,11 @@ export const OPTION_DEFAULTS = {
   // somebody uncalled for a whole period, and "everyone before anyone twice" is
   // what a teacher standing in front of a class means by random.
   fair: true,
+  // Long-run fairness: tilt each draw toward whoever the lifetime pick counts
+  // say has been called least. Off by default — fair rotation already handles
+  // the within-a-round case, and this one changes the odds a teacher may have
+  // got used to, so it should be a choice rather than a surprise.
+  weighted: false,
   coldCall: false,
   suddenDeath: false,
   promptsOn: false,
