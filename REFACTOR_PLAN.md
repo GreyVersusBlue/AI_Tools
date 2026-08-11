@@ -943,14 +943,17 @@ out of scope for Phase 3 per the variance audit.
 - [x] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
   .toolbar, #printArea print block). Round 4b split the print rules back out into
   `_shared/print-area.css` — see "Round 4b" below for why.
-- [~] Same bucket-and-batch approach as Phase 3. Print is the risk area: print-preview
+- [x] Same bucket-and-batch approach as Phase 3. Print is the risk area: print-preview
   every migrated tool. Teachers print these; a broken print layout is a real failure.
   Rounds 4a + 4b landed 2026-08-11 (16 tools, the whole print cluster). The toolbar
   cluster and the `.card`+`.app-header` bucket are now unblocked — 48 tools eligible.
   Round 4c landed 2026-08-11 (12 more tools, script-picked) — 36 remain; use
   `npm run phase4:next`, not the stale bucket lists below. Round 4d landed
   2026-08-11 (12 more) — 24 remain. Round 4e landed 2026-08-11 (12 more,
-  half of what remained) — 12 remain.
+  half of what remained) — 12 remain. **Round 4f landed 2026-08-11 (final
+  12) — `npm run phase4:next` reports 0 remaining; Phase 4 complete** for
+  the `.app-header`/`.card`/`.toolbar` rules in base.css. 64 tools link it;
+  see "Round 4f" below for what's deliberately left open for a future round.
 
 #### What `_shared/base.css` contained at Round 4a (2026-08-11)
 
@@ -1358,6 +1361,56 @@ output unchanged.
 
 **Remaining Phase 4 candidates after Round 4e:** 12 tools, per
 `npm run phase4:next -- --all`.
+
+#### Round 4f — final batch of 12: Phase 4 complete (2026-08-11)
+
+`npm run phase4:next` picked the last 12 candidates: 063-grammar-mad-libs-generator,
+064-historical-trading-card-maker, 066-math-find-the-mistake-generator,
+067-music-sightreading-generator, 068-parent-contact-log,
+069-pe-warmup-circuit-generator, 070-peer-feedback-checklist-generator,
+075-staff-directory-builder, 076-sub-note-feedback-slip-generator,
+078-unit-conversion-chart-builder, 080-virtual-manipulatives-board,
+081-word-problem-warmup-generator. None link `_shared/print-area.css`.
+
+Two LEAVE INLINE variants (068 and 075's `.toolbar`) were checked against
+the Round 4c property-bleed gotcha: both set every property base.css's
+`.toolbar` does, differing only in `margin-bottom` (1rem vs base's
+1.2rem) — full override, no bleed, left as written.
+
+Three apparent verification failures, all resolved as non-issues:
+
+- **067-music-sightreading-generator** and **081-word-problem-warmup-generator**
+  — screenshot (and, for 081, print-screenshot) byte diffs with no computed-
+  style diff. Both pick/generate content via `Math.random()` on load;
+  re-rendering the same post-migration page 3x reproduced the same
+  magnitude of variance, screen and print alike.
+- **080-virtual-manipulatives-board** — PDF differed by exactly 1 byte
+  despite identical length. Root cause: the two verification static
+  servers in this session ran on different ports (this round's harness
+  quirk, not a site behavior), and the tool's "← Toolkit" back-link is an
+  absolute-ish URL embedded in the PDF, so the port number leaked into the
+  PDF bytes. Confirmed by diffing the raw bytes: the only difference was
+  `:8994` vs `:8995` in a `/URI` entry. Not a rendering difference at all.
+
+**Verification:** same method as Rounds 4c–4e — `git archive HEAD`
+baseline served alongside the working tree, fresh browser context per
+render, `executablePath` pointed at the environment's pre-installed
+Chromium. Computed styles, full-page screenshots, and PDF output (dates
+stripped) compared for all 12; print media emulated and screenshotted.
+`check-social.mjs` output unchanged.
+
+`sw.js`: no files added or renamed, `CACHE_VERSION` bumped v63 → v64.
+
+**`npm run phase4:next` now reports 0 remaining candidates — Phase 4 is
+complete** for the three rules (`.app-header`, `.card`, `.toolbar`)
+currently in `_shared/base.css`. 64 tools link base.css; 11 tools were
+identified by the script as having only per-tool variants of these three
+selectors (nothing byte-identical to extract) and were correctly never
+migrated. The "Next dedup candidates in the same head block" list above
+(`.app-header h1`, `.app-header .sub`, `.back-link`, `.back-link:hover`,
+`.card h2`) remains open for a future round if someone wants to keep
+extracting — not attempted here, to keep this round's blast radius to the
+three rules already established.
 
 ### Phase 5 — JS utility patterns (optional, highest judgment)
 - [ ] Candidates: localStorage save/load wrapper, CSV export, print-area show/hide.
