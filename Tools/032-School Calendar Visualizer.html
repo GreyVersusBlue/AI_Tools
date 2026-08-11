@@ -102,16 +102,28 @@
   .adj-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; flex-wrap: wrap; }
   .adj-row .orphan { color: var(--err); }
   .day .paced {
-    display: block; font-size: 0.62rem; font-weight: 600; color: var(--ok);
-    line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: block; font-size: 0.68rem; font-weight: 600; color: var(--ok);
+    line-height: 1.2; overflow: hidden;
   }
+  /* compact overview: one line per lesson, full text in the tooltip */
+  .months.cols-compact .day .paced { font-size: 0.62rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
   .day .paced.mismatch { color: var(--err); }
-  .day .bump-note { display: block; font-size: 0.6rem; color: #8a5a00; font-style: italic; line-height: 1.15; }
+  .day .bump-note { display: block; font-size: 0.64rem; color: #8a5a00; font-style: italic; line-height: 1.2; }
+  .months.cols-compact .day .bump-note { font-size: 0.6rem; line-height: 1.15; }
   .drawer-paced { font-size: 0.84rem; color: var(--ok); font-weight: 600; word-break: break-word; }
   @media print { .day .paced, .day .paced.mismatch, .day .bump-note { color: #000 !important; } }
 
-  /* --- month grid --- */
-  .months { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  /* --- month grid ---
+     Months-across is a view preference (toolbar select, persisted): 1 or 2
+     columns give day cells wide enough for readable lesson titles; compact
+     is the old 3+-across year overview with one-line ellipsized titles. */
+  .months { display: grid; gap: 16px; }
+  .months.cols-1 { grid-template-columns: 1fr; }
+  .months.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .months.cols-compact { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  @media (max-width: 720px) {
+    .months.cols-2 { grid-template-columns: 1fr; }
+  }
   .month { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
   .month h3 { margin: 0; padding: 10px 12px; background: var(--accent); color: #fff; font-size: 0.95rem; }
   .weekdays, .weeks { display: grid; grid-template-columns: repeat(7, 1fr); }
@@ -241,6 +253,11 @@
     <input type="file" id="fileImportIcs" accept=".ics,text/calendar" hidden>
     <select id="jumpMonth" title="Jump to month"></select>
     <button id="btnJumpToday">Jump to Today</button>
+    <select id="viewCols" title="Months across">
+      <option value="1">1 month across</option>
+      <option value="2">2 months across</option>
+      <option value="compact">Compact (3+ across)</option>
+    </select>
     <span class="print-mode">
       <label><input type="radio" name="printMode" value="month" checked> Month-by-month</label>
       <label><input type="radio" name="printMode" value="year"> Whole year</label>
@@ -805,6 +822,28 @@ function renderJumpControl() {
   const list = monthsBetween(cal.meta.start, cal.meta.end);
   sel.innerHTML = list.map(({ y, m }) => `<option value="${y}-${m}">${MONTH_NAMES[m]} ${y}</option>`).join("");
 }
+
+/* --- months-across view preference ---
+   Stored in its own key, not the calendar blob: it's a per-device display
+   choice and shouldn't ride along in backups or the store migration. */
+const VIEW_COLS_KEY = "scv_view_cols";
+function loadViewCols() {
+  try {
+    const v = localStorage.getItem(VIEW_COLS_KEY);
+    return v === "1" || v === "2" || v === "compact" ? v : "2";
+  } catch (e) { return "2"; }
+}
+function applyViewCols(v) {
+  const months = document.getElementById("months");
+  months.classList.remove("cols-1", "cols-2", "cols-compact");
+  months.classList.add("cols-" + v);
+  document.getElementById("viewCols").value = v;
+}
+document.getElementById("viewCols").addEventListener("change", e => {
+  applyViewCols(e.target.value);
+  try { localStorage.setItem(VIEW_COLS_KEY, e.target.value); } catch (e2) { /* view-only pref */ }
+});
+applyViewCols(loadViewCols());
 
 document.getElementById("jumpMonth").addEventListener("change", e => {
   const el = document.getElementById(`month-${e.target.value}`);
