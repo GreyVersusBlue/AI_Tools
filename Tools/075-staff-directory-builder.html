@@ -73,6 +73,7 @@
 
   details.bulk { margin-top: .6rem; }
   details.bulk summary { cursor: pointer; font-size: .85rem; color: var(--accent-2); }
+  .import-msg { font-size: .8rem; color: var(--accent-2); margin: .4rem 0 0; }
 
   #printArea { display: none; }
   @media print {
@@ -96,8 +97,13 @@
       <p class="sub">Name, room, extension, subject — one printable page for the workroom wall or a new teacher's binder.</p>
     </div>
     <div class="btnrow">
+      <button class="secondary" id="exportCsvBtn">Export CSV</button>
+      <button class="secondary" id="exportJsonBtn">Export JSON</button>
+      <button class="secondary" id="importBtn">Import file&hellip;</button>
+      <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" style="display:none;">
       <button class="secondary" id="printBtn">Print directory</button>
     </div>
+    <p class="import-msg" id="importMsg" style="display:none;"></p>
   </div>
 
   <div class="card">
@@ -114,6 +120,7 @@
       <p class="hint">One person per line, columns separated by tabs or commas: <code>Name, Room, Extension, Subject</code></p>
       <textarea id="bulkInput" placeholder="Alex Rivera, 214, 4214, Math&#10;Bailey Chen, 118, 4118, Science"></textarea>
       <button class="secondary small" id="bulkAddBtn">Add pasted rows</button>
+      <p class="import-msg" id="bulkMsg" style="display:none;"></p>
     </details>
   </div>
 
@@ -151,8 +158,9 @@
   'use strict';
   var STORE_KEY = 'sdb_directory_v1';
   var els = {};
-  ['newName','newRoom','newExt','newSubject','addRowBtn','bulkInput','bulkAddBtn',
-   'searchInput','clearAllBtn','dirRows','emptyMsg','printBtn','printSub','printTable'].forEach(function (id) {
+  ['newName','newRoom','newExt','newSubject','addRowBtn','bulkInput','bulkAddBtn','bulkMsg',
+   'searchInput','clearAllBtn','dirRows','emptyMsg','printBtn','printSub','printTable',
+   'exportCsvBtn','exportJsonBtn','importBtn','importFile','importMsg'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -211,10 +219,18 @@
     });
   }
 
-  function addPerson(name, room, ext, subject) {
+  function isDuplicate(name, room) {
+    var n = name.trim().toLowerCase();
+    var r = (room || '').trim().toLowerCase();
+    return people.some(function (p) { return p.name.trim().toLowerCase() === n && p.room.trim().toLowerCase() === r; });
+  }
+
+  function addPerson(name, room, ext, subject, opts) {
     name = (name || '').trim();
-    if (!name) return;
+    if (!name) return 'skipped-empty';
+    if (opts && opts.skipDuplicates && isDuplicate(name, room)) return 'duplicate';
     people.push({ id: uid(), name: name, room: (room || '').trim(), ext: (ext || '').trim(), subject: (subject || '').trim() });
+    return 'added';
   }
 
   els.addRowBtn.addEventListener('click', function () {
@@ -233,13 +249,18 @@
 
   els.bulkAddBtn.addEventListener('click', function () {
     var lines = els.bulkInput.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    var added = 0, skipped = 0;
     lines.forEach(function (line) {
       var parts = line.indexOf('\t') !== -1 ? line.split('\t') : line.split(',');
       parts = parts.map(function (p) { return p.trim(); });
-      addPerson(parts[0], parts[1], parts[2], parts[3]);
+      var result = addPerson(parts[0], parts[1], parts[2], parts[3], { skipDuplicates: true });
+      if (result === 'added') added++;
+      else if (result === 'duplicate') skipped++;
     });
     els.bulkInput.value = '';
     save(); render();
+    els.bulkMsg.style.display = 'block';
+    els.bulkMsg.textContent = 'Added ' + added + (skipped ? ', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's') + ' (same name + room already in the directory).' : '.');
   });
 
   els.dirRows.addEventListener('input', function (ev) {
@@ -267,6 +288,86 @@
   });
 
   els.searchInput.addEventListener('input', render);
+
+  function downloadBlob(text, filename, type) {
+    var blob = new Blob([text], { type: type });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function csvField(v) {
+    v = String(v == null ? '' : v);
+    if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+  function toCsv(list) {
+    var rows = [['Name', 'Room', 'Extension', 'Subject / Dept']];
+    list.forEach(function (p) { rows.push([p.name, p.room, p.ext, p.subject]); });
+    return rows.map(function (r) { return r.map(csvField).join(','); }).join('\r\n');
+  }
+  function parseCsvLine(line) {
+    var fields = []; var cur = ''; var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = false; }
+        } else cur += ch;
+      } else if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { fields.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    fields.push(cur);
+    return fields;
+  }
+
+  els.exportCsvBtn.addEventListener('click', function () {
+    if (!people.length) { alert('Nothing to export yet.'); return; }
+    downloadBlob(toCsv(visibleRows()), 'staff-directory.csv', 'text/csv');
+  });
+  els.exportJsonBtn.addEventListener('click', function () {
+    if (!people.length) { alert('Nothing to export yet.'); return; }
+    downloadBlob(JSON.stringify(people, null, 2), 'staff-directory.json', 'application/json');
+  });
+
+  els.importBtn.addEventListener('click', function () { els.importFile.click(); });
+  els.importFile.addEventListener('change', function () {
+    var file = els.importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var text = String(reader.result || '');
+      var added = 0, skipped = 0;
+      try {
+        if (/\.json$/i.test(file.name) || /^\s*[\[{]/.test(text)) {
+          var data = JSON.parse(text);
+          if (!Array.isArray(data)) throw new Error('not an array');
+          data.forEach(function (p) {
+            var result = addPerson(p.name, p.room, p.ext, p.subject, { skipDuplicates: true });
+            if (result === 'added') added++; else if (result === 'duplicate') skipped++;
+          });
+        } else {
+          var lines = text.split(/\r\n|\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+          if (lines.length && /^name\s*,/i.test(lines[0])) lines.shift();
+          lines.forEach(function (line) {
+            var parts = parseCsvLine(line).map(function (p) { return p.trim(); });
+            var result = addPerson(parts[0], parts[1], parts[2], parts[3], { skipDuplicates: true });
+            if (result === 'added') added++; else if (result === 'duplicate') skipped++;
+          });
+        }
+        save(); render();
+        els.importMsg.style.display = 'block';
+        els.importMsg.textContent = 'Imported ' + added + (skipped ? ', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's') + '.' : '.');
+      } catch (e) {
+        alert('Could not read that file — expected a CSV or JSON export from this tool.');
+      }
+      els.importFile.value = '';
+    };
+    reader.readAsText(file);
+  });
 
   document.querySelectorAll('table.dir th[data-sort]').forEach(function (th) {
     th.addEventListener('click', function () {
