@@ -100,6 +100,9 @@
     <input type="text" id="packetTitle" placeholder="e.g. Causes of the American Revolution">
     <label for="packetContext">Historical context / task</label>
     <textarea id="packetContext" placeholder="Brief background and the overall question students should answer using these sources."></textarea>
+    <label for="essayPrompt">Final synthesis / essay prompt (optional)</label>
+    <textarea id="essayPrompt" placeholder="e.g. Using the sources above and your own knowledge, write an essay that answers the question..."></textarea>
+    <p class="hint">Printed as a closing page after the last source, separate from the historical context above.</p>
   </div>
 
   <div class="card">
@@ -125,11 +128,11 @@
   var STORE_KEY = 'dbq_packet_v1';
 
   var els = {};
-  ['packetTitle', 'packetContext', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printArea'].forEach(function (id) {
+  ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printArea'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
-  var state = { title: '', context: '', sharedQuestions: [], sources: [] };
+  var state = { title: '', context: '', essayPrompt: '', sharedQuestions: [], sources: [] };
 
   function uid() { return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -147,6 +150,7 @@
     } catch (e) { /* ignore */ }
     if (!state.sharedQuestions.length) state.sharedQuestions = [{ id: uid(), text: 'What is the main idea of this source?' }, { id: uid(), text: 'Who created this source, and why might that matter?' }];
     if (!state.sources.length) state.sources = [{ id: uid(), title: '', type: 'text', text: '', image: null, citation: '', questions: [{ id: uid(), text: '' }] }];
+    if (typeof state.essayPrompt !== 'string') state.essayPrompt = '';
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked, e.g. large images */ }
@@ -185,7 +189,12 @@
           '<button type="button" class="danger small" data-del-q="' + q.id + '" data-del-src="' + src.id + '">&times;</button></div>';
       }).join('');
       return '<div class="source-block" data-src-id="' + src.id + '">' +
-        '<h3>' + label + '</h3>' +
+        '<div class="btnrow" style="justify-content:space-between;align-items:center;">' +
+        '<h3 style="margin:0;">' + label + '</h3>' +
+        '<span class="btnrow">' +
+        '<button type="button" class="secondary small" data-move-up="' + src.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr; Move up</button>' +
+        '<button type="button" class="secondary small" data-move-down="' + src.id + '"' + (i === state.sources.length - 1 ? ' disabled' : '') + '>&darr; Move down</button>' +
+        '</span></div>' +
         '<label>Source title</label><input type="text" data-field="title" data-src="' + src.id + '" value="' + escapeAttr(src.title) + '">' +
         '<label>Type</label><select data-field="type" data-src="' + src.id + '"><option value="text"' + (src.type === 'text' ? ' selected' : '') + '>Text</option><option value="image"' + (src.type === 'image' ? ' selected' : '') + '>Image</option></select>' +
         (src.type === 'text'
@@ -236,6 +245,19 @@
     var addQSrc = ev.target.getAttribute('data-add-q');
     var delQ = ev.target.getAttribute('data-del-q');
     var delSrcBtn = ev.target.getAttribute('data-del-src-btn');
+    var moveUp = ev.target.getAttribute('data-move-up');
+    var moveDown = ev.target.getAttribute('data-move-down');
+    if (moveUp || moveDown) {
+      var id = moveUp || moveDown;
+      var pos = state.sources.findIndex(function (s) { return s.id === id; });
+      var swapWith = moveUp ? pos - 1 : pos + 1;
+      if (pos < 0 || swapWith < 0 || swapWith >= state.sources.length) return;
+      var tmp = state.sources[pos];
+      state.sources[pos] = state.sources[swapWith];
+      state.sources[swapWith] = tmp;
+      save(); renderSources();
+      return;
+    }
     if (addQSrc) {
       var src = findSource(addQSrc);
       if (src) src.questions.push({ id: uid(), text: '' });
@@ -258,6 +280,7 @@
 
   els.packetTitle.addEventListener('input', function () { state.title = els.packetTitle.value; save(); });
   els.packetContext.addEventListener('input', function () { state.context = els.packetContext.value; save(); });
+  els.essayPrompt.addEventListener('input', function () { state.essayPrompt = els.essayPrompt.value; save(); });
 
   els.printBtn.addEventListener('click', function () {
     if (!state.sources.length) { alert('Add at least one source first.'); return; }
@@ -278,7 +301,11 @@
         '<div class="citation">' + escapeHtml(src.citation || '') + '</div>' +
         body + qHtml + '</div>';
     }).join('');
-    els.printArea.innerHTML = '<div class="source-page">' + coverHtml + '</div>' + sourcesHtml;
+    var essayHtml = state.essayPrompt.trim()
+      ? '<div class="source-page"><h2>Synthesis / Essay Prompt</h2><div class="source-text">' + escapeHtml(state.essayPrompt.trim()) + '</div>' +
+        '<span class="fill-line"></span><span class="fill-line"></span><span class="fill-line"></span><span class="fill-line"></span></div>'
+      : '';
+    els.printArea.innerHTML = '<div class="source-page">' + coverHtml + '</div>' + sourcesHtml + essayHtml;
     window.print();
   });
 
@@ -286,6 +313,7 @@
   load();
   els.packetTitle.value = state.title;
   els.packetContext.value = state.context;
+  els.essayPrompt.value = state.essayPrompt;
   renderSharedQ();
   renderSources();
 })();
