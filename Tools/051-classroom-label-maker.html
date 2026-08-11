@@ -61,11 +61,10 @@
   table.word-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
   table.word-table th, table.word-table td { border: 1px solid var(--line); padding: .4rem .5rem; text-align: left; }
   table.word-table th { background: #eef1f4; font-size: .74rem; color: var(--muted); }
-  table.word-table a.test-link { font-size: .78rem; color: var(--accent-2); text-decoration: underline; white-space: nowrap; }
+  table.word-table a.test-link { font-size: .78rem; color: var(--accent-2); }
 
-  .file-warning { display: none; background: #fdf3e0; border: 1px solid #e0b04a; color: #6b4c05; border-radius: 8px; padding: .8rem 1rem; margin-bottom: 1rem; font-size: .86rem; }
+  .file-warning { display: none; background: #fbeceA; border: 1px solid #e6c6c1; color: var(--err); border-radius: 8px; padding: .8rem 1rem; margin-bottom: 1rem; font-size: .86rem; font-weight: 600; }
   .file-warning.show { display: block; }
-  .file-warning strong { display: block; margin-bottom: .2rem; }
 
   #printArea { display: none; }
   .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
@@ -100,8 +99,7 @@
   </div>
 
   <div class="file-warning" id="fileWarning">
-    <strong>&#9888; This page is open from a local file, not the live site.</strong>
-    Every QR code will encode a <code>file://</code> link that won't open on a phone scanning it from across the room. Open this tool from its real hosted web address before printing labels for QR use &mdash; printing now is fine only if you don't need the QR codes to work.
+    &#9888; This page is currently open from a local file, not the live site. QR codes printed now will encode a <code>file://</code> link that won&rsquo;t work when scanned by a phone. Open this tool from its real web address before printing labels for classroom use.
   </div>
 
   <div class="card">
@@ -183,16 +181,12 @@
   function renderTable() {
     els.wordCount.textContent = words.length;
     var lang = els.langSelect.value;
-    var head = '<tr><th>Target word</th><th>English</th><th>QR code</th></tr>';
+    var head = '<tr><th>Target word</th><th>English</th><th>Pronunciation</th></tr>';
     var rows = words.map(function (w) {
       return '<tr><td>' + escapeHtml(w.target) + '</td><td>' + escapeHtml(w.english) + '</td>' +
-        '<td><a class="test-link" target="_blank" rel="noopener" href="' + escapeHtml(speakUrl(w.target, lang)) + '">Test pronunciation &#8599;</a></td></tr>';
+        '<td><a class="test-link" target="_blank" rel="noopener" href="' + escapeHtml(speakUrl(w.target, lang)) + '">Test &#9658;</a></td></tr>';
     }).join('');
     els.wordTable.innerHTML = head + rows;
-  }
-
-  function updateFileWarning() {
-    els.fileWarning.classList.toggle('show', location.protocol === 'file:');
   }
 
   function buildQR(text) {
@@ -249,8 +243,8 @@
   /* ---------- boot ---------- */
   load();
   els.wordInput.value = words.map(function (w) { return w.target + ': ' + w.english; }).join('\n');
-  updateFileWarning();
   renderTable();
+  if (location.protocol === 'file:') els.fileWarning.classList.add('show');
 })();
 </script>
 <script>

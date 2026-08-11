@@ -39,39 +39,61 @@ entry with no statement correctly shows "no QR" instead of an empty
 code, and confirmed deleting the last remaining entry falls back to one
 blank row rather than an empty list — no console errors.
 
-**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped two
-Quick Wins: **reorder entries** via up/down buttons in each entry's footer
-(matching the pattern used elsewhere in this toolkit), and **named/multiple
-saved portfolios** — a portfolio selector with New/Duplicate/Rename/Delete,
-each portfolio holding its own title, entries, labels-per-page, and QR
-error-correction setting. The old single-portfolio save under
-`apl_portfolio_v1` migrates automatically into the first entry of the new
-`apl_portfolios_v1` store. Verified with a headless Chromium pass: reorder
-two entries, create/duplicate/delete a portfolio, switch back and confirm
-the original entries (including the reordered ones) persisted correctly,
-print — no console errors.
+**2026-08-11 — Round 1 (session `8vo65u`).** Shipped two of the four Quick
+Wins. Reorder entries via up/down buttons (each entry row gained a small
+move column, matching the up/down pattern used elsewhere in the toolkit) —
+disabled at the top/bottom of the list rather than wrapping. Character-
+count warning near the artist statement textarea: shows a live count as
+you type, turning red past 220 characters with a note that long
+statements make a denser, harder-to-scan QR code — the count updates on
+every keystroke without a full re-render so the textarea doesn't lose
+focus. Verified with a headless Chromium smoke test: added 3 entries,
+moved the first one down and confirmed the fields actually swapped, typed
+a 250-character statement into an entry and confirmed the live counter
+shows "250 characters" with the warning style applied — no console
+errors.
 
-Nothing else below has been started.
+Named/multiple saved portfolios and the roster-bulk-add Quick Win were
+not built this round — see "Where the next round should pick up" below.
+
+**2026-08-11 — Round 2 (session `szyio3`), layered on Round 1 above.**
+Shipped the remaining named/multiple saved portfolios Quick Win this note
+flagged as the natural next step: a portfolio selector with New/Duplicate/
+Rename/Delete, each saved portfolio holding its own title, entries,
+labels-per-page, and QR error-correction setting. The old single-portfolio
+save under `apl_portfolio_v1` migrates automatically into the first entry
+of the new `apl_portfolios_v1` store. Built directly on top of Round 1's
+reorder buttons and character-count warning (both preserved and re-verified
+working together) rather than independently — an earlier attempt to merge
+this session's and `8vo65u`'s branches via git's automatic 3-way merge
+silently duplicated the reorder buttons and click handlers instead of
+combining them cleanly, so the file was rebuilt from `8vo65u`'s merged
+main state with this session's portfolio-save layer re-applied by hand
+instead of trusting the auto-merge. Verified with a headless Chromium
+pass: added a long statement and confirmed the character-count warning
+still fires, reordered two entries and confirmed exactly one up-button per
+row (not duplicated), created/duplicated/deleted a portfolio, switched
+back and confirmed the reordered entries persisted — no console errors.
 
 ## What it does today
 
 - Per-entry title, optional photo upload (thumbnail), artist statement
 - Paste-list bulk import (title + statement per line)
+- **Reorder entries** via up/down buttons
+- **Live character-count warning** on the artist statement field past
+  ~220 characters (QR density heads-up)
+- **Named/multiple saved portfolios** (New/Duplicate/Rename/Delete)
 - QR code per entry encoding the statement text directly (no hosting)
 - Print: label grid (2/3/6/8 per page) with thumbnail, title, QR, statement
 
 ## Quick Wins
 
-- ~~Named/multiple saved portfolios~~ — **shipped 2026-08-11.**
-- ~~Reorder entries~~ — **shipped 2026-08-11.**
+- ~~Named/multiple saved portfolios~~ — **shipped 2026-08-11 (Round 2).**
 - **CSV import including a photo column** isn't feasible without file
   paths, but a **bulk "add these students" from a saved roster** (like
   Gallery Walk QR Codes' roster-hub dropdown) would let a teacher
   populate all the titles at once before adding photos and statements one
   at a time.
-- **Character-count warning** near the statement textarea, since a very
-  long statement forces a denser, harder-to-scan QR code — a heads-up
-  before printing would save a re-print.
 
 ## Major Features
 
@@ -104,21 +126,18 @@ time.
 
 - **P7 (cross-tool)** — this tool and Gallery Walk QR Codes share a
   vendored QR library and near-identical `buildQR`/`drawQR` functions
-  copy-pasted between them; if a third QR-based tool gets built, it may
-  be worth promoting this into one shared `lib/qrcode.js` module referenced
-  by relative path from `Tools/`, rather than a fresh vendored copy per
-  tool folder.
+  copy-pasted between them; **a third QR-based tool now exists**
+  (Classroom Label Maker, `051-classroom-label-maker.html`, also built
+  from the Ideas Backlog this same batch) with its own vendored copy and
+  near-identical `buildQR`/`drawQR` — worth promoting into one shared
+  `lib/qrcode.js` module referenced by relative path from `Tools/` next
+  time any of the three gets touched, rather than a fresh vendored copy
+  per tool folder.
 - **P12 (data integrity)** — the `&hellip;`-through-`escapeHtml()` bug
   found here is the same shape as four other entity-in-JS-string bugs
   found this round; worth a dedicated sweep across every tool for the
   pattern "an HTML entity written as literal text inside a JS string
   literal" before it causes a real user-visible garbled character.
-
-**Where the next round should pick up:** the roster-integration Quick Win
-(bulk "add these students" from a saved roster) is the next-cheapest step
-now that named portfolios exist to hold per-section batches in; photo
-cropping/rotation under Major Features is this tool's biggest remaining
-quality gap.
 
 ## Open Questions
 
@@ -131,3 +150,11 @@ quality gap.
   keep the QR code scannable and simple) rather than just warned about,
   trading completeness for a code that's guaranteed easy to scan from a
   few feet away on a bulletin board?
+
+## Where the next round should pick up
+
+All Quick Wins are now shipped. The roster-bulk-add idea under Major
+Features and the shared `lib/qrcode.js` promotion (P7, now a three-tool
+duplication) are the highest-value items left — the file hasn't cleared
+its Major Features/Moonshot sections, so it stays out of `stable tools/`
+for now.

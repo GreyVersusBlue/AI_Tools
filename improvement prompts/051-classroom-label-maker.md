@@ -35,40 +35,47 @@ resolve on a phone scanning it from across the room — this only works
 correctly when the site is actually deployed at its live address. A
 hint to this effect is shown directly under the language picker.
 
-**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped both
-Quick Wins the file's own "biggest first-run trap" note pointed at:
-a **"Test pronunciation" link per word** in the editable table (opens
-`speak.html` in a new tab with that word's actual QR-encoded URL, so a
-teacher can verify pronunciation quality before printing 30 labels), and a
-**prominent file:// warning banner** replacing the small hint line — now a
-full-width amber banner that appears only when `location.protocol ===
-'file:'`, explaining plainly that every QR code on the page will encode a
-dead link in that mode. Verified with a headless Chromium pass: confirmed
-the banner is hidden when served normally and shown when opened via
-`file://` (the same protocol this repo's own smoke tests run under), and
-confirmed each word row's test link resolves to the correct
-`speak.html?text=...&lang=...` URL — no console errors.
+**2026-08-11 — Round 1 (session `8vo65u`).** Shipped two of the four Quick
+Wins. Added a "Test ▶" link in a new third column of the word table, next
+to every saved word — opens `speak.html` directly in a new tab with that
+word's text and the currently-selected language, so a teacher can check
+pronunciation quality before committing to a print run of 30 labels. The
+links stay in sync with the language picker (switching languages
+re-renders the table so every test link points at the newly-selected
+language). Replaced the small under-the-picker hint with an actual
+warning banner (red background, bold text) that appears at the top of the
+page whenever `location.protocol === 'file:'`, spelling out exactly why
+the printed QR codes won't work in that mode — the small hint line stays
+too, for the in-context detail once someone's already looking at the
+language picker. Verified with a headless Chromium smoke test: saved two
+words, confirmed both test links render and point at `speak.html` with
+the right `text=` param, and confirmed the warning banner is visible when
+the tool is opened via `file://` (as it always is in this environment) —
+no console errors.
+
+Per-word language override and multiple named saved word lists were not
+built this round — see "Where the next round should pick up" below.
 
 ## What it does today
 
 - Paste `target: english` vocabulary pairs, one per line
 - Language picker (10 common languages) drives pronunciation
+- **"Test ▶" link per word**, opening the pronunciation companion page
+  directly so a teacher can check it before printing
+- **Prominent `file://` warning banner**, in addition to the existing hint
+  line, when the QR-code pronunciation feature won't work as printed
 - Print: label grid (word + English + QR code) + a plain reference sheet
 - QR codes link to a same-site companion page that speaks the word aloud
   via the browser's built-in text-to-speech, entirely client-side
 
 ## Quick Wins
 
-- ~~A "test this QR code" link/button~~ — **shipped 2026-08-11.**
 - **Per-word language override** — right now one language applies to the
   whole list; a classroom sometimes mixes vocabulary from two related
   languages or wants to spot-check a word in a dialect variant.
 - **Multiple named saved word lists**, matching the multi-save convention
   used by most builder tools in this round — one flat list per browser
   right now.
-- ~~A visible warning banner~~ — **shipped 2026-08-11**, replacing the
-  small hint line with a full-width amber banner shown only when
-  `location.protocol === 'file:'`.
 
 ## Major Features
 
@@ -114,13 +121,9 @@ unit all year," in every language a program teaches.
 - **P15 (first run)** — the file:// constraint is the single biggest
   first-run trap for this specific tool, more so than most tools in this
   toolkit, precisely because it depends on the site's own hosted identity
-  to function at all.
-
-**Where the next round should pick up:** multiple named saved word lists is
-the remaining Quick Win and matches this round's pattern used in 047/048/052
-(worksheet/portfolio/list selector with New/Duplicate/Rename/Delete) closely
-enough to copy directly; voice selection under Major Features is the
-biggest remaining quality gap.
+  to function at all. **Partially addressed in Round 1** with the
+  prominent warning banner; the "print anyway or block it" question below
+  is still open.
 
 ## Open Questions
 
@@ -132,4 +135,16 @@ biggest remaining quality gap.
 - Should the file:// detection actively disable/grey out the print button
   with an explanation, or is a visible warning (current approach) combined
   with letting the teacher print anyway (e.g. for local reference use
-  without QR functionality) the more flexible default?
+  without QR functionality) the more flexible default? Round 1 kept the
+  "warn but don't block" approach — the banner is prominent now, but
+  printing is still always allowed.
+
+## Where the next round should pick up
+
+Multiple named saved word lists is the natural next step (same pattern as
+Art Critique Worksheet Generator's Round 1, or Rubric Builder's
+`rb-store.js`). Per-word language override is the other open Quick Win.
+Also worth folding in when either of those is touched: this tool's
+`buildQR`/`drawQR` are now duplicated across three tools (this one,
+Gallery Walk QR Codes, Art Portfolio Label Maker) — see 048's Round 1 note
+on promoting them into a shared `lib/qrcode.js`.

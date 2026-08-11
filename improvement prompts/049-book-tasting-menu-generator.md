@@ -20,35 +20,38 @@ Books persist in `localStorage` (`btmg_books_v1`). Verified with a headless
 Chromium smoke test (add two books, print as menu, switch to table tents,
 print again) — no console errors.
 
-**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped two
-Quick Wins: the printed **menu is now grouped by genre as actual menu
-"courses"** (a genre header per section, purely cosmetic — same flat
-two-column layout inside each section, not a page-per-genre split), and
-**cover images now appear in both print modes**, not just the on-screen
-editable list — a small thumbnail next to each menu entry and a larger one
-above each table-tent half. Books with no genre fall into a "More
-Selections" section rather than being dropped. Verified with a headless
-Chromium pass: four books across two genres plus one with no genre, printed
-as menu (confirmed 3 course headers, correct book-per-course counts) and as
-table tents — no console errors.
+**2026-08-11 — Round 1 (session `8vo65u`).** Shipped two of the four Quick
+Wins. Menu print now groups books into genre-named sections (a
+`<h2 class="menu-course-heading">` per genre, with its own two-column
+sub-layout) instead of one flat two-column list across the whole
+collection — resolving the "cosmetic vs layout" open question in favor of
+layout: each genre gets its own section rather than just a label prefix,
+since it reads more like an actual menu that way. Books with no genre set
+land in a "More Books" section rather than being dropped. Cover images
+now render in both print modes — a small thumbnail beside each menu entry,
+and a larger one above the title on each table-tent half — not just in
+the on-screen editable list as before. Verified with a headless Chromium
+smoke test: added 3 books across 2 genres, printed as menu, confirmed both
+genre headings appear and the right book count lands under each — no
+console errors.
 
-Nothing else below has been started.
+Reorder books and the response slip Quick Wins were not built this round
+— see "Where the next round should pick up" below.
 
 ## What it does today
 
 - Add/delete books with title, author, genre, blurb, optional cover image
-- Print as a two-column menu (grouped flat, not by genre)
-- Print as table tents (mirrored top/bottom halves for fold-and-stand)
+- Print as a **genre-grouped menu** (each genre its own "course" section)
+  with cover thumbnails
+- Print as table tents (mirrored top/bottom halves for fold-and-stand),
+  now including the cover image
 
 ## Quick Wins
 
-- ~~Group the menu by genre~~ — **shipped 2026-08-11** as a plain genre
-  header per section (cosmetic grouping, not a page-per-genre split — see
-  the Open Question below on whether that's the right call long-term).
-- ~~Cover images on the menu print~~ — **shipped 2026-08-11**, in both the
-  menu and table-tent print modes.
 - **Reorder books** (drag or up/down buttons) so the print order can match
-  a deliberate table arrangement instead of insertion order.
+  a deliberate table arrangement instead of insertion order — also useful
+  now for controlling which order genre sections print in, since that's
+  currently first-appearance order.
 - **A student response slip** alongside the menu (small "my first course
   choice: ___, second choice: ___" card) to close the loop on the actual
   activity outcome, not just the browsing material.
@@ -89,21 +92,23 @@ response slip gives the activity a measurable outcome.
   friction reduction for a teacher setting this up for the first time with
   a real classroom library.
 
-**Where the next round should pick up:** reorder books (up/down buttons,
-same pattern used in 048/050/052 this round) is the cheapest remaining
-Quick Win; CSV/spreadsheet bulk import under Major Features is the highest-
-leverage item for a teacher with a real classroom library cart.
-
 ## Open Questions
 
-- Is genre-as-menu-course purely cosmetic (just a section header) or
-  should it change layout (e.g. one genre per printed page/section) —
-  the latter is nicer for browsing but uses more paper for a large library.
-  **2026-08-11 note:** shipped this round as purely cosmetic (a header only,
-  no layout/page change), the lower-risk of the two options; revisit if a
-  future round wants the page-per-genre version.
+- ~~Is genre-as-menu-course purely cosmetic (just a section header) or
+  should it change layout~~ **Resolved in Round 1**: each genre gets its
+  own section with a heading, not just a label prefix — no page-per-genre
+  split, since that seemed like too much paper for a small library, but
+  worth revisiting if a future round hears otherwise from real use.
 - Should cover images be required for the table-tent print mode
   specifically (since visual browsing matters more there than in a
   text-forward menu), with a placeholder/blank spot when no image was
   uploaded, or should tents stay text-only unless an image happens to
-  exist?
+  exist? **Still open** — Round 1 just renders the cover when one exists
+  and shows nothing when it doesn't, no placeholder.
+
+## Where the next round should pick up
+
+Reorder books is the natural next step, doubling as genre-section
+ordering control now that the print output is grouped. After that, CSV
+import (Major Features) is flagged as the single highest-leverage item
+for a teacher's first real setup with a full classroom library cart.

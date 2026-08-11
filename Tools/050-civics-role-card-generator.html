@@ -56,10 +56,10 @@
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   .role-block { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
-  .role-block-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
-  .role-block-head input[data-field="role"] { font-weight: 700; margin-bottom: 0; flex: 1; }
-  .role-block-head .copy-count { width: 4.2rem; flex: 0 0 auto; margin-bottom: 0; }
-  .role-block-head .copy-label { font-weight: 400; font-size: .74rem; color: var(--muted); white-space: nowrap; margin: 0; }
+  .role-block-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+  .role-block-head input { font-weight: 700; margin-bottom: 0; }
+  .copies-field { display: flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--muted); white-space: nowrap; }
+  .copies-field input { width: 3.4rem; margin-bottom: 0; text-align: center; }
   .point-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .point-row input { margin-bottom: 0; }
 
@@ -184,9 +184,10 @@
       }).join('');
       return '<div class="role-block" data-role-id="' + r.id + '">' +
         '<div class="role-block-head"><input type="text" data-field="role" data-role="' + r.id + '" value="' + escapeAttr(r.role) + '" placeholder="Role name">' +
-        '<span class="copy-label">Copies</span><input type="number" class="copy-count" data-field="copies" data-role="' + r.id + '" value="' + (r.copies || 1) + '" min="1" max="60">' +
+        '<label class="copies-field">Copies <input type="number" min="1" max="40" data-field="copies" data-role="' + r.id + '" value="' + (r.copies || 1) + '"></label>' +
         '<button type="button" class="secondary small" data-move-role-up="' + r.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
         '<button type="button" class="secondary small" data-move-role-down="' + r.id + '"' + (i === state.roles.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="secondary small" data-dup-role="' + r.id + '">Duplicate</button>' +
         '<button type="button" class="danger small" data-del-role="' + r.id + '">Remove</button></div>' +
         '<label>Position</label><input type="text" data-field="position" data-role="' + r.id + '" value="' + escapeAttr(r.position) + '" placeholder="e.g. Arguing in favor of...">' +
         '<label>Talking points</label>' + points +
@@ -194,25 +195,6 @@
         '</div>';
     }).join('');
   }
-
-  function findRole(id) { return state.roles.find(function (r) { return r.id === id; }); }
-
-  els.rolesWrap.addEventListener('input', function (ev) {
-    var field = ev.target.getAttribute('data-field');
-    var roleId = ev.target.getAttribute('data-role');
-    var pointId = ev.target.getAttribute('data-point');
-    if (field && roleId) {
-      var r = findRole(roleId);
-      if (r) r[field] = field === 'copies' ? (Math.max(1, Math.min(60, parseInt(ev.target.value, 10) || 1))) : ev.target.value;
-      save();
-    } else if (pointId) {
-      var row = ev.target.closest('.point-row');
-      var r2 = findRole(row.getAttribute('data-role'));
-      var p = r2 && r2.points.find(function (x) { return x.id === pointId; });
-      if (p) p.text = ev.target.value;
-      save();
-    }
-  });
 
   function moveInArray(arr, id, dir) {
     var idx = arr.findIndex(function (x) { return x.id === id; });
@@ -223,10 +205,30 @@
     arr[target] = tmp;
   }
 
+  function findRole(id) { return state.roles.find(function (r) { return r.id === id; }); }
+
+  els.rolesWrap.addEventListener('input', function (ev) {
+    var field = ev.target.getAttribute('data-field');
+    var roleId = ev.target.getAttribute('data-role');
+    var pointId = ev.target.getAttribute('data-point');
+    if (field && roleId) {
+      var r = findRole(roleId);
+      if (r) r[field] = field === 'copies' ? (Math.max(1, Math.min(40, parseInt(ev.target.value, 10) || 1))) : ev.target.value;
+      save();
+    } else if (pointId) {
+      var row = ev.target.closest('.point-row');
+      var r2 = findRole(row.getAttribute('data-role'));
+      var p = r2 && r2.points.find(function (x) { return x.id === pointId; });
+      if (p) p.text = ev.target.value;
+      save();
+    }
+  });
+
   els.rolesWrap.addEventListener('click', function (ev) {
     var addPointRole = ev.target.getAttribute('data-add-point');
     var delPointId = ev.target.getAttribute('data-del-point');
     var delRoleId = ev.target.getAttribute('data-del-role');
+    var dupRoleId = ev.target.getAttribute('data-dup-role');
     var moveRoleUp = ev.target.getAttribute('data-move-role-up');
     var moveRoleDown = ev.target.getAttribute('data-move-role-down');
     var movePointUp = ev.target.getAttribute('data-move-point-up');
@@ -241,6 +243,16 @@
       save(); renderRoles();
     } else if (delRoleId) {
       state.roles = state.roles.filter(function (r) { return r.id !== delRoleId; });
+      save(); renderRoles();
+    } else if (dupRoleId) {
+      var orig = findRole(dupRoleId);
+      if (orig) {
+        var clone = JSON.parse(JSON.stringify(orig));
+        clone.id = uid();
+        clone.points.forEach(function (p) { p.id = uid(); });
+        var idx = state.roles.indexOf(orig);
+        state.roles.splice(idx + 1, 0, clone);
+      }
       save(); renderRoles();
     } else if (moveRoleUp) {
       moveInArray(state.roles, moveRoleUp, -1);
@@ -275,8 +287,7 @@
       var points = r.points.filter(function (p) { return p.text.trim(); }).map(function (p) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
       var card = '<div class="role-print-card"><h3>' + escapeHtml(r.role || 'Role') + '</h3>' +
         '<div class="position">' + escapeHtml(r.position || '') + '</div><ul>' + points + '</ul></div>';
-      var copies = Math.max(1, Math.min(60, r.copies || 1));
-      return new Array(copies).fill(card).join('');
+      return new Array(Math.max(1, r.copies || 1) + 1).join(card);
     }).join('');
     els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>';
     window.print();

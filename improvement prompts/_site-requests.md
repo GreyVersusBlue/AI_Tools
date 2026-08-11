@@ -54,3 +54,44 @@ requests and filters the resulting generic connection-reset console message,
 rather than fixing the shared file. This means the smoke test doesn't
 actually catch a regression in the font loading itself — just doesn't fail
 on the pre-existing problem it isn't scoped to fix.
+
+---
+
+## Same-minute claims in `_tools-touched.md` are invisible to each other
+
+Found 2026-08-11 when session `szyio3` (assigned tools 047–052) and session
+`8vo65u` (assigned tools 047–051) were both directly instructed to start
+work at essentially the same moment. Both read the "Currently claimed"
+table while it was empty and pushed their own claim row in the same UTC
+minute (01:29), so neither could see the other's claim before starting —
+the claim system's "check before you build" step only works when a claim
+actually lands before the next session reads the table, and two claims in
+the same 60-second window race past each other. The result was five tools
+(047, 049, 050, 051, and partial overlap on 048) built independently and
+in parallel by two sessions, discovered only at merge time as real PR
+conflicts, not just a tracker-file conflict — one file's automatic 3-way
+merge silently duplicated UI elements and event handlers instead of
+combining two genuinely complementary features cleanly, which would have
+shipped a visibly broken double-button row if merged without a human (or
+agent) actually reading the merged output. See
+`_tools-touched.md`'s "Held-out batch — Round 2" entry for the full
+resolution.
+
+**This isn't hypothetical anymore — it happened once and could happen
+again**, especially whenever Devon assigns overlapping tool ranges to two
+sessions in the same message/moment (as happened here: 047–051 and
+047–052). Nothing about the claim table's mechanics can fully close a
+same-minute race, but two things would reduce the odds and the damage:
+
+- **Before opening a PR**, re-fetch `main` and check whether another
+  session has since merged work touching the same tool files, not just
+  whether they're still in "Currently claimed" — a claim disappears the
+  moment the other session finishes its round, well before that session's
+  own PR merges.
+- **On a real merge conflict in a tool's own `.html`/`.md` files** (as
+  opposed to just the shared tracker file), never trust an automatic
+  3-way merge result at face value — diff the conflicting file against
+  the other session's already-merged version first to check whether the
+  two rounds picked the same Quick Win (redundant, discard one side) or
+  different ones (complementary, needs a careful hand-merge, not a
+  git-automatic one) before resolving.

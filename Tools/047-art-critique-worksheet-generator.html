@@ -58,9 +58,6 @@
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
-  .ws-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-  .ws-row label { margin: 0; white-space: nowrap; }
-  .ws-row select { font-family: inherit; font-size: .88rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); flex: 1 1 12rem; min-width: 10rem; }
 
   .step-block { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; margin-bottom: .9rem; }
   .step-block h3 { font-size: 1.05rem; margin: 0 0 .1rem; color: var(--accent); }
@@ -100,17 +97,21 @@
   </div>
 
   <div class="card">
-    <div class="ws-row">
-      <label for="worksheetSelect">Worksheet</label>
-      <select id="worksheetSelect"></select>
-      <button type="button" class="secondary small" id="newWorksheetBtn">+ New</button>
-      <button type="button" class="secondary small" id="dupWorksheetBtn">Duplicate</button>
-      <button type="button" class="secondary small" id="renameWorksheetBtn">Rename</button>
+    <div class="info-grid">
+      <div>
+        <label for="worksheetSwitch">Saved worksheet</label>
+        <select id="worksheetSwitch"></select>
+      </div>
+      <div>
+        <label for="worksheetName">Worksheet name (for saving/switching)</label>
+        <input type="text" id="worksheetName" placeholder="e.g. Sculpture Unit Critique">
+      </div>
+    </div>
+    <div class="btnrow" style="margin-bottom:.6rem;">
+      <button type="button" class="secondary small" id="newWorksheetBtn">+ New worksheet</button>
+      <button type="button" class="secondary small" id="duplicateWorksheetBtn">Duplicate</button>
       <button type="button" class="danger small" id="deleteWorksheetBtn">Delete</button>
     </div>
-  </div>
-
-  <div class="card">
     <div class="info-grid">
       <div>
         <label for="activityName">Activity / gallery walk name</label>
@@ -131,8 +132,10 @@
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'acw_worksheets_v1';
   var LEGACY_KEY = 'acw_worksheet_v1';
+  var LIST_KEY = 'acw_worksheets_list_v1';
+  var DATA_PREFIX = 'acw_worksheet_data_v1:';
+  var CURRENT_KEY = 'acw_worksheet_current_v1';
 
   var DEFAULT_STEPS = [
     { key: 'describe', label: 'Describe', prompt: 'What do you see? List the colors, shapes, materials, and subject matter.',
@@ -147,11 +150,10 @@
 
   var els = {};
   ['activityName', 'copyCount', 'stepsWrap', 'printBtn', 'printArea',
-   'worksheetSelect', 'newWorksheetBtn', 'dupWorksheetBtn', 'renameWorksheetBtn', 'deleteWorksheetBtn'
+   'worksheetSwitch', 'worksheetName', 'newWorksheetBtn', 'duplicateWorksheetBtn', 'deleteWorksheetBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var store = { list: [], currentId: null };
-  var state = null; // the current worksheet object (a reference into store.list)
+  var state = { name: 'New Worksheet', activityName: '', copyCount: 10, steps: [] };
 
   function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -167,96 +169,87 @@
     });
   }
 
-  function newWorksheet(name) {
-    return { id: uid(), name: name || 'Untitled Worksheet', activityName: '', copyCount: 10, steps: defaultSteps() };
+  /* ---------- named-worksheet store ---------- */
+  function listNames() {
+    try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveNamed(name, data) {
+    var names = listNames();
+    if (names.indexOf(name) === -1) { names.push(name); localStorage.setItem(LIST_KEY, JSON.stringify(names)); }
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+    localStorage.setItem(CURRENT_KEY, name);
+  }
+  function loadNamed(name) {
+    try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
+  }
+  function deleteNamed(name) {
+    var names = listNames().filter(function (n) { return n !== name; });
+    localStorage.setItem(LIST_KEY, JSON.stringify(names));
+    localStorage.removeItem(DATA_PREFIX + name);
+    if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+  }
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+
+  function migrateLegacyIfNeeded() {
+    if (listNames().length) return;
+    var legacy = null;
+    try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null'); } catch (e) { /* ignore */ }
+    if (legacy && Array.isArray(legacy.steps) && legacy.steps.length) {
+      legacy.name = legacy.activityName ? legacy.activityName : 'My Worksheet';
+      saveNamed(legacy.name, legacy);
+    }
   }
 
   function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.list) && saved.list.length) {
-        store = saved;
-        if (!store.list.some(function (w) { return w.id === store.currentId; })) store.currentId = store.list[0].id;
-        state = store.list.find(function (w) { return w.id === store.currentId; });
-        return;
-      }
-    } catch (e) { /* ignore */ }
-    // migrate a pre-multi-worksheet save, if one exists
-    try {
-      var legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null');
-      if (legacy && Array.isArray(legacy.steps) && legacy.steps.length) {
-        var migrated = newWorksheet('My Worksheet');
-        migrated.activityName = legacy.activityName || '';
-        migrated.copyCount = legacy.copyCount || 10;
-        migrated.steps = legacy.steps;
-        store = { list: [migrated], currentId: migrated.id };
-        state = migrated;
-        save();
-        return;
-      }
-    } catch (e) { /* ignore */ }
-    var first = newWorksheet('My Worksheet');
-    store = { list: [first], currentId: first.id };
-    state = first;
+    migrateLegacyIfNeeded();
+    var currentName = localStorage.getItem(CURRENT_KEY);
+    var loaded = currentName ? loadNamed(currentName) : null;
+    if (!loaded) {
+      var names = listNames();
+      loaded = names.length ? loadNamed(names[0]) : null;
+    }
+    if (loaded && Array.isArray(loaded.steps) && loaded.steps.length) {
+      state = loaded;
+      if (!state.name) state.name = 'My Worksheet';
+    } else {
+      state = { name: uniqueName('New Worksheet'), activityName: '', copyCount: 10, steps: [] };
+    }
+    if (!state.steps.length) state.steps = defaultSteps();
+    save();
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage full/blocked */ }
+    try { saveNamed(state.name, state); } catch (e) { /* storage full/blocked */ }
   }
 
-  function renderWorksheetSelect() {
-    els.worksheetSelect.innerHTML = store.list.map(function (w) {
-      return '<option value="' + w.id + '"' + (w.id === store.currentId ? ' selected' : '') + '>' + escapeHtml(w.name) + '</option>';
+  function renderWorksheetSwitch() {
+    var names = listNames();
+    els.worksheetSwitch.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === state.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
     }).join('');
-    els.deleteWorksheetBtn.disabled = store.list.length <= 1;
   }
 
-  function switchTo(id) {
-    var w = store.list.find(function (x) { return x.id === id; });
-    if (!w) return;
-    store.currentId = id;
-    state = w;
-    save();
-    renderWorksheetSelect();
+  function switchTo(name) {
+    var loaded = loadNamed(name);
+    if (!loaded) return;
+    state = loaded;
+    if (!state.steps.length) state.steps = defaultSteps();
+    localStorage.setItem(CURRENT_KEY, name);
+    renderAll();
+  }
+
+  function renderAll() {
+    els.worksheetName.value = state.name;
     els.activityName.value = state.activityName;
     els.copyCount.value = state.copyCount;
+    renderWorksheetSwitch();
     renderSteps();
   }
-
-  els.worksheetSelect.addEventListener('change', function () { switchTo(els.worksheetSelect.value); });
-
-  els.newWorksheetBtn.addEventListener('click', function () {
-    var name = window.prompt('Name for the new worksheet:', 'Untitled Worksheet');
-    if (name === null) return;
-    var w = newWorksheet(name.trim() || 'Untitled Worksheet');
-    store.list.push(w);
-    switchTo(w.id);
-  });
-
-  els.dupWorksheetBtn.addEventListener('click', function () {
-    var name = window.prompt('Name for the duplicate:', state.name + ' (copy)');
-    if (name === null) return;
-    var copy = JSON.parse(JSON.stringify(state));
-    copy.id = uid();
-    copy.name = name.trim() || (state.name + ' (copy)');
-    store.list.push(copy);
-    switchTo(copy.id);
-  });
-
-  els.renameWorksheetBtn.addEventListener('click', function () {
-    var name = window.prompt('Rename this worksheet:', state.name);
-    if (name === null) return;
-    state.name = name.trim() || state.name;
-    save();
-    renderWorksheetSelect();
-  });
-
-  els.deleteWorksheetBtn.addEventListener('click', function () {
-    if (store.list.length <= 1) return;
-    if (!window.confirm('Delete "' + state.name + '"? This cannot be undone.')) return;
-    var idx = store.list.findIndex(function (w) { return w.id === state.id; });
-    store.list.splice(idx, 1);
-    switchTo(store.list[Math.max(0, idx - 1)].id);
-  });
 
   function renderSteps() {
     els.stepsWrap.innerHTML = state.steps.map(function (step, i) {
@@ -311,6 +304,49 @@
   els.activityName.addEventListener('input', function () { state.activityName = els.activityName.value; save(); });
   els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
 
+  els.worksheetName.addEventListener('change', function () {
+    var oldName = state.name;
+    var newName = els.worksheetName.value.trim() || oldName;
+    if (newName !== oldName) {
+      deleteNamed(oldName);
+      state.name = uniqueName(newName);
+    }
+    save();
+    renderWorksheetSwitch();
+    els.worksheetName.value = state.name;
+  });
+
+  els.worksheetSwitch.addEventListener('change', function () { switchTo(els.worksheetSwitch.value); });
+
+  els.newWorksheetBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new worksheet:', 'New Worksheet');
+    if (!name) return;
+    state = { name: uniqueName(name.trim()), activityName: '', copyCount: 10, steps: defaultSteps() };
+    save();
+    renderAll();
+  });
+
+  els.duplicateWorksheetBtn.addEventListener('click', function () {
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = uniqueName(state.name + ' (copy)');
+    state = clone;
+    save();
+    renderAll();
+  });
+
+  els.deleteWorksheetBtn.addEventListener('click', function () {
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    deleteNamed(state.name);
+    var names = listNames();
+    if (names.length) {
+      switchTo(names[0]);
+    } else {
+      state = { name: 'New Worksheet', activityName: '', copyCount: 10, steps: defaultSteps() };
+      save();
+      renderAll();
+    }
+  });
+
   function halfSheetHtml() {
     var title = state.activityName.trim() ? escapeHtml(state.activityName.trim()) : 'Art Critique Worksheet';
     var steps = state.steps.map(function (step, i) {
@@ -335,10 +371,7 @@
 
   /* ---------- boot ---------- */
   load();
-  renderWorksheetSelect();
-  els.activityName.value = state.activityName;
-  els.copyCount.value = state.copyCount;
-  renderSteps();
+  renderAll();
 })();
 </script>
 <script>

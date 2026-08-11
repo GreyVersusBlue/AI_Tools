@@ -23,24 +23,30 @@ Editing Checklist Generator. Single current worksheet autosaved to
 smoke test (default 4 steps with 2 follow-ups each, add a follow-up, print
 3 copies) — no console errors.
 
-**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped two
-Quick Wins: **multiple named saved worksheets** (a worksheet selector with
-New/Duplicate/Rename/Delete, matching the multi-save convention used
-elsewhere in this toolkit — old single-worksheet saves under `acw_worksheet_v1`
-migrate automatically into the first entry of the new `acw_worksheets_v1`
-store on first load), and the **print layout QA fix** flagged in this file's
-own Quick Wins list: the half-sheet print block no longer hard-caps at
-`height: 47vh; overflow: hidden`, which was silently truncating a worksheet
-with many follow-up questions. It's now `min-height: 47vh` with normal
-overflow, so a busy worksheet grows the block instead of clipping content —
-the tradeoff is that a very full worksheet can now push its pair onto a
-third page rather than being force-fit onto two, which is the correct
-tradeoff (visible content beats silent cutoff). Verified with `node --check`
-on both inline scripts and a headless Chromium pass: create/duplicate/
-rename/delete a worksheet, add a follow-up question, print 3 copies — no
-console errors.
+**2026-08-11 — Round 1 (session `8vo65u`).** Shipped two of the four Quick
+Wins below. Multiple named saved worksheets: New/Duplicate/Delete buttons
+plus a switcher dropdown, matching the Rubric Builder convention
+(`RubricStore`-style list/data/current localStorage keys implemented inline
+since this file has no support folder). The old single-save key
+(`acw_worksheet_v1`) auto-migrates into a named save on first load after
+the update, so no existing worksheet is lost. Also fixed the print layout
+QA item: the half-sheet print CSS was `height: 47vh; overflow: hidden`,
+which silently clipped a worksheet's later follow-up questions off the
+printed page with no visual warning — changed to `min-height: 47vh` (no
+`overflow: hidden`) so a half-sheet with many follow-ups grows instead of
+getting cut off; normal page flow now carries overflow onto the next
+printed page rather than losing content. Verified with a headless
+Chromium smoke test: rename, create new, switch between, and duplicate a
+worksheet (state carries over correctly each time), then print after
+adding 5 extra follow-up questions to the first step to confirm the
+half-sheet no longer clips — no console errors.
 
-Nothing else below has been started.
+The self-reflection wording toggle (Quick Win 2) and duplicate-worksheet-
+as-starting-point (now redundant, since "Duplicate" above covers exactly
+this) were not built this round — self-reflection wording is still best
+left to the tool's existing "every prompt is editable" design per the open
+question below, unless a future round decides the toggle is worth the
+added complexity anyway.
 
 ## What it does today
 
@@ -48,20 +54,18 @@ Nothing else below has been started.
   standard art-education framework named in the backlog
 - Editable main prompt and follow-up questions per step; add/remove
   follow-ups freely
-- Print N copies as half-sheets with artwork title + reviewer name lines
+- **Multiple named saved worksheets** (New/Duplicate/Delete + switcher),
+  legacy single-save data auto-migrates on first load
+- Print N copies as half-sheets with artwork title + reviewer name lines;
+  half-sheets grow to fit content instead of clipping long ones
 
 ## Quick Wins
 
-- ~~Multiple named saved worksheets~~ — **shipped 2026-08-11.**
 - **A short "artist self-reflection" variant toggle** — the same DAIJ steps
   but worded for the artist critiquing their own finished piece, instead of
   only a peer/viewer voice — useful for the "student artwork" half of the
-  backlog description, distinct from the "gallery walk" half.
-- ~~Print layout QA~~ — **shipped 2026-08-11** (this tool only; Peer
-  Feedback / Editing Checklist Generator's copy of the same `47vh` cap is
-  untouched — still worth fixing there too).
-- ~~A "duplicate as starting point" option~~ — **shipped 2026-08-11** as
-  part of the multi-worksheet save UI (Duplicate button).
+  backlog description, distinct from the "gallery walk" half. Still open;
+  see the Open Questions note on whether this is worth a toggle at all.
 
 ## Major Features
 
@@ -95,15 +99,11 @@ one click away, every year.
 - **P7 (cross-tool)** — the most direct cross-tool opportunity in this
   entire batch: the backlog description names Gallery Walk QR Codes as a
   pairing, and no integration exists yet.
-- **P6 (print quality)** — shares the exact half-sheet height-cap risk
-  already flagged in Peer Feedback / Editing Checklist Generator's
-  improvement prompt; worth fixing as one shared pattern rather than twice.
+- **P6 (print quality)** — **fixed here in Round 1** (min-height instead of
+  a hard clip). Peer Feedback / Editing Checklist Generator still has the
+  same `height: 47vh; overflow: hidden` pattern and would benefit from the
+  identical fix — worth a future round doing the same one-line change there.
 - **P3 (share links)** — a digital fill-in mode, later.
-
-**Where the next round should pick up:** the self-reflection wording
-toggle (the only Quick Win left) is the cheapest next step; after that this
-tool's real ceiling is the Gallery Walk QR Codes integration under Major
-Features, which is this batch's single most direct P7 opportunity.
 
 ## Open Questions
 
@@ -114,3 +114,13 @@ Features, which is this batch's single most direct P7 opportunity.
 - Is a self-reflection wording variant worth a toggle that rewrites all 4
   prompts, or should it just be left to manual editing since the tool
   already makes every prompt editable?
+
+## Where the next round should pick up
+
+The two remaining Quick Wins are the self-reflection wording toggle and
+(now that multi-save exists) the Gallery Walk QR Codes integration named
+under Major Features — that pairing is still the single highest-value
+item outstanding for this tool per the backlog's own framing. A future
+round could start there: either a simple cross-link between the two
+tools with matching station-numbering, or scope out the bigger combined-
+screen build per the first Open Question above.

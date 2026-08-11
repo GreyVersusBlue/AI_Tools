@@ -520,38 +520,88 @@ download).
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
 
-### Directed round — 2026-08-11 01:29–02:40 UTC — session `szyio3` — tools 047–052
+### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — PR #74
 
-Not picked from the Pass 2 "Not yet touched" list below — these six are
-part of the **35 new Ideas-Backlog tools** the Pass 2 reset note explicitly
-held out ("Devon wants to fold them into the round system as a deliberate
-batch rather than mixed in silently with this reset"). This round was
-Devon's direct instruction to work tools 047–052 specifically, so it's
-recorded here as its own dated round rather than folded into the Pass 2
-numbering above. One or two scoped Quick Wins per tool, each independently
-verified with `node --check` on every inline `<script>` plus a headless
-Chromium pass (Playwright, resolved from the global install per the
-pattern documented in `Tools/image-to-pdf/test/smoke.mjs`) exercising the
-actual shipped behavior end to end — no tool outside this list was touched.
+Devon directly assigned tools 047-051 to this session, ahead of the
+Pass-2-reset note above that holds the 35-tool Ideas Backlog batch out of
+the round system until folded in deliberately — an explicit per-tool
+override per this file's own top-of-file rule ("Devon may also reset it
+early, or move a specific tool back up, and that overrides everything
+here"). This is **not** a Pass 2 round pulled from "Not yet touched" —
+these five remain outside that list, per the held-out-batch note below,
+until Devon folds the rest of the 35 in. One or two scoped Quick Wins
+shipped per tool (each tool's own file has the full breakdown), verified
+with a single combined headless Chromium smoke test covering all five
+tools' new interactions (24 checks, zero console errors).
 
 | Tool | File | What shipped |
 |---|---|---|
-| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | Multiple named saved worksheets (New/Duplicate/Rename/Delete, migrates the old single-worksheet save); print-layout fix so a busy worksheet grows instead of silently truncating at a hard `47vh` cap. |
-| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Reorder entries via up/down buttons; named/multiple saved portfolios (migrates the old single-portfolio save). |
-| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | Printed menu grouped by genre as "courses"; cover images now render in both menu and table-tent print modes, not just the on-screen list. |
-| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Reorder roles and talking points via up/down buttons; a per-role "Copies" field (1–60) so shared roles like multiple jurors print without manual duplication. |
-| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | "Test pronunciation" link per word opening the actual QR-encoded `speak.html` URL; a prominent file:// warning banner (was a small hint line) shown only when `location.protocol === 'file:'`. |
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | Multiple named saved worksheets (New/Duplicate/Delete + switcher, legacy-save auto-migration); fixed half-sheet print CSS that clipped worksheets with many follow-up questions. |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Reorder entries via up/down buttons; live character-count warning on the artist-statement field (QR density heads-up past ~220 chars). |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | Menu print now groups books into genre-named course sections instead of one flat list; cover images now render in both menu and table-tent print output. |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Per-role "copies" count so a role shared by several students (jurors, witnesses) prints that many cards; Duplicate-role button. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | "Test ▶" link per word opening the pronunciation companion page directly; a prominent `file://` warning banner alongside the existing hint line. |
+
+None of the five cleared their list — each still has open Quick Wins and
+full Major Features/Moonshot sections — so none moved to `stable tools/`
+this round. A cross-tool note surfaced this round: three tools now carry
+their own copy-pasted `buildQR`/`drawQR` (Gallery Walk QR Codes, Art
+Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
+into a shared `lib/qrcode.js` next time any of the three is touched again
+(see 048's and 051's own files for the detail).
+
+### Held-out batch — Round 2 — 2026-08-11 01:29–03:10 UTC — session `szyio3` — tools 047–052
+
+**Genuine claim collision with the round directly above.** Devon assigned
+this session tools 047–052 at essentially the same moment `8vo65u` was
+assigned 047–051 — both sessions read this file's empty claim table and
+pushed a claim row in the same UTC minute (01:29), so neither saw the
+other's before starting. `8vo65u` merged first as PR #74. This session's
+own PR (#75) then hit real merge conflicts against 047, 049, 050, and 051
+— not just this tracker file. Rather than blindly resolving in either
+direction, each conflicting tool file was diffed against `8vo65u`'s merged
+version to check for genuine overlap before touching anything:
+
+- **047, 049, 051** — `8vo65u` had independently picked the *same* Quick
+  Wins this session also built (multi-save worksheets + the print fix for
+  047; genre grouping + cover images for 049; the test link + file://
+  banner for 051), so this session's redundant reimplementation of all
+  three was discarded in favor of the already-merged version. No further
+  changes needed.
+- **048, 050** — `8vo65u` had picked a *different* second Quick Win than
+  this session for both (048: character-count warning vs. this session's
+  named/multiple saved portfolios; 050: Duplicate-role button vs. this
+  session's reorder buttons) — genuinely complementary, not conflicting,
+  work. Git's automatic 3-way merge on 048 silently duplicated the reorder
+  buttons and click handlers instead of combining the two feature sets
+  (confirmed by inspection — not caught until reading the merged file
+  directly), and 050 left literal conflict markers mid-function. Both
+  files were rebuilt from `8vo65u`'s merged `main` state with this
+  session's addition re-applied by hand, then re-verified end to end.
+- **052** — untouched by `8vo65u`; merged in cleanly as new work.
+
+| Tool | File | What shipped this round |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | No changes beyond PR #74 (redundant work discarded). |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Named/multiple saved portfolios (New/Duplicate/Rename/Delete, migrates the old single-portfolio save), layered on top of PR #74's reorder buttons and character-count warning. Clears this tool's Quick Wins list except the roster-bulk-add idea. |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | No changes beyond PR #74 (redundant work discarded). |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Reorder roles and talking points via up/down buttons, layered on top of PR #74's per-role Copies field and Duplicate-role button. Clears this tool's Quick Wins list except assigned-student-name. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | No changes beyond PR #74 (redundant work discarded). |
 | Cognates & False Friends Reference List Builder | `052-cognates-false-friends-builder.md` | Three more starter language sets (German, Italian, Portuguese — six total); reorder list items via up/down buttons on both lists. |
 
-**6 of the 35 held-out Ideas-Backlog tools now have a round.** None cleared
-their own Quick Wins list entirely (047 and 048 came closest — see each
-file's own "Where the next round should pick up" note), so none moved to
-`stable tools/` this round, and none are added to "Not yet touched" below
-per this file's own convention (a tool moves to **Already done** after its
-round, not into both lists at once) — the remaining 29 held-out tools, plus
-a second pass on these 6, will surface in the normal "Not yet touched"
-rotation once the current Pass 2 list below empties out and the file
-resets.
+**7 of the 35 held-out Ideas-Backlog tools now have at least one round**
+(047–052 from the combined work of both sessions above, none from the
+remaining 29). None cleared their full Quick Wins list — 048 and 050 came
+closest, one item each remains — so none moved to `stable tools/` this
+round, and none are added to "Not yet touched" below per this file's own
+convention (a tool moves to **Already done** after its round, not into
+both lists at once).
+
+**Process note for future sessions**, also logged in `_site-requests.md`:
+the claim table only prevents collisions when a claim is visible before
+the next session commits its own — two claims landing in the same
+UTC minute are invisible to each other. This is a real, now-observed
+failure mode of the claim system, not just a theoretical gap.
 
 ---
 
@@ -658,6 +708,16 @@ lands naturally inside a tool you are already working on, take it.
   tool that hides a flex/grid-displayed element by attribute needs an
   explicit `[hidden] { display: none; }` rule; worth a grep wherever a
   toolbar control is toggled this way.
+- **`height` + `overflow: hidden` on a print block silently clips content.**
+  `047-art-critique-worksheet-generator.html`'s half-sheet print CSS used
+  `height: 47vh; overflow: hidden`, which cut off a worksheet's later
+  follow-up questions with zero visual warning on screen — the printed
+  page just quietly lost content. Fixed there by switching to
+  `min-height: 47vh` (no `overflow: hidden`), letting normal page flow
+  carry any overflow onto the next printed page instead of eating it.
+  `070-peer-feedback-checklist-generator.html` has the exact same pattern
+  flagged in its own improvement notes and hasn't been fixed yet — the
+  same one-line change should work there too.
 - **Generated-output drift is a real failure mode, not just a theoretical
   one.** Round 7 found that `035-schedule-visualizer.html`'s "Publish" button
   would produce a broken `034-schedule-browser.html` (undefined `escHtml`/

@@ -73,8 +73,8 @@
   #printArea { display: none; }
   .menu-title { text-align: center; font-size: 1.8rem; margin: 0 0 .3rem; font-family: Georgia, serif; }
   .menu-sub { text-align: center; color: #555; font-size: .85rem; margin: 0 0 1.2rem; }
-  .menu-course { margin-bottom: 1.1rem; page-break-inside: avoid; }
-  .menu-course-name { font-family: Georgia, serif; font-size: 1.1rem; text-align: center; border-bottom: 1px solid #999; padding-bottom: .15rem; margin: 0 0 .5rem; letter-spacing: .03em; }
+  .menu-course { margin-bottom: 1.1rem; }
+  .menu-course-heading { font-family: Georgia, serif; font-size: 1.15rem; border-bottom: 1.5px solid var(--accent); padding-bottom: .15rem; margin: 0 0 .5rem; }
   .menu-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
   .menu-entry { margin-bottom: 1rem; display: flex; gap: .5rem; }
   .menu-entry img.mcover { width: 34px; height: 46px; object-fit: cover; border: 1px solid #999; border-radius: 2px; flex-shrink: 0; }
@@ -86,10 +86,10 @@
   .tent-card { border: 1px dashed #999; height: 4in; display: flex; flex-direction: column; page-break-inside: avoid; }
   .tent-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .3in; text-align: center; }
   .tent-half.top { transform: rotate(180deg); border-bottom: 1px dashed #999; }
-  .tent-half img.tcover { width: 50px; height: 68px; object-fit: cover; border: 1px solid #999; border-radius: 2px; margin-bottom: .15rem; }
   .tent-half .ttitle { font-weight: 700; font-size: 1.1rem; font-family: Georgia, serif; }
   .tent-half .tmeta { font-size: .78rem; color: #555; margin: .2rem 0; }
   .tent-half .tblurb { font-size: .74rem; }
+  .tent-half img.tcover { width: 50px; height: 68px; object-fit: cover; border: 1px solid #999; border-radius: 2px; margin-bottom: .15rem; }
 
   @media print {
     body * { visibility: hidden; }
@@ -213,14 +213,13 @@
   });
 
   function groupByGenre() {
-    var order = [];
-    var groups = {};
+    var order = [], groups = {};
     books.forEach(function (b) {
-      var key = (b.genre || '').trim() || 'More Selections';
-      if (!groups[key]) { groups[key] = []; order.push(key); }
-      groups[key].push(b);
+      var g = b.genre.trim() || 'More Books';
+      if (!groups[g]) { groups[g] = []; order.push(g); }
+      groups[g].push(b);
     });
-    return order.map(function (name) { return { name: name, books: groups[name] }; });
+    return order.map(function (g) { return { genre: g, books: groups[g] }; });
   }
 
   function menuHtml() {
@@ -230,10 +229,10 @@
         '<div class="mmeta">' + escapeHtml(b.author) + '</div>' +
         '<div class="mblurb">' + escapeHtml(b.blurb) + '</div></div></div>';
     }
-    function courseHtml(course) {
-      var half = Math.ceil(course.books.length / 2);
-      var col1 = course.books.slice(0, half), col2 = course.books.slice(half);
-      return '<div class="menu-course"><h2 class="menu-course-name">' + escapeHtml(course.name) + '</h2>' +
+    function courseHtml(group) {
+      var half = Math.ceil(group.books.length / 2);
+      var col1 = group.books.slice(0, half), col2 = group.books.slice(half);
+      return '<div class="menu-course"><h2 class="menu-course-heading">' + escapeHtml(group.genre) + '</h2>' +
         '<div class="menu-columns"><div>' + col1.map(entryHtml).join('') + '</div><div>' + col2.map(entryHtml).join('') + '</div></div></div>';
     }
     return '<h1 class="menu-title">Today&rsquo;s Book Tasting Menu</h1>' +
