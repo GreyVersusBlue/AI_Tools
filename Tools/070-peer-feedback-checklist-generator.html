@@ -93,7 +93,7 @@
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .half-sheet { border: none; height: 47vh; overflow: hidden; page-break-inside: avoid; border-bottom: 1px dashed #999; }
+    .half-sheet { border: none; min-height: 47vh; page-break-inside: avoid; border-bottom: 1px dashed #999; }
     .half-sheet:nth-child(2n) { page-break-after: always; border-bottom: none; }
     .half-sheet.compact { font-size: .88em; }
     .half-sheet.compact .pf-cat { margin-bottom: .32rem; }

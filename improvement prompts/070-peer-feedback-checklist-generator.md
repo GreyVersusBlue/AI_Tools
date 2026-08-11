@@ -38,6 +38,15 @@ shipped, verified with a headless Chromium smoke test (real interactions,
   measurement), not the fully "measured" two-per-page layout the Open
   Questions described as the more robust option — that remains open if a
   real-world checklist still clips at the `tight` tier.
+- **Also — picked up a concurrent session's fix.** A parallel round on
+  Art Critique Worksheet Generator (047) found and fixed the exact same
+  `.half-sheet { height: 47vh; overflow: hidden }` print-clipping bug
+  there, and flagged this file as having the identical pattern. Ported
+  that fix here too (`height` → `min-height`, drop `overflow: hidden`) on
+  top of the scaling above — the two are complementary: scaling reduces
+  *how often* a checklist needs the overflow to spill, and dropping
+  `overflow: hidden` means that when it still does, the content flows
+  onto the next printed page instead of vanishing silently.
 
 **Where the next round should pick up:** the per-item rating scale
 (yes/no/somewhat) and "duplicate template as a starting point" are the two

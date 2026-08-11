@@ -29,7 +29,36 @@ single disconnected step. Verified with a headless Chromium smoke test
 print, confirm couplet numbering, results, and the specimen answer table
 all render correctly) — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `qer21r`).** Three Quick Wins shipped:
+
+- **Reorder steps via up/down buttons** — confirmed the prediction in
+  this file: since `leadsTo` references step ids (not array indices),
+  reordering was a pure array-swap UI addition with zero data-model
+  changes, exactly as flagged.
+- **Validation/warnings** — a new banner (hidden when clean) flags, on
+  every render: a step nothing else in the key leads to (unreachable,
+  other than the implicit step 1 entry point), a final choice with a
+  result but no example specimens (won't appear in the classification
+  worksheet), and a dead-end choice with neither a "leads to" step nor a
+  result. Chose the **non-blocking** option from this file's own Open
+  Question — the banner warns but never prevents printing, since a
+  teacher may legitimately want to print a work-in-progress key.
+- **Print-without-specimens option** — a checkbox (default checked) on
+  the main page controls whether Print includes the classification
+  worksheet + answer key pages or just the reference-key page alone.
+
+All three verified with a headless Chromium smoke test (default seeded
+key shows no warnings; adding an unattached third step triggers the
+warning banner; reordering doesn't crash) plus a separate print-path
+check confirming the specimen table is present with the checkbox on and
+absent with it off — zero console errors in either pass.
+
+**Not started this round:** multiple named saved keys, a visual
+branching-tree view, import from a pasted outline, JSON export/import,
+and the "preview classification path" build-time sanity checker. See
+Major Features/Moonshot below — multiple named saved keys is the natural
+next pickup, matching the multi-save convention flagged across sibling
+builder tools this round.
 
 ## What it does today
 
@@ -41,21 +70,14 @@ Nothing below has been started.
 
 ## Quick Wins
 
-- **Reorder steps** via up/down (currently step order is fixed by
-  insertion order, and since couplet numbers are derived from array
-  position, reordering already works internally — this is purely a
-  missing UI affordance, not a data-model change).
-- **Validation/warnings**: flag a step where a choice's "leads to" points
-  to a step that no other choice ever reaches (an orphaned/unreachable
-  step), or a final result with no example specimens (fine for the key
-  itself, but means it won't appear in the worksheet exercise) — both are
-  easy-to-make authoring mistakes with no current feedback.
+- ~~**Reorder steps** via up/down~~ — **done, Round 2.**
+- ~~**Validation/warnings**~~ — **done, Round 2** (non-blocking banner;
+  covers unreachable steps, no-specimen final results, and dead-end
+  choices).
 - **A "preview classification path" tool**: type a made-up specimen's
   traits and watch it highlight which couplets it would satisfy, as a
   build-time sanity check before handing the key to students.
-- **Print-without-specimens option**, for when a teacher wants just the
-  reference key (e.g. to demonstrate what a dichotomous key *is*) without
-  the classification exercise.
+- ~~**Print-without-specimens option**~~ — **done, Round 2.**
 
 ## Major Features
 

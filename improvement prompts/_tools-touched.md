@@ -394,17 +394,7 @@ prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
 system as a deliberate batch rather than mixed in silently with this reset.
 Leave them out until told otherwise:
 
-Art Critique Worksheet Generator (`047-art-critique-worksheet-generator.md`) ·
-Student Art Portfolio Label & QR Tag Maker (`048-art-portfolio-label-maker.md`) ·
-Book Tasting Menu Generator (`049-book-tasting-menu-generator.md`) ·
-Government/Civics Simulation Role Card Generator (`050-civics-role-card-generator.md`) ·
-Classroom Label Maker, Target Language (`051-classroom-label-maker.md`) ·
 Cognates & False Friends Reference List Builder (`052-cognates-false-friends-builder.md`) ·
-Cultural Trivia Card Generator (`053-cultural-trivia-card-generator.md`) ·
-Current Events Discussion Guide Generator (`054-current-events-discussion-guide-generator.md`) ·
-Daily Editing / DOL Warm-Up Generator (`055-daily-editing-warmup-generator.md`) ·
-DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`) ·
-Dichotomous Key Builder (`057-dichotomous-key-builder.md`) ·
 Duty Roster Builder (`058-duty-roster-builder.md`) ·
 Scientific Method / Experiment Design Planner (`059-experiment-design-planner.md`) ·
 Fitness & Skill Assessment Tracker (`060-fitness-skill-assessment-tracker.md`) ·
@@ -520,17 +510,48 @@ download).
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
 
-### Pass 2 — Round 3 — 2026-08-11 01:31 UTC — session `4o6xmy` — tools 068–072
+### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — branch `claude/tools-047-51-improvements-8vo65u`
+
+Devon directly assigned tools 047-051 to this session, ahead of the
+Pass-2-reset note above that holds the 35-tool Ideas Backlog batch out of
+the round system until folded in deliberately — an explicit per-tool
+override per this file's own top-of-file rule ("Devon may also reset it
+early, or move a specific tool back up, and that overrides everything
+here"). This is **not** a Pass 2 round pulled from "Not yet touched" —
+these five remain outside that list, per the held-out-batch note below,
+until Devon folds the rest of the 35 in. One or two scoped Quick Wins
+shipped per tool (each tool's own file has the full breakdown), verified
+with a single combined headless Chromium smoke test covering all five
+tools' new interactions (24 checks, zero console errors).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | Multiple named saved worksheets (New/Duplicate/Delete + switcher, legacy-save auto-migration); fixed half-sheet print CSS that clipped worksheets with many follow-up questions. |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Reorder entries via up/down buttons; live character-count warning on the artist-statement field (QR density heads-up past ~220 chars). |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | Menu print now groups books into genre-named course sections instead of one flat list; cover images now render in both menu and table-tent print output. |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Per-role "copies" count so a role shared by several students (jurors, witnesses) prints that many cards; Duplicate-role button. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | "Test ▶" link per word opening the pronunciation companion page directly; a prominent `file://` warning banner alongside the existing hint line. |
+
+None of the five cleared their list — each still has open Quick Wins and
+full Major Features/Moonshot sections — so none moved to `stable tools/`
+this round. A cross-tool note surfaced this round: three tools now carry
+their own copy-pasted `buildQR`/`drawQR` (Gallery Walk QR Codes, Art
+Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
+into a shared `lib/qrcode.js` next time any of the three is touched again
+(see 048's and 051's own files for the detail).
+
+### Held-out batch — Round 2 — 2026-08-11 01:31 UTC — session `4o6xmy` — tools 068-072
 
 Direct assignment (not picked from "Not yet touched") — these five sit in
 the 35-tool batch Devon deliberately held out of the round system pending
 a future decision to fold them in as a group (see the "Pass 2 — reset"
 note above); this round works them anyway per explicit instruction, which
-overrides the default picking order per this file's own header. Does not
-count toward the "X of 46 (Pass 2)" tallies above, which track only the
-original 46 Pass 1 tools' second pass — these 35 aren't part of that count
-either way yet. One scoped round each, independently verified with a
-headless Chromium smoke test per tool (real interactions — including a
+overrides the default picking order per this file's own header, the same
+override `8vo65u`'s round above and `qer21r`'s round below both used. Does
+not count toward the "X of 46 (Pass 2)" tallies above, which track only
+the original 46 Pass 1 tools' second pass — these 35 aren't part of that
+count either way yet. One scoped round each, independently verified with
+a headless Chromium smoke test per tool (real interactions — including a
 real generated-PNG upload for 071's downscale test and a seeded-legacy-
 storage test for 072's migration path — `window.print` mocked where
 printing was involved) with zero console errors.
@@ -546,7 +567,42 @@ printing was involved) with zero console errors.
 None of the five cleared their own file's full list — 071 is the
 exception, having cleared its Quick Wins entirely including one Major
 Feature, but its Major Features/Moonshot sections still have real items
-open — so none moved to `stable tools/` this round.
+open — so none moved to `stable tools/` this round. This round's 070 note
+partially overlaps with `8vo65u`'s round above: their round found and
+fixed the `height: 47vh; overflow: hidden` print-clipping bug in 047 and
+flagged 070 as having the identical pattern still unfixed — written
+concurrently with this round's own, independent pass at 070's print
+layout (an on-screen size warning plus two-tier font/spacing scaling,
+which mitigates but does not remove the underlying hard height cap). See
+the "Threads left open" entry below — 070 should get `8vo65u`'s
+`min-height`/no-`overflow:hidden` fix layered on top of this round's
+scaling next, combining both rather than picking one.
+
+### Held-out batch — Round 3 — 2026-08-11 01:40 UTC — session `qer21r` — tools 053-057
+
+Not picked from the "Not yet touched" list below — these five are part
+of the 35 tools added at the Pass 2 reset and explicitly held out of the
+round system pending a deliberate fold-in (see the reset note above).
+Assigned directly by Devon rather than self-picked, same as Rounds 9/10
+in Pass 1. One or two scoped Quick Wins
+per tool, each independently verified via `node --check`-equivalent
+syntax parsing, a headless Playwright interaction smoke test (including a
+reload to confirm `localStorage` persistence survives), and a separate
+print-path smoke test confirming each new feature reaches the printed
+output — zero console errors across all of it.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Cultural Trivia Card Generator | `053-cultural-trivia-card-generator.md` | Category filter + card count settings persist across reloads; per-built-in Hide/Unhide toggle. |
+| Current Events Discussion Guide Generator | `054-current-events-discussion-guide-generator.md` | Stopword list grown ~5x to cut vocabulary-suggestion noise; live word count/read-time while pasting; "Clear & start over" button. |
+| Daily Editing / DOL Warm-Up Generator | `055-daily-editing-warmup-generator.md` | Built-ins tagged by error type with a filter (display + worksheet); error-type label shown alongside the reveal; worksheet count + filter persist; custom sentences editable in place. |
+| DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` | Reorder sources via up/down; dedicated final synthesis/essay-prompt field, printed as its own closing page. |
+| Dichotomous Key Builder | `057-dichotomous-key-builder.md` | Reorder steps via up/down; non-blocking validation warnings (unreachable steps, no-specimen results, dead-end choices); print-without-specimens checkbox. |
+
+None of the five cleared their Quick Wins list entirely, and all five
+still have open Major Features/Moonshot items, so none moved to
+`stable tools/` this round. See each file's own Status section for what's
+recommended next.
 
 ---
 
@@ -658,13 +714,31 @@ lands naturally inside a tool you are already working on, take it.
   the first to name this pattern explicitly — a `list` key holding an
   array of saved names, a `data:<name>`-prefixed key per saved item, and a
   `current` key pointing at whichever one is open. Plot Diagram Builder
-  (072, Pass 2 Round 3) copied the same three-key shape inline (no support
-  folder yet) to add multiple named diagrams, including a one-time
+  (072, held-out batch Round 2) copied the same three-key shape inline (no
+  support folder yet) to add multiple named diagrams, including a one-time
   migration path for any pre-existing single-document data under the old
   key. Any tool moving from "one document per browser" to "multiple named
   documents" should copy this shape rather than invent a new one — it's
   now proven in at least two places, and 069/070/072's own files all flag
   this as their next Quick Win, so more copies are coming.
+- **`height` + `overflow: hidden` on a print block silently clips content.**
+  `047-art-critique-worksheet-generator.html`'s half-sheet print CSS used
+  `height: 47vh; overflow: hidden`, which cut off a worksheet's later
+  follow-up questions with zero visual warning on screen — the printed
+  page just quietly lost content. Fixed there by switching to
+  `min-height: 47vh` (no `overflow: hidden`), letting normal page flow
+  carry any overflow onto the next printed page instead of eating it.
+  `070-peer-feedback-checklist-generator.html` has the exact same
+  `height: 47vh; overflow: hidden` pattern — flagged here (before this
+  round) as unfixed, then independently given a *different* partial
+  mitigation in the same round that added this note (held-out batch Round
+  2: an on-screen size warning plus two-tier print font/spacing scaling,
+  which shrinks text for larger checklists but leaves the hard height cap
+  and `overflow: hidden` in place, so a checklist long enough to still
+  overflow at the smallest tier would still clip silently). **070 still
+  needs 047's actual fix** (`min-height`, drop `overflow: hidden`) layered
+  on top of its existing scaling, not instead of it — the two are
+  complementary, not alternatives.
 - **Generated-output drift is a real failure mode, not just a theoretical
   one.** Round 7 found that `035-schedule-visualizer.html`'s "Publish" button
   would produce a broken `034-schedule-browser.html` (undefined `escHtml`/
