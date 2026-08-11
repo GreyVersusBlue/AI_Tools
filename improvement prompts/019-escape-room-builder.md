@@ -1,7 +1,9 @@
 # Improvement Prompts — 019 — Digital Escape Room / Puzzle Lock Builder
 
 **Tool file:** `Tools/019-escape-room-builder.html`
-**Support folder:** `Tools/escape-room-builder/` — `lock.html`, `lib/qrcode.js`
+**Support folder:** `Tools/escape-room-builder/` — `lock.html`, `monitor.html`,
+`test/smoke-test-run.mjs`. The QR encoder comes from `_shared/vendor/qrcode/`
+now, not a per-tool `lib/`.
 
 **Current description (from README):** Chain QR-code puzzle stations into a linear or branching escape room — scanning one out of order sends a student back instead of giving away the clue.
 
@@ -9,7 +11,54 @@
 
 ## Status
 
-Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+**2026-08-11 — Teacher test-run mode (backlog rank 7).** Shipped the Quick
+Win. A "Test run" button beside the print buttons opens a modal holding the
+**real** `lock.html` in an iframe, loaded with the room as it currently
+stands, so a teacher can walk the whole chain typing answers as a student
+would before a single code is printed.
+
+The decision that matters is that it runs the actual player rather than
+reimplementing the matching in the builder. A second copy of
+`normalizeTextAnswer` would drift, and the day it drifted the test run would
+start certifying rooms that don't work. Everything the student gets — the
+forgiving text comparison, digit locks, cipher decoding, hint costs, attempt
+lockouts, the countdown, branching `next` — is exercised for free, and stays
+correct without maintenance.
+
+Isolation is done by stamping the test room's id with `::test`. `lock.html`
+derives `PROGRESS_KEY` from `room.id`, so the rehearsal writes somewhere no
+real player ever reads, and the key is cleared before each run. Two bugs found
+building this, both caught by the test:
+
+- The clear-before-run built its key from the *unsuffixed* id, producing
+  `…::test::test` and clearing nothing — so a second test run resumed on the
+  finish screen.
+- Assigning the same `src` does not reload an iframe, so "Start over" on an
+  unchanged room did nothing even once the key was cleared. It now reloads
+  explicitly when the URL is unchanged.
+
+Closing removes the `src` so a countdown isn't left ticking behind the modal.
+
+**Noticed, not fixed:** the comment above `normalizeTextAnswer` in `lock.html`
+claims `"It's a KEYBOARD!"` matches an accepted answer of `"a keyboard"`. It
+doesn't — normalization strips the apostrophe to give `its a keyboard`, which
+matches neither `keyboard` nor `a keyboard`. Either the comment is wrong or a
+possessive/contraction rule was intended. Worth a look, but it's the player's
+matching semantics, not this row.
+
+New test: `Tools/escape-room-builder/test/smoke-test-run.mjs` (23 assertions,
+wired into `npm test` and `npm run test:escape-room`) — drives the real player
+inside the iframe: wrong answer refused, forgiving-but-correct answer accepted,
+chain advancing to the finish, only a `::test` progress key written, a genuine
+player's progress for the same room surviving, "Start over" really starting
+over, and Escape unloading the frame.
+
+**Where the next round should pick up:** the non-QR short-code fallback and a
+payload-size warning are still the open items here. A test run is also the
+natural place to hang a "this room's QR is too dense to scan" check, since it
+already builds the same payload.
+
+Earlier: reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped hints-with-a-cost, two new puzzle types, and the meta-puzzle letter
 collection. Ideas below are deliberately ambitious and are **not** scoped to
 a single session; items confirmed shipped are tagged **Done** below.
@@ -25,6 +74,9 @@ a single session; items confirmed shipped are tagged **Done** below.
 - Station images with automatic downscaling (`downscaleStationImage`)
 - Print **station QR codes** at 1–8 per page with selectable error correction
 - Print a separate **answer key**; live chain preview
+- **Teacher test run** (`startTestRun`) — the real `lock.html` in a modal
+  iframe, on a `::test`-suffixed room id so it can never touch a student's
+  saved progress
 - Multiple saved rooms (`escape-room-builder:rooms`)
 
 ## Quick Wins
@@ -42,8 +94,8 @@ a single session; items confirmed shipped are tagged **Done** below.
 - **Non-QR fallback.** A printed short code students type into `lock.html` on
   a shared device — QR requires every student to have a camera, which is not
   a safe assumption.
-- **Preview / test-run mode** for the teacher, walking the chain without
-  printing anything.
+- **Done — 2026-08-11.** **Preview / test-run mode** for the teacher, walking the chain without
+  printing anything. *(See the Status entry at the top of this file.)*
 - **Skipped — Round 4 considered this and passed.** **Estimated payload size warning.** The whole room rides in the QR; a room
   with several images will silently produce an unscannable code (P3). *(The
   new per-station fields are all a few bytes and omitted when unused, so the

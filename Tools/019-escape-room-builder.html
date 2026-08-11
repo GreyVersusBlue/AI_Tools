@@ -129,6 +129,29 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  /* ── Teacher test run ──────────────────────────────────────────────── */
+  .test-run-overlay {
+    position: fixed; inset: 0; background: rgba(12,14,20,.72); z-index: 90;
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+  }
+  .test-run-overlay[hidden] { display: none; }
+  .test-run-modal {
+    background: var(--paper); border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,.45);
+    width: min(820px, 100%); max-height: 92vh; display: flex; flex-direction: column;
+    padding: .9rem 1rem 1rem;
+  }
+  .test-run-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .test-run-head strong { font-size: 1.05rem; }
+  .test-run-sub { color: var(--muted); font-size: .85rem; margin-left: .5rem; }
+  .test-run-actions { display: flex; gap: .5rem; }
+  .test-run-actions button { margin: 0; }
+  .test-run-note { font-size: .8rem; color: var(--muted); margin: .45rem 0 .6rem; line-height: 1.45; }
+  #testRunFrame {
+    flex: 1; min-height: 420px; width: 100%; border: 1px solid var(--line-strong);
+    border-radius: 8px; background: #fff;
+  }
+  @media print { .test-run-overlay { display: none !important; } }
+
   /* ── Print-only station QR grid / answer key ───────────────────────── */
   .print-only { display: none; }
   @media print {
@@ -280,7 +303,9 @@
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print Station QR Codes</button>
           <button class="secondary" id="printAnswersBtn" disabled type="button">Print Answer Key</button>
+          <button class="secondary" id="testRunBtn" disabled type="button">Test run</button>
         </div>
+        <div class="hint">&ldquo;Test run&rdquo; opens the real student lock screen right here and lets you walk the whole chain, typing answers the way a student would &mdash; before a single code is printed. It runs on its own saved progress, so it can never touch a student&rsquo;s.</div>
         <div class="hint">Each printed code is stamped for its own station, so scanning Station 3's code before solving Station 1 or 2 tells the player to go find those first. The answer key prints separately &mdash; keep it with you, not with the students.</div>
       </div>
 
@@ -300,6 +325,24 @@
 
   <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded, and no student data leaves this device. The full answer key travels inside the player link/QR data itself, the same way the QR Scavenger Hunt Builder's answer key is printable &mdash; this is a classroom convenience tool, not a security system.</footer>
 
+</div>
+
+<div class="test-run-overlay" id="testRunOverlay" hidden>
+  <div class="test-run-modal" role="dialog" aria-modal="true" aria-label="Test run">
+    <div class="test-run-head">
+      <div>
+        <strong>Test run</strong>
+        <span class="test-run-sub" id="testRunSub"></span>
+      </div>
+      <div class="test-run-actions">
+        <button type="button" class="secondary" id="testRunRestartBtn">Start over</button>
+        <button type="button" class="secondary" id="testRunCloseBtn">Close</button>
+      </div>
+    </div>
+    <p class="test-run-note">This is the real student lock screen, running on its own saved progress under a separate
+      key &mdash; nothing you do here shows up for a student, and closing it leaves the room exactly as it was.</p>
+    <iframe id="testRunFrame" title="Escape room test run"></iframe>
+  </div>
 </div>
 
 <div class="print-only" id="printQrArea">
@@ -337,6 +380,7 @@
    'playerLink', 'copyLinkBtn',
    'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart',
    'countdownEnabled', 'countdownMinutes', 'countdownMinutesRow', 'printCodesBtn', 'printAnswersBtn',
+   'testRunBtn', 'testRunOverlay', 'testRunFrame', 'testRunSub', 'testRunRestartBtn', 'testRunCloseBtn',
    'cards-preview', 'answerPreview', 'printQrArea', 'printQrGrid', 'printAnswerArea', 'printAnswerBody',
    'answerSheetTitle', 'previewNote', 'msg'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
@@ -866,6 +910,7 @@
       els.playerLink.value = '';
       els.printCodesBtn.disabled = true;
       els.printAnswersBtn.disabled = true;
+      els.testRunBtn.disabled = true;
       els.previewNote.textContent = 'Live preview.';
       return;
     }
@@ -900,6 +945,7 @@
     els.previewNote.textContent = valid.length + ' station' + (valid.length === 1 ? '' : 's') + ' ready.';
     els.printCodesBtn.disabled = false;
     els.printAnswersBtn.disabled = false;
+    els.testRunBtn.disabled = false;
   }
 
   function nextLabel(s, valid) {
@@ -962,6 +1008,61 @@
     area.classList.add('active');
     window.print();
   }
+
+  /* ── Teacher test run ──────────────────────────────────────────────────
+     The point of walking the chain before printing is to find the station
+     whose answer nobody can actually type — a stray trailing space, a cipher
+     shift off by one, a "next station" pointing at the wrong place. That is
+     only worth anything if what the teacher walks is the *same* code the
+     students will run, so this loads `lock.html` in an iframe rather than
+     reimplementing the matching. A second copy of normalizeTextAnswer living
+     in the builder would drift, and the day it drifted the test run would
+     start certifying rooms that don't work.
+
+     The one change is the room id: the test room is stamped `<id>::test`, so
+     lock.html's own PROGRESS_KEY lands somewhere a real player never reads,
+     and the key is cleared before each run so "Test run" always starts at
+     station 1 rather than resuming yesterday's rehearsal.
+  ---------------------------------------------------------------------- */
+  var TEST_ROOM_SUFFIX = '::test';
+
+  function startTestRun() {
+    var valid = validStations();
+    if (!valid.length) return;
+    var room = buildRoomPayload(valid);
+    room.id = (room.id || 'room') + TEST_ROOM_SUFFIX;
+    // Built from the already-suffixed id — this has to be the exact key
+    // lock.html will compute for this room, or the rehearsal resumes where
+    // the last one finished and "Start over" does nothing.
+    try { localStorage.removeItem('escape-room-progress:' + room.id); } catch (e) { /* private browsing — nothing to clear */ }
+    els.testRunSub.textContent = valid.length + ' station' + (valid.length === 1 ? '' : 's') +
+      ' · answer them the way a student would';
+    var link = playerLinkFor(room);
+    // "Start over" on an unchanged room produces a byte-identical URL, and
+    // assigning the same src does not reload an iframe — the cleared progress
+    // would never be read and the rehearsal would sit on the finish screen.
+    if (els.testRunFrame.getAttribute('src') === link && els.testRunFrame.contentWindow) {
+      els.testRunFrame.contentWindow.location.reload();
+    } else {
+      els.testRunFrame.src = link;
+    }
+    els.testRunOverlay.hidden = false;
+  }
+
+  function closeTestRun() {
+    els.testRunOverlay.hidden = true;
+    els.testRunFrame.removeAttribute('src'); // stop the timer/countdown running behind the modal
+  }
+
+  els.testRunBtn.addEventListener('click', startTestRun);
+  els.testRunRestartBtn.addEventListener('click', startTestRun);
+  els.testRunCloseBtn.addEventListener('click', closeTestRun);
+  els.testRunOverlay.addEventListener('mousedown', function (e) {
+    if (e.target === els.testRunOverlay) closeTestRun();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !els.testRunOverlay.hidden) closeTestRun();
+  });
 
   els.printCodesBtn.addEventListener('click', function () { printSection(els.printQrArea, buildPrintCodes); });
   els.printAnswersBtn.addEventListener('click', function () { printSection(els.printAnswerArea, buildPrintAnswers); });
