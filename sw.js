@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v46';
+const CACHE_VERSION = 'v47';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -198,6 +198,7 @@ const PRECACHE_URLS = [
   "_shared/a11y.js",
   "_shared/qr-scan.js",
   "_shared/state-link.js",
+  "_shared/sw-register.js",
   "_shared/theme.css",
   "_shared/webrtc-pair.js",
   "_shared/vendor/jspdf/jspdf.umd.min.js",
