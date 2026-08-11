@@ -117,12 +117,16 @@
     margin: 0 auto 1.4rem; background: #fff; overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,.18);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 6% 8%;
+    text-align: center;
+    /* --ins-pad is the pre-printed-stock safe-area inset (see stockInsetVars()).
+       Percentage padding resolves against the containing block's WIDTH on all
+       four sides, which is why one variable covers both axes here. */
+    padding: calc(6% + var(--ins-pad, 0%)) calc(8% + var(--ins-pad, 0%));
   }
   .cert-border { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .cert-seal { font-size: 2.6rem; margin-bottom: .5rem; }
   .cert-logo { max-height: 3.4rem; max-width: 40%; object-fit: contain; margin-bottom: .5rem; }
-  .cert-qr { position: absolute; top: 7%; right: 7%; width: 3.2rem; height: 3.2rem; image-rendering: pixelated; }
+  .cert-qr { position: absolute; top: calc(7% + var(--ins-y, 0%)); right: calc(7% + var(--ins-x, 0%)); width: 3.2rem; height: 3.2rem; image-rendering: pixelated; }
   .cert-kicker { font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .6rem; }
   .cert-title { font-size: 2.6rem; font-weight: 700; margin-bottom: 1.1rem; line-height: 1.1; }
   .cert-presented { font-size: 1rem; color: var(--muted-cert, #555); margin-bottom: .5rem; }
@@ -138,8 +142,14 @@
   .cert-sig-img, .cert-sig-spacer { height: 2rem; }
   .cert-sig-img { max-width: 8rem; object-fit: contain; margin-bottom: .1rem; }
 
-  /* ---- optional alignment guides for pre-printed certificate stock ---- */
-  .cert-guides { position: absolute; inset: 0; pointer-events: none; }
+  /* ---- optional alignment guides for pre-printed certificate stock ----
+     With no stock inset set, these sit on the page edge — which is where the
+     guides used to always sit, and the wrong boundary for the bordered stock
+     people actually buy. With an inset, the whole guide frame moves in to mark
+     the usable area inside the pre-printed border, and a dashed rectangle
+     joins the corner marks so it reads as "keep everything inside here". */
+  .cert-guides { position: absolute; inset: var(--ins-y, 0%) var(--ins-x, 0%); pointer-events: none; }
+  .cert-guides.safe-area { border: 1px dashed rgba(221,51,51,.55); }
   .cert-guides .gm { position: absolute; width: .5in; height: .5in; }
   .cert-guides .gm-tl { top: 0; left: 0; border-top: 1px solid #d33; border-left: 1px solid #d33; }
   .cert-guides .gm-tr { top: 0; right: 0; border-top: 1px solid #d33; border-right: 1px solid #d33; }
@@ -335,12 +345,26 @@
         <p class="hint">Two per page works well for smaller awards — a homework pass or a "caught being kind" slip
           doesn't need a whole sheet of paper. Cut along the dashed guide.</p>
 
+        <label for="stockInset">Pre-printed stock border</label>
+        <select id="stockInset">
+          <option value="0">None — plain paper, use the whole page</option>
+          <option value="0.5">Thin border — keep 0.5 in clear</option>
+          <option value="0.75">Standard bordered stock — keep 0.75 in clear</option>
+          <option value="1">Wide or ornate border — keep 1 in clear</option>
+          <option value="1.25">Very wide border — keep 1.25 in clear</option>
+        </select>
+        <p class="hint">Store-bought certificate paper has the border already printed on it. Set how much of the
+          edge that border eats and everything on the certificate — text, logo, QR code, alignment guides — pulls
+          in to the clear area inside it, instead of printing over the design you paid for. Measure the printed
+          border on one sheet with a ruler and round up. Leave this on &ldquo;None&rdquo; for plain paper.</p>
+
         <label style="display:flex;align-items:center;gap:.5rem;font-weight:600;">
           <input type="checkbox" id="showGuides" style="width:auto;margin:0;"> Show alignment guides
         </label>
-        <p class="hint">Adds small red corner marks so you can check registration against pre-printed certificate
-          stock: print a test copy on plain paper, hold it up to the light against your stock, and adjust your
-          printer's margins if the marks don't line up. Turn this off before printing the final copies.</p>
+        <p class="hint">Draws the boundary your content is being kept inside — the page edge, or the safe area if
+          you set a stock border above. Print a test copy on plain paper, hold it up to the light against your
+          stock, and adjust your printer's margins if it doesn't line up. Turn this off before printing the final
+          copies.</p>
 
         <button type="button" id="printBtn">Print / Save as PDF</button>
       </div>
@@ -384,7 +408,7 @@
    'singleFields','batchFields','studentName','batchNames','camRosterSelect','camLoadRosterBtn',
    'awardTitle','awardTitleCustom','reason','certDate','signature',
    'signatureFile','signaturePreview','signaturePreviewImg','signatureRemove',
-   'qrUrl','printBtn','showGuides',
+   'qrUrl','printBtn','showGuides','stockInset',
    'orientTabs','perPageTabs','camPageSizeStyle',
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -426,20 +450,57 @@
       qrUrl: '', // optional link to a note/video/portfolio page, or '' for no QR code
       orientation: 'landscape', // 'landscape' | 'portrait'
       perPage: 1, // 1 | 2 — certificates per printed sheet
-      showGuides: false // print small corner alignment marks for pre-printed stock
+      showGuides: false, // draw the boundary content is kept inside
+      stockInset: 0 // inches of pre-printed border to keep clear on every edge
     };
   }
 
-  // Certificates saved before orientation/perPage/signatureImage/showGuides
-  // existed just don't have the keys — fill in the old (landscape,
-  // one-per-page, no signature image, no guides) behavior so a returning
-  // preset renders exactly as it always did.
+  // Certificates saved before orientation/perPage/signatureImage/showGuides/
+  // stockInset existed just don't have the keys — fill in the old (landscape,
+  // one-per-page, no signature image, no guides, no stock inset) behavior so a
+  // returning preset renders exactly as it always did.
   function normalizeSettings(s) {
     if (s.orientation !== 'portrait') s.orientation = 'landscape';
     s.perPage = (s.perPage === 2 || s.perPage === '2') ? 2 : 1;
     if (typeof s.signatureImage !== 'string') s.signatureImage = '';
     s.showGuides = !!s.showGuides;
+    s.stockInset = STOCK_INSETS.indexOf(Number(s.stockInset)) === -1 ? 0 : Number(s.stockInset);
     return s;
+  }
+
+  /* ---- pre-printed stock safe area ----
+     Store-bought certificate paper carries its border in the ink; the usable
+     area is the rectangle inside it. The inset is entered in inches and has to
+     come out as percentages, because the certificate is rendered at whatever
+     size the preview or the printed slot happens to be. Those percentages are
+     computed against the certificate's REAL printed size, so 0.75in is 0.75in
+     on paper — the preview then shows the same proportions.
+
+     Printed size of one certificate = the letter page for the current
+     orientation, less the 0.35in @page margin on each edge, halved vertically
+     when two certificates share a sheet. */
+  var STOCK_INSETS = [0, 0.5, 0.75, 1, 1.25];
+  var PAGE_MARGIN_IN = 0.35;
+
+  function printedCertInches() {
+    var portrait = settings.orientation === 'portrait';
+    var w = (portrait ? 8.5 : 11) - PAGE_MARGIN_IN * 2;
+    var h = (portrait ? 11 : 8.5) - PAGE_MARGIN_IN * 2;
+    if (settings.perPage === 2) h = h / 2;
+    return [w, h];
+  }
+
+  /** Inline custom properties for one certificate's safe area, or '' for none. */
+  function stockInsetVars() {
+    var inset = Number(settings.stockInset) || 0;
+    if (inset <= 0) return '';
+    var dims = printedCertInches(), w = dims[0], h = dims[1];
+    // Never let the inset swallow the certificate: cap at 35% of either side.
+    var padPct = Math.min(inset / w * 100, 35);
+    var yPct = Math.min(inset / h * 100, 35);
+    return '--ins-pad:' + padPct.toFixed(3) + '%;' +
+           '--ins-x:' + padPct.toFixed(3) + '%;' +
+           '--ins-y:' + yPct.toFixed(3) + '%;';
   }
 
   function persist() { if (settings) CertificateStore.savePreset(settings.name, settings); }
@@ -622,7 +683,7 @@
     var effTitle = title || effectiveTitle();
     var effReason = (reason != null && reason !== '') ? reason : settings.reason;
     return (
-      '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + '">' +
+      '<div class="cert theme-' + settings.theme + '" style="aspect-ratio:' + w + '/' + h + ';' + stockInsetVars() + '">' +
         CertificateBorders.borderSvg(settings.border, w, h) +
         (settings.logo ? '<img class="cert-logo" src="' + settings.logo + '" alt="">' : '') +
         (qrDataUrl ? '<img class="cert-qr" src="' + qrDataUrl + '" alt="QR code linking to more about this award" title="Scan for more">' : '') +
@@ -640,7 +701,7 @@
           '</div>' +
         '</div>' +
         (settings.showGuides
-          ? '<div class="cert-guides"><span class="gm gm-tl"></span><span class="gm gm-tr"></span><span class="gm gm-bl"></span><span class="gm gm-br"></span></div>'
+          ? '<div class="cert-guides' + (Number(settings.stockInset) > 0 ? ' safe-area' : '') + '"><span class="gm gm-tl"></span><span class="gm gm-tr"></span><span class="gm gm-bl"></span><span class="gm gm-br"></span></div>'
           : '') +
       '</div>'
     );
@@ -795,6 +856,7 @@
     els.signature.value = settings.signature;
     els.qrUrl.value = settings.qrUrl || '';
     els.showGuides.checked = !!settings.showGuides;
+    els.stockInset.value = String(settings.stockInset || 0);
     updateLogoPreview();
     updateSignaturePreview();
 
@@ -982,6 +1044,12 @@
 
   els.showGuides.addEventListener('change', function () {
     settings.showGuides = els.showGuides.checked;
+    renderAll();
+  });
+
+  els.stockInset.addEventListener('change', function () {
+    var val = Number(els.stockInset.value);
+    settings.stockInset = STOCK_INSETS.indexOf(val) === -1 ? 0 : val;
     renderAll();
   });
 
