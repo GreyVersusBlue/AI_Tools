@@ -185,7 +185,12 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Formula Reference Sheet Builder | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
+| Certificate & Award Maker | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
+| Field Trip Permission Slip Generator | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
+| Sub Plan Builder | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
+| Sub Binder / Day Bundle Generator | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
+| Blank Map Generator | `gb5c6e` | 2026-08-11 01:28 UTC | `claude/tools-041-046-improvements-gb5c6e` |
 
 ---
 
