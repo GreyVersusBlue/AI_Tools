@@ -84,6 +84,9 @@ no `index.html` "coming soon" row for these, since there's no single new tool pa
 all still within GitHub Pages' static-hosting limits (no server, no accounts, no database) — several lean on
 browser APIs the toolkit doesn't use yet.
 
+All four rows now have a phased implementation roadmap in [`PLATFORM_PLAN.md`](PLATFORM_PLAN.md); rows still come
+off this list only when each swing actually ships, per "Picking one up" below.
+
 | Idea | What it would do |
 |---|---|
 | Bulk CSV Roster Import Hub | Upload a full set of class rosters once and have every roster-consuming tool on the site pick them up, instead of pasting the same list into each tool separately. |
