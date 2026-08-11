@@ -99,14 +99,32 @@
 
   /* ---- the board itself ---- */
   .board-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 .9rem; }
-  .scoreboard { display: flex; flex-wrap: wrap; gap: .7rem; margin-bottom: 1.1rem; }
-  .team-chip {
-    display: flex; align-items: center; gap: .5rem; background: #fff;
-    border: 1px solid var(--line-strong); border-radius: 8px; padding: .5rem .7rem;
+  .scoreboard {
+    display: flex; flex-wrap: wrap; gap: .9rem; margin: 0 0 1.2rem;
+    position: sticky; top: 0; z-index: 40; background: var(--paper);
+    padding: .7rem .2rem .9rem; border-bottom: 2px solid var(--line-strong);
   }
-  .team-chip input[type="text"] { border: none; padding: 0; font-weight: 700; width: 8rem; }
-  .team-chip .score { font-family: Consolas, monospace; font-weight: 700; min-width: 2.4rem; text-align: center; }
-  .team-chip button { padding: .15rem .5rem; }
+  .team-chip {
+    display: flex; align-items: center; gap: .6rem; background: #fff;
+    border: 2px solid var(--line-strong); border-radius: 10px; padding: .6rem .9rem;
+    transition: background-color .2s ease, box-shadow .2s ease;
+  }
+  .team-chip input[type="text"] { border: none; padding: 0; font-weight: 800; font-size: 1.15rem; width: 9rem; }
+  .team-chip .score {
+    font-family: Consolas, monospace; font-weight: 800; min-width: 3.4rem; text-align: center;
+    font-size: clamp(1.6rem, 2.6vw, 2.3rem); line-height: 1;
+  }
+  .team-chip button { padding: .25rem .65rem; font-size: 1.05rem; }
+  @keyframes scoreFlashUp {
+    0% { background: #cdeed3; box-shadow: 0 0 0 5px rgba(46,107,62,.4); }
+    100% { background: #fff; box-shadow: 0 0 0 0 rgba(46,107,62,0); }
+  }
+  @keyframes scoreFlashDown {
+    0% { background: #f6d6d1; box-shadow: 0 0 0 5px rgba(163,55,43,.4); }
+    100% { background: #fff; box-shadow: 0 0 0 0 rgba(163,55,43,0); }
+  }
+  .team-chip.flash-up { animation: scoreFlashUp 900ms ease-out; }
+  .team-chip.flash-down { animation: scoreFlashDown 900ms ease-out; }
 
   .board-grid { background: var(--board-bg); border-radius: 10px; padding: 1rem; overflow-x: auto; }
   .board-cols { display: grid; gap: .5rem; }
@@ -207,6 +225,20 @@
     <p class="hint">Lets you keep more than one game board saved at once (e.g. one per unit).</p>
     <input type="text" id="boardName" placeholder="e.g. Unit 4 Review">
 
+    <label for="rosterSelect">Build teams from a saved roster (optional)</label>
+    <p class="hint">
+      Splits a saved roster into teams by count instead of typing team names by hand. Rosters
+      saved elsewhere on this device under &ldquo;np_rosters&rdquo; show up in the dropdown below.
+      Team names are pre-filled and stay editable on the scoreboard afterward, same as typed-in teams.
+    </p>
+    <div class="import-row">
+      <select id="rosterSelect"><option value="">— choose a saved roster —</option></select>
+      <label for="rosterTeamCount" style="margin:0;font-weight:600;">Teams:</label>
+      <input type="number" id="rosterTeamCount" min="1" max="12" value="4" style="width:4rem;">
+      <button type="button" class="secondary" id="buildTeamsFromRosterBtn">Split into teams</button>
+    </div>
+    <p class="import-status" id="rosterTeamsStatus"></p>
+
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="manual">Type it in</button>
       <button type="button" class="tab-btn" data-tab="import">Import from Excel</button>
@@ -305,6 +337,7 @@
    'printAnswerKeyBtn', 'printQuizBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
+   'rosterSelect','rosterTeamCount','buildTeamsFromRosterBtn','rosterTeamsStatus',
    'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','lightningRoundToggle','lightningRoundSeconds',
    'scoreboard','boardCols','undoScoreBtn',
    'overlay','overlayCatPoints','overlayCountdown','overlayQuestion','overlayAnswer',
@@ -319,6 +352,22 @@
   var lightningRemaining = 0;
   var undoStack = []; // [{ teamIndex, delta, catIdx, clueIdx }, ...] most-recent last
   var UNDO_MAX = 20;
+  var pendingRosterTeams = null; // set by "Split into teams" until the next Save board / Excel import consumes it
+
+  /** Briefly flashes a score chip green (positive) or red (negative) so a
+      change reads from across a room even when the number itself is small.
+      Looked up by index rather than kept as an element reference because
+      renderBoard() rebuilds the scoreboard's DOM on every score-changing action. */
+  function flashTeamScore(teamIndex, positive) {
+    if (!els.scoreboard) return;
+    var chip = els.scoreboard.querySelectorAll('.team-chip')[teamIndex];
+    if (!chip) return;
+    var cls = positive ? 'flash-up' : 'flash-down';
+    chip.classList.remove('flash-up', 'flash-down');
+    void chip.offsetWidth; // restart the animation if it's still mid-flash
+    chip.classList.add(cls);
+    setTimeout(function () { chip.classList.remove(cls); }, 900);
+  }
 
   function pushScoreUndo(teamIndex, delta, catIdx, clueIdx) {
     undoStack.push({ teamIndex: teamIndex, delta: delta, catIdx: catIdx == null ? null : catIdx, clueIdx: clueIdx == null ? null : clueIdx });
@@ -352,6 +401,7 @@
       }
       save();
       renderBoard();
+      if (team) flashTeamScore(entry.teamIndex, entry.delta < 0);
     });
   }
 
@@ -449,6 +499,87 @@
     return categories;
   }
 
+  /* ---------- teams from a saved roster ---------- */
+  var NP_ROSTERS_KEY = 'np_rosters';
+
+  function loadNpRosters() {
+    try {
+      var v = JSON.parse(localStorage.getItem(NP_ROSTERS_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
+  }
+
+  function populateRosterSelect() {
+    if (!els.rosterSelect) return;
+    var rosters = loadNpRosters();
+    var names = Object.keys(rosters);
+    els.rosterSelect.innerHTML = '<option value="">— choose a saved roster —</option>' +
+      names.map(function (n) {
+        var list = rosters[n];
+        var count = Array.isArray(list) ? list.length : 0;
+        return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + count + ')</option>';
+      }).join('');
+  }
+
+  /** Cuts a name list into `teamCount` contiguous, roughly-even groups (a
+      simple count-based split — no fairness/recency logic; that's a
+      different tool's job). Caps the team count at the number of students
+      so a small roster never produces empty teams. */
+  function splitNamesIntoTeams(names, teamCount) {
+    var n = Math.max(1, Math.min(12, teamCount || 1));
+    if (names.length) n = Math.min(n, names.length);
+    var groups = [];
+    var base = Math.floor(names.length / n);
+    var extra = names.length % n;
+    var idx = 0;
+    for (var i = 0; i < n; i++) {
+      var count = base + (i < extra ? 1 : 0);
+      groups.push(names.slice(idx, idx + count));
+      idx += count;
+    }
+    return groups;
+  }
+
+  /** Builds team objects (name + score, same shape as manually-typed teams)
+      from a roster split — the team name lists the actual students so the
+      teacher can see the roster at a glance, and stays editable afterward
+      exactly like a typed-in team name. */
+  function teamsFromRosterSplit(names, teamCount) {
+    return splitNamesIntoTeams(names, teamCount).map(function (group, i) {
+      var label = 'Team ' + (i + 1) + (group.length ? ': ' + group.join(', ') : '');
+      return { name: label, score: 0 };
+    });
+  }
+
+  if (els.buildTeamsFromRosterBtn) {
+    els.buildTeamsFromRosterBtn.addEventListener('click', function () {
+      var rosterKey = els.rosterSelect.value;
+      if (!rosterKey) {
+        els.rosterTeamsStatus.className = 'import-status error';
+        els.rosterTeamsStatus.textContent = 'Choose a saved roster first.';
+        return;
+      }
+      var rosters = loadNpRosters();
+      var names = Array.isArray(rosters[rosterKey]) ? rosters[rosterKey].filter(Boolean) : [];
+      if (!names.length) {
+        els.rosterTeamsStatus.className = 'import-status error';
+        els.rosterTeamsStatus.textContent = 'That roster has no names in it.';
+        return;
+      }
+      var count = parseInt(els.rosterTeamCount.value, 10);
+      pendingRosterTeams = teamsFromRosterSplit(names, isNaN(count) ? 4 : count);
+      els.rosterTeamsStatus.className = 'import-status ok';
+      els.rosterTeamsStatus.textContent = 'Ready — ' + pendingRosterTeams.map(function (t) { return t.name; }).join(' | ') +
+        '. Save the board below to use these teams.';
+    });
+  }
+
+  function takePendingRosterTeams() {
+    var t = pendingRosterTeams;
+    pendingRosterTeams = null;
+    return t;
+  }
+
   /* ---------- Excel import ---------- */
   function categoriesFromRows(rows) {
     // rows[0] is the header; find column indexes case-insensitively so a
@@ -499,7 +630,7 @@
           var rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
           var categories = categoriesFromRows(rows);
           var name = els.boardName.value.trim() || file.name.replace(/\.[^.]+$/, '');
-          startBoard(name, categories);
+          startBoard(name, categories, takePendingRosterTeams());
           els.importStatus.className = 'import-status ok';
           els.importStatus.textContent = 'Imported ' + categories.length + ' categories.';
         } catch (err) {
@@ -741,6 +872,9 @@
     els.categoriesEditor.innerHTML = '';
     els.importFile.value = '';
     els.importStatus.textContent = '';
+    pendingRosterTeams = null;
+    if (els.rosterTeamsStatus) { els.rosterTeamsStatus.textContent = ''; els.rosterTeamsStatus.className = 'import-status'; }
+    populateRosterSelect();
     if (prefillCategories && prefillCategories.length) {
       prefillCategories.forEach(function (c) { addCategoryBlock(c.name, c.clues); });
     } else {
@@ -773,12 +907,12 @@
       nameInput.addEventListener('change', function () { team.name = nameInput.value.trim() || team.name; save(); });
       var minus = document.createElement('button');
       minus.className = 'small secondary'; minus.textContent = '−';
-      minus.addEventListener('click', function () { team.score -= 10; pushScoreUndo(i, -10, null, null); renderScoreboardOnly(); save(); });
+      minus.addEventListener('click', function () { team.score -= 10; pushScoreUndo(i, -10, null, null); renderScoreboardOnly(); flashTeamScore(i, false); save(); });
       var scoreSpan = document.createElement('span');
       scoreSpan.className = 'score'; scoreSpan.textContent = team.score;
       var plus = document.createElement('button');
       plus.className = 'small secondary'; plus.textContent = '+';
-      plus.addEventListener('click', function () { team.score += 10; pushScoreUndo(i, 10, null, null); renderScoreboardOnly(); save(); });
+      plus.addEventListener('click', function () { team.score += 10; pushScoreUndo(i, 10, null, null); renderScoreboardOnly(); flashTeamScore(i, true); save(); });
       var removeBtn = document.createElement('button');
       removeBtn.className = 'small danger'; removeBtn.textContent = '×';
       removeBtn.title = 'Remove team';
@@ -940,6 +1074,7 @@
         wTeam.score += dailyDoubleWager.amount;
         pushScoreUndo(dailyDoubleWager.teamIndex, dailyDoubleWager.amount, savedClue.catIdx, savedClue.clueIdx);
         markCurrentClueUsed(); closeOverlay(); renderBoard();
+        flashTeamScore(dailyDoubleWager.teamIndex, true);
       });
       var incorrectBtn = document.createElement('button');
       incorrectBtn.className = 'ghost';
@@ -948,6 +1083,7 @@
         wTeam.score -= dailyDoubleWager.amount;
         pushScoreUndo(dailyDoubleWager.teamIndex, -dailyDoubleWager.amount, savedClue.catIdx, savedClue.clueIdx);
         markCurrentClueUsed(); closeOverlay(); renderBoard();
+        flashTeamScore(dailyDoubleWager.teamIndex, false);
       });
       els.awardRow.appendChild(correctBtn);
       els.awardRow.appendChild(incorrectBtn);
@@ -961,6 +1097,7 @@
           markCurrentClueUsed();
           closeOverlay();
           renderBoard();
+          flashTeamScore(ti, true);
         });
         els.awardRow.appendChild(b);
       });
@@ -1027,7 +1164,7 @@
       startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
         editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds);
     } else {
-      startBoard(name, categories);
+      startBoard(name, categories, takePendingRosterTeams());
     }
     editingBoard = null;
   });
