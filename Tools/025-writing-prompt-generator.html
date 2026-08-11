@@ -309,6 +309,38 @@
     .poster-rubric b { font-weight: 800; }
     .poster-goal { font-size: 14pt; font-weight: 800; color: #1f3550; margin-top: .3in; }
 
+    /* half-sheets: the same prompt twice on one page with room to write, so
+       one sheet through the printer covers two students. The poster is for
+       the wall; this is what actually gets written on. */
+    #halfSheetPrintArea.active { display: block; padding: 0; }
+    .half-sheet {
+      /* min-height, not height, and deliberately no overflow:hidden — a
+         fixed height with hidden overflow is how a print sheet silently eats
+         the end of a long prompt. An unusually long prompt makes the sheet
+         grow and pushes the second half onto another page, which is visible
+         and fixable, rather than losing text nobody notices is gone. */
+      min-height: 4.9in; box-sizing: border-box; padding: .25in .1in .3in;
+      display: flex; flex-direction: column;
+      break-inside: avoid; page-break-inside: avoid;
+    }
+    .half-sheet + .half-sheet { border-top: 1.5px dashed #888; }
+    .hs-prompt { font-size: 15pt; font-weight: 800; line-height: 1.25; margin: 0 0 .12in; }
+    .hs-meta { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; color: #444; margin: 0 0 .1in; }
+    .hs-meta span + span::before { content: " · "; }
+    .hs-extra { font-size: 9.5pt; color: #333; margin: 0 0 .12in; }
+    .hs-extra b { font-weight: 800; }
+    .hs-nameline { font-size: 10pt; color: #222; margin: 0 0 .14in; }
+    /* Ruled to fill exactly whatever space is left, at a real 0.3in pitch —
+       no fixed line count to overflow a long prompt, and nothing clipped.
+       Browsers drop background images from print unless told otherwise, so
+       print-color-adjust is what puts these lines on paper at all. */
+    .hs-lines {
+      flex: 1; min-height: .6in;
+      background-image: repeating-linear-gradient(to bottom,
+        transparent 0 calc(0.3in - 1px), #555 calc(0.3in - 1px) 0.3in);
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+
     @page { size: letter portrait; margin: 0.5in; }
   }
 </style>
@@ -323,6 +355,7 @@
     </div>
     <div class="header-actions">
       <button type="button" class="fs-btn" id="printPosterBtn" title="Print the current prompt as a wall poster" disabled>&#128424; Print poster</button>
+      <button type="button" class="fs-btn" id="printHalfSheetBtn" title="Print the current prompt as two half-sheet handouts with writing lines" disabled>&#128221; Print half-sheets</button>
       <button type="button" class="fs-btn" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
     </div>
   </div>
@@ -496,6 +529,7 @@
 </div>
 
 <div class="print-only" id="posterPrintArea"></div>
+<div class="print-only" id="halfSheetPrintArea"></div>
 <div class="print-only" id="rosterPrintArea"></div>
 
 <div class="anon-overlay" id="anonOverlay">
@@ -524,7 +558,7 @@
 
   var els = {};
   ['bandTabs','genreSelect','stage','stagePrompt','metaRow','generateBtn','generateRow','historyList','fullscreenBtn',
-   'printPosterBtn','posterPrintArea',
+   'printPosterBtn','posterPrintArea','printHalfSheetBtn','halfSheetPrintArea',
    'wordGoalDisplay','wordGoalInput','clearWordGoalBtn',
    'timerDisplay','timerPresetsRow','timerCustomInput','timerCustomSetBtn','timerStartBtn','timerPauseBtn','timerResetBtn',
    'includeCustomToggle','togglePromptsBtn','myPromptsPanel','customPromptText','customPromptBand',
@@ -760,6 +794,7 @@
       '<span class="tag">' + (pick.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
       '<span class="tag">' + escapeHtml(genreLabel(pick.genre)) + '</span>';
     els.printPosterBtn.disabled = false;
+    els.printHalfSheetBtn.disabled = false;
     renderRubricRow();
   }
 
@@ -791,6 +826,36 @@
         goalHtml +
         rubricHtml +
       '</div>';
+  }
+
+  /** The same prompt twice on one page, each half with a name line and ruled
+      space to write. The poster goes on the wall; this is the thing students
+      actually hand back, and it halves the paper for a class of thirty. */
+  function halfSheetHtml() {
+    var metaSpans = '<span>' + (currentPrompt.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
+      '<span>' + escapeHtml(genreLabel(currentPrompt.genre)) + '</span>';
+    if (currentPrompt.setName) {
+      metaSpans += '<span>' + escapeHtml(currentPrompt.setName) + ' &mdash; Day ' + currentPrompt.setDay + ' of ' + currentPrompt.setTotal + '</span>';
+    }
+    var extras = [];
+    if (settings.wordGoal) extras.push('<b>Aim for ' + settings.wordGoal + '+ words.</b>');
+    if (currentPrompt.rubricName) extras.push('<b>Rubric:</b> ' + escapeHtml(currentPrompt.rubricName));
+    var extraHtml = extras.length ? '<p class="hs-extra">' + extras.join(' &nbsp; ') + '</p>' : '';
+    return (
+      '<div class="half-sheet">' +
+        '<p class="hs-prompt">' + escapeHtml(currentPrompt.text) + '</p>' +
+        '<p class="hs-meta">' + metaSpans + '</p>' +
+        extraHtml +
+        '<p class="hs-nameline">Name: _____________________________ &nbsp;&nbsp;&nbsp; Date: ______________</p>' +
+        '<div class="hs-lines"></div>' +
+      '</div>'
+    );
+  }
+
+  function renderHalfSheetPrintArea() {
+    if (!currentPrompt) { els.halfSheetPrintArea.innerHTML = ''; return; }
+    var sheet = halfSheetHtml();
+    els.halfSheetPrintArea.innerHTML = sheet + sheet;
   }
 
   /* ---------- Rubric pairing (Rubric Builder handoff) ---------- */
@@ -866,6 +931,7 @@
         els.stagePrompt.innerHTML = '<p class="empty">Press Generate to get a prompt.</p>';
         els.metaRow.innerHTML = '';
         els.printPosterBtn.disabled = true;
+        els.printHalfSheetBtn.disabled = true;
         renderRubricRow();
       }
     } else {
@@ -1092,6 +1158,7 @@
       els.seqNextBtn.disabled = true;
       els.seqJumpBtn.style.display = 'none';
       els.printPosterBtn.disabled = true;
+      els.printHalfSheetBtn.disabled = true;
       renderRubricRow();
       return;
     }
@@ -1112,6 +1179,7 @@
     var suggested = suggestedIndex(set);
     els.seqJumpBtn.style.display = (suggested !== null && suggested !== idx) ? '' : 'none';
     els.printPosterBtn.disabled = false;
+    els.printHalfSheetBtn.disabled = false;
     renderRubricRow();
   }
 
@@ -1534,9 +1602,16 @@
     els.posterPrintArea.classList.add('active');
     window.print();
   });
+  els.printHalfSheetBtn.addEventListener('click', function () {
+    if (!currentPrompt) return;
+    renderHalfSheetPrintArea();
+    els.halfSheetPrintArea.classList.add('active');
+    window.print();
+  });
   window.addEventListener('afterprint', function () {
     els.rosterPrintArea.classList.remove('active');
     els.posterPrintArea.classList.remove('active');
+    els.halfSheetPrintArea.classList.remove('active');
   });
 
   els.fullscreenBtn.addEventListener('click', toggleFullscreen);

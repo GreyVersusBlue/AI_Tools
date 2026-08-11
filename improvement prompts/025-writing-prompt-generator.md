@@ -9,7 +9,46 @@
 
 ## Status
 
-Reviewed — structural read of the source, followed by a Round 4 implementation
+**2026-08-11 — Lined half-sheet handout (backlog rank 5).** Shipped the
+Quick Win. A second header button, "Print half-sheets", next to the existing
+poster: the same prompt twice on one page, each half with the band/genre line
+the poster shows, the word goal and paired rubric if either is set, a
+name/date line, and ruled space. One sheet through the printer covers two
+students. The poster is untouched — this is a second output, not a
+replacement, and the two print areas are switched on independently so one
+print job is one thing.
+
+The ruling is the part worth remembering. It is a repeating background
+gradient on a `flex: 1` block, not a fixed count of `<div>`s:
+
+- It fills exactly whatever room the prompt leaves, so a long prompt takes
+  its space from the writing area instead of overflowing.
+- The half sheet uses `min-height: 4.9in` and **no** `overflow: hidden`. A
+  fixed height with hidden overflow is the print bug this repo already found
+  and fixed in the Art Critique generator — it eats the end of long content
+  silently. Here an unusually long prompt grows the sheet and pushes the
+  second half onto another page: visible and fixable, rather than text
+  quietly gone. `.hs-lines` keeps a `0.6in` floor so there is always
+  somewhere to write.
+- The cost of the gradient approach is that browsers drop background images
+  from print by default, so `print-color-adjust: exact` is load-bearing.
+  Without it the handout prints with nothing on it. The test asserts the
+  computed value for exactly that reason.
+
+Row pitch is `0.3in`, matching the exit ticket's response area shipped the
+same day, so the two tools' handouts rule the same.
+
+New test: `Tools/writing-prompt-generator/test/smoke-half-sheet.mjs` (26
+assertions, wired into `npm test` and `npm run test:writing-prompt`) — button
+enablement in step with the poster, two halves carrying the staged prompt, the
+name line, the measured 4.9in half and its ruling under print emulation, the
+long-prompt case, the word goal travelling with it, and the afterprint reset.
+
+**Where the next round should pick up:** sentence starters / "if you're stuck"
+lines would now have an obvious home on the half sheet. Prompt-list import
+(P13) and purpose tagging are still open.
+
+Earlier: reviewed — structural read of the source, followed by a Round 4 implementation
 pass (see the Round 4 update below) that shipped Prompt Sets, rubric pairing,
 and the Anonymous Response Display. Ideas below that remain unmarked are
 deliberately ambitious and are **not** scoped to a single session.
@@ -21,6 +60,9 @@ deliberately ambitious and are **not** scoped to a single session.
 - Big projector display with **fullscreen** (`toggleFullscreen`) — one of the
   few tools that has it
 - **Print poster** of a single prompt
+- **Print half-sheets** (`halfSheetHtml`, `renderHalfSheetPrintArea`) — the
+  same prompt twice on one page with a name line, the word goal, the paired
+  rubric, and ruled space to write; one sheet covers two students
 - **My Prompts** — teacher-authored prompts with their own genre
   (`gvb-writing-prompts:custom`)
 - **Roster assignment sheet** (`buildRosterSheet`, `pickDistinctForRoster`,
@@ -46,8 +88,9 @@ deliberately ambitious and are **not** scoped to a single session.
   Start/Pause/Reset — see the Pass 2 — Round 2 update.)*
 - **Done — Pass 2, Round 2.** **Word-count goal** displayed with the prompt.
   *(A static target, not live tracking — see the Pass 2 — Round 2 update.)*
-- **Print the prompt as a half-sheet with lines** to write on, not just as a
-  poster — the handout version of the same thing.
+- **Done — 2026-08-11.** **Print the prompt as a half-sheet with lines** to write on, not just as a
+  poster — the handout version of the same thing. *(See the Status entry at
+  the top of this file.)*
 - **Sentence starters and a "if you're stuck" line** with each prompt, which
   is what the students who need the prompt most actually need.
 - **Tag prompts by purpose** (quick write, journal, on-demand assessment,
