@@ -185,7 +185,10 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Unit Conversion Reference Chart Builder | `h4rwxn` | 2026-08-11 01:32 UTC | `claude/tools-078-081-improvements-h4rwxn` |
+| Verb Conjugation Reference Poster Generator | `h4rwxn` | 2026-08-11 01:32 UTC | `claude/tools-078-081-improvements-h4rwxn` |
+| Virtual Manipulatives Board | `h4rwxn` | 2026-08-11 01:32 UTC | `claude/tools-078-081-improvements-h4rwxn` |
+| Word Problem Warm-Up Generator | `h4rwxn` | 2026-08-11 01:32 UTC | `claude/tools-078-081-improvements-h4rwxn` |
 
 ---
 
