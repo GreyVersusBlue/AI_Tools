@@ -116,6 +116,11 @@
   .group-card li .name { color: var(--ink); }
   .group-card li .role { color: var(--accent-2); font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; text-align: right; white-space: nowrap; }
   .group-card li .role.member { color: var(--muted); font-weight: 600; }
+  .group-card li .role.absent { color: var(--err); font-style: italic; }
+  .group-card li.absent-row .name { text-decoration: line-through; color: var(--muted); }
+  .absent-check { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+  .absent-check input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+  .absent-hint { margin: -.2rem 0 .9rem; }
   .group-card .group-station { font-size: .78rem; color: var(--muted); margin: -.3rem 0 .65rem; padding-bottom: .55rem; border-bottom: 1px dashed var(--line); }
   .group-card .group-station strong { color: var(--accent-2); }
   .checkout-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .7rem; padding-top: .6rem; border-top: 1px dashed var(--line); font-size: .78rem; color: var(--muted); }
@@ -161,6 +166,9 @@
     .group-card .group-station { color: #333; }
     .group-card .group-station strong { color: #000; }
     .checkout-row { display: none !important; }
+    .group-card li.absent-row { display: none !important; }
+    .absent-check input[type="checkbox"] { display: none !important; }
+    .absent-hint { display: none !important; }
 
     .tent-card { border: none; break-after: page; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 9in; margin: 0; }
     .tent-card:last-child { break-after: auto; }
@@ -265,6 +273,9 @@
           <button type="button" class="secondary" id="printHistoryBtn">Print role history</button>
         </div>
         <div class="btn-row">
+          <button type="button" class="secondary" id="printFairnessBtn">Print fairness grid</button>
+        </div>
+        <div class="btn-row">
           <button type="button" class="secondary" id="printTentsBtn">Print table tents</button>
         </div>
         <div class="btn-row">
@@ -318,7 +329,7 @@
    'splitValueLabel', 'splitValue', 'roleList', 'addRoleBtn',
    'stationList', 'addStationBtn',
    'pairA', 'pairB', 'addPairBtn', 'pairList',
-   'shuffleBtn', 'undoBtn', 'printBtn', 'printHistoryBtn', 'printTentsBtn', 'printCheckoutBtn', 'resetHistoryBtn',
+   'shuffleBtn', 'undoBtn', 'printBtn', 'printHistoryBtn', 'printFairnessBtn', 'printTentsBtn', 'printCheckoutBtn', 'resetHistoryBtn',
    'historyHint', 'resultsArea', 'warnArea', 'printTitle', 'msg', 'rosterHubSelect', 'rosterHubLoadBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.printTitle = document.getElementById('print-title');
@@ -329,7 +340,9 @@
   //   stations: [{name, equipment}, ...], mode: 'count'|'size', splitValue,
   //   history: { studentName: [roleName,...] (most recent last) },
   //   lastGroups: [{ station: {name, equipment}|null, members: [{name, role}] }, ...],
-  //   checkoutLog: [{ outAt: iso|null, inAt: iso|null }, ...] parallel to lastGroups }
+  //   checkoutLog: [{ outAt: iso|null, inAt: iso|null }, ...] parallel to lastGroups,
+  //   absent: [studentName, ...] — marked absent on the *current* shuffle only;
+  //   reset to [] on every reshuffle (a new shuffle is a new day's attendance) }
   var state = null;
 
   function escapeHtml(s) {
@@ -687,7 +700,7 @@
     var roleNames = (state.roles || []).map(function (r) { return (r.name || '').trim(); }).filter(Boolean);
     if (!roleNames.length) { showMsg('Add at least one role first.'); return; }
 
-    undoSnapshot = { lastGroups: deepClone(state.lastGroups), history: deepClone(state.history), checkoutLog: deepClone(state.checkoutLog) };
+    undoSnapshot = { lastGroups: deepClone(state.lastGroups), history: deepClone(state.history), checkoutLog: deepClone(state.checkoutLog), absent: deepClone(state.absent) };
 
     var groups = makeGroups(names);
     var violations = findApartViolations(groups);
@@ -703,6 +716,7 @@
 
     state.lastGroups = result;
     state.checkoutLog = result.map(function () { return { outAt: null, inAt: null }; });
+    state.absent = []; // a new shuffle is a new day's attendance — old absences don't carry over
     saveCurrent();
     clearMsg();
     var warnings = [];
@@ -728,6 +742,7 @@
     state.lastGroups = undoSnapshot.lastGroups;
     state.history = undoSnapshot.history || {};
     state.checkoutLog = undoSnapshot.checkoutLog || [];
+    state.absent = undoSnapshot.absent || [];
     undoSnapshot = null;
     saveCurrent();
     var violations = state.lastGroups ? findApartViolations(state.lastGroups.map(function (g) { return g.members.map(function (m) { return m.name; }); })) : [];
@@ -767,6 +782,37 @@
       (station.equipment ? ' &mdash; ' + escapeHtml(station.equipment) : '') + '</div>';
   }
 
+  // Derives each member's *effective* role for the current absent list, without
+  // mutating the stored assignment — so toggling a student back to present
+  // instantly un-does the reassignment with no extra bookkeeping. Vacated
+  // roles are handed out round-robin across the present members of the same
+  // group (cursor keeps advancing even when a slot is reused, so multiple
+  // absences spread out rather than piling every vacancy on one student).
+  function computeEffectiveMembers(group) {
+    var absentList = state.absent || [];
+    var members = group.members;
+    var presentIdx = [];
+    members.forEach(function (m, i) { if (absentList.indexOf(m.name) === -1) presentIdx.push(i); });
+    var coverage = {};
+    if (presentIdx.length) {
+      var cursor = 0;
+      members.forEach(function (m, i) {
+        if (absentList.indexOf(m.name) !== -1 && m.role) {
+          var targetIdx = presentIdx[cursor % presentIdx.length];
+          cursor++;
+          (coverage[targetIdx] = coverage[targetIdx] || []).push(m.role);
+        }
+      });
+    }
+    return members.map(function (m, i) {
+      var isAbsent = absentList.indexOf(m.name) !== -1;
+      var extra = coverage[i] || [];
+      var effectiveRole = m.role || null;
+      if (extra.length) effectiveRole = (effectiveRole ? [effectiveRole] : []).concat(extra).join(' + ');
+      return { name: m.name, role: m.role, effectiveRole: isAbsent ? null : effectiveRole, absent: isAbsent };
+    });
+  }
+
   function checkoutRowHtml(groupIdx, station) {
     if (!station) return '';
     var log = (state.checkoutLog && state.checkoutLog[groupIdx]) || { outAt: null, inAt: null };
@@ -783,13 +829,19 @@
       els.resultsArea.innerHTML = '<p class="empty-hint">Add a roster on the left, then click "Shuffle groups &amp; roles."</p>';
       return;
     }
-    els.resultsArea.innerHTML = '<div class="groups-grid">' + result.map(function (group, i) {
+    els.resultsArea.innerHTML =
+      '<p class="hint absent-hint">Check a name if that student is absent today &mdash; their role transfers to a present groupmate automatically.</p>' +
+      '<div class="groups-grid">' + result.map(function (group, i) {
+      var effMembers = computeEffectiveMembers(group);
       return '<div class="group-card"><h3>Group ' + (i + 1) + '</h3>' +
         stationLineHtml(group.station) +
-        '<ul>' + group.members.map(function (s) {
-          var roleText = s.role || MEMBER_LABEL;
-          var cls = s.role ? 'role' : 'role member';
-          return '<li><span class="name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
+        '<ul>' + effMembers.map(function (m) {
+          var roleText = m.absent ? 'Absent' : (m.effectiveRole || MEMBER_LABEL);
+          var cls = m.absent ? 'role absent' : (m.effectiveRole ? 'role' : 'role member');
+          return '<li class="' + (m.absent ? 'absent-row' : '') + '">' +
+            '<label class="absent-check"><input type="checkbox" data-absent-name="' + escapeHtml(m.name) + '"' + (m.absent ? ' checked' : '') + '>' +
+            '<span class="name">' + escapeHtml(m.name) + '</span></label>' +
+            '<span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
         }).join('') + '</ul>' +
         checkoutRowHtml(i, group.station) +
         '</div>';
@@ -805,6 +857,18 @@
     var now = new Date().toISOString();
     if (btn.dataset.checkoutAction === 'checkout') state.checkoutLog[idx].outAt = now;
     else if (btn.dataset.checkoutAction === 'return') state.checkoutLog[idx].inAt = now;
+    saveCurrent();
+    renderResults(state.lastGroups);
+  });
+
+  els.resultsArea.addEventListener('change', function (e) {
+    var cb = e.target.closest('[data-absent-name]');
+    if (!cb) return;
+    if (!state.absent) state.absent = [];
+    var name = cb.dataset.absentName;
+    var idx = state.absent.indexOf(name);
+    if (cb.checked && idx === -1) state.absent.push(name);
+    else if (!cb.checked && idx !== -1) state.absent.splice(idx, 1);
     saveCurrent();
     renderResults(state.lastGroups);
   });
@@ -826,11 +890,16 @@
         (group.station.equipment ? '<span class="equip">' + escapeHtml(group.station.equipment) + '</span>' : '') +
         '</div>';
     }
-    var rows = group.members.map(function (s) {
-      var roleText = s.role || MEMBER_LABEL;
-      var cls = s.role ? 't-role' : 't-role member';
-      var desc = s.role ? roleDescription(s.role) : '';
-      return '<li><span class="t-name-row"><span class="t-name">' + escapeHtml(s.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></span>' +
+    // Absent students are left off the printed tent entirely (per the absent
+    // toggle in the group view); a groupmate covering their vacated role
+    // shows the combined role text but only gets a printed description when
+    // it's still their own single role — a merged "A + B" role has no single
+    // matching description to print.
+    var rows = computeEffectiveMembers(group).filter(function (m) { return !m.absent; }).map(function (m) {
+      var roleText = m.effectiveRole || MEMBER_LABEL;
+      var cls = m.effectiveRole ? 't-role' : 't-role member';
+      var desc = (m.effectiveRole && m.effectiveRole === m.role) ? roleDescription(m.role) : '';
+      return '<li><span class="t-name-row"><span class="t-name">' + escapeHtml(m.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></span>' +
         (desc ? '<span class="t-role-desc">' + escapeHtml(desc) + '</span>' : '') + '</li>';
     }).join('');
     return '<div class="tent-group">Group ' + groupNum + '</div>' + stationHtml + '<ul class="tent-list">' + rows + '</ul>';
@@ -913,6 +982,59 @@
     els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Role History Report — ' + new Date().toLocaleDateString();
     els.warnArea.innerHTML = '';
     els.resultsArea.innerHTML = historyTableHtml();
+    window.print(); // blocks until the dialog closes, so this restores the live view right after
+    els.resultsArea.innerHTML = savedResultsHtml;
+    els.warnArea.innerHTML = savedWarnHtml;
+  });
+
+  // ── Fairness grid (per-student x per-role counts) ────────────────────────
+  // The role-history report above only lists students/roles that already
+  // have at least one history entry, which under-sells a fairness claim —
+  // a student who was just added to the roster, or a role nobody's held
+  // yet, silently disappears instead of showing as a real zero. This report
+  // is deliberately comprehensive: every current roster name (even with no
+  // history) x every currently-defined role (even with a zero count), plus
+  // any legacy role names still sitting in old history so past data isn't
+  // dropped. Same recency-memory source (`state.history`) as roleRecencyScore
+  // and recordHistory — this is a read-only view of that data, nothing new
+  // is tracked.
+  function fairnessGridHtml() {
+    var rosterNames = studentNames();
+    var historyNames = Object.keys(state.history || {});
+    var allNames = rosterNames.slice();
+    historyNames.forEach(function (n) { if (allNames.indexOf(n) === -1) allNames.push(n); });
+    allNames.sort(function (a, b) { return a.localeCompare(b); });
+    if (!allNames.length) return '<p class="empty-hint">Add students to the roster to see the fairness grid.</p>';
+
+    var currentRoleNames = (state.roles || []).map(function (r) { return (r.name || '').trim(); }).filter(Boolean);
+    var legacyRoles = {};
+    historyNames.forEach(function (n) {
+      (state.history[n] || []).forEach(function (r) { if (currentRoleNames.indexOf(r) === -1) legacyRoles[r] = true; });
+    });
+    var roleCols = currentRoleNames.concat(Object.keys(legacyRoles).sort());
+    if (!roleCols.length) return '<p class="empty-hint">Add at least one role to see the fairness grid.</p>';
+
+    var headerCells = roleCols.map(function (r) { return '<th>' + escapeHtml(r) + '</th>'; }).join('');
+    var rows = allNames.map(function (n) {
+      var hist = (state.history && state.history[n]) || [];
+      var counts = {};
+      hist.forEach(function (r) { counts[r] = (counts[r] || 0) + 1; });
+      var cells = roleCols.map(function (r) { return '<td>' + (counts[r] || 0) + '</td>'; }).join('');
+      return '<tr><td>' + escapeHtml(n) + '</td>' + cells + '<td>' + hist.length + '</td></tr>';
+    }).join('');
+    return '<table class="history-table"><thead><tr><th>Student</th>' + headerCells + '<th>Total</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>';
+  }
+
+  els.printFairnessBtn.addEventListener('click', function () {
+    var rosterNames = studentNames();
+    var hasHistory = state.history && Object.keys(state.history).length;
+    if (!rosterNames.length && !hasHistory) { showMsg('Add students to the roster first.'); return; }
+    var savedResultsHtml = els.resultsArea.innerHTML;
+    var savedWarnHtml = els.warnArea.innerHTML;
+    els.printTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Role Fairness Grid — ' + new Date().toLocaleDateString();
+    els.warnArea.innerHTML = '';
+    els.resultsArea.innerHTML = fairnessGridHtml();
     window.print(); // blocks until the dialog closes, so this restores the live view right after
     els.resultsArea.innerHTML = savedResultsHtml;
     els.warnArea.innerHTML = savedWarnHtml;
@@ -1063,7 +1185,8 @@
       history: (loaded.history && typeof loaded.history === 'object') ? loaded.history : {},
       lastGroups: lastGroups,
       checkoutLog: checkoutLog,
-      keepApart: Array.isArray(loaded.keepApart) ? loaded.keepApart : []
+      keepApart: Array.isArray(loaded.keepApart) ? loaded.keepApart : [],
+      absent: Array.isArray(loaded.absent) ? loaded.absent : []
     };
   }
 

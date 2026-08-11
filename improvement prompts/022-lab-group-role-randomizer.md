@@ -35,13 +35,16 @@ below.
   a short description that prints. *(Roles grew an optional description
   field, printed under the role name on table tents only.)*
 - **Skipped — deferred, Round 4.** **Lock a group or a role and reshuffle the rest.**
-- **Skipped — deferred, Round 4.** **Absent handling** — reassign a missing student's role in one tap rather
-  than regenerating the lab.
-- **Skipped — deferred, Round 4.** **Show the fairness data.** The recency memory is the selling point and is
+- **Done — Pass 2, Round 2.** **Absent handling** — reassign a missing student's role in one tap rather
+  than regenerating the lab. *(Checkbox next to each student's name in the
+  group view; checking it removes them from tents/print and hands their
+  vacated role to a present groupmate, round-robin, without a reshuffle.)*
+- **Done — Pass 2, Round 2.** **Show the fairness data.** The recency memory is the selling point and is
   currently invisible; a small "roles you've had" grid per student, printable,
-  makes it credible to students who claim unfairness. *(The role-history
-  report already exists and is close; a per-student printable grid is a
-  distinct, smaller quick win still open.)*
+  makes it credible to students who claim unfairness. *(New "Print fairness
+  grid" button — comprehensive per-student x per-role count table, distinct
+  from the pre-existing "Print role history" report; see update below for why
+  a separate output was worth adding.)*
 - **Group size that matches the equipment.** "I have 7 microscopes" is the
   real constraint, not "make groups of 4".
 - **Done — Round 4.** **Undo the last shuffle** (P11). *(Single-level undo restores groups,
@@ -198,3 +201,98 @@ tent print output containing the station/equipment and role description;
 checkout sheet print output containing the equipment text; and a
 hand-seeded legacy-shape roster (string roles, array-of-arrays
 `lastGroups`) loading, rendering, and reshuffling without errors.
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Implemented both remaining Quick Wins flagged as still-open in this file:
+absent handling and the printable per-student fairness grid. No other tool
+files were touched.
+
+**What shipped:**
+
+- **Absent handling.** Every student row in the group view now has a
+  checkbox next to their name (`data-absent-name`). Checking it marks that
+  student absent for the *current* shuffle only — it does not remove them
+  from the roster or rewrite anything already recorded in role history.
+  The redistribution itself is a pure, render-time computation
+  (`computeEffectiveMembers`), not a data mutation: it reads
+  `group.members` and `state.absent` fresh every render and derives each
+  present member's *effective* role, so checking the box back off instantly
+  and exactly restores the original assignment with no extra bookkeeping or
+  stored "who covered for whom" history. Vacated roles are handed out
+  round-robin across the group's present members (a cursor keeps advancing
+  even when a slot is reused, so multiple absences in one group spread
+  across present members rather than stacking on whoever happens to be
+  first); a member who picks up a second role shows both, joined as
+  "Role A + Role B". Absent students are excluded entirely from the printed
+  group sheet (a `.absent-row { display:none }` print rule) and from table
+  tents (filtered out in `tentPanelHtml` before building the tent list) —
+  the checkbox and the live on-screen row stay visible so the mark can be
+  toggled back. A combined "A + B" role prints without a role description
+  on tents (only a member's own single, uncombined role looks up a
+  description) to avoid printing a description that only covers half of
+  what they're now doing.
+- **Printable fairness grid.** A new "Print fairness grid" button, separate
+  from the pre-existing "Print role history" button. The existing report
+  (`historyTableHtml`) only lists students and roles that already have at
+  least one history entry — a student just added to the roster, or a role
+  nobody's been assigned yet, silently disappears instead of showing as a
+  real, checkable zero, which undercuts exactly the use case ("show a
+  student who claims unfairness the data") this quick win is for. The new
+  `fairnessGridHtml` is deliberately comprehensive: every current roster
+  name (from the names textarea, even with zero history) x every
+  currently-defined role (from the role editor, even with a zero count) —
+  plus any legacy role names still present in old history entries so
+  renamed/removed roles don't silently drop data. It's a read-only view
+  over the same `state.history` that `roleRecencyScore` and
+  `recordHistory` already maintain; no new data is tracked, and marking a
+  student absent has no effect on this report (history is written at
+  shuffle time, before any absence is marked, which is correct — the
+  assignment happened, the fairness ledger should reflect that regardless
+  of a same-day absence). The pre-existing "Print role history" report was
+  left untouched for anyone already relying on its exact format.
+
+**Data model / compatibility notes:**
+
+- `state.absent`: a new array of student names, absent on the *current*
+  shuffle. Reset to `[]` inside `shuffleAll()` on every reshuffle (a new
+  shuffle is a new day's attendance) and included in the undo
+  snapshot/restore alongside `lastGroups`/`history`/`checkoutLog` so Undo
+  reverts absence marks together with the grouping they belonged to.
+  `normalizeRosterData` defaults missing/non-array `absent` to `[]`, so
+  rosters saved or exported before this round — which have no `absent`
+  key at all — load exactly as before. Exported JSON now includes
+  `absent`; import of a pre-this-round file works via the same
+  normalization path.
+- No schema change was needed for the fairness grid — it's computed from
+  `state.history` and `state.roles`, both already present.
+
+**Testing performed:** `node --check` on the extracted inline script.
+Playwright + headless Chromium (`/opt/pw-browsers/chromium`, launched with
+an explicit `executablePath`, no `playwright install`) driving the page via
+`file://`: shuffled an 8-name roster into 2 groups; marked a
+role-holding student absent and confirmed on-screen that (a) their row is
+struck through and shows "Absent", (b) another present groupmate's role
+text updated to include the vacated role, both derived live from the DOM,
+not hard-coded; unmarked them and confirmed the original single-role
+assignment came back exactly; re-marked them absent and confirmed the
+generated table-tent HTML (captured via a `window.print` stub, since
+headless Chromium's `print()` returns immediately rather than blocking
+like a real browser) no longer contains their name; clicked "Print
+fairness grid" after several shuffles and cross-checked a printed student's
+row total against the same student's role counts computed independently
+from `localStorage`'s `lgrr_rosters` — the printed number matched the real
+history data exactly, not a placeholder. Zero console/page errors across
+the whole run. No test scripts were left in the repository.
+
+**Where to pick up next:** the still-open items are unchanged from Round 4's
+list — lock-a-group-or-role-and-reshuffle-the-rest, safety-contract
+integration, group-size-matches-equipment-count, and the cross-tool shared
+grouping/role-rotation engine (P7). One new, smaller idea surfaced by this
+round: the "A + B" combined-role text for a student covering an absent
+groupmate's job is plain string concatenation with no printed description
+and no distinct visual treatment beyond the text itself — if a future round
+wants covering roles to be more visually distinct (e.g., a small "(covering
+for Name)" note) that's a display-only follow-up, not a data model change,
+since `computeEffectiveMembers` already has everything needed to know who
+originally held the role.
