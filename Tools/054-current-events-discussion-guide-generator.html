@@ -97,6 +97,7 @@
       <p class="sub">Paste an article, pull out vocabulary and a summary starter, pick discussion questions, print a guide.</p>
     </div>
     <div class="btnrow">
+      <button class="secondary" id="clearBtn">Clear &amp; start over</button>
       <button class="secondary" id="printBtn">Print discussion guide</button>
     </div>
   </div>
@@ -158,12 +159,27 @@
   ];
 
   var STOPWORDS = ['about', 'after', 'again', 'because', 'before', 'between', 'could', 'during', 'their', 'there',
-    'these', 'those', 'through', 'which', 'while', 'would', 'should', 'other', 'people', 'something', 'according'];
+    'these', 'those', 'through', 'which', 'while', 'would', 'should', 'other', 'people', 'something', 'according',
+    'yesterday', 'tomorrow', 'different', 'another', 'someone', 'everyone', 'anything', 'nothing', 'everything',
+    'however', 'therefore', 'although', 'without', 'against', 'together', 'already', 'actually', 'probably',
+    'especially', 'important', 'information', 'government', 'president', 'national', 'international', 'continue',
+    'continued', 'continues', 'continuing', 'several', 'various', 'including', 'included', 'includes', 'situation',
+    'community', 'students', 'teachers', 'family', 'families', 'children', 'country', 'countries', 'decided',
+    'announced', 'reported', 'officials', 'recently', 'currently', 'previously', 'eventually', 'immediately',
+    'particularly', 'significant', 'significantly', 'following', 'followed', 'message', 'messages', 'question',
+    'questions', 'answer', 'answered', 'problem', 'problems', 'reason', 'reasons', 'result', 'results', 'change',
+    'changes', 'changed', 'changing', 'program', 'programs', 'service', 'services', 'system', 'systems', 'process',
+    'processes', 'project', 'projects', 'support', 'supported', 'provide', 'provided', 'provides', 'require',
+    'required', 'requires', 'create', 'created', 'creates', 'creating', 'develop', 'developed', 'develops',
+    'developing', 'become', 'became', 'becomes', 'becoming', 'remain', 'remained', 'remains', 'remaining',
+    'appear', 'appeared', 'appears', 'appearing', 'happen', 'happened', 'happens', 'happening', 'believe',
+    'believed', 'believes', 'believing', 'suggest', 'suggested', 'suggests', 'suggesting', 'within', 'across',
+    'toward', 'towards', 'nearly', 'almost', 'usually', 'generally', 'typically', 'mostly', 'largely'];
 
   var els = {};
   ['articleTitle', 'articleSource', 'articleText', 'analyzeBtn', 'wordCountHint', 'summaryText',
    'suggestedWords', 'suggestHint', 'vocabWrap', 'addVocabBtn', 'presetQuestions', 'customQuestionsWrap',
-   'addQuestionBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'addQuestionBtn', 'printBtn', 'printArea', 'clearBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [] };
 
@@ -188,11 +204,16 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
   }
 
-  function analyzeArticle() {
+  function updateWordCount() {
     var text = els.articleText.value;
     var words = text.split(/\s+/).filter(Boolean);
-    els.wordCountHint.textContent = words.length + ' words &middot; about ' + Math.max(1, Math.round(words.length / 200)) + ' min read';
-    els.wordCountHint.innerHTML = words.length + ' words &middot; about ' + Math.max(1, Math.round(words.length / 200)) + ' min read';
+    els.wordCountHint.innerHTML = words.length ? (words.length + ' words &middot; about ' + Math.max(1, Math.round(words.length / 200)) + ' min read') : '';
+    return words;
+  }
+
+  function analyzeArticle() {
+    var text = els.articleText.value;
+    var words = updateWordCount();
 
     if (!state.summary) {
       var sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 2);
@@ -306,9 +327,19 @@
 
   els.articleTitle.addEventListener('input', function () { state.title = els.articleTitle.value; save(); });
   els.articleSource.addEventListener('input', function () { state.source = els.articleSource.value; save(); });
-  els.articleText.addEventListener('input', function () { state.articleText = els.articleText.value; save(); });
+  els.articleText.addEventListener('input', function () { state.articleText = els.articleText.value; save(); updateWordCount(); });
   els.summaryText.addEventListener('input', function () { state.summary = els.summaryText.value; save(); });
   els.analyzeBtn.addEventListener('click', analyzeArticle);
+
+  els.clearBtn.addEventListener('click', function () {
+    if (!confirm('Clear this guide and start over? This cannot be undone.')) return;
+    state = { title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [] };
+    save();
+    els.articleTitle.value = ''; els.articleSource.value = ''; els.articleText.value = ''; els.summaryText.value = '';
+    updateWordCount();
+    renderSuggestions([]);
+    renderVocab(); renderPresetQuestions(); renderCustomQuestions();
+  });
 
   function guideHtml() {
     var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Current Events Discussion Guide';
@@ -339,6 +370,7 @@
   els.articleSource.value = state.source;
   els.articleText.value = state.articleText;
   els.summaryText.value = state.summary;
+  updateWordCount();
   renderSuggestions([]);
   renderVocab();
   renderPresetQuestions();
