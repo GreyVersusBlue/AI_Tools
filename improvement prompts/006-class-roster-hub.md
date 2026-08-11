@@ -1,13 +1,43 @@
 # Improvement Prompts — 006 — Class Roster Hub
 
 **Tool file:** `Tools/006-class-roster-hub.html`
-**Support folder:** `Tools/class-roster-hub/` — `lib/qrcode.js`
+**Support folder:** `Tools/class-roster-hub/` — `lib/qrcode.js`, `test/smoke-export.mjs`
 
 **Current description (from README):** Build and save a class roster once, in the same shared storage Name Picker uses — several other tools can load it straight in instead of re-typing a class list.
 
 ---
 
 ## Status
+
+### Pass 2 — Round 2 — 2026-08-11 — session `m3r8ro`
+
+**Shipped roster export to spreadsheet** (backlog rank 6). This tool holds the
+canonical class list for the whole site and the only way out of the browser was
+a printed page — but what a gradebook import or a sub folder wants is columns.
+
+- **Export CSV / Export Excel**, with a scope select: *This roster* or *Every
+  roster*. Columns are `# / Name / Preferred name / Pronunciation / Period or
+  block / Course / School year`.
+- **The export is where the two-key design finally pays off.** `np_rosters`
+  holds the names; `crh_students_v1` hangs preferred name, pronunciation and
+  the roster's period/course/year off them. `exportRowsFor()` joins them, and
+  a roster the sidecar has never seen — one written by Name Picker years ago —
+  still exports cleanly, just with empty detail columns. That fallback is
+  asserted in the suite, because it is the case a naive join would drop.
+- **The open roster exports from what's on screen**, not from what was last
+  saved, and pending edits in the "Paste / bulk edit" tab are adopted first via
+  `adoptPendingEdits()` — the same thing Print already does. An export that
+  quietly dropped the four names just pasted in would be worse than useless.
+- CSV: UTF-8 BOM (Excel on Windows mangles accented names without it), proper
+  quoting, and a leading `Roster` column when exporting more than one. XLSX
+  lazy-loads the shared vendored SheetJS and writes **one sheet per roster**,
+  with `sheetName()` handling Excel's 31-character cap and its rejection of
+  `: \ / ? * [ ]` — "Period 5/6 Honors" becomes "Period 5 6 Honors", and a
+  collision after truncation gets a suffix rather than throwing.
+- No storage change: this reads what is already there.
+- Verified by `Tools/class-roster-hub/test/smoke-export.mjs` (19 checks,
+  `npm run test:roster-hub`) — real buttons, real downloads, the .xlsx read
+  back through the tool's own SheetJS.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
 
@@ -177,6 +207,9 @@ What shipped, against the backlog below:
 - Roster switcher, live name count
 - **Share a roster by QR code** and by `state-link.js` URL
 - Print a class list
+- **Export to CSV or Excel** — one roster or every roster, with preferred
+  name, pronunciation, period, course and school year as columns (one sheet
+  per roster in the .xlsx)
 
 ## Quick Wins
 
