@@ -153,6 +153,50 @@
     background: var(--color-divider); border-radius: 4px; overflow: hidden;
   }
   .agenda-bar-fill { height: 100%; width: 0%; background: var(--color-accent); transition: width 0.2s linear; }
+  /* ---- Ambient strip -------------------------------------------------------
+     A browser tab cannot float above another program's window, so the honest
+     version of "a thin bar over the slide deck" is: open this page in its own
+     small window, resize it thin, and park it at the top of the screen. Strip
+     mode collapses the entire tool to one line so that window has nothing in
+     it but the bar and the time. Everything is sized in vh so it fills
+     whatever height the teacher drags the window to.
+
+     The body class is `strip-mode`, not `ambient-strip`: the element's own
+     class is `.ambient-strip`, and a body carrying the same name would match
+     `.ambient-strip { display: none }` and hide the entire page. */
+  body.strip-mode { padding: 0; margin: 0; overflow: hidden; background: var(--color-bg); }
+  /* Everything except the strip goes, by exclusion rather than by listing —
+     a rule that names each section would quietly stop hiding a section added
+     later, and a stray card in a 90px window is the whole failure mode. The
+     zero-flash overlay is deliberately left alone: it is position:fixed, adds
+     no height, and a silent flash at zero is worth having on the strip too. */
+  body.strip-mode .container > *:not(#ambientStrip) { display: none !important; }
+  body.strip-mode .mirror-overlay,
+  body.strip-mode .a11y-widget,
+  body.strip-mode footer { display: none !important; }
+  body.strip-mode .ambient-strip { display: block; }
+  .ambient-strip { display: none; padding: 0.5vh 1.2vw 0; }
+  .ambient-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .ambient-label {
+    font-size: clamp(0.8rem, 5vh, 2rem); font-weight: 700; color: var(--color-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ambient-time {
+    font-variant-numeric: tabular-nums; font-weight: 800;
+    font-size: clamp(1.2rem, 11vh, 5rem); line-height: 1; color: var(--color-text);
+  }
+  .ambient-strip.warn .ambient-time { color: var(--color-warn); }
+  .ambient-strip.danger .ambient-time { color: var(--color-danger); }
+  .ambient-track {
+    width: 100%; height: clamp(6px, 3vh, 22px); margin-top: 0.6vh;
+    background: var(--color-divider); border-radius: 999px; overflow: hidden;
+  }
+  .ambient-fill { height: 100%; width: 0%; background: var(--color-accent); transition: width 0.2s linear; }
+  .ambient-strip.warn .ambient-fill { background: var(--color-warn); }
+  .ambient-strip.danger .ambient-fill { background: var(--color-danger); }
+  .ambient-idle { margin: 0.6vh 0 0; font-size: clamp(0.7rem, 3.2vh, 1rem); color: var(--color-dim); }
+  .ambient-strip.live .ambient-idle { display: none; }
+
   .agenda-seg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
   .agenda-seg-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
   .agenda-seg-name { flex: 1 1 140px; min-width: 0; }
@@ -302,6 +346,7 @@
     <div class="header-actions">
       <span class="mirror-live-badge" id="mirrorLiveBadge"><span class="dot" aria-hidden="true"></span>Mirroring</span>
       <button type="button" id="fullscreenBtn" title="Toggle fullscreen (F)">⛶ Fullscreen</button>
+      <button type="button" id="stripBtn" title="Open a thin period strip in its own window, to sit above a slide deck">▬ Ambient strip</button>
       <button type="button" id="mirrorBtn">Mirror to a device</button>
       <button type="button" id="helpBtn" title="Keyboard shortcuts (?)" aria-haspopup="dialog">⌨ Shortcuts</button>
     </div>
@@ -344,6 +389,18 @@
     <button class="mode-tab" role="tab" data-mode="roundrobin">Round-Robin</button>
     <button class="mode-tab" role="tab" data-mode="agenda">Agenda</button>
   </nav>
+
+  <!-- Ambient strip: the whole window collapsed to one line, for a browser
+       window resized thin and parked above a projected slide deck. Driven by
+       the same phase/paint code as the full view — see ct-app.js's strip mode. -->
+  <div class="ambient-strip" id="ambientStrip" hidden>
+    <div class="ambient-row">
+      <span class="ambient-label" id="ambientLabel"></span>
+      <span class="ambient-time" id="ambientTime">--:--</span>
+    </div>
+    <div class="ambient-track"><div class="ambient-fill" id="ambientFill"></div></div>
+    <p class="ambient-idle" id="ambientIdle">Nothing running &mdash; start the timer in the main window and this strip follows it.</p>
+  </div>
 
   <main class="timer-stage">
     <div class="agenda-bar" id="agendaBar" hidden><div class="agenda-bar-fill" id="agendaBarFill"></div></div>
@@ -690,6 +747,25 @@ function renderConnected() {
     else document.exitFullscreen();
   });
   document.addEventListener('fullscreenchange', updateLabel);
+
+  /* Ambient strip: open this same page in its own small window with ?strip=1.
+     A browser tab cannot be drawn on top of a slide deck, so the working
+     answer is a second window the teacher resizes thin and parks at the top of
+     the screen — it follows the main window through the ct_running_v1 key the
+     timer already writes. If the popup is blocked, fall through to opening it
+     as a normal tab rather than failing silently. */
+  var stripBtn = document.getElementById('stripBtn');
+  if (stripBtn) {
+    stripBtn.addEventListener('click', function () {
+      var url = new URL(location.href);
+      url.searchParams.set('strip', '1');
+      url.hash = '';
+      var win = window.open(url.toString(), 'ct-ambient-strip',
+        'width=1100,height=170,menubar=no,toolbar=no,location=no,status=no');
+      if (!win) { window.open(url.toString(), '_blank'); return; }
+      try { win.focus(); } catch (e) { /* focus refused — the window is still open */ }
+    });
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key.toLowerCase() !== 'f' || e.ctrlKey || e.metaKey || e.altKey) return;
     var tag = (e.target && e.target.tagName) || '';

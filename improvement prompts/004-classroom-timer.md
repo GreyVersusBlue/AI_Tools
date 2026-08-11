@@ -1,13 +1,53 @@
 # Improvement Prompts — 004 — Classroom Timer
 
 **Tool file:** `Tools/004-Classroom Timer.html`
-**Support folder:** `Tools/classroom-timer/` — `ct-app.js`, `lib/jsqr.js`, `lib/qrcode.js`
+**Support folder:** `Tools/classroom-timer/` — `ct-app.js`, `ct-store.js`,
+`ct-sounds.js`, `ct-mirror.js`, `test/smoke-strip.mjs` (`npm run test:timer`)
 
 **Current description (from README):** Big-digit projector timer: countdown, transition presets, random-interval surprise cues, stopwatch, and round-robin stations.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **ambient period
+strip** (backlog rank 12) — the bonus Round 1 explicitly did not get to.
+
+- **The framing had to be settled first.** A browser tab cannot be drawn on top
+  of PowerPoint, so "a thin bar over the slide deck" cannot literally be an
+  overlay from a static site. The honest version is a second window of this
+  page in strip mode, opened small, resized thin, and parked at the top of the
+  screen. The "▬ Ambient strip" button opens it at 1100×170 and falls back to a
+  normal tab if the popup is blocked.
+- **`?strip=1` collapses the whole tool to one line**: a label, the time, and a
+  full-width bar, all sized in `vh` so they fill whatever height the window is
+  dragged to — verified legible and non-scrolling at 90px tall.
+- **The strip follows the main window through `ct_running_v1`**, the key the
+  timer already wrote so a reload could pick a countdown back up. No new
+  channel and no new schema: the strip listens for the `storage` event on that
+  key and re-runs the same restore path, with a 5-second re-check for the case
+  where the strip was opened before anything was running. It renders through
+  the same `paint()` the full view uses, so the numbers cannot disagree.
+- The strip is read-only by design. The full view owns the timer; two windows
+  writing the same key would fight.
+- Urgency colour (amber/red) and the paused state both carry across, and the
+  agenda segment name becomes the strip's label — which is the whole point
+  during a period, since "8:41 left" is less useful than "Practice — 8:41".
+- **Two bugs found while building it.** (a) The body class was originally
+  `ambient-strip`, the same name as the element's own class, so
+  `.ambient-strip { display: none }` matched the body and hid the entire page.
+  It is `strip-mode` now, with a comment saying why. (b) Hiding the other
+  sections by listing them left two `section.card` blocks and the a11y widget
+  still laid out in a 90px window; the rule is now exclusion-based
+  (`.container > *:not(#ambientStrip)`), so a section added later cannot
+  reappear in the strip.
+- **Verified** by `Tools/classroom-timer/test/smoke-strip.mjs` (24 checks): a
+  countdown is started in one page and the strip in a second page of the same
+  browser profile has to show it, tick on its own, freeze on pause, blank on
+  reset, and fit a 90px window.
+- **Not done:** the strip cannot be driven from the phone (that is the separate
+  `webrtc-pair.js` remote row), and it has no bell-schedule awareness — it
+  shows the *timer's* period, not the school's.
 
 **2026-08-10 —** Implemented all Quick Wins plus the two Major Features
 called out for this round (Agenda mode, count-down-to-a-time), and confirmed
@@ -140,6 +180,10 @@ deck, so it doesn't resolve that idea.
   Test button, and an instant preview when changing the sound or volume
 - A silent/visual "flash at zero" alert (full-screen border pulse),
   opt-in, respecting `prefers-reduced-motion`
+- An **ambient period strip** (`?strip=1`, opened by the header button in its
+  own small window): the whole tool collapsed to a label, the time and a
+  full-width bar, following the main window through `ct_running_v1` — for
+  parking above a projected slide deck instead of taking the screen
 - Screen Wake Lock while a timer runs, so a projector laptop doesn't dim or
   sleep before the timer ends
 - Remaining/elapsed time mirrored into the browser tab title
@@ -212,9 +256,9 @@ deck, so it doesn't resolve that idea.
   redone if the connection drops. Persist the pairing and auto-reoffer, and
   let the paired device act as a *remote* (start/pause/next-segment from a
   phone while walking the room), not just a passive mirror. See P9.
-- **Ambient period bar.** A thin always-visible strip showing how much of the
-  period is left, designed to sit at the top of a projected slide deck rather
-  than take the whole screen.
+- **Done (Round 2) — Ambient period bar.** Shipped as `?strip=1` plus the
+  header button; see Status. What is still open is driving it from a phone,
+  and knowing the school's bell schedule rather than the timer's own.
 
 ## Moonshot / North Star
 

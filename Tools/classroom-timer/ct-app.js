@@ -50,8 +50,47 @@ function setRingVisible(visible) {
 function paint(displayMs, fraction) {
   els.timeDisplay.textContent = formatTime(displayMs);
   if (fraction != null) setRing(fraction);
+  paintStrip(displayMs, fraction);
   updateTabTitle();
 }
+
+/* ---- Ambient period strip -------------------------------------------------
+   A browser tab cannot float above PowerPoint, so the honest version of "a
+   thin bar over the slide deck" is a second window of this page, opened
+   small, resized thin, and parked at the top of the screen. `?strip=1` puts
+   that window into strip mode: the same phase, the same tick loop, the same
+   numbers — everything else hidden by CSS.
+
+   The strip window follows the main one through `ct_running_v1`, the key the
+   tool already writes on every start/pause/resume so a reload can pick a
+   countdown back up. No new channel, no new schema: the strip listens for the
+   `storage` event on that key and re-runs the same restore path.
+--------------------------------------------------------------------------- */
+const STRIP_MODE = new URLSearchParams(location.search).get('strip') === '1';
+
+function paintStrip(displayMs, fraction) {
+  if (!STRIP_MODE || !els.ambientStrip) return;
+  const live = phase.status === 'running' || phase.status === 'paused';
+  els.ambientStrip.classList.toggle('live', live);
+  els.ambientTime.textContent = live ? formatTime(displayMs) : '--:--';
+  // The label is whatever the full view is calling this stretch of time: the
+  // agenda segment if there is one, otherwise the mode's own sub-display.
+  const seg = els.agendaCurrent && !els.agendaCurrent.hidden ? els.agendaCurrent.textContent : '';
+  els.ambientLabel.textContent = live
+    ? (seg || els.subDisplay.textContent || MODE_LABELS[mode] || '')
+    : '';
+  const pct = (fraction == null) ? 0 : Math.min(1, Math.max(0, fraction)) * 100;
+  els.ambientFill.style.width = pct + '%';
+  const urgency = els.ringWrap ? els.ringWrap.dataset.urgency : '';
+  els.ambientStrip.classList.toggle('warn', live && urgency === 'warn');
+  els.ambientStrip.classList.toggle('danger', live && urgency === 'critical');
+  if (phase.status === 'paused') els.ambientLabel.textContent = 'Paused — ' + els.ambientLabel.textContent;
+}
+
+const MODE_LABELS = {
+  countdown: 'Countdown', transition: 'Transition', random: 'Random interval',
+  stopwatch: 'Stopwatch', roundrobin: 'Round-robin', agenda: 'Agenda',
+};
 
 /** Mirrors the remaining/elapsed time into the browser tab title so it's
     readable from a taskbar or an alt-tab list when the tool is behind slides.
@@ -856,6 +895,10 @@ function initControls() {
 }
 
 function cacheEls() {
+  els.ambientStrip = q('ambientStrip');
+  els.ambientLabel = q('ambientLabel');
+  els.ambientTime = q('ambientTime');
+  els.ambientFill = q('ambientFill');
   els.tabs = Array.from(document.querySelectorAll('.mode-tab'));
   els.panels = Array.from(document.querySelectorAll('.settings-panel'));
   els.panelDisableTarget = q('modeSettings');
@@ -971,9 +1014,41 @@ function tryRestoreRunning() {
   return true;
 }
 
+/** Re-adopts whatever the main window is doing. Strip mode only: the full
+    view owns the timer, and a second window trying to drive it would fight
+    over the same key. */
+function followRunningState() {
+  stopTicking();
+  const running = loadRunning();
+  if (!running) {
+    phase = { status: 'idle' };
+    paintStrip(0, null);
+    return;
+  }
+  mode = running.mode;
+  phase = running.phase;
+  phase.laps = phase.laps || [];
+  renderRestoredDisplay();
+  if (phase.status === 'running') startTicking();
+}
+
+function initStripMode() {
+  document.body.classList.add('strip-mode');
+  document.getElementById('ambientStrip').hidden = false;
+  followRunningState();
+  window.addEventListener('storage', (e) => {
+    if (e.key === null || e.key === 'ct_running_v1') followRunningState();
+  });
+  // A window opened before the timer was started, or left open past the end,
+  // otherwise sits on a stale reading until the next storage event. Cheap
+  // enough to re-check on a slow interval.
+  setInterval(followRunningState, 5000);
+}
+
 function init() {
   cacheEls();
   els.ringFg.style.strokeDasharray = String(RING_C);
+  if (STRIP_MODE) { initStripMode(); return; }
   const restored = tryRestoreRunning();
   initTabs();
   initCountdownPanel();
