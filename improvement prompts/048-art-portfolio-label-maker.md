@@ -39,7 +39,19 @@ entry with no statement correctly shows "no QR" instead of an empty
 code, and confirmed deleting the last remaining entry falls back to one
 blank row rather than an empty list — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped two
+Quick Wins: **reorder entries** via up/down buttons in each entry's footer
+(matching the pattern used elsewhere in this toolkit), and **named/multiple
+saved portfolios** — a portfolio selector with New/Duplicate/Rename/Delete,
+each portfolio holding its own title, entries, labels-per-page, and QR
+error-correction setting. The old single-portfolio save under
+`apl_portfolio_v1` migrates automatically into the first entry of the new
+`apl_portfolios_v1` store. Verified with a headless Chromium pass: reorder
+two entries, create/duplicate/delete a portfolio, switch back and confirm
+the original entries (including the reordered ones) persisted correctly,
+print — no console errors.
+
+Nothing else below has been started.
 
 ## What it does today
 
@@ -50,12 +62,8 @@ Nothing below has been started.
 
 ## Quick Wins
 
-- **Named/multiple saved portfolios**, matching the multi-save convention
-  used by most builder tools in this round — one flat list per browser
-  right now, so a teacher with several class sections can't keep separate
-  portfolio batches.
-- **Reorder entries** via up/down buttons, matching the pattern used in
-  Gallery Walk QR Codes and elsewhere in this toolkit.
+- ~~Named/multiple saved portfolios~~ — **shipped 2026-08-11.**
+- ~~Reorder entries~~ — **shipped 2026-08-11.**
 - **CSV import including a photo column** isn't feasible without file
   paths, but a **bulk "add these students" from a saved roster** (like
   Gallery Walk QR Codes' roster-hub dropdown) would let a teacher
@@ -105,6 +113,12 @@ time.
   found this round; worth a dedicated sweep across every tool for the
   pattern "an HTML entity written as literal text inside a JS string
   literal" before it causes a real user-visible garbled character.
+
+**Where the next round should pick up:** the roster-integration Quick Win
+(bulk "add these students" from a saved roster) is the next-cheapest step
+now that named portfolios exist to hold per-section batches in; photo
+cropping/rotation under Major Features is this tool's biggest remaining
+quality gap.
 
 ## Open Questions
 

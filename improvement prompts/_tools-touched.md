@@ -185,12 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Art Critique Worksheet Generator | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
-| Student Art Portfolio Label & QR Tag Maker | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
-| Book Tasting Menu Generator | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
-| Government/Civics Simulation Role Card Generator | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
-| Classroom Label Maker, Target Language | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
-| Cognates & False Friends Reference List Builder | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
+| *(none)* | | | |
 
 ---
 
@@ -524,6 +519,39 @@ download).
 `yjj7k6`'s + these 5). **26 to go.** None of the five cleared their
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
+
+### Directed round — 2026-08-11 01:29–02:40 UTC — session `szyio3` — tools 047–052
+
+Not picked from the Pass 2 "Not yet touched" list below — these six are
+part of the **35 new Ideas-Backlog tools** the Pass 2 reset note explicitly
+held out ("Devon wants to fold them into the round system as a deliberate
+batch rather than mixed in silently with this reset"). This round was
+Devon's direct instruction to work tools 047–052 specifically, so it's
+recorded here as its own dated round rather than folded into the Pass 2
+numbering above. One or two scoped Quick Wins per tool, each independently
+verified with `node --check` on every inline `<script>` plus a headless
+Chromium pass (Playwright, resolved from the global install per the
+pattern documented in `Tools/image-to-pdf/test/smoke.mjs`) exercising the
+actual shipped behavior end to end — no tool outside this list was touched.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | Multiple named saved worksheets (New/Duplicate/Rename/Delete, migrates the old single-worksheet save); print-layout fix so a busy worksheet grows instead of silently truncating at a hard `47vh` cap. |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Reorder entries via up/down buttons; named/multiple saved portfolios (migrates the old single-portfolio save). |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | Printed menu grouped by genre as "courses"; cover images now render in both menu and table-tent print modes, not just the on-screen list. |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Reorder roles and talking points via up/down buttons; a per-role "Copies" field (1–60) so shared roles like multiple jurors print without manual duplication. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | "Test pronunciation" link per word opening the actual QR-encoded `speak.html` URL; a prominent file:// warning banner (was a small hint line) shown only when `location.protocol === 'file:'`. |
+| Cognates & False Friends Reference List Builder | `052-cognates-false-friends-builder.md` | Three more starter language sets (German, Italian, Portuguese — six total); reorder list items via up/down buttons on both lists. |
+
+**6 of the 35 held-out Ideas-Backlog tools now have a round.** None cleared
+their own Quick Wins list entirely (047 and 048 came closest — see each
+file's own "Where the next round should pick up" note), so none moved to
+`stable tools/` this round, and none are added to "Not yet touched" below
+per this file's own convention (a tool moves to **Already done** after its
+round, not into both lists at once) — the remaining 29 held-out tools, plus
+a second pass on these 6, will surface in the normal "Not yet touched"
+rotation once the current Pass 2 list below empties out and the file
+resets.
 
 ---
 

@@ -27,7 +27,19 @@ this round (Verb Conjugation Reference Poster Generator, Sub Note /
 Feedback Slip Generator, Science Fair Project Tracker) — fixed by using
 literal em dash and ampersand characters in the source strings.
 
-Nothing below has been started.
+**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped two
+Quick Wins: **reorder roles and talking points** via up/down buttons (roles
+reorder in the role-card grid header row; talking points reorder within
+each role independently), and a **per-role "Copies" field** — a number
+input (1–60, default 1) next to each role name that controls how many
+identical cards that role prints, so a mock trial with five jurors sharing
+one role no longer needs five separately-typed duplicate roles. Verified
+with a headless Chromium pass: moved a role down, moved a talking point
+down, set one role's copy count to 3, printed, and confirmed the print
+output had exactly the expected total card count (5 default roles + 2 extra
+copies = 7) — no console errors.
+
+Nothing else below has been started.
 
 ## What it does today
 
@@ -37,9 +49,7 @@ Nothing below has been started.
 
 ## Quick Wins
 
-- **Reorder roles and talking points** via up/down buttons, matching the
-  pattern used elsewhere in this toolkit — order is currently fixed by
-  insertion order.
+- ~~Reorder roles and talking points~~ — **shipped 2026-08-11.**
 - **A "duplicate this role" button**, useful for a large mock trial with
   several witnesses who share most of the same talking-point structure but
   need different names/facts.
@@ -47,10 +57,11 @@ Nothing below has been started.
   printed card doubles as the physical hand-out with the assigned
   student's name already on it, instead of a teacher writing it in by
   hand.
-- **A "how many copies" field per role** for roles multiple students share
-  (e.g. several jurors, several witnesses) — right now printing one role
-  produces exactly one card regardless of how many students play that
-  role.
+- ~~A "how many copies" field per role~~ — **shipped 2026-08-11** as a
+  per-role "Copies" number input (1–60); note this prints N *identical*
+  cards, which only fully covers the "several jurors" case, not the
+  "several witnesses with different names/facts" case just above — that
+  one still needs the Duplicate-role button.
 
 ## Major Features
 
@@ -90,6 +101,12 @@ legislative simulation needs; a paired rubric closes the loop from
   common classroom simulation types named in the backlog; more templates
   (e.g. a UN Security Council simulation, a constitutional convention) are
   natural low-effort additions.
+
+**Where the next round should pick up:** the "duplicate this role" button
+is now the more valuable of the two remaining copy-related Quick Wins,
+since the plain copy-count field this round shipped only covers identical
+copies — see the note above. Assigned-student-name is the next Quick Win
+after that.
 
 ## Open Questions
 

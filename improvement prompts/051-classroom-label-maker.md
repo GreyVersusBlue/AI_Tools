@@ -35,6 +35,20 @@ resolve on a phone scanning it from across the room — this only works
 correctly when the site is actually deployed at its live address. A
 hint to this effect is shown directly under the language picker.
 
+**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped both
+Quick Wins the file's own "biggest first-run trap" note pointed at:
+a **"Test pronunciation" link per word** in the editable table (opens
+`speak.html` in a new tab with that word's actual QR-encoded URL, so a
+teacher can verify pronunciation quality before printing 30 labels), and a
+**prominent file:// warning banner** replacing the small hint line — now a
+full-width amber banner that appears only when `location.protocol ===
+'file:'`, explaining plainly that every QR code on the page will encode a
+dead link in that mode. Verified with a headless Chromium pass: confirmed
+the banner is hidden when served normally and shown when opened via
+`file://` (the same protocol this repo's own smoke tests run under), and
+confirmed each word row's test link resolves to the correct
+`speak.html?text=...&lang=...` URL — no console errors.
+
 ## What it does today
 
 - Paste `target: english` vocabulary pairs, one per line
@@ -45,19 +59,16 @@ hint to this effect is shown directly under the language picker.
 
 ## Quick Wins
 
-- **A "test this QR code" link/button** next to each word in the editable
-  table, opening `speak.html` directly in a new tab so a teacher can
-  verify pronunciation quality before printing 30 labels.
+- ~~A "test this QR code" link/button~~ — **shipped 2026-08-11.**
 - **Per-word language override** — right now one language applies to the
   whole list; a classroom sometimes mixes vocabulary from two related
   languages or wants to spot-check a word in a dialect variant.
 - **Multiple named saved word lists**, matching the multi-save convention
   used by most builder tools in this round — one flat list per browser
   right now.
-- **A visible warning banner** (not just a small hint line) when the page
-  is detected running from `file://`, since the QR-code feature silently
-  produces useless codes in that mode with no obvious symptom until
-  someone actually scans one.
+- ~~A visible warning banner~~ — **shipped 2026-08-11**, replacing the
+  small hint line with a full-width amber banner shown only when
+  `location.protocol === 'file:'`.
 
 ## Major Features
 
@@ -104,6 +115,12 @@ unit all year," in every language a program teaches.
   first-run trap for this specific tool, more so than most tools in this
   toolkit, precisely because it depends on the site's own hosted identity
   to function at all.
+
+**Where the next round should pick up:** multiple named saved word lists is
+the remaining Quick Win and matches this round's pattern used in 047/048/052
+(worksheet/portfolio/list selector with New/Duplicate/Rename/Delete) closely
+enough to copy directly; voice selection under Major Features is the
+biggest remaining quality gap.
 
 ## Open Questions
 

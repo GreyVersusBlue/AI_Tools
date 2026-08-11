@@ -23,9 +23,24 @@ Editing Checklist Generator. Single current worksheet autosaved to
 smoke test (default 4 steps with 2 follow-ups each, add a follow-up, print
 3 copies) — no console errors.
 
-Nothing below has been started. This is the tenth and last tool in this
-batch pulled from the Ideas Backlog — see the batch note in `index.html`'s
-progress report for the full list.
+**2026-08-11 — Pass 2, directed round (session `szyio3`).** Shipped two
+Quick Wins: **multiple named saved worksheets** (a worksheet selector with
+New/Duplicate/Rename/Delete, matching the multi-save convention used
+elsewhere in this toolkit — old single-worksheet saves under `acw_worksheet_v1`
+migrate automatically into the first entry of the new `acw_worksheets_v1`
+store on first load), and the **print layout QA fix** flagged in this file's
+own Quick Wins list: the half-sheet print block no longer hard-caps at
+`height: 47vh; overflow: hidden`, which was silently truncating a worksheet
+with many follow-up questions. It's now `min-height: 47vh` with normal
+overflow, so a busy worksheet grows the block instead of clipping content —
+the tradeoff is that a very full worksheet can now push its pair onto a
+third page rather than being force-fit onto two, which is the correct
+tradeoff (visible content beats silent cutoff). Verified with `node --check`
+on both inline scripts and a headless Chromium pass: create/duplicate/
+rename/delete a worksheet, add a follow-up question, print 3 copies — no
+console errors.
+
+Nothing else below has been started.
 
 ## What it does today
 
@@ -37,21 +52,16 @@ progress report for the full list.
 
 ## Quick Wins
 
-- **Multiple named saved worksheets**, matching the multi-save convention
-  used elsewhere in this toolkit (Formula Sheet Builder, Rubric Builder) —
-  right now one worksheet per browser, so a painting-unit worksheet and a
-  sculpture-unit worksheet can't coexist.
+- ~~Multiple named saved worksheets~~ — **shipped 2026-08-11.**
 - **A short "artist self-reflection" variant toggle** — the same DAIJ steps
   but worded for the artist critiquing their own finished piece, instead of
   only a peer/viewer voice — useful for the "student artwork" half of the
   backlog description, distinct from the "gallery walk" half.
-- **Print layout QA**: like Peer Feedback / Editing Checklist Generator,
-  the half-sheet print CSS caps each block at a fixed height (`47vh`) and
-  hides overflow — a worksheet with many follow-up questions risks visual
-  cutoff. Worth fixing in both tools together since they share the same
-  print pattern.
-- **A "duplicate as starting point" option** for cloning the current
-  worksheet under a new name before editing, once multi-save exists.
+- ~~Print layout QA~~ — **shipped 2026-08-11** (this tool only; Peer
+  Feedback / Editing Checklist Generator's copy of the same `47vh` cap is
+  untouched — still worth fixing there too).
+- ~~A "duplicate as starting point" option~~ — **shipped 2026-08-11** as
+  part of the multi-worksheet save UI (Duplicate button).
 
 ## Major Features
 
@@ -89,6 +99,11 @@ one click away, every year.
   already flagged in Peer Feedback / Editing Checklist Generator's
   improvement prompt; worth fixing as one shared pattern rather than twice.
 - **P3 (share links)** — a digital fill-in mode, later.
+
+**Where the next round should pick up:** the self-reflection wording
+toggle (the only Quick Win left) is the cheapest next step; after that this
+tool's real ceiling is the Gallery Walk QR Codes integration under Major
+Features, which is this batch's single most direct P7 opportunity.
 
 ## Open Questions
 
