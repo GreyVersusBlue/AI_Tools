@@ -1412,10 +1412,102 @@ migrated. The "Next dedup candidates in the same head block" list above
 extracting — not attempted here, to keep this round's blast radius to the
 three rules already established.
 
-### Phase 5 — JS utility patterns (optional, highest judgment)
-- [ ] Candidates: localStorage save/load wrapper, CSV export, print-area show/hide.
-- [ ] Only extract where ≥10 tools share near-identical code AND the extraction doesn't
+### Phase 5 — JS utility patterns (optional, highest judgment) — ✅ CLOSED 2026-08-11, nothing extracted
+- [x] Candidates: localStorage save/load wrapper, CSV export, print-area show/hide.
+- [x] Only extract where ≥10 tools share near-identical code AND the extraction doesn't
   force behavior changes. If in doubt, skip — this phase has the worst risk/benefit.
+  **Evaluated all three against that bar (audit below): none passes both halves.
+  Zero extractions; no `_shared/util.js` created, no tools touched, no sw.js
+  change (only this document changed, and it is not in `PRECACHE_URLS`).**
+
+#### Phase 5 audit (2026-08-11) — why nothing was extracted
+
+Method: same as the Phase 3/4 audits — parsed, not eyeballed. Every `function
+name(…) { … }` declaration in all 81 numbered `Tools/*.html` pages was
+extracted brace-matched, whitespace-normalized, storage-key constant names
+canonicalized (so per-tool key names can't hide otherwise-identical code), and
+clustered by exact text equality. Raw counts, so the next reader doesn't have
+to re-derive them:
+
+**1. localStorage save/load wrapper — FAILS the bar.** 269 localStorage-touching
+functions across 70 files; 192 of the clusters are single-file. The largest
+identical cluster is **14 files** sharing a one-line `save()`:
+
+```js
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ } }
+```
+
+(`050`, `052`, `054`, `057`–`060`, `069`, `070`, `073`, `076`–`079`.) That
+clears "≥10 files" — but it is only the *save* half, and the extractable body
+is one line. The matching `load()` in those same 14 files is tool-specific in
+every one: each validates and defaults its own state shape (`Array.isArray(saved.roles)`
+vs `saved.cognates` vs seeding a default dichotomous key, etc.). No save/load
+*pair* is shared by even 5 tools — the next-largest clusters are a 6-file
+`saveStore()`, a 5-file `loadStore()`, and a 5-file `loadAll()`, all different
+groups of tools. Extracting the one shared line as `saveJSON(key, value)`
+replaces a one-line function body with a one-line call — zero duplication
+removed — while adding a `<script>` tag, a `PRECACHE_URLS` entry, and a
+load-order dependency to 14 files. And the tools *outside* the cluster differ
+in ways that are deliberate behavior, not drift: some fail silently, some
+`showMsg('Could not save…')`, some `return false` for the caller to handle.
+One wrapper either flattens those (a forced behavior change — disqualifying)
+or grows options until it's longer than what it replaced.
+
+**2. CSV export — FAILS the bar by the widest margin.** The 2026-08-10 audit
+row said "~96 mention csv; needs closer per-tool audit" — this is that audit,
+and the mentions were a mirage: 79 files contain the string `csv`, but almost
+all hits are `accept=".csv"` attributes, CSV *import* parsing, or prose
+(e.g. `017` and `038` take CSV in but never write it out). Only **8 tools**
+actually produce a CSV download (`003`, `008`, `018`, `033`, `035` — a
+template download — `060`, `068`, `075`), and **no two of them share an
+identical export function** — zero multi-file clusters at
+all. The differences are behavioral, not cosmetic: the escape helper exists
+in 7 variants (some quote fields containing `\r`, some only `,`/`"`/`\n`;
+some coerce `null` to `''`, some would print `"null"`), the MIME string is
+`text/csv` in some and `text/csv;charset=utf-8;` in others, `068` prepends a
+UTF-8 BOM (deliberately, for Excel) and the rest don't, and the row joiner is
+`\r\n` in most but `\n` in `035`/`038`. Any shared exporter would force every
+tool onto one choice per axis — exactly the forced behavior change the bar
+prohibits. The row-building above the escape call is inherently per-tool
+(each tool's headers and data model). Nothing to extract.
+
+**3. print-area show/hide — closest call, still skipped.** 74 tools call
+`window.print()`, but most print the live page or use the Phase 4
+`print-area.css` CSS-only pattern — no shareable JS at all. The JS show/hide
+idiom (deactivate every `.print-only` element, activate one, print):
+
+```js
+document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+els.printArea.classList.add('active');
+window.print();
+```
+
+appears in exactly **10 files** (`001`, `008`, `013`, `014`, `017`, `018`,
+`019`, `021`, `023`, `027`) across 23 call sites — the first line is
+byte-identical in all 23, the second varies only in which element it
+activates (several tools have multiple print areas: `passPrintArea`,
+`summaryArea`, `triagePrintArea`, …). Only 3 of the 10 (`013`, `017`, `018`)
+already wrap it in an identical `activatePrint(area)` function. So it grazes
+"≥10 files" and a parameterized `activatePrint(el)` would not change
+behavior — but it was skipped on the phase's own tie-breaker ("if in doubt,
+skip"): the extractable unit is 3 lines; the total win is ~40 lines across
+the site; and the cost is converting a zero-dependency inline idiom into a
+runtime script dependency in the one area the plan calls out as the real
+failure mode (teachers printing — if a shared util.js ever fails to load,
+the print button silently does nothing in 10 tools, vs. no failure mode at
+all today). There is also no drift to arrest: the shared line is currently
+byte-identical at every one of the 23 sites, so a canonical copy solves a
+problem that measurably does not exist. If a future tool round touches these
+10 files anyway, wrapping the inline copies into each tool's own
+`activatePrint()` (the `013`/`017`/`018` shape) is a cheaper consistency win
+than a shared file.
+
+**Outcome:** Phase 5 closed with zero extractions, per the phase's explicit
+"if in doubt, skip" design. The audit script lives at nothing permanent — it
+was a scratch clustering pass; the numbers above are the record. Phase 6's
+sweep should not re-open these three candidates unless a future tool round
+materially changes the counts (e.g. a batch of new tools ships the same CSV
+exporter verbatim).
 
 ### Phase 6 — Sweep and guard
 - [ ] Re-run the duplication audit (long-line uniq count) and record before/after numbers.
