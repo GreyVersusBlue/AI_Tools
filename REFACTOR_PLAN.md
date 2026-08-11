@@ -482,7 +482,8 @@ test helper unrelated to this pattern).
 - [~] Migrate bucket (a) then (b) in batches, following the **integration spec**
   below. (Note: the original text of this bullet said theme toggle behavior comes
   from `_shared/theme-toggle.js`, "already used by 16 tools" — both claims turned
-  out to be false; see the spec.) **36/38 of bucket (a) done — see Rounds 3a–3c.**
+  out to be false; see the spec.) **38/38 of bucket (a) done (Rounds 3a–3d);
+  10/29 of bucket (b) done — see Round 3d.**
 
 #### Variance audit (2026-08-11)
 
@@ -518,23 +519,12 @@ conflicts can link a shared copy of the baseline without any rendering change
 (extra local vars stay in a small override block; baseline vars a tool doesn't
 use are harmless to define).
 
-**Bucket (a) — identical, straight swap (38 files; 36 migrated in Rounds
-3a–3c, see below — 2 remain):**
-`080-virtual-manipulatives-board.html`,
-`081-word-problem-warmup-generator.html`
+**Bucket (a) — identical, straight swap (38 files; all 38 migrated, Rounds
+3a–3d — 0 remain).**
 
 **Bucket (b) — baseline-compatible, link shared + small local override
-(29 files; extras in parentheses, `unused:` = baseline vars the tool doesn't
-define, harmless):**
-`001-hall-pass-log.html` (+`--good`), `006-class-roster-hub.html` (+`--good`,
-`--warn-bg`, `--warn-line`, `--warn-ink`), `008-behavior-points-tracker.html`
-(+`--good`), `009-backup-restore.html` (+`--good`, `--warn-bg`, `--warn-line`,
-`--warn-ink`), `010-command-center-dashboard.html` (+`--good`),
-`012-graph-paper-generator.html` (unused: `--err`),
-`013-lab-safety-contract-tracker.html` (+`--good`, `--paid`),
-`019-escape-room-builder.html` (+`--good`),
-`020-bracket-tournament-generator.html` (+`--ok`),
-`021-pe-tournament-stations.html` (+`--good`),
+(29 files; 10 migrated in Round 3d — 19 remain; extras in parentheses,
+`unused:` = baseline vars the tool doesn't define, harmless):**
 `023-exit-ticket-generator.html` (+`--good`, `--warn`),
 `024-number-talks-board.html` (+`--good`),
 `025-writing-prompt-generator.html` (unused: `--err`),
@@ -584,9 +574,9 @@ the exemplar for migrating a bucket-(c) tool if we ever want to),
 `_ds` + `theme.css` + `a11y.css`).
 
 **Companion pages** (not in the 81 above):
-`escape-room-builder/monitor.html` and `lock.html` are baseline + `--good:
-#2f6b3a` (a third green — see the (b) note) → treat as bucket (b) alongside
-their parent tool, remembering their `../../_shared/` depth;
+`escape-room-builder/monitor.html` and `lock.html` were baseline + `--good:
+#2f6b3a` (a third green — see the (b) note); migrated alongside their parent
+`019` in Round 3d, `../../_shared/` depth handled.
 `classroom-timer/mirror.html` shares `004`'s own token set → bucket (c),
 nothing to do.
 
@@ -789,6 +779,71 @@ browser revision didn't match this repo's pinned Playwright version):
 **Not migrated this round, deliberately left for a later round:** the
 remaining 2 bucket (a) files (`080`, `081`), all 29 bucket (b) files, and the
 `escape-room-builder` companion pages.
+
+#### Round 3d (2026-08-11) — finished bucket (a), started bucket (b), 12 files + 2 companions
+
+Same option (i) mechanical swap as Rounds 3a–3c for the two remaining bucket
+(a) files: `<script src="../_shared/a11y.js"></script>` after the favicon
+`<link>`, `<link rel="stylesheet" href="../_shared/ink-paper.css">` +
+`<link rel="stylesheet" href="../_shared/a11y.css">` before `<style>`, the
+inline 9-var `:root { ... }` block deleted entirely.
+
+First bucket (b) batch, same shape but the `:root` block is **kept, shrunk to
+just the tool's extra vars** instead of deleted — the 9-var baseline now comes
+from `ink-paper.css`, and each tool's local override supplies only what it
+adds on top (`--good`, `--warn-bg`/`--warn-line`/`--warn-ink`, `--paid`,
+`--ok`, per the variance audit). `012-graph-paper-generator.html` has no
+extras (only fewer baseline vars than the standard set, which is harmless),
+so it got the same full-removal treatment as bucket (a) — no local override
+block needed. `a11y.js` was inserted right after the favicon `<link>` and
+before any pre-existing tool-specific `<script>` tags in every file (matches
+the Round 3b placement rule); no file needed its script order changed
+otherwise.
+
+**Migrated — bucket (a), struck from the list above (2, 0 remain):**
+`080-virtual-manipulatives-board.html`,
+`081-word-problem-warmup-generator.html`.
+
+**Migrated — bucket (b), struck from the list above (10, 19 remain):**
+`001-hall-pass-log.html` (kept `--good`), `006-class-roster-hub.html` (kept
+`--good`, `--warn-bg`, `--warn-line`, `--warn-ink`),
+`008-behavior-points-tracker.html` (kept `--good`), `009-backup-restore.html`
+(kept `--good`, `--warn-bg`, `--warn-line`, `--warn-ink`),
+`010-command-center-dashboard.html` (kept `--good`),
+`012-graph-paper-generator.html` (no extras — full removal),
+`013-lab-safety-contract-tracker.html` (kept `--good`, `--paid`),
+`019-escape-room-builder.html` (kept `--good: #2f6b3a`, the third green
+variant), `020-bracket-tournament-generator.html` (kept `--ok: #2e6b3e` —
+note this is the *same* value as the `032`/`046` variant the migration-round
+note already called out, so that "two files" count is now known to have been
+incomplete pre-migration; doesn't affect the remaining 19, just a correction
+for the record), `021-pe-tournament-stations.html` (kept `--good`).
+
+**Migrated — companions, alongside their parent `019` (2):**
+`Tools/escape-room-builder/monitor.html` and `lock.html`, `../../_shared/`
+depth, both keeping `--good: #2f6b3a`.
+
+**`sw.js`:** `_shared/a11y.js`, `_shared/a11y.css` and `_shared/ink-paper.css`
+were already in `PRECACHE_URLS` from Round 3a, and none of these 14 files
+were renamed, so `PRECACHE_URLS` itself is unchanged this round —
+`CACHE_VERSION` bumped v55 → v56 since the byte content of 14 already-precached
+files changed.
+
+**Verification actually performed** (Playwright/Chromium against a local
+static server via `Tools/board-check/harness.mjs`, `serviceWorkers: 'block'`,
+launched with an explicit `executablePath` since the sandbox's preinstalled
+browser revision didn't match this repo's pinned Playwright version):
+
+| Check | Result |
+|---|---|
+| All 14 pages load | zero `pageerror`s, zero `console.error`s, zero failed/≥400 requests on every page (light mode) |
+| Dark theme toggle | forced `gvb-a11y-prefs` → `{theme:"dark"}`, reloaded: `<html data-theme="dark">` set on all 14, zero console errors; screenshots of all 14 spot-checked visually — readable light-on-dark on every page, including the `--good`/`--ok`/`--paid` override colors and `escape-room-builder/lock.html`'s standalone "no escape room data" card |
+| Light theme (default) | screenshots of `001`, `013`, `080` match the expected ink/paper look — no rendering change vs. pre-migration for the baseline vars, and the bucket (b) override colors render identically to their old inline values |
+| Print preview | emulated `print` media after resetting to light mode: zero console errors on all 14 |
+| Leftover hardcoded hex from the old `:root` block | grep for the 9 baseline hex values (`--ink: #1f2430`, `--paper: #fafaf8`, `--accent: #1f3550`, `--accent-2: #2e6b8f`, etc.) across all 14 files: zero matches — every bucket (b) local override retained only its extra vars, none of the baseline |
+
+**Not migrated this round, deliberately left for a later round:** the
+remaining 19 bucket (b) files.
 
 ### Phase 4 — Common layout + print CSS
 - [ ] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
