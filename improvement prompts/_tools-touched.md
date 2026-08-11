@@ -392,17 +392,12 @@ has shipped and sits empty. Each new tool already has its own `improvement
 prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
 "Not yet touched" list below yet — Devon wants to fold them into the round
 system as a deliberate batch rather than mixed in silently with this reset.
-Leave them out until told otherwise. **Exception:** 063–067 were pulled out
-of this batch and given a round at Devon's direct request (see the
-"063–067" round entry below, in the same spirit as tool 046's extra
-Rounds 9–10 in Pass 1) — they are done and out of this list; the other 30
-are still untouched:
+Leave them out until told otherwise. **Exceptions:** 047–051 and 063–067
+were each pulled out of this batch and given a round at Devon's direct
+request (see the "Held-out batch — Round 1" and "063–067" round entries
+below, in the same spirit as tool 046's extra Rounds 9–10 in Pass 1) — both
+groups are done and out of this list; the other 25 are still untouched:
 
-Art Critique Worksheet Generator (`047-art-critique-worksheet-generator.md`) ·
-Student Art Portfolio Label & QR Tag Maker (`048-art-portfolio-label-maker.md`) ·
-Book Tasting Menu Generator (`049-book-tasting-menu-generator.md`) ·
-Government/Civics Simulation Role Card Generator (`050-civics-role-card-generator.md`) ·
-Classroom Label Maker, Target Language (`051-classroom-label-maker.md`) ·
 Cognates & False Friends Reference List Builder (`052-cognates-false-friends-builder.md`) ·
 Cultural Trivia Card Generator (`053-cultural-trivia-card-generator.md`) ·
 Current Events Discussion Guide Generator (`054-current-events-discussion-guide-generator.md`) ·
@@ -518,6 +513,36 @@ download).
 `yjj7k6`'s + these 5). **26 to go.** None of the five cleared their
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
+
+### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — branch `claude/tools-047-51-improvements-8vo65u`
+
+Devon directly assigned tools 047-051 to this session, ahead of the
+Pass-2-reset note above that holds the 35-tool Ideas Backlog batch out of
+the round system until folded in deliberately — an explicit per-tool
+override per this file's own top-of-file rule ("Devon may also reset it
+early, or move a specific tool back up, and that overrides everything
+here"). This is **not** a Pass 2 round pulled from "Not yet touched" —
+these five remain outside that list, per the held-out-batch note below,
+until Devon folds the rest of the 35 in. One or two scoped Quick Wins
+shipped per tool (each tool's own file has the full breakdown), verified
+with a single combined headless Chromium smoke test covering all five
+tools' new interactions (24 checks, zero console errors).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | Multiple named saved worksheets (New/Duplicate/Delete + switcher, legacy-save auto-migration); fixed half-sheet print CSS that clipped worksheets with many follow-up questions. |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Reorder entries via up/down buttons; live character-count warning on the artist-statement field (QR density heads-up past ~220 chars). |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | Menu print now groups books into genre-named course sections instead of one flat list; cover images now render in both menu and table-tent print output. |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Per-role "copies" count so a role shared by several students (jurors, witnesses) prints that many cards; Duplicate-role button. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | "Test ▶" link per word opening the pronunciation companion page directly; a prominent `file://` warning banner alongside the existing hint line. |
+
+None of the five cleared their list — each still has open Quick Wins and
+full Major Features/Moonshot sections — so none moved to `stable tools/`
+this round. A cross-tool note surfaced this round: three tools now carry
+their own copy-pasted `buildQR`/`drawQR` (Gallery Walk QR Codes, Art
+Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
+into a shared `lib/qrcode.js` next time any of the three is touched again
+(see 048's and 051's own files for the detail).
 
 ### 063–067 — 2026-08-11 01:30–~03:20 UTC — session `9iiyas` — branch `claude/tools-063-067-improvements-9iiyas`
 
@@ -652,6 +677,16 @@ lands naturally inside a tool you are already working on, take it.
   tool that hides a flex/grid-displayed element by attribute needs an
   explicit `[hidden] { display: none; }` rule; worth a grep wherever a
   toolbar control is toggled this way.
+- **`height` + `overflow: hidden` on a print block silently clips content.**
+  `047-art-critique-worksheet-generator.html`'s half-sheet print CSS used
+  `height: 47vh; overflow: hidden`, which cut off a worksheet's later
+  follow-up questions with zero visual warning on screen — the printed
+  page just quietly lost content. Fixed there by switching to
+  `min-height: 47vh` (no `overflow: hidden`), letting normal page flow
+  carry any overflow onto the next printed page instead of eating it.
+  `070-peer-feedback-checklist-generator.html` has the exact same pattern
+  flagged in its own improvement notes and hasn't been fixed yet — the
+  same one-line change should work there too.
 - **Generated-output drift is a real failure mode, not just a theoretical
   one.** Round 7 found that `035-schedule-visualizer.html`'s "Publish" button
   would produce a broken `034-schedule-browser.html` (undefined `escHtml`/

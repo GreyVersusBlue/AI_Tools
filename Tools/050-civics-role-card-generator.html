@@ -56,8 +56,10 @@
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
   .role-block { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
-  .role-block-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+  .role-block-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
   .role-block-head input { font-weight: 700; margin-bottom: 0; }
+  .copies-field { display: flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--muted); white-space: nowrap; }
+  .copies-field input { width: 3.4rem; margin-bottom: 0; text-align: center; }
   .point-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .point-row input { margin-bottom: 0; }
 
@@ -156,7 +158,7 @@
 
   function fromTemplate(key) {
     state.roles = TEMPLATES[key].map(function (r) {
-      return { id: uid(), role: r.role, position: r.position, points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
+      return { id: uid(), role: r.role, position: r.position, copies: 1, points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
     });
   }
 
@@ -166,6 +168,7 @@
       if (saved && Array.isArray(saved.roles) && saved.roles.length) state = saved;
     } catch (e) { /* ignore */ }
     if (!state.roles.length) fromTemplate('mock_trial');
+    state.roles.forEach(function (r) { if (!r.copies || r.copies < 1) r.copies = 1; });
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -179,6 +182,8 @@
       }).join('');
       return '<div class="role-block" data-role-id="' + r.id + '">' +
         '<div class="role-block-head"><input type="text" data-field="role" data-role="' + r.id + '" value="' + escapeAttr(r.role) + '" placeholder="Role name">' +
+        '<label class="copies-field">Copies <input type="number" min="1" max="40" data-field="copies" data-role="' + r.id + '" value="' + (r.copies || 1) + '"></label>' +
+        '<button type="button" class="secondary small" data-dup-role="' + r.id + '">Duplicate</button>' +
         '<button type="button" class="danger small" data-del-role="' + r.id + '">Remove</button></div>' +
         '<label>Position</label><input type="text" data-field="position" data-role="' + r.id + '" value="' + escapeAttr(r.position) + '" placeholder="e.g. Arguing in favor of...">' +
         '<label>Talking points</label>' + points +
@@ -195,7 +200,7 @@
     var pointId = ev.target.getAttribute('data-point');
     if (field && roleId) {
       var r = findRole(roleId);
-      if (r) r[field] = ev.target.value;
+      if (r) r[field] = field === 'copies' ? (Math.max(1, Math.min(40, parseInt(ev.target.value, 10) || 1))) : ev.target.value;
       save();
     } else if (pointId) {
       var row = ev.target.closest('.point-row');
@@ -210,6 +215,7 @@
     var addPointRole = ev.target.getAttribute('data-add-point');
     var delPointId = ev.target.getAttribute('data-del-point');
     var delRoleId = ev.target.getAttribute('data-del-role');
+    var dupRoleId = ev.target.getAttribute('data-dup-role');
     if (addPointRole) {
       var r = findRole(addPointRole);
       if (r) r.points.push({ id: uid(), text: '' });
@@ -221,6 +227,16 @@
     } else if (delRoleId) {
       state.roles = state.roles.filter(function (r) { return r.id !== delRoleId; });
       save(); renderRoles();
+    } else if (dupRoleId) {
+      var orig = findRole(dupRoleId);
+      if (orig) {
+        var clone = JSON.parse(JSON.stringify(orig));
+        clone.id = uid();
+        clone.points.forEach(function (p) { p.id = uid(); });
+        var idx = state.roles.indexOf(orig);
+        state.roles.splice(idx + 1, 0, clone);
+      }
+      save(); renderRoles();
     }
   });
 
@@ -230,7 +246,7 @@
     save(); renderRoles();
   });
   els.addRoleBtn.addEventListener('click', function () {
-    state.roles.push({ id: uid(), role: 'New Role', position: '', points: [{ id: uid(), text: '' }] });
+    state.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, points: [{ id: uid(), text: '' }] });
     save(); renderRoles();
   });
 
@@ -238,8 +254,9 @@
     if (!state.roles.length) { alert('Add at least one role first.'); return; }
     var cards = state.roles.map(function (r) {
       var points = r.points.filter(function (p) { return p.text.trim(); }).map(function (p) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
-      return '<div class="role-print-card"><h3>' + escapeHtml(r.role || 'Role') + '</h3>' +
+      var card = '<div class="role-print-card"><h3>' + escapeHtml(r.role || 'Role') + '</h3>' +
         '<div class="position">' + escapeHtml(r.position || '') + '</div><ul>' + points + '</ul></div>';
+      return new Array(Math.max(1, r.copies || 1) + 1).join(card);
     }).join('');
     els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>';
     window.print();
