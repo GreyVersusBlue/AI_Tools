@@ -1,0 +1,29 @@
+/* The #printArea print pattern — Phase 4 of REFACTOR_PLAN.md.
+   Split out of _shared/base.css in Round 4b so that tools which don't use
+   this pattern can still take base.css's layout rules.
+
+   The pattern: the tool builds its print sheet into a container with
+   id="printArea" that is hidden on screen, and printing blanks everything
+   else so only that container reaches the paper.
+
+   Link this ONLY from a tool that
+     (a) has an element with id="printArea", and
+     (b) has no #printArea print rules of its own.
+   `body * { visibility: hidden }` blanks the whole page and only #printArea
+   comes back, so a tool without that element prints a blank sheet. A tool
+   with its own @media print block should keep it inline and skip this file —
+   see the Phase 4 notes in REFACTOR_PLAN.md for which tools are which.
+
+   Load this BEFORE the tool's inline <style>. The two rules below must also
+   stay in this order: they have equal specificity, so the print block wins
+   only by coming last. Splitting them across files (or leaving the screen
+   rule inline in the tool) silently breaks printing while looking fine on
+   screen. */
+
+#printArea { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+}

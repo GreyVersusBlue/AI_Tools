@@ -17,6 +17,8 @@
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -25,13 +27,11 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 1200px; margin: 0 auto; }
-  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   input[type="text"], textarea {
@@ -68,12 +68,6 @@
   .stage-box textarea { min-height: 4.5rem; font-size: .8rem; }
   .stage-box textarea.filled { background: #f4f8f3; border-color: #8fae82; }
 
-  #printArea { display: none; }
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-  }
   .print-title { font-size: 1.5rem; margin: 0 0 .1rem; text-align: center; }
   .print-author { text-align: center; color: #555; margin: 0 0 1rem; }
   .print-elements { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem 1.5rem; font-size: .88rem; margin-bottom: 1.2rem; }
