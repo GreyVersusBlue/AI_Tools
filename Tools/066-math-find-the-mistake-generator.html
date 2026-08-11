@@ -82,6 +82,14 @@
   .bank-row .btext { flex: 1; }
   .bank-list { max-height: 40vh; overflow-y: auto; }
   .bank-row .del-btn { float: right; }
+  .bank-row.disabled { opacity: .55; }
+  .cat-pill { display: inline-block; font-size: .7rem; padding: .05rem .45rem; border-radius: 999px; background: #eee; color: var(--muted); margin-left: .4rem; border: 1px solid var(--line-strong); }
+  .toggle-btn { float: right; margin-left: .5rem; }
+  .filter-list { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; }
+  .filter-list label { display: flex; align-items: center; gap: .35rem; font-weight: 500; font-size: .82rem; margin: 0; }
+  .filter-list input[type="checkbox"] { margin: 0; width: auto; }
+  .display-empty { color: var(--muted); font-size: .95rem; }
+  select#newCategory { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: #fff; border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem; margin-bottom: .6rem; }
 
   .sheet-page { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem 1.8rem; margin-bottom: 1rem; }
   .sheet-title { font-size: 1.2rem; margin: 0 0 .2rem; }
@@ -111,6 +119,12 @@
       <h1>Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator</h1>
       <p class="sub">A worked problem with one intentional error &mdash; spot it, fix it, then check the correct solution.</p>
     </div>
+  </div>
+
+  <div class="card" id="filterCard">
+    <h2>Filter by topic</h2>
+    <p class="hint">Uncheck a topic to leave it out of both the projector shuffle and the worksheet generator.</p>
+    <div class="filter-list" id="categoryFilterList"></div>
   </div>
 
   <div class="tabs">
@@ -171,11 +185,13 @@
       <textarea id="newFix" placeholder="3x + 12 = 24&#10;3x = 12&#10;x = 4"></textarea>
       <label for="newExplain">What was the mistake? (short explanation)</label>
       <input type="text" id="newExplain" placeholder="e.g. Forgot to distribute the 3 to both terms inside the parentheses.">
+      <label for="newCategory">Topic</label>
+      <select id="newCategory"></select>
       <button id="addProblemBtn">Add to bank</button>
     </div>
     <div class="card">
       <h2>Full bank (<span id="bankCount">0</span> problems)</h2>
-      <p class="hint">Built-in problems can't be deleted, only your own custom ones.</p>
+      <p class="hint">Built-in problems can&rsquo;t be deleted, but you can disable one to leave it out of the projector and worksheet. Only your own custom problems can be deleted.</p>
       <div class="bank-list" id="bankList"></div>
     </div>
   </div>
@@ -185,35 +201,54 @@
 (function () {
   'use strict';
   var CUSTOM_KEY = 'mftm_custom_v1';
+  var DISABLED_BUILTINS_KEY = 'mftm_disabled_builtins_v1';
+
+  var CATEGORIES = [
+    { id: 'order-of-operations', label: 'Order of Operations' },
+    { id: 'one-step-equations', label: 'One-Step Equations' },
+    { id: 'two-step-equations', label: 'Two-Step Equations' },
+    { id: 'fractions', label: 'Fractions' },
+    { id: 'exponents', label: 'Exponents' },
+    { id: 'percents', label: 'Percents' },
+    { id: 'negative-numbers', label: 'Negative Numbers' },
+    { id: 'other', label: 'Other' }
+  ];
+  var CATEGORY_LABELS = {};
+  CATEGORIES.forEach(function (c) { CATEGORY_LABELS[c.id] = c.label; });
 
   var BUILTIN = [
-    { problem: 'Simplify: 4 + 3 &times; 2', work: '4 + 3 = 7\n7 &times; 2 = 14', fix: '3 &times; 2 = 6\n4 + 6 = 10', explain: 'Order of operations: multiplication happens before addition.' },
-    { problem: 'Solve: 3(x + 4) = 24', work: '3x + 4 = 24\n3x = 20\nx = 6.67', fix: '3x + 12 = 24\n3x = 12\nx = 4', explain: 'Forgot to distribute the 3 to both terms inside the parentheses.' },
-    { problem: 'Add: &frac12; + &frac13;', work: '&frac12; + &frac13; = &frac23;', fix: '&frac36; + &frac26; = &frac56;', explain: 'Fractions need a common denominator before adding &mdash; you can&rsquo;t just add numerators and denominators separately.' },
-    { problem: 'Solve: 2x &minus; 5 = 11', work: '2x = 6\nx = 3', fix: '2x = 16\nx = 8', explain: 'When moving &minus;5 to the other side, it becomes +5, not staying as &minus;5 (11 &minus; 5 = 6 is the wrong direction).' },
-    { problem: 'Find 25% of 60', work: '25% = 0.25\n0.25 &times; 60 = 6', fix: '0.25 &times; 60 = 15', explain: 'Multiplication error: 0.25 &times; 60 is 15, not 6.' },
-    { problem: 'Simplify: (&minus;3)&sup2;', work: '(&minus;3)&sup2; = &minus;9', fix: '(&minus;3)&sup2; = 9', explain: 'A negative number squared is positive: (&minus;3) &times; (&minus;3) = 9.' },
-    { problem: 'Multiply: 2.5 &times; 0.4', work: '2.5 &times; 0.4 = 10', fix: '2.5 &times; 0.4 = 1', explain: 'Decimal point placement error &mdash; there should be two digits total after the decimal point in the answer.' },
-    { problem: 'Simplify: 3/4 &divide; 1/2', work: '3/4 &divide; 1/2 = 3/8', fix: '3/4 &times; 2/1 = 6/4 = 1&frac12;', explain: 'Dividing by a fraction means multiplying by its reciprocal, not multiplying the fractions directly.' },
-    { problem: 'Evaluate: &minus;8 + 3', work: '&minus;8 + 3 = &minus;11', fix: '&minus;8 + 3 = &minus;5', explain: 'When adding a positive to a negative, subtract the smaller absolute value from the larger: 8 &minus; 3 = 5, keep the sign of the larger (negative).' },
-    { problem: 'Solve: x/4 = 12', work: 'x = 12 &minus; 4\nx = 8', fix: 'x = 12 &times; 4\nx = 48', explain: 'To undo division by 4, multiply both sides by 4, not subtract 4.' },
-    { problem: 'Find the area of a rectangle: length 8, width 5', work: 'Area = 8 + 5 = 13', fix: 'Area = 8 &times; 5 = 40', explain: 'Area of a rectangle is length &times; width, not length + width.' },
-    { problem: 'Simplify: 5 &minus; 2(3 &minus; 1)', work: '5 &minus; 2(2) = 3(2) = 6', fix: '5 &minus; 2(2) = 5 &minus; 4 = 1', explain: 'After 3 &minus; 2 &times; ... you multiply 2 by the parentheses result and subtract from 5 &mdash; you can&rsquo;t combine 5 &minus; 2 first.' },
-    { problem: 'Convert 3/5 to a percent', work: '3/5 = 0.35 = 35%', fix: '3/5 = 0.6 = 60%', explain: 'Division error: 3 &divide; 5 = 0.6, not 0.35.' },
-    { problem: 'Solve: &minus;3x = 15', work: 'x = 15 &minus; 3\nx = 12', fix: 'x = 15 &divide; (&minus;3)\nx = &minus;5', explain: 'To undo multiplication by &minus;3, divide both sides by &minus;3, not subtract 3.' },
-    { problem: 'Simplify: 2&sup3;', work: '2&sup3; = 6', fix: '2&sup3; = 8', explain: '2&sup3; means 2 &times; 2 &times; 2 = 8, not 2 &times; 3 = 6.' }
-  ].map(function (p) { return { problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false }; });
+    { id: 'b0', category: 'order-of-operations', problem: 'Simplify: 4 + 3 &times; 2', work: '4 + 3 = 7\n7 &times; 2 = 14', fix: '3 &times; 2 = 6\n4 + 6 = 10', explain: 'Order of operations: multiplication happens before addition.' },
+    { id: 'b1', category: 'two-step-equations', problem: 'Solve: 3(x + 4) = 24', work: '3x + 4 = 24\n3x = 20\nx = 6.67', fix: '3x + 12 = 24\n3x = 12\nx = 4', explain: 'Forgot to distribute the 3 to both terms inside the parentheses.' },
+    { id: 'b2', category: 'fractions', problem: 'Add: &frac12; + &frac13;', work: '&frac12; + &frac13; = &frac23;', fix: '&frac36; + &frac26; = &frac56;', explain: 'Fractions need a common denominator before adding &mdash; you can&rsquo;t just add numerators and denominators separately.' },
+    { id: 'b3', category: 'two-step-equations', problem: 'Solve: 2x &minus; 5 = 11', work: '2x = 6\nx = 3', fix: '2x = 16\nx = 8', explain: 'When moving &minus;5 to the other side, it becomes +5, not staying as &minus;5 (11 &minus; 5 = 6 is the wrong direction).' },
+    { id: 'b4', category: 'percents', problem: 'Find 25% of 60', work: '25% = 0.25\n0.25 &times; 60 = 6', fix: '0.25 &times; 60 = 15', explain: 'Multiplication error: 0.25 &times; 60 is 15, not 6.' },
+    { id: 'b5', category: 'exponents', problem: 'Simplify: (&minus;3)&sup2;', work: '(&minus;3)&sup2; = &minus;9', fix: '(&minus;3)&sup2; = 9', explain: 'A negative number squared is positive: (&minus;3) &times; (&minus;3) = 9.' },
+    { id: 'b6', category: 'other', problem: 'Multiply: 2.5 &times; 0.4', work: '2.5 &times; 0.4 = 10', fix: '2.5 &times; 0.4 = 1', explain: 'Decimal point placement error &mdash; there should be two digits total after the decimal point in the answer.' },
+    { id: 'b7', category: 'fractions', problem: 'Simplify: 3/4 &divide; 1/2', work: '3/4 &divide; 1/2 = 3/8', fix: '3/4 &times; 2/1 = 6/4 = 1&frac12;', explain: 'Dividing by a fraction means multiplying by its reciprocal, not multiplying the fractions directly.' },
+    { id: 'b8', category: 'negative-numbers', problem: 'Evaluate: &minus;8 + 3', work: '&minus;8 + 3 = &minus;11', fix: '&minus;8 + 3 = &minus;5', explain: 'When adding a positive to a negative, subtract the smaller absolute value from the larger: 8 &minus; 3 = 5, keep the sign of the larger (negative).' },
+    { id: 'b9', category: 'one-step-equations', problem: 'Solve: x/4 = 12', work: 'x = 12 &minus; 4\nx = 8', fix: 'x = 12 &times; 4\nx = 48', explain: 'To undo division by 4, multiply both sides by 4, not subtract 4.' },
+    { id: 'b10', category: 'other', problem: 'Find the area of a rectangle: length 8, width 5', work: 'Area = 8 + 5 = 13', fix: 'Area = 8 &times; 5 = 40', explain: 'Area of a rectangle is length &times; width, not length + width.' },
+    { id: 'b11', category: 'order-of-operations', problem: 'Simplify: 5 &minus; 2(3 &minus; 1)', work: '5 &minus; 2(2) = 3(2) = 6', fix: '5 &minus; 2(2) = 5 &minus; 4 = 1', explain: 'After 3 &minus; 2 &times; ... you multiply 2 by the parentheses result and subtract from 5 &mdash; you can&rsquo;t combine 5 &minus; 2 first.' },
+    { id: 'b12', category: 'percents', problem: 'Convert 3/5 to a percent', work: '3/5 = 0.35 = 35%', fix: '3/5 = 0.6 = 60%', explain: 'Division error: 3 &divide; 5 = 0.6, not 0.35.' },
+    { id: 'b13', category: 'one-step-equations', problem: 'Solve: &minus;3x = 15', work: 'x = 15 &minus; 3\nx = 12', fix: 'x = 15 &divide; (&minus;3)\nx = &minus;5', explain: 'To undo multiplication by &minus;3, divide both sides by &minus;3, not subtract 3.' },
+    { id: 'b14', category: 'exponents', problem: 'Simplify: 2&sup3;', work: '2&sup3; = 6', fix: '2&sup3; = 8', explain: '2&sup3; means 2 &times; 2 &times; 2 = 8, not 2 &times; 3 = 6.' }
+  ].map(function (p) { return { id: p.id, category: p.category, problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false }; });
 
   var els = {};
   ['displayNum', 'displayProblem', 'displayWork', 'displayFix', 'displayExplain', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'newProblem', 'newWork', 'newFix', 'newExplain', 'addProblemBtn', 'bankCount', 'bankList'].forEach(function (id) {
+   'newProblem', 'newWork', 'newFix', 'newExplain', 'newCategory', 'addProblemBtn', 'bankCount', 'bankList',
+   'categoryFilterList'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var custom = [];
   var order = [];
   var idx = 0;
+  var revealStage = 0; // 0 = nothing shown, 1 = corrected work shown, 2 = work + explanation shown
+  var disabledBuiltinIds = {};
+  var categoryFilter = {};
+  CATEGORIES.forEach(function (c) { categoryFilter[c.id] = true; });
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -230,14 +265,34 @@
     try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* storage full/blocked */ }
   }
 
+  function loadDisabledBuiltins() {
+    var ids = [];
+    try { ids = JSON.parse(localStorage.getItem(DISABLED_BUILTINS_KEY) || '[]'); } catch (e) { ids = []; }
+    if (!Array.isArray(ids)) ids = [];
+    disabledBuiltinIds = {};
+    ids.forEach(function (id) { disabledBuiltinIds[id] = true; });
+  }
+  function saveDisabledBuiltins() {
+    var ids = Object.keys(disabledBuiltinIds).filter(function (id) { return disabledBuiltinIds[id]; });
+    try { localStorage.setItem(DISABLED_BUILTINS_KEY, JSON.stringify(ids)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  // Every problem (built-in and custom), including disabled built-ins, for the bank management view.
   function allProblems() {
-    return BUILTIN.concat(custom.map(function (c) {
-      return { problem: c.problem, work: c.work, fix: c.fix, explain: c.explain, custom: true, id: c.id };
+    return BUILTIN.map(function (p) {
+      return { id: p.id, category: p.category, problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false, disabled: !!disabledBuiltinIds[p.id] };
+    }).concat(custom.map(function (c) {
+      return { id: c.id, category: c.category || 'other', problem: c.problem, work: c.work, fix: c.fix, explain: c.explain, custom: true, disabled: false };
     }));
   }
 
+  // Only problems eligible for the projector shuffle / worksheet draw: not disabled and in a checked category.
+  function activeProblems() {
+    return allProblems().filter(function (p) { return !p.disabled && categoryFilter[p.category] !== false; });
+  }
+
   function resetOrder() {
-    var all = allProblems();
+    var all = activeProblems();
     order = all.map(function (_, i) { return i; });
     idx = 0;
   }
@@ -249,29 +304,61 @@
     return arr;
   }
 
+  function updateRevealBtnLabel() {
+    if (revealStage === 0) els.revealBtn.textContent = 'Reveal correct solution';
+    else if (revealStage === 1) els.revealBtn.textContent = 'Reveal explanation';
+    else els.revealBtn.textContent = 'Hide reveal';
+  }
+
   function renderDisplay() {
-    var all = allProblems();
-    if (!all.length || !order.length) return;
+    var all = activeProblems();
+    revealStage = 0;
+    els.displayFix.classList.remove('shown');
+    els.displayExplain.classList.remove('shown');
+    updateRevealBtnLabel();
+    if (!all.length || !order.length) {
+      els.displayNum.textContent = '';
+      els.displayProblem.innerHTML = '<span class="display-empty">No problems match the selected topics. Check at least one topic above.</span>';
+      els.displayWork.innerHTML = '';
+      els.displayFix.innerHTML = '';
+      els.displayExplain.innerHTML = '';
+      return;
+    }
+    if (idx >= order.length) idx = 0;
     var item = all[order[idx]];
     els.displayNum.textContent = 'Problem ' + (idx + 1) + ' of ' + order.length;
     els.displayProblem.innerHTML = item.problem;
     els.displayWork.innerHTML = item.work;
     els.displayFix.innerHTML = item.fix;
-    els.displayFix.classList.remove('shown');
     els.displayExplain.innerHTML = item.explain || '';
-    els.displayExplain.classList.remove('shown');
   }
 
   els.prevBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx - 1 + order.length) % order.length; renderDisplay(); });
   els.nextBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx + 1) % order.length; renderDisplay(); });
   els.revealBtn.addEventListener('click', function () {
-    els.displayFix.classList.toggle('shown');
-    els.displayExplain.classList.toggle('shown');
+    if (!order.length) return;
+    if (revealStage === 0) {
+      els.displayFix.classList.add('shown');
+      revealStage = 1;
+    } else if (revealStage === 1) {
+      els.displayExplain.classList.add('shown');
+      revealStage = 2;
+    } else {
+      els.displayFix.classList.remove('shown');
+      els.displayExplain.classList.remove('shown');
+      revealStage = 0;
+    }
+    updateRevealBtnLabel();
   });
   els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
 
   els.buildSheetBtn.addEventListener('click', function () {
-    var all = shuffle(allProblems().slice());
+    var all = shuffle(activeProblems().slice());
+    if (!all.length) {
+      els.sheetProblems.innerHTML = '<p class="display-empty">No problems match the selected topics. Check at least one topic above.</p>';
+      els.sheetKey.innerHTML = '';
+      return;
+    }
     var count = Math.max(1, Math.min(20, parseInt(els.sheetCount.value, 10) || 5, all.length));
     var chosen = all.slice(0, count);
     els.sheetProblems.innerHTML = chosen.map(function (item, i) {
@@ -295,10 +382,11 @@
     var work = els.newWork.value.trim();
     var fix = els.newFix.value.trim();
     var explain = els.newExplain.value.trim();
+    var category = els.newCategory.value || 'other';
     if (!problem || !work || !fix) { alert('Fill in the problem, the worked (mistaken) solution, and the correct solution.'); return; }
-    custom.push({ id: uid(), problem: problem, work: work.replace(/\n/g, '<br>'), fix: fix.replace(/\n/g, '<br>'), explain: explain });
+    custom.push({ id: uid(), category: category, problem: problem, work: work.replace(/\n/g, '<br>'), fix: fix.replace(/\n/g, '<br>'), explain: explain });
     saveCustom();
-    els.newProblem.value = ''; els.newWork.value = ''; els.newFix.value = ''; els.newExplain.value = '';
+    els.newProblem.value = ''; els.newWork.value = ''; els.newFix.value = ''; els.newExplain.value = ''; els.newCategory.value = 'other';
     resetOrder(); renderDisplay(); renderBank();
   });
 
@@ -306,18 +394,48 @@
     var all = allProblems();
     els.bankCount.textContent = all.length;
     els.bankList.innerHTML = all.map(function (item) {
-      var delBtn = item.custom
-        ? '<button type="button" class="danger small del-btn" data-del="' + item.id + '">Delete</button>'
-        : '<span class="hint del-btn" style="margin:0;">built-in</span>';
-      return '<div class="bank-row">' + delBtn + '<strong>' + item.problem + '</strong></div>';
+      var actionBtn;
+      if (item.custom) {
+        actionBtn = '<button type="button" class="danger small del-btn" data-del="' + item.id + '">Delete</button>';
+      } else if (item.disabled) {
+        actionBtn = '<button type="button" class="secondary small toggle-btn" data-toggle="' + item.id + '">Enable</button><span class="hint del-btn" style="margin:0;">built-in (disabled)</span>';
+      } else {
+        actionBtn = '<button type="button" class="secondary small toggle-btn" data-toggle="' + item.id + '">Disable</button><span class="hint del-btn" style="margin:0;">built-in</span>';
+      }
+      var catLabel = CATEGORY_LABELS[item.category] || item.category;
+      return '<div class="bank-row' + (item.disabled ? ' disabled' : '') + '">' + actionBtn +
+        '<strong>' + item.problem + '</strong><span class="cat-pill">' + escapeHtml(catLabel) + '</span></div>';
     }).join('');
   }
   els.bankList.addEventListener('click', function (ev) {
-    var id = ev.target.getAttribute('data-del');
-    if (!id) return;
-    custom = custom.filter(function (c) { return c.id !== id; });
-    saveCustom(); resetOrder(); renderDisplay(); renderBank();
+    var delId = ev.target.getAttribute('data-del');
+    var toggleId = ev.target.getAttribute('data-toggle');
+    if (delId) {
+      custom = custom.filter(function (c) { return c.id !== delId; });
+      saveCustom(); resetOrder(); renderDisplay(); renderBank();
+    } else if (toggleId) {
+      disabledBuiltinIds[toggleId] = !disabledBuiltinIds[toggleId];
+      saveDisabledBuiltins(); resetOrder(); renderDisplay(); renderBank();
+    }
   });
+
+  function renderCategoryFilter() {
+    els.categoryFilterList.innerHTML = CATEGORIES.map(function (c) {
+      return '<label><input type="checkbox" data-cat="' + c.id + '" checked> ' + escapeHtml(c.label) + '</label>';
+    }).join('');
+  }
+  els.categoryFilterList.addEventListener('change', function (ev) {
+    var cat = ev.target.getAttribute('data-cat');
+    if (!cat) return;
+    categoryFilter[cat] = ev.target.checked;
+    resetOrder(); renderDisplay();
+  });
+
+  function populateNewCategorySelect() {
+    els.newCategory.innerHTML = CATEGORIES.map(function (c) {
+      return '<option value="' + c.id + '"' + (c.id === 'other' ? ' selected' : '') + '>' + escapeHtml(c.label) + '</option>';
+    }).join('');
+  }
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -332,6 +450,9 @@
 
   /* ---------- boot ---------- */
   loadCustom();
+  loadDisabledBuiltins();
+  renderCategoryFilter();
+  populateNewCategorySelect();
   resetOrder();
   renderDisplay();
   renderBank();

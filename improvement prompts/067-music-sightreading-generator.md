@@ -50,7 +50,32 @@ above the staff before the first ledger line at A5) both matched
 music-theory-correct expectations. Also confirmed both modes' print
 output renders correctly. No console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `9iiyas`).** Shipped the top three Quick
+Wins below — the font-availability check (the fourth) is not yet started.
+Generation settings now persist to `localStorage`
+(`msrg_settings_v1`: time signature, measure count, note/rest pool, tempo
+text, clef, note range, note count, show-names, and last-active tab),
+restored on boot via a `setSelectIfValid` guard so a corrupted or
+missing value never forces a `<select>` into an invalid option; a fresh
+pattern is always generated from the restored settings on load — only the
+*settings* persist, never the generated notes/measures themselves, per
+this tool's own explicit design intent. A per-tab "Lock this pattern for
+printing" checkbox snapshots the currently-displayed pattern so generating
+a new one for the screen doesn't also change what's about to print; this
+required a small refactor so `renderRhythm`/`renderPitches` accept an
+optional measures/notes argument instead of always reading the live
+module-level array. A "Big single-measure display" toggle on the Rhythm
+tab steps through the current pattern one measure at a time (large,
+full-width) with Previous/Next controls, for call-and-response clapping
+drills. Verified with headless Playwright: settings round-trip across
+reload (including a from-empty-storage first load), beat-accuracy held
+across 120 freshly-generated measures spanning all three time signatures
+(a supplemental spot-check by the reviewing session initially flagged 39
+"mismatches" that turned out to be the reviewer's own test script using
+the wrong Unicode codepoint for the half-note glyph, not a real bug — every
+reported measure summed correctly once re-checked by hand), lock/print
+behavior on both tabs, and big-mode Previous/Next boundary behavior — no
+console errors.
 
 ## What it does today
 
@@ -58,27 +83,22 @@ Nothing below has been started.
   beat-accurate measure generation, Unicode-glyph display
 - Sight-reading mode: clef choice, note range, note count, hand-drawn
   SVG staff with correct line/space positions, stems, and ledger lines
+- Generation settings persist across reload (the generated pattern itself
+  does not — a fresh one is made from the restored settings on each load)
+- A per-tab "lock this pattern for printing" toggle, so a new on-screen
+  pattern doesn't overwrite what's about to print
+- A big single-measure step-through display for the rhythm tab
+  (call-and-response drills)
 - Independent print output per mode
 
 ## Quick Wins
 
-- **Save the last-used settings** (time signature, note pool, clef,
-  range) to `localStorage` so a teacher doesn't have to reconfigure the
-  warm-up every class period &mdash; the only tool this round with no
-  persistence at all, since the whole point is a fresh random pattern
-  each time, but the *settings* should still stick.
-- **A "repeat last pattern" option** for print, since right now
-  printing always uses whatever is currently displayed on screen, which
-  is fine, but there's no way to reprint an earlier pattern without
-  regenerating (and losing) it.
-- **Bigger single-measure/single-line display mode** for the rhythm tab,
-  showing just one measure at a time full-screen for call-and-response
-  clapping drills, instead of always showing every measure at once.
 - **Font-availability check with an SVG fallback** for the rhythm mode's
   Unicode note/rest glyphs &mdash; if the projecting computer's font
   doesn't include the Musical Symbols Unicode block, the glyphs render
   as tofu boxes; a simple canvas-based glyph-support probe could warn
   the teacher or switch to a hand-drawn SVG fallback automatically.
+  (Carried over from last round — not yet started.)
 
 ## Major Features
 
@@ -119,10 +139,9 @@ an instructor physically present.
   generic calculation) is a reusable pattern worth reaching for again if
   a future tool needs staff notation (e.g. a hypothetical "Ear Training"
   or "Interval Drill" tool).
-- **P15 (first run)** &mdash; the "no persistence at all" gap called out
-  above is the most first-run-visible issue: a teacher who sets up their
-  preferred rhythm pool and pitch range once will lose that setup the
-  moment they close the tab.
+- **P15 (first run)** &mdash; **resolved this round:** generation settings
+  now persist to `localStorage`, so a teacher's preferred rhythm pool and
+  pitch range survive closing the tab.
 
 ## Open Questions
 

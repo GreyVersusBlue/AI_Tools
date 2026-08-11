@@ -80,6 +80,16 @@
   .measure .glyph { font-size: 2.6rem; line-height: 1; }
   .ts-glyph { font-size: 2.6rem; font-weight: 700; line-height: .85; text-align: center; margin-right: .4rem; }
 
+  .lock-row { margin-bottom: .3rem; }
+
+  /* Big single-measure step-through mode */
+  .big-mode-wrap { display: none; text-align: center; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px dashed var(--line-strong); }
+  .big-mode-wrap.active { display: block; }
+  .big-mode-counter { font-weight: 700; font-size: 1.1rem; align-self: center; min-width: 9rem; }
+  #bigMeasureDisplay { display: flex; justify-content: center; margin: 1.6rem 0; }
+  #bigMeasureDisplay .measure { border-left: 5px solid var(--ink); border-right: 5px solid var(--ink); padding: 1.4rem 3.5rem; min-height: 220px; align-items: center; }
+  #bigMeasureDisplay .glyph { font-size: 8rem; }
+
   /* Sight-reading mode display */
   .staff-system { margin-bottom: 1.4rem; }
   .staff-system svg { width: 100%; height: auto; display: block; }
@@ -155,7 +165,17 @@
 
     <div class="display-card">
       <p class="display-note" id="rhythmNote">Clap or count through each measure left to right.</p>
+      <label class="check-row lock-row"><input type="checkbox" id="lockRhythmToggle"> Lock this pattern for printing (new patterns keep displaying on screen, but printing uses the locked one)</label>
+      <label class="check-row"><input type="checkbox" id="bigModeToggle"> Big single-measure display (for call-and-response clapping drills)</label>
       <div class="measure-row" id="rhythmDisplay"></div>
+      <div class="big-mode-wrap" id="bigModeWrap">
+        <div class="btnrow" style="justify-content:center; align-items:center;">
+          <button type="button" class="secondary" id="prevMeasureBtn">&larr; Previous</button>
+          <span class="big-mode-counter" id="bigModeCounter"></span>
+          <button type="button" class="secondary" id="nextMeasureBtn">Next &rarr;</button>
+        </div>
+        <div id="bigMeasureDisplay"></div>
+      </div>
     </div>
   </div>
 
@@ -202,6 +222,7 @@
 
     <div class="display-card">
       <p class="display-note" id="pitchNote">Sing or play through each note left to right.</p>
+      <label class="check-row lock-row"><input type="checkbox" id="lockPitchToggle"> Lock this pattern for printing (new patterns keep displaying on screen, but printing uses the locked one)</label>
       <div id="pitchDisplay"></div>
     </div>
   </div>
@@ -231,12 +252,77 @@
    'timeSig', 'numMeasures', 'tempo', 'rhythmPool', 'newRhythmBtn', 'rhythmDisplay', 'rhythmNote',
    'clefSelect', 'minNote', 'maxNote', 'numNotes', 'showNames', 'newPitchBtn', 'pitchDisplay', 'pitchNote',
    'printBtn', 'printRhythmArea', 'printRhythmSub', 'printRhythmDisplay',
-   'printPitchArea', 'printPitchSub', 'printPitchDisplay'
+   'printPitchArea', 'printPitchSub', 'printPitchDisplay',
+   'lockRhythmToggle', 'lockPitchToggle',
+   'bigModeToggle', 'bigModeWrap', 'bigMeasureDisplay', 'bigModeCounter', 'prevMeasureBtn', 'nextMeasureBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var mode = 'rhythm';
   var rhythmMeasures = [];
   var pitchNotes = [];
+  var lockedRhythm = null; // { measures, timeSigValue, tempo } — snapshot pinned for printing
+  var lockedPitch = null;  // { notes, clef, minNote, maxNote } — snapshot pinned for printing
+  var bigModeIndex = 0;
+
+  /* ---------------- Settings persistence ---------------- */
+  var STORAGE_KEY = 'msrg_settings_v1';
+
+  function safeParse(json, fallback) {
+    try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
+  }
+
+  function loadSettings() {
+    var data = safeParse(localStorage.getItem(STORAGE_KEY), null);
+    return (data && data.v === 1) ? data : null;
+  }
+
+  function saveSettings() {
+    try {
+      var data = {
+        v: 1,
+        activeTab: mode,
+        rhythm: {
+          timeSig: els.timeSig.value,
+          numMeasures: els.numMeasures.value,
+          tempo: els.tempo.value,
+          pool: selectedRhythmPool()
+        },
+        pitch: {
+          clef: els.clefSelect.value,
+          minNote: els.minNote.value,
+          maxNote: els.maxNote.value,
+          numNotes: els.numNotes.value,
+          showNames: els.showNames.checked
+        }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { /* storage unavailable or full — settings just won't persist */ }
+  }
+
+  function setSelectIfValid(sel, value) {
+    if (value == null) return;
+    var hasOption = Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+    if (hasOption) sel.value = value;
+  }
+
+  function applySavedSettings(data) {
+    if (!data) return;
+    if (data.rhythm) {
+      setSelectIfValid(els.timeSig, data.rhythm.timeSig);
+      setSelectIfValid(els.numMeasures, data.rhythm.numMeasures);
+      if (typeof data.rhythm.tempo === 'string' && data.rhythm.tempo) els.tempo.value = data.rhythm.tempo;
+      if (Array.isArray(data.rhythm.pool)) {
+        Array.prototype.slice.call(els.rhythmPool.querySelectorAll('input')).forEach(function (cb) {
+          cb.checked = data.rhythm.pool.indexOf(cb.value) !== -1;
+        });
+      }
+    }
+    if (data.pitch) {
+      setSelectIfValid(els.clefSelect, data.pitch.clef);
+      setSelectIfValid(els.numNotes, data.pitch.numNotes);
+      if (typeof data.pitch.showNames === 'boolean') els.showNames.checked = data.pitch.showNames;
+    }
+  }
 
   /* ---------------- Tabs ---------------- */
   els.rhythmTabBtn.addEventListener('click', function () { setMode('rhythm'); });
@@ -247,6 +333,7 @@
     els.pitchTabBtn.classList.toggle('active', m === 'pitch');
     els.rhythmPanel.style.display = m === 'rhythm' ? '' : 'none';
     els.pitchPanel.style.display = m === 'pitch' ? '' : 'none';
+    saveSettings();
   }
 
   /* ---------------- Rhythm generation ---------------- */
@@ -277,11 +364,15 @@
     var pool = selectedRhythmPool();
     rhythmMeasures = [];
     for (var i = 0; i < count; i++) rhythmMeasures.push(generateMeasure(beats, pool));
-    renderRhythm(els.rhythmDisplay, els.timeSig.value);
+    renderRhythm(els.rhythmDisplay, els.timeSig.value, rhythmMeasures);
+    bigModeIndex = 0;
+    if (els.bigModeToggle.checked) renderBigMeasure();
+    saveSettings();
   }
 
-  function renderRhythm(target, timeSigValue) {
-    target.innerHTML = rhythmMeasures.map(function (measure, i) {
+  function renderRhythm(target, timeSigValue, measures) {
+    measures = measures || rhythmMeasures;
+    target.innerHTML = measures.map(function (measure, i) {
       var tsHtml = i === 0 ? '<div class="ts-glyph">' + timeSigValue + '<br>4</div>' : '';
       var glyphs = measure.map(function (v) { return '<span class="glyph">' + RHYTHM_GLYPH[v] + '</span>'; }).join('');
       return tsHtml + '<div class="measure">' + glyphs + '</div>';
@@ -289,6 +380,55 @@
   }
 
   els.newRhythmBtn.addEventListener('click', generateRhythm);
+  els.timeSig.addEventListener('change', saveSettings);
+  els.numMeasures.addEventListener('change', saveSettings);
+  els.tempo.addEventListener('input', saveSettings);
+  els.rhythmPool.addEventListener('change', saveSettings);
+
+  /* ---------------- Lock pattern for printing ---------------- */
+  els.lockRhythmToggle.addEventListener('change', function () {
+    if (els.lockRhythmToggle.checked) {
+      lockedRhythm = {
+        measures: JSON.parse(JSON.stringify(rhythmMeasures)),
+        timeSigValue: els.timeSig.value,
+        tempo: els.tempo.value
+      };
+    } else {
+      lockedRhythm = null;
+    }
+  });
+
+  /* ---------------- Big single-measure step-through mode ---------------- */
+  function renderBigMeasure() {
+    if (!rhythmMeasures.length) {
+      els.bigMeasureDisplay.innerHTML = '';
+      els.bigModeCounter.textContent = 'No measures generated yet';
+      els.prevMeasureBtn.disabled = true;
+      els.nextMeasureBtn.disabled = true;
+      return;
+    }
+    if (bigModeIndex > rhythmMeasures.length - 1) bigModeIndex = rhythmMeasures.length - 1;
+    if (bigModeIndex < 0) bigModeIndex = 0;
+    var measure = rhythmMeasures[bigModeIndex];
+    var glyphs = measure.map(function (v) { return '<span class="glyph">' + RHYTHM_GLYPH[v] + '</span>'; }).join('');
+    els.bigMeasureDisplay.innerHTML = '<div class="measure">' + glyphs + '</div>';
+    els.bigModeCounter.textContent = 'Measure ' + (bigModeIndex + 1) + ' of ' + rhythmMeasures.length;
+    els.prevMeasureBtn.disabled = bigModeIndex === 0;
+    els.nextMeasureBtn.disabled = bigModeIndex === rhythmMeasures.length - 1;
+  }
+
+  els.bigModeToggle.addEventListener('change', function () {
+    var active = els.bigModeToggle.checked;
+    els.bigModeWrap.classList.toggle('active', active);
+    els.rhythmDisplay.style.display = active ? 'none' : '';
+    if (active) { bigModeIndex = 0; renderBigMeasure(); }
+  });
+  els.prevMeasureBtn.addEventListener('click', function () {
+    if (bigModeIndex > 0) { bigModeIndex--; renderBigMeasure(); }
+  });
+  els.nextMeasureBtn.addEventListener('click', function () {
+    if (bigModeIndex < rhythmMeasures.length - 1) { bigModeIndex++; renderBigMeasure(); }
+  });
 
   /* ---------------- Sight-reading generation ---------------- */
   var LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
@@ -320,6 +460,20 @@
   }
   els.clefSelect.addEventListener('change', function () { applyClefDefaults(); generatePitches(); });
 
+  /* ---------------- Lock pattern for printing (pitch) ---------------- */
+  els.lockPitchToggle.addEventListener('change', function () {
+    if (els.lockPitchToggle.checked) {
+      lockedPitch = {
+        notes: JSON.parse(JSON.stringify(pitchNotes)),
+        clef: els.clefSelect.value,
+        minNote: els.minNote.value,
+        maxNote: els.maxNote.value
+      };
+    } else {
+      lockedPitch = null;
+    }
+  });
+
   function parseNoteLabel(label) {
     return { letter: label.charAt(0), octave: parseInt(label.slice(1), 10) };
   }
@@ -350,7 +504,8 @@
       pitchNotes.push(pick);
       prevLabel = noteLabel(pick);
     }
-    renderPitches(els.pitchDisplay, clef);
+    renderPitches(els.pitchDisplay, clef, pitchNotes);
+    saveSettings();
   }
 
   function ledgerLinePositions(position) {
@@ -369,10 +524,11 @@
   var LINE_GAP = 14;
   var STEP = LINE_GAP / 2;
 
-  function renderPitches(target, clef) {
+  function renderPitches(target, clef, notes) {
+    notes = notes || pitchNotes;
     var showNames = els.showNames.checked;
     var rows = [];
-    for (var i = 0; i < pitchNotes.length; i += ROW_CAPACITY) rows.push(pitchNotes.slice(i, i + ROW_CAPACITY));
+    for (var i = 0; i < notes.length; i += ROW_CAPACITY) rows.push(notes.slice(i, i + ROW_CAPACITY));
 
     target.innerHTML = rows.map(function (rowNotes) {
       var width = 90 + rowNotes.length * 70;
@@ -420,20 +576,22 @@
   els.numNotes.addEventListener('change', generatePitches);
   els.minNote.addEventListener('change', generatePitches);
   els.maxNote.addEventListener('change', generatePitches);
-  els.showNames.addEventListener('change', function () { renderPitches(els.pitchDisplay, els.clefSelect.value); });
+  els.showNames.addEventListener('change', function () { renderPitches(els.pitchDisplay, els.clefSelect.value); saveSettings(); });
 
   /* ---------------- Print ---------------- */
   els.printBtn.addEventListener('click', function () {
     if (mode === 'rhythm') {
-      els.printRhythmSub.textContent = els.timeSig.value + '/4 time — ' + rhythmMeasures.length + ' measures — ' + els.tempo.value;
-      renderRhythm(els.printRhythmDisplay, els.timeSig.value);
+      var rSrc = lockedRhythm || { measures: rhythmMeasures, timeSigValue: els.timeSig.value, tempo: els.tempo.value };
+      els.printRhythmSub.textContent = rSrc.timeSigValue + '/4 time — ' + rSrc.measures.length + ' measures — ' + rSrc.tempo + (lockedRhythm ? ' (locked pattern)' : '');
+      renderRhythm(els.printRhythmDisplay, rSrc.timeSigValue, rSrc.measures);
       els.printRhythmArea.classList.add('active');
       window.print();
       els.printRhythmArea.classList.remove('active');
     } else {
-      var clef = els.clefSelect.value;
-      els.printPitchSub.textContent = clef.charAt(0).toUpperCase() + clef.slice(1) + ' clef — ' + pitchNotes.length + ' notes — range ' + els.minNote.value + '–' + els.maxNote.value;
-      renderPitches(els.printPitchDisplay, clef);
+      var pSrc = lockedPitch || { notes: pitchNotes, clef: els.clefSelect.value, minNote: els.minNote.value, maxNote: els.maxNote.value };
+      var clefLabel = pSrc.clef.charAt(0).toUpperCase() + pSrc.clef.slice(1);
+      els.printPitchSub.textContent = clefLabel + ' clef — ' + pSrc.notes.length + ' notes — range ' + pSrc.minNote + '–' + pSrc.maxNote + (lockedPitch ? ' (locked pattern)' : '');
+      renderPitches(els.printPitchDisplay, pSrc.clef, pSrc.notes);
       els.printPitchArea.classList.add('active');
       window.print();
       els.printPitchArea.classList.remove('active');
@@ -442,7 +600,15 @@
 
   /* ---------------- Boot ---------------- */
   populateNoteSelects();
-  applyClefDefaults();
+  var savedSettings = loadSettings();
+  applySavedSettings(savedSettings);
+  if (savedSettings && savedSettings.pitch && savedSettings.pitch.minNote && savedSettings.pitch.maxNote) {
+    setSelectIfValid(els.minNote, savedSettings.pitch.minNote);
+    setSelectIfValid(els.maxNote, savedSettings.pitch.maxNote);
+  } else {
+    applyClefDefaults();
+  }
+  setMode(savedSettings && savedSettings.activeTab === 'pitch' ? 'pitch' : 'rhythm');
   generateRhythm();
   generatePitches();
 })();
