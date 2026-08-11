@@ -18,10 +18,13 @@ consolidated them.
 | --- | --- | --- | --- |
 | `jspdf/` | [jsPDF](https://github.com/parallax/jsPDF) + [AutoTable plugin](https://github.com/simonbengtsson/jsPDF-AutoTable) | 2.5.2 / 3.6.0 | MIT |
 | `xlsx/` | [SheetJS Community Edition](https://sheetjs.com/) | 0.18.5 | Apache-2.0 |
-| `jsqr/` | [jsQR](https://github.com/cozmo/jsQR) | unversioned build — identified by SHA-256 | Apache-2.0 |
+| `jsqr/` | [jsQR](https://github.com/cozmo/jsQR) (QR *decoder*) | unversioned build — identified by SHA-256 | Apache-2.0 |
+| `qrcode/` | [qrcode.js](https://github.com/kazuhikoarase/qrcode-generator) (QR *encoder*) | unversioned build — identified by SHA-256 | MIT |
+| `jszip/` | [JSZip](https://github.com/Stuk/jszip) | 3.10.1 | MIT / GPLv3 |
 
 Each folder has its own README with the exact file size, SHA-256, source URL,
-consumers, and update instructions.
+consumers, and update instructions. `jsqr/` and `qrcode/` are easy to confuse
+by name — jsQR *reads* QR codes, qrcode.js *draws* them.
 
 ## Rules
 
@@ -35,5 +38,6 @@ consumers, and update instructions.
   vendored library with a wrong path or a breaking API change loads silently and
   fails at the moment of use — which reads to a teacher as a broken button.
 
-Libraries still living in per-tool `lib/` folders (`qrcode.js`, `jszip.min.js`)
-are duplicated too and are queued for the same treatment; see `REFACTOR_PLAN.md`.
+Phase 1b of `REFACTOR_PLAN.md` consolidated the last two duplicated libraries
+(`qrcode.js`, 14 copies; `jszip.min.js`, 2 copies) into this folder — nothing
+is left living in a per-tool `lib/` folder any more.
