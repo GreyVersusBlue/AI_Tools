@@ -185,16 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Tournament Bracket & Station Rotation (PE) | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Lab Group & Role Randomizer | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Exit Ticket / Bell Ringer Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Number Talks / Mental Math Routine Board | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Writing Prompt Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Math Fact Drill Sheet Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Novel Study / Reading Circles Manager | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Primary Source Analysis Worksheet Generator | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Prompt Builder | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
-| Quiz / Review Game Board | `mxpfjs` | 2026-08-10 23:23 UTC | `claude/tools-021-030-improvements-mxpfjs` |
+| *(none)* | | | |
 
 ---
 
@@ -466,6 +457,37 @@ was touched.
 list — each still has substantial Major Features/Moonshot items open in its
 own file — so none moved to `stable tools/` this round.
 
+### Pass 2 — Round 2 — 2026-08-11 03:10 UTC — session `mxpfjs`
+
+Ten tools, all print/projector/data tools that each already had a Pass 1
+round (Round 4 or Round 5 — see each file's own history) — this round picked
+up specifically where each file's own "Where the next round should pick up"
+notes left off, two scoped improvements per tool, each independently
+verified via `node --check` and a headless Playwright pass before being
+committed. No tool outside this list was touched.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Tournament Bracket & Station Rotation (PE) | `021-pe-tournament-stations.md` | Rest/water stations as a first-class station type (`isRest` flag — no scored toggle, distinct tile/print-card badge, excluded from score capture); single-level undo on Reset and New Unit. |
+| Lab Group & Role Randomizer | `022-lab-group-role-randomizer.md` | Absent-student handling (per-shuffle toggle, role redistributes round-robin to a present groupmate, absent students drop off printed tents); a printable per-student × per-role fairness grid, including zero-history students and zero-count roles. |
+| Exit Ticket / Bell Ringer Generator | `023-exit-ticket-generator.md` | Batch class-set printing on the Printable Handout tab (one slip per `np_rosters` name, name + date pre-filled); a second, renamable-category tally alongside Quick Tally, with a dated save/reset history. |
+| Number Talks / Mental Math Routine Board | `024-number-talks-board.md` | Strategy-card name field now autocompletes from `np_rosters` via a `<datalist>`; single-level undo on Clear board. |
+| Writing Prompt Generator | `025-writing-prompt-generator.md` | A writing-timer widget (presets + custom, epoch-based countdown, WebAudio chime) and an optional word-count goal display, both living inside `.stage` so they survive fullscreen; goal also prints on the poster. |
+| Math Fact Drill Sheet Generator | `026-math-drill-generator.md` | An optional same-sheet corner answer key (with a toggle to also drop the separate key page); a "same problems, reordered per version" anti-copying mode distinct from the existing different-problems version tabs. |
+| Novel Study / Reading Circles Manager | `027-novel-study-circles-manager.md` | "Export vocabulary to Flashcard Generator" — writes a deduped word list directly into `040-vocab-flashcard-generator.html`'s own storage contract (mirroring the `wpg-rubric-link.js` read-only cross-tool bridge pattern); single-level undo on Delete-meeting and Reset-role-history. |
+| Primary Source Analysis Worksheet Generator | `028-primary-source-analysis-generator.md` | An off-by-default reading-support card (summary + simplified paraphrase, printed with the source); uploaded source images now downscale to a 1600px max dimension before storage, with a visible size warning (P12). |
+| Prompt Builder | `029-prompt-builder.md` | A standalone redaction helper (manual name list + opt-in best-effort auto-detect, consistent "Student A/B/C" placeholders); prompt-history text search and per-entry pinning. |
+| Quiz / Review Game Board | `030-review-game-board.md` | Scoreboard is now sticky, larger, and flashes green/red on any score change; teams can be built from a saved `np_rosters` roster, split into N count-based groups with editable, pre-filled names. |
+
+**10 of 46 (Pass 2) tools done this round; 20 of 46 done overall in Pass 2. 26
+to go.** None of the ten cleared their own backlog file — each still carries
+open Major Features/Moonshot items — so none moved to `stable tools/` this
+round either. Two site-wide findings from this round were added to
+`_site-requests.md`: a likely-wider P12 image-storage risk beyond the tools
+already named there, and a new wrinkle on the recurring fullscreen-stage
+duplication (interactive controls, not just static display, now need to
+live inside the fullscreened subtree in at least four tools).
+
 ---
 
 ## Not yet touched
@@ -485,16 +507,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Behavior & Points Tracker — `008-behavior-points-tracker.md`
 - Backup & Restore — `009-backup-restore.md`
 - Command Center — `010-command-center-dashboard.md`
-- Tournament Bracket & Station Rotation (PE) — `021-pe-tournament-stations.md`
-- Lab Group & Role Randomizer — `022-lab-group-role-randomizer.md`
-- Exit Ticket / Bell Ringer Generator — `023-exit-ticket-generator.md`
-- Number Talks / Mental Math Routine Board — `024-number-talks-board.md`
-- Writing Prompt Generator — `025-writing-prompt-generator.md`
-- Math Fact Drill Sheet Generator — `026-math-drill-generator.md`
-- Novel Study / Reading Circles Manager — `027-novel-study-circles-manager.md`
-- Primary Source Analysis Worksheet Generator — `028-primary-source-analysis-generator.md`
-- Prompt Builder — `029-prompt-builder.md`
-- Quiz / Review Game Board — `030-review-game-board.md`
 - Word Doc Merger — `031-docx-merger.md`
 - School Calendar Visualizer — `032-school-calendar-visualizer.md`
 - Silent Reading (SSR) Log Tracker — `033-ssr-log-tracker.md`

@@ -54,3 +54,53 @@ requests and filters the resulting generic connection-reset console message,
 rather than fixing the shared file. This means the smoke test doesn't
 actually catch a regression in the font loading itself — just doesn't fail
 on the pre-existing problem it isn't scoped to fix.
+
+---
+
+## P12 image-storage risk likely extends beyond the tools already flagged
+
+Found 2026-08-11 while adding image downscaling to
+`028-primary-source-analysis-generator.html` (Pass 2, Round 2, session
+`mxpfjs`). `_platform-themes.md`'s P12 section already names several
+image-bearing tools that base64 uploads straight into `localStorage`; this
+round's implementer checked and confirmed only `Tools/timeline-builder/`
+and `Tools/seating-chart/` currently have a dedicated downscale-before-store
+module to copy from (both accept a max-dimension + JPEG-quality canvas
+resize). `028` now has its own copy of that same pattern.
+
+Still worth a dedicated P12 pass across the rest of the image-accepting
+tools this round didn't touch: `046-blank-map-generator.html` (already uses
+IndexedDB for its map cache, so may already be fine — worth confirming
+rather than assuming), `042-certificate-award-maker.html`'s logo upload
+(`cam-logo.js`), `080-virtual-manipulatives-board.html`, and
+`038-data-chart-builder.html` if it accepts images. A shared
+`_shared/downscale-image.js` (extracted from the timeline-builder/
+seating-chart/primary-source-analysis copies, which are likely near-identical
+by now) would be a reasonable next step rather than a fourth
+copy-paste the next time an image-upload tool gets touched.
+
+---
+
+## Fullscreen-stage duplication has now reoccurred a fourth time, with a new wrinkle
+
+Found 2026-08-11 across three tools worked in the same round (Pass 2, Round
+2, session `mxpfjs`): `023-exit-ticket-generator.html`,
+`024-number-talks-board.html`, and `025-writing-prompt-generator.html`.
+`_tools-touched.md`'s "Threads left open across rounds" section already
+tracks this exact duplication (fullscreen-stage wiring independently built
+in at least four tools: `021`, `023`, `024`, `025`), so this is not new
+information — but this round surfaced a specific new wrinkle worth
+recording for whoever eventually builds the shared module:
+
+The Fullscreen API only renders the fullscreened element's own DOM
+subtree. `025-writing-prompt-generator.html` needed to add a *live,
+interactive* writing timer (Start/Pause/Reset buttons, not just a bigger
+font) that stays usable while `.stage` is fullscreened — the same
+constraint that already forced the Round 4 Anonymous Response Display
+into an overlay reparented inside the fullscreened element. A shared
+`_shared/fullscreen-stage.js` helper, whenever someone builds it, needs to
+account for *interactive controls living inside the fullscreened subtree*
+(timers, reveal buttons, response toggles), not just static display
+content (bigger prompt text, dark background) — the four independent
+implementations so far have all discovered this the hard way rather than
+having a documented contract for it.
