@@ -482,7 +482,7 @@ test helper unrelated to this pattern).
 - [~] Migrate bucket (a) then (b) in batches, following the **integration spec**
   below. (Note: the original text of this bullet said theme toggle behavior comes
   from `_shared/theme-toggle.js`, "already used by 16 tools" — both claims turned
-  out to be false; see the spec.) **12/38 of bucket (a) done — see Round 3a.**
+  out to be false; see the spec.) **24/38 of bucket (a) done — see Rounds 3a–3b.**
 
 #### Variance audit (2026-08-11)
 
@@ -518,16 +518,8 @@ conflicts can link a shared copy of the baseline without any rendering change
 (extra local vars stay in a small override block; baseline vars a tool doesn't
 use are harmless to define).
 
-**Bucket (a) — identical, straight swap (38 files; 12 migrated in Round 3a,
-see below — 26 remain):**
-`049-book-tasting-menu-generator.html`,
-`050-civics-role-card-generator.html`, `051-classroom-label-maker.html`,
-`054-current-events-discussion-guide-generator.html`,
-`056-dbq-source-packet-builder.html`, `057-dichotomous-key-builder.html`,
-`058-duty-roster-builder.html`, `059-experiment-design-planner.html`,
-`060-fitness-skill-assessment-tracker.html`,
-`061-fraction-decimal-percent-drill-generator.html`,
-`063-grammar-mad-libs-generator.html`, `064-historical-trading-card-maker.html`,
+**Bucket (a) — identical, straight swap (38 files; 24 migrated in Rounds 3a–3b,
+see below — 14 remain):**
 `065-lab-report-template-builder.html`, `067-music-sightreading-generator.html`,
 `069-pe-warmup-circuit-generator.html`,
 `070-peer-feedback-checklist-generator.html`,
@@ -714,6 +706,52 @@ already does for the existing suites):
 remaining 26 bucket (a) files, all 29 bucket (b) files (need the small local
 override step once (i) vs (ii) day-to-day pattern is proven out further), and
 the `escape-room-builder` companion pages.
+
+#### Round 3b (2026-08-11) — second migration batch, 12 more bucket (a) files
+
+Same option (i) mechanical swap as Round 3a, same per-file shape: `<script
+src="../_shared/a11y.js"></script>` inserted right after the favicon `<link>`
+(before any tool-specific `<script>` tag already there — only
+`051-classroom-label-maker.html` had one, `../_shared/vendor/qrcode/qrcode.js`,
+left in place after `a11y.js`), then `<link rel="stylesheet"
+href="../_shared/ink-paper.css">` + `<link rel="stylesheet"
+href="../_shared/a11y.css">` right before `<style>`, with the inline 9-var
+`:root { ... }` block deleted from inside `<style>`. No `A11Y_NATIVE_THEME`
+flag (none of these ship native dark CSS), no `_ds` Industry stylesheet, no
+`theme.css`.
+
+**Migrated (12, struck from the bucket (a) list above):**
+`049-book-tasting-menu-generator.html`,
+`050-civics-role-card-generator.html`, `051-classroom-label-maker.html`,
+`054-current-events-discussion-guide-generator.html`,
+`056-dbq-source-packet-builder.html`, `057-dichotomous-key-builder.html`,
+`058-duty-roster-builder.html`, `059-experiment-design-planner.html`,
+`060-fitness-skill-assessment-tracker.html`,
+`061-fraction-decimal-percent-drill-generator.html`,
+`063-grammar-mad-libs-generator.html`, `064-historical-trading-card-maker.html`.
+
+**`sw.js`:** `_shared/a11y.js`, `_shared/a11y.css` and `_shared/ink-paper.css`
+were already in `PRECACHE_URLS` from Round 3a, and none of the 12 files were
+renamed, so `PRECACHE_URLS` itself is unchanged this round — `CACHE_VERSION`
+still bumped (v53 → v54) since the byte content of 12 already-precached HTML
+files changed.
+
+**Verification actually performed** (Playwright/Chromium against a local
+static server via `Tools/board-check/harness.mjs`, `serviceWorkers: 'block'`,
+launched with an explicit `executablePath` since the sandbox's preinstalled
+browser revision didn't match this repo's pinned Playwright version):
+
+| Check | Result |
+|---|---|
+| All 12 pages load | zero `pageerror`s, zero `console.error`s, zero failed/≥400 requests on every page (light mode) |
+| Dark theme toggle | forced `gvb-a11y-prefs` → `{theme:"dark"}`, reloaded: `<html data-theme="dark">` set, `.a11y-filter-dark` applied, zero console errors on any of the 12; screenshots of `051` and `057` spot-checked visually — readable light-on-dark, no contrast issues |
+| Light theme (default) | screenshot of `051` matches the expected ink/paper look; byte-identical CSS values to the old inline block, so no rendering change vs. pre-migration |
+| Print preview | emulated `print` media after resetting to light mode: zero console errors on all 12. `051`'s print screenshot is a blank paper-colored page — expected, its print output is JS-populated on the "Print labels" button click, not present at rest (same pattern Round 3a documented for `003`/`042`) |
+| Leftover hardcoded hex from the old `:root` block | `grep` for the 9 original hex values plus `--ink: #`/`--accent-2: #2e6b8f` across all 12 files: zero matches |
+
+**Not migrated this round, deliberately left for a later round:** the
+remaining 14 bucket (a) files, all 29 bucket (b) files, and the
+`escape-room-builder` companion pages.
 
 ### Phase 4 — Common layout + print CSS
 - [ ] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
