@@ -22,6 +22,7 @@
 <script src="../_shared/state-link.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -30,18 +31,15 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 1400px; margin: 0 auto; }
-  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
   .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
 
   .layout { display: grid; grid-template-columns: minmax(320px, 460px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
   input[type="text"], input[type="number"], select, textarea {

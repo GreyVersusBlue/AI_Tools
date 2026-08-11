@@ -947,6 +947,8 @@ out of scope for Phase 3 per the variance audit.
   every migrated tool. Teachers print these; a broken print layout is a real failure.
   Rounds 4a + 4b landed 2026-08-11 (16 tools, the whole print cluster). The toolbar
   cluster and the `.card`+`.app-header` bucket are now unblocked — 48 tools eligible.
+  Round 4c landed 2026-08-11 (12 more tools, script-picked) — 36 remain; use
+  `npm run phase4:next`, not the stale bucket lists below.
 
 #### What `_shared/base.css` contained at Round 4a (2026-08-11)
 
@@ -1184,6 +1186,91 @@ fixed — expect them if you repeat this method:**
    produced a reproducible 65-byte antialiasing difference on
    049-book-tasting-menu-generator that looked like a real regression and was
    not. `browser.newContext()` per render, closed after.
+
+#### Round 4c — first script-picked batch of 12 (2026-08-11)
+
+`npm run phase4:next` picked 001-hall-pass-log, 003-rubric-builder,
+006-class-roster-hub, 008-behavior-points-tracker, 009-backup-restore,
+012-graph-paper-generator, 013-lab-safety-contract-tracker,
+014-roleplay-scenario-generator, 015-timeline-builder, 017-gallery-walk-qr,
+019-escape-room-builder, 020-bracket-tournament-generator (12 of the 48
+candidates that existed at the start of the round; 36 remain). None of these
+link `_shared/print-area.css` — each keeps its own print CSS (or has no
+`#printArea` at all) exactly as before. Two variant rules were left inline
+per the script's LEAVE INLINE notes and recorded here:
+
+- **009-backup-restore** `.app-header` — its own rule was only
+  `{ margin-bottom: 1.4rem; }` (no `display`/`align-items`/etc.), so it isn't
+  byte-identical to base.css's `.app-header` and the script correctly left it
+  inline. But leaving it *unchanged* was still a bug: base.css's
+  `.app-header` rule now loads before the tool's `<style>`, and CSS cascades
+  **per property**, not per rule block — so `display: flex; align-items:
+  baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;`
+  bled in from base.css for every property the tool's own rule didn't set,
+  turning a plain stacked block header (back-link, then `<h1>`, then a
+  tagline `<p>`) into a flex row. Fixed by adding `display: block;` to the
+  tool's own rule (`.app-header { display: block; margin-bottom: 1.4rem; }`)
+  — that alone neutralises the leaked flex properties, since align-items /
+  justify-content / gap / flex-wrap have no effect outside a flex container.
+  Verified against the pre-migration render: computed style now differs only
+  in the now-inert flex properties, and print/screen screenshots match
+  (module the browser Storage-quota estimate, which is non-deterministic per
+  context and unrelated to CSS).
+  **This is a new failure mode for Phase 4, not covered by 4a/4b: any LEAVE
+  INLINE variant that partially overrides a base.css selector (sets fewer
+  properties than base.css does) must be checked for property bleed, not
+  just "does the tool's own rule still read the same" — the computed style,
+  not the rule text, is what has to match.**
+- **020-bracket-tournament-generator** `.app-header` and `.card` — both
+  variants set the *same* properties as base.css (just reformatted across
+  multiple lines, plus `.card`'s padding/margin-bottom values are
+  intentionally different), so there's no bleed: every property base.css
+  would set is already set by the tool's own rule. Confirmed no computed-style
+  difference pre vs post.
+
+**Verification.** No committed suite; same cross-tool method as 4a/4b,
+extended to tools outside the print cluster:
+
+- `git archive HEAD` into a scratch tree for the pre-migration baseline,
+  served from a second static server alongside the working tree.
+- Playwright's `npx playwright install chromium` cannot reach
+  `cdn.playwright.dev` from this environment (proxy blocks it). This
+  environment ships a pre-installed Chromium at
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` whose revision
+  (1194) doesn't match what the installed `playwright` npm package expects
+  by default (1234) — `chromium.launch()` with no options fails to resolve
+  it. Passing `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`
+  explicitly works around the mismatch. (This also means the repo's own
+  `npm test` suites that call `harness.mjs`'s `launch()` — which doesn't
+  take an `executablePath` — fail in this environment on the browser-managed
+  suites; the two pure-logic suites still pass. Unrelated to this round:
+  none of the four `npm test` suites touch any of the 12 tools migrated
+  here.)
+- Computed styles for `.app-header`, `.card`, `.toolbar` (whichever exist),
+  full-page screenshots under `screen`, and `page.pdf()` output (dates
+  stripped) — pre vs post, fresh browser context per render.
+- Two apparent failures turned out to be noise, confirmed by re-rendering
+  the **same** post-migration page multiple times and seeing the same
+  variance: 009's screenshot/PDF byte differences (antialiasing plus a
+  non-deterministic Storage-quota estimate string rendered on the page), and
+  014-roleplay-scenario-generator's screenshot difference (it picks a random
+  scenario via `Math.random()` on every load, independent of any CSS
+  change — computed styles matched exactly, only the screenshot varied).
+- Print: emulated `print` media and screenshotted; byte-identical pre vs
+  post for all 9 tools with their own print CSS, and for
+  014/020 (no print CSS at all — prints as the plain page). 009's print
+  screenshot differed by the same non-deterministic quota-string noise, not
+  layout.
+- `node Tools/board-check/check-social.mjs` output unchanged before and
+  after (same pre-existing drift as documented in CLAUDE.md).
+
+`sw.js`: no files added or renamed (base.css was already in
+`PRECACHE_URLS` since Round 4a), `CACHE_VERSION` bumped v60 → v61.
+
+**Remaining Phase 4 candidates after Round 4c:** 36 tools, per
+`npm run phase4:next -- --all` — the plan's Batch 3/Batch 4/Singles lists
+above are now stale (Round 4c picked across those buckets in file order, not
+bucket order) and should not be used for picking work; run the script.
 
 ### Phase 5 — JS utility patterns (optional, highest judgment)
 - [ ] Candidates: localStorage save/load wrapper, CSV export, print-area show/hide.
