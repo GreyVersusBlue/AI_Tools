@@ -9,6 +9,75 @@
 
 ## Status
 
+### Round 12 (2026-08-11, session `albm3m`) — shipped
+
+Cleared the Quick Wins list (all three that Round 11 left open) plus the
+most tractable Major Feature (attribution on every export). All verified
+with a 27-check headless Chromium pass driving the real UI end-to-end
+(uploaded map → calibrate → batch place → worksheet PDF/print, label-set
+save/rename/edit/export/import round-trips, shrink+undo, all four export
+paths), zero unexpected console errors, plus direct visual inspection of
+the rendered worksheet/answer-key/PNG/poster-tile output.
+
+- **Numbered markers are now worksheet items.** A numbered pin whose key
+  caption holds the answer joins the text labels in one top-to-bottom
+  numbering (`worksheetEntries()` flattens both kinds to `{kind, ref,
+  text, x, y}`); on the worksheet render each pin displays *that
+  version's* item number instead of its natural placement order
+  (`opts.markerNumbers` in `drawMapContent()`), the caption goes into the
+  word bank and the numbered answer lines, and the answer key draws the
+  caption in a text box beside the pin. An **uncaptioned** numbered pin
+  can't be an item (no answer to key), so its circle prints "?" rather
+  than a stray number from the wrong sequence — and the worksheet panel
+  now says exactly that, with a count, when it opens ("N numbered markers
+  with no key caption won't be on the worksheet…"), which was the other
+  half of this Quick Win ("or say so where they'll see it").
+- **Label sets can now be renamed, edited, exported, and imported.**
+  Rename (saved sets), an "Edit places…" sub-panel that round-trips the
+  set through the same one-place-per-line `name, lat, lon` text the batch
+  paste already taught (same `parseCoordLine()`; bad lines are reported
+  by count with the first offender quoted, and nothing saves until they
+  parse), JSON export of any set (built-ins included), and import with
+  validation via `bmg-label-sets.js`'s existing `isValidPlaceList()`.
+  Editing a **built-in** saves the result as "<name> (edited)" — the
+  shipped data stays as shipped — and the editor's hint says so before
+  you type. Import reuses `saveLabelSet()`'s same-name save-over
+  behavior deliberately, so re-importing a corrected file updates rather
+  than duplicates. New store methods: `renameLabelSet()`,
+  `updateLabelSetPlaces()`.
+- **Shrink to Fit** (`btnShrinkLabels`, next to Tidy Labels). Steps only
+  the labels currently involved in a collision down one text size (large
+  → medium → small, never below small) and then re-runs the tidy
+  relaxation against the now-smaller measured boxes — committed through a
+  single `onChange`, so resizes and nudges undo together with one Ctrl+Z
+  (verified). The box-measure/overlap geometry was extracted from
+  `tidyOverlaps()` into shared `measureBoxes()`/`boxOverlap()` helpers,
+  and `tidyOverlaps()` gained a `silent` option so the composed pass
+  commits once. Reports honestly, including the "everything colliding is
+  already smallest" case.
+- **Attribution on every export** (Major Feature, scoped to the raster
+  exports). A new `drawPngCredit()` stamps the credit line on a
+  translucent strip along the bottom-left of PNG download, Print Map, and
+  Save PDF (via `renderMapCanvas()`), and on the tiled poster's
+  bottom-left page (drawn at 16px on the poster canvas, since each poster
+  pixel prints physically larger). `worksheetCreditLine()` was
+  generalized to `mapCreditLine()`, shared with the worksheet footer; for
+  a teacher-uploaded image it now credits "Map: <name> (teacher-supplied
+  image)" instead of reprinting the stored "you are responsible…"
+  advice text, which was advice to the teacher, not attribution.
+  Automatic and not a toggle, unlike Round 9's grayscale checkbox — the
+  licence line is the price of using a Commons map, which is the point of
+  the backlog item ("unmissable on every export").
+
+Where the next round should pick up: the Quick Wins list is now empty —
+next is the Major Features list (time-slice maps, vector base maps,
+choropleth, quiz-mode persistence, map+timeline pairing). One small seam
+left on purpose: the answer key draws a pin's caption box at the pin's
+own anchor, so two items sharing one spot (e.g. a batch-placed pin plus
+its label) overlap boxes there — same behavior two stacked labels always
+had; a per-page collision pass over answer-key text boxes would be the
+fix if a real map ever makes it illegible.
+
 ### Round 11 (2026-08-11, session `gb5c6e`) — shipped
 
 Two of the five open Quick Wins from Round 10's list — the two that were
@@ -167,41 +236,51 @@ the projected half of the quiz-mode major feature.
   **batch placing markers from a coordinate list** and **distance measurement**
   in km/mi
 - **Reusable label sets** — seven built-in place lists plus teacher-saved
-  ones, dropped onto any calibrated map, and a **Tidy Labels** pass that
-  nudges overlapping labels apart
+  ones, dropped onto any calibrated map; saved sets can be renamed and
+  edited in place, and any set (built-ins included) exports/imports as a
+  JSON file for sharing between colleagues
+- **Tidy Labels** (nudges overlapping labels apart) and **Shrink to Fit**
+  (steps colliding labels' text down a size, then tidies — for maps too
+  dense for separation alone), each a single undoable edit
 - **Semantic line types** (river / border / trade route / migration / …)
   that caption their own legend row
 - **Student Handout Mode**, **Self-Check Quiz Mode** (with reveal-next,
   scoring, reshuffle and projector text), and a **numbered worksheet +
-  answer key** builder with word bank and multiple shuffled versions
+  answer key** builder with word bank and multiple shuffled versions —
+  numbered blanks come from text labels *and* from numbered markers whose
+  key captions hold the answers
 - Multiple named projects, import/export, PNG download, print / save PDF, and
-  **tiled poster printing** across several pages
+  **tiled poster printing** across several pages — every raster export
+  automatically carries the map's Commons credit line
 - IndexedDB map cache for genuine offline reuse; "clear cached maps"
 - Full undo/redo history
 
 ## Quick Wins
 
-Round 10 shipped the worksheet/answer-key/label-set/tidy/line-type/quiz
-cluster and Round 9 shipped grayscale-safe fills; what's left here is what
-those rounds surfaced rather than solved.
+**All clear as of Round 12.** Rounds 9–12 worked through this whole list;
+the entries are kept below (marked Done) as the record of what shipped
+where. New quick wins surfaced by future rounds go here.
 
 - **Done —** **Word bank on the answer-key page is redundant** — it prints there
   because the key reuses the worksheet layout wholesale. Minor, but it's a
   wasted inch of paper on every key. *(Shipped Round 11 — the answer key no
   longer draws the word bank at all; the worksheet page still does.)*
-- **Numbered markers aren't worksheet items.** The worksheet numbers text
+- **Done —** **Numbered markers aren't worksheet items.** The worksheet numbers text
   labels only. A teacher who built their map from numbered pins (and put the
   answers in the legend captions) gets an empty worksheet with no
   explanation beyond the panel's hint. Either number them too, or say so
-  where they'll see it.
-- **Label sets can't be edited or exported.** A saved set can be created and
+  where they'll see it. *(Shipped Round 12 — both halves: captioned pins
+  are items, and the panel explains uncaptioned ones with a count.)*
+- **Done —** **Label sets can't be edited or exported.** A saved set can be created and
   deleted, but not renamed, trimmed, or handed to a colleague — and the
   built-in coordinates can't be corrected in place, only re-saved as a
   private copy. Set import/export would also make the built-ins
-  community-fixable.
-- **A "shrink to fit" pass for labels**, as a companion to Tidy Labels: on a
+  community-fixable. *(Shipped Round 12 — rename, a text editor reusing
+  the batch-paste line format, and JSON export/import.)*
+- **Done —** **A "shrink to fit" pass for labels**, as a companion to Tidy Labels: on a
   really dense map, separation alone runs out of room and the honest fix is
-  smaller type.
+  smaller type. *(Shipped Round 12 — steps colliding labels down one size
+  and re-tidies, one undoable edit.)*
 - **Done —** **Worksheet answer lines don't wrap.** A long place name in a narrow
   answer column overruns its line rather than shrinking or wrapping.
   *(Shipped Round 11 as shrink-to-fit rather than wrapping — a new
@@ -232,9 +311,12 @@ those rounds surfaced rather than solved.
 - **Map + timeline pairing** (P7). `015-timeline-builder.html` covers *when*;
   this covers *where*. A combined print — timeline along the bottom, map
   above, events pinned to both — would be a genuinely distinctive artifact.
-- **Attribution done properly and automatically.** `renderAttribution` exists;
+- **Done —** **Attribution done properly and automatically.** `renderAttribution` exists;
   making the Commons licence line unmissable on every export protects the
-  teacher and models good practice for students.
+  teacher and models good practice for students. *(Shipped Round 12 —
+  `drawPngCredit()` stamps the credit line on PNG / Print / Save PDF and
+  the tiled poster's bottom-left page automatically; the worksheet footer
+  already had it and now shares the same `mapCreditLine()`.)*
 
 ## Moonshot / North Star
 

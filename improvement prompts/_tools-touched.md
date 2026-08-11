@@ -826,6 +826,27 @@ None of the four cleared their list — each still has substantial Major
 Features/Moonshot items open in its own file — so none moved to
 `stable tools/` this round.
 
+### Devon-assigned round — tool 046 (Round 12) — 2026-08-11 02:07 UTC — session `albm3m` — branch `claude/tool-46-blank-map-generator-albm3m`
+
+Devon directed this session at the Blank Map Generator specifically —
+the same per-tool override as its Rounds 9–11 — so this does **not**
+change the Pass 2 tally (046 already counted in session `gb5c6e`'s
+Round 4 above). Cleared the tool's entire remaining Quick Wins list plus
+one Major Feature, all verified with a 27-check headless Chromium pass
+driving the real UI (worksheet PDF byte-parsed for page count, label-set
+export/import round-tripped through real downloads/uploads, undo
+exercised via real Ctrl+Z) plus direct visual inspection of the rendered
+worksheet, answer key, PNG, and poster-tile output.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Blank Map Generator | `046-blank-map-generator.md` | Numbered markers with key captions are now worksheet items (uncaptioned ones print "?" and the panel says why, with a count); label sets gained rename / edit-as-text / JSON export / import (built-ins edit as copy-on-save); a "Shrink to Fit" companion to Tidy Labels (one undoable edit); the Commons credit line now stamps automatically on every raster export (PNG, Print, PDF, tiled poster). |
+
+The tool's Quick Wins list is now empty — but its Major Features /
+Moonshot sections (time-slice maps, vector base maps, choropleth,
+map+timeline pairing) are substantial and open, so it does not move to
+`stable tools/`.
+
 ---
 
 ## Not yet touched

@@ -357,6 +357,37 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
     input.addEventListener("pointerdown", e => e.stopPropagation());
   }
 
+  /** Measures every non-empty label's rendered box in screen space, tagged with its stage-anchored screen position — the collision geometry shared by tidyOverlaps() and shrinkToFit(). */
+  function measureBoxes() {
+    const layerRect = layerEl.getBoundingClientRect();
+    const boxes = [];
+    labels.forEach(l => {
+      const node = nodes.get(l.id);
+      if (!node || !l.text) return;
+      const r = node.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const anchor = viewer.stageToScreen(l.x, l.y);
+      boxes.push({
+        label: l,
+        offX: r.left - (layerRect.left + anchor.x), // box position relative to the anchor point
+        offY: r.top - (layerRect.top + anchor.y),
+        w: r.width, h: r.height,
+        x: anchor.x, y: anchor.y,
+        homeX: anchor.x, homeY: anchor.y,
+      });
+    });
+    return boxes;
+  }
+
+  /** How much two measured boxes overlap on each axis (padding-inflated), or null when they don't collide. */
+  function boxOverlap(a, b, padding) {
+    const ax = a.x + a.offX, ay = a.y + a.offY;
+    const bx = b.x + b.offX, by = b.y + b.offY;
+    const overlapX = Math.min(ax + a.w, bx + b.w) - Math.max(ax, bx) + padding;
+    const overlapY = Math.min(ay + a.h, by + b.h) - Math.max(ay, by) + padding;
+    return (overlapX > 0 && overlapY > 0) ? { overlapX, overlapY } : null;
+  }
+
   /**
    * Nudges overlapping labels apart until none of their boxes collide,
    * keeping each as close to where it was as the crowding allows.
@@ -377,27 +408,12 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
    * coordinates at the end, so the amount of separation is what looks right
    * at the *current* zoom. Runs through onChange like any other edit, so
    * it's a single Ctrl+Z away from being undone. Returns how many labels
-   * actually moved.
+   * actually moved. `silent` skips the onChange so a caller composing this
+   * with its own edit (shrinkToFit) can commit everything as one change.
    */
-  function tidyOverlaps({ padding = 5, iterations = 260 } = {}) {
+  function tidyOverlaps({ padding = 5, iterations = 260, silent = false } = {}) {
     const scale = viewer.getView().scale;
-    const layerRect = layerEl.getBoundingClientRect();
-    const boxes = [];
-    labels.forEach(l => {
-      const node = nodes.get(l.id);
-      if (!node || !l.text) return;
-      const r = node.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      const anchor = viewer.stageToScreen(l.x, l.y);
-      boxes.push({
-        label: l,
-        offX: r.left - (layerRect.left + anchor.x), // box position relative to the anchor point
-        offY: r.top - (layerRect.top + anchor.y),
-        w: r.width, h: r.height,
-        x: anchor.x, y: anchor.y,
-        homeX: anchor.x, homeY: anchor.y,
-      });
-    });
+    const boxes = measureBoxes();
     if (boxes.length < 2) return 0;
 
     for (let iter = 0; iter < iterations; iter++) {
@@ -405,11 +421,11 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
       for (let i = 0; i < boxes.length; i++) {
         for (let j = i + 1; j < boxes.length; j++) {
           const a = boxes[i], b = boxes[j];
+          const overlap = boxOverlap(a, b, padding);
+          if (!overlap) continue;
+          const { overlapX, overlapY } = overlap;
           const ax = a.x + a.offX, ay = a.y + a.offY;
           const bx = b.x + b.offX, by = b.y + b.offY;
-          const overlapX = Math.min(ax + a.w, bx + b.w) - Math.max(ax, bx) + padding;
-          const overlapY = Math.min(ay + a.h, by + b.h) - Math.max(ay, by) + padding;
-          if (overlapX <= 0 || overlapY <= 0) continue;
           collided = true;
           if (overlapX < overlapY) {
             const dir = (ax + a.w / 2) <= (bx + b.w / 2) ? -1 : 1;
@@ -441,8 +457,47 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
       box.label.y += dy / scale;
       moved++;
     });
-    if (moved) { reposition(); onChange?.(labels); }
+    if (moved) { reposition(); if (!silent) onChange?.(labels); }
     return moved;
+  }
+
+  /**
+   * The companion pass to tidyOverlaps() for maps too dense for separation
+   * alone (all fifty states on one page): steps every label currently
+   * involved in a collision down one text size (large → medium → small —
+   * never below small, where shrinking stops being the fix), then re-runs
+   * the tidy relaxation against the now-smaller boxes. Committed through a
+   * single onChange, so the whole thing — resizes and nudges together — is
+   * one Ctrl+Z away from being undone. Returns {colliding, shrunk, moved}
+   * so the caller can report honestly, including the case where everything
+   * colliding is already at the smallest size.
+   */
+  function shrinkToFit({ padding = 5 } = {}) {
+    const boxes = measureBoxes();
+    const colliding = new Set();
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        if (boxOverlap(boxes[i], boxes[j], padding)) {
+          colliding.add(boxes[i].label.id);
+          colliding.add(boxes[j].label.id);
+        }
+      }
+    }
+    if (!colliding.size) return { colliding: 0, shrunk: 0, moved: 0 };
+
+    const stepDown = { large: "medium", medium: "small" };
+    let shrunk = 0;
+    labels.forEach(l => {
+      if (!colliding.has(l.id)) return;
+      const next = stepDown[l.size || DEFAULT_LABEL_SIZE];
+      if (next) { l.size = next; shrunk++; }
+    });
+    // reconcile() re-applies the smaller font sizes to the DOM nodes, so the
+    // tidy pass below measures the labels at their new, smaller boxes.
+    if (shrunk) reconcile();
+    const moved = tidyOverlaps({ padding, silent: true });
+    if (shrunk || moved) onChange?.(labels);
+    return { colliding: colliding.size, shrunk, moved };
   }
 
   /** Starts editing a just-placed label by id (used right after addAt()). */
@@ -454,6 +509,6 @@ export function createLabelLayer(layerEl, viewer, { onChange, onQuizChange } = {
 
   return {
     setLabels, getLabels, addAt, remove, reposition, startEditing, select, deselect, getSelectedId, nudge,
-    setQuizMode, isQuizMode, revealNext, revealAll, hideAll, getQuizProgress, tidyOverlaps,
+    setQuizMode, isQuizMode, revealNext, revealAll, hideAll, getQuizProgress, tidyOverlaps, shrinkToFit,
   };
 }
