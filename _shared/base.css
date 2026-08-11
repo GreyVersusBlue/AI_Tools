@@ -1,0 +1,35 @@
+/* Shared layout + print baseline — Phase 4 of REFACTOR_PLAN.md.
+   Every rule below was verified byte-identical (leading indentation
+   stripped) across the tools it was lifted from; rules that had any
+   variant were deliberately left inline in the tools that own them.
+   This is a straight dedup, not a restyle: no declaration changed.
+
+   Load order matters. Link this AFTER _shared/ink-paper.css (it consumes
+   --card / --line) and BEFORE the tool's own inline <style>, so a tool
+   keeping a local variant of any selector here still wins on the cascade.
+
+   ---------------------------------------------------------------------
+   WARNING — the @media print block at the bottom is all-or-nothing.
+   `body * { visibility: hidden }` blanks the entire page and only
+   #printArea is made visible again. A tool that links base.css but has
+   NO element with id="printArea" will print a blank sheet. Only link
+   this from tools that use the #printArea print pattern.
+   --------------------------------------------------------------------- */
+
+.app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1.2rem; }
+
+/* The #printArea pattern: the print sheet is built in a hidden container
+   and only becomes visible when the page is printed. The screen rule and
+   the print block must stay in this order — the print block relies on
+   coming last to override `display: none`. */
+#printArea { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
+}

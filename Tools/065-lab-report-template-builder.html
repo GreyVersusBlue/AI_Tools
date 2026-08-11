@@ -17,6 +17,7 @@
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -25,7 +26,6 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 1280px; margin: 0 auto; }
-  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
@@ -34,7 +34,6 @@
   .layout { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
@@ -77,7 +76,6 @@
   .modal-header h2 { font-size: 1.15rem; margin: 0; }
   .preview-sheet { background: #fff; border: 1px solid var(--line); padding: .9in .75in; }
 
-  #printArea { display: none; }
   .lab-title { font-size: 1.4rem; margin: 0 0 .1rem; }
   .lab-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
   .lab-section { margin-bottom: 1rem; }
@@ -91,11 +89,6 @@
   table.data-table th { background: #eee; }
   table.data-table td { height: 1.6rem; }
 
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-  }
 </style>
 </head>
 <body>

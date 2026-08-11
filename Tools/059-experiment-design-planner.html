@@ -17,6 +17,7 @@
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -25,13 +26,11 @@
     padding: 24px 20px 100px; line-height: 1.45;
   }
   .wrap { max-width: 900px; margin: 0 auto; }
-  .app-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
   .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; }
   .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
   .back-link:hover { color: var(--accent-2); }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
   .card h2 { font-size: 1rem; margin: 0 0 .3rem; color: var(--accent); }
   .card .step-num { display: inline-block; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; line-height: 1.5rem; font-size: .82rem; margin-right: .4rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
@@ -66,7 +65,6 @@
   .warn-hint { color: var(--err); font-size: .78rem; margin: -.2rem 0 .6rem; display: none; }
   .warn-hint.shown { display: block; }
 
-  #printArea { display: none; }
   .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
   .print-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
   .print-section { margin-bottom: 1rem; }
@@ -74,11 +72,6 @@
   .print-section p { font-size: .9rem; margin: .2rem 0; }
   .print-section ul, .print-section ol { margin: .2rem 0; padding-left: 1.3rem; font-size: .9rem; }
 
-  @media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-  }
 </style>
 </head>
 <body>
