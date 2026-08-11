@@ -85,6 +85,31 @@
   }
   @media print { .ab-badge { color: #000 !important; border-color: #000 !important; } }
 
+  /* --- lesson pacing --- */
+  .pace-help summary { cursor: pointer; font-size: 0.85rem; color: var(--accent-2); }
+  .pace-help p, .pace-help ul { font-size: 0.82rem; color: var(--muted); margin: 8px 0; }
+  .pace-help code { background: #f2f0ea; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; font-size: 0.95em; }
+  .pacing-card textarea { font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; margin-top: 10px; }
+  .pace-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 8px; }
+  .pace-row .field { display: flex; flex-direction: column; gap: 3px; }
+  .pace-row label { font-size: 0.76rem; font-weight: 600; color: var(--muted); }
+  .pace-status { font-size: 0.84rem; color: var(--muted); margin-top: 10px; }
+  .pace-status b { color: var(--ink); }
+  .pace-status .overflow-warn { color: var(--err); }
+  .pace-errors { color: var(--err); font-size: 0.8rem; margin-top: 6px; white-space: pre-line; }
+  .adj-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .adj-list h3 { font-size: 0.82rem; margin: 0 0 2px; color: var(--muted); }
+  .adj-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; flex-wrap: wrap; }
+  .adj-row .orphan { color: var(--err); }
+  .day .paced {
+    display: block; font-size: 0.62rem; font-weight: 600; color: var(--ok);
+    line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .day .paced.mismatch { color: var(--err); }
+  .day .bump-note { display: block; font-size: 0.6rem; color: #8a5a00; font-style: italic; line-height: 1.15; }
+  .drawer-paced { font-size: 0.84rem; color: var(--ok); font-weight: 600; word-break: break-word; }
+  @media print { .day .paced, .day .paced.mismatch, .day .bump-note { color: #000 !important; } }
+
   /* --- month grid --- */
   .months { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
   .month { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
@@ -94,6 +119,9 @@
   .day {
     min-height: 58px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
     padding: 3px 4px; font-size: 0.72rem; cursor: pointer; position: relative; background: #fff;
+    /* overflow:hidden also zeroes the grid item's automatic minimum size, so a
+       long nowrap lesson code ellipsizes instead of blowing the column out */
+    overflow: hidden;
   }
   .day:hover { background: #f6f4ee; }
   .day.empty { background: #fbfaf7; cursor: default; }
@@ -224,6 +252,35 @@
     </div>
   </div>
 
+  <div class="card pacing-card no-print">
+    <h2>Lesson Pacing</h2>
+    <details class="pace-help">
+      <summary>Lesson naming convention &amp; how pacing works</summary>
+      <p>One lesson per line, named <code>U&lt;unit&gt;-&lt;lesson&gt;-&lt;A|B&gt;-&lt;Title&gt;</code>:</p>
+      <ul>
+        <li><code>U1-03-A-Urbanization &amp; Trade Networks</code> — Unit&nbsp;1, Lesson&nbsp;03, written for an A&nbsp;day.</li>
+        <li><code>U2-BUF1-B-Buffer / Review Day</code> — buffer/review days use a token like <code>BUF1</code> instead of a number.</li>
+      </ul>
+      <p>Zero-pad lesson numbers (<code>01</code>, <code>02</code>…) so lists stay in order. The title can contain anything, including hyphens.
+      Lessons fill school days in the order pasted — weekends and no-school days are skipped; early dismissals still get their lesson, marked with ½.
+      To push a lesson back a day (it ran long, an assembly ate the block), open that day and use <em>Bump forward</em> — everything after it slides one school day, and your reason shows on the vacated day.
+      For a snow day, tag the date with a no-school type (the day editor has a shortcut) and the whole sequence reflows around it automatically, A/B letters included.</p>
+      <p>Placement is always computed from the sequence, so editing a past day reflows everything after it. To freeze what you actually taught on a given day, write it in that day's <em>Lesson / unit note</em> field — that note never moves.</p>
+    </details>
+    <textarea id="paceInput" rows="6" placeholder="U1-01-A-Early Islamic Expansion&#10;U1-01-B-Early Islamic Expansion&#10;U1-02-A-Geographic Factors in Early Islamic Expansion&#10;…"></textarea>
+    <div class="pace-row">
+      <button id="btnPacePreview" class="small">Preview</button>
+      <div class="field"><label for="paceStart">Start date</label><input type="date" id="paceStart"></div>
+      <button id="btnPaceDistribute" class="primary small">Distribute Across Calendar</button>
+      <button id="btnPaceXlsx" class="small">Import County Pacing Spreadsheet (.xlsx)</button>
+      <input type="file" id="filePaceXlsx" accept=".xlsx,.xls" hidden>
+      <button id="btnPaceClear" class="danger small">Clear Pacing</button>
+    </div>
+    <div id="paceStatus" class="pace-status"></div>
+    <div id="paceErrors" class="pace-errors"></div>
+    <div id="adjLog" class="adj-list"></div>
+  </div>
+
   <p class="stats-line no-print" id="statsLine"></p>
 
   <h1 id="printTitle" style="display:none;"></h1>
@@ -243,6 +300,7 @@
   <textarea id="drawerLesson" placeholder="e.g. U1-05-A Islamic Governance"></textarea>
   <label class="f" for="drawerNote">Other note</label>
   <textarea id="drawerNote"></textarea>
+  <div id="drawerPacing"></div>
   <div style="margin-top:14px; display:flex; gap:8px;">
     <button id="drawerSave" class="primary small">Save</button>
     <button id="drawerClear" class="danger small">Clear Day/Range</button>
@@ -250,11 +308,16 @@
 </div>
 
 <script type="module">
-import { createStore, isValid as isValidCalendar } from './school-calendar/scv-store.js';
+import { createStore, isValid as isValidCalendar, migrate as migrateCalendar } from './school-calendar/scv-store.js';
 import { seedCalendar2026, blankCalendar } from './school-calendar/scv-seed.js';
+import {
+  parseLessonList, placeLessons, isTeachableDay, rebindAdjustments,
+  parsePacingRows, emptyPacing,
+} from './school-calendar/scv-pacing.js';
 
 const store = createStore(seedCalendar2026);
 let cal = store.get();
+let placement = null; // computed lesson placement, rebuilt at the top of every render
 let selectedDate = null;
 let rangeAnchor = null; // last plain-clicked date — the shift-click anchor for range selection
 let rangeDates = null;  // array of ISO dates when the drawer is open in range mode, else null
@@ -389,7 +452,26 @@ function renderMonths() {
       const lesson = entry && entry.lesson ? `<span class="lesson">${escapeHtml(entry.lesson)}</span>` : "";
       const abLetter = abMap[dateISO];
       const abBadge = abLetter ? `<span class="ab-badge" title="${abLetter} day">${abLetter}</span>` : "";
-      cell.innerHTML = `<span class="num">${d}</span>${abBadge}${chips}${label}${lesson}`;
+      // Paced lesson (computed placement) renders distinct from the free-text
+      // lesson note above: green + bold vs italic accent, "your note" vs
+      // "where the sequence currently lands".
+      let paced = "";
+      const placedLesson = placement && placement.byDate[dateISO];
+      if (placedLesson) {
+        const mismatch = abLetter && abLetter !== placedLesson.letter;
+        const half = isEarlyDismissalDay(dateISO);
+        const code = `U${placedLesson.unit}-${placedLesson.num}-${placedLesson.letter}`;
+        const tip = placedLesson.raw
+          + (mismatch ? ` — coded ${placedLesson.letter} but this is a ${abLetter} day` : "")
+          + (half ? " — early dismissal (shortened periods)" : "");
+        paced = `<span class="paced${mismatch ? " mismatch" : ""}" title="${escapeAttr(tip)}">`
+          + `${mismatch ? "⚠ " : ""}${escapeHtml(code)} · ${escapeHtml(placedLesson.title)}${half ? " ½" : ""}</span>`;
+      }
+      const vacated = placement && placement.vacated[dateISO];
+      const bumpNotes = vacated ? vacated.map(v =>
+        `<span class="bump-note" title="${escapeAttr("A lesson was bumped off this day" + (v.reason ? ": " + v.reason : ""))}">⤳ bumped${v.reason ? ": " + escapeHtml(v.reason) : ""}</span>`
+      ).join("") : "";
+      cell.innerHTML = `<span class="num">${d}</span>${abBadge}${chips}${label}${paced}${bumpNotes}${lesson}`;
       cell.addEventListener("click", (e) => {
         if (e.shiftKey && rangeAnchor) openDrawerRange(rangeAnchor, dateISO);
         else openDrawer(dateISO);
@@ -465,10 +547,31 @@ function isNoSchoolDay(dateISO) {
    it stays correct across holidays and breaks without the teacher having
    to manually skip anything. */
 function isEligibleForAbCycle(dateISO) {
-  const d = new Date(dateISO + "T00:00:00");
-  const dow = d.getDay();
-  if (dow === 0 || dow === 6) return false;
-  return !isNoSchoolDay(dateISO);
+  // Delegates to the pacing module's predicate so the A/B cycle and the
+  // lesson placement can never disagree about what counts as a school day.
+  return isTeachableDay(dateISO, cal.days, cal.dayTypes);
+}
+
+/** A day tagged with an early-dismissal type — still a school day, but the
+    placed lesson gets flagged so a teacher plans for shortened periods. */
+function isEarlyDismissalDay(dateISO) {
+  const entry = cal.days[dateISO];
+  if (!entry || !entry.types.length) return false;
+  return entry.types.some(id => {
+    const t = typeById(id);
+    return t && !t.noSchool && (t.id === "halfday" || /early dismissal|half day/i.test(t.label));
+  });
+}
+
+function computePlacement() {
+  if (!cal.pacing) cal.pacing = emptyPacing();
+  placement = placeLessons({
+    lessons: cal.pacing.lessons,
+    adjustments: cal.pacing.adjustments,
+    startISO: cal.pacing.startDate || cal.meta.start,
+    endISO: cal.meta.end,
+    isTeachable: isEligibleForAbCycle,
+  });
 }
 
 function countAbEligibleStrictlyBetween(aISO, bISO) {
@@ -559,7 +662,7 @@ function renderStats() {
   el.innerHTML = text;
 }
 
-function render() { renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); }
+function render() { computePlacement(); renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); }
 
 function syncMeta() {
   document.getElementById("metaLabel").value = cal.meta.yearLabel;
@@ -611,8 +714,49 @@ function openDrawer(dateISO) {
   document.getElementById("drawerLabel").value = entry.label || "";
   document.getElementById("drawerLesson").value = entry.lesson || "";
   document.getElementById("drawerNote").value = entry.note || "";
+  renderDrawerPacing(dateISO);
   document.getElementById("drawer").classList.add("open");
   renderMonths();
+}
+
+/** The pacing section of the day editor: what lesson landed here, a bump
+    button (one skipped school-day slot, with an optional reason), and the
+    snow-day shortcut (tag no-school + label; the sequence reflows on its
+    own — untagging the day is the undo). */
+function renderDrawerPacing(dateISO) {
+  const el = document.getElementById("drawerPacing");
+  const placed = placement && placement.byDate[dateISO];
+  const vacated = placement && placement.vacated[dateISO];
+  let html = "";
+  if (placed) {
+    html += `<label class="f">Paced lesson</label><div class="drawer-paced">${escapeHtml(placed.raw)}</div>
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="drawerBump" class="small">Bump forward…</button>
+        <button id="drawerSnow" class="small">Snow day…</button>
+      </div>`;
+  }
+  if (vacated && vacated.length) {
+    html += `<label class="f">Bumped off this day</label><div style="font-size:0.82rem;">` +
+      vacated.map(v => escapeHtml(v.reason || "(no reason given)")).join("<br>") + `</div>`;
+  }
+  el.innerHTML = html;
+  if (!placed) return;
+  document.getElementById("drawerBump").addEventListener("click", () => {
+    const reason = prompt(`Bump "${placed.raw}" — it and every lesson after it slide forward one school day, skipping weekends and no-school days.\n\nOptional reason (shows on the vacated day):`, "");
+    if (reason === null) return;
+    cal.pacing.adjustments.push({ id: uid("adj"), beforeLessonId: placed.id, reason: reason.trim(), createdOn: dateISO });
+    save(); closeDrawer();
+  });
+  document.getElementById("drawerSnow").addEventListener("click", () => {
+    const label = prompt("Tag this day as no school — the whole lesson sequence (and the A/B cycle) reflows around it.\n\nLabel for the day:", "Snow Day");
+    if (label === null) return;
+    const existing = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
+    const holidayType = typeById("holiday") || cal.dayTypes.find(t => t.noSchool);
+    if (holidayType && !existing.types.includes(holidayType.id)) existing.types = [...existing.types, holidayType.id];
+    if (label.trim()) existing.label = label.trim();
+    cal.days[dateISO] = existing;
+    save(); closeDrawer();
+  });
 }
 
 /** Shift-click range selection — the anchor is whichever date was last
@@ -634,6 +778,7 @@ function openDrawerRange(fromISO, toISO) {
   document.getElementById("drawerLabel").value = "";
   document.getElementById("drawerLesson").value = "";
   document.getElementById("drawerNote").value = "";
+  document.getElementById("drawerPacing").innerHTML = "";
   document.getElementById("drawer").classList.add("open", "range-mode");
   renderMonths();
 }
@@ -716,6 +861,171 @@ document.getElementById("btnApplyAb").addEventListener("click", () => {
   save(); render();
 });
 
+/* --- lesson pacing --- */
+function uid(prefix) {
+  return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function fmtShort(dateISO) {
+  return new Date(dateISO + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "numeric", day: "numeric" });
+}
+
+function renderPacing() {
+  const p = cal.pacing;
+  const startInput = document.getElementById("paceStart");
+  startInput.value = p.startDate || cal.meta.start;
+
+  const statusEl = document.getElementById("paceStatus");
+  if (!p.lessons.length) {
+    statusEl.innerHTML = "No lessons paced yet — paste a list above or import the county spreadsheet.";
+  } else {
+    const parts = [`<b>${p.lessons.length}</b> lessons paced from ${fmtShort(p.startDate || cal.meta.start)}`];
+    const placedCount = Object.keys(placement.byDate).length;
+    parts.push(`${placedCount} placed`);
+    if (placement.overflow.length) {
+      const first = placement.overflow[0];
+      parts.push(`<span class="overflow-warn">⚠ ${placement.overflow.length} don't fit before ${cal.meta.end} (starting at ${escapeHtml(first.raw)})</span>`);
+    }
+    statusEl.innerHTML = parts.join(" &middot; ");
+  }
+
+  const log = document.getElementById("adjLog");
+  if (!p.adjustments.length) { log.innerHTML = ""; return; }
+  const orphaned = new Set(placement.orphanedAdjustmentIds);
+  log.innerHTML = "<h3>Bumps (newest last)</h3>" + p.adjustments.map(a => {
+    const lesson = p.lessons.find(l => l.id === a.beforeLessonId);
+    const what = lesson
+      ? `bumped <code>${escapeHtml(lesson.raw)}</code>`
+      : `<span class="orphan">no longer matches a lesson</span>`;
+    const reason = a.reason ? ` — <i>${escapeHtml(a.reason)}</i>` : "";
+    const when = a.createdOn ? ` (added ${fmtShort(a.createdOn)})` : "";
+    const flag = orphaned.has(a.id) && lesson ? ` <span class="orphan">(inactive)</span>` : "";
+    return `<div class="adj-row">${what}${reason}${when}${flag}
+      <button class="small danger" data-adj="${escapeAttr(a.id)}">Remove</button></div>`;
+  }).join("");
+  log.querySelectorAll("[data-adj]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      cal.pacing.adjustments = cal.pacing.adjustments.filter(a => a.id !== btn.dataset.adj);
+      save(); render();
+    });
+  });
+}
+
+document.getElementById("btnPacePreview").addEventListener("click", () => {
+  const { lessons, errors } = parseLessonList(document.getElementById("paceInput").value);
+  const errEl = document.getElementById("paceErrors");
+  const lines = [];
+  if (lessons.length) lines.push(`${lessons.length} lesson${lessons.length === 1 ? "" : "s"} parsed OK.`);
+  errors.forEach(e => lines.push(`Line ${e.line}: "${e.text}" ${e.message}`));
+  if (!lessons.length && !errors.length) lines.push("Nothing to parse — paste one lesson code per line.");
+  errEl.textContent = lines.join("\n");
+});
+
+document.getElementById("btnPaceDistribute").addEventListener("click", () => {
+  const { lessons, errors } = parseLessonList(document.getElementById("paceInput").value);
+  if (!lessons.length) { alert("Paste at least one lesson code first (one per line — open the naming-convention help above for the format)."); return; }
+  if (errors.length && !confirm(`${errors.length} line(s) don't match the naming convention and will be skipped:\n\n` +
+    errors.slice(0, 5).map(e => `line ${e.line}: ${e.text}`).join("\n") + (errors.length > 5 ? "\n…" : "") + "\n\nContinue with the rest?")) return;
+  if (cal.pacing.lessons.length && !confirm(`Replace the current ${cal.pacing.lessons.length}-lesson sequence with these ${lessons.length}?\n\nExisting bumps are re-matched by lesson code; any that no longer match are dropped.`)) return;
+  const { kept, dropped } = rebindAdjustments(cal.pacing.adjustments, cal.pacing.lessons, lessons);
+  cal.pacing = {
+    startDate: document.getElementById("paceStart").value || cal.meta.start,
+    lessons,
+    adjustments: kept,
+  };
+  save(); render();
+  document.getElementById("paceErrors").textContent =
+    dropped.length ? `${dropped.length} bump(s) no longer matched a lesson and were dropped.` : "";
+});
+
+document.getElementById("btnPaceClear").addEventListener("click", () => {
+  if (!cal.pacing.lessons.length && !cal.pacing.adjustments.length) return;
+  if (!confirm("Remove the paced lesson sequence and all bumps? Day tags and notes are kept.")) return;
+  cal.pacing = emptyPacing();
+  save(); render();
+});
+
+/* --- county pacing spreadsheet import (SheetJS, lazy-loaded from the
+       site-wide vendored copy — same pattern as the Review Game Board) --- */
+const XLSX_LIB = '../_shared/vendor/xlsx/xlsx.full.min.js';
+let xlsxLoadPromise = null;
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  if (!xlsxLoadPromise) {
+    xlsxLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = XLSX_LIB;
+      s.onload = resolve;
+      s.onerror = () => { xlsxLoadPromise = null; reject(new Error("couldn't load the spreadsheet library")); };
+      document.head.appendChild(s);
+    });
+  }
+  return xlsxLoadPromise;
+}
+
+const KIND_TO_TYPE = { "halfday": "halfday", "closure-holiday": "holiday", "closure-workday": "workday" };
+
+document.getElementById("btnPaceXlsx").addEventListener("click", () => document.getElementById("filePaceXlsx").click());
+document.getElementById("filePaceXlsx").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    await loadXlsx();
+    const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
+    let sheetName = wb.SheetNames[0];
+    if (wb.SheetNames.length > 1) {
+      const pick = prompt("This workbook has more than one sheet:\n\n" +
+        wb.SheetNames.map((n, i) => `${i + 1}. ${n}`).join("\n") + "\n\nImport which one? (enter a number)", "1");
+      if (pick === null) return;
+      sheetName = wb.SheetNames[parseInt(pick, 10) - 1];
+      if (!sheetName) { alert("No sheet with that number."); return; }
+    }
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: true });
+    const { lessonRows, dayTags, errors } = parsePacingRows(rows);
+    if (!lessonRows.length && !dayTags.length) {
+      alert("No pacing rows found. Expected columns: A = date, B = lesson code, C = school notes.");
+      return;
+    }
+    const closures = dayTags.filter(t => t.kind === "closure-holiday" || t.kind === "closure-workday").length;
+    const halves = dayTags.filter(t => t.kind === "halfday").length;
+    if (!confirm(`Import from sheet "${sheetName}":\n\n` +
+      `• ${lessonRows.length} lessons (replaces the current sequence)\n` +
+      `• ${closures} closure day(s) and ${halves} early dismissal(s) tagged\n` +
+      `• ${errors.length} unreadable row(s) skipped\n\n` +
+      `Existing day tags and notes are kept — imported tags are added to them.`)) return;
+
+    dayTags.forEach(t => {
+      const typeId = KIND_TO_TYPE[t.kind];
+      const existing = cal.days[t.date] || { types: [], label: "", note: "", lesson: "" };
+      const types = typeId && typeById(typeId) && !existing.types.includes(typeId)
+        ? [...existing.types, typeId] : existing.types;
+      cal.days[t.date] = { ...existing, types, label: t.label || existing.label };
+    });
+
+    const lessons = lessonRows.map(r => r.lesson);
+    const { kept, dropped } = rebindAdjustments(cal.pacing.adjustments, cal.pacing.lessons, lessons);
+    cal.pacing = { startDate: lessonRows[0].date, lessons, adjustments: kept };
+    save(); render();
+
+    // Cross-check: does our teachable-day walk land every lesson on the
+    // spreadsheet's own date? A mismatch usually means a no-school tag is
+    // missing (or extra) somewhere — surface it, don't hide it.
+    const diffs = lessonRows.filter(r => placement.dateByLessonId[r.lesson.id] !== r.date);
+    let msg = `Imported ${lessons.length} lessons and ${dayTags.length} day notes from "${sheetName}".`;
+    if (dropped.length) msg += `\n\n${dropped.length} existing bump(s) no longer matched a lesson and were dropped.`;
+    if (diffs.length) {
+      const d0 = diffs[0];
+      msg += `\n\nHeads-up: computed placement differs from the spreadsheet's dates on ${diffs.length} day(s). ` +
+        `First difference: ${d0.lesson.raw} — sheet says ${d0.date}, calendar computes ${placement.dateByLessonId[d0.lesson.id] || "no room"}. ` +
+        `Check the no-school tags around that date.`;
+    }
+    alert(msg);
+  } catch (err) {
+    alert("Couldn't import that spreadsheet: " + (err && err.message ? err.message : err));
+  }
+});
+
 /* --- toolbar --- */
 document.getElementById("btnAddType").addEventListener("click", () => {
   let id = "type" + (cal.dayTypes.length + 1);
@@ -731,7 +1041,7 @@ document.getElementById("btnSeed").addEventListener("click", () => {
 });
 
 document.getElementById("btnBlank").addEventListener("click", () => {
-  if (!confirm("Clear every tagged day but keep your day-type legend and year range?")) return;
+  if (!confirm("Clear every tagged day but keep your day-type legend and year range? The paced lesson sequence is kept too, and reflows once the closures are gone.")) return;
   cal.days = {};
   save(); render();
 });
@@ -760,6 +1070,11 @@ document.getElementById("btnNewYear").addEventListener("click", () => {
   if (end === null) return;
   const fresh = blankCalendar(label || "School Year", start, end);
   fresh.dayTypes = cal.dayTypes.map(t => ({ ...t })); // carry the legend forward, drop the days
+
+  if (cal.pacing && cal.pacing.lessons.length
+      && confirm(`Carry the ${cal.pacing.lessons.length}-lesson paced sequence into the new year?\n\nBumps are cleared and distribution restarts from the new year's first school day — set a different start date in the Lesson Pacing card if needed.`)) {
+    fresh.pacing = { startDate: null, lessons: cal.pacing.lessons.map(l => ({ ...l })), adjustments: [] };
+  }
 
   const lessonEntries = Object.entries(cal.days).filter(([, d]) => d.lesson);
   if (lessonEntries.length && confirm(`Copy ${lessonEntries.length} lesson pacing note(s) from the current calendar into the new year, shifted by a number of weekdays you choose?`)) {
@@ -798,7 +1113,7 @@ document.getElementById("fileImport").addEventListener("change", e => {
         alert("That file doesn't look like a School Calendar Visualizer backup.");
         return;
       }
-      cal = parsed;
+      cal = migrateCalendar(parsed); // older backups predate lesson pacing
       save(); render();
     } catch (err) {
       alert("Couldn't read that file as JSON.");
@@ -820,14 +1135,20 @@ function icsDateStamp(dateISO, dayOffset) {
 }
 
 function buildIcs() {
+  computePlacement(); // buildIcs can run outside a render; use a fresh placement
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AsPerMyLessonPlan.com//School Calendar Visualizer//EN", "CALSCALE:GREGORIAN"];
-  Object.keys(cal.days).sort().forEach(dateISO => {
-    const entry = cal.days[dateISO];
-    if (!entry.types.length && !entry.label) return; // skip days with only a lesson/other note — not calendar-worthy on their own
+  const dates = new Set([...Object.keys(cal.days), ...Object.keys(placement.byDate)]);
+  [...dates].sort().forEach(dateISO => {
+    const entry = cal.days[dateISO] || { types: [], label: "", note: "", lesson: "" };
+    const placed = placement.byDate[dateISO];
+    // Days with only a free-text lesson/other note still aren't calendar-worthy
+    // on their own, but a placed pacing lesson is.
+    if (!entry.types.length && !entry.label && !placed) return;
     const typeLabels = entry.types.map(id => { const t = typeById(id); return t ? t.label : null; }).filter(Boolean);
-    const summary = entry.label || typeLabels.join(" / ") || "Tagged Day";
+    const summary = entry.label || (placed ? placed.raw : "") || typeLabels.join(" / ") || "Tagged Day";
     const descParts = [];
     if (typeLabels.length) descParts.push(typeLabels.join(", "));
+    if (placed && summary !== placed.raw) descParts.push("Pacing: " + placed.raw);
     if (entry.lesson) descParts.push("Lesson: " + entry.lesson);
     if (entry.note) descParts.push(entry.note);
     lines.push("BEGIN:VEVENT");

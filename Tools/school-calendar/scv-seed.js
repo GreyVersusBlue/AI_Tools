@@ -3,7 +3,9 @@
 // Multi-day closures (Winter Break, Spring Break) are expanded to one entry
 // per calendar day so each day is independently editable.
 
-export const VERSION = 1;
+import { emptyPacing } from "./scv-pacing.js";
+
+export const VERSION = 2;
 
 // `noSchool: true` marks a type as taking a weekday out of the instructional-day
 // count (see the calendar's "instructional days" summary line) — students
@@ -80,7 +82,8 @@ export function seedCalendar2026() {
     __v: VERSION,
     meta: { yearLabel: "2026–27 School Year", start: "2026-08-31", end: "2027-06-11" },
     dayTypes: DEFAULT_DAY_TYPES.map(t => ({ ...t })),
-    days: buildDays()
+    days: buildDays(),
+    pacing: emptyPacing()
   };
 }
 
@@ -89,6 +92,7 @@ export function blankCalendar(yearLabel, start, end) {
     __v: VERSION,
     meta: { yearLabel: yearLabel || "School Year", start: start || "2026-08-31", end: end || "2027-06-11" },
     dayTypes: DEFAULT_DAY_TYPES.map(t => ({ ...t })),
-    days: {}
+    days: {},
+    pacing: emptyPacing()
   };
 }
