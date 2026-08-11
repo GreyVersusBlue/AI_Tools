@@ -23,7 +23,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v43';
+const CACHE_VERSION = 'v44';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -59,7 +59,12 @@ const PRECACHE_URLS = [
   "Tools/blank-map-generator/bmg-markers.js",
   "Tools/blank-map-generator/bmg-regions.js",
   "Tools/blank-map-generator/bmg-store.js",
+  "Tools/blank-map-generator/bmg-vector.js",
   "Tools/blank-map-generator/bmg-viewer.js",
+  "Tools/blank-map-generator/data/world-land-110m.json",
+  "Tools/blank-map-generator/data/world-countries-110m.json",
+  "Tools/blank-map-generator/data/us-nation-10m.json",
+  "Tools/blank-map-generator/data/us-states-10m.json",
   "Tools/blank-map-generator/lib/jspdf.umd.min.js",
   "Tools/049-book-tasting-menu-generator.html",
   "Tools/020-bracket-tournament-generator.html",
