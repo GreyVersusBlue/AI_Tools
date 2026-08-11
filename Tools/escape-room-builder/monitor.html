@@ -7,16 +7,15 @@
 <meta name="description" content="Live view of which station each team has reached, paired device-by-device over WebRTC.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='15' width='14' height='11' rx='2' fill='%232A6DB0'/%3E%3Cpath d='M12 15v-4a4 4 0 0 1 8 0v4' fill='none' stroke='%23C43A2F' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='1.8' fill='%23F6F7F9'/%3E%3C/svg%3E">
+<script src="../../_shared/a11y.js"></script>
 <script src="../../_shared/webrtc-pair.js"></script>
 <script src="../../_shared/qr-scan.js"></script>
 <script src="../../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../../_shared/vendor/jsqr/jsqr.js"></script>
+<link rel="stylesheet" href="../../_shared/ink-paper.css">
+<link rel="stylesheet" href="../../_shared/a11y.css">
 <style>
-  :root {
-    --ink: #1f2430; --paper: #fafaf8; --card: #fff;
-    --line: #dcdad2; --line-strong: #c3c0b6;
-    --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b; --good: #2f6b3a;
-  }
+  :root { --good: #2f6b3a; }
   * { box-sizing: border-box; }
   body {
     font-family: "Segoe UI", Georgia, "Times New Roman", serif;
