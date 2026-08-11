@@ -475,11 +475,188 @@ inline service-worker registration snippet** (repo-wide `grep -rl
 test helper unrelated to this pattern).
 
 ### Phase 3 — Theme adoption (~84 files, needs a variance audit first)
-- [ ] Sub-audit: diff each tool's `:root` block against `_shared/theme.css`. Bucket into
+- [x] Sub-audit: diff each tool's `:root` block against `_shared/theme.css`. Bucket into
   (a) identical → straight swap, (b) extra tool-specific vars → link shared + keep a
   small local override block, (c) genuinely different palette → leave alone, list it.
-- [ ] Migrate bucket (a) then (b) in batches. Theme toggle behavior comes from
-  `_shared/theme-toggle.js` (already used by 16 tools — copy their integration pattern).
+  **Done 2026-08-11 — see "Variance audit" below.**
+- [ ] Migrate bucket (a) then (b) in batches, following the **integration spec**
+  below. (Note: the original text of this bullet said theme toggle behavior comes
+  from `_shared/theme-toggle.js`, "already used by 16 tools" — both claims turned
+  out to be false; see the spec.)
+
+#### Variance audit (2026-08-11)
+
+Method: extracted every `--var: value` declaration inside every `:root` block of
+all **81 numbered `Tools/*.html`** pages (script parsed brace-matched blocks;
+values normalized — whitespace collapsed, lowercased), then clustered by exact
+name+value equality and compared against `_shared/theme.css`.
+
+**Headline finding: a literal diff against `_shared/theme.css` is the wrong
+comparison, and the audit proves it.** `theme.css`'s `:root` defines only 8
+semantic status tokens (`--color-success/-bg`, `--color-warn/-bg`,
+`--color-caution/-bg`, `--color-danger/-bg`) plus a `[data-theme="dark"]`
+remap, and it depends on the Industry design system
+(`_ds/industry-dbdf1714-…/styles.css`) for every base token it remaps
+(`--color-bg`, `--color-neutral-*`, `--color-accent-*`, …). **No tool's inline
+`:root` shares a single variable name with `theme.css`** — except
+`004-Classroom Timer`, which coincidentally reuses 3 of the names
+(`--color-success/warn/danger`) with its own different values. What the ~84-file
+audit row actually found duplicated is a different thing: a de facto standard
+**9-variable "ink/paper" palette**, byte-identical in 38 tools:
+
+```css
+:root {
+  --ink: #1f2430; --paper: #fafaf8; --card: #fff;
+  --line: #dcdad2; --line-strong: #c3c0b6;
+  --accent: #1f3550; --accent-2: #2e6b8f; --muted: #6b6a63; --err: #a3372b;
+}
+```
+
+Buckets below are therefore computed against **that baseline**, with
+conflict-based rules that match migration safety: a tool with zero value
+conflicts can link a shared copy of the baseline without any rendering change
+(extra local vars stay in a small override block; baseline vars a tool doesn't
+use are harmless to define).
+
+**Bucket (a) — identical, straight swap (38 files):**
+`003-rubric-builder.html`, `014-roleplay-scenario-generator.html`,
+`015-timeline-builder.html`, `017-gallery-walk-qr.html`,
+`022-lab-group-role-randomizer.html`, `033-ssr-log-tracker.html`,
+`039-vocab-conjugation-drill.html`, `040-vocab-flashcard-generator.html`,
+`041-formula-sheet-builder.html`, `042-certificate-award-maker.html`,
+`047-art-critique-worksheet-generator.html`,
+`048-art-portfolio-label-maker.html`, `049-book-tasting-menu-generator.html`,
+`050-civics-role-card-generator.html`, `051-classroom-label-maker.html`,
+`054-current-events-discussion-guide-generator.html`,
+`056-dbq-source-packet-builder.html`, `057-dichotomous-key-builder.html`,
+`058-duty-roster-builder.html`, `059-experiment-design-planner.html`,
+`060-fitness-skill-assessment-tracker.html`,
+`061-fraction-decimal-percent-drill-generator.html`,
+`063-grammar-mad-libs-generator.html`, `064-historical-trading-card-maker.html`,
+`065-lab-report-template-builder.html`, `067-music-sightreading-generator.html`,
+`069-pe-warmup-circuit-generator.html`,
+`070-peer-feedback-checklist-generator.html`,
+`071-picture-prompt-generator.html`, `072-plot-diagram-builder.html`,
+`074-science-safety-label-maker.html`, `075-staff-directory-builder.html`,
+`076-sub-note-feedback-slip-generator.html`,
+`077-testing-accommodations-card-generator.html`,
+`078-unit-conversion-chart-builder.html`,
+`079-verb-conjugation-poster-generator.html`,
+`080-virtual-manipulatives-board.html`,
+`081-word-problem-warmup-generator.html`
+
+**Bucket (b) — baseline-compatible, link shared + small local override
+(29 files; extras in parentheses, `unused:` = baseline vars the tool doesn't
+define, harmless):**
+`001-hall-pass-log.html` (+`--good`), `006-class-roster-hub.html` (+`--good`,
+`--warn-bg`, `--warn-line`, `--warn-ink`), `008-behavior-points-tracker.html`
+(+`--good`), `009-backup-restore.html` (+`--good`, `--warn-bg`, `--warn-line`,
+`--warn-ink`), `010-command-center-dashboard.html` (+`--good`),
+`012-graph-paper-generator.html` (unused: `--err`),
+`013-lab-safety-contract-tracker.html` (+`--good`, `--paid`),
+`019-escape-room-builder.html` (+`--good`),
+`020-bracket-tournament-generator.html` (+`--ok`),
+`021-pe-tournament-stations.html` (+`--good`),
+`023-exit-ticket-generator.html` (+`--good`, `--warn`),
+`024-number-talks-board.html` (+`--good`),
+`025-writing-prompt-generator.html` (unused: `--err`),
+`026-math-drill-generator.html` (unused: `--err`),
+`027-novel-study-circles-manager.html` (+`--good`),
+`028-primary-source-analysis-generator.html` (+`--good`),
+`030-review-game-board.html` (+`--ok`, `--gold`, `--board-bg`, `--board-cell`,
+`--board-cell-hover`, `--board-used`),
+`032-School Calendar Visualizer.html` (+`--ok`; unused: `--line-strong`),
+`037-grade-distribution-visualizer.html` (+`--gA`–`--gF` and their `-bg`
+variants, 10 vars), `043-field-trip-permission-slip.html` (+`--good`),
+`045-sub-binder-generator.html` (+`--good`, `--warn-bg`, `--warn-line`),
+`046-blank-map-generator.html` (+`--ok`; unused: `--line-strong`),
+`052-cognates-false-friends-builder.html` (+`--ok`),
+`053-cultural-trivia-card-generator.html` (+`--ok`),
+`055-daily-editing-warmup-generator.html` (+`--ok`),
+`062-geography-bee-quiz-generator.html` (+`--ok`),
+`066-math-find-the-mistake-generator.html` (+`--ok`),
+`068-parent-contact-log.html` (+`--ok`),
+`073-science-fair-project-tracker.html` (+`--ok`)
+
+Migration-round note for (b): the success-green extra is not one value —
+`--good` is `#2f7d4f` in most tools, `--ok` is `#2c6e3f` in seven and
+`#2e6b3e` in two (`032`, `046`). No conflict with the baseline (different
+names), but worth unifying deliberately, not silently, when batching.
+
+**Bucket (c) — genuinely different palette, leave alone (9 files):**
+- `002-group-team-generator.html`, `016-qr-code-generator.html`,
+  `018-qr-scavenger-hunt-builder.html` — one shared 13-var **dark** palette
+  (`--bg: #0f1117` family), identical across all three. A candidate for its own
+  tiny shared file someday, but not this phase.
+- `007-Name Picker.html` — its own 13-var dark palette (`#1a1a2e` family).
+- `004-Classroom Timer.html` — its own `--color-*` light+dark token set with
+  native `[data-theme="dark"]` CSS; already fully integrated with `a11y.js`
+  (`A11Y_NATIVE_THEME`). Nothing to migrate.
+- `035-schedule-visualizer.html` — 61 custom vars incl. its own dark theme.
+- `038-data-chart-builder.html`, `044-Sub Plan Builder.html` — ink/paper family
+  but with a deliberately different `--accent`.
+- `034-schedule-browser.html` — **no `:root` block at all** (hardcoded colors);
+  nothing to swap.
+
+**Already on the shared theme stack — nothing to do (5 files):**
+`005-Seating Chart Generator.html` (local var names aliased to `_ds` tokens —
+the exemplar for migrating a bucket-(c) tool if we ever want to),
+`011-image-to-pdf.html`, `029-prompt-builder.html`, `031-docx-merger.html`,
+`036-final_grade_checker.html` (zero inline `:root` vars; they link
+`_ds` + `theme.css` + `a11y.css`).
+
+**Companion pages** (not in the 81 above):
+`escape-room-builder/monitor.html` and `lock.html` are baseline + `--good:
+#2f6b3a` (a third green — see the (b) note) → treat as bucket (b) alongside
+their parent tool, remembering their `../../_shared/` depth;
+`classroom-timer/mirror.html` shares `004`'s own token set → bucket (c),
+nothing to do.
+
+#### Integration spec for the migration rounds (what the migrated tools actually do)
+
+The old plan text ("theme toggle behavior comes from `_shared/theme-toggle.js`,
+already used by 16 tools") is wrong on both counts as of this audit: **zero
+live tools reference `theme-toggle.js`** (only the dead `Tools/New Designs/`
+archive does), and `_shared/a11y.js` has *superseded* it as the single owner of
+theme state (its header says so; it even migrates `theme-toggle.js`'s old
+`gvb-tools-theme` localStorage key into its own `gvb-a11y-prefs` JSON key,
+once). There is no `#themeToggle` button to add — `a11y.js` injects its own
+floating accessibility widget (text size / dark theme / dyslexia font /
+read-aloud) into every page that loads it. The pattern the five
+already-migrated tools follow, in head order:
+
+```html
+<script>window.A11Y_NATIVE_THEME = true;</script>  <!-- ONLY if the page ships its own [data-theme="dark"] CSS -->
+<script src="../_shared/a11y.js"></script>          <!-- synchronous, BEFORE stylesheets: applies the saved theme pre-paint, no flash -->
+<link rel="stylesheet" href="../_ds/industry-dbdf1714-c448-4b04-9ea3-c77c792b4c8a/styles.css">
+<link rel="stylesheet" href="../_shared/theme.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+```
+
+Rules that fall out of reading `a11y.js` + the migrated tools:
+
+- `a11y.js` sets `data-theme` on `<html>` and stores prefs under
+  `gvb-a11y-prefs` (JSON: `theme` / `textScale` / `dyslexic`), synced across
+  tabs via the `storage` event.
+- Pages **with** native dark CSS declare `window.A11Y_NATIVE_THEME = true`
+  *before* loading `a11y.js`; pages without it omit the flag and get the
+  generic CSS-filter dark fallback from `a11y.css`.
+- The full shared stack (the `005`/`011`/`029`/`031`/`036` pattern) is:
+  `_ds` Industry stylesheet (base tokens) → `theme.css` (semantic status
+  tokens + dark remap) → `a11y.css`, with local `:root` vars aliased to
+  `var(--color-*)` tokens where a tool keeps its old var names (see `005`).
+- **Open decision for the first migration batch** (flagging now so it's made
+  deliberately): bucket (a)/(b) can be migrated two ways — (i) extract the
+  9-var ink/paper baseline verbatim into a shared stylesheet (zero visual
+  change, but no real dark mode), or (ii) full adoption of the `_ds` +
+  `theme.css` + `A11Y_NATIVE_THEME` stack per the spec above (restyles the
+  tool to the Industry system and gains true dark mode, like `005` did). The
+  audit deliberately does not pre-decide this; (ii) is where the site is
+  heading, (i) is the only truly mechanical swap.
+- `_shared/theme-toggle.js` is unused by any live page and absent from
+  `PRECACHE_URLS` (Phase 1's note that "Phase 3 must add it" is superseded —
+  don't add it). Delete the file in Phase 6 once nothing in `prompts/`
+  references it either.
 
 ### Phase 4 — Common layout + print CSS
 - [ ] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
