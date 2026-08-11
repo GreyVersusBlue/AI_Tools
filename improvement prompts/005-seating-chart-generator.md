@@ -1,13 +1,54 @@
 # Improvement Prompts — 005 — Seating Chart Generator
 
 **Tool file:** `Tools/005-Seating Chart Generator.html`
-**Support folder:** `Tools/seating-chart/` — `scg-photo.js` and assets
+**Support folder:** `Tools/seating-chart/` — `seating.mjs`, `scg-photo.js`,
+fonts, and `test/` (`smoke-seating.mjs`, `smoke-sub-packet.mjs`,
+`drive-seating.mjs`)
 
 **Current description (from README):** Build a chart once, then reshuffle it whenever you need to.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **whole-day sub
+packet** (backlog rank 9). The single-section Sub export already put one
+period's chart, notes and rule conflicts on one page; a teacher out for the day
+has six periods and was running it six times.
+
+- **"Sub packet (whole day)"** builds a contents page followed by one
+  sub-export page per section, in the tool's own section order.
+- **It reuses `buildPrintPage()` rather than a second render path.** That
+  function already builds a static, trimmed, scaled page per section for "Print
+  all sections"; it gained an `opts.sub` branch that appends the same flag,
+  violations and notes blocks the live-floor sub export appends, so the two
+  paths cannot drift apart.
+- **The two "for the substitute" overrides are the part worth guarding.** Names
+  and photos are forced on regardless of the teacher's persisted print toggles
+  (a substitute cannot use a chart that respects a privacy preference), and
+  per-student notes print — the one mode where they do, by design; see the CSS
+  note by `.desk .seat`. Both are asserted, along with the ordinary "Print all
+  sections" still doing neither.
+- **The contents page is what makes it a packet rather than a stack.** Per
+  section: page number, name, seated-of-total, and a "Read first" column
+  flagging how many notes and how many broken seating rules that section
+  carries, so a sub knows before the bell which page needs reading. Plus a line
+  explaining that charts are drawn from the front of the room, which is the
+  question every substitute asks.
+- With a single section it falls back to the plain one-page Sub export — one
+  section is not a packet.
+- **Verified** by a new suite, `Tools/seating-chart/test/smoke-sub-packet.mjs`
+  (34 checks, part of `npm run test:seating`). It seeds a two-period day
+  through the tool's own storage key with desks placed 110px apart — inside
+  `ROOM.neighbor` — so the keep-apart conflict is guaranteed rather than left
+  to the auto-assigner's dice, then drives the real button with `window.print`
+  stubbed and the print events dispatched by hand, the same way
+  `drive-seating.mjs` does.
+- **Not done:** the packet has no per-section page of the roster as a list
+  (only the chart), and no "what to do if a student is absent" affordance. The
+  mobile-toolbar row is still the tool's outstanding backlog item, and this
+  round added one more toolbar button to it — worth doing before the toolbar
+  grows again.
 
 **2026-08-10** — Implemented all eight Quick Wins and both requested Major
 Features in this round. Concretely:
@@ -124,8 +165,10 @@ time someone is in `duplicateSection()`.
 - A **storage-usage readout** (P12) showing how much of the ~5MB
   localStorage budget the current charts and photos are using
 - Print one chart, **print all sections**, **print a blank/nameless chart**
-  (for a seating quiz or a sub to fill in), or a **sub-friendly export**
-  (chart + per-student notes + keep-apart/put-together rules on one page);
+  (for a seating quiz or a sub to fill in), a **sub-friendly export**
+  (chart + per-student notes + keep-apart/put-together rules on one page), or
+  a **whole-day sub packet** (a contents page flagging which periods carry
+  notes or rule conflicts, then every section's sub export in order);
   independent print toggles for names, photos and rule conflicts; share a
   section by `state-link.js` URL
 
