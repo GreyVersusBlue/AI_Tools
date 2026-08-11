@@ -941,12 +941,14 @@ out of scope for Phase 3 per the variance audit.
 
 ### Phase 4 — Common layout + print CSS
 - [x] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
-  .toolbar, #printArea print block).
+  .toolbar, #printArea print block). Round 4b split the print rules back out into
+  `_shared/print-area.css` — see "Round 4b" below for why.
 - [~] Same bucket-and-batch approach as Phase 3. Print is the risk area: print-preview
   every migrated tool. Teachers print these; a broken print layout is a real failure.
-  Batch 1 (10 tools) landed 2026-08-11; 6 candidates remain in the same bucket.
+  Rounds 4a + 4b landed 2026-08-11 (16 tools, the whole print cluster). The toolbar
+  cluster and the `.card`+`.app-header` bucket are now unblocked — 48 tools eligible.
 
-#### What `_shared/base.css` contains (Round 4a, 2026-08-11)
+#### What `_shared/base.css` contained at Round 4a (2026-08-11)
 
 Five rules, each verified byte-identical (leading indent stripped) across every
 file it was lifted from, by extracting the parsed rule bodies and grouping on
@@ -1020,19 +1022,53 @@ don't use the pattern.
 
 Each lost 4 rule sites (8 lines) and gained 1 link line.
 
+### Round 4b — split the print rules out of base.css (2026-08-11)
+
+Round 4a's base.css bundled the `#printArea` print pattern with the layout
+rules. That made base.css unusable for every tool that doesn't use the
+pattern — `body * { visibility: hidden }` blanks the page and only `#printArea`
+comes back, so linking it from a tool without that element prints a blank
+sheet. 48 of the 54 tools that still had shared rules inline were blocked on
+exactly this.
+
+Round 4b splits them:
+
+- **`_shared/base.css`** — `.app-header`, `.card`, `.toolbar`. Three plain
+  layout rules, no print behavior. **Safe for any tool.**
+- **`_shared/print-area.css`** — `#printArea { display: none; }` plus the
+  `@media print` block, in that order. Link **only** from a tool that has an
+  `id="printArea"` element *and* no `#printArea` print rules of its own.
+
+The two rules in print-area.css must stay in that order and in the same file:
+they have equal specificity, so the print block wins only by coming last.
+Splitting them across files, or leaving the screen rule inline in the tool,
+silently breaks printing while looking fine on screen. That is the same trap
+described under Round 4a, and it is why the screen rule moved out of the tools
+rather than staying behind.
+
+All 16 print-cluster tools now link both files. Verified with two negative
+controls: a page linking only base.css with no `#printArea` prints normally
+(so the toolbar cluster is safe), and a page linking print-area.css without an
+`#printArea` element does print blank (so the documented footgun is real and
+correctly confined to that file).
+
 #### Remaining Phase 4 candidates
 
-**Batch 2 — rest of the print cluster (6 files, drop-in identical to batch 1):**
-071-picture-prompt-generator, 072-plot-diagram-builder,
-073-science-fair-project-tracker, 074-science-safety-label-maker,
-077-testing-accommodations-card-generator, 079-verb-conjugation-poster-generator.
+**Batch 2 — rest of the print cluster: DONE in Round 4b** (071-picture-prompt-generator,
+072-plot-diagram-builder, 073-science-fair-project-tracker,
+074-science-safety-label-maker, 077-testing-accommodations-card-generator,
+079-verb-conjugation-poster-generator). Note 072 was the one tool whose print
+block was *not* the last rule in its `<style>` — it has typography rules after
+it. That turned out to be harmless (none of them touch `visibility`/`display`),
+but it means "the print block is last" is not a safe precondition to assume.
+The check that matters: after removing the block, the tool must contain no
+`visibility` declaration and no `#printArea` selector of its own.
 
 **Batch 3 — toolbar cluster (19 files, `.card` + `.app-header` + `.toolbar`).
-None has the identical print block: some have no `@media print` block at all,
-the rest have a variant one. Either way they must NOT get base.css as it
-stands — it would blank the page on print for the first group and fight the
-tool's own print rules in the second. Split the print rules out of base.css
-into their own file (or guard them on `body:has(#printArea)`) before batch 3:**
+Unblocked by Round 4b: they take `_shared/base.css` only and must NOT link
+print-area.css.** 5 of them have no `#printArea` element at all and 9 have a
+variant print block of their own; both groups keep whatever print CSS they
+already have, untouched.
 001-hall-pass-log, 003-rubric-builder, 006-class-roster-hub,
 008-behavior-points-tracker, 012-graph-paper-generator,
 013-lab-safety-contract-tracker, 015-timeline-builder, 017-gallery-walk-qr,
@@ -1047,31 +1083,79 @@ into their own file (or guard them on `body:has(#printArea)`) before batch 3:**
 in the table above, and the 17 tools whose print blocks add `@page` or per-tool
 page-break rules — those are real per-tool differences, not drift.
 
+**Batch 4 — the `.card` + `.app-header` bucket (19 files).** Also unblocked by
+Round 4b; base.css only, same as batch 3.
+026-math-drill-generator, 047-art-critique-worksheet-generator,
+048-art-portfolio-label-maker, 051-classroom-label-maker,
+053-cultural-trivia-card-generator, 055-daily-editing-warmup-generator,
+061-fraction-decimal-percent-drill-generator, 062-geography-bee-quiz-generator,
+063-grammar-mad-libs-generator, 064-historical-trading-card-maker,
+066-math-find-the-mistake-generator, 067-music-sightreading-generator,
+068-parent-contact-log, 069-pe-warmup-circuit-generator,
+070-peer-feedback-checklist-generator, 075-staff-directory-builder,
+076-sub-note-feedback-slip-generator, 078-unit-conversion-chart-builder,
+081-word-problem-warmup-generator.
+
+**Singles (10 files, one or two matching rules each — case-by-case, lowest
+value per edit):** 009-backup-restore `[card]`, 014-roleplay-scenario-generator
+`[header+toolbar]`, 020-bracket-tournament-generator `[toolbar]`,
+023-exit-ticket-generator `[card]`, 024-number-talks-board `[card]`,
+025-writing-prompt-generator `[header]`, 028-primary-source-analysis-generator
+`[card+toolbar]`, 030-review-game-board `[header+toolbar]`,
+045-sub-binder-generator `[card]`, 080-virtual-manipulatives-board `[header]`.
+
+**Deliberately excluded:** every `.card`/`.app-header`/`.toolbar` variant listed
+in the table above, and the 17 tools whose print blocks add `@page` or per-tool
+page-break rules — those are real per-tool differences, not drift.
+
 **Next dedup candidates in the same head block** (identical across all 16 print-
-cluster files, not extracted this round to keep batch 1's blast radius small):
+cluster files, not extracted yet to keep each round's blast radius small):
 `.app-header h1`, `.app-header .sub`, `.back-link`, `.back-link:hover` (16/16),
 and `.card h2` (15/16).
 
-#### How batch 1 was verified
+**Rounds cannot run in parallel.** Every round bumps `CACHE_VERSION` on the same
+line of `sw.js` and appends to `PRECACHE_URLS`, so two concurrent rounds always
+conflict there — Phase 3 ran 3d/3e/3f sequentially for the same reason.
+
+#### How rounds 4a and 4b were verified
 
 No committed suite (this is cross-tool, and the repo's convention puts suites
-under `Tools/<tool>/test/`). The pre-migration copies were materialised from
-`git show HEAD:` into a parallel tree, served from the same static server, and
-compared against the migrated copies in headless Chromium:
+under `Tools/<tool>/test/`). The **pre-Phase-4** copies of all 16 tools were
+materialised from `git show 8ab06ce^:` into a parallel tree, served from the
+same static server, and compared against the current copies in headless
+Chromium — so 4b re-proved the whole chain (inline → base.css → base.css +
+print-area.css), not just its own delta:
 
 - computed styles for `.app-header`, `.card`, `#printArea` and its children,
-  under **both** `screen` and `print` media emulation — identical for all 10;
-- full-page screenshots under `screen` and under `print` with a fixed sample
-  sheet injected into `#printArea` — pixel-identical for all 10, plus
-  byte-identical `page.pdf()` output;
+  under **both** `screen` and `print` media emulation — identical for all 16;
+- full-page screenshots under `screen`, and under `print` with a fixed sample
+  sheet injected into `#printArea` — pixel-identical for all 16;
+- `page.pdf()` output identical after normalisation (see the gotcha below);
 - hard print-contract assertions independent of the baseline (`#printArea` is
-  `display:none` on screen, and `block`/`visible`/`absolute` in print);
+  `display:none` on screen, and `block`/`visible`/`absolute` in print; the
+  surrounding page chrome is `visibility: hidden` in print);
+- the two negative controls described under Round 4b;
 - 058-duty-roster-builder driven through its real UI (fill staff, add duties,
   auto-fill, click "Print roster") with `window.print` stubbed — the generated
   roster renders in the print sheet identically to pre-migration;
 - no console errors, page errors, or failed requests on load;
 - `node Tools/board-check/check-social.mjs` output identical before and after
   (it still exits non-zero on the pre-existing drift documented in CLAUDE.md).
+
+**Two harness gotchas, both of which produced false results before being
+fixed — expect them if you repeat this method:**
+
+1. **`page.pdf()` bytes are never stable.** Chromium stamps `CreationDate` and
+   `ModDate` into the PDF, so the same URL rendered twice one second apart
+   differs. Round 4a reported "byte-identical PDF output" and that was luck —
+   both renders happened to land in the same second. Strip
+   `/(Creation|Mod)Date \(D:…\)` before comparing, or the check is worthless.
+2. **Give every render its own browser context.** Reusing one context across
+   the baseline and current renders leaks localStorage between two pages served
+   from the same origin, and also leaves subpixel-rendering state behind: it
+   produced a reproducible 65-byte antialiasing difference on
+   049-book-tasting-menu-generator that looked like a real regression and was
+   not. `browser.newContext()` per render, closed after.
 
 ### Phase 5 — JS utility patterns (optional, highest judgment)
 - [ ] Candidates: localStorage save/load wrapper, CSV export, print-area show/hide.
