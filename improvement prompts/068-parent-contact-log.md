@@ -23,33 +23,68 @@ errors.
 This is intentionally the *minimum* that's useful. Nothing below has been
 started — it's all open for a future round.
 
+**2026-08-11 — Round 2 (session `4o6xmy`).** Five Quick Wins shipped, all
+verified with a headless Chromium smoke test (real interactions, not
+mocked, except `window.print`) with zero console errors:
+
+- **Date range filter** (`filterFrom`/`filterTo` date inputs plus a "Clear
+  dates" button) added alongside the existing name/method filters in the
+  history toolbar — combines with them via simple AND logic.
+- **CSV export** (`Export CSV` button) — exports whatever the current
+  filter (name/method/date range) currently shows, matching "Print this
+  list"'s existing filtered-not-full-log semantics, as a UTF-8 BOM'd CSV
+  with proper quoting for commas/quotes/newlines in outcome text.
+- **Roster sort toggle** — "Sort by: Name / Fewest contacts first" select
+  above the roster list, turning the existing red-zero at-a-glance signal
+  into an actual worklist as the backlog's Quick Win described.
+- **Confirmation toast** — a small bottom-center toast ("Contact logged." /
+  "Contact updated.") replaces the previous silent form-clear.
+- **Enter-to-submit** — Enter in the outcome textarea logs the contact
+  (Shift+Enter still inserts a newline), matching the pattern description
+  exactly.
+
+**Where the next round should pick up:** Contact "tags" (attendance/
+grades/behavior/positive) as a second axis alongside method is the next
+Quick Win, then the two Major Features that matter most for this tool's
+sensitivity — follow-up flags and the real conference print packet (title
+page + blank note area) — since this remains the single most
+sensitive-data tool in the toolkit and still has no explicit "this never
+leaves your browser, export before clearing your cache" warning banner
+(see Open Questions below, still open). Multiple sections/classes is the
+other big lift, deliberately not attempted this round since it changes the
+storage shape (see Open Questions).
+
 ## What it does today
 
 - Roster: type/paste names, or pull a saved Name Picker roster in
 - Log a contact: student, date (defaults today), method (phone/email/note
   home/in person/text/other), initials, free-text outcome
 - Per-student contact count next to each roster name (a `0` count stands out
-  in red — an at-a-glance "who haven't I reached" signal)
-- History table: filter by student name and/or method, edit or delete any
-  entry
+  in red — an at-a-glance "who haven't I reached" signal), sortable by name
+  or by fewest contacts first
+- History table: filter by student name, method, and/or a date range; edit
+  or delete any entry
 - Print the full filtered list, or one student's whole history, as a plain
-  table
+  table; export the filtered list as CSV
+- Log the form with Enter from the outcome field, with a confirmation toast
 
 ## Quick Wins
 
-- **Date range filter** on the history table (this quarter, this semester,
-  custom range) — right now filtering is name/method only.
-- **CSV export** of the full log, for a counselor or admin request, or to
-  archive at year's end before clearing it out.
-- **Sort the roster list** by "fewest contacts first" as a view option, so
-  the at-a-glance red-zero signal becomes an actual worklist.
-- **Confirmation toast instead of nothing** after logging a contact — right
-  now the form just clears silently, which reads as "did that save?"
-- **Keyboard-friendly logging**: submit the form on Enter from the outcome
-  textarea (Shift+Enter for a newline) instead of requiring a button click.
+- **Done — Date range filter** on the history table (from/to date inputs,
+  combines with the existing name/method filters) — a "this quarter/this
+  semester" preset dropdown would be a nice follow-up but plain from/to
+  covers the described use case.
+- **Done — CSV export**, scoped to the current filter (matches "Print this
+  list"'s existing filtered-not-full-log behavior).
+- **Done — Sort the roster list** by "fewest contacts first" as a view
+  option.
+- **Done — Confirmation toast instead of nothing** after logging a contact.
+- **Done — Keyboard-friendly logging**: Enter in the outcome field submits,
+  Shift+Enter inserts a newline.
 - **Contact "tags"** (attendance / grades / behavior / positive note home)
   as a lightweight second axis alongside method, since "why" matters as much
-  as "how" when a teacher is scanning history before a call.
+  as "how" when a teacher is scanning history before a call. *(Still open —
+  next round's best Quick Win pick.)*
 
 ## Major Features
 

@@ -62,11 +62,19 @@
 
   .category { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
   .category-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
-  .category-head input[type="text"] { margin-bottom: 0; font-weight: 700; }
+  .category-head input[type="text"] { margin-bottom: 0; font-weight: 700; flex: 1; }
+  .category-head .cat-move { display: flex; gap: .2rem; flex-shrink: 0; }
   .item-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
   .item-row input[type="text"] { margin-bottom: 0; }
   .item-row .drag-handle { color: var(--muted); font-size: .8rem; flex-shrink: 0; }
+  .item-row .item-move { display: flex; gap: .15rem; flex-shrink: 0; }
   .add-item-btn { margin-top: .3rem; }
+  button.icon-btn { padding: .2rem .45rem; font-size: .74rem; line-height: 1; }
+
+  .size-warning {
+    background: #fdf3ec; border: 1px solid #e0b98f; color: #7a4a1c; border-radius: 8px;
+    padding: .6rem .8rem; font-size: .82rem; margin-bottom: .8rem;
+  }
 
   #printArea { display: none; }
   .half-sheet {
@@ -85,8 +93,13 @@
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .half-sheet { border: none; height: 47vh; overflow: hidden; page-break-inside: avoid; border-bottom: 1px dashed #999; }
+    .half-sheet { border: none; min-height: 47vh; page-break-inside: avoid; border-bottom: 1px dashed #999; }
     .half-sheet:nth-child(2n) { page-break-after: always; border-bottom: none; }
+    .half-sheet.compact { font-size: .88em; }
+    .half-sheet.compact .pf-cat { margin-bottom: .32rem; }
+    .half-sheet.tight { font-size: .76em; }
+    .half-sheet.tight .pf-cat { margin-bottom: .2rem; }
+    .half-sheet.tight .comments-line { height: .8rem; }
   }
 </style>
 </head>
@@ -128,6 +141,7 @@
     <div>
       <div class="card">
         <h2>Checklist categories</h2>
+        <p class="size-warning" id="sizeWarning" style="display:none;"></p>
         <div id="categoriesWrap"></div>
         <button class="secondary" id="addCategoryBtn">+ Add category</button>
       </div>
@@ -179,7 +193,7 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'assignmentName', 'copyCount', 'categoriesWrap',
-   'addCategoryBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { assignmentName: '', copyCount: 6, categories: [] };
 
@@ -208,24 +222,53 @@
     });
   }
 
+  function contentWeight() {
+    return state.categories.reduce(function (sum, c) { return sum + 1 + c.items.length; }, 0);
+  }
+  function sizeClassFor(weight) {
+    if (weight <= 11) return '';
+    if (weight <= 17) return ' compact';
+    return ' tight';
+  }
+
+  function renderSizeWarning() {
+    var weight = contentWeight();
+    if (weight <= 11) { els.sizeWarning.style.display = 'none'; return; }
+    els.sizeWarning.style.display = 'block';
+    els.sizeWarning.textContent = weight <= 17
+      ? 'This checklist is on the larger side — print text will shrink slightly to help it fit a half-sheet.'
+      : 'This checklist is long for a half-sheet — print text will shrink to fit, but consider trimming categories/items if it still looks cramped on the printed page.';
+  }
+
   function renderCategories() {
-    els.categoriesWrap.innerHTML = state.categories.map(function (cat) {
-      var itemsHtml = cat.items.map(function (item) {
+    var lastCat = state.categories.length - 1;
+    els.categoriesWrap.innerHTML = state.categories.map(function (cat, ci) {
+      var lastItem = cat.items.length - 1;
+      var itemsHtml = cat.items.map(function (item, ii) {
         return '<div class="item-row" data-cat="' + cat.id + '" data-item="' + item.id + '">' +
           '<span class="drag-handle">&bull;</span>' +
           '<input type="text" data-field="item" value="' + escapeAttr(item.text) + '">' +
+          '<div class="item-move">' +
+            '<button type="button" class="secondary icon-btn" data-item-up="' + item.id + '" data-item-up-cat="' + cat.id + '"' + (ii === 0 ? ' disabled' : '') + ' title="Move item up">&uarr;</button>' +
+            '<button type="button" class="secondary icon-btn" data-item-down="' + item.id + '" data-item-down-cat="' + cat.id + '"' + (ii === lastItem ? ' disabled' : '') + ' title="Move item down">&darr;</button>' +
+          '</div>' +
           '<button type="button" class="danger small" data-del-item="' + item.id + '" data-cat-del="' + cat.id + '">&times;</button>' +
           '</div>';
       }).join('');
       return '<div class="category" data-cat-id="' + cat.id + '">' +
         '<div class="category-head">' +
           '<input type="text" data-field="catname" data-cat="' + cat.id + '" value="' + escapeAttr(cat.name) + '">' +
+          '<div class="cat-move">' +
+            '<button type="button" class="secondary icon-btn" data-cat-up="' + cat.id + '"' + (ci === 0 ? ' disabled' : '') + ' title="Move category up">&uarr;</button>' +
+            '<button type="button" class="secondary icon-btn" data-cat-down="' + cat.id + '"' + (ci === lastCat ? ' disabled' : '') + ' title="Move category down">&darr;</button>' +
+          '</div>' +
           '<button type="button" class="danger small" data-del-cat="' + cat.id + '">Remove category</button>' +
         '</div>' +
         itemsHtml +
         '<button type="button" class="secondary small add-item-btn" data-add-item="' + cat.id + '">+ Add item</button>' +
         '</div>';
     }).join('');
+    renderSizeWarning();
   }
 
   els.loadTemplateBtn.addEventListener('click', function () {
@@ -258,10 +301,19 @@
     }
   });
 
+  function moveInArray(arr, fromIdx, toIdx) {
+    if (toIdx < 0 || toIdx >= arr.length) return;
+    var tmp = arr[fromIdx]; arr[fromIdx] = arr[toIdx]; arr[toIdx] = tmp;
+  }
+
   els.categoriesWrap.addEventListener('click', function (ev) {
     var addCatId = ev.target.getAttribute('data-add-item');
     var delCatId = ev.target.getAttribute('data-del-cat');
     var delItemId = ev.target.getAttribute('data-del-item');
+    var catUpId = ev.target.getAttribute('data-cat-up');
+    var catDownId = ev.target.getAttribute('data-cat-down');
+    var itemUpId = ev.target.getAttribute('data-item-up');
+    var itemDownId = ev.target.getAttribute('data-item-down');
     if (addCatId) {
       var cat = state.categories.find(function (c) { return c.id === addCatId; });
       if (cat) cat.items.push({ id: uid(), text: 'New checklist item' });
@@ -273,6 +325,19 @@
       var catDelId = ev.target.getAttribute('data-cat-del');
       var cat3 = state.categories.find(function (c) { return c.id === catDelId; });
       if (cat3) cat3.items = cat3.items.filter(function (i) { return i.id !== delItemId; });
+      save(); renderCategories();
+    } else if (catUpId || catDownId) {
+      var mCatId = catUpId || catDownId;
+      var idx = state.categories.findIndex(function (c) { return c.id === mCatId; });
+      moveInArray(state.categories, idx, catUpId ? idx - 1 : idx + 1);
+      save(); renderCategories();
+    } else if (itemUpId || itemDownId) {
+      var iCatId = ev.target.getAttribute(itemUpId ? 'data-item-up-cat' : 'data-item-down-cat');
+      var iCat = state.categories.find(function (c) { return c.id === iCatId; });
+      if (!iCat) return;
+      var iId = itemUpId || itemDownId;
+      var iIdx = iCat.items.findIndex(function (i) { return i.id === iId; });
+      moveInArray(iCat.items, iIdx, itemUpId ? iIdx - 1 : iIdx + 1);
       save(); renderCategories();
     }
   });
@@ -288,7 +353,8 @@
       }).join('');
       return '<div class="pf-cat"><h4>' + escapeHtml(cat.name) + '</h4>' + items + '</div>';
     }).join('');
-    return '<div class="half-sheet"><h3>' + title + '</h3>' +
+    var sizeClass = sizeClassFor(contentWeight());
+    return '<div class="half-sheet' + sizeClass + '"><h3>' + title + '</h3>' +
       '<div class="names">Author: _____________________ &nbsp; Reviewer: _____________________</div>' +
       cats + '<div class="pf-cat"><h4>Comments</h4><span class="comments-line"></span><span class="comments-line"></span></div>' +
       '</div>';

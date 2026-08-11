@@ -577,6 +577,35 @@ Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
 into a shared `lib/qrcode.js` next time any of the three is touched again
 (see 048's and 051's own files for the detail).
 
+### Held-out batch — 2026-08-11 01:31 UTC — session `4o6xmy` — tools 068-072
+
+Direct assignment (not picked from "Not yet touched") — these five sit in
+the 35-tool batch Devon deliberately held out of the round system pending
+a future decision to fold them in as a group (see the "Pass 2 — reset"
+note above); this round works them anyway per explicit instruction, which
+overrides the default picking order per this file's own header, the same
+override several other held-out-batch rounds in this section also used.
+Does not count toward the "X of 46 (Pass 2)" tallies, which track only the
+original 46 Pass 1 tools' second pass — these 35 aren't part of that count
+either way yet. One scoped round each, independently verified with a
+headless Chromium smoke test per tool (real interactions — including a
+real generated-PNG upload for 071's downscale test and a seeded-legacy-
+storage test for 072's migration path — `window.print` mocked where
+printing was involved) with zero console errors.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Parent/Guardian Contact Log | `068-parent-contact-log.md` | Date-range filter, CSV export (respects current filter), roster sort-by-fewest-contacts, confirmation toast, Enter-to-submit logging. |
+| PE Warm-Up Circuit Card Generator | `069-pe-warmup-circuit-generator.md` | Reorder stations (up/down), duplicate station, a small click-to-pick emoji palette. |
+| Peer Feedback / Editing Checklist Generator | `070-peer-feedback-checklist-generator.md` | Reorder categories and items (up/down); print-layout QA as an on-screen size warning plus two-tier print font/spacing scaling, plus a `min-height`/no-`overflow:hidden` fix for the same print-clipping bug pattern independently found and fixed in 047 by a concurrent session. |
+| Picture-Prompt Speaking/Writing Task Generator | `071-picture-prompt-generator.md` | Cleared its whole Quick Wins list: fixed the reset-hint wording inconsistency, pin-a-prompt-to-an-image, silent image downscale-on-upload (≤1400px, JPEG), and a persisted print-count-subset field. Also folded in its most-called-out Major Feature (image downscaling) rather than leaving it for a later round. |
+| Story Elements / Plot Diagram Builder | `072-plot-diagram-builder.md` | Fixed a real bug — literal `&mdash;` text printing instead of an em dash, the sixth instance of the same bug class flagged elsewhere this round (see `_site-requests.md`); multiple named saved diagrams (with automatic migration of the prior single-diagram data, verified in a dedicated test); a filled/empty stage visual highlight. |
+
+None of the five cleared their own file's full list — 071 is the
+exception, having cleared its Quick Wins entirely including one Major
+Feature, but its Major Features/Moonshot sections still have real items
+open — so none moved to `stable tools/` this round.
+
 ### Pass 2 — Round 4 — 2026-08-11 02:20 UTC — session `gb5c6e` — branch `claude/tools-041-046-improvements-gb5c6e`
 
 Tools 041–046: the school-office print cluster (formula sheets,
@@ -845,9 +874,23 @@ lands naturally inside a tool you are already working on, take it.
   page just quietly lost content. Fixed there by switching to
   `min-height: 47vh` (no `overflow: hidden`), letting normal page flow
   carry any overflow onto the next printed page instead of eating it.
-  `070-peer-feedback-checklist-generator.html` has the exact same pattern
-  flagged in its own improvement notes and hasn't been fixed yet — the
-  same one-line change should work there too.
+  `070-peer-feedback-checklist-generator.html` had the exact same pattern
+  and has since picked up the identical `min-height` fix (session
+  `4o6xmy`'s held-out-batch round), layered on top of that same round's
+  own on-screen size warning and two-tier print font/spacing scaling —
+  see `_site-requests.md`'s matching entry for the fuller writeup and a
+  third variant of the same fix in `076-sub-note-feedback-slip-generator.html`.
+- **Multi-save localStorage convention: `list` / `data:<name>` / `current`.**
+  Formula Sheet Builder (`Tools/formula-sheet-builder/fsb-store.js`) was
+  the first to name this pattern explicitly — a `list` key holding an
+  array of saved names, a `data:<name>`-prefixed key per saved item, and a
+  `current` key pointing at whichever one is open. Plot Diagram Builder
+  (072, session `4o6xmy`'s held-out-batch round) copied the same
+  three-key shape inline (no support folder yet) to add multiple named
+  diagrams, including a one-time migration path for any pre-existing
+  single-document data under the old key. Any tool moving from "one
+  document per browser" to "multiple named documents" should copy this
+  shape rather than invent a new one.
 - **Generated-output drift is a real failure mode, not just a theoretical
   one.** Round 7 found that `035-schedule-visualizer.html`'s "Publish" button
   would produce a broken `034-schedule-browser.html` (undefined `escHtml`/

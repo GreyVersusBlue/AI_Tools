@@ -72,6 +72,12 @@
   .stage-card .task-text { font-size: 1.3rem; }
   .stage-nav { display: flex; gap: .8rem; justify-content: center; margin-top: .5rem; }
   .empty-hint { color: var(--muted); }
+  .pin-btn { background: #fff; color: var(--ink); border-color: var(--line-strong); font-size: .82rem; padding: .4rem .8rem; }
+  .pin-btn:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .pin-btn.pinned { background: #fdf3ec; border-color: #e0b98f; color: #7a4a1c; }
+  .pin-btn.pinned:hover { background: #fbe8d8; }
+  .print-count-field { display: inline-flex; align-items: center; gap: .4rem; }
+  .print-count-field input { width: 5rem; margin-bottom: 0; }
 
   #printArea { display: none; }
   .print-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .3in; }
@@ -113,6 +119,10 @@
     <div class="btnrow">
       <button id="newImageBtn">New random image</button>
       <button class="secondary" id="resetUsedBtn">Reset (allow repeats)</button>
+      <span class="print-count-field">
+        <label for="printCount" style="margin:0;">Cards to print</label>
+        <input type="number" id="printCount" min="1" placeholder="All">
+      </span>
       <button class="secondary" id="printBtn">Print a set of prompt cards</button>
     </div>
     <p class="hint" id="usedHint"></p>
@@ -129,6 +139,8 @@
   'use strict';
   var IMAGES_KEY = 'ppg_images_v1';
   var PROMPTS_KEY = 'ppg_prompts_v1';
+  var PRINT_COUNT_KEY = 'ppg_print_count_v1';
+  var MAX_IMAGE_DIM = 1400;
 
   var DEFAULT_PROMPTS = [
     'Describe what you see in as much detail as possible.',
@@ -140,7 +152,7 @@
   ];
 
   var els = {};
-  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'newImageBtn', 'resetUsedBtn', 'printBtn', 'usedHint', 'stageCard', 'printArea'].forEach(function (id) {
+  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -157,6 +169,25 @@
     });
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  function downscaleDataUrl(dataUrl, maxDim, cb) {
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      if (!w || !h || (w <= maxDim && h <= maxDim)) { cb(dataUrl); return; }
+      var scale = maxDim / Math.max(w, h);
+      var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, cw, ch);
+        cb(canvas.toDataURL('image/jpeg', 0.82));
+      } catch (e) { cb(dataUrl); }
+    };
+    img.onerror = function () { cb(dataUrl); };
+    img.src = dataUrl;
+  }
 
   function load() {
     try { images = JSON.parse(localStorage.getItem(IMAGES_KEY) || '[]'); } catch (e) { images = []; }
@@ -188,14 +219,19 @@
     var files = Array.prototype.slice.call(els.imageInput.files || []);
     if (!files.length) return;
     var remaining = files.length;
+    function done() {
+      remaining--;
+      if (remaining === 0) { saveImages(); renderThumbs(); els.imageInput.value = ''; }
+    }
     files.forEach(function (file) {
       var reader = new FileReader();
       reader.onload = function () {
-        images.push({ id: uid(), src: reader.result });
-        remaining--;
-        if (remaining === 0) { saveImages(); renderThumbs(); els.imageInput.value = ''; }
+        downscaleDataUrl(reader.result, MAX_IMAGE_DIM, function (finalSrc) {
+          images.push({ id: uid(), src: finalSrc, pinnedPromptId: null });
+          done();
+        });
       };
-      reader.onerror = function () { remaining--; };
+      reader.onerror = function () { done(); };
       reader.readAsDataURL(file);
     });
   });
@@ -229,31 +265,62 @@
     els.usedHint.textContent = '';
   }
 
+  function usedHintText() {
+    if (currentImageIdx === -1 || !images.length) return '';
+    if (!usedIndexes.length) return 'Reset — every image can appear again. Click "New random image" to continue.';
+    return usedIndexes.length + ' of ' + images.length + ' images shown this round';
+  }
+
   function pickNewImage() {
     if (!images.length) { renderStageEmpty(); return; }
     if (usedIndexes.length >= images.length) usedIndexes = [];
     var available = images.map(function (_, i) { return i; }).filter(function (i) { return usedIndexes.indexOf(i) === -1; });
     currentImageIdx = available[Math.floor(Math.random() * available.length)];
     usedIndexes.push(currentImageIdx);
-    currentPromptIdx = prompts.length ? Math.floor(Math.random() * prompts.length) : -1;
+    var img = images[currentImageIdx];
+    var pinnedIdx = img.pinnedPromptId ? prompts.findIndex(function (p) { return p.id === img.pinnedPromptId; }) : -1;
+    currentPromptIdx = pinnedIdx !== -1 ? pinnedIdx : (prompts.length ? Math.floor(Math.random() * prompts.length) : -1);
     renderStage();
   }
 
   function renderStage() {
     if (currentImageIdx === -1 || !images[currentImageIdx]) { renderStageEmpty(); return; }
     var img = images[currentImageIdx];
-    var task = currentPromptIdx !== -1 && prompts[currentPromptIdx] ? prompts[currentPromptIdx].text : '';
-    els.stageCard.innerHTML = '<img src="' + img.src + '" alt=""><div class="task-text">' + escapeHtml(task) + '</div>';
-    els.usedHint.textContent = usedIndexes.length + ' of ' + images.length + ' images shown this round';
+    var prompt = currentPromptIdx !== -1 ? prompts[currentPromptIdx] : null;
+    var task = prompt ? prompt.text : '';
+    var isPinned = !!(prompt && img.pinnedPromptId === prompt.id);
+    els.stageCard.innerHTML = '<img src="' + img.src + '" alt=""><div class="task-text">' + escapeHtml(task) + '</div>' +
+      (prompt ? '<button type="button" class="pin-btn' + (isPinned ? ' pinned' : '') + '" id="pinPromptBtn">' +
+        (isPinned ? '📌 Pinned to this image — click to unpin' : '📌 Pin this prompt to this image') + '</button>' : '');
+    els.usedHint.textContent = usedHintText();
   }
 
+  els.stageCard.addEventListener('click', function (ev) {
+    if (!ev.target.closest('#pinPromptBtn')) return;
+    if (currentImageIdx === -1 || currentPromptIdx === -1) return;
+    var img = images[currentImageIdx];
+    var prompt = prompts[currentPromptIdx];
+    if (!img || !prompt) return;
+    img.pinnedPromptId = (img.pinnedPromptId === prompt.id) ? null : prompt.id;
+    saveImages();
+    renderStage();
+  });
+
   els.newImageBtn.addEventListener('click', pickNewImage);
-  els.resetUsedBtn.addEventListener('click', function () { usedIndexes = []; els.usedHint.textContent = 'Reset — every image can appear again.'; });
+  els.resetUsedBtn.addEventListener('click', function () { usedIndexes = []; els.usedHint.textContent = usedHintText(); });
+
+  els.printCount.addEventListener('input', function () {
+    try { localStorage.setItem(PRINT_COUNT_KEY, els.printCount.value || ''); } catch (e) { /* storage full/blocked */ }
+  });
 
   els.printBtn.addEventListener('click', function () {
     if (!images.length) { alert('Upload at least one image first.'); return; }
-    var cards = images.map(function (img) {
-      var p = prompts.length ? prompts[Math.floor(Math.random() * prompts.length)].text : '';
+    var requested = parseInt(els.printCount.value, 10);
+    var count = (requested && requested > 0) ? Math.min(requested, images.length) : images.length;
+    var subset = images.slice(0, count);
+    var cards = subset.map(function (img) {
+      var pinnedIdx = img.pinnedPromptId ? prompts.findIndex(function (p) { return p.id === img.pinnedPromptId; }) : -1;
+      var p = pinnedIdx !== -1 ? prompts[pinnedIdx].text : (prompts.length ? prompts[Math.floor(Math.random() * prompts.length)].text : '');
       return '<div class="print-card"><img src="' + img.src + '" alt=""><div class="ptext">' + escapeHtml(p) + '</div></div>';
     }).join('');
     els.printArea.innerHTML = '<div class="print-grid">' + cards + '</div>';
@@ -262,6 +329,7 @@
 
   /* ---------- boot ---------- */
   load();
+  try { els.printCount.value = localStorage.getItem(PRINT_COUNT_KEY) || ''; } catch (e) { /* ignore */ }
   renderThumbs();
   renderPrompts();
   renderStageEmpty();
