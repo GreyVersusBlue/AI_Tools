@@ -9,6 +9,36 @@
 
 ## Status
 
+### 2026-08-11 — session `m3r8ro`
+
+**Shipped the week-at-a-glance print view** (backlog rank 16). The month grid
+answers "where does this fall in the year"; a planner page answers a different
+question — what is happening Monday to Friday, and what do I need to know about
+each day — and the part a teacher actually needs there is the *note*, which a
+40px month cell has no room for.
+
+- A third print mode, **One week**, plus a date picker for which week (the one
+  containing today, or the first week of the calendar if today is outside it).
+  Any date in a week resolves to its Monday, so picking a Thursday works.
+- **It is five wide columns, not a small calendar.** Day type renders as a
+  readable word rather than a colour chip — school printers are black and white
+  (P6) — alongside the A/B letter, the paced lesson from the pacing layer, the
+  free-text lesson, and the note in full.
+- **A no-school day is greyed, not dropped.** "There is no Monday this week" is
+  itself the thing worth seeing on a planner page. The greying reads
+  `noSchool` off the calendar's own day types rather than re-deciding it.
+- **The strip shows on screen, not only in print media.** Five columns of notes
+  is not something to send to a printer sight-unseen, so the mode swaps the
+  view; the month grid and year grid step aside and come back when the mode
+  does. A blank three-rule "Notes for the week" block prints under it, because
+  a planner page gets written on.
+- **Verified** by `Tools/school-calendar/test/smoke-week.mjs` (34 checks,
+  folded into `npm run test:school-calendar`), including a pass with print
+  media emulated to confirm the strip prints and the month grid does not print
+  alongside it.
+- **Not done:** no multi-week (fortnight) strip, and no way to print a run of
+  weeks in one job — each week is its own print.
+
 ### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
 
 - **Done — A/B day cycle overlay.** The Quick Win flagged as "the single
@@ -109,7 +139,10 @@ session.
 - **Start New Year From This Template** — the only tool on the site with a
   real year-rollover concept (P14)
 - Export **.ics** (calendar subscription/import) and JSON backup; import backup
-- Print / Save PDF
+- Print / Save PDF, in three modes: month-by-month, whole year, or a
+  **one-week planner strip** (five wide columns with day type as a word, A/B
+  letter, paced lesson, free-text lesson and the full note, plus a blank
+  notes block)
 - Stored under `scv_calendar_v1` — read by `010-command-center-dashboard.html`
   and `045-sub-binder-generator.html`
 
