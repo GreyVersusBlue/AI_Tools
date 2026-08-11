@@ -136,6 +136,14 @@
   .source-text-lines .stl-num { flex-shrink: 0; width: 1.6rem; text-align: right; color: #888; font-family: Consolas, monospace; font-size: .78rem; }
   .source-text-lines .stl-text { white-space: pre-wrap; }
   .citation-line { font-size: .82rem; color: #333; margin-top: .3rem; font-style: italic; }
+  .reading-support-box, .reading-paraphrase-box {
+    border: 1px solid #999; border-radius: 4px; padding: .5rem .7rem; margin: .6rem 0 0; background: #eef6fb;
+    font-family: "Segoe UI", sans-serif;
+  }
+  .reading-support-box.top { margin: 0 0 .8rem; }
+  .reading-paraphrase-box { background: #fbf9f2; }
+  .reading-support-heading { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .3rem; }
+  .reading-support-text { font-size: .88rem; white-space: pre-wrap; }
   .vocab-box {
     border: 1px solid #999; border-radius: 4px; padding: .5rem .7rem; margin: .6rem 0 0; background: #fbf9f2;
     font-family: "Segoe UI", sans-serif;
@@ -242,9 +250,27 @@
         <label for="imageFile">Or upload an image from your computer (optional)</label>
         <p class="hint">Embeds the file directly in this worksheet's saved data &mdash; no hosting needed. Takes priority over the Image URL above if both are set.</p>
         <input type="file" id="imageFile" accept="image/*">
+        <p class="hint">Large photos are automatically resized (long edge capped at 1600px) before they're saved, to keep this worksheet from eating too much of the browser's storage.</p>
         <div id="imageFilePreviewWrap" style="display:none;margin:-.3rem 0 .8rem;">
           <img id="imageFilePreview" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
           <button type="button" class="secondary small" id="clearImageFileBtn" style="margin-top:.4rem;">Remove uploaded image</button>
+          <p id="imageSizeWarning" class="hint" style="display:none;color:var(--err);font-weight:600;margin:.4rem 0 0;"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Reading support (optional)</div>
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="readingSupportEnabled" style="width:auto;margin:0;"> Add reading-support scaffolding to this worksheet
+        </label>
+        <p class="hint">Off by default &mdash; when unchecked, the worksheet prints exactly as it does without this section. Turning it on adds a teacher-typed summary and/or a plain-language paraphrase of the source text. Pairs well with &ldquo;Number each line&rdquo; above, so students can point back to the exact line in the original wording.</p>
+        <div id="readingSupportFields" style="display:none;">
+          <label for="readingSummary">Short summary (optional)</label>
+          <p class="hint">A sentence or two giving the gist before students tackle the full source. Prints as a highlighted box near the top of the worksheet.</p>
+          <textarea id="readingSummary" placeholder="e.g. In this speech, Lincoln honors the soldiers who died at Gettysburg and argues the nation must continue their work of preserving democracy."></textarea>
+          <label for="readingParaphrase">Simplified paraphrase (optional)</label>
+          <p class="hint">Your own plain-language rewrite of the source text. Prints in its own box right under the original.</p>
+          <textarea id="readingParaphrase" placeholder="A plain-language version of the source text, sentence by sentence or paragraph by paragraph."></textarea>
         </div>
       </div>
 
@@ -511,7 +537,8 @@
     'toolbar', 'sheetSwitch', 'newSheetBtn', 'deleteSheetBtn', 'exportSheetBtn', 'importSheetBtn', 'importSheetFile',
     'sheetName', 'sourceTitle', 'sourceType', 'sourceDescription', 'sourceText', 'imageUrl',
     'citationAuthor', 'citationDate', 'citationOrigin', 'lineNumbers', 'vocabSupport',
-    'imageFile', 'imageFilePreviewWrap', 'imageFilePreview', 'clearImageFileBtn',
+    'imageFile', 'imageFilePreviewWrap', 'imageFilePreview', 'clearImageFileBtn', 'imageSizeWarning',
+    'readingSupportEnabled', 'readingSupportFields', 'readingSummary', 'readingParaphrase',
     'fwOptions', 'notesEditor', 'answerLines',
     'previewArea', 'printBlankBtn', 'printKeyBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -527,6 +554,54 @@
   }
   function nlToBr(s) { return escapeHtml(s).replace(/\n/g, '<br>'); }
   function repeatHtml(html, n) { var out = ''; for (var i = 0; i < n; i++) out += html; return out; }
+
+  /* ---------- uploaded image: downscale before storing (P12) ---------- */
+  var IMAGE_MAX_DIMENSION = 1600; // px, long edge
+  var IMAGE_JPEG_QUALITY = 0.82;
+  var IMAGE_WARN_BYTES = 1.5 * 1024 * 1024; // ~1.5MB stored payload — a big share of localStorage's ~5MB cap once the rest of the worksheet is counted
+
+  function downscaleImage(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('Could not read that image file.')); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error('Could not decode that image file.')); };
+        img.onload = function () {
+          var scale = Math.min(1, IMAGE_MAX_DIMENSION / Math.max(img.width, img.height));
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function estimateDataUrlBytes(dataUrl) {
+    if (!dataUrl) return 0;
+    var idx = dataUrl.indexOf(',');
+    var b64 = idx === -1 ? dataUrl : dataUrl.slice(idx + 1);
+    return Math.round(b64.length * 0.75);
+  }
+
+  function updateImageSizeWarning() {
+    var bytes = estimateDataUrlBytes(state && state.imageDataUrl);
+    if (bytes > IMAGE_WARN_BYTES) {
+      els.imageSizeWarning.textContent = 'This image is about ' + (bytes / (1024 * 1024)).toFixed(1) +
+        ' MB once stored — that’s a large share of the browser’s ~5MB storage limit shared by all your saved worksheets. Consider a smaller or simpler image if you run into a storage error.';
+      els.imageSizeWarning.style.display = '';
+    } else {
+      els.imageSizeWarning.style.display = 'none';
+    }
+  }
 
   function sourceTypeLabel(value) {
     var t = SOURCE_TYPES.filter(function (t) { return t.value === value; })[0];
@@ -547,6 +622,9 @@
       citationOrigin: '',
       lineNumbers: false,
       vocabSupport: '',
+      readingSupportEnabled: false,
+      readingSummary: '',
+      readingParaphrase: '',
       framework: 'optic',
       notes: {},
       customQuestions: {},
@@ -709,6 +787,9 @@
         parts.push('<div class="source-text-block">' + nlToBr(state.sourceText) + '</div>');
       }
     }
+    if (state.readingSupportEnabled && state.readingParaphrase) {
+      parts.push('<div class="reading-paraphrase-box"><p class="reading-support-heading">Simplified / plain-language version</p><div class="reading-support-text">' + nlToBr(state.readingParaphrase) + '</div></div>');
+    }
     var citationBits = [];
     if (state.citationAuthor) citationBits.push(escapeHtml(state.citationAuthor));
     if (state.citationDate) citationBits.push(escapeHtml(state.citationDate));
@@ -759,6 +840,9 @@
           '<div class="sheet-title">Primary Source Analysis' + (state.sourceTitle ? ': ' + escapeHtml(state.sourceTitle) : '') + '</div>' +
           '<div class="sheet-sub">Framework: ' + escapeHtml(fw.fullName) + '</div>' +
         '</div>' +
+        (state.readingSupportEnabled && state.readingSummary
+          ? '<div class="reading-support-box top"><p class="reading-support-heading">Summary</p><div class="reading-support-text">' + nlToBr(state.readingSummary) + '</div></div>'
+          : '') +
         sourceBlockHtml() +
         studentLine +
         '<div class="steps-wrap">' + stepsHtml + '</div>' +
@@ -784,6 +868,10 @@
     els.citationOrigin.value = state.citationOrigin || '';
     els.lineNumbers.checked = !!state.lineNumbers;
     els.vocabSupport.value = state.vocabSupport || '';
+    els.readingSupportEnabled.checked = !!state.readingSupportEnabled;
+    els.readingSupportFields.style.display = state.readingSupportEnabled ? '' : 'none';
+    els.readingSummary.value = state.readingSummary || '';
+    els.readingParaphrase.value = state.readingParaphrase || '';
     els.imageFile.value = '';
     if (state.imageDataUrl) {
       els.imageFilePreview.src = state.imageDataUrl;
@@ -791,6 +879,7 @@
     } else {
       els.imageFilePreviewWrap.style.display = 'none';
     }
+    updateImageSizeWarning();
     els.answerLines.value = state.answerLines || 4;
     renderFrameworkPicker();
     renderNotesEditor();
@@ -824,7 +913,10 @@
     if (typeof state.citationDate !== 'string') state.citationDate = '';
     if (typeof state.citationOrigin !== 'string') state.citationOrigin = '';
     if (typeof state.vocabSupport !== 'string') state.vocabSupport = '';
+    if (typeof state.readingSummary !== 'string') state.readingSummary = '';
+    if (typeof state.readingParaphrase !== 'string') state.readingParaphrase = '';
     state.lineNumbers = !!state.lineNumbers;
+    state.readingSupportEnabled = !!state.readingSupportEnabled;
     Store.setCurrentName(name);
     renderAll();
   }
@@ -844,12 +936,19 @@
   bindTextField('citationDate', 'citationDate');
   bindTextField('citationOrigin', 'citationOrigin');
   bindTextField('vocabSupport', 'vocabSupport');
+  bindTextField('readingSummary', 'readingSummary');
+  bindTextField('readingParaphrase', 'readingParaphrase');
   els.sourceType.addEventListener('change', function () {
     state.sourceType = els.sourceType.value;
     renderPreview();
   });
   els.lineNumbers.addEventListener('change', function () {
     state.lineNumbers = els.lineNumbers.checked;
+    renderPreview();
+  });
+  els.readingSupportEnabled.addEventListener('change', function () {
+    state.readingSupportEnabled = els.readingSupportEnabled.checked;
+    els.readingSupportFields.style.display = state.readingSupportEnabled ? '' : 'none';
     renderPreview();
   });
 
@@ -861,20 +960,23 @@
   els.imageFile.addEventListener('change', function () {
     var file = els.imageFile.files && els.imageFile.files[0];
     if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      state.imageDataUrl = reader.result;
-      els.imageFilePreview.src = state.imageDataUrl;
+    downscaleImage(file).then(function (dataUrl) {
+      state.imageDataUrl = dataUrl;
+      els.imageFilePreview.src = dataUrl;
       els.imageFilePreviewWrap.style.display = '';
+      updateImageSizeWarning();
       renderPreview();
-    };
-    reader.readAsDataURL(file);
+    }).catch(function (err) {
+      alert(err.message);
+      els.imageFile.value = '';
+    });
   });
 
   els.clearImageFileBtn.addEventListener('click', function () {
     state.imageDataUrl = '';
     els.imageFile.value = '';
     els.imageFilePreviewWrap.style.display = 'none';
+    updateImageSizeWarning();
     renderPreview();
   });
 
