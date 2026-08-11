@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Art Critique Worksheet Generator | `8vo65u` | 2026-08-11 01:29 UTC | `claude/tools-047-51-improvements-8vo65u` |
+| Student Art Portfolio Label & QR Tag Maker | `8vo65u` | 2026-08-11 01:29 UTC | `claude/tools-047-51-improvements-8vo65u` |
+| Book Tasting Menu Generator | `8vo65u` | 2026-08-11 01:29 UTC | `claude/tools-047-51-improvements-8vo65u` |
+| Government/Civics Simulation Role Card Generator | `8vo65u` | 2026-08-11 01:29 UTC | `claude/tools-047-51-improvements-8vo65u` |
+| Classroom Label Maker, Target Language | `8vo65u` | 2026-08-11 01:29 UTC | `claude/tools-047-51-improvements-8vo65u` |
 
 ---
 
