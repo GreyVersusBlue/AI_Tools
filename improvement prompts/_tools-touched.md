@@ -547,7 +547,7 @@ open" section already treats the read-only cross-tool bridge pattern —
 copy-paste-and-adapt, not a shared library, until a third or fourth tool
 wants the same thing.
 
-### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — branch `claude/tools-047-51-improvements-8vo65u`
+### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — PR #74
 
 Devon directly assigned tools 047-051 to this session, ahead of the
 Pass-2-reset note above that holds the 35-tool Ideas Backlog batch out of
@@ -576,6 +576,59 @@ their own copy-pasted `buildQR`/`drawQR` (Gallery Walk QR Codes, Art
 Portfolio Label Maker, and now Classroom Label Maker) — worth promoting
 into a shared `lib/qrcode.js` next time any of the three is touched again
 (see 048's and 051's own files for the detail).
+
+### Held-out batch — Round 2 — 2026-08-11 01:29–03:10 UTC — session `szyio3` — tools 047–052
+
+**Genuine claim collision with the round directly above.** Devon assigned
+this session tools 047–052 at essentially the same moment `8vo65u` was
+assigned 047–051 — both sessions read this file's empty claim table and
+pushed a claim row in the same UTC minute (01:29), so neither saw the
+other's before starting. `8vo65u` merged first as PR #74. This session's
+own PR (#75) then hit real merge conflicts against 047, 049, 050, and 051
+— not just this tracker file. Rather than blindly resolving in either
+direction, each conflicting tool file was diffed against `8vo65u`'s merged
+version to check for genuine overlap before touching anything:
+
+- **047, 049, 051** — `8vo65u` had independently picked the *same* Quick
+  Wins this session also built (multi-save worksheets + the print fix for
+  047; genre grouping + cover images for 049; the test link + file://
+  banner for 051), so this session's redundant reimplementation of all
+  three was discarded in favor of the already-merged version. No further
+  changes needed.
+- **048, 050** — `8vo65u` had picked a *different* second Quick Win than
+  this session for both (048: character-count warning vs. this session's
+  named/multiple saved portfolios; 050: Duplicate-role button vs. this
+  session's reorder buttons) — genuinely complementary, not conflicting,
+  work. Git's automatic 3-way merge on 048 silently duplicated the reorder
+  buttons and click handlers instead of combining the two feature sets
+  (confirmed by inspection — not caught until reading the merged file
+  directly), and 050 left literal conflict markers mid-function. Both
+  files were rebuilt from `8vo65u`'s merged `main` state with this
+  session's addition re-applied by hand, then re-verified end to end.
+- **052** — untouched by `8vo65u`; merged in cleanly as new work.
+
+| Tool | File | What shipped this round |
+|---|---|---|
+| Art Critique Worksheet Generator | `047-art-critique-worksheet-generator.md` | No changes beyond PR #74 (redundant work discarded). |
+| Student Art Portfolio Label & QR Tag Maker | `048-art-portfolio-label-maker.md` | Named/multiple saved portfolios (New/Duplicate/Rename/Delete, migrates the old single-portfolio save), layered on top of PR #74's reorder buttons and character-count warning. Clears this tool's Quick Wins list except the roster-bulk-add idea. |
+| Book Tasting Menu Generator | `049-book-tasting-menu-generator.md` | No changes beyond PR #74 (redundant work discarded). |
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Reorder roles and talking points via up/down buttons, layered on top of PR #74's per-role Copies field and Duplicate-role button. Clears this tool's Quick Wins list except assigned-student-name. |
+| Classroom Label Maker, Target Language | `051-classroom-label-maker.md` | No changes beyond PR #74 (redundant work discarded). |
+| Cognates & False Friends Reference List Builder | `052-cognates-false-friends-builder.md` | Three more starter language sets (German, Italian, Portuguese — six total); reorder list items via up/down buttons on both lists. |
+
+**7 of the 35 held-out Ideas-Backlog tools now have at least one round**
+(047–052 from the combined work of both sessions above, none from the
+remaining 29). None cleared their full Quick Wins list — 048 and 050 came
+closest, one item each remains — so none moved to `stable tools/` this
+round, and none are added to "Not yet touched" below per this file's own
+convention (a tool moves to **Already done** after its round, not into
+both lists at once).
+
+**Process note for future sessions**, also logged in `_site-requests.md`:
+the claim table only prevents collisions when a claim is visible before
+the next session commits its own — two claims landing in the same
+UTC minute are invisible to each other. This is a real, now-observed
+failure mode of the claim system, not just a theoretical gap.
 
 ### Held-out batch — 2026-08-11 01:31 UTC — session `4o6xmy` — tools 068-072
 

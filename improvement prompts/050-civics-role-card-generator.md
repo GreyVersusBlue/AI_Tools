@@ -44,19 +44,36 @@ Assigning a student name per role and reordering roles/talking points
 were not built this round — see "Where the next round should pick up"
 below.
 
+**2026-08-11 — Round 2 (session `szyio3`), layered on Round 1 above.**
+Shipped the reorder Quick Win this note flagged as the smallest remaining
+item: up/down buttons on both roles (in the role-block header, alongside
+the existing Copies field and Duplicate button) and talking points
+(independently, within each role) — matching the pattern used elsewhere
+in the toolkit. Built directly on top of Round 1's copies field and
+duplicate-role button (both preserved and re-verified working together)
+rather than independently — an earlier attempt to merge this session's
+and `8vo65u`'s branches via git's automatic 3-way merge left literal
+conflict markers in the middle of `renderRoles()`, so the file was
+rebuilt from `8vo65u`'s merged main state with this session's reorder
+layer re-applied by hand instead of trusting the auto-merge. Verified
+with a headless Chromium pass: moved a role down and confirmed the order
+changed, set a role's copy count and moved a talking point, duplicated a
+role (confirming Round 1's button still works), printed and confirmed
+the card count matched (6 roles, one with 3 copies = 8 cards) — no
+console errors.
+
 ## What it does today
 
 - 3 starter templates (Mock Trial, Debate, Legislative Simulation) + blank
 - Fully editable: role name, position, talking points (add/remove)
 - **Per-role copies count** — print N cards for a role N students share
 - **Duplicate-role button** for cloning a role as a starting point
+- **Reorder roles and talking points** via up/down buttons
 - Print: 2-per-page role card grid, respecting each role's copy count
 
 ## Quick Wins
 
-- **Reorder roles and talking points** via up/down buttons, matching the
-  pattern used elsewhere in this toolkit — order is currently fixed by
-  insertion order.
+- ~~Reorder roles and talking points~~ — **shipped 2026-08-11 (Round 2).**
 - **Assign a student name to each role** (an optional field) so the
   printed card doubles as the physical hand-out with the assigned
   student's name already on it, instead of a teacher writing it in by
@@ -112,7 +129,8 @@ legislative simulation needs; a paired rubric closes the loop from
 
 ## Where the next round should pick up
 
-Reorder roles/talking points is the smallest remaining Quick Win.
-Assigned-student-name is the bigger open item — the first Open Question
-above (manual field vs. roster pull) should get answered before building
-it, since it changes the shape of the feature.
+Assigned-student-name is the one remaining Quick Win and the bigger open
+item — the first Open Question above (manual field vs. roster pull) should
+get answered before building it, since it changes the shape of the
+feature. The file hasn't cleared its Major Features/Moonshot sections
+either, so it stays out of `stable tools/` for now.

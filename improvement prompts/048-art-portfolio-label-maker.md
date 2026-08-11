@@ -56,6 +56,25 @@ errors.
 Named/multiple saved portfolios and the roster-bulk-add Quick Win were
 not built this round — see "Where the next round should pick up" below.
 
+**2026-08-11 — Round 2 (session `szyio3`), layered on Round 1 above.**
+Shipped the remaining named/multiple saved portfolios Quick Win this note
+flagged as the natural next step: a portfolio selector with New/Duplicate/
+Rename/Delete, each saved portfolio holding its own title, entries,
+labels-per-page, and QR error-correction setting. The old single-portfolio
+save under `apl_portfolio_v1` migrates automatically into the first entry
+of the new `apl_portfolios_v1` store. Built directly on top of Round 1's
+reorder buttons and character-count warning (both preserved and re-verified
+working together) rather than independently — an earlier attempt to merge
+this session's and `8vo65u`'s branches via git's automatic 3-way merge
+silently duplicated the reorder buttons and click handlers instead of
+combining them cleanly, so the file was rebuilt from `8vo65u`'s merged
+main state with this session's portfolio-save layer re-applied by hand
+instead of trusting the auto-merge. Verified with a headless Chromium
+pass: added a long statement and confirmed the character-count warning
+still fires, reordered two entries and confirmed exactly one up-button per
+row (not duplicated), created/duplicated/deleted a portfolio, switched
+back and confirmed the reordered entries persisted — no console errors.
+
 ## What it does today
 
 - Per-entry title, optional photo upload (thumbnail), artist statement
@@ -63,15 +82,13 @@ not built this round — see "Where the next round should pick up" below.
 - **Reorder entries** via up/down buttons
 - **Live character-count warning** on the artist statement field past
   ~220 characters (QR density heads-up)
+- **Named/multiple saved portfolios** (New/Duplicate/Rename/Delete)
 - QR code per entry encoding the statement text directly (no hosting)
 - Print: label grid (2/3/6/8 per page) with thumbnail, title, QR, statement
 
 ## Quick Wins
 
-- **Named/multiple saved portfolios**, matching the multi-save convention
-  used by most builder tools in this round — one flat list per browser
-  right now, so a teacher with several class sections can't keep separate
-  portfolio batches.
+- ~~Named/multiple saved portfolios~~ — **shipped 2026-08-11 (Round 2).**
 - **CSV import including a photo column** isn't feasible without file
   paths, but a **bulk "add these students" from a saved roster** (like
   Gallery Walk QR Codes' roster-hub dropdown) would let a teacher
@@ -136,10 +153,8 @@ time.
 
 ## Where the next round should pick up
 
-Named/multiple saved portfolios is the natural next step — it's the same
-`RubricStore`-style pattern used elsewhere this batch (see Art Critique
-Worksheet Generator's Round 1 for a from-scratch inline implementation of
-that exact convention, or Rubric Builder's `rb-store.js` for the reusable
-module shape). After that, the roster-bulk-add Quick Win and the shared
-`lib/qrcode.js` promotion (P7, now a three-tool duplication) are the
-highest-value items left.
+All Quick Wins are now shipped. The roster-bulk-add idea under Major
+Features and the shared `lib/qrcode.js` promotion (P7, now a three-tool
+duplication) are the highest-value items left — the file hasn't cleared
+its Major Features/Moonshot sections, so it stays out of `stable tools/`
+for now.

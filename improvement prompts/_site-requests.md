@@ -119,15 +119,60 @@ Status entries) already flagged that **Peer Feedback / Editing Checklist
 Generator** (`070-peer-feedback-checklist-generator.html`) and **Art Critique
 Worksheet Generator** (`047-art-critique-worksheet-generator.html`) share the
 identical `.slip`/half-sheet fixed-height print pattern and the identical
-risk. **Update: both are now fixed independently, concurrently with this
-note being written** — Art Critique Worksheet Generator switched to
-`min-height`/no-`overflow:hidden` in the same round that first flagged this
-pattern (see the `hidden`-loses-to-`display:flex`-adjacent entry in
-`_tools-touched.md`'s "Threads left open" section), and Peer Feedback /
-Editing Checklist Generator picked up the same `min-height` fix plus an
-on-screen size warning and two-tier print font/spacing scaling in session
-`4o6xmy`'s round. 076's own fix (a content-length threshold that falls back
-to one-slip-per-page past a certain size) is a third, slightly more
+risk — neither has been fixed yet. Worth applying the same pattern (min-height
++ overflow: visible + a one-up fallback) the next time either tool gets a
+round, rather than re-discovering the bug independently.
+
+**Update, 2026-08-11: both are now fixed, independently and concurrently
+with this note being written.** Art Critique Worksheet Generator switched
+to `min-height`/no-`overflow:hidden` — shipped independently by both
+session `szyio3` and session `8vo65u` in the same round (PR #74, merged
+first; confirmed present on `main`). Peer Feedback / Editing Checklist
+Generator picked up the same `min-height` fix plus an on-screen size
+warning and two-tier print font/spacing scaling in session `4o6xmy`'s
+round. 076's own fix (a content-length threshold that falls back to
+one-slip-per-page past a certain size) is a third, slightly more
 sophisticated variant of the same underlying idea — worth comparing all
-three approaches the next time any print-clipping issue turns up elsewhere,
-rather than picking one arbitrarily.
+three approaches the next time any print-clipping issue turns up
+elsewhere, rather than picking one arbitrarily.
+
+---
+
+## Same-minute claims in `_tools-touched.md` are invisible to each other
+
+Found 2026-08-11 when session `szyio3` (assigned tools 047–052) and session
+`8vo65u` (assigned tools 047–051) were both directly instructed to start
+work at essentially the same moment. Both read the "Currently claimed"
+table while it was empty and pushed their own claim row in the same UTC
+minute (01:29), so neither could see the other's claim before starting —
+the claim system's "check before you build" step only works when a claim
+actually lands before the next session reads the table, and two claims in
+the same 60-second window race past each other. The result was five tools
+(047, 049, 050, 051, and partial overlap on 048) built independently and
+in parallel by two sessions, discovered only at merge time as real PR
+conflicts, not just a tracker-file conflict — one file's automatic 3-way
+merge silently duplicated UI elements and event handlers instead of
+combining two genuinely complementary features cleanly, which would have
+shipped a visibly broken double-button row if merged without a human (or
+agent) actually reading the merged output. See
+`_tools-touched.md`'s "Held-out batch — Round 2" entry for the full
+resolution.
+
+**This isn't hypothetical anymore — it happened once and could happen
+again**, especially whenever Devon assigns overlapping tool ranges to two
+sessions in the same message/moment (as happened here: 047–051 and
+047–052). Nothing about the claim table's mechanics can fully close a
+same-minute race, but two things would reduce the odds and the damage:
+
+- **Before opening a PR**, re-fetch `main` and check whether another
+  session has since merged work touching the same tool files, not just
+  whether they're still in "Currently claimed" — a claim disappears the
+  moment the other session finishes its round, well before that session's
+  own PR merges.
+- **On a real merge conflict in a tool's own `.html`/`.md` files** (as
+  opposed to just the shared tracker file), never trust an automatic
+  3-way merge result at face value — diff the conflicting file against
+  the other session's already-merged version first to check whether the
+  two rounds picked the same Quick Win (redundant, discard one side) or
+  different ones (complementary, needs a careful hand-merge, not a
+  git-automatic one) before resolving.

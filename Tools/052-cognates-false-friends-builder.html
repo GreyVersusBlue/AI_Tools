@@ -58,6 +58,7 @@
   .row3 { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; align-items: center; margin-bottom: .3rem; }
   .row3.ff { grid-template-columns: 1fr 1fr 1.4fr auto; }
   .row3 input { margin-bottom: 0; }
+  .row3 .row-actions { display: flex; gap: .3rem; }
 
   table.ref-table { width: 100%; border-collapse: collapse; }
   table.ref-table th, table.ref-table td { border: 1px solid #999; padding: .4rem .6rem; text-align: left; font-size: .88rem; }
@@ -98,6 +99,9 @@
     <select id="templateSelect">
       <option value="spanish">Spanish examples</option>
       <option value="french">French examples</option>
+      <option value="german">German examples</option>
+      <option value="italian">Italian examples</option>
+      <option value="portuguese">Portuguese examples</option>
       <option value="blank">Blank</option>
     </select>
     <button class="secondary" id="loadTemplateBtn">Load (replaces current lists)</button>
@@ -146,6 +150,39 @@
         ['sensible', 'sensible', 'Actually means "sensitive" (sensible is "raisonnable").']
       ]
     },
+    german: {
+      lang: 'German',
+      cognates: [['Hotel', 'hotel'], ['Radio', 'radio'], ['Musik', 'music'], ['Familie', 'family'], ['Kaffee', 'coffee'], ['Universität', 'university']],
+      falseFriends: [
+        ['bekommen', 'become', 'Actually means "to get/receive" (to become is "werden").'],
+        ['Gift', 'gift', 'Actually means "poison" (gift is "Geschenk").'],
+        ['Rat', 'rat', 'Actually means "advice" (rat the animal is "Ratte").'],
+        ['also', 'also', 'Actually means "so/therefore" (also is "auch").'],
+        ['aktuell', 'actual', 'Actually means "current/up-to-date" (actual is "tatsächlich").']
+      ]
+    },
+    italian: {
+      lang: 'Italian',
+      cognates: [['animale', 'animal'], ['importante', 'important'], ['musica', 'music'], ['nazione', 'nation'], ['televisione', 'television']],
+      falseFriends: [
+        ['parenti', 'parents', 'Actually means "relatives" (parents is "genitori").'],
+        ['libreria', 'library', 'Actually means "bookstore" (library is "biblioteca").'],
+        ['camera', 'camera', 'Actually means "room" (camera the device is "macchina fotografica").'],
+        ['fattoria', 'factory', 'Actually means "farm" (factory is "fabbrica").'],
+        ['magazzino', 'magazine', 'Actually means "warehouse/store" (magazine is "rivista").']
+      ]
+    },
+    portuguese: {
+      lang: 'Portuguese',
+      cognates: [['animal', 'animal'], ['importante', 'important'], ['música', 'music'], ['nação', 'nation'], ['televisão', 'television']],
+      falseFriends: [
+        ['pretender', 'pretend', 'Actually means "to intend" (to pretend is "fingir").'],
+        ['livraria', 'library', 'Actually means "bookstore" (library is "biblioteca").'],
+        ['puxar', 'push', 'Actually means "to pull" (to push is "empurrar").'],
+        ['esquisito', 'exquisite', 'Actually means "weird/strange" (exquisite is "requintado").'],
+        ['novela', 'novel', 'Actually means "soap opera" (novel is "romance").']
+      ]
+    },
     blank: { lang: '', cognates: [['', '']], falseFriends: [['', '', '']] }
   };
 
@@ -182,21 +219,36 @@
   }
 
   function renderCognates() {
-    els.cognatesWrap.innerHTML = state.cognates.map(function (c) {
+    els.cognatesWrap.innerHTML = state.cognates.map(function (c, i) {
       return '<div class="row3" data-id="' + c.id + '">' +
         '<input type="text" data-field="target" data-id="' + c.id + '" value="' + escapeAttr(c.target) + '" placeholder="Target-language word">' +
         '<input type="text" data-field="english" data-id="' + c.id + '" value="' + escapeAttr(c.english) + '" placeholder="English word">' +
-        '<button type="button" class="danger small" data-del-cognate="' + c.id + '">&times;</button></div>';
+        '<span class="row-actions">' +
+        '<button type="button" class="secondary small" data-move-cognate-up="' + c.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="secondary small" data-move-cognate-down="' + c.id + '"' + (i === state.cognates.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="danger small" data-del-cognate="' + c.id + '">&times;</button></span></div>';
     }).join('');
   }
   function renderFalseFriends() {
-    els.falseFriendsWrap.innerHTML = state.falseFriends.map(function (f) {
+    els.falseFriendsWrap.innerHTML = state.falseFriends.map(function (f, i) {
       return '<div class="row3 ff" data-id="' + f.id + '">' +
         '<input type="text" data-ffield="target" data-id="' + f.id + '" value="' + escapeAttr(f.target) + '" placeholder="Target-language word">' +
         '<input type="text" data-ffield="looksLike" data-id="' + f.id + '" value="' + escapeAttr(f.looksLike) + '" placeholder="Looks like (English)">' +
         '<input type="text" data-ffield="actual" data-id="' + f.id + '" value="' + escapeAttr(f.actual) + '" placeholder="What it actually means">' +
-        '<button type="button" class="danger small" data-del-ff="' + f.id + '">&times;</button></div>';
+        '<span class="row-actions">' +
+        '<button type="button" class="secondary small" data-move-ff-up="' + f.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="secondary small" data-move-ff-down="' + f.id + '"' + (i === state.falseFriends.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="danger small" data-del-ff="' + f.id + '">&times;</button></span></div>';
     }).join('');
+  }
+
+  function moveInArray(arr, id, dir) {
+    var idx = arr.findIndex(function (x) { return x.id === id; });
+    var target = idx + dir;
+    if (idx === -1 || target < 0 || target >= arr.length) return;
+    var tmp = arr[idx];
+    arr[idx] = arr[target];
+    arr[target] = tmp;
   }
 
   els.cognatesWrap.addEventListener('input', function (ev) {
@@ -208,9 +260,18 @@
   });
   els.cognatesWrap.addEventListener('click', function (ev) {
     var id = ev.target.getAttribute('data-del-cognate');
-    if (!id) return;
-    state.cognates = state.cognates.filter(function (c) { return c.id !== id; });
-    save(); renderCognates();
+    var upId = ev.target.getAttribute('data-move-cognate-up');
+    var downId = ev.target.getAttribute('data-move-cognate-down');
+    if (id) {
+      state.cognates = state.cognates.filter(function (c) { return c.id !== id; });
+      save(); renderCognates();
+    } else if (upId) {
+      moveInArray(state.cognates, upId, -1);
+      save(); renderCognates();
+    } else if (downId) {
+      moveInArray(state.cognates, downId, 1);
+      save(); renderCognates();
+    }
   });
   els.addCognateBtn.addEventListener('click', function () {
     state.cognates.push({ id: uid(), target: '', english: '' });
@@ -226,9 +287,18 @@
   });
   els.falseFriendsWrap.addEventListener('click', function (ev) {
     var id = ev.target.getAttribute('data-del-ff');
-    if (!id) return;
-    state.falseFriends = state.falseFriends.filter(function (f) { return f.id !== id; });
-    save(); renderFalseFriends();
+    var upId = ev.target.getAttribute('data-move-ff-up');
+    var downId = ev.target.getAttribute('data-move-ff-down');
+    if (id) {
+      state.falseFriends = state.falseFriends.filter(function (f) { return f.id !== id; });
+      save(); renderFalseFriends();
+    } else if (upId) {
+      moveInArray(state.falseFriends, upId, -1);
+      save(); renderFalseFriends();
+    } else if (downId) {
+      moveInArray(state.falseFriends, downId, 1);
+      save(); renderFalseFriends();
+    }
   });
   els.addFalseFriendBtn.addEventListener('click', function () {
     state.falseFriends.push({ id: uid(), target: '', looksLike: '', actual: '' });
