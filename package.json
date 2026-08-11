@@ -9,7 +9,8 @@
     "test:seating": "node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/drive-seating.mjs",
     "test:schedule": "node Tools/schedule/test/smoke.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs",
-    "check:social": "node Tools/board-check/check-social.mjs"
+    "check:social": "node Tools/board-check/check-social.mjs",
+    "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

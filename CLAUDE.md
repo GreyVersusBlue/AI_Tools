@@ -130,6 +130,14 @@ files must be added there too.
   after touching any head section. Rebuilding the generator means first
   deciding which branding/image policy is correct; don't guess it into
   ~114 files.
+- `_shared/base.css` holds layout rules that were duplicated byte-identically
+  across tools (`.card`, `.app-header`, `.toolbar`); `_shared/print-area.css`
+  holds the `#printArea` screen/print pair. **base.css is safe for any tool;
+  print-area.css is not** — it blanks the page on print and restores only
+  `#printArea`, so linking it from a tool without that element, or one that
+  has its own `@media print` block, breaks printing. Both files' headers spell
+  this out. `npm run phase4:next` (read-only) lists which tools still have
+  duplicated rules and flags the ones that must not get print-area.css.
 - `improvement prompts/_platform-themes.md` is read-only reference material;
   `improvement prompts/_tools-touched.md` explains how improvement-round
   sessions claim work. Follow both.
