@@ -492,6 +492,34 @@ the full list). A future session — ideally one picking up the 001–010 range
 again, but anyone is fine — should finish these five so the range gets a
 complete Pass 2 first pass before other tools get a second round.
 
+### Pass 2 — Round 2 — 2026-08-11 00:49 UTC — session `j6ok2v` — PR #73
+
+Tools 031–035: a document merger, a calendar, a reading log, and the
+schedule-browser/visualizer pair. One scoped, independently-verified
+Quick Win per tool (031 got two), plus — the main event — the first
+phase of the R61–R63 backport into 035's publisher that two prior
+rounds (Pass 1 Round 7 on both 034 and 035) had explicitly flagged as
+the single highest-value item outstanding for that tool pair, and
+explicitly deferred as too large for a single sitting. Given that same
+sizing concern, this round ported one self-contained piece (the
+staleness banner) rather than rushing all four remaining features;
+`035-schedule-visualizer.md`'s Status has the recommended order for
+the rest (copy/share links next, then Compare mode, then PNG
+download).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Word Doc Merger | `031-docx-merger.md` | Remember-last-session file list (names/order/headings, resume banner); explicit "keep or normalize styles" choice with a full style-merge implementation. |
+| School Calendar Visualizer | `032-school-calendar-visualizer.md` | A/B day cycle overlay — badges every day, skips weekends/no-school days without losing sync, "today is an X day" in the stats line. |
+| Silent Reading (SSR) Log Tracker | `033-ssr-log-tracker.md` | Printable finished-books wall; fixed a real bug (single-entry form never refreshed the Books checklist) found while testing it. |
+| East Middle Schedule Browser | `034-schedule-browser.md` | No direct changes — see 035; this file remains the source of truth for still-unported features. |
+| School Layout Visualizer | `035-schedule-visualizer.md` | R61–R63 backport, phase 1 of 4: staleness banner ported into the publish pipeline and live preview, verified end-to-end. |
+
+**20 of 46 (Pass 2) tools done** (10 from `v19h3x`'s round + 5 from
+`yjj7k6`'s + these 5). **26 to go.** None of the five cleared their
+list — each still has substantial Major Features/Moonshot items open in
+its own file — so none moved to `stable tools/` this round.
+
 ---
 
 ## Not yet touched
@@ -516,11 +544,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Primary Source Analysis Worksheet Generator — `028-primary-source-analysis-generator.md`
 - Prompt Builder — `029-prompt-builder.md`
 - Quiz / Review Game Board — `030-review-game-board.md`
-- Word Doc Merger — `031-docx-merger.md`
-- School Calendar Visualizer — `032-school-calendar-visualizer.md`
-- Silent Reading (SSR) Log Tracker — `033-ssr-log-tracker.md`
-- East Middle Schedule Browser — `034-schedule-browser.md`
-- School Layout Visualizer — `035-schedule-visualizer.md`
 - Final Grade Checker — `036-final-grade-checker.md`
 - Grade Distribution Visualizer — `037-grade-distribution-visualizer.md`
 - Data Table → Chart Builder — `038-data-chart-builder.md`

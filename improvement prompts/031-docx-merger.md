@@ -9,6 +9,52 @@
 
 ## Status
 
+### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
+
+Two more Quick Wins from the list below, both fully shipped and verified — no partial/scoped-down version of either.
+
+- **Done — Remember the last session's file list.** File objects can't
+  survive a page reload (browsers never let a page silently re-read a file
+  after refresh), so this remembers names, order, and heading text only —
+  a dismissible banner on next visit shows what was in progress
+  (`docx-merger-last-filelist` in localStorage), and re-adding files by
+  name snaps them back into the remembered order and restores typed
+  heading text, correctly across multiple add batches (add-more-files
+  still honors the remembered order on each call, not just the first).
+- **Done — "Keep or normalize styles" as an explicit choice.** Previously
+  silent (styles.xml from non-base files was never merged at all — every
+  file's custom styles silently fell back to Word's default whenever they
+  didn't already exist in the base file). Now an explicit radio choice:
+  **Normalize** (default, byte-identical to the old behavior — confirmed
+  via a regression test) or **Preserve each file's original styles**,
+  which merges every file's `word/styles.xml` into the base document,
+  renaming only styleIds that collide with an already-used one (so files
+  sharing a template don't grow needless duplicates), fixing up
+  `basedOn`/`next`/`link` references within the renamed styles, and
+  remapping the body's `pStyle`/`rStyle`/`tblStyle` references to match —
+  the same offset-and-remap pattern `offsetNumbering`/`updateReferences`
+  already used for numbering.
+
+Verified end-to-end in headless Chromium with hand-built `.docx` fixtures
+(Python `zipfile`, minimal but valid OOXML): two files with same-named but
+differently-colored `Heading1` styles merge correctly in Preserve mode —
+base keeps its own color, the second file's style lands as `Heading1_f1`
+with its own color and a `basedOn`/`next` correctly remapped to a renamed
+`Normal_f1`, and the merged body's second heading paragraph's `pStyle`
+points at the renamed id. Normalize mode's `styles.xml` output was
+confirmed byte-identical to the pre-change file, so the default path has
+no regression. The remember/resume flow was verified across a real page
+reload (not just a state mock): the banner shows the correct file count
+and names, and re-adding files out of order snaps them back to the
+remembered order and hides the banner.
+
+**Where a future round should pick up:** per-document page-break/skip-
+first-page options are the last item on the original Quick Wins list still
+unbuilt (see below) — a smaller lift than styles was, and should reuse the
+same "Heading text" per-row UI pattern the file list already has. Section-
+aware merging, headers/footers/page numbers, and the packet-builder
+moonshot are all still open (Major Features below).
+
 **2026-08-10 — Round 6 (PR #58): P5 fixed, plus three Quick Wins.**
 
 - **Done — Vendor JSZip locally (P5).** cdnjs was unreachable in this
@@ -89,15 +135,16 @@ not a concatenator.
   per-document — see below. Page-break-after-this-one and skip-first-page
   are still global/unbuilt.)*
 - **Done —** **Custom heading text** per document rather than the filename.
-- **Keep or normalize styles** as an explicit choice. Merging documents with
+- **Done —** **Keep or normalize styles** as an explicit choice. Merging documents with
   conflicting style definitions is the main way this kind of tool produces
-  ugly output, and the user currently has no lever.
+  ugly output, and the user currently has no lever. *(Preserve mode merges
+  and renames colliding styleIds; Normalize is the unchanged default.)*
 - **Done —** **Warn on unsupported content** — embedded images, headers/footers, tracked
   changes, comments, footnotes. Silently dropping content is the worst failure
   mode a merger can have; naming it is most of the fix. *(Images are actually
   carried over already — this warns on headers, footers, comments,
   footnotes, and tracked changes, the things genuinely dropped.)*
-- **Remember the last session's file list** (names only) so an accidental
+- **Done —** **Remember the last session's file list** (names only) so an accidental
   refresh doesn't lose a 20-file ordering.
 
 ## Major Features

@@ -9,6 +9,38 @@
 
 ## Status
 
+### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
+
+- **Done — Printable finished-books wall.** The "Books completed" count
+  already existed in the class summary table (`finishedCount`); this adds
+  the display artifact itself — a "Print finished-books wall" button that
+  prints one card per student with at least one book checked off, listing
+  every title they've finished, with a total-books/total-readers header
+  line. Skips students with nothing finished rather than printing empty
+  cards.
+- **Fixed a real bug found while testing that feature.** The single-entry
+  `#entryForm` submit handler never called `renderBookProgress()` — the
+  bulk-entry save handler did, but the everyday single-entry path didn't —
+  so the "Books" checklist under a student's log silently failed to show a
+  newly-logged book until some unrelated action happened to trigger a full
+  re-render. Since the finished-books wall depends entirely on that
+  checklist being checkable, this was blocking the new feature as well as
+  being wrong on its own; added the missing call.
+
+Verified in headless Chromium: logging a book via the single-entry form
+now populates the Books checklist immediately (reproduced the stale
+checklist before the fix, confirmed it's gone after); marking one
+student's book finished and printing the wall shows exactly that student
+and book, excludes a student with no finished books, and the empty-state
+alert fires correctly when no student in the class has any finished book
+yet.
+
+**Where a future round should pick up:** genre tagging and reading
+conference notes are the two Quick Win-scale items still open (Major
+Features below) that build directly on the book-progress data this round
+touched. The bigger items — goals/challenges, novel-study integration,
+and classroom library inventory — are all still open and larger lifts.
+
 **2026-08-10 — Round 6 (PR #58): five Quick Wins shipped.**
 
 - **Done — Bulk entry grid.** A collapsible "Bulk entry" section: one row
@@ -93,8 +125,9 @@ session.
 - **Done —** **Reading rate** (pages per minute over logged sessions) — the number that
   makes a conference concrete: "you read 1.2 pages a minute; this book is 240
   pages; that's about three weeks."
-- **Books-finished count and a finished-books wall**, which is the motivating
-  artifact for middle schoolers, printable as a display.
+- **Done —** **Books-finished count and a finished-books wall**, which is the motivating
+  artifact for middle schoolers, printable as a display. *(The count already
+  existed in the summary table; the wall itself shipped this round.)*
 - **Genre tagging**, so "you've read six fantasy books; try one of these" is a
   conversation the data supports.
 - **Done —** **Undo on Delete class / delete entry** (P11).
