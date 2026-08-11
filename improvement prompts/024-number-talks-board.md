@@ -25,6 +25,9 @@ are **not** scoped to a single session; items confirmed shipped are tagged
   (`tokenizeExpr`, `parseExpression`, `parseTerm`, `parseFactor`) with a
   teacher-only "show answer"
 - **Strategy cards** added live during discussion, on a shared board
+- **Printable session record** (`printSessionRecord`) — the teacher's paper
+  copy: the string with its computed answers, every attributed strategy card,
+  the whole session's list of strings, and a "notes for next time" box
 - Session save/export (`buildSessionExportText`, `exportSession`), string
   history (`gvb-number-talks:stringHistory`), clear board / clear log
 - Print a handout of the number talk
@@ -279,3 +282,45 @@ names are roster-backed); including dot images in the session `.txt` export;
 roster/name attribution for *who answered* a quick image (distinct from
 strategy-card attribution, still untouched); and the cross-tool convergence
 with `023`/`025` noted above.
+
+## Session-record round — 2026-08-11 (backlog rank 1)
+
+Shipped the **printable session record** — the paper half of "Save this
+session", which until now only wrote a `.txt` file into a downloads folder.
+
+"Print session record" sits beside "Save this session" and prints, on one page:
+
+- **On the board** — the current string, each expression with its computed
+  answer, plus the teaching note if the string carries one. In quick-image
+  mode it draws the dot image itself and states the count.
+- **Strategies shared (N)** — one block per card, with the student's name, or
+  a stable "Student N" label when the card was left unnamed. This is the part
+  the `.txt` export flattened into one line each.
+- **Number talks used this session (N)** — the whole session's strings, not
+  just the one currently on the board.
+- **Notes for next time** — a ruled box, because the record is a thing you
+  write on after the lesson.
+
+The record is deliberately *not* the student handout, in three ways that the
+suite pins down: it shows the answers (the handout never does), it names who
+said what, and it covers the session rather than the current string. An
+expression `computeAnswer()` cannot parse (a word problem, "as a percent")
+still prints — just without an answer — rather than being dropped.
+
+New suite `Tools/number-talks-board/test/smoke-session-record.mjs` (25 checks)
+as `npm run test:number-talks`: it drives a real custom string, two strategy
+cards (one named, one not), and checks the answer, the attribution, the
+unnamed fallback, the counts, the session list, the untouched and still
+answer-free student handout, quick-image mode, and an empty board printing
+something honest instead of crashing.
+
+### Where the next round should pick up
+
+- **Draw on a strategy card** is now the most valuable open Quick Win, and the
+  session record gives it an obvious payoff: a number line or an array sketched
+  during discussion would print straight onto this page. It needs a canvas and
+  the storage thinking that goes with it (P12).
+- **Turn-and-talk timer** and **wait-time pause** are still open and untouched.
+- The record prints the strategy board *as it stands*. Clearing the board mid
+  lesson loses what was there; if that turns out to matter, the fix is an
+  append-only session log rather than reading `strategies` at print time.
