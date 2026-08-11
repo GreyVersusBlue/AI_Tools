@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Science Fair Project Tracker | `b4zswl` | 2026-08-11 01:32 UTC | `claude/tools-073-077-improvements-b4zswl` |
+| Science Safety Symbol & Equipment Label Maker | `b4zswl` | 2026-08-11 01:32 UTC | `claude/tools-073-077-improvements-b4zswl` |
+| Staff Directory / Quick-Reference Builder | `b4zswl` | 2026-08-11 01:32 UTC | `claude/tools-073-077-improvements-b4zswl` |
+| Sub Note / Feedback Slip Generator | `b4zswl` | 2026-08-11 01:32 UTC | `claude/tools-073-077-improvements-b4zswl` |
+| Testing Accommodations Reference Card Generator | `b4zswl` | 2026-08-11 01:32 UTC | `claude/tools-073-077-improvements-b4zswl` |
 
 ---
 
