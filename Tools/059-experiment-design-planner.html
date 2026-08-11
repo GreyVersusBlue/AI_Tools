@@ -62,6 +62,11 @@
 
   .list-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .list-row input { margin-bottom: 0; }
+  .list-row .reorder-btns { display: flex; gap: .15rem; }
+  .list-row .reorder-btns button { padding: .15rem .4rem; font-size: .74rem; line-height: 1; }
+
+  .warn-hint { color: var(--err); font-size: .78rem; margin: -.2rem 0 .6rem; display: none; }
+  .warn-hint.shown { display: block; }
 
   #printArea { display: none; }
   .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
@@ -116,6 +121,7 @@
     <input type="text" id="varIndependent" placeholder="e.g. water temperature">
     <label for="varDependent">Dependent variable (what you measure)</label>
     <input type="text" id="varDependent" placeholder="e.g. time for sugar to dissolve">
+    <p class="warn-hint" id="varSanityHint">Your independent and dependent variables look the same &mdash; the independent variable is what you change, the dependent variable is what you measure as a result. Double-check these are actually different.</p>
     <label>Controlled variables (kept the same)</label>
     <div id="controlledWrap"></div>
     <button type="button" class="secondary small" id="addControlledBtn">+ Add controlled variable</button>
@@ -142,7 +148,7 @@
   var STORE_KEY = 'edp_planner_v1';
 
   var els = {};
-  ['expTitle', 'question', 'hypIf', 'hypThen', 'hypBecause', 'varIndependent', 'varDependent',
+  ['expTitle', 'question', 'hypIf', 'hypThen', 'hypBecause', 'varIndependent', 'varDependent', 'varSanityHint',
    'controlledWrap', 'addControlledBtn', 'materialsWrap', 'addMaterialBtn', 'procedureWrap', 'addStepBtn',
    'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -173,12 +179,23 @@
   }
 
   function renderList(wrapEl, list, placeholder) {
-    wrapEl.innerHTML = list.map(function (item) {
+    wrapEl.innerHTML = list.map(function (item, i) {
       return '<div class="list-row" data-id="' + item.id + '">' +
+        '<div class="reorder-btns">' +
+        '<button type="button" class="secondary small" data-up="' + item.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="secondary small" data-down="' + item.id + '"' + (i === list.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '</div>' +
         '<input type="text" value="' + escapeAttr(item.text) + '" placeholder="' + escapeAttr(placeholder) + '">' +
         '<button type="button" class="danger small" data-del="' + item.id + '">&times;</button>' +
         '</div>';
     }).join('');
+  }
+
+  function moveItem(list, id, dir) {
+    var i = list.findIndex(function (x) { return x.id === id; });
+    var j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
   }
 
   function bindList(wrapEl, listKey, placeholder) {
@@ -191,9 +208,18 @@
       save();
     });
     wrapEl.addEventListener('click', function (ev) {
-      var id = ev.target.getAttribute('data-del');
-      if (!id) return;
-      state[listKey] = state[listKey].filter(function (i) { return i.id !== id; });
+      var delId = ev.target.getAttribute('data-del');
+      var upId = ev.target.getAttribute('data-up');
+      var downId = ev.target.getAttribute('data-down');
+      if (delId) {
+        state[listKey] = state[listKey].filter(function (i) { return i.id !== delId; });
+      } else if (upId) {
+        moveItem(state[listKey], upId, -1);
+      } else if (downId) {
+        moveItem(state[listKey], downId, 1);
+      } else {
+        return;
+      }
       save();
       renderList(wrapEl, state[listKey], placeholder);
     });
@@ -209,8 +235,19 @@
 
   ['expTitle', 'question', 'hypIf', 'hypThen', 'hypBecause', 'varIndependent', 'varDependent'].forEach(function (id) {
     var field = { expTitle: 'title', question: 'question', hypIf: 'hypIf', hypThen: 'hypThen', hypBecause: 'hypBecause', varIndependent: 'varIndependent', varDependent: 'varDependent' }[id];
-    els[id].addEventListener('input', function () { state[field] = els[id].value; save(); });
+    els[id].addEventListener('input', function () {
+      state[field] = els[id].value;
+      save();
+      if (field === 'varIndependent' || field === 'varDependent') checkVarSanity();
+    });
   });
+
+  function checkVarSanity() {
+    var a = state.varIndependent.trim().toLowerCase();
+    var b = state.varDependent.trim().toLowerCase();
+    var same = a && b && a === b;
+    els.varSanityHint.classList.toggle('shown', same);
+  }
 
   function renderAll() {
     els.expTitle.value = state.title;
@@ -223,21 +260,22 @@
     renderList(els.controlledWrap, state.controlled, 'e.g. amount of sugar used');
     renderList(els.materialsWrap, state.materials, 'e.g. thermometer');
     renderList(els.procedureWrap, state.procedure, 'e.g. Measure 100mL of water');
+    checkVarSanity();
   }
 
   els.printBtn.addEventListener('click', function () {
     var title = state.title.trim() || 'Experiment Design Planner';
-    var hyp = 'If ' + (state.hypIf || '&hellip;') + ', then ' + (state.hypThen || '&hellip;') + ', because ' + (state.hypBecause || '&hellip;') + '.';
+    var hyp = 'If ' + (state.hypIf || '…') + ', then ' + (state.hypThen || '…') + ', because ' + (state.hypBecause || '…') + '.';
     var controlled = state.controlled.filter(function (c) { return c.text.trim(); }).map(function (c) { return '<li>' + escapeHtml(c.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
     var materials = state.materials.filter(function (m) { return m.text.trim(); }).map(function (m) { return '<li>' + escapeHtml(m.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
     var procedure = state.procedure.filter(function (p) { return p.text.trim(); }).map(function (p, i) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
     els.printArea.innerHTML =
       '<h1 class="print-title">' + escapeHtml(title) + '</h1>' +
       '<p class="print-sub">Name: __________________________ &nbsp; Date: __________</p>' +
-      '<div class="print-section"><h3>1. Question</h3><p>' + escapeHtml(state.question || '&mdash;') + '</p></div>' +
+      '<div class="print-section"><h3>1. Question</h3><p>' + escapeHtml(state.question || '—') + '</p></div>' +
       '<div class="print-section"><h3>2. Hypothesis</h3><p>' + escapeHtml(hyp) + '</p></div>' +
-      '<div class="print-section"><h3>3. Variables</h3><p><b>Independent:</b> ' + escapeHtml(state.varIndependent || '&mdash;') +
-      '</p><p><b>Dependent:</b> ' + escapeHtml(state.varDependent || '&mdash;') + '</p><p><b>Controlled:</b></p><ul>' + controlled + '</ul></div>' +
+      '<div class="print-section"><h3>3. Variables</h3><p><b>Independent:</b> ' + escapeHtml(state.varIndependent || '—') +
+      '</p><p><b>Dependent:</b> ' + escapeHtml(state.varDependent || '—') + '</p><p><b>Controlled:</b></p><ul>' + controlled + '</ul></div>' +
       '<div class="print-section"><h3>4. Materials</h3><ul>' + materials + '</ul></div>' +
       '<div class="print-section"><h3>5. Procedure</h3><ol>' + procedure + '</ol></div>';
     window.print();

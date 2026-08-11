@@ -510,6 +510,43 @@ download).
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
 
+### Pass 2 — Round 3 — 2026-08-11 01:29 UTC — session `yar0mb` — PR #82
+
+Tools 036–040: the grade/data cluster (Final Grade Checker, Grade
+Distribution Visualizer, Data Table → Chart Builder) plus the
+vocabulary-drill pair (Vocab & Conjugation Drill Generator, Vocabulary
+Flashcard & Word Wall Generator). One scoped, independently-verified Quick
+Win per tool, each picked up from that tool's own Pass 1 "Skipped —
+deferred" list rather than invented fresh. Every change was verified with
+`node --check` (or the full 150-test `grade-math.test.mjs` suite for 036)
+plus a headless Playwright pass (page load, the actual interaction, zero
+console errors) served over a local HTTP server — `file://` module imports
+are blocked by CORS in a headless Chromium sandbox, which is worth knowing
+before assuming a smoke test needs a real server for this codebase's
+`<script type="module">` tools specifically (`Tools/036-final_grade_checker.html`
+is the only one of the five; the other four are classic non-module
+`<script>` tags and load fine over `file://`, though the shared
+Google-Fonts `@import` failure noted in `_site-requests.md` still fires
+and was filtered out of the pass/fail check rather than fixed).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Final Grade Checker | `036-final-grade-checker.md` | Explicit column mapping on import (P13) — an optional `{nameCol, q1Col}` override in `parsePastedData`, plus a UI panel that previews the first row and lets a teacher override auto-detect when a gradebook export's column order changes. |
+| Grade Distribution Visualizer | `037-grade-distribution-visualizer.md` | 15-second in-memory undo on Delete assignment (P11), same pattern as `018-qr-scavenger-hunt-builder.html`'s "Undo clear"; the existing confirm dialog stays. |
+| Data Table → Chart Builder | `038-data-chart-builder.md` | Same undo pattern (P11) applied to Delete dataset. |
+| Vocab & Conjugation Drill Generator | `039-vocab-conjugation-drill.md` | Accent-tolerant answer checking on the conjugation self-quiz — a three-state `answerMatch()` (correct/close/wrong) via Unicode NFD diacritic-stripping; scoring stays strict, only the feedback message changed. |
+| Vocabulary Flashcard & Word Wall Generator | `040-vocab-flashcard-generator.md` | Alignment test page — one numbered front/back sheet pair reusing the real double-sided print's own mirroring math, to check duplex settings before a full class set. |
+
+**25 of 46 (Pass 2) tools done** (20 from the prior three rounds + these
+5). **21 to go.** None of the five cleared their own list — each still has
+at least one deferred Quick Win or a full Major Features/Moonshot section
+open — so none moved to `stable tools/` this round. Two tools (037, 038)
+independently picked up the identical P11 undo pattern this round; nothing
+shared was extracted, matching how the rest of this file's "Threads left
+open" section already treats the read-only cross-tool bridge pattern —
+copy-paste-and-adapt, not a shared library, until a third or fourth tool
+wants the same thing.
+
 ### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — branch `claude/tools-047-51-improvements-8vo65u`
 
 Devon directly assigned tools 047-051 to this session, ahead of the
@@ -566,6 +603,33 @@ still have open Major Features/Moonshot items, so none moved to
 `stable tools/` this round. See each file's own Status section for what's
 recommended next.
 
+### Tools 058–062 — 2026-08-11 01:41 UTC — session `kq3g3h` — Devon's direct request
+
+Devon directed this session to work tools 058&ndash;062 specifically,
+outside the normal pick-from-"Not yet touched" flow — these five are part
+of the 35-tool batch held out at the Pass 2 reset above ("Devon wants to
+fold them into the round system as a deliberate batch rather than mixed
+in silently with this reset"), so this round does **not** count toward
+the "N of 46 (Pass 2)" tally above and the 35-tool batch is still not
+folded into that rotation. One or two independently-verified Quick Wins
+per tool, each confirmed with a headless Chromium smoke test (Playwright,
+installed fresh into the scratchpad for this session since no
+`package.json` exists in the repo) covering the new behavior plus a
+reload to confirm `localStorage` persistence, with zero console errors.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Duty Roster Builder | `058-duty-roster-builder.md` | Live per-staff assignment counts; a per-staff "skip this week" flag that auto-fill respects; fixed a latent bug where deleting a duty location left orphaned assignments still counting toward staff totals. |
+| Scientific Method / Experiment Design Planner | `059-experiment-design-planner.md` | Up/down reordering for controlled variables, materials, and procedure steps; a sanity hint when the independent and dependent variable fields match; fixed a print-output bug where empty-field HTML-entity placeholders were being double-escaped into literal text. |
+| Fitness & Skill Assessment Tracker | `060-fitness-skill-assessment-tracker.md` | Time-value (`mm:ss`) parsing so class average/min/max stats now work for time-type events, not just count-type; CSV export of the full results grid. |
+| Fraction–Decimal–Percent Conversion Drill Generator | `061-fraction-decimal-percent-drill-generator.md` | Seeded generation (mulberry32, ported from Math Fact Drill Sheet Generator's pattern) with a "Lock seed" checkbox for reproducible reprints; settings (difficulty/given-form/row count/seed lock) now persist across page loads. |
+| Geography Bee / Map Skills Quiz Generator | `062-geography-bee-quiz-generator.md` | Category filter and quiz question count persist across page loads; built-in questions can now be hidden/shown individually (not just deleted, which only ever applied to custom questions) and hidden ones are excluded from the projector/shuffle/quiz pools. |
+
+None of the five cleared their own Quick Wins list — each still has
+Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each file's own Status section for exactly where the
+next round should pick up.
+
 ### Devon-assigned round — tools 073–077 — 2026-08-11 ~01:45 UTC — session `b4zswl`
 
 **Not part of the Pass 2 001–046 rotation above** — these five come from
@@ -619,11 +683,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Primary Source Analysis Worksheet Generator — `028-primary-source-analysis-generator.md`
 - Prompt Builder — `029-prompt-builder.md`
 - Quiz / Review Game Board — `030-review-game-board.md`
-- Final Grade Checker — `036-final-grade-checker.md`
-- Grade Distribution Visualizer — `037-grade-distribution-visualizer.md`
-- Data Table → Chart Builder — `038-data-chart-builder.md`
-- Vocab & Conjugation Drill Generator — `039-vocab-conjugation-drill.md`
-- Vocabulary Flashcard & Word Wall Generator — `040-vocab-flashcard-generator.md`
 - Formula Reference Sheet Builder — `041-formula-sheet-builder.md`
 - Certificate & Award Maker — `042-certificate-award-maker.md`
 - Field Trip Permission Slip Generator — `043-field-trip-permission-slip.md`

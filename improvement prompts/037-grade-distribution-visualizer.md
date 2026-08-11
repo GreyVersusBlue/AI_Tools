@@ -9,6 +9,27 @@
 
 ## Status
 
+**2026-08-11 — Pass 2 round.** Shipped **undo on Delete assignment** (P11),
+the smaller of the two Quick Wins this file's Pass 1 round left deferred.
+The `confirm()` dialog already existed (its wording now mentions the undo
+window instead of "This can't be undone"); what was missing was the
+undo itself. Copies the exact pattern `018-qr-scavenger-hunt-builder.html`
+established for "Undo clear": an in-memory-only snapshot (never
+`localStorage`, so it doesn't survive a reload) captured right before
+`deleteSet()` runs, a "Undo delete" button that appears for a 15-second
+window (`setTimeout`), and a restore path that re-saves the snapshot under
+its original name — unless a same-named assignment was created during the
+undo window, in which case it restores as `"<name> (restored)"` instead of
+silently overwriting the new one. Verified with a headless Playwright pass:
+delete → undo brings back the exact same pasted scores; the name-collision
+case (deleting the *only* assignment auto-creates a fresh "New Assignment"
+with the same default name, then Undo correctly detects the collision and
+restores as "New Assignment (restored)") was hit organically by the test
+and handled correctly, not just reasoned about. No JS console errors.
+
+Not attempted this round: **copy chart to clipboard**, the other deferred
+Quick Win, and everything under Major Features/Moonshot.
+
 **2026-08-10 — implementation round.** Shipped all five Quick Wins scoped
 for this round: assignment naming on export/print, n/excluded visibility,
 zeros as their own category, a grayscale-/colorblind-safe palette, and
@@ -92,8 +113,9 @@ Wins in the backlog below), and everything under Major Features / Moonshot.
   Seven-point presets; hand-editing a cutoff box flips it to "Custom".)*
 - **Skipped — deferred.** **Copy the chart to clipboard** for pasting into a PLC document or an email.
   *(Not part of this round's scoped list.)*
-- **Skipped — deferred.** **Undo / confirm on Delete assignment** (P11). *(Not part of this round's
-  scoped list.)*
+- **Done — 2026-08-11.** **Undo / confirm on Delete assignment** (P11). *(Confirm already existed;
+  added a 15-second in-memory undo, same pattern as the QR Scavenger Hunt
+  Builder's "Undo clear" — see Status.)*
 
 ## Major Features
 

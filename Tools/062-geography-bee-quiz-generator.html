@@ -199,9 +199,11 @@
 (function () {
   'use strict';
   var CUSTOM_KEY = 'gbq_custom_v1';
+  var DISABLED_KEY = 'gbq_disabled_v1';
+  var SETTINGS_KEY = 'gbq_settings_v1';
   var CAT_LABELS = { capitals: 'Capitals', landmarks: 'Landmarks', mapskills: 'Map Skills' };
 
-  var BUILTIN = [
+  var BUILTIN_RAW = [
     ['capitals', 'What is the capital of France?', 'Paris'],
     ['capitals', 'What is the capital of Japan?', 'Tokyo'],
     ['capitals', 'What is the capital of Australia?', 'Canberra'],
@@ -232,7 +234,8 @@
     ['mapskills', 'What do lines of latitude measure?', 'Distance north or south of the Equator'],
     ['mapskills', 'What do lines of longitude measure?', 'Distance east or west of the Prime Meridian'],
     ['mapskills', 'What symbol on a map typically points north?', 'A compass rose']
-  ].map(function (row) { return { category: row[0], q: row[1], a: row[2], custom: false }; });
+  ];
+  var BUILTIN = BUILTIN_RAW.map(function (row, i) { return { id: 'bi' + i, category: row[0], q: row[1], a: row[2], custom: false }; });
 
   var els = {};
   ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
@@ -240,6 +243,7 @@
    'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var custom = [];
+  var disabled = {};
   var order = [];
   var idx = 0;
 
@@ -258,14 +262,45 @@
     try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* storage full/blocked */ }
   }
 
+  function loadDisabled() {
+    try {
+      var arr = JSON.parse(localStorage.getItem(DISABLED_KEY) || '[]');
+      disabled = {};
+      if (Array.isArray(arr)) arr.forEach(function (id) { disabled[id] = true; });
+    } catch (e) { disabled = {}; }
+  }
+  function saveDisabled() {
+    try { localStorage.setItem(DISABLED_KEY, JSON.stringify(Object.keys(disabled))); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function loadSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+      if (s && typeof s === 'object') {
+        if (typeof s.category === 'string') els.categoryFilter.value = s.category;
+        if (s.sheetCount) els.sheetCount.value = s.sheetCount;
+      }
+    } catch (e) { /* ignore */ }
+  }
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        category: els.categoryFilter.value, sheetCount: els.sheetCount.value
+      }));
+    } catch (e) { /* storage full/blocked */ }
+  }
+
   function allQuestions() {
     return BUILTIN.concat(custom.map(function (c) {
       return { category: c.category, q: c.q, a: c.a, custom: true, id: c.id };
     }));
   }
+  function activeQuestions() {
+    return allQuestions().filter(function (item) { return item.custom || !disabled[item.id]; });
+  }
   function filteredQuestions() {
     var cat = els.categoryFilter.value;
-    return allQuestions().filter(function (item) { return !cat || item.category === cat; });
+    return activeQuestions().filter(function (item) { return !cat || item.category === cat; });
   }
 
   function resetOrder() {
@@ -298,13 +333,14 @@
     els.displayA.classList.remove('shown');
   }
 
-  els.applyFilterBtn.addEventListener('click', function () { resetOrder(); renderDisplay(); });
+  els.applyFilterBtn.addEventListener('click', function () { saveSettings(); resetOrder(); renderDisplay(); });
   els.prevBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx - 1 + order.length) % order.length; renderDisplay(); });
   els.nextBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx + 1) % order.length; renderDisplay(); });
   els.revealBtn.addEventListener('click', function () { els.displayA.classList.toggle('shown'); });
   els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
 
   els.buildSheetBtn.addEventListener('click', function () {
+    saveSettings();
     var all = shuffle(filteredQuestions().slice());
     var count = Math.max(1, Math.min(30, parseInt(els.sheetCount.value, 10) || 10, all.length));
     var chosen = all.slice(0, count);
@@ -332,19 +368,31 @@
 
   function renderBank() {
     var all = allQuestions();
-    els.bankCount.textContent = all.length;
+    var activeCount = activeQuestions().length;
+    els.bankCount.textContent = activeCount + (activeCount !== all.length ? ' active of ' + all.length : '');
     els.bankList.innerHTML = all.map(function (item) {
-      var delBtn = item.custom
+      var isHidden = !item.custom && disabled[item.id];
+      var actionBtn = item.custom
         ? '<button type="button" class="danger small del-btn" data-del="' + item.id + '">Delete</button>'
-        : '<span class="hint del-btn" style="margin:0;">built-in</span>';
-      return '<div class="bank-row">' + delBtn + '<b>[' + CAT_LABELS[item.category] + ']</b> ' + escapeHtml(item.q) + ' &mdash; <em>' + escapeHtml(item.a) + '</em></div>';
+        : '<button type="button" class="secondary small del-btn" data-toggle="' + item.id + '">' + (isHidden ? 'Show' : 'Hide') + '</button>';
+      var status = item.custom ? '' : (isHidden ? ' <span class="hint" style="margin:0;">(hidden)</span>' : '');
+      return '<div class="bank-row"' + (isHidden ? ' style="opacity:.55;"' : '') + '>' + actionBtn +
+        '<b>[' + CAT_LABELS[item.category] + ']</b> ' + escapeHtml(item.q) + ' &mdash; <em>' + escapeHtml(item.a) + '</em>' + status + '</div>';
     }).join('');
   }
   els.bankList.addEventListener('click', function (ev) {
-    var id = ev.target.getAttribute('data-del');
-    if (!id) return;
-    custom = custom.filter(function (c) { return c.id !== id; });
-    saveCustom(); resetOrder(); renderDisplay(); renderBank();
+    var delId = ev.target.getAttribute('data-del');
+    var toggleId = ev.target.getAttribute('data-toggle');
+    if (delId) {
+      custom = custom.filter(function (c) { return c.id !== delId; });
+      saveCustom();
+    } else if (toggleId) {
+      if (disabled[toggleId]) delete disabled[toggleId]; else disabled[toggleId] = true;
+      saveDisabled();
+    } else {
+      return;
+    }
+    resetOrder(); renderDisplay(); renderBank();
   });
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
@@ -360,6 +408,8 @@
 
   /* ---------- boot ---------- */
   loadCustom();
+  loadDisabled();
+  loadSettings();
   resetOrder();
   renderDisplay();
   renderBank();
