@@ -9,6 +9,41 @@
 
 ## Status
 
+**2026-08-11 — Round 2 (session `gb5c6e`).** Shipped the two remaining
+Quick Wins from the previous round's "didn't fit" list: signature image
+upload and print alignment guides. Storage stayed additive:
+`settings.signatureImage` (data URL, default `''`) and `settings.showGuides`
+(boolean, default `false`) both backfill through `normalizeSettings()`, so a
+preset saved before this round loads and prints exactly as before.
+
+- **Signature image.** Reuses `CertificateLogo.downscaleImage()` verbatim
+  (it was already generic, not logo-specific, despite the name) — same
+  upload/preview/remove pattern as the existing logo control. The image
+  prints just above the signature line instead of (not replacing) the typed
+  signature text, which still prints below the line as the printed
+  name/title. Both footer cells (date and signature) are now wrapped in a
+  `.cert-sig-wrap` with a same-height spacer when there's no image, so the
+  date line's border-top stays vertically aligned with the signature line's
+  whether or not a signature image is present.
+- **Print alignment guides.** A "Show alignment guides" checkbox adds four
+  small red corner marks (0.5in L-brackets) at the certificate's own edges —
+  the exact boundary that gets stretched to fill the printed page — via a
+  `.cert-guides` overlay inside `certificateHtml()`, so screen preview and
+  print show identically positioned marks with no separate print-only code
+  path. The hint text spells out the intended workflow: print a test copy on
+  plain paper, hold it to the light against pre-printed certificate stock,
+  adjust printer margins if the marks don't line up, then turn guides off
+  for the real print run.
+
+Verified with a headless Playwright pass: 4 guide marks render, signature
+image upload/preview/remove round-trips correctly, both new settings persist
+through a reload, and the print-area build includes the guide overlay when
+enabled — zero console errors.
+
+Not attempted this round: everything in Major Features (still all deferred).
+
+---
+
 **2026-08-10 — Quick Wins mostly implemented; Major Features deferred.**
 Storage stayed additive: `settings.orientation`/`settings.perPage` are new
 keys with a `normalizeSettings()` fallback (landscape, 1-per-page) for any
@@ -61,17 +96,16 @@ What shipped, in the order of the backlog:
   `hideDeleteUndo()`, holding exactly one deleted preset) appears in the
   toolbar after a confirmed delete and restores it via
   `CertificateStore.savePreset()`.
-- **Skipped — deferred.** Signature image upload, and print alignment
-  guides / bleed marks for pre-printed certificate stock. Both are real,
-  scoped asks that just didn't fit in this round's five-item list; a
-  signature image would reuse `CertificateLogo.downscaleImage()` almost
-  as-is, and bleed guides are a CSS-only addition to the print stylesheet.
+- **Done —** Signature image upload, and print alignment guides for
+  pre-printed certificate stock. *(Shipped 2026-08-11 — see Status. The
+  guides are corner marks at the certificate's own edges, not a separate
+  bleed-safe-area calculation; that distinction may matter if a future round
+  wants true bleed marks for stock with its own pre-printed border.)*
 
 **Where a future round should pick up:** everything in Major Features below
-(all deferred), the signature-image and bleed-guide Quick Wins above, and a
-genuine drag-and-drop design surface if there's ever appetite for it — the
-current template system is still "five fixed text fields in a fixed layout,"
-just with more label/kicker variety than before.
+(all deferred), and a genuine drag-and-drop design surface if there's ever
+appetite for it — the current template system is still "five fixed text
+fields in a fixed layout," just with more label/kicker variety than before.
 
 ## What it does today
 
@@ -81,7 +115,8 @@ just with more label/kicker variety than before.
   Custom — the newer three also swap the kicker line above the name
 - Decorative borders (`cam-borders.js`) and theme swatches, with live preview
 - Editable name / title / reason / date / signature; uploadable logo
-  (`cam-logo.js`), removable
+  (`cam-logo.js`), removable; optional uploaded **signature image** printed
+  above the signature line
 - Named presets saved and switchable (`gvb-certificate-maker:list` / `:data:*`),
   with confirm-before-delete and a 10-second undo
 - **Batch mode** — one certificate per name for a whole class, with an
@@ -89,6 +124,8 @@ just with more label/kicker variety than before.
   reason** (and optional per-student title) via two-column paste
 - **Orientation (landscape/portrait) and 1- or 2-per-page** print layout,
   with a dynamically-injected `@page` size and a cut guide for 2-per-page
+- Optional **print alignment guides** (corner marks) for registering against
+  pre-printed certificate stock
 - QR code support; Print / Save as PDF
 
 ## Quick Wins
@@ -101,13 +138,17 @@ just with more label/kicker variety than before.
   vocabulary elsewhere on the site (P13). *(Comma now means reason, not the
   old per-line title override — see Status for why that's a deliberate
   change and how title override still works via `| Title`.)*
-- **Skipped — deferred.** **Signature image**, not just a typed name — an uploaded or drawn signature
-  makes the output look official. *(Didn't fit this round's scope; would
-  reuse `cam-logo.js`'s downscaling almost unchanged.)*
+- **Done —** **Signature image**, not just a typed name — an uploaded or drawn signature
+  makes the output look official. *(Reused `CertificateLogo.downscaleImage()`
+  unchanged; prints above the typed signature line rather than replacing it.)*
 - **Done —** **Landscape and portrait**, and a **two-per-page** layout for smaller awards
   and "caught being kind" slips.
-- **Skipped — deferred.** **Print alignment guides / bleed check** so pre-printed certificate paper
+- **Done —** **Print alignment guides / bleed check** so pre-printed certificate paper
   lines up. Teachers buy certificate stock; this is the format it needs.
+  *(Shipped as corner registration marks at the certificate's own edges,
+  toggleable, shown identically in preview and print — not a true
+  bleed-safe-area calculation for stock with its own pre-printed border; see
+  Open Questions below.)*
 - **Done —** **More templates that aren't end-of-year awards** — homework
   pass, reading milestone, "good news from school" note home shipped.
   *(Skipped hall pass of honour and birthday certificate — the three shipped
@@ -155,15 +196,25 @@ enough that the result doesn't look like a form.
   `np_rosters` via a roster-select + Load button.
 - **P6 (print quality)** — margins, bleed, and pre-printed stock alignment
   matter more here than anywhere else on the site. Orientation/2-per-page
-  landed this round; bleed/alignment guides for pre-printed stock did not.
-- **P12 (storage)** — the uploaded logo is base64 in `localStorage`; it needs
-  downscaling and a size warning. (Downscaling already existed via
-  `cam-logo.js`; the size-warning half is still open.)
+  landed in the previous round; corner alignment guides landed 2026-08-11
+  (see Status/Open Questions — not a true bleed-safe-area calculation yet).
+- **P12 (storage)** — the uploaded logo and (as of 2026-08-11) the uploaded
+  signature image are both base64 in `localStorage`; both go through
+  downscaling (`cam-logo.js`'s `CertificateLogo.downscaleImage`, capped at
+  200px), but neither has a visible storage-usage warning yet.
 - **P13 (import surfaces)** — **addressed 2026-08-10**: two-column
   name/reason paste (tab or comma) via the rewritten `batchEntriesList()`.
 
 ## Open Questions
 
+- **New 2026-08-11.** The shipped alignment guides mark the certificate's
+  own edges (where content is stretched to fill the printed page), not a
+  computed bleed-safe-area inset from the physical page edge. For a teacher
+  whose pre-printed stock has its own decorative border already printed,
+  true bleed marks (a safe-area rectangle inset from the paper edge by a
+  configurable margin) would be more directly useful — worth asking whether
+  that's the actual complaint before building it, since it's a different
+  (larger) feature than what shipped.
 - Is there interest in shipping a small set of licensed-clear decorative
   fonts, or should the tool stay with system fonts for reliability?
 - Should the QR code on a certificate point at anything in particular
