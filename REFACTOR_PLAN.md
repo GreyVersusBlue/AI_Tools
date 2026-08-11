@@ -1052,6 +1052,34 @@ controls: a page linking only base.css with no `#printArea` prints normally
 `#printArea` element does print blank (so the documented footgun is real and
 correctly confined to that file).
 
+#### Picking a batch: use the script, not the lists below
+
+```
+npm run phase4:next          # next 12 candidates
+npm run phase4:next -- 20    # next 20
+npm run phase4:next -- --all # everything remaining
+npm run phase4:next -- --json
+```
+
+`Tools/board-check/list-base-css-candidates.mjs` (read-only, rewrites nothing)
+is the source of truth for what's left. It reads the rules out of
+`_shared/base.css` at runtime and checks every tool against the tree, so:
+
+- a tool counts as **done** if it links `_shared/base.css` — not if the plan
+  says so, so a round that forgets to update this file still picks up correct
+  work next time;
+- a rule counts as **safe to delete** only if it is byte-identical to
+  base.css's (leading indentation ignored). Anything that differs is reported
+  as `LEAVE INLINE` instead;
+- adding a rule to base.css automatically widens the candidate set — nothing
+  about the rule list is hardcoded;
+- it flags every tool that has its own `@media print` block or no `#printArea`
+  element, i.e. every tool that must **not** be given `_shared/print-area.css`;
+- "nothing left" is exit 0 with a clear message, so a round that runs after
+  Phase 4 finishes stops instead of inventing work.
+
+The lists below are a snapshot for reading; the script is what to act on.
+
 #### Remaining Phase 4 candidates
 
 **Batch 2 — rest of the print cluster: DONE in Round 4b** (071-picture-prompt-generator,
