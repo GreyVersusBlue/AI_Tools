@@ -30,8 +30,15 @@
    push that claim-only change by itself, before writing any implementation
    code, so a concurrent session sees your claim before picking its own
    batch.
-3. Do the work; update that tool's own `improvement prompts/<tool>.md` with
-   what shipped, what was hard, and where the next round should pick up.
+3. Do the work, following the repo conventions in the root `CLAUDE.md` —
+   in particular: vendored third-party libraries live in `_shared/vendor/`
+   (one canonical copy, never a fresh per-tool copy); tool subfolders use
+   `lib/`, never `libs/`; link `_shared/` boilerplate (theme, a11y,
+   sw-register) instead of inlining a copy; and any file you add, rename,
+   or delete means updating `PRECACHE_URLS` in `sw.js` and bumping
+   `CACHE_VERSION` in the same commit. Then update that tool's own
+   `improvement prompts/<tool>.md` with what shipped, what was hard, and
+   where the next round should pick up.
 4. When you finish: remove the tool's row from **Currently claimed** and
    from **Not yet touched**, and add it to **Already done**, in the table
    for your round — header the round like
