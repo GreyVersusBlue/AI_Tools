@@ -9,7 +9,7 @@
 // No real student appears in this file. Every name is invented.
 
 import {
-  getLetter, getQP, qpToFinalLetter, calcFinals, toScore,
+  getLetter, getQP, qpToFinalLetter, calcFinals, toScore, curveScores,
   parseGradeToken, splitRow, parsePastedData, findQuarterWindow, isGradeCell,
   LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
 } from './grade-math.mjs';
@@ -159,6 +159,71 @@ eq(toScore(0), 0, '0 is fine');
 eq(getLetter(950), null, 'a stray 950 gets no letter');
 eq(calcFinals([950, 96, 97, 98]), null, 'and it does not become a fourth quarter');
 eq(parseGradeToken('A(950.00)'), null, 'a 950 in a paste is rejected');
+
+// ── Class-wide what-if ───────────────────────────────────────
+//
+// The point of these is that a curve is a QUESTION, not an edit: nothing here
+// may change the input, and every answer has to come back out through
+// calcFinals() rather than through a second, simpler calculation.
+group('Class-wide what-if');
+
+const CLASS_SET = [88, 91, 84, 87];
+const frozen = CLASS_SET.slice();
+curveScores(CLASS_SET, { plus: 5, dropLowest: true });
+eq(CLASS_SET, frozen, 'the pasted scores are never mutated by a what-if');
+
+eq(curveScores(CLASS_SET), [88, 91, 84, 87], 'no options is a plain copy');
+eq(curveScores(CLASS_SET, { plus: 0 }), [88, 91, 84, 87], 'a zero curve changes nothing');
+eq(curveScores(CLASS_SET, { plus: 3 }), [91, 94, 87, 90], '+3 lands on every quarter');
+eq(curveScores(CLASS_SET, { plus: -4 }), [84, 87, 80, 83], 'a negative curve is allowed — some terms need one');
+eq(curveScores([97, 99, 100, 96], { plus: 8 }), [100, 100, 100, 100], 'a curve is capped at 100 by default');
+eq(curveScores([3, 1, 2, 4], { plus: -10 }), [0, 0, 0, 0], 'and floored at 0');
+eq(curveScores([97, 99, 100, 96], { plus: 8, cap: 105 }), [105, 105, 105, 104], 'the cap is overridable');
+
+// Drop the lowest: the bad quarter stops pulling, replaced by what the student
+// actually earned across the rest.
+eq(curveScores([90, 90, 90, 50], { dropLowest: true }), [90, 90, 90, 90],
+   'the lowest quarter is replaced by the mean of the other three');
+eq(curveScores([80, 90, 100, 60], { dropLowest: true }), [80, 90, 100, 90],
+   'and the mean is of the OTHER three, not of all four');
+eq(curveScores([70, 70, 70, 70], { dropLowest: true }), [70, 70, 70, 70],
+   'four identical quarters are unchanged by a drop');
+eq(curveScores([50, 90, 90, 50], { dropLowest: true })[0], (90 + 90 + 50) / 3,
+   'with two equal lowest quarters, exactly one is dropped');
+eq(curveScores([null, 88, 92, 84], { dropLowest: true }), [null, 88, 92, 90],
+   'a missing quarter is left missing and is not treated as a zero — the mean is of the two that are there');
+eq(curveScores([null, null, null, 70], { dropLowest: true }), [null, null, null, 70],
+   'one lonely quarter has no "rest" to stand in for it, so nothing is dropped');
+eq(curveScores([], { dropLowest: true, plus: 5 }), [], 'an empty set is survivable');
+
+// Both at once, in the documented order: curve first, then drop.
+eq(curveScores([80, 90, 100, 60], { plus: 5, dropLowest: true }), [85, 95, 100, (85 + 95 + 100) / 3],
+   'a curve is applied before the drop, so the drop averages the CURVED others');
+
+// The answer has to come back through calcFinals, unchanged rules included.
+{
+  const scores = [89, 89, 89, 89];
+  eq(calcFinals(scores).finalLetter, 'B', 'four 89s is a B');
+  eq(calcFinals(curveScores(scores, { plus: 1 })).finalLetter, 'A', 'and +1 moves the whole set to an A');
+  eq(calcFinals(curveScores(scores, { plus: 0.4 })).finalLetter, 'B', 'while +0.4 does not — the cutoff still decides');
+}
+{
+  // Weighted terms: the drop must not change the divisor, which is why it is
+  // modelled as a replacement rather than a three-quarter average.
+  const opts = { weights: [1, 1, 1, 7] };
+  const scores = [100, 100, 100, 40];
+  eq(calcFinals(scores, opts).pctAvg, 58, 'a heavily weighted bad quarter drags the average to 58');
+  const dropped = curveScores(scores, { dropLowest: true });
+  eq(dropped, [100, 100, 100, 100], 'dropping it replaces it with the other three');
+  eq(calcFinals(dropped, opts).pctAvg, 100, 'and the weights still apply to four quarters');
+}
+{
+  // A student one quarter short still has no final, curve or no curve. The
+  // tool must not invent a grade for them just because a what-if is on.
+  const three = [90, 90, 90, null];
+  eq(calcFinals(curveScores(three, { plus: 10 })), null, 'a curve does not conjure a final out of three quarters');
+  eq(calcFinals(curveScores(three, { dropLowest: true })), null, 'nor does a drop');
+}
 
 // ── Paste import ─────────────────────────────────────────────
 group('Paste import — token parsing');

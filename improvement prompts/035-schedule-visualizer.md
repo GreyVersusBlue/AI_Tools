@@ -1,13 +1,80 @@
 # Improvement Prompts — 035 — School Layout Visualizer
 
 **Tool file:** `Tools/035-schedule-visualizer.html` (~19,400 lines — by far the largest tool on the site)
-**Support folder:** `Tools/schedule-visualizer/` — `lib/jsqr.js`, `lib/qrcode.js`; plus `Tools/schedule/` — fonts, `libs/jspdf/`
+**Support folder:** `Tools/schedule-visualizer/` — `sv-handoff.js`,
+`sv-recovery.js`, `test/smoke-recovery.mjs`; plus `Tools/schedule/` — fonts,
+the published-browser fixtures and test suite
 
 **Current description (from README):** Build a hyperlinked map of teachers, rooms, and clusters — and publish a schedule browser like the one above from it.
 
 ---
 
 ## Status
+
+### Pass 2 — Round 3 — 2026-08-11 — session `m3r8ro`
+
+**Shipped automatic recovery points (backlog rank 2, "Autosave and crash
+recovery").** The framing in the backlog row needed correcting before the
+work could be scoped: *autosave already existed* — `scheduleBlueprintAutosave()`
+has written the blueprint to `stviz_blueprint` 800ms after every change for
+many rounds. What did not exist was any answer to what happens when that one
+key fails, which for the site's largest artifact is the whole risk:
+
+- **The unreadable-autosave hole was the real bug.** `loadBlueprintFromLocalStorage()`
+  caught every failure with one `console.warn` and returned `false` — the same
+  `false` it returns on a genuine first run. So a truncated or evicted payload
+  opened an empty editor with no explanation, and the *next keystroke's
+  autosave overwrote the only copy that existed*. It now records
+  `_blueprintLoadStatus` as `restored` / `empty` / `corrupt`, and on `corrupt`
+  copies the unreadable string to `stviz_blueprint_unreadable` before anything
+  can tread on it.
+- **New module `Tools/schedule-visualizer/sv-recovery.js`** keeps a rolling ring
+  of three full-project generations (blueprint + groups + settings + what-if)
+  **in IndexedDB, not localStorage** — deliberately, per P12 and per this
+  tool's own storage-headroom warning: three copies of a project carrying a
+  traced floor-plan image would compete with the live autosave for the same
+  ~5MB and could be the very thing that pushes a write over quota. It also owns
+  the `STVIZ_SESSION_OPEN_v1` marker (localStorage, because it has to be
+  written and cleared synchronously at boot and at pagehide).
+- **Capture points:** every 5 minutes when something has changed (hooked into
+  `scheduleBlueprintAutosave()`, so "changed" can't drift from the autosave's
+  own definition), on `pagehide` and on `visibilitychange → hidden`, and forced
+  before an import replaces everything and before the danger-zone "clear saved
+  blueprint". A restore captures the state it is about to replace first, so
+  recovering is itself undoable.
+- **On load,** a banner appears in exactly two cases and stays quiet otherwise:
+  the autosave came back unreadable, or the previous session never reached its
+  pagehide (crash / killed tab / dead machine). Both name the recovery point's
+  time and contents. A "Automatic Recovery Points" list in Settings sits under
+  Project Snapshots for a deliberate rollback with no crash involved.
+- **Drive-by fix:** `.stviz-storage-banner` (the R58 quota warning) had markup
+  and JS but **no CSS anywhere in the file** — it was rendering as unstyled
+  body text at the top of the page. Both banners are now styled together.
+- **What was fiddly.** (a) `RecoveryManager` is a `const` declared ~11,000
+  lines below `scheduleBlueprintAutosave()`, so the hook has to go through
+  `window.RecoveryManager` — a bare reference is a temporal-dead-zone *throw*,
+  not `undefined`. (b) `sv-recovery.js` is an ES module and evaluates after the
+  classic script, so `init()` waits on a `sv-recovery-ready` event when the
+  namespace isn't there yet. (c) The pagehide capture is a best-effort
+  IndexedDB write; the `visibilitychange` capture is the one that reliably
+  lands, and pagehide is the clean-close case anyway.
+- **Verified** by a new suite, `Tools/schedule-visualizer/test/smoke-recovery.mjs`
+  (21 checks, `npm run test:schedule-visualizer`), reusing the schedule suite's
+  Northwind fixture: a point really lands in IndexedDB with a readable header,
+  the ring caps at three, an unchanged project doesn't spend a generation, a
+  crash marker produces the "wasn't closed cleanly" banner, a corrupted
+  `stviz_blueprint` produces the "could not be read" banner *and* the
+  quarantine copy, and restoring from either banner puts the rooms back. The
+  existing `Tools/schedule/test/smoke.mjs` (42 checks, the publish pipeline)
+  still passes.
+- **Not done:** the recovery ring holds the full project but not the undo
+  history; and there is no "compare this recovery point with what's on screen"
+  view, which is what would make a rollback from the Settings list a decision
+  rather than a leap.
+
+**Where a future round should pick up:** unchanged from Round 2 below — the
+R61–R63 backport (copy/share links next, then Compare/Common Planning mode,
+then PNG download) is still the highest-value item for this tool pair.
 
 ### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
 
@@ -161,6 +228,11 @@ multi-session on their own.
 - **Snapshots and history** (`STVIZ_SNAPSHOT_*`, `beginAction`/`commitAction`,
   full undo), project export/import, **peer-to-peer project handoff** over
   `webrtc-pair.js` with QR pairing
+- **Automatic recovery points** (`sv-recovery.js`, IndexedDB `stviz-recovery`):
+  a rolling three-generation copy of the whole project taken every few minutes,
+  on leaving the page, and before an import or a danger-zone clear; offered on
+  load when the autosave is unreadable or the last session ended abnormally,
+  and listed in Settings for a deliberate rollback
 - Onboarding flow (`stviz_onboarded`), PDF export via vendored jsPDF
 
 ## Quick Wins
@@ -170,10 +242,11 @@ multi-session on their own.
   cheaper after the editor, the schedule model, the pathfinder, the congestion
   engine, the playback renderer, and the publisher are separate modules under
   `Tools/schedule-visualizer/`. The support folder already exists and holds
-  only two vendored libraries.
-- **Autosave and crash recovery.** The largest, most-easily-lost artifact on
-  the site; snapshots exist but a periodic autosave slot would prevent the
-  worst outcome.
+  only two vendored libraries and, since Pass 2 Round 3, `sv-handoff.js` and
+  `sv-recovery.js` — the module split has a foothold to grow from.
+- **Done —** **Autosave and crash recovery** (Pass 2 Round 3). Autosave was
+  already there; what shipped is the recovery ring in `sv-recovery.js` plus
+  the corrupt-autosave detection the old loader silently swallowed.
 - **Done —** **Storage headroom warning** (P12). A blueprint with a traced image plus
   snapshots is the biggest thing in `localStorage` on this site, and the
   failure mode is a silent write failure.

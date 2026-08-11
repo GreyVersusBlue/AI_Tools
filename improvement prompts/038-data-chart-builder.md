@@ -1,13 +1,43 @@
 # Improvement Prompts — 038 — Data Table → Chart Builder
 
 **Tool file:** `Tools/038-data-chart-builder.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/data-chart-builder/test/smoke-xlsx.mjs`
+(`npm run test:chart-builder`). The page itself is a single file.
 
 **Current description (from README):** Paste a table from a spreadsheet or lab notebook, pick the columns, and get a bar, line, pie, or scatter chart with quick descriptive stats — download as PNG or SVG.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **spreadsheet file
+import** (backlog rank 14, platform theme P13). The tool took a paste, a .csv
+or a .tsv; every sibling tool that handles tabular data also reads .xlsx, and a
+teacher with a lab-data workbook was opening it, selecting, copying, and coming
+back.
+
+- `.xlsx` / `.xlsm` / `.xls` now drop onto the same box and go through the same
+  file picker, with SheetJS lazy-loaded from the shared vendored build only
+  when a workbook actually turns up — the common paste path still costs nothing.
+- **A workbook is converted to the tab-separated text the tool already parses**,
+  not to a second internal representation. One parser, one set of rules about
+  headers and numbers, nothing to keep in sync — and the chart, the stats and
+  the saved-dataset feature all work on an imported workbook without knowing
+  it came from one.
+- **Two silent corruptions the conversion has to avoid**, both asserted:
+  a cell containing a tab (a pasted note inside a data table) would otherwise
+  become two columns, so tabs and newlines inside a cell become spaces; and a
+  stray formatted cell far to the right of the data would otherwise become an
+  empty series, so trailing all-empty columns are trimmed by measuring the real
+  width of every row.
+- **A multi-sheet workbook gets a sheet picker** rather than silently taking
+  the first sheet. The workbook is held in memory so switching sheets does not
+  re-read the file, and the picker disappears again when a .csv is loaded.
+- If SheetJS cannot load, the message points at a .csv export of the same
+  sheet, which needs nothing.
+- **Verified** by `Tools/data-chart-builder/test/smoke-xlsx.mjs` (25 checks).
+  The .xlsx fixtures are built inside the page with the tool's own vendored
+  SheetJS, so the suite reads a real workbook rather than a hand-rolled zip.
 
 **2026-08-11 — Pass 2 round.** Shipped **undo on Delete dataset** (P11), one
 of the three Quick Wins this file's Pass 1 round left deferred — the same
@@ -88,8 +118,10 @@ under Major Features / Moonshot.
 
 ## What it does today
 
-- Paste or load a table; tolerant parsing (`splitLine`, `parseTable`,
-  `detectNumericColumns`) with a live preview
+- Paste or load a table — .csv, .tsv, or an **.xlsx workbook** (SheetJS,
+  lazy-loaded; multi-sheet workbooks get a sheet picker) — with tolerant
+  parsing (`splitLine`, `parseTable`, `detectNumericColumns`) and a live
+  preview
 - Chart types: **bar, line, pie, scatter, box plot** (`buildBoxData`,
   `quartiles`) — the README undersells this
 - Column selection, multi-series (`getCheckedValueCols`), legend, axis labels

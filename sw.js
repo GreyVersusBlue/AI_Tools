@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v67';
+const CACHE_VERSION = 'v84';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -132,6 +132,7 @@ const PRECACHE_URLS = [
   "Tools/name-picker/fonts/outfit-latin-ext-600-normal.woff2",
   "Tools/name-picker/fonts/outfit-latin-ext-700-normal.woff2",
   "Tools/name-picker/fonts/press-start-2p-latin-400-normal.woff2",
+  "Tools/name-picker/np-details.js",
   "Tools/name-picker/np-pick.js",
   "Tools/name-picker/np-store.js",
   "Tools/027-novel-study-circles-manager.html",
@@ -155,6 +156,7 @@ const PRECACHE_URLS = [
   "Tools/034-schedule-browser.html",
   "Tools/035-schedule-visualizer.html",
   "Tools/schedule-visualizer/sv-handoff.js",
+  "Tools/schedule-visualizer/sv-recovery.js",
   "Tools/schedule/fonts/dm-mono-latin-400-normal.woff2",
   "Tools/schedule/fonts/dm-mono-latin-500-normal.woff2",
   "Tools/schedule/fonts/dm-sans-latin-400-normal.woff2",
@@ -202,6 +204,7 @@ const PRECACHE_URLS = [
   "_shared/print-area.css",
   "_shared/qr-scan.js",
   "_shared/state-link.js",
+  "_shared/student-details.js",
   "_shared/sw-register.js",
   "_shared/theme.css",
   "_shared/webrtc-pair.js",

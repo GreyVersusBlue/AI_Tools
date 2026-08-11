@@ -20,6 +20,62 @@
 //
 // DOM-free. Imported by the page and by the Node suite.
 
+/**
+ * Pick one of `candidates`, optionally biased by `weights` (name -> positive
+ * number). With no weights this is a plain uniform draw, which is what every
+ * caller did before weighting existed.
+ *
+ * A missing, zero, negative or non-finite weight reads as 1 rather than as
+ * "never call this student": a weighting bug must never silently exclude
+ * somebody from being called on.
+ */
+export function weightedChoice(candidates, weights, rng = Math.random) {
+  if (!candidates || !candidates.length) return null;
+  if (!weights) return candidates[Math.floor(rng() * candidates.length)];
+  let total = 0;
+  const w = candidates.map(n => {
+    const v = Number(weights[n]);
+    const x = (isFinite(v) && v > 0) ? v : 1;
+    total += x;
+    return x;
+  });
+  let r = rng() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    r -= w[i];
+    if (r < 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];   // float drift on the last bucket
+}
+
+/**
+ * Long-run fairness weights from the lifetime pick counts the tool already
+ * keeps in `np_stats`.
+ *
+ * Fair rotation solves fairness *within a round*: everybody is called once
+ * before anybody is called twice. It says nothing across rounds, and across a
+ * term that is where the drift lives — a student who joined in October, or one
+ * who was absent for the two rounds everybody else was called in, stays behind
+ * for good. This tilts each draw toward whoever has been called least, using
+ * the counts that were already being recorded and never read back.
+ *
+ * `weight = (max - count + 1) ** strength`, so the least-called student in the
+ * room always has the largest weight and the most-called always has weight 1.
+ * Nobody's weight is ever zero: this is a lean, not a lockout, and a student
+ * who has been called most must still be callable.
+ */
+export function fairnessWeights(names, stats = {}, { strength = 1 } = {}) {
+  const list = (names || []).filter(n => typeof n === "string" && n);
+  if (!list.length) return {};
+  const counts = list.map(n => {
+    const v = Number(stats[n]);
+    return (isFinite(v) && v > 0) ? v : 0;
+  });
+  const max = Math.max(...counts);
+  const out = {};
+  list.forEach((n, i) => { out[n] = Math.pow(max - counts[i] + 1, strength); });
+  return out;
+}
+
 /** Fisher-Yates. Uniform over all n! orderings; does not mutate the input. */
 export function shuffle(list, rng = Math.random) {
   const out = Array.from(list);
@@ -52,7 +108,7 @@ export function freshRotation() {
  * Returns `{name, state}` and never mutates the state passed in. `name` is null
  * only when nobody is eligible.
  */
-export function fairPick(state, eligible, rng = Math.random) {
+export function fairPick(state, eligible, rng = Math.random, weights = null) {
   const pool = [];
   const seen = new Set();
   for (const n of eligible || []) {
@@ -73,7 +129,7 @@ export function fairPick(state, eligible, rng = Math.random) {
     candidates = remaining.filter(n => n !== last);
   }
 
-  const name = candidates[Math.floor(rng() * candidates.length)];
+  const name = weightedChoice(candidates, weights, rng);
   return { name, state: { remaining: remaining.filter(n => n !== name), last: name } };
 }
 
@@ -82,18 +138,25 @@ export function fairPick(state, eligible, rng = Math.random) {
  * rotation is switched off. Still avoids an immediate repeat, which the jump
  * animation already did by accident and a teacher notices.
  */
-export function uniformPick(state, eligible, rng = Math.random) {
+export function uniformPick(state, eligible, rng = Math.random, weights = null) {
   const pool = Array.from(new Set((eligible || []).filter(n => typeof n === "string" && n)));
   const last = state && typeof state.last === "string" ? state.last : null;
   if (!pool.length) return { name: null, state: { remaining: [], last } };
   const candidates = pool.length > 1 && last !== null ? pool.filter(n => n !== last) : pool;
-  const name = candidates[Math.floor(rng() * candidates.length)];
+  const name = weightedChoice(candidates, weights, rng);
   return { name, state: { remaining: [], last: name } };
 }
 
-/** `fair ? fairPick : uniformPick`, so callers do not branch. */
-export function pickOne(state, eligible, { fair = true, rng = Math.random } = {}) {
-  return (fair ? fairPick : uniformPick)(state, eligible, rng);
+/**
+ * `fair ? fairPick : uniformPick`, so callers do not branch.
+ *
+ * `weights` is optional and orthogonal to `fair`: rotation decides *who is
+ * still owed a turn this round*, weighting decides *which of them comes up
+ * next*. They compose — with both on, a round still calls everybody exactly
+ * once, but the students furthest behind over the term come up earlier in it.
+ */
+export function pickOne(state, eligible, { fair = true, rng = Math.random, weights = null } = {}) {
+  return (fair ? fairPick : uniformPick)(state, eligible, rng, weights);
 }
 
 /**
@@ -101,7 +164,7 @@ export function pickOne(state, eligible, { fair = true, rng = Math.random } = {}
  * the same rotation so a multi-pick spends turns rather than sidestepping them —
  * pick 4 from 28 twice and you have called eight different students.
  */
-export function pickMany(state, eligible, count, { fair = true, rng = Math.random } = {}) {
+export function pickMany(state, eligible, count, { fair = true, rng = Math.random, weights = null } = {}) {
   const names = [];
   const chosen = new Set();
   let s = state;
@@ -112,7 +175,7 @@ export function pickMany(state, eligible, count, { fair = true, rng = Math.rando
   // the rotation refills part-way through.
   let left = pool.slice();
   for (let i = 0; i < total; i++) {
-    const step = (fair ? fairPick : uniformPick)(s, left, rng);
+    const step = (fair ? fairPick : uniformPick)(s, left, rng, weights);
     if (!step.name || chosen.has(step.name)) break;
     chosen.add(step.name);
     names.push(step.name);
@@ -146,5 +209,6 @@ export function leastPicked(names, stats = {}) {
 }
 
 export default {
-  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, makeGroups, leastPicked
+  shuffle, freshRotation, fairPick, uniformPick, pickOne, pickMany, makeGroups, leastPicked,
+  weightedChoice, fairnessWeights
 };

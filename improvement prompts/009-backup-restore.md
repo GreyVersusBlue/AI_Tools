@@ -1,13 +1,49 @@
 # Improvement Prompts — 009 — Backup & Restore
 
 **Tool file:** `Tools/009-backup-restore.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/backup-restore/test/` — the browser suite
+(`smoke-restore-diff.mjs`, `npm run test:backup`). The page itself is a single file.
 
 **Current description (from README):** Scans your browser for everything every tool on this site has saved and downloads it as one file, or restores it back on a new computer or after a wiped cache.
 
 ---
 
 ## Status
+
+### Pass 2 — Round 2 — 2026-08-11 — session `m3r8ro`
+
+**Shipped the record-level restore preview** (backlog rank 7). The preview
+answered "how many *files* will be overwritten", which is the wrong unit: a
+teacher doesn't have one file called `np_rosters`, they have six rosters, and
+what they need before pressing Restore is which of the six get replaced, which
+get added, and which are left alone.
+
+- New `recordDiff(mode, key, oldRaw, newRaw)` classifies every named record
+  inside a key as **replaced / added / untouched / lost**, reusing the existing
+  `parseNamedMap()` so it understands both site conventions (a
+  `<prefix>:data:<name>` key per record, and one flat key holding
+  `{name: record}`, optionally wrapped in `.sets`). A settings blob has no
+  records to speak of, so it falls back to one whole-key outcome — half-merging
+  one is how you corrupt it, which `combineValue()` already knew.
+- **`lost` is the finding.** "Replace" writes the file's value over the whole
+  key, so a roster that exists only on this computer and is absent from the
+  backup is *destroyed* — and nothing anywhere said so. The summary now names
+  the count in red and points at the two modes that keep them; the row lists
+  them by name.
+- **The numbers are recomputed when the mode radio changes**, which is the
+  point of having modes: the same backup file against the same computer is
+  "1 replaced, 1 added, 1 untouched, 2 removed" under Replace and "0 replaced,
+  1 added, 4 untouched" under Add-only. Checkbox state is carried across the
+  re-render, so changing modes can't silently re-tick a row that was
+  deliberately excluded.
+- `describeOverwrittenNames()` is gone — `recordDiff()` subsumes it and returns
+  the same names in a form that can also say what happens to them.
+- Verified by `Tools/backup-restore/test/smoke-restore-diff.mjs` (22 checks):
+  a real backup file is fed to the real file input, all three modes are checked
+  against a fixture built so every category is non-empty, and the last section
+  actually presses Restore and compares `np_rosters` afterwards — so the
+  preview's arithmetic is checked against the restore's behaviour, not just
+  against itself.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
 
@@ -189,8 +225,11 @@ What shipped, against the backlog below:
 
 - Scans `localStorage` for every key the site's tools write, groups them, and
   labels them for a human (`scanGroups`, `labelFor`, `isInternalKey`)
-- Shows size per group and describes what would be overwritten on restore
-  (`describeOverwrittenNames`)
+- Shows size per group, and a **record-level preview of the restore**
+  (`recordDiff`, `renderRestorePreview`): per group and in total, how many
+  named records would be replaced, added, left untouched, and — under
+  "Replace" — how many that exist only on this computer would be removed.
+  Recomputed live when the restore mode changes
 - Downloads a single `.json` backup; restores selected items with checkboxes
 - Remembers when you last backed up (`br_last_backup_at`) and shows a banner
 - Rescan button

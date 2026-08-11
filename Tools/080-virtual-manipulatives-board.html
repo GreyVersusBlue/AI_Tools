@@ -94,6 +94,12 @@
 
   .snapshot-preview { margin-top: 1rem; }
   .snapshot-preview canvas { border: 1px solid var(--line); max-width: 100%; }
+
+  .saved-bar { padding: .7rem .8rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+  .saved-bar .bar-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .saved-bar select { font-family: inherit; font-size: .88rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); min-width: 12rem; }
+  .saved-bar button.action { font-size: .84rem; padding: .35rem .7rem; }
+  .saved-bar .save-status { font-size: .82rem; color: var(--muted); margin-left: auto; }
 </style>
 </head>
 <body>
@@ -104,6 +110,19 @@
       <h1>Virtual Manipulatives Board</h1>
       <p class="sub">Drag base-ten blocks, fraction tiles, and algebra tiles to demonstrate live &mdash; snapshot the board when you're done.</p>
     </div>
+  </div>
+
+  <div class="toolbar saved-bar">
+    <label class="bar-label" for="boardSelect">Saved boards</label>
+    <select id="boardSelect" aria-label="Saved boards"></select>
+    <button type="button" class="action secondary" id="prevBoardBtn" title="Load the previous saved board">&lsaquo; Prev</button>
+    <button type="button" class="action secondary" id="nextBoardBtn" title="Load the next saved board">Next &rsaquo;</button>
+    <span class="divider"></span>
+    <button type="button" class="action" id="saveBoardBtn">Save</button>
+    <button type="button" class="action secondary" id="saveAsBoardBtn">Save as new&hellip;</button>
+    <button type="button" class="action secondary" id="renameBoardBtn">Rename</button>
+    <button type="button" class="action secondary" id="deleteBoardBtn">Delete</button>
+    <span class="save-status" id="saveStatus" role="status" aria-live="polite"></span>
   </div>
 
   <div class="tabs">
@@ -187,7 +206,11 @@
       el.style.left = newLeft + 'px';
       el.style.top = newTop + 'px';
     });
-    el.addEventListener('pointerup', function () { dragging = false; });
+    el.addEventListener('pointerup', function () {
+      if (!dragging) return;
+      dragging = false;
+      touch();
+    });
   }
 
   /* ---------- blocks & tiles board ---------- */
@@ -211,27 +234,28 @@
     board.appendChild(piece);
     makeDraggable(piece, board);
     piece.querySelector('.del').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
-    piece.querySelector('.del').addEventListener('click', function () { piece.remove(); });
+    piece.querySelector('.del').addEventListener('click', function () { piece.remove(); touch(); });
     piece.querySelector('.dup').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
     piece.querySelector('.dup').addEventListener('click', function () { addByType(type); });
+    touch();
     return piece;
   }
 
-  function addUnit() { addPieceEl('<div class="unit-block"></div>', 'unit'); }
+  function addUnit() { return addPieceEl('<div class="unit-block"></div>', 'unit'); }
   function addTen() {
     var segs = '';
     for (var i = 0; i < 10; i++) segs += '<div class="seg"></div>';
-    addPieceEl('<div class="ten-block">' + segs + '</div>', 'ten');
+    return addPieceEl('<div class="ten-block">' + segs + '</div>', 'ten');
   }
   function addHundred() {
     var segs = '';
     for (var i = 0; i < 100; i++) segs += '<div class="seg"></div>';
-    addPieceEl('<div class="hundred-block">' + segs + '</div>', 'hundred');
+    return addPieceEl('<div class="hundred-block">' + segs + '</div>', 'hundred');
   }
   function addFraction(n) {
     var segs = '<div class="seg filled"></div>';
     for (var i = 1; i < n; i++) segs += '<div class="seg"></div>';
-    addPieceEl('<div class="fraction-tile">' + segs + '</div>', 'fraction-' + n);
+    return addPieceEl('<div class="fraction-tile">' + segs + '</div>', 'fraction-' + n);
   }
   function addAlgebra(kind) {
     var map = {
@@ -243,15 +267,19 @@
       'alg-negx2': ['algebra-tile neg x2term', '&minus;x&sup2;']
     };
     var spec = map[kind];
-    addPieceEl('<div class="' + spec[0] + '">' + spec[1] + '</div>', kind);
+    if (!spec) return null;
+    return addPieceEl('<div class="' + spec[0] + '">' + spec[1] + '</div>', kind);
   }
 
   function addByType(type) {
-    if (type === 'unit') addUnit();
-    else if (type === 'ten') addTen();
-    else if (type === 'hundred') addHundred();
-    else if (type.indexOf('fraction-') === 0) addFraction(parseInt(type.slice('fraction-'.length), 10));
-    else addAlgebra(type);
+    if (type === 'unit') return addUnit();
+    if (type === 'ten') return addTen();
+    if (type === 'hundred') return addHundred();
+    if (String(type).indexOf('fraction-') === 0) {
+      var denom = parseInt(String(type).slice('fraction-'.length), 10);
+      return (denom >= 2 && denom <= 12) ? addFraction(denom) : null;
+    }
+    return addAlgebra(type);
   }
 
   document.querySelectorAll('[data-add]').forEach(function (btn) {
@@ -264,6 +292,7 @@
   document.getElementById('clearBoardBtn').addEventListener('click', function () {
     board.innerHTML = '';
     placeCounter = 0;
+    touch();
   });
 
   /* ---------- tabs ---------- */
@@ -331,12 +360,14 @@
         mEl.style.left = valueToPercent(markers[idx]) + '%';
       });
       mEl.addEventListener('pointerup', function () {
+        if (!dragging) return;
         dragging = false;
         if (!moved) {
           var idx = parseInt(mEl.getAttribute('data-idx'), 10);
           markers.splice(idx, 1);
           renderMarkers();
         }
+        touch();
       });
     });
   }
@@ -346,16 +377,255 @@
     var pct = (ev.clientX - rect.left) / rect.width * 100;
     markers.push(percentToValue(pct));
     renderMarkers();
+    touch();
   });
 
   document.getElementById('rebuildLineBtn').addEventListener('click', function () {
     markers = [];
     buildTicks(); renderMarkers();
+    touch();
   });
   document.getElementById('clearMarkersBtn').addEventListener('click', function () {
     markers = [];
     renderMarkers();
+    touch();
   });
+
+  /* ---------- saved board states ----------
+     A board is a whole demonstration: every piece on the blocks board plus the
+     number line's range and markers. Boards live under one versioned key so a
+     teacher can prep several demos before class and step through them with
+     Prev/Next. The board in front of you is also autosaved separately, so a
+     reload (or a closed laptop lid) no longer discards it. */
+  var BOARDS_KEY = 'vmb_boards_v1';
+  var WORKING_KEY = 'vmb_working_v1';
+
+  var els = {
+    select: document.getElementById('boardSelect'),
+    status: document.getElementById('saveStatus')
+  };
+  var currentName = '';      // name of the saved board currently loaded ('' = unsaved working board)
+  var loadedSnapshot = '';   // serialized state as of the last load/save, for the dirty check
+  var restoring = false;     // suppresses autosave while applyState() rebuilds the DOM
+
+  function readBoards() {
+    var raw;
+    try { raw = localStorage.getItem(BOARDS_KEY); } catch (e) { return []; }
+    if (!raw) return [];
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { return []; }
+    if (!parsed || !Array.isArray(parsed.boards)) return [];
+    return parsed.boards.filter(function (b) { return b && typeof b.name === 'string'; });
+  }
+
+  function writeBoards(boards) {
+    try {
+      localStorage.setItem(BOARDS_KEY, JSON.stringify({ v: 1, boards: boards }));
+      return true;
+    } catch (e) {
+      setStatus('Could not save — browser storage is full.');
+      return false;
+    }
+  }
+
+  function serializeState() {
+    var pieces = Array.prototype.map.call(board.querySelectorAll('.piece'), function (p) {
+      return {
+        type: p.getAttribute('data-piece-type'),
+        left: Math.round(parseFloat(p.style.left) || 0),
+        top: Math.round(parseFloat(p.style.top) || 0)
+      };
+    });
+    var r = nlRange();
+    return { pieces: pieces, line: { min: r.min, max: r.max, markers: markers.slice() } };
+  }
+
+  function applyState(st) {
+    st = st || {};
+    restoring = true;
+    try {
+      board.innerHTML = '';
+      placeCounter = 0;
+      (Array.isArray(st.pieces) ? st.pieces : []).forEach(function (rec) {
+        if (!rec || typeof rec.type !== 'string') return;
+        var el = addByType(rec.type);
+        if (!el) return;
+        el.style.left = (Number(rec.left) || 0) + 'px';
+        el.style.top = (Number(rec.top) || 0) + 'px';
+      });
+      var line = st.line || {};
+      if (typeof line.min === 'number') nlMin.value = line.min;
+      if (typeof line.max === 'number') nlMax.value = line.max;
+      markers = Array.isArray(line.markers) ? line.markers.filter(function (v) { return typeof v === 'number'; }) : [];
+      buildTicks();
+      renderMarkers();
+    } finally {
+      restoring = false;
+    }
+  }
+
+  function setStatus(msg) { els.status.textContent = msg || ''; }
+
+  /** Autosave hook — called from every mutation of the board or the line. */
+  function touch() {
+    if (restoring) return;
+    try { localStorage.setItem(WORKING_KEY, JSON.stringify({ v: 1, name: currentName, state: serializeState() })); } catch (e) { /* quota — the board still works, it just won't survive a reload */ }
+    if (currentName) {
+      setStatus(isDirty() ? 'Unsaved changes to "' + currentName + '"' : 'Showing "' + currentName + '"');
+    }
+  }
+
+  function isDirty() {
+    return JSON.stringify(serializeState()) !== loadedSnapshot;
+  }
+
+  function isEmptyBoard() {
+    var st = serializeState();
+    return st.pieces.length === 0 && st.line.markers.length === 0;
+  }
+
+  function refreshSelect() {
+    var boards = readBoards();
+    var html = '<option value="">' + (boards.length ? 'Working board (unsaved)' : 'Nothing saved yet') + '</option>';
+    boards.forEach(function (b) {
+      html += '<option value="' + b.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') + '">' +
+        b.name.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</option>';
+    });
+    els.select.innerHTML = html;
+    els.select.value = currentName && boards.some(function (b) { return b.name === currentName; }) ? currentName : '';
+  }
+
+  function uniqueName(base) {
+    var names = readBoards().map(function (b) { return b.name; });
+    if (names.indexOf(base) === -1) return base;
+    var n = 2;
+    while (names.indexOf(base + ' (' + n + ')') !== -1) n++;
+    return base + ' (' + n + ')';
+  }
+
+  /** Guards a load that would throw away unsaved work. */
+  function okToReplace() {
+    if (isEmptyBoard() || !isDirty()) return true;
+    return confirm(currentName
+      ? 'The board has unsaved changes to "' + currentName + '". Load anyway and lose them?'
+      : 'The board has unsaved work on it. Load a saved board anyway and lose it?');
+  }
+
+  function loadBoard(name) {
+    var found = readBoards().filter(function (b) { return b.name === name; })[0];
+    if (!found) return false;
+    applyState(found.state);
+    currentName = found.name;
+    loadedSnapshot = JSON.stringify(serializeState());
+    refreshSelect();
+    touch();
+    setStatus('Showing "' + currentName + '"');
+    return true;
+  }
+
+  function storeBoard(name, state) {
+    var boards = readBoards();
+    var rec = { name: name, savedAt: new Date().toISOString(), state: state };
+    var idx = -1;
+    boards.forEach(function (b, i) { if (b.name === name) idx = i; });
+    if (idx === -1) boards.push(rec); else boards[idx] = rec;
+    if (!writeBoards(boards)) return false;
+    currentName = name;
+    loadedSnapshot = JSON.stringify(state);
+    refreshSelect();
+    setStatus('Saved "' + name + '"');
+    return true;
+  }
+
+  function saveAsNew(defaultName) {
+    var name = prompt('Name this board:', defaultName || 'Demo ' + (readBoards().length + 1));
+    if (name === null) return;
+    name = name.trim();
+    if (!name) return;
+    storeBoard(uniqueName(name), serializeState());
+    touch();
+  }
+
+  function stepBoard(delta) {
+    var boards = readBoards();
+    if (!boards.length) { setStatus('Nothing saved yet.'); return; }
+    if (!okToReplace()) return;
+    var names = boards.map(function (b) { return b.name; });
+    var idx = names.indexOf(currentName);
+    // From an unsaved working board, Prev opens the last board and Next the first.
+    var next = idx === -1 ? (delta > 0 ? 0 : names.length - 1)
+      : (idx + delta + names.length) % names.length;
+    loadBoard(names[next]);
+  }
+
+  els.select.addEventListener('change', function () {
+    var name = els.select.value;
+    if (!name) { refreshSelect(); return; }
+    if (!okToReplace()) { refreshSelect(); return; }
+    loadBoard(name);
+  });
+  document.getElementById('prevBoardBtn').addEventListener('click', function () { stepBoard(-1); });
+  document.getElementById('nextBoardBtn').addEventListener('click', function () { stepBoard(1); });
+
+  document.getElementById('saveBoardBtn').addEventListener('click', function () {
+    if (currentName) { storeBoard(currentName, serializeState()); touch(); }
+    else saveAsNew('');
+  });
+  document.getElementById('saveAsBoardBtn').addEventListener('click', function () {
+    saveAsNew(currentName ? uniqueName(currentName + ' copy') : '');
+  });
+
+  document.getElementById('renameBoardBtn').addEventListener('click', function () {
+    if (!currentName) { setStatus('Save this board first, then it can be renamed.'); return; }
+    var name = prompt('Rename "' + currentName + '" to:', currentName);
+    if (name === null) return;
+    name = name.trim();
+    if (!name || name === currentName) return;
+    var boards = readBoards();
+    // A rename onto an existing name gets suffixed rather than eating that board.
+    if (boards.some(function (b) { return b.name !== currentName && b.name === name; })) name = uniqueName(name);
+    boards = boards.map(function (b) {
+      return b.name === currentName ? { name: name, savedAt: b.savedAt, state: b.state } : b;
+    });
+    if (!writeBoards(boards)) return;
+    currentName = name;
+    refreshSelect();
+    touch();
+    setStatus('Renamed to "' + name + '"');
+  });
+
+  document.getElementById('deleteBoardBtn').addEventListener('click', function () {
+    if (!currentName) { setStatus('No saved board is loaded.'); return; }
+    if (!confirm('Delete the saved board "' + currentName + '"? This can’t be undone. What’s on screen stays put.')) return;
+    var gone = currentName;
+    if (!writeBoards(readBoards().filter(function (b) { return b.name !== gone; }))) return;
+    currentName = '';
+    loadedSnapshot = '';
+    refreshSelect();
+    touch();
+    setStatus('Deleted "' + gone + '" — the board on screen is untouched.');
+  });
+
+  [nlMin, nlMax].forEach(function (input) {
+    input.addEventListener('change', function () { touch(); });
+  });
+
+  /** Restores the working board from the last session, if there was one. */
+  function restoreWorking() {
+    var raw;
+    try { raw = localStorage.getItem(WORKING_KEY); } catch (e) { return; }
+    if (!raw) return;
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { return; }
+    if (!parsed || !parsed.state) return;
+    applyState(parsed.state);
+    var name = typeof parsed.name === 'string' ? parsed.name : '';
+    if (name && readBoards().some(function (b) { return b.name === name; })) currentName = name;
+    var saved = readBoards().filter(function (b) { return b.name === currentName; })[0];
+    loadedSnapshot = saved ? JSON.stringify(saved.state) : '';
+    if (currentName) setStatus(isDirty() ? 'Unsaved changes to "' + currentName + '"' : 'Showing "' + currentName + '"');
+    else if (!isEmptyBoard()) setStatus('Restored the board from your last session.');
+  }
 
   /* ---------- snapshot ---------- */
   function isTransparent(color) {
@@ -432,6 +702,8 @@
   /* ---------- boot ---------- */
   buildTicks();
   renderMarkers();
+  restoreWorking();
+  refreshSelect();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

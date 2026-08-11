@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sub Plan Builder</title>
 <script src="../_shared/vendor/jszip/jszip.min.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
   :root {
     --ink: #1f2430;
@@ -52,6 +54,23 @@
     padding: 18px 20px;
     margin-bottom: 20px;
   }
+  /* Share-by-link: a row of two buttons plus the QR overlay they open. */
+  .share-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  #shareNote.saved { color: var(--ok); font-weight: 600; }
+  #shareNote.err { color: var(--err); font-weight: 600; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(20,22,28,.55);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 60;
+  }
+  .overlay[hidden] { display: none; }
+  .qr-modal {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; max-width: 340px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .qr-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 700; margin-bottom: 10px; }
+  #qrCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+
   .card > .hint {
     color: var(--muted);
     font-size: 0.82rem;
@@ -369,6 +388,27 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   <h2 class="section-title">Student notes &amp; concerns <span class="opt" style="font-weight:400;">(optional)</span></h2>
   <p class="hint"><strong>Not saved.</strong> This box is cleared when you leave or refresh this page — it never sits in browser storage, so it's safe to use for IEP/504 reminders or behavior notes tied to a specific student.</p>
   <textarea id="studentNotes" rows="4" placeholder="e.g. Period 3 — Jane D. has extended time on all written work per her 504."></textarea>
+</div>
+
+<div class="card" id="shareCard">
+  <h2 class="section-title">Hand this plan to someone else</h2>
+  <p class="hint">Puts the whole plan &mdash; standing details, every day out, every period note &mdash; inside a link. Nothing is uploaded: the plan travels in the link itself, so the office or a colleague opens it in their own browser with no email attachment and no account. <strong>The Student Notes box below is never included</strong>, the same rule the saved history follows.</p>
+  <div class="share-row">
+    <button type="button" id="btnCopyPlanLink">🔗 Copy link to this plan</button>
+    <button type="button" id="btnPlanQr">▦ Show QR code</button>
+  </div>
+  <p class="hint" id="shareNote">&nbsp;</p>
+</div>
+
+<div class="overlay" id="qrOverlay" hidden>
+  <div class="qr-modal" role="dialog" aria-modal="true" aria-label="Sub plan QR code">
+    <div class="qr-head">
+      <span>Scan to open this plan</span>
+      <button type="button" class="small" id="qrCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <canvas id="qrCanvas"></canvas>
+    <p class="hint" id="qrHint">Scanning opens a copy of this plan on the other device. It is a copy &mdash; edits there do not come back here.</p>
+  </div>
 </div>
 
 <div id="generateArea">
@@ -1427,6 +1467,167 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       statusEl.textContent = 'Something went wrong: ' + e.message;
     }
   });
+
+  /* ---------- Share this plan by link or QR (P3) ----------------------------
+     A finished sub plan usually has to reach somebody else — the front office,
+     the department chair, the colleague covering first period — and until now
+     the only ways out of this tool were a .docx download and a text blob to
+     paste. Both mean an attachment.
+
+     `_shared/state-link.js` puts the whole plan inside the URL itself
+     (base64 of the JSON, in a query parameter), so a link opens the same plan
+     on another machine with no server, no account and no file. Nothing is
+     uploaded; the payload never leaves the two browsers that see the link.
+
+     What travels: the standing details, the dates, and every day's fields.
+     What does not: the Student Notes box. That box is the one place on this
+     page explicitly documented as never being stored anywhere, and a link is
+     storage — it lands in a chat log, an email, a browser history. The saved
+     history already draws that line and this follows it exactly.
+  ------------------------------------------------------------------------- */
+  const SHARE_PARAM = 'plan';
+  const shareNote = el('shareNote');
+
+  function setShareNote(text, cls) {
+    shareNote.textContent = text || ' ';
+    shareNote.className = 'hint' + (cls ? ' ' + cls : '');
+  }
+
+  function buildSharePayload() {
+    captureCurrentDayFields();
+    const dates = computeDateList();
+    const days = {};
+    dates.forEach(d => { days[d] = dayPlans[d] || blankDayPlan(); });
+    // `settings` is copied rather than referenced so a later edit on this page
+    // can't retroactively change a link already copied to the clipboard.
+    return {
+      v: 1,
+      standing: JSON.parse(JSON.stringify(settings)),
+      planDate: el('planDate').value,
+      numDays: el('numDays').value,
+      days: days
+    };
+  }
+
+  function looksLikePlanPayload(obj) {
+    return !!obj && typeof obj === 'object' && obj.days && typeof obj.days === 'object';
+  }
+
+  /** Applies a decoded payload over this page. Standing details included —
+      a plan read without the room number, the periods and the phone numbers
+      is not a plan somebody can act on. */
+  function applySharePayload(p) {
+    if (p.standing && typeof p.standing === 'object') {
+      settings = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), p.standing);
+      if (!Array.isArray(settings.periods) || !settings.periods.length) settings.periods = JSON.parse(JSON.stringify(DEFAULTS.periods));
+      assignMissingPeriodIds(settings.periods);
+      applySettingsToForm();
+      renderPeriods();
+      scheduleSave();
+    }
+    if (typeof p.planDate === 'string' && p.planDate) el('planDate').value = p.planDate;
+    if (p.numDays !== undefined && p.numDays !== null) el('numDays').value = String(p.numDays);
+
+    dayPlans = {};
+    Object.keys(p.days || {}).forEach(d => {
+      const src = p.days[d] || {};
+      dayPlans[d] = Object.assign(blankDayPlan(), {
+        lessonTitle: String(src.lessonTitle || ''),
+        announcement: String(src.announcement || ''),
+        overviewText: String(src.overviewText || ''),
+        scheduleText: String(src.scheduleText || ''),
+        samePeriods: src.samePeriods !== false,
+        sharedPeriodNotes: String(src.sharedPeriodNotes || ''),
+        perPeriodValues: (src.perPeriodValues && typeof src.perPeriodValues === 'object') ? src.perPeriodValues : {},
+        materialsNote: String(src.materialsNote || ''),
+        dayType: String(src.dayType || 'lesson')
+      });
+    });
+    currentDay = null;              // force renderDayTabs to adopt the first shared date
+    renderDayTabs();
+    applyDayFieldsToForm(currentDay);
+    renderPerPeriodBlocks();
+  }
+
+  function shareUrl() {
+    return StateLink.buildShareUrl(SHARE_PARAM, buildSharePayload());
+  }
+
+  el('btnCopyPlanLink').addEventListener('click', () => {
+    const url = shareUrl();
+    const copy = navigator.clipboard && navigator.clipboard.writeText
+      ? navigator.clipboard.writeText(url)
+      : Promise.reject();
+    copy.then(
+      () => setShareNote('Link copied (' + Math.round(url.length / 1024 * 10) / 10 + ' KB). Paste it anywhere — it opens this exact plan.', 'saved'),
+      () => { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  /* A QR code holds far less than a URL bar does. A plan with several days of
+     notes runs past what any scanner will read reliably, so the failure is
+     caught and named rather than shown as an unscannable grey square. */
+  function drawShareQr(canvas, text) {
+    const qr = window.qrcode(0, 'L');   // 0 = smallest version that fits, L = most capacity
+    qr.addData(text);
+    qr.make();
+    const count = qr.getModuleCount();
+    const quiet = 4, px = 6;
+    const size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#1f2430';
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+    return count;
+  }
+
+  el('btnPlanQr').addEventListener('click', () => {
+    const url = shareUrl();
+    let modules;
+    try {
+      modules = drawShareQr(el('qrCanvas'), url);
+    } catch (e) {
+      setShareNote('This plan is too long to fit in a QR code (' + Math.round(url.length / 1024) + ' KB). Use “Copy link to this plan” instead — a link has no such limit.', 'err');
+      return;
+    }
+    el('qrHint').textContent = modules > 100
+      ? 'Dense code — hold the phone steady and close. If it will not scan, use the copy-link button instead.'
+      : 'Scanning opens a copy of this plan on the other device. It is a copy — edits there do not come back here.';
+    el('qrOverlay').hidden = false;
+    setShareNote(' ');
+  });
+
+  el('qrCloseBtn').addEventListener('click', () => { el('qrOverlay').hidden = true; });
+  el('qrOverlay').addEventListener('mousedown', (e) => { if (e.target === el('qrOverlay')) el('qrOverlay').hidden = true; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') el('qrOverlay').hidden = true; });
+
+  /** A ?plan=... link, consumed once on load. */
+  function importSharedPlan() {
+    const raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return;
+    StateLink.clearParam(SHARE_PARAM);   // consumed up front, so a refresh can't re-import
+    const decoded = StateLink.decodeState(raw);
+    if (!looksLikePlanPayload(decoded)) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted.', 'err');
+      return;
+    }
+    const dayCount = Object.keys(decoded.days).length;
+    const who = (decoded.standing && decoded.standing.teacherName) ? decoded.standing.teacherName : 'another teacher';
+    if (!confirm('This link contains a sub plan from ' + who + ' (' + dayCount + ' day' + (dayCount === 1 ? '' : 's') +
+                 ').\n\nOpening it replaces the standing details and plan fields saved in this browser. Continue?')) {
+      setShareNote('Shared plan not opened — nothing on this page was changed.');
+      return;
+    }
+    applySharePayload(decoded);
+    setShareNote('Opened a shared plan from ' + who + '. It is a copy — nothing goes back to them.', 'saved');
+  }
+
+  importSharedPlan();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

@@ -1,13 +1,50 @@
 # Improvement Prompts — 042 — Certificate & Award Maker
 
 **Tool file:** `Tools/042-certificate-award-maker.html`
-**Support folder:** `Tools/certificate-award-maker/` — `cam-borders.js`, `cam-logo.js`, `cam-store.js`, `lib/qrcode.js`
+**Support folder:** `Tools/certificate-award-maker/` — `cam-borders.js`, `cam-logo.js`, `cam-store.js`, `lib/qrcode.js`, `test/smoke-stock-inset.mjs`
 
 **Current description (from README):** Five templates × four decorative borders, editable name/title/reason/date/signature with a live preview, and a batch mode that prints one certificate per name for a whole class.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 3 (session `m3r8ro`).** Shipped the **pre-printed stock
+safe area** (backlog rank 4) — which is the answer to the Open Question Round 2
+left open below, and the answer was yes: the guides were marking the wrong
+boundary for exactly the paper teachers buy.
+
+- A **"Pre-printed stock border"** select (`settings.stockInset`, inches:
+  0 / 0.5 / 0.75 / 1 / 1.25, default 0) says how much of the edge the paper's
+  printed border eats. Everything on the certificate pulls in by that much —
+  text, logo, QR code and the alignment guides — so nothing prints over the
+  design the teacher paid for.
+- **The inches are real, not decorative.** `printedCertInches()` computes the
+  certificate's actual printed size — letter for the current orientation, less
+  the 0.35in `@page` margin on each edge, halved vertically when two share a
+  sheet — and `stockInsetVars()` turns the inset into percentages against
+  *that*. So 0.75in is 0.75in on paper in landscape, in portrait, and in
+  two-per-page, and the preview shows the same proportions instead of a fixed
+  CSS inch that would lie at every scale.
+- **Three custom properties, one place to apply them.** `--ins-pad` for the
+  padding (percentage padding resolves against the container's *width* on all
+  four sides, which is why one value covers both axes), `--ins-x`/`--ins-y` for
+  the guide frame and the absolutely-positioned QR code, where top/bottom are
+  height-relative. They're set inline on `.cert` by `certificateHtml()`, so
+  preview, thumbnails and print all get them with no separate code path.
+- With an inset set, the guides stop being four loose corner marks and close
+  into a dashed safe-area rectangle — it reads as "keep everything inside
+  here" rather than "here is a corner".
+- The inset is capped at 35% per side so a mis-set value can't collapse the
+  certificate.
+- Storage stayed additive as usual: `normalizeSettings()` backfills
+  `stockInset: 0`, and a preset saved before this round renders byte-identically.
+- Verified by `Tools/certificate-award-maker/test/smoke-stock-inset.mjs`
+  (23 checks, `npm run test:certificate`), which measures the rendered element
+  rather than trusting the CSS: guide and padding offsets are read off the live
+  certificate and converted back through its printed width, checked in
+  landscape, portrait and two-per-page, plus the QR corner, persistence, and a
+  preset aged backwards by deleting the `stockInset` key.
 
 **2026-08-11 — Round 2 (session `gb5c6e`).** Shipped the two remaining
 Quick Wins from the previous round's "didn't fit" list: signature image
@@ -145,10 +182,9 @@ fields in a fixed layout," just with more label/kicker variety than before.
   and "caught being kind" slips.
 - **Done —** **Print alignment guides / bleed check** so pre-printed certificate paper
   lines up. Teachers buy certificate stock; this is the format it needs.
-  *(Shipped as corner registration marks at the certificate's own edges,
-  toggleable, shown identically in preview and print — not a true
-  bleed-safe-area calculation for stock with its own pre-printed border; see
-  Open Questions below.)*
+  *(Round 2 shipped corner registration marks at the certificate's own edges;
+  Round 3 added the stock-border inset that makes them mark the usable area
+  inside a pre-printed border, and pulls the content in with them.)*
 - **Done —** **More templates that aren't end-of-year awards** — homework
   pass, reading milestone, "good news from school" note home shipped.
   *(Skipped hall pass of honour and birthday certificate — the three shipped
@@ -195,9 +231,9 @@ enough that the result doesn't look like a form.
 - **P2 (shared roster)** — **addressed 2026-08-10**: batch mode now reads
   `np_rosters` via a roster-select + Load button.
 - **P6 (print quality)** — margins, bleed, and pre-printed stock alignment
-  matter more here than anywhere else on the site. Orientation/2-per-page
-  landed in the previous round; corner alignment guides landed 2026-08-11
-  (see Status/Open Questions — not a true bleed-safe-area calculation yet).
+  matter more here than anywhere else on the site. Orientation/2-per-page,
+  corner alignment guides, and (Round 3) a real inch-accurate safe-area inset
+  for bordered stock have all landed.
 - **P12 (storage)** — the uploaded logo and (as of 2026-08-11) the uploaded
   signature image are both base64 in `localStorage`; both go through
   downscaling (`cam-logo.js`'s `CertificateLogo.downscaleImage`, capped at
@@ -207,14 +243,17 @@ enough that the result doesn't look like a form.
 
 ## Open Questions
 
-- **New 2026-08-11.** The shipped alignment guides mark the certificate's
-  own edges (where content is stretched to fill the printed page), not a
-  computed bleed-safe-area inset from the physical page edge. For a teacher
-  whose pre-printed stock has its own decorative border already printed,
-  true bleed marks (a safe-area rectangle inset from the paper edge by a
-  configurable margin) would be more directly useful — worth asking whether
-  that's the actual complaint before building it, since it's a different
-  (larger) feature than what shipped.
+- ~~The shipped alignment guides mark the certificate's own edges, not a
+  computed safe area inset from the paper edge.~~ **Answered in Round 3:**
+  built, as a stock-border inset in inches that moves the guides *and* the
+  content. What is still not modelled is stock with an *asymmetric* border
+  (a wide decorative band down one side only) — the inset is one value for
+  all four edges. Worth four separate fields only if someone actually owns
+  that paper.
+- Should the decorative border SVG switch itself off when a stock border is
+  set? Printing a drawn border inside a pre-printed one is almost never what
+  a teacher wants, but silently changing their chosen border is worse than a
+  hint — right now the tool says nothing.
 - Is there interest in shipping a small set of licensed-clear decorative
   fonts, or should the tool stay with system fonts for reliability?
 - Should the QR code on a certificate point at anything in particular

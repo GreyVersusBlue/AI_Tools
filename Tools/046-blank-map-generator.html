@@ -458,6 +458,13 @@
     </div>
   </div>
 
+  <div id="starterCard" class="card recent-card no-print">
+    <h2>Start from a sample</h2>
+    <p class="hint" style="margin:0 0 8px;">Three finished maps, built from the offline base maps and label sets that ship with this tool &mdash; nothing is downloaded. Each opens as its own new project, so nothing you already have is touched, and every label is yours to drag, rename or delete.</p>
+    <div id="starterRow" class="recentRow"></div>
+    <p class="hint" id="starterStatus" style="margin:8px 0 0;"></p>
+  </div>
+
   <div id="recentCard" class="card recent-card no-print" hidden>
     <h2>Recently used</h2>
     <div id="recentRow" class="recentRow"></div>
@@ -3550,7 +3557,7 @@ function showEmptyMapState(mapMissing) {
 }
 
 /** Loads whichever project is now active (after init, switch, create, or delete) into the viewer. */
-async function loadActiveProjectIntoUI() {
+async function loadActiveProjectIntoUI(opts) {
   project = store.getActiveProject();
   refreshProjectSwitcher();
   syncPageFormatControls();
@@ -3565,6 +3572,12 @@ async function loadActiveProjectIntoUI() {
     return;
   }
   showEmptyMapState(false);
+  // A brand-new empty project opens the search card on a default query, which
+  // is the right first move for a teacher — but not for a caller that is about
+  // to set the base map itself (the starter projects). Kicking off a Wikimedia
+  // search and then immediately throwing the results away is a network request
+  // on a school network for nothing.
+  if (opts && opts.skipSearch) return;
   el('searchInput').value = 'blank world map';
   runSearch('blank world map');
 }
@@ -3668,6 +3681,113 @@ async function init() {
   }
   await refreshRecent();
   await loadActiveProjectIntoUI();
+  renderStarters();
+}
+
+/* ── Starter projects (P15) ─────────────────────────────────────────────────
+   A first run opened to an empty canvas and a list of things to configure,
+   which is a poor use of the five minutes a teacher gives a tool during a prep
+   period. These are three complete maps assembled entirely from parts that
+   already ship offline: a built-in vector base map (bmg-vector.js) plus a
+   built-in label set (bmg-label-sets.js). Nothing is fetched.
+
+   Each one is built by *driving the tool's own controls* rather than by
+   writing a project blob: pick the base map, press the same button the Base
+   Map card presses, then place the same label set the Label Sets panel would
+   place. That means a sample cannot drift out of step with what the tool
+   actually produces, and a teacher who then opens either panel finds it set to
+   what they are looking at.
+--------------------------------------------------------------------------- */
+const STARTER_PROJECTS = [
+  {
+    name: 'Europe — countries',
+    preset: 'europe', style: 'land', borders: true, labelSet: 'europe-countries',
+    blurb: 'Country outlines with every country labelled — hide the labels for a quiz version.',
+  },
+  {
+    name: 'United States — states',
+    preset: 'usa-48', style: 'land', borders: true, labelSet: 'us-states',
+    blurb: 'The lower 48 with state outlines and all 50 state labels placed.',
+  },
+  {
+    name: 'World — physical features',
+    preset: 'world', style: 'land', borders: false, labelSet: 'world-physical',
+    blurb: 'Coastlines only, with the major mountain ranges, deserts, rivers and seas marked.',
+  },
+];
+
+function setStarterStatus(text, isError) {
+  const node = el('starterStatus');
+  node.textContent = text || '';
+  node.style.color = isError ? 'var(--err, #a3372b)' : '';
+}
+
+function renderStarters() {
+  const row = el('starterRow');
+  if (!row) return;
+  row.innerHTML = '';
+  STARTER_PROJECTS.forEach((sp, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'recentItem';
+    btn.dataset.starter = String(i);
+    btn.title = sp.blurb;
+    btn.textContent = sp.name;
+    row.appendChild(btn);
+  });
+  row.addEventListener('click', onStarterClick);
+}
+
+let starterBusy = false;
+async function onStarterClick(ev) {
+  const btn = ev.target.closest('[data-starter]');
+  if (!btn || starterBusy) return;
+  const sp = STARTER_PROJECTS[Number(btn.dataset.starter)];
+  if (!sp) return;
+  starterBusy = true;
+  el('starterRow').querySelectorAll('button').forEach(b => { b.disabled = true; });
+  setStarterStatus('Building “' + sp.name + '”…');
+  try {
+    await buildStarter(sp);
+    setStarterStatus('Opened “' + sp.name + '” as a new project. Everything on it is editable.');
+  } catch (err) {
+    setStarterStatus("Couldn't build that sample (" + (err && err.message ? err.message : 'unknown error') + ').', true);
+  } finally {
+    starterBusy = false;
+    el('starterRow').querySelectorAll('button').forEach(b => { b.disabled = false; });
+  }
+}
+
+async function buildStarter(sp) {
+  // Its own project, so a first click cannot overwrite work already here.
+  store.createProject(uniqueProjectName(sp.name));
+  await loadActiveProjectIntoUI({ skipSearch: true });
+
+  el('baseMapSelect').value = sp.preset;
+  el('baseMapStyleSelect').value = sp.style;
+  el('baseMapBorders').checked = sp.borders;
+  renderBaseMapHint();
+  await useBuiltInBaseMap();          // the same path the Base Map button takes
+
+  if (!isCalibrated(project.calibration) || !currentSize.width) {
+    throw new Error('the base map came back without its coordinate calibration');
+  }
+
+  el('labelSetSelect').value = sp.labelSet;
+  syncLabelSetPanel();
+  el('btnPlaceLabelSet').click();     // and the same path the Label Sets panel takes
+  save();
+  refreshProjectSwitcher();
+}
+
+/** Suffixes a name until nothing saved holds it, so clicking a sample twice
+    gives two projects rather than two things called the same. */
+function uniqueProjectName(base) {
+  const taken = store.listProjects().map(p => p.name);
+  if (taken.indexOf(base) === -1) return base;
+  let n = 2;
+  while (taken.indexOf(base + ' (' + n + ')') !== -1) n++;
+  return base + ' (' + n + ')';
 }
 
 init();

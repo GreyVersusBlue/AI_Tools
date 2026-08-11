@@ -953,90 +953,196 @@
       var env = read.envelope;
       renderVerify(env, read.flags, file.size);
 
-      var groups = {};
-      var overwriteCount = 0, newCount = 0;
-      Object.keys(env.data).forEach(function (key) {
-        if (typeof env.data[key] !== 'string') return;
-        var label = labelFor(key) || 'Other saved data';
-        var kind = classifyKey(key);
-        var id = label + ' ' + kind;
-        var existing;
-        try { existing = localStorage.getItem(key); } catch (e) { existing = null; }
-        var willOverwrite = existing !== null;
-        if (willOverwrite) overwriteCount++; else newCount++;
-        if (!groups[id]) groups[id] = { id: id, label: label, kind: kind, count: 0, overwrite: 0, keys: [], overwrittenNames: [] };
-        groups[id].count++;
-        groups[id].keys.push(key);
-        if (willOverwrite) {
-          groups[id].overwrite++;
-          var names = describeOverwrittenNames(key, existing, env.data[key]);
-          if (names) groups[id].overwrittenNames = groups[id].overwrittenNames.concat(names);
-          else groups[id].overwrittenNames.push(null);
-        }
-      });
-
       pending = env;
-      lastRestoreGroups = groups;
-
-      var when = env.exportedAt ? ' from ' + new Date(env.exportedAt).toLocaleString() : '';
-      previewSummary.innerHTML = 'This backup' + when + ' contains <b>' + Object.keys(env.data).length + '</b> item' + (Object.keys(env.data).length === 1 ? '' : 's') + ':' +
-        ' <span class="warn-count">' + overwriteCount + ' already exist' + (overwriteCount === 1 ? 's' : '') + ' here</span>, ' +
-        '<span class="new-count">' + newCount + ' ' + (newCount === 1 ? 'is' : 'are') + ' new</span>. What happens to the ' + overwriteCount + ' depends on the choice below.';
-
-      previewList.innerHTML = '';
-      Object.keys(groups).sort().forEach(function (id) {
-        var g = groups[id];
-        var text = g.label + ' (' + KIND_LABEL[g.kind].toLowerCase() + ') — ' + g.count + ' item' + (g.count === 1 ? '' : 's');
-        if (g.overwrite) {
-          var realNames = g.overwrittenNames.filter(Boolean);
-          var uniqueNames = realNames.filter(function (n, i) { return realNames.indexOf(n) === i; });
-          if (uniqueNames.length) {
-            var shown = uniqueNames.slice(0, 8);
-            var more = uniqueNames.length - shown.length;
-            text += ' — already here: ' + shown.map(function (n) { return '"' + n + '"'; }).join(', ') + (more > 0 ? ', +' + more + ' more' : '');
-          } else {
-            text += ' (' + g.overwrite + ' already here)';
-          }
-        }
-        var li = document.createElement('li');
-        li.innerHTML = '<label><input type="checkbox" class="restore-grp-check" data-id="' + escapeHtml(id) + '" checked>' + escapeHtml(text) + '</label>';
-        previewList.appendChild(li);
-      });
-
-      if (env.indexedDB) {
-        Object.keys(env.indexedDB).forEach(function (name) {
-          var li = document.createElement('li');
-          li.innerHTML = '<label><input type="checkbox" class="restore-idb-check" data-db="' + escapeHtml(name) + '">Cached database "' + escapeHtml(name) + '" — off by default; tick only if you want the cached images back.</label>';
-          previewList.appendChild(li);
-        });
-      }
-
+      renderRestorePreview();
       preview.classList.add('active');
     };
     reader.onerror = function () { showMsg('error', 'Couldn’t read that file. Try again.'); };
     reader.readAsText(file);
   });
 
-  /** Best-effort extraction of which *named* records inside one localStorage
-      key would actually change, so the restore preview can say "will
-      overwrite: Period 3, Period 5" instead of just "2 items overwritten" —
-      covers the two conventions this site's tools already use for a
-      multi-record key: a `<prefix>:data:<name>` key per record, or one flat
-      key holding `{name: data}` (optionally wrapped one level deeper in a
-      `.sets` object, the shape several roster/section tools use). Returns
-      null when neither pattern applies, so the caller falls back to the
-      plain aggregate count. */
-  function describeOverwrittenNames(key, oldRaw, newRaw) {
+
+  /* ══ Restore preview: what changes, record by record ═══════════════════════
+     The preview used to answer "how many files will be overwritten". That is
+     the wrong unit. A teacher does not have "one file called np_rosters" — they
+     have six rosters, and what they need to know before pressing Restore is
+     which of those six the backup replaces, which it adds, and which it leaves
+     alone. Two of those three used to be invisible.
+
+     Worse, "Replace" writes the file's value over the whole key, so a roster
+     that exists only on this computer and is absent from the backup is simply
+     gone. Nothing said so. `lost` below is that case, and it is the one the
+     preview shouts about.
+
+     Every number here is recomputed when the mode radio changes, because the
+     answer genuinely differs per mode — that is the entire point of the modes. */
+
+  function currentRestoreMode() {
+    return (document.querySelector('input[name="restoreMode"]:checked') || {}).value || 'replace';
+  }
+
+  /**
+   * How restoring one key under `mode` would land, per named record inside it.
+   * Returns { replaced, added, untouched, lost, granular } where the first four
+   * are arrays of record names (or one placeholder name when the key is not a
+   * set of named records — a settings blob is all-or-nothing, and pretending
+   * otherwise is how you corrupt one).
+   */
+  function recordDiff(mode, key, oldRaw, newRaw) {
+    var res = { replaced: [], added: [], untouched: [], lost: [], granular: true };
+
+    // `<prefix>:data:<name>` — the whole key is exactly one named record.
     var prefixMatch = /^(.*?:data:)(.+)$/.exec(key);
-    if (prefixMatch) return [prefixMatch[2]];
+    if (prefixMatch) {
+      var pName = prefixMatch[2];
+      if (oldRaw === null) res.added.push(pName);
+      else if (oldRaw === newRaw || mode === 'fill') res.untouched.push(pName);
+      else res.replaced.push(pName);
+      return res;
+    }
+
+    var whole = labelFor(key) || key;
+    if (oldRaw === null) { res.added.push(whole); res.granular = false; return res; }
+
     var oldMap = parseNamedMap(oldRaw);
     var newMap = parseNamedMap(newRaw);
-    if (!oldMap || !newMap) return null;
-    var changed = Object.keys(newMap.records).filter(function (name) {
-      return JSON.stringify(oldMap.records[name]) !== JSON.stringify(newMap.records[name]);
+    if (!oldMap || !newMap) {
+      res.granular = false;
+      if (oldRaw === newRaw || mode === 'fill') res.untouched.push(whole);
+      else res.replaced.push(whole);
+      return res;
+    }
+
+    Object.keys(newMap.records).forEach(function (n) {
+      if (!Object.prototype.hasOwnProperty.call(oldMap.records, n)) { res.added.push(n); return; }
+      var same = JSON.stringify(oldMap.records[n]) === JSON.stringify(newMap.records[n]);
+      if (same || mode === 'fill') res.untouched.push(n);
+      else res.replaced.push(n);
     });
-    return changed.length ? changed : null;
+    Object.keys(oldMap.records).forEach(function (n) {
+      if (Object.prototype.hasOwnProperty.call(newMap.records, n)) return;
+      // Replace writes the file's value over the whole key, so anything only
+      // on this computer goes with it. Fill and Combine both keep it.
+      if (mode === 'replace') res.lost.push(n); else res.untouched.push(n);
+    });
+    return res;
   }
+
+  function uniq(list) {
+    return list.filter(function (n, i) { return list.indexOf(n) === i; });
+  }
+
+  function nameList(names, cap) {
+    var shown = names.slice(0, cap || 6);
+    var more = names.length - shown.length;
+    return shown.map(function (n) { return '\u201c' + escapeHtml(n) + '\u201d'; }).join(', ') +
+      (more > 0 ? ', +' + more + ' more' : '');
+  }
+
+  /** Builds the group model for the loaded backup under the current mode. */
+  function buildRestoreGroups(env, mode) {
+    var groups = {};
+    Object.keys(env.data).forEach(function (key) {
+      if (typeof env.data[key] !== 'string') return;
+      var label = labelFor(key) || 'Other saved data';
+      var kind = classifyKey(key);
+      var id = label + ' ' + kind;
+      var existing;
+      try { existing = localStorage.getItem(key); } catch (e) { existing = null; }
+      var d = recordDiff(mode, key, existing, env.data[key]);
+      if (!groups[id]) groups[id] = { id: id, label: label, kind: kind, count: 0, keys: [],
+                                      replaced: [], added: [], untouched: [], lost: [], granular: true };
+      var g = groups[id];
+      g.count++;
+      g.keys.push(key);
+      g.replaced = g.replaced.concat(d.replaced);
+      g.added = g.added.concat(d.added);
+      g.untouched = g.untouched.concat(d.untouched);
+      g.lost = g.lost.concat(d.lost);
+      if (!d.granular) g.granular = false;
+    });
+    Object.keys(groups).forEach(function (id) {
+      var g = groups[id];
+      g.replaced = uniq(g.replaced); g.added = uniq(g.added);
+      g.untouched = uniq(g.untouched); g.lost = uniq(g.lost);
+    });
+    return groups;
+  }
+
+  /** Renders (or re-renders) the preview list and summary. Checkbox state is
+      carried across a re-render — changing the mode must not silently re-tick
+      a row the teacher deliberately excluded. */
+  function renderRestorePreview() {
+    if (!pending) return;
+    var env = pending;
+    var mode = currentRestoreMode();
+
+    var wasUnchecked = {};
+    document.querySelectorAll('.restore-grp-check').forEach(function (cb) {
+      if (!cb.checked) wasUnchecked[cb.dataset.id] = true;
+    });
+    var idbChecked = {};
+    document.querySelectorAll('.restore-idb-check').forEach(function (cb) {
+      if (cb.checked) idbChecked[cb.dataset.db] = true;
+    });
+
+    var groups = buildRestoreGroups(env, mode);
+    lastRestoreGroups = groups;
+
+    var tot = { replaced: 0, added: 0, untouched: 0, lost: 0 };
+    Object.keys(groups).forEach(function (id) {
+      var g = groups[id];
+      tot.replaced += g.replaced.length; tot.added += g.added.length;
+      tot.untouched += g.untouched.length; tot.lost += g.lost.length;
+    });
+
+    var when = env.exportedAt ? ' from ' + new Date(env.exportedAt).toLocaleString() : '';
+    var itemCount = Object.keys(env.data).length;
+    var parts = [];
+    parts.push('<span class="warn-count">' + tot.replaced + ' replaced</span>');
+    parts.push('<span class="new-count">' + tot.added + ' added</span>');
+    parts.push('<b>' + tot.untouched + '</b> untouched');
+    previewSummary.innerHTML =
+      'This backup' + when + ' holds <b>' + itemCount + '</b> saved item' + (itemCount === 1 ? '' : 's') +
+      '. Restoring it the way you have it set now would leave you with: ' + parts.join(', ') + '.' +
+      (tot.lost
+        ? ' <span class="warn-count">' + tot.lost + ' record' + (tot.lost === 1 ? '' : 's') +
+          ' that exist only on this computer would be removed</span> \u2014 pick one of the other two options to keep them.'
+        : '');
+
+    previewList.innerHTML = '';
+    Object.keys(groups).sort().forEach(function (id) {
+      var g = groups[id];
+      var head = escapeHtml(g.label + ' (' + KIND_LABEL[g.kind].toLowerCase() + ')');
+      var bits = [];
+      if (g.replaced.length) bits.push('<span class="warn-count">' + g.replaced.length + ' replaced</span>' +
+        (g.granular ? ': ' + nameList(g.replaced) : ''));
+      if (g.added.length) bits.push('<span class="new-count">' + g.added.length + ' added</span>' +
+        (g.granular ? ': ' + nameList(g.added) : ''));
+      if (g.untouched.length) bits.push(g.untouched.length + ' untouched');
+      if (g.lost.length) bits.push('<span class="warn-count">' + g.lost.length + ' here only, would be removed</span>' +
+        (g.granular ? ': ' + nameList(g.lost) : ''));
+      if (!bits.length) bits.push('nothing would change');
+      var li = document.createElement('li');
+      li.innerHTML = '<label><input type="checkbox" class="restore-grp-check" data-id="' + escapeHtml(id) + '"' +
+        (wasUnchecked[id] ? '' : ' checked') + '>' + head + ' \u2014 ' + bits.join(' \u00b7 ') + '</label>';
+      previewList.appendChild(li);
+    });
+
+    if (env.indexedDB) {
+      Object.keys(env.indexedDB).forEach(function (name) {
+        var li = document.createElement('li');
+        li.innerHTML = '<label><input type="checkbox" class="restore-idb-check" data-db="' + escapeHtml(name) + '"' +
+          (idbChecked[name] ? ' checked' : '') + '>Cached database \u201c' + escapeHtml(name) +
+          '\u201d \u2014 off by default; tick only if you want the cached images back.</label>';
+        previewList.appendChild(li);
+      });
+    }
+  }
+
+  document.querySelectorAll('input[name="restoreMode"]').forEach(function (radio) {
+    radio.addEventListener('change', renderRestorePreview);
+  });
 
   /** `{name: record}`, possibly wrapped one level deeper under `.sets`. Returns
       `{ container, records, wrapped }` so a merge can put the result back in

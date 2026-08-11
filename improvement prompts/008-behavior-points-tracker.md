@@ -1,13 +1,59 @@
 # Improvement Prompts — 008 — Behavior & Points Tracker
 
 **Tool file:** `Tools/008-behavior-points-tracker.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/behavior-points-tracker/test/` — the browser suite
+(`smoke-shared-record.mjs`, `npm run test:behavior`). The page itself is a
+single file.
 
 **Current description (from README):** Arm a behavior (built-in +1/-1, or an editable list of point-valued behaviors) and tap any student's card to apply it — a live, projector-friendly per-student point tally with an activity feed and undo. Archive a day into an expandable history and print a report of the current totals.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **adoption of the shared
+student record** (backlog rank 8): preferred names on the cards, and — the part
+that actually mattered — point history that survives a student being renamed.
+
+- **The bug.** Every per-student thing this tool stores is keyed by the name
+  string: `points`, `posCount`, `negCount`, `goals`, today's `log`, and every
+  row of every archived day. Editing a roster name in Class Roster Hub (or
+  fixing "Smith, John" to "John Smith") therefore orphaned the lot — the
+  student reappeared on the board at 0, and a term of history belonged to a
+  name nobody had any more. `followRenames()` now moves it across.
+- **How the rename is detected.** Class Roster Hub mints a stable id per
+  student and keeps it across a rename (its `syncRecords()` re-matches a
+  vanished name by sorted-token key). The section stores `state.idNames` =
+  `{id: last-seen name}`; when an id turns up under a different name and the
+  old name is no longer on the roster, `renameStudentData()` moves every bag.
+  It deliberately refuses to move onto a name that already has data of its own
+  — merging two students' behaviour records is not something to do unasked.
+- **Preferred names.** The card shows what the class actually calls the student
+  with the roster name beneath it, the same treatment the Name Picker gives.
+  Suppressed in initials mode, where the whole point is that nothing readable
+  is on screen. Points are still keyed and stored by the roster name, so
+  nothing downstream (`010-command-center-dashboard.html` reads
+  `store.sets[name]`) changes shape.
+- **`np-details.js` was promoted to `_shared/student-details.js`** rather than
+  copied, which is what the backlog row suggested. Two copies of a name-matching
+  rule is exactly the drift `CLAUDE.md` exists to stop: if this tool's
+  `normalize()` and Class Roster Hub's `normKey()` ever disagreed about what
+  counts as the same name, students would lose their details in one tool and
+  keep them in another. `Tools/name-picker/np-details.js` is now a thin
+  re-export, so the Name Picker's import path and its 261-check suite are
+  untouched. The shared file gained `parseIds`/`loadIds`/`lookupId` — the
+  detail lookup deliberately drops a student with neither a preferred name nor
+  a pronunciation, but following a rename needs the id of *every* student.
+- **Also fixed:** `Tools/name-picker/np-details.js` was never in `sw.js`'s
+  `PRECACHE_URLS` despite being imported by the Name Picker — a genuine offline
+  gap. Both it and the new shared file are precached now.
+- Storage stayed additive (`idNames`, `rosterName`), and a teacher who has
+  never opened Class Roster Hub has no sidecar, gets null from every lookup,
+  and sees the tool behave exactly as before — asserted in the suite.
+- Verified by `Tools/behavior-points-tracker/test/smoke-shared-record.mjs`
+  (24 checks): points are awarded, a day is archived, the student is renamed in
+  the sidecar, and every bag is then checked to have followed — including the
+  archived day — plus the no-sidecar path.
 
 **2026-08-10 — Trends, goal tracking, the parent-facing summary, and the
 privacy modes all shipped, along with six of the seven Quick Wins.** Every
@@ -118,6 +164,10 @@ What shipped, against the backlog below:
 
 - Multiple named **sections** (`behavior-points-tracker-sections`), each with
   its own roster; loads a saved `np_rosters` roster
+- Reads Class Roster Hub's shared student record (`crh_students_v1`, via
+  `_shared/student-details.js`): cards show the **preferred name** over the
+  roster name, and a student **renamed there keeps their points, goals, log
+  and archived history** here, followed by stable id
 - Editable **behavior chips** with point values; arm a chip, then tap student
   cards to apply it
 - Live board of student cards with running totals; sort by name or points

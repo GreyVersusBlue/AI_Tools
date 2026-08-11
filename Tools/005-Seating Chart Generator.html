@@ -399,6 +399,16 @@
     .print-notes ul{columns:2; column-gap:22px;}
     .sub-export-flag{display:none;}
     body.printing-sub .sub-export-flag{display:block; text-align:center; font-size:10.5px; opacity:0.7; margin-top:2px;}
+    /* Whole-day sub packet: a contents page so a substitute can find the
+       period they are standing in front of without leafing through six charts,
+       and so anything that needs reading before the bell (notes, seating rule
+       conflicts) is visible from the front. */
+    .print-contents{margin-top:14px; font-size:12.5px;}
+    .print-contents table{width:100%; border-collapse:collapse;}
+    .print-contents th,.print-contents td{border:1px solid #000; padding:5px 8px; text-align:left;}
+    .print-contents th{font-family: var(--font-heading); font-size:12px; letter-spacing:.3px;}
+    .print-contents td.flagcell{font-weight:700;}
+    .print-cover-note{margin-top:14px; font-size:11.5px; line-height:1.55;}
   }
   .print-head{display:none; text-align:center; margin:0 0 10px;}
   .print-head h2{font-family: var(--font-heading); font-size:20px; color:var(--blue);}
@@ -580,6 +590,8 @@
                 title="Print with no names or photos, seat numbers forced on — for a seating quiz or a sub to fill in">Print blank</button>
         <button class="btn sm ghost" onclick="printSubExport()"
                 title="One page: this section's chart, plus notes and keep-apart rules, ready to hand a substitute">Sub export</button>
+        <button class="btn sm ghost" onclick="printSubExportAll()"
+                title="One packet: a contents page, then every section's sub export in order — the whole day in one print">Sub packet (whole day)</button>
       </div>
       <div class="sep"></div>
       <span class="grp" id="saveBar"></span>
@@ -1574,10 +1586,59 @@ function buildPrintPage(s, opts = {}){
   wrap.appendChild(floor);
   page.appendChild(wrap);
 
-  if (opts.showViolations){
+  /* `sub` is the whole-day packet's per-section page: the same flag, rule
+     conflicts and per-student notes the single-section Sub export appends,
+     built here so both paths produce the same page rather than one of them
+     drifting. Notes are deliberately absent from every other print mode — see
+     notesHTML(). */
+  if (opts.sub){
+    const div = document.createElement('div');
+    div.className = 'print-extra';
+    div.innerHTML = `<p class="sub-export-flag">For the substitute &mdash; includes student notes, not shown on a normal print.</p>`
+      + violationsHTML(s, checkConstraints(s)) + notesHTML(s);
+    page.appendChild(div);
+  } else if (opts.showViolations){
     const v = violationsHTML(s, checkConstraints(s));
     if (v){ const div = document.createElement('div'); div.className = 'print-extra'; div.innerHTML = v; page.appendChild(div); }
   }
+  return page;
+}
+
+/** The packet's first page: every section in order, with the numbers a
+    substitute actually needs at a glance and a flag on the ones carrying
+    something to read before the bell. */
+function buildSubCoverPage(){
+  const page = document.createElement('div');
+  page.className = 'print-page';
+
+  const head = document.createElement('div');
+  head.className = 'print-head';
+  const total = state.sections.reduce((n, s) => n + Object.keys(s.assign).length, 0);
+  head.innerHTML = `<h2>Seating charts &mdash; whole day</h2>`
+    + `<p>${esc(state.sections.length + ' section' + (state.sections.length === 1 ? '' : 's') + ' \u00b7 '
+       + total + ' seated student' + (total === 1 ? '' : 's') + ' \u00b7 '
+       + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }))}</p>`;
+  page.appendChild(head);
+
+  const rows = state.sections.map((s, i) => {
+    const report = checkConstraints(s);
+    const conflicts = report.apartBroken.length + report.togetherBroken.length;
+    const notes = s.students.filter(st => st.note && st.note.trim()).length;
+    const flags = [];
+    if (notes) flags.push(notes + ' note' + (notes === 1 ? '' : 's'));
+    if (conflicts) flags.push(conflicts + ' rule conflict' + (conflicts === 1 ? '' : 's'));
+    return `<tr><td>${i + 2}</td><td>${esc(s.name)}</td><td>${Object.keys(s.assign).length} of ${s.students.length}</td>`
+      + `<td class="flagcell">${flags.length ? esc(flags.join(', ')) : ''}</td></tr>`;
+  }).join('');
+
+  const contents = document.createElement('div');
+  contents.className = 'print-contents';
+  contents.innerHTML = `<table><thead><tr><th>Page</th><th>Section</th><th>Seated</th><th>Read first</th></tr></thead>`
+    + `<tbody>${rows}</tbody></table>`
+    + `<p class="print-cover-note">Each section is on its own page, in this order. Charts are drawn from the front of the room, `
+    + `so a student on the left of the page is on your left as you face the class. Anything in the &ldquo;Read first&rdquo; `
+    + `column is printed at the bottom of that section&rsquo;s page.</p>`;
+  page.appendChild(contents);
   return page;
 }
 function preparePrintAll(){
@@ -1587,8 +1648,23 @@ function preparePrintAll(){
   const opts = { showNames: state.printNames, showPhotos: state.printPhotos, numbered: state.numbered, mirror: state.mirror, showViolations: state.printViolations };
   state.sections.forEach(s => wrap.appendChild(buildPrintPage(s, opts)));
 }
+
+/* The whole-day sub packet: a contents page, then one sub-export page per
+   section. Names and photos are forced on regardless of the persisted print
+   toggles — a substitute cannot use a chart that respects the teacher's
+   privacy-mode preference, and that is exactly the reasoning the
+   single-section Sub export already applies to the live floor. */
+function preparePrintAllSub(){
+  document.body.classList.add('printing-all', 'printing-sub');
+  const wrap = el('printAllWrap');
+  wrap.innerHTML = '';
+  wrap.appendChild(buildSubCoverPage());
+  const opts = { showNames: true, showPhotos: true, numbered: state.numbered, mirror: state.mirror, sub: true };
+  state.sections.forEach(s => wrap.appendChild(buildPrintPage(s, opts)));
+}
+
 function restoreAfterPrintAll(){
-  document.body.classList.remove('printing-all');
+  document.body.classList.remove('printing-all', 'printing-sub');
   el('printAllWrap').innerHTML = '';
 }
 
@@ -1603,7 +1679,10 @@ function restoreAfterPrintAll(){
 //              seat numbers forced on, regardless of the persisted checkboxes.
 //   'sub'    — Sub export: the live floor with names/photos forced ON
 //              (a sub needs them) plus notes and rule conflicts appended.
+//   'sub-all'— Whole-day sub packet: a contents page, then one 'sub'-style
+//              static page per section. One packet instead of six prints.
 window.addEventListener('beforeprint', () => {
+  if (printMode === 'sub-all'){ preparePrintAllSub(); return; }
   if (printMode === 'all'){ preparePrintAll(); return; }
   preparePrint();
   if (printMode === 'blank') document.body.classList.add('printing-blank');
@@ -1611,7 +1690,7 @@ window.addEventListener('beforeprint', () => {
   else applyPrintClasses();
 });
 window.addEventListener('afterprint', () => {
-  if (printMode === 'all') restoreAfterPrintAll();
+  if (printMode === 'all' || printMode === 'sub-all') restoreAfterPrintAll();
   else { restoreAfterPrint(); clearPrintClasses(); el('printExtra').innerHTML = ''; }
   printMode = 'single';
 });
@@ -1619,6 +1698,11 @@ function printChart(){ printMode = 'single'; window.print(); }
 function printAllSections(){ printMode = 'all'; window.print(); }
 function printBlankChart(){ printMode = 'blank'; window.print(); }
 function printSubExport(){ printMode = 'sub'; window.print(); }
+function printSubExportAll(){
+  if (state.sections.length < 2){ printSubExport(); return; }   // one section is not a packet
+  printMode = 'sub-all';
+  window.print();
+}
 
 /* ============================================================
    Util + boot
@@ -1757,7 +1841,7 @@ Object.assign(window, {
   addPair, removePair,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
   autoAssign, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered,
-  printChart, printAllSections, printBlankChart, printSubExport, setPrintOpt,
+  printChart, printAllSections, printBlankChart, printSubExport, printSubExportAll, setPrintOpt,
   poolDragOver, poolDragLeave, poolDrop, poolClick,
 });
 

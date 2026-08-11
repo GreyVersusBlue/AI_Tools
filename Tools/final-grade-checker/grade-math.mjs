@@ -157,6 +157,63 @@ export function calcFinals(scores, opts) {
   };
 }
 
+// ── Class-wide what-if ───────────────────────────────────────
+//
+// Two questions a teacher asks at the end of a term, out loud, every year:
+// "what if I add three points to everyone" and "what if I drop everybody's
+// worst quarter". Both are questions about *letters moving*, not about
+// numbers — the answer that matters is which students cross a cutoff.
+//
+// This returns a transformed copy of the score array and nothing else, so the
+// answer comes back through calcFinals() unchanged: the same weights, the same
+// rounding rule, the same quality-point table, the same tie-break. A what-if
+// that quietly used a second, simpler calculation would be worse than useless.
+//
+// `dropLowest` is modelled by replacing the lowest quarter with the mean of
+// the other three. Inside a fixed four-quarter model that is what "drop it"
+// means: the bad quarter stops pulling the average down, and what stands in
+// for it is what the student actually earned across the rest. Doing it as a
+// three-quarter average instead would change the divisor and silently break
+// weighted terms.
+//
+// Nothing here mutates the input. The imported grades on screen stay exactly
+// as they were pasted — a curve is a question, not an edit.
+
+/**
+ * A copy of `scores` with the what-if applied.
+ *
+ * @param {Array<number|null>} scores  the four quarter percentages
+ * @param {{plus?: number, dropLowest?: boolean, cap?: number}} [opts]
+ *        plus       points added to every quarter (may be negative)
+ *        dropLowest replace the lowest quarter with the mean of the others
+ *        cap        ceiling per quarter after the curve (default 100)
+ */
+export function curveScores(scores, opts) {
+  const plus = Number((opts && opts.plus) || 0);
+  const cap = (opts && Number.isFinite(opts.cap)) ? opts.cap : 100;
+  let out = (scores || []).map(toScore);
+
+  if (plus) {
+    out = out.map(s => s === null ? null : Math.max(0, Math.min(cap, s + plus)));
+  }
+
+  if (opts && opts.dropLowest) {
+    const filled = out.map((s, i) => ({ s, i })).filter(x => x.s !== null);
+    // Nothing to drop unless there is a rest to average: a student with one
+    // quarter on file has no "other three" to stand in for it.
+    if (filled.length >= 2) {
+      let lowest = filled[0];
+      for (const x of filled) if (x.s < lowest.s) lowest = x;
+      const rest = filled.filter(x => x.i !== lowest.i);
+      const mean = rest.reduce((a, x) => a + x.s, 0) / rest.length;
+      out = out.slice();
+      out[lowest.i] = mean;
+    }
+  }
+
+  return out;
+}
+
 // ── Paste import ─────────────────────────────────────────────
 //
 // A TAC quarter cell is a letter and a percentage in brackets: `C(73.28)`.

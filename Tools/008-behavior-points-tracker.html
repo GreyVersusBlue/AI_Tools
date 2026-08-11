@@ -17,6 +17,16 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='12' cy='16' r='6.5' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M9.3 16h5.4M12 13.3v5.4' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='16' r='4.5' fill='%23C43A2F'/%3E%3Crect x='20.8' y='15.1' width='4.4' height='1.8' rx='.9' fill='%23fff'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<script type="module">
+  /* The shared per-student record Class Roster Hub keeps beside np_rosters:
+     preferred name and pronunciation to show, and the stable id that lets this
+     tool follow a student through a rename instead of orphaning their points.
+     Read-only, and absent for any teacher who has never opened Class Roster
+     Hub — everything below degrades to plain names. */
+  import { loadDetails, lookupDetail, loadIds, lookupId, normalize } from '../_shared/student-details.js';
+  window.StudentDetails = { loadDetails, lookupDetail, loadIds, lookupId, normalize };
+  window.dispatchEvent(new Event('student-details-ready'));
+</script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -432,6 +442,12 @@
     if (['full', 'positive', 'initials', 'total'].indexOf(s.displayMode) === -1) s.displayMode = 'full';
     if (typeof s.noteMode !== 'boolean') s.noteMode = false;
     if (!s.goals || typeof s.goals !== 'object') s.goals = {};
+    /* id -> the name that id was last seen under, so a student renamed in
+       Class Roster Hub can be followed here. Additive: a section saved before
+       this round has an empty map and simply learns the current names on its
+       first load. */
+    if (!s.idNames || typeof s.idNames !== 'object') s.idNames = {};
+    if (typeof s.rosterName !== 'string') s.rosterName = '';
     s.tags.forEach(function (t) { if (CATEGORIES.indexOf(t.cat) === -1) t.cat = 'other'; });
     s.history.forEach(function (h) {
       if (!Array.isArray(h.rows)) h.rows = [];
@@ -472,6 +488,102 @@
     renderCumulative();
     renderGoals();
     renderTrends();
+  }
+
+  /* ── The shared student record ─────────────────────────────────────────────
+     Two things come out of Class Roster Hub's `crh_students_v1` sidecar, and
+     they solve two different problems:
+
+       preferred / say   the name a student actually answers to, and how to say
+                         it. A points board is projected and read out loud; a
+                         card that says "Aiden" when the class knows him as AJ
+                         is the same failure the Name Picker already fixed.
+
+       id                a stable per-student key that survives a rename. Every
+                         per-student thing this tool stores — points, goals,
+                         today's log, every archived day — is keyed by the name
+                         string, so editing a roster name used to orphan the
+                         lot: the student reappears on the board with 0 and
+                         their history belongs to a name nobody has any more.
+                         `followRenames()` below moves it across instead.
+
+     Both are best-effort. A teacher who has never opened Class Roster Hub has
+     no sidecar, every lookup returns null, and this tool behaves exactly as it
+     did before. ─────────────────────────────────────────────────────────── */
+  var detailsCache = null, idsCache = null;
+
+  function refreshSharedRecord() {
+    if (!window.StudentDetails) { detailsCache = null; idsCache = null; return; }
+    try {
+      detailsCache = window.StudentDetails.loadDetails(localStorage);
+      idsCache = window.StudentDetails.loadIds(localStorage);
+    } catch (e) { detailsCache = null; idsCache = null; }
+  }
+
+  function detailFor(name) {
+    if (!detailsCache || !window.StudentDetails) return null;
+    return window.StudentDetails.lookupDetail(detailsCache, name, state && state.rosterName);
+  }
+
+  /** What to show on a card: the preferred name, with the roster name under it
+      so it can still be tied back to the gradebook. */
+  function cardLabel(name) {
+    var d = detailFor(name);
+    if (!d || !d.preferred) return { big: name, sub: '' };
+    var same = window.StudentDetails.normalize(d.preferred) === window.StudentDetails.normalize(name);
+    return same ? { big: name, sub: '' } : { big: d.preferred, sub: name };
+  }
+
+  /**
+   * Follows any student whose roster name changed since this section last saw
+   * them, moving every per-student record from the old name to the new one.
+   * Returns the number of students moved.
+   *
+   * Only ever moves data the *old* name owned and the new name does not: if
+   * both names somehow carry points (a rename onto a name already in use), the
+   * two are left alone rather than merged, because merging two students'
+   * behaviour records is not something to do without being asked.
+   */
+  function followRenames() {
+    if (!idsCache || !state) return 0;
+    var names = parseNames();
+    var moved = 0;
+    var seen = {};
+    names.forEach(function (name) {
+      var id = window.StudentDetails.lookupId(idsCache, name, state.rosterName);
+      if (!id) return;
+      seen[id] = true;
+      var was = state.idNames[id];
+      state.idNames[id] = name;
+      if (!was || was === name) return;
+      if (names.indexOf(was) !== -1) return;      // both names on the roster — not a rename
+      if (!renameStudentData(was, name)) return;
+      moved++;
+    });
+    return moved;
+  }
+
+  /** Moves one student's points, counts, goal, today's log and every archived
+      day from `from` to `to`. No-op (returns false) if there is nothing to
+      move, or if `to` already has data of its own. */
+  function renameStudentData(from, to) {
+    var hasOld = state.points[from] !== undefined || state.goals[from] !== undefined ||
+      state.posCount[from] !== undefined || state.negCount[from] !== undefined ||
+      state.log.some(function (ev) { return ev.name === from; }) ||
+      state.history.some(function (h) { return h.rows.some(function (r) { return r.name === from; }); });
+    if (!hasOld) return false;
+    if (state.points[to] !== undefined || state.goals[to] !== undefined) return false;
+
+    ['points', 'posCount', 'negCount', 'goals'].forEach(function (bag) {
+      if (state[bag][from] === undefined) return;
+      state[bag][to] = state[bag][from];
+      delete state[bag][from];
+    });
+    state.log.forEach(function (ev) { if (ev.name === from) ev.name = to; });
+    state.history.forEach(function (h) {
+      h.rows.forEach(function (r) { if (r.name === from) r.name = to; });
+    });
+    return true;
   }
 
   // ── Roster ───────────────────────────────────────────────────────────────
@@ -518,10 +630,20 @@
       if (!list) return;
       els.namesInput.value = list.join('\n');
       state.namesText = els.namesInput.value;
+      /* Remember which saved roster this section is following, so the shared
+         record is read from the right class — two periods can both have a Sam
+         who goes by different things. */
+      state.rosterName = name;
+      refreshSharedRecord();
+      var moved = followRenames();
       updateNameCount();
       renderBoard();
       refreshDependentViews();
       save();
+      if (moved) {
+        showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+          ' renamed in Class Roster Hub — their points and history came with them.', 'info');
+      }
     } catch (e) { showMsg('Could not read that roster from this browser.', 'error'); }
   });
 
@@ -683,7 +805,13 @@
       var shownPts = state.displayMode === 'positive' ? Math.max(0, pts) : pts;
       var cls = shownPts > 0 ? 'pos-total' : (shownPts < 0 ? 'neg-total' : '');
       if (picked[n]) cls += ' picked';
-      var label = state.displayMode === 'initials' ? initialsOf(n) : n;
+      var card = cardLabel(n);
+      var label = state.displayMode === 'initials' ? initialsOf(card.big) : card.big;
+      /* The roster name under the preferred one, so a card can still be tied
+         back to the gradebook. Dropped in initials mode, where the whole point
+         is that nothing readable is on screen. */
+      var alias = (card.sub && state.displayMode !== 'initials')
+        ? '<div class="s-sub">' + escapeHtml(card.sub) + '</div>' : '';
       /* Today and the quarter answer different questions: +14 for the term and
          −2 today is a different conversation from −2 for both. */
       /* Shown for everyone once any day is archived, including the students
@@ -700,6 +828,7 @@
       }
       return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '">' +
         '<div class="s-name">' + escapeHtml(label) + '</div>' +
+        alias +
         '<div class="s-points">' + (shownPts > 0 ? '+' : '') + shownPts + '</div>' +
         sub + goal +
         '</div>';
@@ -1270,6 +1399,7 @@
 
   /* ---------- boot ---------- */
   populateRosterSelect();
+  refreshSharedRecord();
   var initial = loadStore();
   if (initial.current && initial.sets[initial.current]) {
     loadSetByName(initial.current);
@@ -1283,6 +1413,27 @@
       newSet('New Section');
     }
   }
+
+  /* student-details.js is an ES module, so it evaluates after this classic
+     script. Catching up once it lands is what makes a rename made in Class
+     Roster Hub since the last visit get followed on open, rather than only
+     when a roster is re-loaded by hand. */
+  function adoptSharedRecord() {
+    refreshSharedRecord();
+    if (!state) return;
+    var moved = followRenames();
+    renderBoard();
+    if (moved) {
+      refreshDependentViews();
+      renderHistory();
+      renderCumulative();
+      save();
+      showMsg(moved + ' student' + (moved === 1 ? '' : 's') +
+        ' renamed in Class Roster Hub — their points and history came with them.', 'info');
+    }
+  }
+  if (window.StudentDetails) adoptSharedRecord();
+  else window.addEventListener('student-details-ready', adoptSharedRecord, { once: true });
 
 })();
 </script>

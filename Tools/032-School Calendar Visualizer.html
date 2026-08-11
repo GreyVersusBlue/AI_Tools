@@ -184,8 +184,41 @@
 
   .storage-warn { background: #fff3d6; border: 1px solid #e0c27a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 16px; }
 
+  /* ── Week-at-a-glance ──────────────────────────────────────────────────────
+     The month grid answers "where does this fall in the year"; a planner page
+     answers "what is happening Monday to Friday, and what do I need to know
+     about it". That needs room for the note, which a 40px month cell does not
+     have — so this is five wide columns, not a small calendar. */
+  .week-strip { display: none; }
+  body.view-week .week-strip { display: block; }
+  body.view-week .months, body.view-week .year-grid { display: none; }
+  .week-strip h2 { font-size: 1.05rem; margin: 0 0 2px; }
+  .week-strip .week-sub { font-size: .8rem; color: var(--muted, #6b6a63); margin: 0 0 10px; }
+  .week-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .week-day { border: 1px solid var(--line, #d9d7cd); border-radius: 8px; padding: 8px 9px; min-height: 150px; display: flex; flex-direction: column; gap: 5px; }
+  .week-day.is-off { background: #f4f3ef; }
+  .week-day .wd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; border-bottom: 1px solid var(--line, #d9d7cd); padding-bottom: 4px; }
+  .week-day .wd-name { font-weight: 700; font-size: .82rem; }
+  .week-day .wd-date { font-size: .72rem; color: var(--muted, #6b6a63); font-variant-numeric: tabular-nums; }
+  .week-day .wd-types { display: flex; flex-wrap: wrap; gap: 4px; }
+  .week-day .wd-type { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border: 1px solid currentColor; border-radius: 4px; padding: 1px 4px; }
+  .week-day .wd-label { font-size: .76rem; font-weight: 700; }
+  .week-day .wd-paced { font-size: .74rem; font-weight: 700; color: #2e6b3e; }
+  .week-day .wd-lesson { font-size: .74rem; font-style: italic; }
+  .week-day .wd-note { font-size: .72rem; color: var(--muted, #6b6a63); white-space: pre-line; margin-top: auto; }
+  .week-day .wd-ab { font-size: .68rem; font-weight: 700; border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; }
+  .week-strip .week-lines { margin-top: 10px; border: 1px solid var(--line, #d9d7cd); border-radius: 8px; padding: 8px 10px; }
+  .week-strip .week-lines strong { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
+  .week-strip .week-lines .rule { border-bottom: 1px solid #ccc; height: 18px; }
+
   @media print {
     body { padding: 8px; background: #fff; }
+    /* A planner page is landscape, and five columns need the width. */
+    body.view-week { padding: 0; }
+    body.view-week .week-day { break-inside: avoid; page-break-inside: avoid; }
+    body.view-week .week-day.is-off { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body.view-week .week-day .wd-paced { color: #000 !important; }
+    @page { size: auto; }
     .toolbar, .card.legend-card, .card.meta-card, #drawer, .storage-warn, .no-print { display: none !important; }
     .months { gap: 10px; }
     .month { border: 1px solid #999; }
@@ -228,6 +261,11 @@
     <span class="print-mode">
       <label><input type="radio" name="printMode" value="month" checked> Month-by-month</label>
       <label><input type="radio" name="printMode" value="year"> Whole year</label>
+      <label><input type="radio" name="printMode" value="week"> One week</label>
+    </span>
+    <span class="print-mode" id="weekPickWrap" style="display:none;">
+      <label for="weekPick">Week of</label>
+      <input type="date" id="weekPick">
     </span>
     <button id="btnPrint" class="primary">Print / Save PDF</button>
   </div>
@@ -303,6 +341,7 @@
   <h1 id="printTitle" style="display:none;"></h1>
   <div class="months" id="months"></div>
   <div class="year-grid" id="yearGrid"></div>
+  <div class="week-strip" id="weekStrip"></div>
 </div>
 
 <div id="drawer">
@@ -679,7 +718,96 @@ function renderStats() {
   el.innerHTML = text;
 }
 
-function render() { computePlacement(); renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); }
+function render() { computePlacement(); renderLegend(); renderMonths(); renderYearGrid(); renderWeekStrip(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); renderPacing(); }
+
+/* ── Week-at-a-glance ────────────────────────────────────────────────────────
+   The month grid answers "where does this fall in the year". A planner page
+   answers a different question — what is happening Monday to Friday, and what
+   do I need to know about each day — and that answer does not fit in a 40px
+   month cell, because the part a teacher actually needs is the note.
+
+   So this is five wide columns rather than a small calendar: day type as a
+   readable word instead of a colour chip (school printers are black and
+   white — P6), the A/B letter, the paced lesson, the free-text lesson, and the
+   note in full. A no-school day is greyed rather than omitted, because "there
+   is no Monday this week" is itself the thing worth seeing.
+--------------------------------------------------------------------------- */
+const WEEK_DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+/** The Monday of the week containing `dateISO`. */
+function mondayOf(dateISO) {
+  const d = new Date(dateISO + "T00:00:00");
+  if (isNaN(d)) return null;
+  const shift = (d.getDay() + 6) % 7;          // Sun=0 -> 6, Mon=1 -> 0
+  d.setDate(d.getDate() - shift);
+  return iso(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** The week the printed strip should default to: the one containing today if
+    that falls inside the calendar, otherwise the first week of the year. */
+function defaultWeekStart() {
+  const today = todayISO();
+  const inRange = today >= cal.meta.start && today <= cal.meta.end;
+  return mondayOf(inRange ? today : cal.meta.start);
+}
+
+function weekStripStart() {
+  const picked = document.getElementById("weekPick").value;
+  return (picked && mondayOf(picked)) || defaultWeekStart();
+}
+
+function longDate(dateISO) {
+  const d = new Date(dateISO + "T00:00:00");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function renderWeekStrip() {
+  const wrap = document.getElementById("weekStrip");
+  if (!wrap) return;
+  const start = weekStripStart();
+  if (!start) { wrap.innerHTML = ""; return; }
+  const abMap = buildAbMap();
+  const startD = new Date(start + "T00:00:00");
+
+  const cells = WEEK_DAY_NAMES.map((name, i) => {
+    const d = new Date(startD);
+    d.setDate(d.getDate() + i);
+    const dateISO = iso(d.getFullYear(), d.getMonth(), d.getDate());
+    const inRange = dateISO >= cal.meta.start && dateISO <= cal.meta.end;
+    const entry = (cal.days && cal.days[dateISO]) || { types: [], label: "", note: "", lesson: "" };
+    const types = (entry.types || []).map(id => typeById(id)).filter(Boolean);
+    // "Off" is anything the calendar's own day types mark as a non-school day;
+    // the tool already knows which those are, so this does not re-decide it.
+    const off = !inRange || types.some(t => t.noSchool);
+    const abLetter = abMap[dateISO];
+    const placed = placement && placement.byDate[dateISO];
+
+    return '<div class="week-day' + (off ? " is-off" : "") + '">' +
+      '<div class="wd-head"><span class="wd-name">' + name + '</span>' +
+      '<span class="wd-date">' + escapeHtml(longDate(dateISO)) +
+      (abLetter && !off ? ' <span class="wd-ab">' + escapeHtml(abLetter) + '</span>' : '') + '</span></div>' +
+      (types.length ? '<div class="wd-types">' + types.map(t =>
+        '<span class="wd-type">' + escapeHtml(t.label) + '</span>').join("") + '</div>' : '') +
+      (!inRange ? '<div class="wd-note">Outside this calendar</div>' : '') +
+      (entry.label ? '<div class="wd-label">' + escapeHtml(entry.label) + '</div>' : '') +
+      (placed && !off ? '<div class="wd-paced">U' + placed.unit + '-' + placed.num + '-' + placed.letter +
+        ' · ' + escapeHtml(placed.title) + (isEarlyDismissalDay(dateISO) ? ' ½' : '') + '</div>' : '') +
+      (entry.lesson ? '<div class="wd-lesson">' + escapeHtml(entry.lesson) + '</div>' : '') +
+      (entry.note ? '<div class="wd-note">' + escapeHtml(entry.note) + '</div>' : '') +
+      '</div>';
+  }).join("");
+
+  const endD = new Date(startD);
+  endD.setDate(endD.getDate() + 4);
+  const endISO = iso(endD.getFullYear(), endD.getMonth(), endD.getDate());
+
+  wrap.innerHTML =
+    '<h2>' + escapeHtml(cal.meta.yearLabel || "School year") + ' &mdash; week of ' + escapeHtml(longDate(start)) + '</h2>' +
+    '<p class="week-sub">' + escapeHtml(longDate(start)) + ' to ' + escapeHtml(longDate(endISO)) + '</p>' +
+    '<div class="week-days">' + cells + '</div>' +
+    '<div class="week-lines"><strong>Notes for the week</strong>' +
+    '<div class="rule"></div><div class="rule"></div><div class="rule"></div></div>';
+}
 
 function syncMeta() {
   document.getElementById("metaLabel").value = cal.meta.yearLabel;
@@ -1302,9 +1430,23 @@ document.getElementById("fileImportIcs").addEventListener("change", e => {
 
 document.querySelectorAll('input[name="printMode"]').forEach(el => {
   el.addEventListener("change", e => {
-    document.body.classList.toggle("print-year", e.target.value === "year");
+    const mode = e.target.value;
+    document.body.classList.toggle("print-year", mode === "year");
+    // The week strip is the one print mode that is also worth seeing on screen
+    // before printing — five columns of notes is not something to send to a
+    // printer sight-unseen — so it swaps the view rather than only the @media
+    // print rules.
+    document.body.classList.toggle("view-week", mode === "week");
+    document.getElementById("weekPickWrap").style.display = mode === "week" ? "" : "none";
+    if (mode === "week") {
+      const pick = document.getElementById("weekPick");
+      if (!pick.value) pick.value = defaultWeekStart() || "";
+      renderWeekStrip();
+    }
   });
 });
+
+document.getElementById("weekPick").addEventListener("change", renderWeekStrip);
 
 document.getElementById("btnPrint").addEventListener("click", () => window.print());
 

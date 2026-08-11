@@ -1,13 +1,46 @@
 # Improvement Prompts — 002 — Group / Team Generator
 
 **Tool file:** `Tools/002-group-team-generator.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/group-team-generator/test/smoke-share.mjs`
+(`npm run test:groups`). The page itself is a single file.
 
 **Current description (from README):** Split a pasted or Name-Picker roster into random groups by count or size, with optional skill-balancing and "keep these two apart" constraints. Prints a clean group sheet.
 
 ---
 
 ## Status
+
+### 2026-08-11 — session `m3r8ro`
+
+**Shipped share-a-grouping by link or QR** (backlog rank 15, platform theme P3).
+The tool could print a grouping or copy it as text; what it could not do was
+hand somebody the arrangement itself. A co-teacher reading a copied-text
+version retypes it, and re-running the shuffle on their machine gives a
+different answer — which defeats the point of sharing it at all.
+
+- **"🔗 Copy Link" and "▦ QR Code"** join the export row, appearing only once
+  there is a grouping to share.
+- **What travels is the result, not the recipe** — and that was the design
+  decision. The payload carries the group labels and who is in each group.
+  It does *not* carry the roster, the keep-apart list, the put-together list,
+  the skill numbers, the pairing memory, or the generator settings. A shared
+  grouping is a read-only artifact, and nobody wants their keep-apart pairs
+  leaving the building with it. Five assertions in the suite exist purely to
+  hold that line, driven from a keep-apart pair added through the real control.
+- **The receiving page renders it read-only**, over whatever config happened to
+  load, and writes nothing: the banner says it is somebody else's arrangement,
+  and that reshuffling would use *your* roster rather than theirs. The suite
+  checks no shared student name reaches `localStorage`.
+- **Labels are reproduced verbatim** by switching the receiving page to the
+  `custom` naming mode and feeding it the sender's labels. Without that, a
+  browser set to "Table 1, Table 2" would silently relabel somebody else's
+  colour-team groups.
+- The parameter is consumed on read, so a refresh cannot re-import; a mangled
+  link says so rather than opening blank; and an over-large grouping is refused
+  by name with a pointer to the link, rather than drawing an unscannable QR.
+- **Verified** by `Tools/group-team-generator/test/smoke-share.mjs` (33 checks),
+  which opens the link in a second browser context and compares the arrangement
+  group by group.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
 
@@ -134,6 +167,9 @@ Real tradeoffs and things a future round should know about:
   standalone small group)
 - **Keep Apart** and **Put Together** constraints with violation reporting
   (`findApartViolations`, `findTogetherViolations`)
+- **Share a generated grouping by link or QR** (`_shared/state-link.js`) — the
+  arrangement only, never the roster, constraints, skills or pairing memory;
+  opens read-only on the other machine and is never saved there
 - **Pairing memory** — penalizes recently-paired students
   (`pairRecencyPenalty`, `recordPairHistory`, `findRecentPairViolations`),
   with a reset. This is the tool's best idea.
