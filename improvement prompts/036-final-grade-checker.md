@@ -1,13 +1,54 @@
 # Improvement Prompts — 036 — Final Grade Checker
 
 **Tool file:** `Tools/036-final_grade_checker.html`
-**Support folder:** `Tools/final-grade-checker/`
+**Support folder:** `Tools/final-grade-checker/` — `grade-math.mjs`,
+`grade-math.test.mjs`, `test/smoke-whatif.mjs` (`npm run test:final-grade`)
 
 **Current description (from README):** Enter grades by hand or paste a TAC export, and check the math automatically.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **class-wide curve
+what-if** (backlog rank 13). "What if I add three points to everyone" and "what
+if I drop everyone's worst quarter" are the two questions a teacher asks out
+loud at the end of a term, and both are questions about *letters moving*.
+
+- A **What-if card** above the student list (imported classes only — there is
+  nothing to ask about one hand-entered student): a points field and a "drop
+  each student's lowest quarter" checkbox, with a summary that counts and
+  *names* who moves and from which letter to which.
+- **Two rules the implementation obeys, because getting either wrong would
+  make the feature dangerous.**
+  1. *A curve is a question, not an edit.* New pure export `curveScores()`
+     returns a transformed **copy**; the pasted quarter grades, the real final
+     beside them, and the pasted text itself are all untouched. Each card gains
+     a separate dashed, labelled "What-if" box rather than a changed number —
+     nobody should be able to read a curved letter as the grade that goes on
+     the report card. The suite asserts the 89.00 is still printed as 89.00.
+  2. *No second calculation.* The transformed scores go straight back through
+     the same `calcFinals()` with the same `calcOpts()` — same rounding rule,
+     same weights, same quality-point tie-break. Switching the Grading Settings
+     to strict rounding changes the what-if answer too, which the suite checks
+     precisely because a divergence there is how a second, simpler calculation
+     would show itself.
+- **"Drop the lowest" is modelled as a replacement, not a three-quarter
+  average**, and that choice is load-bearing: the divisor stays four, so a
+  weighted term still applies its weights. The doc comment in `grade-math.mjs`
+  says why. A curve is applied *before* the drop, so the drop averages the
+  curved others.
+- A student one quarter short still gets no final, curve or no curve — the
+  tool must not conjure a grade for them because a what-if is on. Two tests
+  hold that down.
+- **Verified** by 22 new hand-worked cases in `grade-math.test.mjs` (174 total)
+  and a new browser suite `test/smoke-whatif.mjs` (38 checks). The browser
+  suite is the one that matters here: it is what proves the page asks the
+  question without answering a different one.
+- **Not done:** no per-quarter curve (the points field applies to all four),
+  and the what-if does not reach the printed slip or the PDF/Excel exports —
+  deliberately, for now, since an exported file loses the "this is a question"
+  framing that the on-screen dashed box carries.
 
 **2026-08-11 — Pass 2 round.** Shipped the one Quick Win this file's Pass 1
 round left explicitly deferred: **column mapping on import** (P13).
@@ -105,6 +146,10 @@ Visualizer, rubric-scored input, progress reports).
   `qpCutoffForLetter`, `pctCutoffForLetter`)
 - **Borderline detection** (`borderlineInfo`, `borderlineLabel`) — flags
   students sitting on a letter-grade edge
+- **Class-wide what-if** (`curveScores`) — add N points to every quarter
+  and/or drop each student's lowest, recomputed through the same
+  `calcFinals()`, showing which letters move and naming who; the pasted data
+  and the real final are never altered
 - Exports: **Excel**, **PDF** (jsPDF), **Share PDF** (Web Share API), print
 - Loads `_shared/theme.css` and `_shared/a11y.js`; lazy-loads libraries
   (`loadLibs`, `withLibs`)

@@ -137,6 +137,25 @@
   .settings-panel .settings-help { font-size: 12px; opacity: 0.65; margin-bottom: var(--space-3); }
   .settings-row { margin-bottom: var(--space-3); font-size: 13px; }
   .settings-row > strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.7; margin-bottom: 4px; }
+  /* Class-wide what-if */
+  .whatif-hint { font-size: 12px; opacity: 0.7; margin: 0 0 8px; max-width: 62ch; }
+  .whatif-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .whatif-controls label { font-size: 12px; font-weight: 700; opacity: 0.75; }
+  .whatif-check { display: flex; align-items: center; gap: 5px; font-weight: 700; }
+  .whatif-summary { margin-top: 10px; font-size: 13px; line-height: 1.55; }
+  .whatif-summary:empty { display: none; }
+  .whatif-summary .moved { font-weight: 700; }
+  .whatif-summary ul { margin: 6px 0 0; padding-left: 18px; }
+  /* The what-if result on a student card: deliberately a separate, labelled
+     box rather than a changed number, so nobody reads a curved letter as the
+     grade that goes on the report card. */
+  .whatif-line { margin-top: 8px; padding: 5px 8px; border: 1px dashed var(--color-accent); font-size: 12px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .whatif-line .whatif-label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.7; font-size: 10px; }
+  .whatif-line .whatif-letter { font-size: 16px; font-weight: 700; }
+  .whatif-line .whatif-delta { font-size: 11px; font-weight: 700; }
+  .whatif-line.up { background: rgba(47, 143, 91, 0.10); }
+  .whatif-line.down { background: rgba(196, 58, 47, 0.10); }
+  @media print { .whatif-line { border-style: solid; } }
   .settings-row label { display: block; margin: 3px 0; cursor: pointer; }
   .settings-row select.input { width: 100%; max-width: 420px; padding: 6px 8px; font-size: 13px; }
   .weights-inputs { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin-top: 6px; }
@@ -317,6 +336,23 @@
     </details>
   </div>
 
+  <!-- Class-wide what-if. Hidden until a class is imported: it is a question
+       about a whole roster, and there is nothing to ask about one student. -->
+  <div class="card blueprint no-print" id="whatif-card" style="display:none;">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="settings-row">
+      <strong>Class-wide what-if</strong>
+      <p class="whatif-hint">Asks a question without changing anything. The pasted grades stay exactly as they are; every card below gains a second, clearly-marked result so you can see which letters actually move.</p>
+      <div class="whatif-controls">
+        <label for="whatif-plus">Add points to every quarter</label>
+        <input type="number" id="whatif-plus" class="input" value="0" step="0.5" min="-20" max="20" style="width:90px;">
+        <label class="whatif-check"><input type="checkbox" id="whatif-drop"> Drop each student&rsquo;s lowest quarter</label>
+        <button class="btn btn-secondary" id="whatif-reset" type="button">Clear</button>
+      </div>
+      <div id="whatif-summary" class="whatif-summary"></div>
+    </div>
+  </div>
+
   <div id="students-container"></div>
 
   <div class="no-print" id="add-student-row" style="text-align:center;margin:-0.25rem 0 1.5rem;">
@@ -403,7 +439,7 @@ import {
   getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
   LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
   isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
-  findQuarterWindow, splitRow,
+  findQuarterWindow, splitRow, curveScores,
 } from './final-grade-checker/grade-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
@@ -932,7 +968,106 @@ function renderImportedStudents(students) {
   students.forEach((s, i) => container.appendChild(buildImportCard(s, i)));
   document.getElementById('clear-all-btn').onclick = () => switchToManual();
   document.getElementById('add-student-row').style.display = 'none';
+  document.getElementById('whatif-card').style.display = students.length ? '' : 'none';
+  renderWhatIfSummary(students);
 }
+
+/* ── Class-wide what-if ──────────────────────────────────────────────────────
+   "What if I add three points to everyone" and "what if I drop everyone's
+   worst quarter" are the two questions a teacher asks out loud at the end of a
+   term, and both are questions about *letters moving*, not numbers.
+
+   Two rules this obeys, because getting either wrong would make it dangerous:
+
+     1. It never touches the pasted data. `curveScores()` returns a copy; the
+        real quarters, the real final, and the printed slip are all unchanged.
+        A curve is a question, not an edit.
+     2. It never uses a second calculation. The transformed scores go back
+        through the same `calcFinals()` with the same `calcOpts()` — same
+        rounding rule, same weights, same quality-point tie-break — so a
+        what-if letter is a letter this tool would really report.
+--------------------------------------------------------------------------- */
+function whatIfOpts() {
+  const plus = Number(document.getElementById('whatif-plus').value) || 0;
+  const dropLowest = document.getElementById('whatif-drop').checked;
+  return (plus || dropLowest) ? { plus, dropLowest } : null;
+}
+
+/** The what-if final for one student, or null when the what-if is off or the
+    student has no final either way. */
+function whatIfFinal(scores) {
+  const wi = whatIfOpts();
+  if (!wi) return null;
+  const before = calcFinals(scores, calcOpts());
+  const after = calcFinals(curveScores(scores, wi), calcOpts());
+  if (!after) return null;
+  return { before, after, moved: !before || before.finalLetter !== after.finalLetter };
+}
+
+function whatIfLineHtml(scores) {
+  const r = whatIfFinal(scores);
+  if (!r) return '';
+  const dir = !r.moved ? '' : (RANK[r.after.finalLetter] > RANK[(r.before || {}).finalLetter] ? 'up' : 'down');
+  const delta = r.moved
+    ? `<span class="whatif-delta">${r.before ? r.before.finalLetter + ' \u2192 ' + r.after.finalLetter : 'now has a final'}</span>`
+    : '<span class="whatif-delta">no change</span>';
+  return `<div class="whatif-line ${dir}">
+    <span class="whatif-label">What-if</span>
+    <span class="whatif-letter" style="color:${letterColor[r.after.finalLetter] || 'inherit'}">${r.after.finalLetter}</span>
+    ${delta}
+    <span class="whatif-delta" style="opacity:.6">${r.after.pctAvg.toFixed(2)}% &middot; ${r.after.avgQP.toFixed(2)} pts</span>
+  </div>`;
+}
+
+function whatIfDescription() {
+  const wi = whatIfOpts();
+  if (!wi) return '';
+  const bits = [];
+  if (wi.plus) bits.push((wi.plus > 0 ? '+' : '') + wi.plus + ' points on every quarter');
+  if (wi.dropLowest) bits.push('lowest quarter dropped');
+  return bits.join(', ');
+}
+
+function renderWhatIfSummary(students) {
+  const box = document.getElementById('whatif-summary');
+  const wi = whatIfOpts();
+  if (!wi || !students || !students.length) { box.innerHTML = ''; return; }
+
+  const moves = [];
+  let unchanged = 0, noFinal = 0;
+  students.forEach(s => {
+    const r = whatIfFinal(s.scores);
+    if (!r) { noFinal++; return; }
+    if (r.moved) moves.push({ name: s.name, from: r.before ? r.before.finalLetter : '—', to: r.after.finalLetter });
+    else unchanged++;
+  });
+
+  const up = moves.filter(m => RANK[m.to] > (RANK[m.from] ?? -1)).length;
+  const down = moves.length - up;
+  const parts = [`<span class="moved">${moves.length} of ${students.length}</span> final letter${moves.length === 1 ? '' : 's'} move`];
+  if (up && down) parts.push(`${up} up, ${down} down`);
+  if (unchanged) parts.push(`${unchanged} unchanged`);
+  if (noFinal) parts.push(`${noFinal} still without a final (a quarter is missing)`);
+
+  box.innerHTML = `<div><em>${escHtml(whatIfDescription())}</em> &mdash; ${parts.join(' &middot; ')}.</div>` +
+    (moves.length
+      ? `<ul>${moves.slice(0, 40).map(m => `<li>${escHtml(m.name)}: ${m.from} &rarr; <strong>${m.to}</strong></li>`).join('')}` +
+        (moves.length > 40 ? `<li>&hellip; and ${moves.length - 40} more</li>` : '') + '</ul>'
+      : '');
+}
+
+function refreshWhatIf() {
+  if (!currentStudents || !currentStudents.length) return;
+  renderImportedStudents(currentStudents);
+}
+
+document.getElementById('whatif-plus').addEventListener('input', refreshWhatIf);
+document.getElementById('whatif-drop').addEventListener('change', refreshWhatIf);
+document.getElementById('whatif-reset').addEventListener('click', () => {
+  document.getElementById('whatif-plus').value = '0';
+  document.getElementById('whatif-drop').checked = false;
+  refreshWhatIf();
+});
 
 function buildImportCard(student, i) {
   const card = document.createElement('div');
@@ -997,7 +1132,7 @@ function buildImportCard(student, i) {
     <div class="grades-row">
       <div class="quarters-section">${quartersHtml}</div>
       <div class="divider" aria-hidden="true"></div>
-      <div class="results-section">${qpHtml}${avgHtml}${finalHtml}${arithBlockHtml(scores, f, opts)}</div>
+      <div class="results-section">${qpHtml}${avgHtml}${finalHtml}${whatIfLineHtml(scores)}${arithBlockHtml(scores, f, opts)}</div>
     </div>`;
   return card;
 }
@@ -1007,6 +1142,9 @@ function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ── Render: Manual cards ─────────────────────────────────────
 function switchToManual() {
   mode = 'manual';
+  // The what-if is a question about a whole roster; there is nothing to ask
+  // about a single hand-entered student.
+  document.getElementById('whatif-card').style.display = 'none';
   document.getElementById('import-area').value = '';
   setStatus('','');
   currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores:[null,null,null,null] }));

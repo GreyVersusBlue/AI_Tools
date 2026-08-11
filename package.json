@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Dev-only test tooling for the East Middle Staff Toolkit. The site itself is static, has no build step, and is never served from node_modules — see CLAUDE.md. After cloning: npm ci && npx playwright install chromium",
   "scripts": {
-    "test": "node Tools/name-picker/test/smoke.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/school-calendar/test/smoke-pacing.mjs && node Tools/schedule/test/smoke.mjs && node Tools/image-to-pdf/test/smoke.mjs && node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/certificate-award-maker/test/smoke-stock-inset.mjs && node Tools/hall-pass-log/test/smoke-export.mjs && node Tools/class-roster-hub/test/smoke-export.mjs && node Tools/backup-restore/test/smoke-restore-diff.mjs && node Tools/behavior-points-tracker/test/smoke-shared-record.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/name-picker/test/drive-weighting.mjs && node Tools/sub-plan-builder/test/smoke-share.mjs && node Tools/classroom-timer/test/smoke-strip.mjs && node Tools/seating-chart/test/drive-seating.mjs",
+    "test": "node Tools/name-picker/test/smoke.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/school-calendar/test/smoke-pacing.mjs && node Tools/schedule/test/smoke.mjs && node Tools/image-to-pdf/test/smoke.mjs && node Tools/virtual-manipulatives-board/test/smoke-boards.mjs && node Tools/schedule-visualizer/test/smoke-recovery.mjs && node Tools/pe-tournament-stations/test/smoke-pe-stations.mjs && node Tools/certificate-award-maker/test/smoke-stock-inset.mjs && node Tools/hall-pass-log/test/smoke-export.mjs && node Tools/class-roster-hub/test/smoke-export.mjs && node Tools/backup-restore/test/smoke-restore-diff.mjs && node Tools/behavior-points-tracker/test/smoke-shared-record.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/name-picker/test/drive-weighting.mjs && node Tools/sub-plan-builder/test/smoke-share.mjs && node Tools/classroom-timer/test/smoke-strip.mjs && node Tools/final-grade-checker/grade-math.test.mjs && node Tools/final-grade-checker/test/smoke-whatif.mjs && node Tools/seating-chart/test/drive-seating.mjs",
     "test:name-picker": "node Tools/name-picker/test/smoke.mjs && node Tools/name-picker/test/drive-weighting.mjs",
     "test:seating": "node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/smoke-sub-packet.mjs && node Tools/seating-chart/test/drive-seating.mjs",
     "test:schedule": "node Tools/schedule/test/smoke.mjs",
@@ -17,6 +17,7 @@
     "test:behavior": "node Tools/behavior-points-tracker/test/smoke-shared-record.mjs",
     "test:sub-plan": "node Tools/sub-plan-builder/test/smoke-share.mjs",
     "test:timer": "node Tools/classroom-timer/test/smoke-strip.mjs",
+    "test:final-grade": "node Tools/final-grade-checker/grade-math.test.mjs && node Tools/final-grade-checker/test/smoke-whatif.mjs",
     "test:school-calendar": "node Tools/school-calendar/test/smoke-pacing.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs",
     "test:manipulatives": "node Tools/virtual-manipulatives-board/test/smoke-boards.mjs",
