@@ -185,7 +185,12 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Art Critique Worksheet Generator | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
+| Student Art Portfolio Label & QR Tag Maker | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
+| Book Tasting Menu Generator | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
+| Government/Civics Simulation Role Card Generator | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
+| Classroom Label Maker, Target Language | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
+| Cognates & False Friends Reference List Builder | `szyio3` | 2026-08-11 01:29 UTC | `claude/tools-047-52-improvements-szyio3` |
 
 ---
 
