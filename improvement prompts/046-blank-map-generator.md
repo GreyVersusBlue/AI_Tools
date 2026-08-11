@@ -1,13 +1,49 @@
 # Improvement Prompts — 046 — Blank Map Generator
 
 **Tool file:** `Tools/046-blank-map-generator.html`
-**Support folder:** `Tools/blank-map-generator/` — `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-label-sets.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-viewer.js`
+**Support folder:** `Tools/blank-map-generator/` — `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-label-sets.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-vector.js`, `bmg-viewer.js`, `test/smoke-starters.mjs`
 
 **Current description (from README):** Search Wikimedia Commons for a map, pan/zoom into a region, and annotate it with draggable labels, markers (pin/star/dot/flag), and shaded polygon regions — all auto-building an editable legend. Optional compass rose, lat/long grid, and a locator inset. Undo for accidental deletes. Maps are cached for offline reuse; print or save as PDF.
 
 ---
 
 ## Status
+
+### 2026-08-11 — session `m3r8ro`
+
+**Shipped starter map projects** (backlog rank 17, platform theme P15). A first
+run opened to an empty canvas and a list of things to configure, which is a
+poor use of the five minutes a teacher gives a tool during a prep period.
+
+- Three finished maps on the landing card: **Europe — countries**, **United
+  States — states**, **World — physical features**, each assembled from parts
+  that already ship offline (a `bmg-vector.js` base map preset plus a
+  `bmg-label-sets.js` built-in set). Nothing is downloaded.
+- **They are built by driving the tool's own controls**, not by writing a
+  project blob: set the base-map preset/style/borders, call the same
+  `useBuiltInBaseMap()` the Base Map button calls, then click the same
+  `#btnPlaceLabelSet` the Label Sets panel uses. A sample therefore cannot
+  drift out of step with what the tool actually produces, and a teacher who
+  opens either panel afterwards finds it set to what they are looking at.
+- **Each opens as its own new project**, with a suffixed name if one already
+  exists, so a first click cannot overwrite work already in the workspace and a
+  second click on the same sample gives a second project rather than a
+  collision.
+- **Bug found and fixed while building it:** `loadActiveProjectIntoUI()` fires
+  a default Wikimedia search whenever it lands on an empty project. The starter
+  flow creates an empty project and then immediately sets the base map, so that
+  search was pure waste — a network request on a school network for results
+  thrown away a moment later. It now takes a `{ skipSearch: true }` option that
+  only the starter path passes; every other caller is unchanged.
+- **Verified** by `Tools/blank-map-generator/test/smoke-starters.mjs` (22
+  checks, `npm run test:blank-map`). The assertion that matters most counts
+  offsite requests before and after a build and requires the difference to be
+  zero — the entire point of assembling these from vendored vector data is that
+  they work on a blocked network. It also checks the labels are real, placed,
+  draggable label objects and that the map comes back calibrated.
+- **Not done:** the samples are not offered again once a workspace has
+  projects in it (the card is always shown, but there is no "you look new
+  here" logic), and there is no sample using the regions or lines layers.
 
 ### Round 13 (2026-08-11, session `mn6d5m`) — shipped
 
@@ -338,6 +374,9 @@ the projected half of the quiz-mode major feature.
 
 ## What it does today
 
+- **Three starter projects** on the landing card — Europe countries, US
+  states, world physical features — each a complete map assembled offline from
+  a built-in base map plus a built-in label set, opening as its own new project
 - **Built-in base maps** — World, six continents and two USA crops, drawn
   offline from vendored Natural Earth data in outline-only or land-fill
   style, with borders on or off. They **calibrate themselves**, so the
