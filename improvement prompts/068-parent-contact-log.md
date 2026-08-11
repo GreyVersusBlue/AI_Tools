@@ -58,12 +58,15 @@ storage shape (see Open Questions).
 
 - Roster: type/paste names, or pull a saved Name Picker roster in
 - Log a contact: student, date (defaults today), method (phone/email/note
-  home/in person/text/other), initials, free-text outcome
+  home/in person/text/other), **reason** (attendance / grades / behavior /
+  positive news / academic support / scheduling / other), initials, free-text
+  outcome
 - Per-student contact count next to each roster name (a `0` count stands out
   in red — an at-a-glance "who haven't I reached" signal), sortable by name
   or by fewest contacts first
-- History table: filter by student name, method, and/or a date range; edit
-  or delete any entry
+- History table: filter by student name, method, **reason**, and/or a date
+  range — method and reason compose, so "every attendance phone call" is one
+  pair of dropdowns; edit or delete any entry
 - Print the full filtered list, or one student's whole history, as a plain
   table; export the filtered list as CSV
 - Log the form with Enter from the outcome field, with a confirmation toast
@@ -81,10 +84,11 @@ storage shape (see Open Questions).
 - **Done — Confirmation toast instead of nothing** after logging a contact.
 - **Done — Keyboard-friendly logging**: Enter in the outcome field submits,
   Shift+Enter inserts a newline.
-- **Contact "tags"** (attendance / grades / behavior / positive note home)
-  as a lightweight second axis alongside method, since "why" matters as much
-  as "how" when a teacher is scanning history before a call. *(Still open —
-  next round's best Quick Win pick.)*
+- **Done — 2026-08-11.** **Contact "tags"** (attendance / grades / behavior /
+  positive note home) as a lightweight second axis alongside method, since
+  "why" matters as much as "how" when a teacher is scanning history before a
+  call. *(Shipped as a Reason select on the form and a matching filter that
+  composes with the method filter — see the reason-tags round below.)*
 
 ## Major Features
 
@@ -138,3 +142,40 @@ change?").
   or as one roster with a "class period" tag per student? The former matches
   existing conventions; the latter is less duplication if the same student
   roster is shared across contact-log purposes.
+
+## Reason-tags round — 2026-08-11 (backlog rank 1)
+
+Shipped the **contact reason** axis — the Quick Win this file already named as
+the next best pick.
+
+- Seven reasons on the log form: Attendance, Grades / missing work, Behavior,
+  Positive news, Academic support, Scheduling / logistics, Other. A fixed list
+  rather than free text, because the whole value is being able to filter and
+  scan by it; a free-text field would have produced "behaviour", "behavior" and
+  "beh." within a term.
+- The history filter gained a matching dropdown that **composes with the method
+  filter**, which is the point of a second axis: "every attendance phone call"
+  is now one pair of dropdowns.
+- The reason travels into the table (as a badge that reads without colour — the
+  school printer is black and white), the CSV export, the printed full log, and
+  the per-student printed history.
+
+The care went into the old data. Entries logged before this round have no
+`reason` field at all, and that reads as **not recorded** everywhere — an em
+dash in the table, a blank CSV cell, its own selectable filter bucket — rather
+than being guessed at or backfilled, since nothing in an old entry says what it
+was about. Opening one for edit shows the first reason but does **not** write
+it; only saving does. The suite asserts the legacy entry is byte-for-byte
+untouched on disk until an actual save.
+
+New suite `Tools/parent-contact-log/test/smoke-reasons.mjs` (25 checks) as
+`npm run test:parent-log`.
+
+### Where the next round should pick up
+
+- The reason axis makes a **"contact balance" readout** cheap and genuinely
+  useful: a per-student or class count of positive-news contacts against the
+  rest, which is the thing a teacher would actually act on. That was
+  deliberately not built here — the row asked for the axis, not the analysis.
+- The **conference print packet** idea further down this file is still open,
+  and would now naturally group a student's history by reason.

@@ -95,6 +95,12 @@
     display: inline-block; font-size: .72rem; font-weight: 600; padding: .1rem .5rem;
     border-radius: 999px; background: #e9eef3; color: var(--accent-2); white-space: nowrap;
   }
+  .reason-badge {
+    display: inline-block; font-size: .72rem; font-weight: 600; padding: .1rem .5rem;
+    border-radius: 4px; background: #f2efe6; color: var(--ink); border: 1px solid var(--line-strong);
+    white-space: nowrap;
+  }
+  .reason-badge.none { background: transparent; border-color: transparent; color: var(--muted); font-weight: 400; }
   .row-actions { display: flex; gap: .3rem; white-space: nowrap; }
   .empty-state { color: var(--muted); font-size: .9rem; padding: 1.5rem 0; text-align: center; }
 
@@ -172,6 +178,10 @@
             </select>
           </div>
           <div>
+            <label for="entryReason">Reason</label>
+            <select id="entryReason"></select>
+          </div>
+          <div>
             <label for="entryInitials">Your initials (optional)</label>
             <input type="text" id="entryInitials" maxlength="6">
           </div>
@@ -196,6 +206,7 @@
             <option>Text message</option>
             <option>Other</option>
           </select>
+          <select id="filterReason"></select>
           <label for="filterFrom" class="sr-only" style="display:none;">From date</label>
           <input type="date" id="filterFrom" title="From date">
           <span class="date-sep">&ndash;</span>
@@ -208,7 +219,7 @@
         </div>
         <table>
           <thead>
-            <tr><th>Date</th><th>Student</th><th>Method</th><th>Outcome</th><th>By</th><th></th></tr>
+            <tr><th>Date</th><th>Student</th><th>Method</th><th>Reason</th><th>Outcome</th><th>By</th><th></th></tr>
           </thead>
           <tbody id="entryRows"></tbody>
         </table>
@@ -235,13 +246,48 @@
 
   var els = {};
   ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg','rosterSort',
-   'entryStudent','entryDate','entryMethod','entryInitials','entryOutcome','logEntryBtn','editingHint',
-   'filterStudent','filterMethod','filterFrom','filterTo','clearDateRangeBtn','exportCsvBtn','printAllBtn','entryRows','entriesEmptyMsg',
+   'entryStudent','entryDate','entryMethod','entryReason','entryInitials','entryOutcome','logEntryBtn','editingHint',
+   'filterStudent','filterMethod','filterReason','filterFrom','filterTo','clearDateRangeBtn','exportCsvBtn','printAllBtn','entryRows','entriesEmptyMsg',
    'printArea','printTitle','printSub','printTable','toast'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var roster = [];
   var entries = [];
   var editingId = null;
+
+  /* ---------- contact reasons -------------------------------------------
+     Method answers "how did you reach them". Reason answers "what was it
+     about", which is the axis a teacher actually needs when an administrator
+     asks "what have you tried with this student" or when you want to check
+     that home contact is not exclusively bad news.
+
+     Entries logged before this round have no `reason` at all. That reads as
+     "not recorded" everywhere — an empty string, an em dash in the table, a
+     blank CSV cell — rather than being guessed at or backfilled, because
+     nothing in an old entry says what it was about. */
+  var REASONS = [
+    'Attendance',
+    'Grades / missing work',
+    'Behavior',
+    'Positive news',
+    'Academic support',
+    'Scheduling / logistics',
+    'Other'
+  ];
+  var NO_REASON = '(not recorded)';
+
+  function reasonOf(e) { return (e && typeof e.reason === 'string') ? e.reason : ''; }
+
+  function fillReasonSelects() {
+    els.entryReason.innerHTML = REASONS.map(function (r) {
+      return '<option value="' + escapeHtml(r) + '">' + escapeHtml(r) + '</option>';
+    }).join('');
+    // The filter offers the untagged bucket only once something untagged
+    // exists — a fresh log should not advertise a category it cannot contain.
+    var anyBlank = entries.some(function (e) { return !reasonOf(e); });
+    els.filterReason.innerHTML = '<option value="">All reasons</option>' +
+      REASONS.map(function (r) { return '<option value="' + escapeHtml(r) + '">' + escapeHtml(r) + '</option>'; }).join('') +
+      (anyBlank ? '<option value="' + escapeHtml(NO_REASON) + '">' + escapeHtml(NO_REASON) + '</option>' : '');
+  }
 
   function todayISO() {
     var d = new Date();
@@ -321,11 +367,16 @@
   function filteredEntries() {
     var studentFilter = els.filterStudent.value.trim().toLowerCase();
     var methodFilter = els.filterMethod.value;
+    var reasonFilter = els.filterReason.value;
     var fromDate = els.filterFrom.value;
     var toDate = els.filterTo.value;
     return entries.filter(function (e) {
       if (studentFilter && e.student.toLowerCase().indexOf(studentFilter) === -1) return false;
       if (methodFilter && e.method !== methodFilter) return false;
+      if (reasonFilter) {
+        var r = reasonOf(e);
+        if (reasonFilter === NO_REASON ? !!r : r !== reasonFilter) return false;
+      }
       if (fromDate && e.date < fromDate) return false;
       if (toDate && e.date > toDate) return false;
       return true;
@@ -342,6 +393,8 @@
         '<td>' + fmtDate(e.date) + '</td>' +
         '<td>' + escapeHtml(e.student) + '</td>' +
         '<td><span class="method-badge">' + escapeHtml(e.method) + '</span></td>' +
+        '<td><span class="reason-badge' + (reasonOf(e) ? '' : ' none') + '">' +
+          escapeHtml(reasonOf(e) || '—') + '</span></td>' +
         '<td>' + escapeHtml(e.outcome) + '</td>' +
         '<td>' + escapeHtml(e.initials || '') + '</td>' +
         '<td><div class="row-actions">' +
@@ -353,6 +406,7 @@
   }
 
   function renderAll() {
+    fillReasonSelects();
     renderRosterList();
     renderStudentSelect();
     renderEntries();
@@ -372,9 +426,9 @@
     return v;
   }
   function downloadCsv(filename, rows) {
-    var header = ['Date', 'Student', 'Method', 'Outcome', 'By'];
+    var header = ['Date', 'Student', 'Method', 'Reason', 'Outcome', 'By'];
     var lines = [header.map(csvCell).join(',')].concat(rows.map(function (e) {
-      return [e.date, e.student, e.method, e.outcome, e.initials || ''].map(csvCell).join(',');
+      return [e.date, e.student, e.method, reasonOf(e), e.outcome, e.initials || ''].map(csvCell).join(',');
     }));
     var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
@@ -414,6 +468,7 @@
   function resetForm() {
     els.entryDate.value = todayISO();
     els.entryMethod.value = 'Phone call';
+    els.entryReason.value = REASONS[0];
     els.entryInitials.value = '';
     els.entryOutcome.value = '';
     editingId = null;
@@ -430,12 +485,14 @@
       var e = entries.find(function (x) { return x.id === editingId; });
       if (e) {
         e.student = student; e.date = els.entryDate.value || todayISO();
-        e.method = els.entryMethod.value; e.initials = els.entryInitials.value.trim(); e.outcome = outcome;
+        e.method = els.entryMethod.value; e.reason = els.entryReason.value;
+        e.initials = els.entryInitials.value.trim(); e.outcome = outcome;
       }
     } else {
       entries.push({
         id: uid(), student: student, date: els.entryDate.value || todayISO(),
-        method: els.entryMethod.value, initials: els.entryInitials.value.trim(), outcome: outcome
+        method: els.entryMethod.value, reason: els.entryReason.value,
+        initials: els.entryInitials.value.trim(), outcome: outcome
       });
     }
     var wasEditing = !!editingId;
@@ -462,6 +519,9 @@
       els.entryStudent.value = e.student;
       els.entryDate.value = e.date;
       els.entryMethod.value = e.method;
+      // An entry logged before reasons existed opens on the first reason
+      // rather than silently claiming one, and only takes it if saved.
+      els.entryReason.value = reasonOf(e) || REASONS[0];
       els.entryInitials.value = e.initials || '';
       els.entryOutcome.value = e.outcome;
       els.editingHint.style.display = 'block';
@@ -478,6 +538,7 @@
 
   els.filterStudent.addEventListener('input', renderEntries);
   els.filterMethod.addEventListener('change', renderEntries);
+  els.filterReason.addEventListener('change', renderEntries);
   els.filterFrom.addEventListener('change', renderEntries);
   els.filterTo.addEventListener('change', renderEntries);
   els.clearDateRangeBtn.addEventListener('click', function () {
@@ -492,10 +553,11 @@
   function doPrint(title, sub, rows) {
     els.printTitle.textContent = title;
     els.printSub.textContent = sub;
-    var head = '<thead><tr><th>Date</th><th>Student</th><th>Method</th><th>Outcome</th><th>By</th></tr></thead>';
+    var head = '<thead><tr><th>Date</th><th>Student</th><th>Method</th><th>Reason</th><th>Outcome</th><th>By</th></tr></thead>';
     var body = '<tbody>' + rows.map(function (e) {
       return '<tr><td>' + fmtDate(e.date) + '</td><td>' + escapeHtml(e.student) + '</td><td>' +
-        escapeHtml(e.method) + '</td><td>' + escapeHtml(e.outcome) + '</td><td>' + escapeHtml(e.initials || '') + '</td></tr>';
+        escapeHtml(e.method) + '</td><td>' + escapeHtml(reasonOf(e) || '—') + '</td><td>' +
+        escapeHtml(e.outcome) + '</td><td>' + escapeHtml(e.initials || '') + '</td></tr>';
     }).join('') + '</tbody>';
     els.printTable.innerHTML = head + body;
     window.print();
@@ -518,6 +580,7 @@
   loadRoster();
   loadEntries();
   els.rosterInput.value = roster.join('\n');
+  fillReasonSelects(); // before resetForm, which needs the options to exist to pick one
   resetForm();
   renderAll();
 })();
