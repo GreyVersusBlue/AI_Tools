@@ -345,6 +345,28 @@ seen were the six pre-existing missing-font 404s already documented above
 snippet (`016`–`081` except any migrated in a later round), plus the 2
 companion pages noted above pending a decision on their relative path.
 
+**Round 2b (2026-08-11):** re-hashed the inline snippet (CRLF-normalized) in
+the next 15 numbered tools, `016`–`030` — all 15 identical to the Round 2a
+block, none set aside. Migrated all 15 to
+`<script src="../_shared/sw-register.js" defer></script>`; no new files
+needed in `PRECACHE_URLS` (`_shared/sw-register.js` was already added in
+Round 2a). `CACHE_VERSION` bumped v47 → v48 since the content of 15
+already-precached pages changed (verification checklist item 4 applies
+regardless of whether the file list itself changed).
+
+Verified in a real browser (local static server) for all 15 migrated tools:
+`_shared/sw-register.js` requested and returned 200 on every page, and no
+console errors beyond the same 6-error baseline already present on
+`001-hall-pass-log.html` (a Round 2a tool, previously verified clean) — traced
+to page-independent 404s unrelated to this change (confirmed by fetching every
+`PRECACHE_URLS` entry directly from the browser: zero misses), consistent with
+Round 2a's own note about pre-existing, unrelated console errors.
+
+**Remaining after this round: 51 numbered tools** still carry the inline
+snippet (`031`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
+`escape-room-builder/monitor.html`) still pending a decision on their relative
+path.
+
 ### Phase 3 — Theme adoption (~84 files, needs a variance audit first)
 - [ ] Sub-audit: diff each tool's `:root` block against `_shared/theme.css`. Bucket into
   (a) identical → straight swap, (b) extra tool-specific vars → link shared + keep a
