@@ -135,6 +135,20 @@
   .tally-bar-fill { height: 100%; background: var(--accent-2); border-radius: 7px 0 0 7px; transition: width .2s ease; }
   .tally-row-count { width: 2.8rem; flex-shrink: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
+  /* ── Tally by category ───────────────────────────────────────────── */
+  .cat-tally-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .8rem; margin-bottom: .8rem; }
+  .cat-tally-card { background: var(--card); border: 1px solid var(--line-strong); border-radius: 12px; padding: .7rem .8rem; display: flex; flex-direction: column; gap: .5rem; }
+  .cat-tally-head { display: flex; align-items: center; gap: .3rem; }
+  .cat-tally-label-input { flex: 1; font-weight: 700; font-size: .82rem; border: none; border-bottom: 1px solid transparent; padding: .1rem .2rem; background: transparent; border-radius: 0; }
+  .cat-tally-label-input:hover, .cat-tally-label-input:focus { border-bottom-color: var(--line-strong); outline: none; }
+  .cat-tally-incr {
+    font-family: inherit; width: 100%; display: flex; flex-direction: column; align-items: center; gap: .2rem;
+    background: #fff; color: var(--ink); border: 2px solid var(--line-strong); border-radius: 10px; padding: 1rem .4rem; cursor: pointer;
+  }
+  .cat-tally-incr:hover { background: #eaf1f6; border-color: var(--accent-2); }
+  .cat-tally-num { font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; color: var(--accent); line-height: 1; }
+  .cat-tally-hint { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
   /* ── Paper Triage tab ─────────────────────────────────────────────── */
   .triage-summary { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: .9rem; font-weight: 700; }
   .triage-summary .count-good { color: var(--good); }
@@ -251,6 +265,8 @@
     .print-only .triage-results h3:first-child { margin-top: 0; }
     .print-only .triage-name-list { font-size: 1.05rem; }
     .print-only .triage-group { font-size: 1.05rem; margin-bottom: .5rem; }
+    .print-only .slip-page.batch-page { page-break-after: always; break-after: page; }
+    .print-only .slip-page.batch-page:last-child { page-break-after: auto; break-after: auto; }
     @page { size: letter portrait; margin: 0.4in; }
   }
 </style>
@@ -408,6 +424,21 @@
       <p class="hint" id="tallyTotal" style="margin:0;">0 responses</p>
       <button type="button" class="secondary" id="tallyResetBtn">Reset Tally</button>
     </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Tally by Category</span>
+        <button type="button" class="secondary" id="addCatTallyBtn">Add Category</button>
+      </div>
+      <p class="hint">A second way to tally, for reading a stack of papers and sorting as you go &mdash; e.g. &ldquo;12 got it, 9 partial, 7 confused.&rdquo; Rename a category by editing its label, tap a tile once per paper, and use Save &amp; Reset when you start a new class or a new day &mdash; each save logs a dated snapshot below so you can compare classes over time.</p>
+      <div class="cat-tally-grid" id="catTallyGrid"></div>
+      <div class="controls" style="justify-content: space-between;">
+        <p class="hint" id="catTallyTotal" style="margin:0;">0 taps</p>
+        <button type="button" class="secondary" id="saveCatTallyBtn">Save &amp; Reset</button>
+      </div>
+      <h3 style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1rem 0 .5rem;">Saved History</h3>
+      <div id="catTallyHistory"></div>
+    </div>
   </section>
 
   <section class="tab-panel" id="panel-handout">
@@ -415,6 +446,18 @@
       <div class="card-title"><span>Current prompt</span></div>
       <p class="handout-prompt-display" id="handoutPromptDisplay">Press Shuffle to get a prompt.</p>
       <p class="hint">Change the prompt from the <button type="button" class="link-btn" id="gotoBankBtn">Prompt &amp; Display tab</button> &mdash; the handout below always uses whatever prompt is showing there.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Class Set</span></div>
+      <label class="check-inline" for="batchModeCheck"><input type="checkbox" id="batchModeCheck"> Print a slip for every student in a class</label>
+      <div id="batchRosterRow" hidden style="margin-top:.8rem;">
+        <label for="batchRosterSelect">Load a saved roster</label>
+        <select id="batchRosterSelect" style="width:100%;margin-bottom:.6rem;"><option value="">Paste names below&hellip;</option></select>
+        <label for="batchNamesInput">Or paste names, one per line</label>
+        <textarea id="batchNamesInput" rows="4" placeholder="Amir&#10;Brianna&#10;Devon&#10;..."></textarea>
+        <p class="hint">Each student's slip gets their name and a date line pre-printed, regardless of the &ldquo;Include on each slip&rdquo; checkboxes below. Use &ldquo;Prompts on this page&rdquo; below to give the whole class the same prompt or a different prompt per student. Rosters saved elsewhere on this device under &ldquo;np_rosters&rdquo; show up in the dropdown above.</p>
+      </div>
     </div>
 
     <div class="card">
@@ -480,12 +523,14 @@
   var STORAGE_KEY = 'gvb-exit-ticket:settings';
   var CUSTOM_BANK_KEY = 'gvb-exit-ticket:customPrompts';
   var TALLY_KEY = 'gvb-exit-ticket:tally';
+  var CAT_TALLY_KEY = 'gvb-exit-ticket:categoryTally';
   var TRIAGE_KEY = 'gvb-exit-ticket:triage';
   var DISCUSSION_KEY = 'gvb-exit-ticket:discussion';
   var NP_ROSTERS_KEY = 'np_rosters';
   var HISTORY_LIMIT = 10;
   var AVOID_REPEAT_WINDOW = 8;
   var MINE_KEY = 'mine';
+  var CAT_TALLY_HISTORY_LIMIT = 30;
 
   var els = {};
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
@@ -495,11 +540,13 @@
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
    'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
    'tallyGrid', 'tallyResults', 'tallyTotal', 'tallyResetBtn',
+   'addCatTallyBtn', 'catTallyGrid', 'catTallyTotal', 'saveCatTallyBtn', 'catTallyHistory',
    'triageRosterSelect', 'triageGroupSizeInput', 'triageNamesInput', 'buildTriageBtn',
    'triageGridCard', 'triageSummary', 'triageGrid', 'resetTriageBtn',
    'triageResultsCard', 'triageResults', 'printTriageBtn', 'triagePrintArea',
    'discussionInput', 'addDiscussionBtn', 'discussionManageList', 'clearDiscussionBtn',
-   'discussionStage', 'discussionBoard', 'discussionEmpty', 'discussionFullscreenBtn'
+   'discussionStage', 'discussionBoard', 'discussionEmpty', 'discussionFullscreenBtn',
+   'batchModeCheck', 'batchRosterRow', 'batchRosterSelect', 'batchNamesInput'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var THINK_TIME_OPTIONS = [0, 30, 60, 120];
@@ -623,14 +670,16 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '' };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
   var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
   var thinkTimerInterval = null;
   var thinkTimeRemaining = 0;
   var differentSlipPrompts = []; // texts, one per slip, when settings.slipMode === 'different'
+  var batchSlipPrompts = []; // texts, one per roster name, when batchMode + settings.slipMode === 'different'
   var tally = [0, 0, 0, 0]; // taps for options 1-4
+  var catTally = { categories: [], history: [] }; // categories: [{id, label, count}], history: [{ts, total, entries:[{id,label,count}]}]
   var triage = { groupSize: 4, students: [] }; // students: [{ id, name, status }], status: '' | 'got' | 'almost' | 'reteach'
   var triageCurrentId = null;
   var discussionResponses = []; // [{ id, text }], anonymous responses transcribed for the projected discussion board
@@ -663,6 +712,7 @@
     if (saved.slipMode === 'same' || saved.slipMode === 'different') settings.slipMode = saved.slipMode;
     if (typeof saved.qrEnabled === 'boolean') settings.qrEnabled = saved.qrEnabled;
     if (typeof saved.qrUrl === 'string') settings.qrUrl = saved.qrUrl;
+    if (typeof saved.batchMode === 'boolean') settings.batchMode = saved.batchMode;
   }
 
   function loadCustomBank() {
@@ -690,6 +740,45 @@
   }
   function saveTally() {
     try { localStorage.setItem(TALLY_KEY, JSON.stringify(tally)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function defaultCatTally() {
+    return {
+      categories: [
+        { id: 'got', label: 'Got it', count: 0 },
+        { id: 'partial', label: 'Partial', count: 0 },
+        { id: 'confused', label: 'Confused', count: 0 }
+      ],
+      history: []
+    };
+  }
+  function loadCatTally() {
+    var fallback = defaultCatTally();
+    try {
+      var raw = localStorage.getItem(CAT_TALLY_KEY);
+      if (!raw) return fallback;
+      var v = JSON.parse(raw);
+      if (!v || typeof v !== 'object') return fallback;
+      var categories = Array.isArray(v.categories) ? v.categories.filter(function (c) {
+        return c && typeof c.label === 'string' && c.id != null;
+      }).map(function (c) {
+        return { id: c.id, label: c.label, count: (typeof c.count === 'number' && c.count >= 0) ? c.count : 0 };
+      }) : fallback.categories;
+      var hist = Array.isArray(v.history) ? v.history.filter(function (h) {
+        return h && typeof h.ts === 'number' && Array.isArray(h.entries);
+      }).map(function (h) {
+        var entries = h.entries.filter(function (e) { return e && typeof e.label === 'string'; }).map(function (e) {
+          return { id: e.id, label: e.label, count: (typeof e.count === 'number' && e.count >= 0) ? e.count : 0 };
+        });
+        var total = (typeof h.total === 'number' && h.total >= 0) ? h.total : entries.reduce(function (a, e) { return a + e.count; }, 0);
+        return { ts: h.ts, total: total, entries: entries };
+      }) : [];
+      return { categories: categories, history: hist };
+    } catch (e) { return fallback; }
+  }
+  function saveCatTally() {
+    try { localStorage.setItem(CAT_TALLY_KEY, JSON.stringify(catTally)); }
     catch (e) { /* private browsing / storage full — silently skip */ }
   }
 
@@ -749,6 +838,11 @@
   function repeatHtml(html, n) {
     var out = '';
     for (var i = 0; i < n; i++) out += html;
+    return out;
+  }
+  function chunkArray(arr, size) {
+    var out = [];
+    for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
     return out;
   }
 
@@ -1279,8 +1373,115 @@
   });
   els.tallyResetBtn.addEventListener('click', resetTally);
 
+  // ── Tally by category ────────────────────────────────────────────────────
+  function catTallyTotal() {
+    return catTally.categories.reduce(function (a, c) { return a + c.count; }, 0);
+  }
+  function renderCatTallyGrid() {
+    if (!catTally.categories.length) {
+      els.catTallyGrid.innerHTML = '<p class="bank-empty">No categories yet &mdash; add one above.</p>';
+    } else {
+      els.catTallyGrid.innerHTML = catTally.categories.map(function (c) {
+        return '<div class="cat-tally-card" data-id="' + escapeHtml(c.id) + '">' +
+          '<div class="cat-tally-head">' +
+            '<input type="text" class="cat-tally-label-input" data-id="' + escapeHtml(c.id) + '" value="' + escapeHtml(c.label) + '" aria-label="Category name">' +
+            '<button type="button" class="bank-remove-btn cat-tally-remove" data-id="' + escapeHtml(c.id) + '" title="Remove category" aria-label="Remove category">&times;</button>' +
+          '</div>' +
+          '<button type="button" class="cat-tally-incr" data-id="' + escapeHtml(c.id) + '">' +
+            '<span class="cat-tally-num">' + c.count + '</span>' +
+            '<span class="cat-tally-hint">tap to add one</span>' +
+          '</button>' +
+        '</div>';
+      }).join('');
+    }
+    var total = catTallyTotal();
+    els.catTallyTotal.textContent = total + (total === 1 ? ' tap' : ' taps');
+  }
+  function formatCatTallyEntry(entry) {
+    return entry.entries.map(function (e) { return e.count + ' ' + e.label; }).join(', ');
+  }
+  function renderCatTallyHistory() {
+    if (!catTally.history.length) {
+      els.catTallyHistory.innerHTML = '<p class="hint" style="margin:0;">No saved counts yet &mdash; tap Save &amp; Reset after a class to log today&rsquo;s tally.</p>';
+      return;
+    }
+    els.catTallyHistory.innerHTML = '<ul class="bank-list">' + catTally.history.map(function (h) {
+      var dateStr = new Date(h.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      return '<li><span class="bank-item-text"><b>' + escapeHtml(dateStr) + '</b> &mdash; ' +
+        escapeHtml(formatCatTallyEntry(h)) + ' (' + h.total + ' total)</span>' +
+        '<button type="button" class="bank-remove-btn cat-tally-history-remove" data-ts="' + h.ts + '" title="Remove this entry" aria-label="Remove this entry">&times;</button></li>';
+    }).join('') + '</ul>';
+  }
+  function renderCatTally() {
+    renderCatTallyGrid();
+    renderCatTallyHistory();
+  }
+  function addCatTallyCategory() {
+    catTally.categories.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2), label: 'New category', count: 0 });
+    saveCatTally();
+    renderCatTallyGrid();
+  }
+  function removeCatTallyCategory(id) {
+    catTally.categories = catTally.categories.filter(function (c) { return c.id !== id; });
+    saveCatTally();
+    renderCatTallyGrid();
+  }
+  function incrCatTally(id) {
+    var c = catTally.categories.filter(function (x) { return x.id === id; })[0];
+    if (!c) return;
+    c.count++;
+    saveCatTally();
+    renderCatTallyGrid();
+  }
+  function saveAndResetCatTally() {
+    var total = catTallyTotal();
+    if (total > 0) {
+      catTally.history.unshift({
+        ts: Date.now(),
+        total: total,
+        entries: catTally.categories.map(function (c) { return { id: c.id, label: c.label, count: c.count }; })
+      });
+      if (catTally.history.length > CAT_TALLY_HISTORY_LIMIT) catTally.history.length = CAT_TALLY_HISTORY_LIMIT;
+    }
+    catTally.categories.forEach(function (c) { c.count = 0; });
+    saveCatTally();
+    renderCatTally();
+  }
+  function removeCatTallyHistoryEntry(ts) {
+    catTally.history = catTally.history.filter(function (h) { return h.ts !== ts; });
+    saveCatTally();
+    renderCatTallyHistory();
+  }
+  els.addCatTallyBtn.addEventListener('click', addCatTallyCategory);
+  els.catTallyGrid.addEventListener('click', function (e) {
+    var incrBtn = e.target.closest ? e.target.closest('.cat-tally-incr') : null;
+    if (incrBtn) { incrCatTally(incrBtn.getAttribute('data-id')); return; }
+    var rmBtn = e.target.closest ? e.target.closest('.cat-tally-remove') : null;
+    if (rmBtn) { removeCatTallyCategory(rmBtn.getAttribute('data-id')); return; }
+  });
+  els.catTallyGrid.addEventListener('input', function (e) {
+    var inp = e.target.closest ? e.target.closest('.cat-tally-label-input') : null;
+    if (!inp) return;
+    var c = catTally.categories.filter(function (x) { return x.id === inp.getAttribute('data-id'); })[0];
+    if (!c) return;
+    c.label = inp.value;
+    saveCatTally();
+  });
+  els.saveCatTallyBtn.addEventListener('click', saveAndResetCatTally);
+  els.catTallyHistory.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.cat-tally-history-remove') : null;
+    if (!btn) return;
+    removeCatTallyHistoryEntry(parseInt(btn.getAttribute('data-ts'), 10));
+  });
+
   // ── Printable handout ─────────────────────────────────────────────────────
   function renderHandoutPromptDisplay() {
+    if (settings.batchMode) {
+      els.handoutPromptDisplay.textContent = settings.slipMode === 'different'
+        ? 'Each student gets a different prompt — see the preview below.'
+        : (currentPrompt.text || 'Press Shuffle to get a prompt.');
+      return;
+    }
     if (settings.slipMode === 'different') {
       els.handoutPromptDisplay.textContent = 'Each slip on this page gets a different prompt — see the preview below.';
       return;
@@ -1342,10 +1543,15 @@
     return qrCache.url;
   }
 
-  function slipHtml(text) {
+  function slipHtml(text, studentName) {
     var metaBits = [];
-    if (settings.showName) metaBits.push('Name: _____________________');
-    if (settings.showDate) metaBits.push('Date: __________');
+    if (studentName) {
+      metaBits.push('Name: <b>' + escapeHtml(studentName) + '</b>');
+      metaBits.push('Date: __________');
+    } else {
+      if (settings.showName) metaBits.push('Name: _____________________');
+      if (settings.showDate) metaBits.push('Date: __________');
+    }
     var metaLine = metaBits.length ? '<div class="slip-meta-line">' + metaBits.join('&nbsp;&nbsp;&nbsp;&nbsp;') + '</div>' : '';
     var qrDataUrl = settings.qrEnabled ? getQrDataUrl() : null;
     var qrHtml = qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code linking to the digital response form">' : '';
@@ -1382,8 +1588,50 @@
     );
   }
 
+  function populateBatchRosterSelect() {
+    var rosters = loadNpRosters();
+    var names = Object.keys(rosters);
+    els.batchRosterSelect.innerHTML = '<option value="">Paste names below&hellip;</option>' +
+      names.map(function (n) {
+        var list = rosters[n];
+        var count = Array.isArray(list) ? list.length : 0;
+        return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + count + ')</option>';
+      }).join('');
+  }
+
+  function buildBatchHandoutHtml() {
+    var names = parseRosterNames(els.batchNamesInput.value);
+    if (!names.length) {
+      return '<p class="hint">Load a saved roster or paste names above to generate a class set &mdash; one slip per student.</p>';
+    }
+    var texts;
+    if (settings.slipMode === 'different') {
+      if (batchSlipPrompts.length !== names.length) batchSlipPrompts = pickDistinctSlipPrompts(names.length);
+      texts = batchSlipPrompts.length
+        ? batchSlipPrompts
+        : names.map(function () { return 'No prompts available for this category yet — add one in My Prompts or pick a different category.'; });
+    } else {
+      var t = currentPrompt.text || 'Type or pick a prompt in the Prompt & Display tab.';
+      texts = names.map(function () { return t; });
+    }
+    var perPage = settings.perPage;
+    var cols = perPage === 4 ? 2 : 1;
+    var slips = names.map(function (name, i) { return slipHtml(texts[i], name); });
+    var pages = chunkArray(slips, perPage);
+    return pages.map(function (pageSlips) {
+      return '<div class="slip-page batch-page">' +
+        '<div class="slip-grid pp' + perPage + '" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(2,1fr);">' +
+          pageSlips.join('') +
+        '</div></div>';
+    }).join('');
+  }
+
+  function updatePrintBtnLabel() {
+    els.printBtn.textContent = settings.batchMode ? 'Print Class Set' : 'Print Handout';
+  }
+
   function renderHandout() {
-    var html = buildHandoutHtml();
+    var html = settings.batchMode ? buildBatchHandoutHtml() : buildHandoutHtml();
     els.handoutPreview.innerHTML = html;
     els.printArea.innerHTML = html;
   }
@@ -1391,7 +1639,7 @@
   els.perPageSelect.addEventListener('change', function () {
     settings.perPage = parseInt(els.perPageSelect.value, 10) === 4 ? 4 : 2;
     saveSettings();
-    if (settings.slipMode === 'different') refreshDifferentSlipPrompts();
+    if (settings.slipMode === 'different' && !settings.batchMode) refreshDifferentSlipPrompts();
     else renderHandout();
   });
   els.showNameCheck.addEventListener('change', function () {
@@ -1408,11 +1656,43 @@
     settings.slipMode = els.slipModeSelect.value === 'different' ? 'different' : 'same';
     saveSettings();
     els.differentSlipRow.hidden = settings.slipMode !== 'different';
+    batchSlipPrompts = [];
     renderHandoutPromptDisplay();
-    if (settings.slipMode === 'different') refreshDifferentSlipPrompts();
+    if (settings.slipMode === 'different' && !settings.batchMode) refreshDifferentSlipPrompts();
     else renderHandout();
   });
-  els.reshuffleSlipsBtn.addEventListener('click', refreshDifferentSlipPrompts);
+  els.reshuffleSlipsBtn.addEventListener('click', function () {
+    if (settings.batchMode) {
+      var names = parseRosterNames(els.batchNamesInput.value);
+      batchSlipPrompts = pickDistinctSlipPrompts(names.length);
+      renderHandout();
+    } else {
+      refreshDifferentSlipPrompts();
+    }
+  });
+
+  els.batchModeCheck.addEventListener('change', function () {
+    settings.batchMode = els.batchModeCheck.checked;
+    saveSettings();
+    els.batchRosterRow.hidden = !settings.batchMode;
+    batchSlipPrompts = [];
+    updatePrintBtnLabel();
+    renderHandoutPromptDisplay();
+    renderHandout();
+  });
+  els.batchRosterSelect.addEventListener('change', function () {
+    var name = els.batchRosterSelect.value;
+    if (!name) return;
+    var rosters = loadNpRosters();
+    var list = rosters[name];
+    if (!Array.isArray(list)) return;
+    els.batchNamesInput.value = list.join('\n');
+    batchSlipPrompts = [];
+    renderHandout();
+  });
+  els.batchNamesInput.addEventListener('input', function () {
+    renderHandout();
+  });
 
   els.qrEnabledCheck.addEventListener('change', function () {
     settings.qrEnabled = els.qrEnabledCheck.checked;
@@ -1457,6 +1737,8 @@
   renderBankList();
   tally = loadTally();
   renderTally();
+  catTally = loadCatTally();
+  renderCatTally();
   buildCategorySelect();
   applySavedSettings();
   els.categorySelect.value = settings.category;
@@ -1470,6 +1752,10 @@
   els.qrEnabledCheck.checked = settings.qrEnabled;
   els.qrUrlInput.value = settings.qrUrl;
   els.qrUrlRow.hidden = !settings.qrEnabled;
+  els.batchModeCheck.checked = settings.batchMode;
+  els.batchRosterRow.hidden = !settings.batchMode;
+  updatePrintBtnLabel();
+  populateBatchRosterSelect();
 
   triage = loadTriage();
   els.triageGroupSizeInput.value = String(triage.groupSize);
@@ -1485,7 +1771,8 @@
   renderDiscussion();
 
   pickPrompt();
-  if (settings.slipMode === 'different') refreshDifferentSlipPrompts();
+  if (settings.slipMode === 'different' && !settings.batchMode) refreshDifferentSlipPrompts();
+  else if (settings.batchMode) renderHandout();
 })();
 </script>
 <script>

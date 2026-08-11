@@ -35,9 +35,10 @@ below.
   *(The new Paper Triage tab reads `np_rosters` for its own picker; the
   handout tab itself is untouched.)*
 - **A response box sized for the prompt**, and lined vs blank as a choice.
-- **Skipped — deferred, Round 4.** **Print a whole class set** with names pre-printed from `np_rosters` (P2) —
+- **Done — Pass 2, Round 2.** **Print a whole class set** with names pre-printed from `np_rosters` (P2) —
   the same batch pattern Certificate Maker and Permission Slip already have.
-  *(Natural next pairing with the Round 4 roster helpers, not built yet.)*
+  *(Shipped as a "Class Set" toggle on the Printable Handout tab — see the
+  Pass 2 — Round 2 update below.)*
 - **Skipped — deferred, Round 4.** **Tag prompts by subject and by purpose** (recall, reflection, prediction,
   self-assessment) so the bank is browsable rather than only shuffleable.
 - **Skipped — deferred, Round 4.** **Pin / favourite prompts** and a "don't show me this one again" control.
@@ -59,8 +60,12 @@ below.
   three anonymous responses onto the projector for a whole-class
   conversation — the "show me the class's thinking" move — driven entirely
   from the teacher's machine. *(Shipped as the "Discussion Board" tab.)*
-- **Skipped — deferred, Round 4.** **Tally by response category**, not just a raw count, so the existing Quick
+- **Done — Pass 2, Round 2.** **Tally by response category**, not just a raw count, so the existing Quick
   Tally can capture "12 got it, 9 partial, 7 confused" and chart it over time.
+  *(Shipped as a "Tally by Category" card alongside the existing 1-4 Quick
+  Tally — see the Pass 2 — Round 2 update below. "Chart it over time" is
+  addressed with a dated history log per the improvement doc's own
+  "date-stamped log entry" suggestion, not a chart widget.)*
 - **Skipped — deferred, Round 4.** **Bell-ringer sequences.** A prompt per day for a week or a unit, planned in
   advance and advanced automatically by date, rather than shuffled each
   morning.
@@ -209,3 +214,91 @@ tally-by-category, and the P7 shared-library convergence noted above are
 the most obvious next steps. The triage tab's "small groups" pooling
 decision above is worth revisiting if a teacher explicitly wants
 reteach-only groups.
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Picked up the two items the Round 4 update named as the natural next steps,
+both in `Tools/023-exit-ticket-generator.html` only (no other files touched
+besides this one and this prompt doc):
+
+- **Batch class-set printing from `np_rosters` on the Printable Handout tab
+  (P2).** New "Class Set" card at the top of the Printable Handout tab, above
+  Layout: a "Print a slip for every student in a class" checkbox reveals the
+  same roster-picker pattern as the Paper Triage tab (`np_rosters` dropdown +
+  paste-names textarea), reusing the existing `loadNpRosters()` and
+  `parseRosterNames()` helpers directly rather than duplicating them. When
+  the toggle is on, the handout preview and print output switch to one slip
+  per roster name, each with that student's actual name (bold, pre-printed —
+  not the blank "Name: ___" line) and a "Date: ___" line, regardless of the
+  "Include on each slip" checkboxes (which only govern the non-batch mode
+  now). The existing "Same prompt on every slip" / "A different prompt on
+  each slip" select is reused unchanged: "same" gives the whole roster the
+  current stage prompt, "different" draws one distinct prompt per student
+  from `pickDistinctSlipPrompts()` (same helper the non-batch different-slip
+  mode already used), cached in a new `batchSlipPrompts` array so retyping a
+  name mid-roster doesn't reshuffle everyone, with "New set of prompts"
+  forcing a fresh shuffle either way. Slips still respect the existing
+  2-per-page / 4-per-page setting; rosters larger than one page emit multiple
+  `.slip-page.batch-page` blocks with a new `page-break-after` print rule so
+  each page prints separately. The Print button relabels to "Print Class
+  Set" while batch mode is on. Batch mode is a boolean on the existing
+  `settings` object (persisted via `STORAGE_KEY`, same convention as
+  `showName`/`slipMode`/etc.) — the roster text itself is intentionally not
+  persisted, matching how the non-batch handout's prompt selection isn't
+  persisted either.
+- **Tally by response category.** Added a "Tally by Category" card alongside
+  (not replacing) the existing 1-4 Quick Tally, in the same Quick Tally tab —
+  the two are different tools (a fixed self-report scale for students to tap
+  vs. a teacher-editable set of named buckets for sorting a paper stack) and
+  extending the 1-4 tally in place would have muddied both. Ships with three
+  default categories seeded from the improvement doc's own example — "Got
+  it", "Partial", "Confused" — each independently renamable (inline text
+  input) and removable, plus an "Add Category" button for more. Each
+  category is a large tap-to-increment tile; "Save & Reset" logs a
+  date-stamped snapshot (all category labels and counts, plus the total) to
+  a persisted history list below and zeroes the counters for the next class,
+  directly matching the doc's "a simple date-stamped log entry per
+  save/reset action is sufficient" scoping note — no charting was built.
+  History entries can be individually removed. Everything persists to a new
+  `gvb-exit-ticket:categoryTally` key (`{ categories, history }`), following
+  the file's one-key-per-feature convention rather than overloading
+  `TALLY_KEY` or the settings object.
+
+**Compatibility / storage notes:**
+
+- New keys: `gvb-exit-ticket:categoryTally`. No existing key's schema
+  changed; `settings.batchMode` is a new optional boolean on the existing
+  `STORAGE_KEY` object and defaults to `false` for anyone with a pre-existing
+  saved settings blob (old data has no `batchMode` field, which
+  `applySavedSettings()`'s `typeof === 'boolean'` guard treats the same as
+  "not set").
+- `slipHtml()` gained an optional second parameter (`studentName`); calls
+  from the pre-existing non-batch path are unchanged (single-argument), so
+  no existing behavior shifted.
+
+**Testing performed:**
+
+- `node --check` on both extracted inline `<script>` blocks (main app logic
+  and the service-worker registration snippet) — no syntax errors.
+- A headless Playwright smoke test against the pre-installed Chromium at
+  `/opt/pw-browsers/chromium` (`executablePath` set explicitly; `playwright
+  install` was not run), loaded via `file://`, covering: seeding `np_rosters`
+  and confirming the batch roster dropdown picks it up; selecting a roster
+  and confirming `#printArea` contains one `.slip` per name with every name
+  string present in the markup, first under "same prompt" (all slip prompts
+  identical) and again after switching to "different prompt on each" (names
+  still present, slip count unchanged); the three default category tiles
+  render, increment correctly, "Save & Reset" logs the expected history text
+  and zeroes counters, and a full page reload preserves both the zeroed
+  counters and the logged history, with the counters still incrementing
+  correctly post-reload. Zero console/page errors throughout. The test
+  script and extracted script files were deleted after the run — nothing
+  left behind in the repo.
+- Result: pass, no deviations from the two scoped tasks.
+
+**What's still open:** the P7 shared-library convergence
+(prompt-bank/display/handout trio with Number Talks and Writing Prompt
+Generator) and the fullscreen-stage duplication across four tools noted in
+the Round 4 update are both untouched — still the right candidates for a
+future round that's explicitly scoped to touch `_shared/`. Tag/pin/import
+prompt-bank features and bell-ringer sequences also remain unpicked-up.
