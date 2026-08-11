@@ -185,7 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Blank Map Generator | `albm3m` | 2026-08-11 02:07 UTC | `claude/tool-46-blank-map-generator-albm3m` |
 
 ---
 
