@@ -10,6 +10,7 @@
     "test:schedule": "node Tools/schedule/test/smoke.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs",
     "check:social": "node Tools/board-check/check-social.mjs",
+    "check:dedupe": "node Tools/board-check/check-dedupe.mjs",
     "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs"
   },
   "devDependencies": {
