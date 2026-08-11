@@ -61,8 +61,9 @@
   }
   .piece { position: absolute; cursor: grab; touch-action: none; }
   .piece:active { cursor: grabbing; }
-  .piece .del { position: absolute; top: -8px; right: -8px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--err); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; }
-  .piece:hover .del { display: block; }
+  .piece .del { position: absolute; top: -8px; right: -8px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--err); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
+  .piece .dup { position: absolute; top: -8px; right: 12px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--accent-2); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
+  .piece:hover .del, .piece:hover .dup { display: block; }
 
   .unit-block { width: 26px; height: 26px; background: #2e6b8f; border: 1px solid #1f3550; }
   .ten-block { display: flex; gap: 1px; }
@@ -208,11 +209,13 @@
     piece.style.left = pos.left + 'px';
     piece.style.top = pos.top + 'px';
     piece.setAttribute('data-piece-type', type);
-    piece.innerHTML = inner + '<span class="del">&times;</span>';
+    piece.innerHTML = inner + '<span class="dup" title="Duplicate">&#10064;</span><span class="del" title="Delete">&times;</span>';
     board.appendChild(piece);
     makeDraggable(piece, board);
     piece.querySelector('.del').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
     piece.querySelector('.del').addEventListener('click', function () { piece.remove(); });
+    piece.querySelector('.dup').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    piece.querySelector('.dup').addEventListener('click', function () { addByType(type); });
     return piece;
   }
 
@@ -245,14 +248,16 @@
     addPieceEl('<div class="' + spec[0] + '">' + spec[1] + '</div>', kind);
   }
 
+  function addByType(type) {
+    if (type === 'unit') addUnit();
+    else if (type === 'ten') addTen();
+    else if (type === 'hundred') addHundred();
+    else if (type.indexOf('fraction-') === 0) addFraction(parseInt(type.slice('fraction-'.length), 10));
+    else addAlgebra(type);
+  }
+
   document.querySelectorAll('[data-add]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var type = btn.getAttribute('data-add');
-      if (type === 'unit') addUnit();
-      else if (type === 'ten') addTen();
-      else if (type === 'hundred') addHundred();
-      else addAlgebra(type);
-    });
+    btn.addEventListener('click', function () { addByType(btn.getAttribute('data-add')); });
   });
   document.querySelectorAll('[data-add-fraction]').forEach(function (btn) {
     btn.addEventListener('click', function () { addFraction(parseInt(btn.getAttribute('data-add-fraction'), 10)); });
@@ -355,9 +360,20 @@
   });
 
   /* ---------- snapshot ---------- */
-  var COLORS = {
-    unit: '#2e6b8f', ten: '#2e6b8f', hundred: '#1f3550'
-  };
+  function isTransparent(color) {
+    return !color || color === 'transparent' || /rgba\([^)]*,\s*0\s*\)/.test(color);
+  }
+  function drawSeg(ctx, rect, segEl) {
+    var sRect = segEl.getBoundingClientRect();
+    var x = sRect.left - rect.left, y = sRect.top - rect.top;
+    var color = getComputedStyle(segEl).backgroundColor;
+    if (!isTransparent(color)) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, sRect.width, sRect.height);
+    }
+    ctx.strokeStyle = '#333';
+    ctx.strokeRect(x, y, sRect.width, sRect.height);
+  }
   function snapshotEl(containerEl, previewLabel) {
     var rect = containerEl.getBoundingClientRect();
     var canvas = document.createElement('canvas');
@@ -366,13 +382,30 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     Array.prototype.forEach.call(containerEl.children, function (child) {
-      var cRect = child.getBoundingClientRect();
-      var x = cRect.left - rect.left, y = cRect.top - rect.top;
-      if (child.classList.contains('piece') || child.classList.contains('nl-marker')) {
-        ctx.fillStyle = getComputedStyle(child.firstElementChild || child).backgroundColor || '#888';
-        ctx.fillRect(x, y, cRect.width, cRect.height);
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(x, y, cRect.width, cRect.height);
+      if (child.classList.contains('piece')) {
+        var wrapper = child.firstElementChild;
+        var segs = wrapper ? wrapper.querySelectorAll('.seg') : [];
+        if (segs.length) {
+          Array.prototype.forEach.call(segs, function (segEl) { drawSeg(ctx, rect, segEl); });
+        } else {
+          var cRect = child.getBoundingClientRect();
+          var x = cRect.left - rect.left, y = cRect.top - rect.top;
+          ctx.fillStyle = getComputedStyle(wrapper || child).backgroundColor || '#888';
+          ctx.fillRect(x, y, cRect.width, cRect.height);
+          ctx.strokeStyle = '#333';
+          ctx.strokeRect(x, y, cRect.width, cRect.height);
+        }
+      } else if (child.classList.contains('nl-marker')) {
+        var mRect = child.getBoundingClientRect();
+        var mx = mRect.left - rect.left, my = mRect.top - rect.top;
+        var mColor = getComputedStyle(child).color;
+        ctx.fillStyle = isTransparent(mColor) ? '#1f3550' : mColor;
+        ctx.beginPath();
+        ctx.moveTo(mx + mRect.width / 2, my);
+        ctx.lineTo(mx, my + mRect.height);
+        ctx.lineTo(mx + mRect.width, my + mRect.height);
+        ctx.closePath();
+        ctx.fill();
       }
     });
     ctx.strokeStyle = '#999';
