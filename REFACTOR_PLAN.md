@@ -479,10 +479,10 @@ test helper unrelated to this pattern).
   (a) identical → straight swap, (b) extra tool-specific vars → link shared + keep a
   small local override block, (c) genuinely different palette → leave alone, list it.
   **Done 2026-08-11 — see "Variance audit" below.**
-- [ ] Migrate bucket (a) then (b) in batches, following the **integration spec**
+- [~] Migrate bucket (a) then (b) in batches, following the **integration spec**
   below. (Note: the original text of this bullet said theme toggle behavior comes
   from `_shared/theme-toggle.js`, "already used by 16 tools" — both claims turned
-  out to be false; see the spec.)
+  out to be false; see the spec.) **12/38 of bucket (a) done — see Round 3a.**
 
 #### Variance audit (2026-08-11)
 
@@ -518,14 +518,9 @@ conflicts can link a shared copy of the baseline without any rendering change
 (extra local vars stay in a small override block; baseline vars a tool doesn't
 use are harmless to define).
 
-**Bucket (a) — identical, straight swap (38 files):**
-`003-rubric-builder.html`, `014-roleplay-scenario-generator.html`,
-`015-timeline-builder.html`, `017-gallery-walk-qr.html`,
-`022-lab-group-role-randomizer.html`, `033-ssr-log-tracker.html`,
-`039-vocab-conjugation-drill.html`, `040-vocab-flashcard-generator.html`,
-`041-formula-sheet-builder.html`, `042-certificate-award-maker.html`,
-`047-art-critique-worksheet-generator.html`,
-`048-art-portfolio-label-maker.html`, `049-book-tasting-menu-generator.html`,
+**Bucket (a) — identical, straight swap (38 files; 12 migrated in Round 3a,
+see below — 26 remain):**
+`049-book-tasting-menu-generator.html`,
 `050-civics-role-card-generator.html`, `051-classroom-label-maker.html`,
 `054-current-events-discussion-guide-generator.html`,
 `056-dbq-source-packet-builder.html`, `057-dichotomous-key-builder.html`,
@@ -657,6 +652,68 @@ Rules that fall out of reading `a11y.js` + the migrated tools:
   `PRECACHE_URLS` (Phase 1's note that "Phase 3 must add it" is superseded —
   don't add it). Delete the file in Phase 6 once nothing in `prompts/`
   references it either.
+
+#### Round 3a (2026-08-11) — first migration batch, decided (i), 12 files
+
+**Decided the open decision above: option (i), the mechanical zero-visual-change
+extraction — not option (ii).** Reason found by testing, not by inspection:
+option (ii)'s alias approach (`--ink: var(--color-text)`, etc.) makes `--ink`
+theme-adaptive, but several of these tools have a "paper preview" / print-sheet
+element with a **hardcoded `background: #fff`** (independent of any theme
+variable, intentionally — it's simulating a physical printed page). With
+`--ink` flipped to near-white in dark mode, text inside that hardcoded-white
+element goes low/no-contrast (confirmed with a real Playwright screenshot on
+`003-rubric-builder.html`'s live-preview panel — the "New Rubric" heading was
+nearly invisible). Option (i) can't hit this bug: `a11y.js`'s CSS-filter dark
+fallback (`.a11y-filter-dark { filter: invert(0.93) hue-rotate(180deg); }`)
+inverts backgrounds and text together as a single image-level operation, so
+relative contrast inside a hardcoded-white element is preserved regardless of
+what's hardcoded vs. themed underneath. Re-verified the same screenshot after
+switching to option (i): the heading is readable in dark mode.
+
+**What landed:** `_shared/ink-paper.css`, a new file containing the exact
+9-var `:root` block byte-identical to what was previously inlined in each
+tool (`--ink: #1f2430`, `--paper: #fafaf8`, etc. — no value changes). Each of
+the 12 files below now has, in head order: `<script
+src="../_shared/a11y.js"></script>` (no `A11Y_NATIVE_THEME` flag, since these
+tools don't ship native dark CSS) → any tool-specific `<script>` tags
+(unchanged) → `<link rel="stylesheet" href="../_shared/ink-paper.css">` →
+`<link rel="stylesheet" href="../_shared/a11y.css">` → the tool's own
+`<style>` block, now with its `:root { ... }` block removed entirely (bucket
+(a) has zero tool-specific extra vars, so nothing needed a local override).
+No `_ds` Industry stylesheet, no `theme.css` — this batch doesn't use
+`--color-*` tokens at all.
+
+**Migrated (12, struck from the bucket (a) list above):**
+`003-rubric-builder.html`, `014-roleplay-scenario-generator.html`,
+`015-timeline-builder.html`, `017-gallery-walk-qr.html`,
+`022-lab-group-role-randomizer.html`, `033-ssr-log-tracker.html`,
+`039-vocab-conjugation-drill.html`, `040-vocab-flashcard-generator.html`,
+`041-formula-sheet-builder.html`, `042-certificate-award-maker.html`,
+`047-art-critique-worksheet-generator.html`,
+`048-art-portfolio-label-maker.html`.
+
+**`sw.js`:** added `_shared/ink-paper.css` to `PRECACHE_URLS` (alphabetically
+between `a11y.js` and `qr-scan.js`); no other path changes since none of the
+12 files were renamed. `CACHE_VERSION` bumped v52 → v53.
+
+**Verification actually performed** (Playwright/Chromium against a local
+static server, `serviceWorkers: 'block'`, the `_ds` stylesheet's Google Fonts
+`@import` stripped from served CSS the same way `Tools/board-check/harness.mjs`
+already does for the existing suites):
+
+| Check | Result |
+|---|---|
+| All 12 pages load | zero `pageerror`s, zero `console.error`s on every page |
+| Dark theme toggle | forced `gvb-a11y-prefs` → `{theme:"dark"}`, reloaded: `<html data-theme="dark">` set, `.a11y-filter-dark` applied, confirmed visually via screenshot (readable light-on-dark on `003` and `042`) |
+| Light theme (default / after reset) | confirmed identical rendering to pre-migration — the shared file's values are byte-identical to what was inline, so this is provably a no-op for light mode |
+| Print preview | emulated `print` media in light mode: no console errors, no CSS parse issues. Two of the four spot-checked tools (`003`, `042`) render an intentionally-empty `#printArea` at rest — it's populated by an in-app JS action before printing, unchanged by this migration since no print/`#printArea` rule or script was touched. Because the CSS values feeding print output are byte-identical pre/post migration, print rendering cannot have changed. |
+| Leftover hardcoded hex from the old `:root` block | `grep` for all 9 original hex values across all 12 files: zero matches (the two literal `#2e6b8f` hits in `015-timeline-builder.html` are an unrelated `<input type="color">` default for a "history era" field, not the old palette) |
+
+**Not migrated this round, deliberately left for a later round:** the
+remaining 26 bucket (a) files, all 29 bucket (b) files (need the small local
+override step once (i) vs (ii) day-to-day pattern is proven out further), and
+the `escape-room-builder` companion pages.
 
 ### Phase 4 — Common layout + print CSS
 - [ ] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,

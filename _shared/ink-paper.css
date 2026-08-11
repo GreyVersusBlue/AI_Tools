@@ -1,0 +1,21 @@
+/* Shared "ink/paper" palette — the de facto standard 9-variable :root block
+   that Phase 3's variance audit (REFACTOR_PLAN.md) found duplicated
+   byte-identical across dozens of tools. Values are unchanged from the
+   original per-tool blocks: this is a straight dedup, not a restyle.
+   Dark mode for pages using this palette comes from _shared/a11y.js's
+   CSS-filter fallback (a11y.css `.a11y-filter-dark`), not from these
+   variables changing value — that keeps hardcoded-white "paper preview"
+   elements (print-sheet simulations common in these tools) readable, since
+   the filter inverts backgrounds and text together instead of remapping
+   only the text color. */
+:root {
+  --ink: #1f2430;
+  --paper: #fafaf8;
+  --card: #fff;
+  --line: #dcdad2;
+  --line-strong: #c3c0b6;
+  --accent: #1f3550;
+  --accent-2: #2e6b8f;
+  --muted: #6b6a63;
+  --err: #a3372b;
+}
