@@ -70,8 +70,12 @@
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
-    .slip { border: none; height: 47vh; overflow: hidden; page-break-inside: avoid; border-bottom: 1px dashed #999; }
-    .slip:nth-child(2n) { page-break-after: always; border-bottom: none; }
+    .slip { border: none; min-height: 47vh; overflow: visible; page-break-inside: avoid; border-bottom: 1px dashed #999; }
+    /* Default: two half-sheets per page. If the prompt list is long enough that a
+       slip might not fit half a page, #printArea gets .one-up and each slip gets
+       its own page instead of silently clipping content. */
+    #printArea:not(.one-up) .slip:nth-child(2n) { page-break-after: always; border-bottom: none; }
+    #printArea.one-up .slip { page-break-after: always; border-bottom: none; }
   }
 </style>
 </head>
@@ -89,8 +93,10 @@
   </div>
 
   <div class="card">
-    <label for="copyCount">How many copies to print</label>
-    <input type="number" id="copyCount" value="2" min="1" max="20" style="max-width:8rem;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;max-width:24rem;">
+      <div><label for="copyCount">How many copies to print</label><input type="number" id="copyCount" value="2" min="1" max="20"></div>
+      <div><label for="classPeriod">Class/Period (optional, pre-fills every copy)</label><input type="text" id="classPeriod" placeholder="e.g. 3rd Period"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -116,9 +122,9 @@
   ];
 
   var els = {};
-  ['copyCount', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { copyCount: 2, prompts: [] };
+  var state = { copyCount: 2, prompts: [], classPeriod: '' };
 
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -134,6 +140,7 @@
       if (saved && Array.isArray(saved.prompts) && saved.prompts.length) state = saved;
     } catch (e) { /* ignore */ }
     if (!state.prompts.length) state.prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
+    if (state.classPeriod == null) state.classPeriod = '';
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -166,20 +173,29 @@
     save(); renderPrompts();
   });
   els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
+  els.classPeriod.addEventListener('input', function () { state.classPeriod = els.classPeriod.value; save(); });
 
-  function slipHtml() {
-    var prompts = state.prompts.filter(function (p) { return p.text.trim(); }).map(function (p) {
+  function slipHtml(filledPrompts) {
+    var prompts = filledPrompts.map(function (p) {
       return '<p class="slip-prompt">' + escapeHtml(p.text) + '</p><span class="slip-line"></span><span class="slip-line"></span>';
     }).join('');
+    var classPeriodField = state.classPeriod.trim()
+      ? escapeHtml(state.classPeriod.trim())
+      : '__________________';
     return '<div class="slip"><h2>Sub Note</h2>' +
-      '<div class="meta-line">Date: __________ &nbsp; Class/Period: __________________ &nbsp; Sub name: __________________</div>' +
+      '<div class="meta-line">Date: __________ &nbsp; Class/Period: ' + classPeriodField + ' &nbsp; Sub name: __________________</div>' +
       prompts + '</div>';
   }
 
   els.printBtn.addEventListener('click', function () {
     var count = Math.max(1, Math.min(20, state.copyCount || 2));
+    var filledPrompts = state.prompts.filter(function (p) { return p.text.trim(); });
+    // Two half-sheets per page fits comfortably up to ~5 short prompts; beyond that,
+    // give each slip its own full page instead of letting content clip silently.
+    var oneUp = filledPrompts.length > 5;
     var html = '';
-    for (var i = 0; i < count; i++) html += slipHtml();
+    for (var i = 0; i < count; i++) html += slipHtml(filledPrompts);
+    els.printArea.className = oneUp ? 'one-up' : '';
     els.printArea.innerHTML = html;
     window.print();
   });
@@ -187,6 +203,7 @@
   /* ---------- boot ---------- */
   load();
   els.copyCount.value = state.copyCount;
+  els.classPeriod.value = state.classPeriod;
   renderPrompts();
 })();
 </script>

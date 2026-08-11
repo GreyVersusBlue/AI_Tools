@@ -658,6 +658,35 @@ Major Features/Moonshot items open — so none moved to `stable tools/`
 this round. See each file's own Status section for exactly where the
 next round should pick up.
 
+### Devon-assigned round — tools 073–077 — 2026-08-11 ~01:45 UTC — session `b4zswl`
+
+**Not part of the Pass 2 001–046 rotation above** — these five come from
+the 35-tool batch the Pass 2 reset note explicitly held back ("leave them
+out until told otherwise"). Devon directly assigned this range for this
+session rather than picking from the Pass 2 "Not yet touched" list, so
+this round is recorded separately and does **not** change the "X of 46
+(Pass 2)" tallies above. Whether/when the rest of the 35-tool batch joins
+the Pass 2 rotation is still Devon's call, per that note.
+
+One or two scoped Quick Wins per tool, each independently verified with
+`node --check` on every inline `<script>` block and a headless
+Chromium/Playwright smoke test (interact with the real DOM, assert on
+real state, zero console errors) before committing.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Science Fair Project Tracker | `073-science-fair-project-tracker.md` | Overdue-milestone highlighting (red cell + non-color ⚠ marker); a whole-class per-milestone summary bar; "sort: least complete first"; milestone up/down reorder. |
+| Science Safety Symbol & Equipment Label Maker | `074-science-safety-label-maker.md` | Edit-in-place and Duplicate buttons on queued labels (previously delete-and-re-add only); a small/medium/large label-size control affecting both print columns and card height. |
+| Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` | CSV and JSON export/import (hand-rolled quoted-CSV parser, no library); duplicate-detection on bulk paste and CSV import (same name + room), with an "Added N, skipped M" report. |
+| Sub Note / Feedback Slip Generator | `076-sub-note-feedback-slip-generator.md` | Fixed a real print bug — long prompt lists were silently clipped by a fixed-height `overflow:hidden` half-sheet; now falls back to one full page per slip past a 5-prompt threshold. Added an optional Class/Period field that pre-fills every printed copy. |
+| Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` | "N of M students have an accommodation checked" summary (fixed a bug where it didn't update on checkbox change); "print one student only" option; 2/3/4-column print-size control. |
+
+None of the five cleared their own Quick Wins list entirely (074 and 075
+each have 2–3 items left; 076 and 077 have 1 each; 073 cleared its Quick
+Wins but still has open Major Features/Moonshot) — so none moved to
+`stable tools/` this round. See each tool's own file for exactly what's
+still open and where the next round should pick up.
+
 ---
 
 ## Not yet touched

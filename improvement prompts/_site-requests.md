@@ -54,3 +54,31 @@ requests and filters the resulting generic connection-reset console message,
 rather than fixing the shared file. This means the smoke test doesn't
 actually catch a regression in the font loading itself — just doesn't fail
 on the pre-existing problem it isn't scoped to fix.
+
+---
+
+## Fixed-height, `overflow: hidden` half-sheet print CSS silently clips content
+
+Found/fixed 2026-08-11 in `076-sub-note-feedback-slip-generator.html` (session
+`b4zswl`). The print CSS for a "two half-sheets per page" layout used
+`.slip { height: 47vh; overflow: hidden; }` — if the content inside a slip
+(a long prompt list, in this case) grows taller than 47vh, it gets silently
+clipped with no visual sign anything is missing. This is worse than an
+overflow that just looks bad, because a teacher has no way to know content
+was cut off from the printed page.
+
+**The fix applied to 076**: switch to `min-height: 47vh; overflow: visible`
+and add a content-length threshold — under the threshold, keep the original
+"two per page" layout (`page-break-after: always` every 2nd `.slip`); over
+it, give each item its own full page instead
+(`page-break-after: always` every 1st `.slip`), so nothing clips regardless
+of how much content is in a single slip.
+
+This tool's own file (`076-sub-note-feedback-slip-generator.md`, prior
+Status entries) already flagged that **Peer Feedback / Editing Checklist
+Generator** (`070-peer-feedback-checklist-generator.html`) and **Art Critique
+Worksheet Generator** (`047-art-critique-worksheet-generator.html`) share the
+identical `.slip`/half-sheet fixed-height print pattern and the identical
+risk — neither has been fixed yet. Worth applying the same pattern (min-height
++ overflow: visible + a one-up fallback) the next time either tool gets a
+round, rather than re-discovering the bug independently.

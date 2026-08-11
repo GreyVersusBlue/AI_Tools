@@ -16,30 +16,52 @@ a one-page print view. Single directory, autosaved to localStorage
 (`sdb_directory_v1`). Verified with a headless Chromium smoke test (single
 add, bulk add, column sort) — no console errors.
 
-Nothing below has been started — this is deliberately the minimum useful
-version.
+This was deliberately the minimum useful version at first build.
+
+**2026-08-11 — Round (session `b4zswl`).** Shipped two of the five Quick
+Wins — the two the file itself flagged as most important ("risky for
+something meant to last all year" and "doubles every row silently"):
+(1) **CSV and JSON export/import.** Export writes either a CSV (name,
+room, ext, subject — quoted per RFC4180 where a field contains a comma,
+quote, or newline) or a full JSON dump (including ids) via a downloaded
+`Blob`; Import accepts either format back (sniffed by file extension, then
+by content — a leading `[`/`{` is treated as JSON), with a hand-rolled
+quoted-field CSV line parser (no library) and a header-row skip when the
+first line starts with `name,`. (2) **Duplicate-detection on bulk paste**
+(and reused for CSV import) — a pasted or imported row is skipped, not
+added twice, if a person with the same name and room (case-insensitive)
+already exists; the bulk-add and import handlers report "Added N, skipped
+M duplicates" so nothing silently vanishes without the teacher knowing.
+Single-row add via the form is intentionally left duplicate-check-free —
+a teacher retyping an existing name into the one-at-a-time form is a
+deliberate edit, not an accidental double-paste. Did not attempt photo
+column, department grouping, or "copy as plain text" this round — see
+Open Questions. Verified with a headless Chromium/Playwright smoke test:
+bulk-pasted 3 rows (one an intentional duplicate) and confirmed "Added 2,
+skipped 1 duplicate"; exported CSV and JSON and confirmed both files'
+contents; cleared the directory and re-imported the exported CSV,
+confirming both rows came back and the header row was skipped correctly —
+zero console errors. `node --check` passed on both inline scripts.
 
 ## What it does today
 
-- Add one person via a form, or paste many at once (spreadsheet columns)
+- Add one person via a form, or paste many at once (spreadsheet columns) —
+  bulk paste skips duplicates (same name + room) and reports how many were
+  added vs. skipped
 - Inline-editable table: click into any cell to fix a typo in place
 - Sort by clicking any column header (name/room/ext/subject), search across
   all fields
+- Export the directory as CSV or JSON; import either format back in
+  (with the same duplicate-skip behavior as bulk paste)
 - Print a clean table sized for one page
 
 ## Quick Wins
 
-- **CSV/JSON export and import**, matching the pattern most other builder
-  tools in this toolkit already have (Formula Sheet Builder, Rubric
-  Builder) — right now there's no way to get a directory out of the browser
-  at all, which is risky for something meant to last all year.
 - **Photo column** (optional headshot per person) for a "who is that" wall
   reference, not just a phone-book.
 - **Group/sub-header by department** in both the on-screen table and the
   print view (Math staff together, then Science, etc.) instead of one flat
   alphabetical list.
-- **Duplicate-detection on bulk paste** — pasting the same list twice right
-  now just doubles every row silently.
 - **"Copy as plain text" button** for pasting a quick phone list into an
   email without needing to print first.
 
@@ -86,3 +108,7 @@ retyping into three different formats every August.
 - Worth reusing the shared roster storage pattern at all for staff, or is
   keeping this fully separate from student-roster tools (Name Picker, Class
   Roster Hub) the right call given they serve different audiences?
+- Next round: department grouping is probably the highest-value remaining
+  Quick Win — it touches both the on-screen table and the print view, so
+  it's a bit bigger than "photo column" or "copy as plain text," but it's
+  the one the file's own Moonshot section leans on most.
