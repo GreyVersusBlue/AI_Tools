@@ -67,7 +67,7 @@
   .btnrow, .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
 
   .entries-list { display: flex; flex-direction: column; gap: .7rem; }
-  .entry-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; display: grid; grid-template-columns: 70px 1fr; gap: .7rem; }
+  .entry-row { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem; display: grid; grid-template-columns: auto 70px 1fr; gap: .7rem; }
   .entry-thumb-wrap { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
   .entry-thumb {
     width: 64px; height: 64px; border-radius: 6px; border: 1px dashed var(--line-strong);
@@ -78,6 +78,10 @@
   .entry-fields .field-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 700; margin-bottom: .15rem; }
   .entry-footer { display: flex; justify-content: space-between; align-items: center; margin-top: .2rem; }
   .entry-footer .num { font-family: Consolas, monospace; font-size: .74rem; color: var(--muted); }
+  .entry-move { display: flex; flex-direction: column; gap: .15rem; }
+  .entry-move button { padding: .05rem .35rem; font-size: .7rem; line-height: 1.3; }
+  .char-count { font-size: .68rem; color: var(--muted); margin: -.35rem 0 .5rem; text-align: right; }
+  .char-count.warn { color: var(--err); font-weight: 600; }
 
   .import-box { background: #f4f3ee; border: 1px solid var(--line); border-radius: 8px; padding: .9rem; margin-top: .6rem; display: none; }
   .import-box.open { display: block; }
@@ -253,12 +257,22 @@
     if (!state.entries.length) state.entries.push({ id: uid(), title: '', description: '', image: '' });
   }
 
+  var CHAR_WARN_AT = 220;
+
   function renderRows() {
+    var last = state.entries.length - 1;
     els.entriesList.innerHTML = state.entries.map(function (e, i) {
       var thumb = e.image
         ? '<div class="entry-thumb" style="background-image:url(\'' + e.image + '\');"></div>'
         : '<div class="entry-thumb">No photo</div>';
+      var len = (e.description || '').length;
+      var countHtml = '<div class="char-count' + (len > CHAR_WARN_AT ? ' warn' : '') + '">' + len + ' characters' +
+        (len > CHAR_WARN_AT ? ' &mdash; long statements make a denser, harder-to-scan QR code' : '') + '</div>';
       return '<div class="entry-row" data-id="' + e.id + '">' +
+        '<div class="entry-move">' +
+          '<button type="button" class="secondary small" data-move-up="' + e.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+          '<button type="button" class="secondary small" data-move-down="' + e.id + '"' + (i === last ? ' disabled' : '') + '>&darr;</button>' +
+        '</div>' +
         '<div class="entry-thumb-wrap">' + thumb +
           '<button type="button" class="link-btn" data-photo="' + e.id + '">' + (e.image ? 'Change' : 'Add photo') + '</button>' +
           (e.image ? '<button type="button" class="link-btn" data-remove-photo="' + e.id + '">Remove</button>' : '') +
@@ -268,6 +282,7 @@
           '<input type="text" data-title="' + e.id + '" value="' + escapeAttr(e.title) + '" placeholder="e.g. Self-Portrait &mdash; Ava R.">' +
           '<div class="field-label">Artist statement / description (goes in the QR code)</div>' +
           '<textarea data-desc="' + e.id + '" placeholder="What is this piece, and what should a viewer know about it?">' + escapeHtml(e.description) + '</textarea>' +
+          countHtml +
           '<div class="entry-footer"><span class="num">Entry ' + (i + 1) + '</span>' +
             '<button type="button" class="danger small" data-remove="' + e.id + '">Remove entry</button>' +
           '</div>' +
@@ -286,7 +301,28 @@
     } else if (descId) {
       var e2 = state.entries.find(function (x) { return x.id === descId; });
       if (e2) e2.description = ev.target.value;
+      var countEl = ev.target.parentElement.querySelector('.char-count');
+      if (countEl) {
+        var len = ev.target.value.length;
+        countEl.textContent = len + ' characters' + (len > CHAR_WARN_AT ? ' — long statements make a denser, harder-to-scan QR code' : '');
+        countEl.classList.toggle('warn', len > CHAR_WARN_AT);
+      }
       save(); scheduleRender();
+    }
+  });
+
+  els.entriesList.addEventListener('click', function (ev) {
+    var upId = ev.target.getAttribute('data-move-up');
+    var downId = ev.target.getAttribute('data-move-down');
+    if (upId || downId) {
+      var id = upId || downId;
+      var idx = state.entries.findIndex(function (x) { return x.id === id; });
+      var swapWith = upId ? idx - 1 : idx + 1;
+      if (idx === -1 || swapWith < 0 || swapWith >= state.entries.length) return;
+      var tmp = state.entries[idx];
+      state.entries[idx] = state.entries[swapWith];
+      state.entries[swapWith] = tmp;
+      save(); renderRows(); scheduleRender();
     }
   });
 
