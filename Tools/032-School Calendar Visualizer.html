@@ -80,6 +80,18 @@
   .stats-line { font-size: 0.85rem; color: var(--muted); margin: -8px 0 18px; }
   .stats-line b { color: var(--ink); }
 
+  .ab-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  .ab-row .field { display: flex; flex-direction: column; gap: 3px; }
+  .ab-row label { font-size: 0.76rem; font-weight: 600; color: var(--muted); }
+  .ab-row .enable { flex-direction: row; align-items: center; gap: 6px; font-weight: normal; }
+  .ab-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+  .ab-badge {
+    position: absolute; top: 2px; right: 3px; font-size: 0.58rem; font-weight: 700;
+    color: var(--accent-2); border: 1px solid var(--accent-2); border-radius: 3px;
+    padding: 0 3px; line-height: 1.3; background: #fff;
+  }
+  @media print { .ab-badge { color: #000 !important; border-color: #000 !important; } }
+
   /* --- month grid --- */
   .months { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
   .month { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
@@ -200,6 +212,23 @@
       Click a day in the calendar below to tag it with one or more types.
     </div>
     <button id="btnAddType" class="small" style="margin-top:10px;">+ Add Day Type</button>
+  </div>
+
+  <div class="card ab-card no-print">
+    <h2>A/B Day Cycle</h2>
+    <div class="ab-row">
+      <label class="enable"><input type="checkbox" id="abEnable"> Track A/B days on this calendar</label>
+      <div class="field"><label for="abAnchorDate">A known date</label><input type="date" id="abAnchorDate"></div>
+      <div class="field"><label for="abAnchorLetter">…is a</label>
+        <select id="abAnchorLetter"><option value="A">A day</option><option value="B">B day</option></select>
+      </div>
+      <div class="field"><button id="btnApplyAb" class="small">Apply</button></div>
+    </div>
+    <div class="ab-hint">
+      The cycle alternates on every school day (weekdays not tagged "No school" in a Day Type above) and skips
+      weekends and no-school days entirely, so it stays correct across breaks. Pick a date you know for certain —
+      today, or the first day of school. Once applied, every day on the calendar below shows its A/B letter.
+    </div>
   </div>
 
   <p class="stats-line no-print" id="statsLine"></p>
@@ -326,6 +355,7 @@ function renderMonths() {
   const list = monthsBetween(cal.meta.start, cal.meta.end);
   const startDate = new Date(cal.meta.start + "T00:00:00");
   const endDate = new Date(cal.meta.end + "T00:00:00");
+  const abMap = buildAbMap();
 
   list.forEach(({ y, m }) => {
     const monthEl = document.createElement("div");
@@ -364,7 +394,9 @@ function renderMonths() {
         : "";
       const label = entry && entry.label ? `<span class="lbl">${escapeHtml(entry.label)}</span>` : "";
       const lesson = entry && entry.lesson ? `<span class="lesson">${escapeHtml(entry.lesson)}</span>` : "";
-      cell.innerHTML = `<span class="num">${d}</span>${chips}${label}${lesson}`;
+      const abLetter = abMap[dateISO];
+      const abBadge = abLetter ? `<span class="ab-badge" title="${abLetter} day">${abLetter}</span>` : "";
+      cell.innerHTML = `<span class="num">${d}</span>${abBadge}${chips}${label}${lesson}`;
       cell.addEventListener("click", (e) => {
         if (e.shiftKey && rangeAnchor) openDrawerRange(rangeAnchor, dateISO);
         else openDrawer(dateISO);
@@ -431,6 +463,76 @@ function isNoSchoolDay(dateISO) {
   return entry.types.some(id => { const t = typeById(id); return t && t.noSchool; });
 }
 
+/* --- A/B day cycle ---
+   The rest of the site (Schedule Browser, Schedule Visualizer) is built
+   around A/B days; this calendar didn't know about them, so it couldn't
+   answer "is the Monday after break an A day?" — the single most-asked
+   calendar question in a block-schedule school. The cycle only advances on
+   real school days (weekday, and not tagged "No school" by a Day Type), so
+   it stays correct across holidays and breaks without the teacher having
+   to manually skip anything. */
+function isEligibleForAbCycle(dateISO) {
+  const d = new Date(dateISO + "T00:00:00");
+  const dow = d.getDay();
+  if (dow === 0 || dow === 6) return false;
+  return !isNoSchoolDay(dateISO);
+}
+
+function countAbEligibleStrictlyBetween(aISO, bISO) {
+  // aISO must be < bISO. Counts eligible days strictly between them.
+  let count = 0;
+  const cur = new Date(aISO + "T00:00:00");
+  const end = new Date(bISO + "T00:00:00");
+  cur.setDate(cur.getDate() + 1);
+  while (cur < end) {
+    if (isEligibleForAbCycle(iso(cur.getFullYear(), cur.getMonth(), cur.getDate()))) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+/** Maps every eligible date in [lo, hi] (the calendar's displayed range,
+    extended to include the anchor date if it falls outside it) to "A" or
+    "B". Built once per render rather than walked fresh from the anchor for
+    every cell. */
+function buildAbMap() {
+  const map = {};
+  const ac = cal.abCycle;
+  if (!ac || !ac.enabled || !ac.anchorDate) return map;
+  const anchorISO = ac.anchorDate;
+  const anchorLetter = ac.anchorLetter === "B" ? "B" : "A";
+  const lo = anchorISO < cal.meta.start ? anchorISO : cal.meta.start;
+  const hi = anchorISO > cal.meta.end ? anchorISO : cal.meta.end;
+  if (lo > hi) return map;
+
+  let letter;
+  if (lo === anchorISO) {
+    letter = anchorLetter;
+  } else {
+    const between = lo < anchorISO ? countAbEligibleStrictlyBetween(lo, anchorISO) : countAbEligibleStrictlyBetween(anchorISO, lo);
+    letter = (between % 2 === 0) ? anchorLetter : (anchorLetter === "A" ? "B" : "A");
+  }
+
+  const cur = new Date(lo + "T00:00:00");
+  const end = new Date(hi + "T00:00:00");
+  while (cur <= end) {
+    const curISO = iso(cur.getFullYear(), cur.getMonth(), cur.getDate());
+    if (isEligibleForAbCycle(curISO)) {
+      map[curISO] = letter;
+      letter = letter === "A" ? "B" : "A";
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return map;
+}
+
+function syncAbControls() {
+  const ac = cal.abCycle || { enabled: false, anchorDate: "", anchorLetter: "A" };
+  document.getElementById("abEnable").checked = !!ac.enabled;
+  document.getElementById("abAnchorDate").value = ac.anchorDate || "";
+  document.getElementById("abAnchorLetter").value = ac.anchorLetter === "B" ? "B" : "A";
+}
+
 /** Weekdays (Mon-Fri) in [startISO, endISO], and how many of those are
     flagged no-school by their day type(s) — the arithmetic teachers do by
     hand for "how many teaching days are left in the quarter". */
@@ -459,10 +561,12 @@ function renderStats() {
     const remaining = weekdayStats(today, cal.meta.end);
     text += ` &middot; <b>${remaining.instructional}</b> remaining from today`;
   }
+  const abToday = buildAbMap()[today];
+  if (abToday) text += ` &middot; today is an <b>${abToday}</b> day`;
   el.innerHTML = text;
 }
 
-function render() { renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); renderJumpControl(); renderStats(); }
+function render() { renderLegend(); renderMonths(); renderYearGrid(); syncMeta(); syncAbControls(); renderJumpControl(); renderStats(); }
 
 function syncMeta() {
   document.getElementById("metaLabel").value = cal.meta.yearLabel;
@@ -603,6 +707,19 @@ document.getElementById("btnApplyMeta").addEventListener("click", () => {
   cal.meta.yearLabel = document.getElementById("metaLabel").value.trim() || cal.meta.yearLabel;
   cal.meta.start = document.getElementById("metaStart").value || cal.meta.start;
   cal.meta.end = document.getElementById("metaEnd").value || cal.meta.end;
+  save(); render();
+});
+
+/* --- A/B day cycle --- */
+document.getElementById("btnApplyAb").addEventListener("click", () => {
+  const anchorDate = document.getElementById("abAnchorDate").value;
+  const enable = document.getElementById("abEnable").checked;
+  if (enable && !anchorDate) { alert("Pick a known A-day or B-day date first."); return; }
+  cal.abCycle = {
+    enabled: enable,
+    anchorDate,
+    anchorLetter: document.getElementById("abAnchorLetter").value === "B" ? "B" : "A"
+  };
   save(); render();
 });
 
