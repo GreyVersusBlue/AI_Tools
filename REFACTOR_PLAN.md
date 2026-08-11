@@ -483,7 +483,7 @@ test helper unrelated to this pattern).
   below. (Note: the original text of this bullet said theme toggle behavior comes
   from `_shared/theme-toggle.js`, "already used by 16 tools" — both claims turned
   out to be false; see the spec.) **38/38 of bucket (a) done (Rounds 3a–3d);
-  10/29 of bucket (b) done — see Round 3d.**
+  22/29 of bucket (b) done — see Round 3e.**
 
 #### Variance audit (2026-08-11)
 
@@ -523,21 +523,8 @@ use are harmless to define).
 3a–3d — 0 remain).**
 
 **Bucket (b) — baseline-compatible, link shared + small local override
-(29 files; 10 migrated in Round 3d — 19 remain; extras in parentheses,
+(29 files; 22 migrated (Rounds 3d–3e) — 7 remain; extras in parentheses,
 `unused:` = baseline vars the tool doesn't define, harmless):**
-`023-exit-ticket-generator.html` (+`--good`, `--warn`),
-`024-number-talks-board.html` (+`--good`),
-`025-writing-prompt-generator.html` (unused: `--err`),
-`026-math-drill-generator.html` (unused: `--err`),
-`027-novel-study-circles-manager.html` (+`--good`),
-`028-primary-source-analysis-generator.html` (+`--good`),
-`030-review-game-board.html` (+`--ok`, `--gold`, `--board-bg`, `--board-cell`,
-`--board-cell-hover`, `--board-used`),
-`032-School Calendar Visualizer.html` (+`--ok`; unused: `--line-strong`),
-`037-grade-distribution-visualizer.html` (+`--gA`–`--gF` and their `-bg`
-variants, 10 vars), `043-field-trip-permission-slip.html` (+`--good`),
-`045-sub-binder-generator.html` (+`--good`, `--warn-bg`, `--warn-line`),
-`046-blank-map-generator.html` (+`--ok`; unused: `--line-strong`),
 `052-cognates-false-friends-builder.html` (+`--ok`),
 `053-cultural-trivia-card-generator.html` (+`--ok`),
 `055-daily-editing-warmup-generator.html` (+`--ok`),
@@ -844,6 +831,74 @@ browser revision didn't match this repo's pinned Playwright version):
 
 **Not migrated this round, deliberately left for a later round:** the
 remaining 19 bucket (b) files.
+
+#### Round 3e (2026-08-11) — second bucket (b) batch, 12 more files
+
+Same bucket (b) shape as Round 3d: `<script src="../_shared/a11y.js"></script>`
+inserted right after the favicon `<link>` (before the `gvb:social:end` comment
+where present, before any pre-existing tool-specific `<script>` tags), then
+`<link rel="stylesheet" href="../_shared/ink-paper.css">` + `<link
+rel="stylesheet" href="../_shared/a11y.css">` right before `<style>`, with the
+inline `:root { ... }` block shrunk to just the tool's extra vars — the 9-var
+baseline now comes from `ink-paper.css`. Two files
+(`025-writing-prompt-generator.html`, `026-math-drill-generator.html`) turned
+out to have zero extra vars once the baseline was pulled out (the variance
+audit had flagged their one difference, `--err`, as merely *unused*, not an
+extra), so both got the full-removal treatment like bucket (a) — no local
+override block needed, matching the `012` precedent from Round 3d.
+
+One pre-existing wrinkle fixed in passing: `025-writing-prompt-generator.html`
+already had `<link rel="stylesheet" href="../_shared/a11y.css">` and `<script
+src="../_shared/a11y.js"></script>` tags, but in the wrong place — after
+`</style>`, near the end of `<head>`, instead of `a11y.js` loading
+synchronously before the stylesheets per the integration spec (the whole
+point is applying the saved theme pre-paint, before first render, to avoid a
+flash). Those two misplaced tags were removed and replaced by the
+correctly-ordered ones the migration adds anyway; this doesn't change the
+file's script/stylesheet count, just where `a11y.js` and `a11y.css` sit in
+`<head>`.
+
+**Migrated — bucket (b), struck from the list above (12, 7 remain):**
+`023-exit-ticket-generator.html` (kept `--good`, `--warn`),
+`024-number-talks-board.html` (kept `--good`),
+`025-writing-prompt-generator.html` (no extras — full removal, also fixed
+misplaced `a11y.js`/`a11y.css` tags),
+`026-math-drill-generator.html` (no extras — full removal),
+`027-novel-study-circles-manager.html` (kept `--good`),
+`028-primary-source-analysis-generator.html` (kept `--good`),
+`030-review-game-board.html` (kept `--ok`, `--gold`, `--board-bg`,
+`--board-cell`, `--board-cell-hover`, `--board-used`),
+`032-School Calendar Visualizer.html` (kept `--ok`),
+`037-grade-distribution-visualizer.html` (kept `--gA`–`--gF` and their `-bg`
+variants, 10 vars, plus the explanatory comment above them),
+`043-field-trip-permission-slip.html` (kept `--good: #2e7d4f` — note this is a
+one-hex-digit-different variant of the usual `#2f7d4f` `--good`, left as-is
+since changing it would be a visual change outside this migration's scope),
+`045-sub-binder-generator.html` (kept `--good`, `--warn-bg`, `--warn-line`),
+`046-blank-map-generator.html` (kept `--ok`).
+
+**`sw.js`:** `_shared/a11y.js`, `_shared/a11y.css` and `_shared/ink-paper.css`
+were already in `PRECACHE_URLS` from Round 3a, and none of these 12 files
+were renamed, so `PRECACHE_URLS` itself is unchanged this round —
+`CACHE_VERSION` bumped v56 → v57 since the byte content of 12 already-precached
+files changed.
+
+**Verification actually performed** (Playwright/Chromium against a local
+static server via `Tools/board-check/harness.mjs`'s `serve`/`prepPage`/`settle`
+exports, `serviceWorkers: 'block'`, launched with an explicit `executablePath`
+pointed at the sandbox's preinstalled Chromium since it didn't match this
+repo's pinned Playwright version):
+
+| Check | Result |
+|---|---|
+| All 12 pages load | zero `pageerror`s, zero `console.error`s, zero failed/≥400 requests on every page (light mode) |
+| Dark theme toggle | set `gvb-a11y-prefs` → `{theme:"dark"}` before load: `<html data-theme="dark">` set on all 12, `.a11y-filter-dark` applied, zero console errors; screenshots of all 12 spot-checked visually — readable light-on-dark on every page, including `030`'s `--gold`/board-cell colors and `037`'s letter-grade stat tiles |
+| Light theme (default) | zero console errors on all 12; byte-identical baseline CSS values to the old inline block, so no rendering change vs. pre-migration for the 9 shared vars, and the kept per-tool override colors are unchanged values |
+| Print preview | emulated `print` media after resetting to light mode: zero console errors on all 12 |
+| Leftover hardcoded hex from the old `:root` block | grep for the 9 baseline hex values (`--ink: #1f2430`, `--paper: #fafaf8`, `--accent: #1f3550`, `--accent-2: #2e6b8f`, `--muted: #6b6a63`, `--err: #a3372b`, `--line: #dcdad2`, `--line-strong: #c3c0b6`, `--card: #fff`) across all 12 files: zero matches |
+
+**Not migrated this round, deliberately left for a later round:** the
+remaining 7 bucket (b) files (`052`, `053`, `055`, `062`, `066`, `068`, `073`).
 
 ### Phase 4 — Common layout + print CSS
 - [ ] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
