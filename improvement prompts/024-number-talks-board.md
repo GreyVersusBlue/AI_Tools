@@ -1,7 +1,7 @@
 # Improvement Prompts — 024 — Number Talks / Mental Math Routine Board
 
 **Tool file:** `Tools/024-number-talks-board.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/number-talks-board/` — `dot-images.js`, `test/smoke-session-record.mjs`
 
 **Current description (from README):** A bank of number-talk prompts that reveal one expression at a time on a projector display, plus a lightweight strategy-sharing board.
 
@@ -9,7 +9,44 @@
 
 ## Status
 
-Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+**2026-08-11 — Printable session record (backlog rank 6).** Shipped the Quick
+Win that three previous rounds left open. "Print session record" sits beside
+"Save this session" and lays the same material out for paper: the string on
+the board with its answer (or the quick image with its count), every strategy
+card with the student it belongs to, and a numbered list of everything shown
+this session. An unnamed card prints as "Student N" rather than blank, so a
+card jotted in a hurry still reads as somebody.
+
+Two decisions:
+
+- **An "include the answers" checkbox, on by default.** This is the teacher's
+  record, so the answers belong — but the same page is the obvious thing to
+  send home with the student who was pulled out, and a record of the class's
+  thinking with the answers printed on it is worth much less as a study copy.
+  Unticking it removes every answer and says on the page that it did, so
+  nobody wonders whether the tool just failed to compute them.
+- **`break-inside: avoid` on every strategy card.** A student's reasoning
+  split half onto the next sheet is exactly the print defect this repo already
+  had to go back and fix in the Art Critique generator. The test asserts the
+  computed value under print emulation rather than trusting the declaration.
+
+The existing student handout and the `.txt` export are untouched — this is a
+third output, and the test checks the handout doesn't pick up session-record
+content.
+
+New test: `Tools/number-talks-board/test/smoke-session-record.mjs` (24
+assertions, wired into `npm test` and `npm run test:number-talks`) — the
+empty-session case, attribution including the unnamed card, the answers being
+present and then genuinely absent, the page-break rule, and the other two
+outputs still doing their own jobs.
+
+**Where the next round should pick up:** dot images still aren't in the `.txt`
+export (they are in the printed record now); "who answered a quick image" is
+still unattributed; and the class strategy wall library — accumulating named
+strategies across the year — is the remaining big idea for this tool and is
+still on the backlog.
+
+Earlier: reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped the strategy-organized number string library, fullscreen/dark
 projector mode, and dot images. Ideas below are deliberately ambitious and
 are **not** scoped to a single session; items confirmed shipped are tagged
@@ -27,7 +64,11 @@ are **not** scoped to a single session; items confirmed shipped are tagged
 - **Strategy cards** added live during discussion, on a shared board
 - Session save/export (`buildSessionExportText`, `exportSession`), string
   history (`gvb-number-talks:stringHistory`), clear board / clear log
-- Print a handout of the number talk
+- Print a handout of the number talk (student-facing, no answers)
+- **Print a session record** (`sessionRecordHtml`, `printSessionRecord`) — the
+  string with its answer, or the quick image with its count, every strategy
+  card next to the student it belongs to, and everything shown this session,
+  with an "include the answers" toggle for a copy going home
 
 ## Quick Wins
 
@@ -46,8 +87,9 @@ are **not** scoped to a single session; items confirmed shipped are tagged
 - **Turn-and-talk timer** built into the reveal flow (P7 — the timer exists).
 - **A "wait time" pause** between reveal and discussion, since the routine
   depends on silent think time.
-- **Save a whole session as a printable record** — the board, the strategies,
+- **Done — 2026-08-11.** **Save a whole session as a printable record** — the board, the strategies,
   and who contributed — which the export partly does but not as a handout.
+  *(See the Status entry at the top of this file.)*
 - **Done — Pass 2, Round 2.** **Undo on Clear board** (P11) — it destroys a live discussion.
   *(Shipped as a single-level, unpersisted undo — see the Pass 2 — Round 2
   update below.)*
