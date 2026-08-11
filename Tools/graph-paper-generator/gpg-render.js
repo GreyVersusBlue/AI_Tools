@@ -465,11 +465,117 @@
     return { svg: svgWrap(page.w, page.h, svgInner), lineSets: sets, lineHeight: lineHeight };
   }
 
+  /* ── Print calibration page ────────────────────────────────────────────
+     Every other page this tool produces is drawn in inches and is only true
+     to scale if the printer actually printed at 100%. "Fit to page", a
+     driver's default margins, or a school copier's slight reduction all
+     silently shrink it — and a 1/4in grid that is really 0.238in ruins any
+     measurement task done on it. Nothing in the tool could tell a teacher
+     whether their printer does that.
+
+     This page is the check: rulers to hold a real ruler against, and squares
+     to measure, drawn with the same inch-based geometry as everything else, so
+     if these come out true then so does the graph paper.
+
+     CM_PER_INCH is exact by definition (an inch is defined as 2.54cm), so the
+     centimetre ruler is not an approximation of the inch one — both are drawn
+     from the same true unit. */
+  var CM_PER_INCH = 2.54;
+
+  function calibrationRuler(x, y, lengthIn, unitIn, majorEvery, minorPerUnit, unitLabel, labelEveryUnits) {
+    var parts = [];
+    var units = Math.floor(lengthIn / unitIn + 1e-9);
+    var baselineY = y + 0.5;
+    parts.push(lineEl(x, baselineY, x + units * unitIn, baselineY, BOLD));
+    for (var i = 0; i <= units * minorPerUnit; i++) {
+      var tickX = x + (i / minorPerUnit) * unitIn;
+      var isUnit = i % minorPerUnit === 0;
+      var isHalf = !isUnit && (i * 2) % minorPerUnit === 0;
+      var len = isUnit ? 0.34 : (isHalf ? 0.2 : 0.11);
+      parts.push(lineEl(tickX, baselineY - len, tickX, baselineY, isUnit ? BOLD : THIN));
+      if (isUnit) {
+        var unitIndex = i / minorPerUnit;
+        if (unitIndex % labelEveryUnits === 0) {
+          parts.push(textEl(tickX, baselineY + 0.2, formatNum(unitIndex), 'middle', 0.13));
+        }
+      }
+    }
+    parts.push(textEl(x + units * unitIn + 0.12, baselineY + 0.05, escapeXml(unitLabel), 'start', 0.13));
+    return { svg: parts.join(''), width: units * unitIn, units: units };
+  }
+
+  function calibrationSquare(x, y, sideIn, label) {
+    return '<rect x="' + x.toFixed(4) + '" y="' + y.toFixed(4) + '" width="' + sideIn.toFixed(4) +
+        '" height="' + sideIn.toFixed(4) + '" fill="none" stroke="currentColor" stroke-width="' + BOLD + '"/>' +
+      // Left-anchored, not centred: a centred caption under the 1in square
+      // runs off the left margin, since the square starts at the margin.
+      textEl(x, y + sideIn + 0.2, escapeXml(label), 'start', 0.13);
+  }
+
+  function renderCalibration(opts) {
+    opts = opts || {};
+    var page = pageSize(opts.orientation);
+    var x = MARGIN + 0.15;
+    var parts = [];
+    var y = MARGIN + 0.3;
+
+    parts.push(textEl(page.w / 2, y, 'Printer calibration test page', 'middle', 0.26));
+    y += 0.34;
+    parts.push(textEl(page.w / 2, y, 'Print this at 100% scale — not "Fit to page" or "Shrink to fit".', 'middle', 0.14));
+    y += 0.24;
+    parts.push(textEl(page.w / 2, y, 'Then hold a real ruler against the two rulers below.', 'middle', 0.14));
+    y += 0.55;
+
+    var inchLen = Math.min(6, page.w - MARGIN * 2 - 0.9);
+    var inchRuler = calibrationRuler(x, y, inchLen, 1, 1, 8, 'inches', 1);
+    parts.push(inchRuler.svg);
+    y += 1.15;
+
+    var cmLen = Math.min(15 / CM_PER_INCH, page.w - MARGIN * 2 - 0.9);
+    var cmRuler = calibrationRuler(x, y, cmLen, 1 / CM_PER_INCH, 1, 10, 'centimetres', 1);
+    parts.push(cmRuler.svg);
+    y += 1.3;
+
+    parts.push(calibrationSquare(x, y, 1, 'This square is exactly 1 inch'));
+    parts.push(calibrationSquare(x + 2.2, y, 5 / CM_PER_INCH, 'This square is exactly 5 cm'));
+    y += Math.max(1, 5 / CM_PER_INCH) + 0.7;
+
+    // The arithmetic a teacher needs when it is NOT true: measure the 6in
+    // ruler, and the ratio is what their printer is doing to every page.
+    var lines = [
+      'If the marks line up: this printer prints true to scale. Every page from this tool',
+      'will be the size it says it is.',
+      '',
+      'If they do not: measure the ' + formatNum(inchRuler.units) + '-inch ruler above with a real',
+      'ruler and write what you get here.',
+      '',
+      'Measured: ________ inches instead of ' + formatNum(inchRuler.units) + '.',
+      '',
+      'That is what your printer is doing to every page. Look in the print',
+      'dialog for "Fit to page", "Shrink oversized pages", or a scale set to',
+      'anything but 100%, turn it off, and print this page again.'
+    ];
+    lines.forEach(function (line) {
+      if (line) parts.push(textEl(x, y, escapeXml(line), 'start', 0.15));
+      y += 0.24;
+    });
+
+    var color = opts.faded ? FADE_COLOR : INK_COLOR;
+    var headerH = headerBlockHeight(opts.header);
+    var svgInner = headerSvg(opts.header, page, headerH) + gridGroup(color, parts.join(''));
+    return {
+      svg: svgWrap(page.w, page.h, svgInner),
+      inchUnits: inchRuler.units,
+      cmUnits: cmRuler.units
+    };
+  }
+
   global.GraphPaperRender = {
     renderGraphPaper: renderGraphPaper,
     renderNumberLine: renderNumberLine,
     renderCoordinatePlane: renderCoordinatePlane,
     renderCornellNotes: renderCornellNotes,
-    renderHandwritingLines: renderHandwritingLines
+    renderHandwritingLines: renderHandwritingLines,
+    renderCalibration: renderCalibration
   };
 })(typeof window !== 'undefined' ? window : global);
