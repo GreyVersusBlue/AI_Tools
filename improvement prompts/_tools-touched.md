@@ -185,11 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Cultural Trivia Card Generator | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
-| Current Events Discussion Guide Generator | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
-| Daily Editing / DOL Warm-Up Generator | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
-| DBQ / Source Packet Builder | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
-| Dichotomous Key Builder | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
+| *(none)* | | | |
 
 ---
 
@@ -404,11 +400,6 @@ Book Tasting Menu Generator (`049-book-tasting-menu-generator.md`) ·
 Government/Civics Simulation Role Card Generator (`050-civics-role-card-generator.md`) ·
 Classroom Label Maker, Target Language (`051-classroom-label-maker.md`) ·
 Cognates & False Friends Reference List Builder (`052-cognates-false-friends-builder.md`) ·
-Cultural Trivia Card Generator (`053-cultural-trivia-card-generator.md`) ·
-Current Events Discussion Guide Generator (`054-current-events-discussion-guide-generator.md`) ·
-Daily Editing / DOL Warm-Up Generator (`055-daily-editing-warmup-generator.md`) ·
-DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`) ·
-Dichotomous Key Builder (`057-dichotomous-key-builder.md`) ·
 Duty Roster Builder (`058-duty-roster-builder.md`) ·
 Scientific Method / Experiment Design Planner (`059-experiment-design-planner.md`) ·
 Fitness & Skill Assessment Tracker (`060-fitness-skill-assessment-tracker.md`) ·
@@ -523,6 +514,32 @@ download).
 `yjj7k6`'s + these 5). **26 to go.** None of the five cleared their
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
+
+### Round — 2026-08-11 01:40 UTC — session `qer21r` — tools 053-057
+
+Not picked from the "Not yet touched" list below — these five are part
+of the 35 tools added at the Pass 2 reset and explicitly held out of the
+round system pending a deliberate fold-in (see the reset note above).
+Assigned directly by Devon rather than self-picked, same as Rounds 9/10
+in Pass 1. One or two scoped Quick Wins
+per tool, each independently verified via `node --check`-equivalent
+syntax parsing, a headless Playwright interaction smoke test (including a
+reload to confirm `localStorage` persistence survives), and a separate
+print-path smoke test confirming each new feature reaches the printed
+output — zero console errors across all of it.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Cultural Trivia Card Generator | `053-cultural-trivia-card-generator.md` | Category filter + card count settings persist across reloads; per-built-in Hide/Unhide toggle. |
+| Current Events Discussion Guide Generator | `054-current-events-discussion-guide-generator.md` | Stopword list grown ~5x to cut vocabulary-suggestion noise; live word count/read-time while pasting; "Clear & start over" button. |
+| Daily Editing / DOL Warm-Up Generator | `055-daily-editing-warmup-generator.md` | Built-ins tagged by error type with a filter (display + worksheet); error-type label shown alongside the reveal; worksheet count + filter persist; custom sentences editable in place. |
+| DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` | Reorder sources via up/down; dedicated final synthesis/essay-prompt field, printed as its own closing page. |
+| Dichotomous Key Builder | `057-dichotomous-key-builder.md` | Reorder steps via up/down; non-blocking validation warnings (unreachable steps, no-specimen results, dead-end choices); print-without-specimens checkbox. |
+
+None of the five cleared their Quick Wins list entirely, and all five
+still have open Major Features/Moonshot items, so none moved to
+`stable tools/` this round. See each file's own Status section for what's
+recommended next.
 
 ---
 

@@ -25,7 +25,32 @@ context, add a text source, add a second source, print, confirm the right
 number of pages and that both source text and shared questions appear) —
 no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `qer21r`).** Two Quick Wins shipped:
+
+- **Reorder sources via up/down buttons** — each source block now has
+  Move up / Move down controls (disabled at the ends); since couplet-
+  style lettering (Source A, B, C&hellip;) is derived from array
+  position and per-source `leadsTo`-style references don't exist here
+  (shared/per-source questions don't reference other sources), reordering
+  is a plain array swap with no cross-reference bookkeeping needed.
+- **A dedicated final synthesis/essay prompt field** — a new textarea on
+  the packet-setup card, separate from the historical-context field, that
+  prints as its own closing page (with four blank lines for a written
+  response) after the last source, addressing the "mixed in with
+  background" gap this file called out.
+
+Both verified with a headless Chromium smoke test (moving the second
+source up reorders it to the front, essay prompt text survives a reload)
+plus a separate print-path check confirming the essay page renders with
+the right heading and text — zero console errors in either pass.
+
+**Not started this round:** multiple named saved packets, image size/
+crop control, the Primary Source Analysis Worksheet Generator
+integration, a source bank/library, JSON export/import,
+scaffolding/differentiation levels. See Major Features/Moonshot below —
+the Primary Source Analysis Worksheet Generator integration is still the
+clearest named opportunity (it's an explicit backlog pairing, per
+Platform theme P7) and hasn't been touched.
 
 ## What it does today
 
@@ -37,14 +62,10 @@ Nothing below has been started.
 
 ## Quick Wins
 
-- **Reorder sources** via up/down buttons, matching the pattern used
-  elsewhere in this toolkit — source order (and therefore lettering)
-  is currently fixed by insertion order.
-- **A final synthesis/essay prompt field** on the cover page or as a
-  closing page — real DBQ packets typically end with an overall essay
-  question that ties the sources together, which this MVP doesn't have a
-  dedicated spot for (a teacher can currently only put it in the context
-  field, mixed with background).
+- ~~**Reorder sources** via up/down buttons~~ — **done, Round 2.**
+- ~~**A final synthesis/essay prompt field**~~ — **done, Round 2** (shipped
+  as a closing page, not on the cover page, so it doesn't compete for
+  space with the historical context and name/date line).
 - **Multiple named saved packets**, matching the multi-save convention
   used by most builder tools in this round — one packet per browser right
   now, so a unit with several DBQ activities can't keep them all ready at
