@@ -603,6 +603,33 @@ still have open Major Features/Moonshot items, so none moved to
 `stable tools/` this round. See each file's own Status section for what's
 recommended next.
 
+### Tools 058–062 — 2026-08-11 01:41 UTC — session `kq3g3h` — Devon's direct request
+
+Devon directed this session to work tools 058&ndash;062 specifically,
+outside the normal pick-from-"Not yet touched" flow — these five are part
+of the 35-tool batch held out at the Pass 2 reset above ("Devon wants to
+fold them into the round system as a deliberate batch rather than mixed
+in silently with this reset"), so this round does **not** count toward
+the "N of 46 (Pass 2)" tally above and the 35-tool batch is still not
+folded into that rotation. One or two independently-verified Quick Wins
+per tool, each confirmed with a headless Chromium smoke test (Playwright,
+installed fresh into the scratchpad for this session since no
+`package.json` exists in the repo) covering the new behavior plus a
+reload to confirm `localStorage` persistence, with zero console errors.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Duty Roster Builder | `058-duty-roster-builder.md` | Live per-staff assignment counts; a per-staff "skip this week" flag that auto-fill respects; fixed a latent bug where deleting a duty location left orphaned assignments still counting toward staff totals. |
+| Scientific Method / Experiment Design Planner | `059-experiment-design-planner.md` | Up/down reordering for controlled variables, materials, and procedure steps; a sanity hint when the independent and dependent variable fields match; fixed a print-output bug where empty-field HTML-entity placeholders were being double-escaped into literal text. |
+| Fitness & Skill Assessment Tracker | `060-fitness-skill-assessment-tracker.md` | Time-value (`mm:ss`) parsing so class average/min/max stats now work for time-type events, not just count-type; CSV export of the full results grid. |
+| Fraction–Decimal–Percent Conversion Drill Generator | `061-fraction-decimal-percent-drill-generator.md` | Seeded generation (mulberry32, ported from Math Fact Drill Sheet Generator's pattern) with a "Lock seed" checkbox for reproducible reprints; settings (difficulty/given-form/row count/seed lock) now persist across page loads. |
+| Geography Bee / Map Skills Quiz Generator | `062-geography-bee-quiz-generator.md` | Category filter and quiz question count persist across page loads; built-in questions can now be hidden/shown individually (not just deleted, which only ever applied to custom questions) and hidden ones are excluded from the projector/shuffle/quiz pools. |
+
+None of the five cleared their own Quick Wins list — each still has
+Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each file's own Status section for exactly where the
+next round should pick up.
+
 ---
 
 ## Not yet touched

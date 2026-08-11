@@ -60,6 +60,15 @@
   .duty-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
   .duty-row input { margin-bottom: 0; }
 
+  .staff-list { margin: .2rem 0 .8rem; }
+  .staff-row { display: flex; align-items: center; gap: .6rem; padding: .3rem 0; border-bottom: 1px dashed var(--line); font-size: .86rem; }
+  .staff-row:last-child { border-bottom: none; }
+  .staff-row .staff-name { flex: 1; }
+  .staff-row .staff-count { color: var(--muted); font-size: .78rem; min-width: 5.5rem; }
+  .staff-row label.skip-label { display: flex; align-items: center; gap: .3rem; font-weight: 400; font-size: .8rem; margin: 0; white-space: nowrap; }
+  .staff-row input[type="checkbox"] { margin: 0; width: auto; }
+  .staff-row.is-skipped .staff-name { color: var(--muted); text-decoration: line-through; }
+
   table.roster-grid { width: 100%; border-collapse: collapse; font-size: .88rem; }
   table.roster-grid th, table.roster-grid td { border: 1px solid var(--line-strong); padding: .5rem .5rem; text-align: left; vertical-align: middle; }
   table.roster-grid th { background: #eef1f4; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
@@ -100,6 +109,8 @@
     <label for="staffInput">Staff names, one per line</label>
     <textarea id="staffInput" placeholder="Alex Rivera&#10;Bailey Chen&#10;Carter Diaz"></textarea>
     <button class="secondary" id="saveStaffBtn">Save staff list</button>
+    <p class="hint" id="staffListHint" style="margin-top:.7rem;">Assignment counts and per-person "skip this week" flags &mdash; auto-fill respects skipped staff.</p>
+    <div class="staff-list" id="staffListWrap"></div>
   </div>
 
   <div class="card">
@@ -133,10 +144,10 @@
   var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   var els = {};
-  ['staffInput', 'saveStaffBtn', 'dutiesWrap', 'addDutyBtn', 'gridTable', 'autoFillBtn', 'clearGridBtn',
+  ['staffInput', 'saveStaffBtn', 'staffListWrap', 'dutiesWrap', 'addDutyBtn', 'gridTable', 'autoFillBtn', 'clearGridBtn',
    'printBtn', 'printSub', 'printGrid'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { staff: [], duties: [], assignments: {} };
+  var state = { staff: [], duties: [], assignments: {}, staffSkip: {} };
 
   function uid() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -158,6 +169,7 @@
       { id: uid(), name: 'Bus loop' }
     ];
     if (!state.assignments) state.assignments = {};
+    if (!state.staffSkip) state.staffSkip = {};
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -184,7 +196,10 @@
     var id = ev.target.getAttribute('data-del-duty');
     if (!id) return;
     state.duties = state.duties.filter(function (d) { return d.id !== id; });
-    save(); renderDuties(); renderGrid();
+    Object.keys(state.assignments).forEach(function (key) {
+      if (key.indexOf(id + '|') === 0) delete state.assignments[key];
+    });
+    save(); renderDuties(); renderGrid(); renderStaffList();
   });
   els.addDutyBtn.addEventListener('click', function () {
     state.duties.push({ id: uid(), name: 'New duty location' });
@@ -196,7 +211,40 @@
     var seen = {}; var unique = [];
     names.forEach(function (n) { if (!seen[n]) { seen[n] = true; unique.push(n); } });
     state.staff = unique;
-    save(); renderGrid();
+    var keptSkip = {};
+    unique.forEach(function (n) { if (state.staffSkip[n]) keptSkip[n] = true; });
+    state.staffSkip = keptSkip;
+    save(); renderGrid(); renderStaffList();
+  });
+
+  function assignmentCounts() {
+    var counts = {};
+    state.staff.forEach(function (n) { counts[n] = 0; });
+    Object.keys(state.assignments).forEach(function (key) {
+      var name = state.assignments[key];
+      if (name && counts.hasOwnProperty(name)) counts[name]++;
+    });
+    return counts;
+  }
+
+  function renderStaffList() {
+    if (!state.staff.length) { els.staffListWrap.innerHTML = ''; return; }
+    var counts = assignmentCounts();
+    els.staffListWrap.innerHTML = state.staff.map(function (name) {
+      var skipped = !!state.staffSkip[name];
+      var n = counts[name] || 0;
+      return '<div class="staff-row' + (skipped ? ' is-skipped' : '') + '">' +
+        '<span class="staff-name">' + escapeHtml(name) + '</span>' +
+        '<span class="staff-count">' + n + ' dut' + (n === 1 ? 'y' : 'ies') + ' this week</span>' +
+        '<label class="skip-label"><input type="checkbox" data-skip="' + escapeAttr(name) + '"' + (skipped ? ' checked' : '') + '> Skip this week</label>' +
+        '</div>';
+    }).join('');
+  }
+  els.staffListWrap.addEventListener('change', function (ev) {
+    var name = ev.target.getAttribute('data-skip');
+    if (!name) return;
+    if (ev.target.checked) state.staffSkip[name] = true; else delete state.staffSkip[name];
+    save(); renderStaffList();
   });
 
   function renderGrid() {
@@ -220,25 +268,26 @@
     var day = ev.target.getAttribute('data-day');
     if (!dutyId || !day) return;
     state.assignments[cellKey(dutyId, day)] = ev.target.value;
-    save();
+    save(); renderStaffList();
   });
 
   els.autoFillBtn.addEventListener('click', function () {
-    if (!state.staff.length) { alert('Save a staff list first.'); return; }
+    var eligible = state.staff.filter(function (n) { return !state.staffSkip[n]; });
+    if (!eligible.length) { alert('Save a staff list first (and make sure at least one person isn\'t flagged "skip this week").'); return; }
     var i = 0;
     DAYS.forEach(function (day) {
       state.duties.forEach(function (duty) {
-        state.assignments[cellKey(duty.id, day)] = state.staff[i % state.staff.length];
+        state.assignments[cellKey(duty.id, day)] = eligible[i % eligible.length];
         i++;
       });
     });
-    save(); renderGrid();
+    save(); renderGrid(); renderStaffList();
   });
 
   els.clearGridBtn.addEventListener('click', function () {
     if (!confirm('Clear every assignment in the grid?')) return;
     state.assignments = {};
-    save(); renderGrid();
+    save(); renderGrid(); renderStaffList();
   });
 
   els.printBtn.addEventListener('click', function () {
@@ -260,6 +309,7 @@
   els.staffInput.value = state.staff.join('\n');
   renderDuties();
   renderGrid();
+  renderStaffList();
 })();
 </script>
 <script>
