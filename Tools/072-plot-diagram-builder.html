@@ -52,12 +52,23 @@
   }
   button.secondary { background: #fff; color: var(--ink); border-color: var(--line-strong); }
   button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: var(--err); color: #fff; }
+  select {
+    font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; width: 100%;
+  }
+  .saves-row { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
+  .saves-row > div:first-child { flex: 1; min-width: 200px; }
+  .saves-row label { margin-bottom: .3rem; }
 
   .mountain-wrap { position: relative; height: 380px; margin: 1rem 0 2rem; }
   .mountain-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   .stage-box { position: absolute; width: 180px; }
   .stage-box .stage-label { font-weight: 700; font-size: .82rem; color: var(--accent); margin-bottom: .2rem; text-align: center; }
   .stage-box textarea { min-height: 4.5rem; font-size: .8rem; }
+  .stage-box textarea.filled { background: #f4f8f3; border-color: #8fae82; }
 
   #printArea { display: none; }
   @media print {
@@ -84,6 +95,19 @@
     </div>
     <div>
       <button class="secondary" id="printBtn">Print diagram</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Saved diagrams</h2>
+    <div class="saves-row">
+      <div>
+        <label for="diagramSelect">Current diagram</label>
+        <select id="diagramSelect"></select>
+      </div>
+      <button type="button" class="secondary" id="newDiagramBtn">+ New diagram</button>
+      <button type="button" class="secondary" id="renameDiagramBtn">Rename</button>
+      <button type="button" class="danger" id="deleteDiagramBtn">Delete</button>
     </div>
   </div>
 
@@ -139,26 +163,146 @@
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'pdb_diagram_v1';
+  var LEGACY_STORE_KEY = 'pdb_diagram_v1';
+  var LIST_KEY = 'pdb_list_v1';
+  var DATA_PREFIX = 'pdb_data_v1:';
+  var CURRENT_KEY = 'pdb_current_v1';
 
   var els = {};
-  ['storyTitle', 'storyAuthor', 'elChar', 'elSetting', 'elConflict', 'elTheme', 'printBtn', 'printArea'].forEach(function (id) {
+  ['storyTitle', 'storyAuthor', 'elChar', 'elSetting', 'elConflict', 'elTheme', 'printBtn', 'printArea',
+   'diagramSelect', 'newDiagramBtn', 'renameDiagramBtn', 'deleteDiagramBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
   var stageEls = document.querySelectorAll('[data-stage]');
 
-  var state = { title: '', author: '', characters: '', setting: '', conflict: '', theme: '', stages: {} };
+  function blankState() { return { title: '', author: '', characters: '', setting: '', conflict: '', theme: '', stages: {} }; }
+  var state = blankState();
+  var currentName = null;
 
-  function load() {
+  function safeParse(json, fallback) {
+    if (json == null) return fallback;
+    try { var v = JSON.parse(json); return v == null ? fallback : v; } catch (e) { return fallback; }
+  }
+  function listDiagrams() { return safeParse(localStorage.getItem(LIST_KEY), []); }
+  function setList(names) { try { localStorage.setItem(LIST_KEY, JSON.stringify(names)); } catch (e) { /* storage full/blocked */ } }
+  function loadDiagram(name) { return safeParse(localStorage.getItem(DATA_PREFIX + name), null); }
+  function persistDiagram(name, data) {
+    var names = listDiagrams();
+    if (names.indexOf(name) === -1) { names.push(name); setList(names); }
+    try { localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data)); } catch (e) { /* storage full/blocked */ }
+  }
+  function deleteDiagramData(name) {
+    setList(listDiagrams().filter(function (n) { return n !== name; }));
+    try { localStorage.removeItem(DATA_PREFIX + name); } catch (e) { /* ignore */ }
+  }
+  function getCurrentName() { return localStorage.getItem(CURRENT_KEY); }
+  function setCurrentName(name) {
     try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && typeof saved === 'object') state = saved;
+      if (name) localStorage.setItem(CURRENT_KEY, name);
+      else localStorage.removeItem(CURRENT_KEY);
     } catch (e) { /* ignore */ }
-    if (!state.stages) state.stages = {};
   }
+  function uniqueName(base, existing) {
+    var name = base, n = 2;
+    while (existing.indexOf(name) !== -1) { name = base + ' (' + n + ')'; n++; }
+    return name;
+  }
+
+  function migrateLegacyIfNeeded() {
+    if (listDiagrams().length) return;
+    var legacy = safeParse(localStorage.getItem(LEGACY_STORE_KEY), null);
+    if (!legacy || typeof legacy !== 'object') return;
+    var hasContent = legacy.title || legacy.author || legacy.characters || legacy.setting ||
+      legacy.conflict || legacy.theme || (legacy.stages && Object.keys(legacy.stages).some(function (k) { return legacy.stages[k]; }));
+    if (!hasContent) return;
+    var name = uniqueName((legacy.title && legacy.title.trim()) || 'My First Diagram', []);
+    if (!legacy.stages) legacy.stages = {};
+    persistDiagram(name, legacy);
+    setCurrentName(name);
+  }
+
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+    if (!currentName) return;
+    persistDiagram(currentName, state);
   }
+
+  function populateFields() {
+    els.storyTitle.value = state.title || '';
+    els.storyAuthor.value = state.author || '';
+    els.elChar.value = state.characters || '';
+    els.elSetting.value = state.setting || '';
+    els.elConflict.value = state.conflict || '';
+    els.elTheme.value = state.theme || '';
+    stageEls.forEach(function (ta) {
+      var v = state.stages[ta.getAttribute('data-stage')] || '';
+      ta.value = v;
+      ta.classList.toggle('filled', !!v.trim());
+    });
+  }
+
+  function renderDiagramSelect() {
+    var names = listDiagrams();
+    els.diagramSelect.innerHTML = names.map(function (n) {
+      return '<option value="' + n.replace(/"/g, '&quot;') + '"' + (n === currentName ? ' selected' : '') + '>' + n + '</option>';
+    }).join('');
+  }
+
+  function switchToDiagram(name) {
+    var data = loadDiagram(name);
+    if (!data) return;
+    currentName = name;
+    state = data;
+    if (!state.stages) state.stages = {};
+    setCurrentName(name);
+    populateFields();
+    renderDiagramSelect();
+  }
+
+  function createNewDiagram(name) {
+    var names = listDiagrams();
+    var finalName = uniqueName(name, names);
+    var fresh = blankState();
+    persistDiagram(finalName, fresh);
+    switchToDiagram(finalName);
+  }
+
+  els.diagramSelect.addEventListener('change', function () {
+    switchToDiagram(els.diagramSelect.value);
+  });
+
+  els.newDiagramBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new diagram (e.g. the novel or story title):', '');
+    if (name === null) return;
+    name = name.trim() || 'Untitled Diagram';
+    createNewDiagram(name);
+  });
+
+  els.renameDiagramBtn.addEventListener('click', function () {
+    if (!currentName) return;
+    var name = prompt('Rename this diagram:', currentName);
+    if (name === null) return;
+    name = name.trim();
+    if (!name || name === currentName) return;
+    var names = listDiagrams().filter(function (n) { return n !== currentName; });
+    var finalName = uniqueName(name, names);
+    persistDiagram(finalName, state);
+    deleteDiagramData(currentName);
+    currentName = finalName;
+    setCurrentName(finalName);
+    renderDiagramSelect();
+  });
+
+  els.deleteDiagramBtn.addEventListener('click', function () {
+    if (!currentName) return;
+    if (!confirm('Delete "' + currentName + '"? This can’t be undone.')) return;
+    deleteDiagramData(currentName);
+    var remaining = listDiagrams();
+    if (remaining.length) {
+      switchToDiagram(remaining[0]);
+    } else {
+      createNewDiagram('My Diagram');
+    }
+  });
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -176,6 +320,7 @@
   stageEls.forEach(function (ta) {
     ta.addEventListener('input', function () {
       state.stages[ta.getAttribute('data-stage')] = ta.value;
+      ta.classList.toggle('filled', !!ta.value.trim());
       save();
     });
   });
@@ -186,16 +331,17 @@
   els.printBtn.addEventListener('click', function () {
     var title = state.title.trim() || 'Plot Diagram';
     var author = state.author.trim() ? 'by ' + escapeHtml(state.author.trim()) : '';
+    var EM_DASH = '—';
     var elementsHtml = '<div class="print-elements">' +
-      '<div><b>Characters:</b> ' + escapeHtml(state.characters || '&mdash;') + '</div>' +
-      '<div><b>Setting:</b> ' + escapeHtml(state.setting || '&mdash;') + '</div>' +
-      '<div><b>Conflict:</b> ' + escapeHtml(state.conflict || '&mdash;') + '</div>' +
-      '<div><b>Theme:</b> ' + escapeHtml(state.theme || '&mdash;') + '</div>' +
+      '<div><b>Characters:</b> ' + escapeHtml(state.characters || EM_DASH) + '</div>' +
+      '<div><b>Setting:</b> ' + escapeHtml(state.setting || EM_DASH) + '</div>' +
+      '<div><b>Conflict:</b> ' + escapeHtml(state.conflict || EM_DASH) + '</div>' +
+      '<div><b>Theme:</b> ' + escapeHtml(state.theme || EM_DASH) + '</div>' +
       '</div>';
     var stagesHtml = Object.keys(STAGE_LABELS).map(function (key) {
       var pos = STAGE_POS[key];
       return '<div class="print-stage-box" style="left:' + pos.left + ';top:' + pos.top + ';">' +
-        '<div class="stage-label">' + STAGE_LABELS[key] + '</div><div>' + escapeHtml(state.stages[key] || '&mdash;') + '</div></div>';
+        '<div class="stage-label">' + STAGE_LABELS[key] + '</div><div>' + escapeHtml(state.stages[key] || EM_DASH) + '</div></div>';
     }).join('');
     els.printArea.innerHTML = '<h1 class="print-title">' + escapeHtml(title) + '</h1>' +
       (author ? '<p class="print-author">' + author + '</p>' : '') +
@@ -207,14 +353,15 @@
   });
 
   /* ---------- boot ---------- */
-  load();
-  els.storyTitle.value = state.title;
-  els.storyAuthor.value = state.author;
-  els.elChar.value = state.characters;
-  els.elSetting.value = state.setting;
-  els.elConflict.value = state.conflict;
-  els.elTheme.value = state.theme;
-  stageEls.forEach(function (ta) { ta.value = state.stages[ta.getAttribute('data-stage')] || ''; });
+  migrateLegacyIfNeeded();
+  var names = listDiagrams();
+  var startName = getCurrentName();
+  if (!startName || names.indexOf(startName) === -1) startName = names[0] || null;
+  if (startName) {
+    switchToDiagram(startName);
+  } else {
+    createNewDiagram('My Diagram');
+  }
 })();
 </script>
 <script>

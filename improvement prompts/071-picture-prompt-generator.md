@@ -27,41 +27,63 @@ confirm matching card count — no console errors.
 
 Nothing below has been started.
 
+**2026-08-11 — Round 2 (session `4o6xmy`).** Cleared the entire Quick Wins
+list — all four items shipped, verified with a headless Chromium smoke
+test using a real generated 2000×1500 PNG upload (not mocked) plus two
+sequential uploads to exercise the no-repeat cycle:
+
+- **Fixed the reset-hint inconsistency.** Both the normal pick path and
+  "Reset (allow repeats)" now go through a single `usedHintText()`
+  function instead of the reset handler hand-writing its own string, so
+  the wording is guaranteed consistent between the two paths.
+- **Pin this prompt to this image.** A "📌 Pin this prompt to this image"
+  button appears under the task text on the stage; toggling it stores
+  `pinnedPromptId` on that image (persisted in `localStorage`, so it
+  survives a reload) and future picks of that image use the pinned prompt
+  instead of a new random one — confirmed the same task text recurs across
+  a full pick-cycle in the smoke test. Print mode respects the pin too.
+- **Image downscaling on upload.** Every uploaded image is now drawn to a
+  canvas and re-encoded as JPEG (quality .82) if either dimension exceeds
+  1400px, before being stored as a data URL — confirmed in the smoke test
+  that a 2000×1500 source image is stored at exactly 1400px on its long
+  edge. Falls back to the original data URL if canvas access throws for
+  any reason (e.g. a locked-down environment), so upload never hard-fails.
+- **Print-set-size setting.** A "Cards to print" number field (blank =
+  all, matching the previous default) persists across reloads and caps how
+  many of the uploaded images get printed, taking the first N.
+
+This clears every Quick Win **and** folds the most-called-out Major
+Feature (image downscaling) into the same round — see the Moonshot note
+below for what that unblocks.
+
 ## What it does today
 
-- Multi-file image upload, thumbnail management with delete
+- Multi-file image upload with automatic downscale to ≤1400px on the long
+  edge (JPEG re-encode), thumbnail management with delete
 - Editable task-prompt bank (6 generic defaults)
 - Projector mode: random image + random prompt, no-repeat-until-cycled,
-  visible progress counter, manual reset
-- Print: grid of image + prompt cards
+  visible progress counter, manual reset (consistent wording on both paths)
+- Pin a specific prompt to a specific image so it recurs on every pick of
+  that image, on both the stage and in print
+- Print: grid of image + prompt cards, with an optional cap on how many
+  cards print
 
 ## Quick Wins
 
-- **Fix an a11y/UX gap in the no-repeat counter**: right now "Reset" sets
-  a text message but doesn't re-render through the normal `renderStage()`
-  path, so the counter text after a manual reset is slightly
-  inconsistently worded versus the counter shown after a normal pick —
-  worth unifying into one render path for consistency.
-- **A "pin this prompt to this image" option**, since right now every
-  "new random image" click re-randomizes the prompt too, which means the
-  same image could get a different prompt each time it's shown across
-  multiple rounds — sometimes useful (variety), sometimes undesirable (a
-  teacher wants a fixed image-prompt pairing for a specific activity).
-- **Image size/storage warnings**: large uploaded photos (a full-resolution
-  phone photo can be several MB) risk hitting localStorage's size limit
-  quickly across even a modest batch; a client-side downscale-on-upload
-  (draw to a canvas, re-export at a reasonable max dimension) would both
-  reduce storage risk and speed up the print/display path.
-- **Settings persistence for print-set-size** (currently always prints
-  every uploaded image; a count field to print a subset would match other
-  generator tools' pattern).
+- **Done — Fix an a11y/UX gap in the no-repeat counter.**
+- **Done — A "pin this prompt to this image" option.**
+- **Done — Image size/storage warnings**, via silent downscale-on-upload
+  rather than a warning (see Open Questions below — this resolves the
+  opt-in-vs-silent question in favor of silent, since a teacher shouldn't
+  need to know what "downscale" means to avoid hitting a storage wall).
+- **Done — Settings persistence for print-set-size.**
 
 ## Major Features
 
-- **Image downscaling on upload** (see above) is significant enough to
-  also be a Major Feature depending on how much friction real usage
-  reveals — this could be the difference between the tool working
-  smoothly with 30 photos vs. hitting storage limits.
+- **Done — Image downscaling on upload** (see above) — resolved as part of
+  this round rather than deferred, since the storage-risk story below is
+  strong enough that the difference between "smoothly with 30 photos" and
+  "hitting storage limits" only needed one round's worth of canvas code.
 - **Multiple named saved image sets**, matching the multi-save convention
   used by most builder tools in this round — one flat image library per
   browser right now, so a "family vocabulary" set and a "school vocabulary"
@@ -103,10 +125,19 @@ default.
 
 ## Open Questions
 
-- Should image downscaling happen silently on every upload (simplest,
-  but removes the option to keep a full-resolution copy for some other
-  use), or should it be an opt-in toggle ("compress for storage" vs.
-  "keep full quality, may hit storage limits sooner")?
+- ~~Should image downscaling happen silently on every upload...~~
+  **Resolved this round: silent.** Downscale-on-upload now always runs
+  (≤1400px long edge, JPEG .82) with no toggle — a teacher who genuinely
+  needs full-resolution copies for some other purpose should keep their
+  own originals outside this tool, since this tool's storage is
+  browser-local and not meant as an archive. Revisit only if real usage
+  shows a case where 1400px is insufficient (e.g. printing very large
+  cards).
 - Is pinning specific prompts to specific images worth the added UI (an
   explicit image-prompt pairing table) given the random-pairing default
   already covers the more common "any prompt works with any image" case?
+  **Resolved this round, lightly:** built as a single per-image pin toggle
+  on the currently-displayed image/prompt pair rather than a full pairing
+  table — no dedicated UI, reuses the existing stage. Revisit if a teacher
+  wants to pre-pin many pairs before ever seeing them projected, which
+  would need the table after all.

@@ -25,28 +25,66 @@ same MVP scope decision made for several other builder tools in this
 round (Lab Report Template Builder, Verb Conjugation Reference Poster
 Generator, etc.).
 
+**2026-08-11 — Round 2 (session `4o6xmy`).** Fixed a real bug and shipped
+two Quick Wins, verified with a headless Chromium smoke test (including a
+dedicated migration test seeding the old single-diagram storage key) with
+zero console errors:
+
+- **Fixed a real bug**: the print output built `Characters`/`Setting`/
+  `Conflict`/`Theme`/stage fallback text using the literal string
+  `'&mdash;'` passed through `escapeHtml()`, which escapes `&` into
+  `&amp;` — so an empty field would print the literal text `&mdash;`
+  instead of an em dash. This is the exact same bug class flagged in
+  `069-pe-warmup-circuit-generator.md`'s Status notes as having recurred
+  five times already this round across other tools; this makes six.
+  Fixed by using the real Unicode em dash character (—) directly instead
+  of the entity name.
+- **Multiple named saved diagrams**, following the `list` / `data:<name>`
+  / `current` localStorage convention already established in Formula
+  Sheet Builder (`Tools/formula-sheet-builder/fsb-store.js`) rather than
+  inventing a new shape: a "Saved diagrams" card with a select dropdown
+  plus New/Rename/Delete. Existing single-diagram data
+  (`pdb_diagram_v1`) is migrated automatically into a first named entry
+  the first time the page loads post-update, verified in a dedicated
+  smoke test that seeds the legacy key and confirms it survives as a
+  named, selectable diagram with no data loss.
+- **A visual distinction between filled and empty stages**: a filled
+  plot-mountain textarea gets a subtle green-tinted background/border,
+  updated live on every keystroke and on diagram switch.
+
+**Where the next round should pick up:** the live class-discussion
+presentation mode (bigger fonts, borderless textareas) is the next Quick
+Win and matters more here than on most tools given the explicit
+live-projection use case (P15); JSON export/import is a natural pairing
+with the new multi-save feature (export a named diagram, import it into
+another browser/section) and should reuse the diagram-shape validation
+the migration code already does. The alternate-shapes and
+character-arc-tracking Major Features, and the collaborative share-link
+Moonshot, remain fully open — see this file's own Open Questions for the
+scoping tradeoffs on both.
+
 ## What it does today
 
 - Title/author fields
 - Story elements summary: characters, setting, conflict, theme
-- Five-stage plot mountain, each stage independently editable
-- Print renders the same diagram on one page
+- Five-stage plot mountain, each stage independently editable, with a
+  subtle highlight on any stage that has content
+- Multiple named saved diagrams (New/Rename/Delete, switch via dropdown),
+  with automatic one-time migration of any pre-existing single diagram
+- Print renders the same diagram on one page, with a real em dash (not
+  literal `&mdash;` text) for any empty field
 
 ## Quick Wins
 
-- **Multiple named saved diagrams**, matching the multi-save convention
-  used by most other builder tools in this round — right now one diagram
-  per browser, so a class studying two novels back-to-back would overwrite
-  the first one's diagram building the second.
+- **Done — Multiple named saved diagrams.**
 - **A live class-discussion mode**: bigger fonts and no visible textarea
   borders in a "presentation" view, versus the current always-editable
   look, since the backlog explicitly calls out projecting this live with a
-  class.
+  class. *(Still open — the next round's best pick per Status above.)*
 - **JSON export/import**, for sharing a completed diagram between class
   periods studying the same novel, or archiving one from a past year.
-- **A visual distinction between filled and empty stages** (e.g. a subtle
-  highlight) so at a glance a teacher can see which parts of the mountain
-  still need class input during a live discussion.
+  *(Still open — natural pairing with the new multi-save feature.)*
+- **Done — A visual distinction between filled and empty stages.**
 
 ## Major Features
 
