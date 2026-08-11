@@ -160,6 +160,9 @@ the labelled/header/faded square-grid case and the 4-plane case.
 - Coordinate planes: four-quadrant or first-quadrant
 - Portrait / landscape; true-to-scale printing (`gridSizeInches`,
   `isoSizeInches`)
+- **Printer check** (`renderCalibration`) — a calibration page with a 6-inch
+  ruler, a 15-cm ruler, a 1-inch square and a 5-cm square, plus the arithmetic
+  for working out what a printer is doing to every page when they do not match
 - Named presets (`gvb-graph-paper:list` / `:data:*`), PNG download, print
 
 ## Quick Wins
@@ -170,9 +173,11 @@ the labelled/header/faded square-grid case and the 4-plane case.
   graph paper.)*
 - **Done —** **A title/name/date header block** on the sheet. *(Shipped Round 3, shared
   across all four modes via `gpg-render.js`'s `headerBlockHeight`/`headerSvg`.)*
-- **Print-margin verification.** "True to scale" is the tool's core promise
-  and it depends on the browser not scaling to fit; a printed calibration
-  ruler on a test page would let a teacher confirm it once per printer.
+- **Done — 2026-08-11.** **Print-margin verification.** "True to scale" is the
+  tool's core promise and it depends on the browser not scaling to fit; a
+  printed calibration ruler on a test page would let a teacher confirm it once
+  per printer. *(Shipped as a "Printer check" mode — see the calibration round
+  below.)*
 - **More grid types**: hexagonal, polar, log/semi-log, engineering (5 squares
   per inch), Cornell-notes ruling, handwriting lines with a dashed midline,
   storyboard boxes, music staff.
@@ -213,8 +218,9 @@ lesson is about — with an answer key, true to scale, on one sheet.
 ## Platform themes that matter here
 
 - **P6 (print quality)** — scale fidelity is this tool's entire value
-  proposition and depends on print settings the tool can't control; a
-  calibration affordance would be a real contribution.
+  proposition and depends on print settings the tool can't control. **Addressed
+  2026-08-11:** the Printer check mode is that affordance. Everything else here
+  is still trusting the print dialog.
 - **P7 (cross-tool)** — plotting would pull in expression parsing that already
   exists on the site; answer keys are a shared pattern.
 - **P15 (first run)** — presets exist, but a gallery of "common sheets" would
@@ -227,3 +233,48 @@ lesson is about — with an answer key, true to scale, on one sheet.
   and it's a meaningfully different product.
 - Should pre-plotted graphing live here, or in a separate graphing tool that
   reuses this renderer?
+
+## Calibration round — 2026-08-11 (backlog rank 1)
+
+Shipped the **Printer check** mode — a seventh tab whose only output is a
+calibration page.
+
+The tool's whole promise is that a 1/4in square is 1/4in, and that promise
+lives or dies on a print dialog the tool cannot see. "Fit to page", a driver
+default margin, or a copier reduction silently shrinks every sheet, and a
+quarter-inch grid printed at 0.238in ruins any measuring task done on it.
+
+The page carries a 6-inch ruler with eighth-inch ticks, a 15-cm ruler with
+millimetre ticks, a 1-inch square and a 5-cm square, and the arithmetic for the
+bad case: measure the 6-inch ruler, write down what you actually got, and that
+ratio is what the printer is doing to every page.
+
+Details worth keeping:
+
+- **Both rulers come from the same unit.** `CM_PER_INCH = 2.54` is exact by
+  definition, so the centimetre ruler is not an independent approximation — if
+  the inch ruler is true, so is it. The suite asserts 10cm lands at exactly
+  10/2.54 units.
+- **It ignores the header and ink-saving options** a worksheet would use. A
+  faded ruler is a worse ruler, and a name line on a calibration page is noise.
+- **The captions under the squares are left-anchored, not centred** — centred
+  ran the 1-inch square's caption off the left margin, because the square
+  starts at the page margin.
+
+New suite `Tools/graph-paper-generator/test/smoke-calibration.mjs` (40 checks)
+as `npm run test:graph-paper`. Most of it is geometry asserted straight off the
+SVG in plain Node — a calibration page that is itself wrong would be worse than
+none — including tick counts, exact one-unit inch spacing, the cm/inch
+agreement, the two square sizes, and that nothing is drawn past the page edge.
+
+### Where the next round should pick up
+
+- **More grid types** (hexagonal, polar, log/semi-log, engineering, storyboard,
+  music staff) is now the biggest open Quick Win and is pure `gpg-render.js`
+  work with an obvious test shape — the calibration suite's approach of
+  asserting geometry off the SVG applies directly.
+- The calibration page is print-only. If a teacher's printer *is* off, nothing
+  lets them compensate. A "my printer prints at 97%" scale factor applied to
+  every render is technically easy and pedagogically dangerous (it would make
+  the on-screen preview lie), so it wants a real decision before anyone builds
+  it.

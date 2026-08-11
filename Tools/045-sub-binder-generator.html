@@ -100,6 +100,20 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 1.6rem; }
 
+  /* Sub feedback form — the one page in the packet the substitute writes on,
+     so everything on it is sized for handwriting rather than for reading. */
+  .fb-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-bottom: .8rem; }
+  .fb-table th, .fb-table td { border: 1px solid var(--line-strong); padding: .35rem .5rem; text-align: left; vertical-align: top; }
+  .fb-table th { background: #f1f0ea; font-size: .82rem; }
+  .fb-table th.fb-period, .fb-table td.fb-period { width: 6.5rem; font-weight: 600; }
+  .fb-table td.fb-write { height: 2.2rem; }
+  .fb-block { margin-bottom: .7rem; }
+  .fb-label { font-size: .85rem; font-weight: 600; margin-bottom: .2rem; }
+  .fb-box { border: 1px solid var(--line-strong); border-radius: 4px; height: 1.1in; }
+  .fb-box.short { height: .6in; }
+  .fb-sign { display: flex; gap: 1.5rem; margin-top: 1rem; font-size: .85rem; }
+  .fb-sign span { flex: 1; border-bottom: 1px solid var(--ink); padding-bottom: 1.3rem; }
+
   .print-only { display: none; }
   @media print {
     body { background: #fff; color: #000; padding: 0; }
@@ -117,6 +131,12 @@
     .print-only dl.facts dt { color: #333; }
     .print-only .cover-emergency { border: 2px solid #a3372b; border-radius: 6px; padding: .8rem 1rem; margin-top: 1.2rem; }
     .print-only .cover-emergency .today-note-label { color: #a3372b; }
+    /* On paper the writing areas get more room than they need on screen —
+       a substitute writing in pen needs a line's worth, not a text box's. */
+    .print-only .fb-table td.fb-write { height: .55in; }
+    .print-only .fb-box { height: 1.25in; border-color: #999; }
+    .print-only .fb-box.short { height: .7in; }
+    .print-only .fb-sign span { border-bottom-color: #000; }
   }
 </style>
 </head>
@@ -184,6 +204,11 @@
   <div class="card">
     <div class="card-title"><span>Behavior plan</span><a href="008-behavior-points-tracker.html">Edit in Behavior Points Tracker</a></div>
     <div id="behaviorBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Sub feedback form</span></div>
+    <div id="feedbackBody"></div>
   </div>
 
   <div class="card">
@@ -756,6 +781,57 @@
     return { available: true, status: 'Saved (' + exitTicketBank.length + ' custom prompt' + (exitTicketBank.length === 1 ? '' : 's') + ').' };
   }
 
+  /* ==================== Sub feedback form ====================
+     Every other page in this bundle is the teacher talking to the substitute.
+     This is the one page going the other way: what actually got done, who
+     helped, and what went wrong, filled in before the sub leaves and waiting
+     on the desk in the morning. Without it that information arrives, if at
+     all, as a sticky note or not at all.
+
+     It is a blank form, so unlike every other section it is always available —
+     there is nothing to have saved first. The period rows come from Sub Plan
+     Builder's standing details when they exist, so a sub reports back period
+     by period against the same labels the rest of the packet uses; with no
+     standing details it falls back to four generic rows rather than nothing. */
+  var FEEDBACK_FALLBACK_ROWS = 4;
+
+  function evalFeedback() {
+    var periods = (standingCache && Array.isArray(standingCache.periods)) ? standingCache.periods.length : 0;
+    return {
+      available: true,
+      status: periods
+        ? 'Blank form, with a row per period from your standing details (' + periods + ').'
+        : 'Blank form, with ' + FEEDBACK_FALLBACK_ROWS + ' generic rows (no periods saved in Sub Plan Builder yet).'
+    };
+  }
+
+  function feedbackRowLabels() {
+    var periods = (standingCache && Array.isArray(standingCache.periods)) ? standingCache.periods : [];
+    var labelled = periods
+      .map(function (p) { return (p && p.label) ? String(p.label).trim() : ''; })
+      .filter(function (l) { return l.length > 0; });
+    if (labelled.length) return labelled;
+    var out = [];
+    for (var i = 1; i <= FEEDBACK_FALLBACK_ROWS; i++) out.push('Period ' + i);
+    return out;
+  }
+
+  function feedbackFormHtml() {
+    var rows = feedbackRowLabels().map(function (label) {
+      return '<tr><td class="fb-period">' + escapeHtml(label) + '</td><td class="fb-write"></td><td class="fb-write"></td></tr>';
+    }).join('');
+    return '<p class="hint" style="margin-top:0;">Please fill this in before you leave and leave it on the desk. ' +
+        'Anything you write here is genuinely useful &mdash; especially the parts that did not go well.</p>' +
+      '<table class="fb-table"><thead><tr>' +
+        '<th class="fb-period">Period</th><th>What got done</th><th>How it went</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="fb-block"><div class="fb-label">Students who helped &mdash; I would like to thank them</div><div class="fb-box short"></div></div>' +
+      '<div class="fb-block"><div class="fb-label">Students I had to speak to, and what happened</div><div class="fb-box"></div></div>' +
+      '<div class="fb-block"><div class="fb-label">What did not get finished, or what I left for you</div><div class="fb-box"></div></div>' +
+      '<div class="fb-block"><div class="fb-label">Anything else you should know (materials, technology, the room, a message from the office)</div><div class="fb-box"></div></div>' +
+      '<div class="fb-sign"><span>Substitute&rsquo;s name</span><span>Best way to reach you</span></div>';
+  }
+
   function exitTicketCardHtml() {
     if (!exitTicketBank.length) {
       return '<p class="empty-hint">No custom exit tickets saved yet, and Exit Ticket Generator doesn&rsquo;t remember which prompt was used on a given day either &mdash; add one in <a href="023-exit-ticket-generator.html">Exit Ticket Generator</a>, or just note today&rsquo;s prompt in the Lesson card above.</p>';
@@ -766,9 +842,12 @@
       '</ul>';
   }
   function renderExitTicketCard() { byId('exitTicketBody').innerHTML = exitTicketCardHtml(); }
+  function renderFeedbackCard() { byId('feedbackBody').innerHTML = feedbackFormHtml(); }
 
   /* ==================== Sections checklist ==================== */
-  var SECTION_ORDER = ['emergency', 'standing', 'today', 'lesson', 'seating', 'hallpass', 'behavior', 'exitticket'];
+  // 'feedback' is deliberately last: it is the page the substitute fills in
+  // and leaves on the desk, so it belongs at the back of the packet.
+  var SECTION_ORDER = ['emergency', 'standing', 'today', 'lesson', 'seating', 'hallpass', 'behavior', 'exitticket', 'feedback'];
   var SECTION_TITLES = {
     emergency: 'Emergency info',
     standing: 'Standing details',
@@ -777,11 +856,13 @@
     seating: 'Seating chart',
     hallpass: 'Hall pass procedure',
     behavior: 'Behavior plan',
-    exitticket: 'Exit ticket / bell ringer'
+    exitticket: 'Exit ticket / bell ringer',
+    feedback: 'Sub feedback form (they fill it in)'
   };
   var SECTION_EVAL = {
     emergency: evalEmergency, standing: evalStanding, today: evalToday, lesson: evalLesson,
-    seating: evalSeating, hallpass: evalHallPass, behavior: evalBehavior, exitticket: evalExitTicket
+    seating: evalSeating, hallpass: evalHallPass, behavior: evalBehavior, exitticket: evalExitTicket,
+    feedback: evalFeedback
   };
 
   function loadIncludePrefs() {
@@ -839,6 +920,7 @@
     renderHallPassCard();
     renderBehaviorCard();
     renderExitTicketCard();
+    renderFeedbackCard();
     renderChecklist();
   }
 
@@ -898,6 +980,9 @@
     }
     if (lastEvals.exitticket && lastEvals.exitticket.available && isIncluded('exitticket')) {
       pages.push(simplePageHtml('Exit Ticket / Bell Ringer', dateLabel, exitTicketCardHtml()));
+    }
+    if (isIncluded('feedback')) {
+      pages.push(simplePageHtml('How did today go?', dateLabel + ' — please fill in and leave on the desk', feedbackFormHtml()));
     }
 
     var printArea = byId('printArea');
@@ -960,6 +1045,16 @@
     var freeform = (lessonInput.value || '').trim();
     if (freeform) {
       pages.push(simplePageHtml('General Note', 'Applies to the whole absence, not tied to one day', '<div class="lesson-block">' + escapeHtml(freeform) + '</div>'));
+    }
+
+    // The feedback form is the one section that is per-day even though it has
+    // no saved data: two days away means two days to report back on, and one
+    // shared form would be filled in on day one and forgotten on day two.
+    if (isIncluded('feedback')) {
+      dates.forEach(function (d, i) {
+        pages.push(simplePageHtml('How did it go? — Day ' + (i + 1) + ' of ' + dates.length,
+          dayLabelLong(d) + ' — please fill in and leave on the desk', feedbackFormHtml()));
+      });
     }
 
     return pages;

@@ -150,6 +150,11 @@ explicit scope tradeoff, not an oversight (see Open Questions).
 - **Print bundle for all N days** — when the saved absence spans 2+ days,
   builds one packet covering the whole absence: shared sections once, a
   date-range cover, and a combined Calendar+Lesson page per day
+- **Sub feedback form** (`feedbackFormHtml`, `evalFeedback`) — the one page in
+  the packet that goes the other way: per-period "what got done / how it went"
+  rows taken from the standing details' own period labels, plus who helped, who
+  did not, what was left undone, and a signature line. Always available, since
+  it is blank; one per day in a multi-day packet
 - Refresh data button to re-pull from every source tool
 
 ## Quick Wins
@@ -276,3 +281,48 @@ clear list of anything it couldn't find.
   for two consecutive rounds; a third round that adds a new source instead
   of addressing it should think hard about whether that's still the right
   call.
+
+## Feedback-page round — 2026-08-11 (backlog rank 1)
+
+Shipped the **sub feedback form** as a ninth section.
+
+Every other page in this bundle is the teacher talking to the substitute. This
+is the one page going the other way, and without it that information arrives as
+a sticky note or not at all: what got done, who helped, what went wrong. It
+sits last in `SECTION_ORDER` on purpose — it is the page the sub fills in and
+leaves on the desk.
+
+Three decisions:
+
+- **It is always available.** Every other section is gated on another tool
+  having saved something; a blank form has nothing to have saved first, so
+  `evalFeedback()` returns `available: true` unconditionally. A teacher who has
+  never opened Sub Plan Builder still gets a usable page — the suite opens the
+  tool with completely empty storage and prints one.
+- **The period rows come from the standing details' own labels** when they
+  exist, so the sub reports back against "1st — Social Studies", not "Period 1".
+  With no standing details it falls back to four generic rows rather than to
+  nothing, which is the difference between a usable form and a dead section.
+- **One form per day in a multi-day packet.** Everything else in the multi-day
+  builder is either shared or genuinely date-specific from saved data; this is
+  the one section that is per-day *despite* having no saved data, because two
+  days away means two days to report back on, and a single shared form gets
+  filled in on day one and forgotten on day two.
+
+Beyond the per-period table it asks four things with room to write: who helped
+(so they can be thanked), who had to be spoken to, what was left undone, and
+anything else — plus a name and contact line.
+
+New suite `Tools/sub-binder-generator/test/smoke-feedback-page.mjs` (28 checks)
+as `npm run test:sub-binder`.
+
+### Where the next round should pick up
+
+- `076-sub-note-feedback-slip-generator.html` is a separate tool that generates
+  standalone feedback slips with teacher-authored prompts. This page does not
+  read it. If a teacher has custom prompts there, having the binder use them
+  instead of the fixed four questions would be a genuine P7 bridge — and is the
+  obvious next step for this page.
+- Nothing captures what the sub wrote back into the toolkit. That is out of
+  scope by design (paper is the medium here), but a "type up what the sub said"
+  field on the binder, stored per date, would close the loop.

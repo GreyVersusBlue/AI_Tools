@@ -27,7 +27,12 @@ tools table. Worth fixing whenever someone touches the README.
 - **Camera verification** (`verifyScan`, `stopCameraScan`, `setScanBadge`) —
   scan your own code to confirm it works before printing
 - **Bulk grid generation** (`parseBulkLines`, `generateBulkGrid`) at 2–5 per
-  row, printable
+  row, printable, with Avery 5160/8160 and 5163/8163 label-sheet presets and
+  whole-batch jsQR verification
+- **One labelled code per student from a saved roster** (`populateRosterSelect`,
+  `rosterLineContent`) — reads `np_rosters` read-only and fills the bulk paste
+  box, either with the student's name as the code content or with a
+  `{name}`/`{roster}`/`{n}` link template
 - Download PNG and SVG; recent codes (`qr-code-generator-recent`)
 - Uses `_shared/qr-scan.js`
 
@@ -65,9 +70,11 @@ tools table. Worth fixing whenever someone touches the README.
   share-by-link mechanism produces long URLs that make dense, hard-to-scan
   codes. A shared "is this payload too big for a reliable code?" check
   belongs here.
-- **Batch codes from a roster or a spreadsheet** (P2/P13) — one code per
-  student, labelled with their name, printed as a grid. That's the pattern
-  Gallery Walk and Scavenger Hunt each reimplement.
+- **Done (roster half) —** **Batch codes from a roster or a spreadsheet**
+  (P2/P13) — one code per student, labelled with their name, printed as a grid.
+  That's the pattern Gallery Walk and Scavenger Hunt each reimplement.
+  *(The `np_rosters` path shipped in Pass 2 — Round 2 below; a spreadsheet
+  import is still only the existing comma/tab paste.)*
 - **Done —** **Sheet layouts for standard label stock** (Avery-style), so codes can be
   printed onto stickers for lab equipment, library books, or classroom bins.
   *(Two real presets, Avery 5160/8160 and 5163/8163 — see the Round 4 update
@@ -322,3 +329,60 @@ Implemented four of the Major Features from this file in one pass, all inside
 - Real inkjet/laser print tests against physical Avery 5160/5163 stock
   would be the strongest possible validation of the label-sheet math above
   and beyond what a headless browser can confirm.
+
+## Pass 2 — Round 2 — 2026-08-11 — roster-labelled code sheet
+
+Shipped the **"Batch codes from a roster or a spreadsheet"** Major Feature
+(backlog rank 1), entirely inside `Tools/016-qr-code-generator.html`.
+
+- A **roster panel at the top of bulk mode** lists every non-empty roster in
+  `np_rosters` with its student count, and "Add one code per student" appends
+  one line per student to the existing paste box. It fills the same textarea
+  the teacher would have typed into rather than a parallel data path, so every
+  existing bulk affordance — editing a line, the sheet presets, cut lines,
+  whole-batch verification — works on roster output with no new code.
+- **Two content modes.** "Each code holds the student's name" is the sticker
+  case: a name-labelled code for a portfolio, a lab drawer, a book. "Each code
+  holds a link, name filled in" takes a template with `{name}`, `{roster}` and
+  `{n}` (1-based position) tokens, URL-encoded on substitution, for a turn-in
+  form or a per-student document link.
+- **Lines are emitted tab-separated, not comma-separated.** Rosters are full of
+  "Ruiz, Marisol"; `splitBulkLine()` already prefers a tab when one is present,
+  so a comma inside a name cannot split the line. This was the one real
+  correctness trap in the row.
+- **The print layout auto-switches to Avery 5160** the first time, since the
+  point of the row is a sheet of name stickers — but only from the `custom`
+  default, never over a layout the teacher already picked, and the status line
+  says it happened.
+- Reads `np_rosters` only; never writes it. The roster list re-reads on every
+  switch into bulk mode, so saving a roster in another tab shows up without a
+  reload.
+
+### Testing performed
+
+- Headless Chromium via Playwright against a served copy: seeded `np_rosters`
+  with three rosters (one empty), confirmed the empty one is not offered and
+  counts render; loaded a roster in name mode and asserted three tab-separated
+  lines with the comma-bearing name intact; asserted the sheet preset flipped
+  to `avery5160` and the status line reported the count; switched to link mode
+  and asserted `{name}`/`{roster}`/`{n}` substitution and URL-encoding; then
+  generated the grid and confirmed 3 codes generated, 0 failed, 0 unverified,
+  3 physically-sized label items in the print area, and the first grid caption
+  reading the student's name. Zero console errors, zero offsite requests.
+- Added `PW_CHROMIUM_EXECUTABLE` to `Tools/board-check/harness.mjs` — an opt-in
+  env var for machines where `npx playwright install chromium` can't reach the
+  download host but a compatible Chromium is already on disk. Unset, behavior
+  is byte-identical to before.
+
+### Where the next round should pick up
+
+- **Inventory/check-out tracking** remains the open Major Feature, and the
+  roster panel now makes half of it cheap: generating per-student codes is
+  done, so what's missing is the local scanned-in/scanned-out record on the
+  other end.
+- The roster panel is deliberately bulk-only. If a teacher wants one student's
+  code at a time, single mode still needs manual typing — a "pick a student"
+  affordance there would be small, but it wasn't the ask.
+- `crh_students_v1` (Class Roster Hub's sidecar) holds stable per-student ids.
+  A future round could encode the id rather than the name, which is what an
+  inventory or check-in record actually wants to key on.

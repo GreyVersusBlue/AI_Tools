@@ -92,8 +92,14 @@ export function serve(port) {
 
 /* ── browser ───────────────────────────────────────────────────────────── */
 
+// PW_CHROMIUM_EXECUTABLE is an escape hatch for machines where
+// `npx playwright install chromium` can't reach the download host (a locked-down
+// school network, a sandboxed CI container) but a compatible Chromium is already
+// on disk. Unset — the normal case — Playwright resolves its own browser exactly
+// as before.
 export async function launch() {
-  return chromium.launch({ headless: true });
+  const exe = process.env.PW_CHROMIUM_EXECUTABLE;
+  return chromium.launch(exe ? { headless: true, executablePath: exe } : { headless: true });
 }
 
 // The shared _ds stylesheet @imports Google Fonts over HTTPS on every page

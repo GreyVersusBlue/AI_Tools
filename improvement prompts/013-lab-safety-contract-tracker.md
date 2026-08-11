@@ -177,6 +177,9 @@ produces 2 slips naming the 2 missing students with the due date shown.
   saves `np_rosters`
 - **Mark all as signed**; per-document date setting
 - Print a **full report** and a **missing list**
+- **Parent-contact follow-up sheet** (`printContactBtn`, `contactAttemptHtml`)
+  — the missing students with two dated contact attempts each, methods as tick
+  boxes, and an outcome column, for documenting the chase
 - **`.ics` export** — "add lab-day reminder to calendar"
   (`buildIcsForDueDate`), with a days-until countdown
 - **Optional per-document fee with a paid/unpaid toggle** per student,
@@ -256,3 +259,50 @@ end of the year.
   supports it and the name is the main thing limiting its use.
 - Is any form of on-screen student acknowledgement acceptable to the district,
   or must everything be paper?
+
+## Parent-contact round — 2026-08-11 (backlog rank 1)
+
+Shipped the **parent-contact follow-up sheet**.
+
+"Print missing list" answers *who* still owes a contract. It does nothing for
+the part that actually eats the time: calling or emailing home, twice, and
+being able to say what was tried and when when an administrator or a parent
+asks later. **"Print parent-contact sheet"** is that page — the same missing
+students, with the chase built into the row:
+
+- Column 1 carries what the tool already knows: the student, which documents
+  are missing (only when more than one is tracked — with a single document the
+  label adds nothing to a row that already means "missing"), what is unpaid
+  and how much, and the teacher's own note.
+- Column 2 is **two dated attempts**, each with the method as tick boxes (call
+  / email / text / note home / in person) and an outcome row (spoke / left
+  message / no answer / bad number). One call is rarely the whole chase.
+- Column 3 is left blank for the pen.
+- A "Kept by / school year" line at the top, because this is a document that
+  may be read by someone who is not the teacher.
+
+It is deliberately paper rather than fields in the tool: the calls happen at a
+desk phone with a stack of paper, and a teacher writing "no answer, left
+voicemail" wants a pen. What the tool knows is printed; what only the teacher
+will know is left blank.
+
+One layout detail worth remembering: every tick box is glued to its label with
+`&nbsp;`. Without it the narrow column stranded a ☐ at the end of a line with
+its word on the next.
+
+New suite `Tools/lab-safety-contract-tracker/test/smoke-contact-sheet.mjs`
+(21 checks) as `npm run test:lab-safety`: a four-student class with two signed
+through the tool's own toggles, asserting the sheet carries exactly the two
+missing students and neither signed one, the note travels, the row shape is
+right, the outcome column is empty, the existing missing-list print is
+untouched, and an all-signed class prints "nobody to contact" instead of an
+empty grid.
+
+### Where the next round should pick up
+
+- The sheet is print-only by design. If a future round wants the *outcome*
+  captured in the tool (so next year's teacher can see the history), that is a
+  storage-schema change to `lsct_sections_v1` and should carry a migration —
+  do not bolt contact records onto the per-student note field.
+- **Scan returned forms** (`_shared/qr-scan.js` against a per-student code on
+  each blank contract) is still open and is the biggest remaining idea here.

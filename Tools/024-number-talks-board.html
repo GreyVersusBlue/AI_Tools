@@ -145,6 +145,23 @@
   .print-workspace-label { font-size: .95rem; font-weight: 700; margin-bottom: .3rem; }
   .print-workspace { border: 1px solid #999; border-radius: 4px; height: 2.6in; }
 
+  /* Session record: the teacher's copy of what happened, not the student
+     handout. Answers are shown here on purpose — the student sheet above
+     never shows them. */
+  .rec-section { margin-bottom: 1.1rem; page-break-inside: avoid; }
+  .rec-h { font-size: 1rem; font-weight: 800; border-bottom: 1px solid #999; padding-bottom: .12rem; margin-bottom: .5rem; }
+  .rec-expr { font-family: Consolas, "Courier New", monospace; font-size: 1.05rem; font-weight: 700; margin-bottom: .28rem; }
+  .rec-answer { color: #444; font-weight: 700; }
+  .rec-note { font-size: .88rem; color: #333; font-style: italic; margin-top: .35rem; }
+  .rec-strategy { border: 1px solid #bbb; border-radius: 4px; padding: .4rem .55rem; margin-bottom: .45rem; page-break-inside: avoid; }
+  .rec-strategy .rec-who { font-weight: 800; font-size: .92rem; margin-bottom: .12rem; }
+  .rec-strategy .rec-what { font-size: .92rem; white-space: pre-wrap; }
+  .rec-list { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
+  .rec-list li { margin-bottom: .2rem; }
+  .rec-empty { color: #666; font-size: .9rem; font-style: italic; }
+  .rec-space-label { font-size: .9rem; font-weight: 700; margin: .8rem 0 .25rem; }
+  .rec-space { border: 1px solid #999; border-radius: 4px; height: 1.6in; }
+
   .mode-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
   .mode-tab { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .55rem 1rem; font-weight: 700; font-size: .88rem; cursor: pointer; }
   .mode-tab:hover { border-color: var(--accent-2); color: var(--accent-2); }
@@ -355,6 +372,7 @@
     <div class="hint" style="margin-top:.7rem;">Want to keep a copy? Nothing here is saved automatically &mdash; download it before you reload or close the tab.</div>
     <div class="btn-row" style="margin-top:0;">
       <button type="button" class="secondary" id="exportSessionBtn">Save this session</button>
+      <button type="button" class="secondary" id="printSessionBtn">Print session record</button>
     </div>
   </div>
 
@@ -519,7 +537,7 @@
    'customInput', 'customNoteInput', 'useCustomBtn', 'saveToBankBtn', 'bankList', 'addStrategyBtn', 'strategyGrid', 'clearBoardBtn', 'undoClearBtn', 'strategyNameOptions',
    'historyList', 'historyEmptyHint', 'exportSessionBtn',
    'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn',
-   'printRow', 'printHandoutBtn', 'printArea',
+   'printRow', 'printHandoutBtn', 'printSessionBtn', 'printArea',
    'stringHistoryList', 'stringHistoryEmptyHint', 'clearStringHistoryBtn',
    'stageArea', 'fullscreenBtn', 'exitFullscreenBtn', 'teachingNote',
    'modeStringsBtn', 'modeDotsBtn', 'stringsSection', 'stringsSection2', 'dotsSection',
@@ -1363,6 +1381,73 @@
     window.print();
   }
 
+  /* ---------- printable session record ----------
+     The other half of "Save this session". The .txt export is for a folder on
+     a laptop; this is the paper version a teacher actually files, hands to a
+     coach or an administrator during a walkthrough, or staples into a planning
+     binder — the string, the answers, and every attributed strategy card in
+     one place.
+
+     Deliberately different from the student handout above in three ways: it
+     shows the answers (it is the teacher's copy), it shows who said what, and
+     it shows the whole session, not just the string currently on the board. */
+  function recordStrategiesHtml() {
+    if (!strategies.length) return '<p class="rec-empty">No strategy cards were stamped up.</p>';
+    return strategies.map(function (s, i) {
+      var name = s.name && s.name.trim() ? s.name.trim() : 'Student ' + (i + 1);
+      var text = s.text && s.text.trim() ? s.text.trim() : '(no notes typed)';
+      return '<div class="rec-strategy"><div class="rec-who">' + escapeHtml(name) + '</div>' +
+        '<div class="rec-what">' + escapeHtml(text) + '</div></div>';
+    }).join('');
+  }
+
+  function recordCurrentHtml() {
+    if (mode === 'dots') {
+      if (!dotState) return '<p class="rec-empty">No quick image on the board.</p>';
+      return renderDotBox(dotState) +
+        '<div class="rec-expr">How many: <span class="rec-answer">' + dotState.count + '</span></div>';
+    }
+    if (!current) return '<p class="rec-empty">No number string on the board.</p>';
+    var rows = current.exprs.map(function (e, i) {
+      // computeAnswer() returns null for anything outside the arithmetic forms
+      // it can parse (word problems, "as a percent"). Print the expression
+      // anyway and just leave the answer off, rather than dropping the line.
+      var ans = computeAnswer(e);
+      return '<div class="rec-expr">' +
+        (current.exprs.length > 1 ? '<span class="print-num">' + (i + 1) + '.</span>' : '') +
+        escapeHtml(e) +
+        (ans === null ? '' : ' <span class="rec-answer">= ' + escapeHtml(String(ans)) + '</span>') +
+        '</div>';
+    }).join('');
+    var note = current.note ? '<p class="rec-note">' + escapeHtml(current.note) + '</p>' : '';
+    return rows + note;
+  }
+
+  function printSessionRecord() {
+    var now = new Date();
+    var historyHtml = history.length
+      ? '<ol class="rec-list">' + history.slice().reverse().map(function (h) {
+          return '<li>[' + escapeHtml(categoryLabel(h.category)) + '] ' + escapeHtml(h.text) + '</li>';
+        }).join('') + '</ol>'
+      : '<p class="rec-empty">Nothing shown yet this session.</p>';
+
+    els.printArea.innerHTML =
+      '<div class="print-title">Number Talk — Session Record</div>' +
+      '<div class="print-sub">' +
+        escapeHtml(now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })) +
+        ' &middot; ' + escapeHtml(categoryLabel(settings.category)) +
+        ' &middot; teacher copy — includes answers</div>' +
+      '<div class="print-meta"><span>Class: <span class="fill-line">&nbsp;</span></span>' +
+        '<span>Period: <span class="fill-line">&nbsp;</span></span></div>' +
+      '<div class="rec-section"><div class="rec-h">On the board</div>' + recordCurrentHtml() + '</div>' +
+      '<div class="rec-section"><div class="rec-h">Strategies shared (' + strategies.length + ')</div>' +
+        recordStrategiesHtml() + '</div>' +
+      '<div class="rec-section"><div class="rec-h">Number talks used this session (' + history.length + ')</div>' +
+        historyHtml + '</div>' +
+      '<div class="rec-section"><div class="rec-space-label">Notes for next time</div><div class="rec-space"></div></div>';
+    window.print();
+  }
+
   function exportSession() {
     var text = buildSessionExportText();
     var blob = new Blob([text], { type: 'text/plain' });
@@ -1391,6 +1476,7 @@
   els.undoClearBtn.addEventListener('click', undoClearBoard);
   els.exportSessionBtn.addEventListener('click', exportSession);
   els.printHandoutBtn.addEventListener('click', printHandout);
+  els.printSessionBtn.addEventListener('click', printSessionRecord);
   els.clearStringHistoryBtn.addEventListener('click', clearStringHistory);
   els.toggleAnswerBtn.addEventListener('click', function () {
     answerKeyVisible = !answerKeyVisible;

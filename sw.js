@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v84';
+const CACHE_VERSION = 'v98';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -91,6 +91,7 @@ const PRECACHE_URLS = [
   "Tools/031-docx-merger.html",
   "Tools/058-duty-roster-builder.html",
   "Tools/019-escape-room-builder.html",
+  "Tools/escape-room-builder/er-match.js",
   "Tools/escape-room-builder/lock.html",
   "Tools/escape-room-builder/monitor.html",
   "Tools/023-exit-ticket-generator.html",

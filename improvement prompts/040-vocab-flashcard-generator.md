@@ -9,6 +9,37 @@
 
 ## Status
 
+**2026-08-11 — share round (backlog rank 1).** Shipped **share a word list by
+link or QR** (P3). The tool could already export a `.json` file, but a file has
+to be attached, downloaded, found again and imported — four steps and a thing
+to lose. Two new toolbar buttons: **Copy link** builds a `?deck=` URL through
+`_shared/state-link.js`, and **QR code** draws that URL with the shared
+`_shared/vendor/qrcode/qrcode.js` encoder into a modal, for the colleague
+standing next to you with a phone.
+
+What travels is the deck: the list name, the raw word text, *and* the card
+settings that decide how it prints (mode, columns/rows, card stock size,
+fold-vs-duplex, sort, shuffle, guides). That last part was the design decision
+— "the same deck" means the 3x5 fold-over cards the sender set up, not just the
+words. What does not travel is the rest of the browser: other saved lists stay
+home.
+
+On the receiving side the arrival is saved as a **new** named list, uniqued
+through the existing `uniqueListName()` (`"Unit 4 Vocabulary (shared)"`, then
+`" 2"`), so a shared link can never land on top of a list already there — the
+suite proves that with a pre-seeded list of the receiver's own. The `?deck=`
+param is consumed on read so a refresh can't double-import, a mangled link says
+so by name instead of opening blank, an empty list refuses to produce a link,
+and a list too long for a QR is refused by name rather than drawn as an
+unscannable square. The file-import path and the link-import path now share one
+`normalizeIncomingList()` coercion so they can't drift apart.
+
+New suite `Tools/vocab-flashcard-generator/test/smoke-share.mjs` (26 checks) as
+`npm run test:vocab-share`: it opens the link in a second browser context and
+checks the words, the non-ASCII round trip, every card setting, the
+no-clobber guarantee, double-open, the mangled link, and zero console errors
+or offsite requests.
+
 **2026-08-11 — Pass 2 round.** Shipped **the alignment test page**, the
 smaller of the two Quick Wins this file's Pass 1 round left deferred: a
 "Print alignment test page" button (visible only in Flashcards mode with
@@ -111,6 +142,9 @@ Features / Moonshot.
 - A quiz preview (`renderQuiz`)
 - **Read-only import bridge** from Vocab & Conjugation Drill Generator's
   saved drill sets (`vfg-conjdrill-link.js`)
+- **Share a list by link or QR** (`buildSharePayload`, `importSharedList`,
+  `normalizeIncomingList`) — a `?deck=` URL carrying the words and the card
+  settings, received as a new uniquely-named saved list
 
 ## Quick Wins
 
@@ -205,7 +239,8 @@ work, and don't promote one without Devon saying so.
   review game and drill tools.
 - **P6 (print quality)** — double-sided alignment, cut lines, and card stock
   sizes are this tool's core craft.
-- **P3 (share links)** — sharing a word list with a colleague.
+- **P3 (share links)** — **done:** Copy link / QR code in the toolbar, received
+  as a new saved list.
 - **P12 (storage)** — if images are added to cards.
 
 ## Open Questions
@@ -216,3 +251,17 @@ work, and don't promote one without Devon saying so.
 - ~~Is a student-facing study mode in scope?~~ **Answered: no** — students
   aren't intended users. Printed cards remain the deliverable, with the
   projected class review as the on-screen option.
+
+### Where the next round should pick up (after the share round)
+
+- **Image on a card** is still the oldest deferred Quick Win, and it now has a
+  second consequence: a base64 image would blow past what a `?deck=` URL can
+  carry, let alone a QR. Whoever builds it should decide up front whether
+  images travel in a share link at all (probably not — share the words, note
+  that pictures stay behind) rather than discovering it after the fact.
+- **More printable formats from the same list** (word search, crossword, bingo,
+  matching quiz, Frayer page) is the biggest remaining Major Feature and is
+  still untouched — it is a pile of mechanical transformations of data the tool
+  already parses.
+- The share payload is versioned (`v: 1`) but nothing reads that field yet.
+  A future shape change should branch on it rather than guessing.

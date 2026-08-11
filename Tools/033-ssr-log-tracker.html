@@ -96,6 +96,26 @@
   .row-actions { display: flex; gap: .4rem; justify-content: flex-end; }
   .table-wrap { overflow-x: auto; }
 
+  /* ── Genre tagging ────────────────────────────────────────────────────
+     A genre belongs to a book, not to an entry or to a student: one teacher
+     tagging "Hatchet" as Adventure tags it for everyone in the class. */
+  .genre-field { margin-top: .6rem; }
+  .genre-field input { max-width: 22rem; }
+  .book-genre-input {
+    font-family: inherit; font-size: .78rem; padding: .2rem .4rem; margin: 0 0 0 auto;
+    border: 1px solid var(--line-strong); border-radius: 5px; background: #fff; color: var(--ink);
+    width: 11rem; flex-shrink: 0;
+  }
+  .genre-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+  .genre-chip {
+    background: #eaf1f5; border: 1px solid #c9dbe3; color: var(--accent-2);
+    border-radius: 999px; padding: .2rem .65rem; font-size: .78rem; font-weight: 600;
+  }
+  .genre-chip.untagged { background: #f4f1ea; border-color: var(--line-strong); color: var(--muted); }
+  .genre-table td.zero { color: var(--muted); }
+  .genre-table td.num { text-align: center; }
+  .genre-table th.g-untagged, .genre-table td.g-untagged { color: var(--muted); }
+
   .summary-filter { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
   .summary-filter label { margin: 0; font-weight: 600; font-size: .8rem; display: flex; align-items: center; gap: .3rem; }
   .summary-filter input[type="date"] { width: auto; margin: 0; }
@@ -186,6 +206,7 @@
   </div>
 
   <datalist id="bookDatalist"></datalist>
+  <datalist id="genreDatalist"></datalist>
 
   <div class="card">
     <label for="sectionName">Class / section name</label>
@@ -247,6 +268,11 @@
             <div><label for="entryPages">Pages read to</label><input type="number" id="entryPages" min="0" step="1" required placeholder="e.g. 42"></div>
             <div><label for="entryMinutes">Minutes (optional)</label><input type="number" id="entryMinutes" min="0" step="1" placeholder="e.g. 20"></div>
           </div>
+          <div class="genre-field">
+            <label for="entryGenre">Genre (optional)</label>
+            <input type="text" id="entryGenre" list="genreDatalist" placeholder="e.g. Realistic fiction">
+            <span class="hint" style="margin:0;">Set once per book title &mdash; every student reading it, and every entry for it, picks up the same genre.</span>
+          </div>
           <div class="btn-row">
             <button type="submit" id="addEntryBtn">Add entry</button>
             <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">Cancel edit</button>
@@ -256,6 +282,7 @@
         <div class="book-progress" id="bookProgress" style="display:none;">
           <div class="card-title" style="margin-bottom:.4rem;">Books</div>
           <ul class="book-progress-list" id="bookProgressList"></ul>
+          <div class="genre-chips" id="studentGenreChips"></div>
         </div>
 
         <div class="table-wrap">
@@ -293,6 +320,10 @@
       <span class="hint" style="margin:0;">Date filter applies to totals only, not the current-book or days-logged-this-week columns.</span>
     </div>
     <div class="summary-filter" style="margin-bottom:.9rem;">
+      <label>Genre <select id="filterGenre"><option value="">All genres</option></select></label>
+      <span class="hint" id="genreFilterHint" style="margin:0;">Totals, the CSV export and the printed summary all follow this.</span>
+    </div>
+    <div class="summary-filter" style="margin-bottom:.9rem;">
       <label>Weekly goal <input type="number" id="goalPages" min="0" step="1" placeholder="pages"></label>
       <label>+ <input type="number" id="goalMinutes" min="0" step="1" placeholder="minutes"></label>
       <span class="hint" style="margin:0;">Optional &mdash; shown as a per-student progress indicator in the
@@ -315,6 +346,21 @@
       </table>
     </div>
     <p class="hint" id="noSummaryHint" style="display:none;">Add students and log entries to see a class summary.</p>
+
+    <div class="genre-spread" id="genreSpread" style="display:none;">
+      <div class="card-title" style="margin:1.2rem 0 .4rem;">
+        <span>Genre spread</span>
+        <button type="button" class="secondary small" id="printGenreBtn">Print genre spread</button>
+      </div>
+      <p class="hint">Distinct book titles each student has logged in each genre. A zero is the interesting cell &mdash;
+        it is a gap in that reader&rsquo;s diet. Untagged books sit in the last column until a genre is set on them.</p>
+      <div class="table-wrap">
+        <table class="summary-table genre-table" id="genreTable">
+          <thead><tr id="genreTableHead"></tr></thead>
+          <tbody id="genreTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <footer class="note">
@@ -348,11 +394,17 @@
     'printArea',
     'undoBanner', 'undoMessage', 'undoBtn',
     'bulkDetails', 'bulkDate', 'bulkTableBody', 'bulkSaveBtn', 'bulkStatus', 'printSlipsBtn',
-    'readingRate', 'bookDatalist'
+    'readingRate', 'bookDatalist',
+    'entryGenre', 'genreDatalist', 'studentGenreChips', 'filterGenre', 'genreFilterHint',
+    'genreSpread', 'genreTable', 'genreTableHead', 'genreTableBody', 'printGenreBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
   //           finished: { studentName: [bookKey, ...] },
+  //           genres: { bookKey: 'Genre' } — per BOOK, not per entry and not per
+  //           student: one teacher tagging "Hatchet" as Adventure tags it for the
+  //           whole class. Absent in every section saved before genres existed,
+  //           which is why every read of it defaults to {}.
   //           weeklyGoalPages, weeklyGoalMinutes } — bookKey is the trimmed,
   //           lowercased book title, matching the grouping key used by withSessionPages.
   //           weeklyGoalPages/weeklyGoalMinutes are 0 when off (goal is optional, per class).
@@ -419,7 +471,7 @@
     if (!state) return;
     var all = readAllSections();
     all[state.name] = {
-      roster: state.roster, logs: state.logs, finished: state.finished,
+      roster: state.roster, logs: state.logs, finished: state.finished, genres: state.genres || {},
       weeklyGoalPages: state.weeklyGoalPages || 0, weeklyGoalMinutes: state.weeklyGoalMinutes || 0
     };
     writeAllSections(all);
@@ -456,7 +508,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, roster: [], logs: {}, finished: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0 };
+    state = { name: name, roster: [], logs: {}, finished: {}, genres: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0 };
     activeStudent = null;
     editingEntryId = null;
     setCurrentName(name);
@@ -476,6 +528,9 @@
     if (!data) return;
     state = {
       name: name, roster: data.roster || [], logs: data.logs || {}, finished: data.finished || {},
+      // Sections saved before this round have no genres map at all; an empty
+      // one reads identically to "nothing tagged yet", so nothing migrates.
+      genres: data.genres || {},
       weeklyGoalPages: data.weeklyGoalPages || 0, weeklyGoalMinutes: data.weeklyGoalMinutes || 0
     };
     activeStudent = (state.roster.indexOf(activeStudent) !== -1) ? activeStudent : null;
@@ -682,6 +737,91 @@
     return list;
   }
 
+  /* ---------- genres ------------------------------------------------------
+     A genre belongs to a book, not to an entry and not to a student. One
+     teacher tagging "Hatchet" as Adventure tags it for every student reading
+     it and for every entry that will ever be logged against it — which is the
+     only version of this that a teacher would actually keep up with.
+
+     The preset list is a suggestion, not a schema: the field is a free-text
+     input backed by a datalist, so a class that reads a lot of manga or
+     verse novels can say so, and the spread grid's columns follow whatever is
+     actually in use rather than a fixed set. */
+  var GENRE_PRESETS = [
+    'Realistic fiction', 'Fantasy', 'Science fiction', 'Mystery', 'Historical fiction',
+    'Adventure', 'Horror', 'Graphic novel', 'Nonfiction', 'Biography/Memoir',
+    'Poetry', 'Sports', 'Humor'
+  ];
+  var UNTAGGED = '(no genre yet)';
+
+  function genreFor(bookOrKey) {
+    if (!state || !state.genres) return '';
+    var key = bookKey(bookOrKey);
+    return key && state.genres[key] ? state.genres[key] : '';
+  }
+
+  function setGenreFor(book, genre) {
+    if (!state) return;
+    if (!state.genres) state.genres = {};
+    var key = bookKey(book);
+    if (!key) return;
+    var clean = String(genre || '').trim();
+    // An emptied field means "untag this book", not "leave whatever was there".
+    if (clean) state.genres[key] = clean;
+    else delete state.genres[key];
+  }
+
+  /** Every genre in use in this class, plus the presets, for the datalist —
+      so a teacher's own genre name is one keystroke away the second time. */
+  function genresInUse() {
+    var seen = {}, list = [];
+    Object.keys((state && state.genres) || {}).forEach(function (k) {
+      var g = state.genres[k];
+      if (g && !seen[g.toLowerCase()]) { seen[g.toLowerCase()] = true; list.push(g); }
+    });
+    list.sort(function (a, b) { return a.localeCompare(b); });
+    return list;
+  }
+
+  function renderGenreDatalist() {
+    var used = genresInUse();
+    var seen = {};
+    var all = used.concat(GENRE_PRESETS).filter(function (g) {
+      var k = g.toLowerCase();
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+    els.genreDatalist.innerHTML = all.map(function (g) { return '<option value="' + escapeHtml(g) + '">'; }).join('');
+  }
+
+  /** Distinct book titles a student has logged, grouped by genre. Books, not
+      entries: reading one fantasy novel over six sessions is one fantasy book,
+      and counting sessions would make a slow reader look like a genre addict. */
+  function genreCountsFor(name) {
+    var counts = {};
+    studentBookList(studentEntries(name)).forEach(function (b) {
+      var g = genreFor(b.key) || UNTAGGED;
+      counts[g] = (counts[g] || 0) + 1;
+    });
+    return counts;
+  }
+
+  function renderStudentGenreChips() {
+    if (!activeStudent) { els.studentGenreChips.innerHTML = ''; return; }
+    var counts = genreCountsFor(activeStudent);
+    var keys = Object.keys(counts).sort(function (a, b) {
+      if (a === UNTAGGED) return 1;
+      if (b === UNTAGGED) return -1;
+      return a.localeCompare(b);
+    });
+    if (!keys.length) { els.studentGenreChips.innerHTML = ''; return; }
+    els.studentGenreChips.innerHTML = keys.map(function (g) {
+      return '<span class="genre-chip' + (g === UNTAGGED ? ' untagged' : '') + '">' +
+        escapeHtml(g) + ' · ' + counts[g] + '</span>';
+    }).join('');
+  }
+
   /** Every distinct book title logged anywhere in this class — most students
       read from the same classroom library, so a title one student typed is
       almost always the exact title another student's entry wants too. */
@@ -755,6 +895,7 @@
     els.activeStudentName.textContent = activeStudent;
     resetForm();
     renderBookProgress();
+    renderStudentGenreChips(); // switching students changes whose diet is on screen
     renderLogTable();
     renderReadingRate();
   }
@@ -768,12 +909,28 @@
       var li = document.createElement('li');
       li.innerHTML = '<label><input type="checkbox" data-book-key="' + escapeHtml(b.key) + '"' +
         (finished ? ' checked' : '') + '> ' + escapeHtml(b.title) +
-        (finished ? ' <span class="hint" style="margin:0;">&mdash; finished</span>' : '') + '</label>';
+        (finished ? ' <span class="hint" style="margin:0;">&mdash; finished</span>' : '') +
+        '<input type="text" class="book-genre-input" list="genreDatalist" data-genre-book="' + escapeHtml(b.title) +
+        '" value="' + escapeHtml(genreFor(b.key)) + '" placeholder="Genre" aria-label="Genre for ' + escapeHtml(b.title) + '">' +
+        '</label>';
       els.bookProgressList.appendChild(li);
     });
   }
 
+  els.bookProgressList.addEventListener('click', function (ev) {
+    // The genre input sits inside the row's <label>, so a click in it would
+    // otherwise toggle the "finished" checkbox the label is for.
+    if (ev.target.closest('input[data-genre-book]')) ev.preventDefault();
+  });
+
   els.bookProgressList.addEventListener('change', function (ev) {
+    var genreInput = ev.target.closest('input[data-genre-book]');
+    if (genreInput) {
+      setGenreFor(genreInput.dataset.genreBook, genreInput.value);
+      saveCurrentState();
+      renderSummaryTable(); // renders the genre views too
+      return;
+    }
     var cb = ev.target.closest('input[type="checkbox"][data-book-key]');
     if (!cb || !activeStudent) return;
     setBookFinished(activeStudent, cb.dataset.bookKey, cb.checked);
@@ -846,6 +1003,7 @@
     els.entryBook.value = e.book;
     els.entryPages.value = e.pagesTo;
     els.entryMinutes.value = e.minutes != null ? e.minutes : '';
+    els.entryGenre.value = genreFor(e.book);
     els.addEntryBtn.textContent = 'Save changes';
     els.cancelEditBtn.style.display = '';
     els.entryDate.focus();
@@ -880,6 +1038,9 @@
     } else {
       entries.push({ id: makeId(), date: date, book: book, pagesTo: pagesTo, minutes: minutes });
     }
+    // The genre field edits the BOOK, so it applies whether this is a new
+    // entry or an edit of an old one — and an emptied field untags the book.
+    setGenreFor(book, els.entryGenre.value);
     saveCurrentState();
     resetForm();
     renderStudentList();
@@ -889,6 +1050,14 @@
     renderReadingRate();
     renderBookDatalist();
     renderBulkTable();
+  });
+
+  /** Typing (or picking) a title that already carries a genre fills the genre
+      field in, so the common case — logging another session of a book the
+      class has already tagged — needs no thought and no retyping. */
+  els.entryBook.addEventListener('change', function () {
+    var g = genreFor(els.entryBook.value);
+    if (g) els.entryGenre.value = g;
   });
 
   /* ---------- bulk entry (one grid, whole class, one date) ---------- */
@@ -1026,7 +1195,10 @@
     var week = currentWeekRange();
     return state.roster.map(function (name) {
       var all = studentEntries(name);
-      var filtered = all.filter(function (e) { return inRange(e.date); });
+      // Genre filter rides alongside the date filter and affects exactly the
+      // same thing: the totals. "Current book" and "days logged this week"
+      // deliberately keep answering about the student, not the filter.
+      var filtered = all.filter(function (e) { return inRange(e.date) && passesGenreFilter(e); });
       var sessionById = withSessionPages(filtered);
       var totalPages = 0, totalMinutes = 0;
       filtered.forEach(function (e) {
@@ -1077,6 +1249,79 @@
     return '<div class="goal-mini">' + parts.join('') + '</div>';
   }
 
+  /* ---------- class-level genre views ------------------------------------
+     Two questions, two answers. "Show me only the fantasy reading" is the
+     filter. "Where are the gaps" is the spread grid — students down the side,
+     genres across, distinct titles in each cell, and a zero is the cell worth
+     looking at. */
+  function currentGenreFilter() {
+    return els.filterGenre ? els.filterGenre.value : '';
+  }
+
+  /** Does this entry's book carry the filtered genre? An empty filter passes
+      everything; the untagged bucket is selectable in its own right, since
+      "what has nobody tagged yet" is a real question when you are cleaning up. */
+  function passesGenreFilter(entry) {
+    var want = currentGenreFilter();
+    if (!want) return true;
+    var g = genreFor(entry.book) || UNTAGGED;
+    return g === want;
+  }
+
+  function renderGenreFilterOptions() {
+    var used = genresInUse();
+    var prev = currentGenreFilter();
+    var anyUntagged = state && state.roster.some(function (name) {
+      return studentBookList(studentEntries(name)).some(function (b) { return !genreFor(b.key); });
+    });
+    var opts = ['<option value="">All genres</option>'];
+    used.forEach(function (g) { opts.push('<option value="' + escapeHtml(g) + '">' + escapeHtml(g) + '</option>'); });
+    if (anyUntagged) opts.push('<option value="' + escapeHtml(UNTAGGED) + '">' + escapeHtml(UNTAGGED) + '</option>');
+    els.filterGenre.innerHTML = opts.join('');
+    // Keep the teacher's chosen filter across a re-render unless the genre it
+    // named has since disappeared from the class entirely.
+    els.filterGenre.value = prev;
+    if (els.filterGenre.value !== prev) els.filterGenre.value = '';
+  }
+
+  function renderGenreSpread() {
+    if (!state || !state.roster.length) { els.genreSpread.style.display = 'none'; return; }
+    var counts = {};
+    var columnSet = {};
+    state.roster.forEach(function (name) {
+      counts[name] = genreCountsFor(name);
+      Object.keys(counts[name]).forEach(function (g) { columnSet[g] = true; });
+    });
+    var columns = Object.keys(columnSet).filter(function (g) { return g !== UNTAGGED; })
+      .sort(function (a, b) { return a.localeCompare(b); });
+    var hasUntagged = !!columnSet[UNTAGGED];
+    if (!columns.length && !hasUntagged) { els.genreSpread.style.display = 'none'; return; }
+    els.genreSpread.style.display = '';
+
+    els.genreTableHead.innerHTML = '<th>Student</th>' +
+      columns.map(function (g) { return '<th>' + escapeHtml(g) + '</th>'; }).join('') +
+      (hasUntagged ? '<th class="g-untagged">' + escapeHtml(UNTAGGED) + '</th>' : '');
+
+    els.genreTableBody.innerHTML = state.roster.map(function (name) {
+      var c = counts[name];
+      var cells = columns.map(function (g) {
+        var n = c[g] || 0;
+        return '<td class="num' + (n === 0 ? ' zero' : '') + '">' + n + '</td>';
+      }).join('');
+      if (hasUntagged) cells += '<td class="num g-untagged">' + (c[UNTAGGED] || 0) + '</td>';
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
+    }).join('');
+  }
+
+  /** Everything that has to move when a genre changes anywhere. */
+  function renderGenreUI() {
+    renderGenreDatalist();
+    renderGenreFilterOptions();
+    renderStudentGenreChips();
+    renderGenreSpread();
+    renderBookProgress();
+  }
+
   function renderSummaryTable() {
     var rows = summaryRows();
     var key = sortState.key, dir = sortState.dir;
@@ -1107,6 +1352,10 @@
       var arrow = th.querySelector('.arrow');
       arrow.textContent = th.dataset.sort === sortState.key ? (sortState.dir === 1 ? '▲' : '▼') : '';
     });
+    // Every path that changes entries, books or the roster already re-renders
+    // the summary, so the genre views hang off it rather than needing their own
+    // call at each of those call sites.
+    renderGenreUI();
   }
 
   document.querySelectorAll('.summary-table th[data-sort]').forEach(function (th) {
@@ -1120,6 +1369,12 @@
 
   els.filterFrom.addEventListener('change', renderSummaryTable);
   els.filterTo.addEventListener('change', renderSummaryTable);
+  els.filterGenre.addEventListener('change', function () {
+    renderSummaryTable();
+    els.genreFilterHint.textContent = currentGenreFilter()
+      ? 'Totals below, the CSV export and the printed summary are limited to ' + currentGenreFilter() + '.'
+      : 'Totals, the CSV export and the printed summary all follow this.';
+  });
   els.clearFilterBtn.addEventListener('click', function () {
     els.filterFrom.value = '';
     els.filterTo.value = '';
@@ -1141,15 +1396,15 @@
 
   function exportCsv() {
     if (!state) return;
-    var header = ['Student', 'Date', 'Book', 'Pages Read To', 'Minutes', 'Pages This Session'];
+    var header = ['Student', 'Date', 'Book', 'Genre', 'Pages Read To', 'Minutes', 'Pages This Session'];
     var rows = [];
     state.roster.forEach(function (name) {
-      var filtered = studentEntries(name).filter(function (e) { return inRange(e.date); });
+      var filtered = studentEntries(name).filter(function (e) { return inRange(e.date) && passesGenreFilter(e); });
       var asc = sortedAscending(filtered);
       var sessionById = withSessionPages(filtered);
       asc.forEach(function (e) {
         rows.push([
-          name, e.date, e.book, e.pagesTo,
+          name, e.date, e.book, genreFor(e.book), e.pagesTo,
           (e.minutes != null && e.minutes !== '' ? e.minutes : ''),
           sessionById[e.id] || 0
         ]);
@@ -1182,14 +1437,15 @@
     });
     var rows = desc.map(function (e) {
       return '<tr><td>' + escapeHtml(e.date) + '</td><td>' + escapeHtml(e.book) + '</td>' +
+        '<td>' + escapeHtml(genreFor(e.book) || '—') + '</td>' +
         '<td>' + e.pagesTo + '</td><td>' + (sessionById[e.id] || 0) + '</td>' +
         '<td>' + (e.minutes != null ? e.minutes : '&mdash;') + '</td></tr>';
     }).join('');
     els.printArea.innerHTML =
       '<div class="print-title">' + escapeHtml(activeStudent) + ' &mdash; Reading Log</div>' +
       '<div class="print-sub">' + escapeHtml(state.name) + ' &middot; Printed ' + escapeHtml(todayStr()) + '</div>' +
-      '<table><thead><tr><th>Date</th><th>Book</th><th>Pages read to</th><th>Pages this session</th><th>Minutes</th></tr></thead>' +
-      '<tbody>' + (rows || '<tr><td colspan="5">No log entries yet.</td></tr>') + '</tbody></table>';
+      '<table><thead><tr><th>Date</th><th>Book</th><th>Genre</th><th>Pages read to</th><th>Pages this session</th><th>Minutes</th></tr></thead>' +
+      '<tbody>' + (rows || '<tr><td colspan="6">No log entries yet.</td></tr>') + '</tbody></table>';
     window.print();
   }
 
@@ -1206,6 +1462,9 @@
     var from = els.filterFrom.value, to = els.filterTo.value;
     var rangeNote = (from || to) ? (' &middot; Totals ' + (from ? ('from ' + escapeHtml(from)) : '') +
       (from && to ? ' ' : '') + (to ? ('to ' + escapeHtml(to)) : '')) : '';
+    // A printed page that silently showed only fantasy totals would be a lie
+    // by omission on somebody's desk, so the filter is named on it.
+    if (currentGenreFilter()) rangeNote += ' &middot; Genre: ' + escapeHtml(currentGenreFilter());
     var body = rows.map(function (r) {
       return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
         '<td>' + r.finishedCount + '</td><td>' + r.daysThisWeek + '</td><td>' + r.pages + '</td><td>' + r.minutes + '</td></tr>';
@@ -1257,9 +1516,43 @@
     window.print();
   }
 
+  /** The spread grid on paper — the version that goes to a PLC meeting or into
+      a conference folder, where "this reader has read nothing but graphic
+      novels since October" is the whole point of the conversation. */
+  function printGenreSpread() {
+    if (!state || !state.roster.length) return;
+    var counts = {};
+    var columnSet = {};
+    state.roster.forEach(function (name) {
+      counts[name] = genreCountsFor(name);
+      Object.keys(counts[name]).forEach(function (g) { columnSet[g] = true; });
+    });
+    var columns = Object.keys(columnSet).filter(function (g) { return g !== UNTAGGED; })
+      .sort(function (a, b) { return a.localeCompare(b); });
+    var hasUntagged = !!columnSet[UNTAGGED];
+    if (!columns.length && !hasUntagged) {
+      alert('No genres tagged yet. Set a genre on a book in a student’s "Books" list, then print the spread.');
+      return;
+    }
+    var head = '<th>Student</th>' + columns.map(function (g) { return '<th>' + escapeHtml(g) + '</th>'; }).join('') +
+      (hasUntagged ? '<th>' + escapeHtml(UNTAGGED) + '</th>' : '');
+    var body = state.roster.map(function (name) {
+      var c = counts[name];
+      var cells = columns.map(function (g) { return '<td>' + (c[g] || 0) + '</td>'; }).join('');
+      if (hasUntagged) cells += '<td>' + (c[UNTAGGED] || 0) + '</td>';
+      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
+    }).join('');
+    els.printArea.innerHTML =
+      '<div class="print-title">Genre Spread &mdash; ' + escapeHtml(state.name) + '</div>' +
+      '<div class="print-sub">Distinct book titles per genre &middot; Printed ' + escapeHtml(todayStr()) + '</div>' +
+      '<table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+    window.print();
+  }
+
   els.printStudentBtn.addEventListener('click', printStudentLog);
   els.printSummaryBtn.addEventListener('click', printSummary);
   els.printWallBtn.addEventListener('click', printFinishedBooksWall);
+  els.printGenreBtn.addEventListener('click', printGenreSpread);
 
   /* ---------- boot ---------- */
   var current = getCurrentName();
@@ -1272,6 +1565,7 @@
   }
   resetForm();
   populateRosterHubSelect();
+  renderGenreUI();
 
 })();
 </script>

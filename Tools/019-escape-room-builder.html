@@ -22,6 +22,7 @@
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="escape-room-builder/er-match.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -128,6 +129,32 @@
   .ref-list th { background: #f1f0ea; font-size: .7rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
+
+  /* ── Teacher test run ─────────────────────────────────────────────────
+     A walk through the chain exactly as a student meets it, in the builder,
+     with the teacher's own answer key one click away. */
+  .tr-overlay { position: fixed; inset: 0; background: rgba(12, 14, 22, .72); z-index: 200; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 16px; overflow-y: auto; }
+  .tr-overlay[hidden] { display: none; }
+  .tr-modal { background: var(--paper); color: var(--ink); border-radius: 12px; max-width: 40rem; width: 100%; padding: 1.2rem 1.3rem 1.4rem; box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+  .tr-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+  .tr-head h2 { font-size: 1.05rem; margin: 0; }
+  .tr-step { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+  .tr-clue { font-size: 1.1rem; line-height: 1.45; margin: 0 0 .8rem; white-space: pre-wrap; }
+  .tr-cipher { font-family: Consolas, monospace; font-size: 1.15rem; letter-spacing: .1em; background: #f1f0ea; border-radius: 6px; padding: .5rem .7rem; margin-bottom: .8rem; word-break: break-word; }
+  .tr-img { max-width: 100%; max-height: 34vh; object-fit: contain; border-radius: 8px; display: block; margin-bottom: .8rem; }
+  .tr-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .tr-row input[type="text"] { flex: 1 1 12rem; }
+  .tr-feedback { font-size: .9rem; margin-top: .7rem; padding: .5rem .7rem; border-radius: 6px; display: none; }
+  .tr-feedback.show { display: block; }
+  .tr-feedback.good { background: rgba(47,107,58,.12); color: var(--good); }
+  .tr-feedback.bad { background: rgba(196,58,47,.1); color: var(--danger, #b0332a); }
+  .tr-teacher { margin-top: .9rem; border-top: 1px dashed var(--line-strong); padding-top: .7rem; font-size: .85rem; color: var(--muted); }
+  .tr-teacher b { color: var(--ink); }
+  .tr-teacher .link-btn { background: transparent; color: var(--accent-2); border: none; text-decoration: underline; padding: .2rem 0; font-size: .85rem; font-weight: 600; width: auto; cursor: pointer; }
+  .tr-trace { margin-top: .8rem; font-size: .85rem; }
+  .tr-trace ol { margin: .3rem 0 0; padding-left: 1.3rem; }
+  .tr-warn { background: rgba(196,58,47,.1); border: 1px solid rgba(196,58,47,.35); border-radius: 6px; padding: .55rem .7rem; font-size: .85rem; margin-top: .8rem; }
+  .tr-ok { background: rgba(47,107,58,.12); border: 1px solid rgba(47,107,58,.3); border-radius: 6px; padding: .55rem .7rem; font-size: .85rem; margin-top: .8rem; }
 
   /* ── Print-only station QR grid / answer key ───────────────────────── */
   .print-only { display: none; }
@@ -280,7 +307,11 @@
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print Station QR Codes</button>
           <button class="secondary" id="printAnswersBtn" disabled type="button">Print Answer Key</button>
+          <button class="secondary" id="testRunBtn" disabled type="button">&#9654; Test run (no printing)</button>
         </div>
+        <div class="hint">Test run walks the chain the way a student meets it &mdash; the same clues, the same answer
+          matching, the same branching &mdash; without printing a page or opening the player link. It ends by naming
+          any station the chain can never reach.</div>
         <div class="hint">Each printed code is stamped for its own station, so scanning Station 3's code before solving Station 1 or 2 tells the player to go find those first. The answer key prints separately &mdash; keep it with you, not with the students.</div>
       </div>
 
@@ -300,6 +331,19 @@
 
   <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded, and no student data leaves this device. The full answer key travels inside the player link/QR data itself, the same way the QR Scavenger Hunt Builder's answer key is printable &mdash; this is a classroom convenience tool, not a security system.</footer>
 
+</div>
+
+<div class="tr-overlay" id="testRunOverlay" hidden>
+  <div class="tr-modal" role="dialog" aria-modal="true" aria-labelledby="testRunTitle">
+    <div class="tr-head">
+      <h2 id="testRunTitle">Test run</h2>
+      <div class="tr-row" style="gap:.4rem;">
+        <span class="tr-step" id="testRunStep"></span>
+        <button type="button" class="secondary" id="testRunClose">Close</button>
+      </div>
+    </div>
+    <div id="testRunBody"></div>
+  </div>
 </div>
 
 <div class="print-only" id="printQrArea">
@@ -338,7 +382,8 @@
    'cardsPerPage', 'ecLevel', 'showNumber', 'randomizeStart',
    'countdownEnabled', 'countdownMinutes', 'countdownMinutesRow', 'printCodesBtn', 'printAnswersBtn',
    'cards-preview', 'answerPreview', 'printQrArea', 'printQrGrid', 'printAnswerArea', 'printAnswerBody',
-   'answerSheetTitle', 'previewNote', 'msg'
+   'answerSheetTitle', 'previewNote', 'msg',
+   'testRunBtn', 'testRunOverlay', 'testRunClose', 'testRunStep', 'testRunBody'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -866,6 +911,7 @@
       els.playerLink.value = '';
       els.printCodesBtn.disabled = true;
       els.printAnswersBtn.disabled = true;
+      els.testRunBtn.disabled = true;
       els.previewNote.textContent = 'Live preview.';
       return;
     }
@@ -900,7 +946,194 @@
     els.previewNote.textContent = valid.length + ' station' + (valid.length === 1 ? '' : 's') + ' ready.';
     els.printCodesBtn.disabled = false;
     els.printAnswersBtn.disabled = false;
+    els.testRunBtn.disabled = false;
   }
+
+  /* ── Teacher test run ───────────────────────────────────────────────────
+     Proofreading an escape room by reading the answer key does not catch the
+     things that actually break one: a clue that doesn't say what to type, an
+     accepted answer with a stray trailing space, a branch that points at a
+     station you later deleted, or a station nothing ever routes to. The only
+     way to find those is to walk the chain — and until now that meant
+     printing codes or opening the player link and playing it for real, which
+     also writes progress into localStorage for that room.
+
+     This walks the SAME payload students get (`buildRoomPayload`) through the
+     SAME matcher they hit (`er-match.js`, shared with lock.html), and writes
+     nothing anywhere: it is a dry run, not a game.
+  ---------------------------------------------------------------------- */
+  var testRun = null; // { room, idx, visited: [], misses, revealed }
+
+  function trStationNext(room, idx) {
+    var st = room.stations[idx];
+    var next = (typeof st.next === 'number') ? st.next : idx + 1;
+    return (next === null || next >= room.stations.length) ? null : next;
+  }
+
+  /** Stations no path from the start can ever reach — a real authoring bug
+      the answer key cannot show you, since every station looks fine on its
+      own row. Walks branches from station 0 the way lock.html would. */
+  function unreachableStations(room) {
+    var seen = {};
+    var queue = room.stations.length ? [0] : [];
+    while (queue.length) {
+      var i = queue.shift();
+      if (seen[i]) continue;
+      seen[i] = true;
+      var n = trStationNext(room, i);
+      if (n !== null && !seen[n]) queue.push(n);
+    }
+    var out = [];
+    room.stations.forEach(function (_, i) { if (!seen[i]) out.push(i + 1); });
+    return out;
+  }
+
+  function trExpectedText(st) {
+    if (st.type === 'cipher') {
+      return 'Decodes to: ' + (st.answers || []).join(', ') +
+        ' (shift ' + clampShift(st.cipherShift) + ')';
+    }
+    if (st.type === 'digits') return 'Code: ' + (st.answers || []).join(', ');
+    var txt = 'Accepts: ' + (st.answers || []).join(', ');
+    if (st.numericTolerance !== undefined && st.numericTolerance !== null) {
+      txt += ' (numeric, within ±' + st.numericTolerance + ')';
+    }
+    return txt;
+  }
+
+  function renderTestRun() {
+    if (!testRun) return;
+    var room = testRun.room;
+
+    if (testRun.idx === null) {
+      var unreachable = unreachableStations(room);
+      var trace = testRun.visited.map(function (i) { return '<li>Station ' + (i + 1) + '</li>'; }).join('');
+      els.testRunStep.textContent = 'Finished';
+      els.testRunBody.innerHTML =
+        '<p class="tr-clue">🏁 The chain ends here — that is what a team will see.</p>' +
+        '<div class="tr-trace"><b>Path you walked:</b><ol>' + trace + '</ol></div>' +
+        (unreachable.length
+          ? '<div class="tr-warn"><b>' + unreachable.length + ' station' + (unreachable.length === 1 ? '' : 's') +
+            ' can never be reached:</b> ' + unreachable.map(function (n) { return 'Station ' + n; }).join(', ') +
+            '. Check the “after this station, go to…” rules — nothing routes to ' +
+            (unreachable.length === 1 ? 'it' : 'them') + ', so ' +
+            (unreachable.length === 1 ? 'its clue' : 'those clues') + ' will never be seen.</div>'
+          : '<div class="tr-ok">Every station is reachable from Station 1.</div>') +
+        '<div class="tr-row" style="margin-top:1rem;">' +
+          '<button type="button" id="trRestart">Run it again</button>' +
+          '<button type="button" class="secondary" id="trDone">Close</button>' +
+        '</div>';
+      els.testRunBody.querySelector('#trRestart').addEventListener('click', function () { startTestRun(); });
+      els.testRunBody.querySelector('#trDone').addEventListener('click', closeTestRun);
+      return;
+    }
+
+    var idx = testRun.idx;
+    var st = room.stations[idx];
+    els.testRunStep.textContent = 'Station ' + (idx + 1) + ' of ' + room.stations.length;
+
+    var cipherLine = '';
+    if (st.type === 'cipher') {
+      var shown = (st.answers || []).map(function (a) { return caesarEncode(a, clampShift(st.cipherShift)); });
+      cipherLine = '<div class="tr-cipher">' + escapeHtml(shown.join('   /   ')) + '</div>';
+    }
+    var img = st.image ? '<img class="tr-img" src="' + escapeHtml(st.image) + '" alt="">' : '';
+    var hintBlock = st.hint
+      ? (testRun.revealed[idx]
+          ? '<p class="tr-teacher"><b>Hint shown:</b> ' + escapeHtml(st.hint) + '</p>'
+          : '<button type="button" class="secondary" id="trHint">Show the hint' +
+            (st.hintCost ? ' (−' + st.hintCost + ' pts)' : '') + '</button>')
+      : '<span class="tr-step">No hint on this station</span>';
+
+    els.testRunBody.innerHTML =
+      '<p class="tr-clue">' + escapeHtml(st.clue) + '</p>' +
+      img + cipherLine +
+      '<div class="tr-row">' +
+        '<input type="text" id="trAnswer" placeholder="Type an answer, as a student would" autocomplete="off">' +
+        '<button type="button" id="trCheck">Check</button>' +
+      '</div>' +
+      '<div class="tr-feedback" id="trFeedback"></div>' +
+      '<div class="tr-row" style="margin-top:.7rem;">' + hintBlock +
+        '<button type="button" class="secondary" id="trSkip">Skip to next station</button>' +
+      '</div>' +
+      '<div class="tr-teacher" id="trTeacher">' +
+        (testRun.showAnswers
+          ? '<b>Answer:</b> ' + escapeHtml(trExpectedText(st)) +
+            (st.maxAttempts ? ' · locks out after ' + st.maxAttempts + ' miss' + (st.maxAttempts === 1 ? '' : 'es') : '') +
+            (st.awardLetter ? ' · awards the letter “' + escapeHtml(st.awardLetter) + '”' : '') +
+            ' <button type="button" class="link-btn" id="trHideAns">hide</button>'
+          : '<button type="button" class="link-btn" id="trShowAns">Show the expected answer (teacher only)</button>') +
+        '<div style="margin-top:.3rem;">Misses so far: ' + (testRun.misses[idx] || 0) + '</div>' +
+      '</div>';
+
+    var input = els.testRunBody.querySelector('#trAnswer');
+    var feedback = els.testRunBody.querySelector('#trFeedback');
+
+    function submit() {
+      var verdict = EscapeRoomMatch.checkAnswer(st, input.value);
+      if (verdict.correct) {
+        feedback.className = 'tr-feedback show good';
+        feedback.textContent = '✓ Correct — this is what a student sees, then the next clue opens.';
+        setTimeout(function () { advanceTestRun(idx); }, 450);
+        return;
+      }
+      testRun.misses[idx] = (testRun.misses[idx] || 0) + 1;
+      feedback.className = 'tr-feedback show bad';
+      feedback.textContent = verdict.nearMiss
+        ? 'So close — check your capitalization, spacing, and spelling, then try again. (Students get this same near-miss message.)'
+        : 'Not quite — try again. (Students get this same message.)';
+      var counter = els.testRunBody.querySelector('#trTeacher div');
+      if (counter) counter.textContent = 'Misses so far: ' + testRun.misses[idx];
+    }
+
+    els.testRunBody.querySelector('#trCheck').addEventListener('click', submit);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    els.testRunBody.querySelector('#trSkip').addEventListener('click', function () { advanceTestRun(idx); });
+    var hintBtn = els.testRunBody.querySelector('#trHint');
+    if (hintBtn) hintBtn.addEventListener('click', function () { testRun.revealed[idx] = true; renderTestRun(); });
+    var showAns = els.testRunBody.querySelector('#trShowAns');
+    if (showAns) showAns.addEventListener('click', function () { testRun.showAnswers = true; renderTestRun(); });
+    var hideAns = els.testRunBody.querySelector('#trHideAns');
+    if (hideAns) hideAns.addEventListener('click', function () { testRun.showAnswers = false; renderTestRun(); });
+    input.focus();
+  }
+
+  function advanceTestRun(fromIdx) {
+    if (!testRun) return;
+    var next = trStationNext(testRun.room, fromIdx);
+    testRun.idx = next;
+    if (next !== null) testRun.visited.push(next);
+    renderTestRun();
+  }
+
+  function startTestRun() {
+    var valid = validStations();
+    if (!valid.length) return;
+    testRun = {
+      room: buildRoomPayload(valid),
+      idx: 0,
+      visited: [0],
+      misses: {},
+      revealed: {},
+      showAnswers: false
+    };
+    els.testRunOverlay.hidden = false;
+    renderTestRun();
+  }
+
+  function closeTestRun() {
+    testRun = null;
+    els.testRunOverlay.hidden = true;
+  }
+
+  els.testRunBtn.addEventListener('click', startTestRun);
+  els.testRunClose.addEventListener('click', closeTestRun);
+  els.testRunOverlay.addEventListener('mousedown', function (e) {
+    if (e.target === els.testRunOverlay) closeTestRun();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !els.testRunOverlay.hidden) closeTestRun();
+  });
 
   function nextLabel(s, valid) {
     if (s.next === 'end') return 'Finish';

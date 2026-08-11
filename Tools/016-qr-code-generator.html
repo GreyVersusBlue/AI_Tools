@@ -483,6 +483,20 @@
 
   #bulk-hint { margin-bottom: 0.75rem; }
 
+  /* Roster panel — the "one labelled code per student" shortcut that fills the
+     paste box below it, set off so it reads as a starting point rather than a
+     required step. */
+  .roster-panel {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 0.85rem;
+    background: var(--surface2);
+  }
+  .roster-panel .hint code {
+    font-family: Consolas, monospace;
+    font-size: 0.95em;
+  }
+
   #bulk-status {
     font-size: 0.76rem;
     color: var(--text-dim);
@@ -594,6 +608,32 @@
       </div>
 
       <div class="bulk-only" id="bulk-content-pane">
+        <div class="control-group roster-panel" id="bulk-roster-panel">
+          <label for="bulk-roster">Start from a class roster</label>
+          <div class="hint">Reads the rosters Name Picker and Class Roster Hub already saved on this
+            machine — nothing is uploaded, and nothing here changes them.</div>
+          <div class="control-row">
+            <div class="control-group">
+              <select id="bulk-roster" aria-label="Saved roster"><option value="">No saved rosters found</option></select>
+            </div>
+            <div class="control-group">
+              <select id="bulk-roster-mode" aria-label="What each student's code should contain">
+                <option value="name">Each code holds the student's name</option>
+                <option value="link">Each code holds a link, name filled in</option>
+              </select>
+            </div>
+          </div>
+          <div class="control-group" id="bulk-roster-link-group" style="display:none;">
+            <input type="text" id="bulk-roster-link" spellcheck="false"
+                   placeholder="https://example.com/turn-in?student={name}">
+            <div class="hint"><code>{name}</code> becomes the student's name (URL-encoded),
+              <code>{roster}</code> the roster's name, and <code>{n}</code> their position on the list.</div>
+          </div>
+          <div class="btn-row" style="margin-top:0.6rem;">
+            <button class="btn-secondary" type="button" id="btn-bulk-roster">Add one code per student</button>
+          </div>
+          <div id="bulk-roster-msg" class="hint" style="margin:0.5rem 0 0;"></div>
+        </div>
         <div class="control-group">
           <label for="bulk-text">One code per line</label>
           <textarea id="bulk-text" spellcheck="false" style="min-height: 160px;" placeholder="Station 1, https://example.com/station1&#10;Station 2, https://example.com/station2&#10;Station 3, https://example.com/station3"></textarea>
@@ -861,6 +901,12 @@
     printImg: document.getElementById('print-img'),
     msg: document.getElementById('msg'),
     bulkText: document.getElementById('bulk-text'),
+    bulkRoster: document.getElementById('bulk-roster'),
+    bulkRosterMode: document.getElementById('bulk-roster-mode'),
+    bulkRosterLinkGroup: document.getElementById('bulk-roster-link-group'),
+    bulkRosterLink: document.getElementById('bulk-roster-link'),
+    bulkRosterMsg: document.getElementById('bulk-roster-msg'),
+    btnBulkRoster: document.getElementById('btn-bulk-roster'),
     bulkCols: document.getElementById('bulk-cols'),
     bulkColsRow: document.getElementById('bulk-cols-row'),
     bulkCutlines: document.getElementById('bulk-cutlines'),
@@ -1249,6 +1295,8 @@
       var mode = document.querySelector('input[name="app-mode"]:checked').value;
       document.body.classList.toggle('mode-bulk', mode === 'bulk');
       document.body.classList.toggle('mode-scan', mode === 'scan');
+      // A roster may have been saved in another tab since this page loaded.
+      if (mode === 'bulk') populateRosterSelect();
     });
   });
 
@@ -1631,6 +1679,100 @@
   }
 
   els.bulkSheet.addEventListener('change', syncBulkSheetUI);
+
+  // ── One labelled code per student, from a saved roster ────────────────────
+  // Read-only reuse of the shared roster list ('np_rosters', written by Name
+  // Picker and Class Roster Hub — an object of rosterName -> array of name
+  // strings). This tool never writes that key; it only turns a roster into
+  // bulk lines, which the teacher can then edit like any other paste.
+  //
+  // Lines are emitted tab-separated rather than comma-separated on purpose:
+  // rosters are full of "Ruiz, Marisol", and splitBulkLine() prefers a tab
+  // when one is present, so a comma inside a name can't split the line.
+  var ROSTER_KEY = 'np_rosters';
+  var ROSTER_LINK_DEFAULT = 'https://example.com/turn-in?student={name}';
+
+  function readRosters() {
+    try {
+      var v = JSON.parse(localStorage.getItem(ROSTER_KEY) || '{}');
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+      return v;
+    } catch (e) { return {}; }
+  }
+
+  function rosterNames(roster) {
+    if (!Array.isArray(roster)) return [];
+    return roster
+      .map(function (n) { return String(n == null ? '' : n).replace(/[\t\r\n]+/g, ' ').trim(); })
+      .filter(function (n) { return n.length > 0; });
+  }
+
+  function populateRosterSelect() {
+    var rosters = readRosters();
+    var names = Object.keys(rosters).filter(function (k) { return rosterNames(rosters[k]).length > 0; });
+    if (!names.length) {
+      els.bulkRoster.innerHTML = '<option value="">No saved rosters found</option>';
+      els.bulkRoster.disabled = true;
+      els.btnBulkRoster.disabled = true;
+      els.bulkRosterMsg.textContent = 'Save a class list in Name Picker or Class Roster Hub first, then it shows up here.';
+      return;
+    }
+    els.bulkRoster.disabled = false;
+    els.btnBulkRoster.disabled = false;
+    var frag = document.createDocumentFragment();
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose a roster…';
+    frag.appendChild(placeholder);
+    names.forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = n + ' (' + rosterNames(rosters[n]).length + ')';
+      frag.appendChild(opt);
+    });
+    els.bulkRoster.innerHTML = '';
+    els.bulkRoster.appendChild(frag);
+  }
+
+  function syncRosterModeUI() {
+    var isLink = els.bulkRosterMode.value === 'link';
+    els.bulkRosterLinkGroup.style.display = isLink ? '' : 'none';
+    if (isLink && !els.bulkRosterLink.value.trim()) els.bulkRosterLink.value = ROSTER_LINK_DEFAULT;
+  }
+  els.bulkRosterMode.addEventListener('change', syncRosterModeUI);
+
+  function rosterLineContent(studentName, rosterName, index) {
+    if (els.bulkRosterMode.value !== 'link') return studentName;
+    var tpl = els.bulkRosterLink.value.trim() || ROSTER_LINK_DEFAULT;
+    return tpl
+      .replace(/\{name\}/g, encodeURIComponent(studentName))
+      .replace(/\{roster\}/g, encodeURIComponent(rosterName))
+      .replace(/\{n\}/g, String(index + 1));
+  }
+
+  els.btnBulkRoster.addEventListener('click', function () {
+    var rosterName = els.bulkRoster.value;
+    if (!rosterName) { els.bulkRosterMsg.textContent = 'Pick a roster first.'; return; }
+    var students = rosterNames(readRosters()[rosterName]);
+    if (!students.length) { els.bulkRosterMsg.textContent = 'That roster has no names in it.'; return; }
+
+    var lines = students.map(function (s, i) { return s + '\t' + rosterLineContent(s, rosterName, i); });
+    var existing = els.bulkText.value.replace(/\s+$/, '');
+    els.bulkText.value = (existing ? existing + '\n' : '') + lines.join('\n') + '\n';
+
+    // The point of this shortcut is a sheet of name stickers, so land on a
+    // label preset the first time rather than the plain-paper grid — but never
+    // override a layout the teacher has already chosen.
+    var switched = false;
+    if (els.bulkSheet.value === 'custom') {
+      els.bulkSheet.value = 'avery5160';
+      syncBulkSheetUI();
+      switched = true;
+    }
+    els.bulkRosterMsg.textContent = students.length + ' student' + (students.length === 1 ? '' : 's') +
+      ' added below' + (switched ? ', and the print layout is set to Avery 5160 name labels — change it above if you want plain paper' : '') +
+      '. Edit any line, then Generate grid.';
+  });
 
   function splitBulkLine(line) {
     var delim = line.indexOf('\t') !== -1 ? '\t' : ',';
@@ -2324,6 +2466,8 @@
   syncLabels();
   syncOverlayPanes();
   syncBulkSheetUI();
+  populateRosterSelect();
+  syncRosterModeUI();
   renderRecent();
   renderScannedList();
   render();

@@ -123,6 +123,7 @@
           <div class="mode-tab" data-mode="isometric">Isometric</div>
           <div class="mode-tab" data-mode="cornell">Cornell notes</div>
           <div class="mode-tab" data-mode="handwriting">Handwriting lines</div>
+          <div class="mode-tab" data-mode="calibration">Printer check</div>
         </div>
 
         <label for="orientation">Page orientation</label>
@@ -289,6 +290,15 @@
           </select>
           <input type="number" id="hwSizeCustom" min="0.1" max="3" step="0.05" value="0.5" style="display:none;" placeholder="Line height (inches)">
           <p class="hint">Each set is a topline, a dashed midline, and a solid baseline — the standard handwriting-practice triplet, repeated down the page.</p>
+        </div>
+
+        <!-- ===== Printer calibration panel ===== -->
+        <div class="mode-panel" id="panel-calibration">
+          <p class="hint" style="margin-top:0;">Every other page here is drawn in real inches, but that only survives if the
+            printer prints at 100%. &ldquo;Fit to page&rdquo;, a driver default, or a copier reduction quietly shrinks it &mdash;
+            and a &frac14;&Prime; grid that is really 0.238&Prime; ruins any measuring task done on it.</p>
+          <p class="hint">Print this once per printer and hold a real ruler against it. Nothing to configure &mdash; page
+            orientation above still applies.</p>
         </div>
 
         <div class="btnRow">
@@ -586,6 +596,10 @@
         faded: settings.faded,
         header: headerOpt()
       });
+    } else if (settings.mode === 'calibration') {
+      // Deliberately ignores the header/faded options a worksheet would use:
+      // a calibration page has one job, and a faded ruler is a worse ruler.
+      result = window.GraphPaperRender.renderCalibration({ orientation: settings.orientation });
     } else if (settings.mode === 'cornell') {
       result = window.GraphPaperRender.renderCornellNotes({
         orientation: settings.orientation,

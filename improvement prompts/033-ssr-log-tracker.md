@@ -106,6 +106,9 @@ session.
   `isBookFinished`, `setBookFinished`, `withSessionPages`)
 - **Weekly goal tracking** (`daysLoggedThisWeek`, `currentWeekRange`,
   `goalCellHtml`)
+- **Genre tags on books** (`setGenreFor`, `genreCountsFor`, `renderGenreSpread`)
+  — an optional genre per *title*, shared across every student reading it, with
+  per-student chips, a class genre filter, and a printable genre-spread grid
 - Class summary table; date-range filtering
 - Print class summary and per-student logs; export CSV
 - Loads `_shared/a11y.js`
@@ -199,3 +202,57 @@ work, and don't promote one without Devon saying so.
   design problem for this tool, so the bulk-entry grid matters more than it
   otherwise would.
 - Should classroom library inventory be part of this tool or its own?
+
+## Genre round — 2026-08-11 (backlog rank 1)
+
+Shipped **genre tags on books**, with the per-student and class views the
+backlog row asked for.
+
+The design decision that makes it maintainable: **a genre belongs to a book,
+not to an entry and not to a student.** `state.genres` is a `{ bookKey: genre }`
+map on the section, keyed exactly like `withSessionPages`/`studentBookList`
+already key titles. One teacher tagging "Hatchet" as Adventure tags it for every
+student reading it and for every session logged against it, forever. Tagging
+per entry would have meant re-picking a genre on every one of a class's ~600
+entries a year, which nobody would do, and the data would be junk.
+
+- **Two ways in.** A genre field on the entry form (free text, backed by a
+  datalist of the 13 presets plus whatever the class already uses), which
+  pre-fills the moment a title that is already tagged is typed; and a small
+  genre input on each row of a student's Books list. Both write the same map.
+- **Per student:** genre chips under the Books list, counting **distinct
+  titles**, not sessions — a slow reader on one long fantasy novel should not
+  read as a genre addict. Untagged books get their own muted chip rather than
+  vanishing.
+- **Class filter:** a genre dropdown beside the date filter, applying to
+  exactly what the date filter applies to (the totals, the CSV, the printed
+  summary — never "current book" or "days logged this week"). The printed
+  summary names the genre it was filtered to, since a page that silently showed
+  only fantasy totals would be a lie by omission on somebody's desk. The
+  untagged bucket is selectable in its own right, for cleanup passes.
+- **Class spread grid:** students down the side, genres in use across, distinct
+  titles per cell, zeros marked — the gap view, on screen and as its own print
+  for a PLC meeting or a conference folder.
+- The CSV export gained a Genre column; the per-student printed log gained one
+  too.
+- **Migration:** sections saved before this round have no `genres` key at all,
+  and an absent map reads identically to "nothing tagged yet", so nothing to
+  migrate and nothing to lose. The suite loads a pre-genres section and checks
+  its entries survive the first save with the new field.
+
+One UI trap worth remembering: the genre input sits inside the Books row's
+`<label>`, so a click in it toggled the "finished" checkbox that label is for.
+The click handler preventDefaults for that input.
+
+New suite `Tools/ssr-log-tracker/test/smoke-genres.mjs` (33 checks) as
+`npm run test:ssr`.
+
+### Where the next round should pick up
+
+- Nothing reads genres across *classes* yet. A teacher with five sections has
+  five separate genre maps, so the same book tagged in period 3 is untagged in
+  period 5. A shared book table (P7/P8) would fix that, and is the natural next
+  step — but it is a storage-schema change and wants its own round.
+- A genre-balance nudge ("Ada has read six graphic novels and nothing else
+  since October") would fall straight out of `genreCountsFor`, and is closer to
+  what a teacher actually acts on than the grid alone.

@@ -25,6 +25,9 @@ below.
 - **Think time** timer with a chime (30s / 1min / 2min / off)
 - Handout printing at 2-per-page (half sheets) or 4-per-page (quarter sheets),
   with either the same prompt on every slip or **a different prompt on each**
+- **A response area sized to the prompt** (`answerAreaHtml`, `autoAnswerSpace`)
+  — ruled lines, a blank box for a sketch, or plain space, at a third / half /
+  all of the slip, chosen explicitly or inferred from the prompt's own wording
 - **Quick Tally** counter with reset (`gvb-exit-ticket:tally`)
 - QR code support
 
@@ -34,7 +37,11 @@ below.
   an exit ticket you can't use; this should be on by default with a toggle.
   *(The new Paper Triage tab reads `np_rosters` for its own picker; the
   handout tab itself is untouched.)*
-- **A response box sized for the prompt**, and lined vs blank as a choice.
+- **Done — 2026-08-11.** **A response box sized for the prompt**, and lined vs
+  blank as a choice. *(Two selects on the Printable Handout tab: a response
+  style — ruled lines / blank box / plain space — and how much room to leave —
+  Match the prompt (automatic) / short / medium / full. See the sized-response
+  round below.)*
 - **Done — Pass 2, Round 2.** **Print a whole class set** with names pre-printed from `np_rosters` (P2) —
   the same batch pattern Certificate Maker and Permission Slip already have.
   *(Shipped as a "Class Set" toggle on the Printable Handout tab — see the
@@ -302,3 +309,57 @@ Generator) and the fullscreen-stage duplication across four tools noted in
 the Round 4 update are both untouched — still the right candidates for a
 future round that's explicitly scoped to touch `_shared/`. Tag/pin/import
 prompt-bank features and bell-ringer sequences also remain unpicked-up.
+
+## Sized-response round — 2026-08-11 (backlog rank 1)
+
+Shipped **"A response box sized for the prompt, and lined vs blank as a
+choice"** — the oldest still-open Quick Win in this file.
+
+Two selects on the Printable Handout tab's Layout card:
+
+- **Response area**: *Ruled lines*, *Blank box* (bordered, for a sketch,
+  diagram or graph), or *Plain space*.
+- **How much room to leave**: *Match the prompt (automatic)*, or an explicit
+  *short* (a third of the slip), *medium* (half) or *full*.
+
+Design notes worth keeping:
+
+- The size is a pair of **flex weights**, not a fixed pixel height: the
+  response box gets its fraction of whatever room the slip has left after the
+  prompt and the name/date row, so it stays correct at 2-per-page and
+  4-per-page, on screen and in print, without a second set of numbers.
+- **The slack goes below the box, not above it.** The first attempt put the
+  spacer above, which pushed a lone ruled line to the bottom of the slip with a
+  hole above it — it read as a rendering bug. Writing space starts directly
+  under the question; the leftover paper reads as margin.
+- **Line count follows the box height, rounded up.** Rounding down gave "List
+  three things you learned" a single line, which is worse than the fixed
+  layout it replaced.
+- **The automatic size reads the prompt's wording, not its length.** "Explain
+  why … with evidence" is a paragraph whether it is six words or sixty, and
+  "List three" is short either way; length only breaks the tie when no verb
+  gives it away. The hint line under the selects says out loud what automatic
+  decided ("This prompt reads as an explanation, so each slip leaves the whole
+  slip to write in"), so it is inspectable rather than mysterious. In
+  different-prompt-per-slip mode each slip sizes to its own prompt and the note
+  says so.
+- Both settings persist in the existing `gvb-exit-ticket` settings blob and are
+  defaulted in `applySavedSettings`, so a teacher's older saved settings load
+  unchanged. Class Set slips inherit the same response area.
+
+New suite `Tools/exit-ticket-generator/test/smoke-response-area.mjs` (23 checks)
+as `npm run test:exit-ticket`: it measures the response box as a real fraction
+of the rendered slip (so "short" cannot be a relabelled constant), checks the
+three wording buckets, the explicit override, the three styles including the
+computed border, print/preview parity, persistence across a reload, and the
+class-set path.
+
+### Where the next round should pick up
+
+- The still-deferred Quick Wins from Round 4 are untouched: **name/date lines
+  on the handout tab** (the Paper Triage tab has its own roster picker, the
+  handout tab's checkboxes are unchanged), **tagging prompts by purpose**,
+  **pin/favourite**, and **paste-import a prompt list** (P13).
+- The auto-size heuristic is two regexes and a length tie-break. If it guesses
+  wrong often in real use, the fix is more verbs, not a longer prompt — and the
+  explicit override already covers the exceptions.

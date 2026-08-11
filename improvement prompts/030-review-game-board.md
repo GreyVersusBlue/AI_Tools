@@ -9,6 +9,44 @@
 
 ## Status
 
+**2026-08-11 — images inside a clue (backlog rank 1).** The oldest open Quick
+Win on this list, and the one that changes what the tool can ask: for a social
+studies or science review the picture often *is* the question — which region
+does this map show, what is happening in this cartoon, name this apparatus.
+
+- **+ Image on any clue row** in the manual editor: a thumbnail you click to
+  replace, an × to drop it, and the resulting size in KB shown in place so the
+  storage cost is never invisible.
+- **Downscaled hard on import** (`readAndDownscaleImage`) — long edge capped at
+  1000px, re-encoded as JPEG at 0.72, transparent PNGs matted onto white rather
+  than black since these land on printed paper as often as a dark board. A
+  2400×1600 photo lands around a twentieth of its original size. 1000px is
+  ample for a projector and for a 3.2in printed quiz image, and the whole
+  origin only gets ~5 MB of localStorage (P12).
+- **Kept inline on the clue** (`clue.image`), so it travels with the board
+  through save, JSON export, and JSON import exactly like the question text —
+  nothing to lose track of, nothing to upload. `normalizeBoard` only accepts a
+  real `data:image/` URL, so nothing else gets put into an `<img src>`.
+- **Projected with the clue**, capped at 42vh so a tall source cannot push the
+  question text off the bottom of the screen — and **hidden behind the Daily
+  Double wager panel**, because a picture shown early is the clue given away
+  before anyone has bet on it.
+- **Printed** on the practice quiz (3.2in wide, where it has to be there for
+  the question to be answerable on paper) and as a small thumbnail on the
+  answer key.
+- **`save()` now reports a full-storage failure** instead of throwing silently.
+  Inline images are the first thing in this tool that can realistically fill
+  localStorage, and a silent write failure would lose a game mid-lesson. The
+  message names images as the likely cause and suggests exporting first.
+
+New suite `Tools/review-game-board/test/smoke-clue-image.mjs` (21 checks) as
+`npm run test:review-board`: it builds a real 2400×1600 noise PNG in the page,
+feeds it through the actual file input, and asserts the re-encode, the exact
+capped dimensions, the preserved aspect ratio, the saved board, the projected
+overlay, the text-only clue showing no stale image, the Daily Double hide/reveal
+(pinned deterministically rather than left to the random assignment), both print
+paths, and a JSON round trip that drops a hostile non-image string.
+
 **2026-08-10 — Round 5 (PR #56): four Quick Wins shipped, one of which
 replaced an existing mechanic rather than adding to it.**
 
@@ -61,6 +99,9 @@ wager round from this round's Quick Win is also still open — see above.
 
 - Board of categories × point values; click a cell to open the clue, reveal
   the answer, award points to a team, or **mark used without awarding**
+- **An optional picture on any clue** (`buildClueImageCell`,
+  `readAndDownscaleImage`) — downscaled to 1000px JPEG, stored inline on the
+  clue, projected with the question, printed on the quiz and answer key
 - **Excel import** (SheetJS) with a **downloadable blank template** —
   the best import onboarding on the site
 - JSON import/export; multiple saved boards (`gvb-review-board:list` /
@@ -82,8 +123,12 @@ wager round from this round's Quick Win is also still open — see above.
   *(Daily Double now prompts for team + wager before showing the question,
   replacing the old fixed ×2. A separate final-round wager phase is a bigger,
   distinct feature — see Status.)*
-- **Images and audio in a clue.** A map, a diagram, a primary source, a
-  pronunciation — a text-only clue limits the tool to recall questions.
+- **Done (images) — 2026-08-11.** **Images and audio in a clue.** A map, a
+  diagram, a primary source, a pronunciation — a text-only clue limits the tool
+  to recall questions. *(Images shipped: downscaled, stored inline, projected,
+  printed. **Audio was not built** — a recorded pronunciation is a different
+  capture path (MediaRecorder), a different storage profile, and a different
+  playback control; it deserves its own round.)*
 - **Done —** **Keyboard control** (P10) — number keys to award, space to reveal, Esc to
   close. Running a game by mouse from a laptop is slow.
 - **Done — Pass 2, Round 2.** **Load a roster to build teams** (P2) rather than typing team names.
@@ -205,3 +250,17 @@ order, and the final-question wager round noted as open back in Round 5
 (the Daily Double wager itself is done; the separate final-round wager
 phase — single question, every team wagers simultaneously — was not built).
 Projector styling (P1, fullscreen + shared theme) is also still untouched.
+
+### Where the next round should pick up (after the clue-image round)
+
+- **Audio in a clue** is the untouched half of that Quick Win — a recorded
+  pronunciation or a music excerpt. It needs MediaRecorder capture, a much
+  worse storage profile than a downscaled JPEG, and a playback control on the
+  overlay. Worth its own round, and worth deciding first whether audio should
+  live in IndexedDB (the `bmg-map-cache.js` pattern) instead of localStorage.
+- If a future round moves images to IndexedDB, note that JSON export currently
+  gets image portability for free by keeping them inline; that would have to be
+  solved deliberately rather than lost.
+- Everything under Major Features (one bank played six ways, a real tagged
+  question bank, every-team-answers, teacher-side buzz order, difficulty-aware
+  scoring) is still untouched.
