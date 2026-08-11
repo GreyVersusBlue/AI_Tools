@@ -479,11 +479,12 @@ test helper unrelated to this pattern).
   (a) identical → straight swap, (b) extra tool-specific vars → link shared + keep a
   small local override block, (c) genuinely different palette → leave alone, list it.
   **Done 2026-08-11 — see "Variance audit" below.**
-- [~] Migrate bucket (a) then (b) in batches, following the **integration spec**
+- [x] Migrate bucket (a) then (b) in batches, following the **integration spec**
   below. (Note: the original text of this bullet said theme toggle behavior comes
   from `_shared/theme-toggle.js`, "already used by 16 tools" — both claims turned
   out to be false; see the spec.) **38/38 of bucket (a) done (Rounds 3a–3d);
-  22/29 of bucket (b) done — see Round 3e.**
+  29/29 of bucket (b) done (Rounds 3d–3f) — buckets (a) and (b) are both
+  fully migrated.**
 
 #### Variance audit (2026-08-11)
 
@@ -523,15 +524,7 @@ use are harmless to define).
 3a–3d — 0 remain).**
 
 **Bucket (b) — baseline-compatible, link shared + small local override
-(29 files; 22 migrated (Rounds 3d–3e) — 7 remain; extras in parentheses,
-`unused:` = baseline vars the tool doesn't define, harmless):**
-`052-cognates-false-friends-builder.html` (+`--ok`),
-`053-cultural-trivia-card-generator.html` (+`--ok`),
-`055-daily-editing-warmup-generator.html` (+`--ok`),
-`062-geography-bee-quiz-generator.html` (+`--ok`),
-`066-math-find-the-mistake-generator.html` (+`--ok`),
-`068-parent-contact-log.html` (+`--ok`),
-`073-science-fair-project-tracker.html` (+`--ok`)
+(29 files; all 29 migrated, Rounds 3d–3f — 0 remain).**
 
 Migration-round note for (b): the success-green extra is not one value —
 `--good` is `#2f7d4f` in most tools, `--ok` is `#2c6e3f` in seven and
@@ -898,7 +891,53 @@ repo's pinned Playwright version):
 | Leftover hardcoded hex from the old `:root` block | grep for the 9 baseline hex values (`--ink: #1f2430`, `--paper: #fafaf8`, `--accent: #1f3550`, `--accent-2: #2e6b8f`, `--muted: #6b6a63`, `--err: #a3372b`, `--line: #dcdad2`, `--line-strong: #c3c0b6`, `--card: #fff`) across all 12 files: zero matches |
 
 **Not migrated this round, deliberately left for a later round:** the
-remaining 7 bucket (b) files (`052`, `053`, `055`, `062`, `066`, `068`, `073`).
+remaining 7 bucket (b) files (`052`, `053`, `055`, `062`, `066`, `068`, `073`)
+— finished in Round 3f.
+
+#### Round 3f (2026-08-11) — final bucket (b) batch, 7 files (buckets (a) and (b) both complete)
+
+Same bucket (b) shape as Rounds 3d–3e: `<script
+src="../_shared/a11y.js"></script>` inserted right after the favicon `<link>`
+(all 7 had zero pre-existing `<script>` tags in that gap), then `<link
+rel="stylesheet" href="../_shared/ink-paper.css">` + `<link rel="stylesheet"
+href="../_shared/a11y.css">` right before `<style>`, with the inline `:root
+{ ... }` block shrunk to just the tool's one extra var — the variance audit
+had flagged all 7 as `+--ok` only, and all 7 confirmed to use the same
+`--ok: #2c6e3f` value, so each kept a one-line `:root { --ok: #2c6e3f; }`
+override.
+
+**Migrated — bucket (b), struck from the list above (7, 0 remain — bucket (b)
+is now fully migrated):** `052-cognates-false-friends-builder.html`,
+`053-cultural-trivia-card-generator.html`,
+`055-daily-editing-warmup-generator.html`,
+`062-geography-bee-quiz-generator.html`,
+`066-math-find-the-mistake-generator.html`, `068-parent-contact-log.html`,
+`073-science-fair-project-tracker.html` — all kept `--ok: #2c6e3f`.
+
+**`sw.js`:** `_shared/a11y.js`, `_shared/a11y.css` and `_shared/ink-paper.css`
+were already in `PRECACHE_URLS` from Round 3a, and none of these 7 files
+were renamed, so `PRECACHE_URLS` itself is unchanged this round —
+`CACHE_VERSION` bumped v57 → v58 since the byte content of 7 already-precached
+files changed.
+
+**Verification actually performed** (Playwright/Chromium against a local
+static server via `Tools/board-check/harness.mjs`'s `serve`/`prepPage`/`settle`
+exports, `serviceWorkers: 'block'`, launched with an explicit `executablePath`
+pointed at the sandbox's preinstalled Chromium since it didn't match this
+repo's pinned Playwright version):
+
+| Check | Result |
+|---|---|
+| All 7 pages load | zero `pageerror`s, zero `console.error`s on every page (light mode) |
+| Dark theme toggle | set `gvb-a11y-prefs` → `{theme:"dark"}` before load: `<html data-theme="dark">` set on all 7, `.a11y-filter-dark` applied, zero console errors; screenshots of all 7 spot-checked visually — readable light-on-dark on every page |
+| Light theme (default) | zero console errors on all 7; byte-identical baseline CSS values to the old inline block, so no rendering change vs. pre-migration, and the kept `--ok` override is the unchanged value |
+| Print preview | emulated `print` media after resetting to light mode: zero console errors on all 7 |
+| Leftover hardcoded hex from the old `:root` block | grep for the 9 baseline hex values across all 7 files: zero matches |
+
+**Not migrated this round:** none — this was the last bucket (b) batch.
+Phase 3's migration bullet is now fully complete (buckets (a) and (b), 67/67
+files); bucket (c) (9 files) and the 5 already-on-the-stack files remain
+out of scope for Phase 3 per the variance audit.
 
 ### Phase 4 — Common layout + print CSS
 - [ ] Create `_shared/base.css` with the verbatim-identical rules (.card, .app-header,
