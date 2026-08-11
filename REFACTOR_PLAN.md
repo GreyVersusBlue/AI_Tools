@@ -316,9 +316,34 @@ is 56,963 bytes (SHA-256 `bdee8deb723d3b76015ecaefb974a0a438fe8889280914a06b60d7
 `acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e`).
 
 ### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
-- [ ] Create `_shared/sw-register.js` (the existing 5-line snippet).
-- [ ] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR.
-- [ ] Verify snippet is byte-identical everywhere first (`grep -B0 -A4 serviceWorker`); any variant gets reviewed, not blindly replaced.
+- [x] Create `_shared/sw-register.js` (the existing 5-line snippet).
+- [~] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR.
+- [x] Verify snippet is byte-identical everywhere first (`grep -B0 -A4 serviceWorker`); any variant gets reviewed, not blindly replaced.
+
+**Round 2a (2026-08-11):** hashed the extracted snippet (CRLF-normalized) across
+all 82 files containing `serviceWorker`. **81 numbered `Tools/*.html` pages**
+share one identical block (`register('../sw.js')`). **Two companion pages**,
+`classroom-timer/mirror.html` and `escape-room-builder/monitor.html`, register
+`'../../sw.js'` instead (they sit one folder deeper) — set aside, not edited
+this round; they'd need their own `<script src="../../_shared/sw-register.js">`
+reference or a copy of the file at that relative depth, which is a decision for
+whoever migrates the next batch, not a silent auto-fix.
+
+Created `_shared/sw-register.js` with the exact 81-file snippet. Migrated the
+first 15 numbered tools (alphabetical/numeric order, `001`–`015`) to
+`<script src="../_shared/sw-register.js" defer></script>`. Added the new file
+to `PRECACHE_URLS` (alphabetically between `state-link.js` and `theme.css`)
+and bumped `CACHE_VERSION` v46 → v47.
+
+Verified in a real browser (local static server, `Tools/board-check` harness
+config) for all 15 migrated tools: `_shared/sw-register.js` requested and
+returned 200 for every page, zero new console errors. The only console errors
+seen were the six pre-existing missing-font 404s already documented above
+(`assets/fonts/*.woff2`), unrelated to this change and present before it.
+
+**Remaining after this round: 66 numbered tools** still carry the inline
+snippet (`016`–`081` except any migrated in a later round), plus the 2
+companion pages noted above pending a decision on their relative path.
 
 ### Phase 3 — Theme adoption (~84 files, needs a variance audit first)
 - [ ] Sub-audit: diff each tool's `:root` block against `_shared/theme.css`. Bucket into
