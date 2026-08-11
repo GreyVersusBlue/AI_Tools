@@ -138,6 +138,29 @@
     @page { size: letter portrait; margin: 0.4in; }
   }
 
+  /* ── Parent-contact follow-up sheet ───────────────────────────────────
+     The missing list says who owes a contract. This is the sheet a teacher
+     actually fills in while chasing them: two dated attempts per student with
+     the method ticked, and room to write what came of it — which is what has
+     to exist on paper when an administrator asks what was tried. */
+  @media print {
+    .contact-by { font-size: .85rem; margin: 0 0 .8rem; }
+    .fill-inline { display: inline-block; min-width: 2.6in; border-bottom: 1px solid #000; height: 1.05em; }
+    .fill-inline.short { min-width: 1.3in; }
+    .contact-table { table-layout: fixed; }
+    .contact-table th.c-who { width: 1.9in; }
+    .contact-table th.c-out { width: 2.1in; }
+    .contact-table td { vertical-align: top; height: .95in; }
+    .contact-name { font-weight: 700; font-size: .95rem; }
+    .contact-missing { font-size: .78rem; color: #a3372b; margin-top: .12rem; }
+    .contact-owed { font-size: .78rem; color: #9c6c11; margin-top: .1rem; }
+    .contact-attempt { font-size: .78rem; margin-bottom: .42rem; }
+    .contact-attempt:last-child { margin-bottom: 0; }
+    .contact-attempt .c-methods { letter-spacing: .02em; }
+    .contact-attempt .c-line { display: inline-block; min-width: 1in; border-bottom: 1px solid #999; height: 1em; }
+    .contact-row { page-break-inside: avoid; }
+  }
+
   /* ── Blank form print (one signable copy per student) ────────────────── */
   @media print {
     .form-page { page-break-after: always; padding-top: .4in; }
@@ -245,6 +268,7 @@
         <button type="button" class="secondary small" id="markAllSignedBtn">Mark all as signed</button>
         <button type="button" class="secondary small" id="printFullBtn">Print full report</button>
         <button type="button" class="secondary small" id="printMissingBtn">Print missing list</button>
+        <button type="button" class="secondary small" id="printContactBtn">Print parent-contact sheet</button>
         <button type="button" class="secondary small" id="printSlipsBtn">Print reminder slips</button>
       </div>
     </div>
@@ -276,6 +300,16 @@
   </table>
 </div>
 
+<div class="print-only" id="printContactArea">
+  <h2 id="printContactTitle">Parent Contact Log — Missing Lab Safety Contracts</h2>
+  <p class="p-sub" id="printContactSub"></p>
+  <p class="contact-by">Kept by: <span class="fill-inline"></span> &nbsp; School year / term: <span class="fill-inline short"></span></p>
+  <table class="contact-table">
+    <thead><tr><th class="c-who">Student &amp; what&rsquo;s missing</th><th>Contact attempts</th><th class="c-out">Outcome / next step</th></tr></thead>
+    <tbody id="printContactBody"></tbody>
+  </table>
+</div>
+
 <div class="print-only" id="printFormsArea">
   <div id="printFormsBody"></div>
 </div>
@@ -303,6 +337,7 @@
     'printFullBtn', 'printMissingBtn', 'printSlipsBtn',
     'printFullArea', 'printFullTitle', 'printFullSub', 'printFullBody',
     'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody',
+    'printContactBtn', 'printContactArea', 'printContactTitle', 'printContactSub', 'printContactBody',
     'printFormsArea', 'printFormsBody', 'printSlipsArea', 'printSlipsBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -926,6 +961,65 @@
       return '<tr>' + cells + '</tr>';
     }).join('') : ('<tr><td colspan="' + colCount + '">Everyone has turned theirs in.</td></tr>'));
     activatePrint(els.printMissingArea);
+  });
+
+  /* ---------- parent-contact follow-up sheet ----------
+     "Print missing list" answers who still owes a contract. It does not help
+     with the part that actually takes the time: calling or emailing home,
+     twice, and being able to say what was tried and when if an administrator
+     or a parent asks later. This is that sheet — the same missing students,
+     with the chase built into the page.
+
+     Deliberately paper, not a form in the tool: the calls happen at a desk
+     phone with a stack of paper, and a teacher writing "no answer, left
+     voicemail" wants a pen, not a text field. What the tool knows (who is
+     missing, which documents, what is unpaid) is printed; what only the
+     teacher will know is left blank. */
+  // Non-breaking spaces inside the two-word methods: without them a narrow
+  // column splits "Note home" across lines and the tick box drifts away from
+  // its label.
+  var CONTACT_METHODS = ['Call', 'Email', 'Text', 'Note&nbsp;home', 'In&nbsp;person'];
+
+  function contactAttemptHtml(n) {
+    return '<div class="contact-attempt">' +
+      '<b>' + n + '.</b> Date: <span class="c-line"></span> ' +
+      // The box and its label have to break as one unit, or a narrow column
+      // leaves a stray ☐ at the end of a line and its word on the next.
+      '<span class="c-methods">' + CONTACT_METHODS.map(function (m) { return '☐&nbsp;' + m; }).join(' ') + '</span>' +
+      '<br>Reached: ☐&nbsp;Spoke ☐&nbsp;Left&nbsp;message ☐&nbsp;No&nbsp;answer ☐&nbsp;Bad&nbsp;number' +
+      '</div>';
+  }
+
+  els.printContactBtn.addEventListener('click', function () {
+    if (!state) return;
+    var data = summaryData();
+    var multiDoc = state.documents.length > 1;
+    els.printContactTitle.textContent = state.name + ' — Parent Contact Log (missing lab safety contracts)';
+    var dueBit = state.dueDate ? (' · Needed before ' + formatDate(state.dueDate)) : '';
+    els.printContactSub.textContent = 'Printed ' + formatDate(todayStr()) + dueBit + ' · ' +
+      data.missing.length + ' student' + (data.missing.length === 1 ? '' : 's') + ' to chase';
+
+    els.printContactBody.innerHTML = data.missing.length
+      ? data.missing.map(function (name) {
+          var c = state.contracts[name] || defaultContract();
+          var missingLabels = state.documents.filter(function (d) { return !getDoc(name, d.id).signed; })
+            .map(function (d) { return d.label; }).join(', ');
+          var unpaid = unpaidLabelsFor(name);
+          // With one document the label is just the tool's own name for it and
+          // adds nothing to a row that already means "missing" — skip it there.
+          var missingLine = (multiDoc && missingLabels)
+            ? '<div class="contact-missing">Missing: ' + escapeHtml(missingLabels) + '</div>' : '';
+          var owedLine = unpaid.length
+            ? '<div class="contact-owed">Unpaid: ' + escapeHtml(unpaid.join(', ') + ' — ' + formatMoney(unpaidAmountFor(name))) + '</div>' : '';
+          var noteLine = c.note ? '<div class="contact-missing">Note: ' + escapeHtml(c.note) + '</div>' : '';
+          return '<tr class="contact-row">' +
+            '<td><div class="contact-name">' + escapeHtml(name) + '</div>' + missingLine + owedLine + noteLine + '</td>' +
+            '<td>' + contactAttemptHtml(1) + contactAttemptHtml(2) + '</td>' +
+            '<td></td>' +
+          '</tr>';
+        }).join('')
+      : '<tr><td colspan="3">Everyone has turned theirs in — nobody to contact.</td></tr>';
+    activatePrint(els.printContactArea);
   });
 
   /* ---------- print blank forms (one signable copy per document) ---------- */
