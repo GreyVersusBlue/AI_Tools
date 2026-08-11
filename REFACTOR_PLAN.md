@@ -949,7 +949,8 @@ out of scope for Phase 3 per the variance audit.
   cluster and the `.card`+`.app-header` bucket are now unblocked — 48 tools eligible.
   Round 4c landed 2026-08-11 (12 more tools, script-picked) — 36 remain; use
   `npm run phase4:next`, not the stale bucket lists below. Round 4d landed
-  2026-08-11 (12 more) — 24 remain.
+  2026-08-11 (12 more) — 24 remain. Round 4e landed 2026-08-11 (12 more,
+  half of what remained) — 12 remain.
 
 #### What `_shared/base.css` contained at Round 4a (2026-08-11)
 
@@ -1315,6 +1316,47 @@ pre vs post for all 12. `check-social.mjs` output unchanged.
 `sw.js`: no files added or renamed, `CACHE_VERSION` bumped v61 → v62.
 
 **Remaining Phase 4 candidates after Round 4d:** 24 tools, per
+`npm run phase4:next -- --all`.
+
+#### Round 4e — third script-picked batch of 12 (2026-08-11)
+
+`npm run phase4:next` picked 040-vocab-flashcard-generator,
+041-formula-sheet-builder, 042-certificate-award-maker,
+043-field-trip-permission-slip, 045-sub-binder-generator,
+047-art-critique-worksheet-generator, 048-art-portfolio-label-maker,
+051-classroom-label-maker, 053-cultural-trivia-card-generator,
+055-daily-editing-warmup-generator, 061-fraction-decimal-percent-drill-generator,
+062-geography-bee-quiz-generator — half of the 24 candidates that existed
+at the start of the round, at the user's request; 12 remain. None link
+`_shared/print-area.css`.
+
+One LEAVE INLINE variant hit the Round 4c property-bleed gotcha again:
+**045-sub-binder-generator** `.app-header` was `{ margin-bottom: 1.2rem; }`
+only — same shape as 009-backup-restore in Round 4c (a stacked block
+header: back-link, then `<h1>`, then a `<p>`), so base.css's `display: flex`
+etc. would have bled in. Fixed the same way, adding `display: block;`
+(`.app-header { display: block; margin-bottom: 1.2rem; }`) before linking
+base.css. Verified clean this time: computed style differs only in the
+now-inert flex properties, and screenshot/PDF are **byte-identical** pre vs
+post (no antialiasing noise at all, unlike 009's case).
+
+Two apparent screenshot-only failures during verification were confirmed as
+pre-existing randomized content, not regressions (same re-render method as
+prior rounds): **061-fraction-decimal-percent-drill-generator** generates a
+fresh drill sheet with `Math.random()` on every load — re-rendering the
+same post-migration page 3x produced similar byte-count variance.
+
+**Verification:** same method as Rounds 4c/4d — `git archive HEAD` baseline
+served alongside the working tree, fresh browser context per render,
+`executablePath` pointed at the environment's pre-installed Chromium.
+Computed styles, full-page screenshots, and PDF output (dates stripped)
+compared for all 12; print media emulated and screenshotted — byte-identical
+pre vs post for all 12, including 045 after its fix. `check-social.mjs`
+output unchanged.
+
+`sw.js`: no files added or renamed, `CACHE_VERSION` bumped v62 → v63.
+
+**Remaining Phase 4 candidates after Round 4e:** 12 tools, per
 `npm run phase4:next -- --all`.
 
 ### Phase 5 — JS utility patterns (optional, highest judgment)
