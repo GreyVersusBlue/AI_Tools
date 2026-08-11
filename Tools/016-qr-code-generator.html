@@ -594,6 +594,29 @@
       </div>
 
       <div class="bulk-only" id="bulk-content-pane">
+        <div class="control-group" id="bulk-roster-group">
+          <label for="bulk-roster">Start from a class roster</label>
+          <div class="control-row">
+            <div class="control-group">
+              <select id="bulk-roster"></select>
+            </div>
+            <div class="control-group">
+              <select id="bulk-roster-mode">
+                <option value="name">Each code holds the student&rsquo;s name</option>
+                <option value="link-name">Each code holds a link with the student&rsquo;s name in it</option>
+                <option value="link">Every code holds the same link</option>
+              </select>
+            </div>
+          </div>
+          <div class="control-group" id="bulk-roster-link-group" style="display:none; margin-top:0.6rem;">
+            <label for="bulk-roster-link">Link</label>
+            <input type="text" id="bulk-roster-link" spellcheck="false" placeholder="https://carrollk12.schoology.com/…?student={name}">
+          </div>
+          <div class="btn-row" style="margin-top:0.6rem;">
+            <button class="btn-secondary" type="button" id="btn-bulk-roster">Fill the list from this roster</button>
+          </div>
+          <div class="hint" id="bulk-roster-hint">Rosters saved in Name Picker or Class Roster Hub show up here. Filling the list writes one labelled line per student below, then switches the print layout to Avery labels so the sheet comes out ready to peel.</div>
+        </div>
         <div class="control-group">
           <label for="bulk-text">One code per line</label>
           <textarea id="bulk-text" spellcheck="false" style="min-height: 160px;" placeholder="Station 1, https://example.com/station1&#10;Station 2, https://example.com/station2&#10;Station 3, https://example.com/station3"></textarea>
@@ -864,6 +887,12 @@
     bulkCols: document.getElementById('bulk-cols'),
     bulkColsRow: document.getElementById('bulk-cols-row'),
     bulkCutlines: document.getElementById('bulk-cutlines'),
+    bulkRoster: document.getElementById('bulk-roster'),
+    bulkRosterMode: document.getElementById('bulk-roster-mode'),
+    bulkRosterLinkGroup: document.getElementById('bulk-roster-link-group'),
+    bulkRosterLink: document.getElementById('bulk-roster-link'),
+    btnBulkRoster: document.getElementById('btn-bulk-roster'),
+    bulkRosterHint: document.getElementById('bulk-roster-hint'),
     bulkSheet: document.getElementById('bulk-sheet'),
     bulkSheetHint: document.getElementById('bulk-sheet-hint'),
     btnBulkGenerate: document.getElementById('btn-bulk-generate'),
@@ -1577,6 +1606,105 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  // ── Roster-labelled code sheets ──────────────────────────────────────────
+  // Read-only reuse of the shared roster list (Name Picker and Class Roster
+  // Hub both write 'np_rosters'). This tool never writes that key — it only
+  // turns a saved class list into one labelled line per student in the bulk
+  // textarea, which then flows through the ordinary bulk pipeline.
+  //
+  // Lines are written TAB-separated on purpose: splitBulkLine() prefers a tab
+  // when one is present, and a roster full of "Smith, John" entries would be
+  // cut in half by the comma delimiter.
+  var ROSTERS_KEY = 'np_rosters';
+
+  function readRosters() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(ROSTERS_KEY) || '{}');
+      if (!raw || typeof raw !== 'object') return {};
+      var out = {};
+      Object.keys(raw).forEach(function (k) {
+        if (!Array.isArray(raw[k])) return;
+        var names = raw[k].map(function (entry) {
+          if (typeof entry === 'string') return entry.trim();
+          if (entry && typeof entry === 'object' && entry.name) return String(entry.name).trim();
+          return '';
+        }).filter(function (n) { return n.length > 0; });
+        if (names.length) out[k] = names;
+      });
+      return out;
+    } catch (e) { return {}; }
+  }
+
+  function populateRosterSelect() {
+    var rosters = readRosters();
+    var names = Object.keys(rosters);
+    els.bulkRoster.innerHTML = '';
+    if (!names.length) {
+      els.bulkRoster.appendChild(new Option('No saved rosters found', ''));
+      els.bulkRoster.disabled = true;
+      els.btnBulkRoster.disabled = true;
+      return;
+    }
+    els.bulkRoster.disabled = false;
+    els.btnBulkRoster.disabled = false;
+    els.bulkRoster.appendChild(new Option('Choose a roster…', ''));
+    names.forEach(function (n) {
+      els.bulkRoster.appendChild(new Option(n + ' (' + rosters[n].length + ')', n));
+    });
+  }
+
+  function syncRosterModeUI() {
+    var mode = els.bulkRosterMode.value;
+    els.bulkRosterLinkGroup.style.display = (mode === 'name') ? 'none' : '';
+  }
+  els.bulkRosterMode.addEventListener('change', syncRosterModeUI);
+
+  // Put the student's name into a link. A {name} placeholder wins; otherwise
+  // the name is appended as a query parameter, which is what most turn-in
+  // forms and folder links expect.
+  function linkForStudent(link, name) {
+    if (link.indexOf('{name}') !== -1) return link.split('{name}').join(encodeURIComponent(name));
+    return link + (link.indexOf('?') === -1 ? '?' : '&') + 'student=' + encodeURIComponent(name);
+  }
+
+  function fillBulkFromRoster() {
+    var rosterName = els.bulkRoster.value;
+    if (!rosterName) { showBulkMsg('Pick a roster first.'); return; }
+    var rosters = readRosters();
+    var students = rosters[rosterName];
+    if (!students || !students.length) { showBulkMsg('That roster is empty.'); populateRosterSelect(); return; }
+
+    var mode = els.bulkRosterMode.value;
+    var link = els.bulkRosterLink.value.trim();
+    if (mode !== 'name' && !link) { showBulkMsg('Add the link each code should point to, or switch to “Each code holds the student’s name”.'); els.bulkRosterLink.focus(); return; }
+
+    els.bulkText.value = students.map(function (name) {
+      var content = mode === 'name' ? name
+        : mode === 'link' ? link
+        : linkForStudent(link, name);
+      return name + '\t' + content;
+    }).join('\n');
+
+    // "Straight onto the label presets" — a roster sheet is a sheet of
+    // stickers, so default to Avery 5160 unless a preset is already chosen.
+    var switched = false;
+    if (!SHEET_PRESETS[els.bulkSheet.value]) {
+      els.bulkSheet.value = 'avery5160';
+      syncBulkSheetUI();
+      switched = true;
+    }
+    showBulkMsg(students.length + ' student' + (students.length === 1 ? '' : 's') + ' from “' + rosterName + '” loaded below' +
+      (switched ? ', printing to Avery 5160 labels (change the layout above if you want plain paper)' : '') +
+      '. Generate the grid when you’re ready.');
+  }
+
+  els.btnBulkRoster.addEventListener('click', fillBulkFromRoster);
+  // Another tab (Name Picker, Class Roster Hub) editing rosters shows up here
+  // without a reload, matching how the rest of the site handles shared keys.
+  window.addEventListener('storage', function (e) {
+    if (e.key === ROSTERS_KEY) populateRosterSelect();
+  });
 
   // ── Bulk mode ────────────────────────────────────────────────────────────
   // Reuses the exact same buildQR()/drawQR() path as single mode (same
@@ -2324,6 +2452,8 @@
   syncLabels();
   syncOverlayPanes();
   syncBulkSheetUI();
+  populateRosterSelect();
+  syncRosterModeUI();
   renderRecent();
   renderScannedList();
   render();

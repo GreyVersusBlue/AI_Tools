@@ -1,7 +1,10 @@
 # Improvement Prompts — 016 — QR Code Generator
 
 **Tool file:** `Tools/016-qr-code-generator.html`
-**Support folder:** `Tools/qr-code-generator/` — `lib/jsqr.js`, `lib/qrcode.js`
+**Support folder:** `Tools/qr-code-generator/` — `test/smoke-roster.mjs`. The QR
+encoder and jsQR decoder now come from `_shared/vendor/qrcode/` and
+`_shared/vendor/jsqr/` (Phase 1/1b of `REFACTOR_PLAN.md`), not from a per-tool
+`lib/` folder.
 
 **Current description (from README):** _(Not currently listed in the README tools table — worth adding.)_ A general-purpose QR code generator with typed templates, logo overlay, bulk grids, and camera verification.
 
@@ -9,8 +12,45 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-11 — Roster-labelled code sheet (backlog rank 1).** Shipped the
+"Batch codes from a roster or a spreadsheet" Major Feature. Bulk mode gained a
+"Start from a class roster" panel: a roster picker populated read-only from
+`np_rosters`, a mode selector (name only / a link with the student's name in
+it / one shared link for everyone), and a link field. Filling writes one
+labelled line per student into the existing bulk textarea, so the whole
+existing pipeline — encoding, jsQR batch verification, Avery label layout,
+print — is reused rather than duplicated.
+
+Two things that were not obvious going in:
+
+- **The generated lines must be tab-separated.** `splitBulkLine` prefers a tab
+  when one is present and otherwise splits on the first comma, so a roster of
+  "Lovelace, Marco" entries written comma-separated would silently label the
+  code "Lovelace" and encode ", Marco". This is the single sharpest edge in
+  the feature and the test covers it end-to-end.
+- **Filling from a roster switches the print layout to Avery 5160**, since a
+  per-student sheet is a sheet of stickers — but only when the layout is still
+  the plain-paper default. A preset the teacher already picked is left alone.
+
+Named links accept a `{name}` placeholder anywhere in the URL; without one the
+name is appended as `student=`, url-encoded, respecting an existing query
+string. A `storage` listener repopulates the roster picker when another tab
+edits `np_rosters`.
+
+New test: `Tools/qr-code-generator/test/smoke-roster.mjs` (33 assertions,
+wired into `npm test` and `npm run test:qr`) — covers roster listing, the
+comma-in-a-name case through the real generator, the label-stock switch and
+its don't-stomp rule, all three link modes, that `np_rosters` is byte-identical
+afterward, and the no-rosters-saved empty state. `npm run check:dedupe` green.
+
+**Where the next round should pick up:** inventory/check-out tracking is still
+the biggest open feature here (scanning is now first-class; persisting a local
+checked-out/returned record on top of it is not). The roster panel is also the
+natural place to hang a "one code per student that opens their seating-chart
+photo / portfolio" bridge if P7 work goes that way.
+
+Earlier: reviewed — structural read of the source. Ideas below are
+deliberately ambitious and are **not** scoped to a single session.
 
 Note: this tool and `029-prompt-builder.html` are both missing from the README
 tools table. Worth fixing whenever someone touches the README.
@@ -27,9 +67,17 @@ tools table. Worth fixing whenever someone touches the README.
 - **Camera verification** (`verifyScan`, `stopCameraScan`, `setScanBadge`) —
   scan your own code to confirm it works before printing
 - **Bulk grid generation** (`parseBulkLines`, `generateBulkGrid`) at 2–5 per
-  row, printable
+  row, printable, with optional cut lines
+- **Avery label sheet presets** (5160/8160 and 5163/8163) that print the bulk
+  grid at exact physical inch dimensions, with whole-batch jsQR verification
+- **Roster-labelled code sheets** (`readRosters`, `fillBulkFromRoster`): pick a
+  roster saved in Name Picker / Class Roster Hub and get one labelled line per
+  student in the bulk textarea — the code holding the student's name, a link
+  with their name in it, or one shared link
+- **Scan mode** — decode any code from the camera or an uploaded image, with
+  this tool's own typed formats parsed back into labelled fields
 - Download PNG and SVG; recent codes (`qr-code-generator-recent`)
-- Uses `_shared/qr-scan.js`
+- Uses `_shared/qr-scan.js`; reads `np_rosters` read-only
 
 ## Quick Wins
 
@@ -65,9 +113,11 @@ tools table. Worth fixing whenever someone touches the README.
   share-by-link mechanism produces long URLs that make dense, hard-to-scan
   codes. A shared "is this payload too big for a reliable code?" check
   belongs here.
-- **Batch codes from a roster or a spreadsheet** (P2/P13) — one code per
+- **Done —** **Batch codes from a roster or a spreadsheet** (P2/P13) — one code per
   student, labelled with their name, printed as a grid. That's the pattern
-  Gallery Walk and Scavenger Hunt each reimplement.
+  Gallery Walk and Scavenger Hunt each reimplement. *(Roster half shipped
+  2026-08-11 — see the Status entry above. A spreadsheet/XLSX import path is
+  still open.)*
 - **Done —** **Sheet layouts for standard label stock** (Avery-style), so codes can be
   printed onto stickers for lab equipment, library books, or classroom bins.
   *(Two real presets, Avery 5160/8160 and 5163/8163 — see the Round 4 update
