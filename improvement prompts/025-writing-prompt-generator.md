@@ -40,9 +40,12 @@ deliberately ambitious and are **not** scoped to a single session.
 
 ## Quick Wins
 
-- **A writing timer alongside the prompt** (P7 — the timer exists). Timed
-  writing is the standard use of a prompt display.
-- **Word-count goal** displayed with the prompt.
+- **Done — Pass 2, Round 2.** **A writing timer alongside the prompt** (P7 —
+  the timer exists). Timed writing is the standard use of a prompt display.
+  *(A self-contained countdown widget with presets, custom minutes, and
+  Start/Pause/Reset — see the Pass 2 — Round 2 update.)*
+- **Done — Pass 2, Round 2.** **Word-count goal** displayed with the prompt.
+  *(A static target, not live tracking — see the Pass 2 — Round 2 update.)*
 - **Print the prompt as a half-sheet with lines** to write on, not just as a
   poster — the handout version of the same thing.
 - **Sentence starters and a "if you're stuck" line** with each prompt, which
@@ -210,3 +213,99 @@ wrote and loaded with zero console errors; deleting a set and confirming the
 sequence stage falls back cleanly; and the anonymous response flow including
 the one-at-a-time/grid toggle and Next navigation. Zero console errors on
 either page throughout. The test script was thrown away after use.
+
+## Pass 2 — Round 2 update — 2026-08-11 (session `mxpfjs`)
+
+Shipped the two still-open Quick Wins named in that section: the writing
+timer and the word-count goal.
+
+**1. Writing timer.** A self-contained "Writing Timer" widget now lives
+inside `.stage` itself — countdown display, four duration presets (3/5/10/15
+min), a custom-minutes box (1–180, Enter or "Set"), and Start/Pause/Reset —
+following the same setup-then-start pattern as `004-Classroom Timer.html`
+(a preset or custom value fills in the duration; Start begins the countdown
+separately) and the same audible-chime approach already used for
+`023-exit-ticket-generator.html`'s think-time countdown (a short WebAudio
+oscillator beep, doubled here into two beeps so it reads as a distinct
+"time's up" cue against the single think-time beep). Being a child of
+`.stage` rather than a sibling control row was the deliberate choice: the
+Fullscreen API only renders descendants of the fullscreened element, and this
+tool fullscreens `.stage` specifically (not the whole page), so Start/Pause/
+Reset had to live inside it to stay clickable once a teacher goes fullscreen
+— the same reasoning already applied to the Anonymous Response Display
+overlay's duplicated view-mode toggle in the Round 4 pass. The countdown uses
+an epoch (`Date.now()`-based `endAt`), not a decrementing per-tick counter, so
+a backgrounded or throttled tab can't drift the displayed time. The chosen
+duration persists across reloads (`settings.timerMinutes`); the running
+state/remaining time deliberately does not, so a stale mid-countdown state
+never survives a reload. The timer is independent of which prompt is
+showing and of draw-vs-sequence mode — it keeps running (or keeps its
+paused/reset state) across `generate()` calls and Prev/Next sequence
+navigation, since a teacher restarting a countdown every time they change
+prompts would defeat the point of a writing timer.
+
+**2. Word-count goal.** A new "Word-count goal" number input (with a Clear
+button) sets `settings.wordGoal`, persisted and displayed as "Aim for
+`<n>`+ words" on a dedicated line inside `.stage`, just under the prompt —
+so it fullscreens with the prompt the same way the timer does. This is
+explicitly a static target the teacher sets, not live word-count tracking of
+anything typed — there is no student input anywhere in this teacher-facing
+display tool for it to track. Printing the poster (`renderPosterPrintArea`)
+now includes an "Aim for `<n>`+ words" line (`.poster-goal`) whenever a goal
+is set, alongside the existing rubric credit line.
+
+Both features were added without touching `renderDrawStage` /
+`renderSequenceStage`'s ownership of prompt content: the stage's inner markup
+was split into a persistent `#stagePrompt` child (which those two functions
+still fully own and overwrite on every render) plus sibling `#wordGoalDisplay`
+and `#stageTimer` children that are rendered independently and never touched
+by prompt re-renders — so generating a new prompt or stepping a sequence
+can no longer clobber a running timer or the goal display, which a naive
+"rebuild `.stage`'s innerHTML" implementation would have done.
+
+**Not done, left for a future round (unchanged from the Round 4 update,
+confirmed still accurate):**
+- Sentence starters / "if you're stuck" lines (Quick Win) — still needs
+  genuinely per-prompt authored content across all 200 bank prompts, not
+  generic filler.
+- The bigger, source-tied prompt bank and the student portfolio (Major
+  Features) — untouched.
+- Convergence with `023-exit-ticket-generator.html` /
+  `024-number-talks-board.html` (P7, cross-tool) — not attempted this round
+  either. Worth reflagging now that a *second* generic, shareable pattern
+  exists: this round's "the fullscreened element must contain its own live
+  controls, not just its own display" constraint (first hit by the Anonymous
+  Response Display overlay in Round 4, now hit again by the writing timer)
+  is a real, recurring shape any of the three bank tools' fullscreen-stage
+  code would need to handle identically. Combined with Round 4's note about
+  the prompt-sets-as-sequence pattern and the read-only cross-tool-bridge
+  pattern, that's now three independently-discovered shared shapes across
+  two rounds — a concrete case for a shared display-engine module if a
+  future round wants to take it on, rather than three copies drifting apart.
+- Dark mode / P1 projector polish — still not addressed; the new timer and
+  goal widgets reuse the existing CSS variables so they inherit whatever
+  theming the tool has today, same caveat as Round 4.
+
+**Testing:** `node --check` on `wpg-prompts.js`, `wpg-store.js`,
+`wpg-rubric-link.js`, and both inline `<script>` blocks extracted from the
+HTML — all clean. A throwaway Playwright script (Chromium at
+`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`, `file://`) exercised:
+generating a prompt; setting a word-count goal and confirming it renders on
+stage, confirming it appears in the printed poster's HTML (`.poster-goal`
+with the number), clearing it and confirming the display empties, then
+reloading and confirming both the input value and the stage display restore
+from storage; the timer's default 5:00 state; each of the 3/5/10/15-minute
+presets and a custom "7" applied correctly; starting a 1-minute countdown and
+confirming Start/Pause button visibility toggles correctly and the displayed
+time actually decreases after ~1.2s; pausing and confirming the display
+freezes across a further 1s wait and the buttons toggle back; resetting and
+confirming the full duration returns; monkey-patching
+`AudioContext.prototype.createOscillator` to detect the chime, then using
+Playwright's virtual clock to fast-forward past a 1-minute countdown and
+confirming the display reached exactly `0:00`, the `.timer-done` flashing
+class applied, and the chime fired; and confirming `.stage` genuinely
+granted fullscreen in this headless run and that `#stagePrompt`,
+`#wordGoalDisplay`, and `#stageTimer` are all still descendants of `#stage`
+(so all three remain visible/operable once fullscreened). Zero console or
+page errors throughout. The test script and extracted inline-script files
+were deleted after use.
