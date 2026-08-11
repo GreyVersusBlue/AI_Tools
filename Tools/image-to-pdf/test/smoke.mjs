@@ -134,7 +134,16 @@ async function runScenario(label, fn) {
   }
 }
 
-const browser = await chromium.launch({ headless: true });
+// This suite launches Chromium itself rather than going through
+// board-check/harness.mjs, so it needs its own copy of the same escape hatch:
+// PW_CHROMIUM_EXECUTABLE points at an already-installed browser on machines
+// where `npx playwright install chromium` can't reach the download host.
+// Unset — the normal case — Playwright resolves its own browser as before.
+const browser = await chromium.launch(
+  process.env.PW_CHROMIUM_EXECUTABLE
+    ? { headless: true, executablePath: process.env.PW_CHROMIUM_EXECUTABLE }
+    : { headless: true }
+);
 
 try {
   /* ── 1. Basic path: load 3 images, one-per-page, generate, sanity-check output ── */
