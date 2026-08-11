@@ -1338,6 +1338,31 @@
     return totals;
   }
 
+  /* Every individual trip in the range, newest day first — the backing detail
+     for the totals table. The on-screen report deliberately stays a summary
+     (it's read at a glance during a conversation); this is what an export
+     needs, because "12 passes, 96 minutes" is the start of a counselor
+     conversation and the individual trips are the rest of it. */
+  function buildRangeDetail(fromMs, toMs) {
+    var out = [];
+    var todayLabel = new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+    state.log.forEach(function (e) {
+      if (e.outMs >= fromMs && e.outMs <= toMs) {
+        out.push({ date: todayLabel, dateMs: e.outMs, name: e.name, dest: e.destLabel,
+                   out: e.outStr, back: e.inStr || '', minutes: e.durationMin, note: e.note || '' });
+      }
+    });
+    state.history.forEach(function (h) {
+      var ms = (h.dateMs != null) ? h.dateMs : Date.parse(h.date);
+      if (isNaN(ms) || ms < fromMs || ms > toMs) return;
+      h.rows.forEach(function (r) {
+        out.push({ date: h.date, dateMs: (r.outMs != null ? r.outMs : ms), name: r.name, dest: r.destLabel,
+                   out: r.outStr, back: r.inStr || '', minutes: r.durationMin, note: r.note || '' });
+      });
+    });
+    return out.sort(function (a, b) { return b.dateMs - a.dateMs || a.name.localeCompare(b.name); });
+  }
+
   els.buildRangeBtn.addEventListener('click', function () {
     if (!els.rangeFrom.value || !els.rangeTo.value) { showMsg('Pick a start and end date for the range report.', 'error'); return; }
     var fromMs = new Date(els.rangeFrom.value + 'T00:00:00').getTime();
@@ -1350,6 +1375,7 @@
       fromLabel: new Date(fromMs).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
       toLabel: new Date(toMs).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
       rows: rows,
+      detail: buildRangeDetail(fromMs, toMs),
     };
     if (!rows.length) {
       els.rangeReportWrap.innerHTML = '<p class="empty-hint">No sign-outs recorded in that range.</p>';
@@ -1358,11 +1384,99 @@
     els.rangeReportWrap.innerHTML =
       '<table class="history-table"><thead><tr><th>Student</th><th>Passes</th><th>Total Minutes</th></tr></thead><tbody>' +
       rows.map(function (r) { return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.count + '</td><td>' + r.minutes + ' min</td></tr>'; }).join('') +
-      '</tbody></table><div class="btn-row" style="margin-top:.6rem;"><button class="secondary" type="button" id="printRangeBtn">Print Range Report</button></div>';
+      '</tbody></table><div class="btn-row" style="margin-top:.6rem;">' +
+      '<button class="secondary" type="button" id="printRangeBtn">Print Range Report</button>' +
+      '<button class="secondary" type="button" id="csvRangeBtn">Export CSV</button>' +
+      '<button class="secondary" type="button" id="xlsxRangeBtn">Export Excel</button>' +
+      '</div>';
   });
 
+  /* ── Spreadsheet export ───────────────────────────────────────────────────
+     A year of hall-pass data is worth nothing if it can only be looked at in
+     this browser. CSV is the everything-opens-it format; the .xlsx carries two
+     sheets — the same per-student totals, plus every individual trip behind
+     them — because the totals are what starts a conversation and the trips are
+     what the conversation is about. SheetJS is lazy-loaded from the shared
+     vendored build only when Excel is actually asked for; CSV is written by
+     hand so the common case needs no library at all. */
+  var XLSX_LIB = '../_shared/vendor/xlsx/xlsx.full.min.js';
+  var xlsxLoadPromise = null;
+  function loadXlsx() {
+    if (xlsxLoadPromise) return xlsxLoadPromise;
+    xlsxLoadPromise = new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = XLSX_LIB;
+      el.onload = function () { resolve(); };
+      el.onerror = function () { xlsxLoadPromise = null; reject(new Error('Could not load the spreadsheet library.')); };
+      document.head.appendChild(el);
+    });
+    return xlsxLoadPromise;
+  }
+
+  function csvCell(v) {
+    var s = (v == null) ? '' : String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+  }
+
+  function exportFilename(ext) {
+    var base = (state && state.name ? state.name : 'hall-pass') + ' ' +
+      lastRangeReport.fromLabel + ' to ' + lastRangeReport.toLabel;
+    return base.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() + '.' + ext;
+  }
+
+  function summaryAoa() {
+    return [['Student', 'Passes', 'Total minutes']].concat(
+      lastRangeReport.rows.map(function (r) { return [r.name, r.count, r.minutes]; }));
+  }
+  function detailAoa() {
+    return [['Date', 'Student', 'Destination', 'Out', 'Back', 'Minutes', 'Note']].concat(
+      (lastRangeReport.detail || []).map(function (d) {
+        return [d.date, d.name, d.dest, d.out, d.back, d.minutes, d.note];
+      }));
+  }
+
+  function exportRangeCsv() {
+    // One file, both tables, separated by a blank line — a CSV can't carry two
+    // sheets and splitting it into two downloads is worse than one scroll.
+    var lines = [];
+    lines.push('Hall pass log,' + csvCell((state && state.name) || ''));
+    lines.push('Range,' + csvCell(lastRangeReport.fromLabel + ' to ' + lastRangeReport.toLabel));
+    lines.push('');
+    summaryAoa().forEach(function (row) { lines.push(row.map(csvCell).join(',')); });
+    lines.push('');
+    detailAoa().forEach(function (row) { lines.push(row.map(csvCell).join(',')); });
+    // The BOM is what makes Excel open UTF-8 names correctly on Windows.
+    downloadBlob(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), exportFilename('csv'));
+    showMsg('Exported ' + lastRangeReport.rows.length + ' student' + (lastRangeReport.rows.length !== 1 ? 's' : '') + ' as CSV.', 'info');
+  }
+
+  function exportRangeXlsx() {
+    showMsg('Building the spreadsheet…', 'info');
+    loadXlsx().then(function () {
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryAoa()), 'Totals');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detailAoa()), 'Every pass');
+      XLSX.writeFile(wb, exportFilename('xlsx'));
+      showMsg('Exported ' + lastRangeReport.rows.length + ' student' + (lastRangeReport.rows.length !== 1 ? 's' : '') +
+        ' and ' + (lastRangeReport.detail || []).length + ' pass' + ((lastRangeReport.detail || []).length !== 1 ? 'es' : '') + ' to Excel.', 'info');
+    }).catch(function () {
+      showMsg('Couldn’t load the spreadsheet library. The CSV export works without it.', 'error');
+    });
+  }
+
   els.rangeReportWrap.addEventListener('click', function (e) {
-    if (!e.target.closest('#printRangeBtn') || !lastRangeReport) return;
+    if (!lastRangeReport) return;
+    if (e.target.closest('#csvRangeBtn')) { exportRangeCsv(); return; }
+    if (e.target.closest('#xlsxRangeBtn')) { exportRangeXlsx(); return; }
+    if (!e.target.closest('#printRangeBtn')) return;
     els.rangePrintTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Hall Pass Log — Long-Range Report';
     els.rangePrintSub.textContent = lastRangeReport.fromLabel + ' – ' + lastRangeReport.toLabel;
     els.rangePrintBody.innerHTML = lastRangeReport.rows.length

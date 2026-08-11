@@ -1,13 +1,45 @@
 # Improvement Prompts — 001 — Digital Hall Pass / Sign-Out Log
 
 **Tool file:** `Tools/001-hall-pass-log.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/hall-pass-log/test/` — the browser suite
+(`smoke-export.mjs`, `npm run test:hall-pass`). The page itself is a single file.
 
 **Current description (from README):** Tap a destination, tap a student — a live board tracks who's out and for how long, with a per-day log, archived history, and a printable report.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **pass-log
+spreadsheet export** (backlog rank 5). The long-range report could be read and
+printed, but a year of hall-pass data could not leave the browser — and the
+conversation it feeds (counselor, attendance clerk, parent meeting) happens in
+a spreadsheet.
+
+- Two buttons on the built report: **Export CSV** and **Export Excel**.
+- **The export is deliberately richer than the on-screen report.** The report
+  stays a summary because it's read at a glance mid-conversation; the export
+  carries the per-student totals *and* every individual trip behind them —
+  date, student, destination, out, back, minutes, note. "12 passes, 96
+  minutes" is what starts the conversation; the individual trips are what the
+  conversation is about. New `buildRangeDetail()` walks the same two sources
+  `buildRangeTotals()` does (today's live log plus archived history) and
+  normalizes both into one row shape.
+- **CSV is hand-written, no library.** It leads with a UTF-8 BOM (without it
+  Excel on Windows mangles names), quotes any cell containing a comma, quote
+  or newline, and puts both tables in one file separated by a blank line — a
+  CSV can't carry two sheets and two downloads is worse than one scroll.
+- **XLSX lazy-loads the shared vendored SheetJS** (`_shared/vendor/xlsx/`)
+  only when Excel is actually asked for, and writes two named sheets, "Totals"
+  and "Every pass". Numbers go in as numbers. If the library fails to load the
+  error message points at the CSV, which needs nothing.
+- Nothing about the storage schema changed — this is a read of what's already
+  there.
+- Verified by `Tools/hall-pass-log/test/smoke-export.mjs` (23 checks): the
+  real buttons are clicked, the real downloads are saved and parsed, the .xlsx
+  is read back through the tool's own SheetJS to check both sheets, and a note
+  containing a comma is proven to survive the CSV round trip. Out-of-range
+  history is checked to be absent from both files.
 
 **2026-08-10 — Quick Wins and the two required Major Features implemented,
 plus long-range reporting.** All storage stayed additive: `outNow`/`log`/
@@ -116,7 +148,8 @@ currently buckets by exact name-string match for the same reason.
   `topEntries`) — frequency tracking per student, plus a self-contained
   time-of-day pattern flag ("4 of 5 trips around 10 AM")
 - **Long-range report**: pick a date range, get a printable per-student
-  passes/minutes total
+  passes/minutes total, exportable as CSV or a two-sheet .xlsx (totals plus
+  every individual trip)
 - Read live by `010-command-center-dashboard.html` (via `outNow.length` only —
   unaffected by any of the above)
 
