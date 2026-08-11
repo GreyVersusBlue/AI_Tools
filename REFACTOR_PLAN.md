@@ -948,7 +948,8 @@ out of scope for Phase 3 per the variance audit.
   Rounds 4a + 4b landed 2026-08-11 (16 tools, the whole print cluster). The toolbar
   cluster and the `.card`+`.app-header` bucket are now unblocked — 48 tools eligible.
   Round 4c landed 2026-08-11 (12 more tools, script-picked) — 36 remain; use
-  `npm run phase4:next`, not the stale bucket lists below.
+  `npm run phase4:next`, not the stale bucket lists below. Round 4d landed
+  2026-08-11 (12 more) — 24 remain.
 
 #### What `_shared/base.css` contained at Round 4a (2026-08-11)
 
@@ -1271,6 +1272,50 @@ extended to tools outside the print cluster:
 `npm run phase4:next -- --all` — the plan's Batch 3/Batch 4/Singles lists
 above are now stale (Round 4c picked across those buckets in file order, not
 bucket order) and should not be used for picking work; run the script.
+
+#### Round 4d — second script-picked batch of 12 (2026-08-11)
+
+`npm run phase4:next` picked 021-pe-tournament-stations,
+022-lab-group-role-randomizer, 023-exit-ticket-generator,
+024-number-talks-board, 025-writing-prompt-generator, 026-math-drill-generator,
+027-novel-study-circles-manager, 028-primary-source-analysis-generator,
+030-review-game-board, 033-ssr-log-tracker, 037-grade-distribution-visualizer,
+039-vocab-conjugation-drill (12 of the 36 candidates that existed at the
+start of the round; 24 remain). None link `_shared/print-area.css`. Four
+LEAVE INLINE variants this round, each checked against the Round 4c
+property-bleed gotcha:
+
+- **023-exit-ticket-generator** and **028-primary-source-analysis-generator**
+  `.app-header`, **024-number-talks-board** `.app-header` — all three set
+  every property base.css's `.app-header` does (`display`, `align-items`,
+  `justify-content`, `gap`, `flex-wrap`), differing only in `margin-bottom`
+  (1.2rem vs base's 1.4rem). Full override on every property base.css sets
+  — no bleed possible, safe to leave exactly as written.
+- **030-review-game-board** `.card` — sets every property base.css's `.card`
+  does, differing only in `padding` (1.2rem 1.3rem vs base's 1.1rem 1.2rem)
+  and `margin-bottom` (1.2rem vs base's 1rem). Same reasoning: full override,
+  no bleed.
+
+No new gotchas found. Two apparent screenshot-only failures during
+verification turned out to be pre-existing randomized content, not CSS
+regressions (confirmed by re-rendering the same post-migration page 3x and
+seeing similar variance each time, same method as Round 4c's noise checks):
+**023-exit-ticket-generator** picks a random prompt via `Math.random()` on
+every load, and **026-math-drill-generator** generates a fresh drill sheet
+with a random seed on every load. Computed styles for `.app-header`/`.card`/
+`.toolbar` matched exactly pre vs post for both.
+
+**Verification:** same method as Round 4c — `git archive HEAD` baseline
+served alongside the working tree, fresh browser context per render,
+`executablePath` pointed at the environment's pre-installed Chromium.
+Computed styles, full-page screenshots, and PDF output (dates stripped)
+compared for all 12; print media emulated and screenshotted — byte-identical
+pre vs post for all 12. `check-social.mjs` output unchanged.
+
+`sw.js`: no files added or renamed, `CACHE_VERSION` bumped v61 → v62.
+
+**Remaining Phase 4 candidates after Round 4d:** 24 tools, per
+`npm run phase4:next -- --all`.
 
 ### Phase 5 — JS utility patterns (optional, highest judgment)
 - [ ] Candidates: localStorage save/load wrapper, CSV export, print-area show/hide.
