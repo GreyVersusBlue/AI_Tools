@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Cultural Trivia Card Generator | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
+| Current Events Discussion Guide Generator | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
+| Daily Editing / DOL Warm-Up Generator | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
+| DBQ / Source Packet Builder | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
+| Dichotomous Key Builder | `qer21r` | 2026-08-11 01:30 UTC | `claude/tools-053-57-improvements-qer21r` |
 
 ---
 
