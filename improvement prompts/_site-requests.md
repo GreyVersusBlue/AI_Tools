@@ -94,3 +94,40 @@ markup where entities are correct as-is) rather than waiting for the next
 tool's smoke test to catch instance seven by luck. The fix each time has
 been the same one-line swap: replace the entity name with the actual
 Unicode character in the source string.
+
+---
+
+## Fixed-height, `overflow: hidden` half-sheet print CSS silently clips content
+
+Found/fixed 2026-08-11 in `076-sub-note-feedback-slip-generator.html` (session
+`b4zswl`). The print CSS for a "two half-sheets per page" layout used
+`.slip { height: 47vh; overflow: hidden; }` — if the content inside a slip
+(a long prompt list, in this case) grows taller than 47vh, it gets silently
+clipped with no visual sign anything is missing. This is worse than an
+overflow that just looks bad, because a teacher has no way to know content
+was cut off from the printed page.
+
+**The fix applied to 076**: switch to `min-height: 47vh; overflow: visible`
+and add a content-length threshold — under the threshold, keep the original
+"two per page" layout (`page-break-after: always` every 2nd `.slip`); over
+it, give each item its own full page instead
+(`page-break-after: always` every 1st `.slip`), so nothing clips regardless
+of how much content is in a single slip.
+
+This tool's own file (`076-sub-note-feedback-slip-generator.md`, prior
+Status entries) already flagged that **Peer Feedback / Editing Checklist
+Generator** (`070-peer-feedback-checklist-generator.html`) and **Art Critique
+Worksheet Generator** (`047-art-critique-worksheet-generator.html`) share the
+identical `.slip`/half-sheet fixed-height print pattern and the identical
+risk. **Update: both are now fixed independently, concurrently with this
+note being written** — Art Critique Worksheet Generator switched to
+`min-height`/no-`overflow:hidden` in the same round that first flagged this
+pattern (see the `hidden`-loses-to-`display:flex`-adjacent entry in
+`_tools-touched.md`'s "Threads left open" section), and Peer Feedback /
+Editing Checklist Generator picked up the same `min-height` fix plus an
+on-screen size warning and two-tier print font/spacing scaling in session
+`4o6xmy`'s round. 076's own fix (a content-length threshold that falls back
+to one-slip-per-page past a certain size) is a third, slightly more
+sophisticated variant of the same underlying idea — worth comparing all
+three approaches the next time any print-clipping issue turns up elsewhere,
+rather than picking one arbitrarily.

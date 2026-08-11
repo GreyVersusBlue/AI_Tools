@@ -164,6 +164,7 @@
           <select id="saved-datasets-select" style="flex:1;"><option value="">Select a saved dataset…</option></select>
           <button type="button" class="btn-file" id="btn-load-dataset">Load</button>
           <button type="button" class="btn-file" id="btn-delete-dataset">Delete</button>
+          <button type="button" class="btn-file" id="btn-undo-delete-dataset" style="display:none;">Undo delete</button>
         </div>
         <p class="hint">Saved to this browser only — nothing is uploaded.</p>
       </div>
@@ -296,7 +297,7 @@
    'value-cols-list', 'scatter-cols-group', 'scatter-x-col', 'scatter-y-col', 'show-trendline', 'options-card', 'chart-title',
    'y-axis-label-group', 'y-axis-label', 'show-values', 'sort-row', 'sort-values', 'chart-stage', 'stats-grid', 'filename', 'btn-png', 'btn-svg', 'msg',
    'btn-choose-file', 'file-input', 'dataset-name', 'btn-save-dataset', 'saved-datasets-select',
-   'btn-load-dataset', 'btn-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
+   'btn-load-dataset', 'btn-delete-dataset', 'btn-undo-delete-dataset', 'grayscale-mode', 'show-error-bars', 'error-bars-config',
    'btn-print-worksheet', 'print-area'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
@@ -365,14 +366,45 @@
     handleParse();
     clearMsg();
   });
+  // One-shot undo buffer (in memory only, not localStorage) so a delete
+  // click made mid-lesson isn't permanent for the next 15 seconds. Same
+  // pattern as 018-qr-scavenger-hunt-builder.html's "Undo clear" button.
+  var deletedDatasetUndo = null; // { name, text, timeoutId }
+
+  function hideUndoDeleteDataset() {
+    if (deletedDatasetUndo && deletedDatasetUndo.timeoutId) clearTimeout(deletedDatasetUndo.timeoutId);
+    deletedDatasetUndo = null;
+    els.btnUndoDeleteDataset.style.display = 'none';
+  }
+
   els.btnDeleteDataset.addEventListener('click', function () {
     var name = els.savedDatasetsSelect.value;
     if (!name) { showMsg('Choose a saved dataset to delete.'); return; }
-    if (!window.confirm('Delete the saved dataset "' + name + '"?')) return;
+    if (!window.confirm('Delete the saved dataset "' + name + '"? You can undo this for the next 15 seconds.')) return;
     var map = getSavedDatasets();
+    var deletedText = map[name];
     delete map[name];
     setSavedDatasets(map);
     refreshSavedDatasetsSelect();
+
+    hideUndoDeleteDataset();
+    deletedDatasetUndo = { name: name, text: deletedText };
+    els.btnUndoDeleteDataset.style.display = '';
+    deletedDatasetUndo.timeoutId = setTimeout(hideUndoDeleteDataset, 15000);
+  });
+
+  els.btnUndoDeleteDataset.addEventListener('click', function () {
+    if (!deletedDatasetUndo) return;
+    var name = deletedDatasetUndo.name, text = deletedDatasetUndo.text;
+    hideUndoDeleteDataset();
+    var map = getSavedDatasets();
+    // A same-named dataset saved during the undo window would otherwise get
+    // silently overwritten by the restore.
+    var restoreName = Object.prototype.hasOwnProperty.call(map, name) ? name + ' (restored)' : name;
+    map[restoreName] = text;
+    setSavedDatasets(map);
+    refreshSavedDatasetsSelect();
+    els.savedDatasetsSelect.value = restoreName;
   });
 
   // ── Parsing ──────────────────────────────────────────────────────────────

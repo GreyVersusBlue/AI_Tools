@@ -9,6 +9,30 @@
 
 ## Status
 
+**2026-08-11 — Pass 2 round.** Shipped **the alignment test page**, the
+smaller of the two Quick Wins this file's Pass 1 round left deferred: a
+"Print alignment test page" button (visible only in Flashcards mode with
+the double-sided layout — hidden for the fold layout, which doesn't need
+duplex alignment, and for Word Wall mode) prints one numbered front page
+and one numbered back page at the *current* grid/card-size settings,
+reusing the exact same `VocabLayout.mirrorPageRows` math the real print
+path uses — a test page that verified alignment with different math than
+the real print would be worthless. No real card content, no vocabulary
+needed — a teacher can run these two sheets through the printer alone to
+confirm the duplex settings before committing a whole class set, rather
+than discovering a misalignment thirty cards in. Verified with a headless
+Playwright pass: the button's visibility tracks layout/mode correctly
+(hidden for fold, hidden for Word Wall, reappears when switching back);
+clicking it builds exactly two `.page` blocks labeled FRONT/BACK with
+numbered cards in the same mirrored order the real duplex print already
+uses; `window.print()` is invoked; zero JS console errors.
+
+Not attempted this round: **image on a card**, the other deferred Quick
+Win (needs the downscale-on-import treatment `041-formula-sheet-builder.html`'s
+`readAndDownscaleImage` already models, plus a storage-quota consideration
+per P12 — a bigger addition than this round's scope), and everything under
+Major Features/Moonshot.
+
 **2026-08-10 — implementation round.** Shipped all five Quick Wins scoped for
 this round: cut lines & margin guide, part-of-speech/pronunciation card
 fields (example sentence already existed — verified, not duplicated), sort +
@@ -76,6 +100,9 @@ Features / Moonshot.
   printers without duplex — the detail that makes the output actually usable
 - **Cut lines and a margin guide** (`guideClass`/`pageClass`), on by default,
   toggleable
+- **Alignment test page** (`buildAlignmentTestPages`) — one numbered
+  front/back sheet pair, reusing the real double-sided print's mirroring
+  math, to check duplex settings before a full class set
 - **Index-card stock size presets** (3×5, 4×6, `CARD_SIZE_PRESETS`) alongside
   the custom columns/rows grid
 - **Word wall cards** at large sizes (`buildWallPages`, `wallCardHtml`) with
@@ -101,11 +128,11 @@ Features / Moonshot.
   *(Example sentence already existed — verified before building, not
   duplicated. Added part of speech and pronunciation as two more optional
   columns, shown on the card front/back and in the self-quiz.)*
-- **Skipped — deferred.** **Alignment test page** before a class set is printed double-sided — the
+- **Done — 2026-08-11.** **Alignment test page** before a class set is printed double-sided — the
   mirroring is already right, but the printer's duplex settings are the usual
-  culprit and one test page saves a ream. *(Not part of this round's scoped
-  list — a natural next Quick Win; would print one front page + one back
-  page with big registration marks instead of the full deck.)*
+  culprit and one test page saves a ream. *(A "Print alignment test page"
+  button — one numbered front page + one numbered back page, reusing the
+  real print's mirroring math, no vocabulary needed. See Status.)*
 - **Done —** **Sort and shuffle** the list; print in a randomized order. *(A Sort
   select — A→Z / Z→A / as entered — alongside the existing Shuffle
   checkbox; composable, and now the single source both the preview and

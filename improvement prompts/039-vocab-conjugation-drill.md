@@ -9,6 +9,31 @@
 
 ## Status
 
+**2026-08-11 — Pass 2 round.** Shipped **accent-tolerant answer checking**,
+the smaller of the two Quick Wins this file's Pass 1 round left deferred —
+scoped to the conjugation self-quiz (`checkQuizAnswers`/
+`renderConjugationQuiz`), the only place in this tool that compares typed
+text against an answer (the vocab self-check is reveal-on-click, never
+typed). A new `answerMatch(typed, correct)` returns `'correct'` /
+`'close'` / `'wrong'`: exact match (case/whitespace-insensitive, as
+before) is `'correct'`; a match only after `stripDiacritics()` (Unicode
+NFD decomposition, stripping the combining-marks block) is `'close'`; a
+blank answer is always `'wrong'`, never a false "close" via two empty
+strings comparing equal. Scoring stayed strict — only an exact match counts
+toward `quizScore`, matching the prompt's framing ("a response rather than
+a bare wrong," not free credit for a missed accent) — but the on-screen
+mark now reads "≈ close — check your accent (‹answer›)" instead of a bare
+✗, with a third `.quiz-row.close` amber state alongside the existing
+green/red. Verified with a headless Playwright pass seeding a Spanish verb
+with an accented form (está): exact match → correct, accent-stripped match
+→ close (with the right message), a blank answer → wrong (not close), and
+a wrong word entirely → wrong. No JS console errors.
+
+Not attempted this round: **fill-in-the-blank sentence mode**, the other
+deferred Quick Win (it needs an example-sentence field per conjugation
+entry plus a blank-generation rule — a bigger addition than this round's
+scope), and everything under Major Features/Moonshot.
+
 **2026-08-10 — implementation round.** Shipped all five Quick Wins scoped for
 this round: the accented-character helper, both-directions drilling,
 shuffle-and-limit, multiple print versions, and irregular-verb flagging.
@@ -87,7 +112,10 @@ under Major Features / Moonshot.
 - **On-screen quiz modes**: vocabulary self-check
   (`renderVocabOnScreenCheck`) and conjugation quiz
   (`renderConjugationQuiz`, `buildQuizOrder`, `checkQuizAnswers`,
-  `nextQuizVerb`, `restartQuiz`)
+  `nextQuizVerb`, `restartQuiz`) — the conjugation quiz's typed-answer
+  check is **accent-tolerant** (`answerMatch`/`stripDiacritics`): exact
+  match scores correct, an accent-only mismatch is flagged "close" rather
+  than a bare wrong, and scoring stays strict either way
 - **Text-to-speech** (`speak`, `populateTtsLangSelect`, `listenButtonHtml`) —
   one of only two tools using `speechSynthesis`
 - Printable drills and answer keys; saved sets
@@ -103,11 +131,11 @@ under Major Features / Moonshot.
   row of the target language's special characters solves it in a few lines.
   *(Shipped as a Language select + character row, tracking whichever field
   was last focused across both modes.)*
-- **Skipped — deferred.** **Accent-tolerant answer checking**, with a "close — check your accent"
-  response rather than a bare wrong. *(Not part of this round's scoped list;
-  the on-screen quiz still does exact-match comparison. A future round could
-  add a normalized-comparison pass — strip diacritics, compare, and if that
-  matches but the raw strings don't, show "close" instead of a bare wrong.)*
+- **Done — 2026-08-11.** **Accent-tolerant answer checking**, with a "close — check your accent"
+  response rather than a bare wrong. *(A three-state `answerMatch()` —
+  correct / close / wrong — on the conjugation self-quiz; scoring stays
+  strict (only exact counts), the feedback message is what changed. See
+  Status.)*
 - **Done —** **Both directions.** Target→English and English→target are different skills
   and the drill should be able to do either or alternate. *(Added a Direction
   select — fixed either way, or alternating per item — feeding a shared

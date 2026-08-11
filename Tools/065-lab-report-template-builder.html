@@ -61,11 +61,23 @@
   button.full { width: 100%; }
   .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
 
-  .list-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+  .list-row { display: flex; align-items: center; gap: .4rem; padding: .25rem 0; }
   .list-row input[type="text"] { margin-bottom: 0; }
+  .list-row button.small { padding: .2rem .45rem; flex-shrink: 0; }
+  .list-row button:disabled { opacity: .35; cursor: default; }
   section.builder { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
   section.builder h3 { font-size: .95rem; margin: 0 0 .5rem; color: var(--accent); }
   .add-btn { margin-top: .2rem; }
+
+  /* ---- saved templates toolbar ---- */
+  select#templateSwitch { width: 100%; font-family: inherit; font-size: .9rem; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); margin-bottom: .6rem; }
+
+  /* ---- print preview modal ---- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,20,15,.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
+  .modal-box { background: #fff; width: 100%; max-width: 760px; max-height: 88vh; overflow: auto; border-radius: 10px; padding: 1.1rem 1.3rem; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .8rem; gap: .6rem; }
+  .modal-header h2 { font-size: 1.15rem; margin: 0; }
+  .preview-sheet { background: #fff; border: 1px solid var(--line); padding: .9in .75in; }
 
   #printArea { display: none; }
   .lab-title { font-size: 1.4rem; margin: 0 0 .1rem; }
@@ -97,12 +109,25 @@
       <p class="sub">Build a reusable lab report template, then print a fillable packet for each lab.</p>
     </div>
     <div class="btnrow">
+      <button class="secondary" id="previewBtn">Preview</button>
       <button class="secondary" id="printBtn">Print packet</button>
     </div>
   </div>
 
   <div class="layout">
     <div>
+      <div class="card">
+        <h2>My templates</h2>
+        <label for="templateName">Template name</label>
+        <p class="hint">Save this lab as a named template so you can build more than one (e.g. one per lab).</p>
+        <input type="text" id="templateName" placeholder="e.g. Acid-Base Lab">
+        <label for="templateSwitch">Saved templates</label>
+        <select id="templateSwitch"></select>
+        <div class="btnrow">
+          <button class="secondary" id="newTemplateBtn">New</button>
+          <button class="danger" id="deleteTemplateBtn">Delete</button>
+        </div>
+      </div>
       <div class="card">
         <h2>Start from a template</h2>
         <select id="templateSelect">
@@ -164,10 +189,31 @@
 
 <div id="printArea"></div>
 
+<div class="modal-overlay" id="previewModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Print preview</h2>
+      <div class="btnrow">
+        <button type="button" id="previewPrintBtn">Print</button>
+        <button type="button" class="secondary" id="closePreviewBtn">Close</button>
+      </div>
+    </div>
+    <div id="previewBody" class="preview-sheet"></div>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'lrt_template_v1';
+  /* Multi-template storage, same shape as the Formula Sheet Builder / Rubric
+     Builder stores: a list of names plus one JSON blob per name, and a
+     pointer to whichever one is "current". OLD_STORE_KEY is the single
+     template this tool used before named templates existed; it's migrated
+     into the new scheme once (as "My Template") and then left alone. */
+  var OLD_STORE_KEY = 'lrt_template_v1';
+  var LIST_KEY = 'lrt_list_v1';
+  var DATA_PREFIX = 'lrt_data_v1:';
+  var CURRENT_KEY = 'lrt_current_v1';
 
   var TEMPLATES = {
     generic: {
@@ -211,7 +257,9 @@
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'labTitle', 'objective', 'dataRows', 'columnsWrap', 'addColumnBtn',
    'hypothesisPrompt', 'materialsWrap', 'addMaterialBtn', 'procedureWrap', 'addStepBtn',
-   'observationsPrompt', 'conclusionWrap', 'addQuestionBtn', 'printBtn', 'printArea'].forEach(function (id) {
+   'observationsPrompt', 'conclusionWrap', 'addQuestionBtn', 'printBtn', 'printArea',
+   'templateName', 'templateSwitch', 'newTemplateBtn', 'deleteTemplateBtn',
+   'previewBtn', 'previewModal', 'previewBody', 'closePreviewBtn', 'previewPrintBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -225,9 +273,12 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
-  function fromTemplate(key) {
+  /** Builds fresh template content from a subject starter (no "name" field —
+      callers attach that separately depending on whether they're swapping
+      the current named template's content or creating a brand-new one). */
+  function buildFromSubject(key) {
     var t = TEMPLATES[key];
-    state = {
+    return {
       title: t.title, objective: t.objective, hypothesisPrompt: t.hypothesisPrompt,
       materials: t.materials.map(function (v) { return { id: uid(), text: v }; }),
       procedure: t.procedure.map(function (v) { return { id: uid(), text: v }; }),
@@ -238,35 +289,127 @@
     };
   }
 
-  function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.materials)) state = saved;
-    } catch (e) { /* ignore */ }
-  }
-  function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  // Swaps the *content* of the current named template with a subject
+  // starter, keeping whatever name is already in use.
+  function fromTemplate(key) {
+    var name = state ? state.name : 'My Template';
+    state = buildFromSubject(key);
+    state.name = name;
   }
 
+  /* ---------- named-template store (mirrors Formula Sheet Builder / Rubric Builder) ---------- */
+  function listTemplates() {
+    try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveTemplateAs(name, data) {
+    var names = listTemplates();
+    if (names.indexOf(name) === -1) {
+      names.push(name);
+      try { localStorage.setItem(LIST_KEY, JSON.stringify(names)); } catch (e) { /* storage full/blocked */ }
+    }
+    try {
+      localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+      localStorage.setItem(CURRENT_KEY, name);
+    } catch (e) { /* storage full/blocked */ }
+  }
+  function loadTemplateData(name) {
+    try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
+  }
+  function deleteTemplateByName(name) {
+    var names = listTemplates().filter(function (n) { return n !== name; });
+    try {
+      localStorage.setItem(LIST_KEY, JSON.stringify(names));
+      localStorage.removeItem(DATA_PREFIX + name);
+      if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+    } catch (e) { /* ignore */ }
+  }
+  function getCurrentTemplateName() {
+    try { return localStorage.getItem(CURRENT_KEY); } catch (e) { return null; }
+  }
+
+  // One-time migration: if a teacher already has the old single-template
+  // value and hasn't got any named templates yet, turn it into the first
+  // named entry so nothing already saved is lost.
+  function migrateOldTemplateIfNeeded() {
+    if (listTemplates().length) return;
+    var old;
+    try { old = JSON.parse(localStorage.getItem(OLD_STORE_KEY) || 'null'); } catch (e) { old = null; }
+    if (!old || !Array.isArray(old.materials)) return;
+    old.name = 'My Template';
+    saveTemplateAs('My Template', old);
+    try { localStorage.removeItem(OLD_STORE_KEY); } catch (e) { /* ignore */ }
+  }
+
+  function save() {
+    if (!state) return;
+    saveTemplateAs(state.name, state);
+  }
+
+  // Loads a saved template by name into `state`. Returns false (leaving
+  // `state` untouched) if that name isn't actually in storage.
+  function loadTemplateByName(name) {
+    var data = loadTemplateData(name);
+    if (!data || !Array.isArray(data.materials)) return false;
+    state = data;
+    if (!state.name) state.name = name;
+    if (typeof state.dataRows !== 'number') state.dataRows = 5;
+    localStorage.setItem(CURRENT_KEY, name);
+    renderAll();
+    return true;
+  }
+
+  function newTemplate(name) {
+    state = buildFromSubject('generic');
+    state.name = name;
+    save();
+    renderAll();
+  }
+
+  // Each list's wrap element + input placeholder, keyed the same as the
+  // matching field on `state`, so re-renders after add/delete/reorder don't
+  // need the placeholder threaded through every call site.
+  var LIST_INFO = {
+    materials: { placeholder: 'e.g. Safety goggles' },
+    procedure: { placeholder: 'e.g. Measure the sample' },
+    columns: { placeholder: 'e.g. Trial' },
+    conclusion: { placeholder: 'e.g. Was your hypothesis supported?' }
+  };
+
   function renderList(wrapEl, list, placeholder) {
-    wrapEl.innerHTML = list.map(function (item) {
+    wrapEl.innerHTML = list.map(function (item, i) {
       return '<div class="list-row" data-id="' + item.id + '">' +
         '<input type="text" value="' + escapeAttr(item.text) + '" placeholder="' + escapeAttr(placeholder) + '">' +
-        '<button type="button" class="danger small" data-del="' + item.id + '">&times;</button>' +
+        '<button type="button" class="secondary small" data-up="' + item.id + '" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="secondary small" data-down="' + item.id + '" title="Move down"' + (i === list.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="danger small" data-del="' + item.id + '" title="Remove">&times;</button>' +
         '</div>';
     }).join('');
   }
 
+  function renderListByKey(listKey) {
+    renderList(els[listKey + 'Wrap'], state[listKey], LIST_INFO[listKey].placeholder);
+  }
+
+  function refreshTemplateSwitcher() {
+    var names = listTemplates();
+    els.templateSwitch.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (state && n === state.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
   function renderAll() {
+    save();
+    refreshTemplateSwitcher();
+    els.templateName.value = state.name || '';
     els.labTitle.value = state.title || '';
     els.objective.value = state.objective || '';
     els.hypothesisPrompt.value = state.hypothesisPrompt || '';
     els.observationsPrompt.value = state.observationsPrompt || '';
     els.dataRows.value = state.dataRows || 5;
-    renderList(els.materialsWrap, state.materials, 'e.g. Safety goggles');
-    renderList(els.procedureWrap, state.procedure, 'e.g. Measure the sample');
-    renderList(els.columnsWrap, state.columns, 'e.g. Trial');
-    renderList(els.conclusionWrap, state.conclusion, 'e.g. Was your hypothesis supported?');
+    renderListByKey('materials');
+    renderListByKey('procedure');
+    renderListByKey('columns');
+    renderListByKey('conclusion');
   }
 
   function bindListEvents(wrapEl, listKey) {
@@ -279,11 +422,25 @@
       save();
     });
     wrapEl.addEventListener('click', function (ev) {
-      var id = ev.target.getAttribute('data-del');
-      if (!id) return;
-      state[listKey] = state[listKey].filter(function (i) { return i.id !== id; });
+      var btn = ev.target.closest('button');
+      if (!btn) return;
+      var list = state[listKey];
+      var upId = btn.getAttribute('data-up');
+      var downId = btn.getAttribute('data-down');
+      var delId = btn.getAttribute('data-del');
+      if (upId) {
+        var upIdx = list.findIndex(function (i) { return i.id === upId; });
+        if (upIdx > 0) list.splice(upIdx - 1, 0, list.splice(upIdx, 1)[0]);
+      } else if (downId) {
+        var downIdx = list.findIndex(function (i) { return i.id === downId; });
+        if (downIdx > -1 && downIdx < list.length - 1) list.splice(downIdx + 1, 0, list.splice(downIdx, 1)[0]);
+      } else if (delId) {
+        state[listKey] = list.filter(function (i) { return i.id !== delId; });
+      } else {
+        return;
+      }
       save();
-      renderList(wrapEl, state[listKey], '');
+      renderListByKey(listKey);
     });
   }
 
@@ -294,16 +451,42 @@
     renderAll();
   });
 
+  /* ---------- saved-templates toolbar ---------- */
+  els.templateName.addEventListener('change', function () {
+    if (!state) return;
+    var oldName = state.name;
+    var newName = els.templateName.value.trim() || oldName;
+    if (newName !== oldName) {
+      deleteTemplateByName(oldName);
+      state.name = newName;
+    }
+    renderAll();
+  });
+  els.templateSwitch.addEventListener('change', function () { loadTemplateByName(els.templateSwitch.value); });
+  els.newTemplateBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new template:', 'New Template');
+    if (!name) return;
+    newTemplate(name.trim());
+  });
+  els.deleteTemplateBtn.addEventListener('click', function () {
+    if (!state) return;
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    deleteTemplateByName(state.name);
+    var remaining = listTemplates();
+    if (remaining.length) loadTemplateByName(remaining[0]);
+    else newTemplate('My Template');
+  });
+
   ['labTitle', 'objective', 'hypothesisPrompt', 'observationsPrompt'].forEach(function (id) {
     var field = { labTitle: 'title', objective: 'objective', hypothesisPrompt: 'hypothesisPrompt', observationsPrompt: 'observationsPrompt' }[id];
     els[id].addEventListener('input', function () { state[field] = els[id].value; save(); });
   });
   els.dataRows.addEventListener('input', function () { state.dataRows = Math.max(1, Math.min(20, parseInt(els.dataRows.value, 10) || 5)); save(); });
 
-  els.addMaterialBtn.addEventListener('click', function () { state.materials.push({ id: uid(), text: '' }); save(); renderList(els.materialsWrap, state.materials, 'e.g. Safety goggles'); });
-  els.addStepBtn.addEventListener('click', function () { state.procedure.push({ id: uid(), text: '' }); save(); renderList(els.procedureWrap, state.procedure, 'e.g. Measure the sample'); });
-  els.addColumnBtn.addEventListener('click', function () { state.columns.push({ id: uid(), text: '' }); save(); renderList(els.columnsWrap, state.columns, 'e.g. Trial'); });
-  els.addQuestionBtn.addEventListener('click', function () { state.conclusion.push({ id: uid(), text: '' }); save(); renderList(els.conclusionWrap, state.conclusion, 'e.g. Was your hypothesis supported?'); });
+  els.addMaterialBtn.addEventListener('click', function () { state.materials.push({ id: uid(), text: '' }); save(); renderListByKey('materials'); });
+  els.addStepBtn.addEventListener('click', function () { state.procedure.push({ id: uid(), text: '' }); save(); renderListByKey('procedure'); });
+  els.addColumnBtn.addEventListener('click', function () { state.columns.push({ id: uid(), text: '' }); save(); renderListByKey('columns'); });
+  els.addQuestionBtn.addEventListener('click', function () { state.conclusion.push({ id: uid(), text: '' }); save(); renderListByKey('conclusion'); });
 
   bindListEvents(els.materialsWrap, 'materials');
   bindListEvents(els.procedureWrap, 'procedure');
@@ -339,10 +522,32 @@
     window.print();
   });
 
+  /* ---------- print preview: reuses packetHtml() + the print CSS classes, ---------- */
+  /* so what's shown here is the actual print markup, not a second renderer. */
+  els.previewBtn.addEventListener('click', function () {
+    els.previewBody.innerHTML = packetHtml();
+    els.previewModal.style.display = 'flex';
+  });
+  els.closePreviewBtn.addEventListener('click', function () { els.previewModal.style.display = 'none'; });
+  els.previewModal.addEventListener('click', function (ev) {
+    if (ev.target === els.previewModal) els.previewModal.style.display = 'none';
+  });
+  els.previewPrintBtn.addEventListener('click', function () {
+    els.printArea.innerHTML = packetHtml();
+    window.print();
+  });
+
   /* ---------- boot ---------- */
-  load();
-  if (!state) fromTemplate('generic');
-  renderAll();
+  migrateOldTemplateIfNeeded();
+  var bootName = getCurrentTemplateName();
+  if (!bootName || !loadTemplateByName(bootName)) {
+    var savedNames = listTemplates();
+    var loadedExisting = false;
+    for (var bi = 0; bi < savedNames.length && !loadedExisting; bi++) {
+      loadedExisting = loadTemplateByName(savedNames[bi]);
+    }
+    if (!loadedExisting) newTemplate('My Template');
+  }
 })();
 </script>
 <script>

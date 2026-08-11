@@ -63,6 +63,15 @@
   .bank-box .bank-group { margin-bottom: .3rem; }
   .bank-box .bank-group b { text-transform: capitalize; }
 
+  .tag-ref { font-size: .78rem; color: var(--muted); margin: -.2rem 0 .7rem; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+  .tag-ref .tag-ref-label { font-weight: 600; color: var(--ink); margin-right: .1rem; }
+  .tag-chip {
+    font-family: inherit; font-size: .74rem; font-weight: 600; cursor: pointer;
+    background: #fff; color: var(--accent-2); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: .18rem .55rem; line-height: 1.3;
+  }
+  .tag-chip:hover { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+
   #printArea { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -90,9 +99,11 @@
   <div class="card">
     <label for="templateSelect">Story template</label>
     <select id="templateSelect"></select>
-    <label for="customText" style="margin-top:.6rem;">Or write your own (use tags like {noun}, {adjective}, {verb-ed}, {place}, {animal}, {number}, {name})</label>
+    <label for="customText" style="margin-top:.6rem;">Or write your own (mark blanks with tags — click one below to insert it)</label>
+    <div class="tag-ref" id="tagRef" aria-label="Available story tags"></div>
     <textarea id="customText" placeholder="Once there was a {adjective} {animal} who loved to {verb}..."></textarea>
     <button class="secondary" id="useCustomBtn">Use my own story</button>
+    <p class="hint" id="customSavedHint" style="margin-top:.3rem;">Your custom story is saved automatically in this browser.</p>
   </div>
 
   <div class="card">
@@ -128,7 +139,13 @@
     { name: 'Book Report Parody',
       text: 'The book I read was called "The {adjective} {noun}." It is about a {adjective} {animal} who wants to {verb} more than anything else in the world. Along the way, they meet a {noun} who teaches them to {verb} {adverb}. My favorite part was when the {animal} {verb-ed} all the way to {place}. I would give this book {number} out of 10 stars.' },
     { name: 'A Day in the Life of a Pet',
-      text: 'Being a pet {animal} is {adjective} work. Every morning I wake up and demand {number} bowls of {food}. Then I {verb} around the {place} until my human, {name}, gives me a {adjective} {noun} to play with. At night, I curl up on the {adjective} {noun} and dream about {plural-noun}.' }
+      text: 'Being a pet {animal} is {adjective} work. Every morning I wake up and demand {number} bowls of {food}. Then I {verb} around the {place} until my human, {name}, gives me a {adjective} {noun} to play with. At night, I curl up on the {adjective} {noun} and dream about {plural-noun}.' },
+    { name: 'The Science Fair Disaster',
+      text: 'For my science fair project, I decided to build a {adjective} volcano that could erupt {plural-noun} instead of lava. My partner, {name}, brought in a {color} {noun} to make it look more official. Everything was going {adverb} until the volcano started to {verb} out of control and sprayed {food} all over {number} classmates. Our teacher just shouted "{exclamation}!" and gave us extra credit for being creative. Next year, I want to build a robot that can {verb-ed} across the {place} on its own.' },
+    { name: 'Space Mission Log',
+      text: 'Mission log, day {number}: Captain {name} steered our {adjective} spaceship toward a {color} planet covered in {plural-noun}. The crew had to {verb} through a cloud of floating {food} to land safely. A {adjective} alien {animal} appeared and shouted "{exclamation}!" before trading a {noun} for our {body-part} scanner. We {verb-ed} back to the ship {adverb} and set a course for {place}.' },
+    { name: "Weekend at Grandma's House",
+      text: 'Every time I visit Grandma {name}, something {adjective} happens. Last weekend, she taught me to {verb} while her {animal} watched us make {number} batches of {food}. Then we walked to {place} and found a {color} {noun} hidden in the {plural-noun}. Grandma {verb-ed} {adverb} and said "{exclamation}, we should sell these!" I hurt my {body-part} laughing so hard.' }
   ];
 
   var WORD_BANK = {
@@ -151,10 +168,31 @@
 
   var els = {};
   ['templateSelect', 'customText', 'useCustomBtn', 'storyPreview', 'bankBox', 'fillRandomBtn', 'clearFillBtn',
-   'printBtn', 'printStory', 'printBank'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printStory', 'printBank', 'tagRef'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentText = TEMPLATES[0].text;
   var filled = false;
+
+  /* ---------- custom story persistence ---------- */
+  var CUSTOM_STORY_KEY = 'gmlg_custom_story_v1';
+  var customSaveTimer = null;
+
+  function loadCustomStory() {
+    try {
+      var raw = localStorage.getItem(CUSTOM_STORY_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data && typeof data.text === 'string') {
+        els.customText.value = data.text;
+      }
+    } catch (e) { /* corrupt or unavailable storage — ignore */ }
+  }
+
+  function saveCustomStory() {
+    try {
+      localStorage.setItem(CUSTOM_STORY_KEY, JSON.stringify({ v: 1, text: els.customText.value }));
+    } catch (e) { /* storage unavailable (e.g. private mode) — ignore */ }
+  }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -165,6 +203,25 @@
   els.templateSelect.innerHTML = TEMPLATES.map(function (t, i) {
     return '<option value="' + i + '">' + escapeHtml(t.name) + '</option>';
   }).join('');
+
+  var ALL_TAGS = Object.keys(WORD_BANK);
+  els.tagRef.innerHTML = '<span class="tag-ref-label">Tags:</span>' + ALL_TAGS.map(function (tag) {
+    return '<button type="button" class="tag-chip" data-tag="' + escapeHtml(tag) + '">{' + escapeHtml(tag) + '}</button>';
+  }).join('');
+
+  els.tagRef.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.tag-chip') : null;
+    if (!btn) return;
+    var tag = '{' + btn.getAttribute('data-tag') + '}';
+    var ta = els.customText;
+    var start = typeof ta.selectionStart === 'number' ? ta.selectionStart : ta.value.length;
+    var end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : ta.value.length;
+    ta.value = ta.value.slice(0, start) + tag + ta.value.slice(end);
+    var pos = start + tag.length;
+    ta.focus();
+    if (ta.setSelectionRange) ta.setSelectionRange(pos, pos);
+    saveCustomStory();
+  });
 
   function parseTags(text) {
     var tags = [];
@@ -206,6 +263,11 @@
     refresh();
   });
 
+  els.customText.addEventListener('input', function () {
+    clearTimeout(customSaveTimer);
+    customSaveTimer = setTimeout(saveCustomStory, 300);
+  });
+
   els.useCustomBtn.addEventListener('click', function () {
     var text = els.customText.value.trim();
     if (!text) { alert('Write a story with at least one {tag} first.'); return; }
@@ -231,6 +293,7 @@
   });
 
   /* ---------- boot ---------- */
+  loadCustomStory();
   refresh();
 })();
 </script>

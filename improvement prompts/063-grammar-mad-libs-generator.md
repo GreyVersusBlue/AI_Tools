@@ -27,31 +27,36 @@ already independently randomized via the regex replace callback,
 regardless of the dead cache-key lookup) — removed for clarity, no
 behavior change.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `9iiyas`).** Shipped the top three Quick
+Wins below: custom stories now autosave to `localStorage`
+(`gmlg_custom_story_v1`, debounced 300ms) and restore on load, without the
+built-in-template select ever clobbering the saved/typed custom text; a
+visible, always-on tag-reference chip row now sits above the custom-story
+textarea (derived from `Object.keys(WORD_BANK)` so it can't drift out of
+sync with the actual tag list) — clicking a chip inserts that tag at the
+cursor position; and 3 new built-in templates ("The Science Fair Disaster,"
+"Space Mission Log," "Weekend at Grandma's House") joined the original 4,
+for 7 total. Verified with headless Playwright: reload-persistence,
+chip-click insertion, and per-template blank counts for all 7 templates —
+no console errors. The per-tag word-count-control Quick Win below is the
+one item from this round's original four not yet done.
 
 ## What it does today
 
-- 4 built-in templates + custom story input, both using `{tag}` syntax
+- 7 built-in templates + custom story input, both using `{tag}` syntax
+- Custom story autosaves to `localStorage` and survives a reload
+- A visible, click-to-insert tag reference row next to the custom-story
+  textarea
 - 14 word-bank categories with 6 sample words each
 - "Fill randomly" demo reveal for the projector
 - Print: labeled blanks + word-bank suggestion box
 
 ## Quick Wins
 
-- **Save custom stories** to `localStorage` so a teacher-written story
-  survives a page reload instead of needing to be retyped every visit —
-  the single most obvious gap versus every other generator in this
-  toolkit.
-- **More built-in templates** — 4 is a thin starting library; doubling or
-  tripling it is pure content work with no architecture changes.
-- **A visible list of valid tags** (a small reference chip row) next to
-  the custom-story textarea, since a teacher writing their own story has
-  to remember or guess the exact tag spelling (`verb-ed` vs `past-verb`,
-  etc.) with no on-screen reminder beyond the placeholder text.
 - **Per-tag word count control** — right now every tag has a fixed 6-word
   bank; letting a teacher add their own words to a category (matching this
   toolkit's paste-a-list convention) would make the suggestion box richer
-  and topic-specific.
+  and topic-specific. (Carried over from last round — not yet started.)
 
 ## Major Features
 

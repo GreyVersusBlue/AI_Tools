@@ -18,14 +18,41 @@ list autosaved to `localStorage` (`snfs_slip_v1`). Verified with a headless
 Chromium smoke test (default prompts render correctly including an
 apostrophe, add a prompt, print 3 copies) — no console errors.
 
-Nothing below has been started. This is the simplest tool built so far in
-this batch — deliberately so, matching how short a real sub note is meant
-to be.
+This is the simplest tool built so far in this batch — deliberately so,
+matching how short a real sub note is meant to be.
+
+**2026-08-11 — Round (session `b4zswl`).** Shipped two of the three Quick
+Wins: (1) **print layout QA** — the real bug here was that `.slip` used a
+fixed `height: 47vh; overflow: hidden` in print CSS, so a prompt list long
+enough to overflow half a page got silently clipped, losing content with
+no visual sign anything was missing. Fixed by switching to
+`min-height: 47vh; overflow: visible` and adding a threshold: with 5 or
+fewer filled prompts (the shipped default is 4) the slip still prints two
+per page as before; beyond that, `#printArea` gets a `.one-up` class and
+each slip gets its own full page instead. This only fixes 076's own
+instance — Peer Feedback / Editing Checklist Generator and Art Critique
+Worksheet Generator flagged the identical fixed-height-clipping risk in
+their own files and are still unfixed; out of scope for this round. (2) A
+**"Class/Period" field** next to the copy-count field: when filled in, it
+pre-fills that value on the meta-line of every printed copy instead of a
+blank line the sub has to hand-write on each one; left blank, it falls
+back to the original blank underscore line exactly as before. Did not
+attempt "multiple named saved prompt sets" — see Open Questions. Verified
+with a headless Chromium/Playwright smoke test: filled in a class/period
+and confirmed it appears pre-filled on the printed meta-line; added
+prompts past the 5-prompt threshold and confirmed `#printArea` picked up
+the `one-up` class; confirmed the default 4-prompt case still prints
+without it — zero console errors. `node --check` passed on both inline
+scripts.
 
 ## What it does today
 
 - 4 default prompts, fully editable (edit text, add/remove)
-- Copy-count field, print N half-sheets with a date/period/sub-name line
+- Copy-count field; optional Class/Period field that pre-fills every
+  printed copy's meta-line
+- Print N half-sheets with a date/period/sub-name line; automatically
+  switches to one full-page slip per copy instead of clipping once the
+  prompt list is long enough to risk overflowing a half-sheet
 
 ## Quick Wins
 
@@ -33,14 +60,6 @@ to be.
   specialized one (e.g. for a lab day, or a day with a fire drill scheduled)
   could both be worth keeping ready, matching the multi-save convention
   used elsewhere in this toolkit.
-- **A "for [class period]" field pre-filled per copy** if printed alongside
-  a specific day's schedule, rather than one blank line the sub fills in by
-  hand for every copy.
-- **Print layout QA**: shares the same fixed-height half-sheet risk flagged
-  in Peer Feedback / Editing Checklist Generator and Art Critique Worksheet
-  Generator's improvement prompts — a long prompt list could get cut off.
-  Worth fixing across all three tools together since they share the same
-  print pattern.
 
 ## Major Features
 
@@ -72,9 +91,11 @@ elsewhere in this toolkit.
 - **P7 (cross-tool)** — the most direct opportunity here: Sub Plan Builder
   and Sub Binder Generator already exist and cover the other half of the
   same day.
-- **P6 (print quality)** — the shared half-sheet height-cap risk (see Peer
-  Feedback / Editing Checklist Generator and Art Critique Worksheet
-  Generator) applies identically here.
+- **P6 (print quality)** — this tool's own half-sheet height-cap risk is
+  fixed as of this round (see Status); the identical risk still exists in
+  Peer Feedback / Editing Checklist Generator and Art Critique Worksheet
+  Generator, which share the same `.slip { height: Nvh; overflow: hidden }`
+  print pattern and would benefit from the same fix.
 
 ## Open Questions
 
