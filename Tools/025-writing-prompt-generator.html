@@ -309,6 +309,25 @@
     .poster-rubric b { font-weight: 800; }
     .poster-goal { font-size: 14pt; font-weight: 800; color: #1f3550; margin-top: .3in; }
 
+    /* half-sheet handout: the same prompt twice on one page, each with room to
+       write. The poster is for the wall; this is what lands on a desk. */
+    #handoutPrintArea.active { display: block; padding: 0; }
+    .half-sheet {
+      /* Two of these plus the @page 0.5in margins have to fit 11in of paper —
+         4.9in each leaves a little slack so the second half never tips onto a
+         third page. */
+      height: 4.9in; box-sizing: border-box; padding: .3in .4in;
+      display: flex; flex-direction: column; page-break-inside: avoid;
+    }
+    .half-sheet + .half-sheet { border-top: 1.5px dashed #999; }
+    .hs-namerow { font-size: 10.5pt; color: #222; margin: 0 0 .18in; }
+    .hs-namerow span { margin-right: .5in; }
+    .hs-prompt { font-size: 14pt; font-weight: 800; line-height: 1.25; margin: 0 0 .1in; }
+    .hs-meta { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; color: #555; margin: 0 0 .14in; }
+    .hs-meta span + span::before { content: " · "; }
+    .hs-lines { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .hs-line { border-bottom: 1px solid #666; flex: 0 0 auto; }
+
     @page { size: letter portrait; margin: 0.5in; }
   }
 </style>
@@ -323,6 +342,7 @@
     </div>
     <div class="header-actions">
       <button type="button" class="fs-btn" id="printPosterBtn" title="Print the current prompt as a wall poster" disabled>&#128424; Print poster</button>
+      <button type="button" class="fs-btn" id="printHandoutBtn" title="Print the current prompt as two half-sheet handouts with writing lines" disabled>&#128221; Print half-sheets</button>
       <button type="button" class="fs-btn" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
     </div>
   </div>
@@ -383,8 +403,20 @@
   <div class="goal-row" id="goalRow">
     <label for="wordGoalInput">Word-count goal</label>
     <input type="number" id="wordGoalInput" min="0" step="25" placeholder="e.g. 150">
-    <span>words &mdash; optional, shown with the prompt and on the poster</span>
+    <span>words &mdash; optional, shown with the prompt, on the poster and on the half-sheet</span>
     <button type="button" class="toggle-btn" id="clearWordGoalBtn">Clear</button>
+  </div>
+
+  <div class="goal-row" id="handoutRow">
+    <label for="handoutSpacingSelect">Half-sheet lines</label>
+    <select id="handoutSpacingSelect">
+      <option value="wide">Wide ruled (0.42&Prime;)</option>
+      <option value="normal" selected>Normal (0.34&Prime;)</option>
+      <option value="narrow">Narrow (0.28&Prime;)</option>
+      <option value="blank">No lines (blank space)</option>
+    </select>
+    <label class="check-toggle" for="handoutNameLineCheck" style="font-size:.85rem;"><input type="checkbox" id="handoutNameLineCheck" checked> Name &amp; date line</label>
+    <span>&mdash; two identical half-sheets per page, cut along the dashed line</span>
   </div>
 
   <div class="generate-row" id="generateRow">
@@ -496,6 +528,7 @@
 </div>
 
 <div class="print-only" id="posterPrintArea"></div>
+<div class="print-only" id="handoutPrintArea"></div>
 <div class="print-only" id="rosterPrintArea"></div>
 
 <div class="anon-overlay" id="anonOverlay">
@@ -525,6 +558,7 @@
   var els = {};
   ['bandTabs','genreSelect','stage','stagePrompt','metaRow','generateBtn','generateRow','historyList','fullscreenBtn',
    'printPosterBtn','posterPrintArea',
+   'printHandoutBtn','handoutPrintArea','handoutSpacingSelect','handoutNameLineCheck',
    'wordGoalDisplay','wordGoalInput','clearWordGoalBtn',
    'timerDisplay','timerPresetsRow','timerCustomInput','timerCustomSetBtn','timerStartBtn','timerPauseBtn','timerResetBtn',
    'includeCustomToggle','togglePromptsBtn','myPromptsPanel','customPromptText','customPromptBand',
@@ -542,7 +576,7 @@
     els[id] = document.getElementById(id);
   });
 
-  var settings = { bands: ['ms', 'hs'], genre: 'all', includeCustom: true, mode: 'draw', anonView: 'one', timerMinutes: 5, wordGoal: null };
+  var settings = { bands: ['ms', 'hs'], genre: 'all', includeCustom: true, mode: 'draw', anonView: 'one', timerMinutes: 5, wordGoal: null, handoutSpacing: 'normal', handoutNameLine: true };
   var history = []; // {band, genre, text, date} — persisted across sessions, newest first
   var customPrompts = []; // {id, text, band: 'ms'|'hs'|'both', genre} — teacher-added, persisted across sessions
   var HISTORY_LIMIT = 200; // keep a school-year's worth of entries without growing unbounded
@@ -594,6 +628,12 @@
     if (saved && (saved.wordGoal === null || (typeof saved.wordGoal === 'number' && saved.wordGoal > 0 && saved.wordGoal <= 100000))) {
       settings.wordGoal = saved.wordGoal;
     }
+    // Half-sheet handout fields, added later than the rest — absent from every
+    // settings blob saved before this round, hence the defaults above.
+    if (saved && Object.prototype.hasOwnProperty.call(HANDOUT_SPACING, saved.handoutSpacing)) {
+      settings.handoutSpacing = saved.handoutSpacing;
+    }
+    if (saved && typeof saved.handoutNameLine === 'boolean') settings.handoutNameLine = saved.handoutNameLine;
 
     var savedHistory = WritingPromptStore.loadHistory();
     history = savedHistory.filter(function (h) {
@@ -760,6 +800,7 @@
       '<span class="tag">' + (pick.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
       '<span class="tag">' + escapeHtml(genreLabel(pick.genre)) + '</span>';
     els.printPosterBtn.disabled = false;
+    els.printHandoutBtn.disabled = false;
     renderRubricRow();
   }
 
@@ -791,6 +832,77 @@
         goalHtml +
         rubricHtml +
       '</div>';
+  }
+
+  /* ---------- Half-sheet handout ------------------------------------------
+     The poster puts one prompt on a wall. This puts the same prompt on a desk,
+     twice per page, with lines to write on — which is what a bell-ringer
+     actually needs, and what the tool made teachers hand-rule until now.
+
+     Line spacing is a real physical measurement rather than a vague
+     small/medium/large: 7th-grade handwriting genuinely needs about 0.42in,
+     and a teacher who knows their class can pick. The line count is derived
+     from the space left over after the prompt block, so a long prompt costs
+     lines instead of silently overflowing the half sheet.
+  ---------------------------------------------------------------------- */
+  var HANDOUT_SPACING = { wide: 0.42, normal: 0.34, narrow: 0.28, blank: 0 };
+  var HANDOUT_SHEET_H = 4.9;     // matches .half-sheet height in the print CSS
+  var HANDOUT_PAD_V = 0.6;       // .3in top + .3in bottom
+  var HANDOUT_HEAD_H = 0.55;     // name row + meta line
+  var HANDOUT_PROMPT_LINE_H = 0.26;
+
+  function handoutSpacing() {
+    var v = els.handoutSpacingSelect ? els.handoutSpacingSelect.value : 'normal';
+    return Object.prototype.hasOwnProperty.call(HANDOUT_SPACING, v) ? v : 'normal';
+  }
+
+  /** Rough count of how many printed lines the prompt itself will take at
+      14pt across a 6.7in column — used only to decide how many ruled lines
+      still fit underneath it. */
+  function estimatePromptLines(text) {
+    return Math.max(1, Math.ceil(String(text || '').length / 62));
+  }
+
+  function halfSheetHtml() {
+    var p = currentPrompt;
+    var spacingKey = handoutSpacing();
+    var pitch = HANDOUT_SPACING[spacingKey];
+
+    var metaSpans = '<span>' + (p.band === 'ms' ? 'Middle School' : 'High School') + '</span>' +
+      '<span>' + escapeHtml(genreLabel(p.genre)) + '</span>';
+    if (p.setName) {
+      metaSpans += '<span>' + escapeHtml(p.setName) + ' &mdash; Day ' + p.setDay + ' of ' + p.setTotal + '</span>';
+    }
+    if (settings.wordGoal) metaSpans += '<span>Aim for ' + settings.wordGoal + '+ words</span>';
+    if (p.rubricName) metaSpans += '<span>Rubric: ' + escapeHtml(p.rubricName) + '</span>';
+
+    var nameRow = (els.handoutNameLineCheck && els.handoutNameLineCheck.checked)
+      ? '<p class="hs-namerow"><span>Name: ______________________________</span><span>Date: ______________</span></p>'
+      : '';
+
+    var used = HANDOUT_PAD_V + HANDOUT_HEAD_H + estimatePromptLines(p.text) * HANDOUT_PROMPT_LINE_H;
+    if (!nameRow) used -= 0.22;
+    var room = Math.max(0, HANDOUT_SHEET_H - used);
+    var lines = '';
+    if (pitch > 0) {
+      var count = Math.max(1, Math.floor(room / pitch));
+      for (var i = 0; i < count; i++) lines += '<div class="hs-line" style="height:' + pitch + 'in;"></div>';
+    }
+
+    return '<div class="half-sheet">' +
+      nameRow +
+      '<p class="hs-prompt">' + escapeHtml(p.text) + '</p>' +
+      '<p class="hs-meta">' + metaSpans + '</p>' +
+      '<div class="hs-lines">' + lines + '</div>' +
+    '</div>';
+  }
+
+  function renderHandoutPrintArea() {
+    if (!currentPrompt) { els.handoutPrintArea.innerHTML = ''; return; }
+    // Two identical halves: one page is one pair of students, or one student's
+    // draft plus a spare for whoever loses theirs.
+    var half = halfSheetHtml();
+    els.handoutPrintArea.innerHTML = half + half;
   }
 
   /* ---------- Rubric pairing (Rubric Builder handoff) ---------- */
@@ -866,6 +978,7 @@
         els.stagePrompt.innerHTML = '<p class="empty">Press Generate to get a prompt.</p>';
         els.metaRow.innerHTML = '';
         els.printPosterBtn.disabled = true;
+      els.printHandoutBtn.disabled = true;
         renderRubricRow();
       }
     } else {
@@ -1092,6 +1205,7 @@
       els.seqNextBtn.disabled = true;
       els.seqJumpBtn.style.display = 'none';
       els.printPosterBtn.disabled = true;
+      els.printHandoutBtn.disabled = true;
       renderRubricRow();
       return;
     }
@@ -1112,6 +1226,7 @@
     var suggested = suggestedIndex(set);
     els.seqJumpBtn.style.display = (suggested !== null && suggested !== idx) ? '' : 'none';
     els.printPosterBtn.disabled = false;
+    els.printHandoutBtn.disabled = false;
     renderRubricRow();
   }
 
@@ -1534,9 +1649,24 @@
     els.posterPrintArea.classList.add('active');
     window.print();
   });
+  els.printHandoutBtn.addEventListener('click', function () {
+    if (!currentPrompt) return;
+    renderHandoutPrintArea();
+    els.handoutPrintArea.classList.add('active');
+    window.print();
+  });
+  els.handoutSpacingSelect.addEventListener('change', function () {
+    settings.handoutSpacing = handoutSpacing();
+    persist();
+  });
+  els.handoutNameLineCheck.addEventListener('change', function () {
+    settings.handoutNameLine = els.handoutNameLineCheck.checked;
+    persist();
+  });
   window.addEventListener('afterprint', function () {
     els.rosterPrintArea.classList.remove('active');
     els.posterPrintArea.classList.remove('active');
+    els.handoutPrintArea.classList.remove('active');
   });
 
   els.fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -1661,6 +1791,8 @@
     p.classList.toggle('active', p.dataset.view === settings.anonView);
   });
   els.wordGoalInput.value = settings.wordGoal || '';
+  els.handoutSpacingSelect.value = settings.handoutSpacing;
+  els.handoutNameLineCheck.checked = settings.handoutNameLine !== false;
   renderWordGoalDisplay();
   timerTotalMs = settings.timerMinutes * 60000;
   timerRemainingMs = timerTotalMs;

@@ -21,6 +21,9 @@ deliberately ambitious and are **not** scoped to a single session.
 - Big projector display with **fullscreen** (`toggleFullscreen`) — one of the
   few tools that has it
 - **Print poster** of a single prompt
+- **Print half-sheets** (`halfSheetHtml`, `renderHandoutPrintArea`) — the same
+  prompt twice on one page with a name/date row and ruled lines at a chosen
+  physical spacing (wide 0.42in / normal 0.34in / narrow 0.28in / blank)
 - **My Prompts** — teacher-authored prompts with their own genre
   (`gvb-writing-prompts:custom`)
 - **Roster assignment sheet** (`buildRosterSheet`, `pickDistinctForRoster`,
@@ -46,8 +49,12 @@ deliberately ambitious and are **not** scoped to a single session.
   Start/Pause/Reset — see the Pass 2 — Round 2 update.)*
 - **Done — Pass 2, Round 2.** **Word-count goal** displayed with the prompt.
   *(A static target, not live tracking — see the Pass 2 — Round 2 update.)*
-- **Print the prompt as a half-sheet with lines** to write on, not just as a
-  poster — the handout version of the same thing.
+- **Done — 2026-08-11.** **Print the prompt as a half-sheet with lines** to
+  write on, not just as a poster — the handout version of the same thing.
+  *(A "Print half-sheets" button beside "Print poster": two identical half
+  sheets per page with a cut line, a name/date row, the prompt, the meta
+  strip, and ruled lines at a chosen physical pitch. See the half-sheet round
+  below.)*
 - **Sentence starters and a "if you're stuck" line** with each prompt, which
   is what the students who need the prompt most actually need.
 - **Tag prompts by purpose** (quick write, journal, on-demand assessment,
@@ -309,3 +316,46 @@ granted fullscreen in this headless run and that `#stagePrompt`,
 (so all three remain visible/operable once fullscreened). Zero console or
 page errors throughout. The test script and extracted inline-script files
 were deleted after use.
+
+## Half-sheet round — 2026-08-11 (backlog rank 1)
+
+Shipped **"Print the prompt as a half-sheet with lines"**.
+
+- **"Print half-sheets"** sits next to "Print poster" in the header and follows
+  the same enable/disable rule (both need a prompt on the stage). It renders
+  two identical half sheets on one page, separated by a dashed cut line: a
+  name/date row, the prompt at 14pt, a small meta strip (band · genre · set day
+  · word goal · rubric name — everything the poster shows, in one line), and
+  ruled lines filling the rest.
+- **Line spacing is a physical measurement, not a t-shirt size**: wide 0.42in,
+  normal 0.34in, narrow 0.28in, or no lines at all. 7th-grade handwriting
+  genuinely needs about 0.42in and a teacher knows their own class. The name
+  line is a separate toggle. Both persist in the existing settings blob, and
+  both are defaulted in `loadSaved()` so older saved settings load unchanged.
+- **The line count is derived, not fixed.** The prompt block's height is
+  estimated from its length and subtracted from the sheet, so a long prompt
+  costs lines instead of pushing them off the bottom. Half height is 4.9in so
+  two halves plus the 0.5in `@page` margins can never tip onto a third page.
+- **Found and fixed while printing this:** `_shared/a11y.css` had no `@media
+  print` rule, so the floating accessibility button printed in the corner of
+  every handout on every tool whose print CSS hides `.wrap > *` rather than
+  `body *`. One rule in the shared file fixes it site-wide.
+
+New suite `Tools/writing-prompt-generator/test/smoke-half-sheet.mjs` (26 checks)
+as `npm run test:writing-prompt`. It runs under `emulateMedia('print')` — the
+layout only exists in print CSS — and measures real inches: the 4.9in half, the
+10in page total, the exact 0.42/0.34/0.28in line pitch, the line count moving
+the right way with spacing, the blank option, the optional name row, twelve
+consecutive real prompts with zero overflow, persistence across a reload, the
+untouched poster path, and the a11y-button fix.
+
+### Where the next round should pick up
+
+- **Sentence starters / "if you're stuck"** is now the most valuable remaining
+  Quick Win, and it has an obvious home: the half sheet has the room for it,
+  directly under the prompt.
+- **Tag prompts by purpose** and **paste-import a prompt list** (P13) are still
+  open and unchanged.
+- The half sheet deliberately prints the *current* prompt twice. A per-student
+  version — the roster assignment sheet's prompts, one half sheet each — is a
+  natural next step and would reuse `halfSheetHtml()` as-is.

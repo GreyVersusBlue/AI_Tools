@@ -148,3 +148,12 @@ html.a11y-dyslexic button {
 @media (prefers-reduced-motion: no-preference) {
   .a11y-panel { transition: opacity .12s ease; }
 }
+
+/* The floating accessibility button is a screen control and has no business on
+   paper. Tools whose print CSS hides everything with `body * { visibility:
+   hidden }` never showed it; the ones that hide `.wrap > *` instead were
+   printing it in the corner of every handout. Found while printing the Writing
+   Prompt half-sheet — it belongs here, once, rather than in each tool. */
+@media print {
+  .a11y-widget { display: none !important; }
+}
