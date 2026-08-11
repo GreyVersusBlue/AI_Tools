@@ -176,6 +176,7 @@
     <select id="listSwitch"></select>
     <button class="secondary" style="width:auto;" id="newListBtn">New assignment</button>
     <button class="danger" style="width:auto;" id="deleteListBtn">Delete</button>
+    <button class="secondary" style="width:auto;display:none;" id="undoDeleteBtn">Undo delete</button>
   </div>
 
   <div class="layout">
@@ -272,7 +273,7 @@
 
   /* ---------- elements ---------- */
   var els = {};
-  ['toolbar', 'listSwitch', 'newListBtn', 'deleteListBtn', 'listName', 'scoreInput', 'parseNote',
+  ['toolbar', 'listSwitch', 'newListBtn', 'deleteListBtn', 'undoDeleteBtn', 'listName', 'scoreInput', 'parseNote',
    'cutoffPreset', 'cutA', 'cutB', 'cutC', 'cutD', 'bucketWidth', 'printBtn', 'printTitle', 'outputBody',
    'compareChecks', 'compareWrap'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -990,13 +991,48 @@
     if (!name) return;
     newList(name.trim());
   });
+  // One-shot undo buffer (in memory only, not localStorage) so a delete
+  // click made mid-lesson isn't permanent for the next 15 seconds. Same
+  // pattern as 018-qr-scavenger-hunt-builder.html's "Undo clear" button.
+  var deletedAssignmentUndo = null; // { name, data, timeoutId }
+
+  function hideUndoDelete() {
+    if (deletedAssignmentUndo && deletedAssignmentUndo.timeoutId) clearTimeout(deletedAssignmentUndo.timeoutId);
+    deletedAssignmentUndo = null;
+    els.undoDeleteBtn.style.display = 'none';
+  }
+
   els.deleteListBtn.addEventListener('click', function () {
     if (!state) return;
-    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
-    deleteSet(state.name);
+    if (!confirm('Delete "' + state.name + '"? You can undo this for the next 15 seconds.')) return;
+    var deletedName = state.name;
+    var deletedData = loadSet(deletedName);
+    deleteSet(deletedName);
+
+    hideUndoDelete();
+    deletedAssignmentUndo = { name: deletedName, data: deletedData };
+    els.undoDeleteBtn.style.display = '';
+    deletedAssignmentUndo.timeoutId = setTimeout(hideUndoDelete, 15000);
+
     var remaining = listSets();
     if (remaining.length) loadListByName(remaining[0]);
     else newList('New Assignment');
+  });
+
+  els.undoDeleteBtn.addEventListener('click', function () {
+    if (!deletedAssignmentUndo) return;
+    var name = deletedAssignmentUndo.name, data = deletedAssignmentUndo.data;
+    hideUndoDelete();
+    if (!data) return; // nothing was ever saved for this assignment — nothing to restore
+
+    // A same-named assignment created during the undo window would otherwise
+    // get silently overwritten by the restore.
+    var restoreName = name;
+    if (listSets().indexOf(restoreName) !== -1) restoreName = restoreName + ' (restored)';
+    data.name = restoreName;
+    saveSet(restoreName, data);
+    loadListByName(restoreName);
+    refreshSwitcher();
   });
 
   els.printBtn.addEventListener('click', function () { window.print(); });

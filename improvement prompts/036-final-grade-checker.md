@@ -9,6 +9,38 @@
 
 ## Status
 
+**2026-08-11 — Pass 2 round.** Shipped the one Quick Win this file's Pass 1
+round left explicitly deferred: **column mapping on import** (P13).
+`parsePastedData(raw, colOpts)` in `grade-math.mjs` now takes an optional
+`{ nameCol, q1Col }` override (both 0-indexed) — omit it, or pass
+`null`/`undefined`, and behavior is byte-for-byte identical to before
+(verified: `parsePastedData(paste)` and `parsePastedData(paste, null)`
+produce identical JSON in the new test). All 144 pre-existing tests still
+pass unmodified; 6 new tests cover the override path (explicit mapping
+silences the auto-detect "position" warning, an out-of-range mapping is
+caught by the column-count guard rather than reading `undefined`, and the
+omit/null equivalence).
+
+The UI side: a collapsible "Column mapping" panel under the import
+warnings, showing the first pasted row's columns numbered, with two
+selects (student name column, "quarter 1 starts at") pre-filled from
+whatever `findQuarterWindow` auto-detected. Changing either and clicking
+"Re-import with this mapping" re-parses the *same* pasted text with the
+explicit override; "Reset to auto-detect" clears it. The panel auto-opens
+whenever the auto-detect heuristic had to move the window from the
+documented position (i.e., exactly when a teacher would otherwise be
+staring at an unexplained warning), and stays out of the way otherwise.
+Verified with a headless Playwright pass: auto-detect still finds a
+shifted column and warns; an explicit mapping matching that same shift
+silences the warning; a deliberately-wrong mapping degrades to the
+existing per-cell "not a grade" warnings instead of crashing or
+mis-importing; reset restores the heuristic. No JS console errors in any
+case.
+
+Not attempted this round: everything else in this file was already Done
+(Pass 1 cleared every other Quick Win) or is Major Features/Moonshot,
+untouched.
+
 **2026-08-10 — implementation round.** Shipped all five Quick Wins scoped
 for this round: the opt-in settings persistence, "show the arithmetic",
 per-student printable slips, weighted categories, and an explicit rounding
@@ -65,7 +97,9 @@ Visualizer, rubric-scored input, progress reports).
 
 - Two entry paths: **manual student cards** (add/remove/clear) and **file
   import** — CSV *and* XLSX via SheetJS, with drag-drop, header-row detection
-  (`stripHeaderRow`), and warnings (`showWarnings`)
+  (`stripHeaderRow`), warnings (`showWarnings`), and an explicit **column
+  mapping override** (`renderColumnMapping`) for when auto-detect guesses
+  wrong
 - **"What do I need on the final?"** and **"What do I need on the remaining
   quarter?"** solvers (`computeNeed`, `classifyRequired`,
   `qpCutoffForLetter`, `pctCutoffForLetter`)
@@ -104,9 +138,11 @@ Visualizer, rubric-scored input, progress reports).
   come from. *(A boundary choice — round-at-.5 (default, matches the county
   rule already documented) vs. strict — plus an optional pre-cutoff rounding
   precision, both visible settings instead of hidden assumptions.)*
-- **Skipped — deferred.** **Column mapping on import** rather than positional assumptions (P13), so a
-  gradebook export that changes column order doesn't fail quietly. *(Not
-  part of this round's scoped list — a natural next Quick Win.)*
+- **Done — 2026-08-11.** **Column mapping on import** rather than positional assumptions (P13), so a
+  gradebook export that changes column order doesn't fail quietly. *(An
+  explicit `{ nameCol, q1Col }` override in `parsePastedData`, plus a
+  collapsible UI panel that pre-fills from the auto-detected columns and
+  auto-opens when auto-detect had to move the window.)*
 
 ## Major Features
 
