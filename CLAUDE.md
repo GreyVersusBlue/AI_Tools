@@ -41,6 +41,13 @@ every edit. The deduplication work that established them is tracked in
 - When comparing two copies of a library to see whether they're really
   different builds, hash them with line endings normalized (`tr -d '\r'`).
   Raw file sizes differ by CRLF alone and will fool you.
+- **Before committing, run `npm run check:dedupe`** (Phase 6 guard;
+  `node Tools/board-check/check-dedupe.mjs` directly works too — no
+  dependencies needed). It exits nonzero if any of the six vendored library
+  filenames exists as a file, or is referenced by a live page's `src`/`href`,
+  anywhere outside `_shared/vendor/` — the exact duplication Phases 1/1b
+  removed creeping back. Fix the offender it prints; never commit over a red
+  check.
 
 ## Per-tool folders
 

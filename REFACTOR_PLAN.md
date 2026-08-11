@@ -1509,13 +1509,98 @@ sweep should not re-open these three candidates unless a future tool round
 materially changes the counts (e.g. a batch of new tools ships the same CSV
 exporter verbatim).
 
-### Phase 6 — Sweep and guard
-- [ ] Re-run the duplication audit (long-line uniq count) and record before/after numbers.
-- [ ] Add a small check script (e.g. `Tools/board-check/check-dedupe.mjs`) that fails if a
+### Phase 6 — Sweep and guard — ✅ DONE 2026-08-11
+- [x] Re-run the duplication audit (long-line uniq count) and record before/after numbers.
+  **Done — see "Duplication re-measurement" below.**
+- [x] Add a small check script (e.g. `Tools/board-check/check-dedupe.mjs`) that fails if a
   vendored lib filename — `jspdf.umd.min.js`, `jspdf.plugin.autotable.min.js`,
   `xlsx.full.min.js`, `jsqr.js`, `qrcode.js`, or `jszip.min.js` — appears
   anywhere outside `_shared/vendor/`, so duplication can't creep back for any
   of the six libraries Phases 1 and 1b consolidated.
+  **Done — `npm run check:dedupe`; CLAUDE.md § Vendored third-party libraries
+  now says to run it before committing.**
+
+#### Duplication re-measurement (2026-08-11)
+
+Method (recorded so the numbers are reproducible — the 2026-08-10 audit's
+"long-line uniq count" script was never committed): across all 81 numbered
+`Tools/*.html` pages, CRLF-normalized, each line trimmed, only lines ≥ 60
+chars counted; a line is *duplicated* if its exact trimmed text appears in
+≥ 2 distinct files. Three commits measured with the identical script:
+
+| Commit | Distinct duplicated long lines | Total occurrences | Excess (total − distinct) | Vendored lib files outside `_shared/vendor/` |
+|---|---|---|---|---|
+| `94ff768` — pre-refactor baseline (last commit before Phase 0) | 850 | 3,813 | 2,963 | **28** (~2.9 MB across the six libraries) |
+| `6399ade` — mid-stream control (after the interleaved "Pass 2 Round 2" improvement round for tools 021–030, before Phases 1b–5) | 875 | 3,885 | 3,010 | 15 |
+| `45101ea` — after Phase 5 (current main) | 869 | 3,595 | **2,726** | **0** |
+
+Reading the numbers honestly:
+
+- **The headline win was never in the HTML long lines — it was the vendored
+  binaries: 28 duplicate library files (~2.4 MB deleted in Phases 1/1b) down
+  to 0**, now enforced by the new guard below.
+- The long-line metric improved modestly (excess occurrences 2,963 → 2,726).
+  The mid-stream control row shows why the distinct-line count *rose* 850 →
+  869: an ordinary improvement round pushed duplication up to 3,010 excess
+  before Phases 1b–5 pulled it back down (−284 from the refactor work
+  itself). Duplication grows by default here; that is exactly the drift the
+  Phase 0 conventions + generator-prompt updates exist to stop.
+- The metric structurally under-counts Phases 2–4: the extracted
+  boilerplate (5-line sw-register snippet, 9-var `:root` blocks, `.card`/
+  `.app-header`/`.toolbar` rules) was mostly *short* lines (< 60 chars), and
+  each extraction adds back one shared `<link>`/`<script>` line per file —
+  several of which are themselves ≥ 60 chars and identical in 60–80 files,
+  which is *intentional* duplication (a one-line reference) rather than
+  copy-paste drift. The line metric can't tell those apart; the per-phase
+  verification tables above are the real record of what was removed.
+
+#### Guard: `Tools/board-check/check-dedupe.mjs` (2026-08-11)
+
+`npm run check:dedupe` (or `node Tools/board-check/check-dedupe.mjs`
+directly — no dependencies, works before `npm ci`). Read-only; exit 0 clean,
+exit 1 with an offender list if vendored-library duplication creeps back.
+Two checks over the six Phase 1/1b filenames:
+
+- **FILES** — no file with one of the six names may exist anywhere in the
+  repo outside `_shared/vendor/` (`.git`, `node_modules`, `.claude` skipped).
+- **REFS** — no `src`/`href` in any live HTML page may point one of the six
+  names anywhere but into `_shared/vendor/` — catches a CDN link or stale
+  per-tool path even before any duplicate file lands. `Tools/Old Designs/`
+  and `Tools/New Designs/` are exempt from REFS only (dead archives with
+  pre-existing broken references, documented in Phase 1; still subject to
+  FILES).
+
+Verified: exits 0 on the current tree; exits 1 on a planted
+`Tools/classroom-timer/lib/jsqr.js` copy (FILES) and on a planted cdnjs
+`jszip.min.js` script tag in a live page (REFS); back to 0 after cleanup.
+Wired into `package.json` (`check:dedupe`) and CLAUDE.md ("run before
+committing"). `sw.js` untouched — `Tools/board-check/` dev files are not
+precached (Round 1c precedent), so no `PRECACHE_URLS`/`CACHE_VERSION`
+change.
+
+#### Phase 6 sweep decisions — the two deferred deletion candidates
+
+Both items parked "for Phase 6" by earlier phases were evaluated and
+**deliberately deferred**, not forgotten:
+
+- **`_shared/theme-toggle.js` — NOT deleted.** Phase 3's own precondition
+  ("once nothing in `prompts/` references it either") is not met: ~14
+  `prompts/*.md` files and CLAUDE.md's new-tool boilerplate section still
+  name it. Deleting the file first would break the documented instructions;
+  the prompt/CLAUDE.md rewrite is its own round (they should point at the
+  `a11y.js` stack per the Phase 3 integration spec), and the file is not in
+  `PRECACHE_URLS`, referenced by zero live pages, and costs nothing to keep
+  meanwhile.
+- **`CDN_ALLOWLIST` in `sw.js` — NOT deleted.** Removing it is a
+  service-worker fetch-path behavior change requiring a `CACHE_VERSION` bump
+  and re-verification, for zero user-visible benefit (no shipping tool
+  references a CDN; the check-dedupe REFS check now blocks new CDN links to
+  the six libraries in live pages). Leave for a round that is already
+  touching `sw.js`.
+
+**Phase 6 complete — all six phases (0, 1, 1b/1c, 2, 3, 4, 5, 6) of this
+plan are now closed.** Future duplication work is guard-enforcement plus
+whatever a future audit turns up, not open phases of this plan.
 
 ---
 
