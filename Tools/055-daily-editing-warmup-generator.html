@@ -72,6 +72,8 @@
   .display-broken { font-size: 1.7rem; font-family: Consolas, monospace; color: var(--err); }
   .display-fixed { font-size: 1.7rem; font-family: Consolas, monospace; color: var(--ok); display: none; }
   .display-fixed.shown { display: block; }
+  .display-cat { display: none; font-style: italic; }
+  .display-cat.shown { display: block; }
   .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; }
 
   .bank-row { display: flex; align-items: center; gap: .5rem; padding: .4rem 0; border-bottom: 1px dashed var(--line); font-size: .87rem; }
@@ -110,6 +112,23 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="btnrow" style="align-items:end;">
+      <div style="min-width:14rem;">
+        <label for="categoryFilter">Error type</label>
+        <select id="categoryFilter">
+          <option value="">All error types</option>
+          <option value="capitalization">Capitalization</option>
+          <option value="punctuation">Punctuation &amp; Apostrophes</option>
+          <option value="homophones">Homophones</option>
+          <option value="subject-verb">Subject-Verb Agreement</option>
+          <option value="run-ons">Run-ons &amp; Comma Splices</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <div class="tabs">
     <button type="button" class="tab-btn active" data-stage="display">Projector display</button>
     <button type="button" class="tab-btn" data-stage="sheet">Printable worksheet</button>
@@ -124,6 +143,7 @@
       <div class="display-num" id="displayNum"></div>
       <div class="display-broken" id="displayBroken"></div>
       <div class="display-fixed" id="displayFixed"></div>
+      <div class="hint" id="displayCat"></div>
       <div class="display-nav">
         <button class="secondary" id="prevBtn">&larr; Prev</button>
         <button id="revealBtn">Reveal correction</button>
@@ -162,6 +182,15 @@
       <textarea id="newBroken" placeholder="e.g. me and him is going to the store"></textarea>
       <label for="newFixed">Corrected sentence</label>
       <textarea id="newFixed" placeholder="e.g. He and I are going to the store."></textarea>
+      <label for="newCategory">Error type</label>
+      <select id="newCategory">
+        <option value="capitalization">Capitalization</option>
+        <option value="punctuation">Punctuation &amp; Apostrophes</option>
+        <option value="homophones">Homophones</option>
+        <option value="subject-verb">Subject-Verb Agreement</option>
+        <option value="run-ons">Run-ons &amp; Comma Splices</option>
+        <option value="other" selected>Other</option>
+      </select>
       <button id="addSentenceBtn">Add to bank</button>
     </div>
     <div class="card">
@@ -176,38 +205,45 @@
 (function () {
   'use strict';
   var CUSTOM_KEY = 'deg_custom_v1';
+  var SETTINGS_KEY = 'deg_settings_v1';
+
+  var CAT_LABELS = {
+    capitalization: 'Capitalization', punctuation: 'Punctuation & Apostrophes',
+    homophones: 'Homophones', 'subject-verb': 'Subject-Verb Agreement',
+    'run-ons': 'Run-ons & Comma Splices', other: 'Other'
+  };
 
   var BUILTIN = [
-    ['their going to the movies tonight', 'They&rsquo;re going to the movies tonight.'],
-    ['the dog chased its tail for an hour', 'The dog chased its tail for an hour.'],
-    ['your the best friend ive ever had', 'You&rsquo;re the best friend I&rsquo;ve ever had.'],
-    ['i cant believe theyre already here', 'I can&rsquo;t believe they&rsquo;re already here.'],
-    ['me and him went to the game yesterday', 'He and I went to the game yesterday.'],
-    ['the students was working quietly on there project', 'The students were working quietly on their project.'],
-    ['she dont know where the book is', 'She doesn&rsquo;t know where the book is.'],
-    ['we seen that movie last weekend', 'We saw that movie last weekend.'],
-    ['the teacher gave us are homework early', 'The teacher gave us our homework early.'],
-    ['everyone brought there own lunch today', 'Everyone brought their own lunch today.'],
-    ['its going to rain later so bring a umbrella', 'It&rsquo;s going to rain later, so bring an umbrella.'],
-    ['can you pass me them books over their', 'Can you pass me those books over there?'],
-    ['my favorite subjects is math and science', 'My favorite subjects are math and science.'],
-    ['he should of finished his homework last night', 'He should have finished his homework last night.'],
-    ['the girls soccer team won they&rsquo;re first game', 'The girls&rsquo; soccer team won their first game.'],
-    ['there is alot of homework this week', 'There is a lot of homework this week.'],
-    ['who&rsquo;s backpack is this laying on the floor', 'Whose backpack is this lying on the floor?'],
-    ['i walked to the store then i walked home', 'I walked to the store, and then I walked home.'],
-    ['the weather were nice so we played outside', 'The weather was nice, so we played outside.'],
-    ['neither of the boys have finished their test', 'Neither of the boys has finished his test.'],
-    ['she is one of the best players on the team her coach says', 'She is one of the best players on the team, her coach says.'],
-    ['im going to bring my lunch box and my jacket', 'I&rsquo;m going to bring my lunch box and my jacket.'],
-    ['the books on the top shelf is mine', 'The books on the top shelf are mine.'],
-    ['every one of the students need a pencil', 'Every one of the students needs a pencil.']
-  ].map(function (pair) { return { broken: pair[0], fixed: pair[1], custom: false }; });
+    ['their going to the movies tonight', 'They&rsquo;re going to the movies tonight.', 'homophones'],
+    ['the dog chased its tail for an hour', 'The dog chased its tail for an hour.', 'capitalization'],
+    ['your the best friend ive ever had', 'You&rsquo;re the best friend I&rsquo;ve ever had.', 'homophones'],
+    ['i cant believe theyre already here', 'I can&rsquo;t believe they&rsquo;re already here.', 'punctuation'],
+    ['me and him went to the game yesterday', 'He and I went to the game yesterday.', 'other'],
+    ['the students was working quietly on there project', 'The students were working quietly on their project.', 'subject-verb'],
+    ['she dont know where the book is', 'She doesn&rsquo;t know where the book is.', 'subject-verb'],
+    ['we seen that movie last weekend', 'We saw that movie last weekend.', 'other'],
+    ['the teacher gave us are homework early', 'The teacher gave us our homework early.', 'homophones'],
+    ['everyone brought there own lunch today', 'Everyone brought their own lunch today.', 'homophones'],
+    ['its going to rain later so bring a umbrella', 'It&rsquo;s going to rain later, so bring an umbrella.', 'punctuation'],
+    ['can you pass me them books over their', 'Can you pass me those books over there?', 'homophones'],
+    ['my favorite subjects is math and science', 'My favorite subjects are math and science.', 'subject-verb'],
+    ['he should of finished his homework last night', 'He should have finished his homework last night.', 'other'],
+    ['the girls soccer team won they&rsquo;re first game', 'The girls&rsquo; soccer team won their first game.', 'punctuation'],
+    ['there is alot of homework this week', 'There is a lot of homework this week.', 'other'],
+    ['who&rsquo;s backpack is this laying on the floor', 'Whose backpack is this lying on the floor?', 'homophones'],
+    ['i walked to the store then i walked home', 'I walked to the store, and then I walked home.', 'run-ons'],
+    ['the weather were nice so we played outside', 'The weather was nice, so we played outside.', 'subject-verb'],
+    ['neither of the boys have finished their test', 'Neither of the boys has finished his test.', 'subject-verb'],
+    ['she is one of the best players on the team her coach says', 'She is one of the best players on the team, her coach says.', 'run-ons'],
+    ['im going to bring my lunch box and my jacket', 'I&rsquo;m going to bring my lunch box and my jacket.', 'punctuation'],
+    ['the books on the top shelf is mine', 'The books on the top shelf are mine.', 'subject-verb'],
+    ['every one of the students need a pencil', 'Every one of the students needs a pencil.', 'subject-verb']
+  ].map(function (row) { return { broken: row[0], fixed: row[1], category: row[2], custom: false }; });
 
   var els = {};
-  ['displayNum', 'displayBroken', 'displayFixed', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
-   'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'newBroken', 'newFixed', 'addSentenceBtn', 'bankCount', 'bankList'].forEach(function (id) {
+  ['displayNum', 'displayBroken', 'displayFixed', 'displayCat', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+   'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey', 'categoryFilter',
+   'newBroken', 'newFixed', 'newCategory', 'addSentenceBtn', 'bankCount', 'bankList'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -231,11 +267,27 @@
   }
 
   function allSentences() {
-    return BUILTIN.concat(custom.map(function (c) { return { broken: c.broken, fixed: c.fixed, custom: true, id: c.id }; }));
+    return BUILTIN.concat(custom.map(function (c) { return { broken: c.broken, fixed: c.fixed, category: c.category || 'other', custom: true, id: c.id }; }));
+  }
+  function filteredSentences() {
+    var cat = els.categoryFilter.value;
+    return allSentences().filter(function (item) { return !cat || item.category === cat; });
+  }
+
+  function loadSettings() {
+    var s = {};
+    try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch (e) { s = {}; }
+    if (s && typeof s === 'object') {
+      if (typeof s.category === 'string') els.categoryFilter.value = s.category;
+      if (s.sheetCount != null) els.sheetCount.value = s.sheetCount;
+    }
+  }
+  function saveSettings() {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ category: els.categoryFilter.value, sheetCount: els.sheetCount.value })); } catch (e) { /* storage full/blocked */ }
   }
 
   function resetOrder() {
-    var all = allSentences();
+    var all = filteredSentences();
     order = all.map(function (_, i) { return i; });
     idx = 0;
   }
@@ -248,13 +300,19 @@
   }
 
   function renderDisplay() {
-    var all = allSentences();
-    if (!all.length || !order.length) return;
+    var all = filteredSentences();
+    if (!all.length || !order.length) {
+      els.displayNum.textContent = ''; els.displayBroken.textContent = 'No sentences match this error type.';
+      els.displayFixed.textContent = ''; els.displayCat.textContent = '';
+      return;
+    }
     var item = all[order[idx]];
     els.displayNum.textContent = 'Sentence ' + (idx + 1) + ' of ' + order.length;
     els.displayBroken.textContent = item.broken;
     els.displayFixed.innerHTML = item.fixed;
     els.displayFixed.classList.remove('shown');
+    els.displayCat.textContent = CAT_LABELS[item.category] || item.category;
+    els.displayCat.classList.remove('shown');
   }
 
   els.prevBtn.addEventListener('click', function () {
@@ -267,11 +325,16 @@
     idx = (idx + 1) % order.length;
     renderDisplay();
   });
-  els.revealBtn.addEventListener('click', function () { els.displayFixed.classList.toggle('shown'); });
+  els.revealBtn.addEventListener('click', function () {
+    els.displayFixed.classList.toggle('shown');
+    els.displayCat.classList.toggle('shown');
+  });
   els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
+  els.categoryFilter.addEventListener('change', function () { saveSettings(); resetOrder(); renderDisplay(); });
+  els.sheetCount.addEventListener('change', saveSettings);
 
   els.buildSheetBtn.addEventListener('click', function () {
-    var all = shuffle(allSentences().slice());
+    var all = shuffle(filteredSentences().slice());
     var count = Math.max(1, Math.min(30, parseInt(els.sheetCount.value, 10) || 5, all.length));
     var chosen = all.slice(0, count);
     els.sheetProblems.innerHTML = chosen.map(function (item, i) {
@@ -292,7 +355,7 @@
     var broken = els.newBroken.value.trim();
     var fixed = els.newFixed.value.trim();
     if (!broken || !fixed) { alert('Fill in both the broken sentence and the correction.'); return; }
-    custom.push({ id: uid(), broken: broken, fixed: fixed });
+    custom.push({ id: uid(), broken: broken, fixed: fixed, category: els.newCategory.value });
     saveCustom();
     els.newBroken.value = ''; els.newFixed.value = '';
     resetOrder();
@@ -300,15 +363,28 @@
     renderBank();
   });
 
+  function catOptionsHtml(selected) {
+    return Object.keys(CAT_LABELS).map(function (key) {
+      return '<option value="' + key + '"' + (key === selected ? ' selected' : '') + '>' + CAT_LABELS[key] + '</option>';
+    }).join('');
+  }
+
   function renderBank() {
     var all = allSentences();
     els.bankCount.textContent = all.length;
     els.bankList.innerHTML = all.map(function (item) {
-      var delBtn = item.custom
-        ? '<button type="button" class="danger small" data-del="' + item.id + '">Delete</button>'
-        : '<span class="hint" style="margin:0;">built-in</span>';
-      return '<div class="bank-row"><span class="btext"><span class="broken-txt">' + escapeHtml(item.broken) +
-        '</span><span class="arrow">&rarr;</span><span class="fixed-txt">' + item.fixed + '</span></span>' + delBtn + '</div>';
+      if (item.custom) {
+        return '<div class="bank-row" data-id="' + item.id + '" style="align-items:flex-start;">' +
+          '<span class="btext" style="display:flex;flex-direction:column;gap:.3rem;">' +
+          '<textarea class="edit-broken" style="margin:0;">' + escapeHtml(item.broken) + '</textarea>' +
+          '<textarea class="edit-fixed" style="margin:0;">' + escapeHtml(item.fixed) + '</textarea>' +
+          '<select class="edit-cat">' + catOptionsHtml(item.category) + '</select>' +
+          '</span>' +
+          '<button type="button" class="danger small" data-del="' + item.id + '">Delete</button></div>';
+      }
+      return '<div class="bank-row"><span class="btext"><b>[' + (CAT_LABELS[item.category] || item.category) + ']</b> <span class="broken-txt">' + escapeHtml(item.broken) +
+        '</span><span class="arrow">&rarr;</span><span class="fixed-txt">' + item.fixed + '</span></span>' +
+        '<span class="hint" style="margin:0;">built-in</span></div>';
     }).join('');
   }
 
@@ -320,6 +396,29 @@
     resetOrder();
     renderDisplay();
     renderBank();
+  });
+  els.bankList.addEventListener('input', function (ev) {
+    var row = ev.target.closest('.bank-row');
+    if (!row) return;
+    var id = row.getAttribute('data-id');
+    var item = custom.find(function (c) { return c.id === id; });
+    if (!item) return;
+    if (ev.target.classList.contains('edit-broken')) item.broken = ev.target.value;
+    if (ev.target.classList.contains('edit-fixed')) item.fixed = ev.target.value;
+    saveCustom();
+    resetOrder();
+    renderDisplay();
+  });
+  els.bankList.addEventListener('change', function (ev) {
+    if (!ev.target.classList.contains('edit-cat')) return;
+    var row = ev.target.closest('.bank-row');
+    var id = row.getAttribute('data-id');
+    var item = custom.find(function (c) { return c.id === id; });
+    if (!item) return;
+    item.category = ev.target.value;
+    saveCustom();
+    resetOrder();
+    renderDisplay();
   });
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
@@ -335,6 +434,7 @@
 
   /* ---------- boot ---------- */
   loadCustom();
+  loadSettings();
   resetOrder();
   renderDisplay();
   renderBank();
