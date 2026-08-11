@@ -90,6 +90,7 @@
       <p class="sub">Track fitness-test results per student across the year, with simple class stats.</p>
     </div>
     <div class="btnrow">
+      <button class="secondary" id="exportCsvBtn">Export CSV</button>
       <button class="secondary" id="printBtn">Print report</button>
     </div>
   </div>
@@ -124,7 +125,7 @@
   var STORE_KEY = 'fsat_tracker_v1';
 
   var els = {};
-  ['rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn'].forEach(function (id) {
+  ['rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -157,6 +158,23 @@
   }
 
   function resultKey(name, eventId) { return name + '|' + eventId; }
+
+  function parseTimeToSeconds(str) {
+    if (str == null) return null;
+    str = String(str).trim();
+    if (!str) return null;
+    var mmss = str.match(/^(\d+):([0-5]?\d(?:\.\d+)?)$/);
+    if (mmss) return parseInt(mmss[1], 10) * 60 + parseFloat(mmss[2]);
+    var n = parseFloat(str);
+    return isNaN(n) ? null : n;
+  }
+  function formatSecondsAsTime(totalSeconds) {
+    var rounded = Math.round(totalSeconds * 10) / 10;
+    var m = Math.floor(rounded / 60);
+    var s = Math.round((rounded - m * 60) * 10) / 10;
+    if (s >= 60) { m += 1; s = Math.round((s - 60) * 10) / 10; }
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
 
   function renderEvents() {
     els.eventsWrap.innerHTML = state.events.map(function (ev) {
@@ -203,18 +221,28 @@
   });
 
   function computeStats(eventId, type) {
-    if (type !== 'count') return null;
-    var values = state.roster.map(function (name) {
-      var v = state.results[resultKey(name, eventId)];
-      return v && !isNaN(parseFloat(v)) ? parseFloat(v) : null;
-    }).filter(function (v) { return v !== null; });
-    if (!values.length) return { avg: '—', min: '—', max: '—' };
-    var sum = values.reduce(function (a, b) { return a + b; }, 0);
-    return {
-      avg: (sum / values.length).toFixed(1),
-      min: Math.min.apply(null, values),
-      max: Math.max.apply(null, values)
-    };
+    var raw = state.roster.map(function (name) { return state.results[resultKey(name, eventId)]; });
+    if (type === 'count') {
+      var values = raw.map(function (v) { return v && !isNaN(parseFloat(v)) ? parseFloat(v) : null; }).filter(function (v) { return v !== null; });
+      if (!values.length) return { avg: '—', min: '—', max: '—' };
+      var sum = values.reduce(function (a, b) { return a + b; }, 0);
+      return {
+        avg: (sum / values.length).toFixed(1),
+        min: Math.min.apply(null, values),
+        max: Math.max.apply(null, values)
+      };
+    }
+    if (type === 'time') {
+      var secs = raw.map(function (v) { return parseTimeToSeconds(v); }).filter(function (v) { return v !== null; });
+      if (!secs.length) return { avg: '—', min: '—', max: '—' };
+      var sumSecs = secs.reduce(function (a, b) { return a + b; }, 0);
+      return {
+        avg: formatSecondsAsTime(sumSecs / secs.length),
+        min: formatSecondsAsTime(Math.min.apply(null, secs)),
+        max: formatSecondsAsTime(Math.max.apply(null, secs))
+      };
+    }
+    return null;
   }
 
   function buildStatsRowHtml() {
@@ -254,6 +282,32 @@
     state.results[resultKey(student, eventId)] = ev.target.value;
     save();
     refreshStatsRow();
+  });
+
+  function csvEscape(v) {
+    v = String(v == null ? '' : v);
+    if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+
+  els.exportCsvBtn.addEventListener('click', function () {
+    if (!state.roster.length) { alert('Save a roster first.'); return; }
+    var header = ['Student'].concat(state.events.map(function (ev) { return ev.name; }));
+    var lines = [header.map(csvEscape).join(',')];
+    state.roster.forEach(function (name) {
+      var row = [name].concat(state.events.map(function (ev) { return state.results[resultKey(name, ev.id)] || ''; }));
+      lines.push(row.map(csvEscape).join(','));
+    });
+    var csv = lines.join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'fitness-assessment-results.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
 
   els.printBtn.addEventListener('click', function () {
