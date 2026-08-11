@@ -140,6 +140,21 @@
   .cert-reason { font-size: 1.05rem; max-width: 80%; margin: 0 auto 1.4rem; }
   .cert-footer { display: flex; justify-content: space-between; width: 100%; margin-top: auto; font-size: .85rem; }
   .cert-footer .line { border-top: 1px solid #99968c; padding-top: .3rem; min-width: 10rem; }
+  /* Wraps a footer .line so an optional signature image can sit just above
+     the line it's "signed" on; a same-height spacer keeps the date line's
+     border-top vertically aligned with the signature line's whether or not
+     an image is present. */
+  .cert-sig-wrap { display: flex; flex-direction: column; align-items: center; }
+  .cert-sig-img, .cert-sig-spacer { height: 2rem; }
+  .cert-sig-img { max-width: 8rem; object-fit: contain; margin-bottom: .1rem; }
+
+  /* ---- optional alignment guides for pre-printed certificate stock ---- */
+  .cert-guides { position: absolute; inset: 0; pointer-events: none; }
+  .cert-guides .gm { position: absolute; width: .5in; height: .5in; }
+  .cert-guides .gm-tl { top: 0; left: 0; border-top: 1px solid #d33; border-left: 1px solid #d33; }
+  .cert-guides .gm-tr { top: 0; right: 0; border-top: 1px solid #d33; border-right: 1px solid #d33; }
+  .cert-guides .gm-bl { bottom: 0; left: 0; border-bottom: 1px solid #d33; border-left: 1px solid #d33; }
+  .cert-guides .gm-br { bottom: 0; right: 0; border-bottom: 1px solid #d33; border-right: 1px solid #d33; }
 
   /* ---- batch grid (thumbnail) view ---- */
   .thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .9rem; }
@@ -303,6 +318,14 @@
         <label for="signature">Signature line</label>
         <input type="text" id="signature" placeholder="Ms. Moore, 7th Grade Social Studies">
 
+        <label for="signatureFile">Signature image (optional)</label>
+        <p class="hint">Upload a scanned or photographed signature to print above the signature line instead of just the typed text.</p>
+        <input type="file" id="signatureFile" accept="image/*">
+        <div class="logo-preview" id="signaturePreview" style="display:none;">
+          <img id="signaturePreviewImg" alt="">
+          <button type="button" class="secondary small" id="signatureRemove">Remove signature image</button>
+        </div>
+
         <label for="qrUrl">Link this certificate to (optional)</label>
         <p class="hint">Adds a small QR code to the certificate that scans to a congratulatory note, video, or portfolio page.</p>
         <input type="text" id="qrUrl" placeholder="https://...">
@@ -321,6 +344,14 @@
         </div>
         <p class="hint">Two per page works well for smaller awards — a homework pass or a "caught being kind" slip
           doesn't need a whole sheet of paper. Cut along the dashed guide.</p>
+
+        <label style="display:flex;align-items:center;gap:.5rem;font-weight:600;">
+          <input type="checkbox" id="showGuides" style="width:auto;margin:0;"> Show alignment guides
+        </label>
+        <p class="hint">Adds small red corner marks so you can check registration against pre-printed certificate
+          stock: print a test copy on plain paper, hold it up to the light against your stock, and adjust your
+          printer's margins if the marks don't line up. Turn this off before printing the final copies.</p>
+
         <button type="button" id="printBtn">Print / Save as PDF</button>
       </div>
     </div>
@@ -361,7 +392,9 @@
    'deleteUndoBar','deleteUndoName','undoDeleteBtn',
    'themeSwatches','borderSwatches','logoFile','logoPreview','logoPreviewImg','logoRemove',
    'singleFields','batchFields','studentName','batchNames','camRosterSelect','camLoadRosterBtn',
-   'awardTitle','awardTitleCustom','reason','certDate','signature','qrUrl','printBtn',
+   'awardTitle','awardTitleCustom','reason','certDate','signature',
+   'signatureFile','signaturePreview','signaturePreviewImg','signatureRemove',
+   'qrUrl','printBtn','showGuides',
    'orientTabs','perPageTabs','camPageSizeStyle',
    'previewArea','previewNote','viewToggle'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -399,18 +432,23 @@
       reason: '',
       certDate: todayLocalISO(),
       signature: '',
+      signatureImage: '', // downscaled data URL of an uploaded signature, or '' for none
       qrUrl: '', // optional link to a note/video/portfolio page, or '' for no QR code
       orientation: 'landscape', // 'landscape' | 'portrait'
-      perPage: 1 // 1 | 2 — certificates per printed sheet
+      perPage: 1, // 1 | 2 — certificates per printed sheet
+      showGuides: false // print small corner alignment marks for pre-printed stock
     };
   }
 
-  // Certificates saved before orientation/perPage existed just don't have
-  // the keys — fill in the old (landscape, one-per-page) behavior so a
-  // returning preset renders exactly as it always did.
+  // Certificates saved before orientation/perPage/signatureImage/showGuides
+  // existed just don't have the keys — fill in the old (landscape,
+  // one-per-page, no signature image, no guides) behavior so a returning
+  // preset renders exactly as it always did.
   function normalizeSettings(s) {
     if (s.orientation !== 'portrait') s.orientation = 'landscape';
     s.perPage = (s.perPage === 2 || s.perPage === '2') ? 2 : 1;
+    if (typeof s.signatureImage !== 'string') s.signatureImage = '';
+    s.showGuides = !!s.showGuides;
     return s;
   }
 
@@ -468,6 +506,15 @@
       els.logoPreview.style.display = 'flex';
     } else {
       els.logoPreview.style.display = 'none';
+    }
+  }
+
+  function updateSignaturePreview() {
+    if (settings.signatureImage) {
+      els.signaturePreviewImg.src = settings.signatureImage;
+      els.signaturePreview.style.display = 'flex';
+    } else {
+      els.signaturePreview.style.display = 'none';
     }
   }
 
@@ -594,9 +641,17 @@
         '<div class="cert-title">' + escapeHtml(effTitle) + '</div>' +
         (effReason ? '<div class="cert-reason">' + escapeHtml(effReason) + '</div>' : '') +
         '<div class="cert-footer">' +
-          '<div class="line">' + escapeHtml(formattedDate()) + '</div>' +
-          '<div class="line">' + escapeHtml(settings.signature || ' ') + '</div>' +
+          '<div class="cert-sig-wrap"><div class="cert-sig-spacer"></div><div class="line">' + escapeHtml(formattedDate()) + '</div></div>' +
+          '<div class="cert-sig-wrap">' +
+            (settings.signatureImage
+              ? '<img class="cert-sig-img" src="' + settings.signatureImage + '" alt="Signature">'
+              : '<div class="cert-sig-spacer"></div>') +
+            '<div class="line">' + escapeHtml(settings.signature || ' ') + '</div>' +
+          '</div>' +
         '</div>' +
+        (settings.showGuides
+          ? '<div class="cert-guides"><span class="gm gm-tl"></span><span class="gm gm-tr"></span><span class="gm gm-bl"></span><span class="gm gm-br"></span></div>'
+          : '') +
       '</div>'
     );
   }
@@ -749,7 +804,9 @@
     els.certDate.value = settings.certDate;
     els.signature.value = settings.signature;
     els.qrUrl.value = settings.qrUrl || '';
+    els.showGuides.checked = !!settings.showGuides;
     updateLogoPreview();
+    updateSignaturePreview();
 
     var isBatch = settings.mode === 'batch';
     document.querySelector('.mode-tab[data-mode="batch"]').classList.toggle('active', isBatch);
@@ -910,6 +967,31 @@
     settings.logo = '';
     els.logoFile.value = '';
     updateLogoPreview();
+    renderAll();
+  });
+
+  els.signatureFile.addEventListener('change', function () {
+    var file = els.signatureFile.files[0];
+    if (!file) return;
+    CertificateLogo.downscaleImage(file).then(function (dataUrl) {
+      settings.signatureImage = dataUrl;
+      updateSignaturePreview();
+      renderAll();
+    }).catch(function () {
+      alert('Could not read that image file.');
+      els.signatureFile.value = '';
+    });
+  });
+
+  els.signatureRemove.addEventListener('click', function () {
+    settings.signatureImage = '';
+    els.signatureFile.value = '';
+    updateSignaturePreview();
+    renderAll();
+  });
+
+  els.showGuides.addEventListener('change', function () {
+    settings.showGuides = els.showGuides.checked;
     renderAll();
   });
 
