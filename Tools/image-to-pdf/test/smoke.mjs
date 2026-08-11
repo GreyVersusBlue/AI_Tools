@@ -16,21 +16,18 @@
 // those still rely on a human running the tool. "Catches an obvious
 // regression" is the bar, not full coverage.
 //
-// No npm install: Playwright is resolved from the global install at
-// /opt/node22/lib/node_modules via createRequire + require.resolve({paths}),
-// since Node's ESM loader does not honor NODE_PATH the way CJS require does.
-// Chromium is launched from the pre-installed binary at /opt/pw-browsers/chromium.
+// Playwright comes from the repo-root package.json (devDependencies only —
+// see CLAUDE.md "Test tooling") and picks its own Chromium from the standard
+// browser cache. Fresh clone: npm ci && npx playwright install chromium
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
 import { makeSolidPng, makeNoisePng } from './make-fixtures.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOOL_PATH = path.join(__dirname, '..', '..', '011-image-to-pdf.html');
-const CHROMIUM_PATH = '/opt/pw-browsers/chromium';
 
 let pass = 0, fail = 0;
 const ok = (cond, label, detail = '') => {
@@ -38,9 +35,13 @@ const ok = (cond, label, detail = '') => {
   else { fail++; console.log(`  FAIL  ${label}${detail ? '\n        ' + detail : ''}`); }
 };
 
-const require = createRequire(import.meta.url);
-const playwrightEntry = require.resolve('playwright', { paths: ['/opt/node22/lib/node_modules'] });
-const { chromium } = (await import(playwrightEntry)).default;
+let chromium;
+try {
+  ({ chromium } = await import('playwright'));
+} catch {
+  console.error('Playwright is not installed. From the repo root, run:\n  npm ci\n  npx playwright install chromium');
+  process.exit(1);
+}
 
 if (!fs.existsSync(TOOL_PATH)) {
   console.error(`FAIL  tool file not found at ${TOOL_PATH}`);
@@ -133,7 +134,7 @@ async function runScenario(label, fn) {
   }
 }
 
-const browser = await chromium.launch({ executablePath: CHROMIUM_PATH, headless: true });
+const browser = await chromium.launch({ headless: true });
 
 try {
   /* ── 1. Basic path: load 3 images, one-per-page, generate, sanity-check output ── */
