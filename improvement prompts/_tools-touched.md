@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Duty Roster Builder | `kq3g3h` | 2026-08-11 01:30 UTC | `claude/tools-058-062-improvements-kq3g3h` |
+| Scientific Method / Experiment Design Planner | `kq3g3h` | 2026-08-11 01:30 UTC | `claude/tools-058-062-improvements-kq3g3h` |
+| Fitness & Skill Assessment Tracker | `kq3g3h` | 2026-08-11 01:30 UTC | `claude/tools-058-062-improvements-kq3g3h` |
+| Fraction–Decimal–Percent Conversion Drill Generator | `kq3g3h` | 2026-08-11 01:30 UTC | `claude/tools-058-062-improvements-kq3g3h` |
+| Geography Bee / Map Skills Quiz Generator | `kq3g3h` | 2026-08-11 01:30 UTC | `claude/tools-058-062-improvements-kq3g3h` |
 
 ---
 
