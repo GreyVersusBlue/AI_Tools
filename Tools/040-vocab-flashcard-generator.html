@@ -226,6 +226,9 @@
             <option value="duplex">Double-sided (front page, then back page mirrored)</option>
             <option value="fold">Single-sided fold-over (no duplex printer needed)</option>
           </select>
+          <button type="button" class="secondary" id="alignTestBtn" style="margin-top:.5rem;">Print alignment test page</button>
+          <p class="hint" id="alignTestHint" style="margin:.3rem 0 0;">Prints one numbered front page and one numbered back page — no
+            real cards yet — so you can check your printer's duplex settings before committing a whole class set.</p>
         </div>
 
         <div id="wallOptions" style="display:none;">
@@ -275,7 +278,7 @@
    'importBridgeRow','conjDrillSetSelect','importConjDrillBtn',
    'flashOptions','wallOptions','quizOptions','flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
    'sortOrder','shuffleOrder','showGuides',
-   'printBtn','previewArea','previewNote','printNote','sheetView'
+   'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
@@ -417,6 +420,41 @@
       return '<div class="' + pageClass() + '"><div class="grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);">' +
         padded.map(foldCardHtml).join('') + '</div></div>';
     });
+  }
+
+  /** Alignment test page (P6): one numbered front page and one numbered
+      back page, at the current grid/card-size settings but with no real
+      card content — so a teacher can run just these two sheets through the
+      printer's duplex path and confirm card N lines up front-to-back
+      before committing a whole class set. Reuses the same
+      grid/mirror math as the real double-sided print, since a page that
+      "tests alignment" but computes it differently would be worthless. */
+  function alignTestCardHtml(label) {
+    return '<div class="' + guideClass('flash-card') + '"><div class="term" style="font-size:1.6rem;">' + label + '</div></div>';
+  }
+
+  function buildAlignmentTestPages() {
+    var cols = state.flashCols, rows = state.flashRows, perPage = cols * rows;
+    var preset = CARD_SIZE_PRESETS[state.cardSizePreset];
+    var gridStyle = preset
+      ? 'grid-template-columns:repeat(' + cols + ',' + preset.wIn + 'in);grid-template-rows:repeat(' + rows + ',' + preset.hIn + 'in);justify-content:center;align-content:center;'
+      : 'grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);';
+    var labels = [];
+    for (var i = 0; i < perPage; i++) labels.push(i + 1);
+    var mirrored = VocabLayout.mirrorPageRows(labels, cols);
+    var labelLine = '<div style="font-weight:700;font-size:.8rem;margin-bottom:.15in;">ALIGNMENT TEST';
+    return (
+      '<div class="' + pageClass() + '">' + labelLine + ' &mdash; FRONT (page 1 of 2)</div>' +
+        '<div class="grid" style="' + gridStyle + '">' + labels.map(alignTestCardHtml).join('') + '</div></div>' +
+      '<div class="' + pageClass() + '">' + labelLine + ' &mdash; BACK (page 2 of 2, flip along the long edge)</div>' +
+        '<div class="grid" style="' + gridStyle + '">' + mirrored.map(alignTestCardHtml).join('') + '</div></div>'
+    );
+  }
+
+  function syncAlignTestVisibility() {
+    var show = state.mode === 'flashcards' && state.flashLayout !== 'fold';
+    els.alignTestBtn.style.display = show ? '' : 'none';
+    els.alignTestHint.style.display = show ? '' : 'none';
   }
 
   function wallCardHtml(item) {
@@ -636,6 +674,7 @@
     els.wallOptions.style.display = state.mode === 'wordwall' ? '' : 'none';
     els.quizOptions.style.display = state.mode === 'quiz' ? '' : 'none';
     els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
+    syncAlignTestVisibility();
     refreshImportBridge();
   }
 
@@ -690,6 +729,7 @@
   els.flashLayout.addEventListener('change', function () {
     state.flashLayout = els.flashLayout.value;
     currentPreviewIndex = 0;
+    syncAlignTestVisibility();
     renderPreview();
   });
   els.wallPerPage.addEventListener('change', renderPreview);
@@ -707,6 +747,7 @@
       els.wallOptions.style.display = state.mode === 'wordwall' ? '' : 'none';
       els.quizOptions.style.display = state.mode === 'quiz' ? '' : 'none';
       els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
+      syncAlignTestVisibility();
       currentPreviewIndex = 0;
       quizIndex = 0;
       quizFlipped = false;
@@ -799,6 +840,10 @@
 
   els.printBtn.addEventListener('click', function () {
     buildPrintArea();
+    window.print();
+  });
+  els.alignTestBtn.addEventListener('click', function () {
+    document.getElementById('printArea').innerHTML = buildAlignmentTestPages();
     window.print();
   });
 

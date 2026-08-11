@@ -34,15 +34,53 @@ every value persisted in `localStorage`, confirmed live stats recompute
 correctly, and confirmed print output matches saved data — no console
 errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `kq3g3h`).** Shipped the single biggest
+functionality gap plus one Quick Win.
+
+- **Done — Time-value parsing and stats.** Time-type results now support
+  `mm:ss` (e.g. `8:30`, with optional fractional seconds like `9:00.5`) as
+  well as a plain-seconds fallback, parsed by a small regex-based parser.
+  `computeStats()` now branches on event type: count events keep their
+  existing average/min/max math, and time events convert every entry to
+  seconds, average/min/max in seconds, then format the result back to
+  `m:ss` for display. Previously time events always showed "—" in the
+  stats row regardless of data entered — now the class average/range row
+  populates correctly for both of the two default time-type events (Mile
+  Run is time-type; Push-ups/Sit-ups are count-type). Malformed time entries (anything that doesn't match `mm:ss` or
+  parse as a plain number) are silently excluded from stats the same way
+  non-numeric count entries already were, rather than throwing.
+- **Done — CSV export.** A new "Export CSV" button next to Print builds a
+  CSV (student rows × event columns, raw entered values — not
+  reparsed/reformatted) and triggers a browser download via a Blob URL, for
+  handing to a gradebook or district PE reporting requirement.
+- Verified with a headless Chromium smoke test: entered three students'
+  mixed-precision `mm:ss` mile times, confirmed the stats row shows a
+  correctly-averaged `m:ss` value derived from the actual parsed seconds
+  (not a naive string average), exported CSV and confirmed the downloaded
+  file contains the raw entered values.
+
+Not started this round: per-student trend across two dates (Fall vs
+Spring), sortable results table, standards/benchmark bands, multiple saved
+rosters, retest-duplication, and per-student report cards. The Open
+Questions (free-text-with-parsing vs two separate number inputs for time
+entry; where per-student report cards should live) are both still
+unresolved — this round kept the existing free-text-with-parsing-on-input
+approach rather than switching to separate minute/second fields, since it
+required no UI change and the parser handles the common formats forgivingly.
+
+**Where the next round should pick up:** sortable results table is the
+smallest remaining Quick Win. Per-student trend across two dates is the
+most valuable Major Feature now that time events actually produce
+comparable numbers to trend against.
 
 ## What it does today
 
 - Paste-a-roster textarea (one name per line, de-duplicated)
 - Editable test events list: name + type (count or time), add/delete
 - Results grid: one row per student, one column per event, free-text cells
-- Live class average/min/max for count-type events (time-type shows
-  &mdash; since raw mm:ss strings aren't parsed into a sortable number today)
+- Live class average/min/max for both count-type and time-type events
+  (`mm:ss` parsed to seconds for the math, formatted back for display)
+- CSV export of the full results grid
 - Print: report table matching the on-screen grid plus the stats row
 
 ## Quick Wins

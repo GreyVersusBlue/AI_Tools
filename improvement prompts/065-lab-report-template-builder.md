@@ -22,7 +22,30 @@ sized to the configured rows/columns). Single current template autosaved to
 test (template swap with confirm-dialog accepted, add a material, print) —
 no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `9iiyas`).** Shipped all four Quick Wins
+below. Up/down reorder buttons now sit on every list row (materials,
+procedure, data-table columns, conclusion questions); procedure numbering,
+as predicted last round, needed no separate fix since it's already derived
+from array order at render time. Multiple named saved templates now exist,
+storage-shaped to match Formula Sheet Builder / Rubric Builder
+(`lrt_list_v1` name list, `lrt_data_v1:<name>` per-template blob,
+`lrt_current_v1` pointer) — the old single-template key `lrt_template_v1`
+is migrated once into a "My Template" entry on first load and then removed,
+so nothing already saved was lost; verified this doesn't re-migrate or
+duplicate on a second reload. A print preview modal reuses the exact same
+`packetHtml()` output and print CSS classes as the real print, so there's
+no second renderer to drift out of sync with the first. Verified with two
+headless-Playwright passes: reorder + numbering, save-as/switch/persist
+across reload for two distinct templates, old-key migration (including
+no-duplicate-on-repeat-reload), and preview reflecting live edits — no
+console errors.
+
+**Known tradeoff, flagged for a future round rather than fixed now:**
+renaming a template to a name that collides with an existing one silently
+overwrites that entry — this mirrors the same accepted tradeoff in Formula
+Sheet Builder / Rubric Builder rather than diverging from the toolkit's
+existing convention, but collision protection would be a reasonable
+follow-up if a reviewer wants it.
 
 ## What it does today
 
@@ -30,25 +53,19 @@ Nothing below has been started.
 - Fully editable: title, objective, hypothesis prompt, materials,
   procedure, data table columns + row count, observations prompt,
   conclusion questions
+- Reorder any list item (materials, procedure, columns, conclusion
+  questions) via up/down buttons
+- Multiple named saved templates, switchable from a dropdown, with
+  automatic one-time migration from the old single-template format
+- A print preview modal before committing to `window.print()`
 - One-click print of a complete fillable packet matching the current
   template exactly
 
 ## Quick Wins
 
-- **Reorder items within each list** (materials, procedure, columns,
-  conclusion questions) via up/down buttons, matching Formula Sheet
-  Builder / Rubric Builder's existing pattern — right now the only way to
-  reorder is delete-and-re-add at the end.
-- **Multiple named saved templates**, the same convention Formula Sheet
-  Builder and Rubric Builder already use — right now there's exactly one
-  lab template per browser, so "Acid-Base Lab" and "Pendulum Lab" can't
-  both be kept ready between class periods.
-- **A print preview** before committing to the print dialog — right now
-  "Print packet" goes straight to `window.print()` with no chance to
-  sanity-check the packet's layout first.
-- **Procedure step numbering that survives reordering** is already correct
-  (numbers are rendered from array order at print time, not stored) — worth
-  noting so a future reorder feature doesn't accidentally break it.
+All four from the previous round shipped this round — see Status above.
+Nothing queued here right now; the next round should look at Major
+Features below.
 
 ## Major Features
 

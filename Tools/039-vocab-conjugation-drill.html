@@ -171,8 +171,10 @@
   .quiz-row .quiz-input { margin-bottom: 0; flex: 1; }
   .quiz-row .quiz-mark { flex-shrink: 0; font-size: .85rem; font-weight: 700; white-space: nowrap; }
   .quiz-row.correct .quiz-mark { color: #2f7d4f; }
+  .quiz-row.close .quiz-mark { color: #9a6b00; }
   .quiz-row.incorrect .quiz-mark { color: var(--err); }
   .quiz-row.correct .quiz-input { border-color: #2f7d4f; }
+  .quiz-row.close .quiz-input { border-color: #9a6b00; }
   .quiz-row.incorrect .quiz-input { border-color: var(--err); }
   .sheet-nav { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1rem; }
   .sheet-nav button.secondary { width: auto; margin: 0; }
@@ -826,15 +828,36 @@
     return state.conjugations.filter(function (c) { return c.id === id; })[0] || null;
   }
 
+  /** Strips combining diacritical marks (accents, cedillas, umlauts, etc.)
+   * via Unicode NFD decomposition, so "café" and "cafe" compare equal. This
+   * only affects the on-screen self-quiz's feedback message — exact match is
+   * still required to count toward the score; a same-but-for-accents answer
+   * is flagged "close" instead of a bare wrong, not silently marked correct. */
+  function stripDiacritics(s) {
+    return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  /** 'correct' | 'close' (right but for accents) | 'wrong'. Blank input is
+   * always 'wrong', never a false "close" match against a blank-normalizing
+   * comparison. */
+  function answerMatch(typed, correct) {
+    var t = String(typed || '').trim().toLowerCase();
+    var c = String(correct || '').trim().toLowerCase();
+    if (!t) return 'wrong';
+    if (t === c) return 'correct';
+    if (stripDiacritics(t) === stripDiacritics(c)) return 'close';
+    return 'wrong';
+  }
+
   function checkQuizAnswers() {
     if (quizChecked) return;
     var entry = currentQuizEntry();
     if (!entry) return;
     var correctCount = 0;
     state.persons.forEach(function (person, pi) {
-      var typed = (quizAnswers[pi] || '').trim().toLowerCase();
-      var correct = (entry.forms[pi] || '').trim().toLowerCase();
-      if (typed && typed === correct) correctCount++;
+      var typed = quizAnswers[pi] || '';
+      var correct = entry.forms[pi] || '';
+      if (answerMatch(typed, correct) === 'correct') correctCount++;
     });
     quizScore.correct += correctCount;
     quizScore.total += state.persons.length;
@@ -866,13 +889,19 @@
     var rows = state.persons.map(function (person, pi) {
       var typed = quizAnswers[pi] || '';
       var correctAnswer = entry.forms[pi] || '';
-      var isCorrect = quizChecked && typed.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-      var rowClass = quizChecked ? (isCorrect ? ' correct' : ' incorrect') : '';
+      var match = quizChecked ? answerMatch(typed, correctAnswer) : null;
+      var rowClass = quizChecked ? (' ' + (match === 'correct' ? 'correct' : match === 'close' ? 'close' : 'incorrect')) : '';
+      var markHtml = '';
+      if (quizChecked) {
+        markHtml = match === 'correct' ? '&#10003;'
+          : match === 'close' ? '&#8776; close &mdash; check your accent (' + escapeHtml(correctAnswer) + ')'
+          : '&#10007; ' + escapeHtml(correctAnswer);
+      }
       return '<div class="quiz-row' + rowClass + '">' +
         '<span class="quiz-person">' + escapeHtml(person || ('Row ' + (pi + 1))) + '</span>' +
         '<input type="text" class="quiz-input" data-pi="' + pi + '" value="' + escapeHtml(typed) + '"' +
           (quizChecked ? ' disabled' : '') + ' placeholder="Conjugated form" autocomplete="off">' +
-        (quizChecked ? '<span class="quiz-mark">' + (isCorrect ? '&#10003;' : '&#10007; ' + escapeHtml(correctAnswer)) + '</span>' : '') +
+        (quizChecked ? '<span class="quiz-mark">' + markHtml + '</span>' : '') +
       '</div>';
     }).join('');
 

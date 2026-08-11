@@ -216,6 +216,34 @@ group('Paste import — column guards');
   eq(students.length, 0, 'a row with no grades at all is skipped');
   eq(warnings.some(w => /no grade data/.test(w)), true, 'and says so');
 }
+group('Paste import — explicit column mapping (colOpts)');
+{
+  // Same shifted-column paste as the "extra leading column" case above, but
+  // this time told explicitly where things are instead of relying on the
+  // auto-detect heuristic. No "position N, not N" warning should appear,
+  // since the caller isn't disagreeing with a guess — it's stating a fact.
+  const paste = 'X\t123459\tDesmond Invented\tSS7-3\t7\tB(85.00)\tB(84.00)\tA(91.00)\tA(93.00)\t88.25';
+  const { students, warnings } = parsePastedData(paste, { nameCol: 2, q1Col: 5 });
+  eq(students[0].name, 'Desmond Invented', 'explicit nameCol is honored');
+  eq(students[0].scores, [85, 84, 91, 93], 'explicit q1Col is honored');
+  eq(warnings.some(w => /position/.test(w)), false, 'no auto-detect disagreement warning when the mapping was explicit');
+}
+{
+  // A mapping that runs off the end of a short row is a column guard
+  // failure, not a crash reading undefined.
+  const { students, warnings } = parsePastedData('a\tb\tc', { nameCol: 1, q1Col: 5 });
+  eq(students.length, 0, 'an out-of-range explicit mapping skips the row');
+  eq(/need at least 9/.test(warnings[0]), true, 'and reports the mapping-derived minimum, not the default 8');
+}
+{
+  // parsePastedData(raw) and parsePastedData(raw, null) must stay identical
+  // to every pre-existing call site that doesn't know about colOpts yet.
+  const paste = '123456\tAmelia Fakename\tSS7-3\t7\tB(85.00)\tB(84.00)\tA(91.00)\tA(93.00)\t88.25';
+  const a = parsePastedData(paste);
+  const b = parsePastedData(paste, null);
+  eq(JSON.stringify(a), JSON.stringify(b), 'omitting colOpts matches passing null');
+}
+
 eq(parsePastedData('').students.length, 0, 'an empty paste imports nothing');
 eq(parsePastedData('\n\n  \n').students.length, 0, 'a whitespace paste imports nothing');
 
