@@ -32,27 +32,36 @@ the same class of entity-in-JS-string bug caught twice already in this
 round, on Verb Conjugation Reference Poster Generator and Sub Note /
 Feedback Slip Generator).
 
-Nothing below has been started.
+**2026-08-11 — Round (session `b4zswl`).** Shipped all four Quick Wins in
+one pass, since they all touch the same `renderTable()`/`renderMilestones()`
+functions and compose cleanly: (1) overdue highlighting — any milestone
+cell for an unchecked student whose due date has passed gets a red-tinted
+`.overdue` background plus a small ⚠ marker (not color alone, so it still
+reads on a grayscale printer or for a colorblind teacher — though this is
+on-screen only, the print view is unaffected); (2) a whole-class summary
+bar above the grid showing "N/M done with [milestone]" per milestone;
+(3) a "sort: least complete first" checkbox that re-sorts the on-screen
+table by completed-milestone count (print output is unaffected, so the
+chase-list on paper keeps roster order); (4) up/down reorder buttons on
+each milestone row, matching the pattern used elsewhere in this toolkit.
+Verified with a headless Chromium/Playwright smoke test: saved a 3-student
+roster, set a milestone's due date to yesterday and confirmed 3 overdue
+cells appeared, checked one box and confirmed the overdue count dropped to
+2, confirmed the summary bar text, confirmed least-complete-first sort
+reorders correctly, and confirmed a milestone moved down actually swaps
+position — zero console errors throughout. `node --check` passed on both
+inline scripts.
 
 ## What it does today
 
-- 6 default milestones with editable names and optional due dates
+- 6 default milestones with editable names, optional due dates, and
+  up/down reorder buttons
 - Roster &times; milestone checkbox grid, live per-student progress
   percentage
+- Overdue cells (unchecked past their due date) highlighted red on-screen
+- Whole-class summary bar: per-milestone completion counts above the grid
+- Optional "least complete first" sort (on-screen only)
 - Print: full checkmark grid + a "still missing, by milestone" chase-list
-
-## Quick Wins
-
-- **Overdue highlighting**: visually flag a milestone cell red once its
-  due date has passed and it's still unchecked — right now due dates are
-  purely informational text, not connected to any visual urgency signal.
-- **Sort the roster by "least complete first"** as a view option, turning
-  the tracker into an actual worklist for who needs a check-in.
-- **A whole-class summary bar** (e.g. "18 of 24 students have completed
-  Background Research") above the grid, for a quick administrative view
-  without scanning every row.
-- **Reorder milestones** via up/down buttons, matching the pattern used
-  elsewhere in this toolkit.
 
 ## Major Features
 
@@ -96,8 +105,14 @@ turns a teacher-maintained spreadsheet into a shared, live status board.
   their own milestone done, but a teacher must confirm before it counts),
   or is trusting student self-report sufficient for a formative tracking
   tool like this?
-- Is overdue-highlighting worth doing purely client-side against
-  `new Date()` (meaning the highlight only updates when the page is open,
-  not via any background notification), or should "days until/overdue"
-  just be a computed, always-visible column instead of a color change that
-  a teacher might not notice until they open the tool?
+- ~~Is overdue-highlighting worth doing purely client-side against
+  `new Date()`...~~ Resolved this round: shipped as a client-side
+  `new Date()` comparison, on-screen only. It's cheap and correct for the
+  common case (teacher opens the tracker sometime before or during the
+  checkpoint); a background notification would need a service-worker
+  periodic-sync or similar, which felt like real scope creep for what this
+  quick win was meant to solve.
+- Next round could pick up any of the Major Features above — multiple
+  named trackers and per-milestone notes are the two that don't require
+  new toolkit-wide infrastructure (P3 share-link plumbing, ICS export) and
+  so are probably the next-cheapest wins.

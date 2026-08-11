@@ -20,29 +20,41 @@ bins. Queue persists in `localStorage` (`sslm_queue_v1`). Verified with a
 headless Chromium smoke test (pick a symbol, add a label with quantity 3,
 print, confirm exactly 3 cards render) — no console errors.
 
-Nothing below has been started. Icons are simplified/stylized, not
-official GHS pictograms — see Open Questions.
+Icons are simplified/stylized, not official GHS pictograms — see Open
+Questions.
+
+**2026-08-11 — Round (session `b4zswl`).** Shipped three of the Quick
+Wins (edit, duplicate, and label-size were bundled together since they all
+touch the same queue-row UI; queue reordering was left for a future round —
+see Open Questions): (1) edit an existing queued label — an "Edit" button per queue row
+loads that label's symbol/text/qty back into the top form, highlights the
+form with an outline and a "Save changes" label on the button (with a
+Cancel link), and updates the existing queue entry in place instead of
+adding a duplicate; (2) a "Duplicate" button per queue row clones the
+entry with a new id, for the "same symbol, different bin number" case
+named in the prompt; (3) a label-size control (small/4-per-row,
+medium/3-per-row — the prior fixed default, large/2-per-row) that changes
+both the print grid's column count and each card's physical height,
+persisted alongside the queue. Storage shape changed from a bare array to
+`{queue, labelSize}`; `load()` handles both shapes so an existing saved
+queue from before this round still loads correctly. Did not attempt
+"combine two symbols on one label" — see Open Questions, it's a genuinely
+different data shape (multi-symbol labels) rather than a quick tweak.
+Verified with a headless Chromium/Playwright smoke test: added a label,
+duplicated it (queue count 1→2), clicked Edit and confirmed the editing
+UI appears, saved an edited label text and confirmed the queue text
+updated in place (not duplicated), switched to the "large" size and
+printed, confirming the print grid picked up `size-large` and rendered the
+right card count — zero console errors. `node --check` passed on both
+inline scripts.
 
 ## What it does today
 
 - 10 hazard/equipment icons, color-coded
-- Custom label text + copy count per queued label
-- Print: 3-column grid of label cards, each sized for a storage bin
-
-## Quick Wins
-
-- **Reorder the queue** and **edit an existing queued label** (currently
-  delete-and-re-add is the only way to fix a typo) — small quality-of-life
-  gaps versus other list-builder tools in this toolkit.
-- **A "duplicate this label" button** for quickly making a near-identical
-  label (same symbol, different bin number) without re-picking the symbol
-  each time.
-- **Label size options** (small/medium/large) since a 2-inch card that
-  fits a bin lid might be too big for a narrow shelf edge or too small for
-  a wall-mounted station sign.
-- **Combine two symbols on one label** (e.g. "Flammable + Corrosive" for a
-  mixed-hazard storage cabinet) — right now each label carries exactly one
-  symbol.
+- Custom label text + copy count per queued label; edit or duplicate any
+  queued label
+- Label size control (small/medium/large — 4/3/2 per row)
+- Print: label-grid sized per the chosen size, each card matching
 
 ## Major Features
 
@@ -94,3 +106,10 @@ tools.
   resource, but a dependency this toolkit doesn't currently have anywhere
   else) or to a teacher-authored local page/note per hazard (simpler,
   fully local, but less authoritative)?
+- Still open from the Quick Wins list: **reordering the queue** (up/down,
+  matching the pattern used in Science Fair Project Tracker's milestone
+  list this same round) and **combining two symbols on one label**, which
+  would need the queue item shape to hold an array of symbols instead of
+  one and touches the print-card rendering, the edit form, and the
+  duplicate logic all at once — sizeable enough to deserve its own round
+  rather than being folded in here.

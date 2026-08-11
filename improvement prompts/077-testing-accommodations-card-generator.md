@@ -24,26 +24,41 @@ explicitly calls out (comparing it to Final Grade Checker) since
 accommodation data is sensitive. This closes out the General/Classroom
 Logistics section of the Ideas Backlog for now.
 
+**2026-08-11 — Round (session `b4zswl`).** Shipped three of the four Quick
+Wins: (1) a visible **"N of M students have at least one accommodation
+checked"** summary line above the assignment grid; (2) a **"print one
+student only"** select next to the print button (defaults to "All
+students"), so a single new student's card can be printed without
+regenerating the whole class set; (3) a **cards-per-row control**
+(2/3/4, default 3 — matching the prior fixed layout) that resizes the
+print grid's columns. Found and fixed a real bug while testing (2): the
+existing checkbox-change handler updated `state.assignments` and saved,
+but never re-rendered anything, so the new summary line was stuck at
+"0 of N" until some other action (like editing a roster) happened to
+trigger a full table re-render — added a `renderSummary()` call to the
+checkbox change handler to fix it. Did not attempt "sort/filter the grid
+by accommodation type" — see Open Questions. Verified with a headless
+Chromium/Playwright smoke test: saved a 3-student roster, confirmed the
+summary read "0 of 3," checked one accommodation and confirmed it updated
+to "1 of 3," printed with a single student selected and confirmed exactly
+one card rendered, then printed with "All students" and confirmed all
+three rendered — zero console errors. `node --check` passed on both
+inline scripts.
+
 ## What it does today
 
 - Roster + editable accommodation-type list
 - Checkbox grid (student &times; type) plus a free-text note per student
-- Print: one small card per student, 3-column grid, listing checked types
-  and the note
+- A live "N of M students have at least one accommodation checked"
+  summary above the grid
+- Print: one small card per student (or a single selected student),
+  2/3/4-column grid, listing checked types and the note
 
 ## Quick Wins
 
-- **A "print one student only" option**, for when a single new student's
-  accommodations need a card without regenerating the whole class set.
 - **Sort/filter the grid** by accommodation type (e.g. "show only students
   with extended time") — useful when planning room assignments for a
   testing day.
-- **A visible "N students have accommodations" summary** at the top of the
-  grid, so a quick glance answers "how many cards will I actually print"
-  before printing.
-- **Card size/columns control** (2 vs 3 vs 4 per page) since a student with
-  many checked accommodations or a long note may want more room than a
-  fixed 3-column grid gives.
 
 ## Major Features
 
@@ -78,10 +93,12 @@ instead of quietly going stale.
   the most direct opportunity; this is the second tool in this round (after
   Parent/Guardian Contact Log) dealing with sensitive per-student data
   that stays local by design.
-- **P6 (print quality)** — card-size/column control matters once real
-  accommodation lists (which can be longer than the 6 defaults) get used.
-- **P15 (first run)** — a visible "N students have accommodations" count
-  and sort/filter both reduce the friction of scanning a full roster by eye.
+- **P6 (print quality)** — card-size/column control shipped this round;
+  matters more once real accommodation lists (which can be longer than the
+  6 defaults) get used.
+- **P15 (first run)** — the "N students have accommodations" count shipped
+  this round; sort/filter is still open and would further reduce the
+  friction of scanning a full roster by eye.
 
 ## Open Questions
 
@@ -93,3 +110,7 @@ instead of quietly going stale.
   audience (a testing coordinator, not a single classroom teacher) that it
   deserves its own tool built on top of this one's data model instead of
   growing this tool's scope?
+- Next round: sort/filter by accommodation type is the only Quick Win left
+  unbuilt — a small addition to the existing grid, not a new data shape,
+  so it's probably a quick pickup whenever this tool's turn comes around
+  again.

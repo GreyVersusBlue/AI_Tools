@@ -67,6 +67,12 @@
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table .due { font-size: .68rem; color: var(--muted); display: block; }
   table.grid-table td.progress { font-size: .8rem; }
+  table.grid-table td.overdue { background: #fbe2df; border-left: 3px solid var(--err); }
+  table.grid-table td.overdue::after { content: " \26A0"; color: var(--err); font-size: .8rem; }
+
+  .summary-bar { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; margin-bottom: .8rem; font-size: .82rem; color: var(--muted); }
+  .summary-bar strong { color: var(--ink); }
+  .sort-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; font-size: .84rem; }
 
   #printArea { display: none; }
   .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
@@ -113,6 +119,10 @@
 
   <div class="card">
     <h2>Progress</h2>
+    <div class="summary-bar" id="summaryBar"></div>
+    <div class="sort-row">
+      <label style="margin:0;" for="sortLeastComplete"><input type="checkbox" id="sortLeastComplete" style="margin-right:.35rem;">Sort: least complete first</label>
+    </div>
     <div style="overflow-x:auto;">
       <table class="grid-table" id="progressTable"></table>
     </div>
@@ -129,11 +139,19 @@
   var DEFAULT_MILESTONES = ['Question & Hypothesis', 'Background Research', 'Materials & Procedure', 'Data Collection', 'Board Complete', 'Presentation Ready'];
 
   var els = {};
-  ['rosterInput', 'saveRosterBtn', 'milestonesWrap', 'addMilestoneBtn', 'progressTable', 'printBtn', 'printArea'].forEach(function (id) {
+  ['rosterInput', 'saveRosterBtn', 'milestonesWrap', 'addMilestoneBtn', 'progressTable', 'printBtn', 'printArea', 'summaryBar', 'sortLeastComplete'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var state = { roster: [], milestones: [], done: {} };
+  var sortLeastComplete = false;
+
+  function todayIso() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
 
   function uid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -166,13 +184,23 @@
   function doneKey(name, milestoneId) { return name + '|' + milestoneId; }
 
   function renderMilestones() {
-    els.milestonesWrap.innerHTML = state.milestones.map(function (m) {
+    els.milestonesWrap.innerHTML = state.milestones.map(function (m, idx) {
       return '<div class="milestone-row" data-id="' + m.id + '">' +
         '<input type="text" data-mname="' + m.id + '" value="' + escapeAttr(m.name) + '">' +
         '<input type="date" data-mdue="' + m.id + '" value="' + escapeAttr(m.due) + '">' +
+        '<button type="button" class="secondary small" data-move-up="' + m.id + '"' + (idx === 0 ? ' disabled' : '') + ' title="Move up">&uarr;</button>' +
+        '<button type="button" class="secondary small" data-move-down="' + m.id + '"' + (idx === state.milestones.length - 1 ? ' disabled' : '') + ' title="Move down">&darr;</button>' +
         '<button type="button" class="danger small" data-del-m="' + m.id + '">&times;</button>' +
         '</div>';
     }).join('');
+  }
+  function moveMilestone(id, dir) {
+    var idx = state.milestones.findIndex(function (m) { return m.id === id; });
+    var newIdx = idx + dir;
+    if (idx === -1 || newIdx < 0 || newIdx >= state.milestones.length) return;
+    var item = state.milestones.splice(idx, 1)[0];
+    state.milestones.splice(newIdx, 0, item);
+    save(); renderMilestones(); renderTable();
   }
   els.milestonesWrap.addEventListener('input', function (ev) {
     var nameId = ev.target.getAttribute('data-mname');
@@ -188,9 +216,13 @@
     }
   });
   els.milestonesWrap.addEventListener('click', function (ev) {
-    var id = ev.target.getAttribute('data-del-m');
-    if (!id) return;
-    state.milestones = state.milestones.filter(function (m) { return m.id !== id; });
+    var upId = ev.target.getAttribute('data-move-up');
+    var downId = ev.target.getAttribute('data-move-down');
+    var delId = ev.target.getAttribute('data-del-m');
+    if (upId) { moveMilestone(upId, -1); return; }
+    if (downId) { moveMilestone(downId, 1); return; }
+    if (!delId) return;
+    state.milestones = state.milestones.filter(function (m) { return m.id !== delId; });
     save(); renderMilestones(); renderTable();
   });
   els.addMilestoneBtn.addEventListener('click', function () {
@@ -206,24 +238,39 @@
     save(); renderTable();
   });
 
+  function renderSummaryBar() {
+    if (!state.roster.length || !state.milestones.length) { els.summaryBar.innerHTML = ''; return; }
+    els.summaryBar.innerHTML = state.milestones.map(function (m) {
+      var done = state.roster.filter(function (name) { return state.done[doneKey(name, m.id)]; }).length;
+      return '<span><strong>' + done + '/' + state.roster.length + '</strong> done with ' + escapeHtml(m.name) + '</span>';
+    }).join('');
+  }
+
   function renderTable() {
+    renderSummaryBar();
     if (!state.roster.length) {
       els.progressTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
       return;
     }
+    var today = todayIso();
     var head = '<tr><th>Student</th>' + state.milestones.map(function (m) {
       return '<th>' + escapeHtml(m.name) + (m.due ? '<span class="due">due ' + fmtDate(m.due) + '</span>' : '') + '</th>';
     }).join('') + '<th>Progress</th></tr>';
-    var rows = state.roster.map(function (name) {
+    var studentStats = state.roster.map(function (name) {
       var completeCount = 0;
       var cells = state.milestones.map(function (m) {
         var key = doneKey(name, m.id);
-        var checked = state.done[key] ? ' checked' : '';
-        if (state.done[key]) completeCount++;
-        return '<td><input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + checked + '></td>';
+        var checked = !!state.done[key];
+        if (checked) completeCount++;
+        var overdue = !checked && m.due && m.due < today;
+        return '<td' + (overdue ? ' class="overdue" title="Overdue"' : '') + '><input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + (checked ? ' checked' : '') + '></td>';
       }).join('');
       var pct = state.milestones.length ? Math.round(completeCount / state.milestones.length * 100) : 0;
-      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '<td class="progress">' + completeCount + '/' + state.milestones.length + ' (' + pct + '%)</td></tr>';
+      return { name: name, completeCount: completeCount, pct: pct, cells: cells };
+    });
+    if (sortLeastComplete) studentStats.sort(function (a, b) { return a.completeCount - b.completeCount; });
+    var rows = studentStats.map(function (s) {
+      return '<tr><td>' + escapeHtml(s.name) + '</td>' + s.cells + '<td class="progress">' + s.completeCount + '/' + state.milestones.length + ' (' + s.pct + '%)</td></tr>';
     }).join('');
     els.progressTable.innerHTML = head + rows;
   }
@@ -234,6 +281,11 @@
     if (!student || !milestone) return;
     state.done[doneKey(student, milestone)] = ev.target.checked;
     save(); renderTable();
+  });
+
+  els.sortLeastComplete.addEventListener('change', function () {
+    sortLeastComplete = els.sortLeastComplete.checked;
+    renderTable();
   });
 
   els.printBtn.addEventListener('click', function () {
