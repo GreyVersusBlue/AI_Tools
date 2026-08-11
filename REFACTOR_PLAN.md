@@ -408,6 +408,25 @@ snippet (`061`–`081`), plus the 2 companion pages (`classroom-timer/mirror.htm
 `escape-room-builder/monitor.html`) still pending a decision on their relative
 path.
 
+**Round 2e (2026-08-11):** re-hashed the inline snippet (CRLF-normalized) in
+all 21 remaining numbered tools, `061`–`081` — all 21 identical to the Round
+2a–2d block, none set aside. Migrated the next 15, `061`–`075`, to
+`<script src="../_shared/sw-register.js" defer></script>`; no new files
+needed in `PRECACHE_URLS` (`_shared/sw-register.js` was already added in
+Round 2a). `CACHE_VERSION` bumped v50 → v51 since the content of 15
+already-precached pages changed.
+
+Verified in a real browser (local static Python server on port 8137) for all
+15 migrated tools: `_shared/sw-register.js` requested and returned 200 on
+every page, and console errors were the same 4-error baseline on every page
+(the pre-existing `assets/fonts/*.woff2` 404s documented above, unrelated to
+this change) — no new errors introduced by any of the 15 migrations.
+
+**Remaining after this round: 6 numbered tools** still carry the inline
+snippet (`076`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
+`escape-room-builder/monitor.html`) still pending a decision on their relative
+path.
+
 ### Phase 3 — Theme adoption (~84 files, needs a variance audit first)
 - [ ] Sub-audit: diff each tool's `:root` block against `_shared/theme.css`. Bucket into
   (a) identical → straight swap, (b) extra tool-specific vars → link shared + keep a
