@@ -185,7 +185,7 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Blank Map Generator (046) | `mn6d5m` | 2026-08-11 02:44 UTC | `claude/vector-base-maps-phase-1-mn6d5m` |
+| *(none)* | | | |
 
 ---
 
@@ -846,6 +846,48 @@ The tool's Quick Wins list is now empty — but its Major Features /
 Moonshot sections (time-slice maps, vector base maps, choropleth,
 map+timeline pairing) are substantial and open, so it does not move to
 `stable tools/`.
+
+### Devon-assigned round — tool 046 (Round 13) — 2026-08-11 02:44 UTC — session `mn6d5m` — branch `claude/vector-base-maps-phase-1-mn6d5m`
+
+Devon directed this session at the Blank Map Generator specifically — the
+same per-tool override as its Rounds 9–12 — so this is **not** picked from
+"Not yet touched" and does **not** change the Pass 2 tally (046 already
+counted in session `gb5c6e`'s Round 4 above). Round 12's branch had not
+merged to `main` when this round started, and this round's work builds
+directly on its `mapCreditLine()` export-stamping, so this branch was based
+on `claude/tool-46-blank-map-generator-albm3m` rather than `main` — it
+carries Round 12's commits as well as its own.
+
+Phase 1 of the **vector base maps** Major Feature, the first item off that
+list rather than a Quick Win (there were none left after Round 12).
+Verified with `node --check` on every touched module plus a **19-check
+headless Chromium pass** over the real UI served on local HTTP, and direct
+visual inspection of the generated rasters and both PDF worksheet pages.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Blank Map Generator | `046-blank-map-generator.md` | Nine built-in, offline base maps (World, six continents, USA lower-48 and all-50) rendered from ~670 KB of vendored public-domain Natural Earth GeoJSON, in outline or land-fill style with borders on/off. They go through the *existing* raster/IndexedDB pipeline as an upload-shaped cache record, so every feature works unchanged — and because the renderer owns the projection, each one **calibrates itself**, verified at 0.01 map px against the projection math. Exports credit Natural Earth via Round 12's automatic stamping. |
+
+Two notes worth carrying forward:
+
+- **npm is the working route for third-party data and libraries** when the
+  open web is blocked from a session's sandbox — twice now (jsPDF/JSZip
+  vendoring in earlier rounds via `npm pack`, and this round's Natural
+  Earth TopoJSON via `world-atlas`/`us-atlas` + `topojson-client`).
+  Wikimedia was unreachable in both Round 12's and this round's sandbox.
+- **Look at the rendered output, don't just assert on it.** This round's
+  first render had three stray full-width lines across the world map
+  (Natural Earth clamps antimeridian-crossing rings to ±180, which plate
+  carrée turns into a `lineTo` across the whole canvas), and the *first
+  fix* for that introduced a hard line along every world map's bottom
+  edge. Both were found by looking at the image; only afterwards was a
+  full-raster row scan added to catch the class automatically. Every
+  numeric check in the suite passed the whole time.
+
+The tool's Quick Wins list is still empty and its Major Features / Moonshot
+sections remain open (time-slice maps, vector phase 2 — live rendering,
+per-region hit-testing, choropleth — and map+timeline pairing), so it does
+not move to `stable tools/`.
 
 ---
 
