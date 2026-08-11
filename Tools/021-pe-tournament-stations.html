@@ -85,6 +85,9 @@
   #msg { font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; display: none; margin-top: .5rem; white-space: pre-line; }
   #msg.error { display: block; background: #fbeceA; color: var(--err); border: 1px solid #e6c6c1; }
   #msg.info { display: block; background: #eaf1f5; color: var(--accent-2); border: 1px solid #c9dbe3; }
+  /* Not an error — the tool did the safe thing on its own and is saying so
+     (a name collision that was suffixed rather than allowed to overwrite). */
+  #msg.warn { display: block; background: #fdf6e3; color: #7a5a12; border: 1px solid #e6d5a8; }
 
   .empty-hint { font-size: .85rem; color: var(--muted); padding: .4rem 0; }
 
@@ -530,6 +533,18 @@
   }
   function listNames() {
     return Object.keys(loadStore().projects).sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  /** Suffixes a name until nothing saved holds it — "Volleyball" → "Volleyball (2)".
+      `ignore` is the name being renamed away from, so renaming a unit to what it
+      is already called isn't treated as a collision with itself. */
+  function uniqueProjectName(base, ignore) {
+    var taken = {};
+    listNames().forEach(function (n) { if (n !== ignore) taken[n] = true; });
+    if (!taken[base]) return base;
+    var n = 2;
+    while (taken[base + ' (' + n + ')']) n++;
+    return base + ' (' + n + ')';
   }
 
   function normalizeState(s) {
@@ -1512,8 +1527,11 @@
   function newProject(name) {
     state = defaultProject(name);
     applyStateToForm();
-    refreshSwitcher();
+    // Save before refreshing the switcher: refreshSwitcher() lists what's in
+    // storage, so the old order left the brand-new unit missing from its own
+    // dropdown until some later action happened to refresh it.
     save();
+    refreshSwitcher();
   }
 
   function loadProjectByName(name) {
@@ -1529,14 +1547,29 @@
     if (!state) return;
     var oldName = state.name;
     var newName = els.projectName.value.trim() || oldName;
-    if (newName !== oldName) {
-      var store = loadStore();
-      delete store.projects[oldName];
-      state.name = newName;
-      store.projects[newName] = state;
-      store.current = newName;
-      saveStore(store);
-      refreshSwitcher();
+    if (newName === oldName) return;
+    // Renaming onto a name another unit already holds used to delete the old
+    // key and write over that unit — a saved unit destroyed by a typo in the
+    // name field. Suffix instead, and say so.
+    var finalName = uniqueProjectName(newName, oldName);
+    if (finalName === oldName) {
+      // The only free suffix was the name it already has — nothing to write.
+      els.projectName.value = oldName;
+      showMsg('A unit named "' + newName + '" is already saved, so this one kept the name "' + oldName + '" rather than overwriting it.', 'warn');
+      return;
+    }
+    var store = loadStore();
+    delete store.projects[oldName];
+    state.name = finalName;
+    store.projects[finalName] = state;
+    store.current = finalName;
+    saveStore(store);
+    els.projectName.value = finalName;
+    refreshSwitcher();
+    if (finalName !== newName) {
+      showMsg('A unit named "' + newName + '" is already saved, so this one was renamed "' + finalName + '" instead of overwriting it.', 'warn');
+    } else {
+      clearMsg();
     }
   });
 
@@ -1545,8 +1578,18 @@
   els.newProjectBtn.addEventListener('click', function () {
     var name = prompt('Name for the new PE unit:', 'New Unit');
     if (!name) return;
+    name = name.trim();
+    if (!name) return;
+    // newProject() saves straight over store.projects[name], so a name that
+    // collides used to wipe out the saved unit already sitting there — an
+    // entire unit's stations, groups and bracket gone with no warning.
+    var finalName = uniqueProjectName(name, null);
+    if (finalName !== name) {
+      if (!confirm('A PE unit named "' + name + '" is already saved.\n\nCreate a separate unit named "' + finalName + '" instead?\n\n(Cancel to keep the saved one and start over — nothing is deleted either way.)')) return;
+    }
     captureUndoSnapshot();
-    newProject(name.trim());
+    newProject(finalName);
+    if (finalName !== name) showMsg('Created "' + finalName + '" — the saved "' + name + '" is untouched.', 'warn');
   });
 
   els.deleteProjectBtn.addEventListener('click', function () {

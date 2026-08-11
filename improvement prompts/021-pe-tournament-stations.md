@@ -1,13 +1,45 @@
 # Improvement Prompts — 021 — Tournament Bracket & Station Rotation (PE)
 
 **Tool file:** `Tools/021-pe-tournament-stations.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/pe-tournament-stations/test/` — the browser suite
+(`smoke-pe-stations.mjs`, `npm run test:pe-stations`). The page itself is
+still a single file.
 
 **Current description (from README):** A station rotation timer with named stations and groups, plus a tournament bracket for PE units.
 
 ---
 
 ## Status
+
+**2026-08-11 — Pass 2, Round 3 (session `m3r8ro`).** Shipped the
+overwrite guard (backlog rank 3) — a genuine data-loss bug, not a polish
+item. `newProject(name)` did `state = defaultProject(name)` then `save()`,
+and `save()` writes `store.projects[state.name] = state` unconditionally,
+so typing the name of a unit that was already saved **destroyed it** —
+stations, groups, bracket and all — with no confirmation and nothing to
+undo it with. (The toolbar's Undo covers the in-memory state, not the
+clobbered store entry.)
+
+- Both directions are now guarded by one `uniqueProjectName(base, ignore)`
+  helper. **New unit** on a colliding name asks first — "a unit named X is
+  already saved; create X (2) instead?" — and cancelling creates nothing
+  and destroys nothing.
+- **The rename field had the same hole from the other side**, and it was
+  the sneakier of the two: `delete store.projects[oldName]` followed by
+  `store.projects[newName] = state` meant renaming a unit onto another
+  unit's name silently wrote over that unit. It suffixes now, and when the
+  only free suffix is the name the unit already has, the rename simply
+  doesn't take and the field snaps back — with a message saying why, rather
+  than appearing to have done nothing.
+- **Ordering bug found while in there:** `newProject()` called
+  `refreshSwitcher()` *before* `save()`, and the switcher lists what is in
+  storage — so a brand-new unit was missing from its own dropdown until
+  some later action happened to refresh it. Save now runs first.
+- A `#msg.warn` style was added; `showMsg(..., 'warn')` had no matching CSS
+  rule, so a warning would have been set on a `display:none` element.
+- Verified by `Tools/pe-tournament-stations/test/smoke-pe-stations.mjs`
+  (14 checks): the destructive thing is actually done in the test and the
+  saved unit's station count is asserted intact afterwards.
 
 Reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped the station template library, fitness/score capture, gym-legible
@@ -25,7 +57,8 @@ are tagged **Done** below.
 - **Bracket** generation from the groups or a typed list, with click-to-advance
   and auto-advance
 - Prints: **station cards**, the rotation schedule, the bracket
-- Saved units (`pe-tournament-stations`)
+- Saved units (`pe-tournament-stations`), with New/rename guarded against
+  overwriting an existing saved unit — a collision is suffixed, never merged
 
 ## Quick Wins
 
