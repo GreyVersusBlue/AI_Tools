@@ -299,6 +299,22 @@
       <summary style="cursor:pointer;font-weight:600;color:var(--color-warn);">Import warnings</summary>
       <ul id="import-warning-list" style="margin:0.4rem 0 0 1.1rem;line-height:1.6;opacity:0.8;"></ul>
     </details>
+    <details id="column-mapping" class="import-warnings" hidden style="margin-top:0.6rem;font-size:0.76rem;">
+      <summary style="cursor:pointer;font-weight:600;">Column mapping</summary>
+      <p style="margin:0.5rem 0 0.6rem;opacity:0.8;">If a gradebook export changed column order and the importer guessed
+        wrong, set the columns explicitly here from the first row below, then re-import.</p>
+      <div id="column-mapping-preview" style="overflow-x:auto;margin-bottom:0.6rem;"></div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:end;">
+        <label style="display:flex;flex-direction:column;gap:0.2rem;">Student name column
+          <select id="map-name-col" class="input"></select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:0.2rem;">Quarter 1 starts at column
+          <select id="map-q1-col" class="input"></select>
+        </label>
+        <button class="btn btn-secondary" id="apply-mapping-btn" type="button">Re-import with this mapping</button>
+        <button class="btn btn-secondary" id="reset-mapping-btn" type="button">Reset to auto-detect</button>
+      </div>
+    </details>
   </div>
 
   <div id="students-container"></div>
@@ -387,6 +403,7 @@ import {
   getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
   LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
   isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
+  findQuarterWindow, splitRow,
 } from './final-grade-checker/grade-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
@@ -845,10 +862,53 @@ function showWarnings(warnings) {
   box.open = true;   // every warning is visible; the old version showed only the first
 }
 
+// ── Column mapping (P13) ────────────────────────────────────
+// Explicit override for a gradebook export whose column order the
+// auto-detect heuristic in findQuarterWindow guesses wrong for. `null` means
+// "keep auto-detecting" — the default, unchanged behavior.
+let columnOverride = null;
+
+function firstDataCols(raw) {
+  const lines = String(raw ?? '').split('\n').filter(l => l.trim().length > 0);
+  return lines.length ? splitRow(lines[0]) : null;
+}
+
+function renderColumnMapping(raw) {
+  const details = document.getElementById('column-mapping');
+  const cols = firstDataCols(raw);
+  if (!cols || cols.length < 2) { details.hidden = true; return; }
+  details.hidden = false;
+
+  const preview = document.getElementById('column-mapping-preview');
+  preview.innerHTML = '<table style="border-collapse:collapse;font-size:0.74rem;"><thead><tr>' +
+    cols.map((_, i) => `<th style="padding:2px 6px;border:1px solid var(--color-border,#ccc);text-align:left;">${i + 1}</th>`).join('') +
+    '</tr></thead><tbody><tr>' +
+    cols.map(c => `<td style="padding:2px 6px;border:1px solid var(--color-border,#ccc);">${escHtml(c || '·')}</td>`).join('') +
+    '</tr></tbody></table>';
+
+  const auto = findQuarterWindow(cols);
+  // Auto-detect had to move the window from the documented position — pop
+  // the panel open so the teacher notices the guess instead of hunting for
+  // it. An explicit mapping the teacher already chose is left as they left it.
+  if (!columnOverride && auto.moved) details.open = true;
+  const nameVal = Math.min(columnOverride ? columnOverride.nameCol : 1, cols.length - 1);
+  const q1Val   = Math.min(columnOverride ? columnOverride.q1Col   : auto.start, cols.length - 1);
+
+  const optionsHtml = cols.map((c, i) =>
+    `<option value="${i}">${i + 1}. ${escHtml(String(c || '(blank)').slice(0, 24))}</option>`).join('');
+  const nameSel = document.getElementById('map-name-col');
+  const q1Sel   = document.getElementById('map-q1-col');
+  nameSel.innerHTML = optionsHtml;
+  q1Sel.innerHTML   = optionsHtml;
+  nameSel.value = String(nameVal);
+  q1Sel.value   = String(q1Val);
+}
+
 function doImport() {
   const raw = document.getElementById('import-area').value;
-  if (!raw.trim()) { setStatus('Nothing to import.', 'warn'); showWarnings([]); return; }
-  const { students, warnings } = parsePastedData(raw);
+  if (!raw.trim()) { setStatus('Nothing to import.', 'warn'); showWarnings([]); document.getElementById('column-mapping').hidden = true; return; }
+  renderColumnMapping(raw);
+  const { students, warnings } = parsePastedData(raw, columnOverride);
   if (students.length === 0) {
     setStatus('Could not read any students. Check the format and try again.', 'err');
     showWarnings(warnings);
@@ -1577,6 +1637,21 @@ on('clear-paste-btn', () => {
   document.getElementById('import-area').value = '';
   setStatus('', '');
   showWarnings([]);
+  columnOverride = null;
+  document.getElementById('column-mapping').hidden = true;
+});
+on('apply-mapping-btn', () => {
+  columnOverride = {
+    nameCol: parseInt(document.getElementById('map-name-col').value, 10),
+    q1Col: parseInt(document.getElementById('map-q1-col').value, 10),
+  };
+  doImport();
+  document.getElementById('column-mapping').open = true;
+});
+on('reset-mapping-btn', () => {
+  columnOverride = null;
+  doImport();
+  document.getElementById('column-mapping').open = true;
 });
 on('print-btn', () => window.print());
 on('print-slips-btn', printSlips);
