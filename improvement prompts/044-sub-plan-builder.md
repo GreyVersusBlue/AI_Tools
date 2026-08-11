@@ -1,14 +1,51 @@
 # Improvement Prompts — 044 — Sub Plan Builder
 
 **Tool file:** `Tools/044-Sub Plan Builder.html`
-**Support folder:** `Tools/sub-plan-builder/lib/jszip.min.js` (vendored JSZip
-3.10.1 — no longer loaded from cdnjs)
+**Support folder:** `Tools/sub-plan-builder/test/smoke-share.mjs`
+(`npm run test:sub-plan`). JSZip now comes from the site-wide
+`_shared/vendor/jszip/` copy rather than a per-tool `lib/`.
 
 **Current description (from README):** Fill in the boilerplate once (schedule, emergency info, phone numbers), then add today's lesson and export a ready-to-print sub plan as a Word doc.
 
 ---
 
 ## Status
+
+**2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **share a plan by link or
+QR** (backlog rank 11, platform theme P3). A finished sub plan almost always
+has to reach somebody else — the front office, the department chair, whoever is
+covering first period — and the only ways out of the tool were a .docx download
+and a text blob to paste. Both mean an attachment.
+
+- **"Copy link to this plan" and "Show QR code"** in a new share card. The plan
+  rides inside the URL via `_shared/state-link.js`; nothing is uploaded and the
+  payload never leaves the two browsers that see the link.
+- **What travels and what does not was the real design decision.** The link
+  carries the standing details (a plan read without the room number, the
+  periods and the phone numbers is not a plan anyone can act on), the dates,
+  and every day's fields. It does **not** carry the Student Notes box. That box
+  is documented on the page as never being stored anywhere, and a link *is*
+  storage — it lands in a chat log, an email, a browser history. The saved
+  history already draws that line; this draws the same one, and the suite
+  asserts the note is absent from the URL, from the decoded payload, and from
+  the receiving browser.
+- **Opening a link is confirm-gated** and says who it is from and how many days
+  it covers, because it replaces the standing details saved in that browser.
+  Declining changes nothing. The parameter is consumed on read, so a refresh
+  cannot re-import the plan over whatever the receiving teacher has since done.
+- **The QR has a real size limit and says so.** A plan with several days of
+  detailed notes runs past what any scanner will read; `qrcode.js` throws and
+  the tool names the failure and points at the copy-link button rather than
+  drawing an unscannable grey square. A two-day plan with ordinary notes came
+  out at 2.1 KB and encodes fine.
+- A payload copied to the clipboard is a deep copy of `settings`, so editing
+  the page afterwards cannot retroactively change a link already sent.
+- **Verified** by `Tools/sub-plan-builder/test/smoke-share.mjs` (40 checks):
+  the link is built, decoded, and then actually opened in three further browser
+  contexts — one that accepts, one that declines, one handed a mangled link —
+  plus both QR branches.
+- **Not done:** the link carries no version negotiation beyond `v: 1`, and
+  there is no "share just one day of a multi-day absence" option.
 
 **2026-08-11 — Round 2 (session `gb5c6e`).** Shipped a scoped slice of
 "Templates by day type" (Major Features): a per-day "Day type" select
@@ -101,6 +138,9 @@ feedback slip; shareable link/QR; standing-details versioning.
 - Plain-text "quick copy" mode with clipboard copy and **Read aloud**
   (`speechSynthesis`) — also multi-day aware
 - Print / Save as PDF
+- **Share the whole plan by link or QR code** (`_shared/state-link.js`) —
+  standing details, every day out, every period note, but never the Student
+  Notes box; opening a link is confirm-gated and consumes the parameter
 - Plan **history** (`subPlanBuilder.history.v1`) with load/delete — one entry
   per day out; also the record `045-sub-binder-generator.html` reads to find "the
   plan for date X"
