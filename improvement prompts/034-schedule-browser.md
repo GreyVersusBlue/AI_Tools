@@ -9,6 +9,19 @@
 
 ## Status
 
+### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
+
+No changes to this file this round — the work went into
+`035-schedule-visualizer.html`'s publisher instead, starting the R61–R63
+backport this file's own notes (and Round 7's) flagged as the highest-
+value, highest-risk item outstanding for this tool pair. Phase 1 (the
+staleness banner) is done; see `035-schedule-visualizer.md`'s Status for
+what shipped, what was verified, and the recommended order for the
+remaining phases (copy/share links, Common Planning/Compare mode, PNG
+download). This file — the real, currently-shipped browser — remains the
+de facto source of truth for those still-unported features until the
+backport finishes; nothing here changed that.
+
 **2026-08-10 — Round 7 (PR #60): four Quick Wins shipped directly to this
 file, plus a critical bug found and fixed in the publisher (see
 `035-schedule-visualizer.md`).**

@@ -9,6 +9,41 @@
 
 ## Status
 
+### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
+
+- **Done — A/B day cycle overlay.** The Quick Win flagged as "the single
+  most-asked calendar question in a block-schedule school." A new "A/B Day
+  Cycle" card lets the teacher name one known A-day or B-day date; the
+  cycle then alternates on every real school day (weekday, not tagged "No
+  school" by a Day Type — reusing the same flag the instructional-day
+  counter already reads) and skips weekends and no-school days without
+  losing sync, so the day after a break correctly continues the
+  alternation as if the break weren't there. Every calendar cell gets a
+  small A/B badge (month view only — the year-grid view was left alone to
+  avoid cluttering its already-tiny cells; see below), and the stats line
+  adds "today is an X day" when today's in range and the cycle is
+  enabled. Stored as `cal.abCycle`; `scv-store.js`'s `isValid()` only
+  checks `meta`/`dayTypes`/`days`, so old saved calendars load fine with
+  the feature simply off until a teacher sets an anchor date.
+
+Verified end-to-end in headless Chromium (served over `http://`, not
+`file://` — this tool's `<script type="module">` imports are blocked by
+CORS under `file://`, unlike 034/035's non-module tools): anchoring
+2026-08-31 (a Monday) as an A day correctly alternates A/B/A/B/A through
+the week, skips both weekend days with no badge, and correctly continues
+the cycle as B on 09-08 after Labor Day (09-07, tagged Holiday/No School)
+consumed no cycle slot — confirming the skip-and-resync logic, not just
+plain alternation. The setting and its computed badges both survive a
+full page reload via localStorage.
+
+**Where a future round should pick up:** the A/B badge on the year-grid
+view (skipped this round for space/clutter reasons) and week-at-a-glance
+print are both natural, bounded next steps on the printing/display side.
+The bigger items — the pacing layer, grading-period awareness for other
+tools to read, and bell schedules per day type — are all still open
+(Major Features below) and are where the real cross-tool leverage (P7)
+is.
+
 **2026-08-10 — Round 6 (PR #58): five Quick Wins shipped.** `scv-seed.js`'s
 `DEFAULT_DAY_TYPES` gained a `noSchool` boolean (set on `holiday` and
 `workday`, unset elsewhere); every other change lives in the tool's own
@@ -86,10 +121,11 @@ session.
   flag rather than the range boundaries alone.)*
 - **Done —** **Count days by type** in the legend (12 half days, 4 workdays), which
   doubles as a data-entry check.
-- **A/B day cycle overlay.** The rest of the site (Schedule Browser, Schedule
+- **Done —** **A/B day cycle overlay.** The rest of the site (Schedule Browser, Schedule
   Visualizer) is built around A/B days; this calendar doesn't know about them,
   so it can't answer "is the Monday after break an A day?" — which is the
-  single most-asked calendar question in a block-schedule school.
+  single most-asked calendar question in a block-schedule school. *(Month
+  view only — year-grid badges are still open.)*
 - **Week-at-a-glance print** in addition to the month/year views.
 - **Done —** **Multi-select / drag to paint a range** of days with one type, instead of
   clicking each day of a week-long break. *(Click-then-shift-click, not a
