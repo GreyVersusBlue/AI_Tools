@@ -185,7 +185,11 @@ above, add its row here; when the round ships, the row moves down to
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Final Grade Checker | `yar0mb` | 2026-08-11 01:29 UTC | `claude/tools-036-040-improvements-yar0mb` |
+| Grade Distribution Visualizer | `yar0mb` | 2026-08-11 01:29 UTC | `claude/tools-036-040-improvements-yar0mb` |
+| Data Table → Chart Builder | `yar0mb` | 2026-08-11 01:29 UTC | `claude/tools-036-040-improvements-yar0mb` |
+| Vocab & Conjugation Drill Generator | `yar0mb` | 2026-08-11 01:29 UTC | `claude/tools-036-040-improvements-yar0mb` |
+| Vocabulary Flashcard & Word Wall Generator | `yar0mb` | 2026-08-11 01:29 UTC | `claude/tools-036-040-improvements-yar0mb` |
 
 ---
 
