@@ -315,9 +315,9 @@ is 56,963 bytes (SHA-256 `bdee8deb723d3b76015ecaefb974a0a438fe8889280914a06b60d7
 `_shared/vendor/jszip/jszip.min.js` is 97,630 bytes (SHA-256
 `acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e`).
 
-### Phase 2 — Extract service-worker registration (mechanical, ~83 files)
+### Phase 2 — Extract service-worker registration (mechanical, ~83 files) — ✅ DONE 2026-08-11
 - [x] Create `_shared/sw-register.js` (the existing 5-line snippet).
-- [~] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR. (60/81 numbered tools done: Rounds 2a–2d.)
+- [x] Replace inline snippet with `<script src="../_shared/sw-register.js" defer></script>` in batches of ~15 files per PR. **All 81 numbered tools plus the 2 companion pages done: Rounds 2a–2f.**
 - [x] Verify snippet is byte-identical everywhere first (`grep -B0 -A4 serviceWorker`); any variant gets reviewed, not blindly replaced.
 
 **Round 2a (2026-08-11):** hashed the extracted snippet (CRLF-normalized) across
@@ -426,6 +426,53 @@ this change) — no new errors introduced by any of the 15 migrations.
 snippet (`076`–`081`), plus the 2 companion pages (`classroom-timer/mirror.html`,
 `escape-room-builder/monitor.html`) still pending a decision on their relative
 path.
+
+**Round 2f (2026-08-11):** re-hashed the inline snippet (CRLF-normalized) in
+the last 6 numbered tools (`076`–`081`) and, separately, the 2 companion
+pages — all 6 numbered tools identical to the Round 2a–2e block; the 2
+companion pages identical to *each other* but on the `../../sw.js` variant
+already flagged in Round 2a (they sit one folder deeper than the numbered
+tools). Migrated all 8, finishing Phase 2.
+
+**Resolved the companion-page relative-path question** left open since Round
+2a: rather than keep a second copy of `sw-register.js` at a different
+relative depth (or hardcode `../../_shared/sw-register.js` pointing at a
+script whose own internal path assumption would still be wrong), fixed
+`_shared/sw-register.js` itself to resolve `sw.js` off the *script's own URL*
+(`new URL('../sw.js', document.currentScript.src)`) instead of the *page's*
+URL. `_shared/` always sits one level below the repo root regardless of how
+deeply nested the page that loads it is, so this makes the one canonical
+`sw-register.js` correct at any depth — the numbered tools' `<script
+src="../_shared/sw-register.js">` and the companion pages' `<script
+src="../../_shared/sw-register.js">` now both resolve to the same absolute
+`_shared/sw-register.js`, which registers the same absolute `sw.js`
+regardless of which relative path loaded it. Verified in the browser
+(below): `navigator.serviceWorker.getRegistrations()` on both companion
+pages returns `active.scriptURL` pointing at the site root `sw.js`, not a
+nonexistent `Tools/sw.js` or `Tools/classroom-timer/sw.js`. No new
+`_shared/vendor`-style file needed — this is a one-file fix that also
+future-proofs any tool added later at a deeper path.
+
+No new files needed in `PRECACHE_URLS` — `_shared/sw-register.js` and both
+companion pages were already listed (added in Rounds 2a and prior). Bumped
+`CACHE_VERSION` v51 → v52, both for the 8 changed pages and because
+`_shared/sw-register.js`'s own content changed.
+
+Verified in a real browser (local Python static server, port 8199, service
+worker active) for all 8 migrated files: `_shared/sw-register.js` requested
+and returned 200 on every page, zero console errors beyond the same
+pre-existing 6-error `assets/fonts/*.woff2` baseline (confirmed again this
+round on `index.html`, unrelated to this change), and
+`navigator.serviceWorker.getRegistrations()` confirmed `sw.js` registered
+against the site root scope on every page including both companion pages.
+Reloaded `index.html` fresh afterward: `caches.keys()` showed exactly one
+cache, `aplp-precache-v52`, with `177/177` `PRECACHE_URLS` entries present —
+no stale `v51` cache left behind, no missing entries.
+
+**Phase 2 is complete: 0 numbered tools and 0 companion pages remain with an
+inline service-worker registration snippet** (repo-wide `grep -rl
+"serviceWorker" Tools/` now only matches `Tools/board-check/harness.mjs`, a
+test helper unrelated to this pattern).
 
 ### Phase 3 — Theme adoption (~84 files, needs a variance audit first)
 - [ ] Sub-audit: diff each tool's `:root` block against `_shared/theme.css`. Bucket into
