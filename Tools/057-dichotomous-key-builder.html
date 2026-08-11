@@ -95,10 +95,23 @@
     <input type="text" id="keyTitle" placeholder="e.g. Classifying Common Animals">
   </div>
 
+  <div class="card" id="warningsCard" style="display:none;">
+    <h2 style="color:var(--err);">Possible authoring issues</h2>
+    <ul id="warningsList" style="margin:0;padding-left:1.2rem;font-size:.86rem;"></ul>
+  </div>
+
   <div class="card">
     <h2>Steps</h2>
     <div id="stepsWrap"></div>
     <button class="secondary" id="addStepBtn">+ Add step</button>
+  </div>
+
+  <div class="card">
+    <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;">
+      <input type="checkbox" id="includeSpecimens" checked style="width:auto;margin:0;">
+      Include classification exercise (specimen worksheet + answer key) when printing
+    </label>
+    <p class="hint" style="margin:.3rem 0 0;">Uncheck to print just the reference key &mdash; e.g. to demonstrate what a dichotomous key is.</p>
   </div>
 </div>
 
@@ -110,7 +123,7 @@
   var STORE_KEY = 'dkb_key_v1';
 
   var els = {};
-  ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea', 'warningsCard', 'warningsList', 'includeSpecimens'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { title: '', steps: [] };
 
@@ -167,9 +180,43 @@
             : '<div></div>') +
           '</div>';
       }
-      return '<div class="step-block"><h3>Step ' + (i + 1) + '</h3>' + choiceHtml('a', step.a) + choiceHtml('b', step.b) +
+      return '<div class="step-block"><div class="btnrow" style="justify-content:space-between;align-items:center;margin-bottom:.5rem;">' +
+        '<h3 style="margin:0;">Step ' + (i + 1) + '</h3>' +
+        '<span class="btnrow">' +
+        '<button type="button" class="secondary small" data-move-up="' + step.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr; Move up</button>' +
+        '<button type="button" class="secondary small" data-move-down="' + step.id + '"' + (i === state.steps.length - 1 ? ' disabled' : '') + '>&darr; Move down</button>' +
+        '</span></div>' + choiceHtml('a', step.a) + choiceHtml('b', step.b) +
         '<button type="button" class="danger small" data-del-step="' + step.id + '" style="margin-top:.4rem;">Remove step</button></div>';
     }).join('');
+    renderWarnings();
+  }
+
+  function computeWarnings() {
+    var warnings = [];
+    state.steps.forEach(function (step, i) {
+      var n = i + 1;
+      var reachable = i === 0 || state.steps.some(function (s) {
+        return s.a.leadsTo === step.id || s.b.leadsTo === step.id;
+      });
+      if (!reachable) warnings.push('Step ' + n + ' is unreachable &mdash; no choice anywhere in the key leads to it.');
+      ['a', 'b'].forEach(function (letter) {
+        var choice = step[letter];
+        var label = n + letter;
+        if (!choice.leadsTo && choice.result.trim() && !choice.examples.trim()) {
+          warnings.push('Couplet ' + label + ' ("' + escapeHtml(choice.result.trim()) + '") has no example specimens, so it won&rsquo;t appear in the classification worksheet.');
+        }
+        if (!choice.leadsTo && !choice.result.trim()) {
+          warnings.push('Couplet ' + label + ' has no &ldquo;leads to&rdquo; step and no result &mdash; it&rsquo;s a dead end.');
+        }
+      });
+    });
+    return warnings;
+  }
+
+  function renderWarnings() {
+    var warnings = computeWarnings();
+    els.warningsCard.style.display = warnings.length ? 'block' : 'none';
+    els.warningsList.innerHTML = warnings.map(function (w) { return '<li>' + w + '</li>'; }).join('');
   }
 
   els.stepsWrap.addEventListener('input', function (ev) {
@@ -186,6 +233,19 @@
   });
 
   els.stepsWrap.addEventListener('click', function (ev) {
+    var moveUp = ev.target.getAttribute('data-move-up');
+    var moveDown = ev.target.getAttribute('data-move-down');
+    if (moveUp || moveDown) {
+      var mid = moveUp || moveDown;
+      var pos = state.steps.findIndex(function (s) { return s.id === mid; });
+      var swapWith = moveUp ? pos - 1 : pos + 1;
+      if (pos < 0 || swapWith < 0 || swapWith >= state.steps.length) return;
+      var tmp = state.steps[pos];
+      state.steps[pos] = state.steps[swapWith];
+      state.steps[swapWith] = tmp;
+      save(); renderSteps();
+      return;
+    }
     var id = ev.target.getAttribute('data-del-step');
     if (!id) return;
     state.steps = state.steps.filter(function (s) { return s.id !== id; });
@@ -226,17 +286,20 @@
         '<div class="key-couplet"><span class="cnum">' + n + 'b.</span> ' + escapeHtml(step.b.text || '&hellip;') + ' &mdash; <em>' + leadsToLabel(step.b) + '</em></div>';
     }).join('');
 
+    var includeSpecimens = els.includeSpecimens.checked;
     var specimens = [];
-    state.steps.forEach(function (step) {
-      ['a', 'b'].forEach(function (letter) {
-        var choice = step[letter];
-        if (!choice.leadsTo && choice.examples) {
-          choice.examples.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (name) {
-            specimens.push({ name: name, result: choice.result || '' });
-          });
-        }
+    if (includeSpecimens) {
+      state.steps.forEach(function (step) {
+        ['a', 'b'].forEach(function (letter) {
+          var choice = step[letter];
+          if (!choice.leadsTo && choice.examples) {
+            choice.examples.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (name) {
+              specimens.push({ name: name, result: choice.result || '' });
+            });
+          }
+        });
       });
-    });
+    }
     var shuffled = shuffle(specimens.slice());
     var worksheetRows = shuffled.map(function (s) { return '<tr><td>' + escapeHtml(s.name) + '</td><td>&nbsp;</td></tr>'; }).join('');
     var keyRows = shuffled.map(function (s) { return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + escapeHtml(s.result) + '</td></tr>'; }).join('');

@@ -2744,6 +2744,19 @@ function planAnswerList(box, count, preferredColumns) {
   return { columns, lineH };
 }
 
+/** Shrinks the font (down to `minPx`) until `text` fits in `maxWidth` — used
+    for answer-key text, which unlike a worksheet blank can't just leave the
+    overflow off the line: a long place name needs to actually be readable. */
+function fitFontSizeToWidth(ctx, text, maxWidth, basePx, minPx, fontFamily) {
+  let px = basePx;
+  while (px > minPx) {
+    ctx.font = `${px}px ${fontFamily}`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    px -= 1;
+  }
+  return px;
+}
+
 function drawAnswerLines(ctx, box, items, showAnswers, plan) {
   const { columns, lineH } = plan;
   const colW = (box.w - (columns - 1) * 10) / columns;
@@ -2766,7 +2779,9 @@ function drawAnswerLines(ctx, box, items, showAnswers, plan) {
     ctx.lineTo(x + colW - 6, y + 3.5);
     ctx.stroke();
     if (showAnswers) {
-      ctx.font = `${fontPx}px sans-serif`;
+      const availW = Math.max(20, colW - numW - 2 - 4);
+      const fitPx = fitFontSizeToWidth(ctx, item.label.text, availW, fontPx, 8, 'sans-serif');
+      ctx.font = `${fitPx}px sans-serif`;
       ctx.fillStyle = '#1f2430';
       ctx.fillText(item.label.text, x + numW + 2, y);
     }
@@ -2873,8 +2888,11 @@ async function renderWorksheetPage({ version, versions, showAnswers, settings, d
   const contentBottom = H - margin - (creditText ? 16 : 0);
 
   // Word bank sits directly under the header, full width, so both the map
-  // panel and the answer lines below it work with what's left.
-  if (settings.wordBank && items.length) {
+  // panel and the answer lines below it work with what's left. Skipped on
+  // the answer key: every answer is already spelled out on the answer
+  // lines there, so the bank is a redundant wasted inch of paper on that
+  // page specifically (the worksheet page still gets it).
+  if (settings.wordBank && items.length && !showAnswers) {
     const words = shuffled(items.map(i => i.label.text), version * 7717 + 13);
     const plan = planWordBank(ctx, contentW, words);
     drawWordBank(ctx, { x: margin, y, w: contentW }, words, plan);

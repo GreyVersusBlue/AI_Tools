@@ -392,29 +392,19 @@ has shipped and sits empty. Each new tool already has its own `improvement
 prompts/<tool>.md` with a first-build Status, but none of the 35 are in the
 "Not yet touched" list below yet — Devon wants to fold them into the round
 system as a deliberate batch rather than mixed in silently with this reset.
-Leave them out until told otherwise:
+Leave them out until told otherwise. **Exceptions:** 047–051, 053–057, and
+063–067 were each pulled out of this batch and given a round at Devon's
+direct request (see the "Held-out batch" and "063–067" round entries
+below, in the same spirit as tool 046's extra Rounds 9–10 in Pass 1) — all
+three groups are done and out of this list; the other 20 are still
+untouched:
 
-Art Critique Worksheet Generator (`047-art-critique-worksheet-generator.md`) ·
-Student Art Portfolio Label & QR Tag Maker (`048-art-portfolio-label-maker.md`) ·
-Book Tasting Menu Generator (`049-book-tasting-menu-generator.md`) ·
-Government/Civics Simulation Role Card Generator (`050-civics-role-card-generator.md`) ·
-Classroom Label Maker, Target Language (`051-classroom-label-maker.md`) ·
 Cognates & False Friends Reference List Builder (`052-cognates-false-friends-builder.md`) ·
-Cultural Trivia Card Generator (`053-cultural-trivia-card-generator.md`) ·
-Current Events Discussion Guide Generator (`054-current-events-discussion-guide-generator.md`) ·
-Daily Editing / DOL Warm-Up Generator (`055-daily-editing-warmup-generator.md`) ·
-DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`) ·
-Dichotomous Key Builder (`057-dichotomous-key-builder.md`) ·
 Duty Roster Builder (`058-duty-roster-builder.md`) ·
 Scientific Method / Experiment Design Planner (`059-experiment-design-planner.md`) ·
 Fitness & Skill Assessment Tracker (`060-fitness-skill-assessment-tracker.md`) ·
 Fraction–Decimal–Percent Conversion Drill Generator (`061-fraction-decimal-percent-drill-generator.md`) ·
 Geography Bee / Map Skills Quiz Generator (`062-geography-bee-quiz-generator.md`) ·
-Grammar Mad Libs Generator (`063-grammar-mad-libs-generator.md`) ·
-Historical Figure / Country Trading Card Maker (`064-historical-trading-card-maker.md`) ·
-Lab Report Template Builder (`065-lab-report-template-builder.md`) ·
-Math "Find the Mistake" Warm-Up Generator (`066-math-find-the-mistake-generator.md`) ·
-Music Sight-Reading / Rhythm Warm-Up Generator (`067-music-sightreading-generator.md`) ·
 Parent/Guardian Contact Log (`068-parent-contact-log.md`) ·
 PE Warm-Up Circuit Card Generator (`069-pe-warmup-circuit-generator.md`) ·
 Peer Feedback / Editing Checklist Generator (`070-peer-feedback-checklist-generator.md`) ·
@@ -520,6 +510,43 @@ download).
 list — each still has substantial Major Features/Moonshot items open in
 its own file — so none moved to `stable tools/` this round.
 
+### Pass 2 — Round 3 — 2026-08-11 01:29 UTC — session `yar0mb` — PR #82
+
+Tools 036–040: the grade/data cluster (Final Grade Checker, Grade
+Distribution Visualizer, Data Table → Chart Builder) plus the
+vocabulary-drill pair (Vocab & Conjugation Drill Generator, Vocabulary
+Flashcard & Word Wall Generator). One scoped, independently-verified Quick
+Win per tool, each picked up from that tool's own Pass 1 "Skipped —
+deferred" list rather than invented fresh. Every change was verified with
+`node --check` (or the full 150-test `grade-math.test.mjs` suite for 036)
+plus a headless Playwright pass (page load, the actual interaction, zero
+console errors) served over a local HTTP server — `file://` module imports
+are blocked by CORS in a headless Chromium sandbox, which is worth knowing
+before assuming a smoke test needs a real server for this codebase's
+`<script type="module">` tools specifically (`Tools/036-final_grade_checker.html`
+is the only one of the five; the other four are classic non-module
+`<script>` tags and load fine over `file://`, though the shared
+Google-Fonts `@import` failure noted in `_site-requests.md` still fires
+and was filtered out of the pass/fail check rather than fixed).
+
+| Tool | File | What shipped |
+|---|---|---|
+| Final Grade Checker | `036-final-grade-checker.md` | Explicit column mapping on import (P13) — an optional `{nameCol, q1Col}` override in `parsePastedData`, plus a UI panel that previews the first row and lets a teacher override auto-detect when a gradebook export's column order changes. |
+| Grade Distribution Visualizer | `037-grade-distribution-visualizer.md` | 15-second in-memory undo on Delete assignment (P11), same pattern as `018-qr-scavenger-hunt-builder.html`'s "Undo clear"; the existing confirm dialog stays. |
+| Data Table → Chart Builder | `038-data-chart-builder.md` | Same undo pattern (P11) applied to Delete dataset. |
+| Vocab & Conjugation Drill Generator | `039-vocab-conjugation-drill.md` | Accent-tolerant answer checking on the conjugation self-quiz — a three-state `answerMatch()` (correct/close/wrong) via Unicode NFD diacritic-stripping; scoring stays strict, only the feedback message changed. |
+| Vocabulary Flashcard & Word Wall Generator | `040-vocab-flashcard-generator.md` | Alignment test page — one numbered front/back sheet pair reusing the real double-sided print's own mirroring math, to check duplex settings before a full class set. |
+
+**25 of 46 (Pass 2) tools done** (20 from the prior three rounds + these
+5). **21 to go.** None of the five cleared their own list — each still has
+at least one deferred Quick Win or a full Major Features/Moonshot section
+open — so none moved to `stable tools/` this round. Two tools (037, 038)
+independently picked up the identical P11 undo pattern this round; nothing
+shared was extracted, matching how the rest of this file's "Threads left
+open" section already treats the read-only cross-tool bridge pattern —
+copy-paste-and-adapt, not a shared library, until a third or fourth tool
+wants the same thing.
+
 ### Held-out batch — Round 1 — 2026-08-11 01:29 UTC — session `8vo65u` — PR #74
 
 Devon directly assigned tools 047-051 to this session, ahead of the
@@ -603,6 +630,173 @@ the next session commits its own — two claims landing in the same
 UTC minute are invisible to each other. This is a real, now-observed
 failure mode of the claim system, not just a theoretical gap.
 
+### Pass 2 — Round 4 — 2026-08-11 02:20 UTC — session `gb5c6e` — branch `claude/tools-041-046-improvements-gb5c6e`
+
+Tools 041–046: the school-office print cluster (formula sheets,
+certificates, field trip slips) plus the sub-coverage pair (Sub Plan
+Builder, Sub Binder Generator) plus the Blank Map Generator. One scoped
+Quick Win or Major Feature per tool, picked from each tool's own
+"where the next round should pick up" note. Every change was verified with
+`node --check`/syntax checks and a headless Playwright pass exercising the
+actual new interaction (not just page load) — an .ics file byte-parsed for
+correct VEVENT structure, a real worksheet+answer-key PDF generated
+end-to-end through the actual UI with long place-name labels, per-day state
+round-tripped through Sub Plan Builder's history storage, etc. — zero
+console errors across all six.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Formula Reference Sheet Builder | `041-formula-sheet-builder.md` | Print size selector (Full page / Half sheet 2-up / Index card 4-up) tiling identical copies onto one physical letter page with cut lines; auto-fit now targets the selected page's actual height. |
+| Certificate & Award Maker | `042-certificate-award-maker.md` | Uploadable signature image printed above the signature line (reuses the logo downscaler); toggleable print alignment guides (corner registration marks) for pre-printed certificate stock. |
+| Field Trip Permission Slip Generator | `043-field-trip-permission-slip.md` | `.ics` calendar export — one event for the trip, plus a separate slip-due reminder event with a live missing-count snapshot, reusing Lab Safety Contract Tracker's VCALENDAR pattern. |
+| Sub Plan Builder | `044-sub-plan-builder.md` | Per-day "Day type" template selector (Testing / Video / Emergency no-notice) that fills Overview/Schedule/Materials with confirm-gated starter content; tracked per-day and round-tripped through history. |
+| Sub Binder / Day Bundle Generator | `045-sub-binder-generator.md` | "Print bundle for all N days" — shared sections print once, the date-specific Calendar+Lesson sections print once per day with a divider header, reusing the single-day render functions. |
+| Blank Map Generator | `046-blank-map-generator.md` | Answer-key page no longer prints a redundant word bank; answer-key text now shrinks to fit its column instead of overflowing on long place names. |
+
+**31 of 46 (Pass 2) tools done** (25 before this round, including session
+`yar0mb`'s concurrent Round 3 on tools 036–040, + these 6). **15 to go.**
+None of the six cleared their list — each still has substantial Major
+Features/Moonshot items open in its own file — so none moved to
+`stable tools/` this round. Sub Binder Generator's own file flags the P8
+cross-tool handoff interface as now due for a third consecutive round; see
+its Open Questions.
+
+### 063–067 — 2026-08-11 01:30–~03:20 UTC — session `9iiyas` — branch `claude/tools-063-067-improvements-9iiyas`
+
+Devon assigned this session tools 063–067 directly, pulling them out of the
+35-tool Ideas-Backlog batch that's otherwise being held back from the round
+system (see the "Exception" note above) — so this round is **not** part of
+the 46-tool Pass 2 count/tally above, and doesn't move that "N to go"
+number. Each tool got its top 2–3 Quick Wins from its own `improvement
+prompts/<tool>.md`, implemented by five parallel subagents (one per tool,
+each scoped to touch only its own `.html` file), independently reviewed and
+re-verified with a fresh headless-Playwright pass by the orchestrating
+session before each commit (not just trusting the sub-agent's own
+self-report) — one bug in the reviewer's own beat-accuracy test script
+turned up a wrong Unicode codepoint for the half-note glyph, not a bug in
+the shipped code, worth noting so a future reviewer doesn't chase the same
+false lead.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Grammar Mad Libs Generator | `063-grammar-mad-libs-generator.md` | Custom stories now persist to `localStorage`; a visible, click-to-insert tag reference row next to the custom-story textarea; 3 new built-in templates (7 total). |
+| Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` | Row-mirrored duplex front/back printing (adapted from Vocabulary Flashcard Generator's `VocabLayout.mirrorPageRows`, copied in rather than shared, so the file stays self-contained); edit-an-existing-card in place; a stat-overflow warning before print. |
+| Lab Report Template Builder | `065-lab-report-template-builder.md` | Up/down reorder buttons on every list (materials, procedure, columns, conclusion); multiple named saved templates (mirrors Formula Sheet Builder / Rubric Builder's storage shape) with automatic one-time migration of the old single-template key; a print preview modal that reuses the real print markup. |
+| Math "Find the Mistake" Warm-Up Generator | `066-math-find-the-mistake-generator.md` | An 8-category topic taxonomy with a filter panel scoping both projector shuffle and worksheet generation; a two-stage reveal (corrected work, then explanation, as separate clicks) in projector mode only — worksheet/answer-key mode still shows both together; per-built-in disable/enable without deleting. |
+| Music Sight-Reading / Rhythm Warm-Up Generator | `067-music-sightreading-generator.md` | Generation settings (time signature, note pool, clef, range, counts, active tab) now persist to `localStorage` — the only tool in the toolkit that previously had zero persistence; a "lock this pattern for printing" toggle per tab so a new on-screen pattern doesn't overwrite what's about to print; a big single-measure step-through display for call-and-response clapping drills. |
+
+None of the five cleared their own improvement-prompt list — each still has
+real Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each tool's own file for what's next.
+
+### Held-out batch — Round 2 — 2026-08-11 01:40 UTC — session `qer21r` — tools 053-057
+
+Not picked from the "Not yet touched" list below — these five are part
+of the 35 tools added at the Pass 2 reset and explicitly held out of the
+round system pending a deliberate fold-in (see the reset note above).
+Assigned directly by Devon rather than self-picked, same as Rounds 9/10
+in Pass 1. One or two scoped Quick Wins
+per tool, each independently verified via `node --check`-equivalent
+syntax parsing, a headless Playwright interaction smoke test (including a
+reload to confirm `localStorage` persistence survives), and a separate
+print-path smoke test confirming each new feature reaches the printed
+output — zero console errors across all of it.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Cultural Trivia Card Generator | `053-cultural-trivia-card-generator.md` | Category filter + card count settings persist across reloads; per-built-in Hide/Unhide toggle. |
+| Current Events Discussion Guide Generator | `054-current-events-discussion-guide-generator.md` | Stopword list grown ~5x to cut vocabulary-suggestion noise; live word count/read-time while pasting; "Clear & start over" button. |
+| Daily Editing / DOL Warm-Up Generator | `055-daily-editing-warmup-generator.md` | Built-ins tagged by error type with a filter (display + worksheet); error-type label shown alongside the reveal; worksheet count + filter persist; custom sentences editable in place. |
+| DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` | Reorder sources via up/down; dedicated final synthesis/essay-prompt field, printed as its own closing page. |
+| Dichotomous Key Builder | `057-dichotomous-key-builder.md` | Reorder steps via up/down; non-blocking validation warnings (unreachable steps, no-specimen results, dead-end choices); print-without-specimens checkbox. |
+
+None of the five cleared their Quick Wins list entirely, and all five
+still have open Major Features/Moonshot items, so none moved to
+`stable tools/` this round. See each file's own Status section for what's
+recommended next.
+
+### Tools 058–062 — 2026-08-11 01:41 UTC — session `kq3g3h` — Devon's direct request
+
+Devon directed this session to work tools 058&ndash;062 specifically,
+outside the normal pick-from-"Not yet touched" flow — these five are part
+of the 35-tool batch held out at the Pass 2 reset above ("Devon wants to
+fold them into the round system as a deliberate batch rather than mixed
+in silently with this reset"), so this round does **not** count toward
+the "N of 46 (Pass 2)" tally above and the 35-tool batch is still not
+folded into that rotation. One or two independently-verified Quick Wins
+per tool, each confirmed with a headless Chromium smoke test (Playwright,
+installed fresh into the scratchpad for this session since no
+`package.json` exists in the repo) covering the new behavior plus a
+reload to confirm `localStorage` persistence, with zero console errors.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Duty Roster Builder | `058-duty-roster-builder.md` | Live per-staff assignment counts; a per-staff "skip this week" flag that auto-fill respects; fixed a latent bug where deleting a duty location left orphaned assignments still counting toward staff totals. |
+| Scientific Method / Experiment Design Planner | `059-experiment-design-planner.md` | Up/down reordering for controlled variables, materials, and procedure steps; a sanity hint when the independent and dependent variable fields match; fixed a print-output bug where empty-field HTML-entity placeholders were being double-escaped into literal text. |
+| Fitness & Skill Assessment Tracker | `060-fitness-skill-assessment-tracker.md` | Time-value (`mm:ss`) parsing so class average/min/max stats now work for time-type events, not just count-type; CSV export of the full results grid. |
+| Fraction–Decimal–Percent Conversion Drill Generator | `061-fraction-decimal-percent-drill-generator.md` | Seeded generation (mulberry32, ported from Math Fact Drill Sheet Generator's pattern) with a "Lock seed" checkbox for reproducible reprints; settings (difficulty/given-form/row count/seed lock) now persist across page loads. |
+| Geography Bee / Map Skills Quiz Generator | `062-geography-bee-quiz-generator.md` | Category filter and quiz question count persist across page loads; built-in questions can now be hidden/shown individually (not just deleted, which only ever applied to custom questions) and hidden ones are excluded from the projector/shuffle/quiz pools. |
+
+None of the five cleared their own Quick Wins list — each still has
+Major Features/Moonshot items open — so none moved to `stable tools/`
+this round. See each file's own Status section for exactly where the
+next round should pick up.
+
+### Devon-assigned round — tools 073–077 — 2026-08-11 ~01:45 UTC — session `b4zswl`
+
+**Not part of the Pass 2 001–046 rotation above** — these five come from
+the 35-tool batch the Pass 2 reset note explicitly held back ("leave them
+out until told otherwise"). Devon directly assigned this range for this
+session rather than picking from the Pass 2 "Not yet touched" list, so
+this round is recorded separately and does **not** change the "X of 46
+(Pass 2)" tallies above. Whether/when the rest of the 35-tool batch joins
+the Pass 2 rotation is still Devon's call, per that note.
+
+One or two scoped Quick Wins per tool, each independently verified with
+`node --check` on every inline `<script>` block and a headless
+Chromium/Playwright smoke test (interact with the real DOM, assert on
+real state, zero console errors) before committing.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Science Fair Project Tracker | `073-science-fair-project-tracker.md` | Overdue-milestone highlighting (red cell + non-color ⚠ marker); a whole-class per-milestone summary bar; "sort: least complete first"; milestone up/down reorder. |
+| Science Safety Symbol & Equipment Label Maker | `074-science-safety-label-maker.md` | Edit-in-place and Duplicate buttons on queued labels (previously delete-and-re-add only); a small/medium/large label-size control affecting both print columns and card height. |
+| Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` | CSV and JSON export/import (hand-rolled quoted-CSV parser, no library); duplicate-detection on bulk paste and CSV import (same name + room), with an "Added N, skipped M" report. |
+| Sub Note / Feedback Slip Generator | `076-sub-note-feedback-slip-generator.md` | Fixed a real print bug — long prompt lists were silently clipped by a fixed-height `overflow:hidden` half-sheet; now falls back to one full page per slip past a 5-prompt threshold. Added an optional Class/Period field that pre-fills every printed copy. |
+| Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` | "N of M students have an accommodation checked" summary (fixed a bug where it didn't update on checkbox change); "print one student only" option; 2/3/4-column print-size control. |
+
+None of the five cleared their own Quick Wins list entirely (074 and 075
+each have 2–3 items left; 076 and 077 have 1 each; 073 cleared its Quick
+Wins but still has open Major Features/Moonshot) — so none moved to
+`stable tools/` this round. See each tool's own file for exactly what's
+still open and where the next round should pick up.
+
+### Pass 2 — Round 3 — 2026-08-11 01:43 UTC — session `h4rwxn` — PR #78
+
+Tools 078–081, assigned directly by Devon rather than picked from the
+"Not yet touched" list below — these four are part of the 35-tool batch
+the Pass 2 reset note (above) explicitly held out of the round-robin, so
+this round doesn't count toward that list's "26 to go" and none of the
+four were removed from it. One scoped, independently-verified item (or
+two, where both were small) per tool, each checked with `node --check` and
+a headless Playwright smoke test before committing. The 080 fix turned out
+broader than its own file's Status had flagged: the "ten/hundred blocks
+snapshot as blank" bug was actually one instance of a bug affecting three
+piece types (fraction tiles hit the same root cause; number-line markers
+had an unrelated instance of the identical pattern) — all three fixed in
+the same pass since they shared one function.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Unit Conversion Reference Chart Builder | `078-unit-conversion-chart-builder.md` | Per-line delete for template-sourced lines (not just custom ones); print column-count control (1/2/3), both persisted. |
+| Verb Conjugation Reference Poster Generator | `079-verb-conjugation-poster-generator.md` | 5 new starter templates (Spanish imperfect/future/irregulars, French imperfect/irregulars, doubling 3→8); print column-count control (1/2/3 panels per row), persisted. |
+| Virtual Manipulatives Board | `080-virtual-manipulatives-board.md` | Fixed the snapshot color bug for segmented pieces (ten/hundred blocks *and* fraction tiles) and number-line markers; added a duplicate-piece button. |
+| Word Problem Warm-Up Generator | `081-word-problem-warmup-generator.md` | Doubled templates per operation (3→6, 24 total); seeded generation (mulberry32 + lock-seed checkbox, matching Math Fact Drill Sheet Generator's pattern); settings persistence (grade band, operations, count, lock state). |
+
+None of the four cleared their list — each still has substantial Major
+Features/Moonshot items open in its own file — so none moved to
+`stable tools/` this round.
+
 ---
 
 ## Not yet touched
@@ -627,17 +821,6 @@ data-heavy), and say why in the PR. Skip anything already listed in
 - Primary Source Analysis Worksheet Generator — `028-primary-source-analysis-generator.md`
 - Prompt Builder — `029-prompt-builder.md`
 - Quiz / Review Game Board — `030-review-game-board.md`
-- Final Grade Checker — `036-final-grade-checker.md`
-- Grade Distribution Visualizer — `037-grade-distribution-visualizer.md`
-- Data Table → Chart Builder — `038-data-chart-builder.md`
-- Vocab & Conjugation Drill Generator — `039-vocab-conjugation-drill.md`
-- Vocabulary Flashcard & Word Wall Generator — `040-vocab-flashcard-generator.md`
-- Formula Reference Sheet Builder — `041-formula-sheet-builder.md`
-- Certificate & Award Maker — `042-certificate-award-maker.md`
-- Field Trip Permission Slip Generator — `043-field-trip-permission-slip.md`
-- Sub Plan Builder — `044-sub-plan-builder.md`
-- Sub Binder / Day Bundle Generator — `045-sub-binder-generator.md`
-- Blank Map Generator — `046-blank-map-generator.md`
 
 ---
 

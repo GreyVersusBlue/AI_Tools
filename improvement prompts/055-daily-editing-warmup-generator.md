@@ -20,7 +20,43 @@ Questions). Custom sentences persist in `localStorage`
 (`deg_custom_v1`). Verified with a headless Chromium smoke test (reveal,
 next, add a custom sentence, build a worksheet) — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `qer21r`).** Three Quick Wins shipped:
+
+- **Category/error-type tags on every built-in sentence, plus a filter**
+  — each of the 24 built-ins was hand-tagged into one of six buckets
+  (Capitalization, Punctuation &amp; Apostrophes, Homophones,
+  Subject-Verb Agreement, Run-ons &amp; Comma Splices, Other, matching the
+  five named in this file's own suggestion plus a catch-all), and a new
+  "Error type" dropdown filters the projector display, Prev/Next
+  navigation, and worksheet build together — resolving the "targeting
+  apostrophes this week" gap named in this file.
+- **Error-type label alongside the reveal** — a bonus once tagging
+  existed: the projector display now shows the error-type label the
+  moment the correction is revealed (not before, so it doesn't spoil the
+  answer), turning the reveal into a one-line grammar-term refresher per
+  the Major Features wishlist.
+- **Settings persistence** for the worksheet count and category filter
+  (`deg_settings_v1`), matching the pattern used across sibling tools.
+- **Edit an existing custom sentence** instead of delete-and-re-add — the
+  Add form now also asks for an error type, and custom bank rows render
+  as live-editable textareas/select (broken text, corrected text,
+  category) instead of read-only text, saving on every keystroke.
+
+Verified with a headless Chromium smoke test (filter narrows the display,
+category label appears only after reveal, sheet count + category survive
+a reload, editing a custom sentence's text persists across reload) plus a
+separate print-path check building a filtered worksheet — zero console
+errors in either pass.
+
+**Not started this round:** hide/disable individual built-ins, bulk
+import from a pasted list, difficulty/grade-band tiers, a "why"
+explanation per correction, weekly/spiral no-repeat rotation. See Major
+Features/Moonshot below — a "why" explanation is the single biggest
+pedagogical gap still open (the reveal shows the fix but not the rule),
+and now that sentences are error-tagged it could reasonably default to a
+short per-category explanation with per-sentence override, addressing the
+Open Question about whether 24 hand-written explanations are required
+just to ship the feature.
 
 ## What it does today
 
@@ -32,19 +68,22 @@ Nothing below has been started.
 
 ## Quick Wins
 
-- **Categorize/tag sentences** (capitalization, punctuation, homophones,
-  subject-verb agreement, run-ons) and let a teacher filter to one category
-  — right now every sentence is in one undifferentiated pool, and a teacher
-  targeting "this week we're focused on apostrophes" can't narrow to that.
+- ~~**Categorize/tag sentences**~~ — **done, Round 2** (six buckets:
+  capitalization, punctuation &amp; apostrophes, homophones, subject-verb
+  agreement, run-ons, other; filter applies to display + worksheet).
 - **Hide/disable individual built-in sentences** without deleting them —
   right now the only granularity is "add custom" or "use everything," so a
-  built-in that doesn't fit a class can't be dropped from rotation.
-- **Settings persistence for worksheet count and grade-band-appropriate
-  defaults** — resets to `5` every page load.
-- **Edit an existing custom sentence** instead of delete-and-re-add.
-- **Error-type label alongside the reveal** ("subject-verb agreement") so
-  the correction doubles as a quick grammar-term refresher, not just an
-  answer.
+  built-in that doesn't fit a class can't be dropped from rotation. (053
+  Cultural Trivia Card Generator shipped this exact pattern in the same
+  round this file's tool got tagging — its `Hide`/`Unhide`-per-built-in
+  approach with a stable-id list in `localStorage` is the template to
+  copy here.)
+- ~~**Settings persistence for worksheet count**~~ — **done, Round 2**
+  (grade-band-appropriate *defaults* specifically, as opposed to just
+  remembering the last value used, is still open).
+- ~~**Edit an existing custom sentence**~~ — **done, Round 2.**
+- ~~**Error-type label alongside the reveal**~~ — **done, Round 2**
+  (shown only once revealed, so it doesn't spoil the answer).
 
 ## Major Features
 

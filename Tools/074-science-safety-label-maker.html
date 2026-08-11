@@ -42,6 +42,9 @@
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
   .add-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: .6rem; align-items: end; }
+  .add-grid.editing { outline: 2px solid var(--accent-2); outline-offset: 6px; border-radius: 8px; }
+  .editing-note { font-size: .78rem; color: var(--accent-2); font-weight: 600; margin: -.3rem 0 .6rem; }
+  select#sizeSelect { width: auto; font-family: inherit; font-size: .85rem; padding: .35rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; }
 
   .symbol-picker { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; }
   .symbol-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: .5rem .4rem; border: 2px solid var(--line-strong); border-radius: 8px; background: #fff; cursor: pointer; width: 5.2rem; }
@@ -69,9 +72,16 @@
   .queue-row .qty { color: var(--muted); font-size: .8rem; }
 
   #printArea { display: none; }
-  .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; }
-  .label-card { border: 1.5px solid #333; border-radius: 6px; height: 2in; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .15in; text-align: center; page-break-inside: avoid; }
+  .label-grid { display: grid; gap: .2in; }
+  .label-grid.size-small { grid-template-columns: repeat(4, 1fr); }
+  .label-grid.size-medium { grid-template-columns: repeat(3, 1fr); }
+  .label-grid.size-large { grid-template-columns: repeat(2, 1fr); }
+  .label-card { border: 1.5px solid #333; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .15in; text-align: center; page-break-inside: avoid; }
+  .label-grid.size-small .label-card { height: 1.5in; }
+  .label-grid.size-medium .label-card { height: 2in; }
+  .label-grid.size-large .label-card { height: 2.75in; }
   .label-card svg { width: 44px; height: 44px; margin-bottom: .1in; }
+  .label-grid.size-large .label-card svg { width: 60px; height: 60px; }
   .label-card .ltext { font-weight: 700; font-size: .95rem; }
 
   @media print {
@@ -90,6 +100,12 @@
       <p class="sub">Pick a hazard symbol, add your storage/bin text, print a sheet of labels.</p>
     </div>
     <div class="btnrow">
+      <label style="margin:0;" for="sizeSelect">Label size</label>
+      <select id="sizeSelect">
+        <option value="small">Small (4/row)</option>
+        <option value="medium" selected>Medium (3/row)</option>
+        <option value="large">Large (2/row)</option>
+      </select>
       <button class="secondary" id="printBtn">Print labels</button>
     </div>
   </div>
@@ -97,7 +113,8 @@
   <div class="card">
     <h2>Choose a symbol</h2>
     <div class="symbol-picker" id="symbolPicker"></div>
-    <div class="add-grid">
+    <p class="editing-note" id="editingNote" style="display:none;">Editing a queued label &mdash; make changes then click "Save changes", or <a href="#" id="cancelEditLink">cancel</a>.</p>
+    <div class="add-grid" id="addGrid">
       <div><label for="labelText">Label text</label><input type="text" id="labelText" placeholder="e.g. Acids Only"></div>
       <div><label for="labelQty">Copies</label><input type="number" id="labelQty" value="1" min="1" max="30"></div>
       <div><button id="addLabelBtn">Add to sheet</button></div>
@@ -131,12 +148,14 @@
   ];
 
   var els = {};
-  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'printArea'].forEach(function (id) {
+  ['symbolPicker', 'labelText', 'labelQty', 'addLabelBtn', 'queueWrap', 'queueCount', 'printBtn', 'printArea', 'sizeSelect', 'editingNote', 'addGrid', 'cancelEditLink'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var selectedSymbol = SYMBOLS[0].key;
   var queue = [];
+  var labelSize = 'medium';
+  var editingId = null;
 
   function uid() { return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -148,11 +167,14 @@
   function svgFor(sym) { return '<svg viewBox="0 0 32 32" style="color:' + sym.color + '">' + sym.path + '</svg>'; }
 
   function load() {
-    try { queue = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { queue = []; }
-    if (!Array.isArray(queue)) queue = [];
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { saved = []; }
+    if (Array.isArray(saved)) { queue = saved; labelSize = 'medium'; }
+    else if (saved && Array.isArray(saved.queue)) { queue = saved.queue; labelSize = saved.labelSize || 'medium'; }
+    else { queue = []; labelSize = 'medium'; }
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(queue)); } catch (e) { /* storage full/blocked */ }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ queue: queue, labelSize: labelSize })); } catch (e) { /* storage full/blocked */ }
   }
 
   function renderPicker() {
@@ -168,13 +190,38 @@
     renderPicker();
   });
 
+  function setEditing(id) {
+    editingId = id;
+    var editing = !!id;
+    els.editingNote.style.display = editing ? 'block' : 'none';
+    els.addGrid.classList.toggle('editing', editing);
+    els.addLabelBtn.textContent = editing ? 'Save changes' : 'Add to sheet';
+  }
+
   els.addLabelBtn.addEventListener('click', function () {
     var text = els.labelText.value.trim();
     if (!text) { alert('Add label text first.'); return; }
     var qty = Math.max(1, Math.min(30, parseInt(els.labelQty.value, 10) || 1));
-    queue.push({ id: uid(), symbol: selectedSymbol, text: text, qty: qty });
+    if (editingId) {
+      var item = queue.find(function (q) { return q.id === editingId; });
+      if (item) { item.symbol = selectedSymbol; item.text = text; item.qty = qty; }
+      setEditing(null);
+    } else {
+      queue.push({ id: uid(), symbol: selectedSymbol, text: text, qty: qty });
+    }
     save(); renderQueue();
     els.labelText.value = ''; els.labelQty.value = 1;
+  });
+
+  els.cancelEditLink.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    setEditing(null);
+    els.labelText.value = ''; els.labelQty.value = 1;
+  });
+
+  els.sizeSelect.addEventListener('change', function () {
+    labelSize = els.sizeSelect.value;
+    save();
   });
 
   function renderQueue() {
@@ -184,13 +231,36 @@
       return '<div class="queue-row">' + svgFor(sym) +
         '<span class="qtext">' + escapeHtml(item.text) + ' &mdash; <em>' + escapeHtml(sym.name) + '</em></span>' +
         '<span class="qty">&times;' + item.qty + '</span>' +
+        '<button type="button" class="secondary small" data-edit="' + item.id + '">Edit</button>' +
+        '<button type="button" class="secondary small" data-dup="' + item.id + '">Duplicate</button>' +
         '<button type="button" class="danger small" data-del="' + item.id + '">Delete</button></div>';
     }).join('');
   }
   els.queueWrap.addEventListener('click', function (ev) {
-    var id = ev.target.getAttribute('data-del');
-    if (!id) return;
-    queue = queue.filter(function (q) { return q.id !== id; });
+    var editId = ev.target.getAttribute('data-edit');
+    var dupId = ev.target.getAttribute('data-dup');
+    var delId = ev.target.getAttribute('data-del');
+    if (editId) {
+      var item = queue.find(function (q) { return q.id === editId; });
+      if (!item) return;
+      selectedSymbol = item.symbol;
+      els.labelText.value = item.text;
+      els.labelQty.value = item.qty;
+      renderPicker();
+      setEditing(editId);
+      els.labelText.focus();
+      return;
+    }
+    if (dupId) {
+      var src = queue.find(function (q) { return q.id === dupId; });
+      if (!src) return;
+      queue.push({ id: uid(), symbol: src.symbol, text: src.text, qty: src.qty });
+      save(); renderQueue();
+      return;
+    }
+    if (!delId) return;
+    if (editingId === delId) setEditing(null);
+    queue = queue.filter(function (q) { return q.id !== delId; });
     save(); renderQueue();
   });
 
@@ -203,12 +273,13 @@
         cards.push('<div class="label-card">' + svgFor(sym) + '<div class="ltext">' + escapeHtml(item.text) + '</div></div>');
       }
     });
-    els.printArea.innerHTML = '<div class="label-grid">' + cards.join('') + '</div>';
+    els.printArea.innerHTML = '<div class="label-grid size-' + labelSize + '">' + cards.join('') + '</div>';
     window.print();
   });
 
   /* ---------- boot ---------- */
   load();
+  els.sizeSelect.value = labelSize;
   renderPicker();
   renderQueue();
 })();

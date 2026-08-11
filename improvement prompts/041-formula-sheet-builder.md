@@ -9,6 +9,38 @@
 
 ## Status
 
+**2026-08-11 — Round 2 (session `gb5c6e`).** Shipped the remaining
+half-sheet/index-card Quick Win. New per-sheet `pageSize` field
+(`'full'|'half'|'card'`), defaulted via the same backfill pattern as the
+other additive fields (`newSheet`/`loadSheetByName`/JSON import all default
+missing/invalid values to `'full'`, so a sheet saved before this round loads
+unchanged). A "Print size" select sits next to the existing Columns control:
+
+- **Full page (8.5×11")** — unchanged, one sheet per printed page.
+- **Half sheet (8.5×5.5")** — 2 identical copies tiled on one physical
+  letter page with a dashed cut line between them.
+- **Index card size (4.25×5.5")** — 4 identical copies tiled 2×2 on one
+  physical letter page with dashed cut lines.
+
+The live preview shows the sheet at its actual selected physical size (not
+just a note), with padding scaled proportionally to the page dimensions so a
+card-sized sheet isn't mostly margin. `applyAutoFit()`'s target height now
+comes from the selected page size instead of a hardcoded 11in, so auto-fit
+correctly shrinks harder for a card-sized sheet with the same formula list.
+Printing builds a `.print-page-grid` of `.cut-cell`s (one real letter-size
+physical page, teacher loads plain paper and cuts apart afterward — no
+special stock assumed) for half/card sizes; full page prints exactly as
+before. Verified with a headless Playwright pass: page-size note text,
+inline sheet dimensions, print-area cut-cell count (2 and 4), full-page
+single-sheet output, and pageSize persisting through a reload — zero console
+errors.
+
+Not attempted this round: real math rendering (still the largest deferred
+item — see Open Questions), and the printed-scaffolding-variants / allowed-
+formulas-for-the-test Major Features.
+
+---
+
 **2026-08-10 — implementation round.** Shipped four of this round's five
 scoped Quick Wins (formula picker, auto-fit-to-one-page, worked example,
 variable key) plus verified the fifth already existed. Storage stayed
@@ -57,7 +89,8 @@ picker delivers.
 - Optional per-item image, downscaled on import (`readAndDownscaleImage`)
 - Multiple named sheets (`gvb-formula-sheet:list` / `:data:*`), JSON
   import/export
-- Print a one-page reference sheet
+- Print a one-page reference sheet, at full page, half-sheet (2-up), or
+  index-card (4-up) size
 
 ## Quick Wins
 
@@ -84,10 +117,11 @@ picker delivers.
 - **Done —** **Variable key** ("r = radius") as a structured field rather than prose.
   *(Shipped in the same expandable panel as the worked example: a repeatable
   symbol/meaning list, printed under the formula.)*
-- **Skipped — deferred.** **Print at half-sheet or index-card size** for a taped-to-the-desk version.
-  *(Not part of this round's scoped list — the sheet is still fixed at
-  8.5×11in; a natural next Quick Win alongside the column-count control that
-  already exists.)*
+- **Done —** **Print at half-sheet or index-card size** for a taped-to-the-desk version.
+  *(A "Print size" select — Full page / Half sheet (2-up) / Index card
+  (4-up) — tiles identical copies of the sheet onto one physical letter
+  page with dashed cut lines; auto-fit targets the selected page's actual
+  height.)*
 - **Done — already existed.** **Confirm on "Load template (replaces current list)"** (P11) — it silently
   discards work. *(The `confirm()` gate was already there before this round;
   only the message text changed, to spell out that the current sheet's

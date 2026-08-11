@@ -10,6 +10,37 @@
 
 ## Status
 
+**2026-08-11 — Round 2 (session `gb5c6e`).** Shipped a scoped slice of
+"Templates by day type" (Major Features): a per-day "Day type" select
+(Regular lesson day / Testing day / Video day / Emergency plan (no notice))
+plus an "Insert template" button that fills Overview/Schedule/Materials with
+generic starter content for that day type — never automatically, only on
+click, and only after a `confirm()` if any of those three fields already has
+something in it (so it can't silently clobber a lesson someone was mid-way
+through writing). The emergency-plan template is the one the file's own
+Moonshot section calls "the killer feature" — a permanently-usable generic
+plan that doesn't depend on whatever unit is currently running.
+
+`dayType` is additive to `blankDayPlan()`/`captureCurrentDayFields()`/
+`applyDayFieldsToForm()` (defaults to `'lesson'`) and to the history entry
+shape written by `saveCurrentPlanToHistory()`/read by `loadHistoryEntry()`
+(`en.dayType || 'lesson'` fallback for entries saved before this round) —
+Sub Binder Generator, which reads this same history key, ignores the new
+field entirely since it only reads the fields it already knew about. Tracked
+per-day like every other day-tab field, so a 3-day absence can freely mix a
+testing day and a lesson day. Verified with a headless Playwright pass: the
+no-type-selected guard alert, the overwrite-confirm gate, per-day tracking
+across tab switches (day 2 defaults to `'lesson'` independently of day 1's
+choice), and a full round-trip through `saveCurrentPlanToHistory()` →
+`localStorage` → "Load" restoring the saved day type — zero console errors.
+
+Not attempted this round: everything else "Templates by day type" could
+still mean (richer per-type period/schedule scaffolding beyond the four
+generic templates, district- or subject-specific packs), and all of Major
+Features' other bullets (still deferred — see below).
+
+---
+
 **2026-08-10 — JSZip vendored, plus the round of Quick Wins scoped for this
 tool alongside `045-sub-binder-generator.html`.** JSZip 3.10.1 now ships locally
 at `Tools/sub-plan-builder/lib/jszip.min.js` (pulled via `npm pack jszip@3.10.1`
@@ -78,6 +109,9 @@ feedback slip; shareable link/QR; standing-details versioning.
 - Import/export standing details as JSON
 - Behavior-plan variants: Short version / Full version with referral track /
   Custom
+- **Day-type starter templates** — Testing / Video / Emergency (no notice) —
+  fill in Overview/Schedule/Materials with generic content on request,
+  tracked per-day in multi-day plans
 
 ## Quick Wins
 
@@ -119,10 +153,15 @@ feedback slip; shareable link/QR; standing-details versioning.
 
 ## Major Features
 
-- **Skipped — deferred.** **Templates by day type.** A lesson-day plan, a testing-day plan, a
+- **Partially done.** **Templates by day type.** A lesson-day plan, a testing-day plan, a
   video-day plan, an emergency no-notice plan. The emergency one is the
   killer feature: a permanently-maintained generic plan that works for any
-  day of the year, printed and left in a drawer.
+  day of the year, printed and left in a drawer. *(Shipped 2026-08-11: a
+  per-day "Day type" select and an "Insert template" button that fill
+  Overview/Schedule/Materials with generic content for Testing / Video /
+  Emergency, confirm-gated so it can't overwrite work silently. Still open:
+  richer per-type scaffolding beyond generic text, and any district/subject-
+  specific variants.)*
 - **Skipped — deferred.** **Pull the lesson from elsewhere** (P7). If the School Calendar Visualizer
   knows what unit you're in and the Exit Ticket / Number Talks banks have
   routines, the plan can be 70% drafted before you type anything. *(This

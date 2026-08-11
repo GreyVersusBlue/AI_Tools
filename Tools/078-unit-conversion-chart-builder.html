@@ -110,6 +110,16 @@
         <h2>Unit sets to include</h2>
         <div id="templatePicker"></div>
       </div>
+      <div class="card">
+        <h2>Print layout</h2>
+        <label for="colCount">Columns</label>
+        <select id="colCount">
+          <option value="1">1 column</option>
+          <option value="2" selected>2 columns</option>
+          <option value="3">3 columns</option>
+        </select>
+        <p class="hint" style="margin-bottom:0;">Fewer unit sets read better in 1&ndash;2 columns; a full chart with several sets fits more on one page in 3.</p>
+      </div>
     </div>
 
     <div>
@@ -201,9 +211,9 @@
 
   var els = {};
   ['templatePicker', 'chartGroups', 'noGroupsMsg', 'customGroup', 'customLine', 'addCustomBtn',
-   'printBtn', 'printGroups', 'printTitle'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printGroups', 'printTitle', 'colCount'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { selected: {}, custom: {} };
+  var state = { selected: {}, custom: {}, hidden: {}, columns: 2 };
 
   function uid() { return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
@@ -214,6 +224,8 @@
     } catch (e) { /* ignore */ }
     if (!state.selected) state.selected = {};
     if (!state.custom) state.custom = {};
+    if (!state.hidden) state.hidden = {};
+    if (!state.columns) state.columns = 2;
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -237,6 +249,7 @@
       var t = TEMPLATES[key];
       groups[t.group] = groups[t.group] || [];
       t.lines.forEach(function (line, i) {
+        if (state.hidden[key] && state.hidden[key][i]) return;
         groups[t.group].push({ text: line, source: key, idx: i });
       });
     });
@@ -259,7 +272,7 @@
       var rows = groups[name].map(function (item) {
         var delBtn = item.source === 'custom'
           ? '<button type="button" class="danger small" data-del-custom="' + escapeAttr(name) + '|' + item.id + '">&times;</button>'
-          : '';
+          : '<button type="button" class="danger small" data-hide-line="' + escapeAttr(item.source) + '|' + item.idx + '" title="Remove just this line">&times;</button>';
         return '<div class="item-row"><span class="item-text">' + item.text + '</span><span class="btns">' + delBtn + '</span></div>';
       }).join('');
       return '<div class="group"><h3>' + name + '</h3>' + rows + '</div>';
@@ -270,21 +283,38 @@
     var key = ev.target.getAttribute('data-tpl');
     if (!key) return;
     state.selected[key] = ev.target.checked;
+    if (ev.target.checked) delete state.hidden[key];
     save();
     renderChart();
   });
 
   els.chartGroups.addEventListener('click', function (ev) {
-    var ref = ev.target.getAttribute('data-del-custom');
-    if (!ref) return;
-    var parts = ref.split('|');
-    var groupName = parts[0], id = parts[1];
-    if (state.custom[groupName]) {
-      state.custom[groupName] = state.custom[groupName].filter(function (c) { return c.id !== id; });
-      if (!state.custom[groupName].length) delete state.custom[groupName];
+    var customRef = ev.target.getAttribute('data-del-custom');
+    if (customRef) {
+      var parts = customRef.split('|');
+      var groupName = parts[0], id = parts[1];
+      if (state.custom[groupName]) {
+        state.custom[groupName] = state.custom[groupName].filter(function (c) { return c.id !== id; });
+        if (!state.custom[groupName].length) delete state.custom[groupName];
+      }
+      save();
+      renderChart();
+      return;
     }
+    var hideRef = ev.target.getAttribute('data-hide-line');
+    if (hideRef) {
+      var hParts = hideRef.split('|');
+      var tplKey = hParts[0], idx = hParts[1];
+      state.hidden[tplKey] = state.hidden[tplKey] || {};
+      state.hidden[tplKey][idx] = true;
+      save();
+      renderChart();
+    }
+  });
+
+  els.colCount.addEventListener('change', function () {
+    state.columns = parseInt(els.colCount.value, 10) || 2;
     save();
-    renderChart();
   });
 
   els.addCustomBtn.addEventListener('click', function () {
@@ -306,6 +336,7 @@
       var rows = groups[name].map(function (item) { return '<div class="item-row"><span class="item-text">' + item.text + '</span></div>'; }).join('');
       return '<div class="group"><h3>' + name + '</h3>' + rows + '</div>';
     }).join('');
+    els.printGroups.style.gridTemplateColumns = 'repeat(' + state.columns + ', 1fr)';
     window.print();
   });
 
@@ -320,6 +351,7 @@
     save();
     buildTemplatePicker();
   }
+  els.colCount.value = String(state.columns);
   renderChart();
 })();
 </script>

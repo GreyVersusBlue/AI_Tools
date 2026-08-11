@@ -19,31 +19,58 @@ the answer is always a whole number. Verified with a headless Chromium
 smoke test (default generation, reveal, next, switch to worksheet tab) — no
 console errors.
 
-Everything below is unbuilt — this ships with 3 templates per operation and
-no persistence at all, both deliberate MVP cuts.
+**2026-08-11 — Round 1 (session `h4rwxn`).** Shipped three of the Quick Wins
+below. More templates per operation: doubled from 3 to 6 per operation (24
+total sentence patterns), reusing the existing `(a, b, name, item) =>
+{text, answer}` template shape. Seeded generation: added the same
+mulberry32 PRNG + "lock seed" checkbox pattern Math Fact Drill Sheet
+Generator uses (`Tools/math-drill-generator/mdg-generate.js` was the
+reference) — `randInt`/`pick` now take an explicit `rng` argument instead
+of calling `Math.random()` directly, and one `rng = makeRng(seed)` is
+created per Generate click so a whole set (not just one problem) is
+reproducible from its seed. Settings persistence: grade band, the four
+operation checkboxes, problem count, and the lock-seed state now save to
+`wpwg_settings_v1` in localStorage and restore on load.
+
+One bug caught and fixed before it shipped: the first Generate click
+after checking "Lock seed" would still produce a *new* random set, because
+`nextSeed()` read `settings.lockSeed` and that value was previously only
+written inside `saveSettings()`, which ran *after* `nextSeed()` in the
+Generate flow — a one-click lag between checking the box and it actually
+taking effect. Fixed by adding a `change` listener on the checkbox that
+writes `settings.lockSeed` immediately, so checking the box now freezes
+the sheet currently on screen rather than the next one generated after
+that. Caught by reasoning through the call order while writing it, then
+confirmed with a headless Playwright test (check the box, click Generate,
+confirm the seed and problem text are identical to what was already
+displayed — not the next roll). A second Playwright pass confirmed
+determinism end-to-end (2,000 direct-call trials against the extracted RNG
+functions: no negative subtraction answers, no non-integer division
+answers, same seed &rarr; byte-identical problem set) and that lock-seed
+survives a page reload.
+
+Two-step problems, fractions/decimals/percents templates, a custom
+template editor, per-problem operation labels, copy-to-clipboard, and
+on-screen answer input all remain unbuilt.
 
 ## What it does today
 
-- 3 templates per operation × 4 operations = 12 total sentence patterns,
-  each filled with a random name, random everyday item, and grade-band-
-  scaled numbers
+- 6 templates per operation &times; 4 operations = 24 total sentence
+  patterns, each filled with a random name, random everyday item, and
+  grade-band-scaled numbers
 - Grade band toggle (3&ndash;5 vs 6&ndash;8) changes the number ranges, not
   the templates
 - Projector display (one problem at a time, reveal button) and printable
   worksheet + answer key, generated from the same problem set so they always
   match
+- Seeded generation with a "lock seed" checkbox — checking it freezes the
+  current set; the next Generate click reproduces it exactly (same
+  problems, same order); a visible seed field shows what's currently locked
+- Grade band, operation selection, problem count, and lock-seed state
+  persist in `localStorage` across visits
 
 ## Quick Wins
 
-- **More templates per operation** — 3 repeats noticeably within one
-  6&ndash;10 problem sheet. This is the single highest-value next step and
-  is pure content, not architecture.
-- **Seeded generation**, the way Math Fact Drill Sheet Generator does it
-  (Mulberry32 RNG + a "lock seed" checkbox), so a sheet can be reprinted
-  identically for a make-up.
-- **Settings persistence** — grade band, operation checkboxes, and problem
-  count reset to defaults on every page load right now; a `localStorage`
-  save would match every other generator in the toolkit.
 - **A per-problem operation label** (small badge showing "multiplication",
   etc.) in the worksheet view, useful when operations are mixed on one
   sheet.

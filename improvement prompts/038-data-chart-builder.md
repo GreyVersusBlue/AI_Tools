@@ -9,6 +9,24 @@
 
 ## Status
 
+**2026-08-11 — Pass 2 round.** Shipped **undo on Delete dataset** (P11), one
+of the three Quick Wins this file's Pass 1 round left deferred — the same
+scoped item and the same in-memory-15-second-undo pattern (copied from
+`018-qr-scavenger-hunt-builder.html`'s "Undo clear") landed independently
+in `037-grade-distribution-visualizer.html` this same round; see that
+file's own Status for the fuller writeup of the pattern. Here the saved
+value is just a raw pasted-text string (`data-chart-builder-datasets` maps
+name → text, no cutoffs/weights to carry), so the restore is simpler: an
+"Undo delete" button appears for 15s after a delete, and clicking it
+re-saves the text under its original name — or `"<name> (restored)"` if a
+same-named dataset was saved during the undo window. Verified with a
+headless Playwright pass: save → delete → undo round-trips the exact
+pasted text back into the saved-datasets list with zero JS console errors.
+
+Not attempted this round: **copy chart to clipboard** and **bigger/print
+layout preset**, the other two deferred Quick Wins, and everything under
+Major Features/Moonshot.
+
 **2026-08-10 — implementation round.** Of the five Quick Wins scoped for
 this round, two ("chart titles and axis labels that print" and "show the
 trendline you already compute") turned out to **already exist** — verified
@@ -102,8 +120,8 @@ under Major Features / Moonshot.
 - **Skipped — deferred.** **Bigger/print layout preset.** Charts get projected; a projector preset
   (thick lines, large type) and a print preset would both get used. *(Not
   part of this round's scoped list.)*
-- **Skipped — deferred.** **Undo / confirm on Delete dataset** (P11). *(Not part of this round's
-  scoped list.)*
+- **Done — 2026-08-11.** **Undo / confirm on Delete dataset** (P11). *(Confirm already existed;
+  added a 15-second in-memory undo — see Status.)*
 
 ## Major Features
 

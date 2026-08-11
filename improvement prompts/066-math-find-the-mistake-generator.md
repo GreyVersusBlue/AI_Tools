@@ -25,33 +25,51 @@ pattern from earlier in this Ideas Backlog work. Custom problems persist in
 test (reveal shows both fix and explanation, next, add a custom problem,
 build a worksheet) — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `9iiyas`).** Shipped three of the four
+Quick Wins below. Added an 8-category topic taxonomy (order of operations,
+one-step equations, two-step equations, fractions, exponents, percents,
+negative numbers, plus an `other` bucket for the 2 built-ins that didn't
+cleanly fit a named topic — decimal multiplication and rectangle area) and
+a filter panel that scopes both projector shuffling and worksheet
+generation to only the checked categories; custom problems pick a category
+on add. Projector-mode reveal is now two separate steps — first click shows
+only the corrected work, second click adds the explanation — while
+worksheet/answer-key mode is unchanged and still shows both together in one
+pass, since it isn't a live reveal. Built-in problems can now be disabled
+(not deleted) per-item from the bank list, persisted to a new
+`mftm_disabled_builtins_v1` key, and excluded from both projector and
+worksheet while disabled. Grade-band scoping (the fourth Quick Win) is not
+yet started. Verified with headless Playwright — category filtering scoped
+both modes correctly, reveal order was work-then-explanation, worksheet/key
+stayed combined, disabling persisted across reload and could be
+re-enabled — no console errors.
+
+**Worth a second look next round:** the 2-problem `other` category was a
+judgment call since the task's seven named topics didn't cleanly cover
+decimal multiplication or rectangle area — a stricter category mapping
+(or a ninth named category) might be worth reconsidering.
 
 ## What it does today
 
-- 15 built-in worked-mistake problems across a spread of math topics
-- Projector mode: shuffle, reveal (shows correct work + explanation
-  together)
-- Worksheet mode: randomized subset + matching answer key
-- Custom problem bank layered on top of the built-ins
+- 15 built-in worked-mistake problems across a spread of math topics, each
+  tagged with one of 8 categories
+- A category filter panel scoping both projector shuffle and worksheet
+  generation
+- Projector mode: shuffle, two-stage reveal (corrected work, then a
+  separate explanation reveal)
+- Worksheet mode: randomized subset + matching answer key (explanation +
+  fix shown together, unaffected by the two-stage projector reveal)
+- Per-built-in disable/enable without deleting, persisted across reload
+- Custom problem bank layered on top of the built-ins, each with its own
+  category
 
 ## Quick Wins
 
-- **Categorize/tag problems by topic** (order of operations, equations,
-  fractions, exponents, percents) and let a teacher filter to one category
-  — right now every problem is in one undifferentiated pool, mirroring the
-  same gap flagged in Daily Editing / DOL Warm-Up Generator's improvement
-  prompt for the same reason.
-- **Separate the "reveal correct work" and "reveal explanation" into two
-  steps** instead of one combined toggle — a teacher might want students to
-  identify the mistake themselves (explanation) before seeing the full
-  corrected solution.
-- **Hide/disable individual built-ins** without deleting them, matching the
-  same gap noted for Daily Editing's built-in bank.
 - **Grade-band scoping** for the built-in bank, similar to Math Fact Drill
   Sheet Generator's grade-band ranges — several built-ins (fractions,
   two-step equations) skew middle-school while others (basic order of
-  operations) work for elementary too.
+  operations) work for elementary too. (Carried over from last round — not
+  yet started.)
 
 ## Major Features
 

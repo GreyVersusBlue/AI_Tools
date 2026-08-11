@@ -9,6 +9,48 @@
 
 ## Status
 
+**2026-08-11 — Round 2 (session `gb5c6e`).** Shipped multi-day bundles, the
+one Quick Win the previous round explicitly deferred (Sub Plan Builder
+gained multi-day absences in that same round; this tool still only built
+one date's packet at a time). A new "Print bundle for all N days" button
+appears whenever `subPlanBuilder.lastAbsence.v1` has more than one date —
+next to the always-available single-day "Print bundle" button, which is
+unchanged.
+
+The key design call: **not every section repeats per day.** Emergency info,
+Standing details, Seating, Hall pass procedure, and Behavior plan don't
+depend on the selected date at all (they're a snapshot of "current" state,
+not per-day records) — those print **once**, shared across the whole
+absence, exactly like Sub Plan Builder's own standing details are shared
+across its day tabs. Only "Today's calendar entry" and "Lesson" are
+genuinely date-specific (each keyed off `findHistoryEntryForDate()`/the
+calendar's per-date map), so those two print **once per day**, combined
+onto a single page per day with a "Day N of M — <date>" header. The
+freeform "anything else" note is a single shared field in this tool's own
+data model (not per-day, unlike Sub Plan Builder's real per-day fields), so
+it prints once at the end rather than being repeated on every day's page.
+
+Implementation reuses the single-day code paths verbatim rather than
+duplicating them: `coverPageHtml()` now takes an optional `dates` array
+(building a "Sep 8 – Sep 10 (3 days)" range line when given 2+, unchanged
+when omitted), and the per-day loop temporarily points `bundleDateEl.value`
+at each date, calls the exact same `todayCalHtml()`/`lessonFromPlanHtml()`
+functions the single-day view already uses, then restores the original
+selected date afterward — verified this doesn't leak into the visible date
+picker. Verified with a headless Playwright pass: button visibility/label
+only appears for 2+ dates, a 3-day bundle produces the expected page count
+and per-day headers/content, shared sections appear exactly once, the date
+picker's value is unchanged after building the bundle, and the existing
+single-day print path still works — zero console errors.
+
+Not attempted this round: the documented cross-tool handoff interface (P8),
+still explicitly due per the previous round's Open Questions — this round
+added a consumer of the existing raw-key-read sources rather than
+addressing that brittleness, which is a real and intentional scope choice
+given the round's size, not an oversight. See Open Questions below.
+
+---
+
 **2026-08-10 — Quick Wins mostly shipped, designed together with
 `044-Sub Plan Builder.html` per P7.** Storage stayed additive throughout: this
 tool still reads `subPlanBuilder.standingDetails.v1` and `seating-chart-v1`
@@ -105,6 +147,9 @@ explicit scope tradeoff, not an oversight (see Open Questions).
 - Renders every source as its own card, then prints a cover page plus one
   page per checked, available section (fixed order), reusing the existing
   page-break-per-page print CSS
+- **Print bundle for all N days** — when the saved absence spans 2+ days,
+  builds one packet covering the whole absence: shared sections once, a
+  date-range cover, and a combined Calendar+Lesson page per day
 - Refresh data button to re-pull from every source tool
 
 ## Quick Wins
@@ -133,10 +178,11 @@ explicit scope tradeoff, not an oversight (see Open Questions).
   can't. *(Defaults from Sub Plan Builder's selected absence date when one
   exists, otherwise today; freely overridable. See Status for the exact
   mechanism.)*
-- **Skipped — deferred.** **Multi-day bundles**, printed with a divider per day. *(Sub Plan Builder
-  now supports multiple days out; this tool still builds one date's packet at
-  a time. Explicitly out of scope for this round — see the companion tool's
-  file for the multi-day work that did happen.)*
+- **Done —** **Multi-day bundles**, printed with a divider per day. *(Shipped 2026-08-11 — a
+  "Print bundle for all N days" button, shown whenever Sub Plan Builder's
+  saved absence spans 2+ days. Shared/non-date-specific sections print once;
+  Today's calendar entry + Lesson print once per day with a "Day N of M"
+  header. See Status for the full design.)*
 - **Done —** **Tell the teacher what's missing.** "No seating chart saved for 3rd period"
   is more useful than silently omitting it. *(Every section — old and new —
   now has a live status string; the seating one specifically checks each
@@ -223,3 +269,10 @@ clear list of anything it couldn't find.
   still make an available section render wrong instead of correctly flagging
   as unavailable). The next round that touches this file should treat the
   interface question as due, not deferred.
+- **Still due, 2026-08-11.** This round (multi-day bundles) didn't touch the
+  interface question either — it composes the same six raw-key reads across
+  multiple dates rather than adding a seventh source, so the brittleness
+  count didn't grow, but it also didn't shrink. The P8 interface is now due
+  for two consecutive rounds; a third round that adds a new source instead
+  of addressing it should think hard about whether that's still the right
+  call.

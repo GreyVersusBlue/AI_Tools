@@ -9,6 +9,42 @@
 
 ## Status
 
+### Round 11 (2026-08-11, session `gb5c6e`) — shipped
+
+Two of the five open Quick Wins from Round 10's list — the two that were
+pure bugs in the numbered-worksheet/answer-key renderer rather than new
+features:
+
+- **Word bank no longer prints on the answer-key page.** `settings.wordBank
+  && items.length` gained `&& !showAnswers` in `renderWorksheetPage()` — the
+  key already spells out every answer on the numbered answer lines, so the
+  word bank was a genuinely redundant inch of paper on that specific page.
+  The worksheet page itself is unaffected; the bank still prints there.
+- **Answer-key text now shrinks to fit its column instead of overflowing.**
+  A new `fitFontSizeToWidth()` helper measures the answer text against the
+  actual space left in its column (after the number and the rule line) and
+  steps the font down (13px/11px base, down to an 8px floor) until it fits,
+  used in `drawAnswerLines()`'s `showAnswers` branch. A long name like
+  "Massachusetts" or "Guinea-Bissau" in a narrow multi-column answer key no
+  longer runs past its line — verified directly against `drawAnswerLines()`
+  in an isolated canvas harness (six real place names across a stress-test
+  6-column narrow layout: every realistic name fit within its measured
+  column width; only a deliberately absurd 45-character stress string still
+  overflowed even at the 8px floor, which is the expected, correctly-bounded
+  behavior for that helper — there's a floor on how small text can go before
+  it stops being a font-size problem). End-to-end verified too: uploaded a
+  synthetic image, placed real labels including long names via the actual
+  UI, generated a real worksheet+answer-key PDF through
+  `btnWorksheetPdf` (both pages present, byte-verified via the PDF's own
+  `/Type /Page` count), zero console errors.
+
+Not attempted this round: the other three open Quick Wins (numbered
+markers as worksheet items, label-set edit/export, a shrink-to-fit pass for
+label placement itself — distinct from this round's answer-text fit, which
+only touches the answer-key's own text) and everything in Major Features.
+
+---
+
 Reviewed — structural read of the source. This is the most architecturally
 mature tool on the site: properly modularized, IndexedDB-backed, with
 undo/redo. Ideas below are deliberately ambitious and **not** scoped to one
@@ -149,9 +185,10 @@ Round 10 shipped the worksheet/answer-key/label-set/tidy/line-type/quiz
 cluster and Round 9 shipped grayscale-safe fills; what's left here is what
 those rounds surfaced rather than solved.
 
-- **Word bank on the answer-key page is redundant** — it prints there
+- **Done —** **Word bank on the answer-key page is redundant** — it prints there
   because the key reuses the worksheet layout wholesale. Minor, but it's a
-  wasted inch of paper on every key.
+  wasted inch of paper on every key. *(Shipped Round 11 — the answer key no
+  longer draws the word bank at all; the worksheet page still does.)*
 - **Numbered markers aren't worksheet items.** The worksheet numbers text
   labels only. A teacher who built their map from numbered pins (and put the
   answers in the legend captions) gets an empty worksheet with no
@@ -165,8 +202,15 @@ those rounds surfaced rather than solved.
 - **A "shrink to fit" pass for labels**, as a companion to Tidy Labels: on a
   really dense map, separation alone runs out of room and the honest fix is
   smaller type.
-- **Worksheet answer lines don't wrap.** A long place name in a narrow
+- **Done —** **Worksheet answer lines don't wrap.** A long place name in a narrow
   answer column overruns its line rather than shrinking or wrapping.
+  *(Shipped Round 11 as shrink-to-fit rather than wrapping — a new
+  `fitFontSizeToWidth()` steps the answer text's font down, per item, until
+  it fits the column's actual remaining width, down to an 8px floor. Chosen
+  over multi-line wrapping because the answer list's row height is already
+  computed by `planAnswerList()` for a fixed number of single-line rows;
+  wrapping would need that layout pass to know in advance which rows grow,
+  which is more invasive than this round's scope.)*
 
 ## Major Features
 

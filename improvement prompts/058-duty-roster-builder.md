@@ -17,14 +17,52 @@ cell in day-then-duty order, and a print view of the finished grid. State
 autosaves to `localStorage` (`drb_roster_v1`). Verified with a headless
 Chromium smoke test (save staff, auto-fill, print) — no console errors.
 
-Nothing below has been started.
+**2026-08-11 — Round 2 (session `kq3g3h`).** Shipped two of the four Quick
+Wins: per-staff assignment counts and a per-staff "skip this week" flag.
+
+- The staff card now renders a live list below the paste-in textarea, one
+  row per saved staff member, each showing a running count of duties
+  assigned that week (recomputed from `state.assignments` on every grid
+  edit, not just after auto-fill) and a "Skip this week" checkbox.
+- Auto-fill now excludes any staff member with the skip flag set from the
+  round-robin pool entirely, instead of assigning them and requiring a
+  manual fix afterward. If everyone is flagged (or the staff list is
+  empty), auto-fill refuses with an explanatory alert instead of silently
+  doing nothing.
+- Skip flags persist per-name in `localStorage` alongside the rest of the
+  state, and survive re-saving the staff textarea (a re-save prunes flags
+  for names that were removed, but keeps flags for names that are still
+  present).
+- Found and fixed a latent bug while building the counts feature: deleting
+  a duty location left its assignments behind in `state.assignments`
+  (never visible in the grid again, since the row was gone, but still
+  counted toward a staff member's weekly total). Duty deletion now also
+  clears any assignment entries keyed to that duty.
+- Verified with a headless Chromium smoke test: save a 4-person staff
+  list, flag one person as skip, auto-fill, confirm the flagged person
+  never appears in any grid cell, confirm counts update live from manual
+  grid edits, reload and confirm the skip flag persisted.
+
+Not started this round: CSV export, multiple saved weeks/rotations, duty-
+location capacity (2-people-per-cell), and the true week-to-week rotation
+described under Major Features. The Open Questions (Staff Directory
+Builder hand-off, round-robin ordering) also remain open — no shared-
+roster read was added this round, so the staff textarea here is still
+independent from Staff Directory Builder's list.
+
+**Where the next round should pick up:** CSV export is the smallest
+remaining Quick Win and would pair naturally with a "multiple saved
+weeks" pass, since exporting only really matters once there's more than
+one week's grid to hand off.
 
 ## What it does today
 
 - Editable duty-location list (add/rename/remove)
 - Paste-in staff list (one per line)
 - Fixed Monday&ndash;Friday grid, one dropdown assignment per duty per day
-- Round-robin auto-fill across the whole grid in one click
+- Round-robin auto-fill across the whole grid in one click, skipping any
+  staff member flagged "out this week"
+- Live per-staff assignment counts and a per-staff skip flag
 - Print the finished grid as a plain table
 
 ## Quick Wins
