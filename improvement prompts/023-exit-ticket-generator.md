@@ -1,7 +1,8 @@
 # Improvement Prompts — 023 — Exit Ticket / Bell Ringer Generator
 
 **Tool file:** `Tools/023-exit-ticket-generator.html`
-**Support folder:** `Tools/exit-ticket-generator/` — `lib/qrcode.js`
+**Support folder:** `Tools/exit-ticket-generator/` — `test/smoke-response-area.mjs`.
+The QR encoder comes from `_shared/vendor/qrcode/` now, not a per-tool `lib/`.
 
 **Current description (from README):** A bank of short warm-up and reflection prompts with a big projector display, plus a printable handout mode for half- or quarter-sheet exit tickets.
 
@@ -9,7 +10,52 @@
 
 ## Status
 
-Reviewed — structural read of the source, before Round 4 (PR #55, see below)
+**2026-08-11 — Sized response area (backlog rank 4).** Shipped the "response
+box sized for the prompt, lined vs blank as a choice" Quick Win, plus a fix
+that turned out to be the more important half.
+
+**The fix:** the answer lines were four `height: 0` divs in a flex column with
+`gap: .28rem`. That gap is about 4.5px — roughly **1.2mm on paper**. What the
+printer produced was a hairline pattern, not writing lines. Nobody could have
+written on those. Rows are now a real height driven by one custom property,
+`--resp-row`, which the print stylesheet restates as `0.3in` (a shade under
+wide-ruled) — verified at exactly 0.300in under print emulation.
+
+**The feature:** two new Layout controls. *Response area* — writing lines,
+blank box, quarter-inch grid, or none at all (a bell ringer answered in a
+notebook). *How much room* — short / medium / tall, or Auto. All four styles
+size off the same row count, so a "medium" box and "medium" lines occupy the
+same part of the slip.
+
+Auto reads the prompt: extended-response verbs (explain, why, compare,
+evidence, analyse…) or over 110 characters get a paragraph; brief markers
+(list, name, define, circle…) or under 30 characters get a sentence;
+everything else lands in the middle. The character-count rule deliberately
+only decides the very short ones — "What surprised you today?" is 43
+characters and wants more than a line, which is what pushed the threshold
+from 45 down to 30. The hint under the controls says what Auto did with the
+current prompt, and any explicit size wins.
+
+The grid carries `print-color-adjust: exact`; browsers drop background images
+from print by default, so without it the grid would preview fine and print
+blank.
+
+`responseStyle` / `responseSize` are validated against their allowed values
+on load, so a settings blob saved before this round falls back to lines +
+Auto rather than being read as an invalid style.
+
+New test: `Tools/exit-ticket-generator/test/smoke-response-area.mjs` (34
+assertions, wired into `npm test` and `npm run test:exit-ticket`) — covers the
+row height in both media, all three explicit sizes, every Auto branch, the
+override, boxes vs lines, the grid's print-color-adjust, prompt-only, the
+persisted choice, the print area matching the preview, a class set, and the
+pre-round settings blob.
+
+**Where the next round should pick up:** the "Name and date lines" Quick Win
+is still marked skipped and now sits right next to controls that would make it
+trivial. Projector styling (P1) remains the biggest untouched item.
+
+Earlier: reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped fullscreen/projector mode, the paper-triage grid, and the anonymous
 discussion board. Ideas below are deliberately ambitious and are **not**
 scoped to a single session; items confirmed shipped are tagged **Done**
@@ -25,6 +71,9 @@ below.
 - **Think time** timer with a chime (30s / 1min / 2min / off)
 - Handout printing at 2-per-page (half sheets) or 4-per-page (quarter sheets),
   with either the same prompt on every slip or **a different prompt on each**
+- **A sized response area** (`responseHtml`, `autoResponseRows`) — writing
+  lines, a blank box, a quarter-inch grid or nothing at all, at short /
+  medium / tall, or Auto sized from the prompt's own wording
 - **Quick Tally** counter with reset (`gvb-exit-ticket:tally`)
 - QR code support
 
@@ -34,7 +83,9 @@ below.
   an exit ticket you can't use; this should be on by default with a toggle.
   *(The new Paper Triage tab reads `np_rosters` for its own picker; the
   handout tab itself is untouched.)*
-- **A response box sized for the prompt**, and lined vs blank as a choice.
+- **Done —** **A response box sized for the prompt**, and lined vs blank as a choice.
+  *(Shipped 2026-08-11 with a third grid style and an Auto size — see the
+  Status entry at the top of this file.)*
 - **Done — Pass 2, Round 2.** **Print a whole class set** with names pre-printed from `np_rosters` (P2) —
   the same batch pattern Certificate Maker and Permission Slip already have.
   *(Shipped as a "Class Set" toggle on the Printable Handout tab — see the

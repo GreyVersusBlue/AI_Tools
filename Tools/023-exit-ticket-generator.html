@@ -232,8 +232,30 @@
   .slip-grid.pp2 .slip-meta-line { font-size: .68rem; }
   .slip-qr { width: .4in; height: .4in; flex-shrink: 0; margin-left: auto; image-rendering: pixelated; }
   .slip-grid.pp2 .slip-qr { width: .55in; height: .55in; }
-  .slip-answer-lines { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: .28rem; }
-  .slip-answer-line { border-bottom: 1px solid #999; height: 0; }
+  /* ---- response area ------------------------------------------------------
+     One row height (`--resp-row`) drives every response style, so a "medium"
+     box and "medium" lines take up exactly the same amount of the slip. The
+     preview value is a scaled approximation; print overrides it with a real
+     inch measurement, the same trick the prompt font sizes already use.
+     Before this the lines were spaced by a .28rem flex gap — about 1.2mm on
+     paper, which is a hairline pattern, not something a 7th grader can write
+     between. --------------------------------------------------------------- */
+  .slip-page { --resp-row: 0.62rem; --grid-step: 0.5rem; }
+  .slip-response { margin-top: auto; }
+  .slip-answer-line { border-bottom: 1px solid #999; height: var(--resp-row); }
+  .slip-answer-box {
+    border: 1px solid #999; border-radius: 3px;
+    height: calc(var(--resp-row) * var(--resp-rows, 4));
+  }
+  .slip-answer-box.grid {
+    /* A quarter-inch grid. Browsers skip background images when printing
+       unless told otherwise, so the exact-adjust hint is what makes this
+       reach paper at all. */
+    background-image:
+      repeating-linear-gradient(to right, #bbb 0 1px, transparent 1px var(--grid-step)),
+      repeating-linear-gradient(to bottom, #bbb 0 1px, transparent 1px var(--grid-step));
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -256,7 +278,11 @@
     .print-only .slip-meta-row { margin-bottom: .5rem; }
     .print-only .slip-grid.pp2 .slip-qr { width: .8in; height: .8in; }
     .print-only .slip-grid.pp4 .slip-qr { width: .55in; height: .55in; }
+    /* Real measurements on paper: a 0.3in row is a shade under wide-ruled
+       (8.7mm), which is what a middle-schooler actually writes on. */
+    .print-only .slip-page { --resp-row: 0.3in; --grid-step: 0.25in; }
     .print-only .slip-answer-line { border-bottom: 1px solid #555; }
+    .print-only .slip-answer-box { border-color: #555; }
     .print-only .triage-print-page { padding: .3in; font-family: Georgia, serif; }
     .print-only .triage-print-page h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
     .print-only .triage-print-page .triage-print-sub { font-size: .95rem; color: #333; margin: 0 0 1.1rem; }
@@ -477,6 +503,27 @@
           </div>
         </div>
       </div>
+      <div class="row2" style="margin-bottom:.9rem;">
+        <div>
+          <label for="responseStyleSelect">Response area</label>
+          <select id="responseStyleSelect" style="width:100%;">
+            <option value="lines">Writing lines</option>
+            <option value="blank">Blank box</option>
+            <option value="grid">Quarter-inch grid</option>
+            <option value="none">None &mdash; prompt only</option>
+          </select>
+        </div>
+        <div>
+          <label for="responseSizeSelect">How much room</label>
+          <select id="responseSizeSelect" style="width:100%;">
+            <option value="auto">Auto &mdash; match the prompt</option>
+            <option value="short">Short (a sentence)</option>
+            <option value="medium">Medium (a few sentences)</option>
+            <option value="tall">Tall (a paragraph or a sketch)</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint" id="responseHint" style="margin:-.5rem 0 .9rem;"></p>
       <div class="check-row" style="margin-bottom:.9rem;">
         <label class="check-inline"><input type="checkbox" id="qrEnabledCheck"> Include a QR code on each slip</label>
       </div>
@@ -535,6 +582,7 @@
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
    'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect',
+   'responseStyleSelect', 'responseSizeSelect', 'responseHint',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
    'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
@@ -669,7 +717,7 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false, responseStyle: 'lines', responseSize: 'auto' };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
   var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
@@ -712,6 +760,10 @@
     if (typeof saved.qrEnabled === 'boolean') settings.qrEnabled = saved.qrEnabled;
     if (typeof saved.qrUrl === 'string') settings.qrUrl = saved.qrUrl;
     if (typeof saved.batchMode === 'boolean') settings.batchMode = saved.batchMode;
+    // Added after the response-area round; anything saved before that keeps
+    // the defaults above rather than being read as an invalid style.
+    if (['lines', 'blank', 'grid', 'none'].indexOf(saved.responseStyle) !== -1) settings.responseStyle = saved.responseStyle;
+    if (['auto', 'short', 'medium', 'tall'].indexOf(saved.responseSize) !== -1) settings.responseSize = saved.responseSize;
   }
 
   function loadCustomBank() {
@@ -1542,6 +1594,64 @@
     return qrCache.url;
   }
 
+  /* ---- response area sizing ----------------------------------------------
+     One slip layout used to serve every prompt: four hairline rules, the same
+     four whether the question was "name one cause" or "explain why the
+     compromise failed". The teacher now picks the style and how much room,
+     and "Auto" makes a first guess from the prompt itself.
+
+     The Auto rules are a starting point, not a claim to understand the
+     question — they read the verbs that mark an extended response, then fall
+     back on length. Any of the three explicit sizes overrides them.
+  ------------------------------------------------------------------------ */
+  var RESPONSE_ROWS = { short: 2, medium: 4, tall: 7 };
+  var EXTENDED_RE = /\b(explain|why|how|describe|compare|contrast|justify|argue|evidence|elaborate|paragraph|analy[sz]e|predict|summar)/;
+  var BRIEF_RE = /\b(list|name|define|circle|rate|who|when|where|which|one word|true or false)\b/;
+
+  function autoResponseRows(text) {
+    var t = String(text || '').toLowerCase();
+    if (EXTENDED_RE.test(t) || t.length > 110) return RESPONSE_ROWS.tall;
+    // Length alone only decides the very short ones. "What surprised you
+    // today?" is 43 characters and wants more than a line, so the wording
+    // has to lose to the verbs, not to the character count.
+    if (BRIEF_RE.test(t) || t.length < 30) return RESPONSE_ROWS.short;
+    return RESPONSE_ROWS.medium;
+  }
+
+  function responseRowsFor(text) {
+    return settings.responseSize === 'auto'
+      ? autoResponseRows(text)
+      : (RESPONSE_ROWS[settings.responseSize] || RESPONSE_ROWS.medium);
+  }
+
+  function responseHtml(text) {
+    if (settings.responseStyle === 'none') return '';
+    var rows = responseRowsFor(text);
+    if (settings.responseStyle === 'lines') {
+      return '<div class="slip-response">' + repeatHtml('<div class="slip-answer-line"></div>', rows) + '</div>';
+    }
+    var cls = settings.responseStyle === 'grid' ? 'slip-answer-box grid' : 'slip-answer-box';
+    return '<div class="slip-response"><div class="' + cls + '" style="--resp-rows:' + rows + ';"></div></div>';
+  }
+
+  function syncResponseHint() {
+    if (!els.responseHint) return;
+    if (settings.responseStyle === 'none') {
+      els.responseHint.textContent = 'The slip prints the prompt (and the QR, if it is on) with nothing to write on — for a bell ringer answered in a notebook.';
+      return;
+    }
+    if (settings.responseSize !== 'auto') {
+      els.responseHint.textContent = 'Every slip gets the same amount of room, whatever the prompt asks for.';
+      return;
+    }
+    var sample = settings.slipMode === 'different'
+      ? (differentSlipPrompts[0] || currentPrompt.text)
+      : currentPrompt.text;
+    var rows = autoResponseRows(sample);
+    var word = rows === RESPONSE_ROWS.tall ? 'a paragraph' : (rows === RESPONSE_ROWS.short ? 'a sentence' : 'a few sentences');
+    els.responseHint.textContent = 'Auto reads the prompt for words like “explain” or “list” and sizes the box to match — this one gets room for ' + word + '. Pick a size above to fix it.';
+  }
+
   function slipHtml(text, studentName) {
     var metaBits = [];
     if (studentName) {
@@ -1555,12 +1665,11 @@
     var qrDataUrl = settings.qrEnabled ? getQrDataUrl() : null;
     var qrHtml = qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code linking to the digital response form">' : '';
     var metaRow = (metaLine || qrHtml) ? '<div class="slip-meta-row">' + metaLine + qrHtml + '</div>' : '';
-    var lineCount = settings.perPage === 4 ? 3 : 4;
     return (
       '<div class="slip">' +
         '<div class="slip-prompt">' + escapeHtml(text) + '</div>' +
         metaRow +
-        '<div class="slip-answer-lines">' + repeatHtml('<div class="slip-answer-line"></div>', lineCount) + '</div>' +
+        responseHtml(text) +
       '</div>'
     );
   }
@@ -1633,6 +1742,9 @@
     var html = settings.batchMode ? buildBatchHandoutHtml() : buildHandoutHtml();
     els.handoutPreview.innerHTML = html;
     els.printArea.innerHTML = html;
+    // The hint describes what Auto did with the *current* prompt, so it has
+    // to follow every re-render, not just the response-area controls.
+    syncResponseHint();
   }
 
   els.perPageSelect.addEventListener('change', function () {
@@ -1640,6 +1752,19 @@
     saveSettings();
     if (settings.slipMode === 'different' && !settings.batchMode) refreshDifferentSlipPrompts();
     else renderHandout();
+  });
+  els.responseStyleSelect.addEventListener('change', function () {
+    settings.responseStyle = els.responseStyleSelect.value;
+    els.responseSizeSelect.disabled = settings.responseStyle === 'none';
+    saveSettings();
+    syncResponseHint();
+    renderHandout();
+  });
+  els.responseSizeSelect.addEventListener('change', function () {
+    settings.responseSize = els.responseSizeSelect.value;
+    saveSettings();
+    syncResponseHint();
+    renderHandout();
   });
   els.showNameCheck.addEventListener('change', function () {
     settings.showName = els.showNameCheck.checked;
@@ -1743,6 +1868,9 @@
   els.categorySelect.value = settings.category;
   els.includeMineCheck.checked = settings.includeMine;
   els.perPageSelect.value = String(settings.perPage);
+  els.responseStyleSelect.value = settings.responseStyle;
+  els.responseSizeSelect.value = settings.responseSize;
+  els.responseSizeSelect.disabled = settings.responseStyle === 'none';
   els.showNameCheck.checked = settings.showName;
   els.showDateCheck.checked = settings.showDate;
   els.thinkTimeSelect.value = String(settings.thinkTime);
