@@ -4,10 +4,11 @@
   "type": "module",
   "description": "Dev-only test tooling for the East Middle Staff Toolkit. The site itself is static, has no build step, and is never served from node_modules — see CLAUDE.md. After cloning: npm ci && npx playwright install chromium",
   "scripts": {
-    "test": "node Tools/name-picker/test/smoke.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/schedule/test/smoke.mjs && node Tools/image-to-pdf/test/smoke.mjs && node Tools/seating-chart/test/drive-seating.mjs",
+    "test": "node Tools/name-picker/test/smoke.mjs && node Tools/seating-chart/test/smoke-seating.mjs && node Tools/school-calendar/test/smoke-pacing.mjs && node Tools/schedule/test/smoke.mjs && node Tools/image-to-pdf/test/smoke.mjs && node Tools/seating-chart/test/drive-seating.mjs",
     "test:name-picker": "node Tools/name-picker/test/smoke.mjs",
     "test:seating": "node Tools/seating-chart/test/smoke-seating.mjs && node Tools/seating-chart/test/drive-seating.mjs",
     "test:schedule": "node Tools/schedule/test/smoke.mjs",
+    "test:school-calendar": "node Tools/school-calendar/test/smoke-pacing.mjs",
     "test:image-to-pdf": "node Tools/image-to-pdf/test/smoke.mjs",
     "check:social": "node Tools/board-check/check-social.mjs",
     "check:dedupe": "node Tools/board-check/check-dedupe.mjs",

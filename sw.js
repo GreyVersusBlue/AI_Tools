@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v65';
+const CACHE_VERSION = 'v66';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -168,6 +168,7 @@ const PRECACHE_URLS = [
   "Tools/schedule/fonts/public-sans-latin-600-normal.woff2",
   "Tools/schedule/fonts/public-sans-latin-700-normal.woff2",
   "Tools/schedule/fonts/published-fonts.js",
+  "Tools/school-calendar/scv-pacing.js",
   "Tools/school-calendar/scv-seed.js",
   "Tools/school-calendar/scv-store.js",
   "Tools/073-science-fair-project-tracker.html",
