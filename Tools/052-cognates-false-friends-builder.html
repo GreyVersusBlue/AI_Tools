@@ -35,6 +35,14 @@
 
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem; resize: vertical; min-height: 5.5rem;
+  }
+  .bulk-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .2rem; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); }
+  .bulk-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
   input[type="text"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
@@ -98,6 +106,18 @@
       <option value="blank">Blank</option>
     </select>
     <button class="secondary" id="loadTemplateBtn">Load (replaces current lists)</button>
+  </div>
+
+  <div class="card">
+    <h2>Bulk paste import</h2>
+    <p class="hint">One entry per line, fields separated by tabs, pipes, or commas (a spreadsheet paste works).
+      <b>Two fields</b> &mdash; <code>word | English</code> &mdash; adds a true cognate.
+      <b>Three fields</b> &mdash; <code>word | looks like | actually means</code> &mdash; adds a false friend.
+      Or name the type yourself as a last field: <code>cognate</code> or <code>false</code>.
+      Entries are added to the lists below without replacing anything.</p>
+    <textarea id="bulkInput" placeholder="animal | animal&#10;hospital | hospital&#10;embarazada | embarrassed | Actually means &quot;pregnant.&quot;"></textarea>
+    <button type="button" class="secondary" id="bulkImportBtn">Add to lists</button>
+    <p class="bulk-note" id="bulkNote" style="display:none;" aria-live="polite"></p>
   </div>
 
   <div class="card">
@@ -181,7 +201,8 @@
 
   var els = {};
   ['langName', 'templateSelect', 'loadTemplateBtn', 'cognatesWrap', 'addCognateBtn',
-   'falseFriendsWrap', 'addFalseFriendBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'falseFriendsWrap', 'addFalseFriendBtn', 'printBtn', 'printArea',
+   'bulkInput', 'bulkImportBtn', 'bulkNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { lang: '', cognates: [], falseFriends: [] };
 
@@ -296,6 +317,64 @@
   els.addFalseFriendBtn.addEventListener('click', function () {
     state.falseFriends.push({ id: uid(), target: '', looksLike: '', actual: '' });
     save(); renderFalseFriends();
+  });
+
+  /* ---------- bulk paste import ---------- */
+  /* Tolerant line parsing (P13): tab first (spreadsheet paste), then pipe,
+     then comma; extra fields beyond three fold back into the last one so a
+     comma inside a note doesn't shear the line apart. An optional trailing
+     type token ("cognate"/"true" or "false"/"ff") overrides the field-count
+     heuristic (2 fields = cognate, 3 = false friend). */
+  function parseBulkLine(line) {
+    var sep = line.indexOf('\t') !== -1 ? '\t' : (line.indexOf('|') !== -1 ? '|' : ',');
+    var parts = line.split(sep).map(function (p) { return p.trim(); });
+    while (parts.length && !parts[parts.length - 1]) parts.pop();
+    if (parts.length < 2) return null;
+
+    var type = null;
+    var last = parts[parts.length - 1].toLowerCase();
+    if (last === 'cognate' || last === 'true' || last === 'true cognate' || last === 'c') { type = 'cognate'; parts.pop(); }
+    else if (last === 'false' || last === 'false friend' || last === 'ff' || last === 'f') { type = 'false'; parts.pop(); }
+    if (parts.length < 2 || !parts[0]) return null;
+
+    if (parts.length > 3) parts = [parts[0], parts[1], parts.slice(2).join(sep === '\t' ? ' ' : sep + ' ')];
+    if (!type) type = parts.length >= 3 ? 'false' : 'cognate';
+
+    if (type === 'cognate') return { type: 'cognate', target: parts[0], english: parts[1] };
+    return { type: 'false', target: parts[0], looksLike: parts[1], actual: parts[2] || '' };
+  }
+
+  els.bulkImportBtn.addEventListener('click', function () {
+    var lines = els.bulkInput.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    if (!lines.length) {
+      els.bulkNote.textContent = 'Paste some lines first — one word pair per line.';
+      els.bulkNote.className = 'bulk-note error';
+      els.bulkNote.style.display = '';
+      return;
+    }
+    var addedCognates = 0, addedFF = 0, skipped = [];
+    lines.forEach(function (line) {
+      var parsed = parseBulkLine(line);
+      if (!parsed) { skipped.push(line); return; }
+      if (parsed.type === 'cognate') {
+        state.cognates.push({ id: uid(), target: parsed.target, english: parsed.english });
+        addedCognates++;
+      } else {
+        state.falseFriends.push({ id: uid(), target: parsed.target, looksLike: parsed.looksLike, actual: parsed.actual });
+        addedFF++;
+      }
+    });
+    save();
+    renderCognates();
+    renderFalseFriends();
+    if (addedCognates || addedFF) els.bulkInput.value = '';
+    var msg = 'Added ' + addedCognates + ' cognate' + (addedCognates === 1 ? '' : 's') +
+      ' and ' + addedFF + ' false friend' + (addedFF === 1 ? '' : 's') + '.';
+    if (skipped.length) msg += ' Skipped ' + skipped.length + ' line' + (skipped.length === 1 ? '' : 's') +
+      ' with fewer than two fields: ' + skipped.slice(0, 3).map(function (s) { return '“' + s.slice(0, 40) + '”'; }).join(', ') + (skipped.length > 3 ? ', …' : '');
+    els.bulkNote.textContent = msg;
+    els.bulkNote.className = 'bulk-note' + (addedCognates || addedFF ? '' : ' error');
+    els.bulkNote.style.display = '';
   });
 
   els.loadTemplateBtn.addEventListener('click', function () {
