@@ -105,6 +105,11 @@
     <div>
       <div class="card">
         <h2>Unit sets to include</h2>
+        <div class="btnrow" style="margin-bottom:.5rem;">
+          <button type="button" class="secondary small" id="presetElemBtn">Elementary preset (3&ndash;5)</button>
+          <button type="button" class="secondary small" id="presetMiddleBtn">Middle school preset (6&ndash;8)</button>
+        </div>
+        <p class="hint">One click checks the right sets for the grade band &mdash; elementary gets the within-system basics plus time; middle school adds cross-system conversions and temperature formulas. Fine-tune with the checkboxes after.</p>
         <div id="templatePicker"></div>
       </div>
       <div class="card">
@@ -206,9 +211,18 @@
     }
   };
 
+  /* One-click grade-band presets over the same checkboxes. Elementary (3–5)
+     sticks to within-system conversions plus time; middle school (6–8) takes
+     everything, including cross-system conversions and temperature formulas. */
+  var PRESETS = {
+    elementary: ['length_customary', 'length_metric', 'weight_customary', 'weight_metric', 'volume_customary', 'volume_metric', 'time'],
+    middle: Object.keys(TEMPLATES)
+  };
+
   var els = {};
   ['templatePicker', 'chartGroups', 'noGroupsMsg', 'customGroup', 'customLine', 'addCustomBtn',
-   'printBtn', 'printGroups', 'printTitle', 'colCount'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printGroups', 'printTitle', 'colCount',
+   'presetElemBtn', 'presetMiddleBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { selected: {}, custom: {}, hidden: {}, columns: 2 };
 
@@ -275,6 +289,19 @@
       return '<div class="group"><h3>' + name + '</h3>' + rows + '</div>';
     }).join('');
   }
+
+  function applyPreset(name) {
+    state.selected = {};
+    PRESETS[name].forEach(function (key) {
+      state.selected[key] = true;
+      delete state.hidden[key]; // same reset a manual re-check does
+    });
+    save();
+    buildTemplatePicker();
+    renderChart();
+  }
+  els.presetElemBtn.addEventListener('click', function () { applyPreset('elementary'); });
+  els.presetMiddleBtn.addEventListener('click', function () { applyPreset('middle'); });
 
   els.templatePicker.addEventListener('change', function (ev) {
     var key = ev.target.getAttribute('data-tpl');

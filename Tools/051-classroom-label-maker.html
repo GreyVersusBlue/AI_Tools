@@ -100,6 +100,19 @@
   </div>
 
   <div class="card">
+    <label for="listSwitch">Saved label list</label>
+    <select id="listSwitch"></select>
+    <label for="listName">List name (for saving/switching)</label>
+    <input type="text" id="listName" placeholder="e.g. Kitchen unit &mdash; la cocina">
+    <div class="btnrow">
+      <button type="button" class="secondary small" id="newListBtn">+ New list</button>
+      <button type="button" class="secondary small" id="duplicateListBtn">Duplicate</button>
+      <button type="button" class="danger small" id="deleteListBtn">Delete</button>
+    </div>
+    <p class="hint" style="margin-top:.5rem;">Each list keeps its own words and language, so a room set, a kitchen set, and a unit set can coexist &mdash; switching lists never overwrites another.</p>
+  </div>
+
+  <div class="card">
     <label for="langSelect">Target language (for pronunciation)</label>
     <select id="langSelect">
       <option value="es-ES">Spanish (es-ES)</option>
@@ -133,37 +146,166 @@
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'clm_words_v1';
-  var LANG_KEY = 'clm_lang_v1';
+  /* Named multi-save (same New/Duplicate/Rename/Delete convention as
+     047-art-critique-worksheet-generator). The old single-list keys below
+     are read once and migrated into the first named list. */
+  var LEGACY_WORDS_KEY = 'clm_words_v1';
+  var LEGACY_LANG_KEY = 'clm_lang_v1';
+  var LIST_KEY = 'clm_lists_v1';
+  var DATA_PREFIX = 'clm_list_v1:';
+  var CURRENT_KEY = 'clm_current_v1';
 
   var els = {};
-  ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'printArea', 'fileWarning'].forEach(function (id) {
+  ['langSelect', 'wordInput', 'saveWordsBtn', 'wordCount', 'wordTable', 'printBtn', 'printArea', 'fileWarning',
+   'listSwitch', 'listName', 'newListBtn', 'duplicateListBtn', 'deleteListBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
-  var words = [];
+  var state = null; // { name, words: [{target, english}], lang }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  /* ---------- named-list store ---------- */
+  function listNames() {
+    try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveNamed(name, data) {
+    var names = listNames();
+    if (names.indexOf(name) === -1) { names.push(name); localStorage.setItem(LIST_KEY, JSON.stringify(names)); }
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+    localStorage.setItem(CURRENT_KEY, name);
+  }
+  function loadNamed(name) {
+    try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
+  }
+  function deleteNamed(name) {
+    var names = listNames().filter(function (n) { return n !== name; });
+    localStorage.setItem(LIST_KEY, JSON.stringify(names));
+    localStorage.removeItem(DATA_PREFIX + name);
+    if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+  }
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+  function normalizeList(data, name) {
+    if (!data || typeof data !== 'object') data = {};
+    return {
+      name: (typeof data.name === 'string' && data.name) || name || 'My Labels',
+      words: Array.isArray(data.words) ? data.words : [],
+      lang: (typeof data.lang === 'string' && data.lang) || 'es-ES'
+    };
+  }
+
+  function migrateLegacyIfNeeded() {
+    if (listNames().length) return;
+    var legacyWords = null;
+    try { legacyWords = JSON.parse(localStorage.getItem(LEGACY_WORDS_KEY) || 'null'); } catch (e) { /* ignore */ }
+    if (Array.isArray(legacyWords) && legacyWords.length) {
+      var lang = null;
+      try { lang = localStorage.getItem(LEGACY_LANG_KEY); } catch (e) { /* ignore */ }
+      saveNamed('My Labels', { name: 'My Labels', words: legacyWords, lang: lang || 'es-ES' });
+    }
+  }
 
   function load() {
-    try { words = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { words = []; }
-    if (!Array.isArray(words)) words = [];
-    try { els.langSelect.value = localStorage.getItem(LANG_KEY) || 'es-ES'; } catch (e) { /* ignore */ }
+    migrateLegacyIfNeeded();
+    var currentName = localStorage.getItem(CURRENT_KEY);
+    var loaded = currentName ? loadNamed(currentName) : null;
+    if (!loaded) {
+      var names = listNames();
+      loaded = names.length ? loadNamed(names[0]) : null;
+    }
+    state = loaded ? normalizeList(loaded, loaded.name) : normalizeList(null, uniqueName('New Label List'));
+    save();
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(words)); } catch (e) { /* storage full/blocked */ }
+    try { saveNamed(state.name, state); } catch (e) { /* storage full/blocked */ }
   }
+
+  function renderListSwitch() {
+    var names = listNames();
+    els.listSwitch.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === state.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
+  function renderAll() {
+    renderListSwitch();
+    els.listName.value = state.name;
+    els.langSelect.value = state.lang;
+    if (els.langSelect.value !== state.lang) { state.lang = els.langSelect.value || 'es-ES'; } // unknown saved code
+    els.wordInput.value = state.words.map(function (w) { return w.target + ': ' + w.english; }).join('\n');
+    renderTable();
+  }
+
+  function switchTo(name) {
+    var loaded = loadNamed(name);
+    if (!loaded) return;
+    state = normalizeList(loaded, name);
+    localStorage.setItem(CURRENT_KEY, name);
+    renderAll();
+  }
+
+  els.listSwitch.addEventListener('change', function () { switchTo(els.listSwitch.value); });
+
+  els.listName.addEventListener('change', function () {
+    var oldName = state.name;
+    var newName = els.listName.value.trim() || oldName;
+    if (newName !== oldName) {
+      deleteNamed(oldName);
+      state.name = uniqueName(newName);
+    }
+    save();
+    renderListSwitch();
+    els.listName.value = state.name;
+  });
+
+  els.newListBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new label list:', 'New Label List');
+    if (!name) return;
+    state = normalizeList({ lang: state.lang }, uniqueName(name.trim()));
+    save();
+    renderAll();
+  });
+
+  els.duplicateListBtn.addEventListener('click', function () {
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = uniqueName(state.name + ' (copy)');
+    state = clone;
+    save();
+    renderAll();
+  });
+
+  els.deleteListBtn.addEventListener('click', function () {
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    deleteNamed(state.name);
+    var names = listNames();
+    if (names.length) {
+      switchTo(names[0]);
+    } else {
+      state = normalizeList(null, 'New Label List');
+      save();
+      renderAll();
+    }
+  });
+
   els.langSelect.addEventListener('change', function () {
-    try { localStorage.setItem(LANG_KEY, els.langSelect.value); } catch (e) { /* ignore */ }
+    state.lang = els.langSelect.value;
+    save();
     renderTable();
   });
 
   els.saveWordsBtn.addEventListener('click', function () {
-    words = els.wordInput.value.split('\n').map(function (line) {
+    state.words = els.wordInput.value.split('\n').map(function (line) {
       var idx = line.indexOf(':');
       if (idx === -1) return null;
       var target = line.slice(0, idx).trim();
@@ -176,6 +318,7 @@
   });
 
   function renderTable() {
+    var words = state.words;
     els.wordCount.textContent = words.length;
     var lang = els.langSelect.value;
     var head = '<tr><th>Target word</th><th>English</th><th>Pronunciation</th></tr>';
@@ -219,8 +362,9 @@
   }
 
   els.printBtn.addEventListener('click', function () {
+    var words = state.words;
     if (!words.length) { alert('Save a word list first.'); return; }
-    var lang = els.langSelect.value;
+    var lang = state.lang;
     var labelsHtml = '<div class="label-grid" id="labelGrid">' + words.map(function (w, i) {
       return '<div class="label-card"><canvas id="qr-' + i + '"></canvas><div class="ltext">' +
         '<div class="target">' + escapeHtml(w.target) + '</div><div class="english">' + escapeHtml(w.english) + '</div></div></div>';
@@ -239,8 +383,7 @@
 
   /* ---------- boot ---------- */
   load();
-  els.wordInput.value = words.map(function (w) { return w.target + ': ' + w.english; }).join('\n');
-  renderTable();
+  renderAll();
   if (location.protocol === 'file:') els.fileWarning.classList.add('show');
 })();
 </script>

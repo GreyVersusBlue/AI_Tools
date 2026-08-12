@@ -9,6 +9,24 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: bulk paste import shipped (backlog rank,
+then #3).** A "Bulk paste import" card above the two lists takes one entry
+per line and appends to the existing lists (never replaces). Parsing is
+the tolerant P13 shape: separator picked per line (tab first for
+spreadsheet pastes, then pipe, then comma), fields beyond three folded
+back into the note so a comma inside "actually means…" doesn't shear the
+line, and routing decided by field count — two fields make a true cognate,
+three make a false friend — with an optional trailing type token
+(`cognate`/`true` or `false`/`ff`) as an explicit override. The result
+note reports how many of each were added and quotes the first few skipped
+(sub-two-field) lines; the textarea clears only on a successful import.
+Verified with a headless Chromium test: mixed tab/pipe/comma lines, both
+type tokens, the comma-folding note arriving intact, the skip report, and
+persistence + print inclusion of imported rows — zero console errors.
+Next round: named multi-save and the quiz-me reveal mode are the open
+Quick Wins; the practice-worksheet variants row is separately on the
+backlog.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from
 the Ideas Backlog — closes out the World Language section for now. Two
 starter example sets (Spanish, French) with well-known real examples
@@ -45,6 +63,8 @@ Nothing else below has been started.
 - Fully editable cognates list (target + English) and false friends list
   (target + looks-like + actual meaning)
 - Print: two-section color-coded reference sheet
+- **Bulk paste import**: tab/pipe/comma lines append to either list (field
+  count or an explicit type token picks cognate vs. false friend)
 
 ## Quick Wins
 
@@ -68,9 +88,8 @@ Nothing else below has been started.
   (share some but not all meanings) — a third category would be more
   linguistically complete for an advanced class, though it adds
   complexity the current true/false binary avoids.
-- **Bulk import from a pasted list**, matching the pattern proven in
-  Staff Directory Builder and other tools this round — typing pairs one
-  at a time in the current form doesn't scale to a large reference list.
+- ~~**Bulk import from a pasted list**~~ — **done, 2026-08-12** (backlog
+  round; see Status).
 - **Difficulty/frequency tagging** so a teacher can filter to "the 10 most
   common false friends" for a quick warm-up versus the full reference list
   for study.

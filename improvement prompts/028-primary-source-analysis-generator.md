@@ -9,6 +9,35 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: share worksheet by link / QR shipped (backlog
+rank 1).** The tool now loads `_shared/state-link.js` and the site's vendored
+QR encoder (`_shared/vendor/qrcode/qrcode.js`) and grew two toolbar buttons —
+**🔗 Copy link** and **▦ QR code** — copying the pattern already shipped in
+`040-vocab-flashcard-generator.html` almost verbatim (same payload/notes/
+overlay shapes, same `?param=` consume-on-load flow):
+
+- The share payload is the whole worksheet state **minus `imageDataUrl`** — an
+  uploaded image is base64'd and can run past a megabyte, far beyond what a
+  URL or QR carries. When an uploaded image exists, the share note says
+  explicitly that the image stays behind and points at Export worksheet for
+  the send-everything path. `imageUrl` (a mere reference) travels fine.
+- Opening a `?worksheet=` link validates with the existing
+  `isPlausibleWorksheet()`, saves under a uniqued name (`… (shared)` when the
+  name collides), loads it, and calls `StateLink.clearParam()` up front so a
+  refresh can't double-import. A garbled link shows a friendly error and the
+  tool boots normally.
+- QR overflow (long pasted sources) is caught and reported with the payload
+  size rather than drawing an unscannable code.
+
+What was hard: nothing structural — the tool already had saved-worksheet
+plumbing and an import validator, so this was wiring, not surgery. Verified
+with a headless Chromium test over a local static server: copy-link round
+trip into a fresh browser context (name, source text, framework, citation all
+arrive; param cleared; reload doesn't duplicate), name uniquing on a second
+import, QR overlay drawing and Escape-to-close, and the bad-payload error
+path — zero console errors. Next round picks up where the last one said:
+the DBQ / multi-source packet is still the biggest open lever.
+
 **2026-08-10 — Round 5 (PR #56): four Quick Wins shipped, plus one
 pre-existing bug fixed.** Found that **APPARTS and 5 W's frameworks already
 existed** in the source (this file was stale on that point) — this round
@@ -107,6 +136,10 @@ teacher, and it has the most room to grow of any content tool on the site.
   separately
 - Saved worksheets (`gvb-primary-source:list` / `:current`) with
   import/export and validation (`isPlausibleWorksheet`)
+- **Share by link / QR** (`_shared/state-link.js` + vendored qrcode encoder):
+  copy a `?worksheet=` URL or show a scannable QR; opening one saves a
+  uniquely-named copy. Uploaded images deliberately don't ride the link
+  (size), with a visible note saying so
 
 ## Quick Wins
 

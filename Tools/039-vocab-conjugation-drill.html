@@ -20,6 +20,8 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -33,6 +35,18 @@
   .back-link:hover { color: var(--accent-2); }
 
   .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+
+  /* Share a drill set by link / QR (same pattern as 040-vocab-flashcard-generator) */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .9rem; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
   .mode-tab { flex: 1; text-align: center; padding: .55rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .88rem; color: var(--muted); }
@@ -207,10 +221,25 @@
     <button class="secondary" id="exportSetBtn">Export set</button>
     <button class="secondary" id="importSetBtn">Import set</button>
     <input type="file" id="importSetFile" accept="application/json,.json" style="display:none;">
+    <button class="secondary" id="shareLinkBtn">🔗 Copy link</button>
+    <button class="secondary" id="shareQrBtn">▦ QR code</button>
     <span class="tts-lang-row">
       <label for="ttsLangSelect">Pronunciation:</label>
       <select id="ttsLangSelect"></select>
     </span>
+  </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+
+  <div class="share-overlay" id="shareOverlay" hidden>
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Drill set QR code">
+      <div class="share-head">
+        <span>Scan to open this drill set</span>
+        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="shareCanvas"></canvas>
+      <p class="hint" style="margin:.6rem 0 0;">Opens the same set on that device and saves it there as a copy &mdash;
+        edits on either side stay put.</p>
+    </div>
   </div>
 
   <div class="card">
@@ -400,7 +429,8 @@
    'importFlashRow','flashSetSelect','importFlashBtn',
    'vocabEditor','conjugationEditor','vocabInput','vocabDirection','vocabLimit',
    'personsList','personPresets','addPersonBtn','conjList','emptyConjHint','addConjBtn','vocabShuffle','conjShuffle',
-   'printBtn','printCombined','printVersions','previewArea','previewNote','sheetNav','ttsLangSelect'
+   'printBtn','printCombined','printVersions','previewArea','previewNote','sheetNav','ttsLangSelect',
+   'shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_PERSONS = ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'];
@@ -1246,6 +1276,96 @@
     if (file) importSetFromFile(file);
   });
 
+  /* ---------- share by link / QR (state-link.js, same pattern as 040) ---------- */
+  var SHARE_PARAM = 'set';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  function shareUrl() {
+    if (!state) return null;
+    save();
+    var payload = { v: 1 };
+    Object.keys(state).forEach(function (k) { payload[k] = state[k]; });
+    return StateLink.buildShareUrl(SHARE_PARAM, payload);
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Nothing to share yet.', true); return; }
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote('Link copied. Opening it anywhere loads this set — words, verbs, person labels, and settings — and saves it there as a copy.'); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Nothing to share yet.', true); return; }
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR code holds far less than a URL bar does. A big set runs past
+      // it — say so rather than drawing a square nobody's phone can read.
+      setShareNote('This set is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote('');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  /** Consume a ?set= link on load. Saves the arrival under a uniqued name —
+      never over an existing set. Returns true if a set was imported. */
+  function importSharedSet() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
+    var decoded = StateLink.decodeState(raw);
+    if (!isPlausibleDrillSet(decoded)) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
+      return false;
+    }
+    var name = (decoded.name && decoded.name.trim()) || 'Shared drill set';
+    var existing = Store.list();
+    if (existing.indexOf(name) !== -1) {
+      name = name + ' (shared)';
+      while (existing.indexOf(name) !== -1) name = name + ' 2';
+    }
+    delete decoded.v;
+    decoded.name = name;
+    Store.save(name, decoded); // loadSetByName defaults any missing newer fields
+    loadSetByName(name);
+    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s.');
+    return true;
+  }
+
   els.printBtn.addEventListener('click', function () {
     var versions = Math.max(1, state.printVersions || 1);
     var htmlParts = [];
@@ -1278,11 +1398,13 @@
   });
 
   /* ---------- boot ---------- */
-  var current = Store.getCurrent();
-  if (current && Store.load(current)) {
-    loadSetByName(current);
-  } else {
-    newSet('New Drill Set');
+  if (!importSharedSet()) {
+    var current = Store.getCurrent();
+    if (current && Store.load(current)) {
+      loadSetByName(current);
+    } else {
+      newSet('New Drill Set');
+    }
   }
 })();
 </script>

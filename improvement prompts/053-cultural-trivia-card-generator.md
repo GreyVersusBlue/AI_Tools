@@ -9,6 +9,23 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: bulk import a custom bank shipped (backlog
+rank, then #4).** A "Bulk import a custom bank" card on the bank tab takes
+one question per line — `question | answer | category`, tab- or
+pipe-separated (deliberately **no** comma splitting: trivia questions are
+full of commas), extra pipe fields folding into the answer. The category
+field is optional and tolerant (`hispanic`/`spanish`, `franco…`/`french`,
+`global`/`world`); lines without one fall back to the Category picker
+above the form. Imports append to `ctcg_custom_v1` without touching
+built-ins or existing custom questions, the note reports added/skipped
+counts and quotes the first few unparseable (no-separator) lines, and the
+textarea clears only on success. Verified with a shared headless Chromium
+test (this and 062's identical feature): mixed pipe/tab lines with and
+without category tokens land in the right category, a comma inside a
+question survives, skipped lines are reported, imports persist and grow
+the bank count — zero console errors. Next round: the export-to-Review-
+Game-Board bridge is this tool's other backlog row.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from
 the Ideas Backlog: a 30-question built-in bank (10 per category:
 Hispanic World, Francophone World, Global Culture), a category filter, a
@@ -57,6 +74,8 @@ pairing and hasn't been touched yet.
 - Projector mode: shuffle, reveal
 - Print: matching front/back trivia-card grids
 - Custom question bank layered on built-ins
+- **Bulk import** (tab/pipe lines, optional tolerant category token) that
+  appends to the custom bank
 
 ## Quick Wins
 
@@ -80,9 +99,8 @@ pairing and hasn't been touched yet.
   Answer from a spreadsheet; a one-click "download as .xlsx for Review
   Game Board" button would deliver on that named integration instead of
   leaving it as a manual copy-paste.
-- **Bulk import a custom bank** from a pasted list, matching the pattern
-  proven in Staff Directory Builder, Review Game Board, and Math "Find the
-  Mistake" Warm-Up Generator.
+- ~~**Bulk import a custom bank** from a pasted list~~ — **done,
+  2026-08-12** (backlog round; see Status).
 - **Difficulty tiers per question** (easy/medium/hard), letting a teacher
   build a review game board with graduated point values straight from
   this bank.

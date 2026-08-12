@@ -88,6 +88,25 @@
   .tent-half .tblurb { font-size: .74rem; }
   .tent-half img.tcover { width: 50px; height: 68px; object-fit: cover; border: 1px solid #999; border-radius: 2px; margin-bottom: .15rem; }
 
+  /* Tasting response slips — the paper artifact each student hands back */
+  .rslip { padding: .15in 0 .25in; }
+  .rslip .rslip-title { text-align: center; font-family: Georgia, serif; font-size: 1.25rem; margin: 0 0 .1rem; }
+  .rslip .rslip-meta { text-align: center; font-size: .82rem; color: #555; margin: 0 0 .6rem; }
+  table.rslip-table { width: 100%; border-collapse: collapse; }
+  table.rslip-table th, table.rslip-table td { border: 1px solid #999; padding: .3rem .45rem; font-size: .78rem; text-align: left; vertical-align: top; }
+  table.rslip-table th { background: #eee; font-size: .72rem; }
+  table.rslip-table td.course-cell { white-space: nowrap; font-weight: 700; font-family: Georgia, serif; }
+  table.rslip-table td.course-cell .course-genre { display: block; font-weight: 400; font-style: italic; font-size: .7rem; color: #555; }
+  table.rslip-table td.write-in { height: 2.3rem; }
+  table.rslip-table td.circle-cell { white-space: nowrap; letter-spacing: .25em; text-align: center; }
+  .rslip .rslip-foot { font-size: .78rem; margin-top: .45rem; }
+  .rslip .rslip-foot .foot-line { display: inline-block; border-bottom: 1px solid #999; min-width: 14rem; height: 1rem; vertical-align: bottom; }
+
+  @media print {
+    .rslip { border-bottom: 1px dashed #999; min-height: 46vh; page-break-inside: avoid; }
+    #printArea .rslip:nth-child(2n) { page-break-after: always; border-bottom: none; }
+    #printArea .rslip:last-child { page-break-after: auto; }
+  }
 </style>
 </head>
 <body>
@@ -121,6 +140,15 @@
   <div class="tabs">
     <button type="button" class="tab-btn active" data-mode="menu">Print as menu</button>
     <button type="button" class="tab-btn" data-mode="tents">Print as table tents</button>
+    <button type="button" class="tab-btn" data-mode="slips">Print response slips</button>
+  </div>
+  <div class="card" id="slipOptions" style="display:none;max-width:30rem;">
+    <h2>Response slips</h2>
+    <p class="hint">Half-sheet rating slips students fill in as they taste &mdash; one row per course, matching the menu&rsquo;s courses when your books have genres. Two slips print per page.</p>
+    <div class="add-grid">
+      <div><label for="slipRounds">Courses per slip (rows)</label><input type="text" id="slipRounds" inputmode="numeric"></div>
+      <div><label for="slipCopies">Slips to print</label><input type="text" id="slipCopies" inputmode="numeric"></div>
+    </div>
   </div>
   <div class="btnrow">
     <button class="secondary" id="printBtn">Print</button>
@@ -133,8 +161,10 @@
 (function () {
   'use strict';
   var STORE_KEY = 'btmg_books_v1';
+  var SLIPS_KEY = 'btmg_slips_v1';
   var els = {};
-  ['newTitle', 'newAuthor', 'newGenre', 'newCover', 'newBlurb', 'addBookBtn', 'booksWrap', 'bookCount', 'printBtn', 'printArea'].forEach(function (id) {
+  ['newTitle', 'newAuthor', 'newGenre', 'newCover', 'newBlurb', 'addBookBtn', 'booksWrap', 'bookCount', 'printBtn', 'printArea',
+   'slipOptions', 'slipRounds', 'slipCopies'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -201,8 +231,71 @@
       document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
       printMode = btn.getAttribute('data-mode');
+      els.slipOptions.style.display = printMode === 'slips' ? '' : 'none';
+      if (printMode === 'slips' && !els.slipRounds.value) {
+        // sensible default: one row per menu course (genre), within reason
+        els.slipRounds.value = Math.min(8, Math.max(3, groupByGenre().length || 4));
+      }
     });
   });
+
+  /* ---------- tasting response slips ---------- */
+  var ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth'];
+
+  function slipSettings() {
+    var rounds = parseInt(els.slipRounds.value, 10);
+    var copies = parseInt(els.slipCopies.value, 10);
+    return {
+      rounds: (isFinite(rounds) && rounds >= 1) ? Math.min(rounds, 8) : 4,
+      copies: (isFinite(copies) && copies >= 1) ? Math.min(copies, 40) : 10
+    };
+  }
+  function loadSlipSettings() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SLIPS_KEY) || 'null'); } catch (e) { /* ignore */ }
+    if (saved && typeof saved === 'object') {
+      if (saved.rounds) els.slipRounds.value = saved.rounds;
+      if (saved.copies) els.slipCopies.value = saved.copies;
+    }
+    if (!els.slipCopies.value) els.slipCopies.value = 10;
+  }
+  function saveSlipSettings(s) {
+    try { localStorage.setItem(SLIPS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+  }
+
+  function slipHtml(rounds) {
+    var courses = groupByGenre(); // course labels mirror the printed menu's headings
+    var rows = '';
+    for (var i = 0; i < rounds; i++) {
+      var genre = courses[i] ? courses[i].genre : '';
+      rows += '<tr>' +
+        '<td class="course-cell">' + (ORDINALS[i] || (i + 1) + 'th') + ' course' +
+          (genre ? '<span class="course-genre">' + escapeHtml(genre) + '</span>' : '') + '</td>' +
+        '<td class="write-in"></td>' +
+        '<td class="write-in"></td>' +
+        '<td class="circle-cell">1&nbsp;2&nbsp;3&nbsp;4&nbsp;5</td>' +
+        '<td class="circle-cell">Y&nbsp;/&nbsp;N</td>' +
+        '</tr>';
+    }
+    return '<div class="rslip">' +
+      '<h2 class="rslip-title">Book Tasting &mdash; Response Slip</h2>' +
+      '<p class="rslip-meta">Name: ______________________ &nbsp; Class: __________ &nbsp; Date: __________</p>' +
+      '<table class="rslip-table"><thead><tr>' +
+      '<th style="width:6.5rem;">Course</th><th style="width:28%;">Book I tasted</th><th>First impressions</th>' +
+      '<th style="width:5.5rem;">Rating<br>(circle)</th><th style="width:4.5rem;">Read&nbsp;more?</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="rslip-foot">The book I most want to check out: <span class="foot-line"></span></div>' +
+      '</div>';
+  }
+
+  function slipsHtml() {
+    var s = slipSettings();
+    saveSlipSettings(s);
+    var one = slipHtml(s.rounds);
+    var html = '';
+    for (var i = 0; i < s.copies; i++) html += one;
+    return html;
+  }
 
   function groupByGenre() {
     var order = [], groups = {};
@@ -248,13 +341,14 @@
   }
 
   els.printBtn.addEventListener('click', function () {
-    if (!books.length) { alert('Add at least one book first.'); return; }
-    els.printArea.innerHTML = printMode === 'tents' ? tentsHtml() : menuHtml();
+    if (!books.length && printMode !== 'slips') { alert('Add at least one book first.'); return; }
+    els.printArea.innerHTML = printMode === 'tents' ? tentsHtml() : (printMode === 'slips' ? slipsHtml() : menuHtml());
     window.print();
   });
 
   /* ---------- boot ---------- */
   load();
+  loadSlipSettings();
   renderBooks();
 })();
 </script>

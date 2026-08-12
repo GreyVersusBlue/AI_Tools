@@ -9,6 +9,27 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: multiple named saved guides shipped (backlog
+rank 4).** Adopted the New/Duplicate/Rename/Delete multi-save convention,
+copied from `047-art-critique-worksheet-generator.html` (same
+`listNames`/`saveNamed`/`loadNamed`/`deleteNamed`/`uniqueName` store shape
+and the switcher-select + name-field + three-buttons card, placed above the
+Article card). New keys: `cedg_guides_v1` (name list), `cedg_guide_v1:<name>`
+(one blob per guide), `cedg_current_v1` (last-open). The old single-guide
+key `cedg_guide_v1` is migrated on first load into a named guide (named
+after its headline, or "My Guide" when the headline is blank; migration
+only fires when the legacy guide actually has content, so a fresh browser
+doesn't grow a junk entry). "Clear & start over" now clears the current
+guide's content but keeps its slot and name, instead of nuking the only
+save. Verified with a headless Chromium test over a local static server:
+legacy migration (headline-derived name, vocab, unchecked preset, custom
+question all arrive), guide isolation across switches, analyze-summary
+persistence, duplicate/rename/delete, clear-keeps-slot, current-guide
+restore on reload, and the printed guide rendering the right guide's
+content — zero console errors. Where the next round should pick up:
+reading-level presets for the question bank, or the two-article comparison
+guide idea (which is a separate backlog row).
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog. This toolkit is static-hosted with no server and no AI
 backend, so "turn a pasted article into a discussion guide" is built as
@@ -69,15 +90,17 @@ friction (one guide per browser, still overwritten week to week).
 - 6 preset discussion questions (checkbox toggle) + custom questions
 - Prints a guide: summary, vocabulary table (with definitions if filled
   in, blank if not), discussion questions with blank answer lines
+- **Multiple named saved guides** (`cedg_guides_v1` / `cedg_guide_v1:<name>`
+  / `cedg_current_v1`) with New/Duplicate/Rename/Delete; the pre-multi-save
+  single guide migrates in automatically, named after its headline
 
 ## Quick Wins
 
 - ~~**A better stopword/heuristic list.**~~ — **done, Round 2** (hand-
   curated expansion, not the vendored-frequency-list approach — see the
   Open Questions note on whether that's still worth doing on top of this).
-- **Multiple named saved guides**, matching the multi-save convention in
-  Formula Sheet Builder / Rubric Builder — right now there's exactly one
-  guide per browser, so last week's article is overwritten by this week's.
+- ~~**Multiple named saved guides**~~ — **done, 2026-08-12** (backlog round;
+  see Status — shipped with legacy migration and a slot-preserving Clear).
 - ~~**A "clear and start over" button**~~ — **done, Round 2.**
 - ~~**Show word count and read time even before analyzing**~~ — **done,
   Round 2.**

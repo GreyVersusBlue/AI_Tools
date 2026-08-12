@@ -68,6 +68,11 @@
   table.grid-table td.progress { font-size: .8rem; }
   table.grid-table td.overdue { background: #fbe2df; border-left: 3px solid var(--err); }
   table.grid-table td.overdue::after { content: " \26A0"; color: var(--err); font-size: .8rem; }
+  table.grid-table td .note-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 0 .15rem; vertical-align: middle; }
+  table.grid-table td .note-btn:hover { color: var(--accent-2); background: none; }
+  table.grid-table td .note-btn.has-note { color: var(--accent-2); }
+  table.grid-table td .cell-note { display: block; font-size: .66rem; color: var(--muted); max-width: 9rem; margin: .1rem auto 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .missing-list .m-note { font-style: italic; color: #444; }
 
   .summary-bar { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; margin-bottom: .8rem; font-size: .82rem; color: var(--muted); }
   .summary-bar strong { color: var(--ink); }
@@ -136,7 +141,7 @@
     els[id] = document.getElementById(id);
   });
 
-  var state = { roster: [], milestones: [], done: {} };
+  var state = { roster: [], milestones: [], done: {}, notes: {} };
   var sortLeastComplete = false;
 
   function todayIso() {
@@ -169,6 +174,7 @@
       state.milestones = DEFAULT_MILESTONES.map(function (name) { return { id: uid(), name: name, due: '' }; });
     }
     if (!state.done) state.done = {};
+    if (!state.notes) state.notes = {}; // added 2026-08: per student-milestone status notes
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -256,7 +262,13 @@
         var checked = !!state.done[key];
         if (checked) completeCount++;
         var overdue = !checked && m.due && m.due < today;
-        return '<td' + (overdue ? ' class="overdue" title="Overdue"' : '') + '><input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + (checked ? ' checked' : '') + '></td>';
+        var note = (state.notes[key] || '').trim();
+        return '<td' + (overdue ? ' class="overdue" title="Overdue"' : '') + '>' +
+          '<input type="checkbox" data-student="' + escapeAttr(name) + '" data-milestone="' + m.id + '"' + (checked ? ' checked' : '') + '>' +
+          '<button type="button" class="note-btn' + (note ? ' has-note' : '') + '" data-note-student="' + escapeAttr(name) + '" data-note-milestone="' + m.id + '" ' +
+            'title="' + (note ? escapeAttr(note) : 'Add a status note') + '" aria-label="Status note for ' + escapeAttr(name) + ', ' + escapeAttr(m.name) + '">&#9998;</button>' +
+          (note ? '<span class="cell-note">' + escapeHtml(note) + '</span>' : '') +
+          '</td>';
       }).join('');
       var pct = state.milestones.length ? Math.round(completeCount / state.milestones.length * 100) : 0;
       return { name: name, completeCount: completeCount, pct: pct, cells: cells };
@@ -276,6 +288,22 @@
     save(); renderTable();
   });
 
+  els.progressTable.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('[data-note-student]');
+    if (!btn) return;
+    var student = btn.getAttribute('data-note-student');
+    var milestoneId = btn.getAttribute('data-note-milestone');
+    var m = state.milestones.find(function (x) { return x.id === milestoneId; });
+    var key = doneKey(student, milestoneId);
+    var current = state.notes[key] || '';
+    var next = prompt('Status note for ' + student + ' — ' + (m ? m.name : 'milestone') +
+      ' (e.g. "board 80% done, missing abstract"; leave empty to remove):', current);
+    if (next === null) return;
+    if (next.trim()) state.notes[key] = next.trim();
+    else delete state.notes[key];
+    save(); renderTable();
+  });
+
   els.sortLeastComplete.addEventListener('change', function () {
     sortLeastComplete = els.sortLeastComplete.checked;
     renderTable();
@@ -292,8 +320,12 @@
     }).join('');
     var missingHtml = state.milestones.map(function (m) {
       var missing = state.roster.filter(function (name) { return !state.done[doneKey(name, m.id)]; });
+      var listed = missing.map(function (name) {
+        var note = (state.notes[doneKey(name, m.id)] || '').trim();
+        return escapeHtml(name) + (note ? ' <span class="m-note">(' + escapeHtml(note) + ')</span>' : '');
+      }).join(', ');
       return '<p><b>' + escapeHtml(m.name) + '</b>' + (m.due ? ' (due ' + fmtDate(m.due) + ')' : '') + ': ' +
-        (missing.length ? missing.map(escapeHtml).join(', ') : 'everyone done') + '</p>';
+        (missing.length ? listed : 'everyone done') + '</p>';
     }).join('');
     els.printArea.innerHTML = '<h1 class="print-title">Science Fair Progress Report</h1>' +
       '<p class="print-sub">Printed ' + new Date().toLocaleDateString() + '</p>' +

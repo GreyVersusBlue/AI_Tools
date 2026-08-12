@@ -9,6 +9,27 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: printable tasting response slips shipped
+(backlog rank 8).** A third print mode ("Print response slips") alongside
+menu and table tents. Each slip is a half-sheet (two per page, dashed cut
+line) a student fills in as they taste: a name/class/date line, a table
+with one row per course — the row labels are "First course", "Second
+course", … and, where the menu has genres, each row carries the matching
+genre name in order, so the slip mirrors the printed menu's course
+headings — with write-in columns for the book tasted and first
+impressions, a circle-a-number 1–5 rating, a Y/N "read more?", and a
+"book I most want to check out" line at the bottom. Selecting the slips
+tab reveals a small options card: courses per slip (rows, defaulting to
+the menu's genre count clamped 3–8) and number of slips to print
+(default 10, max 40), persisted under a new `btmg_slips_v1` key — the
+books key is untouched, so no migration needed. Slips can print even with
+an empty book list (the slip is generic by design — students write titles
+in). Verified with a headless Chromium test: options card shows/hides
+with the tab, genre-derived default rounds, six slips × four rows print
+with ordinals and genre labels, settings persist across reload, and the
+existing menu print still renders — zero console errors. Next round:
+reorder books and CSV import (its own backlog row) are the open ideas.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: a form to add books (title, author, genre, blurb, optional
 cover image via file upload stored as a data URL, following the same
@@ -45,6 +66,10 @@ Reorder books and the response slip Quick Wins were not built this round
   with cover thumbnails
 - Print as table tents (mirrored top/bottom halves for fold-and-stand),
   now including the cover image
+- Print **tasting response slips**: half-sheet per-student rating slips,
+  one row per course (labels mirror the menu's genre courses), with a 1–5
+  circle rating, Y/N "read more?", and a "most want to check out" line;
+  rows/copies configurable and persisted (`btmg_slips_v1`)
 
 ## Quick Wins
 
@@ -52,9 +77,9 @@ Reorder books and the response slip Quick Wins were not built this round
   a deliberate table arrangement instead of insertion order — also useful
   now for controlling which order genre sections print in, since that's
   currently first-appearance order.
-- **A student response slip** alongside the menu (small "my first course
-  choice: ___, second choice: ___" card) to close the loop on the actual
-  activity outcome, not just the browsing material.
+- **Done — 2026-08-12.** **A student response slip** alongside the menu, to
+  close the loop on the actual activity outcome. *(Shipped as the third
+  print mode — see Status.)*
 
 ## Major Features
 

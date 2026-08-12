@@ -9,6 +9,26 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: per-milestone notes field shipped (backlog
+rank 6).** Every student-milestone cell in the progress grid now has a
+small pencil button beside its checkbox that opens a `prompt()` for a
+short status note — "board 80% done, missing abstract". Notes are stored
+in a new `state.notes` map keyed by the same `student|milestoneId` key the
+`done` map already uses (defaulted in `load()` so pre-existing trackers
+migrate cleanly), shown truncated under the cell's checkbox on screen
+(full text in the tooltip; the pencil turns accent-colored when a note
+exists), and — the point of the row — **printed in the "still missing, by
+milestone" chase list**, italicized in parentheses after the student's
+name. An empty prompt answer deletes the note. What was hard: nothing —
+the only design choice was note entry via `prompt()` instead of an inline
+input per cell, because a roster × milestones grid of text inputs would
+have blown up the table layout for a note most cells don't have. Verified
+with a headless Chromium test: add note → renders in cell with has-note
+styling, survives reload, prints in the chase list next to the right
+student, done students stay out of the chase list, empty answer removes
+the note — zero console errors. Next round: multiple named saved trackers
+(its own backlog row) is the natural next lift.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: six default milestones (Question & Hypothesis, Background
 Research, Materials & Procedure, Data Collection, Board Complete,
@@ -62,15 +82,18 @@ inline scripts.
 - Whole-class summary bar: per-milestone completion counts above the grid
 - Optional "least complete first" sort (on-screen only)
 - Print: full checkmark grid + a "still missing, by milestone" chase-list
+- **Per-cell status notes** (pencil button per student-milestone cell,
+  `state.notes` keyed like `done`), shown truncated in the grid and
+  printed after the student's name in the chase list
 
 ## Major Features
 
 - **Multiple named saved trackers** (e.g. separate science-fair cohorts
   per class period), matching the multi-save convention used by most
   builder/tracker tools in this round — right now one tracker per browser.
-- **Per-milestone notes field** (not just a checkbox) — e.g. "board is 80%
-  done, missing the abstract" — turning a binary checkbox into an actual
-  status update a teacher can act on.
+- **Done — 2026-08-12.** **Per-milestone notes field** (not just a
+  checkbox) — e.g. "board is 80% done, missing the abstract". *(Shipped —
+  see Status.)*
 - **Student self-check-in via a share link** (this toolkit's P3 pattern):
   students mark their own milestones complete from their own device,
   instead of a teacher manually checking every box for every student.

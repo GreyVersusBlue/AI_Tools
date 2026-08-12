@@ -9,6 +9,27 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: grade-band scoping shipped (backlog rank,
+then #6).** Every built-in now carries a `band` tag — elementary (3–5):
+b0/b2/b6/b10 (basic order of operations, adding unlike fractions,
+decimal multiplication, rectangle area); high (9–12): three **new**
+built-ins added so that band isn't an empty checkbox (exponent product
+rule x³·x⁴, slope between two points, distributing a negative); middle
+(6–8): everything else — 18 built-ins total. A "Filter by grade band"
+checkbox row sits under the existing topic filter in the same card, same
+markup and behavior (session-only, all checked at boot), and
+`activeProblems()` now applies both filters together, so the projector
+shuffle and the worksheet draw honor topic ∩ band. The add-problem form
+gained a Grade band select (default middle); custom problems saved
+before bands existed have no `band` and deliberately pass every band
+filter rather than vanishing. Bank rows show a band pill next to the
+topic pill. Empty-state messages now name both filters. Verified with a
+headless Chromium test: 18 at boot, high-only = 3 (slope present),
+worksheet filtered, band ∩ topic composes to 1, empty message, band
+pills, and a legacy bandless custom problem surviving an
+elementary-only filter — zero console errors. Next round: bulk import
+(its own backlog row) is the remaining bank-side lift.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: a 15-problem built-in bank spanning order of operations,
 one- and two-step equations, fractions, exponents, percents, and negative
@@ -51,10 +72,11 @@ decimal multiplication or rectangle area — a stricter category mapping
 
 ## What it does today
 
-- 15 built-in worked-mistake problems across a spread of math topics, each
-  tagged with one of 8 categories
-- A category filter panel scoping both projector shuffle and worksheet
-  generation
+- 18 built-in worked-mistake problems across a spread of math topics, each
+  tagged with one of 8 categories **and a grade band** (elementary /
+  middle / high)
+- A category filter panel **plus a grade-band filter** scoping both
+  projector shuffle and worksheet generation (the two compose)
 - Projector mode: shuffle, two-stage reveal (corrected work, then a
   separate explanation reveal)
 - Worksheet mode: randomized subset + matching answer key (explanation +
@@ -65,11 +87,8 @@ decimal multiplication or rectangle area — a stricter category mapping
 
 ## Quick Wins
 
-- **Grade-band scoping** for the built-in bank, similar to Math Fact Drill
-  Sheet Generator's grade-band ranges — several built-ins (fractions,
-  two-step equations) skew middle-school while others (basic order of
-  operations) work for elementary too. (Carried over from last round — not
-  yet started.)
+- ~~**Grade-band scoping** for the built-in bank~~ — **done, 2026-08-12**
+  (backlog round; see Status — includes three new high-band built-ins).
 
 ## Major Features
 

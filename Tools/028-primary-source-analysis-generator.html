@@ -20,6 +20,8 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
   :root { --good: #2f7d4f; }
   * { box-sizing: border-box; }
@@ -36,6 +38,18 @@
   .back-link:hover { color: var(--accent-2); }
 
   .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
+
+  /* Share a worksheet by link / QR (same pattern as 040-vocab-flashcard-generator) */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .9rem; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
   .layout { display: grid; grid-template-columns: minmax(340px, 480px) 1fr; gap: 1.4rem; align-items: start; }
   @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
@@ -201,6 +215,21 @@
     <button class="secondary" id="exportSheetBtn">Export worksheet</button>
     <button class="secondary" id="importSheetBtn">Import worksheet</button>
     <input type="file" id="importSheetFile" accept="application/json,.json" style="display:none;">
+    <button class="secondary" id="shareLinkBtn">🔗 Copy link</button>
+    <button class="secondary" id="shareQrBtn">▦ QR code</button>
+  </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+
+  <div class="share-overlay" id="shareOverlay" hidden>
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Worksheet QR code">
+      <div class="share-head">
+        <span>Scan to open this worksheet</span>
+        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="shareCanvas"></canvas>
+      <p class="hint" style="margin:.6rem 0 0;">Opens the same worksheet on that device and saves it there as a copy &mdash;
+        edits on either side stay put.</p>
+    </div>
   </div>
 
   <div class="layout">
@@ -538,7 +567,8 @@
     'imageFile', 'imageFilePreviewWrap', 'imageFilePreview', 'clearImageFileBtn', 'imageSizeWarning',
     'readingSupportEnabled', 'readingSupportFields', 'readingSummary', 'readingParaphrase',
     'fwOptions', 'notesEditor', 'answerLines',
-    'previewArea', 'printBlankBtn', 'printKeyBtn'
+    'previewArea', 'printBlankBtn', 'printKeyBtn',
+    'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, sourceTitle, sourceType, sourceDescription, sourceText, imageUrl, framework, notes:{stepKey:text} }
@@ -1058,6 +1088,117 @@
     if (file) importSheetFromFile(file);
   });
 
+  /* ---------- share by link / QR (state-link.js, same pattern as 040) ---------- */
+  var SHARE_PARAM = 'worksheet';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /* An uploaded image is base64'd into imageDataUrl and can run to a megabyte
+     and more — far past what a URL (let alone a QR code) can carry. The link
+     deliberately travels without it; everything typed travels intact. */
+  function buildSharePayload() {
+    if (!state) return null;
+    save();
+    var payload = { v: 1 };
+    Object.keys(state).forEach(function (k) {
+      if (k !== 'imageDataUrl') payload[k] = state[k];
+    });
+    return payload;
+  }
+
+  function shareUrl() {
+    var payload = buildSharePayload();
+    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
+  }
+
+  function shareSuccessMessage() {
+    var msg = 'Link copied. Opening it anywhere loads this worksheet — framework, source text, citation, and your notes — and saves it there as a copy.';
+    if (state && state.imageDataUrl) {
+      msg += ' The uploaded image is too large to ride in a link, so it stays behind — the recipient re-uploads it, or use Export worksheet to send everything as a file.';
+    }
+    return msg;
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Nothing to share yet.', true); return; }
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote(shareSuccessMessage()); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Nothing to share yet.', true); return; }
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR code holds far less than a URL bar does. A long pasted source
+      // runs past it — say so rather than drawing a square nobody's phone can read.
+      setShareNote('This worksheet is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote(state && state.imageDataUrl
+      ? 'Heads up: the uploaded image is too large to ride in the QR code — the rest of the worksheet travels intact.'
+      : '');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  /** Consume a ?worksheet= link on load. Saves the arrival as a new worksheet
+      under a uniqued name — never over an existing one. Returns true if imported. */
+  function importSharedWorksheet() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
+    var decoded = StateLink.decodeState(raw);
+    if (!isPlausibleWorksheet(decoded)) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
+      return false;
+    }
+    var name = (decoded.name && decoded.name.trim()) || 'Shared worksheet';
+    var existing = Store.list();
+    if (existing.indexOf(name) !== -1) {
+      name = name + ' (shared)';
+      while (existing.indexOf(name) !== -1) name = name + ' 2';
+    }
+    delete decoded.v;
+    decoded.name = name;
+    decoded.imageDataUrl = ''; // never rides the link; loadSheetByName defaults the rest
+    Store.save(name, decoded);
+    loadSheetByName(name);
+    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s.');
+    return true;
+  }
+
   Array.prototype.slice.call(document.querySelectorAll('.view-tab')).forEach(function (tab) {
     tab.addEventListener('click', function () {
       Array.prototype.slice.call(document.querySelectorAll('.view-tab')).forEach(function (t) { t.classList.remove('active'); });
@@ -1078,11 +1219,13 @@
 
   /* ---------- boot ---------- */
   buildSourceTypeSelect();
-  var current = Store.getCurrentName();
-  if (current && Store.load(current)) {
-    loadSheetByName(current);
-  } else {
-    newSheet('New Worksheet');
+  if (!importSharedWorksheet()) {
+    var current = Store.getCurrentName();
+    if (current && Store.load(current)) {
+      loadSheetByName(current);
+    } else {
+      newSheet('New Worksheet');
+    }
   }
 })();
 </script>

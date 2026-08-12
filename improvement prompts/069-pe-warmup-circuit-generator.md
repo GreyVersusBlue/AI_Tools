@@ -11,6 +11,30 @@ instructions, printed as large station cards.
 
 ## Status
 
+**2026-08-12 — Backlog round: multiple named saved circuits shipped
+(backlog rank 5).** Adopted the New/Duplicate/Rename/Delete multi-save
+convention (the `list`/`data:<name>`/`current` localStorage shape this
+file's own notes pointed at, in the form
+`047-art-critique-worksheet-generator.html` ships it): new keys
+`pe_circuits_v1` / `pe_circuit_v1:<name>` / `pe_circuit_current_v1`, a
+"Saved circuits" card above the print-header card with a switcher select,
+rename-via-name-field, uniqued names, and circuit-level
+New/Duplicate/Delete buttons (named `*Circuit*` to stay clear of the
+per-station Duplicate buttons that already existed). The save-slot name is
+deliberately separate from the printed circuit title. The old
+single-circuit `pe_circuit_v1` key migrates on first load into a named
+circuit (named after its print title, or "My Circuit"), so an existing
+circuit — including one that's just the default template — survives the
+upgrade. A new circuit starts from the default 8-station template, the
+same starting point a fresh browser gets. Verified with a headless
+Chromium test over a local static server: legacy migration (save name from
+title, station, cards-per-page all arrive), circuit isolation across
+switches, duplicate/rename/delete, current-circuit restore across reload,
+and printing the right circuit's cards and header — zero console errors.
+**Where the next round should pick up:** the live projector/timer "run the
+circuit" mode (also its own backlog row) is now the biggest open lever,
+reusing Gallery Walk QR Codes' rotation-timer pattern per Open Questions.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from
 the Ideas Backlog. Closes out the Ideas Backlog's per-tool "coming soon"
 list entirely — every idea that was on the board across two rounds of
@@ -74,17 +98,17 @@ pattern per the Open Questions below rather than a fresh implementation.
 - Add/remove/reorder/duplicate stations; emoji picker palette; confirm-gated
   template switching
 - Print: station card grid (2/4/6/8 per page)
-- Autosaves to `localStorage` (`pe_circuit_v1`)
+- **Multiple named saved circuits** (`pe_circuits_v1` / `pe_circuit_v1:<name>`
+  / `pe_circuit_current_v1`) with New/Duplicate/Rename/Delete; the old
+  single `pe_circuit_v1` circuit migrates in automatically
 
 ## Quick Wins
 
 - **Done — Reorder stations** via up/down buttons.
 - **Done — A simple emoji picker.**
-- **Multiple named saved circuits**, matching the multi-save convention
-  used by most builder tools in this round — one flat circuit per
-  browser right now, so a teacher running different circuits for
-  different units/sports can't keep them separate. *(Still open — see
-  Status for the recommended storage pattern to copy.)*
+- **Done — 2026-08-12.** **Multiple named saved circuits**, matching the
+  multi-save convention used by most builder tools in this round.
+  *(Shipped with legacy migration — see Status.)*
 - **Done — Duplicate a station.**
 
 ## Major Features

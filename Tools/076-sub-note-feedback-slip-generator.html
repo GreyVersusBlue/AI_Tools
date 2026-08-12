@@ -62,6 +62,14 @@
   .slip .meta-line { font-size: .82rem; color: var(--muted); margin-bottom: .7rem; }
   .slip .slip-prompt { font-size: .88rem; font-weight: 600; margin: .5rem 0 .1rem; }
   .slip .slip-line { display: block; border-bottom: 1px solid var(--line-strong); height: 1.2rem; }
+  .slip .slip-urgency {
+    display: flex; align-items: center; gap: .55rem; border: 2px solid #333; border-radius: 6px;
+    padding: .45rem .7rem; margin: .2rem 0 .5rem; font-size: .86rem;
+  }
+  .slip .slip-urgency .u-box {
+    flex-shrink: 0; width: 1.05rem; height: 1.05rem; border: 2px solid #333; border-radius: 3px; background: #fff;
+  }
+  .slip .slip-urgency b { font-weight: 700; }
 
   @media print {
     body * { visibility: hidden; }
@@ -94,6 +102,11 @@
       <div><label for="copyCount">How many copies to print</label><input type="number" id="copyCount" value="2" min="1" max="20"></div>
       <div><label for="classPeriod">Class/Period (optional, pre-fills every copy)</label><input type="text" id="classPeriod" placeholder="e.g. 3rd Period"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:.45rem;font-weight:600;margin-top:.4rem;">
+      <input type="checkbox" id="urgencyToggle" checked style="width:auto;margin:0;">
+      Include a &ldquo;call me about this&rdquo; box on each slip
+    </label>
+    <p class="hint" style="margin-top:.2rem;">A prominent checkbox the sub ticks when something needs your attention &mdash; so you can triage which slips to read first from a stack.</p>
   </div>
 
   <div class="card">
@@ -119,9 +132,9 @@
   ];
 
   var els = {};
-  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['copyCount', 'classPeriod', 'promptsWrap', 'addPromptBtn', 'printBtn', 'printArea', 'urgencyToggle'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { copyCount: 2, prompts: [], classPeriod: '' };
+  var state = { copyCount: 2, prompts: [], classPeriod: '', urgencyBox: true };
 
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -138,6 +151,7 @@
     } catch (e) { /* ignore */ }
     if (!state.prompts.length) state.prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
     if (state.classPeriod == null) state.classPeriod = '';
+    if (typeof state.urgencyBox !== 'boolean') state.urgencyBox = true; // added 2026-08; on for pre-existing saves
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -171,6 +185,7 @@
   });
   els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
   els.classPeriod.addEventListener('input', function () { state.classPeriod = els.classPeriod.value; save(); });
+  els.urgencyToggle.addEventListener('change', function () { state.urgencyBox = els.urgencyToggle.checked; save(); });
 
   function slipHtml(filledPrompts) {
     var prompts = filledPrompts.map(function (p) {
@@ -179,9 +194,12 @@
     var classPeriodField = state.classPeriod.trim()
       ? escapeHtml(state.classPeriod.trim())
       : '__________________';
+    var urgency = state.urgencyBox
+      ? '<div class="slip-urgency"><span class="u-box"></span><span><b>Call me about this</b> &mdash; check this box if something today needs the teacher&rsquo;s attention first.</span></div>'
+      : '';
     return '<div class="slip"><h2>Sub Note</h2>' +
       '<div class="meta-line">Date: __________ &nbsp; Class/Period: ' + classPeriodField + ' &nbsp; Sub name: __________________</div>' +
-      prompts + '</div>';
+      urgency + prompts + '</div>';
   }
 
   els.printBtn.addEventListener('click', function () {
@@ -201,6 +219,7 @@
   load();
   els.copyCount.value = state.copyCount;
   els.classPeriod.value = state.classPeriod;
+  els.urgencyToggle.checked = state.urgencyBox;
   renderPrompts();
 })();
 </script>

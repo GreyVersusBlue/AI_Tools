@@ -9,6 +9,31 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: multiple named saved lists shipped (backlog
+rank 3).** The tool adopted the New/Duplicate/Rename/Delete multi-save
+convention, copied from `047-art-critique-worksheet-generator.html`
+(same `listNames`/`saveNamed`/`loadNamed`/`deleteNamed`/`uniqueName`
+store shape and the same switcher-select + name-field + three-buttons
+card). New keys: `clm_lists_v1` (name list), `clm_list_v1:<name>` (one
+blob per list), `clm_current_v1` (last-open). Each list carries its own
+words **and its own language** — a Spanish room set and a French unit set
+coexist with the right pronunciation each. The old single-list keys
+(`clm_words_v1`/`clm_lang_v1`) are migrated on first load into a named
+list called "My Labels" (words + saved language both carried over; the
+legacy keys are left in place, harmless, in case an old cached page ever
+reads them). Rename is the name-field-on-change pattern; deleting the
+last list drops you into a fresh empty one; names are uniqued with
+" (2)"-style suffixes on collision.
+
+Verified with a headless Chromium test over a local static server:
+legacy-key migration (words, count, and fr-FR language all arrive),
+new-list isolation (each list keeps its own words and language across
+switches), duplicate, rename (old name gone from the switcher), delete,
+current-list persistence across reload, the print path still rendering
+non-blank QR canvases, and a fresh browser booting to an empty
+"New Label List" — zero console errors. Where the next round should pick
+up: per-word language override and voice selection are the open ideas.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from
 the Ideas Backlog. The backlog description names a QR-code-to-audio-clip
 feature, which sounds like it needs a server to host audio files — this
@@ -59,7 +84,11 @@ built this round — see "Where the next round should pick up" below.
 ## What it does today
 
 - Paste `target: english` vocabulary pairs, one per line
-- Language picker (10 common languages) drives pronunciation
+- **Multiple named saved lists** (`clm_lists_v1` / `clm_list_v1:<name>` /
+  `clm_current_v1`) with New/Duplicate/Rename/Delete, each list keeping
+  its own words and language; the pre-multi-save single list migrates in
+  automatically as "My Labels"
+- Language picker (10 common languages) drives pronunciation, saved per list
 - **"Test ▶" link per word**, opening the pronunciation companion page
   directly so a teacher can check it before printing
 - **Prominent `file://` warning banner**, in addition to the existing hint
@@ -73,9 +102,9 @@ built this round — see "Where the next round should pick up" below.
 - **Per-word language override** — right now one language applies to the
   whole list; a classroom sometimes mixes vocabulary from two related
   languages or wants to spot-check a word in a dialect variant.
-- **Multiple named saved word lists**, matching the multi-save convention
-  used by most builder tools in this round — one flat list per browser
-  right now.
+- **Done — 2026-08-12.** **Multiple named saved word lists**, matching the
+  multi-save convention used by most builder tools in this round. *(Shipped
+  with per-list language and legacy migration — see Status.)*
 
 ## Major Features
 

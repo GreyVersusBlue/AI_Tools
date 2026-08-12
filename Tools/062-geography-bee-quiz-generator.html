@@ -35,6 +35,14 @@
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; }
+  textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .6rem; resize: vertical; min-height: 5.5rem;
+  }
+  .bulk-note { font-size: .8rem; line-height: 1.5; margin: 0 0 .2rem; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); }
+  .bulk-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
   input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
@@ -186,6 +194,16 @@
       <button id="addQBtn">Add to bank</button>
     </div>
     <div class="card">
+      <h2>Bulk import a custom bank</h2>
+      <p class="hint">One question per line: <code>question | answer | category</code> (or paste straight from a
+        spreadsheet &mdash; tab-separated works). Category is optional &mdash; <code>capitals</code>,
+        <code>landmarks</code>, or <code>map skills</code>; lines without one use the Category picker above.
+        Everything is added to your custom bank without touching what&rsquo;s already there.</p>
+      <textarea id="bulkInput" placeholder="What is the capital of Kenya? | Nairobi | capitals&#10;On which continent is the Amazon River? | South America | map skills"></textarea>
+      <button type="button" class="secondary" id="bulkImportBtn">Add to bank</button>
+      <p class="bulk-note" id="bulkNote" style="display:none;" aria-live="polite"></p>
+    </div>
+    <div class="card">
       <h2>Full bank (<span id="bankCount">0</span> questions)</h2>
       <p class="hint">Built-in questions can't be deleted, only your own custom ones.</p>
       <div class="bank-list" id="bankList"></div>
@@ -238,7 +256,8 @@
   var els = {};
   ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
+   'bulkInput', 'bulkImportBtn', 'bulkNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var custom = [];
   var disabled = {};
@@ -362,6 +381,55 @@
     saveCustom();
     els.newQ.value = ''; els.newA.value = '';
     resetOrder(); renderDisplay(); renderBank();
+  });
+
+  /* ---------- bulk import a custom bank ---------- */
+  /* Tab or pipe separated (P13's spreadsheet-paste shape) — deliberately no
+     comma splitting, since geography questions are full of commas. */
+  function parseCategoryToken(s) {
+    var t = String(s || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!t) return null;
+    if (t.indexOf('capital') === 0) return 'capitals';
+    if (t.indexOf('landmark') === 0) return 'landmarks';
+    if (t.indexOf('mapskill') === 0 || t === 'map' || t === 'maps') return 'mapskills';
+    return null;
+  }
+  function parseBulkLine(line, defaultCategory) {
+    var sep = line.indexOf('\t') !== -1 ? '\t' : (line.indexOf('|') !== -1 ? '|' : null);
+    if (!sep) return null;
+    var parts = line.split(sep).map(function (p) { return p.trim(); });
+    while (parts.length && !parts[parts.length - 1]) parts.pop();
+    if (parts.length < 2 || !parts[0] || !parts[1]) return null;
+    var category = null;
+    if (parts.length >= 3) {
+      category = parseCategoryToken(parts[parts.length - 1]);
+      if (category) parts.pop();
+    }
+    return { q: parts[0], a: parts.slice(1).join(' | '), category: category || defaultCategory };
+  }
+  function setBulkNote(text, isError) {
+    els.bulkNote.textContent = text || '';
+    els.bulkNote.className = 'bulk-note' + (isError ? ' error' : '');
+    els.bulkNote.style.display = text ? '' : 'none';
+  }
+  els.bulkImportBtn.addEventListener('click', function () {
+    var lines = els.bulkInput.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    if (!lines.length) { setBulkNote('Paste some lines first — one question per line.', true); return; }
+    var added = 0, skipped = [];
+    lines.forEach(function (line) {
+      var parsed = parseBulkLine(line, els.newCategory.value);
+      if (!parsed) { skipped.push(line); return; }
+      custom.push({ id: uid(), category: parsed.category, q: parsed.q, a: parsed.a });
+      added++;
+    });
+    saveCustom();
+    resetOrder(); renderDisplay(); renderBank();
+    if (added) els.bulkInput.value = '';
+    var msg = 'Added ' + added + ' question' + (added === 1 ? '' : 's') + ' to your custom bank.';
+    if (skipped.length) msg += ' Skipped ' + skipped.length + ' line' + (skipped.length === 1 ? '' : 's') +
+      ' with no tab or | between question and answer: ' +
+      skipped.slice(0, 3).map(function (s) { return '“' + s.slice(0, 40) + '”'; }).join(', ') + (skipped.length > 3 ? ', …' : '');
+    setBulkNote(msg, !added);
   });
 
   function renderBank() {

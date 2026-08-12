@@ -9,6 +9,26 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: editable per-tag word banks shipped (backlog
+rank, then #8).** A "Word banks" card between the story card and the
+preview: pick a tag from a select (overridden tags marked with ●), paste
+your own words comma- or line-separated into a textarea (the built-in list
+shows greyed as the placeholder), and the override saves debounced to a
+new `gmlg_custom_banks_v1` map holding **only** overridden tags. Every
+reader goes through a single `effectiveBank(tag)` helper, so the printed
+suggestion box, the on-screen bank (which marks overridden tags with
+"(your list)"), and the "Fill randomly" demo all pick up the unit
+vocabulary together. Emptying the textarea — or the explicit "Reset this
+tag to the built-in list" button — falls back to the built-ins. This also
+delivers the "curriculum-tied word banks" Major Feature in its practical
+form: the silly defaults stay, a teacher's unit words replace them per
+tag. Verified with a headless Chromium test: override replaces the
+built-ins in the bank box with the your-list marker and ● select mark,
+random fill draws from the custom words, print carries them, the override
+persists across reload while other tags stay untouched, and reset
+restores the built-ins — zero console errors. Next round: multiple named
+saved custom stories (its own backlog row) is the open lift.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: four built-in story templates using a simple `{tag}`
 placeholder syntax (noun, plural-noun, verb, verb-ed, adjective, adverb,
@@ -47,16 +67,17 @@ one item from this round's original four not yet done.
 - Custom story autosaves to `localStorage` and survives a reload
 - A visible, click-to-insert tag reference row next to the custom-story
   textarea
-- 14 word-bank categories with 6 sample words each
+- 15 word-bank categories with 6 sample words each, **each overridable
+  with the teacher's own pasted list** (`gmlg_custom_banks_v1`; print,
+  preview, and random fill all follow the override)
 - "Fill randomly" demo reveal for the projector
 - Print: labeled blanks + word-bank suggestion box
 
 ## Quick Wins
 
-- **Per-tag word count control** — right now every tag has a fixed 6-word
-  bank; letting a teacher add their own words to a category (matching this
-  toolkit's paste-a-list convention) would make the suggestion box richer
-  and topic-specific. (Carried over from last round — not yet started.)
+- ~~**Per-tag word count control** / teacher-added words per category~~ —
+  **done, 2026-08-12** (backlog round; see Status — a pasted list fully
+  replaces a tag's bank, any length).
 
 ## Major Features
 
@@ -68,9 +89,9 @@ one item from this round's original four not yet done.
   noun, then an adjective, etc., one at a time, building suspense the way
   the game is traditionally played out loud, then reveal the finished
   story.
-- **Curriculum-tied word banks**: let a teacher swap the default silly
-  word bank for a content-specific one (e.g. current vocabulary unit
-  words), turning this into vocabulary reinforcement disguised as a game.
+- ~~**Curriculum-tied word banks**~~ — **done in practical form,
+  2026-08-12** (the per-tag override above is exactly this: unit
+  vocabulary replaces the silly defaults per tag).
 - **JSON export/import** for a built custom story + its word choices, so
   a particularly good one can be shared between teachers.
 

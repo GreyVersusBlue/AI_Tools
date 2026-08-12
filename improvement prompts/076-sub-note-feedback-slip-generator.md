@@ -9,6 +9,22 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: follow-up urgency checkbox shipped (backlog
+rank 7).** Each printed slip now carries a prominent, hand-tickable
+"**Call me about this** — check this box if something today needs the
+teacher's attention first" box: a bordered strip with an empty printed
+checkbox square, placed right under the date/period/sub-name meta line so
+it's the first thing visible when riffling a stack of returned slips. It's
+controlled by an on-by-default "Include a 'call me about this' box on each
+slip" toggle in the settings card (`state.urgencyBox`, defaulted `true` in
+`load()` so pre-existing saved slips get it too — a slip already saved
+before this round prints with the box unless the teacher turns it off).
+Verified with a headless Chromium test: box prints on every copy by
+default with the tick square present, toggle-off removes it and the choice
+persists across reload, and a legacy save with no `urgencyBox` field
+defaults to on — zero console errors. Next round: multiple named saved
+prompt sets is this tool's remaining backlog row.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: four default prompts (what worked, what didn't, names/notes
 for tomorrow, anything else), fully editable (edit/add/remove any prompt),
@@ -53,6 +69,9 @@ scripts.
 - Print N half-sheets with a date/period/sub-name line; automatically
   switches to one full-page slip per copy instead of clipping once the
   prompt list is long enough to risk overflowing a half-sheet
+- **"Call me about this" urgency box** printed under the meta line
+  (on-by-default toggle, `state.urgencyBox`) so a returned stack can be
+  triaged at a glance
 
 ## Quick Wins
 
@@ -73,9 +92,8 @@ scripts.
   a paper slip left on the desk — could feed into a simple per-day archive
   (loosely similar to Parent/Guardian Contact Log's history list) instead
   of being a one-time throwaway slip.
-- **A "flag for follow-up" checkbox** on print so a sub can mark the slip
-  urgent (e.g. "call me about this") versus routine, giving the teacher a
-  fast signal on which slips need reading first the next morning.
+- **Done — 2026-08-12.** **A "flag for follow-up" checkbox** on print so a
+  sub can mark the slip urgent versus routine. *(Shipped — see Status.)*
 
 ## Moonshot / North Star
 

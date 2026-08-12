@@ -9,6 +9,24 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: hide individual built-in sentences shipped
+(backlog rank, then #2).** Copied `053-cultural-trivia-card-generator.html`'s
+pattern exactly, per this file's own recommendation: built-ins now carry
+stable index-derived ids (`'b0'…'b23'`), hidden ids persist as an array
+under `deg_hidden_v1`, and each built-in bank row has a Hide/Unhide button
+(hidden rows dim to 50% with a "(hidden)" marker). `allSentences()` filters
+hidden ids, so a hidden sentence leaves the projector rotation, the
+worksheet draw, and the bank's active count all at once; the bank list
+still shows it so it can be unhidden. The Open Question ("per-row toggle
+vs. an exclude-list") resolved itself the way 053 already resolved it —
+per-row toggle for discoverability, exclude-list as the storage shape
+underneath. Verified with a headless Chromium test: 24 hide buttons at
+baseline, hiding b0 drops the count to 23, walks the full projector
+rotation without the hidden sentence appearing, a max-size worksheet draws
+23 problems without it, the hide survives reload, and Unhide restores —
+zero console errors. Next round: bulk-import a custom bank (its own
+backlog row) and the why-explanations idea are the open items.
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: a 24-sentence built-in bank covering common middle-school
 grammar/punctuation errors (homophones, subject-verb agreement, run-ons,
@@ -65,19 +83,18 @@ just to ship the feature.
 - Worksheet mode: pick a count, get a randomized worksheet + answer key from
   the combined built-in + custom bank
 - Custom sentence bank: add your own, delete only your own
+- **Per-sentence Hide/Unhide on built-ins** (`deg_hidden_v1`): hidden
+  sentences leave the rotation, worksheet, and count but stay listed for
+  unhiding
 
 ## Quick Wins
 
 - ~~**Categorize/tag sentences**~~ — **done, Round 2** (six buckets:
   capitalization, punctuation &amp; apostrophes, homophones, subject-verb
   agreement, run-ons, other; filter applies to display + worksheet).
-- **Hide/disable individual built-in sentences** without deleting them —
-  right now the only granularity is "add custom" or "use everything," so a
-  built-in that doesn't fit a class can't be dropped from rotation. (053
-  Cultural Trivia Card Generator shipped this exact pattern in the same
-  round this file's tool got tagging — its `Hide`/`Unhide`-per-built-in
-  approach with a stable-id list in `localStorage` is the template to
-  copy here.)
+- ~~**Hide/disable individual built-in sentences**~~ — **done, 2026-08-12**
+  (backlog round; copied 053's Hide/Unhide-per-built-in pattern with a
+  stable-id list in `localStorage`, exactly as this note recommended).
 - ~~**Settings persistence for worksheet count**~~ — **done, Round 2**
   (grade-band-appropriate *defaults* specifically, as opposed to just
   remembering the last value used, is still open).

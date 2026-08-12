@@ -9,6 +9,20 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: reorder the label queue shipped (backlog
+rank 10).** Each queued label row grew ↑/↓ buttons (before the existing
+Edit/Duplicate/Delete, disabled at the ends, same pattern as Science Fair
+Tracker's milestone list), swapping adjacent queue entries. Since the
+printed grid is generated straight from the queue array, the print order
+now follows the on-screen order — a teacher can arrange the queue in
+shelf order before spending the ink. Order persists with the existing
+`sslm_queue_v1` save (no schema change; array order was already what got
+stored). Verified with a headless Chromium test: end buttons disabled,
+two moves reorder correctly, order survives reload, the printed cards
+come out in the reordered sequence, and edit/duplicate/delete still work
+— zero console errors. Still open: two symbols per label (its own
+backlog row) and named multi-save.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: ten hand-drawn inline-SVG hazard/equipment icons
 (flammable, corrosive, toxic/poison, biohazard, electrical hazard, sharp
@@ -51,8 +65,9 @@ inline scripts.
 ## What it does today
 
 - 10 hazard/equipment icons, color-coded
-- Custom label text + copy count per queued label; edit or duplicate any
-  queued label
+- Custom label text + copy count per queued label; edit, duplicate, or
+  **reorder (up/down)** any queued label — the printed grid follows the
+  queue's order
 - Label size control (small/medium/large — 4/3/2 per row)
 - Print: label-grid sized per the chosen size, each card matching
 
@@ -106,9 +121,9 @@ tools.
   resource, but a dependency this toolkit doesn't currently have anywhere
   else) or to a teacher-authored local page/note per hazard (simpler,
   fully local, but less authoritative)?
-- Still open from the Quick Wins list: **reordering the queue** (up/down,
-  matching the pattern used in Science Fair Project Tracker's milestone
-  list this same round) and **combining two symbols on one label**, which
+- ~~Still open from the Quick Wins list: **reordering the queue**~~ —
+  **done, 2026-08-12** (see Status). Still open: **combining two symbols
+  on one label**, which
   would need the queue item shape to hold an array of symbols instead of
   one and touches the print-card rendering, the edit form, and the
   duplicate logic all at once — sizeable enough to deserve its own round

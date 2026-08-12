@@ -104,6 +104,17 @@
   </div>
 
   <div class="card">
+    <h2>Word banks</h2>
+    <p class="hint">Each tag prints a suggestion list on the worksheet. Paste your own words for a tag &mdash; comma- or
+      line-separated &mdash; so the word bank carries the current unit&rsquo;s vocabulary. Empty it to go back to the built-in list.</p>
+    <label for="bankTagSelect">Tag</label>
+    <select id="bankTagSelect"></select>
+    <textarea id="bankWordsInput"></textarea>
+    <p class="hint" id="bankBuiltinHint" style="margin-top:-.2rem;"></p>
+    <button type="button" class="secondary" id="resetBankBtn">Reset this tag to the built-in list</button>
+  </div>
+
+  <div class="card">
     <div class="btnrow">
       <h2 style="margin:0;flex:1;">Preview</h2>
       <button id="fillRandomBtn">Fill randomly (demo)</button>
@@ -165,10 +176,39 @@
 
   var els = {};
   ['templateSelect', 'customText', 'useCustomBtn', 'storyPreview', 'bankBox', 'fillRandomBtn', 'clearFillBtn',
-   'printBtn', 'printStory', 'printBank', 'tagRef'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printStory', 'printBank', 'tagRef',
+   'bankTagSelect', 'bankWordsInput', 'bankBuiltinHint', 'resetBankBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentText = TEMPLATES[0].text;
   var filled = false;
+
+  /* ---------- per-tag word-bank overrides ---------- */
+  /* Only overridden tags are stored; every reader goes through
+     effectiveBank() so the printed bank, the on-screen bank, and the
+     random fill all pick up a teacher's unit vocabulary together. */
+  var CUSTOM_BANKS_KEY = 'gmlg_custom_banks_v1';
+  var customBanks = {};
+
+  function loadCustomBanks() {
+    try {
+      var data = JSON.parse(localStorage.getItem(CUSTOM_BANKS_KEY) || 'null');
+      if (data && typeof data === 'object' && !Array.isArray(data)) customBanks = data;
+    } catch (e) { /* ignore */ }
+    Object.keys(customBanks).forEach(function (tag) {
+      if (!Array.isArray(customBanks[tag]) || !customBanks[tag].length) delete customBanks[tag];
+    });
+  }
+  function saveCustomBanks() {
+    try { localStorage.setItem(CUSTOM_BANKS_KEY, JSON.stringify(customBanks)); } catch (e) { /* storage full/blocked */ }
+  }
+  function effectiveBank(tag) {
+    return (customBanks[tag] && customBanks[tag].length) ? customBanks[tag] : (WORD_BANK[tag] || []);
+  }
+  function parseWordList(text) {
+    return String(text || '').split(/[\n,]/)
+      .map(function (w) { return w.trim(); })
+      .filter(Boolean);
+  }
 
   /* ---------- custom story persistence ---------- */
   var CUSTOM_STORY_KEY = 'gmlg_custom_story_v1';
@@ -233,7 +273,8 @@
   function renderStory(targetEl, forPrint) {
     var html = escapeHtml(currentText).replace(/\{([a-z-]+)\}/g, function (whole, tag) {
       if (filled && !forPrint) {
-        var word = pickRandom(WORD_BANK[tag] || ['&hellip;']);
+        var bank = effectiveBank(tag);
+        var word = bank.length ? escapeHtml(pickRandom(bank)) : '&hellip;';
         return '<span class="blank filled">' + word + '</span>';
       }
       return '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tag-label">(' + tag.replace('-', ' ') + ')</span></span>';
@@ -244,10 +285,55 @@
   function renderBank(targetEl) {
     var tags = parseTags(currentText);
     targetEl.innerHTML = '<b>Word bank ideas (or invent your own!):</b><br>' + tags.map(function (tag) {
-      var words = WORD_BANK[tag] || [];
-      return '<div class="bank-group"><b>' + escapeHtml(tag.replace('-', ' ')) + ':</b> ' + words.map(escapeHtml).join(', ') + '</div>';
+      var words = effectiveBank(tag);
+      var mine = customBanks[tag] && customBanks[tag].length ? ' <em>(your list)</em>' : '';
+      return '<div class="bank-group"><b>' + escapeHtml(tag.replace('-', ' ')) + ':</b>' + mine + ' ' + words.map(escapeHtml).join(', ') + '</div>';
     }).join('');
   }
+
+  /* ---------- word-bank editor ---------- */
+  function renderBankTagSelect() {
+    var selected = els.bankTagSelect.value || ALL_TAGS[0];
+    els.bankTagSelect.innerHTML = ALL_TAGS.map(function (tag) {
+      var mark = customBanks[tag] && customBanks[tag].length ? '● ' : '';
+      return '<option value="' + escapeHtml(tag) + '"' + (tag === selected ? ' selected' : '') + '>' + mark + '{' + escapeHtml(tag) + '}</option>';
+    }).join('');
+  }
+  function renderBankEditor() {
+    var tag = els.bankTagSelect.value || ALL_TAGS[0];
+    var mine = customBanks[tag] || [];
+    els.bankWordsInput.value = mine.join(', ');
+    els.bankWordsInput.placeholder = (WORD_BANK[tag] || []).join(', ');
+    els.bankBuiltinHint.textContent = mine.length
+      ? 'Using your ' + mine.length + '-word list for this tag. Built-in: ' + (WORD_BANK[tag] || []).join(', ')
+      : 'Using the built-in list (shown greyed in the box above). Type or paste words to replace it.';
+  }
+  var bankSaveTimer = null;
+  els.bankWordsInput.addEventListener('input', function () {
+    clearTimeout(bankSaveTimer);
+    bankSaveTimer = setTimeout(function () {
+      var tag = els.bankTagSelect.value;
+      var words = parseWordList(els.bankWordsInput.value);
+      if (words.length) customBanks[tag] = words;
+      else delete customBanks[tag];
+      saveCustomBanks();
+      renderBankTagSelect();
+      var mine = customBanks[tag] || [];
+      els.bankBuiltinHint.textContent = mine.length
+        ? 'Using your ' + mine.length + '-word list for this tag. Built-in: ' + (WORD_BANK[tag] || []).join(', ')
+        : 'Using the built-in list (shown greyed in the box above). Type or paste words to replace it.';
+      refresh();
+    }, 250);
+  });
+  els.bankTagSelect.addEventListener('change', renderBankEditor);
+  els.resetBankBtn.addEventListener('click', function () {
+    var tag = els.bankTagSelect.value;
+    delete customBanks[tag];
+    saveCustomBanks();
+    renderBankTagSelect();
+    renderBankEditor();
+    refresh();
+  });
 
   function refresh() {
     renderStory(els.storyPreview, false);
@@ -291,6 +377,9 @@
 
   /* ---------- boot ---------- */
   loadCustomStory();
+  loadCustomBanks();
+  renderBankTagSelect();
+  renderBankEditor();
   refresh();
 })();
 </script>
