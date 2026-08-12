@@ -68,123 +68,122 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | PE Warm-Up Circuit Card Generator | Multiple named saved circuits | Named multi-save so unit-specific circuits coexist instead of one flat circuit per browser. |
-| 2 | Science Fair Project Tracker | Per-milestone notes field | A short status note per student-milestone cell — "board 80% done, missing abstract" — that prints in the chase list. |
-| 3 | Sub Note / Feedback Slip Generator | Follow-up urgency checkbox | A printed "call me about this" box the substitute ticks, so the teacher can triage which slips to read first. |
-| 4 | Book Tasting Menu Generator | Printable tasting response slips | Print small "first course / second course" rating slips matching the menu, so the tasting produces a paper artifact. |
-| 5 | Peer Feedback / Editing Checklist Generator | Three-point rating per item | Optional yes/somewhat/no boxes instead of a bare checkbox, so feedback records degree rather than only presence. |
-| 6 | Science Safety Symbol & Equipment Label Maker | Reorder the label queue | Up and down controls on queued labels so the printed grid comes out in shelf order rather than insertion order. |
-| 7 | Word Problem Warm-Up Generator | Copy current problem to clipboard | One button copying the projected problem text and answer, for pasting into a slide deck. |
-| 8 | Daily Editing / DOL Warm-Up Generator | Hide individual built-in sentences | A per-sentence hide/unhide toggle on the built-ins with hidden ids persisted, copying the pattern already shipped in two sibling tools. |
-| 9 | Cognates & False Friends Reference List Builder | Bulk paste import | Accept a pasted multi-line list — word, English, type — to build a whole reference set at once instead of row by row. |
-| 10 | Cultural Trivia Card Generator | Bulk import a custom bank | Paste question/answer/category rows to load a whole custom bank in one step rather than adding questions individually. |
-| 11 | Geography Bee / Map Skills Quiz Generator | Bulk import a custom bank | Paste question/answer/category rows to load a whole regional bank at once instead of adding questions one at a time. |
-| 12 | Math "Find the Mistake" Warm-Up Generator | Grade-band scoping of the bank | Tag built-ins elementary, middle, and high and filter the display and worksheet together, matching a sibling tool's shipped filter. |
-| 13 | Unit Conversion Reference Chart Builder | Grade-band presets | One click selects the right unit sets for elementary versus middle school, instead of checking boxes individually every time. |
-| 14 | Grammar Mad Libs Generator | Editable per-tag word banks | Let a teacher paste their own nouns and adjectives per tag, so the worksheet's suggestion boxes carry the current unit's vocabulary. |
-| 15 | Picture-Prompt Speaking/Writing Task Generator | Prompt sets by target language | Ship starter prompt libraries per language taught, selectable so the printed task wording matches the class. |
-| 16 | Verb Conjugation Reference Poster Generator | Per-panel accent colors | Assign one color per verb-ending group so the poster is scannable from across the room. |
-| 17 | Historical Figure / Country Trading Card Maker | Standard trading-card size option | A 2.5×3.5 inch print preset alongside the current larger card, for genuinely pocket-sized cards. |
-| 18 | Lab Report Template Builder | Typed data-table columns | Let each data column declare numeric or text plus a units label, so the printed grid shows the expected format before students record. |
-| 19 | Dichotomous Key Builder | Preview a classification path | Enter a hypothetical specimen's traits and highlight the couplet route it would take, catching dead ends before the key is printed. |
-| 20 | Music Sight-Reading / Rhythm Warm-Up Generator | Glyph-support probe with fallback | Measure the musical-symbol glyphs at load and warn or swap to drawn shapes when the projecting machine renders empty boxes. |
-| 21 | Virtual Manipulatives Board | Snap-to-grid toggle | Optional grid snapping so ten units visibly line up into a ten-rod without careful manual dragging. |
-| 22 | Student Art Portfolio Label & QR Tag Maker | Class reference sheet print | One compact page listing every piece's title, artist, and full statement, for the teacher's records and for gallery signage. |
-| 23 | Government/Civics Simulation Role Card Generator | Assign students to roles | Load a roster from `np_rosters` and print each card with its assigned student's name already on it. |
-| 24 | QR Scavenger Hunt Builder | Staggered station starts | Assign each team a different starting station and rotation offset, printed on a per-team route card so teams stop bunching. |
-| 25 | Lab Group & Role Randomizer | Group size from equipment count | Enter "7 microscopes" and get groups sized to the equipment on hand rather than to an arbitrary group size. |
-| 26 | Field Trip Permission Slip Generator | Bilingual slip printing | Print the same slip with a teacher-supplied second-language column or facing page — the most-requested permission-slip feature in most districts. |
-| 27 | Math Fact Drill Sheet Generator | More operation types | Fraction, decimal, percent, integer, and order-of-operations templates alongside the four arithmetic ones. |
-| 28 | Word Doc Merger | Per-document merge options | Move the page-break and heading-normalization choices from global settings to per-document toggles in the file list. |
-| 29 | Image → PDF Assembler | Whiteboard auto-enhance | A canvas-only contrast and white-balance pass that makes a phone photo of a whiteboard or worksheet legible and cheap to print. |
-| 30 | Immersion Roleplay Scenario Generator | Success-criteria strip | A teacher-authored "what a good attempt sounds like" band printed on every handout and role card. |
-| 31 | Timeline Builder | Tiled wall-timeline print | Reuse the Blank Map Generator's `printTiledPages` so one timeline spreads across taped-together sheets for a hallway wall. |
-| 32 | Bracket / Tournament Generator | Scores that feed standings | Make the score field structured so round-robin W/L, point differential, and the printed bracket become a real record instead of free text. |
-| 33 | Novel Study / Reading Circles Manager | Vocabulary to review game | Export the accumulated vocabulary log into the Review Game Board's bank, using the same bridge pattern the flashcard handoff already uses. |
-| 34 | Art Critique Worksheet Generator | Artist self-reflection variant | A toggle that rewords the four critique steps into first person, for a student reflecting on their own finished piece. |
-| 35 | DBQ / Source Packet Builder | Image size and crop control | A per-source width/scale slider and crop box, so uploaded documents print at a usable size instead of stretching to page width. |
-| 36 | Story Elements / Plot Diagram Builder | Presentation view for discussion | A large-type, borderless, read-only rendering of the diagram for projecting live during a class discussion. |
-| 37 | Final Grade Checker | Missing-work triage report | From the same paste, list who has zeros and who is one assignment from a letter change, and print a per-student catch-up slip. |
-| 38 | Seating Chart Generator | Seating history and rotation | Record who sat where each unit and enforce "not the same seat twice" and "front row once per quarter", printable as evidence for a parent or admin. |
-| 39 | East Middle Schedule Browser | One-page substitute view | Pick an absent teacher and print a single sheet: their day, rooms, groups, common-planning coverage candidates, and a building map crop. |
-| 40 | School Layout Visualizer | Evacuation route planner | Compute and print per-room evacuation paths and assembly points from the existing A* graph, as postable door cards. |
-| 41 | Quiz / Review Game Board | Audio in a clue | Record or attach a short clip — a pronunciation, a music excerpt, a primary-source recording — stored in IndexedDB rather than inline, with a play control on the projected clue. |
-| 42 | Quiz / Review Game Board | Reusable tagged question bank | A bank separate from any one board, tagged by unit, standard, and difficulty, that multiple boards and future game formats draw from. |
-| 43 | Vocabulary Flashcard & Word Wall Generator | More printables from one list | Generate a word search, crossword, bingo cards, and a matching quiz from the same term-and-definition list. |
-| 44 | School Calendar Visualizer | Unit pacing layer | Lay named units across date ranges, auto-counting actual instructional days after holidays and half days, printable as a pacing calendar. |
-| 45 | Math Fact Drill Sheet Generator | Self-checking sheet formats | Riddle-answer, colour-by-answer, and maze transformations of an existing problem set, each with a key. |
-| 46 | Field Trip Permission Slip Generator | Scan returned slips to check off | Use `_shared/qr-scan.js` on the QR each slip already carries, so the collection tracker ticks students off in seconds. |
-| 47 | Lab Safety Contract Tracker | Scan returned forms | Print a per-student code on each blank contract and tick off a returned stack with `_shared/qr-scan.js` in under a minute. |
-| 48 | Sub Plan Builder | Richer document output | Extend the document builder with per-period tables, headers and footers with page numbers, and an embedded seating-chart image. |
-| 49 | Rubric Builder | Rubric scores flow to grade tools | A read-only bridge writing rubric totals into Final Grade Checker / Grade Distribution Visualizer's storage contract, mirroring the existing `wpg-rubric-link.js` pattern. |
-| 50 | Class Roster Hub | All-rosters device transfer | Move every roster, sidecar record, and archive to another machine over `_shared/webrtc-pair.js` with QR pairing, producing no file to lose or email. |
-| 51 | Backup & Restore | Device-to-device migration | Carry the versioned backup envelope straight to a new laptop over `_shared/webrtc-pair.js`, with no file ever written to disk. |
-| 52 | Classroom Timer | Phone as timer remote | Extend the existing `webrtc-pair.js` mirror so the paired phone starts, pauses, and advances agenda segments while the teacher walks the room. |
-| 53 | Command Center | Phone remote for the dashboard | Pair a phone via `_shared/webrtc-pair.js` to drive five named actions — timer, next student, sign in, advance period — from across the room. |
-| 54 | Tournament Bracket & Station Rotation | Real phone-to-laptop remote | Replace the same-device BroadcastChannel remote with `_shared/webrtc-pair.js` LAN pairing, so a phone actually drives the gym display. |
-| 55 | Digital Hall Pass / Sign-Out Log | Two-teacher hallway sync | Pair two teachers' boards over `_shared/webrtc-pair.js` so a shared hallway shows one combined out-count and one overtime alert instead of two blind halves. |
-| 56 | Name Picker | Equity by seat position | Join the equity report to `seating-chart-v1` so the printed participation summary shows call rates by row and region of the room. |
-| 57 | Behavior & Points Tracker | Seating-chart board layout | Arrange the tap targets the way the room actually is, read from `seating-chart-v1`, instead of alphabetically. |
-| 58 | Group / Team Generator | Year-long pairing matrix | Retain pair history beyond the current two generations and print a who-has-worked-with-whom grid that drives an "everyone pairs with everyone" grouping mode. |
-| 59 | Bracket / Tournament Generator | Pools and Swiss formats | Pools feeding an elimination bracket, plus a Swiss pairing mode, so nobody is eliminated after a single round. |
-| 60 | Exit Ticket / Bell Ringer Generator | Bell-ringer sequences | Plan a prompt per day for a week or unit, advanced by date with manual override, mirroring Writing Prompt's Prompt Sets. |
-| 61 | Writing Prompt Generator | Teacher-kept writing record | Log which prompt each student wrote to and the teacher's note, printable per student for a conference. |
-| 62 | Novel Study / Reading Circles Manager | Multiple books in one project | Four circles reading four different books at four paces, with per-book schedules and one combined meeting-day view. |
-| 63 | Digital Escape Room / Puzzle Lock Builder | Printable paper packet | Emit the same puzzle chain as a cut-apart paper packet with a teacher key, so the room runs with no devices at all. |
-| 64 | QR Scavenger Hunt Builder | Paper no-device hunt mode | Print clue cards with code words plus a team answer sheet and teacher key, for the day the Chromebooks stayed in the cart. |
-| 65 | Gallery Walk QR Codes | Verify the whole batch before printing | Decode every generated code with `_shared/qr-scan.js` and flag any station whose code will not scan reliably, before the ink is spent. |
-| 66 | QR Code Generator | Equipment check-out mode | Scan printed asset codes in and out, keeping a local record of which kit is with which group, printable as an inventory sheet. |
-| 67 | Lab Group & Role Randomizer | Gate groups on the safety contract | Read `lsct_sections_v1` and flag or exclude students who have not returned a signed lab safety contract. |
-| 68 | Number Talks / Mental Math Routine Board | Class strategy wall library | Accumulate the class's own named strategies across the year and print them as wall reference posters. |
-| 69 | Image → PDF Assembler | Per-student portfolio PDFs | Group images by student name parsed from filenames and emit one PDF each, delivered as a single archive via the shared JSZip build. |
-| 70 | Graph Paper & Number Line Generator | Graphing worksheet mode | A problem printed above each small coordinate plane, plus a matching answer-key sheet with the line or curve already plotted. |
-| 71 | Immersion Roleplay Scenario Generator | Speaking assessment layer | Tap a short rubric per pair while circulating, stored per class, printed as a per-student speaking record. |
-| 72 | Timeline Builder | Timeline plus map print | Pair events to places and print the timeline along the bottom with a map above, each event pinned to both. |
-| 73 | Primary Source Analysis Worksheet Generator | Side-by-side corroboration worksheet | Print two sources on one sheet with shared sourcing questions plus a "where do they disagree" comparison block and answer key. |
-| 74 | Prompt Builder | Task-organized prompt library | A browsable built-in library grouped by teaching task — write a rubric, differentiate a text, draft a parent email — each loading a full form state. |
-| 75 | Word Doc Merger | Cover page, headers, and page numbers | Generate a title/class/date cover page and inject running headers plus continuous page numbering across the merged document. |
-| 76 | Silent Reading (SSR) Log Tracker | Printable parent reading report | One page per student showing books finished, pages, minutes, and streaks this quarter, batch-printed for conferences or mailing. |
-| 77 | Grade Distribution Visualizer | Per-question item analysis | Accept per-item scores, chart which questions the class missed most, and print a reteach priority list. |
-| 78 | Data Table → Chart Builder | Chart annotation layer | Add arrows, text callouts, and shaded regions on the chart so a printed figure makes an argument rather than just showing a picture. |
-| 79 | Vocab & Conjugation Drill Generator | Conjugation pattern engine | Given an infinitive and verb class, generate the full regular table automatically, with irregular overrides only where flagged. |
-| 80 | Formula Reference Sheet Builder | Local math notation renderer | A self-contained renderer for fractions, radicals, exponents, subscripts, and Greek letters, so formulas stop being plain text. |
-| 81 | Certificate & Award Maker | Templates as data | Move layout, fonts, borders, and colors into template objects so new and teacher-built designs need no code changes. |
-| 82 | Sub Binder / Day Bundle Generator | Evergreen emergency binder | A permanently maintained no-notice packet built from date-independent sections only, with a staleness reminder, printed once and left in a drawer. |
-| 83 | Blank Map Generator | Choropleth from pasted data | Paste "region, value" rows and shade the vector base map with a grayscale-safe ramp plus an automatic legend. |
-| 84 | Art Critique Worksheet Generator | Rubric-scored critique variant | An optional per-step point scale and teacher score column printed alongside the open-ended prompts, with a matching score key. |
-| 85 | Student Art Portfolio Label & QR Tag Maker | Bulk photo import | Select an entire folder of images at once, downscale them, and auto-match by filename to existing entries or create new ones. |
-| 86 | Book Tasting Menu Generator | Spreadsheet book-list import | Use the shared SheetJS build to import title/author/genre/blurb rows in bulk, with a genre-balance warning on the result. |
-| 87 | Government/Civics Simulation Role Card Generator | Per-role case file packets | Attach role-specific evidence, witness facts, or bill text that prints as a companion packet behind each card. |
-| 88 | Classroom Label Maker (Target Language) | Teacher-recorded audio fallback | Record pronunciations locally via MediaRecorder and store them, so labels still work when the browser has no target-language voice. |
-| 89 | Cognates & False Friends Reference List Builder | Practice worksheet variants | Generate matching, fill-in-the-blank, and "trap or true cognate" quiz handouts with answer keys from the same list. |
-| 90 | Cultural Trivia Card Generator | Export into Review Game Board | Emit the selected question set in the Review Game Board's category/points/question/answer format, so a trivia bank becomes a game board. |
-| 91 | Current Events Discussion Guide Generator | Two-article comparison guide | Paste two articles on the same event and generate a side-by-side guide with bias and framing contrast questions and a shared vocabulary list. |
-| 92 | Daily Editing / DOL Warm-Up Generator | Bulk-import a custom bank | Paste a whole list of broken-and-fixed pairs, tab- or pipe-separated, instead of entering them one at a time. |
-| 93 | DBQ / Source Packet Builder | Share a packet by link | Encode the whole packet with `_shared/state-link.js` into a URL, plus a QR, so a department teammate opens the identical packet offline. |
-| 94 | Dichotomous Key Builder | Visual branching tree view | Render the couplet list as a branching diagram, printable as a one-page overview alongside the numbered text key. |
-| 95 | Duty Roster Builder | Multi-week rotating schedule | Store several weeks, derive week N+1 by shifting each person one duty, and print a whole month's grid at once. |
-| 96 | Scientific Method / Experiment Design Planner | Hand off to Lab Report Builder | Encode the plan with `_shared/state-link.js` and open the Lab Report Template Builder pre-filled with question, hypothesis, materials, and procedure. |
-| 97 | Fitness & Skill Assessment Tracker | Per-student report cards | A print view of one page per student across all events and dates, with the class average for comparison, for handing home. |
-| 98 | Fraction–Decimal–Percent Conversion Drill Generator | Improper, mixed, and negative values | Extend operand generation past 0–1 to improper fractions, mixed numbers, and negatives, widening what the drill can practice. |
-| 99 | Geography Bee / Map Skills Quiz Generator | Multiple-choice quiz mode | Auto-generate three distractors from same-category answers, for both the projector display and the printed quiz plus key. |
-| 100 | Grammar Mad Libs Generator | Multiple saved custom stories | Named multi-save for custom templates plus their word banks, so several stories coexist rather than one overwriting the last. |
-| 101 | Historical Figure / Country Trading Card Maker | Batch-add blank cards from a roster | Paste a name-per-line assignment list to create pre-titled blank cards for a whole class research project in one step. |
-| 102 | Lab Report Template Builder | Pre-lab and post-lab packet split | Print a planning packet — hypothesis, materials, procedure — and a separate report packet — data, conclusion — from one saved template. |
-| 103 | Math "Find the Mistake" Warm-Up Generator | Bulk import a custom bank | Paste problem/work/fix/explain rows to load a unit's worth of mistake problems at once. |
-| 104 | Music Sight-Reading / Rhythm Warm-Up Generator | Metronome and reference pitch | Wire the currently decorative tempo field to a real click track and add a play-through of the generated pitches. |
-| 105 | Parent/Guardian Contact Log | Conference print packet | One student's full contact history plus a blank note-taking area, formatted as a single page to hand an administrator before a meeting. |
-| 106 | PE Warm-Up Circuit Card Generator | Live circuit rotation timer | A projector mode that counts down each station's duration and signals the rotation, driving the circuit live rather than only printing signage. |
-| 107 | Peer Feedback / Editing Checklist Generator | Roster-driven pre-named half-sheets | Read `np_rosters` and print one half-sheet per student with the author's name already filled in. |
-| 108 | Picture-Prompt Speaking/Writing Task Generator | Multiple named saved image sets | Named multi-save for image libraries, so a family-vocabulary set and a school-vocabulary set coexist without re-uploading. |
-| 109 | Story Elements / Plot Diagram Builder | Share a diagram by link | Encode the diagram with `_shared/state-link.js` so the same novel's diagram moves between class periods or to a teammate's browser. |
-| 110 | Science Fair Project Tracker | Multiple named saved trackers | Named multi-save so each class period's science-fair cohort keeps its own roster, milestones, and due dates. |
-| 111 | Science Safety Symbol & Equipment Label Maker | Two symbols per label | Let a label carry more than one icon — corrosive plus eye protection — across the edit form, duplicate logic, and printed card. |
-| 112 | Staff Directory / Quick-Reference Builder | Wallet-card layout with QR | An alternate lanyard-insert print with a QR per entry encoding a phone or email link. |
-| 113 | Sub Note / Feedback Slip Generator | Multiple named saved prompt sets | Named multi-save so a general slip, a lab-day slip, and a testing-day slip stay ready simultaneously. |
-| 114 | Testing Accommodations Reference Card Generator | Room-assignment view | Define testing rooms and proctors, auto-route students by accommodation — separate setting, read-aloud — and print per-room proctor lists. |
-| 115 | Unit Conversion Reference Chart Builder | Named saves plus reorder and share | Convert the single stored chart to named multi-save, with group and line reordering and a `_shared/state-link.js` share URL. |
-| 116 | Verb Conjugation Reference Poster Generator | Irregular verb call-out boxes | An optional side panel per poster listing three to five common irregulars in that tense — regular patterns are only half a wall reference. |
-| 117 | Word Problem Warm-Up Generator | Two-step word problems | Chained-operation templates for the upper grade band, the biggest gap for the grades 6–8 audience the tool targets. |
+| 1 | Science Fair Project Tracker | Per-milestone notes field | A short status note per student-milestone cell — "board 80% done, missing abstract" — that prints in the chase list. |
+| 2 | Sub Note / Feedback Slip Generator | Follow-up urgency checkbox | A printed "call me about this" box the substitute ticks, so the teacher can triage which slips to read first. |
+| 3 | Book Tasting Menu Generator | Printable tasting response slips | Print small "first course / second course" rating slips matching the menu, so the tasting produces a paper artifact. |
+| 4 | Peer Feedback / Editing Checklist Generator | Three-point rating per item | Optional yes/somewhat/no boxes instead of a bare checkbox, so feedback records degree rather than only presence. |
+| 5 | Science Safety Symbol & Equipment Label Maker | Reorder the label queue | Up and down controls on queued labels so the printed grid comes out in shelf order rather than insertion order. |
+| 6 | Word Problem Warm-Up Generator | Copy current problem to clipboard | One button copying the projected problem text and answer, for pasting into a slide deck. |
+| 7 | Daily Editing / DOL Warm-Up Generator | Hide individual built-in sentences | A per-sentence hide/unhide toggle on the built-ins with hidden ids persisted, copying the pattern already shipped in two sibling tools. |
+| 8 | Cognates & False Friends Reference List Builder | Bulk paste import | Accept a pasted multi-line list — word, English, type — to build a whole reference set at once instead of row by row. |
+| 9 | Cultural Trivia Card Generator | Bulk import a custom bank | Paste question/answer/category rows to load a whole custom bank in one step rather than adding questions individually. |
+| 10 | Geography Bee / Map Skills Quiz Generator | Bulk import a custom bank | Paste question/answer/category rows to load a whole regional bank at once instead of adding questions one at a time. |
+| 11 | Math "Find the Mistake" Warm-Up Generator | Grade-band scoping of the bank | Tag built-ins elementary, middle, and high and filter the display and worksheet together, matching a sibling tool's shipped filter. |
+| 12 | Unit Conversion Reference Chart Builder | Grade-band presets | One click selects the right unit sets for elementary versus middle school, instead of checking boxes individually every time. |
+| 13 | Grammar Mad Libs Generator | Editable per-tag word banks | Let a teacher paste their own nouns and adjectives per tag, so the worksheet's suggestion boxes carry the current unit's vocabulary. |
+| 14 | Picture-Prompt Speaking/Writing Task Generator | Prompt sets by target language | Ship starter prompt libraries per language taught, selectable so the printed task wording matches the class. |
+| 15 | Verb Conjugation Reference Poster Generator | Per-panel accent colors | Assign one color per verb-ending group so the poster is scannable from across the room. |
+| 16 | Historical Figure / Country Trading Card Maker | Standard trading-card size option | A 2.5×3.5 inch print preset alongside the current larger card, for genuinely pocket-sized cards. |
+| 17 | Lab Report Template Builder | Typed data-table columns | Let each data column declare numeric or text plus a units label, so the printed grid shows the expected format before students record. |
+| 18 | Dichotomous Key Builder | Preview a classification path | Enter a hypothetical specimen's traits and highlight the couplet route it would take, catching dead ends before the key is printed. |
+| 19 | Music Sight-Reading / Rhythm Warm-Up Generator | Glyph-support probe with fallback | Measure the musical-symbol glyphs at load and warn or swap to drawn shapes when the projecting machine renders empty boxes. |
+| 20 | Virtual Manipulatives Board | Snap-to-grid toggle | Optional grid snapping so ten units visibly line up into a ten-rod without careful manual dragging. |
+| 21 | Student Art Portfolio Label & QR Tag Maker | Class reference sheet print | One compact page listing every piece's title, artist, and full statement, for the teacher's records and for gallery signage. |
+| 22 | Government/Civics Simulation Role Card Generator | Assign students to roles | Load a roster from `np_rosters` and print each card with its assigned student's name already on it. |
+| 23 | QR Scavenger Hunt Builder | Staggered station starts | Assign each team a different starting station and rotation offset, printed on a per-team route card so teams stop bunching. |
+| 24 | Lab Group & Role Randomizer | Group size from equipment count | Enter "7 microscopes" and get groups sized to the equipment on hand rather than to an arbitrary group size. |
+| 25 | Field Trip Permission Slip Generator | Bilingual slip printing | Print the same slip with a teacher-supplied second-language column or facing page — the most-requested permission-slip feature in most districts. |
+| 26 | Math Fact Drill Sheet Generator | More operation types | Fraction, decimal, percent, integer, and order-of-operations templates alongside the four arithmetic ones. |
+| 27 | Word Doc Merger | Per-document merge options | Move the page-break and heading-normalization choices from global settings to per-document toggles in the file list. |
+| 28 | Image → PDF Assembler | Whiteboard auto-enhance | A canvas-only contrast and white-balance pass that makes a phone photo of a whiteboard or worksheet legible and cheap to print. |
+| 29 | Immersion Roleplay Scenario Generator | Success-criteria strip | A teacher-authored "what a good attempt sounds like" band printed on every handout and role card. |
+| 30 | Timeline Builder | Tiled wall-timeline print | Reuse the Blank Map Generator's `printTiledPages` so one timeline spreads across taped-together sheets for a hallway wall. |
+| 31 | Bracket / Tournament Generator | Scores that feed standings | Make the score field structured so round-robin W/L, point differential, and the printed bracket become a real record instead of free text. |
+| 32 | Novel Study / Reading Circles Manager | Vocabulary to review game | Export the accumulated vocabulary log into the Review Game Board's bank, using the same bridge pattern the flashcard handoff already uses. |
+| 33 | Art Critique Worksheet Generator | Artist self-reflection variant | A toggle that rewords the four critique steps into first person, for a student reflecting on their own finished piece. |
+| 34 | DBQ / Source Packet Builder | Image size and crop control | A per-source width/scale slider and crop box, so uploaded documents print at a usable size instead of stretching to page width. |
+| 35 | Story Elements / Plot Diagram Builder | Presentation view for discussion | A large-type, borderless, read-only rendering of the diagram for projecting live during a class discussion. |
+| 36 | Final Grade Checker | Missing-work triage report | From the same paste, list who has zeros and who is one assignment from a letter change, and print a per-student catch-up slip. |
+| 37 | Seating Chart Generator | Seating history and rotation | Record who sat where each unit and enforce "not the same seat twice" and "front row once per quarter", printable as evidence for a parent or admin. |
+| 38 | East Middle Schedule Browser | One-page substitute view | Pick an absent teacher and print a single sheet: their day, rooms, groups, common-planning coverage candidates, and a building map crop. |
+| 39 | School Layout Visualizer | Evacuation route planner | Compute and print per-room evacuation paths and assembly points from the existing A* graph, as postable door cards. |
+| 40 | Quiz / Review Game Board | Audio in a clue | Record or attach a short clip — a pronunciation, a music excerpt, a primary-source recording — stored in IndexedDB rather than inline, with a play control on the projected clue. |
+| 41 | Quiz / Review Game Board | Reusable tagged question bank | A bank separate from any one board, tagged by unit, standard, and difficulty, that multiple boards and future game formats draw from. |
+| 42 | Vocabulary Flashcard & Word Wall Generator | More printables from one list | Generate a word search, crossword, bingo cards, and a matching quiz from the same term-and-definition list. |
+| 43 | School Calendar Visualizer | Unit pacing layer | Lay named units across date ranges, auto-counting actual instructional days after holidays and half days, printable as a pacing calendar. |
+| 44 | Math Fact Drill Sheet Generator | Self-checking sheet formats | Riddle-answer, colour-by-answer, and maze transformations of an existing problem set, each with a key. |
+| 45 | Field Trip Permission Slip Generator | Scan returned slips to check off | Use `_shared/qr-scan.js` on the QR each slip already carries, so the collection tracker ticks students off in seconds. |
+| 46 | Lab Safety Contract Tracker | Scan returned forms | Print a per-student code on each blank contract and tick off a returned stack with `_shared/qr-scan.js` in under a minute. |
+| 47 | Sub Plan Builder | Richer document output | Extend the document builder with per-period tables, headers and footers with page numbers, and an embedded seating-chart image. |
+| 48 | Rubric Builder | Rubric scores flow to grade tools | A read-only bridge writing rubric totals into Final Grade Checker / Grade Distribution Visualizer's storage contract, mirroring the existing `wpg-rubric-link.js` pattern. |
+| 49 | Class Roster Hub | All-rosters device transfer | Move every roster, sidecar record, and archive to another machine over `_shared/webrtc-pair.js` with QR pairing, producing no file to lose or email. |
+| 50 | Backup & Restore | Device-to-device migration | Carry the versioned backup envelope straight to a new laptop over `_shared/webrtc-pair.js`, with no file ever written to disk. |
+| 51 | Classroom Timer | Phone as timer remote | Extend the existing `webrtc-pair.js` mirror so the paired phone starts, pauses, and advances agenda segments while the teacher walks the room. |
+| 52 | Command Center | Phone remote for the dashboard | Pair a phone via `_shared/webrtc-pair.js` to drive five named actions — timer, next student, sign in, advance period — from across the room. |
+| 53 | Tournament Bracket & Station Rotation | Real phone-to-laptop remote | Replace the same-device BroadcastChannel remote with `_shared/webrtc-pair.js` LAN pairing, so a phone actually drives the gym display. |
+| 54 | Digital Hall Pass / Sign-Out Log | Two-teacher hallway sync | Pair two teachers' boards over `_shared/webrtc-pair.js` so a shared hallway shows one combined out-count and one overtime alert instead of two blind halves. |
+| 55 | Name Picker | Equity by seat position | Join the equity report to `seating-chart-v1` so the printed participation summary shows call rates by row and region of the room. |
+| 56 | Behavior & Points Tracker | Seating-chart board layout | Arrange the tap targets the way the room actually is, read from `seating-chart-v1`, instead of alphabetically. |
+| 57 | Group / Team Generator | Year-long pairing matrix | Retain pair history beyond the current two generations and print a who-has-worked-with-whom grid that drives an "everyone pairs with everyone" grouping mode. |
+| 58 | Bracket / Tournament Generator | Pools and Swiss formats | Pools feeding an elimination bracket, plus a Swiss pairing mode, so nobody is eliminated after a single round. |
+| 59 | Exit Ticket / Bell Ringer Generator | Bell-ringer sequences | Plan a prompt per day for a week or unit, advanced by date with manual override, mirroring Writing Prompt's Prompt Sets. |
+| 60 | Writing Prompt Generator | Teacher-kept writing record | Log which prompt each student wrote to and the teacher's note, printable per student for a conference. |
+| 61 | Novel Study / Reading Circles Manager | Multiple books in one project | Four circles reading four different books at four paces, with per-book schedules and one combined meeting-day view. |
+| 62 | Digital Escape Room / Puzzle Lock Builder | Printable paper packet | Emit the same puzzle chain as a cut-apart paper packet with a teacher key, so the room runs with no devices at all. |
+| 63 | QR Scavenger Hunt Builder | Paper no-device hunt mode | Print clue cards with code words plus a team answer sheet and teacher key, for the day the Chromebooks stayed in the cart. |
+| 64 | Gallery Walk QR Codes | Verify the whole batch before printing | Decode every generated code with `_shared/qr-scan.js` and flag any station whose code will not scan reliably, before the ink is spent. |
+| 65 | QR Code Generator | Equipment check-out mode | Scan printed asset codes in and out, keeping a local record of which kit is with which group, printable as an inventory sheet. |
+| 66 | Lab Group & Role Randomizer | Gate groups on the safety contract | Read `lsct_sections_v1` and flag or exclude students who have not returned a signed lab safety contract. |
+| 67 | Number Talks / Mental Math Routine Board | Class strategy wall library | Accumulate the class's own named strategies across the year and print them as wall reference posters. |
+| 68 | Image → PDF Assembler | Per-student portfolio PDFs | Group images by student name parsed from filenames and emit one PDF each, delivered as a single archive via the shared JSZip build. |
+| 69 | Graph Paper & Number Line Generator | Graphing worksheet mode | A problem printed above each small coordinate plane, plus a matching answer-key sheet with the line or curve already plotted. |
+| 70 | Immersion Roleplay Scenario Generator | Speaking assessment layer | Tap a short rubric per pair while circulating, stored per class, printed as a per-student speaking record. |
+| 71 | Timeline Builder | Timeline plus map print | Pair events to places and print the timeline along the bottom with a map above, each event pinned to both. |
+| 72 | Primary Source Analysis Worksheet Generator | Side-by-side corroboration worksheet | Print two sources on one sheet with shared sourcing questions plus a "where do they disagree" comparison block and answer key. |
+| 73 | Prompt Builder | Task-organized prompt library | A browsable built-in library grouped by teaching task — write a rubric, differentiate a text, draft a parent email — each loading a full form state. |
+| 74 | Word Doc Merger | Cover page, headers, and page numbers | Generate a title/class/date cover page and inject running headers plus continuous page numbering across the merged document. |
+| 75 | Silent Reading (SSR) Log Tracker | Printable parent reading report | One page per student showing books finished, pages, minutes, and streaks this quarter, batch-printed for conferences or mailing. |
+| 76 | Grade Distribution Visualizer | Per-question item analysis | Accept per-item scores, chart which questions the class missed most, and print a reteach priority list. |
+| 77 | Data Table → Chart Builder | Chart annotation layer | Add arrows, text callouts, and shaded regions on the chart so a printed figure makes an argument rather than just showing a picture. |
+| 78 | Vocab & Conjugation Drill Generator | Conjugation pattern engine | Given an infinitive and verb class, generate the full regular table automatically, with irregular overrides only where flagged. |
+| 79 | Formula Reference Sheet Builder | Local math notation renderer | A self-contained renderer for fractions, radicals, exponents, subscripts, and Greek letters, so formulas stop being plain text. |
+| 80 | Certificate & Award Maker | Templates as data | Move layout, fonts, borders, and colors into template objects so new and teacher-built designs need no code changes. |
+| 81 | Sub Binder / Day Bundle Generator | Evergreen emergency binder | A permanently maintained no-notice packet built from date-independent sections only, with a staleness reminder, printed once and left in a drawer. |
+| 82 | Blank Map Generator | Choropleth from pasted data | Paste "region, value" rows and shade the vector base map with a grayscale-safe ramp plus an automatic legend. |
+| 83 | Art Critique Worksheet Generator | Rubric-scored critique variant | An optional per-step point scale and teacher score column printed alongside the open-ended prompts, with a matching score key. |
+| 84 | Student Art Portfolio Label & QR Tag Maker | Bulk photo import | Select an entire folder of images at once, downscale them, and auto-match by filename to existing entries or create new ones. |
+| 85 | Book Tasting Menu Generator | Spreadsheet book-list import | Use the shared SheetJS build to import title/author/genre/blurb rows in bulk, with a genre-balance warning on the result. |
+| 86 | Government/Civics Simulation Role Card Generator | Per-role case file packets | Attach role-specific evidence, witness facts, or bill text that prints as a companion packet behind each card. |
+| 87 | Classroom Label Maker (Target Language) | Teacher-recorded audio fallback | Record pronunciations locally via MediaRecorder and store them, so labels still work when the browser has no target-language voice. |
+| 88 | Cognates & False Friends Reference List Builder | Practice worksheet variants | Generate matching, fill-in-the-blank, and "trap or true cognate" quiz handouts with answer keys from the same list. |
+| 89 | Cultural Trivia Card Generator | Export into Review Game Board | Emit the selected question set in the Review Game Board's category/points/question/answer format, so a trivia bank becomes a game board. |
+| 90 | Current Events Discussion Guide Generator | Two-article comparison guide | Paste two articles on the same event and generate a side-by-side guide with bias and framing contrast questions and a shared vocabulary list. |
+| 91 | Daily Editing / DOL Warm-Up Generator | Bulk-import a custom bank | Paste a whole list of broken-and-fixed pairs, tab- or pipe-separated, instead of entering them one at a time. |
+| 92 | DBQ / Source Packet Builder | Share a packet by link | Encode the whole packet with `_shared/state-link.js` into a URL, plus a QR, so a department teammate opens the identical packet offline. |
+| 93 | Dichotomous Key Builder | Visual branching tree view | Render the couplet list as a branching diagram, printable as a one-page overview alongside the numbered text key. |
+| 94 | Duty Roster Builder | Multi-week rotating schedule | Store several weeks, derive week N+1 by shifting each person one duty, and print a whole month's grid at once. |
+| 95 | Scientific Method / Experiment Design Planner | Hand off to Lab Report Builder | Encode the plan with `_shared/state-link.js` and open the Lab Report Template Builder pre-filled with question, hypothesis, materials, and procedure. |
+| 96 | Fitness & Skill Assessment Tracker | Per-student report cards | A print view of one page per student across all events and dates, with the class average for comparison, for handing home. |
+| 97 | Fraction–Decimal–Percent Conversion Drill Generator | Improper, mixed, and negative values | Extend operand generation past 0–1 to improper fractions, mixed numbers, and negatives, widening what the drill can practice. |
+| 98 | Geography Bee / Map Skills Quiz Generator | Multiple-choice quiz mode | Auto-generate three distractors from same-category answers, for both the projector display and the printed quiz plus key. |
+| 99 | Grammar Mad Libs Generator | Multiple saved custom stories | Named multi-save for custom templates plus their word banks, so several stories coexist rather than one overwriting the last. |
+| 100 | Historical Figure / Country Trading Card Maker | Batch-add blank cards from a roster | Paste a name-per-line assignment list to create pre-titled blank cards for a whole class research project in one step. |
+| 101 | Lab Report Template Builder | Pre-lab and post-lab packet split | Print a planning packet — hypothesis, materials, procedure — and a separate report packet — data, conclusion — from one saved template. |
+| 102 | Math "Find the Mistake" Warm-Up Generator | Bulk import a custom bank | Paste problem/work/fix/explain rows to load a unit's worth of mistake problems at once. |
+| 103 | Music Sight-Reading / Rhythm Warm-Up Generator | Metronome and reference pitch | Wire the currently decorative tempo field to a real click track and add a play-through of the generated pitches. |
+| 104 | Parent/Guardian Contact Log | Conference print packet | One student's full contact history plus a blank note-taking area, formatted as a single page to hand an administrator before a meeting. |
+| 105 | PE Warm-Up Circuit Card Generator | Live circuit rotation timer | A projector mode that counts down each station's duration and signals the rotation, driving the circuit live rather than only printing signage. |
+| 106 | Peer Feedback / Editing Checklist Generator | Roster-driven pre-named half-sheets | Read `np_rosters` and print one half-sheet per student with the author's name already filled in. |
+| 107 | Picture-Prompt Speaking/Writing Task Generator | Multiple named saved image sets | Named multi-save for image libraries, so a family-vocabulary set and a school-vocabulary set coexist without re-uploading. |
+| 108 | Story Elements / Plot Diagram Builder | Share a diagram by link | Encode the diagram with `_shared/state-link.js` so the same novel's diagram moves between class periods or to a teammate's browser. |
+| 109 | Science Fair Project Tracker | Multiple named saved trackers | Named multi-save so each class period's science-fair cohort keeps its own roster, milestones, and due dates. |
+| 110 | Science Safety Symbol & Equipment Label Maker | Two symbols per label | Let a label carry more than one icon — corrosive plus eye protection — across the edit form, duplicate logic, and printed card. |
+| 111 | Staff Directory / Quick-Reference Builder | Wallet-card layout with QR | An alternate lanyard-insert print with a QR per entry encoding a phone or email link. |
+| 112 | Sub Note / Feedback Slip Generator | Multiple named saved prompt sets | Named multi-save so a general slip, a lab-day slip, and a testing-day slip stay ready simultaneously. |
+| 113 | Testing Accommodations Reference Card Generator | Room-assignment view | Define testing rooms and proctors, auto-route students by accommodation — separate setting, read-aloud — and print per-room proctor lists. |
+| 114 | Unit Conversion Reference Chart Builder | Named saves plus reorder and share | Convert the single stored chart to named multi-save, with group and line reordering and a `_shared/state-link.js` share URL. |
+| 115 | Verb Conjugation Reference Poster Generator | Irregular verb call-out boxes | An optional side panel per poster listing three to five common irregulars in that tense — regular patterns are only half a wall reference. |
+| 116 | Word Problem Warm-Up Generator | Two-step word problems | Chained-operation templates for the upper grade band, the biggest gap for the grades 6–8 audience the tool targets. |
 
 ### Currently claimed (in progress elsewhere)
 

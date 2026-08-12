@@ -138,6 +138,20 @@
   <div class="layout">
     <div class="editor">
       <div class="card">
+        <h2>Saved circuits</h2>
+        <label for="circuitSwitch">Saved circuit</label>
+        <select id="circuitSwitch"></select>
+        <label for="circuitName">Circuit save name (for saving/switching)</label>
+        <input type="text" id="circuitName" placeholder="e.g. Basketball unit warm-up">
+        <div class="btn-row" style="margin-bottom:.3rem;">
+          <button type="button" class="secondary small" id="newCircuitBtn">+ New circuit</button>
+          <button type="button" class="secondary small" id="duplicateCircuitBtn">Duplicate</button>
+          <button type="button" class="danger small" id="deleteCircuitBtn">Delete</button>
+        </div>
+        <p class="hint" style="margin-top:.4rem;">Each circuit saves separately, so unit-specific circuits coexist instead of one flat circuit per browser.</p>
+      </div>
+
+      <div class="card">
         <label for="circuitTitle">Circuit name (for the print header)</label>
         <input type="text" id="circuitTitle" placeholder="e.g. Monday Warm-Up Circuit">
 
@@ -198,12 +212,19 @@
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'pe_circuit_v1';
+  /* Named multi-save (same New/Duplicate/Rename/Delete convention as
+     047-art-critique-worksheet-generator). The old single-circuit key below
+     is read once and migrated into the first named circuit. */
+  var LEGACY_KEY = 'pe_circuit_v1';
+  var LIST_KEY = 'pe_circuits_v1';
+  var DATA_PREFIX = 'pe_circuit_v1:';
+  var CURRENT_KEY = 'pe_circuit_current_v1';
 
   var els = {};
   ['circuitTitle', 'templateSelect', 'useTemplateBtn', 'stationsList', 'addStationBtn',
    'cardsPerPage', 'printBtn', 'previewGrid', 'previewNote',
-   'printArea', 'printHeaderTitle', 'printCardGrid'
+   'printArea', 'printHeaderTitle', 'printCardGrid',
+   'circuitSwitch', 'circuitName', 'newCircuitBtn', 'duplicateCircuitBtn', 'deleteCircuitBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var DEFAULT_STATIONS = [
@@ -217,7 +238,8 @@
     { emoji: '&#129497;', name: 'Bodyweight Squats', duration: '15 reps', instructions: 'Feet shoulder-width apart, sit hips back, chest up.' }
   ];
 
-  var state = { title: '', stations: [], cardsPerPage: '4' };
+  function emptyCircuit(name) { return { name: name, title: '', stations: [], cardsPerPage: '4' }; }
+  var state = emptyCircuit('New Circuit');
 
   var EMOJI_PALETTE = ['🏃','🤸','🦵','💪','🧘','🤾','🏋️','⛹️','🤺','🥊','🏸','⏱️','🔁','💦','🥇','🎯','🧗','🚴','🤸‍♀️','🤸‍♂️','🏆','❤️‍🔥'];
   var openPaletteId = null;
@@ -232,17 +254,138 @@
 
   function blankStation() { return { id: uid(), emoji: '', name: '', duration: '', instructions: '' }; }
 
+  /* ---------- named-circuit store ---------- */
+  function listNames() {
+    try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveNamed(name, data) {
+    var names = listNames();
+    if (names.indexOf(name) === -1) { names.push(name); localStorage.setItem(LIST_KEY, JSON.stringify(names)); }
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+    localStorage.setItem(CURRENT_KEY, name);
+  }
+  function loadNamed(name) {
+    try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
+  }
+  function deleteNamed(name) {
+    var names = listNames().filter(function (n) { return n !== name; });
+    localStorage.setItem(LIST_KEY, JSON.stringify(names));
+    localStorage.removeItem(DATA_PREFIX + name);
+    if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+  }
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+  function normalizeCircuit(data, name) {
+    if (!data || typeof data !== 'object') data = {};
+    var c = emptyCircuit((typeof data.name === 'string' && data.name) || name || 'New Circuit');
+    if (typeof data.title === 'string') c.title = data.title;
+    if (Array.isArray(data.stations)) c.stations = data.stations;
+    if (data.cardsPerPage) c.cardsPerPage = String(data.cardsPerPage);
+    return c;
+  }
+
+  function migrateLegacyIfNeeded() {
+    if (listNames().length) return;
+    var legacy = null;
+    try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null'); } catch (e) { /* ignore */ }
+    if (legacy && Array.isArray(legacy.stations) && legacy.stations.length) {
+      var name = (legacy.title && legacy.title.trim()) || 'My Circuit';
+      saveNamed(name, normalizeCircuit(legacy, name));
+    }
+  }
+
   function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.stations)) state = saved;
-    } catch (e) { /* ignore */ }
+    migrateLegacyIfNeeded();
+    var currentName = localStorage.getItem(CURRENT_KEY);
+    var loaded = currentName ? loadNamed(currentName) : null;
+    if (!loaded) {
+      var names = listNames();
+      loaded = names.length ? loadNamed(names[0]) : null;
+    }
+    state = loaded ? normalizeCircuit(loaded, loaded.name) : emptyCircuit(uniqueName('New Circuit'));
     if (!state.stations.length) applyTemplate('default', true);
-    if (!state.cardsPerPage) state.cardsPerPage = '4';
+    save();
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+    try { saveNamed(state.name, state); } catch (e) { /* storage full/blocked */ }
   }
+
+  function renderCircuitSwitch() {
+    var names = listNames();
+    els.circuitSwitch.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === state.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
+  function renderAll() {
+    renderCircuitSwitch();
+    els.circuitName.value = state.name;
+    els.circuitTitle.value = state.title;
+    els.cardsPerPage.value = state.cardsPerPage;
+    renderStations();
+    render();
+  }
+
+  function switchTo(name) {
+    var loaded = loadNamed(name);
+    if (!loaded) return;
+    state = normalizeCircuit(loaded, name);
+    if (!state.stations.length) state.stations = [blankStation()];
+    localStorage.setItem(CURRENT_KEY, name);
+    openPaletteId = null;
+    renderAll();
+  }
+
+  els.circuitSwitch.addEventListener('change', function () { switchTo(els.circuitSwitch.value); });
+
+  els.circuitName.addEventListener('change', function () {
+    var oldName = state.name;
+    var newName = els.circuitName.value.trim() || oldName;
+    if (newName !== oldName) {
+      deleteNamed(oldName);
+      state.name = uniqueName(newName);
+    }
+    save();
+    renderCircuitSwitch();
+    els.circuitName.value = state.name;
+  });
+
+  els.newCircuitBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new circuit:', 'New Circuit');
+    if (!name) return;
+    state = emptyCircuit(uniqueName(name.trim()));
+    applyTemplate('default', true); // same starting point a fresh browser gets; applyTemplate saves + renders stations
+    openPaletteId = null;
+    renderAll();
+  });
+
+  els.duplicateCircuitBtn.addEventListener('click', function () {
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = uniqueName(state.name + ' (copy)');
+    state = clone;
+    save();
+    openPaletteId = null;
+    renderAll();
+  });
+
+  els.deleteCircuitBtn.addEventListener('click', function () {
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    deleteNamed(state.name);
+    openPaletteId = null;
+    var names = listNames();
+    if (names.length) {
+      switchTo(names[0]);
+    } else {
+      state = emptyCircuit('New Circuit');
+      applyTemplate('default', true);
+      renderAll();
+    }
+  });
 
   function applyTemplate(kind, skipConfirm) {
     if (!skipConfirm && state.stations.some(function (s) { return s.name || s.instructions || s.duration; })) {
@@ -431,10 +574,7 @@
 
   /* ---------- boot ---------- */
   load();
-  els.circuitTitle.value = state.title;
-  els.cardsPerPage.value = state.cardsPerPage;
-  renderStations();
-  render();
+  renderAll();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
