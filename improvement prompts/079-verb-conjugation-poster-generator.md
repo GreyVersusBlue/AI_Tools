@@ -1,7 +1,8 @@
 # Improvement Prompts — 079 — Verb Conjugation Reference Poster Generator
 
 **Tool file:** `Tools/079-verb-conjugation-poster-generator.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/verb-conjugation-poster-generator/` — test suite only;
+the tool itself is still one self-contained file.
 
 **Current description (from README):** Spanish, French, or blank starter templates of verb-group conjugation panels with editable subject/person labels, printed as a large-font wall poster.
 
@@ -46,6 +47,56 @@ Multiple named saved posters, per-panel color-coding, irregular-verb
 call-out boxes, JSON export/import, shrink-to-fit, and QR-to-audio all
 remain unbuilt.
 
+**2026-08-12 — Round 2 (backlog rank 2: per-panel accent colors).** Every
+panel now prints with an accent — a colored border plus a tinted heading band
+behind the verb-group name — so the -ER panel is findable from the back of
+the room without reading it. Six accents ship; a panel left on **Auto** takes
+the next one round the palette by position, and a per-panel picker in the
+builder head overrides that. One "Color-code panels" checkbox in the Print
+layout card turns the whole thing off. The builder mirrors each panel's
+accent on its own block (swatch + border), so the poster's look is visible
+before anything is printed.
+
+This answers the round-1 Open Question — fixed round-robin palette or a
+picker — with **both, cheaply**: round-robin is the default so nobody has to
+choose anything, and the picker exists for the teacher who wants -AR to be
+red every year. What made that affordable is that "Auto" is a stored value
+like any other, not the absence of one, so the two paths are the same code.
+
+Two things worth knowing for next time:
+
+- **Print backgrounds are opt-in.** Browsers drop background fills when
+  printing unless the element carries `print-color-adjust: exact`, so the
+  tinted heading band silently prints blank without it. That rule is on
+  `.poster-panel h3` (and the builder swatch) now.
+- **Nothing is encoded in color alone** (P6). The panel name still says
+  "-AR: hablar"; the accent is a finding aid on top of it. The six tints are
+  spread far enough apart in lightness to stay distinguishable as grays off a
+  black-and-white printer.
+- **Posters saved before this round** carried neither `colorPanels` nor a
+  per-panel `color`. `load()` fills both in with the same defaults a new
+  poster gets and writes the result straight back, so an old poster gains
+  accents rather than printing plain forever.
+
+Auto assignment counts panel position, not "colors not already claimed by an
+override" — pick purple by hand for panel 2 and an Auto panel can land on
+purple as well. Left as-is: it takes four panels and a deliberate override to
+see it, and the fix (assign Autos around the overrides) costs more than the
+collision does.
+
+Verified with a new 25-assertion headless Chromium suite,
+`Tools/verb-conjugation-poster-generator/test/smoke-panel-colors.mjs`
+(`npm run test:verb-poster`), asserting on the printed DOM rather than the
+builder: distinct accents per panel, an override winning over Auto, the
+override surviving a reload, the off switch returning every border to plain
+black, a newly added panel joining the rotation, and the old-poster upgrade
+path — no console errors.
+
+**Next round should pick up** multiple named saved posters (still the top
+Quick Win, and now more valuable — a color scheme is one more thing worth
+keeping per poster), then the remaining content gaps (conditional tense,
+German/Italian starters).
+
 ## What it does today
 
 - 8 starter templates (Spanish present/preterite/imperfect/future/
@@ -53,6 +104,9 @@ remain unbuilt.
   option
 - Editable subject/person labels, shared across all panels on one poster
 - Editable panels (verb group name + one form per person)
+- Per-panel accent colors: six-color palette, auto-assigned by panel order,
+  overridable per panel, switchable off site-wide for the poster; shown live
+  in the builder and printed as a colored border plus tinted heading band
 - Print: large-font poster layout sized for a wall, distinct styling from
   the toolkit's worksheet-style print views, with a chooser-controlled
   1/2/3-panels-per-row layout that persists across visits
@@ -63,9 +117,9 @@ remain unbuilt.
   Formula Sheet Builder / Rubric Builder — right now one poster per
   browser, so a present-tense poster and a preterite poster can't both be
   kept ready.
-- **A color-code option per panel** (e.g. one accent color per verb
-  ending group) to make the poster easier to scan from across a room,
-  which is the whole point of a wall reference.
+- **Done — A color-code option per panel** (2026-08-12). Six-color palette,
+  auto by panel order with a per-panel override and a global off switch;
+  see the Round 2 note above.
 - **Conditional tense and German/Italian starter templates**, to close the
   remaining content gaps the first content pass didn't reach.
 
@@ -107,10 +161,11 @@ every year the same unit comes around.
 
 ## Open Questions
 
-- Is per-panel color-coding worth the complexity of a color picker in the
-  builder UI, or would a small fixed palette (assign colors round-robin by
-  panel position, no picker needed) get most of the visual-scanning benefit
-  for much less UI?
+- ~~Is per-panel color-coding worth the complexity of a color picker...~~
+  **Resolved 2026-08-12: both, because the picker turned out to be nearly
+  free.** Round-robin-by-position is the default and needs no interaction;
+  the per-panel select overrides it. Storing "auto" as an explicit value
+  rather than as a missing one means one code path serves both.
 - Should irregular verbs live as an optional add-on section within the same
   poster/panel model, or does "irregular verb reference" deserve its own
   distinct template type given how differently they're taught (usually

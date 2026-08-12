@@ -70,12 +70,33 @@
 
   .poster-title { text-align: center; font-size: 2.2rem; margin: 0 0 1.2rem; }
   .poster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
-  .poster-panel { border: 2px solid #333; border-radius: 10px; padding: 1rem 1.2rem; }
-  .poster-panel h3 { text-align: center; font-size: 1.5rem; margin: 0 0 .6rem; }
+  .poster-panel { border: 2px solid #333; border-radius: 10px; padding: 0 0 1rem; overflow: hidden; }
+  .poster-panel h3 { text-align: center; font-size: 1.5rem; margin: 0 0 .6rem; padding: .5rem .6rem; }
   .poster-panel table { width: 100%; border-collapse: collapse; }
   .poster-panel td { padding: .35rem .3rem; font-size: 1.15rem; border-bottom: 1px dotted #999; }
+  .poster-panel td:first-child { padding-left: 1.2rem; }
+  .poster-panel td:last-child { padding-right: 1.2rem; }
   .poster-panel td.pperson { color: #555; width: 45%; }
   .poster-panel td.pform { font-weight: 700; color: #1f3550; }
+
+  /* A wall poster is read from across the room, so the accent has to survive
+     the trip to the printer. Browsers drop background fills on print unless
+     told otherwise; on a black-and-white printer the tints come through as
+     distinct light grays, and the panel name still carries the meaning on its
+     own, so nothing is encoded in color alone. */
+  .poster-panel h3, .panel-block-head .swatch {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .panel-block-head .swatch {
+    width: 1.1rem; height: 1.1rem; border-radius: 4px; flex: none;
+    border: 2px solid #333; background: #fff;
+  }
+  .panel-block-head select {
+    width: auto; margin-bottom: 0; font-size: .78rem; padding: .25rem .3rem;
+  }
+  .colorbar { display: flex; align-items: center; gap: .45rem; margin: .55rem 0 0; font-size: .84rem; }
+  .colorbar input { width: auto; margin: 0; }
+  .colorbar label { margin: 0; font-weight: 600; font-size: .84rem; }
 
 </style>
 </head>
@@ -124,6 +145,13 @@
           <option value="3">3 per row</option>
         </select>
         <p class="hint" style="margin-bottom:0;">A single-panel poster reads bigger at 1 per row; a poster with many panels fits more on one page at 3.</p>
+        <p class="colorbar">
+          <input type="checkbox" id="colorPanels" checked>
+          <label for="colorPanels">Color-code panels</label>
+        </p>
+        <p class="hint" style="margin:.2rem 0 0;">One accent per panel, assigned in order unless you pick one yourself,
+          so a verb-ending group is findable from across the room. Panel names still say which group is which, so the
+          poster reads the same off a black-and-white printer.</p>
       </div>
 
       <div class="card">
@@ -150,6 +178,20 @@
   'use strict';
   var STORE_KEY = 'vcp_poster_v1';
   var DEFAULT_PERSONS = ['yo', 'tú', 'él / ella / usted', 'nosotros', 'vosotros', 'ellos / ellas / ustedes'];
+
+  /* Panel accents. `line` is the panel border and heading text, `tint` the
+     heading band behind it — chosen dark enough on light enough that each pair
+     stays legible, and far enough apart in lightness that they are still six
+     distinguishable bands in grayscale. */
+  var PALETTE = [
+    { id: 'crimson', name: 'Crimson', line: '#b3261e', tint: '#fbe9e7' },
+    { id: 'teal', name: 'Teal', line: '#0f6f6a', tint: '#e0f1f0' },
+    { id: 'indigo', name: 'Indigo', line: '#33418c', tint: '#e7e9f7' },
+    { id: 'amber', name: 'Amber', line: '#8a5a00', tint: '#fbf0d9' },
+    { id: 'purple', name: 'Purple', line: '#6a3382', tint: '#f2e8f7' },
+    { id: 'green', name: 'Green', line: '#2f6a2f', tint: '#e6f2e6' }
+  ];
+  var NO_COLOR = { line: '#333', tint: 'transparent' };
 
   var TEMPLATES = {
     es_present: {
@@ -231,7 +273,7 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'posterTitle', 'personsWrap', 'panelsWrap', 'addPanelBtn',
-   'printBtn', 'printArea', 'colCount'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'printBtn', 'printArea', 'colCount', 'colorPanels'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var COLS_KEY = 'vcp_columns_v1';
   var columns = parseInt(localStorage.getItem(COLS_KEY), 10) || 2;
@@ -250,8 +292,9 @@
     var t = TEMPLATES[key];
     state = {
       title: t.title,
+      colorPanels: state && typeof state.colorPanels === 'boolean' ? state.colorPanels : true,
       persons: t.persons.slice(),
-      panels: t.panels.map(function (p) { return { id: uid(), name: p.name, forms: p.forms.slice() }; })
+      panels: t.panels.map(function (p) { return { id: uid(), name: p.name, forms: p.forms.slice(), color: 'auto' }; })
     };
   }
 
@@ -260,6 +303,26 @@
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
       if (saved && Array.isArray(saved.panels)) state = saved;
     } catch (e) { /* ignore */ }
+    /* Posters saved before panel colors existed carry neither field. They get
+       the same defaults a new poster does — accents on, assigned in panel
+       order — so an old poster gains the feature instead of printing plain. */
+    if (state) {
+      var upgraded = false;
+      if (typeof state.colorPanels !== 'boolean') { state.colorPanels = true; upgraded = true; }
+      state.panels.forEach(function (p) { if (!p.color) { p.color = 'auto'; upgraded = true; } });
+      if (upgraded) save();
+    }
+  }
+
+  /** The accent a panel actually prints in: its own pick, or the next one
+   *  round the palette by position when it is left on Auto. */
+  function panelColor(panel, index) {
+    if (!state.colorPanels || panel.color === 'none') return NO_COLOR;
+    if (panel.color && panel.color !== 'auto') {
+      var picked = PALETTE.filter(function (c) { return c.id === panel.color; })[0];
+      if (picked) return picked;
+    }
+    return PALETTE[index % PALETTE.length];
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -278,14 +341,20 @@
   });
 
   function renderPanels() {
-    els.panelsWrap.innerHTML = state.panels.map(function (panel) {
+    els.panelsWrap.innerHTML = state.panels.map(function (panel, pi) {
       var rows = state.persons.map(function (person, i) {
         return '<div class="form-row"><span class="plabel">' + escapeHtml(person || '—') + '</span>' +
           '<input type="text" data-panel="' + panel.id + '" data-idx="' + i + '" value="' + escapeAttr(panel.forms[i] || '') + '"></div>';
       }).join('');
-      return '<div class="panel-block" data-id="' + panel.id + '">' +
+      var c = panelColor(panel, pi);
+      var options = [{ id: 'auto', name: 'Auto' }].concat(PALETTE, [{ id: 'none', name: 'No color' }]).map(function (o) {
+        return '<option value="' + o.id + '"' + ((panel.color || 'auto') === o.id ? ' selected' : '') + '>' + escapeHtml(o.name) + '</option>';
+      }).join('');
+      return '<div class="panel-block" data-id="' + panel.id + '" style="border-color:' + c.line + ';">' +
         '<div class="panel-block-head">' +
+        '<span class="swatch" style="background:' + c.tint + ';border-color:' + c.line + ';" aria-hidden="true"></span>' +
         '<input type="text" data-panel-name="' + panel.id + '" value="' + escapeAttr(panel.name) + '" placeholder="Verb group name">' +
+        '<select data-panel-color="' + panel.id + '" aria-label="Accent color for ' + escapeAttr(panel.name || 'this panel') + '">' + options + '</select>' +
         '<button type="button" class="danger small" data-del-panel="' + panel.id + '">Remove</button>' +
         '</div>' + rows + '</div>';
     }).join('');
@@ -305,6 +374,13 @@
       save();
     }
   });
+  els.panelsWrap.addEventListener('change', function (ev) {
+    var colorId = ev.target.getAttribute('data-panel-color');
+    if (!colorId) return;
+    var panel = state.panels.find(function (p) { return p.id === colorId; });
+    if (panel) panel.color = ev.target.value;
+    save(); renderPanels();
+  });
   els.panelsWrap.addEventListener('click', function (ev) {
     var delId = ev.target.getAttribute('data-del-panel');
     if (!delId) return;
@@ -313,7 +389,12 @@
   });
 
   els.addPanelBtn.addEventListener('click', function () {
-    state.panels.push({ id: uid(), name: 'New verb group', forms: state.persons.map(function () { return ''; }) });
+    state.panels.push({ id: uid(), name: 'New verb group', color: 'auto', forms: state.persons.map(function () { return ''; }) });
+    save(); renderPanels();
+  });
+
+  els.colorPanels.addEventListener('change', function () {
+    state.colorPanels = els.colorPanels.checked;
     save(); renderPanels();
   });
 
@@ -328,17 +409,21 @@
 
   function renderAll() {
     els.posterTitle.value = state.title || '';
+    els.colorPanels.checked = state.colorPanels !== false;
     renderPersons();
     renderPanels();
   }
 
   function posterHtml() {
     var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Verb Conjugation Reference';
-    var panels = state.panels.map(function (panel) {
+    var panels = state.panels.map(function (panel, pi) {
       var rows = state.persons.map(function (person, i) {
         return '<tr><td class="pperson">' + escapeHtml(person) + '</td><td class="pform">' + escapeHtml(panel.forms[i] || '') + '</td></tr>';
       }).join('');
-      return '<div class="poster-panel"><h3>' + escapeHtml(panel.name) + '</h3><table>' + rows + '</table></div>';
+      var c = panelColor(panel, pi);
+      return '<div class="poster-panel" data-accent="' + escapeAttr(c === NO_COLOR ? 'none' : c.id) + '" style="border-color:' + c.line + ';">' +
+        '<h3 style="background:' + c.tint + ';color:' + c.line + ';">' + escapeHtml(panel.name) + '</h3>' +
+        '<table>' + rows + '</table></div>';
     }).join('');
     return '<h1 class="poster-title">' + title + '</h1><div class="poster-grid" style="grid-template-columns: repeat(' + columns + ', 1fr);">' + panels + '</div>';
   }
