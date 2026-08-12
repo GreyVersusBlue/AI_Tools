@@ -9,6 +9,46 @@
 
 ## Status
 
+### 2026-08-12 — session `r8kq4t` — a suite for the roster code sheet
+
+Backlog rank 3 (as it then stood). The roster-labelled code sheet shipped
+without one, and `package.json` already pointed `npm test` and
+`npm run test:qr` at `Tools/qr-code-generator/test/smoke-roster.mjs` — a file
+that was never committed. Since `npm test` is `&&`-chained, that meant every
+suite after it never ran at all. The file exists now (39 checks) and the chain
+is whole again.
+
+What it pins, and why each one is a place a plausible implementation goes
+quietly wrong rather than loudly:
+
+- **The generated lines are tab-separated.** `splitBulkLine()` prefers a tab
+  and falls back to the first comma, and a middle-school roster is full of
+  "Ruiz, Marisol". Join those lines with a comma instead and the sticker reads
+  "Ruiz" while the code encodes ", Marisol" — nothing on screen looks broken.
+  The test carries a "Ruiz, Marisol" entry and follows it out to the drawn
+  code's caption, not just to the textarea.
+- **The Avery auto-switch has two halves and only one is obvious.** Filling
+  from a roster moves the layout to Avery 5160, because a per-student sheet is
+  a sheet of stickers — but only when the layout is still the plain-paper
+  default. A preset the teacher chose on purpose has to survive the next fill,
+  and the panel has to *say* when it changed something.
+- **`np_rosters` is read-only here.** Asserted byte-identical after everything
+  else in the suite, including the states that write to the page's own keys.
+- Smaller things that would otherwise rot silently: blank and untrimmed roster
+  entries are dropped and trimmed, the headcount in the picker reflects that,
+  a second fill *appends* rather than replacing (so two periods share a
+  sheet), `{name}`/`{roster}`/`{n}` are each URL-encoded in place, an empty
+  toolkit disables the button and names the tools that make a roster, and a
+  roster saved in another tab is picked up on the next switch into bulk mode
+  (there is no `storage` listener, so that switch is the only way in).
+
+**Where the next round should pick up:** the same file still has no coverage
+for the single-code path — the templates, the logo overlay's
+error-correction bump, or the recent-codes list — and the scan mode is
+untested because it needs a camera. The overlay's `effectiveEcLevel`
+compensation is the one worth a suite next: it is arithmetic, it is invisible
+when wrong, and a code that fails to scan is only discovered after the ink.
+
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
