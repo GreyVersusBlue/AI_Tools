@@ -1,13 +1,56 @@
 # Improvement Prompts — 034 — East Middle Schedule Browser
 
 **Tool file:** `Tools/034-schedule-browser.html`
-**Support folder:** `Tools/schedule/` — fonts, `libs/jspdf/`
+**Support folder:** `Tools/schedule/` — fonts, `libs/jspdf/`;
+`Tools/schedule-browser/test/smoke-personal-notes.mjs` for this tool’s own tests
 
 **Current description (from README):** This year's actual A/B schedule, searchable by teacher, room, or period. Published from the School Layout Visualizer, below.
 
 ---
 
 ## Status
+
+### 2026-08-11 — Personal notes overlay (backlog rank 7)
+
+Shipped the "Personal overlay" Major Feature. The published schedule says what
+a period *is*. It cannot say that 4th is bus duty this quarter, that 6th is
+when the IEP meetings land, or that 2nd is the one to protect. Those are the
+things a teacher writes on their printed copy in pen — per-person, so they
+live on the device rather than in the published data, and they survive a
+republish because they are keyed by teacher/day/period rather than by any
+published id.
+
+A quiet text box on every row of a teacher's day. Decisions:
+
+- **Keyed by teacher + day + period.** A-day 3rd and B-day 3rd are different
+  periods on a block schedule; a note leaking between them would be worse
+  than no note at all. The test pins that specifically.
+- **Notes attach to whichever schedule is on screen**, not only to the "my
+  schedule" teacher. The whole tool is a browser of other people's schedules,
+  the notes are local either way, and "Almer covers my class B-day 5th" is a
+  note worth leaving on Almer's page.
+- **Clearing prunes.** An emptied note is deleted rather than stored as `''`,
+  and a teacher or day left with nothing is removed — otherwise a year of
+  edits accumulates a blob of empty objects.
+- **The `change` event, delegated, not `input`.** The teacher panel rebuilds
+  itself with `innerHTML` on nearly every interaction, so saving per keystroke
+  would take the caret with it. `change` fires on blur or Enter, by which
+  point the field is finished with.
+- **Empty boxes do not print.** A schedule covered in dashed empty boxes reads
+  as a form somebody forgot to fill in; filled ones print as plain bold text
+  rather than as form fields. `.has-note` had to be named explicitly in the
+  print rule — its screen selector is more specific than the bare input one
+  and kept its border through the print until it was.
+
+New test: `Tools/schedule-browser/test/smoke-personal-notes.mjs` (29
+assertions, wired into `npm test` and `npm run test:schedule-browser`) —
+per-teacher/day/period isolation, persistence across a reload, the pruning
+rules, the print behaviour in both directions, and a corrupt stored blob.
+
+**Where the next round should pick up:** the duty-rotation overlay named just
+below (pulling from a Duty Roster Builder) is the natural next layer on this
+— the notes overlay is the manual version of it. Building-map navigation is
+still the biggest untouched idea.
 
 ### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
 
@@ -105,6 +148,10 @@ session.
 - Deep links (`brApplyDeepLink`, `brBuildLinkURL`), copy link, share
 - **Download schedule as PNG** (`brDownloadTeacherSchedule`), print/save PDF
 - **Staleness check** (`brCheckStaleness`) — warns when the data is old
+- **Personal notes per period** (`br_personal_notes_v1`, `brSetNote`,
+  `brNoteFor`) — the viewing teacher’s own annotations on any schedule,
+  keyed by teacher + day + period, saved on the device, printed with the
+  schedule and invisible when empty
 - Type-ahead search (`brOnType`, `brFindKeyCI`)
 
 ## Quick Wins
@@ -144,9 +191,9 @@ session.
 - **Duty and meeting overlays.** Common planning is already shown; adding
   duty rotations (`IDEAS_BACKLOG.md` has a Duty Roster Builder) and standing
   meetings would make this the complete "where is everyone" picture.
-- **Personal overlay.** Let a teacher add their own notes to their schedule —
+- **Done — 2026-08-11.** **Personal overlay.** Let a teacher add their own notes to their schedule —
   which class is where, what the room code is — stored locally, surviving a
-  republish.
+  republish. *(See the Status entry at the top of this file.)*
 - **Navigation for a new person.** A route on the building map from room A to
   room B; the visualizer already has pathfinding (`astar`,
   `buildMultiFloorGraph`, `computeTravelTimes`) that the published browser

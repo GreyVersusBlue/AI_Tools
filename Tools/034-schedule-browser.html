@@ -135,6 +135,32 @@
 #app-browser .blockrow .cell .sec{font-weight:700;font-size:18px;color:var(--br-ink)}
 #app-browser .blockrow .cell .who{font-size:13px;color:var(--br-muted);margin-top:1px}
 #app-browser .blockrow.plan .cell{color:#9a8430;font-style:italic;font-weight:600;background:#fdfaef}
+/* ── Personal notes: the teacher's own annotations on a period, saved on this
+   device only. Quiet on screen so they never compete with the published
+   schedule, but solid black on paper — the printed copy is the point. ── */
+#app-browser .blockrow .note{width:170px;flex:none;padding:8px 12px 8px 0}
+#app-browser .blockrow .note input{
+  width:100%;font:inherit;font-size:12.5px;color:var(--br-ink);background:#fff;
+  border:1px dashed var(--br-line);border-radius:7px;padding:6px 8px;
+}
+#app-browser .blockrow .note input:focus{border-style:solid;border-color:var(--br-forest);outline:none}
+#app-browser .blockrow .note input::placeholder{color:#b5bdb7}
+#app-browser .blockrow .note input.has-note{border-style:solid;border-color:var(--br-gold-soft);background:#fffdf4;font-weight:600}
+#app-browser .notes-hint{font-size:12.5px;color:var(--br-muted);margin:-4px 0 12px}
+@media(max-width:640px){
+  #app-browser .blockrow{flex-wrap:wrap}
+  #app-browser .blockrow .note{width:100%;padding:0 12px 10px 74px}
+}
+@media print{
+  /* An empty note is nothing on paper — a page of dashed empty boxes reads
+     as a form somebody forgot to fill in. `.has-note` is listed explicitly
+     because its screen rule is more specific than the bare input selector
+     and would otherwise keep its border through the print. */
+  #app-browser .blockrow .note input,
+  #app-browser .blockrow .note input.has-note{border:none;background:none;padding:0;font-weight:700;color:#000}
+  #app-browser .blockrow .note input:placeholder-shown{display:none}
+  #app-browser .notes-hint{display:none}
+}
 #app-browser .block-title{font-family:'Fraunces',serif;font-size:19px;color:var(--br-forest);margin:30px 0 4px;font-weight:600}
 #app-browser .hint{color:var(--br-muted);font-size:14.5px;margin:0 0 14px}
 #app-browser .classrow{display:flex;flex-wrap:wrap;gap:9px}
@@ -562,7 +588,49 @@ function brJumpTeacher(n) { brSetMode('teacher'); brChoose(n); }
 
 function brJumpGroup(s)   { brSetMode('group');   brChoose(s); }
 
-function brDayRows(arr, room, day) {
+/* ── Personal notes overlay ────────────────────────────────────────────────
+   The published schedule says what a period IS. It cannot say that 4th is
+   bus duty this quarter, that 6th is when the IEP meetings land, or that
+   2nd is the one to protect. Those are the things a teacher writes on their
+   printed copy in pen, and they are per-person, so they live here on the
+   device rather than in the published data.
+
+   Keyed by teacher + day + period. Notes are attached to whichever
+   schedule is on screen, which also makes "Mrs. Almer covers my class B-day
+   5th" a note you can leave on Mrs. Almer's page — the whole tool is a
+   browser of other people's schedules and the notes are local either way. */
+const BR_NOTES_KEY = 'br_personal_notes_v1';
+
+function brLoadNotes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BR_NOTES_KEY) || '{}');
+    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+  } catch (e) { return {}; }
+}
+function brNoteFor(teacher, day, i) {
+  const all = brLoadNotes();
+  return (all[teacher] && all[teacher][day] && all[teacher][day][i]) || '';
+}
+/** Writes one note. An emptied note is deleted rather than stored as '', and
+    a teacher or day left with nothing is pruned — otherwise a year of
+    clearing notes leaves a storage blob full of empty objects. */
+function brSetNote(teacher, day, i, text) {
+  const all = brLoadNotes();
+  const value = String(text || '').trim();
+  if (value) {
+    if (!all[teacher]) all[teacher] = {};
+    if (!all[teacher][day]) all[teacher][day] = {};
+    all[teacher][day][i] = value;
+  } else if (all[teacher] && all[teacher][day]) {
+    delete all[teacher][day][i];
+    if (!Object.keys(all[teacher][day]).length) delete all[teacher][day];
+    if (!Object.keys(all[teacher]).length) delete all[teacher];
+  }
+  try { localStorage.setItem(BR_NOTES_KEY, JSON.stringify(all)); }
+  catch (e) { /* storage full/blocked — the note just won't persist */ }
+}
+
+function brDayRows(arr, room, day, teacher) {
   let out='';
   const bell = BR_BELL ? (day==='B' ? BR_BELL.B : BR_BELL.A) : null;
   for (let i=0; i<BR_MODCOUNT; i++) {
@@ -571,10 +639,28 @@ function brDayRows(arr, room, day) {
     const cell=plan
       ? `<div class="cell">Planning / Intervention</div>`
       : `<div class="cell"><div class="sec">Class ${sec}</div><div class="who">Room ${room}</div></div>`;
-    out += `<div class="blockrow${plan?' plan':''}"><div class="bk"><span class="n">${i+1}</span><span class="t">${BR_MOD_LABEL}</span>${time?`<span class="bt">${time}</span>`:''}</div>${cell}</div>`;
+    const note = teacher ? brNoteFor(teacher, day, i) : null;
+    const noteCell = teacher
+      ? `<div class="note"><input type="text" class="br-note${note?' has-note':''}" maxlength="60"
+           data-note-teacher="${brEscHtml(teacher)}" data-note-day="${day}" data-note-i="${i}"
+           aria-label="Your note for ${BR_MOD_LABEL} ${i+1} on ${day} day"
+           placeholder="note…" value="${brEscHtml(note)}"></div>`
+      : '';
+    out += `<div class="blockrow${plan?' plan':''}"><div class="bk"><span class="n">${i+1}</span><span class="t">${BR_MOD_LABEL}</span>${time?`<span class="bt">${time}</span>`:''}</div>${cell}${noteCell}</div>`;
   }
   return out;
 }
+
+/* Delegated, and on `change` rather than `input`: the teacher panel rebuilds
+   itself with innerHTML on almost every interaction, so re-rendering per
+   keystroke would take the caret with it. `change` fires on blur or Enter,
+   by which point the field is finished with. */
+document.addEventListener('change', function (ev) {
+  const el = ev.target;
+  if (!el || !el.classList || !el.classList.contains('br-note')) return;
+  brSetNote(el.dataset.noteTeacher, el.dataset.noteDay, el.dataset.noteI, el.value);
+  el.classList.toggle('has-note', !!el.value.trim());
+});
 
 function brRenderTeacher(n) {
   const t=BR_TEACHERS[n]; if (!t) return;
@@ -596,9 +682,11 @@ function brRenderTeacher(n) {
    <p class="factline">Teaches <b>${t.sec.length} class${t.sec.length!==1?'es':''}</b>. Planning is <b>${BR_MOD_LABEL} ${t.plan}</b>.
      ${split?'A&nbsp;days and B&nbsp;days are different — both are shown below.':'A&nbsp;days and B&nbsp;days are the same.'}</p>
    <div class="days">
-     <div class="daycard"><h3>${split?'A&nbsp;Day':'Every day (A &amp; B the same)'}</h3>${brDayRows(t.A,t.room,'A')}</div>
-     ${split?`<div class="daycard B"><h3>B&nbsp;Day</h3>${brDayRows(t.B,t.room,'B')}</div>`:''}
+     <div class="daycard"><h3>${split?'A&nbsp;Day':'Every day (A &amp; B the same)'}</h3>${brDayRows(t.A,t.room,'A',n)}</div>
+     ${split?`<div class="daycard B"><h3>B&nbsp;Day</h3>${brDayRows(t.B,t.room,'B',n)}</div>`:''}
    </div>
+   <p class="notes-hint">The boxes on the right are yours &mdash; duty, meetings, the period to protect. They are saved
+     on this device only, nobody else sees them, and they print with the schedule. Empty ones don&rsquo;t print at all.</p>
    <h3 class="block-title">Where to find you</h3>
    <p class="hint">Your classroom on the building map — tap any colored neighbor to hop to their schedule.</p>
    ${brMiniMapHTML(n)}
