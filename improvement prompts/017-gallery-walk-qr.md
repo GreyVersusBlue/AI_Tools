@@ -9,6 +9,53 @@
 
 ## Status
 
+### 2026-08-12 — session `r8kq4t` — the projector rotation display
+
+Backlog rank 4 (as it then stood). The rotation timer already worked; it was
+in the wrong place. A gallery walk has the teacher moving around the room and
+twenty-eight students who need to know when to move and where to go, and all
+of that lived in a 2.6rem clock on the laptop.
+
+- **A fullscreen board** (`#projectorView`), dark because the lights are
+  usually off, with the clock at `clamp(4rem, 20vh, 13rem)` and the round
+  label above it. Opened from a button beside the timer controls, closed with
+  Escape or the on-screen Exit, and focus returns to the button it came from.
+- **It is a view, not a second timer.** `renderProjector()` reads the same
+  `state.timer` and mirrors the panel's own clock element, and each of its
+  controls forwards to the editor's real button (`els.timerStartBtn.click()`
+  and friends) rather than reimplementing start/pause/rotate. There is one
+  copy of the rotation rules, so the board cannot drift out of step with the
+  panel behind it — which the suite asserts directly rather than trusting.
+- **The part a printed route card cannot do.** A route card says "you are at
+  Station 4 on your third stop"; a student halfway through a noisy rotation
+  has lost count of which stop they are on. The board shows where everybody is
+  **now**, derived from the same staggered-start order `computeWalkOrder()`
+  already builds for the cards, laid out station by station with names sorted
+  alphabetically inside each one — so the question "where do I go" is answered
+  by finding your own name once.
+- **The rotate announcement is a band, not a curtain.** The first version
+  covered the screen, which meant the moment the assignments mattered most was
+  the moment they were hidden. It is now a strip under the clock, gold on
+  dark, that clears itself after 2.5 seconds; a banner still up two minutes
+  later is worse than none, because the room stops believing it. It pulses
+  only under `prefers-reduced-motion: no-preference`.
+- Degrades in both directions it can: no stations says so, and stations with
+  no walking order loaded draws the station cards and says what is missing
+  rather than showing four empty boxes.
+- The board sits outside `.wrap`, so the tool's existing
+  `.wrap > *:not(.print-only)` print rule does not reach it — it gets its own
+  `@media print { display: none }`, and the suite checks that under emulated
+  print media rather than by reading the stylesheet.
+- **New suite:** `Tools/gallery-walk-qr/test/smoke-projector.mjs`, 33 checks,
+  wired into `npm test` and `npm run test:gallery-walk`.
+
+**Where the next round should pick up:** the board is the natural home for the
+`webrtc-pair.js` phone remote (P9) — a teacher standing at Station 6 cannot
+reach the laptop to call an early rotation, and that is the one control they
+actually need mid-walk. Second: the reaction counts are not on the board yet,
+and "Station 3 has had two visitors and Station 1 has had nine" is the thing a
+teacher would redirect on.
+
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
@@ -23,6 +70,13 @@ ambitious and are **not** scoped to a single session.
 - Print a separate **reference sheet** mapping codes to labels
 - Copy all links; multiple saved galleries (`gallery-walk-qr-sets`)
 - **Reaction counts** with a reset — the beginnings of a feedback mechanism
+- Printable **feedback slips** per station, and a take-home packet per student
+  built from what came back on them
+- A **rotation timer** (minutes/seconds per rotation, rotation count, sound)
+  and a **staggered walking order** with printable per-student route cards
+- A **projector view** of that timer: the clock at room size, plus which
+  students are standing at which station right now, driven by the same timer
+  as the panel
 
 ## Quick Wins
 

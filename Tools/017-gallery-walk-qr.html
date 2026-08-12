@@ -153,9 +153,60 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  /* ── Projector view ─────────────────────────────────────────────────
+     The rotation clock is useless at the laptop: the teacher is across the
+     room and the students are the ones who need to know when to move. This
+     is the same timer state, drawn at a size the back row can read, plus the
+     one thing a paper route card cannot show — where everybody is *right
+     now*. Dark by default, because the lights are usually off.
+
+     Everything here is a view of state.timer; nothing in this block owns
+     any. The controls forward to the real buttons in the editor rather than
+     reimplementing start/pause/rotate, so there is exactly one copy of the
+     rotation rules. */
+  .projector {
+    position: fixed; inset: 0; z-index: 60; background: #12151b; color: #f4f3ee;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2.5vh 3vw; overflow: auto;
+  }
+  .projector[hidden] { display: none; }
+  .pj-head { text-align: center; flex: 0 0 auto; }
+  .pj-round { font-size: clamp(1rem, 2.6vw, 2rem); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9fb6cf; }
+  .pj-clock { font-family: Consolas, monospace; font-weight: 700; line-height: 1; font-size: clamp(4rem, 20vh, 13rem); }
+  .pj-clock.paused { color: #8d8f96; }
+  .pj-clock.complete { color: #7fd6a4; }
+  .pj-status { font-size: clamp(.9rem, 1.6vw, 1.3rem); color: #a7a9b2; margin-top: .3rem; }
+  .pj-body { flex: 1 1 auto; width: 100%; display: flex; align-items: center; justify-content: center; margin: 1.5vh 0; }
+  .pj-grid { display: flex; flex-wrap: wrap; gap: 1.2vh 1.4vw; justify-content: center; width: 100%; }
+  .pj-station {
+    border: 2px solid #33404f; border-radius: 12px; padding: .8vh 1.2vw;
+    min-width: 8rem; flex: 0 1 auto; text-align: center;
+  }
+  .pj-station .pj-st-num { font-size: clamp(1rem, 2.2vw, 1.8rem); font-weight: 700; color: #9fb6cf; letter-spacing: .05em; }
+  .pj-station .pj-st-name { font-size: clamp(.8rem, 1.3vw, 1.1rem); color: #8d8f96; margin-bottom: .3rem; overflow-wrap: anywhere; }
+  .pj-station .pj-who { font-size: clamp(1rem, 1.9vw, 1.7rem); line-height: 1.35; overflow-wrap: anywhere; }
+  .pj-station .pj-nobody { font-size: clamp(.85rem, 1.3vw, 1.1rem); color: #6d707a; font-style: italic; }
+  .pj-empty { font-size: clamp(1rem, 2vw, 1.6rem); color: #a7a9b2; text-align: center; max-width: 40ch; line-height: 1.5; }
+  .pj-controls { flex: 0 0 auto; display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+  .pj-controls button { font-size: clamp(.9rem, 1.4vw, 1.15rem); padding: .6rem 1.2rem; }
+  /* A band, not a curtain: the moment it fires is the moment the station
+     assignments underneath matter most, so it must not cover them. */
+  .pj-banner {
+    display: none; flex: 0 0 auto; width: 100%; text-align: center;
+    background: #ffd479; color: #12151b; font-weight: 700; letter-spacing: .12em;
+    border-radius: 10px; padding: .4vh .8vw; margin-top: .8vh;
+    font-size: clamp(1.4rem, 4vw, 3.2rem);
+  }
+  .projector.rotating .pj-banner { display: block; }
+  @media (prefers-reduced-motion: no-preference) {
+    .projector.rotating .pj-banner { animation: pjPulse 1s ease-in-out infinite; }
+    @keyframes pjPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+  }
+
   /* ── Print-only QR grid / reference sheet ──────────────────────────── */
   .print-only { display: none; }
   @media print {
+    .projector { display: none !important; }
     body { background: #fff; color: #000; padding: 0; }
     .wrap > *:not(.print-only) { display: none !important; }
     .print-only.active { display: block; }
@@ -412,7 +463,10 @@
           <button type="button" class="secondary" id="timerRotateNowBtn">Rotate now</button>
           <button type="button" class="danger" id="timerResetBtn">Reset</button>
         </div>
-        <div class="hint">Runs on this screen while you walk the room &mdash; the clock keeps time even if you switch tabs.</div>
+        <div class="btn-row" style="margin-top:.5rem;">
+          <button type="button" class="secondary" id="projectorBtn">&#128250; Projector view</button>
+        </div>
+        <div class="hint">Runs on this screen while you walk the room &mdash; the clock keeps time even if you switch tabs. Projector view puts the clock and everyone&rsquo;s current station on the board, big enough to read from the back.</div>
       </div>
 
       <div class="card">
@@ -493,6 +547,25 @@
   <div class="print-route-grid" id="printRouteCardsGrid"></div>
 </div>
 
+<!-- The rotation clock, on the board. Outside .wrap so it can own the whole
+     viewport, and outside every print-only block so it never prints. -->
+<div class="projector" id="projectorView" hidden aria-hidden="true">
+  <div class="pj-head">
+    <div class="pj-round" id="pjRound">Rotation 1 of 1</div>
+    <div class="pj-clock" id="pjClock">3:00</div>
+    <div class="pj-status" id="pjStatus"></div>
+  </div>
+  <div class="pj-banner" id="pjBanner" aria-hidden="true">ROTATE &#8594;</div>
+  <div class="pj-body" id="pjBody"></div>
+  <div class="pj-controls">
+    <button type="button" id="pjStart">Start</button>
+    <button type="button" id="pjPause">Pause</button>
+    <button type="button" id="pjResume">Resume</button>
+    <button type="button" class="secondary" id="pjRotate">Rotate now</button>
+    <button type="button" class="secondary" id="pjExit">Exit (Esc)</button>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -515,7 +588,9 @@
    'notesList', 'printPacketsBtn', 'printPacketsArea', 'printPacketsBody',
    'walkRosterSelect', 'walkRosterLoadBtn', 'walkUseStationNamesBtn', 'walkGroupsSummary',
    'routeCardsPerPage', 'walkOrderPreview', 'walkStopsHint', 'generateWalkOrderBtn',
-   'printRouteCardsBtn', 'printRouteCardsArea', 'printRouteCardsGrid'
+   'printRouteCardsBtn', 'printRouteCardsArea', 'printRouteCardsGrid',
+   'projectorBtn', 'projectorView', 'pjRound', 'pjClock', 'pjStatus', 'pjBody', 'pjBanner',
+   'pjStart', 'pjPause', 'pjResume', 'pjRotate', 'pjExit'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -1401,9 +1476,104 @@
     els.timerStartBtn.style.display = (t.running || t.paused) ? 'none' : '';
     els.timerPauseBtn.style.display = t.running ? '' : 'none';
     els.timerResumeBtn.style.display = t.paused ? '' : 'none';
+    // Every path that updates the panel's clock updates the board's too, so
+    // the two can never show different times.
+    renderProjector();
   }
 
   function renderTimerUI() { tickTimerDisplay(); }
+
+  /* ── Projector view ──────────────────────────────────────────────────────
+     A second rendering of the same `state.timer`, sized for the room instead
+     of for the laptop. It owns no state of its own: `projectorOpen` is a
+     display flag and every control forwards to the editor's own button, so
+     there is one copy of the start/pause/rotate rules and the projector
+     cannot drift out of step with the panel behind it.
+
+     The content below the clock is the part a printed route card cannot do.
+     A route card says "you will be at Station 4 on your third stop"; a
+     student halfway through a noisy rotation has lost count of which stop
+     they are on. This says where everybody is *now*, laid out by station so
+     the question "where do I go" is answered by finding your own name once. */
+  var projectorOpen = false;
+  var rotateFlashUntil = 0;
+
+  /** Who is standing at each station right now, from the same staggered-start
+      order the printed route cards use. Null when there is no walking order
+      to place anybody with. */
+  function currentPlacements() {
+    var order = computeWalkOrder();
+    if (!order) return null;
+    var stationCount = nonEmptyEntries().length;
+    // t.count is completed rotations, so it indexes the current stop — held
+    // at the last stop once the walk is over rather than running off the end.
+    var stop = Math.min(state.timer.count, order[0].order.length - 1);
+    var byStation = [];
+    for (var i = 0; i < stationCount; i++) byStation.push([]);
+    order.forEach(function (g) {
+      var station = g.order[stop];
+      if (station >= 1 && station <= stationCount) byStation[station - 1].push(g.name);
+    });
+    byStation.forEach(function (list) { list.sort(function (a, b) { return a.localeCompare(b); }); });
+    return byStation;
+  }
+
+  function renderProjector() {
+    if (!projectorOpen || !state) return;
+    var t = state.timer;
+    els.pjRound.textContent = els.timerRound.textContent;
+    els.pjClock.textContent = els.timerClock.textContent;
+    els.pjClock.className = 'pj-clock' + (els.timerClock.classList.contains('paused') ? ' paused' : '') +
+      (els.timerClock.classList.contains('complete') ? ' complete' : '');
+    els.pjStatus.textContent = t.running
+      ? 'Rotating automatically at 0:00'
+      : (t.paused ? 'Paused' : els.timerStatus.textContent);
+
+    var stations = nonEmptyEntries();
+    var placements = currentPlacements();
+    if (!stations.length) {
+      els.pjBody.innerHTML = '<p class="pj-empty">Add some stations first &mdash; there is nothing to send anybody to yet.</p>';
+    } else {
+      els.pjBody.innerHTML = '<div class="pj-grid">' + stations.map(function (s, i) {
+        var who = placements ? placements[i] : null;
+        var body = who
+          ? (who.length
+              ? '<div class="pj-who">' + who.map(escapeHtml).join('<br>') + '</div>'
+              : '<div class="pj-nobody">open</div>')
+          : '';
+        return '<div class="pj-station">' +
+          '<div class="pj-st-num">Station ' + (i + 1) + '</div>' +
+          '<div class="pj-st-name">' + escapeHtml(s.name || '') + '</div>' + body + '</div>';
+      }).join('') + '</div>' +
+      (placements ? '' : '<p class="pj-empty" style="width:100%;margin-top:1.5vh;">Load names under &ldquo;Walking order&rdquo; to show who is at each station.</p>');
+    }
+
+    els.pjStart.style.display = (t.running || t.paused) ? 'none' : '';
+    els.pjPause.style.display = t.running ? '' : 'none';
+    els.pjResume.style.display = t.paused ? '' : 'none';
+    els.pjRotate.disabled = t.count >= t.rotations;
+    els.projectorView.classList.toggle('rotating', Date.now() < rotateFlashUntil);
+  }
+
+  function setProjector(on) {
+    projectorOpen = !!on;
+    els.projectorView.hidden = !projectorOpen;
+    els.projectorView.setAttribute('aria-hidden', projectorOpen ? 'false' : 'true');
+    els.projectorBtn.setAttribute('aria-expanded', projectorOpen ? 'true' : 'false');
+    if (projectorOpen) { renderProjector(); els.pjExit.focus(); }
+    else { els.projectorView.classList.remove('rotating'); els.projectorBtn.focus(); }
+  }
+
+  els.projectorBtn.addEventListener('click', function () { setProjector(true); });
+  els.pjExit.addEventListener('click', function () { setProjector(false); });
+  els.pjStart.addEventListener('click', function () { els.timerStartBtn.click(); });
+  els.pjPause.addEventListener('click', function () { els.timerPauseBtn.click(); });
+  els.pjResume.addEventListener('click', function () { els.timerResumeBtn.click(); });
+  els.pjRotate.addEventListener('click', function () { els.timerRotateNowBtn.click(); });
+  document.addEventListener('keydown', function (e) {
+    if (!projectorOpen) return;
+    if (e.key === 'Escape') { e.preventDefault(); setProjector(false); }
+  });
 
   function tickTimer() {
     if (!state) return;
@@ -1420,7 +1590,7 @@
       remaining = t.endAt - Date.now();
       guard++;
     }
-    if (changed) { playRotationAlarm(); save(); renderTimerUI(); }
+    if (changed) { rotateFlashUntil = Date.now() + 2500; playRotationAlarm(); save(); renderTimerUI(); }
     else tickTimerDisplay();
   }
   setInterval(tickTimer, TICK_MS);
@@ -1463,6 +1633,7 @@
   els.timerRotateNowBtn.addEventListener('click', function () {
     var t = state.timer;
     if (t.count >= t.rotations) return;
+    rotateFlashUntil = Date.now() + 2500;
     t.count++;
     var totalMs = getRotationMs();
     if (t.count >= t.rotations) { t.running = false; t.paused = false; t.endAt = null; t.remainingMs = null; }
