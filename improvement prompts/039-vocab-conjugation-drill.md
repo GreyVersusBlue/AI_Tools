@@ -9,6 +9,25 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: share a drill set by link / QR shipped
+(backlog rank 2).** The tool now loads `_shared/state-link.js` and the
+vendored QR encoder and grew **🔗 Copy link** and **▦ QR code** toolbar
+buttons, copying the `040-vocab-flashcard-generator.html` pattern almost
+verbatim (same share-note/overlay markup, same `?param=` consume-on-load
+flow; the param here is `?set=`). The payload is the full drill-set state —
+words, verbs, person labels, direction/limit/shuffle settings — nothing in
+this tool is too big for a URL, though a very large set can outgrow a QR
+code, which is caught and reported with the payload size instead of drawing
+an unscannable square. Opening a link validates with the existing
+`isPlausibleDrillSet()`, saves under a uniqued name (`… (shared)` on
+collision), and clears the param so refresh can't double-import;
+`loadSetByName()`'s existing field-defaulting covers payloads from older
+senders. Verified with a headless Chromium test over a local static server:
+copy-link round trip into a fresh browser context (name + vocab arrive,
+param cleared, no duplicate on reload), collision uniquing, QR overlay
+draw/close, garbled-link error path — zero console errors. Next round:
+fill-in-the-blank sentence mode is still the open Quick Win.
+
 **2026-08-11 — Pass 2 round.** Shipped **accent-tolerant answer checking**,
 the smaller of the two Quick Wins this file's Pass 1 round left deferred —
 scoped to the conjugation self-quiz (`checkQuizAnswers`/
@@ -120,6 +139,9 @@ under Major Features / Moonshot.
   one of only two tools using `speechSynthesis`
 - Printable drills and answer keys; saved sets
   (`gvb-vocab-conj:list` / `:data:*`) with import/export
+- **Share by link / QR** (`_shared/state-link.js` + vendored qrcode encoder):
+  a `?set=` URL or scannable QR carries the whole set; opening one saves a
+  uniquely-named copy on the receiving machine
 - **Read-only import bridge** from Vocabulary Flashcard & Word Wall
   Generator's saved word lists (`listFlashcardSets`, `getFlashcardItems`)
 - Loads `_shared/a11y.js`
