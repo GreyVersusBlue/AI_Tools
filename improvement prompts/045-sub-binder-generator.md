@@ -1,13 +1,51 @@
 # Improvement Prompts — 045 — Sub Binder / Day Bundle Generator
 
 **Tool file:** `Tools/045-sub-binder-generator.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/sub-binder-generator/` — `test/smoke-feedback-slip.mjs`
 
 **Current description (from README):** Pulls Sub Plan Builder's standing details and the current Seating Chart into one printable packet, plus today's lesson.
 
 ---
 
 ## Status
+
+**2026-08-11 — Sub feedback slip page (backlog rank 4).** Shipped the Quick
+Win two rounds deferred. A ninth section, `feedback`, printed **last** in the
+bundle — it is the page the substitute fills in, so it should be the one on
+top when the packet goes back down on the desk.
+
+Three decisions:
+
+- **The prompts are read from `076-sub-note-feedback-slip-generator.html`**
+  (`snfs_slip_v1`) when that tool has been used, and fall back to the same
+  four defaults when it hasn't. That tool already exists and already lets a
+  teacher word their own questions; a second copy of that wording living here
+  would be the kind of duplication this repo keeps having to undo. Blank
+  prompts in the saved set are dropped, and an unreadable payload falls back
+  rather than printing an empty page.
+- **It is always available.** Every other section here greys out when its
+  source has nothing saved. A blank feedback form is still a feedback form,
+  so `evalFeedback()` always returns available — the only section that does.
+- **One slip per day in a multi-day bundle**, unlike every other shared
+  section. Three days of a substitute's observations on one sheet is three
+  days blurred together, and across a longer absence it is likely to be a
+  different person each day anyway.
+
+The printed page adds a "Substitute / Periods covered" header and a closing
+"students who were especially helpful" line — the two things a teacher always
+ends up asking about afterwards, and the one worth acting on the next morning.
+Lines are bordered rows at a real 0.32in, so nothing depends on the browser's
+print-backgrounds setting.
+
+New test: `Tools/sub-binder-generator/test/smoke-feedback-slip.mjs` (31
+assertions, wired into `npm test` and `npm run test:sub-binder`) — the
+always-available rule, page order, the form's structure, the include
+preference persisting, the shared-prompt path including blank and corrupt
+payloads, and one-slip-per-day across a three-day absence.
+
+**Where the next round should pick up:** the evergreen emergency binder (still
+on the backlog) and the digital handoff by link/QR are the two remaining big
+ideas here.
 
 **2026-08-11 — Round 2 (session `gb5c6e`).** Shipped multi-day bundles, the
 one Quick Win the previous round explicitly deferred (Sub Plan Builder
@@ -127,7 +165,12 @@ explicit scope tradeoff, not an oversight (see Open Questions).
 - **Date picker** for "which day is this packet for," defaulting to whatever
   Sub Plan Builder last had selected (`subPlanBuilder.lastAbsence.v1`),
   otherwise today; quick-pick buttons when that absence spans multiple days
-- Reads **six** other tools' storage directly, all read-only:
+- **Sub feedback slip** (`feedbackPageBodyHtml`) — the one page in the packet
+  the substitute fills in, printed last, with prompts read from
+  `076-sub-note-feedback-slip-generator.html`'s `snfs_slip_v1` when it has
+  been used and four standard ones when it hasn't. One slip per day in a
+  multi-day bundle.
+- Reads **seven** other tools' storage directly, all read-only:
   `subPlanBuilder.standingDetails.v1` (standing details, emergency info, room
   number, checklist fields), `subPlanBuilder.history.v1` (the saved lesson for
   the selected date), `seating-chart-v1` (seating chart, with per-section
@@ -213,9 +256,11 @@ explicit scope tradeoff, not an oversight (see Open Questions).
 - **Skipped — deferred.** **Emergency sub plan.** A permanently-maintained generic packet that works
   on any day, printed once and left in a drawer — the single most valuable
   version of this tool, and mostly a template plus a reminder to refresh it.
-- **Skipped — deferred.** **Feedback slip.** Print a page the sub fills in before leaving
+- **Done — 2026-08-11.** **Feedback slip.** Print a page the sub fills in before leaving
   (`IDEAS_BACKLOG.md` lists this as its own tool; it belongs on the back of
-  this packet).
+  this packet). *(Shipped as a ninth section, reading its prompts from that
+  separate tool rather than duplicating them — see the Status entry at the
+  top of this file.)*
 - **Skipped — deferred.** **Digital handoff.** A link or QR (P3) so the sub can open the packet on
   their phone, rather than needing a printout that requires you to be at
   school to produce.

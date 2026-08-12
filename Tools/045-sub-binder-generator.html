@@ -114,6 +114,18 @@
     .print-only th, .print-only td { border: 1px solid #999; padding: 5px 8px; text-align: left; }
     .print-only th { background: #eee; }
     .print-only .lesson-block { white-space: pre-wrap; border: 1px solid #999; padding: .7rem .9rem; border-radius: 4px; }
+
+    /* Sub feedback slip — the one page in the bundle that gets written on,
+       so the lines are real 0.32in rows rather than anything that depends on
+       the browser printing backgrounds. */
+    .print-only .fb-intro { font-size: .92rem; margin: 0 0 .5rem; }
+    .print-only .fb-head { display: flex; gap: 1.5rem; margin-bottom: .9rem; }
+    .print-only .fb-field { flex: 1; }
+    .print-only .fb-label { display: block; font-size: .78rem; color: #444; margin-bottom: .1rem; }
+    .print-only .fb-blank { display: block; border-bottom: 1px solid #555; height: .3in; }
+    .print-only .fb-item { margin-bottom: .45rem; break-inside: avoid; page-break-inside: avoid; }
+    .print-only .fb-q { font-weight: 700; font-size: .92rem; margin-bottom: .1rem; }
+    .print-only .fb-line { border-bottom: 1px solid #555; height: .32in; }
     .print-only dl.facts dt { color: #333; }
     .print-only .cover-emergency { border: 2px solid #a3372b; border-radius: 6px; padding: .8rem 1rem; margin-top: 1.2rem; }
     .print-only .cover-emergency .today-note-label { color: #a3372b; }
@@ -189,6 +201,11 @@
   <div class="card">
     <div class="card-title"><span>Exit ticket / bell ringer</span><a href="023-exit-ticket-generator.html">Edit in Exit Ticket Generator</a></div>
     <div id="exitTicketBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Sub feedback slip</span><a href="076-sub-note-feedback-slip-generator.html">Edit prompts in Sub Note Generator</a></div>
+    <div id="feedbackBody"></div>
   </div>
 
   <div class="card">
@@ -767,8 +784,86 @@
   }
   function renderExitTicketCard() { byId('exitTicketBody').innerHTML = exitTicketCardHtml(); }
 
+  /* ==================== Sub feedback slip ====================
+     Every other page in this bundle is the teacher talking to the
+     substitute. This is the one page going the other way, and it is the one
+     that decides whether tomorrow starts with information or with a guess.
+
+     The prompts come from `076-sub-note-feedback-slip-generator.html` when
+     that tool has been used (`snfs_slip_v1`), so a teacher who has already
+     worded their own questions doesn't word them twice — and the same
+     FEEDBACK_DEFAULTS text is used when it hasn't, so the page always has
+     something on it. Read-only, like every other cross-tool read here. */
+  var FEEDBACK_KEY = 'snfs_slip_v1';
+  var FEEDBACK_DEFAULTS = [
+    'What worked well today?',
+    'What didn’t go as planned?',
+    'Any names or notes I should know for tomorrow?',
+    'Anything else the teacher should know?'
+  ];
+  var feedbackPrompts = FEEDBACK_DEFAULTS.slice();
+  var feedbackFromTool = false;
+
+  function loadFeedbackPrompts() {
+    feedbackPrompts = FEEDBACK_DEFAULTS.slice();
+    feedbackFromTool = false;
+    try {
+      var saved = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || 'null');
+      if (!saved || !Array.isArray(saved.prompts)) return;
+      var texts = saved.prompts
+        .map(function (p) { return p && typeof p.text === 'string' ? p.text.trim() : ''; })
+        .filter(Boolean);
+      if (!texts.length) return;
+      feedbackPrompts = texts;
+      feedbackFromTool = true;
+    } catch (e) { /* unreadable — the defaults above still print */ }
+  }
+
+  // Always available: unlike every other section here, this one needs nothing
+  // saved anywhere to be worth printing. A blank feedback form is still a
+  // feedback form.
+  function evalFeedback() {
+    return {
+      available: true,
+      status: feedbackFromTool
+        ? 'Using your ' + feedbackPrompts.length + ' saved prompt' + (feedbackPrompts.length === 1 ? '' : 's') + ' from Sub Note Generator.'
+        : 'Using the four standard prompts — edit them in Sub Note Generator to change what this asks.'
+    };
+  }
+
+  function feedbackCardHtml() {
+    return '<p class="hint" style="margin-top:0;">' +
+      (feedbackFromTool
+        ? 'These are your own prompts, read from Sub Note / Feedback Slip Generator.'
+        : 'Standard prompts. Save your own in <a href="076-sub-note-feedback-slip-generator.html">Sub Note / Feedback Slip Generator</a> and they will be used here instead.') +
+      '</p><ul style="margin:.2rem 0 0; padding-left:1.2rem; font-size:.88rem;">' +
+      feedbackPrompts.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') +
+      '</ul>';
+  }
+
+  /** The printed page: prompts with real ruled space, and a header block for
+      the things a teacher always ends up asking about afterwards — which
+      periods the sub actually covered, and who to thank. */
+  function feedbackPageBodyHtml() {
+    var rows = feedbackPrompts.map(function (t) {
+      return '<div class="fb-item"><div class="fb-q">' + escapeHtml(t) + '</div>' +
+        '<div class="fb-line"></div><div class="fb-line"></div><div class="fb-line"></div></div>';
+    }).join('');
+    return '<p class="fb-intro">Please fill this in before you leave and put it on the desk. ' +
+      'Whatever you write here is what tomorrow starts from.</p>' +
+      '<div class="fb-head">' +
+        '<div class="fb-field"><span class="fb-label">Substitute</span><span class="fb-blank"></span></div>' +
+        '<div class="fb-field"><span class="fb-label">Periods covered</span><span class="fb-blank"></span></div>' +
+      '</div>' +
+      rows +
+      '<div class="fb-item"><div class="fb-q">Students who were especially helpful &mdash; I&rsquo;d like to thank them</div>' +
+        '<div class="fb-line"></div><div class="fb-line"></div></div>';
+  }
+
+  function renderFeedbackCard() { byId('feedbackBody').innerHTML = feedbackCardHtml(); }
+
   /* ==================== Sections checklist ==================== */
-  var SECTION_ORDER = ['emergency', 'standing', 'today', 'lesson', 'seating', 'hallpass', 'behavior', 'exitticket'];
+  var SECTION_ORDER = ['emergency', 'standing', 'today', 'lesson', 'seating', 'hallpass', 'behavior', 'exitticket', 'feedback'];
   var SECTION_TITLES = {
     emergency: 'Emergency info',
     standing: 'Standing details',
@@ -777,11 +872,13 @@
     seating: 'Seating chart',
     hallpass: 'Hall pass procedure',
     behavior: 'Behavior plan',
-    exitticket: 'Exit ticket / bell ringer'
+    exitticket: 'Exit ticket / bell ringer',
+    feedback: 'Sub feedback slip (last page)'
   };
   var SECTION_EVAL = {
     emergency: evalEmergency, standing: evalStanding, today: evalToday, lesson: evalLesson,
-    seating: evalSeating, hallpass: evalHallPass, behavior: evalBehavior, exitticket: evalExitTicket
+    seating: evalSeating, hallpass: evalHallPass, behavior: evalBehavior, exitticket: evalExitTicket,
+    feedback: evalFeedback
   };
 
   function loadIncludePrefs() {
@@ -839,6 +936,8 @@
     renderHallPassCard();
     renderBehaviorCard();
     renderExitTicketCard();
+    loadFeedbackPrompts();
+    renderFeedbackCard();
     renderChecklist();
   }
 
@@ -898,6 +997,11 @@
     }
     if (lastEvals.exitticket && lastEvals.exitticket.available && isIncluded('exitticket')) {
       pages.push(simplePageHtml('Exit Ticket / Bell Ringer', dateLabel, exitTicketCardHtml()));
+    }
+    // Deliberately last: it is the page the substitute fills in, so it wants
+    // to be the one on top of the stack when they put the packet back down.
+    if (isIncluded('feedback')) {
+      pages.push(simplePageHtml('Before You Go — Sub Feedback', dateLabel, feedbackPageBodyHtml()));
     }
 
     var printArea = byId('printArea');
@@ -960,6 +1064,16 @@
     var freeform = (lessonInput.value || '').trim();
     if (freeform) {
       pages.push(simplePageHtml('General Note', 'Applies to the whole absence, not tied to one day', '<div class="lesson-block">' + escapeHtml(freeform) + '</div>'));
+    }
+
+    // One feedback slip per day, unlike every other shared section: three
+    // days of a sub's observations on one sheet is three days blurred
+    // together, and it is likely to be a different substitute anyway.
+    if (isIncluded('feedback')) {
+      dates.forEach(function (d, i) {
+        pages.push(simplePageHtml('Before You Go — Sub Feedback',
+          'Day ' + (i + 1) + ' of ' + dates.length + ' — ' + dayLabelLong(d), feedbackPageBodyHtml()));
+      });
     }
 
     return pages;
