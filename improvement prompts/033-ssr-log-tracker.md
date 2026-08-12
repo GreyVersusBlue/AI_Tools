@@ -1,13 +1,64 @@
 # Improvement Prompts — 033 — Silent Reading (SSR) Log Tracker
 
 **Tool file:** `Tools/033-ssr-log-tracker.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/ssr-log-tracker/` — `test/smoke-genres.mjs`
 
 **Current description (from README):** Track books and pages read during independent reading time, per student or for the whole class — multiple saved sections, a class summary table, and printable logs.
 
 ---
 
 ## Status
+
+### 2026-08-11 — Genre tags on books (backlog rank 1)
+
+Shipped the Quick Win. The tracker could tell you a student had read 340
+pages; it could not tell you they were 340 pages of the same graphic-novel
+series, which is the conversation a reading teacher actually needs to have.
+
+**A genre belongs to a book, not to a log entry.** `state.genres` is a map
+from `bookKey` (the existing trimmed/lowercased title key) to a genre string,
+so the same title read by four students is tagged once. Consequences that fell
+out of that choice, all of them the right ones:
+
+- Typing a title the class has already tagged auto-fills the genre, so the
+  fourth student to pick up *Hatchet* costs nobody any typing — and the class
+  doesn't end up with four spellings of "historical fiction".
+- **A blank genre field never erases an existing tag.** Logging tonight's
+  pages must not wipe what somebody set last week. Clearing is deliberate and
+  happens only in the Books list, which is where a genre is authoritative
+  (`setGenreFor(..., force)`).
+- Retagging in the Books list retags the book for everyone at once.
+
+Free text with a datalist rather than a fixed list: a 6th grade "graphic
+novel" shelf and an AP "magical realism" unit are both legitimate
+vocabularies. `GENRE_SUGGESTIONS` only seeds the datalist; anything typed joins
+it.
+
+**Where the gaps show.** A "Genres read" column (sortable, chips, and an
+explicit *untagged* chip for a student with books but no tags — blank would
+have meant two different things). A genre filter beside the date filter that
+narrows the totals and names everyone who has read none of it. And a **class
+reading diet** panel ranking genres by how *few* students have read them —
+ascending on purpose: sorted by popularity it tells you what the class already
+likes, sorted by scarcity it tells you what to book-talk on Monday.
+
+Genre travels with the CSV export and the printed class summary, and both
+honour the genre filter.
+
+Classes saved before this round have no `genres` key and default to `{}` —
+their books read as untagged and the diet panel stays hidden until something
+is actually tagged.
+
+New test: `Tools/ssr-log-tracker/test/smoke-genres.mjs` (34 assertions, wired
+into `npm test` and `npm run test:ssr`) — the tag-once-inherit-everywhere
+path, the blank-field-does-not-erase rule, retagging from the Books list, the
+untagged chip, diet ordering, the filter and its gap line, both exports, and a
+pre-round saved class.
+
+**Where the next round should pick up:** the printable parent reading report
+(still on the backlog) would now have genre to say something with. A
+"suggest a book from a genre this student hasn't read" bridge to the Book
+Tasting Menu generator is the obvious cross-tool move (P7).
 
 ### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
 
@@ -106,8 +157,15 @@ session.
   `isBookFinished`, `setBookFinished`, `withSessionPages`)
 - **Weekly goal tracking** (`daysLoggedThisWeek`, `currentWeekRange`,
   `goalCellHtml`)
-- Class summary table; date-range filtering
-- Print class summary and per-student logs; export CSV
+- **Genre tags per book** (`state.genres`, keyed by `bookKey`) with a
+  free-text datalist, auto-fill when a title the class already tagged is typed
+  again, and editing/clearing from the Books list
+- Class summary table with a **Genres read** column; date-range **and genre**
+  filtering
+- **Class reading diet panel** (`renderDietPanel`) — genres ranked by how few
+  students have read them, plus a named list of who has read none of a
+  filtered genre
+- Print class summary and per-student logs; export CSV (both carry genre)
 - Loads `_shared/a11y.js`
 
 ## Quick Wins
@@ -128,8 +186,9 @@ session.
 - **Done —** **Books-finished count and a finished-books wall**, which is the motivating
   artifact for middle schoolers, printable as a display. *(The count already
   existed in the summary table; the wall itself shipped this round.)*
-- **Genre tagging**, so "you've read six fantasy books; try one of these" is a
-  conversation the data supports.
+- **Done — 2026-08-11.** **Genre tagging**, so "you've read six fantasy books; try one of these" is a
+  conversation the data supports. *(See the Status entry at the top of this
+  file.)*
 - **Done —** **Undo on Delete class / delete entry** (P11).
 - **Timer for the SSR period itself** (P7 — the timer already exists).
 

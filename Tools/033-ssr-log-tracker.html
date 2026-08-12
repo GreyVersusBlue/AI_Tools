@@ -73,7 +73,7 @@
   .log-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .8rem; }
   .log-header h2 { font-size: 1.2rem; margin: 0; }
 
-  .row4 { display: grid; grid-template-columns: 1fr 1.6fr 1fr 1fr; gap: .7rem; align-items: start; }
+  .row4 { display: grid; grid-template-columns: 1fr 1.6fr 1.1fr 1fr 1fr; gap: .7rem; align-items: start; }
   @media (max-width: 700px) { .row4 { grid-template-columns: 1fr 1fr; } }
   .entry-form { margin-bottom: 1rem; }
   .entry-form .btn-row { display: flex; gap: .5rem; }
@@ -81,8 +81,24 @@
 
   .book-progress { margin-bottom: 1rem; }
   .book-progress-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
-  .book-progress-list li { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .4rem .6rem; }
-  .book-progress-list label { display: flex; align-items: center; gap: .5rem; font-weight: 500; font-size: .86rem; margin: 0; cursor: pointer; }
+  .book-progress-list li { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .4rem .6rem; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .book-progress-list label { display: flex; align-items: center; gap: .5rem; font-weight: 500; font-size: .86rem; margin: 0; cursor: pointer; flex: 1 1 12rem; }
+  .book-progress-list .book-genre-input { width: 9rem; margin: 0; font-size: .8rem; padding: .3rem .4rem; flex: none; }
+
+  /* ---- genre ---- */
+  .genre-chip {
+    display: inline-block; background: #eef2ea; border: 1px solid #cfd9c8; color: #4a5a44;
+    border-radius: 999px; padding: .05rem .5rem; font-size: .72rem; margin: 0 .2rem .15rem 0; white-space: nowrap;
+  }
+  .genre-chip.none { background: #f6f0e8; border-color: #ddcfbb; color: #8a6a3a; }
+  .diet-panel { margin-top: 1rem; border-top: 1px dashed var(--line); padding-top: .8rem; }
+  .diet-list { list-style: none; margin: .4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .25rem; }
+  .diet-list li { display: flex; align-items: center; gap: .6rem; font-size: .84rem; }
+  .diet-list .d-name { flex: 0 0 11rem; font-weight: 600; overflow-wrap: anywhere; }
+  .diet-list .d-bar { flex: 1; height: .5rem; background: #e7e5db; border-radius: 4px; overflow: hidden; min-width: 4rem; }
+  .diet-list .d-bar span { display: block; height: 100%; background: var(--accent); }
+  .diet-list .d-count { flex: 0 0 auto; color: var(--muted); font-size: .78rem; }
+  .diet-gap { color: #8a4a2a; font-size: .82rem; margin: .5rem 0 0; line-height: 1.5; }
   .book-progress-list input[type="checkbox"] { width: auto; margin: 0; }
 
   table { width: 100%; border-collapse: collapse; font-size: .86rem; }
@@ -186,6 +202,7 @@
   </div>
 
   <datalist id="bookDatalist"></datalist>
+  <datalist id="genreDatalist"></datalist>
 
   <div class="card">
     <label for="sectionName">Class / section name</label>
@@ -244,6 +261,7 @@
           <div class="row4">
             <div><label for="entryDate">Date</label><input type="date" id="entryDate" required></div>
             <div><label for="entryBook">Book title</label><input type="text" id="entryBook" required placeholder="e.g. Hatchet" list="bookDatalist"></div>
+            <div><label for="entryGenre">Genre (optional)</label><input type="text" id="entryGenre" placeholder="e.g. Realistic fiction" list="genreDatalist"></div>
             <div><label for="entryPages">Pages read to</label><input type="number" id="entryPages" min="0" step="1" required placeholder="e.g. 42"></div>
             <div><label for="entryMinutes">Minutes (optional)</label><input type="number" id="entryMinutes" min="0" step="1" placeholder="e.g. 20"></div>
           </div>
@@ -289,8 +307,9 @@
     <div class="summary-filter" style="margin-bottom:.9rem;">
       <label>From <input type="date" id="filterFrom"></label>
       <label>To <input type="date" id="filterTo"></label>
+      <label>Genre <select id="filterGenre" style="width:auto;margin:0;"><option value="">All genres</option></select></label>
       <button type="button" class="secondary small" id="clearFilterBtn">Clear filter</button>
-      <span class="hint" style="margin:0;">Date filter applies to totals only, not the current-book or days-logged-this-week columns.</span>
+      <span class="hint" style="margin:0;">Date filter applies to totals only, not the current-book or days-logged-this-week columns. Picking a genre narrows the totals to books tagged with it, and names anyone who has read none.</span>
     </div>
     <div class="summary-filter" style="margin-bottom:.9rem;">
       <label>Weekly goal <input type="number" id="goalPages" min="0" step="1" placeholder="pages"></label>
@@ -304,6 +323,7 @@
           <tr>
             <th data-sort="name">Student <span class="arrow"></span></th>
             <th data-sort="book">Current book <span class="arrow"></span></th>
+            <th data-sort="genreCount">Genres read <span class="arrow"></span></th>
             <th data-sort="finishedCount">Books completed <span class="arrow"></span></th>
             <th data-sort="daysThisWeek">Days logged this week <span class="arrow"></span></th>
             <th data-sort="pages">Total pages <span class="arrow"></span></th>
@@ -315,6 +335,13 @@
       </table>
     </div>
     <p class="hint" id="noSummaryHint" style="display:none;">Add students and log entries to see a class summary.</p>
+
+    <div class="diet-panel" id="dietPanel" style="display:none;">
+      <div class="card-title" style="margin-bottom:.2rem;">Class reading diet</div>
+      <p class="hint" style="margin:0;">How many students have read at least one book in each genre, fewest first &mdash; the top of this list is where the class is thin.</p>
+      <ul class="diet-list" id="dietList"></ul>
+      <p class="diet-gap" id="dietGap" style="display:none;"></p>
+    </div>
   </div>
 
   <footer class="note">
@@ -338,7 +365,8 @@
     'rosterInput', 'saveRosterBtn', 'rosterCount', 'rosterHubSelect', 'rosterHubLoadBtn',
     'studentList', 'noStudentsHint',
     'logCard', 'activeStudentName', 'printStudentBtn',
-    'entryForm', 'entryDate', 'entryBook', 'entryPages', 'entryMinutes',
+    'entryForm', 'entryDate', 'entryBook', 'entryGenre', 'entryPages', 'entryMinutes',
+    'genreDatalist', 'filterGenre', 'dietPanel', 'dietList', 'dietGap',
     'addEntryBtn', 'cancelEditBtn',
     'bookProgress', 'bookProgressList',
     'logTable', 'logTableBody', 'noEntriesHint', 'noStudentCard',
@@ -353,9 +381,17 @@
 
   // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
   //           finished: { studentName: [bookKey, ...] },
+  //           genres: { bookKey: 'Genre' },
   //           weeklyGoalPages, weeklyGoalMinutes } — bookKey is the trimmed,
   //           lowercased book title, matching the grouping key used by withSessionPages.
   //           weeklyGoalPages/weeklyGoalMinutes are 0 when off (goal is optional, per class).
+  //
+  //           `genres` is keyed by book, not by log entry, because a book has
+  //           one genre no matter who is reading it or how many sessions they
+  //           log. Tagging it once means every other student's entries for the
+  //           same title inherit it, which is the whole point in a class that
+  //           reads from one shelf. Classes saved before this existed simply
+  //           have no genres key and default to {}.
   var state = null;
   var activeStudent = null;
   var editingEntryId = null;
@@ -419,7 +455,7 @@
     if (!state) return;
     var all = readAllSections();
     all[state.name] = {
-      roster: state.roster, logs: state.logs, finished: state.finished,
+      roster: state.roster, logs: state.logs, finished: state.finished, genres: state.genres || {},
       weeklyGoalPages: state.weeklyGoalPages || 0, weeklyGoalMinutes: state.weeklyGoalMinutes || 0
     };
     writeAllSections(all);
@@ -456,7 +492,7 @@
   }
 
   function newSection(name) {
-    state = { name: name, roster: [], logs: {}, finished: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0 };
+    state = { name: name, roster: [], logs: {}, finished: {}, genres: {}, weeklyGoalPages: 0, weeklyGoalMinutes: 0 };
     activeStudent = null;
     editingEntryId = null;
     setCurrentName(name);
@@ -466,8 +502,13 @@
     els.toolbar.style.display = '';
     renderStudentList();
     renderActiveStudent();
-    renderSummaryTable();
     renderBookDatalist();
+    renderGenreDatalist();
+    // Before the summary: the summary's totals are filtered by whatever the
+    // genre select holds, and switching class has to clear a genre the new
+    // class has never used.
+    renderGenreFilter();
+    renderSummaryTable();
     renderBulkTable();
   }
 
@@ -476,6 +517,7 @@
     if (!data) return;
     state = {
       name: name, roster: data.roster || [], logs: data.logs || {}, finished: data.finished || {},
+      genres: data.genres || {},
       weeklyGoalPages: data.weeklyGoalPages || 0, weeklyGoalMinutes: data.weeklyGoalMinutes || 0
     };
     activeStudent = (state.roster.indexOf(activeStudent) !== -1) ? activeStudent : null;
@@ -486,8 +528,13 @@
     els.toolbar.style.display = '';
     renderStudentList();
     renderActiveStudent();
-    renderSummaryTable();
     renderBookDatalist();
+    renderGenreDatalist();
+    // Before the summary: the summary's totals are filtered by whatever the
+    // genre select holds, and switching class has to clear a genre the new
+    // class has never used.
+    renderGenreFilter();
+    renderSummaryTable();
     renderBulkTable();
   }
 
@@ -682,6 +729,112 @@
     return list;
   }
 
+  /* ---------- genre ----------------------------------------------------
+     A genre belongs to a book, not to a log entry: the same title read by
+     four students is the same genre four times. Free text rather than a
+     fixed list, because a 6th grade "graphic novel" shelf and an AP "magical
+     realism" unit are both legitimate vocabularies — the datalist keeps a
+     class consistent without dictating the words. GENRE_SUGGESTIONS only
+     seeds that datalist; anything typed becomes a suggestion afterwards. */
+  var GENRE_SUGGESTIONS = [
+    'Realistic fiction', 'Fantasy', 'Science fiction', 'Mystery', 'Historical fiction',
+    'Adventure', 'Horror', 'Graphic novel', 'Nonfiction', 'Biography', 'Memoir',
+    'Poetry', 'Informational', 'Sports', 'Humor'
+  ];
+
+  function genreFor(book) {
+    var key = bookKey(book);
+    if (!key || !state.genres) return '';
+    return state.genres[key] || '';
+  }
+
+  /** Tags a book with a genre. An empty genre is a no-op rather than an
+      erase: leaving the field blank while logging tonight's pages must not
+      wipe the tag somebody set last week. Clearing is done deliberately, in
+      the Books list, where `force` is passed. */
+  function setGenreFor(book, genre, force) {
+    var key = bookKey(book);
+    if (!key) return;
+    if (!state.genres) state.genres = {};
+    var value = (genre || '').trim();
+    if (!value) { if (force) delete state.genres[key]; return; }
+    state.genres[key] = value;
+  }
+
+  /** Every genre in use in this class, plus the built-in suggestions,
+      de-duplicated case-insensitively with the teacher's own capitalisation
+      winning over the suggestion's. */
+  function knownGenres() {
+    var seen = {}, list = [];
+    Object.keys(state.genres || {}).forEach(function (k) {
+      var g = state.genres[k];
+      if (!g) return;
+      var lower = g.toLowerCase();
+      if (seen[lower]) return;
+      seen[lower] = true; list.push(g);
+    });
+    GENRE_SUGGESTIONS.forEach(function (g) {
+      var lower = g.toLowerCase();
+      if (seen[lower]) return;
+      seen[lower] = true; list.push(g);
+    });
+    return list;
+  }
+
+  /** Only the genres actually tagged in this class, sorted — what the filter
+      and the reading-diet panel work from. A suggestion nobody has used is
+      not a gap in the class's reading, it is just a word. */
+  function genresInUse() {
+    var seen = {}, list = [];
+    Object.keys(state.genres || {}).forEach(function (k) {
+      var g = state.genres[k];
+      if (!g) return;
+      var lower = g.toLowerCase();
+      if (!seen[lower]) { seen[lower] = true; list.push(g); }
+    });
+    return list.sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  /** Distinct genres one student has read, in first-logged order. */
+  function studentGenres(name) {
+    var seen = {}, list = [];
+    studentBookList(studentEntries(name)).forEach(function (b) {
+      var g = state.genres && state.genres[b.key];
+      if (!g) return;
+      var lower = g.toLowerCase();
+      if (!seen[lower]) { seen[lower] = true; list.push(g); }
+    });
+    return list;
+  }
+
+  function renderGenreDatalist() {
+    if (!state) { els.genreDatalist.innerHTML = ''; return; }
+    els.genreDatalist.innerHTML = knownGenres().map(function (g) {
+      return '<option value="' + escapeHtml(g) + '">';
+    }).join('');
+  }
+
+  /** Keeps the genre filter's options in step with what is actually tagged,
+      preserving the current choice when it still exists. */
+  function renderGenreFilter() {
+    var current = els.filterGenre.value;
+    var used = genresInUse();
+    els.filterGenre.innerHTML = '<option value="">All genres</option>' +
+      used.map(function (g) { return '<option value="' + escapeHtml(g) + '">' + escapeHtml(g) + '</option>'; }).join('') +
+      '<option value="__untagged__">(books with no genre yet)</option>';
+    var stillThere = used.some(function (g) { return g === current; }) || current === '__untagged__';
+    els.filterGenre.value = stillThere ? current : '';
+  }
+
+  /** Does this entry's book match the active genre filter? */
+  function matchesGenreFilter(entry) {
+    var want = els.filterGenre.value;
+    if (!want) return true;
+    var g = genreFor(entry.book);
+    if (want === '__untagged__') return !g;
+    return g.toLowerCase() === want.toLowerCase();
+  }
+
   /** Every distinct book title logged anywhere in this class — most students
       read from the same classroom library, so a title one student typed is
       almost always the exact title another student's entry wants too. */
@@ -768,10 +921,29 @@
       var li = document.createElement('li');
       li.innerHTML = '<label><input type="checkbox" data-book-key="' + escapeHtml(b.key) + '"' +
         (finished ? ' checked' : '') + '> ' + escapeHtml(b.title) +
-        (finished ? ' <span class="hint" style="margin:0;">&mdash; finished</span>' : '') + '</label>';
+        (finished ? ' <span class="hint" style="margin:0;">&mdash; finished</span>' : '') + '</label>' +
+        '<input type="text" class="book-genre-input" list="genreDatalist" placeholder="Genre" ' +
+          'aria-label="Genre for ' + escapeHtml(b.title) + '" ' +
+          'data-genre-key="' + escapeHtml(b.key) + '" value="' + escapeHtml(genreFor(b.title)) + '">';
       els.bookProgressList.appendChild(li);
     });
   }
+
+  // The Books list is where a genre is authoritative — it is the one place
+  // that can also clear one, hence `force`. The entry form only ever fills a
+  // genre in.
+  els.bookProgressList.addEventListener('change', function (ev) {
+    var input = ev.target.closest('input.book-genre-input[data-genre-key]');
+    if (!input || !state) return;
+    var key = input.dataset.genreKey;
+    if (!state.genres) state.genres = {};
+    var value = input.value.trim();
+    if (value) state.genres[key] = value; else delete state.genres[key];
+    saveCurrentState();
+    renderGenreDatalist();
+    renderGenreFilter();
+    renderSummaryTable();
+  });
 
   els.bookProgressList.addEventListener('change', function (ev) {
     var cb = ev.target.closest('input[type="checkbox"][data-book-key]');
@@ -844,6 +1016,7 @@
     editingEntryId = id;
     els.entryDate.value = e.date;
     els.entryBook.value = e.book;
+    els.entryGenre.value = genreFor(e.book);
     els.entryPages.value = e.pagesTo;
     els.entryMinutes.value = e.minutes != null ? e.minutes : '';
     els.addEntryBtn.textContent = 'Save changes';
@@ -880,6 +1053,7 @@
     } else {
       entries.push({ id: makeId(), date: date, book: book, pagesTo: pagesTo, minutes: minutes });
     }
+    setGenreFor(book, els.entryGenre.value);
     saveCurrentState();
     resetForm();
     renderStudentList();
@@ -888,8 +1062,23 @@
     renderSummaryTable();
     renderReadingRate();
     renderBookDatalist();
+    renderGenreDatalist();
+    renderGenreFilter();
     renderBulkTable();
   });
+
+  /** Typing (or picking) a title the class has already tagged fills the genre
+      in — the common case is the fourth student to pick up the same book, and
+      retyping "Historical fiction" every time is how a genre list ends up with
+      four spellings of the same word. A genre already typed is never
+      overwritten. */
+  function syncGenreFromBook() {
+    if (!state) return;
+    var known = genreFor(els.entryBook.value);
+    if (known && !els.entryGenre.value.trim()) els.entryGenre.value = known;
+  }
+  els.entryBook.addEventListener('change', syncGenreFromBook);
+  els.entryBook.addEventListener('input', syncGenreFromBook);
 
   /* ---------- bulk entry (one grid, whole class, one date) ---------- */
   function lastKnownBook(name) {
@@ -1026,7 +1215,7 @@
     var week = currentWeekRange();
     return state.roster.map(function (name) {
       var all = studentEntries(name);
-      var filtered = all.filter(function (e) { return inRange(e.date); });
+      var filtered = all.filter(function (e) { return inRange(e.date) && matchesGenreFilter(e); });
       var sessionById = withSessionPages(filtered);
       var totalPages = 0, totalMinutes = 0;
       filtered.forEach(function (e) {
@@ -1045,9 +1234,12 @@
         weekMinutes += (e.minutes || 0);
       });
 
+      var genres = studentGenres(name);
       return {
         name: name,
         book: latest ? latest.book : '',
+        genres: genres,
+        genreCount: genres.length,
         finishedCount: studentFinished(name).length,
         daysThisWeek: daysLoggedThisWeek(name),
         pages: totalPages,
@@ -1077,6 +1269,74 @@
     return '<div class="goal-mini">' + parts.join('') + '</div>';
   }
 
+  /** The genres one student has read, as chips. A student with logged books
+      and no tagged genre at all is called out rather than left blank, because
+      "no genre" and "no books" look identical in an empty cell and mean
+      completely different things. */
+  function genreCellHtml(row) {
+    if (row.genres.length) {
+      return row.genres.map(function (g) { return '<span class="genre-chip">' + escapeHtml(g) + '</span>'; }).join('');
+    }
+    var hasBooks = studentBookList(studentEntries(row.name)).length > 0;
+    return hasBooks ? '<span class="genre-chip none">untagged</span>' : '&mdash;';
+  }
+
+  /** The reading diet: for each genre in use, how many students have read at
+      least one book in it, fewest first. Sorting ascending is the whole
+      point — a list ordered by popularity tells you what the class already
+      likes; ordered by scarcity it tells you what to book-talk on Monday. */
+  function renderDietPanel() {
+    var used = genresInUse();
+    if (!used.length || !state.roster.length) {
+      els.dietPanel.style.display = 'none';
+      return;
+    }
+    els.dietPanel.style.display = '';
+
+    var readersByGenre = {}, booksByGenre = {};
+    used.forEach(function (g) { readersByGenre[g.toLowerCase()] = 0; booksByGenre[g.toLowerCase()] = 0; });
+    Object.keys(state.genres || {}).forEach(function (key) {
+      var g = state.genres[key];
+      if (g && booksByGenre.hasOwnProperty(g.toLowerCase())) booksByGenre[g.toLowerCase()]++;
+    });
+    state.roster.forEach(function (name) {
+      studentGenres(name).forEach(function (g) {
+        var lower = g.toLowerCase();
+        if (readersByGenre.hasOwnProperty(lower)) readersByGenre[lower]++;
+      });
+    });
+
+    var total = state.roster.length;
+    var ranked = used.slice().sort(function (a, b) {
+      var d = readersByGenre[a.toLowerCase()] - readersByGenre[b.toLowerCase()];
+      return d !== 0 ? d : a.localeCompare(b);
+    });
+    els.dietList.innerHTML = ranked.map(function (g) {
+      var readers = readersByGenre[g.toLowerCase()];
+      var books = booksByGenre[g.toLowerCase()];
+      var pct = total ? Math.round((readers / total) * 100) : 0;
+      return '<li><span class="d-name">' + escapeHtml(g) + '</span>' +
+        '<span class="d-bar"><span style="width:' + pct + '%;"></span></span>' +
+        '<span class="d-count">' + readers + ' of ' + total + ' student' + (total === 1 ? '' : 's') +
+        ' &middot; ' + books + ' book' + (books === 1 ? '' : 's') + '</span></li>';
+    }).join('');
+
+    // With a genre filter on, name the students it is a gap for. That is the
+    // question a teacher is actually asking when they pick one.
+    var want = els.filterGenre.value;
+    if (!want || want === '__untagged__') {
+      els.dietGap.style.display = 'none';
+      return;
+    }
+    var missing = state.roster.filter(function (name) {
+      return !studentGenres(name).some(function (g) { return g.toLowerCase() === want.toLowerCase(); });
+    });
+    els.dietGap.style.display = '';
+    els.dietGap.textContent = missing.length
+      ? 'No ' + want.toLowerCase() + ' logged yet: ' + missing.join(', ')
+      : 'Every student has logged at least one ' + want.toLowerCase() + ' book.';
+  }
+
   function renderSummaryTable() {
     var rows = summaryRows();
     var key = sortState.key, dir = sortState.dir;
@@ -1096,6 +1356,7 @@
       tr.innerHTML =
         '<td>' + escapeHtml(r.name) + '</td>' +
         '<td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
+        '<td>' + genreCellHtml(r) + '</td>' +
         '<td class="num">' + r.finishedCount + '</td>' +
         '<td class="num' + (r.daysThisWeek < LOW_DAYS_THRESHOLD ? ' days-low' : '') + '">' + r.daysThisWeek + '</td>' +
         '<td class="num">' + r.pages + '</td>' +
@@ -1107,6 +1368,7 @@
       var arrow = th.querySelector('.arrow');
       arrow.textContent = th.dataset.sort === sortState.key ? (sortState.dir === 1 ? '▲' : '▼') : '';
     });
+    renderDietPanel();
   }
 
   document.querySelectorAll('.summary-table th[data-sort]').forEach(function (th) {
@@ -1120,9 +1382,11 @@
 
   els.filterFrom.addEventListener('change', renderSummaryTable);
   els.filterTo.addEventListener('change', renderSummaryTable);
+  els.filterGenre.addEventListener('change', renderSummaryTable);
   els.clearFilterBtn.addEventListener('click', function () {
     els.filterFrom.value = '';
     els.filterTo.value = '';
+    els.filterGenre.value = '';
     renderSummaryTable();
   });
 
@@ -1141,15 +1405,15 @@
 
   function exportCsv() {
     if (!state) return;
-    var header = ['Student', 'Date', 'Book', 'Pages Read To', 'Minutes', 'Pages This Session'];
+    var header = ['Student', 'Date', 'Book', 'Genre', 'Pages Read To', 'Minutes', 'Pages This Session'];
     var rows = [];
     state.roster.forEach(function (name) {
-      var filtered = studentEntries(name).filter(function (e) { return inRange(e.date); });
+      var filtered = studentEntries(name).filter(function (e) { return inRange(e.date) && matchesGenreFilter(e); });
       var asc = sortedAscending(filtered);
       var sessionById = withSessionPages(filtered);
       asc.forEach(function (e) {
         rows.push([
-          name, e.date, e.book, e.pagesTo,
+          name, e.date, e.book, genreFor(e.book), e.pagesTo,
           (e.minutes != null && e.minutes !== '' ? e.minutes : ''),
           sessionById[e.id] || 0
         ]);
@@ -1206,15 +1470,22 @@
     var from = els.filterFrom.value, to = els.filterTo.value;
     var rangeNote = (from || to) ? (' &middot; Totals ' + (from ? ('from ' + escapeHtml(from)) : '') +
       (from && to ? ' ' : '') + (to ? ('to ' + escapeHtml(to)) : '')) : '';
+    var genrePick = els.filterGenre.value;
+    if (genrePick) {
+      rangeNote += ' &middot; ' + (genrePick === '__untagged__'
+        ? 'Books with no genre only'
+        : escapeHtml(genrePick) + ' only');
+    }
     var body = rows.map(function (r) {
       return '<tr><td>' + escapeHtml(r.name) + '</td><td>' + (r.book ? escapeHtml(r.book) : '&mdash;') + '</td>' +
+        '<td>' + (r.genres.length ? escapeHtml(r.genres.join(', ')) : '&mdash;') + '</td>' +
         '<td>' + r.finishedCount + '</td><td>' + r.daysThisWeek + '</td><td>' + r.pages + '</td><td>' + r.minutes + '</td></tr>';
     }).join('');
     els.printArea.innerHTML =
       '<div class="print-title">Class Summary &mdash; ' + escapeHtml(state.name) + '</div>' +
       '<div class="print-sub">Printed ' + escapeHtml(todayStr()) + rangeNote + '</div>' +
-      '<table><thead><tr><th>Student</th><th>Current book</th><th>Books completed</th><th>Days logged this week</th><th>Total pages</th><th>Total minutes</th></tr></thead>' +
-      '<tbody>' + (body || '<tr><td colspan="6">No students yet.</td></tr>') + '</tbody></table>';
+      '<table><thead><tr><th>Student</th><th>Current book</th><th>Genres read</th><th>Books completed</th><th>Days logged this week</th><th>Total pages</th><th>Total minutes</th></tr></thead>' +
+      '<tbody>' + (body || '<tr><td colspan="7">No students yet.</td></tr>') + '</tbody></table>';
     window.print();
   }
 
