@@ -388,10 +388,26 @@
     );
   }
 
+  /** The written form of a problem. Fractions, percents and order-of-
+      operations problems carry their own text because they aren't
+      `number symbol number`; the four fact drills fall through to the
+      operands themselves, exactly as before. */
+  function problemText(p) {
+    if (p.expr) return p.expr + ' = _____';
+    var a = p.aText != null ? p.aText : p.a;
+    var b = p.bText != null ? p.bText : p.b;
+    return a + ' ' + p.symbol + ' ' + b + ' = _____';
+  }
+
+  function answerText(p) { return p.answerText != null ? p.answerText : p.answer; }
+
   function problemItemHtml(p, num) {
-    var body = settings.format === 'vertical'
+    /* Stacked column layout is a whole-number convention — there is no
+       sensible way to stack "20% of 60" or "(3 + 4) × 5" — so a problem that
+       says it can't be stacked is written across even in vertical mode. */
+    var body = (settings.format === 'vertical' && p.vertical !== false)
       ? verticalProblemHtml(p)
-      : (p.a + ' ' + p.symbol + ' ' + p.b + ' = _____');
+      : problemText(p);
     return '<div class="p"><span class="num">' + num + '.</span>' + body + '</div>';
   }
 
@@ -402,7 +418,7 @@
   function sameSheetKeyHtml(pageProblems, startNum) {
     if (!settings.sameSheetKey) return '';
     var items = pageProblems.map(function (p, i) {
-      return '<span><span class="num">' + (startNum + i) + '.</span>' + p.answer + '</span>';
+      return '<span><span class="num">' + (startNum + i) + '.</span>' + answerText(p) + '</span>';
     }).join('');
     return '<div class="same-sheet-key"><div class="ssk-title">Answer key</div><div class="ssk-grid">' + items + '</div></div>';
   }
@@ -442,7 +458,7 @@
     var cols = settings.columns + 1;
     var fsClass = settings.fontSize === 'md' ? '' : ' fs-' + settings.fontSize;
     var items = set.problems.map(function (p, i) {
-      return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + p.answer + '</div>';
+      return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + answerText(p) + '</div>';
     }).join('');
     return (
       '<div class="sheet">' +

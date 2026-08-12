@@ -28,6 +28,34 @@
     {
       key: 'mixed', label: 'Mixed Operations', operation: 'mixed',
       operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
+    },
+    /* The five below are the grades 6-8 half of this tool. They keep the same
+       template shape as the four fact drills, but their problems are not all
+       `a symbol b` — see the display-text note at the top of mdg-generate.js.
+       The operand ranges mean what they can: for integers they bound the
+       magnitude before a sign is picked, for decimals the whole-number part.
+       Fractions, percents and order of operations generate from their own
+       fixed pools and ignore the ranges — the ranges panel is still shown for
+       them, which is a rough edge worth revisiting. */
+    {
+      key: 'integers', label: 'Integer Operations (+ − ×)', operation: 'integer',
+      operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
+    },
+    {
+      key: 'decimals', label: 'Decimal Operations (+ − ×)', operation: 'decimal',
+      operand1: { min: 1, max: 9 }, operand2: { min: 1, max: 9 }
+    },
+    {
+      key: 'fractions', label: 'Fraction Addition & Subtraction', operation: 'fraction',
+      operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
+    },
+    {
+      key: 'percent', label: 'Percent of a Number', operation: 'percent',
+      operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
+    },
+    {
+      key: 'ooo', label: 'Order of Operations', operation: 'ooo',
+      operand1: { min: 1, max: 12 }, operand2: { min: 1, max: 12 }
     }
   ];
 
