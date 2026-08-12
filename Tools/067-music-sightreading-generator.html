@@ -75,6 +75,14 @@
     padding: .4rem 1rem .4rem .8rem; min-height: 74px;
   }
   .measure .glyph { font-size: 2.6rem; line-height: 1; }
+  /* Drawn note shapes stand in for the Unicode musical symbols on a machine
+     whose fonts don't have that block. Sized in `em` so they follow whatever
+     font-size the surrounding display already sets — the big single-measure
+     mode and the printed sheet need no separate sizing. */
+  .glyph svg { height: 1em; width: auto; vertical-align: -.1em; }
+  .pool-sample svg { height: 1.5em; width: auto; vertical-align: -.45em; }
+  .pool-sample .glyph { font-size: 1.3rem; }
+  .glyph-notice { font-size: .78rem; color: var(--muted); margin: .4rem 0 0; }
   .ts-glyph { font-size: 2.6rem; font-weight: 700; line-height: .85; text-align: center; margin-right: .4rem; }
 
   .lock-row { margin-bottom: .3rem; }
@@ -150,11 +158,18 @@
       </div>
       <label>Note/rest values to include</label>
       <div class="check-grid" id="rhythmPool">
-        <label class="check-row"><input type="checkbox" value="quarter" checked> Quarter note (&#9833;)</label>
-        <label class="check-row"><input type="checkbox" value="eighthPair" checked> Eighth pair (&#9835;)</label>
-        <label class="check-row"><input type="checkbox" value="half" checked> Half note (&#119134;)</label>
-        <label class="check-row"><input type="checkbox" value="quarterRest"> Quarter rest (&#119101;)</label>
+        <label class="check-row"><input type="checkbox" value="quarter" checked> Quarter note <span class="pool-sample" data-sample="quarter"></span></label>
+        <label class="check-row"><input type="checkbox" value="eighthPair" checked> Eighth pair <span class="pool-sample" data-sample="eighthPair"></span></label>
+        <label class="check-row"><input type="checkbox" value="half" checked> Half note <span class="pool-sample" data-sample="half"></span></label>
+        <label class="check-row"><input type="checkbox" value="quarterRest"> Quarter rest <span class="pool-sample" data-sample="quarterRest"></span></label>
       </div>
+      <label for="notationMode" style="margin-top:.6rem;">Note symbols</label>
+      <select id="notationMode">
+        <option value="auto">Automatic &mdash; draw them if this machine has no music font</option>
+        <option value="font">Font symbols (&#9833; &#9835;)</option>
+        <option value="drawn">Drawn shapes</option>
+      </select>
+      <p class="glyph-notice" id="glyphNotice" style="display:none;"></p>
       <div class="btnrow">
         <button type="button" id="newRhythmBtn">New rhythm pattern</button>
       </div>
@@ -251,7 +266,8 @@
    'printBtn', 'printRhythmArea', 'printRhythmSub', 'printRhythmDisplay',
    'printPitchArea', 'printPitchSub', 'printPitchDisplay',
    'lockRhythmToggle', 'lockPitchToggle',
-   'bigModeToggle', 'bigModeWrap', 'bigMeasureDisplay', 'bigModeCounter', 'prevMeasureBtn', 'nextMeasureBtn'
+   'bigModeToggle', 'bigModeWrap', 'bigMeasureDisplay', 'bigModeCounter', 'prevMeasureBtn', 'nextMeasureBtn',
+   'notationMode', 'glyphNotice'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var mode = 'rhythm';
@@ -282,7 +298,8 @@
           timeSig: els.timeSig.value,
           numMeasures: els.numMeasures.value,
           tempo: els.tempo.value,
-          pool: selectedRhythmPool()
+          pool: selectedRhythmPool(),
+          notation: els.notationMode.value
         },
         pitch: {
           clef: els.clefSelect.value,
@@ -308,6 +325,7 @@
       setSelectIfValid(els.timeSig, data.rhythm.timeSig);
       setSelectIfValid(els.numMeasures, data.rhythm.numMeasures);
       if (typeof data.rhythm.tempo === 'string' && data.rhythm.tempo) els.tempo.value = data.rhythm.tempo;
+      setSelectIfValid(els.notationMode, data.rhythm.notation);
       if (Array.isArray(data.rhythm.pool)) {
         Array.prototype.slice.call(els.rhythmPool.querySelectorAll('input')).forEach(function (cb) {
           cb.checked = data.rhythm.pool.indexOf(cb.value) !== -1;
@@ -335,7 +353,102 @@
 
   /* ---------------- Rhythm generation ---------------- */
   var RHYTHM_GLYPH = { quarter: '&#9833;', eighthPair: '&#9835;', half: '&#119134;', quarterRest: '&#119101;' };
+  var RHYTHM_CHAR = { quarter: '♩', eighthPair: '♫', half: '𝅗𝅥', quarterRest: '𝄽' };
   var RHYTHM_BEATS = { quarter: 1, eighthPair: 1, half: 2, quarterRest: 1 };
+  var RHYTHM_NAME = { quarter: 'quarter note', eighthPair: 'eighth pair', half: 'half note', quarterRest: 'quarter rest' };
+
+  /* ---------------- Glyph support probe + drawn fallback ----------------
+     Half note and quarter rest live in the Musical Symbols block (U+1D100+),
+     which plenty of school-image Windows and Linux machines have no font for
+     — the projector then shows a row of tofu boxes and the warm-up is
+     unusable. The probe below measures each character in the same font stack
+     the display actually uses and compares it with U+FFFF, a permanently
+     unassigned codepoint that can only ever render as the missing-glyph box:
+     equal widths mean the real glyph fell back to that box too. This measures
+     the DOM, not a canvas, so it is testing exactly the font the page will
+     paint with rather than a separately-specified stack. */
+  function glyphMissing(ch) {
+    var probe = document.createElement('div');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:100px;line-height:1;white-space:nowrap;';
+    var a = document.createElement('span'); a.textContent = ch;
+    var b = document.createElement('span'); b.textContent = '￿';
+    probe.appendChild(a); probe.appendChild(b);
+    document.body.appendChild(probe);
+    var wa = a.getBoundingClientRect().width;
+    var wb = b.getBoundingClientRect().width;
+    probe.parentNode.removeChild(probe);
+    return wa === 0 || Math.abs(wa - wb) < 0.5;
+  }
+
+  var missingGlyphs = [];   // names of the rhythm values whose glyph didn't render
+  var clefGlyphMissing = false;
+
+  function runGlyphProbe() {
+    missingGlyphs = Object.keys(RHYTHM_CHAR).filter(function (k) { return glyphMissing(RHYTHM_CHAR[k]); });
+    clefGlyphMissing = glyphMissing('𝄞');   // 𝄞 treble clef
+  }
+
+  /** Whether the rhythm display should draw its own shapes right now. */
+  function drawingNotes() {
+    var pick = els.notationMode.value;
+    if (pick === 'drawn') return true;
+    if (pick === 'font') return false;
+    return missingGlyphs.length > 0;
+  }
+
+  /* Hand-drawn stand-ins. One viewBox per value, `currentColor` so they take
+     the page's ink color and print black on a grayscale printer. */
+  var NOTEHEAD = 'cx="34" cy="150" rx="26" ry="19" transform="rotate(-20 34 150)"';
+  var NOTEHEAD_2 = 'cx="146" cy="150" rx="26" ry="19" transform="rotate(-20 146 150)"';
+  var DRAWN_NOTE = {
+    quarter: '<svg viewBox="0 0 90 200" role="img" aria-label="quarter note">' +
+      '<ellipse ' + NOTEHEAD + ' fill="currentColor"></ellipse>' +
+      '<rect x="56" y="28" width="7" height="124" fill="currentColor"></rect></svg>',
+    half: '<svg viewBox="0 0 90 200" role="img" aria-label="half note">' +
+      '<ellipse ' + NOTEHEAD + ' fill="none" stroke="currentColor" stroke-width="9"></ellipse>' +
+      '<rect x="56" y="28" width="7" height="124" fill="currentColor"></rect></svg>',
+    eighthPair: '<svg viewBox="0 0 200 200" role="img" aria-label="pair of beamed eighth notes">' +
+      '<ellipse ' + NOTEHEAD + ' fill="currentColor"></ellipse>' +
+      '<ellipse ' + NOTEHEAD_2 + ' fill="currentColor"></ellipse>' +
+      '<rect x="56" y="28" width="7" height="124" fill="currentColor"></rect>' +
+      '<rect x="168" y="28" width="7" height="124" fill="currentColor"></rect>' +
+      '<rect x="56" y="28" width="119" height="19" fill="currentColor"></rect></svg>',
+    quarterRest: '<svg viewBox="0 0 90 200" role="img" aria-label="quarter rest">' +
+      '<path d="M26 34 L60 78 L28 112 L64 150" fill="none" stroke="currentColor" stroke-width="11" stroke-linejoin="miter"></path>' +
+      '<path d="M64 150 c-17 -10 -35 -1 -30 18 c-1 -14 15 -18 27 -7 z" fill="currentColor"></path></svg>'
+  };
+
+  /** One rhythm value, as either the font character or a drawn shape. */
+  function rhythmMarkup(value) {
+    return '<span class="glyph">' + (drawingNotes() ? DRAWN_NOTE[value] : RHYTHM_GLYPH[value]) + '</span>';
+  }
+
+  /** The samples beside the pool checkboxes have to follow the same choice —
+   *  a tofu box next to "Half note" is exactly as unhelpful there. */
+  function renderPoolSamples() {
+    Array.prototype.slice.call(els.rhythmPool.querySelectorAll('.pool-sample')).forEach(function (span) {
+      span.innerHTML = rhythmMarkup(span.getAttribute('data-sample'));
+    });
+  }
+
+  function renderGlyphNotice() {
+    var pick = els.notationMode.value;
+    var text = '';
+    if (pick === 'auto' && missingGlyphs.length) {
+      text = 'This computer has no font for ' +
+        missingGlyphs.map(function (k) { return RHYTHM_NAME[k]; }).join(', ') +
+        ' — those symbols would print as empty boxes, so the notes are being drawn instead.';
+    } else if (pick === 'font' && missingGlyphs.length) {
+      text = 'Warning: this computer has no font for ' +
+        missingGlyphs.map(function (k) { return RHYTHM_NAME[k]; }).join(', ') +
+        ' — they will show as empty boxes. Switch to Drawn shapes to fix it.';
+    } else if (pick === 'drawn') {
+      text = 'Notes are drawn as shapes, not font symbols.';
+    }
+    els.glyphNotice.textContent = text;
+    els.glyphNotice.style.display = text ? '' : 'none';
+  }
 
   function selectedRhythmPool() {
     return Array.prototype.slice.call(els.rhythmPool.querySelectorAll('input:checked')).map(function (cb) { return cb.value; });
@@ -371,10 +484,18 @@
     measures = measures || rhythmMeasures;
     target.innerHTML = measures.map(function (measure, i) {
       var tsHtml = i === 0 ? '<div class="ts-glyph">' + timeSigValue + '<br>4</div>' : '';
-      var glyphs = measure.map(function (v) { return '<span class="glyph">' + RHYTHM_GLYPH[v] + '</span>'; }).join('');
+      var glyphs = measure.map(rhythmMarkup).join('');
       return tsHtml + '<div class="measure">' + glyphs + '</div>';
     }).join('');
   }
+
+  els.notationMode.addEventListener('change', function () {
+    renderPoolSamples();
+    renderGlyphNotice();
+    renderRhythm(els.rhythmDisplay, els.timeSig.value, rhythmMeasures);
+    if (els.bigModeToggle.checked) renderBigMeasure();
+    saveSettings();
+  });
 
   els.newRhythmBtn.addEventListener('click', generateRhythm);
   els.timeSig.addEventListener('change', saveSettings);
@@ -407,7 +528,7 @@
     if (bigModeIndex > rhythmMeasures.length - 1) bigModeIndex = rhythmMeasures.length - 1;
     if (bigModeIndex < 0) bigModeIndex = 0;
     var measure = rhythmMeasures[bigModeIndex];
-    var glyphs = measure.map(function (v) { return '<span class="glyph">' + RHYTHM_GLYPH[v] + '</span>'; }).join('');
+    var glyphs = measure.map(rhythmMarkup).join('');
     els.bigMeasureDisplay.innerHTML = '<div class="measure">' + glyphs + '</div>';
     els.bigModeCounter.textContent = 'Measure ' + (bigModeIndex + 1) + ' of ' + rhythmMeasures.length;
     els.prevMeasureBtn.disabled = bigModeIndex === 0;
@@ -540,7 +661,17 @@
       });
       svg += '<line x1="10" y1="' + lineYs[0] + '" x2="10" y2="' + lineYs[4] + '" stroke="#333" stroke-width="2"></line>';
       svg += '<line x1="' + (width - 10) + '" y1="' + lineYs[0] + '" x2="' + (width - 10) + '" y2="' + lineYs[4] + '" stroke="#333" stroke-width="2"></line>';
-      svg += '<text x="20" y="' + (staffTop + LINE_GAP * 3.1) + '" font-size="' + (LINE_GAP * 4.2) + '" font-family="serif">' + CLEF_GLYPH[clef] + '</text>';
+      /* The clef characters are from the same Unicode block as the half note
+         and the rest, so on a machine that lacks it the staff would open with
+         a tofu box. A clef is far harder to draw convincingly than a notehead,
+         so the fallback here names it in words instead of guessing at the
+         shape — legible, honest, and unmistakable on a projector. */
+      if (clefGlyphMissing) {
+        svg += '<text x="16" y="' + (staffTop + LINE_GAP * 2.6) + '" font-size="' + (LINE_GAP * 0.95) + '" font-family="inherit" font-weight="700">' +
+          (clef === 'treble' ? 'TREBLE' : 'BASS') + '</text>';
+      } else {
+        svg += '<text x="20" y="' + (staffTop + LINE_GAP * 3.1) + '" font-size="' + (LINE_GAP * 4.2) + '" font-family="serif">' + CLEF_GLYPH[clef] + '</text>';
+      }
 
       var startX = 78;
       var stepX = (width - startX - 20) / Math.max(rowNotes.length, 1);
@@ -596,6 +727,7 @@
   });
 
   /* ---------------- Boot ---------------- */
+  runGlyphProbe();
   populateNoteSelects();
   var savedSettings = loadSettings();
   applySavedSettings(savedSettings);
@@ -606,6 +738,13 @@
     applyClefDefaults();
   }
   setMode(savedSettings && savedSettings.activeTab === 'pitch' ? 'pitch' : 'rhythm');
+  /* A tempo marking typed as "&#9833; = 92" is itself a musical glyph. Only the
+     shipped default is rewritten — a teacher's own saved text is theirs. */
+  if (missingGlyphs.indexOf('quarter') !== -1 && !(savedSettings && savedSettings.rhythm && savedSettings.rhythm.tempo)) {
+    els.tempo.value = 'Quarter note = 92';
+  }
+  renderPoolSamples();
+  renderGlyphNotice();
   generateRhythm();
   generatePitches();
 })();
