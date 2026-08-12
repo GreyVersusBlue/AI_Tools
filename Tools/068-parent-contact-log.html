@@ -101,6 +101,25 @@
     white-space: nowrap;
   }
   .reason-badge.none { background: transparent; border-color: transparent; color: var(--muted); font-weight: 400; }
+
+  /* The tally. Sits above the history because it is the summary of what is
+     under it, and it changes with every filter — which is the point: it
+     answers "what have this term's contacts about this student actually
+     been about", not just "how many are there". */
+  .tally { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .75rem; margin-bottom: .8rem; background: #fbfbf9; }
+  .tally-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; margin-bottom: .5rem; }
+  .tally-total { font-weight: 700; font-size: .95rem; }
+  .tally-good { font-size: .86rem; color: #2f7d4f; font-weight: 700; }
+  .tally-good.none { color: var(--muted); font-weight: 600; }
+  .tally-bars { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .6rem; align-items: center; }
+  .tally-label { font-size: .82rem; white-space: nowrap; }
+  .tally-track { background: #eceae2; border-radius: 3px; height: .55rem; overflow: hidden; }
+  /* display:block, because a bare span is inline and would ignore width — the
+     bars would render as empty tracks and look like a rendering bug. */
+  .tally-fill { display: block; background: var(--accent-2); height: 100%; }
+  .tally-row.good .tally-fill { background: #2f7d4f; }
+  .tally-n { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tally-empty { font-size: .84rem; color: var(--muted); margin: 0; }
   .row-actions { display: flex; gap: .3rem; white-space: nowrap; }
   .empty-state { color: var(--muted); font-size: .9rem; padding: 1.5rem 0; text-align: center; }
 
@@ -217,6 +236,7 @@
           <button class="secondary small" id="exportCsvBtn">Export CSV</button>
           <button class="secondary small" id="printAllBtn">Print this list</button>
         </div>
+        <div class="tally" id="tallyBox" aria-live="polite"></div>
         <table>
           <thead>
             <tr><th>Date</th><th>Student</th><th>Method</th><th>Reason</th><th>Outcome</th><th>By</th><th></th></tr>
@@ -247,7 +267,7 @@
   var els = {};
   ['rosterInput','saveRosterBtn','loadNamePickerBtn','namePickerHint','rosterList','rosterEmptyMsg','rosterSort',
    'entryStudent','entryDate','entryMethod','entryReason','entryInitials','entryOutcome','logEntryBtn','editingHint',
-   'filterStudent','filterMethod','filterReason','filterFrom','filterTo','clearDateRangeBtn','exportCsvBtn','printAllBtn','entryRows','entriesEmptyMsg',
+   'filterStudent','filterMethod','filterReason','filterFrom','filterTo','clearDateRangeBtn','exportCsvBtn','printAllBtn','entryRows','entriesEmptyMsg','tallyBox',
    'printArea','printTitle','printSub','printTable','toast'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var roster = [];
@@ -383,8 +403,66 @@
     }).sort(function (a, b) { return (b.date + b.id).localeCompare(a.date + a.id); });
   }
 
+  /* ---------- what the contacts were about ------------------------------
+     A log that only ever records problems is the thing this makes visible.
+     "How many of my calls home were good news" is a number teachers keep
+     roughly in their heads and are sometimes asked for out loud — at a
+     conference, in an IEP meeting, by an administrator — and the honest
+     answer is usually lower than the remembered one.
+
+     It counts whatever is currently filtered rather than the whole log,
+     because the useful questions are narrow: this student, this month, this
+     method. Positive news is pulled out of the list and stated separately
+     because it is the one line anybody is actually looking for; leaving it
+     as the fourth bar of seven would bury it.
+
+     Bars are proportional to the largest reason, not to the total, so a
+     spread of 4/3/2/1 is legible instead of four slivers. */
+  var POSITIVE_REASON = 'Positive news';
+
+  function tallyOf(list) {
+    var counts = {};
+    list.forEach(function (e) {
+      var r = reasonOf(e) || NO_REASON;
+      counts[r] = (counts[r] || 0) + 1;
+    });
+    var rows = Object.keys(counts).map(function (r) { return { reason: r, n: counts[r] }; });
+    // Most-used first; ties keep the order REASONS declares, so the list does
+    // not reshuffle itself every time a contact is logged.
+    var declared = REASONS.concat([NO_REASON]);
+    rows.sort(function (a, b) {
+      if (a.n !== b.n) return b.n - a.n;
+      return declared.indexOf(a.reason) - declared.indexOf(b.reason);
+    });
+    return { rows: rows, total: list.length, positive: counts[POSITIVE_REASON] || 0 };
+  }
+
+  function renderTally(list) {
+    var t = tallyOf(list);
+    if (!t.total) {
+      els.tallyBox.innerHTML = '<p class="tally-empty">Nothing to summarise yet &mdash; log a contact, or widen the filters.</p>';
+      return;
+    }
+    var pct = Math.round((t.positive / t.total) * 100);
+    var max = t.rows[0].n;
+    var good = t.positive
+      ? '<span class="tally-good">' + t.positive + ' of them good news (' + pct + '%)</span>'
+      : '<span class="tally-good none">None of them good news yet</span>';
+    els.tallyBox.innerHTML =
+      '<div class="tally-head"><span class="tally-total">' + t.total + ' contact' + (t.total === 1 ? '' : 's') +
+      ' shown</span>' + good + '</div>' +
+      '<div class="tally-bars">' + t.rows.map(function (r) {
+        var isGood = r.reason === POSITIVE_REASON;
+        return '<span class="tally-label' + (isGood ? ' good' : '') + '">' + escapeHtml(r.reason) + '</span>' +
+          '<span class="tally-track tally-row' + (isGood ? ' good' : '') + '">' +
+            '<span class="tally-fill" style="width:' + Math.round((r.n / max) * 100) + '%"></span></span>' +
+          '<span class="tally-n">' + r.n + '</span>';
+      }).join('') + '</div>';
+  }
+
   function renderEntries() {
     var list = filteredEntries();
+    renderTally(list);
     els.entryRows.innerHTML = '';
     els.entriesEmptyMsg.style.display = list.length ? 'none' : 'block';
     list.forEach(function (e) {
