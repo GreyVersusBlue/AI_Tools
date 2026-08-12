@@ -62,6 +62,14 @@
   .prompt-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .prompt-row input { margin-bottom: 0; }
 
+  .setbar { display: flex; align-items: flex-end; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .setbar .field { display: flex; flex-direction: column; }
+  .setbar select {
+    font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; min-width: 16rem; max-width: 100%;
+  }
+
   .stage-card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem;
@@ -102,7 +110,18 @@
 
   <div class="card">
     <h2>Task prompts</h2>
-    <p class="hint">One is picked at random alongside each image.</p>
+    <div class="setbar">
+      <span class="field">
+        <label for="promptSetSelect">Prompt set</label>
+        <select id="promptSetSelect"></select>
+      </span>
+      <button type="button" class="secondary small" id="newSetBtn">+ New set</button>
+      <button type="button" class="secondary small" id="restoreSetBtn">Restore starter prompts</button>
+      <button type="button" class="danger small" id="deleteSetBtn">Delete set</button>
+    </div>
+    <p class="hint">Starter sets are written in the target language, so the projected and printed
+      task wording matches the class. Switching sets changes which prompts are used everywhere.
+      Edit any of them — your changes stay in that set.</p>
     <div id="promptsWrap"></div>
     <button type="button" class="secondary small" id="addPromptBtn">+ Add prompt</button>
   </div>
@@ -130,7 +149,8 @@
 (function () {
   'use strict';
   var IMAGES_KEY = 'ppg_images_v1';
-  var PROMPTS_KEY = 'ppg_prompts_v1';
+  var PROMPTS_KEY = 'ppg_prompts_v1';        /* pre-2026-08-12: one flat prompt list */
+  var SETS_KEY = 'ppg_prompt_sets_v1';       /* now: named sets, one per language taught */
   var PRINT_COUNT_KEY = 'ppg_print_count_v1';
   var MAX_IMAGE_DIM = 1400;
 
@@ -143,13 +163,70 @@
     'Imagine you are inside this picture. What do you hear, smell, and feel?'
   ];
 
+  /* Starter libraries. The same six tasks, written in each target language, so
+     the wording on the projector and on a printed card is the language the
+     class is working in. Edits are kept per set; "Restore starter prompts"
+     puts a set back to what ships here. */
+  var STARTER_SETS = [
+    { id: 'en', name: 'English (instructions in English)', prompts: DEFAULT_PROMPTS },
+    { id: 'es', name: 'Spanish — Español', prompts: [
+      'Describe lo que ves con todos los detalles que puedas.',
+      '¿Qué está pasando en esta foto? Usa por lo menos tres verbos.',
+      'Escribe cinco oraciones sobre esta imagen.',
+      '¿Quiénes están en la foto y qué hacen?',
+      'Describe los colores, las formas y los objetos que ves.',
+      'Imagina que estás dentro de la foto. ¿Qué oyes, hueles y sientes?'
+    ] },
+    { id: 'fr', name: 'French — Français', prompts: [
+      'Décris ce que tu vois avec le plus de détails possible.',
+      'Que se passe-t-il sur cette image ? Utilise au moins trois verbes.',
+      'Écris cinq phrases sur cette image.',
+      'Qui est sur cette image et que font ces personnes ?',
+      'Décris les couleurs, les formes et les objets que tu remarques.',
+      'Imagine que tu es dans cette image. Qu\'est-ce que tu entends, sens et ressens ?'
+    ] },
+    { id: 'de', name: 'German — Deutsch', prompts: [
+      'Beschreibe so genau wie möglich, was du siehst.',
+      'Was passiert auf diesem Bild? Benutze mindestens drei Verben.',
+      'Schreibe fünf Sätze über dieses Bild.',
+      'Wer ist auf dem Bild und was machen diese Personen?',
+      'Beschreibe die Farben, Formen und Gegenstände, die du siehst.',
+      'Stell dir vor, du bist in diesem Bild. Was hörst, riechst und fühlst du?'
+    ] },
+    { id: 'it', name: 'Italian — Italiano', prompts: [
+      'Descrivi quello che vedi con più dettagli possibile.',
+      'Che cosa succede in questa immagine? Usa almeno tre verbi.',
+      'Scrivi cinque frasi su questa immagine.',
+      'Chi c\'è nella foto e che cosa fa?',
+      'Descrivi i colori, le forme e gli oggetti che noti.',
+      'Immagina di essere dentro questa immagine. Che cosa senti, che odori senti, che cosa provi?'
+    ] },
+    { id: 'la', name: 'Latin — Lingua Latina', prompts: [
+      'Describe quam plurimis verbis quid videas.',
+      'Quid in hac pictura agitur? Tribus saltem sententiis narra.',
+      'Quinque sententias de hac pictura scribe.',
+      'Qui in pictura sunt et quid faciunt?',
+      'Colores, formas resque quas animadvertis describe.',
+      'Finge te in pictura ipsa esse. Quid audis, quid olfacis, quid sentis?'
+    ] },
+    { id: 'esl', name: 'Newcomer / ESL English', prompts: [
+      'What do you see? Name five things.',
+      'Who is in this picture? What are they doing?',
+      'Say three sentences about this picture. Use "There is" or "There are."',
+      'What colors do you see?',
+      'Where is this? Why do you think so?',
+      'What happened before this picture? What happens next?'
+    ] }
+  ];
+
   var els = {};
-  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea'].forEach(function (id) {
+  ['imageInput', 'thumbGrid', 'promptsWrap', 'addPromptBtn', 'promptSetSelect', 'newSetBtn', 'restoreSetBtn', 'deleteSetBtn', 'newImageBtn', 'resetUsedBtn', 'printCount', 'printBtn', 'usedHint', 'stageCard', 'printArea'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
   var images = [];
-  var prompts = [];
+  var sets = [];
+  var activeSetId = '';
   var usedIndexes = [];
   var currentImageIdx = -1;
   var currentPromptIdx = -1;
@@ -181,17 +258,88 @@
     img.src = dataUrl;
   }
 
+  function starterPrompts(starterId) {
+    var s = STARTER_SETS.filter(function (x) { return x.id === starterId; })[0];
+    return (s ? s.prompts : []).map(function (t) { return { id: uid(), text: t }; });
+  }
+  function freshStarterSets() {
+    return STARTER_SETS.map(function (s) {
+      return { id: s.id, name: s.name, starter: s.id, prompts: starterPrompts(s.id) };
+    });
+  }
+
+  /* Sets are the current shape. `ppg_prompts_v1` (one flat list) is the old one:
+     read it once, keep whatever the teacher had typed as its own set, and only
+     then retire the key — a year of edited prompts must not vanish on upgrade. */
+  function migrateFlatPrompts() {
+    var old = null;
+    try { old = JSON.parse(localStorage.getItem(PROMPTS_KEY) || 'null'); } catch (e) { old = null; }
+    sets = freshStarterSets();
+    activeSetId = 'en';
+    if (!Array.isArray(old) || !old.length) return null;
+    var texts = old.map(function (p) { return String(p && p.text != null ? p.text : ''); });
+    var untouched = texts.length === DEFAULT_PROMPTS.length && texts.every(function (t, i) { return t === DEFAULT_PROMPTS[i]; });
+    if (untouched) {
+      /* Never edited — it is the English starter set already. Keep the prompt
+         ids so any pins on them still resolve. */
+      sets[0].prompts = old.map(function (p) { return { id: p.id || uid(), text: p.text }; });
+      return 'en';
+    }
+    var mine = { id: 'my-prompts', name: 'My prompts (from before)', starter: null,
+      prompts: old.map(function (p) { return { id: p.id || uid(), text: String(p.text == null ? '' : p.text) }; }) };
+    sets.unshift(mine);
+    activeSetId = mine.id;
+    return mine.id;
+  }
+
   function load() {
     try { images = JSON.parse(localStorage.getItem(IMAGES_KEY) || '[]'); } catch (e) { images = []; }
     if (!Array.isArray(images)) images = [];
-    try { prompts = JSON.parse(localStorage.getItem(PROMPTS_KEY) || 'null') || []; } catch (e) { prompts = []; }
-    if (!prompts.length) prompts = DEFAULT_PROMPTS.map(function (t) { return { id: uid(), text: t }; });
+
+    var stored = null;
+    try { stored = JSON.parse(localStorage.getItem(SETS_KEY) || 'null'); } catch (e) { stored = null; }
+    var migratedInto = null;
+    if (stored && Array.isArray(stored.sets) && stored.sets.length) {
+      sets = stored.sets.filter(function (s) { return s && Array.isArray(s.prompts); });
+      if (!sets.length) sets = freshStarterSets();
+      activeSetId = sets.some(function (s) { return s.id === stored.activeId; }) ? stored.activeId : sets[0].id;
+    } else {
+      migratedInto = migrateFlatPrompts();
+    }
+
+    /* Pins used to be a single `pinnedPromptId` per image, from the era when
+       there was only one prompt list. They now hang off the set they belong
+       to, so a Spanish pin and an English pin on the same photo coexist. */
+    images.forEach(function (img) {
+      if (!img.pinnedPrompts || typeof img.pinnedPrompts !== 'object') img.pinnedPrompts = {};
+      if (img.pinnedPromptId) {
+        var home = migratedInto || activeSetId;
+        if (!img.pinnedPrompts[home]) img.pinnedPrompts[home] = img.pinnedPromptId;
+        delete img.pinnedPromptId;
+      }
+    });
+    if (migratedInto) {
+      saveSets();
+      saveImages();
+      try { localStorage.removeItem(PROMPTS_KEY); } catch (e) { /* storage blocked */ }
+    }
   }
   function saveImages() {
     try { localStorage.setItem(IMAGES_KEY, JSON.stringify(images)); } catch (e) { /* storage full/blocked */ }
   }
-  function savePrompts() {
-    try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(prompts)); } catch (e) { /* storage full/blocked */ }
+  function saveSets() {
+    try { localStorage.setItem(SETS_KEY, JSON.stringify({ v: 1, activeId: activeSetId, sets: sets })); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function activeSet() {
+    return sets.filter(function (s) { return s.id === activeSetId; })[0] || sets[0] || null;
+  }
+  function activePrompts() {
+    var s = activeSet();
+    return s ? s.prompts : [];
+  }
+  function pinnedIdFor(img) {
+    return (img && img.pinnedPrompts) ? (img.pinnedPrompts[activeSetId] || null) : null;
   }
 
   function renderThumbs() {
@@ -219,7 +367,7 @@
       var reader = new FileReader();
       reader.onload = function () {
         downscaleDataUrl(reader.result, MAX_IMAGE_DIM, function (finalSrc) {
-          images.push({ id: uid(), src: finalSrc, pinnedPromptId: null });
+          images.push({ id: uid(), src: finalSrc, pinnedPrompts: {} });
           done();
         });
       };
@@ -228,8 +376,17 @@
     });
   });
 
+  function renderSetPicker() {
+    els.promptSetSelect.innerHTML = sets.map(function (s) {
+      return '<option value="' + escapeAttr(s.id) + '"' + (s.id === activeSetId ? ' selected' : '') + '>' + escapeHtml(s.name) + '</option>';
+    }).join('');
+    var cur = activeSet();
+    els.restoreSetBtn.disabled = !(cur && cur.starter);
+    els.deleteSetBtn.disabled = sets.length < 2;
+  }
+
   function renderPrompts() {
-    els.promptsWrap.innerHTML = prompts.map(function (p) {
+    els.promptsWrap.innerHTML = activePrompts().map(function (p) {
       return '<div class="prompt-row" data-id="' + p.id + '"><input type="text" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '">' +
         '<button type="button" class="danger small" data-del-prompt="' + p.id + '">&times;</button></div>';
     }).join('');
@@ -237,19 +394,71 @@
   els.promptsWrap.addEventListener('input', function (ev) {
     var id = ev.target.getAttribute('data-prompt');
     if (!id) return;
-    var p = prompts.find(function (x) { return x.id === id; });
+    var p = activePrompts().find(function (x) { return x.id === id; });
     if (p) p.text = ev.target.value;
-    savePrompts();
+    saveSets();
+    if (currentPromptIdx !== -1) renderStage();
   });
   els.promptsWrap.addEventListener('click', function (ev) {
     var id = ev.target.getAttribute('data-del-prompt');
     if (!id) return;
-    prompts = prompts.filter(function (p) { return p.id !== id; });
-    savePrompts(); renderPrompts();
+    var s = activeSet();
+    if (!s) return;
+    s.prompts = s.prompts.filter(function (p) { return p.id !== id; });
+    saveSets(); renderPrompts();
   });
   els.addPromptBtn.addEventListener('click', function () {
-    prompts.push({ id: uid(), text: '' });
-    savePrompts(); renderPrompts();
+    var s = activeSet();
+    if (!s) return;
+    s.prompts.push({ id: uid(), text: '' });
+    saveSets(); renderPrompts();
+  });
+
+  els.promptSetSelect.addEventListener('change', function () {
+    activeSetId = els.promptSetSelect.value;
+    saveSets();
+    renderSetPicker();
+    renderPrompts();
+    /* Re-draw the projected card in the newly chosen language rather than
+       leaving the previous set's wording on screen. */
+    if (currentImageIdx !== -1) {
+      var img = images[currentImageIdx];
+      var pinId = pinnedIdFor(img);
+      var list = activePrompts();
+      var pinnedIdx = pinId ? list.findIndex(function (p) { return p.id === pinId; }) : -1;
+      currentPromptIdx = pinnedIdx !== -1 ? pinnedIdx : (list.length ? Math.floor(Math.random() * list.length) : -1);
+      renderStage();
+    }
+  });
+
+  els.newSetBtn.addEventListener('click', function () {
+    var name = window.prompt('Name for the new prompt set (for example: Spanish 2 — past tense)');
+    if (name === null) return;
+    name = name.trim();
+    if (!name) return;
+    var set = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, starter: null, prompts: [] };
+    sets.push(set);
+    activeSetId = set.id;
+    saveSets(); renderSetPicker(); renderPrompts();
+  });
+
+  els.restoreSetBtn.addEventListener('click', function () {
+    var s = activeSet();
+    if (!s || !s.starter) return;
+    if (!window.confirm('Replace the prompts in "' + s.name + '" with the ones this tool ships? Your edits to this set are lost.')) return;
+    s.prompts = starterPrompts(s.starter);
+    saveSets(); renderPrompts();
+  });
+
+  els.deleteSetBtn.addEventListener('click', function () {
+    var s = activeSet();
+    if (!s || sets.length < 2) return;
+    if (!window.confirm('Delete the prompt set "' + s.name + '"? Its prompts go with it.')) return;
+    sets = sets.filter(function (x) { return x.id !== s.id; });
+    images.forEach(function (img) { if (img.pinnedPrompts) delete img.pinnedPrompts[s.id]; });
+    activeSetId = sets[0].id;
+    saveSets(); saveImages(); renderSetPicker(); renderPrompts();
+    if (currentImageIdx !== -1) { currentPromptIdx = -1; renderStage(); }
   });
 
   function renderStageEmpty() {
@@ -270,17 +479,19 @@
     currentImageIdx = available[Math.floor(Math.random() * available.length)];
     usedIndexes.push(currentImageIdx);
     var img = images[currentImageIdx];
-    var pinnedIdx = img.pinnedPromptId ? prompts.findIndex(function (p) { return p.id === img.pinnedPromptId; }) : -1;
-    currentPromptIdx = pinnedIdx !== -1 ? pinnedIdx : (prompts.length ? Math.floor(Math.random() * prompts.length) : -1);
+    var pinId = pinnedIdFor(img);
+    var list = activePrompts();
+    var pinnedIdx = pinId ? list.findIndex(function (p) { return p.id === pinId; }) : -1;
+    currentPromptIdx = pinnedIdx !== -1 ? pinnedIdx : (list.length ? Math.floor(Math.random() * list.length) : -1);
     renderStage();
   }
 
   function renderStage() {
     if (currentImageIdx === -1 || !images[currentImageIdx]) { renderStageEmpty(); return; }
     var img = images[currentImageIdx];
-    var prompt = currentPromptIdx !== -1 ? prompts[currentPromptIdx] : null;
+    var prompt = currentPromptIdx !== -1 ? activePrompts()[currentPromptIdx] : null;
     var task = prompt ? prompt.text : '';
-    var isPinned = !!(prompt && img.pinnedPromptId === prompt.id);
+    var isPinned = !!(prompt && pinnedIdFor(img) === prompt.id);
     els.stageCard.innerHTML = '<img src="' + img.src + '" alt=""><div class="task-text">' + escapeHtml(task) + '</div>' +
       (prompt ? '<button type="button" class="pin-btn' + (isPinned ? ' pinned' : '') + '" id="pinPromptBtn">' +
         (isPinned ? '📌 Pinned to this image — click to unpin' : '📌 Pin this prompt to this image') + '</button>' : '');
@@ -291,9 +502,11 @@
     if (!ev.target.closest('#pinPromptBtn')) return;
     if (currentImageIdx === -1 || currentPromptIdx === -1) return;
     var img = images[currentImageIdx];
-    var prompt = prompts[currentPromptIdx];
+    var prompt = activePrompts()[currentPromptIdx];
     if (!img || !prompt) return;
-    img.pinnedPromptId = (img.pinnedPromptId === prompt.id) ? null : prompt.id;
+    if (!img.pinnedPrompts) img.pinnedPrompts = {};
+    if (img.pinnedPrompts[activeSetId] === prompt.id) delete img.pinnedPrompts[activeSetId];
+    else img.pinnedPrompts[activeSetId] = prompt.id;
     saveImages();
     renderStage();
   });
@@ -310,9 +523,11 @@
     var requested = parseInt(els.printCount.value, 10);
     var count = (requested && requested > 0) ? Math.min(requested, images.length) : images.length;
     var subset = images.slice(0, count);
+    var list = activePrompts();
     var cards = subset.map(function (img) {
-      var pinnedIdx = img.pinnedPromptId ? prompts.findIndex(function (p) { return p.id === img.pinnedPromptId; }) : -1;
-      var p = pinnedIdx !== -1 ? prompts[pinnedIdx].text : (prompts.length ? prompts[Math.floor(Math.random() * prompts.length)].text : '');
+      var pinId = pinnedIdFor(img);
+      var pinnedIdx = pinId ? list.findIndex(function (p) { return p.id === pinId; }) : -1;
+      var p = pinnedIdx !== -1 ? list[pinnedIdx].text : (list.length ? list[Math.floor(Math.random() * list.length)].text : '');
       return '<div class="print-card"><img src="' + img.src + '" alt=""><div class="ptext">' + escapeHtml(p) + '</div></div>';
     }).join('');
     els.printArea.innerHTML = '<div class="print-grid">' + cards + '</div>';
@@ -323,6 +538,7 @@
   load();
   try { els.printCount.value = localStorage.getItem(PRINT_COUNT_KEY) || ''; } catch (e) { /* ignore */ }
   renderThumbs();
+  renderSetPicker();
   renderPrompts();
   renderStageEmpty();
 })();
