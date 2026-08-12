@@ -66,6 +66,16 @@
   table.dir th .arrow { font-size: .7rem; opacity: .6; }
   table.dir input[type="text"] { padding: .3rem .4rem; font-size: .87rem; }
   .row-actions { display: flex; gap: .3rem; white-space: nowrap; }
+  /* Department sub-headers. A row of the table rather than a separate list,
+     so the columns stay aligned down the whole page. */
+  table.dir tr.dept-head td {
+    background: #eef1f4; font-weight: 700; font-size: .78rem;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--accent);
+    padding: .45rem .5rem; border-bottom: 1px solid var(--line-strong);
+  }
+  table.dir tr.dept-head .dept-count { float: right; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); }
+  .group-toggle { display: flex; align-items: center; gap: .35rem; font-size: .85rem; font-weight: 600; white-space: nowrap; }
+  .group-toggle input { width: auto; margin: 0; }
   .empty-state { color: var(--muted); font-size: .9rem; padding: 1.5rem 0; text-align: center; }
 
   details.bulk { margin-top: .6rem; }
@@ -82,6 +92,16 @@
     .print-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
     .print-table th, .print-table td { border: 1px solid #999; padding: .4rem .55rem; text-align: left; }
     .print-table th { background: #eee; }
+    /* Grey rather than coloured: the workroom printer is black and white, and
+       a sub-header that reads as a data row defeats the point of grouping. */
+    .print-table tr.dept-head td {
+      background: #ddd; font-weight: 700; font-size: .8rem;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .print-table tr.dept-head .dept-count { float: right; font-weight: 400; text-transform: none; letter-spacing: 0; }
+    /* Never leave a department heading stranded at the foot of a page. */
+    .print-table tr.dept-head { page-break-after: avoid; break-after: avoid; }
+    .print-table tr { page-break-inside: avoid; break-inside: avoid; }
   }
 </style>
 </head>
@@ -126,6 +146,7 @@
       <h2 style="margin:0;">Directory</h2>
       <div class="spacer"></div>
       <input type="text" id="searchInput" placeholder="Search name, room, subject&hellip;">
+      <label class="group-toggle" for="groupByDeptBox"><input type="checkbox" id="groupByDeptBox"> Group by department</label>
       <button class="secondary small" id="clearAllBtn">Clear all</button>
     </div>
     <table class="dir">
@@ -156,7 +177,7 @@
   var STORE_KEY = 'sdb_directory_v1';
   var els = {};
   ['newName','newRoom','newExt','newSubject','addRowBtn','bulkInput','bulkAddBtn','bulkMsg',
-   'searchInput','clearAllBtn','dirRows','emptyMsg','printBtn','printSub','printTable',
+   'searchInput','clearAllBtn','dirRows','emptyMsg','printBtn','printSub','printTable','groupByDeptBox',
    'exportCsvBtn','exportJsonBtn','importBtn','importFile','importMsg'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
@@ -164,6 +185,22 @@
   var people = [];
   var sortKey = 'name';
   var sortDir = 1;
+
+  /* One preference, kept in its own key rather than inside sdb_directory_v1.
+     That key holds a bare array of people and is what Export JSON writes and
+     Import reads; wrapping it in an object to make room for a checkbox would
+     have broken every file a teacher has already exported. */
+  var PREFS_KEY = 'sdb_prefs_v1';
+  var groupByDept = false;
+  function loadPrefs() {
+    try {
+      var p = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+      groupByDept = !!(p && p.groupByDept);
+    } catch (e) { groupByDept = false; }
+  }
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ groupByDept: groupByDept })); } catch (e) { /* storage full/blocked */ }
+  }
 
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function escapeHtml(s) {
@@ -196,12 +233,91 @@
     return list;
   }
 
+  var NO_DEPT_LABEL = 'No department listed';
+
+  /**
+   * The heading to print for each case-insensitive department key.
+   *
+   * "Math" and "math" typed a year apart are one department; splitting them
+   * into two blocks would be a worse answer than not grouping at all. That
+   * leaves the question of which spelling to show, and the obvious answer —
+   * whichever comes first — makes the heading change when the teacher sorts
+   * by room, which reads like a bug. So: the spelling used by the most people
+   * wins, and a tie goes to whoever was added to the directory first. Both
+   * inputs come from the full `people` list rather than the filtered view, so
+   * a heading never changes because of a search or a sort.
+   */
+  function departmentLabels() {
+    var counts = {}, firstSeen = {};
+    people.forEach(function (p, i) {
+      var raw = (p.subject || '').trim();
+      if (!raw) return;
+      var key = raw.toLowerCase();
+      if (!counts[key]) counts[key] = {};
+      counts[key][raw] = (counts[key][raw] || 0) + 1;
+      var mark = key + ' ' + raw;
+      if (firstSeen[mark] === undefined) firstSeen[mark] = i;
+    });
+    var out = {};
+    Object.keys(counts).forEach(function (key) {
+      var best = null;
+      Object.keys(counts[key]).forEach(function (raw) {
+        if (best === null) { best = raw; return; }
+        var mine = counts[key][raw], theirs = counts[key][best];
+        if (mine > theirs ||
+            (mine === theirs && firstSeen[key + ' ' + raw] < firstSeen[key + ' ' + best])) best = raw;
+      });
+      out[key] = best;
+    });
+    return out;
+  }
+
+  /**
+   * Split an already-sorted list into department blocks.
+   *
+   * Everybody with no department lands in one block at the end rather than
+   * being dropped — a directory that quietly hides the four people whose
+   * Subject column is blank is how a substitute ends up with no phone number.
+   */
+  function groupByDepartment(list) {
+    var blocks = {}, order = [];
+    var labels = departmentLabels();
+    list.forEach(function (p) {
+      var raw = (p.subject || '').trim();
+      var key = raw.toLowerCase();
+      if (!blocks[key]) { blocks[key] = { key: key, label: labels[key] || NO_DEPT_LABEL, rows: [] }; order.push(key); }
+      blocks[key].rows.push(p);
+    });
+    order.sort(function (a, b) {
+      if (!a) return 1;            // the blank department always comes last
+      if (!b) return -1;
+      return a < b ? -1 : (a > b ? 1 : 0);
+    });
+    return order.map(function (k) { return blocks[k]; });
+  }
+
+  function deptHeadHtml(block, cols) {
+    return '<tr class="dept-head"><td colspan="' + cols + '">' + escapeHtml(block.label) +
+      '<span class="dept-count">' + block.rows.length + ' staff</span></td></tr>';
+  }
+
   function render() {
     var list = visibleRows();
     els.dirRows.innerHTML = '';
     els.emptyMsg.style.display = people.length ? 'none' : 'block';
-    list.forEach(function (p) {
+    var blocks = groupByDept ? groupByDepartment(list) : null;
+    var sequence = blocks
+      ? blocks.reduce(function (acc, b) { return acc.concat([b], b.rows); }, [])
+      : list;
+    sequence.forEach(function (p) {
       var tr = document.createElement('tr');
+      if (p.rows) {   // a department block, not a person
+        tr.className = 'dept-head';
+        tr.innerHTML = '<td colspan="5">' + escapeHtml(p.label) +
+          '<span class="dept-count">' + p.rows.length + ' staff</span></td>';
+        els.dirRows.appendChild(tr);
+        return;
+      }
       tr.innerHTML =
         '<td><input type="text" data-field="name" data-id="' + p.id + '" value="' + escapeHtml(p.name) + '"></td>' +
         '<td><input type="text" data-field="room" data-id="' + p.id + '" value="' + escapeHtml(p.room) + '"></td>' +
@@ -285,6 +401,12 @@
   });
 
   els.searchInput.addEventListener('input', render);
+
+  els.groupByDeptBox.addEventListener('change', function () {
+    groupByDept = els.groupByDeptBox.checked;
+    savePrefs();
+    render();
+  });
 
   function downloadBlob(text, filename, type) {
     var blob = new Blob([text], { type: type });
@@ -377,18 +499,30 @@
 
   els.printBtn.addEventListener('click', function () {
     var list = visibleRows();
-    els.printSub.textContent = list.length + ' staff · printed ' + new Date().toLocaleDateString();
-    var head = '<thead><tr><th>Name</th><th>Room</th><th>Ext.</th><th>Subject / Dept</th></tr></thead>';
-    var body = '<tbody>' + list.map(function (p) {
+    var blocks = groupByDept ? groupByDepartment(list) : null;
+    els.printSub.textContent = list.length + ' staff' +
+      (blocks ? ' in ' + blocks.length + ' department' + (blocks.length === 1 ? '' : 's') : '') +
+      ' · printed ' + new Date().toLocaleDateString();
+    /* Grouped, the Subject column would repeat the sub-header on every row, so
+       it comes out and the page gets wider name and room columns instead. */
+    var cols = blocks ? 3 : 4;
+    var head = '<thead><tr><th>Name</th><th>Room</th><th>Ext.</th>' +
+      (blocks ? '' : '<th>Subject / Dept</th>') + '</tr></thead>';
+    function personRow(p) {
       return '<tr><td>' + escapeHtml(p.name) + '</td><td>' + escapeHtml(p.room) + '</td><td>' +
-        escapeHtml(p.ext) + '</td><td>' + escapeHtml(p.subject) + '</td></tr>';
-    }).join('') + '</tbody>';
+        escapeHtml(p.ext) + '</td>' + (blocks ? '' : '<td>' + escapeHtml(p.subject) + '</td>') + '</tr>';
+    }
+    var body = '<tbody>' + (blocks
+      ? blocks.map(function (b) { return deptHeadHtml(b, cols) + b.rows.map(personRow).join(''); }).join('')
+      : list.map(personRow).join('')) + '</tbody>';
     els.printTable.innerHTML = head + body;
     window.print();
   });
 
   /* ---------- boot ---------- */
   load();
+  loadPrefs();
+  els.groupByDeptBox.checked = groupByDept;
   render();
 })();
 </script>

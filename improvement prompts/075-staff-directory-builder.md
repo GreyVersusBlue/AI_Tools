@@ -9,6 +9,49 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Shipped the Quick Win the previous round
+listed and skipped: **group by department**, on screen and in print.
+
+- A checkbox in the directory toolbar, off by default — the flat list is what
+  this tool has always been and a teacher who wants it should keep it. The
+  choice persists.
+- **Where the preference lives mattered more than the feature.**
+  `sdb_directory_v1` holds a bare array of people, and that array is exactly
+  what Export JSON writes and Import reads. Wrapping it in an object to make
+  room for one checkbox would have broken every file a teacher has already
+  exported, so the preference went into its own `sdb_prefs_v1` instead. The
+  suite asserts the directory key is still a bare array afterwards.
+- **Three things a naive grouping gets wrong, all handled:**
+  - *The people with no department.* They get a block of their own at the
+    end, labelled, rather than being dropped. A directory that quietly hides
+    the four staff whose Subject column is blank is how a substitute ends up
+    with no phone number.
+  - *The same department typed twice.* "Science" and "science", entered a year
+    apart, are one department; splitting them into two blocks would be a worse
+    answer than not grouping at all. Keys are case-insensitive.
+  - *Which spelling to show.* The obvious rule — first one seen — makes the
+    heading change when the teacher sorts by room, which reads like a bug.
+    `departmentLabels()` picks the spelling used by the most people, ties
+    going to whoever was added first, and computes both from the full
+    `people` list rather than the filtered view, so a heading never moves
+    because of a search or a sort.
+- **The print path is a separate renderer and is the one that matters** — the
+  page goes on the workroom wall. Grouped, it drops the Subject column (it
+  would repeat the heading on every row) and gives the width back to name and
+  room, counts the departments in the subtitle, prints headings in grey rather
+  than colour for a black-and-white workroom printer, and carries
+  `page-break-after: avoid` so a heading is never stranded at the foot of a
+  page.
+- **New suite:** `Tools/staff-directory-builder/test/smoke-departments.mjs`,
+  28 checks, wired into `npm test` and `npm run test:staff-directory` — the
+  first automated coverage this tool has had.
+
+**Where the next round should pick up:** grouping makes the wallet-card /
+lanyard print layout (still on the ranked backlog) more useful than it was —
+a per-department card is a realistic thing to hand somebody. The other
+untouched Quick Win, "copy as plain text", is now a five-line job that should
+respect the same grouping.
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: an add-one-row form, a paste-a-whole-list bulk importer
 (tab- or comma-separated), an inline-editable sortable/searchable table, and
@@ -51,6 +94,10 @@ zero console errors. `node --check` passed on both inline scripts.
 - Inline-editable table: click into any cell to fix a typo in place
 - Sort by clicking any column header (name/room/ext/subject), search across
   all fields
+- **Group by department** (optional, persisted): sub-headers with a per-block
+  headcount on screen and in print, the unassigned staff in a block of their
+  own at the end, and case-variant spellings of the same department collapsed
+  into one block
 - Export the directory as CSV or JSON; import either format back in
   (with the same duplicate-skip behavior as bulk paste)
 - Print a clean table sized for one page
@@ -59,9 +106,9 @@ zero console errors. `node --check` passed on both inline scripts.
 
 - **Photo column** (optional headshot per person) for a "who is that" wall
   reference, not just a phone-book.
-- **Group/sub-header by department** in both the on-screen table and the
-  print view (Math staff together, then Science, etc.) instead of one flat
-  alphabetical list.
+- **Done — 2026-08-12.** **Group/sub-header by department** in both the
+  on-screen table and the print view (Math staff together, then Science, etc.)
+  instead of one flat alphabetical list. *(See Status.)*
 - **"Copy as plain text" button** for pasting a quick phone list into an
   email without needing to print first.
 
