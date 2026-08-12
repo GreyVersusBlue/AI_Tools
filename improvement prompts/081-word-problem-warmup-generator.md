@@ -9,6 +9,19 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: copy current problem to clipboard shipped
+(backlog rank, then #1).** A 📋 Copy button in the projector display's nav
+row copies the current problem's text plus `Answer: N` (the answer on its
+own line, deliberately, so it's one keystroke to delete when pasting into
+a student-facing slide) to the clipboard, with a transient aria-live
+confirmation note that auto-hides after a few seconds and a
+`window.prompt` fallback when the clipboard API is unavailable. Verified
+with a headless Chromium test: copied text starts with the displayed
+problem and carries the answer line, advancing to problem 2 and copying
+follows the display, and the note auto-hides — zero console errors.
+Next round: the per-problem operation badge is the remaining Quick Win;
+two-step problems (its own backlog row) is the bigger lever.
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: three sentence templates per operation
 (addition/subtraction/multiplication/division), two grade-band number
@@ -68,14 +81,16 @@ on-screen answer input all remain unbuilt.
   problems, same order); a visible seed field shows what's currently locked
 - Grade band, operation selection, problem count, and lock-seed state
   persist in `localStorage` across visits
+- **Copy button on the projector display** — current problem + answer to
+  the clipboard for pasting into a slide deck
 
 ## Quick Wins
 
 - **A per-problem operation label** (small badge showing "multiplication",
   etc.) in the worksheet view, useful when operations are mixed on one
   sheet.
-- **Copy-to-clipboard for the current projected problem**, for pasting into
-  a slide deck instead of switching windows to project this page.
+- **Done — 2026-08-12.** **Copy-to-clipboard for the current projected
+  problem**, for pasting into a slide deck. *(See Status.)*
 
 ## Major Features
 

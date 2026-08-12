@@ -70,7 +70,8 @@
   .display-text { font-size: 1.9rem; max-width: 46rem; }
   .display-answer { font-size: 1.6rem; color: var(--accent-2); font-weight: 700; display: none; }
   .display-answer.shown { display: block; }
-  .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; }
+  .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
+  .copy-note { font-size: .8rem; color: var(--muted); margin: .4rem 0 0; }
 
   /* worksheet */
   .sheet { display: none; }
@@ -153,7 +154,9 @@
         <button class="secondary" id="prevBtn">&larr; Prev</button>
         <button id="revealBtn">Reveal answer</button>
         <button class="secondary" id="nextBtn">Next &rarr;</button>
+        <button class="secondary" id="copyBtn" title="Copy this problem and its answer, for pasting into a slide deck">&#128203; Copy</button>
       </div>
+      <p class="copy-note" id="copyNote" aria-live="polite" style="display:none;"></p>
     </div>
   </div>
 
@@ -264,7 +267,7 @@
   var els = {};
   ['gradeBand', 'problemCount', 'generateBtn', 'displayNum', 'displayText', 'displayAnswer',
    'prevBtn', 'revealBtn', 'nextBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'seedDisplay', 'lockSeed'].forEach(function (id) {
+   'seedDisplay', 'lockSeed', 'copyBtn', 'copyNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -359,6 +362,28 @@
   });
   els.revealBtn.addEventListener('click', function () {
     els.displayAnswer.classList.toggle('shown');
+  });
+
+  /* Copy the current problem + answer as plain text, for pasting into a
+     slide deck. The answer rides on its own line so it's one keystroke to
+     drop when pasting into something students will see. */
+  var copyNoteTimer = null;
+  function setCopyNote(text) {
+    els.copyNote.textContent = text || '';
+    els.copyNote.style.display = text ? '' : 'none';
+    clearTimeout(copyNoteTimer);
+    if (text) copyNoteTimer = setTimeout(function () { els.copyNote.style.display = 'none'; }, 4000);
+  }
+  els.copyBtn.addEventListener('click', function () {
+    if (!problems.length) { setCopyNote('Generate a set first.'); return; }
+    var p = problems[idx];
+    var text = p.text + '\n\nAnswer: ' + p.answer;
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(text) : Promise.reject();
+    copy.then(
+      function () { setCopyNote('Copied problem ' + (idx + 1) + ' with its answer — the answer is on its own line, easy to delete after pasting.'); },
+      function () { window.prompt('Copy this problem:', text); setCopyNote('Clipboard unavailable here — copy from the box above.'); }
+    );
   });
 
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
