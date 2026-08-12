@@ -97,6 +97,20 @@
   <div class="layout">
     <div>
       <div class="card">
+        <h2>Saved guides</h2>
+        <label for="guideSwitch">Saved guide</label>
+        <select id="guideSwitch"></select>
+        <label for="guideName">Guide name (for saving/switching)</label>
+        <input type="text" id="guideName" placeholder="e.g. Bike Lanes article &mdash; March">
+        <div class="btnrow">
+          <button type="button" class="secondary small" id="newGuideBtn">+ New guide</button>
+          <button type="button" class="secondary small" id="duplicateGuideBtn">Duplicate</button>
+          <button type="button" class="danger small" id="deleteGuideBtn">Delete</button>
+        </div>
+        <p class="hint" style="margin-top:.5rem;">Each guide saves separately, so a semester of article guides stays retrievable instead of each new article overwriting the last.</p>
+      </div>
+
+      <div class="card">
         <h2>Article</h2>
         <label for="articleTitle">Headline</label>
         <input type="text" id="articleTitle" placeholder="e.g. City Council Approves New Bike Lanes">
@@ -139,7 +153,13 @@
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'cedg_guide_v1';
+  /* Named multi-save (same New/Duplicate/Rename/Delete convention as
+     047-art-critique-worksheet-generator). The old single-guide key below
+     is read once and migrated into the first named guide. */
+  var LEGACY_KEY = 'cedg_guide_v1';
+  var LIST_KEY = 'cedg_guides_v1';
+  var DATA_PREFIX = 'cedg_guide_v1:';
+  var CURRENT_KEY = 'cedg_current_v1';
 
   var PRESET_QUESTIONS = [
     'What is the main idea of this article, in your own words?',
@@ -171,9 +191,13 @@
   var els = {};
   ['articleTitle', 'articleSource', 'articleText', 'analyzeBtn', 'wordCountHint', 'summaryText',
    'suggestedWords', 'suggestHint', 'vocabWrap', 'addVocabBtn', 'presetQuestions', 'customQuestionsWrap',
-   'addQuestionBtn', 'printBtn', 'printArea', 'clearBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'addQuestionBtn', 'printBtn', 'printArea', 'clearBtn',
+   'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [] };
+  function emptyGuide(name) {
+    return { name: name, title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [] };
+  }
+  var state = emptyGuide('New Guide');
 
   function uid() { return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -183,18 +207,142 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+  /* ---------- named-guide store ---------- */
+  function listNames() {
+    try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveNamed(name, data) {
+    var names = listNames();
+    if (names.indexOf(name) === -1) { names.push(name); localStorage.setItem(LIST_KEY, JSON.stringify(names)); }
+    localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+    localStorage.setItem(CURRENT_KEY, name);
+  }
+  function loadNamed(name) {
+    try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
+  }
+  function deleteNamed(name) {
+    var names = listNames().filter(function (n) { return n !== name; });
+    localStorage.setItem(LIST_KEY, JSON.stringify(names));
+    localStorage.removeItem(DATA_PREFIX + name);
+    if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+  }
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+  function normalizeGuide(data, name) {
+    if (!data || typeof data !== 'object') data = {};
+    var g = emptyGuide((typeof data.name === 'string' && data.name) || name || 'New Guide');
+    ['title', 'source', 'articleText', 'summary'].forEach(function (k) {
+      if (typeof data[k] === 'string') g[k] = data[k];
+    });
+    if (Array.isArray(data.vocab)) g.vocab = data.vocab;
+    if (data.presetChecked && typeof data.presetChecked === 'object') g.presetChecked = data.presetChecked;
+    if (Array.isArray(data.customQuestions)) g.customQuestions = data.customQuestions;
+    return g;
+  }
+
+  function migrateLegacyIfNeeded() {
+    if (listNames().length) return;
+    var legacy = null;
+    try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null'); } catch (e) { /* ignore */ }
+    if (legacy && typeof legacy === 'object' &&
+        ((legacy.title && legacy.title.trim()) || (legacy.articleText && legacy.articleText.trim()) ||
+         (Array.isArray(legacy.vocab) && legacy.vocab.length))) {
+      var name = (legacy.title && legacy.title.trim()) || 'My Guide';
+      saveNamed(name, normalizeGuide(legacy, name));
+    }
+  }
+
   function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && typeof saved === 'object') state = saved;
-    } catch (e) { /* ignore */ }
-    if (!state.vocab) state.vocab = [];
-    if (!state.presetChecked) state.presetChecked = {};
-    if (!state.customQuestions) state.customQuestions = [];
+    migrateLegacyIfNeeded();
+    var currentName = localStorage.getItem(CURRENT_KEY);
+    var loaded = currentName ? loadNamed(currentName) : null;
+    if (!loaded) {
+      var names = listNames();
+      loaded = names.length ? loadNamed(names[0]) : null;
+    }
+    state = loaded ? normalizeGuide(loaded, loaded.name) : emptyGuide(uniqueName('New Guide'));
+    save();
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+    try { saveNamed(state.name, state); } catch (e) { /* storage full/blocked */ }
   }
+
+  function renderGuideSwitch() {
+    var names = listNames();
+    els.guideSwitch.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === state.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
+  function renderAll() {
+    renderGuideSwitch();
+    els.guideName.value = state.name;
+    els.articleTitle.value = state.title;
+    els.articleSource.value = state.source;
+    els.articleText.value = state.articleText;
+    els.summaryText.value = state.summary;
+    updateWordCount();
+    renderSuggestions([]);
+    renderVocab();
+    renderPresetQuestions();
+    renderCustomQuestions();
+  }
+
+  function switchTo(name) {
+    var loaded = loadNamed(name);
+    if (!loaded) return;
+    state = normalizeGuide(loaded, name);
+    localStorage.setItem(CURRENT_KEY, name);
+    renderAll();
+  }
+
+  els.guideSwitch.addEventListener('change', function () { switchTo(els.guideSwitch.value); });
+
+  els.guideName.addEventListener('change', function () {
+    var oldName = state.name;
+    var newName = els.guideName.value.trim() || oldName;
+    if (newName !== oldName) {
+      deleteNamed(oldName);
+      state.name = uniqueName(newName);
+    }
+    save();
+    renderGuideSwitch();
+    els.guideName.value = state.name;
+  });
+
+  els.newGuideBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new guide:', 'New Guide');
+    if (!name) return;
+    state = emptyGuide(uniqueName(name.trim()));
+    save();
+    renderAll();
+  });
+
+  els.duplicateGuideBtn.addEventListener('click', function () {
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = uniqueName(state.name + ' (copy)');
+    state = clone;
+    save();
+    renderAll();
+  });
+
+  els.deleteGuideBtn.addEventListener('click', function () {
+    if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    deleteNamed(state.name);
+    var names = listNames();
+    if (names.length) {
+      switchTo(names[0]);
+    } else {
+      state = emptyGuide('New Guide');
+      save();
+      renderAll();
+    }
+  });
 
   function updateWordCount() {
     var text = els.articleText.value;
@@ -324,13 +472,10 @@
   els.analyzeBtn.addEventListener('click', analyzeArticle);
 
   els.clearBtn.addEventListener('click', function () {
-    if (!confirm('Clear this guide and start over? This cannot be undone.')) return;
-    state = { title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [] };
+    if (!confirm('Clear "' + state.name + '" and start over? This cannot be undone.')) return;
+    state = emptyGuide(state.name); // clears the content, keeps the saved slot
     save();
-    els.articleTitle.value = ''; els.articleSource.value = ''; els.articleText.value = ''; els.summaryText.value = '';
-    updateWordCount();
-    renderSuggestions([]);
-    renderVocab(); renderPresetQuestions(); renderCustomQuestions();
+    renderAll();
   });
 
   function guideHtml() {
@@ -358,15 +503,7 @@
 
   /* ---------- boot ---------- */
   load();
-  els.articleTitle.value = state.title;
-  els.articleSource.value = state.source;
-  els.articleText.value = state.articleText;
-  els.summaryText.value = state.summary;
-  updateWordCount();
-  renderSuggestions([]);
-  renderVocab();
-  renderPresetQuestions();
-  renderCustomQuestions();
+  renderAll();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
