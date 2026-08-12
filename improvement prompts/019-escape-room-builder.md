@@ -9,6 +9,51 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 2, "answer matching for
+contractions", filed as a live bug. **The bug it named was not real, and two
+adjacent ones in the same function were.** Worth recording exactly, because
+the row is the sort of thing a future session would take at face value.
+
+- **The reported case works and always did.** `normalizeTextAnswer` deletes
+  apostrophes rather than spacing them, so `it's` has collapsed to `its` since
+  the function was written; a student typing either against an accepted answer
+  written with the other has always been let through. The row's example —
+  typing `it's a keyboard` against an accepted `a keyboard` — is not an
+  apostrophe question at all. Those are two different answers, and the only
+  rule that would join them is "accept anything containing the accepted
+  answer", which also accepts `I don't know` at a station whose answer is
+  `no`. Left refused on purpose; the accepted-answers field is a
+  comma-separated list, so a teacher who wants the sentence adds the sentence.
+- **What was actually broken, and both from one line.** `replace(/[^a-z0-9
+  ]/g, '')` deleted *every* mark, and ran after whitespace had already been
+  collapsed:
+  - `well-known` became `wellknown`, which matches nothing a teacher would
+    have typed. A hyphen separates words; deleting it glued them.
+  - any mark with spaces around it left a **double space** behind. `1 / 2`
+    normalized to `1  2`, and nothing else normalizes to that, so an answer
+    written with spaces around a slash or a dash could not be got right by
+    anybody, including the teacher who wrote it.
+- **Rewritten as four ordered passes** with the order documented in the file,
+  since the order is where the bugs lived: strip accents (`café` = `cafe`,
+  which a language classroom will hit), delete apostrophes in all five shapes
+  a keyboard or Word produces, delete a `.` or `,` **between two digits** so
+  `1,000` still equals `1000` and `3.14` stays one token, then turn every
+  other run of non-alphanumerics into a single space.
+- `normalizeAnswer` — the light one, for digit locks and ciphers — now strips
+  curly quotes alongside the straight ones it already handled. A teacher
+  drafting a cipher phrase in Word gets U+2019 whether they ask for it or not,
+  and a Chromebook keyboard gives the student U+0027; the two have to
+  normalize together or the same phrase passes on one device and fails on the
+  other.
+- The builder's own hint text claimed "ignore case, extra spaces, and
+  punctuation" while the code did something narrower. It now describes what
+  the matcher does and says plainly that a longer answer is still a different
+  answer.
+- `test/smoke-test-run.mjs` grew from 7 shared-matcher cases to 16 (57
+  assertions, from 39), each new one a case that used to fail a correct
+  student. Every case still runs through **both** pages, so the builder's test
+  run and `lock.html` cannot drift apart.
+
 Reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped hints-with-a-cost, two new puzzle types, and the meta-puzzle letter
 collection. Ideas below are deliberately ambitious and are **not** scoped to
@@ -29,7 +74,11 @@ a single session; items confirmed shipped are tagged **Done** below.
   — walk the chain in the builder, answering as a student would, with the
   answer key one click away and unreachable stations named at the end
 - **Shared answer matcher** (`escape-room-builder/er-match.js`) used by both
-  `lock.html` and the builder's test run, so the two cannot disagree
+  `lock.html` and the builder's test run, so the two cannot disagree. Text
+  answers ignore case, spacing, punctuation, hyphenation and accents, treat an
+  apostrophe as inside a word rather than between two, keep number separators
+  glued (`1,000` = `1000`), and optionally accept a numeric answer within a
+  per-station tolerance. They are not substring matches.
 - Multiple saved rooms (`escape-room-builder:rooms`)
 
 ## Quick Wins

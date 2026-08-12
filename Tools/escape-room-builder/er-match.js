@@ -18,16 +18,63 @@
        is not the kind of free typing that benefits from forgiveness;
      - text answers ignore case, whitespace and all punctuation, plus an
        optional numeric match within a per-station tolerance.
+
+   What "ignore all punctuation" means is spelled out on normalizeTextAnswer
+   below, because the obvious one-line version of it gets two cases wrong and
+   both of them turn a correct answer into a wrong one.
 */
 (function (global) {
   'use strict';
 
+  /* The light one, for digit locks and ciphers. The curly quotes are in the
+     set because a teacher who writes the accepted phrase in Word gets U+2019
+     whether they want it or not, and the student's phone gives them the same
+     character back — but a Chromebook keyboard gives the straight one, so the
+     two have to normalize together or the same phrase fails on one device and
+     passes on the other. */
   function normalizeAnswer(s) {
-    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,!?'"]/g, '');
+    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ')
+      .replace(/[.,!?'"\u2018\u2019\u201c\u201d]/g, '');
   }
 
+  /**
+   * The forgiving one, for free-typed text answers.
+   *
+   * Four passes, in this order, because the order is where the bugs were:
+   *
+   *  1. Accents come off, so `café` and `cafe` are one answer. A language
+   *     class types the accented form on one device and not on another, and
+   *     the answer did not change.
+   *  2. Apostrophes are *deleted*, in every shape a keyboard or a word
+   *     processor produces, so `it's` collapses to `its` rather than breaking
+   *     into two words. An apostrophe lives inside a word; it is the one mark
+   *     here that does not separate anything.
+   *  3. A `.` or `,` sitting between two digits is deleted too, so `1,000`
+   *     and `1000` match, and `3.14` keeps being one token.
+   *  4. Every *other* run of non-alphanumeric characters becomes a single
+   *     space. Two things depended on this and neither used to work:
+   *       - `well-known` now matches `well known`. Deleting the hyphen glued
+   *         the words into `wellknown`, which matched nothing a teacher would
+   *         have typed.
+   *       - stripping punctuation used to run *after* whitespace was
+   *         collapsed, so any mark with spaces around it left a double space
+   *         behind — `1 / 2` became `1  2`, which could never equal anything.
+   *
+   * What this deliberately does *not* do is match an answer that merely
+   * contains an accepted one. `it's a keyboard` is still wrong against an
+   * accepted `a keyboard`, because the alternative — accepting any answer with
+   * the right words somewhere in it — would accept `I don't know` at a station
+   * whose answer is `no`. A teacher who wants the full sentence should list it
+   * as another accepted answer; the field takes a comma-separated list.
+   */
   function normalizeTextAnswer(s) {
-    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '');
+    return String(s || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/['\u2018\u2019\u02bc\u00b4`]/g, '')
+      .replace(/(\d)[.,](\d)/g, '$1$2')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
   }
 
   /** Plain Levenshtein edit distance — used only to decide whether a wrong

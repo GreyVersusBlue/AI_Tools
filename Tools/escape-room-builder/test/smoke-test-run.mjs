@@ -51,6 +51,28 @@ const CASES = [
   [{ type: 'digits', answers: ['4172'] }, '4172', true, 'a digit code matches exactly'],
   [{ type: 'digits', answers: ['4172'] }, '4173', false, 'a wrong digit does not'],
   [{ type: 'text', answers: ['mitosis'] }, '', false, 'an empty answer is never correct'],
+
+  /* ── what "ignores punctuation" has to mean ──────────────────────────
+     Each of these was a wrong answer on a correct student, and each one
+     came out of a different line of normalizeTextAnswer. */
+  [{ type: 'text', answers: ['well known'] }, 'well-known', true,
+   'a hyphen separates rather than glues: well-known is well known'],
+  [{ type: 'text', answers: ['state of the art'] }, 'state-of-the-art', true,
+   'and it keeps separating past the first hyphen'],
+  [{ type: 'text', answers: ['1/2'] }, '1 / 2', true,
+   'spaces around a mark do not leave a phantom double space behind it'],
+  [{ type: 'text', answers: ["it's a keyboard"] }, 'its a keyboard', true,
+   'an apostrophe is deleted, not spaced: its and it’s are one word'],
+  [{ type: 'text', answers: ["it's a keyboard"] }, 'it’s a keyboard', true,
+   'including the curly one a phone or Word produces'],
+  [{ type: 'text', answers: ['cafe'] }, 'café', true,
+   'an accent is not a different answer'],
+  [{ type: 'text', answers: ['1,000'] }, '1000', true,
+   'but a separator inside a number still glues: 1,000 is 1000'],
+  [{ type: 'text', answers: ['a keyboard'] }, "it's a keyboard", false,
+   'a longer answer that merely contains the accepted one is still wrong'],
+  [{ type: 'cipher', answers: ['open the door’s lock'] }, "open the door's lock", true,
+   'a cipher phrase typed with the other apostrophe still decodes to the same phrase'],
 ];
 const lockPage = await prepPage(browser, BASE, { width: 900, height: 900 });
 await lockPage.goto(BASE + '/Tools/escape-room-builder/lock.html', { waitUntil: 'networkidle' });
