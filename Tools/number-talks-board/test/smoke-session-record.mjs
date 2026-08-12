@@ -109,6 +109,75 @@ const dotRec = await printAndRead('printSessionBtn');
 ok(await page.$$eval('#printArea .dot', e => e.length) > 0, 'the quick image itself is drawn on the record');
 ok(/How many:/.test(dotRec.text), 'with the count spelled out for the teacher');
 
+/* ── the copy that leaves the room ─────────────────────────────────────────
+   The record is the teacher's copy and every answer on it is computed, so it
+   stays that way by default. But it is also the sheet a teacher reaches for
+   when a student was pulled out for a specialist and needs to know what the
+   class did — and handing over a page with "= 75" on it hands over the
+   lesson. Unticking has to take the answers off, and the sheet itself has to
+   say which version it is, because nobody can re-check that once it is in a
+   bag. */
+await page.click('#modeStringsBtn');
+await settle(page, 250);
+await page.fill('#customInput', '48 + 27\n48 + 30\n75 - 3');
+await page.click('#useCustomBtn');
+await settle(page, 300);
+
+eq(await page.isChecked('#recordAnswersBox'), true,
+   'the answers are on by default — this is the teacher\u2019s copy and nobody asked to lose them');
+
+await page.uncheck('#recordAnswersBox');
+await settle(page, 250);
+const noAns = await printAndRead('printSessionBtn');
+ok(noAns.text.includes('48 + 27'), 'the strings are still on the sheet');
+ok(!/=\s*75/.test(noAns.text), 'but the computed answer is gone');
+ok(!/rec-answer/.test(noAns.html), 'and so is the markup that carried it');
+ok(/safe to hand to a student/.test(noAns.text),
+   'the sheet says which version it is, at the top, where it cannot be missed');
+ok(!/teacher copy/.test(noAns.text), 'and no longer claims to be the teacher copy');
+ok(noAns.text.includes('Maya'), 'the strategies stay — they are the student\u2019s own thinking, not the answer');
+
+/* The teaching note is prose, but several of the built-ins give the answer
+   away in words. Stripping numerals and leaving the note would be a fig leaf. */
+await page.click('#nextPromptBtn');
+await settle(page, 300);
+await printAndRead('printSessionBtn');
+eq(await page.$$eval('#printArea .rec-note', e => e.length), 0,
+   'the teaching note comes off too — several of them say the answer in words');
+
+/* Quick-image mode has its own answer, and it is the only thing on the card. */
+await page.click('#modeDotsBtn');
+await settle(page, 250);
+await page.click('#newDotImageBtn');
+await settle(page, 400);
+const dotNoAns = await printAndRead('printSessionBtn');
+ok(/How many:/.test(dotNoAns.text), 'the quick image still asks how many');
+eq(await page.$$eval('#printArea .rec-answer', e => e.length), 0, 'without answering it');
+ok(await page.$$eval('#printArea .dot', e => e.length) > 0, 'and the image itself is still drawn');
+
+/* ── the choice persists, and an older save reads as the teacher copy ───── */
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 400);
+eq(await page.isChecked('#recordAnswersBox'), false, 'the choice survives a reload');
+
+await page.evaluate(() => {
+  Object.keys(localStorage).forEach(key => {
+    try {
+      const v = JSON.parse(localStorage.getItem(key));
+      if (v && typeof v === 'object' && 'recordAnswers' in v) {
+        delete v.recordAnswers;
+        localStorage.setItem(key, JSON.stringify(v));
+      }
+    } catch (e) { /* not JSON */ }
+  });
+});
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 400);
+eq(await page.isChecked('#recordAnswersBox'), true,
+   'a settings blob saved before this option existed reads as the teacher copy it always was');
+await page.click('#modeStringsBtn');
+await settle(page, 250);
+
 /* ── an empty board prints something honest rather than crashing ───────── */
 const fresh = await prepPage(browser, BASE, { width: 1200, height: 900 });
 await fresh.goto(URL_PAGE, { waitUntil: 'networkidle' });

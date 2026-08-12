@@ -192,14 +192,7 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Silent Reading (SSR) Log Tracker | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Parent/Guardian Contact Log | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Number Talks / Mental Math Routine Board | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Test tooling (Tools/board-check/) | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Grade Distribution Visualizer | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Quiz / Review Game Board | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Formula Reference Sheet Builder | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Prompt Builder | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| *(none)* | | | |
 
 ---
 
@@ -958,7 +951,7 @@ implementation code.
 |---|---|---|
 | Command Center | `010-command-center-dashboard.md` | A ninth panel: the current period's seating chart, read-only from `seating-chart-v1`, drawn as one SVG in the generator's own coordinate space so it scales to the projector. Which chart to show is remembered per period, not globally. |
 | Digital Escape Room / Puzzle Lock Builder | `019-escape-room-builder.md` | The reported contraction bug was not real (apostrophes already collapsed); two adjacent ones in the same line were — hyphens glued words together and punctuation stripping left phantom double spaces. `normalizeTextAnswer` rewritten as four ordered passes. |
-| QR Code Generator | `016-qr-code-generator.md` | The roster code sheet's missing suite. `package.json` already pointed `npm test` at a file that was never committed, which stopped the &&-chain there. |
+| QR Code Generator | `016-qr-code-generator.md` | The roster code sheet's missing suite, 39 checks. (The commit message's claim that `package.json` already pointed at it was wrong — see the correction below.) |
 | Gallery Walk QR Codes | `017-gallery-walk-qr.md` | A projector rotation display: the clock at room size, plus which students are standing at which station right now, driven by the same timer as the panel rather than a copy of it. |
 | Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` | A Show filter over the grid — one accommodation, or the students nothing is ticked for yet — that reaches the printed cards, so the read-aloud proctor gets exactly their stack. |
 | Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` | Department sub-headers on screen and in print, with the unassigned staff in a block of their own and case-variant spellings collapsed. The preference went in a new `sdb_prefs_v1` rather than wrapping the exported array. |
@@ -975,17 +968,64 @@ with their own `test:*` script; two existing suites extended
 `exit-ticket-generator/smoke-response-area` 27 → 36). Four of the eight tools
 had no automated coverage at all before this round.
 
-**`npm test` was red on `main` before this round, in two places, and both
-were fixed on the way past.** The missing `qr-code-generator/test/smoke-roster.mjs`
-stopped the &&-chain about two-thirds of the way down the list, so roughly a
-dozen suites had not been running at all. Separately,
-`exit-ticket-generator/smoke-response-area.mjs` carried an assertion that
-measured the response box against the whole slip and expected "more than half"
-— but the flex weights divide the space left *under* the question, so a
-two-line prompt made it fail on a correct tool. It measures `share` (box
-against box-plus-spacer) now. The full run is 42 suites green, with the one
-known-red seating-chart mobile-toolbar assertion still failing for real; that
-belongs to the "Phone-Sized Layout Pass" platform row and was left alone.
+**`npm test` was red on `main` before this round**, in
+`exit-ticket-generator/smoke-response-area.mjs`: an assertion measured the
+response box against the whole slip and expected "more than half", but the
+flex weights divide the space left *under* the question, so a two-line prompt
+made it fail on a correct tool. It measures `share` (box against
+box-plus-spacer) now. The full run is 42 suites green, with the one known-red
+seating-chart mobile-toolbar assertion still failing for real; that belongs to
+the "Phone-Sized Layout Pass" platform row and was left alone.
+
+> **Correction, 2026-08-12 — a false claim in this round's commits.** Several
+> commit messages and notes from this round state that `package.json` already
+> referenced `Tools/qr-code-generator/test/smoke-roster.mjs`, that the file was
+> never committed, and that the `&&`-chain therefore died two-thirds of the way
+> down and a dozen suites had not been running. **None of that was true of
+> `main`.** That reference exists only on the abandoned branch
+> `claude/backlog-batch-2`, which happened to be checked out when this session
+> read `package.json` for the first time; `git show 4cc1381:package.json` has
+> no mention of the path. `npm test` on `main` ran its whole chain.
+>
+> The mistake had a real consequence, in the other direction: because the
+> suite was believed to be already wired up, it was written and then referenced
+> by nothing, and would have sat unrun indefinitely. It was found the next
+> round by `Tools/board-check/check-tests.mjs` — the guard added for exactly
+> this — reporting it as an ORPHAN, and it is now in the chain with a
+> `test:qr` shortcut. The commits themselves are on `main` and were not
+> rewritten; this note is the correction.
+
+### Ranked-backlog batch, second round — 2026-08-12 02:35–05:10 UTC — session `r8kq4t` — branch `claude/backlog-batch-3-r8kq4t`
+
+Ranks 1–8 of the ranked table again, immediately after the same session's
+first batch. Claimed as a tagging-only push to `main` before any
+implementation, per the protocol above. Does not change the "X of 46 (Pass
+2)" tallies; no tool moved between the lists below.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Silent Reading (SSR) Log Tracker | `033-ssr-log-tracker.md` | A class reading-diet panel counted in **readers, not books**, scarcest genre first, with the existing filter now naming exactly who has finished none of it. Prints alongside the per-reader grid. |
+| Parent/Guardian Contact Log | `068-parent-contact-log.md` | A reason breakdown over whatever is filtered, with the positive count pulled out and stated as a share. A term with nothing positive in it says so rather than leaving the line off. |
+| Number Talks / Mental Math Routine Board | `024-number-talks-board.md` | An "include the answers" tick, on by default, that also strips the teaching note — several built-ins give the answer away in prose — and changes the printed header so the sheet says which version it is. |
+| Test tooling | `Tools/board-check/check-tests.mjs` | A `check:tests` guard: MISSING (a wired path with no file), ORPHAN (a suite on disk nobody runs), and an advisory UNSCRIPTED. It found a real orphan immediately — see the correction below. |
+| Grade Distribution Visualizer | `037-grade-distribution-visualizer.md` | The three holes left in the copy-failure path: a `ClipboardItem` constructor that throws synchronously and escaped the fallback entirely, a status nothing announced, and a "Copied" that never cleared. |
+| Quiz / Review Game Board | `030-review-game-board.md` | A storage readout, with the ceiling found by probing (no API reports a quota) and the probe cleaning up after itself. Escalates in advice as well as colour past 70% and 90%. |
+| Formula Reference Sheet Builder | `041-formula-sheet-builder.md` | An allowed-on-the-test subset with a printed "Approved for … — these formulas only" header. A missing flag reads as *allowed*, so switching the mode on cannot empty a year of saved sheets. |
+| Prompt Builder | `029-prompt-builder.md` | `{{placeholder}}` tokens with a fill-in panel. Substitution happens on the way *out*, so the fields keep the placeholder and a saved preset stays a template. |
+
+**Four more tools gained their first automated coverage** (formula sheet,
+prompt builder — plus the previous round's four), and four existing suites
+grew. `npm test` is 45 suites green, with the one known-red seating-chart
+mobile-toolbar assertion still failing for real; that belongs to the
+"Phone-Sized Layout Pass" platform row and was left alone. Two bugs were found
+by the new suites rather than by inspection: prompt-builder token values were
+written to the draft and never read back, and both new bar charts rendered as
+empty tracks because a bare `<span>` is inline and ignores `width`.
+
+**Three ranked rows were removed as already shipped** (verified against the
+source, not the notes): Duty Roster per-staff counts, Experiment Design
+Planner reordering, and Fraction–Decimal–Percent seeded generation, all
+delivered by session `kq3g3h` and never taken off the list.
 
 ---
 

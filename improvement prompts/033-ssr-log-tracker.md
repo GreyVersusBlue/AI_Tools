@@ -9,6 +9,39 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 1 (as it stood): a class
+reading-diet panel, now that books carry genres.
+
+- **Counted in readers, not in books.** "Poetry: 6 books" is a number one
+  enthusiast can produce on their own, and it would read as a healthy genre
+  while twenty-seven students had never opened one. "Poetry: 1 of 28 readers"
+  is the number that says something about the class. The suite pins this with
+  three sessions of one title across two students coming out as two readers.
+- **Scarcest first by default**, because that ordering is the actionable one —
+  the top of the list is the book talk to give on Monday. A button flips it to
+  most-read, which is the same data answering the other question ("what does
+  this class already reach for"), and the panel's own hint says which is
+  which.
+- **The filter names names.** Choosing a genre in the existing filter adds a
+  line listing exactly the students who have finished none of it, with a
+  count. A count is a talking point; a list of names is a plan for next week's
+  conferences. With no genre filtered the line is absent rather than empty.
+- The untagged pile sits at the end whichever way the list is sorted — it is
+  bookkeeping, not a genre.
+- **It prints with the grid rather than instead of it.** The per-reader grid
+  is what goes to a conference and the diet is what goes to a planning
+  meeting; they are the same data at two zoom levels, and "Print genre spread"
+  now emits both tables with the ordering named.
+- The bar-fill needed `display: block` — a bare `<span>` is inline and ignores
+  `width`. Same bug, same day, as the Parent Contact Log's tally; worth
+  remembering the next time a bar chart goes into one of these tools.
+- `smoke-genres.mjs` 34 → 50 checks.
+
+**Where the next round should pick up:** the printable parent reading report
+on the ranked backlog is the substantial one left here, and the diet is not
+part of it — that report is per-student, and this panel is deliberately
+per-class.
+
 ### Pass 2 — Round 2 — 2026-08-11 — session `j6ok2v`
 
 - **Done — Printable finished-books wall.** The "Books completed" count

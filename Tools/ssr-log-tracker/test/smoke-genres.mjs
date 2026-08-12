@@ -204,6 +204,90 @@ ok(await legacy.evaluate(() => {
          all['Old Class'].logs['Dmitri Volkov'].length === 1;
 }), 'and its entries survive the first save with the new field');
 
+
+/* ── the class reading diet ────────────────────────────────────────────────
+   The spread grid answers "what has this reader read". This answers the one
+   a teacher asks on a Sunday night: what does the class as a whole not touch.
+   It is counted in READERS, not in books — "Poetry: 6 books" is a number one
+   enthusiast can produce alone, and it would read as a healthy genre while
+   twenty-seven students had never opened one. */
+const diet = () => page.evaluate(() => {
+  const box = document.getElementById('readingDiet');
+  if (!box || box.style.display === 'none') return null;
+  const labels = [...box.querySelectorAll('.diet-label')].map(e => e.textContent);
+  const ns = [...box.querySelectorAll('.diet-n')].map(e => e.textContent);
+  const nobody = box.querySelector('#dietNobody');
+  return {
+    rows: labels.map((l, i) => [l, ns[i]]),
+    sortBtn: document.getElementById('dietSortBtn').textContent,
+    nobody: (nobody && nobody.style.display !== 'none') ? nobody.textContent : '',
+  };
+});
+
+const d = await diet();
+ok(d, 'the reading-diet panel appears once there are tagged books');
+ok(d.rows.length >= 3, 'one line per genre the class has read: ' + JSON.stringify(d.rows));
+
+/* Readers, not books: Ada logged two sessions of one Adventure book and Ben
+   logged a third session of the same title, so Adventure is two readers. */
+const adventure = d.rows.filter(r => r[0] === 'Adventure')[0];
+ok(adventure, 'Adventure is on the list');
+eq(adventure[1], '2 of 3', 'counted in readers, not books or sessions — three sessions of one title is not three of anything');
+
+/* Scarcest first is the default, because the top of that list is the book
+   talk to give on Monday. */
+const counts = d.rows.filter(r => !/no genre yet/i.test(r[0])).map(r => Number(r[1].split(' ')[0]));
+ok(counts.every((n, i) => i === 0 || counts[i - 1] <= n),
+   'scarcest genre first by default: ' + JSON.stringify(d.rows));
+ok(/most read first/.test(d.sortBtn), 'and the button offers the other order: ' + d.sortBtn);
+
+await page.click('#dietSortBtn');
+await settle(page, 250);
+const flipped = await diet();
+const flippedCounts = flipped.rows.filter(r => !/no genre yet/i.test(r[0])).map(r => Number(r[1].split(' ')[0]));
+ok(flippedCounts.every((n, i) => i === 0 || flippedCounts[i - 1] >= n),
+   'flipping gives most-read first — the same data answering the other question');
+ok(/least read first/.test(flipped.sortBtn), 'and the button offers the way back');
+await page.click('#dietSortBtn');
+await settle(page, 250);
+
+/* ── who, by name, has read none of the filtered genre ─────────────────── */
+/* A count is a talking point. A list of names is a plan for next week. */
+await page.selectOption('#filterGenre', 'Adventure');
+await settle(page, 350);
+const filtered = await diet();
+ok(/No .*Adventure.* yet/.test(filtered.nobody) || /Adventure/.test(filtered.nobody),
+   'filtering to a genre names who has finished none of it: ' + filtered.nobody);
+ok(/Carla Reyes/.test(filtered.nobody),
+   'and it is the right student — the one with no Adventure book: ' + filtered.nobody);
+ok(!/Ada Okonkwo/.test(filtered.nobody), 'while a student who has read one is not on the list');
+ok(/\(1\)/.test(filtered.nobody) || /1\)/.test(filtered.nobody),
+   'with a count, so a long list is readable at a glance: ' + filtered.nobody);
+
+await page.selectOption('#filterGenre', '');
+await settle(page, 350);
+eq((await diet()).nobody, '', 'with no genre filtered there is nobody to name, and the line goes away');
+
+/* ── it prints with the grid, not instead of it ────────────────────────── */
+/* The per-reader grid is what goes to a conference; the diet is what goes to
+   a planning meeting. Same data at two zoom levels, no reason to print one
+   without the other. */
+await page.click('#printGenreBtn');
+await settle(page, 400);
+const printed = await page.textContent('#printArea');
+ok(/Readers per genre/.test(printed), 'the printed spread carries the diet as a second table');
+ok(/scarcest first/.test(printed), 'and says which way round it is ordered');
+ok(/Adventure/.test(printed), 'with the genres on it');
+eq(await page.$$eval('#printArea table', e => e.length), 2, 'two tables: the grid and the diet');
+
+/* ── an untagged pile is bookkeeping, not a genre ──────────────────────── */
+const untaggedRow = (await diet()).rows.filter(r => /untagged/i.test(r[0]))[0];
+if (untaggedRow) {
+  const rows = (await diet()).rows;
+  eq(rows[rows.length - 1][0], untaggedRow[0],
+     'the untagged pile sits at the end of the list whichever way it is sorted');
+}
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
 for (const [name, p] of [['main', page], ['legacy', legacy]]) {
   eq(p.__errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(p.__errs.slice(0, 3)));

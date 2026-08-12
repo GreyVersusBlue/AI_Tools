@@ -50,6 +50,12 @@ async function pageWithClipboard(mode) {
     if (m === 'none') {
       delete window.ClipboardItem;
       try { Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }); } catch (e) {}
+    } else if (m === 'throws') {
+      // Partly-implemented clipboard APIs throw from the ClipboardItem
+      // constructor rather than rejecting the write — a synchronous escape
+      // out of the click handler, not a rejected promise.
+      window.ClipboardItem = function () { throw new TypeError('unsupported type'); };
+      Object.defineProperty(navigator, 'clipboard', { value: { write: () => Promise.resolve() }, configurable: true });
     } else {
       window.ClipboardItem = function (items) { this.items = items; };
       const write = (items) => {
@@ -130,8 +136,41 @@ ok(/clipboard was blocked/.test(await denied.textContent('.chart-dl-row .copy-st
 ok((await denied.evaluate(() => window.__downloads))[0].includes('histogram'),
    'and the right chart is downloaded as the fallback');
 
+/* ── 4. a clipboard that throws instead of rejecting ───────────────────── */
+/* The mode the promise handler cannot catch. Without a try/catch around the
+   ClipboardItem construction this escapes the click handler entirely: no
+   download, no message, a console error nobody is watching, and a button that
+   appears to do nothing — the exact failure the whole fallback exists to
+   prevent, arrived at by the one route that skips it. */
+const thrower = await pageWithClipboard('throws');
+await enterScores(thrower);
+await thrower.click('[data-dl="letter-copy"]');
+await thrower.waitForFunction(() => window.__downloads.length > 0, null, { timeout: 10000 });
+ok(/refused the clipboard/.test(await thrower.textContent('.chart-dl-row .copy-status')),
+   'a clipboard that throws is reported rather than swallowed: ' + await thrower.textContent('.chart-dl-row .copy-status'));
+ok(/.png$/.test((await thrower.evaluate(() => window.__downloads))[0]),
+   'and the PNG still arrives');
+
+/* ── 5. the status is announced, and a success does not outstay it ─────── */
+eq(await page.$eval('.chart-dl-row .copy-status', e => e.getAttribute('aria-live')), 'polite',
+   'the outcome is announced, not only shown — "did that work?" is the whole job of this line');
+eq(await page.$eval('.chart-dl-row .copy-status', e => e.getAttribute('role')), 'status',
+   'with a role to match');
+
+await page.click('[data-dl="letter-copy"]');
+await page.waitForFunction(() => /Copied/.test(document.querySelector('.chart-dl-row .copy-status').textContent),
+  null, { timeout: 10000 });
+await page.waitForFunction(() => document.querySelector('.chart-dl-row .copy-status').textContent === '',
+  null, { timeout: 12000 });
+ok(true, 'a "Copied" message clears itself, so it cannot be read as the result of a later click');
+
+await denied.click('[data-dl="hist-copy"]');
+await settle(denied, 8000);
+ok(/blocked/.test(await denied.textContent('.chart-dl-row .copy-status')),
+   'while a failure stays up — it is asking for something to be done about it');
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
-for (const [name, p] of [['ok', page], ['no-clipboard', noClip], ['denied', denied]]) {
+for (const [name, p] of [['ok', page], ['no-clipboard', noClip], ['denied', denied], ['throws', thrower]]) {
   eq(p.__errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(p.__errs.slice(0, 3)));
   eq(p.__blocked.length, 0, `nothing left the site (${name}): ` + JSON.stringify(p.__blocked.slice(0, 3)));
 }

@@ -9,6 +9,38 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 3 (as it stood): the printed
+session record carries every computed answer, which is right for the teacher's
+copy and wrong for the copy that goes home with the student who was pulled
+out.
+
+- **A "Put the answers on the printed record" checkbox, ticked by default.**
+  The row was worded as "on by default, that removes them", which reads two
+  ways; it is built as *include answers, on by default*, because the record is
+  the teacher's copy, every answer on it is computed rather than typed, and
+  removing them by default would take away something nobody asked to lose.
+  Unticking is the deliberate act of making a version that can leave the room.
+- **What comes off is more than the numbers.** The computed `= 75`, the
+  quick-image count, and — the one that would have been missed — the teaching
+  note, because several of the built-ins give the answer away in prose ("25 x
+  15 = 375, so the answer is 15"). Stripping numerals and leaving the note
+  would have been a fig leaf. The strategy cards stay: they are the students'
+  own thinking, not the answer.
+- **The sheet says which version it is**, in the subtitle that already said
+  "teacher copy — includes answers" and now says "answers left off — safe to
+  hand to a student" instead. On-screen there is a matching line under the
+  checkbox. Both matter because a printed sheet cannot be re-checked once it
+  is in a bag.
+- Stored as one optional `recordAnswers` field in the existing settings blob;
+  only an explicit `false` turns answers off, so a save written before this
+  option existed reads as the teacher copy it always was.
+- `smoke-session-record.mjs` 27 → 38 checks.
+
+**Where the next round should pick up:** the same reasoning applies to "Save
+this session" (the `.txt` export), which was left alone this round — it is
+the teacher's own file rather than something handed over, but if it ever
+becomes a share target it needs the same switch.
+
 Reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped the strategy-organized number string library, fullscreen/dark
 projector mode, and dot images. Ideas below are deliberately ambitious and

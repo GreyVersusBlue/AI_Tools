@@ -116,6 +116,23 @@
   .genre-table td.num { text-align: center; }
   .genre-table th.g-untagged, .genre-table td.g-untagged { color: var(--muted); }
 
+  /* ── Class reading diet ───────────────────────────────────────────────
+     The genre spread below answers "what has this reader read". This answers
+     the question a teacher asks on a Sunday night: what does the class as a
+     whole not touch. One line per genre, how many readers have tried it at
+     all, scarcest first — because the top of a scarcest-first list is the
+     book talk to give on Monday. */
+  .diet-head { display: flex; flex-wrap: wrap; gap: .5rem .8rem; align-items: center; margin: .2rem 0 .5rem; }
+  .diet-rows { display: grid; grid-template-columns: auto 1fr auto; gap: .22rem .6rem; align-items: center; max-width: 44rem; }
+  .diet-label { font-size: .84rem; white-space: nowrap; }
+  .diet-label.untagged { color: var(--muted); }
+  .diet-track { background: #eceae2; border-radius: 3px; height: .6rem; overflow: hidden; }
+  .diet-fill { display: block; background: var(--accent-2); height: 100%; }
+  .diet-row.thin .diet-fill { background: #b5762c; }
+  .diet-n { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .diet-nobody { font-size: .84rem; margin: .6rem 0 0; }
+  .diet-nobody strong { color: var(--ink); }
+
   .summary-filter { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
   .summary-filter label { margin: 0; font-weight: 600; font-size: .8rem; display: flex; align-items: center; gap: .3rem; }
   .summary-filter input[type="date"] { width: auto; margin: 0; }
@@ -347,6 +364,17 @@
     </div>
     <p class="hint" id="noSummaryHint" style="display:none;">Add students and log entries to see a class summary.</p>
 
+    <div class="reading-diet" id="readingDiet" style="display:none;">
+      <div class="card-title" style="margin:1.2rem 0 .4rem;">
+        <span>Class reading diet</span>
+        <button type="button" class="secondary small" id="dietSortBtn">Sort: most read first</button>
+      </div>
+      <p class="hint">How many readers have finished at least one book in each genre. Scarcest first is the
+        book-talk list for Monday; most-read first is what the class already reaches for.</p>
+      <div class="diet-rows" id="dietRows"></div>
+      <p class="diet-nobody" id="dietNobody" style="display:none;"></p>
+    </div>
+
     <div class="genre-spread" id="genreSpread" style="display:none;">
       <div class="card-title" style="margin:1.2rem 0 .4rem;">
         <span>Genre spread</span>
@@ -396,7 +424,8 @@
     'bulkDetails', 'bulkDate', 'bulkTableBody', 'bulkSaveBtn', 'bulkStatus', 'printSlipsBtn',
     'readingRate', 'bookDatalist',
     'entryGenre', 'genreDatalist', 'studentGenreChips', 'filterGenre', 'genreFilterHint',
-    'genreSpread', 'genreTable', 'genreTableHead', 'genreTableBody', 'printGenreBtn'
+    'genreSpread', 'genreTable', 'genreTableHead', 'genreTableBody', 'printGenreBtn',
+    'readingDiet', 'dietRows', 'dietNobody', 'dietSortBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, roster: [names...], logs: { studentName: [ {id,date,book,pagesTo,minutes} ] },
@@ -1284,6 +1313,84 @@
     if (els.filterGenre.value !== prev) els.filterGenre.value = '';
   }
 
+  /* ---------- class reading diet ----------------------------------------
+     Counted in *readers*, not in books. "Historical fiction: 14 books" is a
+     number one enthusiast can produce on their own; "Historical fiction: 2 of
+     28 readers" is the one that says something about the class. A genre
+     nobody has touched cannot appear here at all — it has no books tagged
+     with it — so the honest framing is "of the genres this class reads, these
+     are the thin ones", and the filter below is what names the individuals.
+
+     Scarcest first by default, because that ordering is the actionable one:
+     the top of the list is what to book-talk on Monday. The toggle flips it
+     to most-read, which is the same data answering the other question. */
+  var dietSortScarce = true;
+
+  function readingDietRows() {
+    if (!state || !state.roster.length) return [];
+    var readersOf = {};
+    state.roster.forEach(function (name) {
+      Object.keys(genreCountsFor(name)).forEach(function (g) {
+        if (!readersOf[g]) readersOf[g] = [];
+        readersOf[g].push(name);
+      });
+    });
+    var rows = Object.keys(readersOf).map(function (g) {
+      return { genre: g, readers: readersOf[g], n: readersOf[g].length };
+    });
+    rows.sort(function (a, b) {
+      // Untagged is bookkeeping, not a genre — it sits at the end either way.
+      if (a.genre === UNTAGGED) return 1;
+      if (b.genre === UNTAGGED) return -1;
+      if (a.n !== b.n) return dietSortScarce ? a.n - b.n : b.n - a.n;
+      return a.genre.localeCompare(b.genre);
+    });
+    return rows;
+  }
+
+  /** Who, by name, has finished nothing in the genre currently filtered.
+      A count is a talking point; a list is a plan for the next conference. */
+  function readersMissing(genre) {
+    if (!state || !genre || genre === UNTAGGED) return null;
+    return state.roster.filter(function (name) {
+      return !genreCountsFor(name)[genre];
+    });
+  }
+
+  function renderReadingDiet() {
+    var rows = readingDietRows();
+    if (!rows.length) { els.readingDiet.style.display = 'none'; return; }
+    els.readingDiet.style.display = '';
+    els.dietSortBtn.textContent = dietSortScarce ? 'Sort: most read first' : 'Sort: least read first';
+
+    var total = state.roster.length;
+    var most = rows.reduce(function (m, r) { return Math.max(m, r.n); }, 1);
+    els.dietRows.innerHTML = rows.map(function (r) {
+      // "Thin" is a third of the class or fewer — enough to be worth a book
+      // talk, not so tight that half the list lights up.
+      var thin = r.genre !== UNTAGGED && r.n <= Math.max(1, Math.floor(total / 3));
+      return '<span class="diet-label' + (r.genre === UNTAGGED ? ' untagged' : '') + '">' +
+          escapeHtml(r.genre) + '</span>' +
+        '<span class="diet-track diet-row' + (thin ? ' thin' : '') + '">' +
+          '<span class="diet-fill" style="width:' + Math.round((r.n / most) * 100) + '%"></span></span>' +
+        '<span class="diet-n">' + r.n + ' of ' + total + '</span>';
+    }).join('');
+
+    var want = currentGenreFilter();
+    var missing = readersMissing(want);
+    if (!missing) {
+      els.dietNobody.style.display = 'none';
+      els.dietNobody.textContent = '';
+    } else if (!missing.length) {
+      els.dietNobody.style.display = '';
+      els.dietNobody.innerHTML = 'Everybody has finished at least one <strong>' + escapeHtml(want) + '</strong> book.';
+    } else {
+      els.dietNobody.style.display = '';
+      els.dietNobody.innerHTML = 'No <strong>' + escapeHtml(want) + '</strong> yet (' + missing.length + '): ' +
+        escapeHtml(missing.join(', '));
+    }
+  }
+
   function renderGenreSpread() {
     if (!state || !state.roster.length) { els.genreSpread.style.display = 'none'; return; }
     var counts = {};
@@ -1318,6 +1425,7 @@
     renderGenreDatalist();
     renderGenreFilterOptions();
     renderStudentGenreChips();
+    renderReadingDiet();
     renderGenreSpread();
     renderBookProgress();
   }
@@ -1371,6 +1479,8 @@
   els.filterTo.addEventListener('change', renderSummaryTable);
   els.filterGenre.addEventListener('change', function () {
     renderSummaryTable();
+    // The 'who has read none of this' line is a function of the filter.
+    renderReadingDiet();
     els.genreFilterHint.textContent = currentGenreFilter()
       ? 'Totals below, the CSV export and the printed summary are limited to ' + currentGenreFilter() + '.'
       : 'Totals, the CSV export and the printed summary all follow this.';
@@ -1542,10 +1652,25 @@
       if (hasUntagged) cells += '<td>' + (c[UNTAGGED] || 0) + '</td>';
       return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
     }).join('');
+    /* The per-reader grid is what a teacher takes to a conference; the diet
+       is what they take to a planning meeting. They are the same data at two
+       zoom levels and there is no reason to print one without the other. */
+    var dietRows = readingDietRows();
+    var total = state.roster.length;
+    var dietTable = dietRows.length
+      ? '<div class="print-sub" style="margin-top:1.1rem;"><strong>Readers per genre</strong> ' +
+          '(' + (dietSortScarce ? 'scarcest first' : 'most read first') + ')</div>' +
+        '<table><thead><tr><th>Genre</th><th>Readers</th><th>Of the class</th></tr></thead><tbody>' +
+        dietRows.map(function (r) {
+          return '<tr><td>' + escapeHtml(r.genre) + '</td><td>' + r.n + '</td><td>' +
+            Math.round((r.n / total) * 100) + '%</td></tr>';
+        }).join('') + '</tbody></table>'
+      : '';
     els.printArea.innerHTML =
       '<div class="print-title">Genre Spread &mdash; ' + escapeHtml(state.name) + '</div>' +
       '<div class="print-sub">Distinct book titles per genre &middot; Printed ' + escapeHtml(todayStr()) + '</div>' +
-      '<table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+      '<table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>' +
+      dietTable;
     window.print();
   }
 
@@ -1553,6 +1678,10 @@
   els.printSummaryBtn.addEventListener('click', printSummary);
   els.printWallBtn.addEventListener('click', printFinishedBooksWall);
   els.printGenreBtn.addEventListener('click', printGenreSpread);
+  els.dietSortBtn.addEventListener('click', function () {
+    dietSortScarce = !dietSortScarce;
+    renderReadingDiet();
+  });
 
   /* ---------- boot ---------- */
   var current = getCurrentName();

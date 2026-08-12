@@ -66,6 +66,18 @@
   #promptOutput{ font-size: 14.5px; line-height: 1.7; min-height: 8em; white-space: pre-wrap; word-wrap: break-word; }
   #promptOutput .placeholder{ font-style: italic; opacity: 0.5; }
   #promptOutput .fill{ background: var(--color-accent-100); color: var(--color-accent-800); padding: 0.05em 0.2em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  /* A token nobody has filled in yet. Deliberately loud in the output: a
+     prompt that still says {{topic}} when it reaches an AI is a wasted round
+     trip, and the whole point of the panel is that it is obvious what is
+     outstanding. */
+  #promptOutput .token-blank{ background: #fde9c8; color: #7a4b06; border-bottom: 1px dashed #b5762c; font-style: italic; }
+  .token-panel{ border: 1px solid var(--color-accent-300, #cbd5e1); border-radius: 8px; padding: 0.7rem 0.8rem; margin-bottom: 0.8rem; background: var(--color-accent-50, #f8fafc); }
+  .token-panel h3{ font-size: 0.85rem; margin: 0 0 0.15rem; }
+  .token-panel .token-hint{ font-size: 0.76rem; opacity: 0.75; margin: 0 0 0.5rem; }
+  .token-grid{ display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.6rem; align-items: center; }
+  .token-grid label{ font-size: 0.8rem; font-family: ui-monospace, Consolas, monospace; white-space: nowrap; }
+  .token-grid input{ font-size: 0.85rem; padding: 0.3rem 0.4rem; width: 100%; }
+  .token-panel .token-left{ font-size: 0.76rem; margin: 0.5rem 0 0; color: #7a4b06; font-weight: 600; }
 
   .copy-row{ margin-top: var(--space-4); display: flex; align-items: center; gap: var(--space-3); }
   #copyStatus{ font-size: 12.5px; color: var(--color-success); font-weight: 600; opacity: 0; transition: opacity 0.2s ease; }
@@ -415,6 +427,14 @@
         <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
         <p class="strength-hint" id="strengthHint"></p>
       </div>
+      <div class="token-panel" id="tokenPanel" style="display:none;" aria-live="polite">
+        <h3>Fill in the blanks</h3>
+        <p class="token-hint">This prompt has <code>{{placeholders}}</code> in it. Type each one once here and it
+          drops into every field that uses it &mdash; the fields keep the placeholder, so the saved preset stays
+          reusable next unit.</p>
+        <div class="token-grid" id="tokenGrid"></div>
+        <p class="token-left" id="tokenLeft" style="display:none;"></p>
+      </div>
       <div id="promptOutput"><span class="placeholder">Fill in a few boxes on the left &mdash; your prompt builds itself here.</span></div>
       <div class="copy-row">
         <button type="button" class="btn btn-primary" id="copyBtn">Copy prompt</button>
@@ -523,8 +543,89 @@
     div.textContent = str;
     return div.innerHTML;
   }
-  function fill(str){ return '<span class="fill">' + esc(str) + '</span>'; }
+  /* ---- {{placeholders}} -------------------------------------------------
+     A saved preset is this tool's "saved prompt", and the thing that stops one
+     being reused next unit is that the topic, the standard and the text are
+     baked into it. Writing {{topic}} in a field instead makes the preset a
+     template: the field keeps the placeholder, so it survives being saved and
+     re-applied, and the value lives separately in the panel.
+
+     Substitution happens on the way OUT — in fill(), which is the single
+     funnel every field value passes through to reach the built prompt — and
+     never on the way in. That is what keeps the fields reusable, and it means
+     a preset saved with placeholders in it stays a template no matter how many
+     times it is filled and copied.
+
+     An unfilled placeholder is left visible in the output rather than blanked,
+     and styled loudly. A prompt that still says {{topic}} when it reaches an
+     AI is a wasted round trip; a prompt with a silent hole in it is worse. */
+  const TOKEN_RE = /\{\{\s*([^{}]{1,60}?)\s*\}\}/g;
+  let tokenValues = {};
+
+  // Case- and space-insensitive, so {{Topic}} and {{ topic }} are one blank.
+  function tokenKey(raw){ return String(raw).trim().toLowerCase().replace(/\s+/g, ' '); }
+
+  function substTokens(str){
+    return String(str == null ? '' : str).replace(TOKEN_RE, (m, name) => {
+      const v = tokenValues[tokenKey(name)];
+      return (v && v.trim()) ? v : m;
+    });
+  }
+
+  function fill(str){
+    const withValues = esc(substTokens(str));
+    // esc() leaves braces alone, so anything still in {{ }} is unfilled.
+    const marked = withValues.replace(/\{\{\s*([^{}]{1,60}?)\s*\}\}/g,
+      (m, name) => '<span class="token-blank">{{' + name + '}}</span>');
+    return '<span class="fill">' + marked + '</span>';
+  }
   function val(id){ const el = $(id); return el ? el.value.trim() : ''; }
+
+  /** Every distinct placeholder currently written into any field, in the order
+      it is first met, with the spelling it was first written in. */
+  function tokensInUse(){
+    const seen = new Map();
+    const scan = str => {
+      String(str == null ? '' : str).replace(TOKEN_RE, (m, name) => {
+        const key = tokenKey(name);
+        if (key && !seen.has(key)) seen.set(key, String(name).trim());
+        return m;
+      });
+    };
+    STATIC_IDS.forEach(id => scan(val(id)));
+    scan(toolTypeOther.value);
+    scan(toneOther.value);
+    Object.keys(dynamicValues).forEach(k => scan(dynamicValues[k]));
+    return [...seen.entries()].map(([key, label]) => ({ key: key, label: label }));
+  }
+
+  function renderTokenPanel(){
+    const panel = $('tokenPanel');
+    const grid = $('tokenGrid');
+    const left = $('tokenLeft');
+    if (!panel) return;
+    const tokens = tokensInUse();
+    if (!tokens.length){ panel.style.display = 'none'; grid.innerHTML = ''; return; }
+    panel.style.display = '';
+
+    // Rebuilt only when the set of placeholders changes, so typing a value
+    // never replaces the input being typed into.
+    const signature = tokens.map(t => t.key).join('|');
+    if (grid.dataset.signature !== signature){
+      grid.dataset.signature = signature;
+      grid.innerHTML = tokens.map(t => (
+        '<label for="tok_' + esc(t.key.replace(/[^a-z0-9]+/g, '_')) + '">{{' + esc(t.label) + '}}</label>' +
+        '<input type="text" id="tok_' + esc(t.key.replace(/[^a-z0-9]+/g, '_')) + '" data-token="' + esc(t.key) + '"' +
+        ' value="' + esc(tokenValues[t.key] || '') + '" placeholder="what this stands for, this time">'
+      )).join('');
+    }
+    const blank = tokens.filter(t => !(tokenValues[t.key] || '').trim()).length;
+    left.style.display = blank ? '' : 'none';
+    left.textContent = blank
+      ? blank + ' placeholder' + (blank === 1 ? '' : 's') + ' still to fill in \u2014 ' +
+        'they stay visible in the prompt until you do.'
+      : '';
+  }
 
   // ---- tool-specific extra fields ----
   const TOOL_EXTRAS = {
@@ -712,6 +813,7 @@
       charCount.textContent = output.innerText.length + ' characters';
     }
 
+    renderTokenPanel();
     updateStrength();
   }
 
@@ -859,6 +961,11 @@
       alike — all three hand it the same {STATIC_IDS..., toolTypeOther,
       toneOther, dyn} shape. */
   function applyFieldsFromData(data){
+    /* Placeholder VALUES are deliberately not part of a preset — a preset is
+       the reusable shape and the values are this unit's answers. Restoring
+       them from a draft is right; carrying them into a preset would defeat
+       the point. Only the draft path passes them. */
+    tokenValues = (data && data.tokens && typeof data.tokens === 'object') ? Object.assign({}, data.tokens) : {};
     STATIC_IDS.forEach(id => { if (data[id]) $(id).value = data[id]; });
     if (data.toolTypeOther) toolTypeOther.value = data.toolTypeOther;
     toolTypeOtherWrap.style.display = toolTypeSelect.value === 'other' ? 'block' : 'none';
@@ -952,6 +1059,14 @@
   }
   $('resetBtn').addEventListener('click', handleClearAll);
   $('clearAllTop').addEventListener('click', handleClearAll);
+
+  $('tokenGrid').addEventListener('input', (e) => {
+    const key = e.target.getAttribute('data-token');
+    if (!key) return;
+    tokenValues[key] = e.target.value;
+    build();       // rebuilds the prompt, not the panel — see renderTokenPanel
+    saveDraft();
+  });
 
   // ---- copy ----
   $('copyBtn').addEventListener('click', () => {
@@ -1279,7 +1394,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        const data = { toolTypeOther: toolTypeOther.value, toneOther: toneOther.value, dyn: dynamicValues };
+        const data = { toolTypeOther: toolTypeOther.value, toneOther: toneOther.value, dyn: dynamicValues, tokens: tokenValues };
         STATIC_IDS.forEach(id => { data[id] = val(id); });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         const note = $('autosaveNote');
@@ -1319,6 +1434,9 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const data = JSON.parse(raw);
+      // Placeholder values ride along with the draft: they are this unit's
+      // answers, and losing them on a refresh would mean retyping every blank.
+      if (data.tokens && typeof data.tokens === 'object') tokenValues = Object.assign({}, data.tokens);
       STATIC_IDS.forEach(id => { if (data[id]) $(id).value = data[id]; });
       if (data.toolTypeOther){
         toolTypeOther.value = data.toolTypeOther;

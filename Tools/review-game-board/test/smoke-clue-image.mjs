@@ -194,6 +194,74 @@ const imported = await page.evaluate(() => {
 ok(/^data:image\/jpeg/.test(imported.categories[0].clues[0].image), 'the image survives a JSON export/import');
 eq(imported.categories[0].clues[1].image, undefined, 'a non-image string in that field is dropped on import');
 
+
+/* ── the storage readout ───────────────────────────────────────────────────
+   Clue images are the first thing in this tool that can realistically fill
+   localStorage, and the failure they cause arrives mid-lesson, on a save the
+   teacher never pressed. The only signal before this was an alert AFTER the
+   write had already failed.
+
+   The measurement itself is the risky part, because there is no API that
+   reports a quota — the ceiling has to be probed by writing until it throws.
+   A probe that leaves its padding behind would eat the very space it is
+   measuring, so that is the first thing checked here. */
+const report = () => page.evaluate(() => window.ReviewBoardStore.storageReport());
+
+const r0 = await report();
+ok(r0 && r0.cap > 1024 * 1024, 'the ceiling can be measured at all: ' + JSON.stringify(r0 && Math.round(r0.cap / 1048576) + ' MB'));
+ok(r0.boards > 0, 'the saved board is counted');
+ok(r0.total >= r0.boards, 'and the whole-origin figure includes it');
+eq(await page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('__probe') !== -1).length), 0,
+   'the probe cleans up after itself — padding left behind would eat the space it is measuring');
+
+const line0 = await page.textContent('#storageLine');
+ok(/using about/.test(line0), 'the readout says how much is used: ' + line0);
+ok(/%/.test(line0), 'as a share of what there is, not just a raw number');
+eq(await page.getAttribute('#storageLine', 'aria-live'), 'polite', 'and is announced when it changes');
+eq(await page.$eval('#storageLine', e => e.className), 'storage-line',
+   'with no warning styling while there is plenty of room');
+
+/* ── it warns before the wall, not after it ────────────────────────────── */
+/* Fill the origin to somewhere past 70% with a key belonging to nothing, and
+   the line has to (a) go up, (b) change tone, and (c) say what to do. */
+async function fillTo(fraction) {
+  return page.evaluate(async (frac) => {
+    localStorage.removeItem('__test_padding');
+    window.ReviewBoardStore.forgetCapacity();
+    const r = window.ReviewBoardStore.storageReport();
+    const want = Math.max(0, Math.floor((r.cap * frac - r.total) / 2));  // chars, 2 bytes each
+    if (want <= 0) return false;
+    try { localStorage.setItem('__test_padding', 'x'.repeat(want)); } catch (e) { return false; }
+    window.ReviewBoardStore.forgetCapacity();
+    return true;
+  }, fraction);
+}
+
+ok(await fillTo(0.75), 'the origin can be filled for the test');
+await page.evaluate(() => document.getElementById('buildFromManualBtn') && null);
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 600);
+const warnLine = await page.textContent('#storageLine');
+const warnClass = await page.$eval('#storageLine', e => e.className);
+ok(/warn|danger/.test(warnClass), 'past ~70% the line changes tone: ' + warnClass);
+ok(/clue images|Export a board|remove/i.test(warnLine),
+   'and says what to do about it rather than only stating a number: ' + warnLine);
+
+ok(await fillTo(0.95), 'and the origin can be filled further');
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 600);
+const dangerLine = await page.textContent('#storageLine');
+eq(await page.$eval('#storageLine', e => e.className), 'storage-line danger',
+   'nearly full reads as urgent rather than as a note');
+ok(/likely to fail/.test(dangerLine),
+   'and names the consequence — a board that will not save loses a game mid-lesson: ' + dangerLine);
+
+await page.evaluate(() => { localStorage.removeItem('__test_padding'); window.ReviewBoardStore.forgetCapacity(); });
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 600);
+eq(await page.$eval('#storageLine', e => e.className), 'storage-line',
+   'clearing the space clears the warning — the probed ceiling is not cached past a delete');
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
 eq(page.__blocked.length, 0, 'nothing left the site: ' + JSON.stringify(page.__blocked.slice(0, 3)));

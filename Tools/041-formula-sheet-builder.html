@@ -122,6 +122,22 @@
   .sheet-title { font-size: 1.5rem; font-weight: 700; margin-bottom: .2rem; text-align: center; }
   .sheet-sub { text-align: center; color: var(--muted); font-size: .85rem; margin-bottom: 1.2rem; border-bottom: 1px solid var(--line); padding-bottom: .6rem; }
   .formulas { column-count: 2; column-gap: calc(1.6rem * var(--fs-scale)); }
+
+  /* ── Allowed-on-the-test subset ────────────────────────────────────────
+     A tick per formula, and a printed line saying what the ticked ones are
+     approved for. The line is the whole point: a bare list of formulas on a
+     desk during a test is a page nobody can vouch for. */
+  .allow-box { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--muted); white-space: nowrap; }
+  .allow-box input { width: auto; margin: 0; }
+  .item-row.not-allowed .fields { opacity: .45; }
+  .allow-controls { border-top: 1px dashed var(--line); margin-top: .8rem; padding-top: .7rem; }
+  .allow-count { font-size: .78rem; color: var(--muted); margin: .35rem 0 0; }
+  .allow-count.warn { color: var(--err); font-weight: 600; }
+  .sheet-approved {
+    font-size: calc(.78rem * var(--fs-scale)); font-weight: 700; text-align: center;
+    border: 1.5px solid #333; border-radius: 4px; padding: calc(.22rem * var(--fs-scale)) .4rem;
+    margin: 0 0 calc(.55rem * var(--fs-scale));
+  }
   .formula { break-inside: avoid; margin-bottom: calc(.9rem * var(--fs-scale)); }
   .formula .fname { font-weight: 700; font-size: calc(.92rem * var(--fs-scale)); }
   .formula .fexpr { font-family: Consolas, monospace; font-size: calc(1.05rem * var(--fs-scale)); color: var(--accent); margin: .1rem 0; }
@@ -213,6 +229,18 @@
           </div>
           <p class="hint" style="margin:.4rem 0 0;">Add a worked example or a variable key to any formula afterward with its &#9998; button.</p>
         </div>
+
+        <div class="allow-controls">
+          <label class="allow-box" for="allowedOnlyBox" style="font-size:.85rem;color:var(--ink);font-weight:600;">
+            <input type="checkbox" id="allowedOnlyBox"> Print only the formulas allowed on the test
+          </label>
+          <div id="assessmentRow" style="display:none;margin-top:.5rem;">
+            <label for="assessmentName">Approved for</label>
+            <input type="text" id="assessmentName" placeholder="e.g. Unit 4 Test — Area &amp; Volume">
+            <p class="hint" style="margin:.25rem 0 0;">Printed across the top of the sheet, so the page can be vouched for on a desk.</p>
+          </div>
+          <p class="allow-count" id="allowCount"></p>
+        </div>
       </div>
 
       <button type="button" id="printBtn" class="full">Print</button>
@@ -254,6 +282,7 @@
    'sheetName','sheetTitle','columnCount','pageSize','templatePicker','loadTemplateBtn','browsePickerBtn',
    'itemsList','emptyHint','newName','newExpr','newNote','addItemBtn',
    'printBtn','previewArea','autofitNote','pageSizeNote',
+   'allowedOnlyBox','assessmentRow','assessmentName','allowCount',
    'formulaPickerModal','closePickerBtn','pickerList'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -370,8 +399,30 @@
           : '');
       row.appendChild(fields);
 
+      /* The tick sits with the formula rather than in a separate list, so
+         "is this one allowed" is answered where the decision is made. When
+         the subset is off it is still shown, because a teacher sets the flags
+         first and switches the mode second. */
+      var allow = document.createElement('label');
+      allow.className = 'allow-box';
+      allow.title = 'Allowed on the test';
+      var allowInput = document.createElement('input');
+      allowInput.type = 'checkbox';
+      allowInput.checked = item.allowed !== false;
+      allowInput.setAttribute('data-allow', String(i));
+      allowInput.setAttribute('aria-label', 'Allow "' + (item.name || 'this formula') + '" on the test');
+      allowInput.addEventListener('change', function () {
+        state.items[i].allowed = allowInput.checked;
+        row.classList.toggle('not-allowed', !allowInput.checked);
+        refreshPreview();
+      });
+      allow.appendChild(allowInput);
+      allow.appendChild(document.createTextNode('allowed'));
+      row.classList.toggle('not-allowed', item.allowed === false);
+
       var btns = document.createElement('div');
       btns.className = 'btns';
+      btns.appendChild(allow);
       var editBtn = document.createElement('button');
       editBtn.type = 'button'; editBtn.className = 'secondary small'; editBtn.textContent = '✎';
       editBtn.title = 'Edit worked example / variable key';
@@ -489,9 +540,16 @@
     if (state.items[idx]) { state.items[idx].image = ''; renderAll(); }
   });
 
+  /** The formulas that go on the page: everything, or only the ticked ones. */
+  function sheetItems() {
+    if (!state.allowedOnly) return state.items;
+    return state.items.filter(function (i) { return i.allowed !== false; });
+  }
+
   function sheetHtml(scale) {
-    var itemsHtml = state.items.length
-      ? state.items.map(function (item) {
+    var printed = sheetItems();
+    var itemsHtml = printed.length
+      ? printed.map(function (item) {
           var varsHtml = (item.variables && item.variables.length)
             ? '<div class="fvars">' + item.variables
                 .filter(function (v) { return v.symbol || v.meaning; })
@@ -509,7 +567,10 @@
             varsHtml + exampleHtml +
           '</div>';
         }).join('')
-      : '<div class="empty-sheet">No formulas yet.</div>';
+      : '<div class="empty-sheet">' +
+          (state.allowedOnly && state.items.length
+            ? 'Nothing is ticked as allowed on the test yet.'
+            : 'No formulas yet.') + '</div>';
     var scaleStyle = 'column-count:' + (state.columns || 2) + ';';
     var dims = pageDims();
     // Padding scales down with the physical page so a card-sized sheet
@@ -522,6 +583,14 @@
     return (
       '<div class="sheet" style="' + sheetStyle + '">' +
         '<div class="sheet-title">' + escapeHtml(state.title || state.name) + '</div>' +
+        /* The line that makes the page defensible. Without a named assessment
+           it still says the sheet is a permitted subset, because "these are
+           the only ones you may use" is the claim being made either way. */
+        (state.allowedOnly
+          ? '<div class="sheet-approved">Approved for ' +
+              escapeHtml(state.assessment || 'this assessment') +
+              ' &mdash; these formulas only</div>'
+          : '') +
         '<div class="sheet-sub">Name: _______________________&emsp;&emsp;Period: _____</div>' +
         '<div class="formulas" style="' + scaleStyle + '">' + itemsHtml + '</div>' +
       '</div>'
@@ -559,6 +628,32 @@
     }
   }
 
+  /* How many of the sheet's formulas are ticked, and a plain warning when
+     that is none — the preview would otherwise show an empty page and leave
+     the teacher hunting for the reason. */
+  function renderAllowCount() {
+    var total = state.items.length;
+    var allowed = state.items.filter(function (i) { return i.allowed !== false; }).length;
+    if (!total) { els.allowCount.textContent = ''; els.allowCount.className = 'allow-count'; return; }
+    els.allowCount.className = 'allow-count' + (state.allowedOnly && allowed === 0 ? ' warn' : '');
+    els.allowCount.textContent = state.allowedOnly
+      ? (allowed === 0
+          ? 'Nothing is ticked, so the sheet would print empty. Tick the formulas students may use.'
+          : allowed + ' of ' + total + ' formulas will print.')
+      : allowed + ' of ' + total + ' are ticked as allowed. All ' + total + ' print until you switch this on.';
+  }
+
+  /* Redraw the page without rebuilding the editor list. Anything that fires
+     on every keystroke, or on a click inside a control that must keep focus,
+     goes through here — renderAll() replaces the whole item list and would
+     take the caret or the checkbox out from under the teacher. */
+  function refreshPreview() {
+    save();
+    renderAllowCount();
+    els.previewArea.innerHTML = sheetHtml(1);
+    applyAutoFit();
+  }
+
   function renderAll() {
     save();
     refreshSwitcher();
@@ -567,6 +662,10 @@
     els.sheetTitle.value = state.title;
     els.columnCount.value = state.columns || 2;
     els.pageSize.value = state.pageSize || 'full';
+    els.allowedOnlyBox.checked = !!state.allowedOnly;
+    els.assessmentRow.style.display = state.allowedOnly ? '' : 'none';
+    els.assessmentName.value = state.assessment || '';
+    renderAllowCount();
     renderItemsEditor();
     els.previewArea.innerHTML = sheetHtml(1);
     applyAutoFit();
@@ -584,12 +683,15 @@
     return {
       name: i.name || '', expression: i.expression || '', note: i.note || '', image: i.image || '',
       workedExample: i.workedExample || '',
+      // Additive: a sheet saved before this round has no flag, and every
+      // formula on it counts as allowed — the sheet was the whole list.
+      allowed: i.allowed !== false,
       variables: Array.isArray(i.variables) ? i.variables.map(function (v) { return { symbol: (v && v.symbol) || '', meaning: (v && v.meaning) || '' }; }) : []
     };
   }
 
   function newSheet(name) {
-    state = { name: name, title: '', columns: 2, pageSize: 'full', items: [] };
+    state = { name: name, title: '', columns: 2, pageSize: 'full', items: [], allowedOnly: false, assessment: '' };
     FormulaSheetStore.setCurrentName(name);
     openEditIndex = -1;
     renderAll();
@@ -719,6 +821,15 @@
     var remaining = FormulaSheetStore.listSheets();
     if (remaining.length) loadSheetByName(remaining[0]);
     else newSheet('New Sheet');
+  });
+
+  els.allowedOnlyBox.addEventListener('change', function () {
+    state.allowedOnly = els.allowedOnlyBox.checked;
+    renderAll();
+  });
+  els.assessmentName.addEventListener('input', function () {
+    state.assessment = els.assessmentName.value;
+    refreshPreview();   // not renderAll: it would rebuild the field being typed in
   });
 
   els.printBtn.addEventListener('click', function () {

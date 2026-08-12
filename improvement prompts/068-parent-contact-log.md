@@ -9,6 +9,40 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 2 (as it stood): a reason
+tally above the history, with the positive count called out separately.
+
+- **It counts what is filtered, not the whole log.** The useful questions here
+  are narrow — this student, this month, this method — and a tally of
+  everything answers a question nobody asked. Filter to one student and it
+  becomes "what have my four contacts about her actually been about".
+- **Good news is pulled out of the list and stated on its own line**, with a
+  share as well as a count. As one bar among seven it would be buried, and
+  "2" means nothing without "of 7". This is the number the row was really
+  about: a teacher keeps it roughly in their head, is sometimes asked for it
+  out loud at a conference or an IEP meeting, and the honest answer is usually
+  lower than the remembered one.
+- **A term with nothing positive in it says so** — "None of them good news
+  yet" — rather than leaving the line off. The uncomfortable case is the one
+  worth getting right; an absent line is easy to read past.
+- Entries logged before the reason axis existed are counted under "(not
+  recorded)" rather than dropping out of the total, so the breakdown always
+  adds up to the rows underneath. The suite asserts that sum.
+- Bars are proportional to the largest reason rather than to the total, so a
+  4/3/2/1 spread is legible instead of four slivers. Ties keep the order
+  `REASONS` declares, so the list does not reshuffle itself every time a
+  contact is logged. The box is an `aria-live` region, since it changes in
+  response to a filter rather than a click on itself.
+- One bug found by looking at the render rather than the code: `.tally-fill`
+  is a bare `<span>`, which is inline and ignores `width` — the bars came out
+  as empty tracks. There is now a check that a bar has non-zero width.
+- `smoke-reasons.mjs` 30 → 45 checks.
+
+**Where the next round should pick up:** the conference print packet still on
+the ranked backlog is the natural next one, and the tally is most of its
+header — one student's full history plus this breakdown is exactly the page
+that gets handed to an administrator before a meeting.
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP out of the
 Ideas Backlog: paste-or-type roster (with an optional pull from a saved Name
 Picker roster via the shared `np_rosters` localStorage key), a log-a-contact

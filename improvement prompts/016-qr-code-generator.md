@@ -12,11 +12,20 @@
 ### 2026-08-12 — session `r8kq4t` — a suite for the roster code sheet
 
 Backlog rank 3 (as it then stood). The roster-labelled code sheet shipped
-without one, and `package.json` already pointed `npm test` and
-`npm run test:qr` at `Tools/qr-code-generator/test/smoke-roster.mjs` — a file
-that was never committed. Since `npm test` is `&&`-chained, that meant every
-suite after it never ran at all. The file exists now (39 checks) and the chain
-is whole again.
+without one; it has 39 checks now, and `npm test` / `npm run test:qr` run
+them.
+
+> **Correction, 2026-08-12.** The commit that added this suite claimed
+> `package.json` already referenced it and that the missing file was breaking
+> `npm test` for every suite after it. That was wrong. The reference was read
+> off the abandoned branch `claude/backlog-batch-2`, which was checked out at
+> the time; `main`'s `package.json` never mentioned this path, so nothing was
+> broken by it. The real consequence of the mistake was the opposite one: the
+> suite was written and then wired to nothing, and sat unrun until
+> `check-tests.mjs` flagged it as an ORPHAN. It is in the chain now. The
+> separate claim in the same commit — that
+> `exit-ticket-generator/smoke-response-area.mjs` had a genuinely failing
+> assertion on `main` — was verified directly and stands.
 
 What it pins, and why each one is a place a plausible implementation goes
 quietly wrong rather than loudly:

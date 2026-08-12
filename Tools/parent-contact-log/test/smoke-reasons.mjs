@@ -146,9 +146,106 @@ ok(!/Ada Okonkwo/.test(benPrint), 'without leaking another student into it');
 ok(await page.evaluate(() => document.documentElement.innerHTML.includes("'Method', 'Reason', 'Outcome'")),
    'the CSV export gained a Reason column');
 
+
+/* ── the tally above the history ───────────────────────────────────────────
+   "How many of my contacts home were good news" is a number a teacher keeps
+   roughly in their head and is sometimes asked for out loud. A log that only
+   ever records problems is exactly what this makes visible, so the count has
+   to be of what is on screen — this student, this month, this method — and
+   not of the whole log, or it answers a question nobody asked. */
+const tally = (p = page) => p.evaluate(() => {
+  const box = document.getElementById('tallyBox');
+  const labels = [...box.querySelectorAll('.tally-label')].map(e => e.textContent);
+  const counts = [...box.querySelectorAll('.tally-n')].map(e => Number(e.textContent));
+  return {
+    head: (box.querySelector('.tally-total') || {}).textContent || '',
+    good: (box.querySelector('.tally-good') || {}).textContent || '',
+    rows: labels.map((l, i) => [l, counts[i]]),
+    empty: !!box.querySelector('.tally-empty'),
+  };
+});
+
+await page.selectOption('#filterReason', '');
+await page.fill('#filterStudent', '');
+await settle(page, 300);
+
+const before = await tally();
+ok(before.rows.length > 0, 'the tally has something in it once contacts are logged');
+ok(/contacts shown/.test(before.head), 'it says how many it is counting: ' + before.head);
+
+/* Most-used reason first, so the shape of the term is readable at a glance. */
+const tallyCounts = before.rows.map(r => r[1]);
+ok(tallyCounts.every((n, i) => i === 0 || tallyCounts[i - 1] >= n),
+   'reasons are ordered most-used first: ' + JSON.stringify(before.rows));
+eq(tallyCounts.reduce((a, b) => a + b, 0), (await rows()).length,
+   'and the counts add up to exactly the rows underneath');
+
+/* The positive count is pulled out of the list and stated separately, because
+   it is the one line anybody is looking for; as one bar among seven it would
+   be buried. */
+ok(/good news/.test(before.good), 'good news is called out on its own line: ' + before.good);
+const positiveRow = before.rows.filter(r => r[0] === 'Positive news')[0];
+ok(positiveRow, 'and still appears in the breakdown itself');
+ok(before.good.indexOf(String(positiveRow[1])) !== -1,
+   'with the same number in both places (' + before.good + ' vs ' + positiveRow[1] + ')');
+ok(/%/.test(before.good), 'expressed as a share as well as a count — "1" means nothing without "of 4"');
+
+/* ── it follows the filters, which is the whole point ──────────────────── */
+await page.selectOption('#filterReason', 'Positive news');
+await settle(page, 300);
+const filtered = await tally();
+eq(filtered.rows.length, 1, 'filtering to one reason leaves one row in the tally');
+eq(filtered.rows[0][0], 'Positive news', 'and it is that reason');
+ok(/100%/.test(filtered.good), 'which is now all of what is shown: ' + filtered.good);
+
+await page.selectOption('#filterReason', '');
+await settle(page, 200);
+await page.fill('#filterStudent', 'zzz-nobody');
+await settle(page, 300);
+const none = await tally();
+ok(none.empty, 'a filter that matches nothing says so rather than dividing by zero');
+await page.fill('#filterStudent', '');
+await settle(page, 300);
+
+/* ── a log with no good news says so plainly ───────────────────────────── */
+/* The uncomfortable case is the one worth getting right: a teacher whose term
+   has been all attendance and missing work should see that stated, not an
+   absent line they can read past. */
+const grim = await prepPage(browser, BASE, { width: 1200, height: 900 });
+await grim.addInitScript(() => {
+  localStorage.setItem('pcl_roster_v1', JSON.stringify(['Sable Whitfield']));
+  localStorage.setItem('pcl_entries_v1', JSON.stringify([
+    { id: 'g1', student: 'Sable Whitfield', date: '2026-02-01', method: 'Phone call', reason: 'Attendance', initials: 'DM', outcome: 'Fourth absence' },
+    { id: 'g2', student: 'Sable Whitfield', date: '2026-02-02', method: 'Email', reason: 'Behavior', initials: 'DM', outcome: 'Phone out in class' },
+    // No reason at all — an entry logged before the reason axis existed.
+    { id: 'g3', student: 'Sable Whitfield', date: '2026-01-05', method: 'Phone call', initials: 'DM', outcome: 'Introduced myself' },
+  ]));
+});
+await grim.goto(URL_PAGE, { waitUntil: 'networkidle' });
+await settle(grim, 400);
+const grimTally = await tally(grim);
+ok(/None of them good news yet/.test(grimTally.good),
+   'a log with nothing positive in it says so rather than leaving the line off: ' + grimTally.good);
+eq(grimTally.rows.length, 3, 'and the rest of the breakdown is still drawn');
+ok(grimTally.rows.some(r => r[0] === '(not recorded)'),
+   'an entry logged before the reason axis existed is counted under its own heading rather than dropped out of the total: ' + JSON.stringify(grimTally.rows));
+eq(grimTally.rows.reduce((n, r) => n + r[1], 0), 3, 'so the breakdown still adds up to the whole list');
+
+/* ── announced, not just drawn ─────────────────────────────────────────── */
+eq(await page.getAttribute('#tallyBox', 'aria-live'), 'polite',
+   'the tally is announced when the filters change it');
+/* A bare span is inline and ignores width, so a bar with no display:block
+   renders as an empty track — visibly a bug, and one this caught once. */
+ok(await page.evaluate(() => {
+  const fill = document.querySelector('#tallyBox .tally-fill');
+  return !!fill && fill.getBoundingClientRect().width > 0;
+}), 'the bars actually have width rather than being empty tracks');
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
-eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
-eq(page.__blocked.length, 0, 'nothing left the site: ' + JSON.stringify(page.__blocked.slice(0, 3)));
+for (const [name, p] of [['main', page], ['no-good-news', grim]]) {
+  eq(p.__errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(p.__errs.slice(0, 3)));
+  eq(p.__blocked.length, 0, `nothing left the site (${name}): ` + JSON.stringify(p.__blocked.slice(0, 3)));
+}
 
 await browser.close();
 server.close();

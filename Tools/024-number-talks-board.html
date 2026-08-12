@@ -374,6 +374,11 @@
       <button type="button" class="secondary" id="exportSessionBtn">Save this session</button>
       <button type="button" class="secondary" id="printSessionBtn">Print session record</button>
     </div>
+    <label class="option-row" for="recordAnswersBox" style="margin-top:.6rem;display:flex;align-items:center;gap:.4rem;font-size:.85rem;font-weight:600;cursor:pointer;">
+      <input type="checkbox" id="recordAnswersBox" checked style="width:auto;margin:0;">
+      Put the answers on the printed record
+    </label>
+    <div class="hint" id="recordAnswersHint" style="margin:.25rem 0 0;"></div>
   </div>
 
   <div class="card">
@@ -517,7 +522,7 @@
   };
 
   /* ---------- state ---------- */
-  var settings = { category: 'all', mode: 'strings', dotCountMode: 'subitize', dotLayout: 'random', dotDuration: '2500' };
+  var settings = { category: 'all', mode: 'strings', dotCountMode: 'subitize', dotLayout: 'random', dotDuration: '2500', recordAnswers: true };
   var current = null;     // { category, exprs, revealed, note }
   var history = [];       // [{category, text}]  (in-memory only, session-only)
   var myBank = [];         // [{id, category, exprs, note}]  the teacher's own saved favorites — persists in localStorage
@@ -538,6 +543,7 @@
    'historyList', 'historyEmptyHint', 'exportSessionBtn',
    'answerKeyRow', 'answerKeyText', 'toggleAnswerBtn',
    'printRow', 'printHandoutBtn', 'printSessionBtn', 'printArea',
+   'recordAnswersBox', 'recordAnswersHint',
    'stringHistoryList', 'stringHistoryEmptyHint', 'clearStringHistoryBtn',
    'stageArea', 'fullscreenBtn', 'exitFullscreenBtn', 'teachingNote',
    'modeStringsBtn', 'modeDotsBtn', 'stringsSection', 'stringsSection2', 'dotsSection',
@@ -561,6 +567,9 @@
       if (['subitize', 'small', 'teen', 'any', 'exact'].indexOf(saved.dotCountMode) !== -1) settings.dotCountMode = saved.dotCountMode;
       if (['random', 'tenframe', 'dice', 'scattered', 'twopart'].indexOf(saved.dotLayout) !== -1) settings.dotLayout = saved.dotLayout;
       if (['1500', '2500', '3500', '5000', 'untimed'].indexOf(saved.dotDuration) !== -1) settings.dotDuration = saved.dotDuration;
+      // Only an explicit false turns answers off, so a settings blob saved
+      // before this option existed reads as the teacher copy it always was.
+      if (saved.recordAnswers === false) settings.recordAnswers = false;
     } catch (e) { /* ignore corrupt storage */ }
   }
   function saveSettings() {
@@ -1401,25 +1410,49 @@
     }).join('');
   }
 
+  /* Whether the record is the teacher's copy or a copy that leaves the room.
+     It is the teacher's copy by default — that is what it is for, and every
+     answer on it is computed rather than typed, so removing them by default
+     would take away something nobody asked to lose. Unticking is the
+     deliberate act of making a version that can go home with the student who
+     was pulled out for a specialist, and the printed page says which one it
+     is either way, because a sheet cannot be re-checked once it is in a bag. */
+  function recordShowsAnswers() { return settings.recordAnswers !== false; }
+
+  /* Say which sheet is about to come out of the printer, before it does. The
+     record has no other tell on screen — the toggle and the printed header
+     are the only two places the difference is visible. */
+  function renderRecordAnswersHint() {
+    els.recordAnswersHint.textContent = recordShowsAnswers()
+      ? 'Your copy: every computed answer, plus the teaching note.'
+      : 'Answers and the teaching note come off, and the sheet says so at the top — the version to hand to a student who missed the lesson.';
+  }
+
   function recordCurrentHtml() {
+    var withAnswers = recordShowsAnswers();
     if (mode === 'dots') {
       if (!dotState) return '<p class="rec-empty">No quick image on the board.</p>';
       return renderDotBox(dotState) +
-        '<div class="rec-expr">How many: <span class="rec-answer">' + dotState.count + '</span></div>';
+        '<div class="rec-expr">How many: ' +
+        (withAnswers ? '<span class="rec-answer">' + dotState.count + '</span>' : '<span class="rec-blank">&nbsp;</span>') +
+        '</div>';
     }
     if (!current) return '<p class="rec-empty">No number string on the board.</p>';
     var rows = current.exprs.map(function (e, i) {
       // computeAnswer() returns null for anything outside the arithmetic forms
       // it can parse (word problems, "as a percent"). Print the expression
       // anyway and just leave the answer off, rather than dropping the line.
-      var ans = computeAnswer(e);
+      var ans = withAnswers ? computeAnswer(e) : null;
       return '<div class="rec-expr">' +
         (current.exprs.length > 1 ? '<span class="print-num">' + (i + 1) + '.</span>' : '') +
         escapeHtml(e) +
         (ans === null ? '' : ' <span class="rec-answer">= ' + escapeHtml(String(ans)) + '</span>') +
         '</div>';
     }).join('');
-    var note = current.note ? '<p class="rec-note">' + escapeHtml(current.note) + '</p>' : '';
+    /* The teaching note is prose but it is not safe: several of them give the
+       answer away in words ("25 x 15 = 375, so the answer is 15"). Stripping
+       the numerals and leaving the note would be a fig leaf. */
+    var note = (withAnswers && current.note) ? '<p class="rec-note">' + escapeHtml(current.note) + '</p>' : '';
     return rows + note;
   }
 
@@ -1436,7 +1469,9 @@
       '<div class="print-sub">' +
         escapeHtml(now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })) +
         ' &middot; ' + escapeHtml(categoryLabel(settings.category)) +
-        ' &middot; teacher copy — includes answers</div>' +
+        ' &middot; ' + (recordShowsAnswers()
+          ? 'teacher copy — includes answers'
+          : 'answers left off — safe to hand to a student') + '</div>' +
       '<div class="print-meta"><span>Class: <span class="fill-line">&nbsp;</span></span>' +
         '<span>Period: <span class="fill-line">&nbsp;</span></span></div>' +
       '<div class="rec-section"><div class="rec-h">On the board</div>' + recordCurrentHtml() + '</div>' +
@@ -1477,6 +1512,11 @@
   els.exportSessionBtn.addEventListener('click', exportSession);
   els.printHandoutBtn.addEventListener('click', printHandout);
   els.printSessionBtn.addEventListener('click', printSessionRecord);
+  els.recordAnswersBox.addEventListener('change', function () {
+    settings.recordAnswers = els.recordAnswersBox.checked;
+    saveSettings();
+    renderRecordAnswersHint();
+  });
   els.clearStringHistoryBtn.addEventListener('click', clearStringHistory);
   els.toggleAnswerBtn.addEventListener('click', function () {
     answerKeyVisible = !answerKeyVisible;
@@ -1518,6 +1558,8 @@
   els.dotExactRow.style.display = settings.dotCountMode === 'exact' ? '' : 'none';
   els.dotLayoutSelect.value = settings.dotLayout;
   els.dotDurationSelect.value = settings.dotDuration;
+  els.recordAnswersBox.checked = recordShowsAnswers();
+  renderRecordAnswersHint();
   populateRosterNameOptions();
   renderStage();
   renderHistory();

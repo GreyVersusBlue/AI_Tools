@@ -9,6 +9,43 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 1 (as it stood): tick which
+formulas are permitted, print only those, with a header naming the assessment.
+
+- **A tick per formula, beside the formula**, because that is where the
+  decision is made. It shows whether or not the subset mode is on, since a
+  teacher sets the flags first and switches the mode second — and unticking
+  alone changes nothing that prints, which the suite pins.
+- **The header is the actual feature.** A shorter list is easy; a page a
+  teacher can vouch for on a desk during a test is the point. The sheet prints
+  "Approved for &lt;assessment&gt; — these formulas only", boxed, above the
+  name line. Without a named assessment it still says "Approved for this
+  assessment — these formulas only", because the exhaustiveness claim is being
+  made either way.
+- **The failure that would have destroyed work: reading a missing flag as
+  "not allowed".** Every sheet saved before this round has no `allowed` field
+  anywhere, and treating that as false would empty a year of saved sheets the
+  first time somebody switched the mode on. `normalizeItem` reads
+  `i.allowed !== false`, so absent means allowed. The suite strips the field
+  from a saved sheet and checks the full list still prints.
+- **Ticking must not rebuild the list.** The obvious wiring calls
+  `renderAll()`, which replaces the whole editor and takes the focus with it —
+  which makes ticking six boxes in a row quietly unpleasant, and typing an
+  assessment name impossible. There is now a lighter `refreshPreview()` for
+  anything that fires per keystroke or must keep focus; the suite checks the
+  caret stays in the assessment field and the checkbox keeps focus after a
+  click.
+- An empty subset prints an explanation on the sheet rather than a blank page,
+  and the count line turns red.
+- **New suite:** `Tools/formula-sheet-builder/test/smoke-allowed.mjs`, 31
+  checks, wired into `npm test` and `npm run test:formula-sheet` — the first
+  automated coverage this tool has had.
+
+**Where the next round should pick up:** the local math notation renderer on
+the ranked backlog is the big one here and is unaffected by this; formulas are
+still plain text. Worth noting the subset flag would need to survive that
+change, since it lives on the item.
+
 **2026-08-11 — Round 2 (session `gb5c6e`).** Shipped the remaining
 half-sheet/index-card Quick Win. New per-sheet `pageSize` field
 (`'full'|'half'|'card'`), defaulted via the same backfill pattern as the
