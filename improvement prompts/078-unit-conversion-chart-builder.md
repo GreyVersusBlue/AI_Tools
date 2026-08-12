@@ -9,6 +9,22 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: grade-band presets shipped (backlog rank,
+then #7).** Two one-click preset buttons above the unit-set checkboxes:
+**Elementary (3–5)** checks the seven within-system sets plus time
+(length/weight/volume, customary and metric each — no cross-system
+conversions, no temperature formulas), and **Middle school (6–8)** checks
+all eleven sets. A preset replaces the current selection and clears
+per-line hides on the sets it enables (the same reset a manual re-check
+already did), leaves custom lines untouched, and the checkboxes remain
+live for fine-tuning after — which also answers this file's Open Question:
+hard-coded presets *and* free checkbox editing, not either/or (named
+multi-save, the other half of that question, is its own backlog row).
+Verified with a headless Chromium test: elementary preset checks exactly
+the expected seven sets with no cross/temperature content in the chart,
+middle checks all 11, a preset clears a per-line hide, the selection
+persists across reload, and print honors it — zero console errors.
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: ten checkbox-selectable unit-set templates (length/weight/
 volume each split into customary, metric, and cross-system, plus
@@ -57,6 +73,8 @@ that unlocks reordering and export together.
   the chart without dropping its whole group/template
 - Print column count (1/2/3) is chooser-controlled and persists across
   visits
+- **Grade-band preset buttons** (Elementary 3–5 / Middle school 6–8) that
+  set the checkboxes in one click, still editable after
 
 ## Quick Wins
 
@@ -79,9 +97,8 @@ that unlocks reordering and export together.
   number, see it converted") as an optional toggle — turns the reference
   chart into something a struggling student can actually use mid-problem,
   not just read.
-- **Grade-band presets** — one click selects the right unit sets for
-  "elementary" vs "middle school", instead of checking boxes individually
-  every time.
+- ~~**Grade-band presets**~~ — **done, 2026-08-12** (backlog round; see
+  Status).
 - **Print as a bookmark/half-sheet** in addition to the full-page chart, for
   taping inside a math notebook rather than posting on a wall.
 
