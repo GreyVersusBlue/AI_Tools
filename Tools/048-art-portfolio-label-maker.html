@@ -103,16 +103,29 @@
   }
   .label-preview canvas { width: 84px; height: 84px; image-rendering: pixelated; }
   .label-preview .lbl-title { font-weight: 700; font-size: .84rem; overflow-wrap: anywhere; }
+  .label-preview .lbl-artist { font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; margin-top: -.15rem; }
   .label-preview .lbl-desc { font-size: .68rem; color: var(--muted); overflow-wrap: anywhere; }
   .label-preview .no-qr-note { font-size: .62rem; color: var(--muted); font-style: italic; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   .print-only { display: none; }
+  .ref-sheet { display: table; }
   @media print {
     body { background: #fff; color: #000; padding: 0; }
     .wrap > *:not(.print-only) { display: none !important; }
     .print-only.active { display: block; }
+    /* One print area, two documents. The mode class decides which of them the
+       browser sees, so neither can leak a stray page into the other's print. */
+    .print-only.mode-labels .ref-sheet { display: none; }
+    .print-only.mode-sheet .print-label-grid { display: none; }
+    .ref-sheet { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 4px 6px; text-align: left; vertical-align: top; }
+    .ref-sheet th { background: #eee; font-size: .74rem; text-transform: uppercase; letter-spacing: .03em; }
+    .ref-sheet tr { page-break-inside: avoid; }
+    .ref-sheet .c-num { width: 2em; text-align: right; color: #444; }
+    .ref-sheet .c-title { width: 22%; font-weight: 700; }
+    .ref-sheet .c-artist { width: 18%; }
     .print-label-grid { display: flex; flex-wrap: wrap; }
     .print-label-grid .p-label {
       box-sizing: border-box; border: 1.5px solid #999; border-radius: 8px; padding: 10px;
@@ -122,6 +135,7 @@
     .print-label-grid .p-label img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
     .print-label-grid .p-label canvas { width: 100%; height: auto; max-width: 150px; }
     .print-label-grid .p-label .p-title { font-weight: 700; font-size: 1rem; }
+    .print-label-grid .p-label .p-artist { font-size: .8rem; color: #333; }
     .print-label-grid .p-label .p-desc { font-size: .72rem; color: #333; overflow-wrap: anywhere; }
 
     .print-label-grid.pp-2 .p-label { width: calc(50% - 8px); }
@@ -173,7 +187,8 @@
         </div>
 
         <div class="import-box" id="importBox">
-          <label for="importText">One entry per line &mdash; title, then the artist statement, separated by a tab or a comma</label>
+          <label for="importText">One entry per line &mdash; title, then the artist statement, separated by a tab or a comma.
+            Pasting three tab-separated columns from a spreadsheet reads them as title, artist, statement.</label>
           <p class="hint">Example: Self-Portrait &mdash; Ava R.&nbsp;&nbsp;Charcoal on paper, inspired by...</p>
           <textarea id="importText" placeholder="Self-Portrait &mdash; Ava R.	Charcoal on paper, inspired by our unit on shading&#10;Clay Bowl &mdash; Marco T., Hand-built pinch pot, glazed blue"></textarea>
           <div class="btn-row">
@@ -207,7 +222,11 @@
         </div>
         <div class="btn-row">
           <button id="printBtn" disabled type="button">Print labels</button>
+          <button id="printSheetBtn" class="secondary" disabled type="button">Print class reference sheet</button>
         </div>
+        <div class="hint" style="margin-top:.5rem;">The reference sheet is one compact list of every piece &mdash; title,
+          artist, and the full statement &mdash; for your own records and for gallery signage. No photos or codes on it,
+          so it stays short and cheap to print.</div>
       </div>
     </div>
 
@@ -225,6 +244,7 @@
 <div class="print-only" id="printArea">
   <h2 id="printHeaderTitle" style="font-size:1.2rem;margin:0 0 10px;"></h2>
   <div class="print-label-grid" id="printLabelGrid"></div>
+  <table class="ref-sheet" id="printRefSheet"></table>
 </div>
 
 <script>
@@ -235,8 +255,8 @@
 
   var els = {};
   ['portfolioTitle', 'entriesList', 'addRowBtn', 'toggleImportBtn', 'importBox', 'importText', 'importBtn',
-   'labelsPerPage', 'ecLevel', 'printBtn', 'previewGrid', 'previewNote', 'msg',
-   'printArea', 'printHeaderTitle', 'printLabelGrid',
+   'labelsPerPage', 'ecLevel', 'printBtn', 'printSheetBtn', 'previewGrid', 'previewNote', 'msg',
+   'printArea', 'printHeaderTitle', 'printLabelGrid', 'printRefSheet',
    'portfolioSelect', 'newPortfolioBtn', 'dupPortfolioBtn', 'renamePortfolioBtn', 'deletePortfolioBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -252,11 +272,16 @@
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
   function newPortfolio(name) {
-    return { id: uid(), name: name || 'Untitled Portfolio', title: '', entries: [{ id: uid(), title: '', description: '', image: '' }], labelsPerPage: '6', ecLevel: 'Q' };
+    return { id: uid(), name: name || 'Untitled Portfolio', title: '', entries: [{ id: uid(), title: '', artist: '', description: '', image: '' }], labelsPerPage: '6', ecLevel: 'Q' };
   }
 
   function normalize(p) {
-    if (!p.entries || !p.entries.length) p.entries = [{ id: uid(), title: '', description: '', image: '' }];
+    if (!p.entries || !p.entries.length) p.entries = [{ id: uid(), title: '', artist: '', description: '', image: '' }];
+    /* Entries predate the artist field — every existing one gets an empty
+       string rather than staying undefined, so nothing downstream has to
+       guard for its absence and a saved portfolio prints exactly as before
+       until the teacher fills it in. */
+    p.entries.forEach(function (e) { if (typeof e.artist !== 'string') e.artist = ''; });
     if (!p.labelsPerPage) p.labelsPerPage = '6';
     if (!p.ecLevel) p.ecLevel = 'Q';
     if (!p.title) p.title = '';
@@ -359,7 +384,7 @@
   function clearMsg() { els.msg.textContent = ''; els.msg.className = ''; }
 
   function ensureAtLeastOneRow() {
-    if (!state.entries.length) state.entries.push({ id: uid(), title: '', description: '', image: '' });
+    if (!state.entries.length) state.entries.push({ id: uid(), title: '', artist: '', description: '', image: '' });
   }
 
   var CHAR_WARN_AT = 220;
@@ -384,7 +409,9 @@
         '</div>' +
         '<div class="entry-fields">' +
           '<div class="field-label">Title / student</div>' +
-          '<input type="text" data-title="' + e.id + '" value="' + escapeAttr(e.title) + '" placeholder="e.g. Self-Portrait &mdash; Ava R.">' +
+          '<input type="text" data-title="' + e.id + '" value="' + escapeAttr(e.title) + '" placeholder="e.g. Self-Portrait">' +
+          '<div class="field-label">Artist</div>' +
+          '<input type="text" data-artist="' + e.id + '" value="' + escapeAttr(e.artist || '') + '" placeholder="e.g. Ava R.">' +
           '<div class="field-label">Artist statement / description (goes in the QR code)</div>' +
           '<textarea data-desc="' + e.id + '" placeholder="What is this piece, and what should a viewer know about it?">' + escapeHtml(e.description) + '</textarea>' +
           countHtml +
@@ -398,10 +425,15 @@
 
   els.entriesList.addEventListener('input', function (ev) {
     var titleId = ev.target.getAttribute('data-title');
+    var artistId = ev.target.getAttribute('data-artist');
     var descId = ev.target.getAttribute('data-desc');
     if (titleId) {
       var e1 = state.entries.find(function (x) { return x.id === titleId; });
       if (e1) e1.title = ev.target.value;
+      save(); scheduleRender();
+    } else if (artistId) {
+      var eA = state.entries.find(function (x) { return x.id === artistId; });
+      if (eA) eA.artist = ev.target.value;
       save(); scheduleRender();
     } else if (descId) {
       var e2 = state.entries.find(function (x) { return x.id === descId; });
@@ -482,7 +514,7 @@
   });
 
   els.addRowBtn.addEventListener('click', function () {
-    state.entries.push({ id: uid(), title: '', description: '', image: '' });
+    state.entries.push({ id: uid(), title: '', artist: '', description: '', image: '' });
     save(); renderRows(); scheduleRender();
   });
 
@@ -495,11 +527,21 @@
     if (!text || !text.trim()) return;
     var lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length; });
     var added = lines.map(function (line) {
-      var delim = line.indexOf('\t') !== -1 ? '\t' : ',';
-      var idx = line.indexOf(delim);
+      /* Tabs come from a spreadsheet paste, where the column boundaries are
+         unambiguous, so a third column there is taken as the artist. Comma
+         lines keep splitting on the first comma only — a statement full of
+         commas is normal prose, and reading a second one as a field boundary
+         would silently eat half of it. */
+      if (line.indexOf('\t') !== -1) {
+        var cells = line.split('\t');
+        return cells.length >= 3
+          ? { id: uid(), title: cells[0].trim(), artist: cells[1].trim(), description: cells.slice(2).join('\t').trim(), image: '' }
+          : { id: uid(), title: cells[0].trim(), artist: '', description: (cells[1] || '').trim(), image: '' };
+      }
+      var idx = line.indexOf(',');
       var title = idx === -1 ? line.trim() : line.slice(0, idx).trim();
       var description = idx === -1 ? '' : line.slice(idx + 1).trim();
-      return { id: uid(), title: title, description: description, image: '' };
+      return { id: uid(), title: title, artist: '', description: description, image: '' };
     });
     if (state.entries.length === 1 && !state.entries[0].title && !state.entries[0].description && !state.entries[0].image) state.entries = [];
     state.entries = state.entries.concat(added);
@@ -549,9 +591,9 @@
   function validEntries() {
     return state.entries
       .map(function (e, i) {
-        return { idx: i, id: e.id, title: (e.title || '').trim() || ('Entry ' + (i + 1)), description: (e.description || '').trim(), image: e.image || '' };
+        return { idx: i, id: e.id, title: (e.title || '').trim() || ('Entry ' + (i + 1)), artist: (e.artist || '').trim(), description: (e.description || '').trim(), image: e.image || '' };
       })
-      .filter(function (e) { return e.title || e.description || e.image; });
+      .filter(function (e) { return e.title || e.artist || e.description || e.image; });
   }
 
   var renderTimer = null;
@@ -564,6 +606,7 @@
       els.previewGrid.innerHTML = '<p class="empty-hint">Add at least one entry to see a label preview.</p>';
       els.previewNote.textContent = 'Live preview.';
       els.printBtn.disabled = true;
+      els.printSheetBtn.disabled = true;
       return;
     }
     var ecLevel = els.ecLevel.value;
@@ -580,6 +623,7 @@
         : '<div class="no-qr-note">Add a statement to include a QR code</div>';
       card.innerHTML = thumbHtml +
         '<div class="lbl-title">' + escapeHtml(e.title) + '</div>' +
+        (e.artist ? '<div class="lbl-artist">' + escapeHtml(e.artist) + '</div>' : '') +
         qrHtml +
         (e.description ? '<div class="lbl-desc">' + escapeHtml(e.description.slice(0, 90)) + (e.description.length > 90 ? '…' : '') + '</div>' : '');
       els.previewGrid.appendChild(card);
@@ -597,6 +641,7 @@
     }
     els.previewNote.textContent = valid.length + ' label' + (valid.length === 1 ? '' : 's') + ' ready.';
     els.printBtn.disabled = false;
+    els.printSheetBtn.disabled = false;
   }
 
   els.printBtn.addEventListener('click', function () {
@@ -612,6 +657,7 @@
       var thumbHtml = e.image ? '<img class="thumb" src="' + e.image + '" alt="">' : '';
       card.innerHTML = thumbHtml +
         '<div class="p-title">' + escapeHtml(e.title) + '</div>' +
+        (e.artist ? '<div class="p-artist">' + escapeHtml(e.artist) + '</div>' : '') +
         (e.description ? '<canvas></canvas><div class="p-desc">' + escapeHtml(e.description) + '</div>' : '');
       els.printLabelGrid.appendChild(card);
       if (e.description) {
@@ -621,9 +667,30 @@
         } catch (err) { /* label just prints without a code */ }
       }
     });
-    els.printArea.classList.add('active');
+    els.printArea.className = 'print-only mode-labels active';
     window.print();
-    els.printArea.classList.remove('active');
+    els.printArea.className = 'print-only';
+  });
+
+  /* The reference sheet is the teacher's copy of the same portfolio: every
+     piece in order, with the whole statement rather than the 90-character
+     preview the labels carry, and no photo or code — it is meant to be one
+     short page next to a gallery wall, not another set of tags. */
+  els.printSheetBtn.addEventListener('click', function () {
+    var valid = validEntries();
+    if (!valid.length) return;
+    els.printHeaderTitle.textContent = (state.title.trim() || state.name || 'Student Art Portfolio') + ' — reference sheet';
+    els.printRefSheet.innerHTML =
+      '<thead><tr><th class="c-num">#</th><th class="c-title">Piece</th><th class="c-artist">Artist</th><th>Artist statement</th></tr></thead><tbody>' +
+      valid.map(function (e, i) {
+        return '<tr><td class="c-num">' + (i + 1) + '</td>' +
+          '<td class="c-title">' + escapeHtml(e.title) + '</td>' +
+          '<td class="c-artist">' + escapeHtml(e.artist || '—') + '</td>' +
+          '<td>' + escapeHtml(e.description || '—') + '</td></tr>';
+      }).join('') + '</tbody>';
+    els.printArea.className = 'print-only mode-sheet active';
+    window.print();
+    els.printArea.className = 'print-only';
   });
 
   /* ---------- boot ---------- */
