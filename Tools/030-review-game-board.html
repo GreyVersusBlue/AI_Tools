@@ -48,6 +48,12 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.2rem 1.3rem; margin-bottom: 1.2rem; }
   label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: .3rem; }
   .hint { color: var(--muted); font-size: .82rem; margin: -.15rem 0 .7rem; }
+  /* The storage readout. Three states rather than a bar, because the number
+     itself is not interesting until it is close to the edge — and the edge is
+     where a teacher needs a sentence telling them what to do, not a colour. */
+  .storage-line { color: var(--muted); font-size: .8rem; margin: .7rem 0 0; }
+  .storage-line.warn { color: #8a5a12; font-weight: 600; }
+  .storage-line.danger { color: var(--err); font-weight: 700; }
   input[type="text"], input[type="number"], textarea {
     width: 100%; font-family: inherit; font-size: .95rem; color: var(--ink);
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
@@ -268,6 +274,7 @@
         <span class="spacer" style="flex:1 1 auto;"></span>
         <button type="button" id="buildFromManualBtn">Save board</button>
       </div>
+      <p class="storage-line" id="storageLine" aria-live="polite"></p>
     </div>
 
     <div class="tab-panel" id="tab-import">
@@ -351,7 +358,7 @@
   }
 
   var els = {};
-  ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn',
+  ['toolbar','boardSwitch','newBoardBtn','editBoardBtn','resetGameBtn','deleteBoardBtn','storageLine',
    'printAnswerKeyBtn', 'printQuizBtn', 'exportBoardBtn', 'importBoardBtn', 'importBoardFile', 'printArea',
    'setupCard','boardName','categoriesEditor','addCategoryBtn','buildFromManualBtn',
    'importFile','downloadTemplateBtn','importStatus',
@@ -435,6 +442,7 @@
     try {
       ReviewBoardStore.saveBoard(state.name, state);
       quotaWarned = false;
+      renderStorageLine();
     } catch (e) {
       if (quotaWarned) return;
       quotaWarned = true;
@@ -443,6 +451,49 @@
         'or delete a board you are done with, then try again. Export the board to JSON first ' +
         'if you want to keep it.');
     }
+  }
+
+  /* ---------- how full the drawer is ------------------------------------
+     Clue images are the first thing in this tool that can realistically fill
+     localStorage, and the failure they cause is the worst kind: it arrives
+     mid-lesson, on a save the teacher did not initiate, and the only signal
+     before this was an alert *after* the write had already failed.
+
+     A line under the editor turns that into something visible coming. It
+     reports the boards' own share and the whole origin's, because the cap is
+     shared with every other tool on the site — "your boards are 3 MB" is the
+     actionable half, but a teacher who is out of room because of some other
+     tool deserves to know that rather than deleting boards that were not the
+     problem. */
+  function fmtMB(bytes) {
+    var mb = bytes / (1024 * 1024);
+    if (mb >= 10) return Math.round(mb) + ' MB';
+    if (mb >= 0.1) return (Math.round(mb * 10) / 10) + ' MB';
+    return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+  }
+
+  function renderStorageLine() {
+    if (!els.storageLine) return;
+    var r = ReviewBoardStore.storageReport();
+    if (!r || !r.cap) { els.storageLine.textContent = ''; els.storageLine.className = 'storage-line'; return; }
+    var pct = Math.round(r.pct * 100);
+    var other = Math.max(0, r.total - r.boards);
+    var parts = [r.boards > 4096
+      ? 'Saved boards are using about ' + fmtMB(r.boards)
+      : 'No boards saved yet'];
+    if (other > 64 * 1024) parts.push('other tools on this site another ' + fmtMB(other));
+    parts.push(pct + '% of this browser\u2019s space for the site is used');
+    var msg = parts.join(' \u00b7 ') + '.';
+    var level = '';
+    if (r.pct >= 0.9) {
+      level = ' danger';
+      msg += ' Nearly full \u2014 the next save with an image in it is likely to fail. Export a board to JSON and delete it, or remove some clue images.';
+    } else if (r.pct >= 0.7) {
+      level = ' warn';
+      msg += ' Worth watching \u2014 clue images are the usual cause, and a board that will not save loses a game mid-lesson.';
+    }
+    els.storageLine.className = 'storage-line' + level;
+    els.storageLine.textContent = msg;
   }
 
   function refreshSwitcher() {
@@ -1418,6 +1469,9 @@
     if (!state) return;
     if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
     ReviewBoardStore.deleteBoard(state.name);
+    // The probed ceiling was measured against a fuller drawer; after a delete
+    // there is genuinely more room than the cached figure claims.
+    ReviewBoardStore.forgetCapacity();
     var remaining = ReviewBoardStore.listBoards();
     if (remaining.length) loadBoardByName(remaining[0]);
     else showSetup();
@@ -1430,6 +1484,7 @@
   } else {
     showSetup();
   }
+  renderStorageLine();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

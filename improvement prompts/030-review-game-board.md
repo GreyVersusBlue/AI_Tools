@@ -9,6 +9,42 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 1 (as it stood): a storage
+usage readout, now that clue images are the first thing here that can
+realistically fill localStorage.
+
+- **The measurement is the hard half.** No browser API reports a localStorage
+  quota, so the ceiling has to be *probed* — write a growing string until it
+  throws and report what fit. That is done once and cached, because it is not
+  cheap, and it writes to its own key inside a `try/finally` so a throw
+  mid-probe cannot leave a megabyte of padding behind in a teacher's browser,
+  eating the space it was measuring. The suite checks the probe key is gone.
+  Chromium reports ~10 MB per origin, not the 5 MB the older comments in this
+  file assume.
+- **Two numbers, because the cap is shared.** The line reports the boards' own
+  share and the whole origin's. "Your boards are 3 MB" is the actionable half,
+  but a teacher who is out of room because of some *other* tool on the site
+  would otherwise delete boards that were not the problem.
+- **It escalates in tone and in advice, not just in colour.** Past ~70% it
+  goes amber and says clue images are the usual cause; past 90% it goes red
+  and says the next save with an image in it is likely to fail, and to export
+  a board to JSON before deleting it. The failure this replaces arrived
+  mid-lesson, on a save the teacher never pressed, as an alert *after* the
+  write had already failed.
+- Deleting a board calls `forgetCapacity()` — the ceiling was probed against
+  a fuller drawer, so the cached figure would understate the room now
+  available.
+- Two new store exports, `storageReport()` and `forgetCapacity()`. The report
+  is `{ boards, total, free, cap, pct }` in bytes, counted in UTF-16 code
+  units, which is what browsers actually charge for.
+- `smoke-clue-image.mjs` 22 → 36 checks, including both warning thresholds
+  driven by genuinely filling the origin.
+
+**Where the next round should pick up:** the reusable tagged question bank on
+the ranked backlog is the big one for this tool, and it changes the storage
+picture again — a bank shared across boards would stop the same image being
+stored once per board, which is the actual fix rather than a warning.
+
 **2026-08-11 — images inside a clue (backlog rank 1).** The oldest open Quick
 Win on this list, and the one that changes what the tool can ask: for a social
 studies or science review the picture often *is* the question — which region
