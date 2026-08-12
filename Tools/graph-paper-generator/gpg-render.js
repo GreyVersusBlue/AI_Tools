@@ -465,7 +465,100 @@
     return { svg: svgWrap(page.w, page.h, svgInner), lineSets: sets, lineHeight: lineHeight };
   }
 
+  /* ---------- calibration ruler --------------------------------------------
+     Everything else this tool makes is true-to-scale *if the printer prints
+     at 100%*, and that "if" is doing a lot of work: most print dialogs
+     default to "Fit to page", which shrinks the page by a few percent. Ruled
+     paper that is 3% small looks completely normal and is wrong all year.
+
+     This is the page that settles it. A real inch ruler and a real
+     centimetre ruler, drawn in the same inch-based coordinate system as
+     every other output, plus two reference blocks that need no scale to
+     read. Measure the printout against a ruler from the drawer: if they
+     agree, every other page from this tool is right too.
+  ---------------------------------------------------------------------- */
+  var CM_PER_INCH = 2.54;
+
+  function calibrationScale(x0, y0, lengthIn, unitIn, opts) {
+    // Ticks hang DOWN from a baseline, the way a ruler's edge works, so the
+    // paper ruler can be laid against a real one and read the same way.
+    var parts = [lineEl(x0, y0, x0 + lengthIn, y0, BOLD)];
+    var subdivisions = opts.subdivisions;
+    var total = Math.round((lengthIn / unitIn) * subdivisions);
+    for (var i = 0; i <= total; i++) {
+      var x = x0 + (i / subdivisions) * unitIn;
+      var isUnit = i % subdivisions === 0;
+      var isHalf = !isUnit && (i * 2) % subdivisions === 0;
+      var len = isUnit ? 0.28 : (isHalf ? 0.18 : 0.1);
+      parts.push(lineEl(x, y0, x, y0 + len, isUnit ? BOLD : THIN));
+      if (isUnit) {
+        parts.push(textEl(x, y0 + 0.46, formatNum(i / subdivisions), 'middle', 0.14));
+      }
+    }
+    parts.push(textEl(x0 + lengthIn + 0.12, y0 + 0.1, opts.unitLabel, 'start', 0.13));
+    return parts.join('');
+  }
+
+  function renderCalibrationRuler(opts) {
+    opts = opts || {};
+    var page = pageSize('portrait'); // a ruler wants the long edge of the sheet
+    var usableW = page.w - MARGIN * 2;
+    var x0 = MARGIN;
+    var parts = [];
+
+    parts.push(textEl(page.w / 2, MARGIN + 0.3, 'Printer Scale Check', 'middle', 0.28));
+    [
+      'Print this page at 100% (sometimes called "Actual size"). Do not use "Fit to page".',
+      'Then lay a real ruler along the scales below and check that they agree.',
+      'If they do, every other page from this tool prints true to size as well.'
+    ].forEach(function (line, i) {
+      parts.push(textEl(page.w / 2, MARGIN + 0.62 + i * 0.22, escapeXml(line), 'middle', 0.135));
+    });
+
+    // Inches: 7 whole inches at eighth-inch ticks fits inside the margins.
+    var inchLen = Math.floor(usableW - 0.45);
+    parts.push(textEl(x0, MARGIN + 1.42, 'INCHES', 'start', 0.13));
+    parts.push(calibrationScale(x0, MARGIN + 1.6, inchLen, 1, { subdivisions: 8, unitLabel: 'in' }));
+
+    // Centimetres: same physical span, so the two scales can be compared
+    // against each other as well as against a real ruler.
+    var cmLen = Math.floor((usableW - 0.45) * CM_PER_INCH) / CM_PER_INCH;
+    parts.push(textEl(x0, MARGIN + 2.62, 'CENTIMETRES', 'start', 0.13));
+    parts.push(calibrationScale(x0, MARGIN + 2.8, cmLen, 1 / CM_PER_INCH, { subdivisions: 10, unitLabel: 'cm' }));
+
+    // Two blocks you can check without reading a scale at all.
+    var boxY = MARGIN + 3.75;
+    parts.push('<rect x="' + x0.toFixed(4) + '" y="' + boxY.toFixed(4) + '" width="1" height="1" ' +
+      'fill="none" stroke="currentColor" stroke-width="' + BOLD + '"/>');
+    parts.push(textEl(x0 + 0.5, boxY + 1.22, 'exactly 1 inch square', 'middle', 0.12));
+    var tenCm = 10 / CM_PER_INCH;
+    parts.push(lineEl(x0 + 2.1, boxY + 0.5, x0 + 2.1 + tenCm, boxY + 0.5, BOLD));
+    parts.push(lineEl(x0 + 2.1, boxY + 0.35, x0 + 2.1, boxY + 0.65, BOLD));
+    parts.push(lineEl(x0 + 2.1 + tenCm, boxY + 0.35, x0 + 2.1 + tenCm, boxY + 0.65, BOLD));
+    parts.push(textEl(x0 + 2.1 + tenCm / 2, boxY + 0.92, 'exactly 10 cm', 'middle', 0.12));
+
+    // Somewhere to write the answer down, because the point of doing this
+    // once is not having to do it again.
+    var noteY = boxY + 1.8;
+    parts.push(textEl(x0, noteY, 'Printer', 'start', 0.14));
+    parts.push(lineEl(x0 + 0.75, noteY + 0.04, x0 + 4.2, noteY + 0.04, THIN));
+    parts.push(textEl(x0 + 4.45, noteY, 'Setting that worked', 'start', 0.14));
+    parts.push(lineEl(x0 + 6.1, noteY + 0.04, x0 + usableW, noteY + 0.04, THIN));
+    parts.push(textEl(x0, noteY + 0.4, 'Checked on', 'start', 0.14));
+    parts.push(lineEl(x0 + 1.05, noteY + 0.44, x0 + 4.2, noteY + 0.44, THIN));
+    parts.push(textEl(x0, noteY + 0.95,
+      escapeXml('Tape this to the printer once it checks out.'), 'start', 0.13));
+
+    var gridColor = opts.faded ? FADE_COLOR : INK_COLOR;
+    return {
+      svg: svgWrap(page.w, page.h, gridGroup(gridColor, parts.join(''))),
+      inches: inchLen,
+      centimetres: Math.round(cmLen * CM_PER_INCH)
+    };
+  }
+
   global.GraphPaperRender = {
+    renderCalibrationRuler: renderCalibrationRuler,
     renderGraphPaper: renderGraphPaper,
     renderNumberLine: renderNumberLine,
     renderCoordinatePlane: renderCoordinatePlane,

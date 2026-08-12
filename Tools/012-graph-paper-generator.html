@@ -123,6 +123,7 @@
           <div class="mode-tab" data-mode="isometric">Isometric</div>
           <div class="mode-tab" data-mode="cornell">Cornell notes</div>
           <div class="mode-tab" data-mode="handwriting">Handwriting lines</div>
+          <div class="mode-tab" data-mode="calibration">Printer check</div>
         </div>
 
         <label for="orientation">Page orientation</label>
@@ -289,6 +290,17 @@
           </select>
           <input type="number" id="hwSizeCustom" min="0.1" max="3" step="0.05" value="0.5" style="display:none;" placeholder="Line height (inches)">
           <p class="hint">Each set is a topline, a dashed midline, and a solid baseline — the standard handwriting-practice triplet, repeated down the page.</p>
+        </div>
+
+        <!-- ===== Printer scale check panel ===== -->
+        <div class="mode-panel" id="panel-calibration">
+          <p class="hint" style="margin-top:0;">Everything this tool prints is true to size &mdash; <em>if</em> the printer prints at 100%.
+            Most print dialogs default to &ldquo;Fit to page&rdquo;, which quietly shrinks the sheet by a few percent. Quarter-inch
+            graph paper that is 3% small looks completely normal and is wrong all year.</p>
+          <p class="hint">Print this page once per printer, lay a real ruler along the scales, and you will know. There is a line
+            at the bottom to write down which setting worked, so nobody has to work it out again.</p>
+          <p class="hint">Nothing to configure &mdash; the page ignores orientation, headers and the other panels on purpose, since
+            a test page that varies isn&rsquo;t a test.</p>
         </div>
 
         <div class="btnRow">
@@ -586,6 +598,11 @@
         faded: settings.faded,
         header: headerOpt()
       });
+    } else if (settings.mode === 'calibration') {
+      // Deliberately takes nothing from `settings` except the ink-saving
+      // choice: a scale check that changed with orientation, headers or a
+      // grid size would not be checking the same thing twice.
+      result = window.GraphPaperRender.renderCalibrationRuler({ faded: settings.faded });
     } else if (settings.mode === 'cornell') {
       result = window.GraphPaperRender.renderCornellNotes({
         orientation: settings.orientation,

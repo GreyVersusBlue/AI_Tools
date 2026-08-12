@@ -1,7 +1,7 @@
 # Improvement Prompts — 012 — Graph Paper & Number Line Generator
 
 **Tool file:** `Tools/012-graph-paper-generator.html`
-**Support folder:** `Tools/graph-paper-generator/` — `gpg-render.js`, `gpg-store.js`
+**Support folder:** `Tools/graph-paper-generator/` — `gpg-render.js`, `gpg-store.js`, `test/smoke-calibration.mjs`
 
 **Current description (from README):** Printable graph paper (fill-the-page or exact grid size), number lines (single or several per page), and coordinate planes (four-quadrant or first-quadrant), all sized true-to-scale for printing.
 
@@ -9,8 +9,43 @@
 
 ## Status
 
-Reviewed — structural read of the source. Ideas below are deliberately
-ambitious and are **not** scoped to a single session.
+**2026-08-11 — Printer calibration ruler (backlog rank 5).** Shipped the
+Quick Win that P6 has been pointing at in this file since the first review.
+"True to scale" is this tool's whole value, and it depends entirely on a print
+setting the tool cannot see: most dialogs default to "Fit to page", which
+shrinks the sheet by a few percent. Quarter-inch graph paper that is 3% small
+looks completely normal and is wrong all year.
+
+A sixth mode, **Printer check**, renders a fixed page: a 7-inch scale at
+eighth-inch ticks, an 18cm scale at millimetre ticks, a 1-inch square and a
+10cm bar for anyone who would rather not read a scale at all, and lines to
+write down which printer and which setting came out true. It says to tape it
+to the printer, because the point of doing this once is not doing it again.
+
+The important property is that **the page is fixed**. `renderCalibrationRuler`
+takes nothing from `settings` except the ink-saving toggle — not orientation,
+not the header, not a grid size. A test page that varied with the panel next
+to it would not be testing the same thing twice, and a landscape "ruler" is a
+different measurement.
+
+It reuses the module's existing inch-based coordinate system rather than
+inventing one: the SVG root is `8.5in × 11in` with a `0 0 8.5 11` viewBox, so
+one user unit is one inch and the ruler is correct by construction. The test
+asserts that directly — the "6" label sits at exactly 6.0000 units from zero,
+the "10 cm" label at 10/2.54, and the two scales agree with each other.
+
+New test: `Tools/graph-paper-generator/test/smoke-calibration.mjs` (38
+assertions, wired into `npm test` and `npm run test:graph-paper`) — the
+geometry of both scales, the reference blocks, the instruction text, the
+byte-identical render under changed orientation and header settings, the other
+five modes still rendering, and the mode persisting across a reload.
+
+**Where the next round should pick up:** more grid types (hex, polar,
+semi-log, engineering 5-per-inch) is the biggest remaining Quick Win, and the
+graphing-worksheet mode on the backlog is the biggest feature.
+
+Earlier: reviewed — structural read of the source. Ideas below are
+deliberately ambitious and are **not** scoped to a single session.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
 
@@ -160,6 +195,9 @@ the labelled/header/faded square-grid case and the 4-plane case.
 - Coordinate planes: four-quadrant or first-quadrant
 - Portrait / landscape; true-to-scale printing (`gridSizeInches`,
   `isoSizeInches`)
+- **Printer check** (`renderCalibrationRuler`) — a fixed test page with a real
+  7in and 18cm scale, a 1in square, a 10cm bar, and a line to record which
+  print setting came out true; ignores every other setting on purpose
 - Named presets (`gvb-graph-paper:list` / `:data:*`), PNG download, print
 
 ## Quick Wins
@@ -170,9 +208,11 @@ the labelled/header/faded square-grid case and the 4-plane case.
   graph paper.)*
 - **Done —** **A title/name/date header block** on the sheet. *(Shipped Round 3, shared
   across all four modes via `gpg-render.js`'s `headerBlockHeight`/`headerSvg`.)*
-- **Print-margin verification.** "True to scale" is the tool's core promise
+- **Done — 2026-08-11.** **Print-margin verification.** "True to scale" is the tool's core promise
   and it depends on the browser not scaling to fit; a printed calibration
   ruler on a test page would let a teacher confirm it once per printer.
+  *(Shipped as a sixth mode, "Printer check" — see the Status entry at the
+  top of this file.)*
 - **More grid types**: hexagonal, polar, log/semi-log, engineering (5 squares
   per inch), Cornell-notes ruling, handwriting lines with a dashed midline,
   storyboard boxes, music staff.
