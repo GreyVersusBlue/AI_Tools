@@ -84,6 +84,9 @@
   .half-sheet .pf-cat h4 { margin: 0 0 .2rem; font-size: .88rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-2); }
   .half-sheet .pf-item { font-size: .86rem; margin-bottom: .15rem; }
   .half-sheet .box { display: inline-block; width: .8rem; height: .8rem; border: 1px solid var(--ink); margin-right: .4rem; vertical-align: middle; }
+  .half-sheet .tri { white-space: nowrap; margin-right: .45rem; font-size: .78em; font-weight: 600; }
+  .half-sheet .tri .box { width: .72rem; height: .72rem; margin: 0 .3rem 0 .1rem; }
+  .half-sheet .tri-legend { font-size: .74rem; color: var(--muted); margin: -.3rem 0 .5rem; }
   .half-sheet .comments-line { border-bottom: 1px solid var(--line-strong); display: block; height: 1.1rem; margin-top: .3rem; }
 
   @media print {
@@ -132,6 +135,12 @@
         <input type="text" id="assignmentName" placeholder="e.g. Personal Narrative Draft 1">
         <label for="copyCount">How many copies to print</label>
         <input type="number" id="copyCount" value="6" min="1" max="60">
+        <label for="ratingStyle">Rating style per item</label>
+        <select id="ratingStyle">
+          <option value="check">Single checkbox (present / done)</option>
+          <option value="three">Yes / Somewhat / No boxes</option>
+        </select>
+        <p class="hint">Yes / Somewhat / No records <em>degree</em>, not just presence &mdash; a reviewer can say &ldquo;kind of&rdquo; instead of leaving a box ambiguously empty.</p>
       </div>
     </div>
 
@@ -190,9 +199,9 @@
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'assignmentName', 'copyCount', 'categoriesWrap',
-   'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'addCategoryBtn', 'printBtn', 'printArea', 'sizeWarning', 'ratingStyle'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { assignmentName: '', copyCount: 6, categories: [] };
+  var state = { assignmentName: '', copyCount: 6, categories: [], ratingStyle: 'check' };
 
   function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -207,6 +216,7 @@
       var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
       if (saved && Array.isArray(saved.categories)) state = saved;
     } catch (e) { /* ignore */ }
+    if (state.ratingStyle !== 'three') state.ratingStyle = 'check'; // added 2026-08; single checkbox for pre-existing saves
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -341,18 +351,24 @@
 
   els.assignmentName.addEventListener('input', function () { state.assignmentName = els.assignmentName.value; save(); });
   els.copyCount.addEventListener('input', function () { state.copyCount = parseInt(els.copyCount.value, 10) || 1; save(); });
+  els.ratingStyle.addEventListener('change', function () { state.ratingStyle = els.ratingStyle.value === 'three' ? 'three' : 'check'; save(); });
 
   function halfSheetHtml() {
     var title = state.assignmentName.trim() ? escapeHtml(state.assignmentName.trim()) : 'Peer Feedback Checklist';
+    var three = state.ratingStyle === 'three';
+    var itemBoxes = three
+      ? '<span class="tri">Y<span class="box"></span>S<span class="box"></span>N<span class="box"></span></span>'
+      : '<span class="box"></span>';
     var cats = state.categories.map(function (cat) {
       var items = cat.items.map(function (item) {
-        return '<div class="pf-item"><span class="box"></span>' + escapeHtml(item.text) + '</div>';
+        return '<div class="pf-item">' + itemBoxes + escapeHtml(item.text) + '</div>';
       }).join('');
       return '<div class="pf-cat"><h4>' + escapeHtml(cat.name) + '</h4>' + items + '</div>';
     }).join('');
     var sizeClass = sizeClassFor(contentWeight());
     return '<div class="half-sheet' + sizeClass + '"><h3>' + title + '</h3>' +
       '<div class="names">Author: _____________________ &nbsp; Reviewer: _____________________</div>' +
+      (three ? '<div class="tri-legend">Mark one box per line: <b>Y</b> = yes &middot; <b>S</b> = somewhat &middot; <b>N</b> = not yet</div>' : '') +
       cats + '<div class="pf-cat"><h4>Comments</h4><span class="comments-line"></span><span class="comments-line"></span></div>' +
       '</div>';
   }
@@ -370,6 +386,7 @@
   load();
   els.assignmentName.value = state.assignmentName || '';
   els.copyCount.value = state.copyCount || 6;
+  els.ratingStyle.value = state.ratingStyle;
   if (!state.categories.length) fromTemplate('narrative');
   renderCategories();
 })();

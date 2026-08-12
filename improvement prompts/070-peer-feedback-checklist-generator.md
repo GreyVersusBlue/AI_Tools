@@ -9,6 +9,23 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: three-point rating per item shipped (backlog
+rank 9).** A new "Rating style per item" select in the Assignment card
+switches the printed checklist between the original single checkbox and a
+**Y / Somewhat / N** triple (`state.ratingStyle`, `'check'` | `'three'`,
+defaulted to `'check'` in `load()` so pre-existing saves print exactly as
+before). In three-point mode each item line carries three small labeled
+boxes (Y ☐ S ☐ N ☐) and the sheet grows a one-line legend under the
+author/reviewer line ("Mark one box per line: Y = yes · S = somewhat ·
+N = not yet"). The choice is per-checklist and persists. Verified with a
+headless Chromium test: default mode prints one box per item and no
+legend, three-point mode prints exactly three boxes per item with the
+letters and legend, the choice survives reload, and a legacy save without
+the field defaults to single-checkbox — zero console errors. Next round:
+multiple named saved checklists (Major Features below) remains the
+biggest lift, and the "duplicate template as starting point" Quick Win
+pairs naturally with it.
+
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: four starter templates (Narrative, Argumentative/Persuasive,
 Informative/Expository, General), fully editable categories and checklist
@@ -64,13 +81,15 @@ checklists exist (see Major Features), so consider building them together.
   half-sheet, with print text that shrinks in two steps to help it fit
 - Print N copies as half-sheets, each with blank author/reviewer name lines
   and a comments area
+- **Optional Y / Somewhat / N rating per item** (`state.ratingStyle`),
+  with a printed legend; single checkbox stays the default
 
 ## Quick Wins
 
 - **Done — Reorder categories and items** (up/down buttons).
-- **A short rating option per item** (yes/no/somewhat, or a 1&ndash;3 scale)
-  instead of a bare checkbox, so feedback captures degree, not just
-  presence. *(Still open.)*
+- **Done — 2026-08-12.** **A short rating option per item** (yes/somewhat/no)
+  instead of a bare checkbox. *(Shipped as an opt-in rating style — see
+  Status.)*
 - **Done — Print layout QA** — on-screen size warning plus two-tier print
   font/spacing scaling. *(A true measured-height layout is still the more
   robust option if this heuristic proves insufficient in practice.)*
