@@ -74,6 +74,8 @@
   .file-warn { font-size: 11.5px; color: var(--color-danger); display: none; }
   .file-heading-edit { display: flex; align-items: center; gap: 4px; font-size: 12px; opacity: 0.8; margin-left: auto; }
   .file-heading-edit input { font-size: 12px; padding: 2px 6px; width: 12rem; }
+  .file-opt { display: flex; align-items: center; gap: 4px; font-size: 12px; opacity: 0.8; }
+  .file-opt select { font-size: 12px; padding: 2px 4px; }
 
   .options label {
     display: flex; align-items: flex-start; gap: var(--space-2);
@@ -181,6 +183,8 @@
       <span class="hint">Carries every file's own style definitions into the merged document, renaming any that collide by name. Keeps each section looking like its source file, at the cost of a larger file and possible duplicate style names in Word's style list.</span>
     </span>
   </label>
+  <p class="count-line" id="overrideLine" style="margin-top:0;"></p>
+
   <div class="outname">
     <label for="outName" style="margin:0; white-space:nowrap; font-size:14px;">Output file name:</label>
     <input class="input" type="text" id="outName" value="Merged Document">
@@ -267,8 +271,8 @@
     optToc.disabled = !optHeading.checked;
     optTocLabel.style.opacity = optHeading.checked ? '' : '0.5';
   }
-  optPageBreak.addEventListener('change', saveOptionPrefs);
-  optHeading.addEventListener('change', () => { syncTocAvailability(); saveOptionPrefs(); });
+  optPageBreak.addEventListener('change', () => { saveOptionPrefs(); render(); });
+  optHeading.addEventListener('change', () => { syncTocAvailability(); saveOptionPrefs(); render(); });
   optStyleNormalize.addEventListener('change', saveOptionPrefs);
   optStylePreserve.addEventListener('change', saveOptionPrefs);
   optToc.addEventListener('change', saveOptionPrefs);
@@ -307,7 +311,14 @@
   });
   function persistFileList() {
     try {
-      localStorage.setItem(LAST_LIST_KEY, JSON.stringify(filesArr.map(e => ({ name: e.name, heading: e.heading || '' }))));
+      localStorage.setItem(LAST_LIST_KEY, JSON.stringify(filesArr.map(e => ({
+        name: e.name, heading: e.heading || '',
+        /* Only written when the file actually has an override, so a list
+           saved before per-file options existed still reads back as "every
+           file follows the global switches". */
+        pageBreak: typeof e.pageBreak === 'boolean' ? e.pageBreak : undefined,
+        headingOn: typeof e.headingOn === 'boolean' ? e.headingOn : undefined
+      }))));
     } catch (e) { /* storage full/blocked */ }
   }
   /** Re-sorts filesArr to match rememberedList's order wherever a re-added
@@ -317,10 +328,15 @@
   function applyRememberedOrder() {
     if (!rememberedList.length) return;
     const remembered = new Map();
-    rememberedList.forEach((e, i) => { if (!remembered.has(e.name)) remembered.set(e.name, { i, heading: e.heading }); });
+    rememberedList.forEach((e, i) => {
+      if (!remembered.has(e.name)) remembered.set(e.name, { i, heading: e.heading, pageBreak: e.pageBreak, headingOn: e.headingOn });
+    });
     filesArr.forEach(entry => {
       const match = remembered.get(entry.name);
-      if (match && !entry.heading && match.heading) entry.heading = match.heading;
+      if (!match) return;
+      if (!entry.heading && match.heading) entry.heading = match.heading;
+      if (typeof entry.pageBreak !== 'boolean' && typeof match.pageBreak === 'boolean') entry.pageBreak = match.pageBreak;
+      if (typeof entry.headingOn !== 'boolean' && typeof match.headingOn === 'boolean') entry.headingOn = match.headingOn;
     });
     filesArr = filesArr
       .map((entry, i) => ({ entry, i, ord: remembered.has(entry.name) ? remembered.get(entry.name).i : Infinity }))
@@ -429,6 +445,36 @@
     updatePageEstimateLine();
   }
 
+  /* ---------- per-file overrides ----------
+     The two global switches stay the default, and a file may override either
+     one. Stored as true/false/undefined rather than a plain boolean, so
+     "leave it on the default" is a real state — flipping the global then
+     still moves every file that hasn't been given an answer of its own,
+     which is what a teacher expects after setting 30 files and changing
+     their mind about the global. */
+  function effectivePageBreak(entry) {
+    return typeof entry.pageBreak === 'boolean' ? entry.pageBreak : optPageBreak.checked;
+  }
+  function effectiveHeadingOn(entry) {
+    return typeof entry.headingOn === 'boolean' ? entry.headingOn : optHeading.checked;
+  }
+  /** How many files are not simply following the global switches. */
+  function overrideCount() {
+    return filesArr.filter(e => typeof e.pageBreak === 'boolean' || typeof e.headingOn === 'boolean').length;
+  }
+  /* A global switch that some files are ignoring is the confusing case, so
+     say so where the switches are rather than only in the file list. */
+  function updateOverrideLine() {
+    const el = document.getElementById('overrideLine');
+    if (!el) return;
+    const n = overrideCount();
+    el.textContent = n
+      ? (n === 1
+        ? '1 file below has its own answer for these two and will ignore the switches above.'
+        : `${n} files below have their own answers for these two and will ignore the switches above.`)
+      : '';
+  }
+
   function fmtSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
@@ -436,6 +482,7 @@
   }
 
   function render() {
+    updateOverrideLine();
     const hasFiles = filesArr.length > 0;
     fileToolbar.style.display = hasFiles ? 'flex' : 'none';
     optionsCard.style.display = hasFiles ? 'block' : 'none';
@@ -470,6 +517,20 @@
           <span class="file-warn" data-warn style="${entry.warnings && entry.warnings.length ? '' : 'display:none;'}">${entry.warnings && entry.warnings.length ? escapeHtml('⚠ has ' + entry.warnings.join(', ') + " — won't carry over to the merged file") : ''}</span>
           <label class="file-heading-edit">Heading text:
             <input type="text" data-heading-input placeholder="${escapeHtml(entry.name.replace(/\.docx$/i, ''))}" value="${escapeHtml(entry.heading || '')}">
+          </label>
+          <label class="file-opt">New page:
+            <select data-opt="pageBreak">
+              <option value="">Default (${optPageBreak.checked ? 'on' : 'off'})</option>
+              <option value="on"${entry.pageBreak === true ? ' selected' : ''}>Yes</option>
+              <option value="off"${entry.pageBreak === false ? ' selected' : ''}>No</option>
+            </select>
+          </label>
+          <label class="file-opt">Heading:
+            <select data-opt="heading">
+              <option value="">Default (${optHeading.checked ? 'on' : 'off'})</option>
+              <option value="on"${entry.headingOn === true ? ' selected' : ''}>Yes</option>
+              <option value="off"${entry.headingOn === false ? ' selected' : ''}>No</option>
+            </select>
           </label>
         </div>`;
       fileListEl.appendChild(li);
@@ -508,6 +569,19 @@
         if (filesArr[i]) filesArr[i].heading = input.value;
         clearTimeout(persistFileList._t);
         persistFileList._t = setTimeout(persistFileList, 400);
+      });
+    });
+
+    fileListEl.querySelectorAll('[data-opt]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const i = +sel.closest('li').dataset.index;
+        const entry = filesArr[i];
+        if (!entry) return;
+        const key = sel.dataset.opt === 'heading' ? 'headingOn' : 'pageBreak';
+        if (sel.value === '') delete entry[key];
+        else entry[key] = sel.value === 'on';
+        persistFileList();
+        updateOverrideLine();
       });
     });
 
@@ -861,8 +935,6 @@
     statusEl.className = '';
     const errors = [];
 
-    const addHeadings = document.getElementById('optHeading').checked;
-    const addPageBreak = document.getElementById('optPageBreak').checked;
     const preserveStyles = optStylePreserve.checked;
 
     // find a working base file
@@ -919,11 +991,18 @@
     let finalSectPr = stripTrailingSectPr(baseBody);
     const allExtensions = new Set();
 
-    if (addHeadings) {
+    /* The base file's own heading follows its own override — it is the first
+       section of the merged document, not a special case. Its page break is
+       the one thing that stays global: there is nothing in front of it to
+       break from. */
+    if (effectiveHeadingOn(filesArr[baseIndex])) {
       baseBody.insertBefore(createHeadingParagraph(baseDoc, baseHeading), baseBody.firstChild);
     }
 
-    const addToc = addHeadings && document.getElementById('optToc').checked;
+    /* A contents page lists the headings that exist, so it needs at least one
+       — the global switch alone is no longer enough to know that. */
+    const anyHeadings = filesArr.some(e => effectiveHeadingOn(e));
+    const addToc = anyHeadings && document.getElementById('optToc').checked;
     if (addToc) {
       [createTocHeadingParagraph(baseDoc), createTocFieldParagraph(baseDoc), createPageBreakParagraph(baseDoc)]
         .reverse()
@@ -992,8 +1071,8 @@
         const isLast = idx === remaining.length - 1;
         if (isLast && sectPr) finalSectPr = sectPr;
 
-        if (addPageBreak) baseBody.appendChild(createPageBreakParagraph(baseDoc));
-        if (addHeadings) baseBody.appendChild(createHeadingParagraph(baseDoc, effectiveHeading(entry)));
+        if (effectivePageBreak(entry)) baseBody.appendChild(createPageBreakParagraph(baseDoc));
+        if (effectiveHeadingOn(entry)) baseBody.appendChild(createHeadingParagraph(baseDoc, effectiveHeading(entry)));
 
         Array.from(body.childNodes).forEach(node => {
           baseBody.appendChild(baseDoc.importNode(node, true));
