@@ -1,7 +1,9 @@
 # Improvement Prompts — 043 — Field Trip Permission Slip Generator
 
 **Tool file:** `Tools/043-field-trip-permission-slip.html`
-**Support folder:** `Tools/field-trip-permission-slip/` — `lib/qrcode.js`
+**Support folder:** `Tools/field-trip-permission-slip/` — `test/`. (The QR
+encoder used to live here as `lib/qrcode.js`; Phase 1b of `REFACTOR_PLAN.md`
+moved it to the single site-wide `_shared/vendor/qrcode/qrcode.js`.)
 
 **Current description (from README):** Fill in trip details once, then print one slip, a whole class set, or blank copies — save the trip as a template for next year.
 
@@ -94,10 +96,66 @@ and chaperone-group printables are a first step (two more printable views
 sharing the same trip data) but the parent letter, emergency sheet, headcount
 checklist, name tags, and day schedule are all still unbuilt.
 
+**2026-08-12 — Round 5 (backlog rank 2: bilingual slip printing).** A slip only
+works if the person signing it can read it. The tool now prints a second
+language beside the English one — **Spanish, French, or Portuguese** — either
+as a facing page or as a two-column pair on one sheet.
+
+The split that made this tractable: a permission slip is mostly **fixed
+furniture** — the title, the table headings, the permission sentence, the four
+signature lines, "please return this slip by" — which is identical on every
+trip and every school, so it ships translated. Everything the *teacher* typed
+is theirs to translate, and only three fields are actually prose (purpose,
+what to bring, emergency instructions); the rest are proper nouns, dates, and
+numbers that read the same in both columns. So the translation surface is
+three textareas, not a form as long as the original.
+
+Decisions worth keeping:
+
+- **A blank translation falls back to the English text**, never to a gap. A
+  half-finished translation still produces a slip a family can sign, which is
+  the state a real teacher will be in at 4pm the day before. A hint under the
+  fields names which ones are still in English, so that is known before it is
+  printed rather than after.
+- **The translated slip is a form, not a courtesy copy.** It carries the
+  student's name, the dates, the QR, and all four signature lines. A
+  translated slip with no signature block is decoration.
+- **Facing page is the default**, side-by-side is the option. Two columns on
+  letter paper is a four-inch column, and a long "what to bring" list reads
+  badly in it — but it halves the paper, which some offices care about more.
+
+**A known limitation, asserted in the suite so it can only change on purpose:**
+the untranslated-fields hint tracks whether a translation *exists*, not whether
+it still *matches*. Reword the English purpose and the old translation keeps
+printing, unflagged. Fixing it means storing a hash or a copy of the English
+text each translation was written against — worth doing, not worth guessing at
+this round.
+
+Also unhandled by design: translations are stored once, not per language.
+Switching Spanish → French keeps the Spanish text in the boxes. For a teacher
+who sends slips home in two languages in the same year that is a real gap;
+`state.translations` would need to become `{ es: {...}, fr: {...} }`, which is
+a schema change and belongs in its own round.
+
+Verified with a new 44-assertion headless Chromium suite,
+`Tools/field-trip-permission-slip/test/smoke-bilingual.mjs`
+(`npm run test:permission-slip`): the translated titles and signature lines,
+the English fallback, the hint appearing and clearing, both layouts producing
+structurally different print output, batch printing pairing every student, the
+language switching off again, persistence, and a trip saved before any of this
+opening as English-only — no console errors.
+
+**Next round should pick up** per-language translation storage (above), and
+the backlog's own row about scanning returned slips with `_shared/qr-scan.js`.
+
 ## What it does today
 
 - Full trip detail form (destination, dates, times, cost, transport, contacts)
   with a **live preview** of the slip
+- **Second-language printing** (Spanish / French / Portuguese): headings,
+  permission sentence and signature lines ship translated, the three prose
+  fields are teacher-translated with an English fallback, printed as a facing
+  page or a two-column pair
 - Saved trips as reusable templates (`gvb-field-trip:list` / `:current`),
   switchable, with JSON import/export, confirm-before-delete, and a
   10-second undo

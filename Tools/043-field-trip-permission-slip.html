@@ -112,6 +112,15 @@
     box-shadow: 0 2px 10px rgba(0,0,0,.18); color: #000; font-family: Georgia, "Times New Roman", serif;
   }
   .slip-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: .5rem; margin-bottom: .9rem; }
+  .lang-block { border-top: 1px dashed var(--line-strong); margin-top: 1rem; padding-top: .9rem; }
+  .lang-block .lang-name { font-weight: 400; color: var(--muted); }
+  /* Side by side is one page holding both slips, so each one takes half the
+     width — which is why it is offered as a choice rather than the default:
+     a long "what to bring" list reads better on a facing page than in a
+     four-inch column. */
+  .slip-pair { display: flex; gap: .3in; align-items: flex-start; page-break-after: always; }
+  .slip-pair .slip { width: 50%; margin-bottom: 0; page-break-after: auto; }
+  .slip-pair:last-child { page-break-after: auto; }
   .slip-school { font-size: 1rem; margin-bottom: .2rem; }
   .slip-title { font-size: 1.4rem; font-weight: 700; letter-spacing: .02em; }
 
@@ -175,6 +184,9 @@
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
     #printArea .slip { box-shadow: none; width: 100%; page-break-after: always; }
     #printArea .slip:last-child { page-break-after: auto; }
+    #printArea .slip-pair { display: flex; gap: .25in; }
+    #printArea .slip-pair .slip { width: 50%; padding: .4in .3in; page-break-after: auto; font-size: .82rem; }
+    #printArea .slip-pair .slip .slip-title { font-size: 1.05rem; }
     #printArea .reminder-slip { border: none; page-break-after: always; }
     #printArea .reminder-slip:last-child { page-break-after: auto; }
     #printArea .missing-list-page { page-break-after: auto; }
@@ -261,6 +273,33 @@
 
         <label for="dueDate">Return this slip by</label>
         <input type="date" id="dueDate">
+
+        <div class="lang-block">
+          <label for="secondLang">Second language on the slip</label>
+          <select id="secondLang">
+            <option value="">None &mdash; English only</option>
+            <option value="es">Spanish &mdash; Español</option>
+            <option value="fr">French &mdash; Français</option>
+            <option value="pt">Portuguese &mdash; Português</option>
+          </select>
+          <div id="langOptions" style="display:none;">
+            <label for="langLayout">Layout</label>
+            <select id="langLayout">
+              <option value="facing">Facing page &mdash; the translated slip prints behind each English one</option>
+              <option value="column">Side by side &mdash; both languages on one page, two columns</option>
+            </select>
+            <p class="hint">The headings, the permission sentence and the signature lines are translated for you.
+              Everything you typed is yours to translate below &mdash; anything left blank prints the English text,
+              so a half-finished translation still produces a usable slip.</p>
+            <label for="purposeAlt">Purpose / description &mdash; <span class="lang-name"></span></label>
+            <textarea id="purposeAlt" placeholder="Your translation of the purpose above"></textarea>
+            <label for="whatToBringAlt">What to bring &mdash; <span class="lang-name"></span></label>
+            <textarea id="whatToBringAlt" placeholder="Your translation of what to bring"></textarea>
+            <label for="emergencyInstructionsAlt">Emergency contact instructions &mdash; <span class="lang-name"></span></label>
+            <textarea id="emergencyInstructionsAlt" placeholder="Your translation of the emergency instructions"></textarea>
+            <p class="hint" id="untranslatedHint"></p>
+          </div>
+        </div>
 
         <button type="button" class="secondary full" id="downloadIcsBtn">Add trip to calendar (.ics)</button>
         <p class="hint">Downloads a calendar file with the trip date(s) &mdash; and, if a return-by date is set,
@@ -395,7 +434,9 @@
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
     'printBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
     'printMissingListBtn', 'printReminderSlipsBtn',
-    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn'
+    'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn',
+    'secondLang', 'langLayout', 'langOptions', 'untranslatedHint',
+    'purposeAlt', 'whatToBringAlt', 'emergencyInstructionsAlt'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var FIELD_KEYS = [
@@ -417,7 +458,9 @@
     var s = {
       name: name, mode: 'single', studentName: '', batchNames: '', blankCount: 5, collected: {},
       chaperones: [], // [{ name, phone }]
-      chaperoneAssignments: {} // { studentName: chaperoneName }
+      chaperoneAssignments: {}, // { studentName: chaperoneName }
+      secondLang: '', langLayout: 'facing',
+      translations: { purpose: '', whatToBring: '', emergencyInstructions: '' }
     };
     FIELD_KEYS.forEach(function (k) { s[k] = ''; });
     return s;
@@ -427,6 +470,16 @@
   // the additive defaults so they load exactly as before instead of
   // throwing on a missing field.
   function normalizeState(s) {
+    /* Trips saved before the slip could carry a second language have none of
+       these. An empty `secondLang` is "English only", which is exactly what
+       those trips printed, so an old trip is untouched until a language is
+       picked. */
+    if (typeof s.secondLang !== 'string' || !(s.secondLang in LANGUAGES)) s.secondLang = '';
+    if (s.langLayout !== 'column') s.langLayout = 'facing';
+    if (!s.translations || typeof s.translations !== 'object') s.translations = {};
+    TRANSLATABLE.forEach(function (k) {
+      if (typeof s.translations[k] !== 'string') s.translations[k] = '';
+    });
     if (!s.collected || typeof s.collected !== 'object') s.collected = {};
     Object.keys(s.collected).forEach(function (n) { normalizeCollectedRecord(s.collected[n]); });
     if (!Array.isArray(s.chaperones)) s.chaperones = [];
@@ -758,7 +811,97 @@
     return qrCache.url;
   }
 
-  function slipHtml(studentName) {
+
+  /* ---------- second-language slips ----------
+     The fixed furniture of a permission slip — the headings, the permission
+     sentence, the signature lines — is the same on every trip, so it ships
+     translated. Everything the teacher typed is theirs to translate; a blank
+     translation falls back to the English text, so a half-finished one still
+     produces a slip a family can sign rather than a page of gaps. */
+  var LANGUAGES = {
+    es: {
+      name: 'Spanish — Español',
+      title: 'Autorización para Excursión Escolar',
+      trip: 'Excursión', destination: 'Destino', dates: 'Fecha(s)', times: 'Horario',
+      cost: 'Costo por estudiante', noCost: 'Sin costo',
+      purpose: 'Propósito / descripción', whatToBring: 'Qué traer',
+      chaperone: 'Acompañante / contacto de la excursión',
+      emergency: 'Instrucciones para emergencias',
+      none: 'No se especificó.',
+      permissionHeading: 'Permiso del padre / madre / tutor',
+      permission1: 'Doy permiso a', permission2: 'para asistir a la excursión descrita arriba.',
+      sigParent: 'Firma del padre / madre / tutor', sigDate: 'Fecha',
+      sigContactName: 'Nombre del contacto de emergencia', sigContactPhone: 'Teléfono del contacto de emergencia',
+      returnBy: 'Favor de devolver esta autorización antes del:',
+      depart: 'Salida', ret: 'Regreso'
+    },
+    fr: {
+      name: 'French — Français',
+      title: 'Autorisation de sortie scolaire',
+      trip: 'Sortie', destination: 'Destination', dates: 'Date(s)', times: 'Horaires',
+      cost: 'Coût par élève', noCost: 'Gratuit',
+      purpose: 'Objectif / description', whatToBring: 'À apporter',
+      chaperone: 'Accompagnateur / contact de la sortie',
+      emergency: 'Consignes en cas d\u2019urgence',
+      none: 'Non précisé.',
+      permissionHeading: 'Autorisation du parent / tuteur',
+      permission1: 'J\u2019autorise', permission2: 'à participer à la sortie décrite ci-dessus.',
+      sigParent: 'Signature du parent / tuteur', sigDate: 'Date',
+      sigContactName: 'Nom du contact d\u2019urgence', sigContactPhone: 'Téléphone du contact d\u2019urgence',
+      returnBy: 'Merci de retourner cette autorisation avant le :',
+      depart: 'Départ', ret: 'Retour'
+    },
+    pt: {
+      name: 'Portuguese — Português',
+      title: 'Autorização para Excursão Escolar',
+      trip: 'Excursão', destination: 'Destino', dates: 'Data(s)', times: 'Horário',
+      cost: 'Custo por aluno', noCost: 'Sem custo',
+      purpose: 'Objetivo / descrição', whatToBring: 'O que trazer',
+      chaperone: 'Acompanhante / contato da excursão',
+      emergency: 'Instruções para emergências',
+      none: 'Não especificado.',
+      permissionHeading: 'Autorização do pai / mãe / responsável',
+      permission1: 'Autorizo', permission2: 'a participar da excursão descrita acima.',
+      sigParent: 'Assinatura do pai / mãe / responsável', sigDate: 'Data',
+      sigContactName: 'Nome do contato de emergência', sigContactPhone: 'Telefone do contato de emergência',
+      returnBy: 'Favor devolver esta autorização até:',
+      depart: 'Saída', ret: 'Retorno'
+    }
+  };
+
+  var EN = {
+    title: 'Field Trip Permission Slip',
+    trip: 'Trip', destination: 'Destination', dates: 'Date(s)', times: 'Times',
+    cost: 'Cost per student', noCost: 'No cost',
+    purpose: 'Purpose / description', whatToBring: 'What to bring',
+    chaperone: 'Chaperone / trip contact',
+    emergency: 'Emergency contact instructions',
+    none: 'None specified.',
+    permissionHeading: 'Parent / guardian permission',
+    permission1: 'I give permission for', permission2: 'to attend the trip described above.',
+    sigParent: 'Parent / Guardian Signature', sigDate: 'Date',
+    sigContactName: 'Emergency Contact Name', sigContactPhone: 'Emergency Contact Phone',
+    returnBy: 'Please return this slip by:',
+    depart: 'Depart', ret: 'Return'
+  };
+
+  /* The three prose fields a teacher can translate. Everything else on the
+     slip is either fixed furniture (translated above) or a proper noun, a
+     date, or a number, which reads the same in both columns. */
+  var TRANSLATABLE = ['purpose', 'whatToBring', 'emergencyInstructions'];
+
+  function activeLang() { return LANGUAGES[state.secondLang] || null; }
+  function altText(key) {
+    var alt = (state.translations && state.translations[key] || '').trim();
+    return alt || state[key];
+  }
+
+  /** One slip. `lang` is null for English, or a LANGUAGES entry — in which
+   *  case the fixed headings come from that entry and the three prose fields
+   *  come from the teacher's translations, falling back to the English text. */
+  function slipHtml(studentName, lang) {
+    var L = lang || EN;
+    var body = lang ? altText : function (key) { return state[key]; };
     var isBlank = studentName === null;
     var nameHtml = isBlank
       ? '<span class="slip-student-line blank">&nbsp;</span>'
@@ -767,55 +910,65 @@
     function section(label, text) {
       var t = (text || '').trim();
       return '<div class="slip-section">' +
-        '<div class="slip-label">' + label + '</div>' +
-        '<div class="slip-text' + (t ? '' : ' empty') + '">' + (t ? escapeHtml(t) : 'None specified.') + '</div>' +
+        '<div class="slip-label">' + escapeHtml(label) + '</div>' +
+        '<div class="slip-text' + (t ? '' : ' empty') + '">' + (t ? escapeHtml(t) : L.none) + '</div>' +
       '</div>';
     }
 
     var dateLine = tripDateLine();
     var qrDataUrl = getTripQrDataUrl();
     var timesLine = [];
-    if (state.departureTime) timesLine.push('Depart ' + formatTime(state.departureTime));
-    if (state.returnTime) timesLine.push('Return ' + formatTime(state.returnTime));
+    if (state.departureTime) timesLine.push(L.depart + ' ' + formatTime(state.departureTime));
+    if (state.returnTime) timesLine.push(L.ret + ' ' + formatTime(state.returnTime));
 
     return (
-      '<div class="slip">' +
+      '<div class="slip"' + (lang ? ' lang="' + state.secondLang + '" data-slip-lang="' + state.secondLang + '"' : ' data-slip-lang="en"') + '>' +
         '<div class="slip-header">' +
           (state.schoolTeacher ? '<div class="slip-school">' + escapeHtml(state.schoolTeacher) + '</div>' : '') +
-          '<div class="slip-title">Field Trip Permission Slip</div>' +
+          '<div class="slip-title">' + escapeHtml(L.title) + '</div>' +
         '</div>' +
 
         '<table class="slip-table">' +
-          '<tr><th>Trip</th><td>' + (escapeHtml(state.name) || '&mdash;') + '</td></tr>' +
-          '<tr><th>Destination</th><td>' + (escapeHtml(state.destination) || '&mdash;') + '</td></tr>' +
-          '<tr><th>Date(s)</th><td>' + (dateLine || '&mdash;') + '</td></tr>' +
-          '<tr><th>Times</th><td>' + (timesLine.length ? timesLine.join(' &nbsp;&bull;&nbsp; ') : '&mdash;') + '</td></tr>' +
-          '<tr><th>Cost per student</th><td>' + (escapeHtml(state.cost) || 'No cost') + '</td></tr>' +
+          '<tr><th>' + escapeHtml(L.trip) + '</th><td>' + (escapeHtml(state.name) || '&mdash;') + '</td></tr>' +
+          '<tr><th>' + escapeHtml(L.destination) + '</th><td>' + (escapeHtml(state.destination) || '&mdash;') + '</td></tr>' +
+          '<tr><th>' + escapeHtml(L.dates) + '</th><td>' + (dateLine || '&mdash;') + '</td></tr>' +
+          '<tr><th>' + escapeHtml(L.times) + '</th><td>' + (timesLine.length ? timesLine.join(' &nbsp;&bull;&nbsp; ') : '&mdash;') + '</td></tr>' +
+          '<tr><th>' + escapeHtml(L.cost) + '</th><td>' + (escapeHtml(state.cost) || escapeHtml(L.noCost)) + '</td></tr>' +
         '</table>' +
 
-        section('Purpose / description', state.purpose) +
-        section('What to bring', state.whatToBring) +
-        section('Chaperone / trip contact', [state.chaperoneName, state.chaperonePhone].filter(Boolean).join(' &mdash; ')) +
-        section('Emergency contact instructions', state.emergencyInstructions) +
+        section(L.purpose, body('purpose')) +
+        section(L.whatToBring, body('whatToBring')) +
+        section(L.chaperone, [state.chaperoneName, state.chaperonePhone].filter(Boolean).join(' — ')) +
+        section(L.emergency, body('emergencyInstructions')) +
 
-        '<div class="slip-divider"><span>Parent / guardian permission</span></div>' +
+        '<div class="slip-divider"><span>' + escapeHtml(L.permissionHeading) + '</span></div>' +
         '<div class="slip-permission">' +
-          '<p>I give permission for ' + nameHtml + ' to attend the trip described above.</p>' +
+          '<p>' + escapeHtml(L.permission1) + ' ' + nameHtml + ' ' + escapeHtml(L.permission2) + '</p>' +
           '<div class="sig-grid">' +
-            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">Parent / Guardian Signature</div></div>' +
-            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">Date</div></div>' +
-            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">Emergency Contact Name</div></div>' +
-            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">Emergency Contact Phone</div></div>' +
+            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">' + escapeHtml(L.sigParent) + '</div></div>' +
+            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">' + escapeHtml(L.sigDate) + '</div></div>' +
+            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">' + escapeHtml(L.sigContactName) + '</div></div>' +
+            '<div><div class="sig-fill">&nbsp;</div><div class="sig-line">' + escapeHtml(L.sigContactPhone) + '</div></div>' +
           '</div>' +
         '</div>' +
 
         '<div class="slip-footer">' +
-          '<div>Please return this slip by:</div>' +
+          '<div>' + escapeHtml(L.returnBy) + '</div>' +
           '<div class="due">' + (formatDate(state.dueDate) || '&mdash;') + '</div>' +
           (qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code encoding this trip\'s name, destination, and date" title="Scan for trip details">' : '') +
         '</div>' +
       '</div>'
     );
+  }
+
+  /** What actually gets printed for one student: the English slip alone, or
+   *  it plus its translated twin — behind it on a facing page, or beside it
+   *  in a two-column pair. */
+  function slipSetHtml(studentName) {
+    var lang = activeLang();
+    if (!lang) return slipHtml(studentName, null);
+    var both = slipHtml(studentName, null) + slipHtml(studentName, lang);
+    return state.langLayout === 'column' ? '<div class="slip-pair">' + both + '</div>' : both;
   }
 
   /* ---------- render ---------- */
@@ -826,21 +979,21 @@
 
   function updatePreview() {
     if (state.mode === 'single') {
-      els.previewArea.innerHTML = slipHtml(state.studentName || 'Student Name');
+      els.previewArea.innerHTML = slipSetHtml(state.studentName || 'Student Name');
       els.previewNote.textContent = 'Live preview — this is exactly what prints.';
     } else if (state.mode === 'batch') {
       var names = batchNamesList();
       els.batchNameCount.textContent = names.length + ' name' + (names.length === 1 ? '' : 's');
       if (!names.length) {
-        els.previewArea.innerHTML = slipHtml('Student Name');
+        els.previewArea.innerHTML = slipSetHtml('Student Name');
         els.previewNote.textContent = 'Add student names to preview the batch. Showing a sample slip.';
       } else {
-        els.previewArea.innerHTML = slipHtml(names[0]);
+        els.previewArea.innerHTML = slipSetHtml(names[0]);
         els.previewNote.textContent = 'Showing slip 1 of ' + names.length + '. Printing makes one page per student.';
       }
     } else { // blank
       var count = Math.max(1, parseInt(state.blankCount, 10) || 1);
-      els.previewArea.innerHTML = slipHtml(null);
+      els.previewArea.innerHTML = slipSetHtml(null);
       els.previewNote.textContent = 'Blank copy preview. Printing makes ' + count + ' identical blank ' + (count === 1 ? 'copy' : 'copies') + ' for students to fill in their own name.';
     }
   }
@@ -848,15 +1001,15 @@
   function buildPrintArea() {
     var html;
     if (state.mode === 'single') {
-      html = slipHtml(state.studentName || 'Student Name');
+      html = slipSetHtml(state.studentName || 'Student Name');
     } else if (state.mode === 'batch') {
       var names = batchNamesList();
       if (!names.length) names = [state.studentName || 'Student Name'];
-      html = names.map(function (n) { return slipHtml(n); }).join('');
+      html = names.map(function (n) { return slipSetHtml(n); }).join('');
     } else { // blank
       var count = Math.max(1, parseInt(state.blankCount, 10) || 1);
       var slips = [];
-      for (var i = 0; i < count; i++) slips.push(slipHtml(null));
+      for (var i = 0; i < count; i++) slips.push(slipSetHtml(null));
       html = slips.join('');
     }
     document.getElementById('printArea').innerHTML = html;
@@ -1048,6 +1201,44 @@
 
   FIELD_KEYS.forEach(function (key) { bindTextField(key, key); });
 
+  function syncLangUi() {
+    var lang = activeLang();
+    els.langOptions.style.display = lang ? '' : 'none';
+    if (!lang) return;
+    Array.prototype.slice.call(document.querySelectorAll('.lang-name')).forEach(function (el) {
+      el.textContent = lang.name;
+    });
+    /* Say which prose fields would still print in English, rather than
+       letting a teacher discover it on the printed page. */
+    var missing = TRANSLATABLE.filter(function (k) {
+      return (state[k] || '').trim() && !(state.translations[k] || '').trim();
+    });
+    var LABEL = { purpose: 'Purpose', whatToBring: 'What to bring', emergencyInstructions: 'Emergency instructions' };
+    els.untranslatedHint.textContent = missing.length
+      ? 'Still in English on the ' + lang.name.split(' — ')[0] + ' slip: ' + missing.map(function (k) { return LABEL[k]; }).join(', ') + '.'
+      : 'Every field you filled in has a translation.';
+  }
+
+  els.secondLang.addEventListener('change', function () {
+    state.secondLang = els.secondLang.value;
+    syncLangUi();
+    renderAll();
+  });
+  els.langLayout.addEventListener('change', function () {
+    state.langLayout = els.langLayout.value;
+    renderAll();
+  });
+  TRANSLATABLE.forEach(function (k) {
+    els[k + 'Alt'].addEventListener('input', function () {
+      state.translations[k] = els[k + 'Alt'].value;
+      syncLangUi();
+      renderAll();
+    });
+    /* The English side changing can turn a "translated" field back into an
+       untranslated one, so the hint follows both. */
+    els[k].addEventListener('input', syncLangUi);
+  });
+
   els.studentName.addEventListener('input', function () { state.studentName = els.studentName.value; renderAll(); });
   els.batchNames.addEventListener('input', function () { state.batchNames = els.batchNames.value; renderAll(); renderCollectionTracker(); renderChaperoneAssign(); });
   els.blankCount.addEventListener('input', function () { state.blankCount = els.blankCount.value; renderAll(); });
@@ -1208,6 +1399,10 @@
   function fillForm() {
     els.tripName.value = state.name;
     FIELD_KEYS.forEach(function (k) { els[k].value = state[k] || ''; });
+    els.secondLang.value = state.secondLang || '';
+    els.langLayout.value = state.langLayout || 'facing';
+    TRANSLATABLE.forEach(function (k) { els[k + 'Alt'].value = state.translations[k] || ''; });
+    syncLangUi();
     els.studentName.value = state.studentName || '';
     els.batchNames.value = state.batchNames || '';
     els.blankCount.value = state.blankCount || 5;
