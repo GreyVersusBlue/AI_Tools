@@ -79,7 +79,8 @@
   button.secondary:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
   button.danger { background: #fff; color: var(--err); border-color: var(--err); }
   button.small { width: auto; padding: .3rem .6rem; font-size: .78rem; margin-bottom: 0; }
-  .chart-dl-row { display: flex; gap: .4rem; margin: -.4rem 0 .9rem; }
+  .chart-dl-row { display: flex; gap: .4rem; margin: -.4rem 0 .9rem; flex-wrap: wrap; }
+  .chart-dl-row button.copy-failed { border-color: var(--err); color: var(--err); }
   button.danger:hover { background: var(--err); color: #fff; }
 
   .output-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.4rem; }
@@ -579,22 +580,82 @@
     downloadBlob(new Blob([svgString], { type: 'image/svg+xml' }), filenameBase + '.svg');
   }
 
+  /** Rasterises one of the chart SVGs to a PNG blob at 2x. Split out of the
+      download path so the clipboard path gets the identical image — a
+      "copy" that produced a different picture from "download" would be a
+      small betrayal in a PLC document. */
+  function svgToPngBlob(svgString, w, h) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(svgBlob);
+      img.onload = function () {
+        var scale = 2;
+        var canvas = document.createElement('canvas');
+        canvas.width = w * scale; canvas.height = h * scale;
+        var ctx = canvas.getContext('2d');
+        // White, not transparent: pasted onto a white document a transparent
+        // PNG looks fine, pasted into a dark slide it becomes unreadable.
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(function (blob) {
+          if (blob) resolve(blob); else reject(new Error('Could not encode the chart as a PNG.'));
+        }, 'image/png');
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not render the chart.')); };
+      img.src = url;
+    });
+  }
+
   function downloadSvgAsPng(svgString, filenameBase, w, h) {
-    var img = new Image();
-    var svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-    var url = URL.createObjectURL(svgBlob);
-    img.onload = function () {
-      var scale = 2;
-      var canvas = document.createElement('canvas');
-      canvas.width = w * scale; canvas.height = h * scale;
-      var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(function (blob) { downloadBlob(blob, filenameBase + '.png'); }, 'image/png');
-    };
-    img.onerror = function () { URL.revokeObjectURL(url); alert('Could not render a PNG — try downloading the SVG instead.'); };
-    img.src = url;
+    svgToPngBlob(svgString, w, h).then(function (blob) {
+      downloadBlob(blob, filenameBase + '.png');
+    }, function () {
+      alert('Could not render a PNG — try downloading the SVG instead.');
+    });
+  }
+
+  /* ---------- copy the chart straight to the clipboard --------------------
+     The download step is the whole friction: save it, find it, insert it,
+     delete it later. A PLC agenda is written in one sitting and this is a
+     paste into it.
+
+     `ClipboardItem` is constructed with the *promise* rather than an awaited
+     blob on purpose — Safari requires the item to exist inside the click's
+     own task, and the rasterisation is async. Chrome and Firefox accept the
+     same shape, so there is one code path rather than a fork.
+  ---------------------------------------------------------------------- */
+  function canCopyImages() {
+    return !!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write && window.isSecureContext);
+  }
+
+  function flashButton(btn, text, isError) {
+    if (!btn) return;
+    if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+    btn.textContent = text;
+    btn.classList.toggle('copy-failed', !!isError);
+    setTimeout(function () {
+      btn.textContent = btn.dataset.label;
+      btn.classList.remove('copy-failed');
+    }, isError ? 4000 : 1800);
+  }
+
+  function copyChartToClipboard(svgString, w, h, btn) {
+    if (!canCopyImages()) {
+      flashButton(btn, 'Use Download PNG', true);
+      return;
+    }
+    var blobPromise = svgToPngBlob(svgString, w, h);
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]).then(function () {
+      flashButton(btn, '✓ Copied');
+    }, function () {
+      // Denied permission, an insecure context the check above missed, or a
+      // browser that advertises ClipboardItem but refuses images. The
+      // download button beside it always works, so say that rather than
+      // explaining clipboard permissions to a teacher mid-meeting.
+      flashButton(btn, 'Use Download PNG', true);
+    });
   }
 
   els.outputBody.addEventListener('click', function (e) {
@@ -603,8 +664,10 @@
     var base = (lastChartData.name || 'assignment').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'assignment';
     if (btn.dataset.dl === 'letter-svg') downloadSvgString(buildStackedBarSvg(lastChartData), base + '-letter-grades');
     else if (btn.dataset.dl === 'letter-png') downloadSvgAsPng(buildStackedBarSvg(lastChartData), base + '-letter-grades', 640, 168);
+    else if (btn.dataset.dl === 'letter-copy') copyChartToClipboard(buildStackedBarSvg(lastChartData), 640, 168, btn);
     else if (btn.dataset.dl === 'hist-svg') downloadSvgString(buildHistogramSvg(lastChartData), base + '-histogram');
     else if (btn.dataset.dl === 'hist-png') downloadSvgAsPng(buildHistogramSvg(lastChartData), base + '-histogram', 640, 330);
+    else if (btn.dataset.dl === 'hist-copy') copyChartToClipboard(buildHistogramSvg(lastChartData), 640, 330, btn);
   });
 
   function readCutoffs() {
@@ -719,6 +782,7 @@
       '<div class="chart-dl-row">' +
         '<button type="button" class="secondary small" data-dl="letter-svg">Download SVG</button>' +
         '<button type="button" class="secondary small" data-dl="letter-png">Download PNG</button>' +
+        '<button type="button" class="secondary small" data-dl="letter-copy">Copy chart</button>' +
       '</div>';
 
     var maxCount = buckets.reduce(function (m, b) { return Math.max(m, b.count); }, 0) || 1;
@@ -739,6 +803,7 @@
       '<div class="chart-dl-row">' +
         '<button type="button" class="secondary small" data-dl="hist-svg">Download SVG</button>' +
         '<button type="button" class="secondary small" data-dl="hist-png">Download PNG</button>' +
+        '<button type="button" class="secondary small" data-dl="hist-copy">Copy chart</button>' +
       '</div>';
 
     lastChartData = { name: state.name, stats: stats, letters: letters, letterOrder: letterOrder, buckets: buckets, bucketWidth: bucketWidth, excluded: parsed.skipped };

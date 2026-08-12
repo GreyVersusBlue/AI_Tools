@@ -1,13 +1,52 @@
 # Improvement Prompts — 037 — Grade Distribution Visualizer
 
 **Tool file:** `Tools/037-grade-distribution-visualizer.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/grade-distribution-visualizer/` — `test/smoke-copy-chart.mjs`
 
 **Current description (from README):** Paste a gradebook export and get class-wide stats, an editable letter-grade breakdown, and a score histogram — a companion to the Final Grade Checker.
 
 ---
 
 ## Status
+
+**2026-08-11 — Copy chart to clipboard (backlog rank 6).** Shipped the last
+of the Quick Wins two previous rounds deferred. A "Copy chart" button beside
+each chart's existing SVG/PNG downloads writes the rendered chart to the
+clipboard as a PNG, so it pastes straight into a PLC agenda with no save,
+find, insert, delete-later cycle.
+
+The implementation is mostly about not making a second picture:
+`downloadSvgAsPng` was split into `svgToPngBlob` (rasterise) and a thin
+download wrapper, and the clipboard path uses the same rasteriser. A "copy"
+that quietly produced a different image from "download" would be a small
+betrayal in a document somebody presents from — the test asserts the copied
+bytes are exactly the size of the downloaded file.
+
+Two details worth keeping:
+
+- **`ClipboardItem` is constructed with the *promise*, not an awaited blob.**
+  Safari requires the item to exist inside the click's own task, and the
+  rasterisation is async. Chrome and Firefox accept the same shape, so there
+  is one code path rather than a browser fork.
+- **The canvas is filled white before drawing.** Pasted onto a white page a
+  transparent PNG looks fine; pasted onto a dark slide it disappears.
+
+Clipboard image writes need a secure context and a permission that can be
+refused, so the failure path is explicit: the button flashes "Use Download
+PNG" in the error colour rather than silently doing nothing. Both branches
+are covered — a rejected `write()`, and a browser with no `ClipboardItem` at
+all.
+
+New test: `Tools/grade-distribution-visualizer/test/smoke-copy-chart.mjs` (21
+assertions, wired into `npm test` and `npm run test:grade-dist`) — the PNG
+magic number on the clipboard, each chart copying its own image, byte-size
+parity with the download, the button reverting after its confirmation, and
+both failure branches. Note for whoever writes the next one: 127.0.0.1 counts
+as a **secure** context, so `isSecureContext` is true under the harness and
+the no-support case has to be simulated by deleting `ClipboardItem`.
+
+**Where the next round should pick up:** per-question item analysis (on the
+backlog) is the biggest remaining feature here.
 
 **2026-08-11 — Pass 2 round.** Shipped **undo on Delete assignment** (P11),
 the smaller of the two Quick Wins this file's Pass 1 round left deferred.
@@ -88,7 +127,9 @@ Wins in the backlog below), and everything under Major Features / Moonshot.
   `buildHistogramSvg`)
 - **Comparison mode** (`renderComparison`, `refreshCompareOptions`) — compare
   one assignment against another
-- SVG-native rendering with **PNG and SVG download**; print
+- SVG-native rendering with **PNG and SVG download**, plus **Copy chart** on
+  both charts (`svgToPngBlob`, `copyChartToClipboard`) writing the identical
+  PNG straight to the clipboard; print
 
 ## Quick Wins
 
@@ -111,7 +152,8 @@ Wins in the backlog below), and everything under Major Features / Moonshot.
 - **Done —** **Cutoff presets** (district scale, 10-point scale, custom) rather than
   typing four numbers each time. *(A dropdown with Standard 10-point and
   Seven-point presets; hand-editing a cutoff box flips it to "Custom".)*
-- **Skipped — deferred.** **Copy the chart to clipboard** for pasting into a PLC document or an email.
+- **Done — 2026-08-11.** **Copy the chart to clipboard** for pasting into a PLC document or an email.
+  *(See the Status entry at the top of this file.)*
   *(Not part of this round's scoped list.)*
 - **Done — 2026-08-11.** **Undo / confirm on Delete assignment** (P11). *(Confirm already existed;
   added a 15-second in-memory undo, same pattern as the QR Scavenger Hunt
