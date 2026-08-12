@@ -193,7 +193,7 @@
     </div>
     <div class="card">
       <h2>Full bank (<span id="bankCount">0</span> sentences)</h2>
-      <p class="hint">Built-in sentences can't be deleted, only your own custom ones.</p>
+      <p class="hint">Built-in sentences can't be deleted, but you can <b>hide</b> the ones that don't fit your class &mdash; hidden sentences stay out of the projector rotation and the worksheet until you unhide them. Your own custom sentences can be edited or deleted.</p>
       <div class="bank-list" id="bankList"></div>
     </div>
   </div>
@@ -203,6 +203,7 @@
 (function () {
   'use strict';
   var CUSTOM_KEY = 'deg_custom_v1';
+  var HIDDEN_KEY = 'deg_hidden_v1';
   var SETTINGS_KEY = 'deg_settings_v1';
 
   var CAT_LABELS = {
@@ -236,7 +237,7 @@
     ['im going to bring my lunch box and my jacket', 'I&rsquo;m going to bring my lunch box and my jacket.', 'punctuation'],
     ['the books on the top shelf is mine', 'The books on the top shelf are mine.', 'subject-verb'],
     ['every one of the students need a pencil', 'Every one of the students needs a pencil.', 'subject-verb']
-  ].map(function (row) { return { broken: row[0], fixed: row[1], category: row[2], custom: false }; });
+  ].map(function (row, i) { return { broken: row[0], fixed: row[1], category: row[2], custom: false, id: 'b' + i }; });
 
   var els = {};
   ['displayNum', 'displayBroken', 'displayFixed', 'displayCat', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
@@ -246,6 +247,7 @@
   });
 
   var custom = [];
+  var hiddenIds = [];
   var order = [];
   var idx = 0;
 
@@ -263,9 +265,23 @@
   function saveCustom() {
     try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)); } catch (e) { /* storage full/blocked */ }
   }
+  /* Hidden built-in ids (same pattern as 053-cultural-trivia-card-generator):
+     built-ins can't be deleted, but a teacher can hide the ones that don't
+     fit their class; hidden ids persist and hidden rows never reach the
+     display, the worksheet, or the count. */
+  function loadHidden() {
+    try { hiddenIds = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); } catch (e) { hiddenIds = []; }
+    if (!Array.isArray(hiddenIds)) hiddenIds = [];
+  }
+  function saveHidden() {
+    try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenIds)); } catch (e) { /* storage full/blocked */ }
+  }
 
-  function allSentences() {
+  function allSentencesIncludingHidden() {
     return BUILTIN.concat(custom.map(function (c) { return { broken: c.broken, fixed: c.fixed, category: c.category || 'other', custom: true, id: c.id }; }));
+  }
+  function allSentences() {
+    return allSentencesIncludingHidden().filter(function (item) { return item.custom || hiddenIds.indexOf(item.id) === -1; });
   }
   function filteredSentences() {
     var cat = els.categoryFilter.value;
@@ -368,8 +384,9 @@
   }
 
   function renderBank() {
-    var all = allSentences();
-    els.bankCount.textContent = all.length;
+    var all = allSentencesIncludingHidden();
+    var activeCount = all.filter(function (item) { return item.custom || hiddenIds.indexOf(item.id) === -1; }).length;
+    els.bankCount.textContent = activeCount;
     els.bankList.innerHTML = all.map(function (item) {
       if (item.custom) {
         return '<div class="bank-row" data-id="' + item.id + '" style="align-items:flex-start;">' +
@@ -380,20 +397,33 @@
           '</span>' +
           '<button type="button" class="danger small" data-del="' + item.id + '">Delete</button></div>';
       }
-      return '<div class="bank-row"><span class="btext"><b>[' + (CAT_LABELS[item.category] || item.category) + ']</b> <span class="broken-txt">' + escapeHtml(item.broken) +
-        '</span><span class="arrow">&rarr;</span><span class="fixed-txt">' + item.fixed + '</span></span>' +
-        '<span class="hint" style="margin:0;">built-in</span></div>';
+      var hidden = hiddenIds.indexOf(item.id) !== -1;
+      return '<div class="bank-row"' + (hidden ? ' style="opacity:.5;"' : '') + '><span class="btext"><b>[' + (CAT_LABELS[item.category] || item.category) + ']</b> <span class="broken-txt">' + escapeHtml(item.broken) +
+        '</span><span class="arrow">&rarr;</span><span class="fixed-txt">' + item.fixed + '</span>' +
+        (hidden ? ' <span class="hint" style="display:inline;margin:0;">(hidden)</span>' : '') + '</span>' +
+        '<button type="button" class="secondary small" data-hide="' + item.id + '">' + (hidden ? 'Unhide' : 'Hide') + '</button></div>';
     }).join('');
   }
 
   els.bankList.addEventListener('click', function (ev) {
-    var id = ev.target.getAttribute('data-del');
-    if (!id) return;
-    custom = custom.filter(function (c) { return c.id !== id; });
-    saveCustom();
-    resetOrder();
-    renderDisplay();
-    renderBank();
+    var delId = ev.target.getAttribute('data-del');
+    var hideId = ev.target.getAttribute('data-hide');
+    if (delId) {
+      custom = custom.filter(function (c) { return c.id !== delId; });
+      saveCustom();
+      resetOrder();
+      renderDisplay();
+      renderBank();
+      return;
+    }
+    if (hideId) {
+      var pos = hiddenIds.indexOf(hideId);
+      if (pos === -1) hiddenIds.push(hideId); else hiddenIds.splice(pos, 1);
+      saveHidden();
+      resetOrder();
+      renderDisplay();
+      renderBank();
+    }
   });
   els.bankList.addEventListener('input', function (ev) {
     var row = ev.target.closest('.bank-row');
@@ -432,6 +462,7 @@
 
   /* ---------- boot ---------- */
   loadCustom();
+  loadHidden();
   loadSettings();
   resetOrder();
   renderDisplay();
