@@ -192,7 +192,14 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Silent Reading (SSR) Log Tracker | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Parent/Guardian Contact Log | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Number Talks / Mental Math Routine Board | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Test tooling (Tools/board-check/) | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Grade Distribution Visualizer | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Quiz / Review Game Board | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Formula Reference Sheet Builder | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Prompt Builder | `r8kq4t` | 2026-08-12 02:35 UTC | `claude/backlog-batch-3-r8kq4t` |
 
 ---
 
