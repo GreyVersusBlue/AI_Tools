@@ -9,6 +9,24 @@
 
 ## Status
 
+**2026-08-12 — Backlog round: bulk import a custom bank shipped (backlog
+rank, then #5).** Identical shape to the same-day feature in
+`053-cultural-trivia-card-generator.html` (built together, shared smoke
+test): a "Bulk import a custom bank" card on the bank tab takes
+`question | answer | category` lines, tab- or pipe-separated (no comma
+splitting — geography questions are full of commas), extra pipe fields
+folding into the answer. The optional category token is tolerant
+(`capital…`, `landmark…`, `map skills`/`map`/`mapskills`); lines without
+one use the Category picker above the form. Imports append to
+`gbq_custom_v1` without touching built-ins, hidden built-ins, or existing
+custom questions; the note reports added/skipped counts and quotes
+unparseable lines; the textarea clears only on success. Verified with a
+headless Chromium test: pipe and tab lines with/without category tokens,
+comma-in-question survival, skip reporting, persistence, and bank-count
+growth — zero console errors. **Where the next round should pick up:**
+multiple-choice quiz mode (its own backlog row) and more built-ins per
+category are the open items.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from
 the Ideas Backlog — closes out the Social Studies section for now. A
 30-question built-in bank split evenly across three categories (Capitals,
@@ -68,6 +86,8 @@ link) before implementation.
 - Print: randomized quiz subset + matching answer key
 - Custom question bank layered on the built-ins; individual built-ins can
   be hidden/shown without deleting them
+- **Bulk import** (tab/pipe lines, optional tolerant category token) that
+  appends to the custom bank
 
 ## Quick Wins
 
@@ -99,8 +119,8 @@ link) before implementation.
 - **Region/continent tagging** beyond the current three categories, so a
   teacher covering "South America" specifically can filter to just that
   region's capitals and landmarks instead of the whole world.
-- **Bulk import a custom bank** from a pasted list, matching the pattern
-  already proven in Staff Directory Builder and Review Game Board.
+- ~~**Bulk import a custom bank** from a pasted list~~ — **done,
+  2026-08-12** (backlog round; see Status).
 
 ## Moonshot / North Star
 
