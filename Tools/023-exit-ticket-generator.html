@@ -241,6 +241,28 @@
      height the box got instead of bunching at one end of it. */
   .slip-answer-line { flex: 1 1 0; min-height: .22in; border-bottom: 1px solid #999; }
   .slip-answer-box.boxed { border: 1px solid #999; border-radius: 3px; }
+  /* Quarter-inch grid. Drawn with gradients rather than an image so it stays
+     inside the one file and costs nothing to load, and sized in inches so a
+     square is a real quarter inch on paper — which is the only reason to
+     choose this over the blank box. The lines start from the top-left of the
+     writing area, so a graph drawn on it lines up with the corner. */
+  .slip-answer-box.grid {
+    border: 1px solid #999; border-radius: 3px;
+    background-color: #fff;
+    /* 1px, not the half-pixel that reads nicer in a mock-up: at 96dpi a
+       sub-pixel rule anti-aliases to about half of an already-pale grey and
+       disappears entirely on screen. */
+    background-image:
+      repeating-linear-gradient(to right, #aab6c1 0 1px, transparent 1px .25in),
+      repeating-linear-gradient(to bottom, #aab6c1 0 1px, transparent 1px .25in);
+    background-position: 0 0;
+    /* Browsers drop background images and colours from print by default, on
+       the reasonable theory that they are decoration. Here the background IS
+       the feature, so it has to be asked for explicitly — the whole point of
+       this option is what comes out of the printer. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -265,6 +287,14 @@
     .print-only .slip-grid.pp4 .slip-qr { width: .55in; height: .55in; }
     .print-only .slip-answer-line { border-bottom: 1px solid #555; min-height: .3in; }
     .print-only .slip-answer-box.boxed { border: 1px solid #666; }
+    /* Darker on paper than on screen: a grid that reads nicely on a monitor
+       comes out as almost nothing through a school photocopier. */
+    .print-only .slip-answer-box.grid {
+      border: 1px solid #666;
+      background-image:
+        repeating-linear-gradient(to right, #808d98 0 1px, transparent 1px .25in),
+        repeating-linear-gradient(to bottom, #808d98 0 1px, transparent 1px .25in);
+    }
     .print-only .triage-print-page { padding: .3in; font-family: Georgia, serif; }
     .print-only .triage-print-page h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
     .print-only .triage-print-page .triage-print-sub { font-size: .95rem; color: #333; margin: 0 0 1.1rem; }
@@ -491,8 +521,10 @@
           <select id="answerStyleSelect" style="width:100%;">
             <option value="lines">Ruled lines to write on</option>
             <option value="boxed">Blank box (for a sketch, diagram, or graph)</option>
+            <option value="grid">Quarter-inch grid (for a graph or a scale drawing)</option>
             <option value="plain">Plain space, no lines or box</option>
           </select>
+          <p class="hint" id="answerStyleNote" style="margin:.3rem 0 0;"></p>
         </div>
         <div>
           <label for="answerSpaceSelect">How much room to leave</label>
@@ -562,7 +594,7 @@
   var els = {};
   ['categorySelect', 'includeMineCheck', 'shuffleBtn', 'stage', 'promptText', 'metaRow', 'fullscreenBtn',
    'customPrompt', 'useCustomBtn', 'newBankPrompt', 'addBankBtn', 'bankList', 'historyList',
-   'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect', 'answerStyleSelect', 'answerSpaceSelect', 'answerSpaceNote',
+   'handoutPromptDisplay', 'gotoBankBtn', 'perPageSelect', 'answerStyleSelect', 'answerStyleNote', 'answerSpaceSelect', 'answerSpaceNote',
    'showNameCheck', 'showDateCheck', 'printBtn', 'handoutPreview', 'printArea',
    'thinkTimeSelect', 'thinkTimer', 'slipModeSelect', 'differentSlipRow', 'reshuffleSlipsBtn',
    'qrEnabledCheck', 'qrUrlRow', 'qrUrlInput',
@@ -1586,7 +1618,7 @@
      roughly constant line pitch, so a shorter box doesn't just squeeze the
      same number of lines closer together.
   ------------------------------------------------------------------------ */
-  var ANSWER_STYLES = ['lines', 'boxed', 'plain'];
+  var ANSWER_STYLES = ['lines', 'boxed', 'grid', 'plain'];
   // fraction of the leftover slip height the response box gets
   var ANSWER_SPACE = { auto: null, short: 1 / 3, medium: 1 / 2, full: 1 };
   var ANSWER_SPACE_LABEL = { short: 'a third of the slip', medium: 'about half the slip', full: 'the whole slip' };
@@ -1716,6 +1748,16 @@
     els.printBtn.textContent = settings.batchMode ? 'Print Class Set' : 'Print Handout';
   }
 
+  /** The grid is the one response style that makes a promise about physical
+      size, and a browser's default "shrink to fit" quietly breaks it. Say so
+      where the choice is made rather than leaving it to be discovered with a
+      ruler. */
+  function renderAnswerStyleNote() {
+    els.answerStyleNote.textContent = settings.answerStyle === 'grid'
+      ? 'Print at 100% — not "fit to page" — or the squares come out smaller than a quarter inch.'
+      : '';
+  }
+
   /** Says out loud what "Match the prompt" decided, so the automatic choice is
       inspectable rather than mysterious — and stays quiet when the teacher has
       picked a size themselves. */
@@ -1753,6 +1795,7 @@
   els.answerStyleSelect.addEventListener('change', function () {
     var v = els.answerStyleSelect.value;
     settings.answerStyle = ANSWER_STYLES.indexOf(v) !== -1 ? v : 'lines';
+    renderAnswerStyleNote();
     saveSettings();
     renderHandout();
   });
@@ -1865,6 +1908,7 @@
   els.includeMineCheck.checked = settings.includeMine;
   els.perPageSelect.value = String(settings.perPage);
   els.answerStyleSelect.value = settings.answerStyle;
+  renderAnswerStyleNote();
   els.answerSpaceSelect.value = settings.answerSpace;
   els.showNameCheck.checked = settings.showName;
   els.showDateCheck.checked = settings.showDate;

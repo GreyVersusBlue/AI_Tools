@@ -9,6 +9,48 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** A fourth response style: a **quarter-inch
+grid**, for the maths and science prompts that want a graph or a scale drawing
+rather than sentences.
+
+- Drawn with two `repeating-linear-gradient`s rather than an image, so it
+  stays inside the one file and costs nothing to load, and ruled in `in` units
+  so a square really is a quarter inch on paper. That measurement is the only
+  reason to pick this over the blank box that was already there.
+- **`print-color-adjust: exact`, which is the whole feature.** Browsers drop
+  background images and colours from print by default, on the reasonable
+  theory that they are decoration. Here the background *is* the thing being
+  printed, so it has to be asked for explicitly — without it the option looks
+  right on screen and comes out as an empty box, and nobody finds out until
+  the copies are made.
+- Two things found by looking at the render rather than the code: the lines
+  were originally half a pixel, which anti-aliases to about half of an already
+  pale grey and vanishes on screen entirely; and the print rule needed a
+  darker grey than the screen one, because a grid that reads nicely on a
+  monitor is almost nothing through a school photocopier.
+- A note under the picker says **"Print at 100% — not 'fit to page'"**, shown
+  only for this style. It is the one response area that makes a promise about
+  physical size, and a browser's default shrink-to-fit quietly breaks it.
+  (Graph Paper Generator's calibration page exists for the same reason.)
+- `smoke-response-area.mjs` gained 9 checks (27 → 36), including that the
+  print copy's grid is still a grid and that `print-color-adjust` computes to
+  `exact`.
+
+**A pre-existing red assertion in that suite, fixed on the way past.** It was
+failing on `main` before this round — not caused by this work, and worth
+recording because the diagnosis is the interesting part. The suite measured
+the response box against the height of the *whole slip* and asserted an
+explanation prompt got "more than half" of it. But the flex weights in
+`answerAreaHtml()` divide the space *left under the question*, not the slip:
+a two-line prompt plus a name line eats a third of a preview slip before the
+writing area starts, so "the whole slip to write in" measured 0.44 and the
+assertion failed on any prompt that wrapped. It was measuring the length of
+the question, not the size of the answer box. `slipShape()` now also reports
+`share` — the box against the box-plus-spacer, which is exactly what the flex
+weights control and is resolution-independent — and the three sizing
+assertions read off that instead. `frac` is kept for the monotonic
+"it really does shrink" check, which was always sound.
+
 Reviewed — structural read of the source, before Round 4 (PR #55, see below)
 shipped fullscreen/projector mode, the paper-triage grid, and the anonymous
 discussion board. Ideas below are deliberately ambitious and are **not**
@@ -26,8 +68,9 @@ below.
 - Handout printing at 2-per-page (half sheets) or 4-per-page (quarter sheets),
   with either the same prompt on every slip or **a different prompt on each**
 - **A response area sized to the prompt** (`answerAreaHtml`, `autoAnswerSpace`)
-  — ruled lines, a blank box for a sketch, or plain space, at a third / half /
-  all of the slip, chosen explicitly or inferred from the prompt's own wording
+  — ruled lines, a blank box for a sketch, a **quarter-inch grid** for a graph
+  or scale drawing, or plain space, at a third / half / all of the room under
+  the question, chosen explicitly or inferred from the prompt's own wording
 - **Quick Tally** counter with reset (`gvb-exit-ticket:tally`)
 - QR code support
 
