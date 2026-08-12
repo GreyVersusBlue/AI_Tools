@@ -63,6 +63,11 @@
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table input[type="text"] { width: 4.5rem; margin: 0; text-align: center; padding: .25rem; font-size: .82rem; }
   table.grid-table tfoot td { font-weight: 700; background: #fbfbf9; font-size: .76rem; }
+  table.grid-table th[data-sort-by] { cursor: pointer; user-select: none; }
+  table.grid-table th[data-sort-by]:hover { color: var(--accent-2); }
+  table.grid-table th .arrow { font-size: .68rem; opacity: .7; margin-left: .15rem; }
+  table.grid-table th.sorted-on { color: var(--accent); background: #e2e9ef; }
+  .sort-note { font-size: .78rem; color: var(--muted); margin: -.2rem 0 .6rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 
   .print-title { font-size: 1.4rem; margin: 0 0 .1rem; }
   .print-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
@@ -103,6 +108,8 @@
 
   <div class="card">
     <h2>Results</h2>
+    <p class="hint">Click an event heading to rank the class by it &mdash; best first, then again to flip it. Whatever is on screen is what prints and exports.</p>
+    <p class="sort-note" id="sortNote" aria-live="polite" style="display:none;"></p>
     <div style="overflow-x:auto;">
       <table class="grid-table" id="resultsTable"></table>
     </div>
@@ -117,7 +124,7 @@
   var STORE_KEY = 'fsat_tracker_v1';
 
   var els = {};
-  ['rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn'].forEach(function (id) {
+  ['rosterInput', 'saveRosterBtn', 'eventsWrap', 'addEventBtn', 'resultsTable', 'printBtn', 'exportCsvBtn', 'sortNote'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -237,6 +244,95 @@
     return null;
   }
 
+  /* ── Ranking the class by one event ─────────────────────────────────────
+     "Who are the outliers" is the question a PE teacher asks of this grid,
+     and a roster-ordered table of twenty-eight rows does not answer it. One
+     click per event heading does.
+
+     Two rules a plain numeric sort gets wrong:
+
+       - Best-first has to mean best. A count event is better higher and a
+         time event is better lower, so the first click on Push-ups puts the
+         most at the top and the first click on Mile Run puts the fastest
+         there. Both are "best first"; only the arithmetic differs.
+       - A blank cell is not a score of zero and not the fastest time on
+         record. Students with no result sink to the bottom in *both*
+         directions, so flipping the sort never floats an empty row to the
+         top of the projector.
+
+     Sorting is a view. It is deliberately not persisted — a teacher who
+     reopens this tool wants their roster, not whatever they were ranking by
+     last Thursday — but the print and the CSV do follow it, because "print
+     the mile-run ranking" is the reason to sort in the first place. */
+  var NAME_SORT = '__name';
+  var sortBy = null;      // null = the order the roster was typed in
+  var sortDir = 1;        // 1 = best first / A-Z, -1 = flipped
+
+  function eventById(id) {
+    return state.events.filter(function (e) { return e.id === id; })[0] || null;
+  }
+
+  /** A comparable number for one student's result, or null if there isn't one. */
+  function sortValue(name, ev) {
+    var raw = state.results[resultKey(name, ev.id)];
+    if (ev.type === 'time') return parseTimeToSeconds(raw);
+    var n = (raw === undefined || raw === null || String(raw).trim() === '') ? NaN : parseFloat(raw);
+    return isNaN(n) ? null : n;
+  }
+
+  function orderedRoster() {
+    var list = state.roster.slice();
+    if (!sortBy) return list;
+    if (sortBy === NAME_SORT) {
+      return list.sort(function (a, b) { return a.localeCompare(b) * sortDir; });
+    }
+    var ev = eventById(sortBy);
+    if (!ev) return list;
+    var better = ev.type === 'time' ? 1 : -1;   // time: smaller wins. count: larger wins.
+    return list.sort(function (a, b) {
+      var av = sortValue(a, ev), bv = sortValue(b, ev);
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;                // no result, whichever way round
+      if (bv === null) return -1;
+      if (av === bv) return 0;                  // Array#sort is stable, so ties keep roster order
+      return (av < bv ? -1 : 1) * better * sortDir;
+    });
+  }
+
+  /** How the current order should be described, on screen and on paper. */
+  function sortDescription() {
+    if (!sortBy) return '';
+    if (sortBy === NAME_SORT) return sortDir === 1 ? 'Sorted by name, A to Z' : 'Sorted by name, Z to A';
+    var ev = eventById(sortBy);
+    if (!ev) return '';
+    var best = ev.type === 'time' ? 'fastest first' : 'highest first';
+    var worst = ev.type === 'time' ? 'slowest first' : 'lowest first';
+    return 'Sorted by ' + ev.name + ', ' + (sortDir === 1 ? best : worst);
+  }
+
+  function renderSortNote() {
+    var text = sortDescription();
+    els.sortNote.style.display = text ? 'flex' : 'none';
+    els.sortNote.innerHTML = text
+      ? escapeHtml(text) + ' <button type="button" class="secondary small" id="resetSortBtn">Back to roster order</button>'
+      : '';
+  }
+
+  els.sortNote.addEventListener('click', function (ev) {
+    if (ev.target.id !== 'resetSortBtn') return;
+    sortBy = null; sortDir = 1;
+    renderResultsTable();
+  });
+
+  els.resultsTable.addEventListener('click', function (ev) {
+    var th = ev.target.closest ? ev.target.closest('th[data-sort-by]') : null;
+    if (!th) return;
+    var key = th.getAttribute('data-sort-by');
+    if (sortBy === key) sortDir *= -1;
+    else { sortBy = key; sortDir = 1; }
+    renderResultsTable();
+  });
+
   function buildStatsRowHtml() {
     return '<tr><td>Class average / range</td>' + state.events.map(function (ev) {
       var stats = computeStats(ev.id, ev.type);
@@ -250,22 +346,38 @@
       els.resultsTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
       return;
     }
-    var head = '<tr><th>Student</th>' + state.events.map(function (ev) { return '<th>' + escapeHtml(ev.name) + '</th>'; }).join('') + '</tr>';
-    var rows = state.roster.map(function (name) {
+    function th(key, label) {
+      var on = sortBy === key;
+      return '<th data-sort-by="' + escapeAttr(key) + '"' + (on ? ' class="sorted-on"' : '') +
+        ' title="Click to rank the class by this" role="button" tabindex="0">' + escapeHtml(label) +
+        '<span class="arrow">' + (on ? (sortDir === 1 ? '\u2193' : '\u2191') : '') + '</span></th>';
+    }
+    var head = '<tr>' + th(NAME_SORT, 'Student') +
+      state.events.map(function (ev) { return th(ev.id, ev.name); }).join('') + '</tr>';
+    var rows = orderedRoster().map(function (name) {
       var cells = state.events.map(function (ev) {
         var key = resultKey(name, ev.id);
         var val = state.results[key] || '';
         return '<td><input type="text" data-student="' + escapeAttr(name) + '" data-event="' + ev.id + '" value="' + escapeAttr(val) + '" placeholder="' + (ev.type === 'time' ? 'mm:ss' : '#') + '"></td>';
       }).join('');
-      return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
+      return '<tr data-student-row="' + escapeAttr(name) + '"><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
     }).join('');
     els.resultsTable.innerHTML = '<thead>' + head + '</thead><tbody>' + rows + '</tbody><tfoot>' + buildStatsRowHtml() + '</tfoot>';
+    renderSortNote();
   }
 
   function refreshStatsRow() {
     var tfoot = els.resultsTable.querySelector('tfoot');
     if (tfoot) tfoot.innerHTML = buildStatsRowHtml();
   }
+
+  els.resultsTable.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var th = ev.target.closest ? ev.target.closest('th[data-sort-by]') : null;
+    if (!th) return;
+    ev.preventDefault();
+    th.click();
+  });
 
   els.resultsTable.addEventListener('input', function (ev) {
     var student = ev.target.getAttribute('data-student');
@@ -286,7 +398,7 @@
     if (!state.roster.length) { alert('Save a roster first.'); return; }
     var header = ['Student'].concat(state.events.map(function (ev) { return ev.name; }));
     var lines = [header.map(csvEscape).join(',')];
-    state.roster.forEach(function (name) {
+    orderedRoster().forEach(function (name) {
       var row = [name].concat(state.events.map(function (ev) { return state.results[resultKey(name, ev.id)] || ''; }));
       lines.push(row.map(csvEscape).join(','));
     });
@@ -305,15 +417,17 @@
   els.printBtn.addEventListener('click', function () {
     if (!state.roster.length) { alert('Save a roster first.'); return; }
     var head = '<tr><th>Student</th>' + state.events.map(function (ev) { return '<th>' + escapeHtml(ev.name) + '</th>'; }).join('') + '</tr>';
-    var rows = state.roster.map(function (name) {
+    var rows = orderedRoster().map(function (name) {
       var cells = state.events.map(function (ev) {
         return '<td>' + escapeHtml(state.results[resultKey(name, ev.id)] || '') + '</td>';
       }).join('');
       return '<tr><td>' + escapeHtml(name) + '</td>' + cells + '</tr>';
     }).join('');
+    var order = sortDescription();
     var printArea = document.getElementById('printArea');
     printArea.innerHTML = '<h1 class="print-title">Fitness &amp; Skill Assessment Report</h1>' +
-      '<p class="print-sub">Printed ' + new Date().toLocaleDateString() + '</p>' +
+      '<p class="print-sub">' + (order ? escapeHtml(order) + ' &middot; ' : '') +
+      'Printed ' + new Date().toLocaleDateString() + '</p>' +
       '<table class="print-table"><thead>' + head + '</thead><tbody>' + rows + buildStatsRowHtml() + '</tbody></table>';
     window.print();
   });

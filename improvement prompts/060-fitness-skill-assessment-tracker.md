@@ -11,6 +11,47 @@ average/range stats, and print a report.
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Shipped the last of this tool's original
+Quick Wins: **sortable results columns**.
+
+- Click any event heading to rank the class by it, again to flip it, and the
+  Student heading for A–Z. A note above the grid says which way round it is,
+  with a "Back to roster order" button beside it.
+- **Best-first has to mean best, and that is different arithmetic per event
+  type.** A count event is better higher and a time event is better lower, so
+  the first click on Push-ups puts the most at the top and the first click on
+  Mile Run puts the fastest there. One numeric comparator gets one of the two
+  backwards and nothing on screen would say so. The note is worded in the
+  event's own terms — "fastest first", "highest first" — rather than
+  "ascending", which means nothing to a reader looking at a projected grid.
+- **A blank cell is not a zero and not the fastest time on record.** Students
+  with no result sink to the bottom in *both* directions, so flipping a sort
+  never floats an empty row onto the projector. Sorting by an event nobody has
+  results for leaves the roster order alone instead of shuffling it.
+- The mm:ss parser added in Round 2 does the comparing, so `9:58` correctly
+  beats `10:02` — as text it would lose, and the grid would still look sorted.
+- **The print and the CSV follow the sorted order, and the printed page says
+  what the order is.** Printing the mile-run ranking is the reason to sort in
+  the first place, and a printout found in a drawer in March has to be able to
+  say what it is ordered by. The class average/range footer is unaffected — it
+  reads off the whole class, not the visible view.
+- **Sorting is deliberately not persisted.** A teacher reopening this tool
+  wants their roster, not whatever they were ranking by last Thursday. Nothing
+  about the sort is written to `fsat_tracker_v1`, and the suite checks that.
+- Headings are keyboard-operable (`role="button"`, `tabindex="0"`, Enter or
+  Space), and the sort note is an `aria-live` region so the reordering is
+  announced rather than being a silent visual change (P4).
+- **New suite:** `Tools/fitness-skill-assessment-tracker/test/smoke-sort.mjs`,
+  25 checks, wired into `npm test` and `npm run test:fitness` — the first
+  automated coverage this tool has had.
+
+**Where the next round should pick up:** with sorting in, the remaining Quick
+Win — a per-student Fall/Spring improvement indicator — is the one that turns
+this from a snapshot into a year of progress, and it now has a natural home
+(a sort by "most improved" is the same machinery). It needs a decision first
+about how two events are recognised as the same test at two dates; event
+names are free text today.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from
 the Ideas Backlog. Paste-a-roster textarea, an editable list of test events
 (each named freely, typed as either "count, higher is better" or "time"),
@@ -80,8 +121,14 @@ comparable numbers to trend against.
 - Results grid: one row per student, one column per event, free-text cells
 - Live class average/min/max for both count-type and time-type events
   (`mm:ss` parsed to seconds for the math, formatted back for display)
-- CSV export of the full results grid
-- Print: report table matching the on-screen grid plus the stats row
+- **Click an event heading to rank the class by it** — best first (fastest
+  for a time event, highest for a count), again to flip, with students who
+  have no result held at the bottom either way. The Student heading sorts A–Z,
+  and a note above the grid names the current order and offers a way back to
+  roster order
+- CSV export of the full results grid, in whatever order is on screen
+- Print: report table matching the on-screen grid plus the stats row, with the
+  sort order named in the subtitle
 
 ## Quick Wins
 
@@ -94,9 +141,9 @@ comparable numbers to trend against.
   indicator per student — turns "a snapshot" into "a year of progress."
 - **CSV export** of the full results grid, for a gradebook or district PE
   reporting requirement that wants raw numbers, not just a printed table.
-- **Sortable results table** (click a column header to sort by that
-  event's results) for quickly finding the fastest/slowest in a projected
-  view during class.
+- **Done — 2026-08-12.** **Sortable results table** (click a column header to
+  sort by that event's results) for quickly finding the fastest/slowest in a
+  projected view during class. *(See Status.)*
 
 ## Major Features
 
