@@ -219,6 +219,30 @@
       <input class="input" type="number" id="target-size" min="0.5" step="0.5" placeholder="off">
     </div>
 
+    <div class="control-group" style="flex-basis:100%;">
+      <label for="enhance">Clean up photos of a board or a page</label>
+      <select class="input" id="enhance">
+        <option value="off" selected>Off &mdash; use the photo as it is</option>
+        <option value="whiteboard">Whiteboard &mdash; even out the lighting, whiten the board, keep marker colors</option>
+        <option value="worksheet">Worksheet / page &mdash; stronger, aims for black text on white paper</option>
+      </select>
+      <p style="font-size:12px; opacity:0.65; margin:6px 0 0;">A phone photo of a whiteboard is grey, unevenly lit,
+        and expensive to print. This flattens the lighting across the image, sets the board or paper to white, and
+        pushes the writing dark. It runs on your machine like everything else here &mdash; nothing is uploaded.</p>
+      <div id="enhance-preview" style="display:none; margin-top:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+          <figure style="margin:0;">
+            <img id="enhance-before" alt="The first queued image before cleanup" style="max-width:220px; border:1px solid var(--color-border, #999); display:block;">
+            <figcaption style="font-size:11px; opacity:0.6;">Before</figcaption>
+          </figure>
+          <figure style="margin:0;">
+            <img id="enhance-after" alt="The same image after cleanup" style="max-width:220px; border:1px solid var(--color-border, #999); display:block;">
+            <figcaption style="font-size:11px; opacity:0.6;">After &mdash; first image in the queue</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
     <div class="control-group">
       <label>Output filename</label>
       <input class="input" type="text" id="filename" value="assembled.pdf" placeholder="assembled.pdf">
@@ -488,7 +512,44 @@
   let dragId = null;
 
   // ── Render the file queue list ─────────────────────────────────────────────
+  /* ---------- before/after preview ----------
+     Applying the cleanup to every thumbnail would mean decoding the whole
+     queue on every change of the dropdown. One pair from the first image is
+     enough to judge the setting, and costs one decode. */
+  let previewToken = 0;
+  async function renderEnhancePreview() {
+    const wrap = document.getElementById('enhance-preview');
+    const before = document.getElementById('enhance-before');
+    const after = document.getElementById('enhance-after');
+    if (!wrap) return;
+    const mode = enhanceMode();
+    const first = loadedFiles.find(e => !/\.svg$/i.test(e.file.name));
+    if (!ENHANCE_PRESETS[mode] || !first) { wrap.style.display = 'none'; return; }
+
+    const token = ++previewToken;
+    try {
+      const img = await loadImageElement(await fileToDataURL(first.file));
+      if (token !== previewToken) return;
+      const scale = Math.min(1, 440 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const cw = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+      const ch = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = cw; canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(img, 0, 0, cw, ch);
+      before.src = canvas.toDataURL('image/jpeg', 0.7);
+      enhanceCanvas(canvas, ctx, mode);
+      after.src = canvas.toDataURL('image/jpeg', 0.7);
+      wrap.style.display = '';
+    } catch (e) {
+      wrap.style.display = 'none';   // unreadable image — the queue already reports it
+    }
+  }
+
   function renderList() {
+    renderEnhancePreview();
     fileList.innerHTML = '';
     const ordered = getOrderedEntries();
     if (ordered.length === 0) {
@@ -648,6 +709,8 @@
     original: 'Original', high: 'High', standard: 'Standard',
     compact: 'Compact (auto)', min: 'Minimum (auto)'
   };
+
+  document.getElementById('enhance').addEventListener('change', renderEnhancePreview);
 
   // ── Generate PDF ───────────────────────────────────────────────────────────
   btnGen.addEventListener('click', generatePDF);
@@ -1034,6 +1097,151 @@
   }
 
   // Raster (PNG/JPG/WEBP) → { dataURL, format, naturalW, naturalH } ready to embed.
+
+  // ── Whiteboard / worksheet cleanup ─────────────────────────────────────────
+  // A phone photo of a whiteboard is grey, lit unevenly (bright by the window,
+  // dim in the corner), and carries whatever colour cast the room's lights
+  // have. Printed as-is it costs a lot of toner and reads badly. This is the
+  // flat-field correction a document scanner does, in two passes over the
+  // canvas that is already being drawn for encoding:
+  //
+  //   1. Estimate the illumination. Draw the image down to a thumbnail and
+  //      back up: the bilinear scaling averages away the writing and leaves a
+  //      smooth map of how bright each region of the *board* is. Dividing by
+  //      that map and re-multiplying by the map's own mean flattens the
+  //      gradient. Doing it per channel is also the white balance — a warm
+  //      cast is a per-channel difference in that mean.
+  //
+  //   2. Set the black and white points. The board should end up at 255 and
+  //      the writing near 0. The white point comes from a high percentile of
+  //      the flattened image rather than from its maximum, so one glare
+  //      highlight doesn't set the level for the whole photo.
+  //
+  // "whiteboard" keeps a gentle black point so red and blue marker survive as
+  // colour; "worksheet" pulls harder, since a photo of a printed page wants to
+  // come out as black text on white paper.
+  const ENHANCE_PRESETS = {
+    whiteboard: { blackFrac: 0.32, whitePct: 0.92 },
+    worksheet:  { blackFrac: 0.55, whitePct: 0.90 },
+  };
+
+  /** The value at `pct` through a 256-bucket histogram. Used for the white
+   *  point, so glare (a handful of pixels at 255) can't define it. */
+  function percentileFromHistogram(hist, total, pct) {
+    let seen = 0;
+    const want = total * pct;
+    for (let v = 0; v < 256; v++) {
+      seen += hist[v];
+      if (seen >= want) return v;
+    }
+    return 255;
+  }
+
+  /** Enhance in place. `mode` is a key of ENHANCE_PRESETS; anything else is a
+   *  no-op, so "off" costs nothing. */
+  function enhanceCanvas(canvas, ctx, mode) {
+    const preset = ENHANCE_PRESETS[mode];
+    if (!preset) return;
+    const w = canvas.width, h = canvas.height;
+    if (!w || !h) return;
+
+    // 1. illumination map
+    const sw = Math.max(1, Math.round(w / 24));
+    const sh = Math.max(1, Math.round(h / 24));
+    const small = document.createElement('canvas');
+    small.width = sw; small.height = sh;
+    const sctx = small.getContext('2d');
+    sctx.imageSmoothingEnabled = true;
+    sctx.drawImage(canvas, 0, 0, sw, sh);
+
+    /* A plain average is the wrong estimate: a stroke is only a little
+       narrower than one cell of this map, so the writing darkens the very
+       cells it sits in — and dividing by a background that already contains
+       the ink brightens the ink instead of the board. The board is the bright
+       end of any neighbourhood, so the map is passed through a local maximum
+       (radius 1 cell ≈ 72 source pixels, comfortably wider than a marker
+       stroke) before being scaled back up. Cheap: the map is tens of pixels
+       across, not thousands. */
+    try {
+      const md = sctx.getImageData(0, 0, sw, sh);
+      const src2 = new Uint8ClampedArray(md.data);
+      const at = (x, y, c) => src2[(y * sw + x) * 4 + c];
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          for (let c = 0; c < 3; c++) {
+            let best = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              const yy = y + dy; if (yy < 0 || yy >= sh) continue;
+              for (let dx = -1; dx <= 1; dx++) {
+                const xx = x + dx; if (xx < 0 || xx >= sw) continue;
+                const v = at(xx, yy, c); if (v > best) best = v;
+              }
+            }
+            md.data[(y * sw + x) * 4 + c] = best;
+          }
+        }
+      }
+      sctx.putImageData(md, 0, 0);
+    } catch (e) { /* unreadable canvas — the average map is still usable */ }
+
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = w; bgCanvas.height = h;
+    const bctx = bgCanvas.getContext('2d');
+    bctx.imageSmoothingEnabled = true;
+    bctx.drawImage(small, 0, 0, w, h);
+
+    let src, bg;
+    try {
+      src = ctx.getImageData(0, 0, w, h);
+      bg = bctx.getImageData(0, 0, w, h);
+    } catch (e) {
+      return;   // canvas is tainted or the read failed — leave the photo alone
+    }
+    const sd = src.data, bd = bg.data;
+    const n = sd.length;
+
+    // per-channel mean of the illumination map
+    let mr = 0, mg = 0, mb = 0;
+    for (let i = 0; i < n; i += 4) { mr += bd[i]; mg += bd[i + 1]; mb += bd[i + 2]; }
+    const px = n / 4;
+    mr = mr / px || 1; mg = mg / px || 1; mb = mb / px || 1;
+    /* Every channel is normalised to the SAME target, not to its own mean.
+       Dividing red by the red mean and blue by the blue mean flattens each
+       channel's gradient but leaves the board exactly as warm as it was — the
+       cast lives in the difference between those means. Sending all three to
+       one grey target is what actually white-balances it. */
+    const target = (mr + mg + mb) / 3 || 1;
+
+    // 2. flatten, and collect a luminance histogram of the flattened values
+    const hist = new Uint32Array(256);
+    const flat = new Float32Array(n);
+    for (let i = 0; i < n; i += 4) {
+      const r = sd[i] * target / Math.max(1, bd[i]);
+      const g = sd[i + 1] * target / Math.max(1, bd[i + 1]);
+      const b = sd[i + 2] * target / Math.max(1, bd[i + 2]);
+      flat[i] = r; flat[i + 1] = g; flat[i + 2] = b;
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      hist[Math.max(0, Math.min(255, Math.round(lum)))]++;
+    }
+
+    const white = Math.max(1, percentileFromHistogram(hist, px, preset.whitePct));
+    const black = white * preset.blackFrac;
+    const span = Math.max(1, white - black);
+
+    for (let i = 0; i < n; i += 4) {
+      for (let c = 0; c < 3; c++) {
+        const v = (flat[i + c] - black) * 255 / span;
+        sd[i + c] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+    }
+    ctx.putImageData(src, 0, 0);
+  }
+
+  function enhanceMode() {
+    const el = document.getElementById('enhance');
+    return el ? el.value : 'off';
+  }
+
   async function processRaster(file, ext, qualityMode) {
     const srcDataURL = await fileToDataURL(file);
     const img = await loadImageElement(srcDataURL);
@@ -1050,7 +1258,11 @@
     // held sideways. Routing JPEG through canvas even at "original" quality (at
     // a near-lossless setting) makes the embedded pixels match what the browser
     // — and the person who took the photo — actually see.
-    if (!preset && ext === 'png') {
+    const enhance = enhanceMode();
+    /* The PNG passthrough only holds while nothing is being changed — with
+       cleanup on, the pixels have to go through the canvas to be changed at
+       all. */
+    if (!preset && ext === 'png' && !ENHANCE_PRESETS[enhance]) {
       return { dataURL: srcDataURL, format: 'PNG', naturalW, naturalH };
     }
 
@@ -1067,6 +1279,7 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, cw, ch);
     ctx.drawImage(img, 0, 0, cw, ch);
+    enhanceCanvas(canvas, ctx, enhance);
 
     if (!preset && ext === 'webp') {
       // No lossy source quality was requested to begin with; keep it lossless.

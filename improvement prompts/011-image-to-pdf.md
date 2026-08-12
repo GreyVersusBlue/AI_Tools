@@ -180,6 +180,63 @@ ambitious and **not** scoped to a single session.
 - Reorder-by-thumbnail-grid for large batches (list becomes unwieldy past
   ~15-20 files) is still open.
 
+**2026-08-12 — Round 5 (backlog rank 5: whiteboard auto-enhance).** A new
+"Clean up photos of a board or a page" control with three settings — **Off**,
+**Whiteboard**, and **Worksheet / page** — plus a before/after preview of the
+first queued image, so the setting can be judged before a PDF is built. It is
+the flat-field correction a document scanner does, in canvas, on the same
+canvas the encoder was already going to use:
+
+1. **Estimate the illumination** by drawing the image down to a thumbnail and
+   back up, so the writing averages away and what is left is a map of how
+   bright each region of the *board* is. Divide by that map to flatten the
+   gradient.
+2. **Set the black and white points**, with the white point taken from a high
+   percentile rather than the maximum, so one glare highlight can't define the
+   level for the whole photo.
+
+Whiteboard keeps a gentle black point so red and blue marker survive as
+colour; Worksheet pulls harder, since a photo of a printed page wants to come
+out as black text on white paper.
+
+**Two real bugs, both found by the suite measuring pixels rather than by
+looking at an image:**
+
+- **The blur radius was comparable to a marker stroke.** Downscaling by 24
+  makes each map cell about as wide as the writing, so the strokes darkened
+  the very cells they sat in — and dividing by a background that already
+  contains the ink *brightens the ink*. Measured: writing went from luminance
+  29 to 187, the exact opposite of the feature. The map now passes through a
+  local **maximum** filter (radius one cell, ~72 source pixels) before being
+  scaled up: the board is the bright end of any neighbourhood, so a max is the
+  right estimator and an average is not. It costs nothing — the map is tens of
+  pixels across.
+- **Per-channel normalisation preserved the colour cast.** Dividing red by the
+  red mean and blue by the blue mean flattens each channel's gradient but
+  leaves the board exactly as warm as it was, because the cast *is* the
+  difference between those means. All three channels now normalise to one grey
+  target, which is what actually white-balances it.
+
+The PNG passthrough at "Original" quality had to learn about this: it is only
+valid while nothing is being changed, so it is skipped when cleanup is on.
+
+Verified with a new 22-assertion headless Chromium suite,
+`Tools/image-to-pdf/test/smoke-enhance.mjs` (folded into
+`npm run test:image-to-pdf`). It generates a synthetic whiteboard photo — a
+left-to-right brightness gradient with a warm cast, and dark strokes at known
+positions in both the dim and bright regions — then reads real pixels back out
+of the tool's own before/after preview and asserts that both ends of the board
+land above luminance 235 and within six levels of each other, that the ink
+darkens at both ends, that contrast rises, that the cast is neutralised, and
+that red marker is still red. It also generates a PDF with and without cleanup
+and asserts the bytes differ, so the pass is proven to run in the pipeline and
+not only in the preview. The pre-existing suite still passes unchanged.
+
+**Next round should pick up** a per-image cleanup override — the setting is
+currently one answer for the whole queue, and a packet mixing board photos
+with ordinary pictures wants it per file, exactly like the Word merger's
+per-document options shipped this same round.
+
 ## What it does today
 
 - Add many images (drag-drop), reorder, rotate, remove, clear; sort modes
@@ -189,10 +246,14 @@ ambitious and **not** scoped to a single session.
   per page
 - Quality/compression choices (Original / High / Standard) with size
   implications explained
+- **Whiteboard / worksheet cleanup**: canvas-only flat-field correction that
+  evens out the lighting, white-balances, whitens the board or paper and
+  darkens the writing, with a before/after preview
 - **SVG support** (`processSVG`, `svgToDataURL`) alongside raster
 - Rotation-aware embedding (`rotateForEmbed`), mm-accurate page math
   (`pxToMm`, `clampPageDimsMm`), progress reporting
-- Loads `_shared/theme.css` and `_shared/a11y.js`; loads jsPDF from cdnjs
+- Loads `_shared/theme.css` and `_shared/a11y.js`; jsPDF comes from the
+  site-wide `_shared/vendor/` copy (Phase 1b), not from cdnjs
 
 ## Quick Wins
 
