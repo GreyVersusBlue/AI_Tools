@@ -9,6 +9,63 @@
 
 ## Status
 
+### 2026-08-12 — session `r8kq4t` — the seating chart panel
+
+Backlog rank 1. A ninth panel, **Seating Chart**, read-only over
+`seating-chart-v1` (owned by `005-Seating Chart Generator.html`) — the third
+tool whose storage this page reads and the second it never writes. What it
+adds is the thing the generator itself cannot do from here: the chart for the
+period you are standing in front of, on the projector, without leaving the
+page.
+
+- **Drawn as one SVG, not copied markup.** The generator lays out absolutely
+  positioned divs in a 1280×900 coordinate space and leans on most of a
+  stylesheet to make them look like desks. Re-creating that here would have
+  been exactly the copy-paste drift `CLAUDE.md` exists to stop, and it would
+  not have scaled. An SVG in the same coordinate space scales to the panel, to
+  projector mode and to paper for nothing, and cannot drift with that
+  stylesheet. The bill for it is that SVG text does not wrap, which `fitText`
+  pays: a name wider than its desk gets a `textLength` and is squeezed rather
+  than spilling over the edge, and a name that already fits is left alone.
+- **Which chart to show is remembered per period, not globally.** This was the
+  design decision worth the time. Matching a period to a section by name is a
+  guess — a section called "3rd Period Academic" and a period labelled
+  "Period 3" share no substring — so the panel guesses once (from the roster
+  mapped to the period, then the period's label) and then gets out of the way:
+  picking a section files that choice under the period id in
+  `settings.seatingByPeriod`, and from then on that period comes up right. `-`
+  is the bucket for outside any period, so a prep-period glance still
+  remembers. Nothing has to be set up for the panel to be useful, and nothing
+  has to be re-set every day.
+- **Mirroring is done by reflecting the coordinates**, not by flipping the
+  drawing. The generator flips the floor and then counter-flips every label to
+  keep the writing readable; reflecting `x` about the room instead (and
+  negating the rotation with it) gets the same picture with no counter-flip to
+  forget. `numbered` and per-student `flag` are honoured too — a flagged desk
+  gets a heavier stroke *and* a mark, since a school printer will not show the
+  colour.
+- The panel is `wide`, because a seating chart in a third of the board is
+  decoration. It follows the bell (`onPeriodChange`) and a chart edited in
+  another tab (the `storage` listener), and does not sit on the 20-second
+  refresh timer — there is nothing on it that changes on its own.
+- **New suite:** `Tools/command-center/test/smoke-seating-panel.mjs`, 32
+  checks, wired into `npm test` and `npm run test:command-center`. It seeds a
+  real chart and builds the bell schedule around the *actual* current time, so
+  "the period you are standing in front of" is a real answer rather than a
+  fixture that goes stale at 3pm. It covers the auto-choice, the per-period
+  override surviving a reload, the empty desk, the flag, the rotation, the
+  seat count, the unseated list, the mirror reflecting rather than shifting,
+  both empty states, projector mode — and that a corrupt chart leaves the
+  panel standing and is never written back over.
+
+**Where the next round should pick up:** the panel is a viewer, and the
+obvious next step is the one thing a teacher does while looking at a chart —
+marking somebody absent. That would make this the second panel that writes to
+another tool's key, and `seating-chart-v1` has no absence field, so it needs
+the Seating Chart Generator's own round to decide the shape first. Second:
+student photos live in the chart as base64 and are ignored here (see P12) —
+worth showing, but not before the generator's own IndexedDB migration.
+
 ### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
 
 Picked up item 3 from Round 1's "where the next round should pick up" list:
@@ -151,14 +208,27 @@ What shipped, against the backlog below:
 
 ## What it does today
 
-- Reads four other tools' storage keys and composes them on one page:
+- Reads six other tools' storage keys and composes them on one page:
   `np_rosters` (roster), `scv_calendar_v1` (today's calendar entry),
-  `hall-pass-log-sections` (who's currently out), plus its own settings
+  `hall-pass-log-sections` (who's currently out), `ct_prefs` / `ct_running_v1`
+  (the Classroom Timer's agenda, live), `seating-chart-v1` (the room), plus
+  its own settings. Only the hall-pass key is ever written back.
+- A **panel registry**: nine panels, each switchable and reorderable from the
+  "Panels…" drawer, with a new one arriving switched on for a teacher who has
+  never opened it
+- A live **clock and period strip**, and a bell schedule that brings up the
+  period's roster when the bell rings — unless the teacher has chosen one by
+  hand since the page loaded
 - **Timer** panel with quick durations (5/10/15/20m), Set, Start, Reset, and
   alert sounds (Bell / Buzzer / Chime / None, with Test)
 - **Quick-call** roster panel with no-repeats exclusion, persisted per roster
   (`gvb-command-center:excluded:*`), and Reset turns
-- Live **hall pass** readout of who is out right now
+- **Seating chart** panel: the current period's chart drawn read-only from
+  `seating-chart-v1`, full board width, with flagged seats marked, empty
+  desks dashed, and the section choice remembered per period
+- Live **hall pass** readout of who is out right now, one tap from signing
+  somebody back in
+- **Projector mode** as a display state on the same page, not a second one
 
 ## Quick Wins
 

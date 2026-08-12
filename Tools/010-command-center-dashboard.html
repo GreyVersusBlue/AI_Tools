@@ -174,6 +174,14 @@
   .pc-row .pc-name { flex: 1; }
   .pc-row label { margin: 0; display: flex; align-items: center; gap: .4rem; font-weight: 600; }
 
+  /* ── Seating chart panel ───────────────────────────────────────────────
+     The map is one SVG in the generator's own 1280x900 layout space, so the
+     only sizing rule it needs is "be as wide as the card". max-height keeps a
+     very deep room from pushing the panels under it off the board. */
+  .seat-map { display: block; width: 100%; height: auto; max-height: 62vh; margin: .2rem 0 .6rem; }
+  .seating-pick { max-width: 22rem; }
+  .seat-foot { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; color: var(--muted); font-size: .8rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 1.6rem; text-align: center; }
 
   /* ── Projector mode ────────────────────────────────────────────────────
@@ -188,6 +196,9 @@
   body.projector .now-period { font-size: clamp(1.4rem, 3.6vw, 2.4rem); }
   body.projector .card-title a, body.projector .card-title button { display: none; }
   body.projector .hint, body.projector .roster-list, body.projector .period-row:not(.current) { display: none; }
+  body.projector .seating-pick { display: none; }
+  body.projector .seat-map { max-height: 76vh; }
+  body.projector .seat-foot { font-size: 1rem; }
   body.projector .picked-name { font-size: clamp(2.4rem, 9vw, 4.5rem); }
   body.projector .motd-display { font-size: clamp(1.6rem, 5vw, 3rem); }
   body.projector .timer-display { font-size: clamp(2.6rem, 9vw, 4rem); }
@@ -275,7 +286,7 @@
      another tool's storage.
      ===================================================================== */
   var PANELS = {};
-  var DEFAULT_PANELS = ['motd', 'schedule', 'startday', 'timer', 'donow', 'today', 'roster', 'hallpass'];
+  var DEFAULT_PANELS = ['motd', 'schedule', 'startday', 'timer', 'donow', 'today', 'roster', 'seating', 'hallpass'];
 
   function panelSettings() {
     var stored = Array.isArray(settings.panels) ? settings.panels : [];
@@ -460,6 +471,9 @@
       yanking the roster out from under someone mid-question. */
   function onPeriodChange(period) {
     if (mounted.schedule) buildSchedulePanel(mounted.schedule);
+    // The seating panel is keyed off the period, not the roster, so it follows
+    // the bell whether or not a roster is mapped or the teacher has overridden.
+    if (mounted.seating) buildSeatingPanel(mounted.seating);
     if (!period || !period.roster || settings.autoPeriodRoster === false) return;
     if (rosterManuallyChosen) return;
     if (settings.rosterName === period.roster) return;
@@ -850,6 +864,226 @@
     id: 'roster', title: 'Roster & Quick Call',
     link: { href: '006-class-roster-hub.html', label: 'Manage rosters' },
     build: buildRosterPanel
+  };
+
+  /* =====================================================================
+     PANEL: Seating chart
+
+     Read-only. Like the Do Now panel it reads another tool's key and never
+     writes it — `seating-chart-v1`, owned by 005-Seating Chart Generator.
+     What it adds is the one thing that tool cannot do from here: put the
+     chart for the period you are standing in front of on the projector, at
+     a size the back of the room can read, without leaving this page.
+
+     Drawn as an SVG rather than by copying the generator's own markup. That
+     tool positions absolutely-placed divs in a 1280x900 layout space and
+     leans on most of a stylesheet to make them look like desks; re-creating
+     that here would be the copy-paste drift the repo conventions exist to
+     stop, and it would not scale. One SVG in the same coordinate space
+     scales to any panel width, to projector mode, and to paper, for free.
+     The cost is that SVG text does not wrap, which is what fitText below is
+     for.
+     ===================================================================== */
+  var SEATING_KEY = 'seating-chart-v1';
+  /* ROOM.deskW / ROOM.deskH from Tools/seating-chart/seating.mjs. Desk
+     coordinates in the saved chart are the top-left corner in that space. */
+  var SEAT_DESK_W = 106, SEAT_DESK_H = 70;
+  var SEAT_PAD = 26;          // breathing room around the outermost desks
+  var SEAT_FRONT_BAND = 62;   // the FRONT OF ROOM bar the generator also draws
+
+  function loadSeating() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(SEATING_KEY) || 'null');
+      if (!parsed || !Array.isArray(parsed.sections) || !parsed.sections.length) return null;
+      return parsed;
+    } catch (e) { return null; }
+  }
+
+  /** Names compared the way a teacher typed them rather than character by
+      character: case, punctuation and doubled spaces all vary between the
+      roster list and the chart's section name for the same class. */
+  function loosely(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function sameClass(a, b) {
+    a = loosely(a); b = loosely(b);
+    return !!a && !!b && (a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1);
+  }
+
+  /* Which chart to show is remembered per period, not globally: a teacher who
+     picks "Honors GT" while standing in 3rd period means "3rd period is
+     Honors GT", and expects 4th to come up as something else. `-` is the
+     bucket for outside any period, so a prep-period glance still remembers
+     what it was last looking at. */
+  function seatingChoices() {
+    return (settings.seatingByPeriod && typeof settings.seatingByPeriod === 'object') ? settings.seatingByPeriod : {};
+  }
+  function seatingPeriodKey() {
+    var at = periodAt(nowMinutes());
+    return at.current ? at.current.id : '-';
+  }
+  function sectionForNow(state) {
+    var at = periodAt(nowMinutes());
+    var period = at.current;
+    var byId = {};
+    state.sections.forEach(function (s) { if (s && s.id) byId[s.id] = s; });
+
+    var chosen = seatingChoices()[period ? period.id : '-'];
+    if (chosen && byId[chosen]) return byId[chosen];
+
+    /* Nothing picked yet for this period: guess from the names the teacher
+       has already entered elsewhere. The roster mapped to the period is the
+       stronger signal — it was set deliberately — so it is tried first. */
+    if (period) {
+      var guess = null;
+      if (period.roster) {
+        guess = state.sections.filter(function (s) { return sameClass(s.name, period.roster); })[0];
+      }
+      if (!guess && period.label) {
+        guess = state.sections.filter(function (s) { return sameClass(s.name, period.label); })[0];
+      }
+      if (guess) return guess;
+    }
+    return byId[state.active] || state.sections[0];
+  }
+
+  /** An SVG <text> that squeezes rather than spilling out of its desk. */
+  function fitText(str, cx, y, fontSize, maxWidth, extra) {
+    var text = String(str || '');
+    if (!text) return '';
+    // 0.55em per character is a serviceable average for this serif stack; it
+    // only decides *whether* to squeeze, and lengthAdjust does the rest.
+    var estimate = text.length * fontSize * 0.55;
+    var squeeze = estimate > maxWidth
+      ? ' textLength="' + maxWidth + '" lengthAdjust="spacingAndGlyphs"'
+      : '';
+    return '<text x="' + cx + '" y="' + y + '" text-anchor="middle" font-size="' + fontSize + '"' +
+      (extra || '') + squeeze + '>' + escapeHtml(text) + '</text>';
+  }
+
+  function seatingSvg(state, section) {
+    var desks = Array.isArray(section.desks) ? section.desks : [];
+    if (!desks.length) return null;
+    var assign = (section.assign && typeof section.assign === 'object') ? section.assign : {};
+    var byId = {};
+    (Array.isArray(section.students) ? section.students : []).forEach(function (s) {
+      if (s && s.id) byId[s.id] = s;
+    });
+
+    var xs = desks.map(function (d) { return Number(d.x) || 0; });
+    var ys = desks.map(function (d) { return Number(d.y) || 0; });
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs) + SEAT_DESK_W;
+    var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys) + SEAT_DESK_H;
+    /* A rotated desk overhangs its own box by (w-h)/2 top and bottom, so the
+       extents have to allow for it or a turned desk gets clipped. */
+    var overhang = desks.some(function (d) { return (Number(d.rot) || 0) % 180 !== 0; })
+      ? (SEAT_DESK_W - SEAT_DESK_H) / 2 : 0;
+    var vx = minX - SEAT_PAD - overhang;
+    var vy = minY - SEAT_PAD - SEAT_FRONT_BAND - overhang;
+    var vw = (maxX - minX) + 2 * (SEAT_PAD + overhang);
+    var vh = (maxY - minY) + 2 * (SEAT_PAD + overhang) + SEAT_FRONT_BAND;
+
+    var mirror = state.mirror === true;
+    var numbered = state.numbered === true;
+    var filled = 0;
+
+    var body = desks.map(function (d, i) {
+      var x = Number(d.x) || 0, y = Number(d.y) || 0;
+      var rot = Number(d.rot) || 0;
+      /* Mirroring by reflecting the coordinates, rather than by flipping the
+         whole drawing, keeps every label the right way round without a
+         counter-flip on each one. The rotation reflects with it. */
+      if (mirror) { x = (minX + maxX) - x - SEAT_DESK_W; rot = -rot; }
+      var cx = x + SEAT_DESK_W / 2, cy = y + SEAT_DESK_H / 2;
+      var student = byId[assign[d.id]];
+      if (student) filled++;
+      var flagged = !!(student && student.flag);
+
+      var rect = '<rect x="' + x + '" y="' + y + '" width="' + SEAT_DESK_W + '" height="' + SEAT_DESK_H +
+        '" rx="9" fill="' + (student ? 'var(--card)' : 'none') + '" stroke="var(--' + (student ? 'line-strong' : 'line') + ')"' +
+        ' stroke-width="' + (flagged ? 3.5 : 1.5) + '"' + (student ? '' : ' stroke-dasharray="6 5"') + '/>';
+
+      var label = '';
+      if (student) {
+        var parts = String(student.name || '').trim().split(/\s+/);
+        var first = parts.shift() || '';
+        var rest = parts.join(' ');
+        var inner = SEAT_DESK_W - 12;
+        label = rest
+          ? fitText(first, cx, cy - 1, 19, inner, ' font-weight="600" fill="var(--ink)"') +
+            fitText(rest, cx, cy + 18, 14, inner, ' fill="var(--muted)"')
+          : fitText(first, cx, cy + 7, 21, inner, ' font-weight="600" fill="var(--ink)"');
+        if (flagged) {
+          label += '<text x="' + (x + SEAT_DESK_W - 8) + '" y="' + (y + 17) + '" text-anchor="end" font-size="14" fill="var(--err)">&#9873;</text>';
+        }
+      }
+      if (numbered) {
+        label += '<text x="' + (x + 7) + '" y="' + (y + 17) + '" font-size="12" fill="var(--muted)">' + (i + 1) + '</text>';
+      }
+
+      var group = rect + label;
+      return rot ? '<g transform="rotate(' + rot + ' ' + cx + ' ' + cy + ')">' + group + '</g>' : group;
+    }).join('');
+
+    var frontY = minY - SEAT_PAD - SEAT_FRONT_BAND / 2 - overhang;
+    var front =
+      '<line x1="' + (vx + SEAT_PAD) + '" y1="' + (frontY + 16) + '" x2="' + (vx + vw - SEAT_PAD) + '" y2="' + (frontY + 16) +
+      '" stroke="var(--line-strong)" stroke-width="2"/>' +
+      '<text x="' + (vx + vw / 2) + '" y="' + frontY + '" text-anchor="middle" font-size="17" letter-spacing="2" fill="var(--muted)">FRONT OF ROOM &#183; BOARD</text>';
+
+    return {
+      svg: '<svg class="seat-map" viewBox="' + vx + ' ' + vy + ' ' + vw + ' ' + vh + '" role="img" ' +
+        'aria-label="Seating chart for ' + escapeHtml(section.name || 'this class') + ', ' + filled + ' of ' + desks.length + ' seats filled" ' +
+        'font-family="Segoe UI, Georgia, serif">' + front + body + '</svg>',
+      filled: filled,
+      total: desks.length
+    };
+  }
+
+  function buildSeatingPanel(el) {
+    var state = loadSeating();
+    if (!state) {
+      el.innerHTML = '<p class="empty-hint">No seating chart saved yet. Build one in ' +
+        '<a href="005-Seating%20Chart%20Generator.html">Seating Chart Generator</a> and the chart for whichever period you are in shows up here.</p>';
+      return;
+    }
+    var section = sectionForNow(state);
+    var drawn = seatingSvg(state, section);
+    var seated = {};
+    if (section.assign) Object.keys(section.assign).forEach(function (k) { seated[section.assign[k]] = true; });
+    var unseated = (Array.isArray(section.students) ? section.students : [])
+      .filter(function (s) { return s && !seated[s.id]; })
+      .map(function (s) { return s.name; })
+      .filter(Boolean);
+
+    var picker = state.sections.length > 1
+      ? '<select class="seating-pick" id="seatingPick" aria-label="Which chart to show">' +
+        state.sections.map(function (s) {
+          return '<option value="' + escapeHtml(s.id) + '"' + (s.id === section.id ? ' selected' : '') + '>' + escapeHtml(s.name || 'Untitled') + '</option>';
+        }).join('') + '</select>'
+      : '';
+
+    el.innerHTML = picker +
+      (drawn
+        ? drawn.svg + '<div class="seat-foot"><span>' + escapeHtml(section.name || 'This class') + ' &middot; ' +
+          drawn.filled + ' of ' + drawn.total + ' seats filled</span>' +
+          (unseated.length ? '<span>Not seated: ' + escapeHtml(unseated.join(', ')) + '</span>' : '') + '</div>'
+        : '<p class="empty-hint">&ldquo;' + escapeHtml(section.name || 'This class') + '&rdquo; has no desks placed yet. Lay the room out in Seating Chart Generator and it appears here.</p>');
+
+    var pick = el.querySelector('#seatingPick');
+    if (pick) pick.addEventListener('change', function () {
+      var choices = seatingChoices();
+      choices[seatingPeriodKey()] = pick.value;
+      settings.seatingByPeriod = choices;
+      saveSettings();
+      buildSeatingPanel(el);
+    });
+  }
+
+  PANELS.seating = {
+    id: 'seating', title: 'Seating Chart', wide: true,
+    link: { href: '005-Seating%20Chart%20Generator.html', label: 'Open Seating Chart' },
+    build: buildSeatingPanel
   };
 
   /* =====================================================================
@@ -1260,6 +1494,7 @@
   window.addEventListener('storage', function (e) {
     if (e.key === HALLPASS_STORAGE_KEY && mounted.hallpass) buildHallPassPanel(mounted.hallpass);
     if (e.key === 'np_rosters' && mounted.roster) buildRosterPanel(mounted.roster);
+    if (e.key === SEATING_KEY && mounted.seating) buildSeatingPanel(mounted.seating);
   });
 })();
 </script>
