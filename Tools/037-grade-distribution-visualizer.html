@@ -622,16 +622,36 @@
 
      The status message goes next to the button rather than into an alert:
      this is a "did that work?" confirmation, not something to dismiss. */
+  var copyStatusTimers = new WeakMap();
+
   function setCopyStatus(row, text, isError) {
     if (!row) return;
     var el = row.querySelector('.copy-status');
     if (!el) {
       el = document.createElement('span');
       el.className = 'copy-status';
+      /* Announced, not just shown. The whole point of this line is to be the
+         answer to "did that work?", and a status a screen reader never reaches
+         leaves exactly the ambiguity the button was supposed to remove. */
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
       row.appendChild(el);
     }
     el.textContent = text;
     el.classList.toggle('error', !!isError);
+
+    /* A success message clears itself; a failure does not. "Copied" still
+       sitting there ten minutes later will be read as the result of whatever
+       was clicked most recently, which is worse than no message. A failure
+       is asking the teacher to do something about it, so it stays until the
+       next attempt replaces it. */
+    var pending = copyStatusTimers.get(el);
+    if (pending) clearTimeout(pending);
+    if (!isError && text && text.indexOf('…') === -1) {
+      copyStatusTimers.set(el, setTimeout(function () {
+        if (el.textContent === text) el.textContent = '';
+      }, 6000));
+    }
   }
 
   function copyChartImage(svgString, filenameBase, w, h, row) {
@@ -643,7 +663,23 @@
         setCopyStatus(row, 'This browser can’t put an image on the clipboard — downloaded the PNG instead.', true);
         return;
       }
-      navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]).then(function () {
+      /* try/catch as well as a rejection handler, because the two failure
+         modes are different code paths. `write()` rejects when a permission
+         is refused or the type is unsupported; the `ClipboardItem`
+         constructor *throws synchronously* where the API is only partly
+         implemented. Without the catch that one escapes the click handler
+         entirely — no download, no message, a console error nobody is
+         looking at, and a button that appears to do nothing at all. Which is
+         precisely the failure this whole path exists to prevent. */
+      var wrote;
+      try {
+        wrote = navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+      } catch (e) {
+        downloadBlob(blob, filenameBase + '.png');
+        setCopyStatus(row, 'This browser refused the clipboard — downloaded the PNG instead.', true);
+        return;
+      }
+      Promise.resolve(wrote).then(function () {
         setCopyStatus(row, 'Copied — paste it straight into your document.');
       }, function () {
         downloadBlob(blob, filenameBase + '.png');

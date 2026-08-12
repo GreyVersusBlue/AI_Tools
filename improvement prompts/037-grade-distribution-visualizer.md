@@ -9,6 +9,40 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 5 (as it stood) asked for a
+failure state on the Copy button: "a blocked copy looks identical to a
+successful one — it should flash 'Use Download PNG'".
+
+**Most of that was already there** and had been since the button shipped: an
+unsupported browser and a refused permission both fall back to downloading the
+PNG and say which happened, in a status line beside the button rather than an
+alert. Rather than rebuild it, this round closed the three holes actually left
+in it.
+
+- **A clipboard that throws instead of rejecting.** `write()` returns a
+  promise and its rejection was handled, but the `ClipboardItem` *constructor*
+  throws synchronously where the API is only partly implemented — and that
+  escapes the click handler before any of the fallback runs. No download, no
+  message, a console error nobody is watching, and a button that appears to do
+  nothing: exactly the failure the fallback exists to prevent, reached by the
+  one route that skipped it. Now caught, with its own wording, and covered by
+  a third fake clipboard in the suite.
+- **The status was shown but never announced.** It is the answer to "did that
+  work?", and a status a screen reader never reaches leaves precisely the
+  ambiguity the button was meant to remove. It now carries `role="status"`
+  and `aria-live="polite"` (P4).
+- **"Copied" outstayed its welcome.** It sat beside the button indefinitely,
+  so it would be read as the result of whatever was clicked most recently.
+  Successes clear after six seconds; failures stay, because a failure is
+  asking the teacher to do something about it.
+
+`smoke-copy-chart.mjs` 22 → 29 checks.
+
+**Where the next round should pick up:** the per-question item analysis on the
+ranked backlog is the substantial one left for this tool, and it wants a
+different input shape (per-item scores rather than one total per student) —
+worth designing the paste format before building anything.
+
 **2026-08-11 — Pass 2 round.** Shipped **undo on Delete assignment** (P11),
 the smaller of the two Quick Wins this file's Pass 1 round left deferred.
 The `confirm()` dialog already existed (its wording now mentions the undo
