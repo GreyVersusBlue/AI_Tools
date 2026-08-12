@@ -1,7 +1,8 @@
 # Improvement Prompts — 057 — Dichotomous Key Builder
 
 **Tool file:** `Tools/057-dichotomous-key-builder.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/dichotomous-key-builder/` — test suite only; the
+tool itself is still one self-contained file.
 
 **Current description (from README):** Numbered couplets branching to another step or a final answer, with example specimens tagged per result, printed as a shuffled classification worksheet plus a matching answer key.
 
@@ -60,13 +61,62 @@ Major Features/Moonshot below — multiple named saved keys is the natural
 next pickup, matching the multi-save convention flagged across sibling
 builder tools this round.
 
+**2026-08-12 — Round 3 (backlog rank 5: preview a classification path).** A
+"Walk a specimen through the key" panel now sits above the steps. You think of
+a specimen — real or invented — and answer each couplet the way it would; the
+tool follows the links, shows the route as breadcrumbs (`1a → 2b → 3a`),
+highlights those couplets in the steps list, and stops with a reason.
+
+**What it deliberately does not do is guess.** The backlog row asked to "enter
+a hypothetical specimen's traits and highlight the couplet route it would
+take". Couplet descriptions are free text a teacher writes — nothing here can
+decide whether "has a backbone" is true of a specimen typed into a box, and
+faking it with keyword matching would produce a route that looks authoritative
+and is wrong, which is worse than no feature on a tool whose whole job is
+catching authoring mistakes. So the teacher answers; the tool does the part
+they cannot do by eye on a key with more than a few branches — following every
+link and naming the ending:
+
+- **a named result** — shown with the example specimens tagged under it, or a
+  note that there are none and so it will not appear in the classification
+  worksheet;
+- **a dead end** — a couplet that leads to no step and names no result;
+- **a loop** — a couplet leading back to a step this route already visited,
+  which the existing reachability warnings could never catch, because every
+  step in a loop *is* reachable.
+
+The route is re-walked against the key on every render rather than stored as
+gospel: change a "leads to", reorder, or delete a step and the recorded route
+is truncated at the first couplet that no longer follows. That is why
+`normalizeTrace()` runs at the top of `renderSteps()` and not after — the
+highlight is drawn from the route, so normalizing afterwards would leave the
+list one render stale.
+
+Verified with a new 30-assertion headless Chromium suite,
+`Tools/dichotomous-key-builder/test/smoke-trace-path.mjs`
+(`npm run test:dichotomous-key`): a route to a named result with its examples,
+back/start-over, a deliberately built dead end, a deliberately built loop, and
+the truncation behaviour when the key is edited underneath a recorded route —
+no console errors.
+
+**Next round should pick up** multiple named saved keys, still the natural
+pickup, and the visual branching-tree view — which is now more attractive than
+it was, since the walk-through already computes exactly the routes a tree would
+draw.
+
 ## What it does today
 
 - Numbered couplets, each choice either leads to another step or ends in
   a final result
 - Example specimens tagged per result, auto-collected into a
   worksheet + answer-key specimen table
-- Print: full key + shuffled specimen classification exercise
+- A walk-through: answer the couplets as a hypothetical specimen would, see
+  the route highlighted in the steps list, and get told whether it ends at a
+  result, a dead end, or a loop
+- Non-blocking authoring warnings (unreachable steps, results with no
+  example specimens, dead-end couplets)
+- Print: full key + shuffled specimen classification exercise, with the
+  classification exercise optional
 
 ## Quick Wins
 
@@ -74,9 +124,9 @@ builder tools this round.
 - ~~**Validation/warnings**~~ — **done, Round 2** (non-blocking banner;
   covers unreachable steps, no-specimen final results, and dead-end
   choices).
-- **A "preview classification path" tool**: type a made-up specimen's
-  traits and watch it highlight which couplets it would satisfy, as a
-  build-time sanity check before handing the key to students.
+- ~~**A "preview classification path" tool**~~ — **done, Round 3**, as a
+  teacher-answered walk-through rather than a traits box; see the Round 3
+  note above for why guessing at free-text couplets was rejected.
 - ~~**Print-without-specimens option**~~ — **done, Round 2.**
 
 ## Major Features
