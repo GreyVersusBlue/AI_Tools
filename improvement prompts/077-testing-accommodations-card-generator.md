@@ -9,6 +9,46 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Shipped the one Quick Win the previous
+round explicitly did not attempt: **filtering the grid by accommodation**.
+
+- A **Show** picker beside Print: every student, one accommodation, or the
+  students nobody has ticked anything for yet. That last bucket is its own
+  option because it answers the other question this grid gets asked — "have I
+  missed anybody" — and it is not the same question as "show me everybody".
+- **The filter reaches Print, which is the whole point.** Filtering the view
+  while Print still emitted the whole roster would hand the read-aloud proctor
+  twenty-eight cards, and the bug would only show up at the photocopier.
+  Everything downstream — the summary line, the per-student Print picker (now
+  labelled "All N shown"), and the cards themselves — runs off one
+  `visibleRoster()`.
+- **Columns are never filtered, only rows.** "She needs read-aloud *and*
+  breaks" is exactly the edit a teacher makes while looking at the read-aloud
+  list, so every accommodation stays tickable on a filtered grid.
+- **Unticking under a live filter does not delete the row from under the
+  click** — that takes the keyboard focus with it and makes the grid feel like
+  it is fighting back. The row stays, at half opacity and labelled "not in
+  this list any more", while the count and the print stack drop it
+  immediately. The row leaves for real on the next filter change.
+- **Deleting the accommodation a filter is standing on falls back to every
+  student.** Without that guard, `state.filter` points at an id nothing
+  matches and the grid empties permanently with no obvious way back —
+  `activeFilter()` re-validates against the live type list on every read
+  rather than trusting what was stored.
+- The filter is stored in the existing `tacg_cards_v1` payload as one optional
+  `filter` field. A save written before this round has no such field, reads as
+  "no filter", and is untouched — no migration needed, and the suite opens one
+  to prove it.
+- **New suite:** `Tools/testing-accommodations-card-generator/test/smoke-filter.mjs`,
+  29 checks, wired into `npm test` and `npm run test:accommodations` — the
+  first automated coverage this tool has had.
+
+**Where the next round should pick up:** the room-assignment view still on the
+ranked backlog is now a short step — the filter already produces "the
+separate-setting group" as a list; what is missing is naming rooms and
+proctors and printing a per-room sheet. Worth doing next, because it is the
+actual job the filter was a step toward.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: a roster (paste/type names), an editable accommodation-type
 list (6 defaults: extended time, separate setting, read-aloud, breaks as
@@ -51,14 +91,21 @@ inline scripts.
 - Checkbox grid (student &times; type) plus a free-text note per student
 - A live "N of M students have at least one accommodation checked"
   summary above the grid
-- Print: one small card per student (or a single selected student),
-  2/3/4-column grid, listing checked types and the note
+- A **Show** filter: every student, only the students with one chosen
+  accommodation, or only the students nothing has been ticked for yet. The
+  summary, the print picker and the printed cards all follow it, so filtering
+  to read-aloud and pressing Print gives that proctor exactly their stack
+- Print: one small card per student (or a single selected student, or
+  everybody currently shown), 2/3/4-column grid, listing checked types and
+  the note
 
 ## Quick Wins
 
-- **Sort/filter the grid** by accommodation type (e.g. "show only students
-  with extended time") — useful when planning room assignments for a
-  testing day.
+- **Done — 2026-08-12.** **Sort/filter the grid** by accommodation type
+  (e.g. "show only students with extended time") — useful when planning room
+  assignments for a testing day. *(Shipped as the Show picker; see Status.
+  Sorting was not attempted — the roster order is the teacher's own and
+  re-ordering it would fight the paste box that produced it.)*
 
 ## Major Features
 

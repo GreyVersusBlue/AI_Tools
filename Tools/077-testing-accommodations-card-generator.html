@@ -64,6 +64,11 @@
   table.grid-table td:first-child, table.grid-table th:first-child { text-align: left; font-weight: 700; }
   table.grid-table input[type="text"].note-input { width: 6rem; margin: 0; font-size: .78rem; padding: .2rem .3rem; }
 
+  table.grid-table tr.filtered-out { opacity: .5; }
+  table.grid-table tr.filtered-out td:first-child::after {
+    content: " — not in this list any more"; font-weight: 400; font-size: .72rem; color: var(--muted);
+  }
+
   .summary-line { font-size: .86rem; color: var(--muted); margin: -.2rem 0 .8rem; }
   .summary-line strong { color: var(--ink); }
   .print-controls { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: end; margin-bottom: .8rem; font-size: .84rem; }
@@ -109,8 +114,12 @@
 
   <div class="card">
     <h2>Assign accommodations</h2>
-    <p class="summary-line" id="summaryLine"></p>
+    <p class="summary-line" id="summaryLine" aria-live="polite"></p>
     <div class="print-controls">
+      <div>
+        <label for="filterSelect" style="margin-bottom:.2rem;">Show</label>
+        <select id="filterSelect"><option value="">Every student</option></select>
+      </div>
       <div>
         <label for="printWhoSelect" style="margin-bottom:.2rem;">Print</label>
         <select id="printWhoSelect"><option value="">All students</option></select>
@@ -143,7 +152,7 @@
 
   var els = {};
   ['rosterInput', 'saveRosterBtn', 'typesWrap', 'addTypeBtn', 'assignTable', 'printBtn', 'printGrid',
-   'summaryLine', 'printWhoSelect', 'printColsSelect'].forEach(function (id) {
+   'summaryLine', 'printWhoSelect', 'printColsSelect', 'filterSelect'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -210,33 +219,96 @@
     return state.types.some(function (t) { return state.assignments[assignKey(name, t.id)]; });
   }
 
+  /* ── Filtering by accommodation ───────────────────────────────────────────
+     Testing day is planned one accommodation at a time — "who needs a separate
+     setting" is a room, "who needs read-aloud" is a proctor — and a grid of
+     twenty-eight rows by six columns does not answer that question, it just
+     contains the answer.
+
+     The filter is a view over the roster and nothing else: NONE_FILTER is its
+     own bucket because "nobody has ticked anything for these students yet" is
+     the other question worth asking of this grid, and it is not the same as
+     "everybody". Everything downstream — the summary, the print picker, the
+     cards themselves — runs off visibleRoster(), so filtering to read-aloud
+     and pressing Print gives the read-aloud proctor exactly their stack. */
+  var NONE_FILTER = '__none';
+
+  /** The filter, ignored if it points at an accommodation that has since been
+      deleted — otherwise deleting a type would silently empty the grid. */
+  function activeFilter() {
+    var f = state.filter || '';
+    if (!f) return '';
+    if (f === NONE_FILTER) return f;
+    return state.types.some(function (t) { return t.id === f; }) ? f : '';
+  }
+
+  function visibleRoster() {
+    var f = activeFilter();
+    if (!f) return state.roster;
+    if (f === NONE_FILTER) return state.roster.filter(function (n) { return !hasAnyAccommodation(n); });
+    return state.roster.filter(function (n) { return !!state.assignments[assignKey(n, f)]; });
+  }
+
+  function filterLabel() {
+    var f = activeFilter();
+    if (f === NONE_FILTER) return 'no accommodations yet';
+    var t = state.types.filter(function (x) { return x.id === f; })[0];
+    return t ? t.name : '';
+  }
+
+  function renderFilterSelect() {
+    var f = activeFilter();
+    els.filterSelect.innerHTML = '<option value="">Every student</option>' +
+      state.types.map(function (t) {
+        return '<option value="' + escapeAttr(t.id) + '">Only: ' + escapeHtml(t.name) + '</option>';
+      }).join('') +
+      '<option value="' + NONE_FILTER + '">Only: no accommodations yet</option>';
+    els.filterSelect.value = f;
+  }
+
   function renderSummary() {
     var withAccom = state.roster.filter(hasAnyAccommodation).length;
-    els.summaryLine.textContent = state.roster.length
-      ? '✓ ' + withAccom + ' of ' + state.roster.length + ' students have at least one accommodation checked.'
-      : '';
+    var f = activeFilter();
+    var shown = visibleRoster();
+    if (!state.roster.length) {
+      els.summaryLine.textContent = '';
+    } else if (f) {
+      els.summaryLine.textContent = shown.length + ' of ' + state.roster.length +
+        ' students: ' + filterLabel() + '. Printing now covers just these ' + shown.length + '.';
+    } else {
+      els.summaryLine.textContent = '✓ ' + withAccom + ' of ' + state.roster.length +
+        ' students have at least one accommodation checked.';
+    }
     var current = els.printWhoSelect.value;
-    els.printWhoSelect.innerHTML = '<option value="">All students</option>' + state.roster.map(function (name) {
-      return '<option value="' + escapeAttr(name) + '">' + escapeHtml(name) + '</option>';
-    }).join('');
-    if (current && state.roster.indexOf(current) !== -1) els.printWhoSelect.value = current;
+    els.printWhoSelect.innerHTML = '<option value="">' + (f ? 'All ' + shown.length + ' shown' : 'All students') + '</option>' +
+      shown.map(function (name) {
+        return '<option value="' + escapeAttr(name) + '">' + escapeHtml(name) + '</option>';
+      }).join('');
+    if (current && shown.indexOf(current) !== -1) els.printWhoSelect.value = current;
   }
 
   function renderTable() {
+    renderFilterSelect();
     renderSummary();
     if (!state.roster.length) {
       els.assignTable.innerHTML = '<tr><td class="hint" style="text-align:left;">Save a roster above first.</td></tr>';
       return;
     }
+    var shown = visibleRoster();
+    if (!shown.length) {
+      els.assignTable.innerHTML = '<tr><td class="hint" style="text-align:left;">No students match &ldquo;' +
+        escapeHtml(filterLabel()) + '&rdquo; yet &mdash; switch Show back to every student to tick some.</td></tr>';
+      return;
+    }
     var head = '<tr><th>Student</th>' + state.types.map(function (t) { return '<th>' + escapeHtml(t.name) + '</th>'; }).join('') + '<th>Note</th></tr>';
-    var rows = state.roster.map(function (name) {
+    var rows = shown.map(function (name) {
       var cells = state.types.map(function (t) {
         var key = assignKey(name, t.id);
         var checked = state.assignments[key] ? ' checked' : '';
         return '<td><input type="checkbox" data-student="' + escapeAttr(name) + '" data-type-check="' + t.id + '"' + checked + '></td>';
       }).join('');
       var note = state.notes[name] || '';
-      return '<tr><td>' + escapeHtml(name) + '</td>' + cells +
+      return '<tr data-student-row="' + escapeAttr(name) + '"><td>' + escapeHtml(name) + '</td>' + cells +
         '<td><input type="text" class="note-input" data-note="' + escapeAttr(name) + '" value="' + escapeAttr(note) + '"></td></tr>';
     }).join('');
     els.assignTable.innerHTML = head + rows;
@@ -249,8 +321,30 @@
       state.assignments[assignKey(student, typeId)] = ev.target.checked;
       save();
       renderSummary();
+      /* Unticking the very box a filter is standing on should not pull the row
+         out from under the click — that loses the keyboard focus and makes the
+         grid feel like it is fighting back. The row stays, greyed and labelled
+         as no longer belonging, until the filter is touched again. Everything
+         that counts or prints already runs off visibleRoster(), so it is out
+         of the stack the moment it is unticked. */
+      if (activeFilter()) markFilteredOut();
     }
   });
+
+  function markFilteredOut() {
+    var shown = {};
+    visibleRoster().forEach(function (n) { shown[n] = true; });
+    Array.prototype.forEach.call(els.assignTable.querySelectorAll('tr[data-student-row]'), function (tr) {
+      tr.classList.toggle('filtered-out', !shown[tr.getAttribute('data-student-row')]);
+    });
+  }
+
+  els.filterSelect.addEventListener('change', function () {
+    state.filter = els.filterSelect.value;
+    save();
+    renderTable();
+  });
+
   els.assignTable.addEventListener('input', function (ev) {
     var noteStudent = ev.target.getAttribute('data-note');
     if (noteStudent) {
@@ -262,7 +356,8 @@
   els.printBtn.addEventListener('click', function () {
     if (!state.roster.length) { alert('Save a roster first.'); return; }
     var who = els.printWhoSelect.value;
-    var names = who ? [who] : state.roster;
+    var names = who ? [who] : visibleRoster();
+    if (!names.length) { alert('Nothing to print — no students match the current Show filter.'); return; }
     var cols = els.printColsSelect.value || '3';
     els.printGrid.className = 'card-grid cols-' + cols;
     els.printGrid.innerHTML = names.map(function (name) {
