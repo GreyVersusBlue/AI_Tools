@@ -139,6 +139,22 @@
   .checklist-table td.chk { width: 1.6rem; text-align: center; font-size: 1.1rem; }
   .checklist-table .crit-desc { color: var(--muted); font-size: .78rem; margin-top: .15rem; display: block; }
 
+  /* ---- peer review form ----
+     No point columns at all: a peer scoring a peer out of four turns
+     feedback into a grade argument. What is left is the criteria as things
+     to look at, and room to write. Lines are real bordered rows rather than
+     a background gradient so nothing depends on the browser's
+     print-backgrounds setting. */
+  .peer-table td.peer-crit { width: 34%; vertical-align: top; }
+  .peer-table td.peer-crit b { font-size: .9rem; }
+  .peer-table .crit-desc { color: var(--muted); font-size: .78rem; margin-top: .2rem; display: block; }
+  .peer-table td.peer-lines { padding: .35rem .5rem .1rem; }
+  .peer-prompt { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .1rem; }
+  .peer-prompt + .peer-prompt { margin-top: .35rem; }
+  .peer-line { border-bottom: 1px solid var(--line-strong); height: .3in; }
+  .peer-final { border: 1px solid var(--ink); border-top: none; padding: .5rem .65rem; }
+  .peer-final strong { display: block; font-size: .85rem; margin-bottom: .25rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   /* ---- comment bank & student-text (build mode) ---- */
@@ -276,9 +292,10 @@
           <option value="student">Student-friendly (with self-assessment)</option>
           <option value="single-point">Single-point rubric</option>
           <option value="checklist">Checklist</option>
+          <option value="peer">Peer review form (no points)</option>
         </select>
         <div id="singlePointWrap" style="display:none;">
-          <label for="singlePointLevel">Target level shown as &ldquo;meets expectations&rdquo;</label>
+          <label for="singlePointLevel" id="singlePointLabel">Target level shown as &ldquo;meets expectations&rdquo;</label>
           <select id="singlePointLevel"></select>
         </div>
         <button type="button" id="printBtn" class="full">Print</button>
@@ -370,6 +387,7 @@
 </div>
 
 <div id="printArea" style="display:none;"></div>
+<style id="printPageStyle"></style>
 
 <script>
 (function () {
@@ -381,7 +399,7 @@
    'rubricName','rubricTitle','templatePicker','loadTemplateBtn',
    'levelsRow','addLevelBtn','criteriaList','emptyHint','addCriterionBtn',
    'toggleStudentTextBtn','studentTextHint',
-   'printFormat','singlePointWrap','singlePointLevel',
+   'printFormat','singlePointWrap','singlePointLevel','singlePointLabel','printPageStyle',
    'printBtn','previewArea','previewNote','totalPoints','shareBar',
    'modeTabs','modeBuildBtn','modeScoreBtn','modeClassBtn','buildMode','scoreMode','classMode','analyticsCard',
    'scoreRosterSelect','scoreRosterLoadBtn',
@@ -812,11 +830,58 @@
     );
   }
 
+  /* ---------- peer review form -------------------------------------------
+     The rubric reduced to the two things a peer reviewer can actually
+     supply: the criteria as things to look at, and room to write about each
+     one. Deliberately no point columns — a student scoring a partner out of
+     four turns feedback into a grade argument, and the teacher still has
+     every other format for the grading itself.
+
+     Two named prompts per row rather than one blank space. "Write a comment"
+     gets "good job"; "what works" and "one thing to try" get sentences,
+     which is the whole reason to run peer review at all. The chosen level's
+     descriptor rides along as the standard being described.
+  ---------------------------------------------------------------------- */
+  function peerReviewTableHtml() {
+    var targetId = resolveSinglePointLevelId();
+    var target = state.levels.filter(function (l) { return l.id === targetId; })[0];
+    var bodyRows;
+    if (state.criteria.length) {
+      bodyRows = state.criteria.map(function (c) {
+        var text = escapeHtml((target && c.cells[target.id]) || '');
+        return '<tr>' +
+          '<td class="peer-crit"><b>' + escapeHtml(c.name || 'Untitled') + '</b>' +
+            (text ? '<span class="crit-desc">' + text + '</span>' : '') + '</td>' +
+          '<td class="peer-lines">' +
+            '<div class="peer-prompt">What works</div>' +
+            '<div class="peer-line"></div><div class="peer-line"></div>' +
+            '<div class="peer-prompt">One thing to try</div>' +
+            '<div class="peer-line"></div><div class="peer-line"></div>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    } else {
+      bodyRows = '<tr><td class="empty-row" colspan="2">No criteria yet.</td></tr>';
+    }
+    return (
+      '<div class="rubric-sheet">' +
+        '<div class="sheet-title">' + escapeHtml(state.title || state.name) + ' &mdash; Peer Review</div>' +
+        '<div class="sheet-nameline"><span>Writer</span><span>Reviewer</span><span>Date</span></div>' +
+        '<p class="sheet-subhead">Read the whole piece once before you write anything. Then take one row at a time: name something that works, and give one specific thing to try. Say it the way you would want to hear it.</p>' +
+        '<table class="rubric-table peer-table"><thead><tr><th class="corner">What to look at</th><th>Your feedback</th></tr></thead>' +
+        '<tbody>' + bodyRows + '</tbody></table>' +
+        '<div class="peer-final"><strong>If they change one thing before turning this in, it should be&hellip;</strong>' +
+          '<div class="peer-line"></div><div class="peer-line"></div></div>' +
+      '</div>'
+    );
+  }
+
   function currentPreviewHtml() {
     switch (els.printFormat.value) {
       case 'student': return studentRubricTableHtml();
       case 'single-point': return singlePointTableHtml();
       case 'checklist': return checklistTableHtml();
+      case 'peer': return peerReviewTableHtml();
       default: return rubricTableHtml();
     }
   }
@@ -835,20 +900,33 @@
   }
 
   function updatePrintFormatUi() {
-    var isSinglePoint = els.printFormat.value === 'single-point';
-    els.singlePointWrap.style.display = isSinglePoint ? '' : 'none';
+    var format = els.printFormat.value;
+    // Both of these formats collapse the grid down to one level's wording, so
+    // both need to be told which level that is.
+    var usesTargetLevel = format === 'single-point' || format === 'peer';
+    els.singlePointWrap.style.display = usesTargetLevel ? '' : 'none';
+    els.singlePointLabel.textContent = format === 'peer'
+      ? 'Level whose wording describes what to look for'
+      : 'Target level shown as “meets expectations”';
     els.singlePointLevel.innerHTML = state.levels.map(function (l) {
       return '<option value="' + l.id + '">' + escapeHtml(l.label || 'Untitled') + '</option>';
     }).join('');
     var resolved = resolveSinglePointLevelId();
     if (resolved != null) els.singlePointLevel.value = resolved;
+    // A form to write on wants the tall side of the page; a grid of levels
+    // wants the wide one. The base stylesheet is landscape, so only the
+    // portrait formats override it.
+    els.printPageStyle.textContent = format === 'peer'
+      ? '@page { size: letter portrait; margin: 0.5in; }'
+      : '';
     var notes = {
       standard: 'Live preview — this is exactly what prints (one page, landscape).',
       student: 'Live preview of the student-friendly, self-assessment version.',
       'single-point': 'Live preview of the single-point format.',
-      checklist: 'Live preview of the checklist format.'
+      checklist: 'Live preview of the checklist format.',
+      peer: 'Live preview of the peer review form — criteria and room to write, no points anywhere. Prints portrait.'
     };
-    els.previewNote.textContent = notes[els.printFormat.value] || notes.standard;
+    els.previewNote.textContent = notes[format] || notes.standard;
   }
 
   /* ---------- score-a-student: totals & printable sheet ---------- */
@@ -1489,6 +1567,7 @@
 
   els.printBtn.addEventListener('click', function () {
     document.getElementById('printArea').innerHTML = currentPreviewHtml();
+    updatePrintFormatUi(); // re-asserts the @page orientation for this format
     window.print();
   });
 
@@ -1545,6 +1624,11 @@
   });
 
   els.printScoreBtn.addEventListener('click', function () {
+    // A scored sheet is always the landscape grid, whatever the Print format
+    // selector happens to be left on — the peer form's portrait @page must
+    // not follow it here. Reset before the guard, so an abandoned click
+    // doesn't leave a stale orientation behind either.
+    els.printPageStyle.textContent = '';
     if (!currentScore) { alert('Enter or pick a student first.'); return; }
     document.getElementById('printArea').innerHTML = scoreTableHtml(currentScore);
     window.print();

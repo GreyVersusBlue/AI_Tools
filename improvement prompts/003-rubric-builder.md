@@ -1,13 +1,59 @@
 # Improvement Prompts — 003 — Rubric Builder
 
 **Tool file:** `Tools/003-rubric-builder.html`
-**Support folder:** `Tools/rubric-builder/` — `rb-store.js`, `rb-templates.js`
+**Support folder:** `Tools/rubric-builder/` — `rb-store.js`, `rb-templates.js`, `test/smoke-peer-form.mjs`
 
 **Current description (from README):** Build a grading rubric from a template or from scratch — editable criteria and performance levels, live point totals, print a clean landscape table. Saves multiple named rubrics.
 
 ---
 
 ## Status
+
+### 2026-08-11 — Peer review print format (backlog rank 3)
+
+Shipped as a fifth entry in the existing Print format dropdown, through the
+same `currentPreviewHtml()` dispatcher as the other four — no new flow, no new
+storage, no new print path.
+
+**This round reverses an earlier call.** Two previous rounds skipped peer
+review on the grounds that "the student-friendly print with a self-assessment
+column substantially covers this use case". It doesn't, in one decisive way:
+that print still shows every level and every point value. Hand it to a 7th
+grader to fill in about their partner and peer review becomes a grade
+argument — *"you gave me a 3 and I deserve a 4"* — which is the opposite of
+the point. The peer format has **no points and no level columns anywhere**,
+and the test's sharpest assertion is that negative.
+
+What is left is the criteria as things to look at, plus room to write:
+
+- **Two named prompts per row**, not one blank space. "Write a comment" gets
+  "good job"; *What works* / *One thing to try* gets sentences.
+- **Writer, Reviewer and Date** all named at the top. A peer form with one
+  name line is a mystery by the time it comes back.
+- A closing "if they change one thing" block, because the single most useful
+  revision is the one a partner can name.
+- The selected level's descriptor rides along as the standard being
+  described, so the level picker (previously single-point only) is now shown
+  for both formats with wording relabelled per format.
+- **Ruled lines are bordered divs at a real 0.3in**, not a background
+  gradient — nothing here depends on the browser's print-backgrounds setting.
+
+**Portrait.** A form you write down is not a grid you read across, so this
+format injects `@page { size: letter portrait }` over the stylesheet's
+landscape default. The scored-sheet print resets it first — *before* its
+"pick a student" guard, so an abandoned click can't leave a stale orientation
+behind either.
+
+New test: `Tools/rubric-builder/test/smoke-peer-form.mjs` (33 assertions,
+wired into `npm test` and `npm run test:rubric`) — the no-points assertion,
+the prompts and lines, both name lines, the level descriptor following the
+picker, the orientation in both directions, and all four existing formats
+still rendering and not being the peer form.
+
+**Noticed, not fixed:** the checklist format would also be better portrait,
+for exactly the same reason. It was left alone as out of scope for this row —
+changing an existing format's orientation is a behaviour change for anyone
+already printing it.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
 
@@ -131,12 +177,14 @@ Real findings from this pass:
 - **Rubric analytics** — class average per criterion, lowest first, as the
   reteaching signal (`classAnalytics`, `renderAnalytics`)
 - **Export all scores as CSV** for the gradebook
-- **Four print/preview formats**, chosen from one dropdown that drives both
+- **Five print/preview formats**, chosen from one dropdown that drives both
   the live preview and the print output (`currentPreviewHtml`): the standard
   grid, a **student-friendly version with an "I can…" per-level option and a
   self-assessment column**, a **single-point rubric** (target-level
-  description with blank "concerns"/"advanced" margins), and a **checklist**
-- Print the blank rubric (in any of the four formats above) or **this
+  description with blank "concerns"/"advanced" margins), a **checklist**, and
+  a **peer review form** (`peerReviewTableHtml`) — criteria plus "what works"
+  and "one thing to try" lines, no points or levels anywhere, printed portrait
+- Print the blank rubric (in any of the five formats above) or **this
   student's scored rubric**; print rows never split across a page break
 - Shareable by `state-link.js` URL; student name autocomplete
   (`populateStudentDatalist`), now merged with a loaded roster
@@ -172,10 +220,13 @@ Real findings from this pass:
   column students fill in on paper before submitting. Self-assessment against the rubric
   is one of the highest-effect-size practices there is and needs exactly this
   artifact.
-- **Peer review mode.** The same rubric, reduced, as a peer feedback form —
+- **Done — 2026-08-11.** **Peer review mode.** The same rubric, reduced, as a peer feedback form —
   which `IDEAS_BACKLOG.md` lists as a separate tool and which is a print mode
-  here. **Skipped this round** — the student-friendly print with a
-  self-assessment column substantially covers this use case per the brief.
+  here. *(Shipped as a fifth print format. The earlier reasoning that the
+  student-friendly self-assessment print "substantially covers this use case"
+  turned out to be wrong in one decisive way: that print still shows levels
+  and points, and a student scoring a partner out of four turns feedback into
+  a grade argument. See the Status entry at the top of this file.)*
 - **Feed the grade tools** (P7). Rubric scores should flow into
   `036-final_grade_checker.html` and `037-grade-distribution-visualizer.html` instead
   of being retyped. **Skipped this round** (cross-tool integration, deferred);
