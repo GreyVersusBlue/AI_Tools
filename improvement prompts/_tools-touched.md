@@ -958,7 +958,7 @@ implementation code.
 |---|---|---|
 | Command Center | `010-command-center-dashboard.md` | A ninth panel: the current period's seating chart, read-only from `seating-chart-v1`, drawn as one SVG in the generator's own coordinate space so it scales to the projector. Which chart to show is remembered per period, not globally. |
 | Digital Escape Room / Puzzle Lock Builder | `019-escape-room-builder.md` | The reported contraction bug was not real (apostrophes already collapsed); two adjacent ones in the same line were — hyphens glued words together and punctuation stripping left phantom double spaces. `normalizeTextAnswer` rewritten as four ordered passes. |
-| QR Code Generator | `016-qr-code-generator.md` | The roster code sheet's missing suite. `package.json` already pointed `npm test` at a file that was never committed, which stopped the &&-chain there. |
+| QR Code Generator | `016-qr-code-generator.md` | The roster code sheet's missing suite, 39 checks. (The commit message's claim that `package.json` already pointed at it was wrong — see the correction below.) |
 | Gallery Walk QR Codes | `017-gallery-walk-qr.md` | A projector rotation display: the clock at room size, plus which students are standing at which station right now, driven by the same timer as the panel rather than a copy of it. |
 | Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` | A Show filter over the grid — one accommodation, or the students nothing is ticked for yet — that reaches the printed cards, so the read-aloud proctor gets exactly their stack. |
 | Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` | Department sub-headers on screen and in print, with the unassigned staff in a block of their own and case-variant spellings collapsed. The preference went in a new `sdb_prefs_v1` rather than wrapping the exported array. |
@@ -975,17 +975,32 @@ with their own `test:*` script; two existing suites extended
 `exit-ticket-generator/smoke-response-area` 27 → 36). Four of the eight tools
 had no automated coverage at all before this round.
 
-**`npm test` was red on `main` before this round, in two places, and both
-were fixed on the way past.** The missing `qr-code-generator/test/smoke-roster.mjs`
-stopped the &&-chain about two-thirds of the way down the list, so roughly a
-dozen suites had not been running at all. Separately,
-`exit-ticket-generator/smoke-response-area.mjs` carried an assertion that
-measured the response box against the whole slip and expected "more than half"
-— but the flex weights divide the space left *under* the question, so a
-two-line prompt made it fail on a correct tool. It measures `share` (box
-against box-plus-spacer) now. The full run is 42 suites green, with the one
-known-red seating-chart mobile-toolbar assertion still failing for real; that
-belongs to the "Phone-Sized Layout Pass" platform row and was left alone.
+**`npm test` was red on `main` before this round**, in
+`exit-ticket-generator/smoke-response-area.mjs`: an assertion measured the
+response box against the whole slip and expected "more than half", but the
+flex weights divide the space left *under* the question, so a two-line prompt
+made it fail on a correct tool. It measures `share` (box against
+box-plus-spacer) now. The full run is 42 suites green, with the one known-red
+seating-chart mobile-toolbar assertion still failing for real; that belongs to
+the "Phone-Sized Layout Pass" platform row and was left alone.
+
+> **Correction, 2026-08-12 — a false claim in this round's commits.** Several
+> commit messages and notes from this round state that `package.json` already
+> referenced `Tools/qr-code-generator/test/smoke-roster.mjs`, that the file was
+> never committed, and that the `&&`-chain therefore died two-thirds of the way
+> down and a dozen suites had not been running. **None of that was true of
+> `main`.** That reference exists only on the abandoned branch
+> `claude/backlog-batch-2`, which happened to be checked out when this session
+> read `package.json` for the first time; `git show 4cc1381:package.json` has
+> no mention of the path. `npm test` on `main` ran its whole chain.
+>
+> The mistake had a real consequence, in the other direction: because the
+> suite was believed to be already wired up, it was written and then referenced
+> by nothing, and would have sat unrun indefinitely. It was found the next
+> round by `Tools/board-check/check-tests.mjs` — the guard added for exactly
+> this — reporting it as an ORPHAN, and it is now in the chain with a
+> `test:qr` shortcut. The commits themselves are on `main` and were not
+> rewritten; this note is the correction.
 
 ---
 
