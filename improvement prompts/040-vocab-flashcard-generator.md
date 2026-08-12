@@ -9,6 +9,17 @@
 
 ## Status
 
+**2026-08-11 — toolbar visibility fix.** Not a backlog row; found while
+comparing two parallel implementations of the share round below. The toolbar
+holding the list switcher, Export, Import and both new share buttons was only
+ever revealed by `newList()`. `loadListByName()` never showed it, so every
+**return** visit — the normal case, since the tool reopens the last saved list
+— came up with the toolbar hidden and no way to reach any other list. The
+multi-list feature has probably been invisible to anyone past their first
+session since it shipped. One line in `loadListByName`, plus four assertions in
+the existing `smoke-share.mjs` that fail without it (verified by reverting the
+fix and re-running).
+
 **2026-08-11 — share round (backlog rank 1).** Shipped **share a word list by
 link or QR** (P3). The tool could already export a `.json` file, but a file has
 to be attached, downloaded, found again and imported — four steps and a thing

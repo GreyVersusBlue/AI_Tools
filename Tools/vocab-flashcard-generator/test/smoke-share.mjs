@@ -55,6 +55,17 @@ await page.selectOption('#flashLayout', 'fold');
 await page.selectOption('#sortOrder', 'az');
 await settle(page, 300);
 
+/* ── the toolbar the share buttons live in has to survive a return visit ──
+   It was only ever revealed by newList(), so a teacher who came back to a
+   saved list lost the switcher, Export, Import and both share buttons — the
+   multi-list feature was effectively invisible past a first session. */
+eq(await page.isVisible('#toolbar'), true, 'the toolbar is there on a first run');
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 500);
+eq(await page.isVisible('#toolbar'), true, 'and still there after a reload onto a saved list');
+eq(await page.isVisible('#shareLinkBtn'), true, 'so the share buttons are reachable on a return visit');
+eq(await page.inputValue('#listName'), 'Unit 4 Vocabulary', 'with the saved list actually loaded');
+
 /** The URL the Copy link button would put on the clipboard. */
 const shareLink = () => page.evaluate(() => {
   let captured = null;
