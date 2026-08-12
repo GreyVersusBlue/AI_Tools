@@ -123,6 +123,9 @@
     <h2>Filter by topic</h2>
     <p class="hint">Uncheck a topic to leave it out of both the projector shuffle and the worksheet generator.</p>
     <div class="filter-list" id="categoryFilterList"></div>
+    <h2 style="margin-top:.9rem;">Filter by grade band</h2>
+    <p class="hint">Same idea by level &mdash; scope the bank to elementary, middle, or high school problems. Both filters apply together.</p>
+    <div class="filter-list" id="bandFilterList"></div>
   </div>
 
   <div class="tabs">
@@ -185,6 +188,12 @@
       <input type="text" id="newExplain" placeholder="e.g. Forgot to distribute the 3 to both terms inside the parentheses.">
       <label for="newCategory">Topic</label>
       <select id="newCategory"></select>
+      <label for="newBand">Grade band</label>
+      <select id="newBand">
+        <option value="elementary">Elementary (3&ndash;5)</option>
+        <option value="middle" selected>Middle (6&ndash;8)</option>
+        <option value="high">High (9&ndash;12)</option>
+      </select>
       <button id="addProblemBtn">Add to bank</button>
     </div>
     <div class="card">
@@ -214,29 +223,40 @@
   var CATEGORY_LABELS = {};
   CATEGORIES.forEach(function (c) { CATEGORY_LABELS[c.id] = c.label; });
 
+  var BANDS = [
+    { id: 'elementary', label: 'Elementary (3–5)' },
+    { id: 'middle', label: 'Middle (6–8)' },
+    { id: 'high', label: 'High (9–12)' }
+  ];
+  var BAND_LABELS = {};
+  BANDS.forEach(function (b) { BAND_LABELS[b.id] = b.label; });
+
   var BUILTIN = [
-    { id: 'b0', category: 'order-of-operations', problem: 'Simplify: 4 + 3 &times; 2', work: '4 + 3 = 7\n7 &times; 2 = 14', fix: '3 &times; 2 = 6\n4 + 6 = 10', explain: 'Order of operations: multiplication happens before addition.' },
-    { id: 'b1', category: 'two-step-equations', problem: 'Solve: 3(x + 4) = 24', work: '3x + 4 = 24\n3x = 20\nx = 6.67', fix: '3x + 12 = 24\n3x = 12\nx = 4', explain: 'Forgot to distribute the 3 to both terms inside the parentheses.' },
-    { id: 'b2', category: 'fractions', problem: 'Add: &frac12; + &frac13;', work: '&frac12; + &frac13; = &frac23;', fix: '&frac36; + &frac26; = &frac56;', explain: 'Fractions need a common denominator before adding &mdash; you can&rsquo;t just add numerators and denominators separately.' },
-    { id: 'b3', category: 'two-step-equations', problem: 'Solve: 2x &minus; 5 = 11', work: '2x = 6\nx = 3', fix: '2x = 16\nx = 8', explain: 'When moving &minus;5 to the other side, it becomes +5, not staying as &minus;5 (11 &minus; 5 = 6 is the wrong direction).' },
-    { id: 'b4', category: 'percents', problem: 'Find 25% of 60', work: '25% = 0.25\n0.25 &times; 60 = 6', fix: '0.25 &times; 60 = 15', explain: 'Multiplication error: 0.25 &times; 60 is 15, not 6.' },
-    { id: 'b5', category: 'exponents', problem: 'Simplify: (&minus;3)&sup2;', work: '(&minus;3)&sup2; = &minus;9', fix: '(&minus;3)&sup2; = 9', explain: 'A negative number squared is positive: (&minus;3) &times; (&minus;3) = 9.' },
-    { id: 'b6', category: 'other', problem: 'Multiply: 2.5 &times; 0.4', work: '2.5 &times; 0.4 = 10', fix: '2.5 &times; 0.4 = 1', explain: 'Decimal point placement error &mdash; there should be two digits total after the decimal point in the answer.' },
-    { id: 'b7', category: 'fractions', problem: 'Simplify: 3/4 &divide; 1/2', work: '3/4 &divide; 1/2 = 3/8', fix: '3/4 &times; 2/1 = 6/4 = 1&frac12;', explain: 'Dividing by a fraction means multiplying by its reciprocal, not multiplying the fractions directly.' },
-    { id: 'b8', category: 'negative-numbers', problem: 'Evaluate: &minus;8 + 3', work: '&minus;8 + 3 = &minus;11', fix: '&minus;8 + 3 = &minus;5', explain: 'When adding a positive to a negative, subtract the smaller absolute value from the larger: 8 &minus; 3 = 5, keep the sign of the larger (negative).' },
-    { id: 'b9', category: 'one-step-equations', problem: 'Solve: x/4 = 12', work: 'x = 12 &minus; 4\nx = 8', fix: 'x = 12 &times; 4\nx = 48', explain: 'To undo division by 4, multiply both sides by 4, not subtract 4.' },
-    { id: 'b10', category: 'other', problem: 'Find the area of a rectangle: length 8, width 5', work: 'Area = 8 + 5 = 13', fix: 'Area = 8 &times; 5 = 40', explain: 'Area of a rectangle is length &times; width, not length + width.' },
-    { id: 'b11', category: 'order-of-operations', problem: 'Simplify: 5 &minus; 2(3 &minus; 1)', work: '5 &minus; 2(2) = 3(2) = 6', fix: '5 &minus; 2(2) = 5 &minus; 4 = 1', explain: 'After 3 &minus; 2 &times; ... you multiply 2 by the parentheses result and subtract from 5 &mdash; you can&rsquo;t combine 5 &minus; 2 first.' },
-    { id: 'b12', category: 'percents', problem: 'Convert 3/5 to a percent', work: '3/5 = 0.35 = 35%', fix: '3/5 = 0.6 = 60%', explain: 'Division error: 3 &divide; 5 = 0.6, not 0.35.' },
-    { id: 'b13', category: 'one-step-equations', problem: 'Solve: &minus;3x = 15', work: 'x = 15 &minus; 3\nx = 12', fix: 'x = 15 &divide; (&minus;3)\nx = &minus;5', explain: 'To undo multiplication by &minus;3, divide both sides by &minus;3, not subtract 3.' },
-    { id: 'b14', category: 'exponents', problem: 'Simplify: 2&sup3;', work: '2&sup3; = 6', fix: '2&sup3; = 8', explain: '2&sup3; means 2 &times; 2 &times; 2 = 8, not 2 &times; 3 = 6.' }
-  ].map(function (p) { return { id: p.id, category: p.category, problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false }; });
+    { id: 'b0', band: 'elementary', category: 'order-of-operations', problem: 'Simplify: 4 + 3 &times; 2', work: '4 + 3 = 7\n7 &times; 2 = 14', fix: '3 &times; 2 = 6\n4 + 6 = 10', explain: 'Order of operations: multiplication happens before addition.' },
+    { id: 'b1', band: 'middle', category: 'two-step-equations', problem: 'Solve: 3(x + 4) = 24', work: '3x + 4 = 24\n3x = 20\nx = 6.67', fix: '3x + 12 = 24\n3x = 12\nx = 4', explain: 'Forgot to distribute the 3 to both terms inside the parentheses.' },
+    { id: 'b2', band: 'elementary', category: 'fractions', problem: 'Add: &frac12; + &frac13;', work: '&frac12; + &frac13; = &frac23;', fix: '&frac36; + &frac26; = &frac56;', explain: 'Fractions need a common denominator before adding &mdash; you can&rsquo;t just add numerators and denominators separately.' },
+    { id: 'b3', band: 'middle', category: 'two-step-equations', problem: 'Solve: 2x &minus; 5 = 11', work: '2x = 6\nx = 3', fix: '2x = 16\nx = 8', explain: 'When moving &minus;5 to the other side, it becomes +5, not staying as &minus;5 (11 &minus; 5 = 6 is the wrong direction).' },
+    { id: 'b4', band: 'middle', category: 'percents', problem: 'Find 25% of 60', work: '25% = 0.25\n0.25 &times; 60 = 6', fix: '0.25 &times; 60 = 15', explain: 'Multiplication error: 0.25 &times; 60 is 15, not 6.' },
+    { id: 'b5', band: 'middle', category: 'exponents', problem: 'Simplify: (&minus;3)&sup2;', work: '(&minus;3)&sup2; = &minus;9', fix: '(&minus;3)&sup2; = 9', explain: 'A negative number squared is positive: (&minus;3) &times; (&minus;3) = 9.' },
+    { id: 'b6', band: 'elementary', category: 'other', problem: 'Multiply: 2.5 &times; 0.4', work: '2.5 &times; 0.4 = 10', fix: '2.5 &times; 0.4 = 1', explain: 'Decimal point placement error &mdash; there should be two digits total after the decimal point in the answer.' },
+    { id: 'b7', band: 'middle', category: 'fractions', problem: 'Simplify: 3/4 &divide; 1/2', work: '3/4 &divide; 1/2 = 3/8', fix: '3/4 &times; 2/1 = 6/4 = 1&frac12;', explain: 'Dividing by a fraction means multiplying by its reciprocal, not multiplying the fractions directly.' },
+    { id: 'b8', band: 'middle', category: 'negative-numbers', problem: 'Evaluate: &minus;8 + 3', work: '&minus;8 + 3 = &minus;11', fix: '&minus;8 + 3 = &minus;5', explain: 'When adding a positive to a negative, subtract the smaller absolute value from the larger: 8 &minus; 3 = 5, keep the sign of the larger (negative).' },
+    { id: 'b9', band: 'middle', category: 'one-step-equations', problem: 'Solve: x/4 = 12', work: 'x = 12 &minus; 4\nx = 8', fix: 'x = 12 &times; 4\nx = 48', explain: 'To undo division by 4, multiply both sides by 4, not subtract 4.' },
+    { id: 'b10', band: 'elementary', category: 'other', problem: 'Find the area of a rectangle: length 8, width 5', work: 'Area = 8 + 5 = 13', fix: 'Area = 8 &times; 5 = 40', explain: 'Area of a rectangle is length &times; width, not length + width.' },
+    { id: 'b11', band: 'middle', category: 'order-of-operations', problem: 'Simplify: 5 &minus; 2(3 &minus; 1)', work: '5 &minus; 2(2) = 3(2) = 6', fix: '5 &minus; 2(2) = 5 &minus; 4 = 1', explain: 'After 3 &minus; 2 &times; ... you multiply 2 by the parentheses result and subtract from 5 &mdash; you can&rsquo;t combine 5 &minus; 2 first.' },
+    { id: 'b12', band: 'middle', category: 'percents', problem: 'Convert 3/5 to a percent', work: '3/5 = 0.35 = 35%', fix: '3/5 = 0.6 = 60%', explain: 'Division error: 3 &divide; 5 = 0.6, not 0.35.' },
+    { id: 'b13', band: 'middle', category: 'one-step-equations', problem: 'Solve: &minus;3x = 15', work: 'x = 15 &minus; 3\nx = 12', fix: 'x = 15 &divide; (&minus;3)\nx = &minus;5', explain: 'To undo multiplication by &minus;3, divide both sides by &minus;3, not subtract 3.' },
+    { id: 'b14', band: 'middle', category: 'exponents', problem: 'Simplify: 2&sup3;', work: '2&sup3; = 6', fix: '2&sup3; = 8', explain: '2&sup3; means 2 &times; 2 &times; 2 = 8, not 2 &times; 3 = 6.' },
+    { id: 'b15', band: 'high', category: 'exponents', problem: 'Simplify: x&sup3; &middot; x&#8308;', work: 'x&sup3; &middot; x&#8308; = x&sup1;&sup2;', fix: 'x&sup3; &middot; x&#8308; = x&#8311;', explain: 'When multiplying powers with the same base, add the exponents — don&rsquo;t multiply them.' },
+    { id: 'b16', band: 'high', category: 'other', problem: 'Find the slope between (2, 3) and (6, 11)', work: 'slope = (6 &minus; 2) / (11 &minus; 3)\nslope = 4/8 = 1/2', fix: 'slope = (11 &minus; 3) / (6 &minus; 2)\nslope = 8/4 = 2', explain: 'Slope is rise over run — the change in y goes in the numerator, the change in x in the denominator.' },
+    { id: 'b17', band: 'high', category: 'negative-numbers', problem: 'Simplify: &minus;(2x &minus; 5)', work: '&minus;(2x &minus; 5) = &minus;2x &minus; 5', fix: '&minus;(2x &minus; 5) = &minus;2x + 5', explain: 'The negative sign distributes to both terms inside the parentheses, so &minus;5 flips to +5.' }
+  ].map(function (p) { return { id: p.id, band: p.band, category: p.category, problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false }; });
 
   var els = {};
   ['displayNum', 'displayProblem', 'displayWork', 'displayFix', 'displayExplain', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'newProblem', 'newWork', 'newFix', 'newExplain', 'newCategory', 'addProblemBtn', 'bankCount', 'bankList',
-   'categoryFilterList'].forEach(function (id) {
+   'newProblem', 'newWork', 'newFix', 'newExplain', 'newCategory', 'newBand', 'addProblemBtn', 'bankCount', 'bankList',
+   'categoryFilterList', 'bandFilterList'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -247,6 +267,8 @@
   var disabledBuiltinIds = {};
   var categoryFilter = {};
   CATEGORIES.forEach(function (c) { categoryFilter[c.id] = true; });
+  var bandFilter = {};
+  BANDS.forEach(function (b) { bandFilter[b.id] = true; });
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -278,15 +300,19 @@
   // Every problem (built-in and custom), including disabled built-ins, for the bank management view.
   function allProblems() {
     return BUILTIN.map(function (p) {
-      return { id: p.id, category: p.category, problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false, disabled: !!disabledBuiltinIds[p.id] };
+      return { id: p.id, band: p.band, category: p.category, problem: p.problem, work: p.work, fix: p.fix, explain: p.explain, custom: false, disabled: !!disabledBuiltinIds[p.id] };
     }).concat(custom.map(function (c) {
-      return { id: c.id, category: c.category || 'other', problem: c.problem, work: c.work, fix: c.fix, explain: c.explain, custom: true, disabled: false };
+      // custom problems saved before bands existed have no band — they pass every band filter
+      return { id: c.id, band: c.band || null, category: c.category || 'other', problem: c.problem, work: c.work, fix: c.fix, explain: c.explain, custom: true, disabled: false };
     }));
   }
 
-  // Only problems eligible for the projector shuffle / worksheet draw: not disabled and in a checked category.
+  // Only problems eligible for the projector shuffle / worksheet draw:
+  // not disabled, in a checked topic, and in a checked grade band.
   function activeProblems() {
-    return allProblems().filter(function (p) { return !p.disabled && categoryFilter[p.category] !== false; });
+    return allProblems().filter(function (p) {
+      return !p.disabled && categoryFilter[p.category] !== false && (!p.band || bandFilter[p.band] !== false);
+    });
   }
 
   function resetOrder() {
@@ -316,7 +342,7 @@
     updateRevealBtnLabel();
     if (!all.length || !order.length) {
       els.displayNum.textContent = '';
-      els.displayProblem.innerHTML = '<span class="display-empty">No problems match the selected topics. Check at least one topic above.</span>';
+      els.displayProblem.innerHTML = '<span class="display-empty">No problems match the selected topics and grade bands. Check at least one of each above.</span>';
       els.displayWork.innerHTML = '';
       els.displayFix.innerHTML = '';
       els.displayExplain.innerHTML = '';
@@ -353,7 +379,7 @@
   els.buildSheetBtn.addEventListener('click', function () {
     var all = shuffle(activeProblems().slice());
     if (!all.length) {
-      els.sheetProblems.innerHTML = '<p class="display-empty">No problems match the selected topics. Check at least one topic above.</p>';
+      els.sheetProblems.innerHTML = '<p class="display-empty">No problems match the selected topics and grade bands. Check at least one of each above.</p>';
       els.sheetKey.innerHTML = '';
       return;
     }
@@ -382,9 +408,9 @@
     var explain = els.newExplain.value.trim();
     var category = els.newCategory.value || 'other';
     if (!problem || !work || !fix) { alert('Fill in the problem, the worked (mistaken) solution, and the correct solution.'); return; }
-    custom.push({ id: uid(), category: category, problem: problem, work: work.replace(/\n/g, '<br>'), fix: fix.replace(/\n/g, '<br>'), explain: explain });
+    custom.push({ id: uid(), band: els.newBand.value, category: category, problem: problem, work: work.replace(/\n/g, '<br>'), fix: fix.replace(/\n/g, '<br>'), explain: explain });
     saveCustom();
-    els.newProblem.value = ''; els.newWork.value = ''; els.newFix.value = ''; els.newExplain.value = ''; els.newCategory.value = 'other';
+    els.newProblem.value = ''; els.newWork.value = ''; els.newFix.value = ''; els.newExplain.value = ''; els.newCategory.value = 'other'; els.newBand.value = 'middle';
     resetOrder(); renderDisplay(); renderBank();
   });
 
@@ -401,8 +427,9 @@
         actionBtn = '<button type="button" class="secondary small toggle-btn" data-toggle="' + item.id + '">Disable</button><span class="hint del-btn" style="margin:0;">built-in</span>';
       }
       var catLabel = CATEGORY_LABELS[item.category] || item.category;
+      var bandPill = item.band ? '<span class="cat-pill">' + escapeHtml(BAND_LABELS[item.band] || item.band) + '</span>' : '';
       return '<div class="bank-row' + (item.disabled ? ' disabled' : '') + '">' + actionBtn +
-        '<strong>' + item.problem + '</strong><span class="cat-pill">' + escapeHtml(catLabel) + '</span></div>';
+        '<strong>' + item.problem + '</strong><span class="cat-pill">' + escapeHtml(catLabel) + '</span>' + bandPill + '</div>';
     }).join('');
   }
   els.bankList.addEventListener('click', function (ev) {
@@ -429,6 +456,18 @@
     resetOrder(); renderDisplay();
   });
 
+  function renderBandFilter() {
+    els.bandFilterList.innerHTML = BANDS.map(function (b) {
+      return '<label><input type="checkbox" data-band="' + b.id + '" checked> ' + escapeHtml(b.label) + '</label>';
+    }).join('');
+  }
+  els.bandFilterList.addEventListener('change', function (ev) {
+    var band = ev.target.getAttribute('data-band');
+    if (!band) return;
+    bandFilter[band] = ev.target.checked;
+    resetOrder(); renderDisplay();
+  });
+
   function populateNewCategorySelect() {
     els.newCategory.innerHTML = CATEGORIES.map(function (c) {
       return '<option value="' + c.id + '"' + (c.id === 'other' ? ' selected' : '') + '>' + escapeHtml(c.label) + '</option>';
@@ -450,6 +489,7 @@
   loadCustom();
   loadDisabledBuiltins();
   renderCategoryFilter();
+  renderBandFilter();
   populateNewCategorySelect();
   resetOrder();
   renderDisplay();
