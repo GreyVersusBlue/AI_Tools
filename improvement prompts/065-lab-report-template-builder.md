@@ -1,7 +1,8 @@
 # Improvement Prompts — 065 — Lab Report Template Builder
 
 **Tool file:** `Tools/065-lab-report-template-builder.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/lab-report-template-builder/` — test suite only; the
+tool itself is still one self-contained file.
 
 **Current description (from README):** Build a reusable lab report template — hypothesis, materials, procedure, a configurable data table, and conclusion prompts — from a subject-flavored starter or from scratch, and print a fillable packet for each lab.
 
@@ -47,12 +48,59 @@ Sheet Builder / Rubric Builder rather than diverging from the toolkit's
 existing convention, but collision protection would be a reasonable
 follow-up if a reviewer wants it.
 
+**2026-08-12 — Round 3 (backlog rank 4: typed data-table columns).** A data
+column is no longer just a name. Each one now declares a **kind** — Number or
+Text — and an optional **units** label, and both print under the column name
+in the packet header, so a student can see the expected format before writing
+anything in the cell. Numeric columns also right-align header and body cells,
+so a column of measurements lines up on its digits the way a data table is
+supposed to. The four subject starters ship with their columns already typed
+(Trial → number, Time → number in sec, and so on).
+
+A deliberate restraint: **only "number" is printed, never "text".** A blank
+cell already reads as "write something here", so annotating every text column
+would be noise on the page for no information. Units print for either kind.
+
+Two things that bit, both worth remembering:
+
+- **A `<select>` fires `input` as well as `change`.** The columns list shares
+  one delegated `input` handler with the other three lists, whose single
+  unlabelled input has always meant "the item's text" — so the kind dropdown
+  fell straight through it and wrote the literal string "number" into the
+  column's name. Fields now carry `data-field`, and anything that is not
+  `text` exits the text path. Caught by the suite, not by eye.
+- **Old templates must not be re-typed under the teacher.** Columns saved
+  before this round are plain `{id, text}`; `loadTemplateByName` fills them in
+  as explicit Text with empty units and writes that back. That prints the
+  exact header they had before — including a hand-written `Mass (g)` that
+  stays a name rather than being parsed into a units field. Guessing units out
+  of existing column names was considered and rejected: it would silently
+  rewrite a teacher's headers on a heuristic.
+
+Columns keep the generic reorder/delete wiring — the richer row reuses the
+same `data-up` / `data-down` / `data-del` attributes, so `bindListEvents`
+drives it unchanged.
+
+Verified with a new 22-assertion headless Chromium suite,
+`Tools/lab-report-template-builder/test/smoke-typed-columns.mjs`
+(`npm run test:lab-report`), asserting against the print-preview markup (which
+is the real print renderer): starter column kinds, the header annotations, the
+alignment class on both header and body cells, the three fields staying
+separate, reorder/delete carrying kind and units, persistence across a reload,
+and the legacy-template upgrade — no console errors.
+
+**Next round should pick up** the pre-lab/post-lab packet split from the
+backlog, and the rename-collision tradeoff flagged in round 2.
+
 ## What it does today
 
-- 4 subject-flavored starter templates, each covering every section
+- 4 subject-flavored starter templates, each covering every section, with
+  their data columns already typed
 - Fully editable: title, objective, hypothesis prompt, materials,
   procedure, data table columns + row count, observations prompt,
   conclusion questions
+- Data columns declare a kind (Number or Text) and an optional units label;
+  the printed header carries both, and numeric columns right-align
 - Reorder any list item (materials, procedure, columns, conclusion
   questions) via up/down buttons
 - Multiple named saved templates, switchable from a dropdown, with

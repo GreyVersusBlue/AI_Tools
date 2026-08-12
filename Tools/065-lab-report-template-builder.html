@@ -89,6 +89,22 @@
   table.data-table th, table.data-table td { border: 1px solid #999; padding: .5rem .5rem; text-align: left; font-size: .86rem; }
   table.data-table th { background: #eee; }
   table.data-table td { height: 1.6rem; }
+  /* A blank grid tells a student nothing about what belongs in a cell. The
+     header carries the expected format under the column name, and a numeric
+     column right-aligns both header and cells so a column of measurements
+     lines up on its digits the way a data table is meant to. */
+  table.data-table th .ch-meta { display: block; font-weight: 400; font-size: .74rem; color: #444; margin-top: .1rem; }
+  table.data-table th.num, table.data-table td.num { text-align: right; }
+
+  .col-row { display: grid; grid-template-columns: 1fr 6.5rem 6.5rem auto auto auto; gap: .4rem; align-items: center; padding: .25rem 0; }
+  .col-row input[type="text"], .col-row select { margin-bottom: 0; }
+  .col-row button.small { padding: .2rem .45rem; flex-shrink: 0; }
+  .col-row button:disabled { opacity: .35; cursor: default; }
+  .col-head { display: grid; grid-template-columns: 1fr 6.5rem 6.5rem auto auto auto; gap: .4rem;
+    font-size: .72rem; color: var(--muted); font-weight: 600; margin-top: .3rem; }
+  @media (max-width: 1100px) {
+    .col-row, .col-head { grid-template-columns: 1fr 5.2rem 5.2rem auto auto auto; }
+  }
 
 </style>
 </head>
@@ -142,6 +158,9 @@
         <label for="dataRows">Blank rows for data</label>
         <input type="number" id="dataRows" value="5" min="1" max="20">
         <label>Columns</label>
+        <p class="hint">Each column says what kind of value goes in it, and its units if it has any &mdash; both print
+          under the column name, so a student can see the expected format before they write anything down.</p>
+        <div class="col-head"><span>Column name</span><span>Kind</span><span>Units</span><span></span><span></span><span></span></div>
         <div id="columnsWrap"></div>
         <button class="secondary small add-btn" id="addColumnBtn">+ Add column</button>
       </div>
@@ -213,7 +232,7 @@
       hypothesisPrompt: 'If ____, then ____, because ____.',
       materials: ['Safety goggles', 'Lab notebook', 'Data table (below)'],
       procedure: ['Read through the entire procedure before starting.', 'Gather all materials listed above.', 'Follow each step in order and record data as you go.', 'Clean up your station when finished.'],
-      columns: ['Trial', 'Observation'],
+      columns: [{ name: 'Trial', type: 'number' }, { name: 'Observation', type: 'text' }],
       observationsPrompt: 'What did you notice during the lab? Record anything unexpected.',
       conclusion: ['Was your hypothesis supported by the data? Explain.', 'What sources of error might have affected your results?', 'What would you do differently if you repeated this lab?']
     },
@@ -222,7 +241,7 @@
       hypothesisPrompt: 'If ____ is combined with ____, then ____ will occur, because ____.',
       materials: ['Safety goggles', 'Gloves', 'Test tubes', 'Reactant A', 'Reactant B', 'Stopwatch'],
       procedure: ['Put on safety goggles and gloves.', 'Measure out the first reactant and record its appearance.', 'Add the second reactant and start the stopwatch.', 'Record any signs of a chemical reaction (color change, gas, temperature change, precipitate).', 'Record the time when the reaction appears to stop.'],
-      columns: ['Trial', 'Sign of Reaction', 'Time (sec)'],
+      columns: [{ name: 'Trial', type: 'number' }, { name: 'Sign of Reaction', type: 'text' }, { name: 'Time', type: 'number', units: 'sec' }],
       observationsPrompt: 'Describe what you saw, smelled, or felt happen during the reaction.',
       conclusion: ['Was your hypothesis supported? Explain using your data.', 'What evidence showed that a chemical reaction took place?', 'What safety precautions were most important in this lab, and why?']
     },
@@ -231,7 +250,7 @@
       hypothesisPrompt: 'If ____, then ____ will happen to the organism, because ____.',
       materials: ['Hand lens or microscope', 'Lab notebook', 'Specimen or sample', 'Ruler'],
       procedure: ['Set up your workspace and gather your specimen.', 'Observe the specimen closely and record its features.', 'Measure any relevant dimensions and record them in the data table.', 'Repeat observations at each checkpoint.', 'Return or dispose of the specimen as instructed.'],
-      columns: ['Time / Checkpoint', 'Observation', 'Measurement'],
+      columns: [{ name: 'Time / Checkpoint', type: 'text' }, { name: 'Observation', type: 'text' }, { name: 'Measurement', type: 'number', units: 'cm' }],
       observationsPrompt: 'Describe any changes you observed over the course of the lab.',
       conclusion: ['Was your hypothesis supported by what you observed? Explain.', 'What patterns did you notice in your data?', 'What could explain any unexpected results?']
     },
@@ -240,7 +259,7 @@
       hypothesisPrompt: 'If ____ is increased, then ____ will ____, because ____.',
       materials: ['Meter stick or measuring tool', 'Stopwatch', 'Test object', 'Lab notebook'],
       procedure: ['Set up the measuring equipment as directed.', 'Perform the first trial and record the measurement.', 'Repeat for each additional trial, changing one variable at a time.', 'Calculate an average from your trials if instructed.'],
-      columns: ['Trial', 'Variable Changed', 'Measurement'],
+      columns: [{ name: 'Trial', type: 'number' }, { name: 'Variable Changed', type: 'text' }, { name: 'Measurement', type: 'number' }],
       observationsPrompt: 'Note anything that might have affected the accuracy of your measurements.',
       conclusion: ['Was your hypothesis supported by the data? Explain.', 'How did changing the variable affect your measurements?', 'What sources of measurement error were present in this lab?']
     }
@@ -274,7 +293,7 @@
       title: t.title, objective: t.objective, hypothesisPrompt: t.hypothesisPrompt,
       materials: t.materials.map(function (v) { return { id: uid(), text: v }; }),
       procedure: t.procedure.map(function (v) { return { id: uid(), text: v }; }),
-      columns: t.columns.map(function (v) { return { id: uid(), text: v }; }),
+      columns: t.columns.map(function (c) { return { id: uid(), text: c.name, type: c.type || 'text', units: c.units || '' }; }),
       dataRows: 5,
       observationsPrompt: t.observationsPrompt,
       conclusion: t.conclusion.map(function (v) { return { id: uid(), text: v }; })
@@ -345,6 +364,14 @@
     state = data;
     if (!state.name) state.name = name;
     if (typeof state.dataRows !== 'number') state.dataRows = 5;
+    /* Columns saved before they carried a kind and units are plain
+       {id, text}. Default them to text with no units — that prints exactly
+       the header a teacher already had, so an existing template is not
+       silently re-typed under them. */
+    (state.columns || []).forEach(function (c) {
+      if (c.type !== 'number' && c.type !== 'text') c.type = 'text';
+      if (typeof c.units !== 'string') c.units = '';
+    });
     localStorage.setItem(CURRENT_KEY, name);
     renderAll();
     return true;
@@ -378,7 +405,28 @@
     }).join('');
   }
 
+  /* Columns get their own row renderer rather than the generic one: they
+     carry a kind and a units label alongside the name. The reorder/delete
+     buttons keep the same data-attributes, so `bindListEvents` drives this
+     list unchanged. */
+  function renderColumns() {
+    els.columnsWrap.innerHTML = state.columns.map(function (item, i) {
+      return '<div class="col-row list-row" data-id="' + item.id + '">' +
+        '<input type="text" data-field="text" value="' + escapeAttr(item.text) + '" placeholder="e.g. Time" aria-label="Column name">' +
+        '<select data-field="type" aria-label="Kind of value in ' + escapeAttr(item.text || 'this column') + '">' +
+          '<option value="text"' + (item.type === 'number' ? '' : ' selected') + '>Text</option>' +
+          '<option value="number"' + (item.type === 'number' ? ' selected' : '') + '>Number</option>' +
+        '</select>' +
+        '<input type="text" data-field="units" value="' + escapeAttr(item.units || '') + '" placeholder="e.g. sec" aria-label="Units for ' + escapeAttr(item.text || 'this column') + '">' +
+        '<button type="button" class="secondary small" data-up="' + item.id + '" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="secondary small" data-down="' + item.id + '" title="Move down"' + (i === state.columns.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="danger small" data-del="' + item.id + '" title="Remove">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
   function renderListByKey(listKey) {
+    if (listKey === 'columns') { renderColumns(); return; }
     renderList(els[listKey + 'Wrap'], state[listKey], LIST_INFO[listKey].placeholder);
   }
 
@@ -405,9 +453,33 @@
   }
 
   function bindListEvents(wrapEl, listKey) {
+    /* A column row holds three fields, so which one was typed in has to be
+       named. Every other list has a single unlabelled input, which still
+       means "the item's text". */
+    wrapEl.addEventListener('change', function (ev) {
+      if (ev.target.getAttribute('data-field') !== 'type') return;
+      var row = ev.target.closest('.list-row');
+      if (!row) return;
+      var col = state[listKey].find(function (i) { return i.id === row.getAttribute('data-id'); });
+      if (col) col.type = ev.target.value === 'number' ? 'number' : 'text';
+      save();
+    });
     wrapEl.addEventListener('input', function (ev) {
       var row = ev.target.closest('.list-row');
       if (!row) return;
+      var field = ev.target.getAttribute('data-field');
+      if (field && field !== 'text') {
+        /* A <select> fires `input` as well as `change`, so the kind dropdown
+           reaches here too — falling through would write "number" into the
+           column's name. Only the units field has anything to do on input;
+           the kind is handled by the `change` listener above. */
+        if (field === 'units') {
+          var col = state[listKey].find(function (i) { return i.id === row.getAttribute('data-id'); });
+          if (col) col.units = ev.target.value;
+          save();
+        }
+        return;
+      }
       var id = row.getAttribute('data-id');
       var item = state[listKey].find(function (i) { return i.id === id; });
       if (item) item.text = ev.target.value;
@@ -477,7 +549,7 @@
 
   els.addMaterialBtn.addEventListener('click', function () { state.materials.push({ id: uid(), text: '' }); save(); renderListByKey('materials'); });
   els.addStepBtn.addEventListener('click', function () { state.procedure.push({ id: uid(), text: '' }); save(); renderListByKey('procedure'); });
-  els.addColumnBtn.addEventListener('click', function () { state.columns.push({ id: uid(), text: '' }); save(); renderListByKey('columns'); });
+  els.addColumnBtn.addEventListener('click', function () { state.columns.push({ id: uid(), text: '', type: 'text', units: '' }); save(); renderListByKey('columns'); });
   els.addQuestionBtn.addEventListener('click', function () { state.conclusion.push({ id: uid(), text: '' }); save(); renderListByKey('conclusion'); });
 
   bindListEvents(els.materialsWrap, 'materials');
@@ -489,11 +561,25 @@
     var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Lab Report';
     var materials = state.materials.map(function (m) { return '<div class="checklist-item"><span class="checkbox"></span>' + escapeHtml(m.text) + '</div>'; }).join('');
     var procedure = state.procedure.map(function (p, i) { return '<div class="step-item">' + (i + 1) + '. ' + escapeHtml(p.text) + '</div>'; }).join('');
-    var cols = state.columns.map(function (c) { return '<th>' + escapeHtml(c.text) + '</th>'; }).join('');
+    /* Header: the column name, then a smaller line saying what belongs in the
+       cells. "number" is worth stating because it changes what a student
+       writes; "text" is not — a blank cell already reads as "write something",
+       so saying so would be noise on every column. Units are shown whenever
+       there are any, for either kind. */
+    var cols = state.columns.map(function (c) {
+      var isNum = c.type === 'number';
+      var meta = [];
+      if (isNum) meta.push('number');
+      if (c.units && c.units.trim()) meta.push(c.units.trim());
+      return '<th' + (isNum ? ' class="num"' : '') + '>' + escapeHtml(c.text) +
+        (meta.length ? '<span class="ch-meta">' + escapeHtml(meta.join(' · ')) + '</span>' : '') + '</th>';
+    }).join('');
     var rowsHtml = '';
     var rowCount = Math.max(1, Math.min(20, state.dataRows || 5));
     for (var r = 0; r < rowCount; r++) {
-      rowsHtml += '<tr>' + state.columns.map(function () { return '<td></td>'; }).join('') + '</tr>';
+      rowsHtml += '<tr>' + state.columns.map(function (c) {
+        return c.type === 'number' ? '<td class="num"></td>' : '<td></td>';
+      }).join('') + '</tr>';
     }
     var conclusion = state.conclusion.map(function (q) {
       return '<p style="font-size:.9rem;margin:.3rem 0 .1rem;">' + escapeHtml(q.text) + '</p><span class="fill-line"></span><span class="fill-line"></span>';
