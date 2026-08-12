@@ -1,7 +1,8 @@
 # Improvement Prompts — 014 — Immersion Roleplay Scenario Generator
 
 **Tool file:** `Tools/014-roleplay-scenario-generator.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/roleplay-scenario-generator/` — test suite only;
+the tool itself is still one self-contained file.
 
 **Current description (from README):** Real-life dialogue scenarios with vocabulary scaffolding cards you fill in for whatever language you teach.
 
@@ -167,6 +168,50 @@ and the pronunciation select defaulted to `es-ES`.
   list + speak helper) alongside the existing `_shared/a11y.js` is
   concrete, not hypothetical — two tools already duplicate it verbatim.
 
+**2026-08-12 — Round 5 (backlog rank 6: success-criteria strip).** A scaffolded
+roleplay tells a pair what to *say* but never what doing it *well* is, so the
+pair's real question — "is that enough?" — gets asked of the teacher, one pair
+at a time, for the whole period. A teacher-authored **"What a good attempt
+sounds like"** strip now answers it once, in writing, on the page in front of
+them.
+
+The criteria are a short list of lines, edited in a new panel beside the
+handout-set and add-scenario panels, and they appear in all three places a
+student sees:
+
+- **the projector**, live as they are typed, so the class reads them off the
+  board before starting;
+- **the pair handout**, in a bordered strip above the vocabulary scaffolding —
+  before it, deliberately, since criteria are read first and the scaffolding is
+  referred back to;
+- **every individual role card**.
+
+A strip that printed on only one of the three would be worse than none,
+because the teacher would stop saying it out loud and it would reach only some
+students. That is the assertion the suite spends most of its effort on.
+
+**Stored per class** (`gvb-roleplay:criteria`), like the scaffolding fill-ins
+and for the same reason: what counts as a good attempt in Spanish 1 is not
+what counts in Spanish 3. Empty means absent — no empty bordered box on a
+handout — and a checkbox suppresses the strip without deleting the text.
+
+**One bug the suite caught:** adding or renaming a class left the criteria box
+showing the *previous* class's text while writing into the *new* class's
+record. `renderCriteriaPanel()` now runs inside `renderAll()`, which is the
+path every class change already goes through, and rename/delete carry and drop
+the criteria record alongside the other per-class maps rather than orphaning
+it.
+
+Verified with a new 18-assertion headless Chromium suite,
+`Tools/roleplay-scenario-generator/test/smoke-success-criteria.mjs`
+(`npm run test:roleplay`): the strip on the projector, the handout and every
+role card, absence when empty, the off switch, persistence across a reload,
+and per-class isolation in both directions — no console errors.
+
+**Next round should pick up** the backlog's speaking-assessment layer, which
+is the natural partner to this: criteria say what good sounds like, and the
+assessment layer would record whether it did.
+
 ## What it does today
 
 - Scenario bank browsable by **category** and **level**, with prev/next and
@@ -176,6 +221,9 @@ and the pronunciation select defaulted to `es-ES`.
 - **Per-class vocabulary fills** (`gvb-roleplay:fills`, `:currentClass`) — the
   language-agnostic mechanism: you supply the target-language vocabulary for
   whatever language you teach, saved per class
+- **Per-class success criteria** (`gvb-roleplay:criteria`) — a "what a good
+  attempt sounds like" strip on the projector, the pair handout and every role
+  card, with an off switch
 - **Random role assignment** to students
 - **Handout set builder** — select several scenarios and print them together
   (`renderSetList`, `handoutHtml`, "print selected handouts")

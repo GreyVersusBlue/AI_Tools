@@ -133,6 +133,11 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; text-align: center; }
 
+  .stage-success { border: 2px solid var(--accent, #1f3550); border-radius: 8px; padding: .5rem .8rem; margin: .8rem 0; text-align: left; }
+  .stage-success strong { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+  .stage-success ul { margin: .3rem 0 0; padding-left: 1.2rem; }
+  .stage-success li { margin-bottom: .15rem; }
+
   /* ── Print handout ─────────────────────────────────────────────────── */
   .print-only { display: none; }
   @media print {
@@ -154,6 +159,10 @@
     .print-only .h-scaff-card .h-fill { font-size: .88rem; min-height: 1.3rem; border-bottom: 1px solid #999; white-space: pre-wrap; }
     .print-only .h-scaff-card .h-fill.blank { min-height: 1.6rem; }
     .print-only .h-useful { margin-top: .8rem; border-top: 1px dashed #999; padding-top: .5rem; }
+    .print-only .h-success { border: 1.5px solid #333; border-radius: 6px; padding: .35rem .6rem; margin: .6rem 0 .2rem; }
+    .print-only .h-success .h-success-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: #333; font-weight: 700; }
+    .print-only .h-success ul { margin: .2rem 0 0; padding-left: 1.1rem; font-size: .84rem; }
+    .print-only .h-success li { margin-bottom: .1rem; }
     @page { size: letter portrait; margin: 0.2in; }
   }
 </style>
@@ -208,8 +217,22 @@
     <button type="button" class="big" id="shuffleBtn">Shuffle a new scenario</button>
     <button type="button" class="secondary big" id="printCurrentBtn">Print this scenario</button>
     <button type="button" class="secondary big" id="printRoleCardsBtn">Print role cards (one per student)</button>
+    <button type="button" class="secondary big" id="toggleCriteriaBtn">Success criteria&hellip;</button>
     <button type="button" class="secondary big" id="toggleSetBtn">Build a handout set&hellip;</button>
     <button type="button" class="secondary big" id="toggleAddBtn">Add your own scenario&hellip;</button>
+  </div>
+
+  <div class="set-panel" id="criteriaPanel" style="display:none;">
+    <h3>What a good attempt sounds like</h3>
+    <p class="hint">One short line per criterion. It prints as a strip on every handout and role card, and shows on
+      the projector &mdash; so a pair can check their own attempt against it before they call you over. Saved per
+      class, like the scaffolding fill-ins, since what counts as good in Spanish 1 isn&rsquo;t what counts in
+      Spanish 3.</p>
+    <label for="criteriaText">Success criteria (one per line)</label>
+    <textarea id="criteriaText" rows="5" placeholder="You keep going for at least 6 exchanges without English.&#10;You use at least three phrases from the scaffolding above.&#10;You ask your partner at least one question.&#10;When you get stuck you use a repair phrase instead of stopping."></textarea>
+    <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;margin-top:.4rem;">
+      <input type="checkbox" id="criteriaOn" checked style="width:auto;"> Print the strip on handouts and role cards
+    </label>
   </div>
 
   <div class="set-panel" id="setPanel" style="display:none;">
@@ -275,6 +298,7 @@
   var CURRENT_CLASS_KEY = 'gvb-roleplay:currentClass';
   var CUSTOM_KEY = 'gvb-roleplay:custom';
   var ROSTER_KEY = 'gvb-roleplay:roster';
+  var CRITERIA_KEY = 'gvb-roleplay:criteria';
   var USEFUL_FILLS_KEY = 'gvb-roleplay:usefulFills';
   var FRAMES_KEY = 'gvb-roleplay:frames';
   var TTS_LANG_KEY = 'gvb-roleplay:ttsLang';
@@ -636,7 +660,8 @@
    'rosterHubSelect', 'rosterHubLoadBtn', 'rosterStatus', 'pairUpBtn',
    'toggleAddBtn', 'addPanel', 'addTitle', 'addCategory', 'addRoleA', 'addRoleB', 'addSetup', 'addPhrases',
    'saveCustomBtn', 'cancelCustomBtn', 'customList',
-   'stage', 'printArea'
+   'stage', 'printArea',
+   'criteriaPanel', 'criteriaText', 'criteriaOn', 'toggleCriteriaBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var filter = localStorage.getItem(FILTER_KEY) || 'all';
@@ -750,6 +775,7 @@
       '<span class="cat-tag level-tag">' + escapeHtml(levelLabel(s.level)) + '</span>' +
       '<h2>' + escapeHtml(s.title) + '</h2>' +
       '<p class="setup">' + escapeHtml(s.setup) + '</p>' +
+      stageCriteriaHtml() +
       '<div class="role-assign-row">' +
         '<button type="button" class="secondary small" id="assignRolesBtn">&#127922; Randomly assign roles</button>' +
         '<p class="hint">' + (pairs && pairs.length
@@ -856,6 +882,10 @@
     buildScenarioSelect();
     renderRosterStatus();
     syncTtsLangSelect();
+    /* Criteria are per class like the fill-ins, so the box has to follow a
+       class change — otherwise it shows the previous class's text while
+       writing into the new class's record. */
+    renderCriteriaPanel();
     renderStage();
     if (els.setPanel.style.display !== 'none') renderSetList();
     if (els.addPanel.style.display !== 'none') renderCustomList();
@@ -988,6 +1018,55 @@
   }
 
   /* ---------- print ---------- */
+
+  /* ---------- success criteria ----------
+     A scaffolded roleplay tells a pair what to say but not what "doing it
+     well" is, so the pair's own question is always "is that enough?" — asked
+     of the teacher, one pair at a time. A short criteria strip printed on
+     every handout and role card answers it once. Stored per class alongside
+     the scaffolding fill-ins: what counts as a good attempt in Spanish 1 is
+     not what counts in Spanish 3. */
+  var criteriaByClass = safeParse(localStorage.getItem(CRITERIA_KEY), null);
+  if (!criteriaByClass || typeof criteriaByClass !== 'object' || Array.isArray(criteriaByClass)) criteriaByClass = {};
+  function saveCriteria() {
+    try { localStorage.setItem(CRITERIA_KEY, JSON.stringify(criteriaByClass)); } catch (e) { /* storage full/blocked */ }
+  }
+  function criteriaRecord() {
+    var rec = criteriaByClass[currentClass];
+    if (!rec || typeof rec !== 'object') { rec = { lines: [], on: true }; criteriaByClass[currentClass] = rec; }
+    if (!Array.isArray(rec.lines)) rec.lines = [];
+    if (typeof rec.on !== 'boolean') rec.on = true;
+    return rec;
+  }
+  function criteriaLines() {
+    var rec = criteriaRecord();
+    return rec.on ? rec.lines.filter(function (l) { return l.trim(); }) : [];
+  }
+
+  function successStripHtml() {
+    var lines = criteriaLines();
+    if (!lines.length) return '';
+    return '<div class="h-success"><div class="h-success-label">What a good attempt sounds like</div><ul>' +
+      lines.map(function (l) { return '<li>' + escapeHtml(l.trim()) + '</li>'; }).join('') +
+      '</ul></div>';
+  }
+
+  /* On screen the strip is the same content in the projector's own styling —
+     the class reads it off the board before they start, which is the point of
+     having criteria at all. */
+  function stageCriteriaHtml() {
+    var lines = criteriaLines();
+    if (!lines.length) return '';
+    return '<div class="stage-success"><strong>What a good attempt sounds like</strong><ul>' +
+      lines.map(function (l) { return '<li>' + escapeHtml(l.trim()) + '</li>'; }).join('') + '</ul></div>';
+  }
+
+  function renderCriteriaPanel() {
+    var rec = criteriaRecord();
+    els.criteriaText.value = rec.lines.join('\n');
+    els.criteriaOn.checked = rec.on;
+  }
+
   function usefulPhrasesBlockHtml() {
     var uArr = usefulFillsFor();
     return '<div class="h-useful">' +
@@ -1011,6 +1090,7 @@
       '<div class="h-roles">' +
         s.roles.map(function (r, i) { return '<div class="h-role">Partner ' + (i === 0 ? 'A' : 'B') + ': ' + escapeHtml(r) + '</div>'; }).join('') +
       '</div>' +
+      successStripHtml() +
       '<div class="h-scaff-heading">Vocabulary scaffolding</div>' +
       '<div class="h-scaff-grid">' +
         s.phrases.map(function (p, i) {
@@ -1043,6 +1123,7 @@
       '<div class="h-roles">' + roleLine +
         '<div class="h-role" style="font-weight:400;">Partner: ' + escapeHtml(partnerName) + '</div>' +
       '</div>' +
+      successStripHtml() +
       '<div class="h-scaff-heading">Vocabulary scaffolding</div>' +
       '<div class="h-scaff-grid">' +
         s.phrases.map(function (p, i) {
@@ -1110,6 +1191,7 @@
     saveCurrentClass();
     renderRosterStatus();
     syncTtsLangSelect();
+    renderCriteriaPanel();
     renderStage();
   });
 
@@ -1146,6 +1228,7 @@
     if (framesByClass[currentClass]) { framesByClass[name] = framesByClass[currentClass]; delete framesByClass[currentClass]; }
     if (ttsLangByClass[currentClass]) { ttsLangByClass[name] = ttsLangByClass[currentClass]; delete ttsLangByClass[currentClass]; }
     if (classPairs[currentClass]) { classPairs[name] = classPairs[currentClass]; delete classPairs[currentClass]; }
+    if (criteriaByClass[currentClass]) { criteriaByClass[name] = criteriaByClass[currentClass]; delete criteriaByClass[currentClass]; }
     classes = classes.map(function (c) { return c === currentClass ? name : c; });
     currentClass = name;
     saveCurrentClass();
@@ -1154,6 +1237,7 @@
     saveUsefulFills();
     saveFrames();
     saveTtsLang();
+    saveCriteria();
     renderAll();
   });
 
@@ -1166,6 +1250,7 @@
     delete framesByClass[currentClass];
     delete ttsLangByClass[currentClass];
     delete classPairs[currentClass];
+    delete criteriaByClass[currentClass];
     classes = classes.filter(function (c) { return c !== currentClass; });
     currentClass = classes[0];
     saveCurrentClass();
@@ -1174,6 +1259,7 @@
     saveUsefulFills();
     saveFrames();
     saveTtsLang();
+    saveCriteria();
     renderAll();
   });
 
@@ -1250,6 +1336,22 @@
 
   els.printCurrentBtn.addEventListener('click', function () {
     if (currentId) doPrint([currentId]);
+  });
+
+  els.toggleCriteriaBtn.addEventListener('click', function () {
+    var showing = els.criteriaPanel.style.display !== 'none';
+    els.criteriaPanel.style.display = showing ? 'none' : '';
+    if (!showing) renderCriteriaPanel();
+  });
+  els.criteriaText.addEventListener('input', function () {
+    criteriaRecord().lines = els.criteriaText.value.split('\n');
+    saveCriteria();
+    renderStage();
+  });
+  els.criteriaOn.addEventListener('change', function () {
+    criteriaRecord().on = els.criteriaOn.checked;
+    saveCriteria();
+    renderStage();
   });
 
   els.toggleSetBtn.addEventListener('click', function () {
