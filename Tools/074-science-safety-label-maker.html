@@ -218,11 +218,14 @@
 
   function renderQueue() {
     els.queueCount.textContent = queue.length;
-    els.queueWrap.innerHTML = queue.map(function (item) {
+    var last = queue.length - 1;
+    els.queueWrap.innerHTML = queue.map(function (item, i) {
       var sym = symbolByKey(item.symbol) || SYMBOLS[SYMBOLS.length - 1];
       return '<div class="queue-row">' + svgFor(sym) +
         '<span class="qtext">' + escapeHtml(item.text) + ' &mdash; <em>' + escapeHtml(sym.name) + '</em></span>' +
         '<span class="qty">&times;' + item.qty + '</span>' +
+        '<button type="button" class="secondary small" data-move-up="' + item.id + '"' + (i === 0 ? ' disabled' : '') + ' title="Move up">&uarr;</button>' +
+        '<button type="button" class="secondary small" data-move-down="' + item.id + '"' + (i === last ? ' disabled' : '') + ' title="Move down">&darr;</button>' +
         '<button type="button" class="secondary small" data-edit="' + item.id + '">Edit</button>' +
         '<button type="button" class="secondary small" data-dup="' + item.id + '">Duplicate</button>' +
         '<button type="button" class="danger small" data-del="' + item.id + '">Delete</button></div>';
@@ -232,6 +235,18 @@
     var editId = ev.target.getAttribute('data-edit');
     var dupId = ev.target.getAttribute('data-dup');
     var delId = ev.target.getAttribute('data-del');
+    var upId = ev.target.getAttribute('data-move-up');
+    var downId = ev.target.getAttribute('data-move-down');
+    if (upId || downId) {
+      // shelf-order printing: the queue's order IS the printed grid's order
+      var mId = upId || downId;
+      var idx = queue.findIndex(function (q) { return q.id === mId; });
+      var swapWith = upId ? idx - 1 : idx + 1;
+      if (idx === -1 || swapWith < 0 || swapWith >= queue.length) return;
+      var tmp = queue[idx]; queue[idx] = queue[swapWith]; queue[swapWith] = tmp;
+      save(); renderQueue();
+      return;
+    }
     if (editId) {
       var item = queue.find(function (q) { return q.id === editId; });
       if (!item) return;
