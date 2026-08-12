@@ -1,7 +1,8 @@
 # Improvement Prompts — 022 — Lab Group & Role Randomizer
 
 **Tool file:** `Tools/022-lab-group-role-randomizer.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/lab-group-role-randomizer/` — test suite only; the
+tool itself is still one self-contained file.
 
 **Current description (from README):** Randomize lab groups and assign roles (recorder, materials, safety, etc.) — remembers who's had which role so nobody's stuck as Recorder every lab.
 
@@ -15,9 +16,58 @@ checkout tracking. Ideas below are deliberately ambitious and are **not**
 scoped to a single session; items confirmed shipped are tagged **Done**
 below.
 
+**2026-08-12 — Round 5 (backlog rank 1: group size from equipment count).** A
+third grouping mode, **Equipment on hand**, sits beside "Number of groups" and
+"Students per group". The teacher lists what is actually in the room — item and
+how many — and the **scarcest item sets the group count**.
+
+That last part is the whole reason this is a new mode rather than a relabel.
+"Seven microscopes" on its own is just "seven groups", which the count mode
+already did. The thing neither existing mode can express is a constraint made
+of *more than one number*: seven microscopes and five hot plates is a
+five-group lab, not a seven-group one, and getting that wrong is discovered at
+the bench. A live readout names the item that bound the count, shows the
+resulting group sizes against the real roster, and counts the now-spare units
+of everything else — so a teacher can see *why* they got five and go find two
+more hot plates if they want seven.
+
+Two smaller things fell out of it:
+
+- **"Use this equipment as the stations"** builds one station row per group,
+  each carrying the item list, so the checkout sheet and the table tents
+  already know what each bench is holding without the gear being typed twice.
+  It confirms before replacing stations that are already there.
+- **A class smaller than the equipment** is called out rather than silently
+  producing empty benches — three students against five hot plates says so and
+  makes three groups.
+
+Rosters saved before this mode have no `equipment` array; `normalizeRosterData`
+gives them an empty one, and the other two modes are byte-for-byte unchanged.
+
+Worth knowing for the next round: **the mode radios are `display: none`** — the
+`.toggle-group` CSS styles their labels instead — so anything driving this UI
+programmatically has to click `label[for="mode-…"]`, not the input. The suite
+learned that the hard way.
+
+Verified with a new 32-assertion headless Chromium suite,
+`Tools/lab-group-role-randomizer/test/smoke-equipment-mode.mjs`
+(`npm run test:lab-groups`): the scarcest item winning and being named, the
+count reaching the real shuffle (not just the readout), spare-equipment and
+too-few-students reporting, the confirm on station building, persistence
+across a reload, both original modes still behaving, and an old roster
+opening — no console errors.
+
+**Next round should pick up** the deferred "lock a group and reshuffle the
+rest", and the backlog's own row about gating groups on a returned lab safety
+contract — which would compose neatly with this mode, since both are about
+what the room can actually support today.
+
 ## What it does today
 
-- Split a roster into groups (by count or size); loads `np_rosters`
+- Split a roster into groups three ways — by group count, by group size, or
+  by the equipment on hand, where the scarcest listed item sets the count;
+  loads `np_rosters`
+- Build the station list straight from the equipment list
 - **Editable role list**; roles assigned per group with a **recency memory**
   (`roleRecencyScore`, `recordHistory`) so roles rotate fairly — the tool's
   best idea
