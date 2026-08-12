@@ -186,13 +186,20 @@ even if a tool is later retired.
 
 ## Currently claimed (in progress)
 
-Nothing claimed right now. When you claim a tool per "Claiming a tool"
-above, add its row here; when the round ships, the row moves down to
-**Already done** and is deleted from here.
+When you claim a tool per "Claiming a tool" above, add its row here; when
+the round ships, the row moves down to **Already done** and is deleted from
+here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Command Center | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Digital Escape Room / Puzzle Lock Builder | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| QR Code Generator | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Gallery Walk QR Codes | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Testing Accommodations Reference Card Generator | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Staff Directory / Quick-Reference Builder | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Fitness & Skill Assessment Tracker | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| Exit Ticket / Bell Ringer Generator | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
 
 ---
 
