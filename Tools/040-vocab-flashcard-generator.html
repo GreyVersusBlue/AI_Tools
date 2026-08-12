@@ -677,6 +677,11 @@
     quizIndex = 0; quizFlipped = false;
     applyStateToForm();
     refreshSwitcher();
+    // newList() reveals the toolbar; loading a saved list has to as well.
+    // Without this the list switcher, Export, Import and the share buttons
+    // are only ever reachable on a first run — every return visit opened
+    // with a saved list and no way to get at the others.
+    els.toolbar.style.display = '';
     renderPreview();
   }
 
