@@ -192,14 +192,7 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Command Center | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Digital Escape Room / Puzzle Lock Builder | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| QR Code Generator | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Gallery Walk QR Codes | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Testing Accommodations Reference Card Generator | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Staff Directory / Quick-Reference Builder | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Fitness & Skill Assessment Tracker | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
-| Exit Ticket / Bell Ringer Generator | `r8kq4t` | 2026-08-12 01:33 UTC | `claude/backlog-batch-3-r8kq4t` |
+| *(none)* | | | |
 
 ---
 
@@ -938,6 +931,54 @@ either. Two site-wide findings from this round were added to
 already named there, and a new wrinkle on the recurring fullscreen-stage
 duplication (interactive controls, not just static display, now need to
 live inside the fullscreened subtree in at least four tools).
+
+### Ranked-backlog batch — 2026-08-12 01:33–03:40 UTC — session `r8kq4t` — branch `claude/backlog-batch-3-r8kq4t`
+
+**Worked from the ranked "Existing Tools — Enhancement Ideas" table in
+`IDEAS_BACKLOG.md`, not from the "Not yet touched" list below**, so this
+round does not change the "X of 46 (Pass 2)" tallies and none of the eight
+tools moved between the lists. Ranks 1–8 as they stood at the start; each row
+was deleted from both backlog files on the commit that shipped it, and the
+remaining rows renumbered, leaving 131 contiguous.
+
+This session was also the one that collided with a parallel session earlier
+in the day (its first branch, PR #122, was abandoned unmerged after PR #123
+shipped overlapping work). The claim table above was used properly this time:
+a tagging-only commit for all eight rows went to `main` before any
+implementation code.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Command Center | `010-command-center-dashboard.md` | A ninth panel: the current period's seating chart, read-only from `seating-chart-v1`, drawn as one SVG in the generator's own coordinate space so it scales to the projector. Which chart to show is remembered per period, not globally. |
+| Digital Escape Room / Puzzle Lock Builder | `019-escape-room-builder.md` | The reported contraction bug was not real (apostrophes already collapsed); two adjacent ones in the same line were — hyphens glued words together and punctuation stripping left phantom double spaces. `normalizeTextAnswer` rewritten as four ordered passes. |
+| QR Code Generator | `016-qr-code-generator.md` | The roster code sheet's missing suite. `package.json` already pointed `npm test` at a file that was never committed, which stopped the &&-chain there. |
+| Gallery Walk QR Codes | `017-gallery-walk-qr.md` | A projector rotation display: the clock at room size, plus which students are standing at which station right now, driven by the same timer as the panel rather than a copy of it. |
+| Testing Accommodations Reference Card Generator | `077-testing-accommodations-card-generator.md` | A Show filter over the grid — one accommodation, or the students nothing is ticked for yet — that reaches the printed cards, so the read-aloud proctor gets exactly their stack. |
+| Staff Directory / Quick-Reference Builder | `075-staff-directory-builder.md` | Department sub-headers on screen and in print, with the unassigned staff in a block of their own and case-variant spellings collapsed. The preference went in a new `sdb_prefs_v1` rather than wrapping the exported array. |
+| Fitness & Skill Assessment Tracker | `060-fitness-skill-assessment-tracker.md` | Click an event heading to rank the class by it, best-first meaning fastest for a time event and highest for a count, with no-result rows held at the bottom either way. Print and CSV follow. |
+| Exit Ticket / Bell Ringer Generator | `023-exit-ticket-generator.md` | A quarter-inch grid response area, with `print-color-adjust: exact` — without it the option looks right on screen and prints as an empty box. |
+
+**Six new suites** (`command-center/smoke-seating-panel`,
+`qr-code-generator/smoke-roster`, `gallery-walk-qr/smoke-projector`,
+`testing-accommodations-card-generator/smoke-filter`,
+`staff-directory-builder/smoke-departments`,
+`fitness-skill-assessment-tracker/smoke-sort`), all wired into `npm test`
+with their own `test:*` script; two existing suites extended
+(`escape-room-builder/smoke-test-run` 39 → 57 checks,
+`exit-ticket-generator/smoke-response-area` 27 → 36). Four of the eight tools
+had no automated coverage at all before this round.
+
+**`npm test` was red on `main` before this round, in two places, and both
+were fixed on the way past.** The missing `qr-code-generator/test/smoke-roster.mjs`
+stopped the &&-chain about two-thirds of the way down the list, so roughly a
+dozen suites had not been running at all. Separately,
+`exit-ticket-generator/smoke-response-area.mjs` carried an assertion that
+measured the response box against the whole slip and expected "more than half"
+— but the flex weights divide the space left *under* the question, so a
+two-line prompt made it fail on a correct tool. It measures `share` (box
+against box-plus-spacer) now. The full run is 42 suites green, with the one
+known-red seating-chart mobile-toolbar assertion still failing for real; that
+belongs to the "Phone-Sized Layout Pass" platform row and was left alone.
 
 ---
 
