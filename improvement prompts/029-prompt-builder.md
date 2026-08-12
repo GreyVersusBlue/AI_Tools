@@ -9,6 +9,40 @@
 
 ## Status
 
+**2026-08-12 — session `r8kq4t`.** Backlog rank 1 (as it stood):
+`{{placeholder}}` tokens with a fill-in panel.
+
+- **The load-bearing decision is that substitution happens on the way *out*.**
+  `fill()` is the single funnel every field value passes through to reach the
+  built prompt, so that is where tokens are replaced — and the fields
+  themselves keep the placeholder. Substituting into the fields would work
+  exactly once and then quietly turn a template back into a one-off: the
+  failure would be invisible until next unit, when the saved preset came back
+  with last month's topic already baked in. The suite asserts the field still
+  reads `{{topic}}` after the value has been filled and copied.
+- **A preset is the template; the values are this unit's answers.** Placeholder
+  values live in the draft, not in a preset — `applyFieldsFromData` clears them
+  and only the draft-restore path puts them back. That is what makes "apply the
+  preset, fill three blanks, go" the workflow.
+- **An unfilled placeholder stays visible in the output**, marked loudly, with
+  a count of what is outstanding. A prompt that still says `{{topic}}` when it
+  reaches an AI is a wasted round trip; a prompt with a silent hole in it is
+  worse.
+- `{{ Topic }}` and `{{topic}}` are one blank — case and spacing are
+  normalised, or the panel would ask the same question twice.
+- **The panel is only rebuilt when the *set* of placeholders changes**, not on
+  every keystroke, so typing a value does not replace the input being typed
+  into. Same class of bug as the Formula Sheet Builder's tick boxes this round.
+- **New suite:** `Tools/prompt-builder/test/smoke-placeholders.mjs`, 28 checks,
+  wired into `npm test` and `npm run test:prompt-builder` — the first
+  automated coverage this tool has had. It caught one real bug: token values
+  were written to the draft but never read back, so a refresh lost every blank.
+
+**Where the next round should pick up:** the task-organised prompt library on
+the ranked backlog is the obvious partner to this — a built-in library of
+templates is only worth having if the templates have blanks in them, which
+they now can.
+
 **2026-08-10 — Round 5 (PR #56): five Quick Wins shipped.**
 
 - **Done — Added to the README.** Both this tool and `016-qr-code-generator.html`
