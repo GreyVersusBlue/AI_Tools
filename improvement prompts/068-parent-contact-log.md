@@ -1,13 +1,59 @@
 # Improvement Prompts — 068 — Parent/Guardian Contact Log
 
 **Tool file:** `Tools/068-parent-contact-log.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/parent-contact-log/` — `test/smoke-reasons.mjs`. The
+tool itself is still one inline file.
 
 **Current description (from README):** Log a call, email, or note home per student — date, method, and outcome — with a per-student contact count and a printable history, for quick reference before a conference or a difficult phone call.
 
 ---
 
 ## Status
+
+**2026-08-11 — Contact reason tags (backlog rank 2).** Shipped the Quick Win
+this file has been pointing at since the first build. Method answers "how did
+you reach them"; reason answers "what about", which is the axis anyone
+reviewing a contact log actually asks along — an administrator wants the
+behaviour calls, a conference wants one student, a teacher checking their own
+habits wants to know how many were good news.
+
+Six reasons (positive / grades / behavior / attendance / scheduling / other) as
+a select beside method, a badge column beside the method badge, and a filter
+that composes with the existing student / method / date filters rather than
+replacing any of them.
+
+Decisions worth keeping:
+
+- **The slug is what's stored, not the label.** Renaming "Grades / academics"
+  next year must not orphan a term of entries filed under it. An unrecognised
+  slug prints itself rather than vanishing.
+- **A reason tally above the table**, counting whatever is currently filtered,
+  with the positive count styled separately. "How many of my contacts home
+  were good news" is the number a teacher is quietly keeping score of, and a
+  log that only ever records problems is exactly what this makes visible.
+- **Badges carry their own word.** Colour is a second cue only — these get
+  printed on the black-and-white machine down the hall.
+- **Entries logged before this round have no `reason` at all** and must stay
+  that way: they show an em dash, are styled as absent rather than as a
+  category, are counted separately in the tally, and are findable through a
+  "(no reason recorded)" filter option. Opening one for edit defaults to
+  *Other* rather than to whatever happens to be first in the list — silently
+  filing a year of untagged history under "Positive" would be worse than
+  leaving it blank.
+
+The CSV carries the readable label rather than the slug (that file gets opened
+by people), and the printed list gains the column.
+
+New test: `Tools/parent-contact-log/test/smoke-reasons.mjs` (33 assertions,
+wired into `npm test` and `npm run test:contact-log`) — the second axis not
+displacing method, slug storage, filter composition, the tally, both outputs,
+and the whole pre-round-entries story.
+
+**Where the next round should pick up:** the two Major Features named below —
+follow-up flags, and the real conference print packet (title page plus a blank
+note area) — are now the top of this tool's list. The conference packet would
+pair naturally with the reason tally, which is already a per-student summary
+in everything but framing.
 
 **2026-08-10 — First build.** Shipped as a basic, functioning MVP out of the
 Ideas Backlog: paste-or-type roster (with an optional pull from a saved Name
@@ -62,8 +108,14 @@ storage shape (see Open Questions).
 - Per-student contact count next to each roster name (a `0` count stands out
   in red — an at-a-glance "who haven't I reached" signal), sortable by name
   or by fewest contacts first
-- History table: filter by student name, method, and/or a date range; edit
-  or delete any entry
+- **Reason tag per contact** (`REASONS`, stored as a slug on `entry.reason`):
+  positive / grades / behavior / attendance / scheduling / other, shown as a
+  badge beside the method badge
+- **Reason tally** above the history table (`renderReasonTally`) — a
+  breakdown of whatever is currently filtered, with the positive count
+  called out
+- History table: filter by student name, method, reason, and/or a date range;
+  edit or delete any entry
 - Print the full filtered list, or one student's whole history, as a plain
   table; export the filtered list as CSV
 - Log the form with Enter from the outcome field, with a confirmation toast
@@ -81,10 +133,10 @@ storage shape (see Open Questions).
 - **Done — Confirmation toast instead of nothing** after logging a contact.
 - **Done — Keyboard-friendly logging**: Enter in the outcome field submits,
   Shift+Enter inserts a newline.
-- **Contact "tags"** (attendance / grades / behavior / positive note home)
+- **Done — 2026-08-11.** **Contact "tags"** (attendance / grades / behavior / positive note home)
   as a lightweight second axis alongside method, since "why" matters as much
-  as "how" when a teacher is scanning history before a call. *(Still open —
-  next round's best Quick Win pick.)*
+  as "how" when a teacher is scanning history before a call. *(See the Status
+  entry at the top of this file.)*
 
 ## Major Features
 
