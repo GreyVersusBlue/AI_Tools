@@ -1,7 +1,8 @@
 # Improvement Prompts — 067 — Music Sight-Reading / Rhythm Warm-Up Generator
 
 **Tool file:** `Tools/067-music-sightreading-generator.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/music-sightreading-generator/` — test suite only;
+the tool itself is still one self-contained file.
 
 **Current description (from README):** Randomized rhythm patterns (4/4,
 3/4, or 2/4) or randomized pitch sight-reading on a real treble/bass staff,
@@ -77,10 +78,60 @@ reported measure summed correctly once re-checked by hand), lock/print
 behavior on both tabs, and big-mode Previous/Next boundary behavior — no
 console errors.
 
+**2026-08-12 — Round 3 (backlog rank 6: glyph-support probe with fallback).**
+The last Quick Win is closed. At load the tool now measures each musical
+character it uses against `U+FFFF` — a permanently unassigned codepoint that
+can only ever render as the missing-glyph box — in the same font stack the
+page actually paints with. Equal widths mean the real glyph fell back to that
+box too. Measuring the DOM rather than a canvas matters here: it tests the
+font the display will use, not a separately-specified stack that might resolve
+differently.
+
+When the probe finds anything missing, the rhythm notes are **drawn as SVG**
+instead: filled and hollow noteheads with stems, a beamed eighth pair, and a
+quarter rest. Every place a note appears follows the same decision — the
+measure row, the big single-measure display, the samples beside the pool
+checkboxes, and the printed sheet. A drawn measure row next to tofu checkbox
+labels would have been a half-fix. A "Note symbols" select (Automatic / Font
+symbols / Drawn shapes) lets a teacher override the probe either way, and the
+choice persists with the rest of the settings; a one-line notice explains why
+the display looks different, or warns that the chosen font symbols will print
+as boxes on this machine.
+
+**The clefs are named, not drawn.** `𝄞` and `𝄢` come from the same Unicode
+block and tofu on the same machines, but a treble clef is far harder to draw
+convincingly than a notehead, and a bad one on a projector is worse than no
+symbol. When the clef glyph is missing the staff opens with the word
+`TREBLE` or `BASS` instead — legible, honest, and unmistakable. Drawing real
+clef paths remains open, and is the last piece of "removes the font dependency
+entirely".
+
+Also: the shipped default tempo marking is literally `♩ = 92`, itself a glyph
+from the affected block, so it becomes `Quarter note = 92` when that character
+is missing. Only the shipped default is rewritten — a teacher's own saved
+tempo text is left alone.
+
+Verified with a new 21-assertion headless Chromium suite,
+`Tools/music-sightreading-generator/test/smoke-glyph-fallback.mjs`
+(`npm run test:music-warmup`). The container it was written in genuinely has
+no musical-symbol font, so the fallback path is exercised for real rather than
+simulated; the suite asserts the probe's control measurement, that all four
+displays agree, that each drawn value is its own labelled shape, that the
+override works both directions and persists, the clef wording, and — the
+assertion worth keeping — that a drawn measure still sums to the time
+signature, checked by reading the beat value off each drawn shape's
+`aria-label`. No console errors.
+
+**Next round should pick up** the accidentals/key-signature gap, which is now
+the biggest musical-completeness hole, or the metronome (rank 90-ish on the
+backlog) — the tempo field still has nothing behind it.
+
 ## What it does today
 
 - Rhythm mode: time signature, measure count, note/rest value pool,
-  beat-accurate measure generation, Unicode-glyph display
+  beat-accurate measure generation, Unicode-glyph display with an automatic
+  drawn-SVG fallback on machines with no musical-symbol font (overridable,
+  and persisted)
 - Sight-reading mode: clef choice, note range, note count, hand-drawn
   SVG staff with correct line/space positions, stems, and ledger lines
 - Generation settings persist across reload (the generated pattern itself
@@ -93,12 +144,10 @@ console errors.
 
 ## Quick Wins
 
-- **Font-availability check with an SVG fallback** for the rhythm mode's
-  Unicode note/rest glyphs &mdash; if the projecting computer's font
-  doesn't include the Musical Symbols Unicode block, the glyphs render
-  as tofu boxes; a simple canvas-based glyph-support probe could warn
-  the teacher or switch to a hand-drawn SVG fallback automatically.
-  (Carried over from last round — not yet started.)
+- ~~**Font-availability check with an SVG fallback**~~ — **done, Round 3.**
+  Built as a DOM-measurement probe rather than the canvas one suggested
+  here, so it tests the font stack the page actually paints with. Clefs are
+  named in words rather than drawn; see the Round 3 note above.
 
 ## Major Features
 
@@ -107,10 +156,10 @@ console errors.
   sharps/flats drawn at the clef) and/or a "chromatic" toggle would make
   this useful for more advanced ensembles, not just a beginner diatonic
   warm-up.
-- **Hand-drawn SVG rhythm notation** (proper noteheads, stems, and beam
-  bars instead of Unicode glyphs) &mdash; matches the sight-reading tab's
-  approach and removes the font-dependency risk called out above
-  entirely, at the cost of meaningfully more drawing code.
+- **Hand-drawn SVG clefs.** Round 3 drew the four rhythm values and made
+  drawn notation switchable, so the only remaining font dependency is the
+  treble and bass clef on the sight-reading staff, which currently falls back
+  to the words TREBLE / BASS. Real clef paths would close it out.
 - **Combined rhythm + pitch mode**: play the sight-reading notes in the
   rhythm generated alongside them (durations assigned per note) for a
   true melodic sight-reading drill instead of two separate, unrelated

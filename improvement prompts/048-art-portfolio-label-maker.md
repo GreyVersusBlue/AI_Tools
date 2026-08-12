@@ -1,8 +1,10 @@
 # Improvement Prompts — 048 — Student Art Portfolio Label & QR Tag Maker
 
 **Tool file:** `Tools/048-art-portfolio-label-maker.html`
-**Support folder:** `Tools/art-portfolio-label-maker/lib/qrcode.js` (vendored
-offline QR encoder, copied from Gallery Walk QR Codes' own vendored copy).
+**Support folder:** `Tools/art-portfolio-label-maker/test/` — test suite only.
+(The QR encoder used to live here as `lib/qrcode.js`; Phase 1b of
+`REFACTOR_PLAN.md` moved it to the single site-wide copy at
+`_shared/vendor/qrcode/qrcode.js`, which is what the tool loads today.)
 
 **Current description (from README):** Add a title, photo, and artist
 statement per piece; print portfolio labels with a thumbnail and a QR code
@@ -75,16 +77,70 @@ still fires, reordered two entries and confirmed exactly one up-button per
 row (not duplicated), created/duplicated/deleted a portfolio, switched
 back and confirmed the reordered entries persisted — no console errors.
 
+**2026-08-12 — Round 3 (backlog rank 8: class reference sheet print).** A
+second print button, **Print class reference sheet**, emits one compact table
+of every piece in the portfolio — number, title, artist, and the *whole*
+artist statement. No photos, no codes: it is the teacher's record and the
+gallery-signage copy, and it has to fit on a page or two. This is genuinely
+something the labels cannot do, because a label truncates the statement to 90
+characters.
+
+**It needed an artist field first.** The artist used to be folded into the
+title by convention — the placeholder literally read "Self-Portrait — Ava R."
+— so there was no attribution to put in a column. Entries now carry an
+`artist` string, shown on the label preview, printed under the title on the
+label itself, and given its own column on the sheet. `normalize()` fills it in
+as an empty string on every existing entry, and **no attempt is made to split
+an existing title on the em dash**: guessing a teacher's data apart on a
+punctuation heuristic would quietly mangle a title like "Study — after
+Hokusai".
+
+Two details worth carrying forward:
+
+- **Bulk import treats tabs and commas differently now.** A tab-separated
+  paste with three columns is read as title / artist / statement, because a
+  spreadsheet's column boundaries are unambiguous. A comma line still splits
+  on its *first* comma only — a statement is prose and is full of commas, and
+  reading a second one as a field boundary would silently eat half of it.
+- **One print area, two documents.** The labels grid and the reference sheet
+  share `#printArea`, switched by a `mode-labels` / `mode-sheet` class that
+  the print stylesheet uses to hide the other one. The failure this guards
+  against is a stray page of labels appearing inside a printed reference
+  sheet; the suite asserts the class that is actually in place at the moment
+  `window.print()` is called, not just afterwards.
+
+Verified with a new 21-assertion headless Chromium suite,
+`Tools/art-portfolio-label-maker/test/smoke-reference-sheet.mjs`
+(`npm run test:art-portfolio`) — the full statement on the sheet against the
+truncated one on the label, the mode switch at print time, the artist reaching
+storage and both outputs, both import paths, and a portfolio saved before the
+artist field existed opening and printing unchanged. No console errors.
+
+**Noticed but not fixed:** an untouched blank portfolio counts as one valid
+entry, because `validEntries()` defaults a missing title to "Entry 1" — so the
+preview claims "1 label ready" and both print buttons are live before anything
+has been typed. Long-standing, harmless, and out of this round's scope; worth
+a line of work next time.
+
+**Next round should pick up** the roster-driven bulk add (the remaining Quick
+Win) — now more valuable, since a roster would fill the new artist column
+directly.
+
 ## What it does today
 
-- Per-entry title, optional photo upload (thumbnail), artist statement
-- Paste-list bulk import (title + statement per line)
+- Per-entry title, artist, optional photo upload (thumbnail), artist
+  statement
+- Paste-list bulk import (title + statement per line; three tab-separated
+  columns adds the artist)
 - **Reorder entries** via up/down buttons
 - **Live character-count warning** on the artist statement field past
   ~220 characters (QR density heads-up)
 - **Named/multiple saved portfolios** (New/Duplicate/Rename/Delete)
 - QR code per entry encoding the statement text directly (no hosting)
-- Print: label grid (2/3/6/8 per page) with thumbnail, title, QR, statement
+- Print: label grid (2/3/6/8 per page) with thumbnail, title, artist, QR,
+  truncated statement
+- Print: class reference sheet — one compact table of every piece with its
+  artist and full statement, no photos or codes
 
 ## Quick Wins
 

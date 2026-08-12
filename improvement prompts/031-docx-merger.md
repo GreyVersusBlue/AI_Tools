@@ -1,7 +1,9 @@
 # Improvement Prompts — 031 — Word Doc Merger
 
 **Tool file:** `Tools/031-docx-merger.html`
-**Support folder:** none — single file (loads JSZip from cdnjs)
+**Support folder:** `Tools/docx-merger/` — test suite only. (JSZip is no
+longer loaded from cdnjs: Phase 1b of `REFACTOR_PLAN.md` moved it to the
+site-wide `_shared/vendor/jszip/jszip.min.js`, which is what the page loads.)
 
 **Current description (from README):** Combine multiple Word docs into one, in order.
 
@@ -105,6 +107,52 @@ exists in `stripTrailingSectPr`/`createDefaultSectPr`.
 Ideas below are deliberately ambitious and are **not** scoped to a single
 session.
 
+**2026-08-12 — Round 5 (backlog rank 4: per-document merge options).** "Start
+each file on a new page" and "add the file name as a heading" were one answer
+for the whole merge. A real packet is not uniform — a cover page wants no
+heading, a two-page appendix should not start its own sheet — so each row in
+the file list now answers both questions for itself, next to the heading-text
+box that was already there.
+
+**The design decision that mattered was making "use the default" a real third
+state** rather than seeding each file with a copy of the current global. The
+per-file control is a three-option select (Default / Yes / No), and a file
+with no answer of its own follows the switch. Flipping a global then still
+moves every file that hasn't been overridden — otherwise setting thirty files
+and changing your mind about the global is a thirty-file undo. The "Default"
+option's label shows what the default currently is, and re-renders when the
+global moves, so the row never claims "Default (on)" while the switch is off.
+A line under the two switches says how many files are ignoring them, since a
+global that some files disregard is the confusing case.
+
+Two consequences worth recording:
+
+- **The base file is no longer a special case for headings.** It used to take
+  the global heading switch directly; it now follows its own override like
+  every other section. Its *page break* stays global-only, because there is
+  nothing in front of it to break from.
+- **The table of contents now keys off "does any file have a heading"**, not
+  off the global switch. With per-file overrides, the global being on no
+  longer implies any heading exists.
+
+Overrides ride along in the remembered-file-list key, so re-adding the same
+filenames restores them; entries are only written when a file actually has an
+override, so a list saved before this round reads back as "everything follows
+the globals".
+
+Verified with a new 25-assertion headless Chromium suite,
+`Tools/docx-merger/test/smoke-per-file-options.mjs`
+(`npm run test:docx-merger`). It builds three minimal `.docx` fixtures in-page
+with the tool's own vendored JSZip — so no binary is checked into the repo —
+merges for real, and unzips the result to count page breaks and `Heading2`
+paragraphs in `word/document.xml`. It also covers the default-label tracking,
+overrides surviving a global flip, an all-off merge being a plain
+concatenation, and the legacy remembered list.
+
+**Next round should pick up** the backlog's own "cover page, headers, and page
+numbers" row — which is the same shape of work, and would want a per-file
+"include in the table of contents" flag alongside these two.
+
 ## What it does today
 
 Considerably more than the README suggests — this is a genuine OOXML merger,
@@ -117,7 +165,8 @@ not a concatenator.
   (`mergeNumberingNodes`, `offsetNumbering`), copying missing namespaces, and
   updating `[Content_Types].xml` and references
 - Optional **page break between documents**, **heading per document**, and a
-  generated **table of contents field** (`createTocFieldParagraph`)
+  generated **table of contents field** (`createTocFieldParagraph`) — the
+  first two settable globally *and* overridable per file from the file list
 - Page-count estimate, progress bar, remembered options
   (`docx-merger-options`)
 - Loads `_shared/theme.css` and `_shared/a11y.js` (one of only five tools with

@@ -1,7 +1,8 @@
 # Improvement Prompts — 071 — Picture-Prompt Speaking/Writing Task Generator
 
 **Tool file:** `Tools/071-picture-prompt-generator.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/picture-prompt-generator/` — test suite only; the tool
+itself is still one self-contained file.
 
 **Current description (from README):** Upload images, pair each with a random editable task prompt, step through no-repeats-until-cycled for a projector display, or print a set of image + prompt cards.
 
@@ -56,17 +57,64 @@ This clears every Quick Win **and** folds the most-called-out Major
 Feature (image downscaling) into the same round — see the Moonshot note
 below for what that unblocks.
 
+**2026-08-12 — Round 3 (backlog rank 1: prompt sets by target language).**
+The prompt bank is now a set of named banks instead of one flat list, and
+seven starter libraries ship: English, Spanish, French, German, Italian,
+Latin, and a Newcomer/ESL English set written at a much simpler level. The
+active set drives everything downstream — the projected task text, the pin,
+and the printed cards — so the wording a class sees is the language it is
+working in. A teacher can also add their own named set ("Spanish 2 — past
+tense"), and any starter set can be put back to the shipped wording with
+"Restore starter prompts" after it has been edited.
+
+What was actually hard here was the two schema migrations, not the prompt
+copy:
+
+- `ppg_prompts_v1` (one flat list) is read once on first load of the new
+  build, then retired. If the stored list is byte-identical to the six
+  English defaults it is recognised as the English starter set rather than
+  cloned into a duplicate eighth set; if it has been edited at all it is
+  kept whole as "My prompts (from before)" and left as the active set, so a
+  teacher's own prompts are what they still see after the upgrade.
+- Pins were a single `pinnedPromptId` per image, which only made sense when
+  there was one list. They are now `pinnedPrompts: { setId: promptId }`, and
+  the old single value is rehomed onto whichever set the migration put the
+  teacher on. This is the right shape, not just a compatible one: the same
+  photo can carry a different pinned prompt per language.
+
+Deleting a set also sweeps that set's pins off every image, so no image
+keeps a dangling reference.
+
+Verified with a new 37-assertion headless Chromium suite,
+`Tools/picture-prompt-generator/test/smoke-prompt-sets.mjs` (registered as
+`npm run test:picture-prompt`), covering a real PNG upload, per-set pinning
+in both directions, the printed card text following the active set, an edit
+staying inside its own set across a reload, custom set create/delete,
+starter restore, and both migration paths — no console errors.
+
+**Next round should pick up** the two remaining Major Features below.
+Multiple named saved *image* sets is the natural pair to this round's named
+prompt sets and is now the only thing keeping a family-vocabulary library
+and a school-vocabulary library from coexisting; note it is a bigger storage
+question than prompt sets were, since image sets are the megabyte-scale
+data here (P12).
+
 ## What it does today
 
 - Multi-file image upload with automatic downscale to ≤1400px on the long
   edge (JPEG re-encode), thumbnail management with delete
-- Editable task-prompt bank (6 generic defaults)
-- Projector mode: random image + random prompt, no-repeat-until-cycled,
-  visible progress counter, manual reset (consistent wording on both paths)
-- Pin a specific prompt to a specific image so it recurs on every pick of
-  that image, on both the stage and in print
-- Print: grid of image + prompt cards, with an optional cap on how many
-  cards print
+- Named prompt sets, switchable from one picker: seven starter libraries
+  (English, Spanish, French, German, Italian, Latin, Newcomer/ESL English),
+  plus teacher-created sets; each independently editable, starters
+  restorable to their shipped wording
+- Projector mode: random image + random prompt from the active set,
+  no-repeat-until-cycled, visible progress counter, manual reset (consistent
+  wording on both paths)
+- Pin a specific prompt to a specific image, per prompt set, so the pin
+  recurs on every pick of that image in that language, on both the stage and
+  in print
+- Print: grid of image + prompt cards in the active set's language, with an
+  optional cap on how many cards print
 
 ## Quick Wins
 
@@ -88,11 +136,8 @@ below for what that unblocks.
   used by most builder tools in this round — one flat image library per
   browser right now, so a "family vocabulary" set and a "school vocabulary"
   set can't coexist.
-- **Per-target-language prompt sets**: since the default prompts are
-  written in English (as instructions to the teacher, describing what
-  students should do in the target language), a teacher might want the
-  instructions themselves also translated/localized per language taught —
-  worth a small library of prompt sets by language as starter content.
+- **Done — Per-target-language prompt sets** (2026-08-12). Seven starter
+  libraries plus teacher-created named sets; see the Round 3 note above.
 - **A student-facing timer/response mode** via a share link (this
   toolkit's P3 pattern) — students see the image and prompt on their own
   device with a countdown, for a timed speaking-prep or writing-sprint

@@ -1,7 +1,9 @@
 # Improvement Prompts — 018 — QR Scavenger Hunt Builder
 
 **Tool file:** `Tools/018-qr-scavenger-hunt-builder.html`
-**Support folder:** `Tools/qr-scavenger-hunt-builder/` — `lib/qrcode.js`
+**Support folder:** `Tools/qr-scavenger-hunt-builder/` — `test/` only. (The QR
+encoder used to live here as `lib/qrcode.js`; Phase 1b of `REFACTOR_PLAN.md`
+moved it to the single site-wide `_shared/vendor/qrcode/qrcode.js`.)
 
 **Current description (from README):** Type in stations (or paste them from a spreadsheet) and print a sheet of station QR codes sized however many-per-page you need, plus a separate answer key that never shares a page with the codes.
 
@@ -13,6 +15,44 @@ Reviewed — structural read of the source. The README undersells this one
 considerably — it has a full live-run mode. Ideas below are deliberately
 ambitious and **not** scoped to a single session.
 
+**2026-08-12 — Round 5 (backlog rank 10: staggered station starts).** Teams no
+longer all start at station 1. Each team gets a **route card** — its own
+rotation of the station list, starting at a different point — printed
+two-to-a-page with its check-in code and a line telling the team its list is in
+a different order from everyone else's.
+
+The offset is `round(i × stations / teams)`, which spreads teams evenly whether
+there are more teams than stations or fewer, and is **derived from the team's
+position rather than stored**, so a reprinted route card is always the same
+card. The rotation is a rotation: every team walks the hunt's own station
+order, wrapped around from its own starting point, so every team still visits
+every station exactly once. A shuffle per team would have been easier and is
+wrong — it makes the printed order impossible to check at a glance and loses
+whatever sequence the teacher built into the stations.
+
+The Teams list now shows "starts at &lt;station&gt;" beside each team, and a
+summary line under the toggle counts the spread — including saying plainly
+when there are more teams than stations, so some share a starting point rather
+than that being a silent surprise on the day. Turning the toggle off gives
+every team the plain station order (still a useful route sheet), and the
+choice is saved with the hunt.
+
+Verified with a new 29-assertion headless Chromium suite,
+`Tools/qr-scavenger-hunt-builder/test/smoke-staggered-starts.mjs`
+(`npm run test:scavenger-hunt`), driving the printed route cards: six stations
+across three teams, the rotation property checked card by card (every station
+once, in hunt order, wrapped from that team's offset), the uneven cases in
+both directions, the off switch, persistence across a reload, and a team added
+mid-run being folded into the spread rather than tacked on the end. Two of the
+suite's original assertions were wrong on first run — hand-computed offsets,
+not tool bugs — and were rewritten to assert the *property* (spread within one
+of even; all starts distinct) rather than a guessed sequence. No console
+errors.
+
+**Next round should pick up** the paper no-device hunt mode, which is still on
+the backlog and now has most of what it needs: the route card is already the
+per-team walking order a paper packet would be built around.
+
 ## What it does today
 
 - Stations added manually or pasted from a spreadsheet; reorder, validate
@@ -22,6 +62,8 @@ ambitious and **not** scoped to a single session.
   Start / Pause / Reset (`currentElapsedMs`, `formatElapsed`), **per-team
   progress** (`renderTeamProgress`) and a **leaderboard**
   (`renderLeaderboard`)
+- **Staggered starts**: each team gets a route card with its own rotation of
+  the station list, printed two per page, so teams don't queue at station 1
 - Clear all progress; export CSV; multiple saved hunts
   (`qr-scavenger-hunt-sets`)
 
@@ -33,8 +75,9 @@ ambitious and **not** scoped to a single session.
   (P9 — or a per-team code the team shows the teacher to scan). *(Shipped as
   a 4-character team code plus a "Team Check-In" panel — see the Round 4
   update above.)*
-- **Randomized station order per team**, so eight teams don't queue at station
-  1. The tool has the data; the shuffle is small and the impact is large.
+- **Done — Staggered station order per team** (2026-08-12), so eight teams
+  don't queue at station 1. Built as a *rotation* rather than the shuffle this
+  line suggested — see the Round 5 note above for why.
 - **Hints with a time penalty** — the standard mechanic that keeps a stuck
   team moving.
 - **Print a team answer sheet** the team carries and fills in, since not every

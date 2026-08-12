@@ -104,6 +104,9 @@
   .team-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
   .team-row input { flex: 1; }
   .team-code { font-family: var(--mono); font-size: 0.78rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.35rem 0.55rem; letter-spacing: 0.06em; flex-shrink: 0; }
+  .team-start { font-size: 0.74rem; color: var(--text-dim); flex-shrink: 0; white-space: nowrap; }
+  .stagger-row { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; }
+  .stagger-row input { width: auto; }
   .btn-recode { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 4px; font-size: 0.9rem; padding: 0; }
   .btn-recode:hover:not(:disabled) { border-color: var(--accent); color: var(--text); background: var(--surface2); }
 
@@ -173,6 +176,9 @@
     .print-station-grid .p-card .p-extra { font-size: 0.82rem; color: #333; margin: -2px 0 8px; }
     .print-station-grid .p-card .p-choices { text-align: left; line-height: 1.5; }
     .print-station-grid .p-card .p-team-code { font-family: monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.1em; margin-top: 6px; }
+    .print-station-grid .p-card .p-route { text-align: left; width: 100%; margin: 6px 0 0; padding-left: 1.3rem; font-size: 0.85rem; line-height: 1.5; }
+    .print-station-grid .p-card .p-route li.first { font-weight: 700; }
+    .print-station-grid .p-card .p-route-note { font-size: 0.76rem; color: #555; margin-top: 8px; }
 
     .print-station-grid.pp-1 .p-card { width: calc(100% - 8px); }
     .print-station-grid.pp-2 .p-card { width: calc(50% - 8px); }
@@ -297,8 +303,13 @@
       <div class="btn-row">
         <button class="btn-secondary" id="add-team-btn" type="button">+ Add Team</button>
         <button class="btn-secondary" id="print-teams-btn" type="button">🖨️ Print Team Cards</button>
+        <button class="btn-secondary" id="print-routes-btn" type="button">🖨️ Print Route Cards</button>
       </div>
       <div class="hint">Each team gets a check-in code (shown next to its name) so it can check itself in below without you hunting through a roster — print the cards so teams can carry or show their code.</div>
+      <label class="stagger-row" for="stagger-starts" style="margin-top:0.7rem;">
+        <input type="checkbox" id="stagger-starts" checked> Stagger team starts
+      </label>
+      <div class="hint" id="stagger-info" style="margin-top:0.3rem;"></div>
     </div>
 
     <div class="card">
@@ -368,6 +379,10 @@
   <div class="print-station-grid" id="print-teams-grid"></div>
 </div>
 
+<div class="print-only" id="print-routes-area">
+  <div class="print-station-grid pp-2" id="print-routes-grid"></div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -382,6 +397,7 @@
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg',
    'tab-build', 'tab-run', 'build-view', 'run-view', 'run-hunt-info', 'teams-body', 'add-team-btn',
    'print-teams-btn', 'print-teams-area', 'print-teams-grid',
+   'print-routes-btn', 'print-routes-area', 'print-routes-grid', 'stagger-starts', 'stagger-info',
    'checkin-station', 'checkin-station-info', 'checkin-code', 'checkin-submit-btn', 'checkin-hint-btn', 'checkin-hint-panel',
    'checkin-answer-panel', 'checkin-feedback',
    'timer-display', 'timer-start-btn', 'timer-pause-btn', 'timer-reset-btn', 'clear-progress-btn', 'undo-clear-btn',
@@ -979,7 +995,9 @@
     pendingCheckin = null;
     var total = validStations().length;
     els.runHuntInfo.textContent = 'Running “' + state.name + '” — ' + total + ' station' + (total === 1 ? '' : 's') + '.';
+    els.staggerStarts.checked = state.run.stagger !== false;
     renderTeamsSetup();
+    renderStaggerInfo();
     renderCheckinStationOptions();
     renderCheckinAnswerPanel();
     setCheckinFeedback('', false);
@@ -990,15 +1008,68 @@
     if (clearProgressUndo) hideClearUndo();
   }
 
+  /* ---------- staggered starts ----------
+     Every team beginning at station 1 means a queue at station 1 and an empty
+     room everywhere else. Team i starts at round(i * stations / teams), which
+     spreads the teams evenly whether there are more teams than stations or
+     fewer, and each team then walks the stations in order from there, wrapping
+     around — so every team still visits all of them. The offset is derived
+     from the team's position rather than stored, so a reprinted route card is
+     always the same card. */
+  function teamRoute(teamIdx, teamCount, stations) {
+    if (!stations.length) return [];
+    if (!els.staggerStarts.checked || teamCount < 1) return stations.slice();
+    var offset = Math.round(teamIdx * stations.length / teamCount) % stations.length;
+    return stations.slice(offset).concat(stations.slice(0, offset));
+  }
+
+  function renderStaggerInfo() {
+    var teams = state && state.run ? state.run.teams : [];
+    var stations = validStations();
+    if (!teams.length || !stations.length) { els.staggerInfo.textContent = ''; return; }
+    if (!els.staggerStarts.checked) {
+      els.staggerInfo.textContent = 'Every team starts at ' + stations[0].label + ' and walks the stations in order.';
+      return;
+    }
+    var starts = teams.map(function (t, i) { return teamRoute(i, teams.length, stations)[0].label; });
+    var distinct = new Set(starts).size;
+    els.staggerInfo.textContent = teams.length + ' team' + (teams.length === 1 ? '' : 's') + ' spread across ' +
+      distinct + ' of ' + stations.length + ' station' + (stations.length === 1 ? '' : 's') +
+      (distinct < teams.length ? ' — there are more teams than stations, so some will share a starting point.' : '.');
+  }
+
+  function buildPrintRoutes() {
+    var teams = state.run.teams;
+    var stations = validStations();
+    els.printRoutesGrid.innerHTML = '';
+    teams.forEach(function (t, i) {
+      var route = teamRoute(i, teams.length, stations);
+      var card = document.createElement('div');
+      card.className = 'p-card';
+      card.innerHTML = '<div class="p-num">Route card</div>' +
+        '<div class="p-label">' + escapeHtml(t.name || ('Team ' + (i + 1))) + '</div>' +
+        '<div class="p-extra p-team-code">Code: ' + escapeHtml(t.code) + '</div>' +
+        '<ol class="p-route">' + route.map(function (st, ri) {
+          return '<li' + (ri === 0 ? ' class="first"' : '') + '>' + escapeHtml(st.label) + '</li>';
+        }).join('') + '</ol>' +
+        '<div class="p-route-note">Start at the first station on this list and work down it. ' +
+          'Your list is in a different order from the other teams&rsquo;.</div>';
+      els.printRoutesGrid.appendChild(card);
+    });
+  }
+
   function renderTeamsSetup() {
     var teams = state.run.teams;
     if (!teams.length) {
       els.teamsBody.innerHTML = '<p class="empty-hint">Add at least one team to start the run.</p>';
       return;
     }
+    var stations = validStations();
     els.teamsBody.innerHTML = teams.map(function (t, i) {
+      var route = teamRoute(i, teams.length, stations);
       return '<div class="team-row" data-idx="' + i + '">' +
         '<input type="text" class="f-team-name" value="' + escapeAttr(t.name) + '" placeholder="Team ' + (i + 1) + '">' +
+        (route.length ? '<span class="team-start" title="Where this team begins">starts at ' + escapeHtml(route[0].label) + '</span>' : '') +
         '<span class="team-code" title="Check-in code">' + escapeHtml(t.code) + '</span>' +
         '<button type="button" class="btn-recode" data-recode-team="' + i + '" title="Generate a new check-in code">&#8635;</button>' +
         '<button type="button" class="remove-row-btn" data-remove-team="' + i + '" title="Remove team">&#10005;</button>' +
@@ -1024,6 +1095,7 @@
       state.run.teams.splice(ri, 1);
       save();
       renderTeamsSetup();
+      renderStaggerInfo();
       renderCheckinAnswerPanel();
       renderTeamProgress();
       renderLeaderboard();
@@ -1034,6 +1106,7 @@
       state.run.teams[i].code = generateTeamCode(existingCodes);
       save();
       renderTeamsSetup();
+      renderStaggerInfo();
     }
   });
 
@@ -1043,6 +1116,7 @@
     state.run.teams.push({ name: 'Team ' + (state.run.teams.length + 1), marks: {}, attempts: {}, hintsUsed: {}, penaltyMs: 0, code: generateTeamCode(existingCodes) });
     save();
     renderTeamsSetup();
+    renderStaggerInfo();
     renderTeamProgress();
     renderLeaderboard();
   });
@@ -1051,6 +1125,20 @@
     if (!state || !state.run.teams.length) return;
     buildPrintTeams();
     printSection(els.printTeamsArea);
+  });
+
+  els.printRoutesBtn.addEventListener('click', function () {
+    if (!state || !state.run.teams.length) return;
+    if (!validStations().length) { showMsg('Add at least one station with content before printing route cards.'); return; }
+    buildPrintRoutes();
+    printSection(els.printRoutesArea);
+  });
+
+  els.staggerStarts.addEventListener('change', function () {
+    state.run.stagger = els.staggerStarts.checked;
+    save();
+    renderTeamsSetup();
+    renderStaggerInfo();
   });
 
   function buildPrintTeams() {

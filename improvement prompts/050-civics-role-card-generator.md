@@ -1,7 +1,8 @@
 # Improvement Prompts — 050 — Government/Civics Simulation Role Card Generator
 
 **Tool file:** `Tools/050-civics-role-card-generator.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/civics-role-card-generator/` — test suite only; the
+tool itself is still one self-contained file.
 
 **Current description (from README):** Three starter templates (Mock Trial, Debate, Legislative Simulation) or build from scratch, each role with an editable position and talking points list, printed as a card grid.
 
@@ -62,22 +63,67 @@ role (confirming Round 1's button still works), printed and confirmed
 the card count matched (6 roles, one with 3 copies = 8 cards) — no
 console errors.
 
+**2026-08-12 — Round 3 (backlog rank 9: assign students to roles).** The tool
+now reads `np_rosters` — the class list Name Picker and Class Roster Hub
+already save — and prints each card with its student's name on it. Pick a
+class list, optionally shuffle it, and press Assign; a card nobody is assigned
+to still prints the blank name line it always did.
+
+Three decisions worth recording:
+
+- **Copies stopped being interchangeable.** The print path used to build one
+  card string and repeat it `copies` times. Each copy can now carry a
+  different name, so they are built individually. Had that been missed, a
+  role's whole stack would have printed one student's name — which is exactly
+  what the suite checks.
+- **The class is bigger than the simulation, so the simulation grows.** A
+  28-student class against a 21-card mock trial leaves seven students out. The
+  default is to grow the role that *already has the most copies* — the jury,
+  the audience, whichever role was built to scale — rather than adding a copy
+  round-robin and ending up with eight judges. The summary line names the role
+  it grew and by how much, so nothing happens silently. Untick the box and the
+  leftover students are counted out loud instead.
+- **That growth rule only works if the templates mean it,** and they didn't:
+  every role in every template shipped at `copies: 1`, so "the biggest role"
+  was a five-way tie that resolved to whoever was listed first — the judge.
+  The templates now carry realistic counts (mock trial: 1 judge, 2+2
+  attorneys, 4 witnesses, 12 jurors; debate 3/3/1/3; legislative 1/1/6/6),
+  which is a better starting point on its own and is what makes the growth
+  rule land where it should.
+
+Roles saved before this round have no `students` array; `load()` gives them an
+empty one, which means "nobody assigned" and prints exactly what it used to.
+
+Verified with a new 28-assertion headless Chromium suite,
+`Tools/civics-role-card-generator/test/smoke-assign-roster.mjs`
+(`npm run test:civics-roles`): 28 students landing on 28 distinct cards, the
+growth going to the jury and not the bench, distinct names across one role's
+copies, the leftover count with growth off, blank name lines when there are
+more cards than students, Clear names, a shuffle preserving the set, and an
+old role set printing unchanged — no console errors.
+
+**Next round should pick up** multiple named saved simulations, and per-role
+case-file packets (already on the backlog).
+
 ## What it does today
 
-- 3 starter templates (Mock Trial, Debate, Legislative Simulation) + blank
+- 3 starter templates (Mock Trial, Debate, Legislative Simulation) + blank,
+  each shipping realistic per-role copy counts
 - Fully editable: role name, position, talking points (add/remove)
 - **Per-role copies count** — print N cards for a role N students share
 - **Duplicate-role button** for cloning a role as a starting point
 - **Reorder roles and talking points** via up/down buttons
-- Print: 2-per-page role card grid, respecting each role's copy count
+- Assign a saved class list (`np_rosters`) across the role slots, optionally
+  shuffled, growing the biggest role so nobody is left without a card
+- Print: 2-per-page role card grid, respecting each role's copy count, each
+  card carrying its assigned student's name or a blank name line
 
 ## Quick Wins
 
 - ~~Reorder roles and talking points~~ — **shipped 2026-08-11 (Round 2).**
-- **Assign a student name to each role** (an optional field) so the
-  printed card doubles as the physical hand-out with the assigned
-  student's name already on it, instead of a teacher writing it in by
-  hand.
+- ~~**Assign a student name to each role**~~ — **shipped 2026-08-12
+  (Round 3)**, driven off a saved class list rather than a per-role text
+  field; see the Round 3 note above.
 
 ## Major Features
 

@@ -1,7 +1,8 @@
 # Improvement Prompts — 064 — Historical Figure / Country Trading Card Maker
 
 **Tool file:** `Tools/064-historical-trading-card-maker.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/historical-trading-card-maker/` — test suite only;
+the tool itself is still one self-contained file.
 
 **Current description (from README):** Batch-add cards with a photo/flag image, label:value stats, and back-of-card facts, printed as matching card-front and card-back grids.
 
@@ -57,21 +58,73 @@ per-page pagination changes how many physical sheets a given card count
 produces versus the old continuously-flowing layout — worth confirming
 against real printer output, not just DOM structure.
 
+**2026-08-12 — Round 3 (backlog rank 3: standard trading-card size).** A
+"Print layout" card now offers two card sizes: **Standard trading card —
+2.5 × 3.5 in** (the new default) and **Fill the page**, which is exactly what
+the tool printed before.
+
+**The backlog row's premise was wrong and worth recording.** It asked for
+"a 2.5×3.5 inch preset alongside the current larger card" — but the old card
+was never larger. It was three columns of `1fr` inside a 7.7in print band,
+which works out to about **2.43in × 3.4in**: *under* standard size in both
+directions, and not a measurement at all — it moved with the paper size and
+the page margin. So the real gap this closes is not "smaller cards", it is
+**stated dimensions**: a card that comes out of the printer at the size a
+sleeve or a nine-pocket page is built for. A genuinely larger reference card
+(3.5 × 5in, four to a page) is still unbuilt, and is the honest version of
+what that row thought it was asking for — see Quick Wins.
+
+What was fiddly:
+
+- **The page margin had to move.** Three 2.5in cards plus two 0.15in gutters
+  is 7.8in, which does not clear a letter page at the old 0.4in side margins.
+  `@page` is now 0.3in (still inside the ~0.25in unprintable edge office
+  printers have). Since `@page` cannot be scoped per preset, "Fill the page"
+  is pinned back to its original 7.7in band with a `max-width` on the grid,
+  so widening the margin did not silently resize a layout teachers already
+  print.
+- **Six to a page, not nine.** Three rows of 3.5in is 10.5in of cards on an
+  11in sheet, leaving nothing for the section label or the printer's own
+  margin. Nine-up would mean dropping the section labels; not worth it.
+- Row-mirrored duplex from round 2 is untouched and still asserted.
+
+Verified with a new 18-assertion headless Chromium suite,
+`Tools/historical-trading-card-maker/test/smoke-card-size.mjs`
+(`npm run test:trading-cards`). It measures the **laid-out box** rather than
+reading the stylesheet: `#printArea` is `display:none` on screen, so the suite
+clones it, forces it visible at the printed page's content width, and asserts
+the card is 2.5in × 3.5in (±0.02in), that three cards plus gutters fit the
+printable width, and that the grid is centered — no console errors.
+
+**Next round should pick up** the large-reference-card preset below, and the
+stat-overflow heuristic, which still assumes the old card geometry (6 lines
+with a photo / 11 without) and was not re-derived for the 3.5in card.
+
 ## What it does today
 
 - Batch-add cards: name, optional image, `Label: Value` stats, one-per-
   line facts
 - Edit an existing card in place
+- Two print sizes: standard trading card at exactly 2.5 × 3.5in, centered on
+  the page (default), or the original fill-the-page layout at about
+  2.43 × 3.4in; the choice persists across visits
 - Row-mirrored duplex print: 6-card front pages, then row-mirrored back
   pages, so a flipped physical stack lines up automatically
 - A live stat-overflow warning in the editor, before print
 
 ## Quick Wins
 
-- **Card size options** (e.g. 2.5"&times;3.5" standard trading-card size
-  vs. the current larger custom size) for a teacher who wants an actual
-  pocket-sized trading card rather than a bigger reference card. (Carried
-  over from last round — not yet started.)
+- **Done — Card size options** (2026-08-12). Standard 2.5&times;3.5in
+  (default) alongside the original fill-the-page layout; see the Round 3
+  note above.
+- **A genuinely large reference card** (3.5&times;5in, four to a page) — the
+  thing the backlog row mistakenly believed already existed. Needs the
+  section labels moved or dropped, since 2 rows of 5in plus a label does not
+  clear a letter page, and needs the stat-overflow heuristic re-derived for
+  the taller card.
+- **Re-derive the stat-overflow heuristic per card size.** The 6-lines-with-
+  photo / 11-without thresholds were measured against the old 3.4in card and
+  are now applied unchanged to a 3.5in one with tighter padding.
 
 ## Major Features
 

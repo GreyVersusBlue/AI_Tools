@@ -72,6 +72,16 @@
   .station-row .x:hover { background: var(--err); color: #fff; border-color: var(--err); }
   .station-list { margin-bottom: .6rem; }
 
+  .equip-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+  .equip-row input { margin-bottom: 0; }
+  .equip-row input.equip-item { flex: 1; }
+  .equip-row input.equip-count { flex: 0 0 5.5rem; text-align: center; }
+  .equip-row .x { flex-shrink: 0; background: #fff; border: 1px solid var(--line-strong); color: var(--muted); width: 2rem; height: 2rem; border-radius: 6px; font-size: .85rem; padding: 0; }
+  .equip-row .x:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  .equip-list { margin-bottom: .5rem; }
+  .equip-readout { margin: .5rem 0 0; }
+  .equip-readout b { color: var(--ink); }
+
   .pair-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .6rem; }
   .pair-row select { flex: 1; margin-bottom: 0; }
   .pair-list { display: flex; flex-direction: column; gap: .4rem; }
@@ -225,9 +235,21 @@
           <label for="mode-count">Number of groups</label>
           <input type="radio" name="split-mode" id="mode-size" value="size">
           <label for="mode-size">Students per group</label>
+          <input type="radio" name="split-mode" id="mode-equip" value="equip">
+          <label for="mode-equip">Equipment on hand</label>
         </div>
-        <label for="splitValue" id="splitValueLabel">Number of groups</label>
-        <input type="number" id="splitValue" min="1" max="40" value="4">
+        <div id="splitNumberWrap">
+          <label for="splitValue" id="splitValueLabel">Number of groups</label>
+          <input type="number" id="splitValue" min="1" max="40" value="4">
+        </div>
+        <div id="equipWrap" style="display:none;">
+          <p class="hint">List what you actually have. The scarcest item decides how many groups run at once
+            &mdash; seven microscopes and five hot plates is a five-group lab, not a seven-group one.</p>
+          <div class="equip-list" id="equipList"></div>
+          <button type="button" class="secondary small" id="addEquipBtn" style="width:100%;">+ Add equipment</button>
+          <p class="hint equip-readout" id="equipReadout"></p>
+          <button type="button" class="secondary small" id="equipToStationsBtn" style="width:100%;margin-top:.4rem;">Use this equipment as the stations</button>
+        </div>
       </div>
 
       <div class="card">
@@ -322,7 +344,8 @@
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'deleteRosterBtn', 'exportRosterBtn', 'importRosterBtn', 'importRosterFile',
    'rosterName', 'namesInput', 'nameCount',
-   'splitValueLabel', 'splitValue', 'roleList', 'addRoleBtn',
+   'splitValueLabel', 'splitValue', 'splitNumberWrap', 'equipWrap', 'equipList', 'addEquipBtn', 'equipReadout', 'equipToStationsBtn',
+   'roleList', 'addRoleBtn',
    'stationList', 'addStationBtn',
    'pairA', 'pairB', 'addPairBtn', 'pairList',
    'shuffleBtn', 'undoBtn', 'printBtn', 'printHistoryBtn', 'printFairnessBtn', 'printTentsBtn', 'printCheckoutBtn', 'resetHistoryBtn',
@@ -536,12 +559,108 @@
   // ── Split mode ───────────────────────────────────────────────────────────
   function syncSplitLabel() {
     var isSize = document.getElementById('mode-size').checked;
+    var isEquip = document.getElementById('mode-equip').checked;
     els.splitValueLabel.textContent = isSize ? 'Students per group' : 'Number of groups';
+    els.splitNumberWrap.style.display = isEquip ? 'none' : '';
+    els.equipWrap.style.display = isEquip ? '' : 'none';
+    if (isEquip) renderEquipList();
   }
+
+  /* ---------- equipment as the grouping constraint ----------
+     "Groups of four" is a preference; "seven microscopes" is a fact. In this
+     mode the teacher lists what is actually in the room and the *scarcest*
+     item sets the number of groups — which is not something either of the
+     other two modes can express, since it depends on more than one number. */
+  function equipmentRows() {
+    return (state.equipment || []).map(function (e) {
+      return { item: (e.item || '').trim(), count: Math.max(0, parseInt(e.count, 10) || 0) };
+    });
+  }
+
+  /** The item that decides the group count, or null when nothing usable is listed. */
+  function limitingEquipment() {
+    var usable = equipmentRows().filter(function (e) { return e.item && e.count > 0; });
+    if (!usable.length) return null;
+    return usable.reduce(function (min, e) { return e.count < min.count ? e : min; }, usable[0]);
+  }
+
+  function renderEquipList() {
+    var list = state.equipment || [];
+    els.equipList.innerHTML = list.map(function (e, i) {
+      return '<div class="equip-row">' +
+        '<input type="text" class="equip-item" data-equip-idx="' + i + '" data-equip-field="item" placeholder="e.g. microscope" value="' + escapeHtml(e.item || '').replace(/"/g, '&quot;') + '">' +
+        '<input type="number" class="equip-count" min="0" max="40" data-equip-idx="' + i + '" data-equip-field="count" placeholder="how many" value="' + escapeHtml(String(e.count == null ? '' : e.count)).replace(/"/g, '&quot;') + '">' +
+        '<button type="button" class="x" data-remove-equip="' + i + '" title="Remove item">&#10005;</button>' +
+        '</div>';
+    }).join('');
+    renderEquipReadout();
+  }
+
+  function renderEquipReadout() {
+    var limit = limitingEquipment();
+    var n = studentNames().length;
+    if (!limit) {
+      els.equipReadout.innerHTML = 'Add an item and how many you have, and the group count follows from it.';
+      return;
+    }
+    var groups = Math.max(1, Math.min(limit.count, n || limit.count));
+    var parts = ['<b>' + escapeHtml(String(limit.count)) + ' ' + escapeHtml(limit.item) + '</b> is the limit &rarr; <b>' +
+      groups + ' group' + (groups === 1 ? '' : 's') + '</b>'];
+    if (n) {
+      var big = Math.ceil(n / groups), small = Math.floor(n / groups);
+      parts.push('of ' + (big === small ? big : small + '&ndash;' + big) + ' from ' + n + ' student' + (n === 1 ? '' : 's') + '.');
+    } else {
+      parts.push('&mdash; add a roster to see the group sizes.');
+    }
+    var spare = equipmentRows().filter(function (e) { return e.item && e.count > groups; });
+    if (spare.length) {
+      parts.push('Spare: ' + spare.map(function (e) {
+        return escapeHtml(String(e.count - groups)) + ' ' + escapeHtml(e.item);
+      }).join(', ') + '.');
+    }
+    if (n && limit.count > n) {
+      parts.push('You have more ' + escapeHtml(limit.item) + ' than students, so one student per group.');
+    }
+    els.equipReadout.innerHTML = parts.join(' ');
+  }
+
+  els.addEquipBtn.addEventListener('click', function () {
+    if (!Array.isArray(state.equipment)) state.equipment = [];
+    state.equipment.push({ item: '', count: '' });
+    saveCurrent(); renderEquipList();
+  });
+  els.equipList.addEventListener('input', function (e) {
+    var input = e.target.closest('[data-equip-idx]');
+    if (!input) return;
+    state.equipment[parseInt(input.dataset.equipIdx, 10)][input.dataset.equipField] = input.value;
+    saveCurrent(); renderEquipReadout();
+  });
+  els.equipList.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-equip]');
+    if (!btn) return;
+    state.equipment.splice(parseInt(btn.dataset.removeEquip, 10), 1);
+    saveCurrent(); renderEquipList();
+  });
+
+  /* One station per group, each carrying one unit of every listed item — the
+     checkout sheet and the table tents then already know what each bench is
+     holding, without the equipment being typed a second time. */
+  els.equipToStationsBtn.addEventListener('click', function () {
+    var limit = limitingEquipment();
+    if (!limit) { showMsg('List at least one item and how many you have first.', false); return; }
+    var groups = groupCountFor(studentNames().length || limit.count);
+    if ((state.stations || []).length && !window.confirm('Replace the ' + state.stations.length + ' station row(s) below with ' + groups + ' built from this equipment list?')) return;
+    var gear = equipmentRows().filter(function (e) { return e.item && e.count > 0; }).map(function (e) { return e.item; }).join(', ');
+    state.stations = [];
+    for (var i = 0; i < groups; i++) state.stations.push({ name: 'Station ' + (i + 1), equipment: gear });
+    saveCurrent(); renderStationList();
+    showMsg('Built ' + groups + ' station' + (groups === 1 ? '' : 's') + ' from the equipment list.', true);
+  });
   document.querySelectorAll('input[name="split-mode"]').forEach(function (r) {
     r.addEventListener('change', function () {
       syncSplitLabel();
-      state.mode = document.getElementById('mode-size').checked ? 'size' : 'count';
+      state.mode = document.getElementById('mode-equip').checked ? 'equip'
+        : (document.getElementById('mode-size').checked ? 'size' : 'count');
       saveCurrent();
     });
   });
@@ -551,9 +670,14 @@
   });
 
   function groupCountFor(n) {
-    var isSize = state.mode === 'size';
-    var v = Math.max(1, parseInt(state.splitValue, 10) || 1);
-    var count = isSize ? Math.ceil(n / v) : v;
+    var count;
+    if (state.mode === 'equip') {
+      var limit = limitingEquipment();
+      count = limit ? limit.count : 1;
+    } else {
+      var v = Math.max(1, parseInt(state.splitValue, 10) || 1);
+      count = state.mode === 'size' ? Math.ceil(n / v) : v;
+    }
     return Math.max(1, Math.min(count, n));
   }
 
@@ -1118,7 +1242,7 @@
   function applyStateToForm() {
     els.rosterName.value = state.name;
     els.namesInput.value = state.students || '';
-    document.getElementById(state.mode === 'size' ? 'mode-size' : 'mode-count').checked = true;
+    document.getElementById('mode-' + (state.mode === 'size' ? 'size' : state.mode === 'equip' ? 'equip' : 'count')).checked = true;
     els.splitValue.value = state.splitValue || 4;
     syncSplitLabel();
     renderRoleList();
@@ -1176,8 +1300,14 @@
       students: (typeof loaded.students === 'string') ? loaded.students : '',
       roles: normalizeRoles(loaded.roles),
       stations: normalizeStations(loaded.stations),
-      mode: loaded.mode === 'size' ? 'size' : 'count',
+      mode: (loaded.mode === 'size' || loaded.mode === 'equip') ? loaded.mode : 'count',
       splitValue: loaded.splitValue || 4,
+      /* Rosters saved before equipment mode existed have no list; an empty one
+         means the mode simply has nothing to work from yet, and the other two
+         modes behave exactly as they did. */
+      equipment: Array.isArray(loaded.equipment)
+        ? loaded.equipment.map(function (e) { return { item: String(e && e.item || ''), count: e && e.count != null ? e.count : '' }; })
+        : [],
       history: (loaded.history && typeof loaded.history === 'object') ? loaded.history : {},
       lastGroups: lastGroups,
       checkoutLog: checkoutLog,
@@ -1245,6 +1375,7 @@
     var names = studentNames();
     els.nameCount.textContent = names.length + ' name' + (names.length === 1 ? '' : 's');
     els.shuffleBtn.disabled = names.length < 1;
+    if (state.mode === 'equip') renderEquipReadout();
     populatePairSelects();
     if (persist !== false) {
       state.students = els.namesInput.value;

@@ -1,7 +1,7 @@
 # Improvement Prompts — 026 — Math Fact Drill Sheet Generator
 
 **Tool file:** `Tools/026-math-drill-generator.html`
-**Support folder:** `Tools/math-drill-generator/` — `mdg-generate.js`, `mdg-store.js`, `mdg-templates.js`
+**Support folder:** `Tools/math-drill-generator/` — `mdg-generate.js`, `mdg-store.js`, `mdg-templates.js`, `test/`
 
 **Current description (from README):** Randomized addition/subtraction/multiplication/division/mixed drill sheets with a matching answer key — a fresh sheet every time you generate.
 
@@ -100,10 +100,74 @@ are both Open Questions below. All Quick Wins are now Done.
 Ideas below are deliberately ambitious and are **not** scoped to a single
 session.
 
+**2026-08-12 — Round 5 (backlog rank 3: more operation types).** Five new
+templates take this from a K-5 fact-fluency tool to one that covers the 6-8
+band it is filed under: **Integer Operations (+ − ×)**, **Decimal Operations
+(+ − ×)**, **Fraction Addition & Subtraction**, **Percent of a Number**, and
+**Order of Operations**.
+
+The thing that made this more than five more `TEMPLATES` entries: the original
+four are all `number symbol number`, so the renderer read the operands
+straight off the problem. None of the new five are that shape — a fraction has
+no single numeric operand, "20% of 60" has no operator symbol, and an
+order-of-operations problem is one expression rather than two operands. Rather
+than five special cases in the renderer, a problem may now carry `aText` /
+`bText` / `answerText` (or `expr` for a whole expression), which the renderer
+prefers when present. The four fact drills set none of those and go down
+exactly the path they always did.
+
+`vertical: false` is the other half of that: stacked column layout is a
+whole-number convention, and there is no sensible way to stack `(3 + 4) × 5`,
+so the new types are written across even when the sheet is set to vertical.
+
+Every type is built to keep the answer key clean, which is the actual
+constraint on a drill sheet:
+
+- **Fractions** are proper, subtraction is ordered so nothing goes negative,
+  and answers are reduced and written as mixed numbers.
+- **Decimals** are computed in tenths and divided at the end, so no answer
+  arrives as `4.300000000000001`. Multiplication pairs a decimal with a whole
+  number so the result stays at one place.
+- **Percents** use a base that is a multiple of 20, so every percent on the
+  list lands on a whole number — the drill is about the percent, not about
+  long division.
+- **Order of operations** builds its division case from the quotient, so it
+  always comes out even.
+
+**One real bug, caught by the suite rather than by eye:** the `b × c − a`
+shape drew `a` from a fixed 1-12, so `2 × 2 − 9` produced −5 on a sheet whose
+other four types are all non-negative. `a` is now drawn from below the product.
+
+**A rough edge left in place:** the operand-range panel is still shown for
+fractions, percents and order of operations, which generate from their own
+fixed pools and ignore it. Integers use the range as a magnitude bound and
+decimals as the whole-number part, so it means something for two of the five.
+Hiding or relabelling the panel per template is the fix, and it is UI work
+rather than generator work.
+
+Verified with two suites, both wired into `npm run test:math-drill`:
+
+- `Tools/math-drill-generator/test/drill-math.test.mjs` — pure Node, no
+  browser, **3812 assertions**. It generates 200 problems per type against a
+  seeded RNG and re-derives every answer independently of the generator
+  (order-of-operations expressions are re-evaluated from their printed text,
+  which is the precedence rule the problem is testing). An answer key that is
+  wrong is worse than a layout that is ugly.
+- `Tools/math-drill-generator/test/smoke-new-types.mjs` — 50 assertions in a
+  browser, proving the arithmetic reaches the paper: the failure it catches is
+  a worksheet printing "undefined + undefined" while the answer key is
+  perfect.
+
+**Next round should pick up** the range panel edge above, then exponents and
+one-step equations — the same display-text mechanism now carries them without
+touching the renderer.
+
 ## What it does today
 
 - Operation templates (`mdg-templates.js`) with configurable number ranges
-  (`clampRange`, `readRangeInputs`, "reset range to template default")
+  (`clampRange`, `readRangeInputs`, "reset range to template default") —
+  the four fact drills, fact-family drills per digit, mixed operations, plus
+  integers, decimals, fractions, percent of a number, and order of operations
 - Generates a randomized worksheet plus a **matching answer key**
 - **Version tabs** (`renderVersionTabs`) — multiple versions from one setting
 - Worksheet / Answer key preview tabs; **print both pages**
@@ -113,9 +177,11 @@ session.
 
 ## Quick Wins
 
-- **More operation types.** Fractions (add/subtract/multiply/divide),
-  decimals, percents, integers with negatives, order of operations, exponents,
-  one-step equations. `IDEAS_BACKLOG.md` lists a
+- **Mostly done — More operation types** (2026-08-12): fractions
+  (add/subtract), decimals, percents, integers with negatives, and order of
+  operations all shipped. Fraction multiply/divide, exponents and one-step
+  equations are still open, and now need only a generator case each.
+  Originally worded as: `IDEAS_BACKLOG.md` lists a
   fraction–decimal–percent drill as a separate tool; it belongs here.
 - **Done —** **Vertical (stacked) format** as well as horizontal — required for
   multi-digit addition and long division practice, and currently missing.

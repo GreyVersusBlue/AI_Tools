@@ -59,6 +59,21 @@
   .choice-row .letter { font-weight: 700; padding-top: .4rem; }
   .choice-row input, .choice-row select { margin-bottom: 0; }
 
+  /* ---- walk a hypothetical specimen through the key ---- */
+  .choice-row.on-path { background: #fdf6e6; border-radius: 6px; box-shadow: 0 0 0 2px #e0b98f; }
+  .trace-choice {
+    display: block; width: 100%; text-align: left; margin-bottom: .5rem;
+    background: #fff; color: var(--ink); border-color: var(--line-strong);
+    font-weight: 400; line-height: 1.35;
+  }
+  .trace-choice:hover { background: #f1f0ea; border-color: var(--muted); color: var(--ink); }
+  .trace-choice b { display: inline-block; min-width: 2rem; }
+  .trace-path { font-size: .86rem; color: var(--muted); margin: 0 0 .6rem; }
+  .trace-path .crumb { font-weight: 700; color: var(--ink); }
+  .trace-outcome { font-size: .92rem; border-radius: 8px; padding: .6rem .7rem; margin: 0 0 .6rem; }
+  .trace-outcome.good { background: #edf5ec; border: 1px solid #9cc39a; }
+  .trace-outcome.bad { background: #fbeceb; border: 1px solid #d9a19d; }
+
   .print-title { font-size: 1.3rem; margin: 0 0 .8rem; }
   .key-couplet { margin-bottom: .5rem; font-size: .92rem; }
   .key-couplet .cnum { font-weight: 700; }
@@ -93,6 +108,15 @@
   </div>
 
   <div class="card">
+    <h2>Walk a specimen through the key</h2>
+    <p class="hint" style="color:var(--muted);font-size:.8rem;margin:-.3rem 0 .6rem;">
+      Think of a specimen &mdash; real or made up &mdash; and answer the couplets as it would. The route is
+      highlighted in the steps below, and the walk stops on a dead end or a loop, so you find those before
+      a class does.</p>
+    <div id="traceWrap"></div>
+  </div>
+
+  <div class="card">
     <h2>Steps</h2>
     <div id="stepsWrap"></div>
     <button class="secondary" id="addStepBtn">+ Add step</button>
@@ -115,7 +139,7 @@
   var STORE_KEY = 'dkb_key_v1';
 
   var els = {};
-  ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea', 'warningsCard', 'warningsList', 'includeSpecimens'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['keyTitle', 'stepsWrap', 'addStepBtn', 'printBtn', 'printArea', 'warningsCard', 'warningsList', 'includeSpecimens', 'traceWrap'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { title: '', steps: [] };
 
@@ -160,10 +184,11 @@
   }
 
   function renderSteps() {
+    normalizeTrace();   // before the highlight is drawn, not after
     els.stepsWrap.innerHTML = state.steps.map(function (step, i) {
       function choiceHtml(letter, choice) {
         var isFinal = !choice.leadsTo;
-        return '<div class="choice-row" data-step="' + step.id + '" data-choice="' + letter + '">' +
+        return '<div class="choice-row' + (traceHas(step.id, letter) ? ' on-path' : '') + '" data-step="' + step.id + '" data-choice="' + letter + '">' +
           '<div class="letter">' + (i + 1) + letter + '.</div>' +
           '<div><label>Description</label><input type="text" data-field="text" value="' + escapeAttr(choice.text) + '" placeholder="e.g. Has feathers"></div>' +
           '<div><label>Leads to</label><select data-field="leadsTo">' + choiceOptionsHtml(choice.leadsTo, step.id) + '</select></div>' +
@@ -181,7 +206,115 @@
         '<button type="button" class="danger small" data-del-step="' + step.id + '" style="margin-top:.4rem;">Remove step</button></div>';
     }).join('');
     renderWarnings();
+    renderTrace();
   }
+
+  /* ---------- walk a specimen through the key ----------
+     The couplet descriptions are free text, so nothing can decide for itself
+     whether "has a backbone" is true of a given specimen — a teacher answers
+     each couplet the way their specimen would. What the tool does is follow
+     the links, remember the route, and stop with a reason: a result, a dead
+     end, or a loop back to a step already visited. That is the part a teacher
+     cannot reliably do by eye on a key with more than a few branches. */
+  var trace = [];   // [{ stepId, letter }] — the couplets chosen so far
+
+  function stepById(id) { return state.steps.filter(function (s) { return s.id === id; })[0] || null; }
+  function traceHas(stepId, letter) {
+    return trace.some(function (t) { return t.stepId === stepId && t.letter === letter; });
+  }
+
+  /** Re-walk the recorded route against the key as it stands now and drop
+   *  anything that no longer follows — an edit to a "leads to", a deleted or
+   *  reordered step can all strand a route mid-way. */
+  function normalizeTrace() {
+    var expected = state.steps.length ? state.steps[0].id : '';
+    var kept = [];
+    for (var i = 0; i < trace.length; i++) {
+      var entry = trace[i];
+      if (!expected || entry.stepId !== expected) break;
+      var step = stepById(entry.stepId);
+      if (!step || (entry.letter !== 'a' && entry.letter !== 'b')) break;
+      kept.push(entry);
+      expected = step[entry.letter].leadsTo;
+    }
+    trace = kept;
+  }
+
+  /** Where the route currently stands: a step to answer, an ending, or a
+   *  problem worth naming. */
+  function traceState() {
+    normalizeTrace();
+    if (!state.steps.length) return { kind: 'empty' };
+    if (!trace.length) return { kind: 'ask', step: state.steps[0] };
+    var last = trace[trace.length - 1];
+    var step = stepById(last.stepId);
+    var choice = step[last.letter];
+    if (!choice.leadsTo) {
+      if (choice.result.trim()) {
+        return { kind: 'result', choice: choice, label: stepNumber(step.id) + last.letter };
+      }
+      return { kind: 'dead-end', label: stepNumber(step.id) + last.letter };
+    }
+    var next = stepById(choice.leadsTo);
+    if (!next) return { kind: 'dead-end', label: stepNumber(step.id) + last.letter };
+    if (trace.some(function (t) { return t.stepId === next.id; })) {
+      return { kind: 'loop', step: next, label: stepNumber(step.id) + last.letter };
+    }
+    return { kind: 'ask', step: next };
+  }
+
+  function renderTrace() {
+    var st = traceState();
+    if (st.kind === 'empty') {
+      els.traceWrap.innerHTML = '<p style="margin:0;color:var(--muted);font-size:.86rem;">Add a step first.</p>';
+      return;
+    }
+    var crumbs = trace.length
+      ? '<p class="trace-path">Route so far: ' + trace.map(function (t) {
+          return '<span class="crumb">' + stepNumber(t.stepId) + t.letter + '</span>';
+        }).join(' &rarr; ') + '</p>'
+      : '<p class="trace-path">Start at step 1.</p>';
+
+    var body = '';
+    if (st.kind === 'ask') {
+      body = ['a', 'b'].map(function (letter) {
+        var c = st.step[letter];
+        return '<button type="button" class="secondary trace-choice" data-pick-step="' + st.step.id + '" data-pick="' + letter + '">' +
+          '<b>' + stepNumber(st.step.id) + letter + '.</b> ' + escapeHtml(c.text || '(no description yet)') + '</button>';
+      }).join('');
+    } else if (st.kind === 'result') {
+      var examples = st.choice.examples.trim();
+      body = '<p class="trace-outcome good"><strong>Ends at:</strong> ' + escapeHtml(st.choice.result.trim()) +
+        (examples
+          ? ' &nbsp;<span style="color:#555;">(example specimens: ' + escapeHtml(examples) + ')</span>'
+          : ' &nbsp;<span style="color:#555;">&mdash; no example specimens tagged, so this result won&rsquo;t appear in the classification worksheet.</span>') +
+        '</p>';
+    } else if (st.kind === 'dead-end') {
+      body = '<p class="trace-outcome bad">Couplet <strong>' + st.label + '</strong> is a dead end &mdash; it leads to no step and names no result. ' +
+        'A student following this route would have nowhere to go.</p>';
+    } else if (st.kind === 'loop') {
+      body = '<p class="trace-outcome bad">Couplet <strong>' + st.label + '</strong> leads back to step <strong>' +
+        stepNumber(st.step.id) + '</strong>, which this route already visited &mdash; a specimen following it would circle forever.</p>';
+    }
+
+    var controls = '<div class="btnrow">' +
+      '<button type="button" class="secondary small" id="traceBackBtn"' + (trace.length ? '' : ' disabled') + '>&larr; Back one couplet</button>' +
+      '<button type="button" class="secondary small" id="traceResetBtn"' + (trace.length ? '' : ' disabled') + '>Start over</button>' +
+      '</div>';
+
+    els.traceWrap.innerHTML = crumbs + body + controls;
+  }
+
+  els.traceWrap.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button');
+    if (!btn) return;
+    if (btn.id === 'traceResetBtn') { trace = []; renderSteps(); return; }
+    if (btn.id === 'traceBackBtn') { trace.pop(); renderSteps(); return; }
+    var stepId = btn.getAttribute('data-pick-step');
+    if (!stepId) return;
+    trace.push({ stepId: stepId, letter: btn.getAttribute('data-pick') });
+    renderSteps();
+  });
 
   function computeWarnings() {
     var warnings = [];

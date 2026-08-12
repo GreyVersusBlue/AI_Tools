@@ -61,7 +61,19 @@
   .point-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .point-row input { margin-bottom: 0; }
 
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .6rem; line-height: 1.4; }
+  .assign-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: .5rem; }
+  .assign-row select { flex: 1 1 16rem; margin-bottom: 0; }
+  .assign-opts { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .84rem; }
+  .assign-opts label { display: flex; align-items: center; gap: .35rem; font-weight: 400; margin: 0; }
+  .assign-opts input { width: auto; margin: 0; }
+  .assign-summary { margin: .6rem 0 0; }
+  .role-names { font-size: .78rem; color: var(--muted); margin: .3rem 0 0; }
+  .role-names b { color: var(--ink); font-weight: 600; }
+
   .role-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25in; }
+  .role-print-card .assigned { text-align: center; font-weight: 700; font-size: 1rem; margin-bottom: .12in; }
+  .role-print-card .nameline { text-align: center; color: #555; font-size: .85rem; margin-bottom: .12in; }
   .role-print-card { border: 1.5px solid #333; border-radius: 8px; padding: .3in; height: 4in; page-break-inside: avoid; }
   .role-print-card h3 { margin: 0 0 .1in; font-size: 1.2rem; text-align: center; }
   .role-print-card .position { font-style: italic; text-align: center; color: #555; margin-bottom: .2in; font-size: .9rem; }
@@ -95,6 +107,22 @@
   </div>
 
   <div class="card">
+    <h2>Assign students to roles</h2>
+    <p class="hint">Loads a class list saved by Name Picker or Class Roster Hub, and prints each card with its
+      student's name already on it. Cards with nobody assigned print a blank name line as before.</p>
+    <div class="assign-row">
+      <select id="rosterSelect"></select>
+      <button id="assignBtn">Assign students</button>
+      <button type="button" class="secondary" id="clearAssignBtn">Clear names</button>
+    </div>
+    <div class="assign-opts">
+      <label><input type="checkbox" id="shuffleAssign"> Shuffle the class list first</label>
+      <label><input type="checkbox" id="growCopies" checked> Add copies of the biggest role so everyone gets a card</label>
+    </div>
+    <p class="hint assign-summary" id="assignSummary"></p>
+  </div>
+
+  <div class="card">
     <div class="btnrow">
       <h2 style="margin:0;flex:1;">Roles</h2>
       <button class="secondary" id="addRoleBtn">+ Add role</button>
@@ -112,23 +140,23 @@
 
   var TEMPLATES = {
     mock_trial: [
-      { role: 'Judge', position: 'Neutral — oversees the trial and ensures rules are followed', points: ['Introduce the case and both sides', 'Rule on objections', 'Instruct the jury before deliberation'] },
-      { role: 'Prosecution / Plaintiff Attorney', position: 'Arguing the defendant is responsible', points: ['Present opening statement', 'Call and question witnesses', 'Deliver closing argument summarizing the evidence'] },
-      { role: 'Defense Attorney', position: 'Arguing the defendant is not responsible', points: ['Present opening statement', 'Cross-examine opposing witnesses', 'Deliver closing argument creating reasonable doubt'] },
-      { role: 'Witness', position: 'Provides testimony for one side', points: ['Answer questions truthfully based on your assigned facts', 'Stay in character during cross-examination'] },
-      { role: 'Juror', position: 'Neutral — decides the verdict', points: ['Listen carefully to all evidence', 'Discuss respectfully during deliberation', 'Reach a verdict based on the evidence presented'] }
+      { role: 'Judge', position: 'Neutral — oversees the trial and ensures rules are followed', copies: 1, points: ['Introduce the case and both sides', 'Rule on objections', 'Instruct the jury before deliberation'] },
+      { role: 'Prosecution / Plaintiff Attorney', position: 'Arguing the defendant is responsible', copies: 2, points: ['Present opening statement', 'Call and question witnesses', 'Deliver closing argument summarizing the evidence'] },
+      { role: 'Defense Attorney', position: 'Arguing the defendant is not responsible', copies: 2, points: ['Present opening statement', 'Cross-examine opposing witnesses', 'Deliver closing argument creating reasonable doubt'] },
+      { role: 'Witness', position: 'Provides testimony for one side', copies: 4, points: ['Answer questions truthfully based on your assigned facts', 'Stay in character during cross-examination'] },
+      { role: 'Juror', position: 'Neutral — decides the verdict', copies: 12, points: ['Listen carefully to all evidence', 'Discuss respectfully during deliberation', 'Reach a verdict based on the evidence presented'] }
     ],
     debate: [
-      { role: 'Affirmative Team', position: 'Arguing in favor of the resolution', points: ['Present a clear opening argument', 'Provide evidence supporting your position', 'Rebut the opposing team\'s points'] },
-      { role: 'Negative Team', position: 'Arguing against the resolution', points: ['Present a clear opening argument', 'Provide evidence against the resolution', 'Rebut the affirmative team\'s points'] },
-      { role: 'Moderator', position: 'Neutral — keeps the debate on track', points: ['Introduce the resolution and both teams', 'Enforce time limits', 'Facilitate the audience Q&A if used'] },
-      { role: 'Judge / Scorer', position: 'Neutral — evaluates the debate', points: ['Score each team on evidence and delivery', 'Decide which team argued more persuasively'] }
+      { role: 'Affirmative Team', position: 'Arguing in favor of the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence supporting your position', 'Rebut the opposing team\'s points'] },
+      { role: 'Negative Team', position: 'Arguing against the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence against the resolution', 'Rebut the affirmative team\'s points'] },
+      { role: 'Moderator', position: 'Neutral — keeps the debate on track', copies: 1, points: ['Introduce the resolution and both teams', 'Enforce time limits', 'Facilitate the audience Q&A if used'] },
+      { role: 'Judge / Scorer', position: 'Neutral — evaluates the debate', copies: 3, points: ['Score each team on evidence and delivery', 'Decide which team argued more persuasively'] }
     ],
     legislative: [
-      { role: 'Bill Sponsor', position: 'Supports passing the bill', points: ['Explain what the bill does and why it\'s needed', 'Answer questions from other members', 'Rally support for a yes vote'] },
-      { role: 'Committee Chair', position: 'Neutral — runs the session', points: ['Recognize speakers in order', 'Keep discussion on topic and on time', 'Call for and record the final vote'] },
-      { role: 'Opposing Legislator', position: 'Opposes the bill as written', points: ['Raise specific concerns or objections', 'Propose an amendment if appropriate', 'Explain your reasoning for a no vote'] },
-      { role: 'Supporting Legislator', position: 'Supports the bill', points: ['Add supporting arguments beyond the sponsor\'s', 'Respond to the opposition\'s concerns'] }
+      { role: 'Bill Sponsor', position: 'Supports passing the bill', copies: 1, points: ['Explain what the bill does and why it\'s needed', 'Answer questions from other members', 'Rally support for a yes vote'] },
+      { role: 'Committee Chair', position: 'Neutral — runs the session', copies: 1, points: ['Recognize speakers in order', 'Keep discussion on topic and on time', 'Call for and record the final vote'] },
+      { role: 'Opposing Legislator', position: 'Opposes the bill as written', copies: 6, points: ['Raise specific concerns or objections', 'Propose an amendment if appropriate', 'Explain your reasoning for a no vote'] },
+      { role: 'Supporting Legislator', position: 'Supports the bill', copies: 6, points: ['Add supporting arguments beyond the sponsor\'s', 'Respond to the opposition\'s concerns'] }
     ],
     blank: [
       { role: 'New Role', position: '', points: [''] }
@@ -136,7 +164,8 @@
   };
 
   var els = {};
-  ['templateSelect', 'loadTemplateBtn', 'addRoleBtn', 'rolesWrap', 'printBtn', 'printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+  ['templateSelect', 'loadTemplateBtn', 'addRoleBtn', 'rolesWrap', 'printBtn', 'printArea',
+   'rosterSelect', 'assignBtn', 'clearAssignBtn', 'shuffleAssign', 'growCopies', 'assignSummary'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { roles: [] };
 
@@ -150,7 +179,11 @@
 
   function fromTemplate(key) {
     state.roles = TEMPLATES[key].map(function (r) {
-      return { id: uid(), role: r.role, position: r.position, copies: 1, points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
+      /* Templates carry their own copy counts: a mock trial is one judge and
+         a dozen jurors, not one of each. That is also what makes "grow the
+         biggest role" mean the jury rather than whichever role happens to be
+         listed first. */
+      return { id: uid(), role: r.role, position: r.position, copies: r.copies || 1, students: [], points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
     });
   }
 
@@ -160,7 +193,13 @@
       if (saved && Array.isArray(saved.roles) && saved.roles.length) state = saved;
     } catch (e) { /* ignore */ }
     if (!state.roles.length) fromTemplate('mock_trial');
-    state.roles.forEach(function (r) { if (!r.copies || r.copies < 1) r.copies = 1; });
+    state.roles.forEach(function (r) {
+      if (!r.copies || r.copies < 1) r.copies = 1;
+      /* Roles saved before names could be assigned carry no `students`. An
+         empty array means "nobody assigned", which prints the blank name line
+         the tool has always printed — so an existing set is unchanged. */
+      if (!Array.isArray(r.students)) r.students = [];
+    });
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
@@ -182,10 +221,100 @@
         '<button type="button" class="secondary small" data-dup-role="' + r.id + '">Duplicate</button>' +
         '<button type="button" class="danger small" data-del-role="' + r.id + '">Remove</button></div>' +
         '<label>Position</label><input type="text" data-field="position" data-role="' + r.id + '" value="' + escapeAttr(r.position) + '" placeholder="e.g. Arguing in favor of...">' +
+        (r.students && r.students.length
+          ? '<p class="role-names"><b>Assigned:</b> ' + escapeHtml(r.students.join(', ')) +
+            (r.students.length < Math.max(1, r.copies || 1)
+              ? ' &mdash; ' + (Math.max(1, r.copies || 1) - r.students.length) + ' blank' : '') + '</p>'
+          : '') +
         '<label>Talking points</label>' + points +
         '<button type="button" class="secondary small" data-add-point="' + r.id + '">+ Add talking point</button>' +
         '</div>';
     }).join('');
+  }
+
+  /* ---------- assigning a class list to the role slots ----------
+     Rosters live in `np_rosters`, written by Name Picker and Class Roster Hub
+     — the toolkit's shared class list. A role with `copies: 6` is six slots;
+     students fill slots in role order. */
+  function loadRosters() {
+    try {
+      var r = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      return (r && typeof r === 'object') ? r : {};
+    } catch (e) { return {}; }
+  }
+
+  function populateRosterSelect() {
+    var rosters = loadRosters();
+    var names = Object.keys(rosters).filter(function (n) { return Array.isArray(rosters[n]) && rosters[n].length; });
+    if (!names.length) {
+      els.rosterSelect.innerHTML = '<option value="">No saved class lists found</option>';
+      els.assignBtn.disabled = true;
+      els.assignSummary.textContent = 'Save a class list in Name Picker or Class Roster Hub first, and it will show up here.';
+      return;
+    }
+    els.rosterSelect.innerHTML = '<option value="">Choose a class list&hellip;</option>' +
+      names.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    els.assignBtn.disabled = false;
+  }
+
+  function totalSlots() {
+    return state.roles.reduce(function (sum, r) { return sum + Math.max(1, r.copies || 1); }, 0);
+  }
+
+  function shuffled(list) {
+    var a = list.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function assignStudents() {
+    var rosters = loadRosters();
+    var list = rosters[els.rosterSelect.value];
+    if (!Array.isArray(list) || !list.length) {
+      els.assignSummary.textContent = 'Pick a class list first.';
+      return;
+    }
+    var names = els.shuffleAssign.checked ? shuffled(list) : list.slice();
+    var grown = null;
+    if (els.growCopies.checked && state.roles.length) {
+      /* Grow the role that already has the most copies — in every template
+         here that is the crowd role (jurors, the audience), the one designed
+         to scale. Growing round-robin instead would end up with three judges. */
+      var before = {};
+      while (totalSlots() < names.length) {
+        var biggest = state.roles.reduce(function (best, r) {
+          return (r.copies || 1) > (best.copies || 1) ? r : best;
+        }, state.roles[0]);
+        if (before[biggest.id] === undefined) before[biggest.id] = biggest.copies || 1;
+        biggest.copies = (biggest.copies || 1) + 1;
+        grown = biggest;
+      }
+      if (grown) grown.grewFrom = before[grown.id];
+    }
+
+    state.roles.forEach(function (r) { r.students = []; });
+    var i = 0;
+    state.roles.forEach(function (r) {
+      for (var c = 0; c < Math.max(1, r.copies || 1) && i < names.length; c++) r.students.push(names[i++]);
+    });
+
+    var slots = totalSlots();
+    var parts = [names.length + ' student' + (names.length === 1 ? '' : 's') + ' across ' + slots + ' card' + (slots === 1 ? '' : 's') + '.'];
+    if (grown) {
+      parts.push('Raised "' + grown.role + '" from ' + grown.grewFrom + ' to ' + grown.copies + ' copies to fit everyone.');
+      delete grown.grewFrom;
+    }
+    if (i < names.length) {
+      parts.push((names.length - i) + ' student' + (names.length - i === 1 ? ' has' : 's have') +
+        ' no card — add copies, or tick the box above.');
+    } else if (slots > names.length) {
+      parts.push((slots - names.length) + ' card' + (slots - names.length === 1 ? '' : 's') + ' will print with a blank name line.');
+    }
+    els.assignSummary.textContent = parts.join(' ');
+    save(); renderRoles();
   }
 
   function moveInArray(arr, id, dir) {
@@ -269,7 +398,7 @@
     save(); renderRoles();
   });
   els.addRoleBtn.addEventListener('click', function () {
-    state.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, points: [{ id: uid(), text: '' }] });
+    state.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, students: [], points: [{ id: uid(), text: '' }] });
     save(); renderRoles();
   });
 
@@ -277,16 +406,36 @@
     if (!state.roles.length) { alert('Add at least one role first.'); return; }
     var cards = state.roles.map(function (r) {
       var points = r.points.filter(function (p) { return p.text.trim(); }).map(function (p) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
-      var card = '<div class="role-print-card"><h3>' + escapeHtml(r.role || 'Role') + '</h3>' +
-        '<div class="position">' + escapeHtml(r.position || '') + '</div><ul>' + points + '</ul></div>';
-      return new Array(Math.max(1, r.copies || 1) + 1).join(card);
+      /* Copies are no longer interchangeable — each one can carry a different
+         student's name — so they are built individually rather than by
+         repeating one string. */
+      var out = '';
+      for (var c = 0; c < Math.max(1, r.copies || 1); c++) {
+        var who = (r.students || [])[c];
+        out += '<div class="role-print-card"><h3>' + escapeHtml(r.role || 'Role') + '</h3>' +
+          (who ? '<div class="assigned">' + escapeHtml(who) + '</div>' : '<div class="nameline">Name: ______________________</div>') +
+          '<div class="position">' + escapeHtml(r.position || '') + '</div><ul>' + points + '</ul></div>';
+      }
+      return out;
     }).join('');
     els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>';
     window.print();
   });
 
+  els.assignBtn.addEventListener('click', assignStudents);
+  els.clearAssignBtn.addEventListener('click', function () {
+    state.roles.forEach(function (r) { r.students = []; });
+    els.assignSummary.textContent = 'Names cleared — every card prints a blank name line again.';
+    save(); renderRoles();
+  });
+  /* Another tab may have saved a roster since this page loaded. */
+  window.addEventListener('storage', function (ev) {
+    if (ev.key === 'np_rosters') populateRosterSelect();
+  });
+
   /* ---------- boot ---------- */
   load();
+  populateRosterSelect();
   renderRoles();
 })();
 </script>
