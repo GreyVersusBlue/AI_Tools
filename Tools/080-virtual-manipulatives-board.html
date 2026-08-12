@@ -57,17 +57,32 @@
     position: relative; background: #fff; border: 2px dashed var(--line-strong); border-radius: 10px;
     height: 60vh; min-height: 420px; overflow: hidden;
   }
+  /* The grid is drawn only while snapping is on, so a teacher can see what the
+     pieces are lining up to. One cell = one unit block. */
+  #board.snap {
+    background-image:
+      linear-gradient(to right, rgba(31, 53, 80, .13) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(31, 53, 80, .13) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+  .snap-row { display: flex; align-items: center; gap: .4rem; font-size: .88rem; }
+  .snap-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .piece { position: absolute; cursor: grab; touch-action: none; }
   .piece:active { cursor: grabbing; }
   .piece .del { position: absolute; top: -8px; right: -8px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--err); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
   .piece .dup { position: absolute; top: -8px; right: 12px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); color: var(--accent-2); font-size: 11px; line-height: 16px; text-align: center; cursor: pointer; display: none; z-index: 2; }
   .piece:hover .del, .piece:hover .dup { display: block; }
 
+  /* Every base-ten piece is built from the same 26px square as a single unit,
+     so ten units laid in a row really are the length of a ten-rod and a
+     hundred-flat really is ten rods. Before this the rod was 249px against
+     ten 26px units (260px) — close enough to look right and wrong enough to
+     undercut the one thing base-ten blocks exist to show. */
   .unit-block { width: 26px; height: 26px; background: #2e6b8f; border: 1px solid #1f3550; }
-  .ten-block { display: flex; gap: 1px; }
-  .ten-block .seg { width: 24px; height: 24px; background: #2e6b8f; border: 1px solid #1f3550; }
-  .hundred-block { display: grid; grid-template-columns: repeat(10, 1fr); gap: 1px; width: 250px; }
-  .hundred-block .seg { width: 22px; height: 22px; background: #1f3550; border: 1px solid #14243a; }
+  .ten-block { display: flex; }
+  .ten-block .seg { width: 26px; height: 26px; background: #2e6b8f; border: 1px solid #1f3550; }
+  .hundred-block { display: grid; grid-template-columns: repeat(10, 26px); width: 260px; }
+  .hundred-block .seg { width: 26px; height: 26px; background: #1f3550; border: 1px solid #14243a; }
 
   .fraction-tile { display: flex; border: 1px solid var(--ink); }
   .fraction-tile .seg { width: 26px; height: 40px; border-right: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; }
@@ -158,6 +173,8 @@
     <div class="btnrow">
       <button class="action secondary" id="clearBoardBtn">Clear board</button>
       <button class="action" id="snapshotBoardBtn">Snapshot board</button>
+      <label class="snap-row" for="snapToggle"><input type="checkbox" id="snapToggle"> Snap to grid</label>
+      <button class="action secondary" id="alignPiecesBtn" style="display:none;" title="Move every piece already on the board onto the grid">Align pieces</button>
     </div>
     <div id="board"></div>
   </div>
@@ -185,6 +202,24 @@
 (function () {
   'use strict';
 
+  /* ---------- snap to grid ----------
+     One grid cell is one unit block, which is also what every other base-ten
+     piece is built from — so with snapping on, ten units dragged into a row
+     land exactly the length of a ten-rod without anyone lining them up by
+     hand. Snapping is a placement aid, not a constraint on what is already
+     there: turning it on leaves the board alone, and "Align pieces" is the
+     explicit way to pull an existing arrangement onto the grid. */
+  var GRID = 26;
+  var SNAP_KEY = 'vmb_snap_v1';
+  var snapEl = document.getElementById('snapToggle');
+  var alignBtn = document.getElementById('alignPiecesBtn');
+
+  function snapping() { return snapEl.checked; }
+  function snapValue(v, max) {
+    var snapped = Math.round(v / GRID) * GRID;
+    return Math.max(0, Math.min(max, snapped));
+  }
+
   /* ---------- generic drag ---------- */
   function makeDraggable(el, boundsEl) {
     var startX, startY, origLeft, origTop, dragging = false;
@@ -203,6 +238,10 @@
       var w = el.offsetWidth, h = el.offsetHeight;
       var newLeft = Math.max(0, Math.min(bounds.width - w, origLeft + dx));
       var newTop = Math.max(0, Math.min(bounds.height - h, origTop + dy));
+      if (snapping()) {
+        newLeft = snapValue(newLeft, bounds.width - w);
+        newTop = snapValue(newTop, bounds.height - h);
+      }
       el.style.left = newLeft + 'px';
       el.style.top = newTop + 'px';
     });
@@ -220,6 +259,9 @@
   function nextPos() {
     var col = placeCounter % 6, row = Math.floor(placeCounter / 6) % 5;
     placeCounter++;
+    /* Drop new pieces on the grid too when snapping is on — otherwise the
+       first drag of every piece is a correction rather than a move. */
+    if (snapping()) return { left: col * GRID * 3, top: row * GRID * 2 };
     return { left: 16 + col * 60, top: 16 + row * 60 };
   }
 
@@ -294,6 +336,25 @@
     placeCounter = 0;
     touch();
   });
+
+  function applySnapUi() {
+    board.classList.toggle('snap', snapping());
+    alignBtn.style.display = snapping() ? '' : 'none';
+  }
+  snapEl.addEventListener('change', function () {
+    applySnapUi();
+    try { localStorage.setItem(SNAP_KEY, snapEl.checked ? '1' : '0'); } catch (e) { /* storage blocked */ }
+  });
+  alignBtn.addEventListener('click', function () {
+    var bounds = board.getBoundingClientRect();
+    Array.prototype.forEach.call(board.querySelectorAll('.piece'), function (el) {
+      el.style.left = snapValue(parseFloat(el.style.left) || 0, bounds.width - el.offsetWidth) + 'px';
+      el.style.top = snapValue(parseFloat(el.style.top) || 0, bounds.height - el.offsetHeight) + 'px';
+    });
+    touch();
+  });
+  try { snapEl.checked = localStorage.getItem(SNAP_KEY) === '1'; } catch (e) { /* ignore */ }
+  applySnapUi();
 
   /* ---------- tabs ---------- */
   document.querySelectorAll('.tab-btn').forEach(function (btn) {

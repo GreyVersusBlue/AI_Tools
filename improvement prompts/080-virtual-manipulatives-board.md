@@ -112,12 +112,53 @@ closed lid no longer discards the period's setup.
   working board surviving a real `page.reload()`, the confirm gate being
   honored when declined, and zero console errors or offsite requests.
 
+**2026-08-12 — Round 3 (backlog rank 7: snap-to-grid toggle).** A "Snap to
+grid" checkbox on the board toolbar puts every drag on a grid whose cell is
+one unit block, draws that grid faintly on the board while it is on, and
+persists (`vmb_snap_v1`). Pieces added while snapping is on start on the grid
+too, so the first drag of a new piece is a move rather than a correction.
+
+**The interesting part was not the snapping — it was that the geometry didn't
+agree.** A unit block is 26×26. A ten-rod was ten 24px segments with 1px gaps,
+so 249px long and 24px tall; the hundred-flat was 250×229. Ten units snapped
+into a neat row came to 260px, which meant the one thing base-ten blocks exist
+to demonstrate — ten units *are* a rod — was visibly off by a rod's worth of
+border, near enough to look right and wrong enough to undercut the point.
+Every base-ten piece is now built from the same 26px square: the rod is
+exactly ten units long and one unit tall, and the flat is exactly one rod wide
+and ten units tall. That change is visible on existing boards, since piece
+sizes come from CSS rather than from saved state — saved boards keep their
+positions and gain the corrected sizes.
+
+**Turning snapping on deliberately does not move anything.** Rearranging a
+teacher's live demonstration the moment they tick a box is a surprise, and
+this tool has no undo. "Align pieces" appears alongside the toggle as the
+explicit way to pull an existing arrangement onto the grid.
+
+Verified with a new 21-assertion headless Chromium suite,
+`Tools/virtual-manipulatives-board/test/smoke-snap-grid.mjs` (folded into
+`npm run test:manipulatives` alongside the existing saved-boards suite). It
+drives real pointer drags rather than setting `style.left`, checks that an
+unsnapped drag lands off-grid and a snapped one lands on it, measures that ten
+units on consecutive cells span exactly one ten-rod, and confirms the toggle
+moves nothing by itself. The existing saved-boards suite still passes
+unchanged.
+
+**Next round should pick up** an undo stack (P11) — this board destroys work
+with Clear and has no way back, and Align pieces is now a second irreversible
+action.
+
 ## What it does today
 
 - Base-ten blocks (unit/ten/hundred), fraction tiles (2&ndash;12
   denominators), algebra tiles (&plusmn;1/&plusmn;x/&plusmn;x&sup2;) —
   add via palette buttons, drag freely, delete via hover-x, duplicate via
   hover-&#10064;
+- The base-ten pieces share one 26px module: ten units are exactly a
+  ten-rod, ten rods exactly a hundred-flat
+- Optional snap-to-grid (one cell = one unit block) with the grid drawn on
+  the board, remembered across visits, plus an explicit "Align pieces" for
+  an arrangement that is already down
 - Separate number line: configurable range, click-to-add/drag/click-to-
   remove markers
 - PNG snapshot + download for either the block board or the number line,
