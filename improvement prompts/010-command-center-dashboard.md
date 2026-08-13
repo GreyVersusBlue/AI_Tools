@@ -1,13 +1,126 @@
 # Improvement Prompts — 010 — Command Center
 
 **Tool file:** `Tools/010-command-center-dashboard.html`
-**Support folder:** none — single file
+**Support folder:** `Tools/command-center/` — `cc-remote.js` and `remote.html`
+for the phone-remote feature (see Status below), plus `test/`
 
 **Current description (from README):** A timer, today's School Calendar Visualizer entry, and a no-repeats roster quick-call, side by side on one projector page.
 
 ---
 
 ## Status
+
+### 2026-08-13 — the phone remote
+
+Backlog item 2 from Round 1's "where the next round should pick up" list:
+*"Remote control from a phone (Major, P9) — the panel registry makes this
+tractable now: a paired phone needs to drive four or five named actions..."*
+
+Shipped as a **"Remote control…"** button in the header, opening the same
+kind of pairing modal Classroom Timer's **Mirror to a device** already uses —
+same QR-and-copy flow, same "on the same Wi-Fi, no server" shape — so a
+teacher who has paired one already knows the other. The dashboard is always
+the host (it draws the offer code); the phone opens
+`Tools/command-center/remote.html`, scans it, and shows its answer back. What
+travels over the data channel is new: Classroom Timer's Mirror only ever
+pushes a display snapshot one way, but here the phone is the one *sending* —
+five named commands — and the dashboard applies each one by calling the
+exact function the matching on-screen control already calls:
+
+- **Start / pause the timer** — `timer_toggle` calls `startTimer()` /
+  `pauseTimer()`, whichever the current state calls for. Refused (not
+  silently ignored) if the Timer panel is switched off, the same guard the
+  existing Space-bar shortcut already uses.
+- **Call the next student** — `next_student` calls the same `pickStudent()`
+  the Pick button drives, against whatever roster is currently loaded.
+  Refused if no roster is loaded — a remote command guessing at an empty list
+  would be worse than saying no.
+- **Sign a student back in** — `sign_in` (with the student's id and section)
+  calls the exact `signInFromDashboard()` mirror the Hall Pass panel's own
+  button already calls. The phone doesn't ask for a name blind: the
+  dashboard pushes down who is currently out on every snapshot, so the
+  phone's card is a list of real buttons, one per student, not a text box.
+- **Pull up the next period's roster** — `advance_period` is genuinely new
+  logic, not a rewire of something that already had a button: nothing on this
+  page could move the schedule forward by hand before this. It deliberately
+  does **not** touch the live clock/period readout at the top of the page —
+  that strip is wall-clock driven by design (see Round 1's decision to own
+  the bell schedule outright), and faking "what period it is" would fight
+  that decision rather than extend it. What it does do is apply the *next*
+  scheduled period's mapped roster immediately, reusing the exact same
+  roster-switch `onPeriodChange()` already runs when the real bell reaches
+  that period — so a teacher running a few minutes ahead of the printed
+  schedule can bring up 3rd period's roster from across the room without
+  waiting for the clock, or walking back to the podium to pick it from the
+  dropdown.
+- **Run the start-of-day reset** — `start_day` calls the same
+  `runStartOfDayReset()` the "Start the Day" button calls (pulled out into its
+  own function for this). This was the chosen fifth action: the doc's own
+  four (timer, next student, sign-in, advance period) didn't leave an
+  obviously-missing fifth, so the search was for the cleanest existing
+  single-press, zero-parameter action already on the board, and "Start the
+  Day" was the only other button on the page that fits that description —
+  useful for a teacher greeting students at the door who wants the day
+  started without walking back in.
+
+**New files:** `Tools/command-center/cc-remote.js` (the pairing wrapper over
+`_shared/webrtc-pair.js`, modeled directly on
+`Tools/classroom-timer/ct-mirror.js` — the only existing real integration of
+that shared module — but bidirectional: both the host and the join side get
+`onMessage`/`send`, where Mirror only ever gave one side a `send`) and
+`Tools/command-center/remote.html` (the phone-facing pairing + five-button
+page, structured like `Tools/classroom-timer/mirror.html`). `drawQR` is a
+second small copy of Mirror's own helper rather than an import across tool
+folders — this repo's QR-drawing helpers are already one per tool
+(`016-qr-code-generator`, `017-gallery-walk-qr`, `escape-room-builder`,
+`classroom-timer`, ...), not a single shared one, so this follows that
+existing pattern rather than inventing a new cross-tool dependency for a
+~30-line function.
+
+**Testing:** real WebRTC between two headless browser pages isn't what needed
+proving — `_shared/webrtc-pair.js` and the pairing UI shape are already
+exercised in production by Classroom Timer's Mirror feature. What's new is
+the *dispatch*, so `Tools/command-center/test/smoke-remote-commands.mjs`
+calls `window.__ccApplyRemoteCommand` directly (the same function the data
+channel's `onMessage` calls — exposed on `window` for exactly this) for all
+five commands and checks each one against the on-screen path: same click,
+same resulting `localStorage`/`sessionStorage` state, same DOM. For
+`advance_period`, which has no on-screen button to compare against, the test
+instead checks it against the *bell's own* automatic roster-switch —
+confirming a remote-advanced period ends up in the identical `rosterName` the
+ordinary wall-clock trigger would have produced, just early. 56 checks, 0
+console errors. The existing `smoke-seating-panel.mjs` suite (32 checks)
+still passes unchanged, and `node Tools/board-check/check-dedupe.mjs` is
+clean.
+
+**Known limitations:**
+
+- No fallback for a phone that can neither reach a camera nor easily
+  copy/paste an SDP blob — same limitation Mirror already has; not addressed
+  here.
+- `advance_period`'s scope is deliberately narrow: it moves the *roster*
+  forward, not the displayed clock/period. A teacher glancing at the top
+  strip after pressing it will still see the real current period until the
+  actual bell catches up. This was a deliberate choice to avoid rearchitecting
+  the wall-clock-driven period display (used by the now-strip, the seating
+  panel, and the Start-the-Day checklist alike) into something with a
+  manual-override state, which felt like a separate round's worth of work.
+- The phone's five buttons don't disable themselves while a command is
+  in flight — there's no ack beyond the next snapshot push (up to 1s away,
+  faster in practice since a command triggers an immediate push). A very
+  fast double-tap on "Call next student" could in principle fire twice.
+  Not seen in testing, but worth watching for.
+- Neither new file is in `sw.js`'s `PRECACHE_URLS` yet — left for the
+  integration pass per this repo's worktree convention (see boundaries in
+  the task this round worked from). Everything it depends on
+  (`_shared/webrtc-pair.js`, `_shared/qr-scan.js`, the vendored `qrcode`/
+  `jsqr`) was already precached by Classroom Timer's Mirror feature.
+
+**Where the next round should pick up:** the timer extraction (P7, still
+unstarted, see Round 1's note) and the shared read API are both still open.
+The remote's fifth action (Start the Day) could grow a confirmation step on
+the phone if a teacher ever fires it by mistake — not seen as a problem yet,
+but worth watching once this is used in a real classroom.
 
 ### 2026-08-12 — session `r8kq4t` — the seating chart panel
 
