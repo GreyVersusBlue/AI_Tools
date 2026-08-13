@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v110';
+const CACHE_VERSION = 'v111';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -127,6 +127,7 @@ const PRECACHE_URLS = [
   "Tools/013-lab-safety-contract-tracker.html",
   "Tools/026-math-drill-generator.html",
   "Tools/math-drill-generator/mdg-generate.js",
+  "Tools/math-drill-generator/mdg-selfcheck.js",
   "Tools/math-drill-generator/mdg-store.js",
   "Tools/math-drill-generator/mdg-templates.js",
   "Tools/066-math-find-the-mistake-generator.html",
@@ -156,9 +157,12 @@ const PRECACHE_URLS = [
   "Tools/016-qr-code-generator.html",
   "Tools/018-qr-scavenger-hunt-builder.html",
   "Tools/030-review-game-board.html",
+  "Tools/review-game-board/rgb-audio-db.js",
+  "Tools/review-game-board/rgb-bank-store.js",
   "Tools/review-game-board/rgb-store.js",
   "Tools/014-roleplay-scenario-generator.html",
   "Tools/003-rubric-builder.html",
+  "Tools/rubric-builder/rb-gdv-handoff.js",
   "Tools/rubric-builder/rb-store.js",
   "Tools/rubric-builder/rb-templates.js",
   "Tools/034-schedule-browser.html",
@@ -199,6 +203,7 @@ const PRECACHE_URLS = [
   "Tools/039-vocab-conjugation-drill.html",
   "Tools/040-vocab-flashcard-generator.html",
   "Tools/vocab-flashcard-generator/vfg-layout.js",
+  "Tools/vocab-flashcard-generator/vfg-printables.js",
   "Tools/vocab-flashcard-generator/vfg-store.js",
   "Tools/081-word-problem-warmup-generator.html",
   "Tools/025-writing-prompt-generator.html",
