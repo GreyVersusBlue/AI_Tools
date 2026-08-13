@@ -39,6 +39,9 @@ deliberately ambitious and are **not** scoped to a single session.
   Set item and open it in Rubric Builder
 - **Anonymous Response Display** — up to six pasted student responses shown
   full-screen, one-at-a-time or side-by-side, never persisted to storage
+- **Writing Record** — a teacher-typed, per-student log of which prompt a
+  student wrote to and the teacher's conference note, with a printable
+  per-student page (`gvb-writing-prompts:record`, see the 2026-08-13 round)
 - Loads `_shared/a11y.js`
 
 ## Quick Wins
@@ -86,8 +89,10 @@ deliberately ambitious and are **not** scoped to a single session.
 - **A much bigger, better-organized bank**, including prompts tied to
   historical documents and images (P7 — `028-primary-source-analysis-generator.html`
   and `046-blank-map-generator.html` both hold sources worth writing about).
-- **Student writing portfolio.** Which prompts a student has responded to over
-  the year, with the teacher's notes — the artifact for a conference.
+- **Done — 2026-08-13.** **Student writing portfolio.** Which prompts a
+  student has responded to over the year, with the teacher's notes — the
+  artifact for a conference. *(Shipped as the teacher-typed "Writing Record"
+  section — see the Writing Record round below.)*
 
 ## Moonshot / North Star
 
@@ -359,3 +364,104 @@ untouched poster path, and the a11y-button fix.
 - The half sheet deliberately prints the *current* prompt twice. A per-student
   version — the roster assignment sheet's prompts, one half sheet each — is a
   natural next step and would reuse `halfSheetHtml()` as-is.
+
+## Writing Record round — 2026-08-13
+
+Shipped the **Student writing portfolio** Major Feature, scoped exactly as
+the "Deferred — student-facing" clarification already drew the line:
+teacher-typed and teacher-maintained, not a student submission system. New
+**"Writing Record"** section between the Roster Assignment Sheet and the
+Anonymous Response Display.
+
+- **Student picker.** A text input (`#recordStudentInput`) with a live
+  `<datalist>` — type a name, or pick one already offered. The datalist is
+  fed two ways: "Load a saved roster…" (`#recordRosterLoadSelect`) reads
+  `np_rosters` exactly the way the Roster Assignment Sheet already does
+  (read-only — confirmed by the new test), and any name that already has a
+  logged entry is always offered too, so a student who was hand-typed once
+  (no roster, a mid-year transfer, a make-up assignment) doesn't have to be
+  retyped from scratch next time. There's deliberately no separate "view"
+  vs. "add" control — typing or picking a name both shows that student's
+  existing entries and sets who the next "Add to record" targets.
+- **Logging an entry.** A prompt field, a date (defaults to today, editable),
+  and a note field. **"Use the prompt on stage"** copies the exact text of
+  whatever the generator is currently showing, but typing or pasting a
+  different prompt by hand is just as valid — a teacher backfilling a
+  conference record from a stack of graded papers isn't necessarily looking
+  at a matching prompt on screen right now. An entry only tags itself with
+  band/genre/rubric when its prompt text exactly matches `currentPrompt`
+  (i.e. came from "Use the prompt on stage"); a hand-typed prompt is logged
+  with `band`/`genre`/`rubricName` all `null` rather than guessed at.
+- **Storage.** New `gvb-writing-prompts:record` key
+  (`{ [studentName]: [{id, date, promptText, band, genre, rubricName, note}] }`),
+  via `wpg-store.js`'s new `loadRecord`/`saveRecord` — same validate-on-load
+  pattern as every other key in this file (drops malformed entries rather
+  than trusting a hand-edited localStorage blob). Deliberately its own key
+  and its own array per student, not folded into the existing "Prompt
+  history" list (which is un-attributed and scoped to the random-draw
+  generator's no-repeat logic) or into Prompt Sets (which are the teacher's
+  plan, not the record of who wrote what) — same separation-of-concerns
+  reasoning Round 4 gave for keeping a set's item list out of history.
+- **Editing and removing.** Each logged entry's note is an inline `<textarea>`
+  that saves on every `input` (same live-binding pattern as the Anonymous
+  Response Display's textareas) — no separate "save" step, since a teacher
+  typing conference notes shouldn't lose one to a missed click. The prompt
+  text and date are not editable in place; a wrong one is removed and
+  re-added, matching the simplicity level of "My Prompts" and the Anonymous
+  Response Display's own remove-only list items. Removing a student's last
+  entry deletes that student's key entirely rather than leaving an empty
+  array parked in storage.
+- **Print.** "Print this student's record" builds a full-page, dated list —
+  each entry as date + band/genre/rubric meta + the prompt (bold) + the
+  teacher's note — reusing the generic `.print-only h1` / `.print-meta` /
+  `ol`/`li` rules the Roster Assignment Sheet's print area already
+  established (same page-break-inside: avoid per entry), plus a handful of
+  new rules for the meta line, the bold prompt, and the note paragraph. This
+  is a full printed report, not a half-sheet — it wasn't built on
+  `halfSheetHtml()`, which is specifically the "same prompt twice, ruled
+  lines to write on" handout shape and doesn't fit a variable-length list of
+  past entries.
+
+**Not done, left for a future round:**
+- No dedicated export/import for this record — but `009-backup-restore.html`
+  needs no change: it iterates every localStorage key generically
+  (`Object.keys(localStorage)`), so the new `gvb-writing-prompts:record` key
+  is already covered by a full backup/restore without any tool-specific
+  wiring. Verified by reading its source; not re-tested end-to-end this
+  round.
+- No cross-linking from the Roster Assignment Sheet's per-run list back into
+  the Writing Record (e.g. a one-click "log this assignment for everyone" at
+  build time) — logging stays a deliberate, one-student-at-a-time teacher
+  action for now rather than a bulk one, since a conference note is
+  necessarily written per student anyway.
+- Sentence starters / "if you're stuck", tag-by-purpose, and paste-import
+  (Quick Wins/P13) — untouched, unchanged from prior rounds.
+- Convergence with `023-exit-ticket-generator.html` /
+  `024-number-talks-board.html` (P7) and dark mode (P1) — untouched, same
+  caveats as every prior round.
+
+**Testing:** `node --check` on `wpg-store.js` and the extracted inline
+`<script>` block — clean. `node Tools/board-check/check-dedupe.mjs` — clean.
+Extended the existing Playwright suite with a new
+`Tools/writing-prompt-generator/test/smoke-writing-record.mjs` (40 checks,
+`node Tools/writing-prompt-generator/test/smoke-writing-record.mjs`) covering:
+the record key starting empty; a saved `np_rosters` roster feeding the
+student datalist by name and size, and coming back byte-for-byte unchanged
+(read-only); picking a student with no entries; adding a hand-typed entry and
+confirming it lands in storage verbatim with `band`/`genre` both `null`;
+generating a stage prompt, using "Use the prompt on stage," and confirming
+the resulting entry's `band`/`genre` are populated from the matching stage
+prompt; a student logged with no roster at all still showing up in the
+datalist on a later lookup; two entries for one student appending (not
+overwriting) and rendering newest-first; editing a note textarea in place and
+confirming storage updates without a re-add; removing one entry among several;
+removing a student's last entry dropping their key entirely from the record
+object; the print button's disabled state tracking whether the currently
+viewed student has any entries; the printed page's heading, entry count,
+exact prompt text, and note text; and persistence across a reload. Both
+suites (`smoke-half-sheet.mjs`, `smoke-writing-record.mjs`) pass together,
+26 + 40 checks, zero console errors, nothing left the site.
+`npm run test:writing-prompt` still runs only the half-sheet suite — wiring
+the new suite into `package.json` and `sw.js`'s `PRECACHE_URLS` (this file
+doesn't need precaching, being test-only) is left to the orchestrating
+session's integration pass per this repo's worktree conventions.
