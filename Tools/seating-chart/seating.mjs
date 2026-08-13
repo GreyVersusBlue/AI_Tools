@@ -34,6 +34,15 @@ export const ROOM = {
 
 export const uid = (rng = Math.random) => rng().toString(36).slice(2, 9);
 
+/** Today as `YYYY-MM-DD` in the local timezone — a history entry's default
+    date, and the input to suggestQuarter() when nothing else is known. Not
+    `toISOString().slice(0,10)`, which reads UTC and drifts a date backward or
+    forward for anyone west or east of Greenwich near midnight. */
+export function todayISO(d = new Date()) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /* ---------------------------------------------------------------------------
    Shape
 --------------------------------------------------------------------------- */
@@ -48,6 +57,8 @@ export function newSection(name, rng = Math.random) {
     desks: [],      // { id, x, y, rot, locked }
     assign: {},     // { deskId: studentId }
     layouts: [],    // { id, name, desks, assign } — saved arrangements, see newLayout
+    history: [],    // { id, date, label, quarter, desks, assign, students } — dated
+                     // snapshots for the seating-history/rotation report, see newHistoryEntry
   };
 }
 
@@ -84,6 +95,10 @@ export function freshState(rng = Math.random) {
     printNames: true,       // the three print-only toggles Quick Wins ask for
     printPhotos: true,
     printViolations: true,
+    // Which quarter "now" is, for the front-row-once-per-quarter check and for
+    // tagging newly recorded history entries. A default guess, not a fact —
+    // this tool has no school calendar of its own; see suggestQuarter().
+    currentQuarter: suggestQuarter(todayISO()),
   };
 }
 
@@ -144,6 +159,7 @@ export function repairState(state, rng = Math.random) {
     printNames: state.printNames === false ? false : true,
     printPhotos: state.printPhotos === false ? false : true,
     printViolations: state.printViolations === false ? false : true,
+    currentQuarter: str(state.currentQuarter).trim() || suggestQuarter(todayISO()),
   };
 }
 
@@ -184,6 +200,28 @@ function repairLayout(l, studentIds, rng) {
   const deskIds = new Set(desks.map(d => d.id));
   const assign = cleanAssign(l.assign, deskIds, studentIds);
   return { id, name, desks, assign };
+}
+
+/** A recorded history entry is repaired the same way a saved layout is — its
+    own desks and assign, cleaned against ITS OWN desk ids and ITS OWN name
+    cache (not the live section's, which may have added or removed students
+    since) — so an assign entry naming nobody in the entry's own record is
+    exactly as invalid as a layout's assign naming nobody on the roster. */
+function repairHistoryEntry(h, rng) {
+  const id = str(h.id) || uid(rng);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(str(h.date)) ? str(h.date) : todayISO();
+  const label = str(h.label).trim() || `Recorded ${date}`;
+  const quarter = str(h.quarter).trim() || suggestQuarter(date);
+  const desks = (Array.isArray(h.desks) ? h.desks : [])
+    .filter(d => d && typeof d === 'object' && str(d.id))
+    .map(d => ({ id: str(d.id), x: num(d.x, 0), y: num(d.y, 0) }));
+  const deskIds = new Set(desks.map(d => d.id));
+  const students = (Array.isArray(h.students) ? h.students : [])
+    .filter(x => x && typeof x === 'object' && str(x.id) && str(x.name).trim())
+    .map(x => ({ id: str(x.id), name: str(x.name).trim() }));
+  const studentIds = new Set(students.map(x => x.id));
+  const assign = cleanAssign(h.assign, deskIds, studentIds);
+  return { id, date, label, quarter, desks, assign, students };
 }
 
 function repairSection(s, index, rng) {
@@ -233,7 +271,15 @@ function repairSection(s, index, rng) {
     .filter(l => l && typeof l === 'object')
     .map(l => repairLayout(l, studentIds, rng));
 
-  return { id, name, students, apart, together, desks, assign, layouts };
+  // Oldest first, so every history-reading function (studentHistoryRows,
+  // classHistorySummary, the front-row-per-quarter check) can assume
+  // chronological order instead of re-sorting.
+  const history = (Array.isArray(s.history) ? s.history : [])
+    .filter(h => h && typeof h === 'object')
+    .map(h => repairHistoryEntry(h, rng))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  return { id, name, students, apart, together, desks, assign, layouts, history };
 }
 
 /* ---------------------------------------------------------------------------
@@ -308,7 +354,19 @@ function shuffled(arr, rng) {
    The solver
 --------------------------------------------------------------------------- */
 
-function onePass(section, nbrs, apart, freeDesks, toPlace, seedDesk, seedStudent, rng) {
+/**
+ * `hist` (optional) carries the two seating-history nudges, both best-effort:
+ * `repeatMap` (studentId -> Set of seatKeys already sat in, from
+ * seatHistoryMap) steers a student away from a desk that repeats an earlier
+ * seat, and `frontRowSet`/`dueSet` (desk ids in the front row / student ids
+ * who haven't had one this quarter, from frontRowDeskIds/frontRowStatus)
+ * gives a due student first claim on a front-row desk. Neither ever returns
+ * null the way an unsatisfiable put-together does — a rotation nudge losing
+ * to Keep Apart or a full room is exactly the "warn, don't break the room"
+ * behaviour the feature is supposed to have.
+ */
+function onePass(section, nbrs, apart, freeDesks, toPlace, seedDesk, seedStudent, rng, hist = {}) {
+  const { deskById = {}, repeatMap = null, frontRowSet = null, dueSet = null } = hist;
   const wanted = new Set(toPlace);
   const blocks = shuffled(togetherGroups(section.students, section.together).map(g => shuffled(g, rng)), rng);
   const order = [];
@@ -338,6 +396,20 @@ function onePass(section, nbrs, apart, freeDesks, toPlace, seedDesk, seedStudent
       else return null;                                  // this pass cannot honour a put-together
     }
     if (!cands.length) return null;
+
+    // Nudge 1: don't reseat this student somewhere they've already sat,
+    // unless every remaining candidate desk would.
+    if (repeatMap && repeatMap[sid] && repeatMap[sid].size) {
+      const fresh = cands.filter(did => !repeatMap[sid].has(seatKey(deskById[did])));
+      if (fresh.length) cands = fresh;
+    }
+    // Nudge 2: a student overdue for a front-row seat this quarter gets
+    // first claim on one, whenever this pass still has one free.
+    if (dueSet && dueSet.has(sid) && frontRowSet) {
+      const front = cands.filter(did => frontRowSet.has(did));
+      if (front.length) cands = front;
+    }
+
     const pick = cands[Math.floor(rng() * cands.length)];
     studentDesk[sid] = pick;
     deskStudent[pick] = sid;
@@ -353,10 +425,28 @@ function onePass(section, nbrs, apart, freeDesks, toPlace, seedDesk, seedStudent
  * one broken rule than no chart.
  *
  * Locked desks keep their occupant exactly where they are.
+ *
+ * `quarter` (optional) turns on the two seating-history nudges (see onePass):
+ * pass the section's `currentQuarter` to steer away from repeat seats and
+ * toward a front-row seat for whoever's overdue this quarter. Omit it (the
+ * default) and assignSeats behaves exactly as it did before history existed
+ * — every existing caller that doesn't know about quarters is unaffected.
  */
-export function assignSeats(section, { attempts = 800, rng = Math.random } = {}) {
+export function assignSeats(section, { attempts = 800, rng = Math.random, quarter = '' } = {}) {
   const nbrs = neighborMap(section.desks);
   const apart = apartMap(section.students, section.apart);
+
+  const deskById = {};
+  section.desks.forEach(d => { deskById[d.id] = d; });
+  const history = Array.isArray(section.history) ? section.history : [];
+  const repeatMap = history.length ? seatHistoryMap(history) : null;
+  const frontRowSet = quarter ? new Set(frontRowDeskIds(section.desks)) : null;
+  // Gated on history.length, not just a quarter being set: `currentQuarter`
+  // always has a default value (see freshState), so without this gate every
+  // section would get "due" nudges from the moment the page loads, whether
+  // or not the teacher has ever recorded an arrangement. Once the rotation
+  // has a first recorded data point, this seeds fairly from there.
+  const dueSet = (quarter && history.length) ? frontRowStatus({ ...section, history }, quarter).dueIds : null;
 
   const seedDesk = {}, seedStudent = {}, lockedSids = new Set(), lockedDesks = new Set();
   for (const d of section.desks) {
@@ -374,7 +464,8 @@ export function assignSeats(section, { attempts = 800, rng = Math.random } = {})
 
   let best = null, bestScore = -Infinity;
   for (let i = 0; i < attempts; i++) {
-    const pass = onePass(section, nbrs, apart, freeDesks, toPlace, seedDesk, seedStudent, rng);
+    const pass = onePass(section, nbrs, apart, freeDesks, toPlace, seedDesk, seedStudent, rng,
+      { deskById, repeatMap, frontRowSet, dueSet });
     if (!pass) continue;
     const report = checkConstraints({ ...section, assign: pass.assign }, nbrs);
     // Seated students first, then rules met. A chart that seats 28 with one broken
@@ -626,4 +717,204 @@ export function matchPhotoFilenames(filenames, students) {
   }
   const unmatched = filenames.filter(f => !claimed.has(f));
   return { matches, unmatched };
+}
+
+/* ---------------------------------------------------------------------------
+   Seating history and rotation — "nobody sits in the same seat twice" and
+   "everybody sits in the front row once per quarter" as real constraints,
+   plus the printable evidence for a parent/admin conversation about seating
+   fairness. See Status in improvement prompts/005-seating-chart-generator.md
+   for how "unit" and "quarter" boundaries were decided: a recorded entry is
+   whatever the teacher labels it ("Unit 3") on whatever date they record it,
+   and "quarter" is a freeform, editable tag defaulted by suggestQuarter()
+   rather than read from a real school calendar (this tool has none).
+--------------------------------------------------------------------------- */
+
+/** A desk's stable "spot in the room", for comparing seats across recordings
+    that may have added, removed, or nudged other desks in between — grid-
+    snapped so a pixel of drag jitter never counts as a different seat. */
+export function seatKey(desk) {
+  return snap(num(desk.x, 0)) + ':' + snap(num(desk.y, 0));
+}
+
+/** Which desks count as "the front row": within `tolerance` of whichever desk
+    sits closest to the board. A row built by "+ Row of" or "Make grid" steps
+    a full `deskH + 24` (94px) between rows, so a tolerance well under that
+    (60% of a desk's height) catches a hand-nudged front desk without also
+    catching row two. */
+export function frontRowDeskIds(desks, tolerance = ROOM.deskH * 0.6) {
+  if (!desks || !desks.length) return [];
+  const minY = Math.min(...desks.map(d => num(d.y, 0)));
+  return desks.filter(d => num(d.y, 0) <= minY + tolerance).map(d => d.id);
+}
+
+/** A default guess at "which quarter is `dateStr`", using the shape of a
+    common US school year (Aug-Oct, Nov-Jan, Feb-Mar, Apr-Jul). It is only
+    ever a starting point for the prompt in recordHistory() — real school
+    calendars vary school to school, and this tool has no calendar of its own
+    to read a real one from (School Calendar does; this stays freeform). */
+export function suggestQuarter(dateStr) {
+  const d = new Date(String(dateStr || '') + 'T00:00:00');
+  const m = Number.isFinite(d.getTime()) ? d.getMonth() + 1 : new Date().getMonth() + 1;
+  if (m >= 8 && m <= 10) return 'Q1';
+  if (m === 11 || m === 12 || m === 1) return 'Q2';
+  if (m === 2 || m === 3) return 'Q3';
+  return 'Q4';
+}
+
+/**
+ * A dated snapshot of who sat where: the section's own desks and assignment
+ * at the moment it's recorded, plus a name cache so a student later removed
+ * from the roster still shows up by name in an old record instead of
+ * "(removed)". `label` is freeform ("Unit 3", "Poetry unit"); `quarter`
+ * groups entries for the front-row-once-per-quarter check.
+ */
+export function newHistoryEntry(section, { date, label, quarter } = {}, rng = Math.random) {
+  const d = str(date) || todayISO();
+  return {
+    id: uid(rng),
+    date: d,
+    label: str(label).trim() || `Recorded ${d}`,
+    quarter: str(quarter).trim() || suggestQuarter(d),
+    desks: section.desks.map(dk => ({ id: dk.id, x: num(dk.x, 0), y: num(dk.y, 0) })),
+    assign: { ...section.assign },
+    students: section.students.map(st => ({ id: st.id, name: st.name })),
+  };
+}
+
+/** studentId -> Set of seatKeys they've occupied, across every recorded
+    history entry (not the live floor — see checkHistoryConstraints for
+    that). Each entry supplies its own desks, so a desk id that has since
+    been reused for an unrelated desk on the live floor can't collide. */
+export function seatHistoryMap(history) {
+  const m = {};
+  for (const h of (history || [])) {
+    const deskById = {};
+    (h.desks || []).forEach(d => { deskById[d.id] = d; });
+    for (const [deskId, sid] of Object.entries(h.assign || {})) {
+      const d = deskById[deskId];
+      if (!d) continue;
+      if (!m[sid]) m[sid] = new Set();
+      m[sid].add(seatKey(d));
+    }
+  }
+  return m;
+}
+
+/**
+ * Per-student front-row status for one quarter: how many recorded entries
+ * tagged with that quarter sat them in that entry's own front row.
+ * `dueIds` is every current roster student with zero — "hasn't had it yet,
+ * and isn't being denied it indefinitely" is exactly the thing a fair-
+ * rotation report and the auto-assign nudge both need to know.
+ */
+export function frontRowStatus(section, quarter) {
+  const counts = {};
+  for (const h of (section.history || [])) {
+    if (h.quarter !== quarter) continue;
+    const front = new Set(frontRowDeskIds(h.desks));
+    for (const [deskId, sid] of Object.entries(h.assign || {})) {
+      if (!front.has(deskId)) continue;
+      counts[sid] = (counts[sid] || 0) + 1;
+    }
+  }
+  const rows = section.students.map(st => ({
+    studentId: st.id,
+    name: st.name,
+    timesFrontRow: counts[st.id] || 0,
+  }));
+  const dueIds = new Set(rows.filter(r => r.timesFrontRow === 0).map(r => r.studentId));
+  return { quarter, rows, dueIds };
+}
+
+/**
+ * What the LIVE assignment on the floor right now would repeat or still
+ * leave overdue, checked against recorded history — the toolbar/status-line
+ * report. Same shape of question as checkConstraints() (apart/together), for
+ * a rule the solver treats as a best-effort nudge rather than a hard block
+ * (see onePass): a chart can still violate it, and this is how that shows.
+ * Pass `quarter` as '' to skip the front-row half of the report. Both halves
+ * are naturally silent on a section with no recorded history yet — an empty
+ * `seatHist`/`frontRowStatus` has nothing to flag — which is what keeps this
+ * mute for the many sections that never touch Seating History at all.
+ */
+export function checkHistoryConstraints(section, quarter) {
+  const seatHist = seatHistoryMap(section.history);
+  const deskById = {};
+  (section.desks || []).forEach(d => { deskById[d.id] = d; });
+
+  const repeats = [];
+  for (const [deskId, sid] of Object.entries(section.assign || {})) {
+    const d = deskById[deskId];
+    if (!d) continue;
+    const had = seatHist[sid];
+    if (had && had.has(seatKey(d))) repeats.push({ studentId: sid, deskId });
+  }
+
+  let dueUnseated = [];
+  if (quarter && section.history && section.history.length) {
+    const { dueIds } = frontRowStatus(section, quarter);
+    const front = new Set(frontRowDeskIds(section.desks));
+    const seatedFront = new Set();
+    for (const [deskId, sid] of Object.entries(section.assign || {})) if (front.has(deskId)) seatedFront.add(sid);
+    for (const id of dueIds) {
+      if (seatedFront.has(id)) continue;   // the arrangement on the floor right now already covers them
+      const st = section.students.find(s => s.id === id);
+      if (st) dueUnseated.push({ studentId: id, name: st.name });
+    }
+  }
+
+  return { repeatOK: repeats.length === 0, repeats, dueUnseated };
+}
+
+/** One student's seating history, oldest first — the row-by-row printable
+    evidence for a fairness conversation about one student. `repeat` marks
+    every entry from the second time this student's seat key recurs onward. */
+export function studentHistoryRows(section, studentId) {
+  const seen = new Set();
+  const rows = [];
+  for (const h of (section.history || [])) {
+    // h.assign is deskId -> studentId, so finding this student's seat means
+    // searching the values, not indexing by their id.
+    const deskId = Object.keys(h.assign || {}).find(d => h.assign[d] === studentId);
+    if (!deskId) continue;
+    const deskById = {};
+    (h.desks || []).forEach(d => { deskById[d.id] = d; });
+    const desk = deskById[deskId];
+    if (!desk) continue;
+    const key = seatKey(desk);
+    const repeat = seen.has(key);
+    seen.add(key);
+    rows.push({ date: h.date, label: h.label, quarter: h.quarter, frontRow: frontRowDeskIds(h.desks).includes(deskId), repeat });
+  }
+  return rows;
+}
+
+/** Whole-section rotation summary for one quarter: every current student's
+    total recorded appearances, front-row appearances in `quarter`, and how
+    many of their recorded seats repeated an earlier one of their own — the
+    printable "is this section's rotation actually fair" evidence. */
+export function classHistorySummary(section, quarter) {
+  const byStudent = {};
+  section.students.forEach(st => { byStudent[st.id] = { studentId: st.id, name: st.name, total: 0, repeats: 0, frontRowThisQuarter: 0 }; });
+  const seen = {};
+  for (const h of (section.history || [])) {
+    const front = new Set(frontRowDeskIds(h.desks));
+    const deskById = {};
+    (h.desks || []).forEach(d => { deskById[d.id] = d; });
+    for (const [deskId, sid] of Object.entries(h.assign || {})) {
+      const row = byStudent[sid];
+      if (!row) continue;   // recorded, but no longer on the roster
+      row.total++;
+      const desk = deskById[deskId];
+      if (desk) {
+        const key = seatKey(desk);
+        if (!seen[sid]) seen[sid] = new Set();
+        if (seen[sid].has(key)) row.repeats++;
+        seen[sid].add(key);
+      }
+      if (h.quarter === quarter && front.has(deskId)) row.frontRowThisQuarter++;
+    }
+  }
+  return Object.values(byStudent);
 }
