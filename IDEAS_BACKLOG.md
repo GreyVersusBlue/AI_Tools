@@ -68,26 +68,26 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Backup & Restore | Device-to-device migration | Carry the versioned backup envelope straight to a new laptop over `_shared/webrtc-pair.js`, with no file ever written to disk. |
-| 2 | Classroom Timer | Phone as timer remote | Extend the existing `webrtc-pair.js` mirror so the paired phone starts, pauses, and advances agenda segments while the teacher walks the room. |
-| 3 | Command Center | Phone remote for the dashboard | Pair a phone via `_shared/webrtc-pair.js` to drive five named actions — timer, next student, sign in, advance period — from across the room. |
-| 4 | Tournament Bracket & Station Rotation | Real phone-to-laptop remote | Replace the same-device BroadcastChannel remote with `_shared/webrtc-pair.js` LAN pairing, so a phone actually drives the gym display. |
-| 5 | Digital Hall Pass / Sign-Out Log | Two-teacher hallway sync | Pair two teachers' boards over `_shared/webrtc-pair.js` so a shared hallway shows one combined out-count and one overtime alert instead of two blind halves. |
-| 6 | Name Picker | Equity by seat position | Join the equity report to `seating-chart-v1` so the printed participation summary shows call rates by row and region of the room. |
-| 7 | Behavior & Points Tracker | Seating-chart board layout | Arrange the tap targets the way the room actually is, read from `seating-chart-v1`, instead of alphabetically. |
-| 8 | Group / Team Generator | Year-long pairing matrix | Retain pair history beyond the current two generations and print a who-has-worked-with-whom grid that drives an "everyone pairs with everyone" grouping mode. |
-| 9 | Bracket / Tournament Generator | Pools and Swiss formats | Pools feeding an elimination bracket, plus a Swiss pairing mode, so nobody is eliminated after a single round. |
-| 10 | Exit Ticket / Bell Ringer Generator | Bell-ringer sequences | Plan a prompt per day for a week or unit, advanced by date with manual override, mirroring Writing Prompt's Prompt Sets. |
-| 11 | Writing Prompt Generator | Teacher-kept writing record | Log which prompt each student wrote to and the teacher's note, printable per student for a conference. |
-| 12 | Novel Study / Reading Circles Manager | Multiple books in one project | Four circles reading four different books at four paces, with per-book schedules and one combined meeting-day view. |
-| 13 | Digital Escape Room / Puzzle Lock Builder | Printable paper packet | Emit the same puzzle chain as a cut-apart paper packet with a teacher key, so the room runs with no devices at all. |
-| 14 | QR Scavenger Hunt Builder | Paper no-device hunt mode | Print clue cards with code words plus a team answer sheet and teacher key, for the day the Chromebooks stayed in the cart. |
-| 15 | Gallery Walk QR Codes | Verify the whole batch before printing | Decode every generated code with `_shared/qr-scan.js` and flag any station whose code will not scan reliably, before the ink is spent. |
-| 16 | QR Code Generator | Equipment check-out mode | Scan printed asset codes in and out, keeping a local record of which kit is with which group, printable as an inventory sheet. |
-| 17 | Lab Group & Role Randomizer | Gate groups on the safety contract | Read `lsct_sections_v1` and flag or exclude students who have not returned a signed lab safety contract. |
-| 18 | Number Talks / Mental Math Routine Board | Class strategy wall library | Accumulate the class's own named strategies across the year and print them as wall reference posters. |
-| 19 | Image → PDF Assembler | Per-student portfolio PDFs | Group images by student name parsed from filenames and emit one PDF each, delivered as a single archive via the shared JSZip build. |
-| 20 | Graph Paper & Number Line Generator | Graphing worksheet mode | A problem printed above each small coordinate plane, plus a matching answer-key sheet with the line or curve already plotted. |
+| 1 | Backup & Restore | 🔒 **CLAIMED (2026-08-13)** — Device-to-device migration | Carry the versioned backup envelope straight to a new laptop over `_shared/webrtc-pair.js`, with no file ever written to disk. |
+| 2 | Classroom Timer | 🔒 **CLAIMED (2026-08-13)** — Phone as timer remote | Extend the existing `webrtc-pair.js` mirror so the paired phone starts, pauses, and advances agenda segments while the teacher walks the room. |
+| 3 | Command Center | 🔒 **CLAIMED (2026-08-13)** — Phone remote for the dashboard | Pair a phone via `_shared/webrtc-pair.js` to drive five named actions — timer, next student, sign in, advance period — from across the room. |
+| 4 | Tournament Bracket & Station Rotation | 🔒 **CLAIMED (2026-08-13)** — Real phone-to-laptop remote | Replace the same-device BroadcastChannel remote with `_shared/webrtc-pair.js` LAN pairing, so a phone actually drives the gym display. |
+| 5 | Digital Hall Pass / Sign-Out Log | 🔒 **CLAIMED (2026-08-13)** — Two-teacher hallway sync | Pair two teachers' boards over `_shared/webrtc-pair.js` so a shared hallway shows one combined out-count and one overtime alert instead of two blind halves. |
+| 6 | Name Picker | 🔒 **CLAIMED (2026-08-13)** — Equity by seat position | Join the equity report to `seating-chart-v1` so the printed participation summary shows call rates by row and region of the room. |
+| 7 | Behavior & Points Tracker | 🔒 **CLAIMED (2026-08-13)** — Seating-chart board layout | Arrange the tap targets the way the room actually is, read from `seating-chart-v1`, instead of alphabetically. |
+| 8 | Group / Team Generator | 🔒 **CLAIMED (2026-08-13)** — Year-long pairing matrix | Retain pair history beyond the current two generations and print a who-has-worked-with-whom grid that drives an "everyone pairs with everyone" grouping mode. |
+| 9 | Bracket / Tournament Generator | 🔒 **CLAIMED (2026-08-13)** — Pools and Swiss formats | Pools feeding an elimination bracket, plus a Swiss pairing mode, so nobody is eliminated after a single round. |
+| 10 | Exit Ticket / Bell Ringer Generator | 🔒 **CLAIMED (2026-08-13)** — Bell-ringer sequences | Plan a prompt per day for a week or unit, advanced by date with manual override, mirroring Writing Prompt's Prompt Sets. |
+| 11 | Writing Prompt Generator | 🔒 **CLAIMED (2026-08-13)** — Teacher-kept writing record | Log which prompt each student wrote to and the teacher's note, printable per student for a conference. |
+| 12 | Novel Study / Reading Circles Manager | 🔒 **CLAIMED (2026-08-13)** — Multiple books in one project | Four circles reading four different books at four paces, with per-book schedules and one combined meeting-day view. |
+| 13 | Digital Escape Room / Puzzle Lock Builder | 🔒 **CLAIMED (2026-08-13)** — Printable paper packet | Emit the same puzzle chain as a cut-apart paper packet with a teacher key, so the room runs with no devices at all. |
+| 14 | QR Scavenger Hunt Builder | 🔒 **CLAIMED (2026-08-13)** — Paper no-device hunt mode | Print clue cards with code words plus a team answer sheet and teacher key, for the day the Chromebooks stayed in the cart. |
+| 15 | Gallery Walk QR Codes | 🔒 **CLAIMED (2026-08-13)** — Verify the whole batch before printing | Decode every generated code with `_shared/qr-scan.js` and flag any station whose code will not scan reliably, before the ink is spent. |
+| 16 | QR Code Generator | 🔒 **CLAIMED (2026-08-13)** — Equipment check-out mode | Scan printed asset codes in and out, keeping a local record of which kit is with which group, printable as an inventory sheet. |
+| 17 | Lab Group & Role Randomizer | 🔒 **CLAIMED (2026-08-13)** — Gate groups on the safety contract | Read `lsct_sections_v1` and flag or exclude students who have not returned a signed lab safety contract. |
+| 18 | Number Talks / Mental Math Routine Board | 🔒 **CLAIMED (2026-08-13)** — Class strategy wall library | Accumulate the class's own named strategies across the year and print them as wall reference posters. |
+| 19 | Image → PDF Assembler | 🔒 **CLAIMED (2026-08-13)** — Per-student portfolio PDFs | Group images by student name parsed from filenames and emit one PDF each, delivered as a single archive via the shared JSZip build. |
+| 20 | Graph Paper & Number Line Generator | 🔒 **CLAIMED (2026-08-13)** — Graphing worksheet mode | A problem printed above each small coordinate plane, plus a matching answer-key sheet with the line or curve already plotted. |
 | 21 | Immersion Roleplay Scenario Generator | Speaking assessment layer | Tap a short rubric per pair while circulating, stored per class, printed as a per-student speaking record. |
 | 22 | Timeline Builder | Timeline plus map print | Pair events to places and print the timeline along the bottom with a map above, each event pinned to both. |
 | 23 | Primary Source Analysis Worksheet Generator | Side-by-side corroboration worksheet | Print two sources on one sheet with shared sourcing questions plus a "where do they disagree" comparison block and answer key. |
