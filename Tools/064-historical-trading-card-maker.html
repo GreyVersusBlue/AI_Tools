@@ -236,7 +236,9 @@
     </div>
     <div>
       <button class="secondary" id="printBtn">Print cards</button>
-      <p class="hint" style="margin:.4rem 0 0; max-width: 220px;">Prints fronts, then backs (row-mirrored) &mdash; flip the whole printed stack along its long edge before reprinting for the backs.</p>
+      <button class="secondary" id="pdfBtn">Download PDF</button>
+      <button class="secondary" id="zipBtn">All PNGs (zip)</button>
+      <p class="hint" style="margin:.4rem 0 0; max-width: 260px;">Print and PDF lay out fronts, then backs (row-mirrored) &mdash; flip the whole printed stack along its long edge before reprinting for the backs.</p>
     </div>
   </div>
 
@@ -284,6 +286,7 @@
           </div>
         </div>
         <button type="button" class="secondary small" id="flipBtn">Flip to back</button>
+        <button type="button" class="secondary small" id="pngBtn">Download PNG</button>
         <p class="hint" style="margin:0; text-align:center; max-width: 2.5in;">Exactly what prints &mdash; it updates as you type. Click the card to flip it.</p>
       </div>
     </div>
@@ -326,6 +329,10 @@
 <script src="historical-trading-card-maker/htcm-themes.js"></script>
 <script src="historical-trading-card-maker/htcm-photo.js"></script>
 <script src="historical-trading-card-maker/htcm-render.js"></script>
+<script src="../_shared/duplex-print.js"></script>
+<script src="historical-trading-card-maker/htcm-export.js"></script>
+<script src="../_shared/vendor/jspdf/jspdf.umd.min.js" defer></script>
+<script src="../_shared/vendor/jszip/jszip.min.js" defer></script>
 <script>
 (function () {
   'use strict';
@@ -333,7 +340,7 @@
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
    'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
    'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
-   'adjustBtn', 'newStars', 'setNameInput', 'numberBtn'].forEach(function (id) {
+   'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -564,6 +571,31 @@
   }
   els.addEntryBtn.addEventListener('click', addEntry);
 
+  /* ---------- exports ---------- */
+  function busy(btn, label, fn) {
+    var old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = label;
+    fn(function () { btn.disabled = false; btn.textContent = old; });
+  }
+  els.pngBtn.addEventListener('click', function () {
+    busy(els.pngBtn, 'Rendering…', function (done) {
+      HtcmExport.exportPng(previewEntry(), renderOpts(), done);
+    });
+  });
+  els.pdfBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    busy(els.pdfBtn, 'Rendering…', function (done) {
+      HtcmExport.exportPdf(entries, renderOpts(), done);
+    });
+  });
+  els.zipBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    busy(els.zipBtn, 'Rendering…', function (done) {
+      HtcmExport.exportZip(entries, renderOpts(), done);
+    });
+  });
+
   /* ---------- set name & numbering ---------- */
   els.numberBtn.addEventListener('click', function () {
     if (!entries.length) { alert('Add at least one card first.'); return; }
@@ -615,36 +647,15 @@
   });
 
   /* ---------- print: row-mirrored duplex front/back grids ----------
-     paginate() and mirrorPageRows() below are adapted from VocabLayout in
-     Tools/vocab-flashcard-generator/vfg-layout.js (the sibling Vocabulary
-     Flashcard & Word Wall Generator tool), which already solved this same
-     front/back print-alignment problem for its own card grids. The logic
-     is copied in — not loaded via a shared <script> tag — so this file
-     stays self-contained. */
+     paginate() and mirrorPageRows() started life in the Vocabulary Flashcard
+     Generator, were hand-copied here, and moved to _shared/duplex-print.js
+     when the PDF exporter became their third consumer — the extraction
+     trigger recorded in this tool's improvement prompt. */
   var PRINT_COLS = 3;
   var PRINT_ROWS = 2; // 6 cards/page: fits this tool's 3.4in-tall card comfortably within a letter page alongside the section label
   var PRINT_PER_PAGE = PRINT_COLS * PRINT_ROWS;
-
-  function paginate(items, perPage) {
-    var pages = [];
-    for (var i = 0; i < items.length; i += perPage) pages.push(items.slice(i, i + perPage));
-    return pages;
-  }
-  /** Reverse item order within each row of a page so that printing this
-      page on the back of the matching front page (flipping the whole
-      printed stack over along its long edge, then running it back
-      through the printer) lines each back card up under its matching
-      front card. Incomplete rows are padded with `null` (blank cards)
-      before mirroring so the padding also ends up on the correct side. */
-  function mirrorPageRows(pageItems, cols) {
-    var mirrored = [];
-    for (var i = 0; i < pageItems.length; i += cols) {
-      var row = pageItems.slice(i, i + cols);
-      while (row.length < cols) row.push(null);
-      mirrored = mirrored.concat(row.slice().reverse());
-    }
-    return mirrored;
-  }
+  var paginate = DuplexPrint.paginate;
+  var mirrorPageRows = DuplexPrint.mirrorPageRows;
 
   function renderOpts() { return { theme: doc.settings.theme }; }
   function frontCardHtml(e) { return HtcmRender.frontHtml(e, renderOpts()); }

@@ -231,16 +231,24 @@
       '</linearGradient>';
   }
 
-  /** Shared SVG resources (rarity foil gradients; photo clip shapes join in a
-      later round). Injected once into the page body, and again inside
-      #printArea by the print builder — see the header comment. */
-  function defsSvg() {
-    return '<svg class="htcm-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+  /** The inner <defs> markup alone — the canvas exporter inlines it into a
+      frame SVG before rasterizing, since a standalone data-URI image can't
+      resolve url(#…) refs into the host document. */
+  function defsInner() {
+    return '<defs>' +
       gradient('htcm-foil-silver', [[0, '#dfe5ea'], [0.35, '#98a2ac'], [0.55, '#eef1f4'], [0.8, '#7e8792'], [1, '#b7bfc7']]) +
       gradient('htcm-foil-purple', [[0, '#c9a6ea'], [0.35, '#6b3fa0'], [0.55, '#e6d4f7'], [0.8, '#55307f'], [1, '#9a6fc4']]) +
       gradient('htcm-foil-gold', [[0, '#f0dc8f'], [0.35, '#b08d2f'], [0.55, '#f7ecc0'], [0.8, '#8a6d1d'], [1, '#d4b354']]) +
       clipDefs() +
-      '</defs></svg>';
+      '</defs>';
+  }
+
+  /** Shared SVG resources (rarity foil gradients, photo clip shapes).
+      Injected once into the page body, and again inside #printArea by the
+      print builder — see the header comment. */
+  function defsSvg() {
+    return '<svg class="htcm-defs" width="0" height="0" style="position:absolute" aria-hidden="true">' +
+      defsInner() + '</svg>';
   }
 
   global.HtcmFrames = {
@@ -249,6 +257,7 @@
     SHAPES: SHAPES,
     frameSvg: frameSvg,
     shapePath: shapePath,
+    defsInner: defsInner,
     defsSvg: defsSvg
   };
 })(window);

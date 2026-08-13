@@ -120,6 +120,7 @@
   window.HtcmRender = {
     escapeHtml: escapeHtml,
     frontHtml: frontHtml,
-    backHtml: backHtml
+    backHtml: backHtml,
+    statIconSvg: statIcon // the canvas exporter rasterizes the same icons
   };
 })();

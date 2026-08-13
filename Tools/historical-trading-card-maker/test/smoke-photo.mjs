@@ -110,7 +110,47 @@ ok(await page.evaluate(() => !!document.querySelector('#printArea svg.htcm-defs 
                              document.querySelectorAll('clipPath[id="htcm-clip-shield"]').length >= 2),
    'the clipPath defs are duplicated into the print subtree');
 
-/* ── 5. no console noise anywhere in the run ─────────────────────────────── */
+/* ── 5. canvas export: 300 DPI, and the pixels land where the DOM puts them ─ */
+const sample = await page.evaluate(() => new Promise((res) => {
+  // a synthetic entry with a known-white photo, independent of editor state
+  const c = document.createElement('canvas');
+  c.width = c.height = 8;
+  const cx = c.getContext('2d');
+  cx.fillStyle = '#fff';
+  cx.fillRect(0, 0, 8, 8);
+  const entry = {
+    id: 'x', name: 'Sample', facts: ['A fact.'],
+    stats: [{ label: 'Power', value: '8/10' }],
+    image: { src: c.toDataURL('image/jpeg'), w: 8, h: 8, crop: { x: 0.5, y: 0.5, scale: 1 }, shape: 'rrect', filter: 'none' },
+    meta: { rarity: 'common', setName: '', cardNo: 0, setSize: 0, stars: 0 }, theme: null
+  };
+  HtcmExport.renderCardCanvas(entry, 'front', { theme: 'parchment' }, (canvas) => {
+    const ctx = canvas.getContext('2d');
+    const px = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data);
+    res({
+      w: canvas.width, h: canvas.height,
+      border: px(Math.round(canvas.width / 2), 2),   // cut-line stroke, theme accent
+      photo: px(Math.round(canvas.width / 2), 150),  // inside the banner window: the white test photo
+      paper: px(Math.round(canvas.width / 2), canvas.height - 200) // empty stats area: parchment paper
+    });
+  });
+}));
+eq(sample.w, 750, 'the export canvas renders 2.5in at 300 DPI');
+eq(sample.h, 1050, 'and 3.5in at 300 DPI');
+near(sample.border[0], 138, 30, 'the cut-line border strokes in the theme accent (r≈138)');
+ok(sample.photo[2] > 235, 'the photo pixels land inside the shaped window (white test photo)');
+near(sample.paper[0], 244, 12, 'the paper keeps the theme color (r≈244)');
+near(sample.paper[2], 208, 14, 'and its warmth (b≈208) — not white, not the photo');
+
+/* ── 6. the export libraries are wired: jsPDF and JSZip from _shared/vendor ─ */
+ok(await page.evaluate(() => !!(window.jspdf && window.jspdf.jsPDF)), 'the vendored jsPDF is loaded');
+ok(await page.evaluate(() => !!window.JSZip), 'the vendored JSZip is loaded');
+ok(await page.evaluate(() => !!(window.DuplexPrint && DuplexPrint.paginate && DuplexPrint.mirrorPageRows)),
+   'the extracted _shared/duplex-print.js is loaded');
+eq(await page.evaluate(() => DuplexPrint.mirrorPageRows(['a', 'b', 'c', 'd'], 3).join(',')), 'c,b,a,,,d',
+   'row-mirroring still pads and reverses each row');
+
+/* ── 7. no console noise anywhere in the run ─────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
