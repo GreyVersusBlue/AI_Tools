@@ -9,6 +9,102 @@
 
 ## Status
 
+### Pass 2 — Round 3 — 2026-08-13 — device-to-device roster transfer (backlog item P9, "All-rosters device transfer")
+
+**Shipped.** "Move Everything to Another Device" — a new card (viewer column,
+below "Archived rosters & past years") opens a modal that pairs this tool
+with the same tool open on another computer over `_shared/webrtc-pair.js`
+(manual-signaling WebRTC, no server, same-Wi-Fi/LAN only by design — see that
+file's header) and moves everything in one shot. No file is ever written to
+disk; nothing leaves the local network.
+
+- **What "every roster, sidecar record, and archive" turned out to mean,
+  concretely, in this tool's actual schema:** every entry of `np_rosters`
+  (the active rosters), each one's `crh_students_v1` sidecar (`meta` — period,
+  course, school year — plus each student's `preferred`/`say`) and its own
+  `crh_archived_students` withdrawn-student list, folded together by the
+  existing `snapshotRoster()` helper (the same one Archive-a-roster and
+  Start-a-new-school-year already use) — plus every individually archived
+  roster and every archived school year from `crh_archive_v1`. That is
+  every key in this file's own `OWN_KEYS` — the same array the dependency
+  scanner already uses to define "this tool's own data" — so a future fifth
+  key can't quietly fall out of a transfer that still claims to move
+  everything.
+- **Import is additive, not a destructive overwrite.** Each incoming active
+  roster goes through `restoreSnapshot()` — the exact function "Restore" on
+  an archived roster/year already calls — which auto-renames on a name
+  collision (`"X" → "X (2)"`) rather than replacing whatever the receiving
+  device already has. Incoming archived rosters/years are prepended into the
+  receiving device's own `crh_archive_v1` arrays. A teacher moving to a bare
+  new laptop gets an exact copy; a teacher who already has rosters here loses
+  nothing of their own. The tradeoff, named rather than hidden: there's no
+  "replace everything" mode and no de-duplication if the same transfer is run
+  twice — re-running a transfer produces a second renamed copy, not a merge.
+  That was a deliberate scope cut for a first version, consistent with how
+  the existing shared-roster-URL import already behaves (always a new,
+  uniquely-named roster, never a merge into an existing one).
+- **Chunked transfer, reusing the exact protocol** `schedule-visualizer`'s
+  `sv-handoff.js` already ships for the same "one-shot bulk data transfer"
+  shape: a `meta`/`chunk`/`end` message sequence over the data channel, split
+  at 12,000 characters per message — comfortably under every browser's
+  practical per-message ceiling for an `RTCDataChannel`, per that file's own
+  comment, which this tool's own test now proves against a real 200-student
+  roster that spans several chunks and arrives with nothing lost or
+  duplicated.
+- **A real bug caught before it shipped:** the first draft attached the data
+  channel's `'open'` listener *after* `applyAnswer()` resolved, on the theory
+  that `'open'` can't fire before then anyway. It can — on a fast local
+  connection the event can fire before that `.then()` callback even runs, and
+  a listener attached after an event has already fired never sees it. Fixed
+  by attaching `'open'`/`'close'` the moment the channel is *created* (right
+  after `createOffer()` resolves), matching the safe pattern
+  `classroom-timer/ct-mirror.js` and `schedule-visualizer/sv-handoff.js`
+  already use — attaching early can't race a fired-before-we-listened event,
+  because `'open'` genuinely cannot fire until a remote description has been
+  applied, which can't happen before the user pastes/scans a reply.
+- **Both a QR code and a plain-text code, on both sides, with a camera-scan
+  option** — matching `classroom-timer/ct-mirror.js` and
+  `classroom-timer/mirror.html`'s fuller pattern (QR + `_shared/qr-scan.js`
+  camera scan + a paste-back textarea as the fallback) rather than
+  `schedule-visualizer`'s QR-and-paste-only handoff modal, since some
+  devices/browsers can't reach each other's camera at all and the paste path
+  has to work regardless.
+- No new vendored libraries and no new precache entries: `webrtc-pair.js`,
+  `qr-scan.js`, `vendor/jsqr/jsqr.js`, and `vendor/qrcode/qrcode.js` were
+  already in `sw.js`'s `PRECACHE_URLS` (added when Classroom Timer and School
+  Layout Visualizer shipped their own pairing features) and this tool already
+  loaded the `qrcode.js` encoder for its existing per-roster QR share, so
+  `sw.js` needed no changes at all.
+- Everything lives inline in `006-class-roster-hub.html`'s existing script,
+  matching this file's own established style (a single classic-script IIFE,
+  `window.WebRTCPair`/`window.QRScan` as plain globals) rather than adding a
+  new ES-module support file the way `schedule-visualizer/sv-handoff.js`
+  does — this tool didn't already have that module-script wiring, and
+  introducing it for one feature would have been more surface area than the
+  feature needed.
+- **Verified end-to-end**, not just logic-only: `test/smoke-export.mjs`
+  (still the only suite for this tool — extended, not replaced, since
+  `package.json`'s `test:roster-hub` script and `check-tests.mjs`'s wiring
+  guard are both out of scope for this round) opens **two real Playwright
+  browser contexts** — two independent `localStorage` stores standing in for
+  two devices — and drives the actual buttons end to end: Send on device A,
+  paste/generate the reply on device B, Connect, and Import. `_shared/
+  webrtc-pair.js` is host-candidates-only by design, and two contexts on
+  `127.0.0.1` really do negotiate a genuine peer connection (loopback is a
+  valid same-machine ICE candidate) and really do move bytes over a real
+  `RTCDataChannel` — this is not a mock. The one thing genuinely not
+  exercised is the camera-scan buttons themselves (no `getUserMedia` in a
+  headless run); the manual paste path they fall back to is what's driven,
+  and it is the same code path either way once the code text is in hand.
+  The scenario doubles as the "export the full payload, reimport it, verify
+  nothing is lost or duplicated" round-trip check: a detailed roster (sidecar
+  meta + per-student detail + an archived-withdrawn student), a bare roster
+  with no sidecar record, a 200-student roster sized to force multiple
+  chunks, one individually archived roster, one archived school year, and a
+  same-named roster already sitting on the receiving device to prove the
+  collision auto-rename — 24 new checks, all passing, none of them mocking
+  the connection itself.
+
 ### Pass 2 — Round 2 — 2026-08-11 — session `m3r8ro`
 
 **Shipped roster export to spreadsheet** (backlog rank 6). This tool holds the
@@ -183,9 +279,10 @@ What shipped, against the backlog below:
    drawn card and the pronunciation underneath. That is the proof that the
    sidecar is worth having, and it defines the read-side helper the other
    fourteen tools would copy.
-2. **Roster transfer between devices (P9)** — QR sharing is per-roster and
-   now carries `meta`; all-rosters-at-once over `webrtc-pair.js` is the
-   school-to-home move and is still unbuilt.
+2. ~~**Roster transfer between devices (P9)**~~ — **done Pass 2 Round 3.**
+   "Move Everything to Another Device" sends every roster, its sidecar
+   record, and the whole archive over `webrtc-pair.js` in one shot; see the
+   Pass 2 Round 3 note at the top of Status.
 3. **Apply a rename across all tools** — the last unbuilt bullet under Bulk
    operations, and the one that would make the dependency scan actionable
    rather than only informative.
@@ -210,6 +307,11 @@ What shipped, against the backlog below:
 - **Export to CSV or Excel** — one roster or every roster, with preferred
   name, pronunciation, period, course and school year as columns (one sheet
   per roster in the .xlsx)
+- **Move everything to another device** — every roster, its `crh_students_v1`
+  sidecar detail, and the whole `crh_archive_v1` archive, over a direct
+  WebRTC connection (QR or paste code, no server, same Wi-Fi/LAN only). No
+  file is created; import is additive and auto-renames on a name collision
+  rather than overwriting anything already on the receiving device.
 
 ## Quick Wins
 
@@ -267,8 +369,11 @@ What shipped, against the backlog below:
   section structure. Pairs directly with Backup & Restore. *(Shipped as
   "Start a new school year" — files every roster under a year label in
   `crh_archive_v1`, restorable.)*
-- **Roster transfer between devices** (P9) — QR sharing exists; peer-to-peer
+- **Done —** **Roster transfer between devices** (P9) — QR sharing exists; peer-to-peer
   transfer of *all* rosters would make the school-to-home move trivial.
+  *(Shipped as "Move Everything to Another Device" — every roster, its
+  sidecar record, and the whole archive, over `webrtc-pair.js`; see the Pass
+  2 Round 3 note at the top of Status.)*
 - **Partially done —** **Bulk operations**: merge two rosters, split one, apply a rename across all
   tools. *(Move-ticked-students and merge are shipped; "apply a rename across
   all tools" is still open — see "Where the next round should pick up" above.)*
