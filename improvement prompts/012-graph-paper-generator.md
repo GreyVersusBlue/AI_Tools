@@ -152,6 +152,104 @@ the labelled/header/faded square-grid case and the 4-plane case.
 - Pre-plotted content (a line/curve/point set drawn onto the grid before
   printing) is still open and is the highest-value Major Feature remaining.
 
+## Worksheet mode round — 2026-08-13 (backlog rank 20)
+
+Shipped **Worksheet mode** (`GraphPaperRender.renderWorksheet`), the first of
+the two Major Features called out above — a new eighth tab that reuses
+`PLANE_LAYOUTS`/`onePlaneSvg` exactly as the existing multi-plane coordinate
+mode does, but prints a problem above each small plane and, when "Show
+answer key" is checked, plots that problem's line or curve onto its plane.
+
+- **Expression parsing is a ported adaptation, not a shared extraction.**
+  `tokenizeGraphExpr`/`parseGraphExpression` are a hand-rolled tokenizer +
+  recursive-descent parser/evaluator copied from
+  `024-number-talks-board.html`'s arithmetic parser, adapted for a single
+  free variable (`x` is a variable token here, not — as in the number-talks
+  bank — a spelled-out multiplication operator) and extended with `^`
+  (right-associative) so a parabola can be plotted, not just a line. It
+  parses once into a small AST and evaluates that AST at ~240 sample points
+  per plotted curve, rather than evaluating straight through like the
+  number-talks version does, since a curve needs the same expression
+  evaluated repeatedly. Per this row's own guidance, and because 024's own
+  doc still has an open, unresolved question about whether the arithmetic
+  parser belongs in `_shared/`, this round did not attempt that extraction —
+  the two parsers stay independent copies.
+- **The plotted line/curve is drawn outside the faded/ink-saving `<g>`**,
+  the same "stays full ink regardless of ink-saving mode" contract the
+  header already has — with its own fixed `stroke="#c43a2f"` rather than
+  `currentColor`, so wrapping the grid group in a lighter color for
+  ink-saving mode cannot fade the answer along with it.
+- **A pole or an out-of-range domain breaks the plotted curve into separate
+  `<polyline>` runs** rather than drawing a line through the gap or letting
+  a division-by-zero / off-plane point leak into the path — `plotExprSvg`
+  samples the expression across `[xMin, xMax]` and starts a fresh run
+  whenever a sample is non-finite, null (the division-by-zero case), or
+  plots outside `[yMin, yMax]`.
+- **Random problem generation** (`generateProblem`, linear or quadratic)
+  takes an injectable `rng` (defaulting to `Math.random`) so it stays
+  testable the same way `renderCalibration`'s tests avoid depending on real
+  timers — a fixed sequence makes a generated problem deterministic. The
+  leading coefficient is rerolled until non-zero (a "linear" problem with
+  slope 0, or a "quadratic" with no `x^2` term, isn't worth graphing).
+- The worksheet HTML panel follows the existing per-mode conventions
+  exactly: a new `mode-tab`/`mode-panel` pair, new `defaultSettings` fields,
+  read/write in `readFormIntoSettings`/`applySettingsToForm`, and a new
+  `render()` branch. The per-plane problem list reuses the same
+  grow/trim-to-count pattern as the number-line "independent rows" UI
+  (`ensureWorksheetProblemsLength`/`buildWorksheetProblemsUI`), seeding new
+  slots with a generated problem (or blank, for "Custom") rather than
+  leaving them empty.
+
+New suite `Tools/graph-paper-generator/test/smoke-worksheet-mode.mjs`
+(84 checks), following `smoke-calibration.mjs`'s DOM-free approach — loads
+`gpg-render.js` directly in plain Node (no browser) and asserts geometry
+straight off the returned SVG string. Covers the parser (valid/invalid
+expressions, implicit multiplication, all four operator symbols, `^`
+right-associativity, division-by-zero), `generateProblem` (determinism under
+a fixed rng, 200 real-`Math.random()` draws with no zero-coefficient and
+100% round-trip through the parser), and `renderWorksheet` geometry: blank
+vs. answer-key diffing (identical once `<polyline>`s are stripped), an
+unparseable problem skipped without breaking the others, a parabola clipped
+to the physical page, the `copies` layout-fallback and problems-array
+pad/truncate contracts, landscape, and the header+faded+answer-key
+combination including the "plotted lines are never inside the faded `<g>`"
+check. Also confirms `onePlaneSvg`'s new `plotFn` hook is a true no-op for
+`renderCoordinatePlane`, which never sets it.
+
+### Challenges
+
+- **A test-authoring trap, not a product bug:** the first draft of the
+  quadratic-generation test used a fixed fake rng that returned a constant
+  `0.5` for all three draws. `nonZeroRandInt`'s reroll-until-nonzero loop for
+  the leading coefficient (range -2..2, 5 buckets) maps `r=0.5` to bucket 0
+  on every draw, so a constant-0.5 rng never terminates — the test hung the
+  Node process indefinitely rather than failing. Fixed by using a first draw
+  that lands on a nonzero bucket (`0.9`); real `Math.random()` callers are
+  unaffected since a genuinely random sequence terminates the reroll loop
+  almost surely.
+- A second test (the header + ink-saving + answer-key combination check)
+  initially omitted `xMin`/`xMax`/`yMin`/`yMax`/`interval`/`labelEvery` —
+  every real caller (the HTML panel) always supplies these, but leaving them
+  undefined in the test collapses `onePlaneSvg`'s range math to `NaN`, which
+  silently clips every plotted point as "out of range" rather than throwing
+  or producing visible `NaN` text. The test would have passed its
+  no-`NaN`/no-`undefined` check while actually testing that plotting
+  disappears when the range is missing, not that plotting survives a
+  dressed-up sheet. Fixed by passing the same range options the suite's
+  other `renderWorksheet` calls use.
+
+### Where the next round should pick up
+
+- **Pre-plotted content** as a standalone Major Feature (points, shapes, or
+  content on the plain `renderCoordinatePlane`/`renderGraphPaper` modes, not
+  just inside a generated worksheet problem) is still open — worksheet mode
+  only plots inside its own problem/answer-key flow.
+- More grid types (hex, polar, log/semi-log, engineering, storyboard, music
+  staff) remain open and are unaffected by this round.
+- Whether the ported expression parser should eventually be extracted to
+  `_shared/` alongside 024's copy is still an open question — deliberately
+  not decided this round, per 024's own doc.
+
 ## What it does today
 
 - Grid types: square, dot grid, **isometric** (line and dot), with sizes in
@@ -191,15 +289,16 @@ the labelled/header/faded square-grid case and the 4-plane case.
 
 ## Major Features
 
-- **Pre-plotted content.** Draw a line, a parabola, a set of points, or a
-  shape onto the grid before printing — so the tool produces worksheets, not
-  just paper. A small expression parser (the one in
-  `024-number-talks-board.html` already tokenizes and evaluates arithmetic) could
-  plot `y = 2x + 3` directly.
-- **Worksheet mode.** N small coordinate planes on a page, each with a
-  different problem printed above it, plus an answer key with the correct
-  graph drawn. This turns a paper generator into a graphing-worksheet
-  generator, which is a much bigger deal.
+- **Pre-plotted content** (outside worksheet mode, on the plain coordinate
+  plane / graph paper modes) is still open. Worksheet mode (below) shipped
+  its own copy of the expression parser scoped to that mode's problems only.
+- **Done — 2026-08-13.** **Worksheet mode.** N small coordinate planes on a
+  page, each with a different problem printed above it, plus an answer key
+  with the correct graph drawn. This turns a paper generator into a
+  graphing-worksheet generator, which is a much bigger deal. *(Shipped as a
+  new "Worksheet" tab — `GraphPaperRender.renderWorksheet` — with a ported
+  adaptation of `024-number-talks-board.html`'s expression tokenizer/
+  evaluator; see the Worksheet mode round below.)*
 - **Isometric and dot paper for other subjects** — technical drawing, 3D
   volume nets, perspective grids for art.
 - **Graph paper with a data table beside it**, for science labs — the exact
