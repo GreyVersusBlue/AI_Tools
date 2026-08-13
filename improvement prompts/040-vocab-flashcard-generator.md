@@ -9,6 +9,110 @@
 
 ## Status
 
+**2026-08-13 — more printables from one list (backlog: "More printables from
+one list").** Shipped **word search, crossword, bingo cards, and a matching
+quiz** — four new print formats built from the same saved term/definition
+list, alongside the existing flashcards/word-wall/self-quiz. Each is its own
+mode tab (`Word search`, `Crossword`, `Bingo`, `Matching quiz`), with its own
+options panel, live preview, and Print button, wired through the same
+`currentItems()` (sort/shuffle already applied) so these can never disagree
+with what the flashcard modes show for the same list.
+
+The generation logic (`vocab-flashcard-generator/vfg-printables.js`) is a
+pure-function sibling of `vfg-layout.js` — no DOM, same IIFE-attaches-to-
+`global` shape — with its own Node suite
+(`test/printables-logic.test.mjs`, 98 assertions) that doesn't need a
+browser. A second Playwright suite (`test/smoke-printables.mjs`, 25
+assertions) covers the browser wiring: the four tabs are reachable, Print
+produces the right page shape, the too-few case shows a message instead of
+opening a print dialog on garbage, and there's no console noise.
+
+- **Word search.** Terms are hidden across, down, or on a forward diagonal
+  (no reversed/backwards words — cheap to add, not required, and reversed
+  words are the single biggest thing that makes a word search feel unfair to
+  a middle-schooler, so it was deliberately left out). Only the letters of
+  each term go in the grid — spaces and punctuation are stripped, so "Cell
+  division" becomes `CELLDIVISION`; that's the one lossy step, and the
+  options panel says so. Placement is greedy, longest terms first (they're
+  hardest to fit, so they get first pick), each tried at up to 300 random
+  position/direction combinations against a size derived from the list's
+  total letters; a term that never finds room is dropped and named in a
+  banner rather than silently missing from the word list. Needs 3+ terms
+  with 2+ letters or it says so instead of drawing a puzzle. Prints a puzzle
+  page (grid + word list) and a separate answer-key page (grid with the
+  found letters highlighted).
+
+- **Crossword — the scope tradeoff to know going in.** This is a **greedy
+  best-effort placement, not a solver.** A crossword generator that
+  guarantees every term places, in a genuinely optimal layout, is a real
+  constraint-satisfaction/backtracking problem — out of scope for this
+  round, and arguably out of scope for a client-side classroom tool at all.
+  What's here instead: place the longest term first, then repeat passes over
+  the remaining terms placing any that share a letter with something already
+  on the grid (scored by intersection count, best available placement wins),
+  until a full pass places nothing more. **Terms that never intersect
+  anything are dropped and named** — reported the same way the word search
+  reports what didn't fit, never a silently incomplete puzzle. A definition
+  is required (it's the clue), so a term with no definition is excluded
+  before placement is even attempted. The practical consequence, seen in
+  testing: a list of *related* terms (biology vocabulary sharing common
+  letters — "photosynthesis", "ecosystem", "mitosis") places most or all of
+  its terms; a list of unrelated short words with little letter overlap
+  (e.g. "chlorophyll" against the rest of a small biology set, in one test
+  run) places worse. That's inherent to greedy placement, not a bug to chase
+  — a smarter solver could do better on hard lists, but "best-effort, honest
+  about what didn't fit" was the right scope for this round. Needs 3+
+  eligible terms; if fewer than 2 terms ever manage to intersect anything
+  (a `no-fit` case, distinct from `too-few`), it says a crossword couldn't be
+  built rather than printing a lone floating word. Prints a clue page
+  (numbered grid + Across/Down definitions) and a separate answer-key page
+  (grid with letters filled in).
+
+- **Bingo cards.** Card size (3×3, 4×4, or 5×5 with a classic FREE center)
+  scales automatically with how many call-items (terms or definitions,
+  teacher's choice) are available — needs at least 9 to fill even the
+  smallest card. Every card in a set is an independently-seeded random
+  subset-and-arrangement of the same pool, so "Cards to print" (default 4,
+  up to 12) never hands out two identical cards to a class, while every cell
+  on every card still comes from one caller's master list. Prints one page
+  per card plus a caller's-list page that reads the *other* field (if cards
+  show terms, the caller's list shows the definition to read aloud, in
+  parentheses next to the term it belongs to).
+
+- **Matching quiz.** Numbered terms in a left column, a scrambled/lettered
+  right column of definitions, a blank for the student's letter. Needs at
+  least 2 terms with definitions. Prints the quiz and a separate answer key.
+
+All four share one deterministic-randomness trick worth knowing about:
+placement/shuffling is seeded from a hash of the word list's own text
+(`hashString` + `mulberry32` in `vfg-printables.js`), not `Math.random()`.
+The same list regenerates the exact same word search/crossword/matching
+layout on every re-render, so toggling an unrelated setting (cut lines, sort
+order) doesn't reshuffle a puzzle the teacher was mid-look at — while bingo
+cards, which need to *differ from each other on purpose*, use `seed +
+cardIndex` per card. This also made the Node test suite possible without a
+snapshot library: identical input asserted to produce byte-identical output.
+
+Judgment calls made this round, for the next person to know about rather
+than rediscover: (1) crossword and word search both use *letters only* from
+each term (spaces/punctuation stripped) — there's no clean way to show a
+space in a letter grid, and this matches how every paper word-search/
+crossword generator handles multi-word terms; (2) bingo's "which field is
+called out" is a per-list setting (`bingoField`, defaults to terms-on-cards/
+definitions-called), not per-card, since a caller reading from two different
+scripts mid-game would be worse than picking one; (3) the crossword's
+`no-fit` case (distinct from `too-few`) exists because a "crossword" of one
+isolated word is just a word — worth a distinct, honest message rather than
+technically-succeeding output nobody would recognize as a crossword. New
+mode-tab row now has seven tabs instead of three; `.mode-tabs` gained
+`flex-wrap` so it degrades to two rows on narrow layouts instead of
+squeezing tab labels unreadably thin.
+
+Not attempted this round: the Frayer-model-page idea from the same Major
+Feature entry (word search/crossword/bingo/matching were the four the
+backlog row named explicitly); text-to-speech; the shared-vocabulary-store
+Open Question is unchanged.
+
 **2026-08-11 — toolbar visibility fix.** Not a backlog row; found while
 comparing two parallel implementations of the share round below. The toolbar
 holding the list switcher, Export, Import and both new share buttons was only
@@ -156,6 +260,17 @@ Features / Moonshot.
 - **Share a list by link or QR** (`buildSharePayload`, `importSharedList`,
   `normalizeIncomingList`) — a `?deck=` URL carrying the words and the card
   settings, received as a new uniquely-named saved list
+- **Four more printable formats from the same list** (`vfg-printables.js`,
+  pure logic + its own Node test suite): **word search**
+  (`generateWordSearch`, greedy placement across/down/diagonal, puzzle +
+  answer-key pages), **crossword** (`generateCrossword`, greedy best-effort
+  intersection placement — not a solver, see Status for the tradeoff — clue
+  + answer-key pages), **bingo cards** (`generateBingoCards`, 3×3/4×4/5×5
+  scaling with list size, multiple independently-seeded card layouts plus a
+  caller's master list), and a **matching quiz** (`generateMatchingQuiz`,
+  numbered terms against scrambled lettered definitions, quiz + answer-key
+  pages). All four honestly refuse (a message, not a garbage puzzle) below
+  their minimum term count.
 
 ## Quick Wins
 
@@ -212,10 +327,11 @@ Features / Moonshot.
   term, pause, definition — with shuffle and a "missed it" pile the teacher
   taps, producing a reteach list at the end. The existing quiz preview is
   most of the way there.
-- **More printable formats from the same list**: a word search, a crossword,
-  a matching worksheet, a bingo card set, a quiz with an answer key, a Frayer
-  model page per word. Each is a mechanical transformation of the same data
-  and each gets used.
+- **Partially done — 2026-08-13.** **More printable formats from the same
+  list**: a word search, a crossword, a matching worksheet, a bingo card set
+  **(shipped this round — see Status)**, plus a Frayer model page per word
+  **(not attempted — the backlog row that scoped this round named only the
+  four that shipped)**.
 - **Word wall as a system**, not a print job — cards sized and coloured by
   unit, with a printable index of which words are up, and an easy way to
   retire a unit's words and add the next.
@@ -270,9 +386,20 @@ work, and don't promote one without Devon saying so.
   carry, let alone a QR. Whoever builds it should decide up front whether
   images travel in a share link at all (probably not — share the words, note
   that pictures stay behind) rather than discovering it after the fact.
-- **More printable formats from the same list** (word search, crossword, bingo,
-  matching quiz, Frayer page) is the biggest remaining Major Feature and is
-  still untouched — it is a pile of mechanical transformations of data the tool
-  already parses.
+- ~~**More printable formats from the same list** (word search, crossword,
+  bingo, matching quiz, Frayer page) is the biggest remaining Major Feature
+  and is still untouched.~~ **Done, 2026-08-13, except the Frayer page** —
+  word search, crossword, bingo, and matching quiz shipped; see Status for
+  the crossword's greedy-placement tradeoff. The Frayer model page (one
+  four-quadrant page per word: term, definition, example, non-example/
+  picture) is the one piece of this Major Feature still untouched — it's a
+  per-word page layout, not a puzzle-generation problem, so it doesn't need
+  `vfg-printables.js`'s seeded-RNG/placement machinery at all; it's closer in
+  shape to `wallCardHtml`/`buildWallPages` (one page or quadrant per item)
+  than to anything built this round.
 - The share payload is versioned (`v: 1`) but nothing reads that field yet.
-  A future shape change should branch on it rather than guessing.
+  A future shape change should branch on it rather than guessing. (This
+  round added `bingoCount`/`bingoField` to the payload under the same v1
+  shape rather than bumping the version — they're two more optional fields
+  `normalizeIncomingList` already defaults for older payloads, the same
+  pattern every prior round's new fields used.)

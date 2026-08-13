@@ -34,6 +34,7 @@ one file.
 | `Tools/004-Classroom Timer.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |
 | `Tools/006-class-roster-hub.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |
 | `Tools/007-Name Picker.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |
+| `Tools/013-lab-safety-contract-tracker.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |
 | `Tools/016-qr-code-generator.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |
 | `Tools/017-gallery-walk-qr.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |
 | `Tools/018-qr-scavenger-hunt-builder.html` | `<script src="../_shared/vendor/qrcode/qrcode.js">` |

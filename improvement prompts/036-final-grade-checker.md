@@ -2,13 +2,100 @@
 
 **Tool file:** `Tools/036-final_grade_checker.html`
 **Support folder:** `Tools/final-grade-checker/` — `grade-math.mjs`,
-`grade-math.test.mjs`, `test/smoke-whatif.mjs` (`npm run test:final-grade`)
+`grade-math.test.mjs`, `test/smoke-whatif.mjs` (`npm run test:final-grade`),
+`test/smoke-triage.mjs` (not yet wired into `test:final-grade` — see
+2026-08-13 Status entry)
 
 **Current description (from README):** Enter grades by hand or paste a TAC export, and check the math automatically.
 
 ---
 
 ## Status
+
+**2026-08-13 — Missing-work triage report (claimed backlog row).** Shipped the
+Major Feature this file had left "deferred" twice: from the same paste
+already accepted, a **Missing-Work Triage** card lists who has zeros or
+blank quarters and who is one quarter's worth of improvement from their next
+letter grade, plus a **Print Catch-Up Slips** button that prints one small
+slip per flagged student.
+
+- **The data model is per-quarter, not per-assignment** — the parser this
+  tool has always had reads four quarter percentages per student (a TAC
+  export), never individual assignment scores. The backlog idea's wording
+  ("who has zeros", "turning in the next assignment") was written assuming
+  assignment-level detail that does not exist in this paste format. Rather
+  than invent assignment data the tool cannot see, "missing work" and "one
+  assignment away" are both defined at the grain the data actually has:
+    - **Missing work** = a quarter that is a recorded literal **zero**
+      (parses to exactly `0`, e.g. `F(0.00)`) or a quarter that is
+      **genuinely blank** (never entered). These are kept as two separate
+      lists per student rather than one "missing" count — a zero is a
+      conversation about work not turned in; a blank might just be ungraded
+      yet — matching the existing tool's own distinction (`toScore(v) ===
+      null` vs. `=== 0`) that the parser already makes but nothing
+      downstream had surfaced.
+    - **"One assignment from a letter change" = one quarter from a letter
+      change.** For a student with all four quarters on file (so a real
+      final grade exists to move up FROM — a student still missing a
+      quarter belongs to the missing-work list, not this one, for the same
+      reason the tool has never printed a three-quarter average as a final
+      grade), find their single **lowest-scoring quarter** — the quarter
+      most likely to hold a zero, and the most plausible single thing left
+      to redo or turn in — and compute the *exact minimum score* that
+      quarter alone would need, holding the other three exactly as pasted,
+      to cross the student into the next letter up, by whichever of the two
+      county methods (quality points or percentage average) gets there
+      cheaper. This is deliberately **not** "bring every zero up to a fixed
+      guess like 70" — an arbitrary constant would either overstate what's
+      needed (discouraging) or understate it (misleading a conference). A
+      student already at an A, or whose lowest quarter can't reach the next
+      letter even at a perfect 100, is correctly left off the list rather
+      than shown a fake target.
+- **No second calculation.** `missingWork()`, `letterAbove()`,
+  `requiredScoreForQuarter()` and `triageStudent()` all live in
+  `grade-math.mjs` next to `calcFinals()`/`getLetter()`, and
+  `requiredScoreForQuarter()` is the existing "What Do I Need" backward
+  algebra generalised from "the one missing quarter" to "any one quarter,
+  filled or not" — same weights, same rounding boundary, same quality-points
+  tie-break, driven by the same `calcOpts()` the cards already use. Switching
+  Grading Settings to strict rounding changes both the *target letter* (a
+  final that was a B under the county's round-at-.5 rule can genuinely be a
+  C under strict) and the score needed to reach it, and the triage list
+  moves with it rather than disagreeing — the browser suite checks this
+  precisely, the same way the class-wide what-if's suite does.
+- The catch-up slip reuses the existing `#slip-print-container` and
+  `.printing-slips` print pass that "Print Student Slips" already built,
+  as a separate **Print Catch-Up Slips** button rather than another line on
+  that slip — the two answer different questions (current grade + arithmetic,
+  vs. what needs to change) and only print the subset of students actually
+  flagged, not the whole roster.
+- Both the triage card and the catch-up slips are **imported-class only**,
+  matching the class-wide what-if's own reasoning: there is nothing to
+  triage about one hand-entered student, and the whole feature is about
+  reading a pasted gradebook at a glance.
+- **Verified**: 26 new hand-worked cases in `grade-math.test.mjs` (199 total,
+  0 failed) covering `missingWork`/`letterAbove`/`requiredScoreForQuarter`/
+  `triageStudent`, including an explicit "not achievable even at 100" case
+  and the exact zero-to-79.50-crosses-B-to-A example named in the backlog
+  idea. A new browser suite, `Tools/final-grade-checker/test/smoke-triage.mjs`
+  (34 checks, 0 failed), proves the page reads a four-student paste into the
+  right two lists (not fewer, not more), that switching to strict rounding
+  moves both the target letter and the required score together, that Print
+  Catch-Up Slips prints exactly the flagged students with the same numbers
+  as the summary, and that manual mode hides the card again. Existing suites
+  re-run clean after this change: `grade-math.test.mjs` (199/199) and
+  `test/smoke-whatif.mjs` (38/38, unaffected).
+- **Not wired into `npm test`/`test:final-grade`** — this round's task
+  boundaries excluded editing `package.json`. Run it directly:
+  `node Tools/final-grade-checker/test/smoke-triage.mjs`. Whoever next edits
+  `package.json` for this tool should add it alongside `smoke-whatif.mjs`.
+- **Not done:** no per-card badge on the student cards themselves (the
+  triage lives only in the dedicated card + slips, not as an extra line
+  under every quarter, unlike the what-if feature); the "one quarter away"
+  lever only ever considers the single lowest-scoring quarter, never a
+  cheaper combination across two quarters; and the catch-up slip does not
+  reach the Excel/PDF class exports, consistent with how the class-wide
+  what-if also deliberately stops at the screen and the print pass.
 
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **class-wide curve
 what-if** (backlog rank 13). "What if I add three points to everyone" and "what
@@ -150,6 +237,12 @@ Visualizer, rubric-scored input, progress reports).
   and/or drop each student's lowest, recomputed through the same
   `calcFinals()`, showing which letters move and naming who; the pasted data
   and the real final are never altered
+- **Missing-work triage** (`missingWork`, `letterAbove`,
+  `requiredScoreForQuarter`, `triageStudent`) — for an imported class, a card
+  listing who has a recorded zero or a blank quarter, and who is one
+  quarter's worth of improvement (the single lowest-scoring quarter, raised
+  to the exact minimum needed) from their next letter grade; a **Print
+  Catch-Up Slips** button prints one slip per flagged student
 - Exports: **Excel**, **PDF** (jsPDF), **Share PDF** (Web Share API), print
 - Loads `_shared/theme.css` and `_shared/a11y.js`; lazy-loads libraries
   (`loadLibs`, `withLibs`)
@@ -191,12 +284,16 @@ Visualizer, rubric-scored input, progress reports).
 
 ## Major Features
 
-- **Skipped — deferred.** **Missing-work triage.** Import the gradebook, and get: who has zeros, whose
+- **Done — 2026-08-13.** **Missing-work triage.** Import the gradebook, and get: who has zeros, whose
   grade would move a letter if they turned in one thing, and a printable
   per-student list. This is the highest-value thing that can be computed from
-  a gradebook export and no gradebook does it well. *(Not attempted this
-  round — out of this round's scope, though the per-student slip's "missing
-  quarters" line is a small piece of the same idea.)*
+  a gradebook export and no gradebook does it well. *(A Missing-Work Triage
+  card lists students with a recorded zero or blank quarter and students one
+  quarter's worth of improvement from their next letter grade — "one
+  assignment" reinterpreted as "one quarter", the finest grain this paste
+  format actually carries; see the 2026-08-13 Status entry for exactly how
+  that's computed and why. Print Catch-Up Slips prints one slip per flagged
+  student.)*
 - **Skipped — deferred.** **Scenario modelling.** "If everyone's lowest test is dropped", "if I curve
   by 4 points", "if this assignment is worth 50 instead of 100" — recomputed
   across the class instantly, with a before/after distribution. *(Not

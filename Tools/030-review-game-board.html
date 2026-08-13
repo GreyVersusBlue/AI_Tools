@@ -18,6 +18,18 @@
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="review-game-board/rgb-store.js"></script>
+<script src="review-game-board/rgb-bank-store.js"></script>
+<script type="module">
+  // rgb-audio-db.js is an ES module, which evaluates AFTER the classic
+  // inline <script> further down (module scripts are deferred to after the
+  // document is parsed; the classic inline script runs at its point in the
+  // markup, earlier). Attach it to window and fire a ready event so that
+  // script can wait for it rather than assume it has already landed — same
+  // pattern as 035-schedule-visualizer.html's sv-recovery.js handoff.
+  import * as RGBAudioDB from './review-game-board/rgb-audio-db.js';
+  window.RGBAudioDB = RGBAudioDB;
+  window.dispatchEvent(new Event('rgb-audio-db-ready'));
+</script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -81,9 +93,45 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
+  /* Top-level "Game Boards" / "Question Bank" switch — a bigger, page-level
+     pair, deliberately styled apart from .tab-btn's manual/import tabs
+     nested inside the board editor, so the bank reads as its own area
+     rather than one more tab of a single board's edit form. */
+  .top-tabs { display: flex; gap: .5rem; margin-bottom: 1.1rem; }
+  .top-tab-btn {
+    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+    border-radius: 8px; padding: .6rem 1.2rem; font-weight: 700; font-size: 1rem;
+  }
+  .top-tab-btn.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .top-section { display: none; }
+  .top-section.active { display: block; }
+
+  /* ---- question bank ---- */
+  .bank-filter-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: .8rem; }
+  .bank-filter-row .field { display: flex; flex-direction: column; gap: .25rem; min-width: 9rem; }
+  .bank-filter-row label { margin: 0; }
+  .bank-filter-row select, .bank-filter-row input[type="text"] { min-width: 9rem; }
+  .bank-list { border: 1px solid var(--line-strong); border-radius: 8px; max-height: 26rem; overflow-y: auto; }
+  .bank-entry {
+    display: grid; grid-template-columns: auto 1fr auto; gap: .3rem .8rem; align-items: start;
+    padding: .6rem .8rem; border-bottom: 1px solid var(--line);
+  }
+  .bank-entry:last-child { border-bottom: none; }
+  .bank-entry input[type="checkbox"] { margin-top: .25rem; width: auto; }
+  .bank-entry .bank-q { font-weight: 600; margin: 0 0 .2rem; }
+  .bank-entry .bank-a { color: var(--muted); margin: 0 0 .3rem; font-size: .88rem; }
+  .bank-tags { display: flex; gap: .35rem; flex-wrap: wrap; }
+  .bank-tag {
+    font-size: .72rem; font-weight: 600; padding: .1rem .5rem; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--muted);
+  }
+  .bank-empty { padding: 1.2rem; color: var(--muted); text-align: center; font-size: .9rem; }
+  .bank-pull-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
+  .bank-pull-row input[type="text"] { width: 14rem; }
+
   .category-block { border: 1px solid var(--line-strong); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .9rem; background: #fdfdfb; }
   .category-block .cat-name { font-weight: 700; margin-bottom: .5rem; }
-  .clue-row { display: grid; grid-template-columns: 5.5rem 1fr 1fr auto auto; gap: .5rem; margin-bottom: .5rem; align-items: start; }
+  .clue-row { display: grid; grid-template-columns: 5.5rem 1fr 1fr auto auto auto; gap: .5rem; margin-bottom: .5rem; align-items: start; }
   .clue-row input, .clue-row textarea { font-size: .88rem; }
   .clue-row textarea { min-height: 2.4rem; resize: vertical; }
   /* Image cell: a button until there's a picture, then a thumbnail you can
@@ -97,6 +145,15 @@
   }
   .clue-image-size { font-size: .65rem; color: var(--muted); }
 
+  /* Audio cell: same idea as the image cell — a couple of small buttons
+     until there's a clip, then a compact play control. Narrower controls
+     than a native <audio> element (which is ~200px wide) because six
+     columns already share this row with the question and answer. */
+  .clue-audio-cell { display: flex; flex-direction: column; align-items: center; gap: .25rem; width: 5rem; }
+  .clue-audio-cell button { padding: .3rem .4rem; font-size: .72rem; width: 100%; }
+  .clue-audio-cell button.recording { background: var(--err); border-color: var(--err); }
+  .clue-audio-size { font-size: .65rem; color: var(--muted); }
+
   /* Projected clue image — capped by height so a tall portrait source can't
      push the question text off the bottom of the screen. */
   .overlay .clue-image {
@@ -104,6 +161,13 @@
     border-radius: 8px; background: #fff; padding: .4rem; margin-bottom: 1.2rem;
   }
   .overlay .clue-image.show { display: block; }
+  /* Projected clue audio — a real <audio controls>, not a custom button:
+     free play/pause/seek/volume and screen-reader support for a control
+     thirty students may never have looked at before. */
+  .overlay .clue-audio {
+    display: none; width: min(28rem, 80vw); margin-bottom: 1.2rem;
+  }
+  .overlay .clue-audio.show { display: block; }
   .cat-actions, .board-actions { display: flex; gap: .6rem; margin-top: .5rem; flex-wrap: wrap; }
 
   .toolbar select { font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink); }
@@ -225,6 +289,13 @@
     </div>
   </div>
 
+  <div class="top-tabs" id="topTabs">
+    <button type="button" class="top-tab-btn active" data-top="boards">Game Boards</button>
+    <button type="button" class="top-tab-btn" data-top="bank">Question Bank</button>
+  </div>
+
+  <div class="top-section active" id="boardsSection">
+
   <div class="toolbar" id="toolbar" style="display:none;">
     <label style="margin:0;font-weight:600;font-size:.85rem;">Board:</label>
     <select id="boardSwitch"></select>
@@ -308,6 +379,83 @@
     </div>
   </div>
 
+  </div><!-- /#boardsSection -->
+
+  <div class="top-section" id="bankSection">
+    <div class="card">
+      <label for="bankQuestion">Question</label>
+      <textarea id="bankQuestion" rows="2" placeholder="e.g. What is the capital of Peru?"></textarea>
+      <label for="bankAnswer">Answer</label>
+      <textarea id="bankAnswer" rows="2" placeholder="e.g. Lima"></textarea>
+      <div class="import-row">
+        <div>
+          <label for="bankPoints" style="margin-bottom:.2rem;">Suggested points</label>
+          <input type="number" id="bankPoints" value="100" style="width:6rem;">
+        </div>
+        <div>
+          <label for="bankUnit" style="margin-bottom:.2rem;">Unit</label>
+          <input type="text" id="bankUnit" placeholder="e.g. Unit 4" style="width:10rem;">
+        </div>
+        <div>
+          <label for="bankStandard" style="margin-bottom:.2rem;">Standard</label>
+          <input type="text" id="bankStandard" placeholder="e.g. 7.RP.A.1" style="width:10rem;">
+        </div>
+        <div>
+          <label for="bankDifficulty" style="margin-bottom:.2rem;">Difficulty</label>
+          <select id="bankDifficulty">
+            <option value="">—</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" id="bankAddBtn">+ Add to bank</button>
+      <p class="import-status" id="bankAddStatus"></p>
+    </div>
+
+    <div class="card">
+      <p class="hint">
+        A reusable pool of questions for this tool's boards, separate from any one board — tag a question by
+        unit, standard and difficulty once, then reuse it across boards and across years. Pulling a question
+        into a board <b>copies</b> it in; editing or deleting it here afterward doesn't change a board that
+        already pulled it.
+      </p>
+      <div class="bank-filter-row">
+        <div class="field">
+          <label for="bankFilterUnit">Unit</label>
+          <select id="bankFilterUnit"><option value="">All units</option></select>
+        </div>
+        <div class="field">
+          <label for="bankFilterStandard">Standard</label>
+          <select id="bankFilterStandard"><option value="">All standards</option></select>
+        </div>
+        <div class="field">
+          <label for="bankFilterDifficulty">Difficulty</label>
+          <select id="bankFilterDifficulty">
+            <option value="">All difficulties</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1 1 12rem;">
+          <label for="bankFilterQuery">Search</label>
+          <input type="text" id="bankFilterQuery" placeholder="Search question/answer text">
+        </div>
+        <button type="button" class="secondary" id="bankClearFiltersBtn">Clear filters</button>
+      </div>
+      <div class="bank-list" id="bankList"></div>
+      <div class="bank-pull-row">
+        <label for="bankPullCategory" style="margin:0;">Pull into category:</label>
+        <input type="text" id="bankPullCategory" placeholder="e.g. Vocabulary" list="bankCategoryOptions">
+        <datalist id="bankCategoryOptions"></datalist>
+        <button type="button" id="bankPullBtn">Pull selected into board</button>
+        <span class="import-status" id="bankPullStatus"></span>
+      </div>
+    </div>
+  </div>
+
   <footer class="note">
     Runs entirely in your browser — nothing is uploaded, including any spreadsheet you import.
   </footer>
@@ -327,6 +475,7 @@
   </div>
   <div class="countdown" id="overlayCountdown"></div>
   <img class="clue-image" id="overlayImage" alt="">
+  <audio class="clue-audio" id="overlayAudio" controls></audio>
   <div class="question-text" id="overlayQuestion"></div>
   <div class="answer-text" id="overlayAnswer"></div>
   <div class="overlay-actions">
@@ -365,13 +514,18 @@
    'rosterSelect','rosterTeamCount','buildTeamsFromRosterBtn','rosterTeamsStatus',
    'boardCard','boardTitle','dailyDoubleToggle','redrawDailyDoubleBtn','lightningRoundToggle','lightningRoundSeconds',
    'scoreboard','boardCols','undoScoreBtn',
-   'overlay','overlayCatPoints','overlayCountdown','overlayImage','overlayQuestion','overlayAnswer',
+   'overlay','overlayCatPoints','overlayCountdown','overlayImage','overlayAudio','overlayQuestion','overlayAnswer',
    'wagerPanel','wagerTeamSelect','wagerAmount','wagerStartBtn',
-   'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn'
+   'showAnswerBtn','closeNoAskBtn','awardRow','closeUsedRow','closeUsedBtn',
+   'boardsSection','bankSection',
+   'bankQuestion','bankAnswer','bankPoints','bankUnit','bankStandard','bankDifficulty','bankAddBtn','bankAddStatus',
+   'bankFilterUnit','bankFilterStandard','bankFilterDifficulty','bankFilterQuery','bankClearFiltersBtn','bankList',
+   'bankPullCategory','bankCategoryOptions','bankPullBtn','bankPullStatus'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, categories:[{name, clues:[{points,question,answer,used}]}], teams:[{name,score}] }
   var currentClue = null; // {catIdx, clueIdx}
+  var currentOverlayAudioUrl = null; // object URL backing els.overlayAudio.src — revoked on every hide/reopen
   var dailyDoubleWager = null; // { teamIndex, amount } — set once a Daily Double's wager is confirmed
   var lightningTimer = null;
   var lightningRemaining = 0;
@@ -631,7 +785,222 @@
     return cell;
   }
 
-  function newClueRow(points, question, answer, image) {
+  /* ---------- audio inside a clue ----------------------------------------
+     A pronunciation, a music excerpt, a primary-source recording. Unlike the
+     image above, the blob itself is NOT kept on the clue — it lives in
+     IndexedDB (rgb-audio-db.js) and the clue only carries `audioId`, a small
+     string pointing at it. See that file's header for the full storage and
+     duplicate-on-rename writeup.
+  ---------------------------------------------------------------------- */
+  function audioDB() { return window.RGBAudioDB || null; }
+
+  /** Resolves once rgb-audio-db.js (a deferred module) has attached itself
+      to window, so a click that lands before that finishes still works
+      instead of silently no-op'ing. Usually resolves immediately — the
+      module is a few lines long. */
+  function whenAudioDBReady() {
+    var db = audioDB();
+    if (db) return Promise.resolve(db);
+    return new Promise(function (resolve) {
+      window.addEventListener('rgb-audio-db-ready', function () { resolve(audioDB()); }, { once: true });
+    });
+  }
+
+  function approxAudioKb(bytes) { return Math.max(1, Math.round(bytes / 1024)); }
+
+  function fmtClock(totalSeconds) {
+    var s = Math.max(0, Math.floor(totalSeconds));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  /** The audio cell of one clue row: Record (MediaRecorder) or Upload (a
+      file-upload fallback — not every clue is a live recording; a teacher
+      may already have a primary-source audio file). The id lives on the row
+      element (`row.__clueAudioId`), same pattern as `row.__clueImage`.
+
+      A row can start "borrowed" — populated with an audioId that already
+      belongs to a clue on an already-saved board (editBoardBtn reopens the
+      current board's own categories for editing). Editing is not commit
+      until Save board is pressed, and Save board can itself either update
+      that same board OR create a differently-named new one (the closest
+      thing this tool has to "duplicate a board" — see buildFromManualBtn).
+      Until that choice is made, a borrowed id must never be mutated or
+      deleted in place: doing so would corrupt a board that is not even the
+      one being saved, the moment the teacher renames instead of overwriting.
+      So: re-recording/re-uploading over a still-borrowed id allocates a
+      FRESH id rather than overwriting the borrowed one, and Remove on a
+      still-borrowed id only clears the row's pointer (no delete) — real
+      cleanup of an abandoned borrowed id happens once at Save board time
+      (see the editingBoard.audioIds diff in buildFromManualBtn), which is
+      the first point a same-name save is actually confirmed. Once a row's
+      id has been replaced by a fresh one, it is no longer borrowed and
+      normal in-place reuse/delete resumes — nothing else could reference a
+      session-fresh id yet. */
+  function buildClueAudioCell(row, initialAudioId) {
+    var cell = document.createElement('div');
+    cell.className = 'clue-audio-cell';
+
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'audio/*';
+    fileInput.style.display = 'none';
+
+    var recordBtn = document.createElement('button');
+    recordBtn.type = 'button'; recordBtn.className = 'secondary small';
+    recordBtn.textContent = '🎙 Record';
+
+    var uploadBtn = document.createElement('button');
+    uploadBtn.type = 'button'; uploadBtn.className = 'secondary small';
+    uploadBtn.textContent = 'Upload audio';
+
+    var playBtn = document.createElement('button');
+    playBtn.type = 'button'; playBtn.className = 'secondary small';
+    playBtn.style.display = 'none';
+    playBtn.textContent = '▶ Play';
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button'; removeBtn.className = 'secondary small';
+    removeBtn.textContent = 'Remove';
+    removeBtn.style.display = 'none';
+
+    var sizeNote = document.createElement('div');
+    sizeNote.className = 'clue-audio-size';
+
+    var previewAudio = new Audio();
+    var previewUrl = null;
+    var recorder = null;
+    var recordedChunks = [];
+    var recordTimer = null;
+
+    row.__clueAudioId = (typeof initialAudioId === 'string' && initialAudioId) ? initialAudioId : null;
+    var originalAudioId = row.__clueAudioId; // captured once; never reassigned
+    function isBorrowed() { return !!originalAudioId && row.__clueAudioId === originalAudioId; }
+    row.__clueAudioIsBorrowed = isBorrowed; // so the whole-row "×" handler in newClueRow can ask
+
+    function setPreviewBlob(blob) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = blob ? URL.createObjectURL(blob) : null;
+      previewAudio.src = previewUrl || '';
+      sizeNote.textContent = blob ? approxAudioKb(blob.size) + ' KB' : '';
+    }
+
+    function sync() {
+      var has = !!row.__clueAudioId;
+      recordBtn.style.display = has ? 'none' : '';
+      uploadBtn.style.display = has ? 'none' : '';
+      playBtn.style.display = has ? '' : 'none';
+      removeBtn.style.display = has ? '' : 'none';
+    }
+
+    /** Stores `blob`. Reuses the row's current id in place — UNLESS that id
+        is still the untouched borrowed original, in which case a fresh id is
+        allocated instead (see the function doc comment above): a re-record
+        must never overwrite audio a different, unrenamed board still owns. */
+    function storeBlob(blob) {
+      return whenAudioDBReady().then(function (db) {
+        if (!db) throw new Error('Audio storage is not available in this browser.');
+        var id = (row.__clueAudioId && !isBorrowed()) ? row.__clueAudioId : db.genId();
+        return db.putClip(id, blob).then(function () {
+          row.__clueAudioId = id;
+          setPreviewBlob(blob);
+          sync();
+        });
+      });
+    }
+
+    // If this row started with an id from an already-saved clue (editing an
+    // existing board), load it into the preview player lazily — only once
+    // the teacher actually asks to hear it, since fetching every clip on
+    // every row up front would be wasted work on a board nobody re-plays.
+    var previewLoaded = !row.__clueAudioId;
+    function ensurePreviewLoaded() {
+      if (previewLoaded) return Promise.resolve();
+      return whenAudioDBReady().then(function (db) {
+        return db ? db.getClip(row.__clueAudioId) : null;
+      }).then(function (record) {
+        previewLoaded = true;
+        if (record) setPreviewBlob(record.blob);
+        else { row.__clueAudioId = null; sync(); } // the clip vanished under us
+      });
+    }
+
+    recordBtn.addEventListener('click', function () {
+      if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('This browser cannot record audio. Use Upload audio instead.');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        recordedChunks = [];
+        recorder = new MediaRecorder(stream);
+        recorder.addEventListener('dataavailable', function (e) {
+          if (e.data && e.data.size) recordedChunks.push(e.data);
+        });
+        recorder.addEventListener('stop', function () {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          clearInterval(recordTimer);
+          recordBtn.classList.remove('recording');
+          recordBtn.textContent = '🎙 Record';
+          var blob = new Blob(recordedChunks, { type: recorder.mimeType || 'audio/webm' });
+          storeBlob(blob).catch(function (e) { alert('Could not save the recording: ' + e.message); });
+        });
+        recorder.start();
+        var startedAt = Date.now();
+        recordBtn.classList.add('recording');
+        recordBtn.textContent = '⏹ Stop (0:00)';
+        recordTimer = setInterval(function () {
+          recordBtn.textContent = '⏹ Stop (' + fmtClock((Date.now() - startedAt) / 1000) + ')';
+        }, 500);
+      }).catch(function (err) {
+        alert('Could not access the microphone: ' + (err && err.message ? err.message : err));
+      });
+    });
+
+    uploadBtn.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+      var file = fileInput.files && fileInput.files[0];
+      fileInput.value = '';
+      if (!file) return;
+      previewLoaded = true; // the freshly-picked file IS the preview; nothing to fetch
+      storeBlob(file).catch(function (e) { alert('Could not save that file: ' + e.message); });
+    });
+
+    playBtn.addEventListener('click', function () {
+      ensurePreviewLoaded().then(function () {
+        if (!previewUrl) return;
+        if (previewAudio.paused) { previewAudio.play(); playBtn.textContent = '⏸ Pause'; }
+        else { previewAudio.pause(); }
+      });
+    });
+    previewAudio.addEventListener('pause', function () { playBtn.textContent = '▶ Play'; });
+    previewAudio.addEventListener('ended', function () { playBtn.textContent = '▶ Play'; });
+
+    removeBtn.addEventListener('click', function () {
+      var id = row.__clueAudioId;
+      var borrowed = isBorrowed();
+      row.__clueAudioId = null;
+      setPreviewBlob(null);
+      sync();
+      // A session-fresh id is safe to delete right away — nothing else could
+      // reference it. A still-borrowed id is left alone; Save board's
+      // editingBoard.audioIds diff cleans it up once the save is confirmed
+      // (and only if it's genuinely this board's clue that's still open).
+      if (id && !borrowed) whenAudioDBReady().then(function (db) { if (db) db.deleteClip(id); });
+    });
+
+    cell.appendChild(recordBtn);
+    cell.appendChild(uploadBtn);
+    cell.appendChild(playBtn);
+    cell.appendChild(sizeNote);
+    cell.appendChild(removeBtn);
+    cell.appendChild(fileInput);
+
+    if (row.__clueAudioId) sizeNote.textContent = '🔊 saved';
+    sync();
+    return cell;
+  }
+
+  function newClueRow(points, question, answer, image, audioId) {
     var row = document.createElement('div');
     row.className = 'clue-row';
     row.innerHTML =
@@ -639,8 +1008,20 @@
       '<textarea class="clue-question" placeholder="Question">' + escapeHtml(question) + '</textarea>' +
       '<textarea class="clue-answer" placeholder="Answer">' + escapeHtml(answer) + '</textarea>' +
       '<button type="button" class="secondary small remove-clue">&times;</button>';
-    row.insertBefore(buildClueImageCell(row, image), row.querySelector('.remove-clue'));
-    row.querySelector('.remove-clue').addEventListener('click', function () { row.remove(); });
+    var removeBtnEl = row.querySelector('.remove-clue');
+    row.insertBefore(buildClueImageCell(row, image), removeBtnEl);
+    row.insertBefore(buildClueAudioCell(row, audioId), removeBtnEl);
+    removeBtnEl.addEventListener('click', function () {
+      // A session-fresh audio clip nothing else will ever reference once the
+      // row is gone gets cleaned up right away. A still-borrowed one (this
+      // row started from an already-saved board's clue) is left alone —
+      // Save board's editingBoard.audioIds diff is what safely cleans up an
+      // abandoned borrowed clip, same reasoning as the Remove button above.
+      var id = row.__clueAudioId;
+      var borrowed = row.__clueAudioIsBorrowed && row.__clueAudioIsBorrowed();
+      if (id && !borrowed) whenAudioDBReady().then(function (db) { if (db) db.deleteClip(id); });
+      row.remove();
+    });
     return row;
   }
 
@@ -657,7 +1038,7 @@
     var clueList = document.createElement('div');
     clueList.className = 'clue-list';
     (clues && clues.length ? clues : [null]).forEach(function (c) {
-      clueList.appendChild(c ? newClueRow(c.points, c.question, c.answer, c.image) : newClueRow());
+      clueList.appendChild(c ? newClueRow(c.points, c.question, c.answer, c.image, c.audioId) : newClueRow());
     });
     block.appendChild(clueList);
 
@@ -694,11 +1075,14 @@
         var question = row.querySelector('.clue-question').value.trim();
         var answer = row.querySelector('.clue-answer').value.trim();
         var image = isClueImage(row.__clueImage) ? row.__clueImage : null;
-        // A clue that is nothing but a picture is a legitimate clue ("what is
-        // this?"), so an image alone keeps the row alive.
-        if (!question && !answer && !image && isNaN(points)) return;
+        var audioId = (typeof row.__clueAudioId === 'string' && row.__clueAudioId) ? row.__clueAudioId : null;
+        // A clue that is nothing but a picture (or an audio clip) is a
+        // legitimate clue ("what is this?", "identify this piece"), so
+        // either one alone keeps the row alive.
+        if (!question && !answer && !image && !audioId && isNaN(points)) return;
         var clue = { points: isNaN(points) ? 0 : points, question: question, answer: answer, used: false };
         if (image) clue.image = image;
+        if (audioId) clue.audioId = audioId;
         clues.push(clue);
       });
       clues.sort(function (a, b) { return a.points - b.points; });
@@ -914,6 +1298,20 @@
     return map;
   }
 
+  /** Every audioId already saved on this board's clues, at the moment the
+      editor opens — the "borrowed" set buildClueAudioCell won't mutate or
+      delete in place. Save board consults this twice: to duplicate any of
+      these that are still present when saving under a NEW name, and to
+      delete any that are no longer present anywhere when saving under the
+      SAME name (removed, or replaced by a re-record). */
+  function audioIdsIn(categories) {
+    var ids = [];
+    categories.forEach(function (c) {
+      c.clues.forEach(function (cl) { if (cl.audioId) ids.push(cl.audioId); });
+    });
+    return ids;
+  }
+
   function loadBoardByName(name) {
     var loaded = ReviewBoardStore.loadBoard(name);
     if (!loaded) return;
@@ -934,8 +1332,11 @@
       cat.clues.forEach(function (cl) {
         var keyImg = isClueImage(cl.image)
           ? '<img class="key-img" src="' + escapeHtml(cl.image) + '" alt="">' : '';
+        // Audio can't print — flag that one exists so a teacher scanning a
+        // paper answer key knows to play it from the device instead.
+        var keyAudioNote = cl.audioId ? ' <em>(has an audio clip — play from the device)</em>' : '';
         rows.push('<tr><td>' + escapeHtml(cat.name) + '</td><td>' + (cl.dailyDouble ? '★ ' : '') + cl.points +
-          '</td><td>' + escapeHtml(cl.question) + keyImg + '</td><td>' + escapeHtml(cl.answer) + '</td></tr>');
+          '</td><td>' + escapeHtml(cl.question) + keyImg + keyAudioNote + '</td><td>' + escapeHtml(cl.answer) + '</td></tr>');
       });
     });
     return '<h2>' + escapeHtml(state.name) + ' — Answer Key</h2>' +
@@ -962,9 +1363,10 @@
         // is unanswerable on a sheet of paper without it.
         var quizImg = isClueImage(cl.image)
           ? '<img class="quiz-img" src="' + escapeHtml(cl.image) + '" alt="">' : '';
+        var quizAudioNote = cl.audioId ? ' <em>(🔊 audio clip — play from the device)</em>' : '';
         items.push(
           '<div class="quiz-item"><p class="quiz-q"><b>' + n + '.</b> [' + escapeHtml(cat.name) + ' &mdash; ' + cl.points + ' pts] ' +
-          escapeHtml(cl.question) + '</p>' + quizImg + '<div class="quiz-lines"><div class="quiz-line"></div><div class="quiz-line"></div></div></div>'
+          escapeHtml(cl.question) + quizAudioNote + '</p>' + quizImg + '<div class="quiz-lines"><div class="quiz-line"></div><div class="quiz-line"></div></div></div>'
         );
       });
     });
@@ -1015,8 +1417,13 @@
         // field (a remote URL, a script-ish string) is dropped rather than put
         // into an <img src>.
         if (isClueImage(cl && cl.image)) out.image = cl.image;
+        // By the time normalizeBoard() sees it, an imported audioId has
+        // already been through materializeImportedAudio() (a freshly stored
+        // local IndexedDB clip) or been stripped — never a raw pointer from
+        // whatever browser exported the file.
+        if (typeof (cl && cl.audioId) === 'string' && cl.audioId) out.audioId = cl.audioId;
         return out;
-      }).filter(function (cl) { return cl.question || cl.answer || cl.image; });
+      }).filter(function (cl) { return cl.question || cl.answer || cl.image || cl.audioId; });
       return { name: String((c && c.name) || ''), clues: clues };
     }).filter(function (c) { return c.name && c.clues.length; });
     var teams = (Array.isArray(loaded.teams) ? loaded.teams : []).map(function (t) {
@@ -1032,20 +1439,84 @@
     };
   }
 
+  /** A clip's blob, base64-encoded as a data: URL — the same shape
+      readAndDownscaleImage() hands clue images in, so an exported audio
+      clue round-trips through JSON exactly like an image one already does. */
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () { reject(reader.error || new Error('Could not read the clip.')); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /** The reverse: a data: URL back to a Blob. data: URLs are resolved
+      locally (no network involved), so this is safe to use for untrusted
+      imported content. */
+  function dataUrlToBlob(dataUrl) { return fetch(dataUrl).then(function (r) { return r.blob(); }); }
+
   els.exportBoardBtn.addEventListener('click', function () {
     if (!state) return;
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = sanitizeFilename(state.name) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    // Audio lives in IndexedDB, not on the clue — export has to pull each
+    // clip out and embed it inline (like the image field already is) so the
+    // exported file is self-contained and the audio survives on a different
+    // device. Works on a plain deep copy; the live `state` (and its
+    // audioIds, which only mean anything on THIS device) is never touched.
+    var payload = JSON.parse(JSON.stringify(state));
+    var jobs = [];
+    payload.categories.forEach(function (c) {
+      c.clues.forEach(function (cl) {
+        if (!cl.audioId || !window.RGBAudioDB) return;
+        var id = cl.audioId;
+        delete cl.audioId;
+        jobs.push(window.RGBAudioDB.getClip(id).then(function (record) {
+          if (record) return blobToDataUrl(record.blob).then(function (dataUrl) { cl.audio = dataUrl; });
+        }).catch(function () { /* clip unavailable — exports without it rather than failing the whole board */ }));
+      });
+    });
+    Promise.all(jobs).then(function () {
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = sanitizeFilename(state.name) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
   });
 
   els.importBoardBtn.addEventListener('click', function () { els.importBoardFile.click(); });
+
+  /** Walks a raw, untrusted decoded board and turns any inline `audio` data
+      URL (the shape the export above writes) into a freshly stored local
+      IndexedDB clip, rewriting the field to `audioId`. Any `audioId` already
+      on the incoming object is dropped first — it would be a pointer into
+      whatever browser exported the file, and means nothing on this one. */
+  function materializeImportedAudio(loaded) {
+    if (!Array.isArray(loaded.categories)) return Promise.resolve();
+    var jobs = [];
+    loaded.categories.forEach(function (c) {
+      if (!c || !Array.isArray(c.clues)) return;
+      c.clues.forEach(function (cl) {
+        if (!cl || typeof cl !== 'object') return;
+        delete cl.audioId;
+        var audio = cl.audio;
+        delete cl.audio;
+        if (typeof audio === 'string' && /^data:audio\//.test(audio) && window.RGBAudioDB) {
+          jobs.push(
+            dataUrlToBlob(audio)
+              .then(function (blob) { return window.RGBAudioDB.putClip(window.RGBAudioDB.genId(), blob); })
+              .then(function (record) { cl.audioId = record.id; })
+              .catch(function () { /* a corrupt clip just imports without audio */ })
+          );
+        }
+      });
+    });
+    return Promise.all(jobs);
+  }
 
   els.importBoardFile.addEventListener('change', function () {
     var file = els.importBoardFile.files && els.importBoardFile.files[0];
@@ -1066,16 +1537,18 @@
         alert('That board has no categories/clues to import.');
         return;
       }
-      var name = uniqueBoardName(decoded.name || 'Imported Board');
-      state = normalizeBoard(decoded, name);
-      assignDailyDouble();
-      save(); // an image-carrying board can outgrow storage — save() explains it rather than throwing
-      ReviewBoardStore.setCurrentName(name);
-      refreshSwitcher();
-      els.setupCard.style.display = 'none';
-      els.boardCard.style.display = '';
-      els.toolbar.style.display = '';
-      renderBoard();
+      materializeImportedAudio(decoded).then(function () {
+        var name = uniqueBoardName(decoded.name || 'Imported Board');
+        state = normalizeBoard(decoded, name);
+        assignDailyDouble();
+        save(); // an image- or audio-carrying board can outgrow storage — save() explains it rather than throwing
+        ReviewBoardStore.setCurrentName(name);
+        refreshSwitcher();
+        els.setupCard.style.display = 'none';
+        els.boardCard.style.display = '';
+        els.toolbar.style.display = '';
+        renderBoard();
+      });
     };
     reader.onerror = function () { alert('Couldn’t read that file.'); };
     reader.readAsText(file);
@@ -1192,9 +1665,35 @@
   }
 
   /* ---------- clue reveal overlay ---------- */
+  /** Hides and unloads the projected audio control, revoking its object URL
+      — called on every openClue() (before deciding whether to show it again)
+      and on closeOverlay(), so a clip never keeps playing into the next
+      clue and a URL is never left un-revoked. */
+  function hideOverlayAudio() {
+    els.overlayAudio.pause();
+    els.overlayAudio.classList.remove('show');
+    els.overlayAudio.removeAttribute('src');
+    if (currentOverlayAudioUrl) { URL.revokeObjectURL(currentOverlayAudioUrl); currentOverlayAudioUrl = null; }
+  }
+
+  /** Fetches the clip from IndexedDB and shows the projected control — async,
+      so it's a no-op if the overlay has already moved on to a different clue
+      or closed by the time the fetch resolves (checked via `token`). */
+  function showOverlayAudioFor(clue, token) {
+    if (!clue.audioId || !window.RGBAudioDB) return;
+    window.RGBAudioDB.getClip(clue.audioId).then(function (record) {
+      if (!record || token !== overlayAudioToken) return; // stale by the time this resolved
+      currentOverlayAudioUrl = URL.createObjectURL(record.blob);
+      els.overlayAudio.src = currentOverlayAudioUrl;
+      els.overlayAudio.classList.add('show');
+    }).catch(function () { /* clip unavailable — the overlay just has no audio control */ });
+  }
+  var overlayAudioToken = 0; // bumped on every openClue()/closeOverlay() to invalidate in-flight fetches
+
   function openClue(catIdx, clueIdx) {
     currentClue = { catIdx: catIdx, clueIdx: clueIdx };
     dailyDoubleWager = null;
+    overlayAudioToken++;
     var cat = state.categories[catIdx];
     var clue = cat.clues[clueIdx];
     els.overlayQuestion.textContent = clue.question;
@@ -1205,6 +1704,7 @@
       els.overlayImage.classList.remove('show');
       els.overlayImage.removeAttribute('src');
     }
+    hideOverlayAudio();
     els.overlayAnswer.textContent = clue.answer;
     els.overlayAnswer.classList.remove('show');
     els.awardRow.classList.remove('show');
@@ -1230,6 +1730,7 @@
       els.overlayCatPoints.textContent = escapeHtml(cat.name) + ' — ' + clue.points;
       els.showAnswerBtn.style.display = '';
       els.closeNoAskBtn.style.display = '';
+      showOverlayAudioFor(clue, overlayAudioToken);
       startLightningTimer();
     }
   }
@@ -1246,6 +1747,7 @@
     if (currentClue) {
       var ddClue = state.categories[currentClue.catIdx].clues[currentClue.clueIdx];
       if (isClueImage(ddClue.image)) els.overlayImage.classList.add('show');
+      showOverlayAudioFor(ddClue, overlayAudioToken);
     }
     els.showAnswerBtn.style.display = '';
     els.closeNoAskBtn.style.display = '';
@@ -1259,6 +1761,8 @@
 
   function closeOverlay() {
     stopLightningTimer();
+    overlayAudioToken++; // invalidate any still-in-flight IndexedDB fetch for the clue we're leaving
+    hideOverlayAudio();
     els.overlay.classList.remove('show');
     currentClue = null;
   }
@@ -1371,6 +1875,19 @@
     }
   });
 
+  /* ---------- top-level Game Boards / Question Bank switch ---------- */
+  function showTopSection(which) {
+    Array.prototype.slice.call(document.querySelectorAll('.top-tab-btn')).forEach(function (b) {
+      b.classList.toggle('active', b.dataset.top === which);
+    });
+    els.boardsSection.classList.toggle('active', which === 'boards');
+    els.bankSection.classList.toggle('active', which === 'bank');
+    if (which === 'bank') renderBankList();
+  }
+  Array.prototype.slice.call(document.querySelectorAll('.top-tab-btn')).forEach(function (btn) {
+    btn.addEventListener('click', function () { showTopSection(btn.dataset.top); });
+  });
+
   /* ---------- setup wiring ---------- */
   Array.prototype.slice.call(document.querySelectorAll('.tab-btn')).forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1387,19 +1904,58 @@
     var categories = readManualEditor();
     if (!categories.length) { alert('Add at least one category with at least one question.'); return; }
     var name = els.boardName.value.trim() || ('Board ' + new Date().toISOString().slice(0, 10));
-    if (editingBoard && editingBoard.name === name) {
+
+    /** Finishes the save once any needed audio bookkeeping is done. Split
+        out because the two branches below need different async cleanup
+        before they can call startBoard() — see audioIdsIn()'s doc comment. */
+    function finish() {
+      if (editingBoard && editingBoard.name === name) {
+        categories.forEach(function (c) {
+          c.clues.forEach(function (cl) {
+            var key = c.name + '||' + cl.question;
+            if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
+          });
+        });
+        startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
+          editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds);
+      } else {
+        startBoard(name, categories, takePendingRosterTeams());
+      }
+      editingBoard = null;
+    }
+
+    if (!editingBoard || !window.RGBAudioDB) { finish(); return; }
+
+    if (editingBoard.name === name) {
+      // Same board, saved in place: any of its original clips that are no
+      // longer referenced anywhere in the new categories (removed, or
+      // replaced by a re-record) are genuinely done — this is the one place
+      // it's safe to delete them, because we're not fanning out to a second
+      // board that might still want them.
+      var stillPresent = audioIdsIn(categories);
+      var orphaned = editingBoard.audioIds.filter(function (id) { return stillPresent.indexOf(id) === -1; });
+      Promise.all(orphaned.map(function (id) { return window.RGBAudioDB.deleteClip(id); }))
+        .catch(function () { /* best-effort cleanup; the save still proceeds */ })
+        .then(finish);
+    } else {
+      // A different name: the closest thing this tool has to "duplicate a
+      // board". Any clue that still carries one of the ORIGINAL board's
+      // audioIds gets its own independent copy first, so the untouched
+      // original board (still saved under its old name) keeps working even
+      // after this new board is later edited, or deleted, or its audio
+      // replaced.
+      var toDuplicate = [];
       categories.forEach(function (c) {
         c.clues.forEach(function (cl) {
-          var key = c.name + '||' + cl.question;
-          if (Object.prototype.hasOwnProperty.call(editingBoard.usedMap, key)) cl.used = editingBoard.usedMap[key];
+          if (cl.audioId && editingBoard.audioIds.indexOf(cl.audioId) !== -1) toDuplicate.push(cl);
         });
       });
-      startBoard(name, categories, editingBoard.teams, editingBoard.dailyDoubleEnabled,
-        editingBoard.lightningRoundEnabled, editingBoard.lightningRoundSeconds);
-    } else {
-      startBoard(name, categories, takePendingRosterTeams());
+      Promise.all(toDuplicate.map(function (cl) {
+        return window.RGBAudioDB.duplicateClip(cl.audioId).then(function (newId) {
+          if (newId) cl.audioId = newId; else delete cl.audioId; // source vanished — don't carry a dangling id
+        });
+      })).catch(function () { /* best-effort; the save still proceeds */ }).then(finish);
     }
-    editingBoard = null;
   });
 
   els.importFile.addEventListener('change', function () {
@@ -1417,10 +1973,20 @@
     var name = state.name;
     var teams = state.teams;
     var usedMap = usedMapFor(categories);
+    var audioIds = audioIdsIn(categories);
+    // Pre-existing bug fixed in passing: these three used to be read off
+    // `state` AFTER showSetup(categories) below, which sets state = null —
+    // every "Edit questions" click threw here, so editingBoard was never
+    // actually set and a same-name Save board silently fell through to the
+    // "brand new board" branch, discarding scores/teams/flags. Capture them
+    // from `state` first, same as categories/name/teams already are.
+    var dailyDoubleEnabled = state.dailyDoubleEnabled;
+    var lightningRoundEnabled = state.lightningRoundEnabled;
+    var lightningRoundSeconds = state.lightningRoundSeconds;
     showSetup(categories);
     editingBoard = {
-      name: name, teams: teams, usedMap: usedMap, dailyDoubleEnabled: state.dailyDoubleEnabled,
-      lightningRoundEnabled: state.lightningRoundEnabled, lightningRoundSeconds: state.lightningRoundSeconds
+      name: name, teams: teams, usedMap: usedMap, audioIds: audioIds, dailyDoubleEnabled: dailyDoubleEnabled,
+      lightningRoundEnabled: lightningRoundEnabled, lightningRoundSeconds: lightningRoundSeconds
     };
     els.boardName.value = name;
   });
@@ -1468,6 +2034,10 @@
   els.deleteBoardBtn.addEventListener('click', function () {
     if (!state) return;
     if (!confirm('Delete "' + state.name + '" completely? This can’t be undone.')) return;
+    // Each of this board's clips is independently owned (see rgb-audio-db.js)
+    // — nothing else could be pointing at them, so deleting the board is the
+    // right moment to delete them too rather than leaking them forever.
+    var audioIds = audioIdsIn(state.categories);
     ReviewBoardStore.deleteBoard(state.name);
     // The probed ceiling was measured against a fuller drawer; after a delete
     // there is genuinely more room than the cached figure claims.
@@ -1475,6 +2045,197 @@
     var remaining = ReviewBoardStore.listBoards();
     if (remaining.length) loadBoardByName(remaining[0]);
     else showSetup();
+    if (audioIds.length && window.RGBAudioDB) {
+      audioIds.forEach(function (id) { window.RGBAudioDB.deleteClip(id); });
+    }
+  });
+
+  /* ---------- question bank ------------------------------------------------
+     A reusable pool of questions, separate from any one board, tagged by
+     unit/standard/difficulty (rgb-bank-store.js — its own localStorage key
+     prefix, not a board). "Pull selected into board" COPIES chosen entries
+     in as plain clues; nothing here keeps a live link back to the bank, so
+     editing or deleting a bank entry afterward never changes a board that
+     already pulled it — same one-way relationship JSON import already has
+     with the file it read. ---------------------------------------------- */
+  var bankSelected = {}; // entry id -> true, while checked in the list below
+
+  function populateBankFilterOptions() {
+    var units = ReviewBankStore.distinctValues('unit');
+    var standards = ReviewBankStore.distinctValues('standard');
+    var uVal = els.bankFilterUnit.value, sVal = els.bankFilterStandard.value;
+    els.bankFilterUnit.innerHTML = '<option value="">All units</option>' +
+      units.map(function (u) { return '<option value="' + escapeHtml(u) + '">' + escapeHtml(u) + '</option>'; }).join('');
+    els.bankFilterStandard.innerHTML = '<option value="">All standards</option>' +
+      standards.map(function (s) { return '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>'; }).join('');
+    els.bankFilterUnit.value = units.indexOf(uVal) !== -1 ? uVal : '';
+    els.bankFilterStandard.value = standards.indexOf(sVal) !== -1 ? sVal : '';
+  }
+
+  /** What the "pull into category" field's datalist suggests — the category
+      names already typed into the board editor currently open, if any. */
+  function populateBankCategoryOptions() {
+    var names = Array.prototype.slice.call(els.categoriesEditor.querySelectorAll('.cat-name-input'))
+      .map(function (i) { return i.value.trim(); }).filter(Boolean);
+    els.bankCategoryOptions.innerHTML = names.map(function (n) { return '<option value="' + escapeHtml(n) + '">'; }).join('');
+  }
+
+  function currentBankFilters() {
+    return {
+      unit: els.bankFilterUnit.value,
+      standard: els.bankFilterStandard.value,
+      difficulty: els.bankFilterDifficulty.value,
+      query: els.bankFilterQuery.value
+    };
+  }
+
+  function renderBankList() {
+    populateBankFilterOptions();
+    populateBankCategoryOptions();
+    var entries = ReviewBankStore.filterEntries(currentBankFilters());
+    els.bankList.innerHTML = '';
+    if (!entries.length) {
+      var empty = document.createElement('div');
+      empty.className = 'bank-empty';
+      empty.textContent = ReviewBankStore.listEntries().length
+        ? 'No bank questions match these filters.'
+        : 'The bank is empty — add a question above to get started.';
+      els.bankList.appendChild(empty);
+      return;
+    }
+    entries.forEach(function (entry) {
+      var row = document.createElement('div');
+      row.className = 'bank-entry';
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = !!bankSelected[entry.id];
+      checkbox.addEventListener('change', function () {
+        if (checkbox.checked) bankSelected[entry.id] = true; else delete bankSelected[entry.id];
+      });
+      var body = document.createElement('div');
+      var tags = [];
+      if (entry.unit) tags.push('<span class="bank-tag">' + escapeHtml(entry.unit) + '</span>');
+      if (entry.standard) tags.push('<span class="bank-tag">' + escapeHtml(entry.standard) + '</span>');
+      if (entry.difficulty) tags.push('<span class="bank-tag">' + escapeHtml(entry.difficulty) + '</span>');
+      tags.push('<span class="bank-tag">' + entry.points + ' pts</span>');
+      body.innerHTML =
+        '<p class="bank-q">' + escapeHtml(entry.question) + '</p>' +
+        '<p class="bank-a">' + escapeHtml(entry.answer) + '</p>' +
+        '<div class="bank-tags">' + tags.join('') + '</div>';
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'danger small';
+      del.textContent = 'Delete';
+      del.addEventListener('click', function () {
+        if (!confirm('Delete this bank question? This can’t be undone.')) return;
+        ReviewBankStore.deleteEntry(entry.id);
+        delete bankSelected[entry.id];
+        renderBankList();
+      });
+      row.appendChild(checkbox);
+      row.appendChild(body);
+      row.appendChild(del);
+      els.bankList.appendChild(row);
+    });
+  }
+
+  els.bankAddBtn.addEventListener('click', function () {
+    var question = els.bankQuestion.value.trim();
+    var answer = els.bankAnswer.value.trim();
+    if (!question || !answer) {
+      els.bankAddStatus.className = 'import-status error';
+      els.bankAddStatus.textContent = 'Add both a question and an answer.';
+      return;
+    }
+    ReviewBankStore.saveEntry({
+      question: question, answer: answer,
+      points: parseInt(els.bankPoints.value, 10) || 0,
+      unit: els.bankUnit.value.trim(), standard: els.bankStandard.value.trim(), difficulty: els.bankDifficulty.value
+    });
+    els.bankQuestion.value = '';
+    els.bankAnswer.value = '';
+    els.bankAddStatus.className = 'import-status ok';
+    els.bankAddStatus.textContent = 'Added to the bank.';
+    // Unit/standard/difficulty/points are left as-is on purpose — adding a
+    // run of questions for the same unit is the common case.
+    renderBankList();
+  });
+
+  [els.bankFilterUnit, els.bankFilterStandard, els.bankFilterDifficulty].forEach(function (el) {
+    el.addEventListener('change', renderBankList);
+  });
+  els.bankFilterQuery.addEventListener('input', renderBankList);
+  els.bankClearFiltersBtn.addEventListener('click', function () {
+    els.bankFilterUnit.value = ''; els.bankFilterStandard.value = '';
+    els.bankFilterDifficulty.value = ''; els.bankFilterQuery.value = '';
+    renderBankList();
+  });
+
+  /** Opens the board editor on whatever board is "current" if it isn't
+      already open, so "pull into board" always has somewhere to land — the
+      same board a teacher would reach via Edit questions, not a stray blank
+      one. */
+  function ensureBoardEditorOpen() {
+    if (els.setupCard.style.display !== 'none') return; // already open
+    if (state) els.editBoardBtn.click();
+    else showSetup();
+  }
+
+  function findOrCreateCategoryBlock(name) {
+    var blocks = Array.prototype.slice.call(els.categoriesEditor.querySelectorAll('.category-block'));
+    var match = blocks.filter(function (b) { return b.querySelector('.cat-name-input').value.trim() === name; })[0];
+    if (match) return match;
+    addCategoryBlock(name);
+    var updated = Array.prototype.slice.call(els.categoriesEditor.querySelectorAll('.category-block'));
+    return updated[updated.length - 1];
+  }
+
+  els.bankPullBtn.addEventListener('click', function () {
+    var ids = Object.keys(bankSelected);
+    if (!ids.length) {
+      els.bankPullStatus.className = 'import-status error';
+      els.bankPullStatus.textContent = 'Select at least one question first.';
+      return;
+    }
+    var category = els.bankPullCategory.value.trim();
+    if (!category) {
+      els.bankPullStatus.className = 'import-status error';
+      els.bankPullStatus.textContent = 'Name the category to pull these into.';
+      return;
+    }
+    var all = ReviewBankStore.listEntries();
+    var entries = ids.map(function (id) { return all.filter(function (e) { return e.id === id; })[0]; }).filter(Boolean);
+
+    ensureBoardEditorOpen();
+    Array.prototype.slice.call(document.querySelectorAll('.tab-btn')).forEach(function (b) { b.classList.remove('active'); });
+    Array.prototype.slice.call(document.querySelectorAll('.tab-panel')).forEach(function (p) { p.classList.remove('active'); });
+    document.querySelector('.tab-btn[data-tab="manual"]').classList.add('active');
+    document.getElementById('tab-manual').classList.add('active');
+
+    var block = findOrCreateCategoryBlock(category);
+    var clueList = block.querySelector('.clue-list');
+    // A freshly created category starts with one blank row — drop it before
+    // adding the pulled questions rather than leaving an empty, unusable
+    // clue sitting in front of them.
+    var existingRows = Array.prototype.slice.call(clueList.querySelectorAll('.clue-row'));
+    if (existingRows.length === 1) {
+      var r = existingRows[0];
+      var blank = !r.querySelector('.clue-question').value.trim() && !r.querySelector('.clue-answer').value.trim() &&
+        !r.querySelector('.clue-points').value.trim() && !isClueImage(r.__clueImage) && !r.__clueAudioId;
+      if (blank) r.remove();
+    }
+    // A COPY, not a live reference: these become plain clue rows with no
+    // trace of the bank entry they came from, so later editing or deleting
+    // that bank entry can't change a board that already pulled it.
+    entries.forEach(function (entry) {
+      clueList.appendChild(newClueRow(entry.points, entry.question, entry.answer));
+    });
+
+    bankSelected = {};
+    els.bankPullStatus.className = 'import-status ok';
+    els.bankPullStatus.textContent = 'Pulled ' + entries.length + ' question' + (entries.length === 1 ? '' : 's') +
+      ' into "' + category + '". Remember to click Save board.';
+    showTopSection('boards');
+    renderBankList();
   });
 
   /* ---------- boot ---------- */

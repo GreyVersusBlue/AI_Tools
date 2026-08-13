@@ -9,6 +9,127 @@
 
 ## Status
 
+**2026-08-13.** Both backlog items claimed for this tool: **audio in a
+clue** (the untouched half of the 2026-08-11 Quick Win — images shipped,
+audio was explicitly deferred to "its own round") and **a reusable tagged
+question bank, separate from any one board**. Shipped and verified together
+in one pass since they land in the same file.
+
+- **Shipped — audio clues.** A clue's audio cell (next to the existing image
+  cell — the `.clue-row` grid grew a sixth column) offers **Record**
+  (MediaRecorder, live in the browser) or **Upload audio** (a file-upload
+  fallback — a teacher may already have a primary-source recording, not
+  every clue is a fresh take). Unlike the image, the blob is **not** kept
+  inline on the clue: it lives in a new small IndexedDB module,
+  `Tools/review-game-board/rgb-audio-db.js` (one DB, one object store, same
+  shape as `bmg-map-cache.js`/`sv-recovery.js`), and the clue only carries a
+  string `audioId` pointing at it. That was a direct call from the backlog
+  entry itself ("stored in IndexedDB... rather than inline") and it's the
+  right one: a useful pronunciation or music excerpt is routinely bigger
+  than the ~10 MB localStorage budget the whole origin shares, and there's
+  no equivalent to the image's hard 1000px/JPEG-0.72 downscale that keeps
+  audio intelligible. A play control (a real `<audio controls>`, not a
+  custom button — free seek/volume/screen-reader support) appears on the
+  projected clue, fetched from IndexedDB on open and **hidden behind the
+  Daily Double wager panel**, exactly like the image already is.
+  - **Ownership/duplication, decided:** each clip is independently owned by
+    exactly one clue on exactly one saved board — **a fresh copy, not a
+    shared reference.** This tool's closest thing to "duplicate a board" is
+    editing an existing one and saving under a different name (there's no
+    dedicated Duplicate button). That path now gives the new board its own
+    copy of every clip it still carries (`duplicateClip()`), so the original
+    board — untouched, still saved under its old name — keeps working no
+    matter what happens to the copy afterward, including deleting it. A
+    shared-reference design would have meant "Delete board" on either copy
+    could silently break the other's playback; that felt like the wrong
+    trade for a feature a teacher will use across "this year's board" and
+    "last year's copy of the same board." In-place edits (same name) clean
+    up any of the board's own clips that are no longer referenced (removed,
+    or replaced by a re-record) at the moment Save board is actually
+    clicked — not eagerly while still editing, since editing that hasn't
+    been saved yet must never mutate or delete audio a different,
+    still-unrenamed board might still own. Deleting a board deletes its own
+    clips outright (safe, because nothing else could reference them).
+  - **JSON export/import:** IndexedDB doesn't travel with a JSON file the
+    way an inline image data URL does for free, so export pulls each clip
+    out and embeds it as a `data:audio/...` URL on the exported clue (the
+    same shape the image field already uses), and import decodes it back
+    into a freshly stored **local** clip with a brand-new id — an incoming
+    raw `audioId` is never trusted, since it's a pointer into whichever
+    browser exported the file and means nothing on this one.
+  - **Found and fixed in passing:** `editBoardBtn`'s handler read
+    `state.dailyDoubleEnabled` (and the two lightning-round fields) *after*
+    `showSetup(categories)` already sets `state = null` — a pre-existing bug
+    (confirmed against the prior commit, not introduced this round) that
+    threw on every single "Edit questions" click, silently left
+    `editingBoard` unset, and made a same-name Save board fall through to
+    the "brand new board" branch — discarding scores, team names, and the
+    Daily Double/lightning-round flags every time a teacher edited a board
+    they'd already started playing. This round's audio-duplication logic
+    depends on `editingBoard` actually being set, which is what surfaced it.
+    Fixed by capturing those three fields from `state` before, not after,
+    `showSetup()` runs (same as `categories`/`name`/`teams` already were).
+  - Printed output can't play audio, so both the answer key and the practice
+    quiz now print a small "(has an audio clip — play from the device)" note
+    next to a question that carries one, instead of silently omitting any
+    sign it exists.
+- **Shipped — a reusable tagged question bank.** A new top-level "Question
+  Bank" area (`#topTabs` / `#bankSection`, a page-level switch next to "Game
+  Boards" — deliberately not nested inside a single board's edit form, since
+  the whole point is that it isn't attached to any one board) where a
+  teacher adds a question/answer tagged by **unit**, **standard**, and
+  **difficulty** (Easy/Medium/Hard), browses/filters by any combination of
+  those plus free-text search, and **pulls selected entries into the
+  currently-edited board** as a named category. Storage is
+  `Tools/review-game-board/rgb-bank-store.js` — its own localStorage key
+  prefix (`gvb-review-board-bank:*`), a flat list, not a fourth "board."
+  `rgb-store.js`'s storage readout now folds that prefix into the "boards"
+  share of the usage report rather than letting it get misattributed to
+  "other tools on this site," since it's this same tool's own storage.
+  - **Pull is a copy, not a live reference** — the same one-way relationship
+    a JSON import already has with the file it read. A pulled entry becomes
+    a plain clue row with no trace of which bank entry it came from; editing
+    or deleting that bank entry afterward never changes a board that already
+    pulled it. Verified directly: the test suite pulls two entries into a
+    fresh board, saves it, deletes both source bank entries, and confirms
+    the saved board's clues are untouched.
+  - **Scope call, explicit:** the backlog phrasing also gestures at "future
+    game formats" (bracket, buzzer, escape room/scavenger hunt feeding off
+    the same bank — see this file's Moonshot). That's the site-wide version
+    of the idea and it's **not** what got built here — there is no second
+    game-format tool in this repo yet to be a second consumer, and building
+    cross-tool plumbing with a single consumer is exactly the kind of
+    speculative infrastructure this project's conventions warn against. What
+    shipped is scoped to Review Game Board's own boards: one bank, feeding
+    one kind of board. If/when a second question-driven tool exists, lifting
+    `rgb-bank-store.js` (or its shape) into something shared is the natural
+    next step — deliberately left as a "when," not attempted now.
+- **New tests:** `Tools/review-game-board/test/smoke-clue-audio.mjs` (30
+  checks — upload AND a real MediaRecorder capture via a fake-microphone
+  Chromium launch, IndexedDB storage, projected playback with a decoded
+  duration check, Daily Double hide/reveal, the duplicate-on-rename
+  independence proof described above, delete-cleanup, and the JSON
+  export/import round trip) and
+  `Tools/review-game-board/test/smoke-question-bank.mjs` (29 checks — add,
+  tag, filter by each of the three tags independently and combined,
+  free-text search, delete, pull-into-board, and the copy-not-reference
+  proof). Both follow the `harness.mjs` pattern used by
+  `smoke-clue-image.mjs` (still green, 36 checks, unmodified behavior).
+  `harness.mjs` itself gained two backward-compatible optional parameters —
+  `launch({args})` and `prepPage(..., {permissions})`, both `undefined`/
+  unused by every existing zero-arg call site — needed for the fake-mic
+  Chromium flags and the microphone permission grant.
+  - **Not wired into `npm test` / `package.json`:** this round's boundaries
+    explicitly excluded `package.json`. Both new suites run standalone
+    (`node Tools/review-game-board/test/smoke-clue-audio.mjs` /
+    `smoke-question-bank.mjs`) and `check-tests.mjs` correctly flags them as
+    orphaned — that's expected until whoever owns `package.json` adds them.
+  - **Not done by this round, out of scope per the task boundaries:**
+    `sw.js`'s `PRECACHE_URLS`/`CACHE_VERSION` need
+    `Tools/review-game-board/rgb-audio-db.js` and
+    `Tools/review-game-board/rgb-bank-store.js` added — flagged for whoever
+    owns `sw.js` rather than edited here.
+
 **2026-08-12 — session `r8kq4t`.** Backlog rank 1 (as it stood): a storage
 usage readout, now that clue images are the first thing here that can
 realistically fill localStorage.
@@ -138,13 +259,23 @@ wager round from this round's Quick Win is also still open — see above.
 - **An optional picture on any clue** (`buildClueImageCell`,
   `readAndDownscaleImage`) — downscaled to 1000px JPEG, stored inline on the
   clue, projected with the question, printed on the quiz and answer key
+- **An optional audio clip on any clue** (`buildClueAudioCell`) — Record
+  (MediaRecorder) or Upload audio, stored in IndexedDB
+  (`Tools/review-game-board/rgb-audio-db.js`, not inline on the clue),
+  projected with the question, hidden behind a Daily Double's wager panel
+  like the image. Each board owns independent copies of its clips; see the
+  2026-08-13 Status entry for the duplicate-on-rename writeup.
+- **A reusable, tagged Question Bank**, separate from any one board
+  (`Tools/review-game-board/rgb-bank-store.js`) — add a question tagged by
+  unit/standard/difficulty, filter by any of those plus free text, and pull
+  selected entries into the board currently being edited as a copy.
 - **Excel import** (SheetJS) with a **downloadable blank template** —
   the best import onboarding on the site
-- JSON import/export; multiple saved boards (`gvb-review-board:list` /
-  `:data:*`)
+- JSON import/export (images and audio both travel with the file); multiple
+  saved boards (`gvb-review-board:list` / `:data:*`)
 - **Daily Double** assignment with a redraw (`assignDailyDouble`)
 - **Lightning timer** per clue (`startLightningTimer`)
-- Scoreboard; reset game; print **answer key**
+- Scoreboard; reset game; print **answer key** and **practice quiz**
 
 ## Quick Wins
 
@@ -159,12 +290,12 @@ wager round from this round's Quick Win is also still open — see above.
   *(Daily Double now prompts for team + wager before showing the question,
   replacing the old fixed ×2. A separate final-round wager phase is a bigger,
   distinct feature — see Status.)*
-- **Done (images) — 2026-08-11.** **Images and audio in a clue.** A map, a
-  diagram, a primary source, a pronunciation — a text-only clue limits the tool
-  to recall questions. *(Images shipped: downscaled, stored inline, projected,
-  printed. **Audio was not built** — a recorded pronunciation is a different
-  capture path (MediaRecorder), a different storage profile, and a different
-  playback control; it deserves its own round.)*
+- **Done — images 2026-08-11, audio 2026-08-13.** **Images and audio in a
+  clue.** A map, a diagram, a primary source, a pronunciation — a text-only
+  clue limits the tool to recall questions. *(Images: downscaled, stored
+  inline, projected, printed. Audio: Record or Upload, stored in IndexedDB
+  — not inline, a deliberately different storage profile — with its own
+  projected play control; see the 2026-08-13 Status entry.)*
 - **Done —** **Keyboard control** (P10) — number keys to award, space to reveal, Esc to
   close. Running a game by mouse from a laptop is slow.
 - **Done — Pass 2, Round 2.** **Load a roster to build teams** (P2) rather than typing team names.
@@ -180,9 +311,11 @@ wager round from this round's Quick Win is also still open — see above.
   or escape room (both of those tools need questions and have none), and a
   printed practice quiz with an answer key. Building the bank once and playing
   it six ways is the single highest-leverage change available here.
-- **A real question bank, separate from a board.** Tagged by unit, standard,
-  and difficulty; searchable; reusable across boards and across years. Right
-  now questions live inside a board and can't be recombined.
+- **Done — 2026-08-13. A real question bank, separate from a board.** Tagged
+  by unit, standard, and difficulty; filterable; reusable across boards and
+  across years via "pull into board" (a copy, not a live reference). *(Scoped
+  to this tool's own boards — the site-wide "one bank, six formats" version
+  below is still open; see the 2026-08-13 Status entry's scope note.)*
 - **Every-team-answers mode.** Instead of first-hand-up, every team writes an
   answer on a whiteboard and the teacher taps which teams got it — awarding
   points to all of them at once. Keeps the quiet teams playing, and it's a

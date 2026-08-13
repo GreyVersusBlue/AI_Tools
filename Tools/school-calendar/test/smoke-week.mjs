@@ -158,6 +158,92 @@ eq(printed.toolbar, 'none', 'and the toolbar stays off the page');
 eq(printed.cols, 5, 'with all five days on it');
 await page.emulateMedia({ media: 'screen' });
 
+/* ── 8b. Units — named date ranges, deliberately not the lesson-by-lesson
+   pacing sequence tested in smoke-pacing.mjs. A unit here is a name plus a
+   start/end date; the only arithmetic is the instructional-day count, and
+   the only new visuals are the calendar band and the printable table. ──── */
+await page.check('input[name="printMode"][value="month"]');
+await settle(page, 300);
+
+ok(await page.$('#btnAddUnit'), 'an Add Unit control exists');
+ok(await page.$('input[name="printMode"][value="units"]'), 'a Unit pacing calendar print mode exists');
+
+// Tag one more day (distinct from the ones seeded above) as a half day, so
+// the unit built below has both a holiday exclusion and a half day to call
+// out — the case the assignment specifically asks for.
+const halfDaySeeded = await page.evaluate((thuISO) => {
+  const raw = localStorage.getItem('scv_calendar_v1');
+  if (!raw) return null;
+  const cal = JSON.parse(raw);
+  const halfType = (cal.dayTypes || []).find(t => t.id === 'halfday');
+  if (!halfType) return null;
+  cal.days = cal.days || {};
+  const existing = cal.days[thuISO] || { types: [], label: '', note: '', lesson: '' };
+  cal.days[thuISO] = { ...existing, types: Array.from(new Set([...existing.types, halfType.id])) };
+  localStorage.setItem('scv_calendar_v1', JSON.stringify(cal));
+  return true;
+}, dayOf(3));
+ok(halfDaySeeded, 'the seeded legend has a half-day type to tag Thursday with');
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page, 500);
+
+await page.click('#btnAddUnit');
+await settle(page, 300);
+eq(await page.$$eval('#unitsList .unit-row', rows => rows.length), 1, 'adding a unit creates one row');
+
+await page.fill('#unitsList .unit-row input[data-f="name"]', 'Unit 3: Fractions');
+await page.dispatchEvent('#unitsList .unit-row input[data-f="name"]', 'change');
+await settle(page, 200);
+await page.fill('#unitsList .unit-row input[data-f="start"]', dayOf(0));
+await page.dispatchEvent('#unitsList .unit-row input[data-f="start"]', 'change');
+await settle(page, 200);
+await page.fill('#unitsList .unit-row input[data-f="end"]', dayOf(4));
+await page.dispatchEvent('#unitsList .unit-row input[data-f="end"]', 'change');
+await settle(page, 400);
+
+/* the unit spans Mon 9/14–Fri 9/18: 5 weekdays, Wed 9/16 was already tagged
+   no-school above, and Thu 9/17 is now a half day. */
+const unitStatsText = (await page.textContent('#unitsList .unit-row .unit-stats') || '').replace(/\s+/g, ' ').trim();
+eq(unitStatsText, '4 instructional days (incl. 1 half day)',
+  'the holiday is excluded from the count and the half day is called out, not folded in: ' + JSON.stringify(unitStatsText));
+
+/* ── the unit renders as a band across the calendar ──────────────────── */
+eq(await page.textContent('.day[data-date="2026-09-14"] .unit-tag'), 'Unit 3: Fractions',
+  'the unit name labels its first day on the month grid');
+ok(await page.$('.day[data-date="2026-09-16"] .unit-bar'), 'a day in the middle of the range still gets a colored band');
+eq(await page.$('.day[data-date="2026-09-16"] .unit-tag'), null,
+  'but only the first day gets the name label, so the cell does not get crowded');
+eq(await page.$('.day[data-date="2026-09-13"] .unit-bar'), null, 'a day before the unit starts gets no band');
+eq(await page.$('.day[data-date="2026-09-19"] .unit-bar'), null, 'a day after the unit ends gets no band');
+
+/* ── the printable pacing calendar lists it with its computed count ───── */
+await page.check('input[name="printMode"][value="units"]');
+await settle(page, 400);
+eq(await page.evaluate(() => document.body.classList.contains('view-units')), true, 'choosing Unit pacing calendar swaps the view');
+eq(await page.isVisible('#months'), false, 'the month grid is put away');
+eq(await page.isVisible('#unitsPrint'), true, 'and the pacing table is shown on screen, not just at print time');
+
+const printRow = await page.evaluate(() => {
+  const row = document.querySelector('#unitsPrint tbody tr');
+  return row ? Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim()) : null;
+});
+ok(printRow && /Unit 3: Fractions/.test(printRow[0]), 'the table names the unit: ' + JSON.stringify(printRow));
+eq(printRow && printRow[3], '4', 'and lists its computed instructional-day count: ' + JSON.stringify(printRow));
+eq(printRow && printRow[4], '1', 'with the half day in its own column: ' + JSON.stringify(printRow));
+
+await page.emulateMedia({ media: 'print' });
+await settle(page, 300);
+const unitsPrinted = await page.evaluate(() => ({
+  tableShown: getComputedStyle(document.getElementById('unitsPrint')).display !== 'none',
+  monthsShown: getComputedStyle(document.getElementById('months')).display !== 'none',
+}));
+eq(unitsPrinted.tableShown, true, 'the pacing table prints');
+eq(unitsPrinted.monthsShown, false, 'the month grid does not print alongside it');
+await page.emulateMedia({ media: 'screen' });
+
+await page.check('input[name="printMode"][value="month"]');
+await settle(page, 300);
+
 /* ── 9. no console noise ───────────────────────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 4)));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked.slice(0, 4)));

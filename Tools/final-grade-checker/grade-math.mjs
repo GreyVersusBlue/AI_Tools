@@ -274,6 +274,135 @@ export function findQuarterWindow(cols) {
   return { start: bestScore > 0 ? best : Q1_COLUMN, matches: Math.max(bestScore, 0), moved: bestScore > 0 && best !== Q1_COLUMN };
 }
 
+// ── Missing-work triage ──────────────────────────────────────
+//
+// A quarter's raw score, not merely its presence, says which kind of
+// "missing" it is. A literal 0.00 came out of the gradebook, which in
+// practice means work was assigned and never turned in. A blank cell was
+// simply never entered — not yet graded, or exempt. Both keep a final grade
+// from existing, but a teacher acts on them differently (a zero is a
+// conversation; a blank might just be ungraded yet), so this keeps them
+// apart rather than lumping them into one "missing" count.
+
+/** Which quarters are a recorded zero vs. genuinely blank, for one student's
+ * `scores` array (as produced by parsePastedData). */
+export function missingWork(scores) {
+  const zeros = [], blanks = [];
+  (scores || []).forEach((s, i) => {
+    const v = toScore(s);
+    if (v === 0) zeros.push(i);
+    else if (v === null) blanks.push(i);
+  });
+  return { zeros, blanks, hasAny: zeros.length > 0 || blanks.length > 0 };
+}
+
+const LETTER_ORDER = ['F', 'D', 'C', 'B', 'A'];
+
+/** The letter one rank above `letter` (D -> C -> B -> A), or null for an A
+ * (nothing above it) or an unrecognised letter. */
+export function letterAbove(letter) {
+  const idx = LETTER_ORDER.indexOf(letter);
+  if (idx === -1 || idx === LETTER_ORDER.length - 1) return null;
+  return LETTER_ORDER[idx + 1];
+}
+
+/**
+ * The minimum score on ONE quarter (`quarterIdx`) that would earn
+ * `targetLetter` as the final grade, holding every other quarter exactly as
+ * given. Same backward algebra the page's "What Do I Need" solver already
+ * uses for a genuinely missing quarter, generalised to any quarter — filled
+ * or not — so the missing-work triage below can ask "what if THIS one were
+ * higher" without a second, disagreeing calculation.
+ *
+ * Returns { requiredPct, requiredQP } — the score needed via each of the two
+ * county methods (a caller takes the lower/easier one, same as the on-screen
+ * solver does). Returns null when any OTHER quarter is missing: there is no
+ * unique single-quarter answer until the rest are actually on file.
+ */
+export function requiredScoreForQuarter(scores, quarterIdx, targetLetter, opts) {
+  if (!Number.isInteger(quarterIdx) || quarterIdx < 0 || quarterIdx >= QUARTERS) return null;
+  const weights = (opts && opts.weights) || [25, 25, 25, 25];
+  const wSum = weights.reduce((a, b) => a + b, 0) || QUARTERS;
+  const wMissing = weights[quarterIdx];
+
+  let knownSumPctW = 0, knownSumQPW = 0;
+  for (let i = 0; i < QUARTERS; i++) {
+    if (i === quarterIdx) continue;
+    const v = toScore(scores[i]);
+    if (v === null) return null;
+    knownSumPctW += v * weights[i];
+    knownSumQPW += getQP(getLetter(v, opts)) * weights[i];
+  }
+
+  const letterCutoffs = (opts && opts.boundary === 'strict') ? LETTER_CUTOFFS_STRICT : LETTER_CUTOFFS;
+  const qpCutoffs     = (opts && opts.boundary === 'strict') ? QP_CUTOFFS_STRICT     : QP_CUTOFFS;
+  const cutoffFor = (table, letter) => { const f = table.find(([l]) => l === letter); return f ? f[1] : 0; };
+
+  const targetPctRaw = cutoffFor(letterCutoffs, targetLetter);
+  const requiredPct = (targetPctRaw * wSum - knownSumPctW) / wMissing;
+
+  const neededSumQPW = cutoffFor(qpCutoffs, targetLetter) * wSum;
+  const neededRemainingQP = Math.ceil((neededSumQPW - knownSumQPW) / wMissing - 1e-9);
+  let requiredQP;
+  if (neededRemainingQP <= 0) requiredQP = -Infinity;
+  else if (neededRemainingQP > 4) requiredQP = Infinity;
+  else requiredQP = cutoffFor(letterCutoffs, ['F', 'D', 'C', 'B', 'A'][neededRemainingQP]);
+
+  return { requiredPct, requiredQP };
+}
+
+/**
+ * Missing-work + "one quarter from a letter change" triage for a single
+ * student. Pure, so grade-math.test.mjs can check it directly rather than
+ * only through the page.
+ *
+ * `oneAway` is null unless ALL FOUR quarters are on file (calcFinals has to
+ * have a real final to move up FROM) and the student is not already at an A
+ * (nothing above an A to move to). When present, it names the single
+ * lowest-scoring quarter as the lever — the quarter most likely to hold a
+ * zero, and the most plausible "one assignment" a student could still turn
+ * in or redo — and the minimum score it would need (holding the other three
+ * as pasted) to cross the student into the next letter up. A quarter that
+ * cannot reach the next letter even at 100 does not get flagged: the answer
+ * has to be a real, reachable number, not a guess.
+ */
+export function triageStudent(scores, opts) {
+  const missing = missingWork(scores);
+  const f = calcFinals(scores, opts);
+  let oneAway = null;
+
+  if (f) {
+    const toLetter = letterAbove(f.finalLetter);
+    if (toLetter) {
+      let lowIdx = 0;
+      for (let i = 1; i < QUARTERS; i++) {
+        if (toScore(scores[i]) < toScore(scores[lowIdx])) lowIdx = i;
+      }
+      const req = requiredScoreForQuarter(scores, lowIdx, toLetter, opts);
+      if (req) {
+        const candidates = [req.requiredPct, req.requiredQP].filter(v => Number.isFinite(v) && v > 0);
+        if (candidates.length) {
+          const neededRaw = Math.min(...candidates);
+          if (neededRaw <= MAX_SCORE) {
+            oneAway = {
+              quarterIdx: lowIdx,
+              currentScore: toScore(scores[lowIdx]),
+              fromLetter: f.finalLetter,
+              toLetter,
+              // Round UP to the cent so the printed slip never understates
+              // what's needed — the same care ceil2() takes in the page's
+              // "What Do I Need" solver.
+              neededPct: Math.ceil(neededRaw * 100 - 1e-9) / 100,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return { missing, oneAway };
+}
+
 /**
  * Parse a whole paste. Returns { students, warnings }. Every row that is
  * dropped or altered produces a warning; nothing is adjusted silently.

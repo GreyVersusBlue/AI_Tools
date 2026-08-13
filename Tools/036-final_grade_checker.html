@@ -156,6 +156,16 @@
   .whatif-line.up { background: rgba(47, 143, 91, 0.10); }
   .whatif-line.down { background: rgba(196, 58, 47, 0.10); }
   @media print { .whatif-line { border-style: solid; } }
+
+  /* ── Missing-work triage ─────────────────────────────────── */
+  .triage-count { font-size: 12.5px; font-weight: 700; opacity: 0.8; margin: 4px 0 10px; }
+  .triage-columns { display: flex; gap: var(--space-6); flex-wrap: wrap; }
+  .triage-col { flex: 1 1 280px; min-width: 240px; }
+  .triage-col h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.7; margin-bottom: 6px; }
+  .triage-col ul { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.65; }
+  .triage-col .triage-empty { font-size: 12.5px; opacity: 0.6; font-style: italic; margin: 0; }
+  .triage-zero { color: var(--color-danger); font-weight: 600; }
+  .triage-blank { color: var(--color-warn); }
   .settings-row label { display: block; margin: 3px 0; cursor: pointer; }
   .settings-row select.input { width: 100%; max-width: 420px; padding: 6px 8px; font-size: 13px; }
   .weights-inputs { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin-top: 6px; }
@@ -353,6 +363,31 @@
     </div>
   </div>
 
+  <!-- Missing-work triage. Hidden until a class is imported, like the
+       what-if above — there is nothing to triage about one hand-entered
+       student, and the whole point is reading it straight off the paste. -->
+  <div class="card blueprint no-print" id="triage-card" style="display:none;">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="settings-row">
+      <strong>Missing-work triage</strong>
+      <p class="whatif-hint">From the same paste above: who has a zero or a quarter that was never entered, and
+        who is one quarter's worth of improvement from their next letter grade. Nothing here changes a grade —
+        it's the same numbers already shown on the cards below, sorted into who needs a conversation.</p>
+      <div id="triage-count" class="triage-count"></div>
+      <div class="triage-columns">
+        <div class="triage-col">
+          <h3>Missing work</h3>
+          <div id="triage-missing-list"></div>
+        </div>
+        <div class="triage-col">
+          <h3>One quarter from a letter change</h3>
+          <div id="triage-oneaway-list"></div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="print-catchup-btn" type="button" style="margin-top:0.75rem;">Print Catch-Up Slips</button>
+    </div>
+  </div>
+
   <div id="students-container"></div>
 
   <div class="no-print" id="add-student-row" style="text-align:center;margin:-0.25rem 0 1.5rem;">
@@ -439,7 +474,7 @@ import {
   getLetter, calcFinals, parsePastedData, LETTER_CUTOFFS, QP_CUTOFFS,
   LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
   isGradeCell, Q1_COLUMN, QUARTERS, getQP, qpToFinalLetter, RANK,
-  findQuarterWindow, splitRow, curveScores,
+  findQuarterWindow, splitRow, curveScores, triageStudent,
 } from './final-grade-checker/grade-math.mjs';
 
 /** How close `value` sits to the nearest letter-boundary in `cutoffs` (grade-math.mjs's
@@ -970,6 +1005,8 @@ function renderImportedStudents(students) {
   document.getElementById('add-student-row').style.display = 'none';
   document.getElementById('whatif-card').style.display = students.length ? '' : 'none';
   renderWhatIfSummary(students);
+  document.getElementById('triage-card').style.display = students.length ? '' : 'none';
+  renderTriageSummary(students);
 }
 
 /* ── Class-wide what-if ──────────────────────────────────────────────────────
@@ -1069,6 +1106,106 @@ document.getElementById('whatif-reset').addEventListener('click', () => {
   refreshWhatIf();
 });
 
+/* ── Missing-work triage ──────────────────────────────────────────────────
+   Two questions, from the same paste, that a teacher would otherwise have to
+   read every card to answer: who has a zero or a blank quarter, and who is
+   one quarter's worth of improvement from a different final letter. Both go
+   through triageStudent() in grade-math.mjs — the same calcFinals()/getLetter()
+   arithmetic already driving the cards, not a second calculation. See that
+   file's doc comment, and the 036 improvement-prompts Status entry, for
+   exactly how "one quarter from a letter change" is defined and why. */
+
+function studentLabel(student, i) {
+  return (student.name && student.name.trim()) ? student.name : `Student ${i + 1}`;
+}
+
+function missingWorkLine(student, i, missing) {
+  const bits = [];
+  if (missing.zeros.length) bits.push(`<span class="triage-zero">zero</span> on ${missing.zeros.map(q => 'Q' + (q + 1)).join(', ')}`);
+  if (missing.blanks.length) bits.push(`<span class="triage-blank">not entered</span>: ${missing.blanks.map(q => 'Q' + (q + 1)).join(', ')}`);
+  return `<li><strong>${escHtml(studentLabel(student, i))}</strong> — ${bits.join('; ')}</li>`;
+}
+
+function oneAwayLine(student, i, oneAway) {
+  return `<li><strong>${escHtml(studentLabel(student, i))}</strong> — ${oneAway.fromLetter} &rarr; <strong>${oneAway.toLetter}</strong> ` +
+    `if Quarter ${oneAway.quarterIdx + 1} (now ${oneAway.currentScore.toFixed(2)}%) reaches ${oneAway.neededPct.toFixed(2)}%</li>`;
+}
+
+/** Every student's triage result, computed once and reused by the summary
+ * render and the catch-up slips so the two can never disagree. */
+function triageRows(students) {
+  const opts = calcOpts();
+  return students.map((s, i) => ({ student: s, index: i, result: triageStudent(s.scores, opts) }));
+}
+
+function renderTriageSummary(students) {
+  const countBox = document.getElementById('triage-count');
+  const missingBox = document.getElementById('triage-missing-list');
+  const oneAwayBox = document.getElementById('triage-oneaway-list');
+  if (!students || !students.length) { countBox.textContent = ''; missingBox.innerHTML = ''; oneAwayBox.innerHTML = ''; return; }
+
+  const rows = triageRows(students);
+  const missingRows = rows.filter(r => r.result.missing.hasAny);
+  const oneAwayRows  = rows.filter(r => r.result.oneAway);
+
+  countBox.textContent = `${missingRows.length} of ${students.length} with missing work` +
+    ` · ${oneAwayRows.length} one quarter from a letter change.`;
+
+  missingBox.innerHTML = missingRows.length
+    ? `<ul>${missingRows.map(r => missingWorkLine(r.student, r.index, r.result.missing)).join('')}</ul>`
+    : `<p class="triage-empty">No zeros or blank quarters in this class.</p>`;
+
+  oneAwayBox.innerHTML = oneAwayRows.length
+    ? `<ul>${oneAwayRows.map(r => oneAwayLine(r.student, r.index, r.result.oneAway)).join('')}</ul>`
+    : `<p class="triage-empty">Nobody is one quarter from their next letter grade right now.</p>`;
+}
+
+/** One catch-up slip: missing quarters (if any) and the one-quarter-from-a-
+ * letter-change lever (if any), for a single flagged student. Reuses the same
+ * .slip markup and print pass as buildSlipHtml()/printSlips() below — this is
+ * a different question (what needs to change) than that slip's (what's the
+ * current grade), so it is a separate button rather than another line on the
+ * existing slip. */
+function buildCatchupSlipHtml(student, i, result) {
+  const name = studentLabel(student, i);
+  const scores = student.scores;
+  const quartersLine = [0, 1, 2, 3].map(qi => `Q${qi + 1}: ${scores[qi] !== null ? scores[qi].toFixed(2) + '%' : '—'}`).join(' &nbsp; ');
+
+  const missingParts = [];
+  if (result.missing.zeros.length) missingParts.push(`Zero recorded: ${result.missing.zeros.map(q => 'Quarter ' + (q + 1)).join(', ')}`);
+  if (result.missing.blanks.length) missingParts.push(`Not yet entered: ${result.missing.blanks.map(q => 'Quarter ' + (q + 1)).join(', ')}`);
+  const missingHtml = missingParts.length ? `<div class="slip-missing">${missingParts.map(escHtml).join('<br>')}</div>` : '';
+
+  const oneAwayHtml = result.oneAway
+    ? `<div class="slip-need">One quarter from a ${result.oneAway.toLetter}: raise Quarter ${result.oneAway.quarterIdx + 1} ` +
+      `from ${result.oneAway.currentScore.toFixed(2)}% to ${result.oneAway.neededPct.toFixed(2)}% or higher to move the final grade ` +
+      `from ${result.oneAway.fromLetter} to ${result.oneAway.toLetter}.</div>`
+    : '';
+
+  return `<div class="slip">
+    <div class="slip-name">${escHtml(name)} — Catch-Up Slip</div>
+    <div class="slip-quarters">${quartersLine}</div>
+    ${missingHtml}
+    ${oneAwayHtml}
+  </div>`;
+}
+
+function printCatchupSlips() {
+  if (mode !== 'import' || !currentStudents.length) {
+    alert('Import a class first — the missing-work triage reads the same pasted gradebook.');
+    return;
+  }
+  const rows = triageRows(currentStudents).filter(r => r.result.missing.hasAny || r.result.oneAway);
+  if (!rows.length) {
+    alert('Nobody is flagged for missing work or a near letter-grade change right now — nothing to print.');
+    return;
+  }
+  const container = document.getElementById('slip-print-container');
+  container.innerHTML = rows.map(r => buildCatchupSlipHtml(r.student, r.index, r.result)).join('');
+  document.body.classList.add('printing-slips');
+  window.print();
+}
+
 function buildImportCard(student, i) {
   const card = document.createElement('div');
   card.className = 'card blueprint student-card';
@@ -1142,9 +1279,10 @@ function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ── Render: Manual cards ─────────────────────────────────────
 function switchToManual() {
   mode = 'manual';
-  // The what-if is a question about a whole roster; there is nothing to ask
-  // about a single hand-entered student.
+  // The what-if and the triage are both questions about a whole roster; there
+  // is nothing to ask, or triage, about a single hand-entered student.
   document.getElementById('whatif-card').style.display = 'none';
+  document.getElementById('triage-card').style.display = 'none';
   document.getElementById('import-area').value = '';
   setStatus('','');
   currentStudents = Array.from({length: DEFAULT_MANUAL_COUNT}, () => ({ id: manualNextId++, name:'', scores:[null,null,null,null] }));
@@ -1793,6 +1931,7 @@ on('reset-mapping-btn', () => {
 });
 on('print-btn', () => window.print());
 on('print-slips-btn', printSlips);
+on('print-catchup-btn', printCatchupSlips);
 on('export-excel-btn', e => withLibs('excel', e.currentTarget, exportExcel));
 on('export-pdf-btn',   e => withLibs('pdf',   e.currentTarget, exportPDF));
 on('add-student-btn', addManualStudent);

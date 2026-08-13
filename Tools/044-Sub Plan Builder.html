@@ -378,6 +378,16 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   <label for="materialsNote">Materials / where to find things <span class="opt">(optional)</span></label>
   <textarea id="materialsNote" rows="2" placeholder="Worksheets are stapled on my desk. Video link is on the Schoology page."></textarea>
 
+  <label>Seating chart image <span class="opt">(optional — embedded directly into the Word doc, on every day's page)</span></label>
+  <div class="toggle-row" style="gap:10px; flex-wrap:wrap;">
+    <input type="file" id="seatingChartFile" accept="image/*" style="display:none;">
+    <button type="button" class="small" id="seatingChartPickBtn">📎 Attach image</button>
+    <button type="button" class="small danger" id="seatingChartRemoveBtn" style="display:none;">✕ Remove</button>
+    <span class="field-hint" id="seatingChartStatus" style="margin:0;">No image attached.</span>
+  </div>
+  <img id="seatingChartPreview" alt="Seating chart preview" style="display:none; max-width:220px; max-height:160px; border:1px solid var(--line); border-radius:6px; margin-top:8px;">
+  <p class="field-hint" style="margin-top:4px;">Export a chart from the Seating Chart Generator (or use any photo/screenshot). Like Student Notes below, <strong>this image is never saved</strong> — it lives only in this tab until you generate or leave the page.</p>
+
   <div class="toggle-row">
     <input type="checkbox" id="saveToHistory">
     <label for="saveToHistory">Also save this plan as a dated history entry <span class="opt" style="font-weight:400;">(everything above except Student Notes)</span></label>
@@ -429,7 +439,8 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   <ul>
     <li>Everything in "Standing details" is saved only in this browser (localStorage) — it won't sync to another computer.</li>
     <li>Use <code>**text**</code> in any of the note fields to bold that part in the exported document.</li>
-    <li>The Student Notes box is intentionally never saved — refreshing the page clears it.</li>
+    <li>The Student Notes box is intentionally never saved — refreshing the page clears it. The attached seating chart image works the same way.</li>
+    <li>The generated Word doc includes a real header/footer with page numbers, and period-by-period info as an actual table — not just a plain-text copy for the quick text copy view.</li>
     <li>No student names or other data are sent anywhere — the Word doc is built entirely in your browser.</li>
     <li>"Days out" counts school days only — weekends are skipped automatically, so 3 days out starting Friday means Friday, Monday, and Tuesday.</li>
     <li>The <a href="045-sub-binder-generator.html">Sub Binder Generator</a> reads whichever dates you've selected here to default its own date picker — no need to re-enter the date there.</li>
@@ -993,6 +1004,7 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if ((settings.keysLocation || '').trim()) lines.push('  Keys: ' + settings.keysLocation.trim());
     if ((settings.whoToAsk || '').trim()) lines.push('  Who to ask: ' + settings.whoToAsk.trim());
     if ((settings.techFailureText || '').trim()) lines.push('  If tech fails: ' + stripBold(settings.techFailureText.trim()));
+    if (seatingChartImage) lines.push('  Seating chart: attached — see the generated Word doc (this plain-text copy cannot carry an image).');
 
     const announcement = (dp.announcement || '').trim();
     if (announcement) { lines.push(''); linesOf(announcement).forEach(l => lines.push(stripBold(l).toUpperCase())); }
@@ -1147,7 +1159,85 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   el('btnQuickCopy').addEventListener('click', openQuickCopyModal);
 
+  // ---------- Seating chart image attach (session-only, never saved) --------
+  // Mirrors the Student Notes rule: this is the one other field on the page
+  // that's never written to localStorage, never part of the share link/QR
+  // payload (an image would blow past both the link and QR size limits), and
+  // never part of a day's saved history entry. It exists only so the .docx
+  // just generated can carry it. Every attached image is redrawn through a
+  // canvas and re-encoded as PNG — this normalizes whatever format the file
+  // was (jpg/webp/etc.) to the one format this tool embeds, and caps the
+  // longest side so a phone photo doesn't balloon the .docx.
+
+  let seatingChartImage = null; // { base64, dataUrl, widthPx, heightPx } | null
+  const SEATING_CHART_MAX_DIM = 900;
+
+  function readImageFileToPng(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('could not read that file'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('that does not look like an image'));
+        img.onload = () => {
+          const srcW = img.naturalWidth, srcH = img.naturalHeight;
+          if (!srcW || !srcH) { reject(new Error('that image has no size')); return; }
+          const scale = Math.min(1, SEATING_CHART_MAX_DIM / Math.max(srcW, srcH));
+          const w = Math.max(1, Math.round(srcW * scale));
+          const h = Math.max(1, Math.round(srcH * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          let dataUrl;
+          try { dataUrl = canvas.toDataURL('image/png'); }
+          catch (e) { reject(new Error('could not process that image')); return; }
+          resolve({ dataUrl, base64: dataUrl.split(',')[1], widthPx: w, heightPx: h });
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function setSeatingChartUI() {
+    if (seatingChartImage) {
+      el('seatingChartPreview').src = seatingChartImage.dataUrl;
+      el('seatingChartPreview').style.display = 'block';
+      el('seatingChartStatus').textContent = `Attached (${seatingChartImage.widthPx}×${seatingChartImage.heightPx}px) — will be embedded in the Word doc.`;
+      el('seatingChartRemoveBtn').style.display = '';
+    } else {
+      el('seatingChartPreview').style.display = 'none';
+      el('seatingChartPreview').removeAttribute('src');
+      el('seatingChartRemoveBtn').style.display = 'none';
+      el('seatingChartStatus').textContent = 'No image attached.';
+    }
+  }
+
+  el('seatingChartPickBtn').addEventListener('click', () => el('seatingChartFile').click());
+  el('seatingChartFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      seatingChartImage = await readImageFileToPng(file);
+      setSeatingChartUI();
+    } catch (err) {
+      seatingChartImage = null;
+      setSeatingChartUI();
+      el('seatingChartStatus').textContent = 'Could not attach that image: ' + err.message;
+    }
+  });
+  el('seatingChartRemoveBtn').addEventListener('click', () => {
+    seatingChartImage = null;
+    setSeatingChartUI();
+  });
+
   // ---------- DOCX generation ----------
+
+  const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const WP_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+  const A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main";
+  const PIC_NS = "http://schemas.openxmlformats.org/drawingml/2006/picture";
 
   function xmlEscape(s) {
     return String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -1208,6 +1298,76 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   }
 
+  // ---------- Period-specific details as a real table ----------
+  // Was a Heading3 + bullet list per period; a substitute skimming under
+  // pressure scans a table faster than repeated headings, and it prints
+  // tighter to the page.
+
+  const TABLE_COL_WIDTHS = [1500, 1700, 6160]; // dxa; sums to the 9360 content width (6.5in at these margins)
+
+  function tableCellXml(widthDxa, innerXml, opts) {
+    opts = opts || {};
+    const shd = opts.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${opts.fill}"/>` : '';
+    return `<w:tc><w:tcPr><w:tcW w:w="${widthDxa}" w:type="dxa"/>${shd}</w:tcPr>${innerXml || '<w:p/>'}</w:tc>`;
+  }
+
+  function periodTableXml(rows) {
+    const grid = TABLE_COL_WIDTHS.map(w => `<w:gridCol w:w="${w}"/>`).join('');
+    // Header row text is white-on-navy; the run's own color has to be set
+    // explicitly since the cell shading is drawn independently of run color.
+    const headerCellXml = (text, w) => tableCellXml(w,
+      `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/></w:rPr><w:t>${xmlEscape(text)}</w:t></w:r></w:p>`,
+      { fill: '1F3550' });
+    const headerRow = `<w:tr><w:trPr><w:tblHeader/></w:trPr>${headerCellXml('Period', TABLE_COL_WIDTHS[0])}${headerCellXml('Time', TABLE_COL_WIDTHS[1])}${headerCellXml('Notes', TABLE_COL_WIDTHS[2])}</w:tr>`;
+    const bodyRows = rows.map(r => {
+      const labelCell = tableCellXml(TABLE_COL_WIDTHS[0], `<w:p>${run('Period ' + r.label, true)}</w:p>`);
+      const timeCell = tableCellXml(TABLE_COL_WIDTHS[1], r.time ? `<w:p>${runsFor(r.time)}</w:p>` : '<w:p/>');
+      const noteLines = linesOf(r.notesText);
+      const notesInner = noteLines.length
+        ? noteLines.map(l => paragraph(l, { spacingAfter: 40 })).join('')
+        : '<w:p/>';
+      const notesCell = tableCellXml(TABLE_COL_WIDTHS[2], notesInner);
+      return `<w:tr>${labelCell}${timeCell}${notesCell}</w:tr>`;
+    }).join('');
+    const border = (edge) => `<w:${edge} w:val="single" w:sz="4" w:space="0" w:color="DCDAD2"/>`;
+    const tblPr = `<w:tblPr><w:tblW w:w="${TABLE_COL_WIDTHS.reduce((a, b) => a + b, 0)}" w:type="dxa"/>` +
+      `<w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders>` +
+      `<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>`;
+    return `<w:tbl>${tblPr}<w:tblGrid>${grid}</w:tblGrid>${headerRow}${bodyRows}</w:tbl>`;
+  }
+
+  // ---------- Embedded seating-chart image ----------
+
+  const SEATING_CHART_REL_ID = 'rId5';
+  const CONTENT_WIDTH_EMU = 5943600; // 6.5in content width at 914400 EMU/in, matching TABLE_COL_WIDTHS' sum
+
+  function computeDrawingSizeEmu(widthPx, heightPx) {
+    const EMU_PER_PX = 9525; // 914400 EMU/in ÷ 96 px/in (canvas is always drawn at 96dpi here)
+    let w = widthPx * EMU_PER_PX;
+    let h = heightPx * EMU_PER_PX;
+    if (w > CONTENT_WIDTH_EMU) {
+      const scale = CONTENT_WIDTH_EMU / w;
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+    return { w, h };
+  }
+
+  let nextDrawingId = 1000;
+
+  function drawingParagraph(relId, cx, cy) {
+    const id = nextDrawingId++;
+    return `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">` +
+      `<wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+      `<wp:docPr id="${id}" name="Seating Chart ${id}"/>` +
+      `<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
+      `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+      `<pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Seating Chart ${id}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+      `<pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+      `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+  }
+
   function buildDayParas(dateStr, dp, dayIndex, totalDays) {
     const paras = [];
 
@@ -1242,6 +1402,18 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
     if ((settings.whoToAsk || '').trim()) paras.push(paragraph('Who to ask: ' + settings.whoToAsk.trim(), { style: 'ListParagraph', bullet: true }));
     if ((settings.techFailureText || '').trim()) paras.push(paragraph('If tech fails: ' + settings.techFailureText.trim(), { style: 'ListParagraph', bullet: true }));
 
+    // Seating chart — attached once for the whole absence (not per-day), but
+    // repeated on every day's page like Emergency Info/Quick Checklist above,
+    // so a page pulled out on its own still has it. Only one media part is
+    // ever written to the zip; every day's <w:drawing> below just points at
+    // the same relationship id, so this doesn't multiply the file's size.
+    if (seatingChartImage) {
+      paras.push(emptyParagraph());
+      paras.push(heading(2, 'Seating Chart'));
+      const dims = computeDrawingSizeEmu(seatingChartImage.widthPx, seatingChartImage.heightPx);
+      paras.push(drawingParagraph(SEATING_CHART_REL_ID, dims.w, dims.h));
+    }
+
     const announcement = (dp.announcement || '').trim();
     if (announcement) {
       paras.push(emptyParagraph());
@@ -1264,21 +1436,21 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       linesToParagraphs(schedule, { style: 'ListParagraph', bullet: true }).forEach(p => paras.push(p));
     }
 
-    // Period-specific details
+    // Period-specific details — a real table (Period / Time / Notes), one
+    // row per period, faster to scan under pressure than repeated headings.
     const periods = periodsAll;
     if (periods.length) {
       paras.push(emptyParagraph());
       paras.push(heading(2, 'Period-Specific Details'));
       const same = dp.samePeriods !== false;
       const sharedNotes = (dp.sharedPeriodNotes || '').trim();
-      periods.forEach((p, i) => {
-        const label = 'Period ' + p.label + (p.time ? ' (' + p.time + ')' : '');
-        paras.push(heading(3, label));
-        const notes = same ? sharedNotes : ((dp.perPeriodValues || {})[p._id] || '');
-        if (notes.trim()) {
-          linesToParagraphs(notes, { style: 'ListParagraph', bullet: true }).forEach(p2 => paras.push(p2));
-        }
-      });
+      const rows = periods.map(p => ({
+        label: p.label,
+        time: p.time || '',
+        notesText: same ? sharedNotes : ((dp.perPeriodValues || {})[p._id] || '')
+      }));
+      paras.push(periodTableXml(rows));
+      paras.push(emptyParagraph());
     }
 
     // Important notes
@@ -1348,14 +1520,54 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
 
   function buildDocumentXml() {
     captureCurrentDayFields();
+    nextDrawingId = 1000; // reset so ids are unique-but-stable within one generated doc
     const dates = computeDateList();
     const body = dates.map((d, i) => buildDayParas(d, dayPlans[d] || blankDayPlan(), i, dates.length).join(''))
       .join(pageBreakParagraph());
 
-    const sectPr = `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
+    // headerReference/footerReference must come before pgSz/pgMar in sectPr's
+    // content model, or Word/LibreOffice reject the section properties.
+    const sectPr = `<w:sectPr><w:headerReference w:type="default" r:id="rId3"/><w:footerReference w:type="default" r:id="rId4"/>` +
+      `<w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
 
+    // xmlns:r is needed for the r:id/r:embed attributes above and on the
+    // embedded image; xmlns:wp/a/pic are needed only when an image is
+    // present, but declaring them unconditionally is harmless and simpler.
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
-      `<w:document xmlns:w="${W_NS}"><w:body>${body}${sectPr}</w:body></w:document>`;
+      `<w:document xmlns:w="${W_NS}" xmlns:r="${R_NS}" xmlns:wp="${WP_NS}" xmlns:a="${A_NS}" xmlns:pic="${PIC_NS}"><w:body>${body}${sectPr}</w:body></w:document>`;
+  }
+
+  // Header/footer parts — real Word header/footer, wired via
+  // word/_rels/document.xml.rels (rId3/rId4) and referenced from sectPr
+  // above. The footer's page number is a live field (PAGE/NUMPAGES), not a
+  // pre-baked number, so it stays correct as pages are added/removed later.
+
+  function buildHeaderXml(teacherName, roomNumber) {
+    const roomRun = roomNumber ? `<w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">Room ${xmlEscape(roomNumber)}</w:t></w:r>` : '';
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<w:hdr xmlns:w="${W_NS}">` +
+      `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="DCDAD2"/></w:pBdr>` +
+      `<w:tabs><w:tab w:val="right" w:pos="9360"/></w:tabs><w:spacing w:after="0"/></w:pPr>` +
+      `<w:r><w:rPr><w:b/><w:color w:val="1F3550"/></w:rPr><w:t xml:space="preserve">Substitute Plan — ${xmlEscape(teacherName)}</w:t></w:r>` +
+      roomRun +
+      `</w:p></w:hdr>`;
+  }
+
+  function buildFooterXml() {
+    const fld = (type, dirty) => `<w:r><w:fldChar w:fldCharType="${type}"${dirty ? ' w:dirty="true"' : ''}/></w:r>`;
+    const instr = (text) => `<w:r><w:instrText xml:space="preserve">${text}</w:instrText></w:r>`;
+    const text = (t) => `<w:r><w:t xml:space="preserve">${t}</w:t></w:r>`;
+    // PAGE / NUMPAGES fields: begin/instrText/separate/<cached value>/end.
+    // The cached "1" is only what shows before the field is ever updated;
+    // Word/LibreOffice recompute it on open (or on F9) from the instruction.
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
+      `<w:ftr xmlns:w="${W_NS}">` +
+      `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="DCDAD2"/></w:pBdr><w:jc w:val="center"/><w:spacing w:before="0"/></w:pPr>` +
+      text('Page ') +
+      fld('begin', true) + instr(' PAGE ') + fld('separate') + text('1') + fld('end') +
+      text(' of ') +
+      fld('begin', true) + instr(' NUMPAGES ') + fld('separate') + text('1') + fld('end') +
+      `</w:p></w:ftr>`;
   }
 
   function buildStylesXml() {
@@ -1381,14 +1593,17 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       `</w:numbering>`;
   }
 
-  function buildContentTypesXml() {
+  function buildContentTypesXml(hasImage) {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
       `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
       `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
       `<Default Extension="xml" ContentType="application/xml"/>` +
+      (hasImage ? `<Default Extension="png" ContentType="image/png"/>` : '') +
       `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>` +
       `<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>` +
       `<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>` +
+      `<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>` +
+      `<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>` +
       `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
       `<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>` +
       `</Types>`;
@@ -1403,11 +1618,14 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
       `</Relationships>`;
   }
 
-  function buildDocumentRelsXml() {
+  function buildDocumentRelsXml(hasImage) {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n` +
       `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
       `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
       `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>` +
+      `<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>` +
+      `<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>` +
+      (hasImage ? `<Relationship Id="${SEATING_CHART_REL_ID}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>` : '') +
       `</Relationships>`;
   }
 
@@ -1428,15 +1646,20 @@ Ms. Foyle may assist with the ESOL student in this class"></textarea>
   }
 
   async function generateDocx() {
+    const hasImage = !!seatingChartImage;
+    const teacherName = el('teacherName').value.trim() || 'Devon Moore';
     const zip = new JSZip();
-    zip.file('[Content_Types].xml', buildContentTypesXml());
+    zip.file('[Content_Types].xml', buildContentTypesXml(hasImage));
     zip.file('_rels/.rels', buildRootRelsXml());
     zip.file('word/document.xml', buildDocumentXml());
     zip.file('word/styles.xml', buildStylesXml());
     zip.file('word/numbering.xml', buildNumberingXml());
-    zip.file('word/_rels/document.xml.rels', buildDocumentRelsXml());
+    zip.file('word/header1.xml', buildHeaderXml(teacherName, settings.roomNumber));
+    zip.file('word/footer1.xml', buildFooterXml());
+    zip.file('word/_rels/document.xml.rels', buildDocumentRelsXml(hasImage));
     zip.file('docProps/core.xml', buildCorePropsXml());
     zip.file('docProps/app.xml', buildAppPropsXml());
+    if (hasImage) zip.file('word/media/image1.png', seatingChartImage.base64, { base64: true });
     return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   }
 

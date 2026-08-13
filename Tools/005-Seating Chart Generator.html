@@ -191,6 +191,11 @@
   .layout-row.active{border-left:3px solid var(--teal); font-weight:600;}
   .layout-row .ln{flex:1;}
 
+  /* ---------- seating history / rotation ---------- */
+  .hist-checks{font-size:12px; margin-top:9px; line-height:1.6;}
+  .hist-checks .bad{color:var(--warn); font-weight:600;}
+  .hist-checks .good{color:var(--teal-deep); font-weight:600;}
+
   /* ---------- main / floor ---------- */
   .main{flex:1; display:flex; flex-direction:column; min-width:0; height:100vh;}
   .toolbar{
@@ -378,6 +383,14 @@
     body.printing-all #printAllWrap{display:block;}
     #printAllWrap .print-page + .print-page{page-break-before:always;}
 
+    /* Seating history reports (student and whole-class fairness) — same
+       swap-in-a-static-wrap approach as #printAllWrap above, reusing
+       .print-head/.print-contents' table styling from the sub packet's
+       contents page rather than a third copy of table CSS. */
+    body.printing-history .app{display:none !important;}
+    body.printing-history #printHistoryWrap{display:block;}
+    #printHistoryWrap .print-page + .print-page{page-break-before:always;}
+
     /* Quick Win: print with names and/or photos off — a blank chart for a
        seating quiz, or just a photo-free version for a sub. Applied as a body
        class right before printing (applyPrintClasses() in the script) rather
@@ -414,6 +427,7 @@
   .print-head h2{font-family: var(--font-heading); font-size:20px; color:var(--blue);}
   .print-head p{margin:2px 0 0; font-size:11px; opacity:0.65; letter-spacing:.3px;}
   #printAllWrap{display:none;}
+  #printHistoryWrap{display:none;}
   .print-extra{display:none;}
 </style>
 </head>
@@ -527,6 +541,33 @@
         <p class="hint">These two will sit next to each other. Chain several pairs to build a pod (A with B, B with C).</p>
       </div>
 
+      <div class="block">
+        <h2>Seating History <span class="count" id="historyCount">0</span></h2>
+        <label class="field" for="historyQuarter">Quarter (for the front-row check &mdash; freeform, edit any time)</label>
+        <div class="row tight">
+          <input type="text" id="historyQuarter" placeholder="Q1" aria-label="Current quarter" onchange="setQuarter(this.value)">
+          <button class="btn sm teal" onclick="recordHistory()"
+                  title="Save who's on the floor right now as a dated record">Record this arrangement</button>
+        </div>
+        <div class="hist-checks" id="histChecks"></div>
+        <div id="historyList" style="margin-top:9px;"></div>
+        <label class="field" for="historyStudentSelect">Print history for one student</label>
+        <div class="row tight">
+          <select id="historyStudentSelect" aria-label="Student for the history report"></select>
+          <button class="btn sm ghost" onclick="printStudentHistory()">Print</button>
+        </div>
+        <div class="row tight" style="margin-top:8px;">
+          <button class="btn sm ghost" onclick="printClassHistory()">Print whole-class fairness report</button>
+        </div>
+        <p class="hint"><b>Record this arrangement</b> saves who's sitting where right now, dated and
+          labeled (&ldquo;Unit 3&rdquo;), tagged with the quarter above. Once something is recorded,
+          <b>Auto-assign tries to avoid</b> reseating a student in a spot they've already had, and
+          gives a front-row seat first to whoever hasn't had one yet this quarter &mdash; both are
+          best-effort nudges the solver applies when the room allows it, same as Keep Apart / Put
+          Together, not a rule it will break the room to satisfy. The two print buttons turn the
+          record into evidence for a parent or admin conversation about seating fairness.</p>
+      </div>
+
       <div class="privacy" id="privacyBox">
         <p><b>Where this lives:</b> nothing is uploaded, ever. Your sections, student names,
           notes and desk layouts are saved in this browser&rsquo;s own storage on this computer,
@@ -636,6 +677,11 @@
      empty and display:none the rest of the time (see #printAllWrap in CSS). -->
 <div id="printAllWrap"></div>
 
+<!-- Populated by prepareStudentHistoryPrint()/prepareClassHistoryPrint() just
+     before printing a seating-history report, emptied again by
+     restoreAfterHistoryPrint(). Stays empty and display:none otherwise. -->
+<div id="printHistoryWrap"></div>
+
 <script>
   // The app is an ES module, and a module that fails to load fails silently: no
   // desks, no seed, no error anyone sees. If boot hasn't happened by now, say why.
@@ -653,6 +699,8 @@ import {
   assignSeats, checkConstraints, pickNext, parseRoster,
   gridDesks, rowDesks, nextSpot, contentBox,
   storageReport, matchPhotoFilenames,
+  todayISO, suggestQuarter, newHistoryEntry, checkHistoryConstraints,
+  studentHistoryRows, classHistorySummary,
 } from './seating-chart/seating.mjs';
 import { mountSaveBar, defaultStorage } from '../assets/js/gvb-save.js';
 const { getParam, decodeState, clearParam, mountShareControl } = window.StateLink;
@@ -1099,6 +1147,99 @@ function renderPairs(){
 }
 
 /* ============================================================
+   Seating history and rotation — a dated record of who sat where, and the
+   two nudges (no-repeat-seat, front-row-once-per-quarter) autoAssign() reads
+   off it. See seating.mjs for the pure logic; this half is rendering and the
+   two prompt()-driven actions, in the same style as saveLayout()/renameLayout().
+============================================================ */
+function setQuarter(v){
+  state.currentQuarter = (v || '').trim() || suggestQuarter(todayISO());
+  renderAll();
+}
+function recordHistory(){
+  const s = sec();
+  if (!s.desks.length){ say('Add some desks first.', 'bad'); return; }
+  if (!Object.keys(s.assign).length){ say('Nobody is seated yet — nothing to record.', 'bad'); return; }
+  const defaultLabel = `Unit ${s.history.length + 1}`;
+  const label = prompt('Label this arrangement (e.g. "Unit 3", "Poetry unit"):', defaultLabel);
+  if (label === null) return;
+  const today = todayISO();
+  const suggested = state.currentQuarter || suggestQuarter(today);
+  const quarter = prompt("Which quarter is this for? Used by the front-row-once-per-quarter check.", suggested);
+  if (quarter === null) return;
+  pushUndo();
+  const entry = newHistoryEntry(s, { date: today, label: (label || '').trim(), quarter: (quarter || '').trim() });
+  s.history.push(entry);
+  if (entry.quarter) state.currentQuarter = entry.quarter;
+  renderAll();
+  say(`Recorded "${entry.label}" (${entry.quarter}) &mdash; ${Object.keys(s.assign).length} students on record.`, 'good');
+}
+function deleteHistoryEntry(id){
+  const s = sec();
+  const h = s.history.find(x => x.id === id);
+  if (!h) return;
+  if (!confirm(`Delete the "${h.label}" (${h.date}) record? Undo (Ctrl+Z) restores it right after.`)) return;
+  pushUndo();
+  s.history = s.history.filter(x => x.id !== id);
+  renderAll();
+}
+function renderHistory(){
+  const s = sec();
+  el('historyCount').textContent = s.history.length;
+
+  const list = el('historyList');
+  list.innerHTML = '';
+  if (!s.history.length){
+    list.innerHTML = '<p class="hint" style="margin:0;">No recorded arrangements yet for this section.</p>';
+  } else {
+    s.history.slice().reverse().forEach(h => {
+      const seated = Object.keys(h.assign).length;
+      const dateLabel = new Date(h.date + 'T00:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      const row = document.createElement('div');
+      row.className = 'layout-row';
+      row.innerHTML = `<span class="ln">${esc(dateLabel)} &mdash; ${esc(h.label)}
+          <span class="note">(${esc(h.quarter)}, ${seated} seated)</span></span>
+        <button class="icon-btn" title="Delete this record" aria-label="Delete the ${esc(h.label)} record"
+                onclick="deleteHistoryEntry('${h.id}')">&times;</button>`;
+      list.appendChild(row);
+    });
+  }
+
+  const select = el('historyStudentSelect');
+  const cur = select.value;
+  select.innerHTML = '<option value="">Choose a student&hellip;</option>'
+    + s.students.map(st => `<option value="${st.id}">${esc(st.name)}</option>`).join('');
+  if ([...select.options].some(o => o.value === cur)) select.value = cur;
+
+  el('historyQuarter').value = state.currentQuarter || '';
+  renderHistoryChecks();
+}
+function renderHistoryChecks(){
+  const box = el('histChecks');
+  const s = sec();
+  const quarter = state.currentQuarter;
+  const hc = checkHistoryConstraints(s, quarter);
+  const parts = [];
+  if (hc.repeats.length){
+    const names = [...new Set(hc.repeats.map(r => nameOf(r.studentId)))];
+    parts.push(`<span class="bad">${hc.repeats.length} seated in a spot they've already had:</span> ${esc(names.join(', '))}`);
+  } else if (s.history.length) {
+    parts.push('<span class="good">No repeat seats in the arrangement on the floor now.</span>');
+  }
+  if (quarter){
+    if (hc.dueUnseated.length){
+      parts.push(`<span class="bad">${hc.dueUnseated.length} haven't had front row in ${esc(quarter)} yet:</span> `
+        + esc(hc.dueUnseated.map(d => d.name).join(', ')));
+    } else if (s.students.length && s.history.some(h => h.quarter === quarter)) {
+      parts.push(`<span class="good">Everyone has had a front-row seat in ${esc(quarter)}.</span>`);
+    }
+  }
+  box.innerHTML = parts.length
+    ? parts.map(p => `<div>${p}</div>`).join('')
+    : '<div class="hint" style="margin:0;">Record an arrangement to start tracking rotation.</div>';
+}
+
+/* ============================================================
    Desks: add / layout / move
 ============================================================ */
 function addDesk(){
@@ -1150,7 +1291,7 @@ function autoAssign(){
   if (!s.students.length){ say('Add some students first.', 'bad'); return; }
   if (!s.desks.length){ say('Add some desks first. Try "Make grid".', 'bad'); return; }
   pushUndo();
-  const r = assignSeats(s);
+  const r = assignSeats(s, { quarter: state.currentQuarter });
   s.assign = r.assign;
   selectedStudent = null;
   renderAll();
@@ -1159,11 +1300,15 @@ function autoAssign(){
 function reportConstraints(r){
   const s = sec();
   const report = r || checkConstraints(s);
+  const hc = checkHistoryConstraints(s, state.currentQuarter);
   let extra = '';
   if (!report.apartOK) extra += ` <span class="bad">${report.apartBroken.length} keep-apart pair(s) could not be separated.</span>`;
   if (!report.togetherOK) extra += ` <span class="bad">${report.togetherBroken.length} put-together pair(s) could not be seated side by side.</span>`;
   if (r && r.unseated && r.unseated.length) extra += ` <span class="bad">${r.unseated.length} student(s) have no desk.</span>`;
-  if (report.apartOK && report.togetherOK && (s.apart.length || s.together.length)) extra = ' <span class="good">All seating rules met.</span>';
+  if (hc.repeats.length) extra += ` <span class="bad">${hc.repeats.length} seated in a spot they've had before.</span>`;
+  if (state.currentQuarter && hc.dueUnseated.length) extra += ` <span class="bad">${hc.dueUnseated.length} still haven't had front row in ${esc(state.currentQuarter)}.</span>`;
+  if (report.apartOK && report.togetherOK && !hc.repeats.length && (!state.currentQuarter || !hc.dueUnseated.length)
+      && (s.apart.length || s.together.length || s.history.length)) extra = ' <span class="good">All seating rules met.</span>';
   el('status').innerHTML = baseStatus() + extra;
 }
 
@@ -1668,6 +1813,68 @@ function restoreAfterPrintAll(){
   el('printAllWrap').innerHTML = '';
 }
 
+/* ---- seating history reports: a plain table page, not a floor drawing, so
+   this reuses .print-head/.print-contents' table CSS (already built for the
+   sub packet's contents page) instead of the desk/floor machinery above. ---- */
+function buildHistoryReportPage(title, metaLine, columns, rowsHtml){
+  const page = document.createElement('div');
+  page.className = 'print-page';
+  page.innerHTML = `<div class="print-head"><h2>${esc(title)}</h2><p>${esc(metaLine)}</p></div>`
+    + `<div class="print-contents"><table><thead><tr>${columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>`
+    + `<tbody>${rowsHtml}</tbody></table></div>`;
+  return page;
+}
+function generatedLine(){
+  return 'Generated ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+function prepareStudentHistoryPrint(){
+  document.body.classList.add('printing-history');
+  const wrap = el('printHistoryWrap');
+  wrap.innerHTML = '';
+  const s = sec();
+  const sid = el('historyStudentSelect').value;
+  const st = s.students.find(x => x.id === sid);
+  if (!st){
+    wrap.appendChild(buildHistoryReportPage('Seating history', generatedLine(), ['Date'],
+      '<tr><td>Pick a student in the Seating History panel first, then print again.</td></tr>'));
+    return;
+  }
+  const rows = studentHistoryRows(s, sid);
+  const meta = `${s.name} · ${generatedLine()} · `
+    + `${rows.length} recorded arrangement${rows.length === 1 ? '' : 's'}`;
+  const body = rows.length
+    ? rows.map(r => `<tr><td>${esc(new Date(r.date + 'T00:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }))}</td>`
+        + `<td>${esc(r.label)}</td><td>${esc(r.quarter)}</td><td>${r.frontRow ? 'Yes' : ''}</td>`
+        + `<td>${r.repeat ? 'Repeats an earlier seat' : ''}</td></tr>`).join('')
+    : '<tr><td colspan="5">No recorded arrangements yet for this student.</td></tr>';
+  wrap.appendChild(buildHistoryReportPage(`Seating history — ${st.name}`, meta,
+    ['Date', 'Unit', 'Quarter', 'Front row', 'Note'], body));
+}
+function prepareClassHistoryPrint(){
+  document.body.classList.add('printing-history');
+  const wrap = el('printHistoryWrap');
+  wrap.innerHTML = '';
+  const s = sec();
+  const quarter = state.currentQuarter || '(no quarter set)';
+  const summary = classHistorySummary(s, state.currentQuarter);
+  const meta = `${s.name} · ${esc(quarter)} · ${generatedLine()} · `
+    + `${s.history.length} recorded arrangement${s.history.length === 1 ? '' : 's'}`;
+  const body = summary.length
+    ? summary.map(r => `<tr><td>${esc(r.name)}</td><td>${r.total}</td><td>${r.frontRowThisQuarter}</td><td>${r.repeats}</td></tr>`).join('')
+    : '<tr><td colspan="4">No students on this roster.</td></tr>';
+  wrap.appendChild(buildHistoryReportPage(`Seating fairness — ${s.name}`, meta,
+    ['Student', 'Arrangements seated', `Front row (${quarter})`, 'Repeat seats'], body));
+}
+function restoreAfterHistoryPrint(){
+  document.body.classList.remove('printing-history');
+  el('printHistoryWrap').innerHTML = '';
+}
+function printStudentHistory(){
+  if (!el('historyStudentSelect').value){ say('Pick a student first.', 'bad'); return; }
+  printMode = 'history-student'; window.print();
+}
+function printClassHistory(){ printMode = 'history-class'; window.print(); }
+
 // Covers both the toolbar button and Ctrl+P. printMode picks which of four
 // preparation paths runs, and always resets to 'single' afterward so a stray
 // Ctrl+P following one of the others doesn't inherit its mode.
@@ -1681,7 +1888,13 @@ function restoreAfterPrintAll(){
 //              (a sub needs them) plus notes and rule conflicts appended.
 //   'sub-all'— Whole-day sub packet: a contents page, then one 'sub'-style
 //              static page per section. One packet instead of six prints.
+//   'history-student'/'history-class' — the seating-history reports: a plain
+//              table page built by prepareStudentHistoryPrint()/
+//              prepareClassHistoryPrint() into #printHistoryWrap, the same
+//              swap-in-a-static-wrap idea as 'all'/'sub-all' above.
 window.addEventListener('beforeprint', () => {
+  if (printMode === 'history-student'){ prepareStudentHistoryPrint(); return; }
+  if (printMode === 'history-class'){ prepareClassHistoryPrint(); return; }
   if (printMode === 'sub-all'){ preparePrintAllSub(); return; }
   if (printMode === 'all'){ preparePrintAll(); return; }
   preparePrint();
@@ -1690,6 +1903,7 @@ window.addEventListener('beforeprint', () => {
   else applyPrintClasses();
 });
 window.addEventListener('afterprint', () => {
+  if (printMode === 'history-student' || printMode === 'history-class'){ restoreAfterHistoryPrint(); printMode = 'single'; return; }
   if (printMode === 'all' || printMode === 'sub-all') restoreAfterPrintAll();
   else { restoreAfterPrint(); clearPrintClasses(); el('printExtra').innerHTML = ''; }
   printMode = 'single';
@@ -1715,6 +1929,7 @@ function renderAll(){
   renderLayouts();
   fillSelect('apartA'); fillSelect('apartB'); fillSelect('togA'); fillSelect('togB');
   renderPairs();
+  renderHistory();
   renderFloor();
   renderPool();
   refreshStatus();
@@ -1839,6 +2054,7 @@ Object.assign(window, {
   choosePhoto, removePhoto, chooseBulkPhotos,
   loadRosterHub,
   addPair, removePair,
+  setQuarter, recordHistory, deleteHistoryEntry, printStudentHistory, printClassHistory,
   addDesk, addRow, addPod, makeGrid, clearDesks, clearSeats,
   autoAssign, undo, pickStudent, toggleZoom, toggleMirror, toggleNumbered,
   printChart, printAllSections, printBlankChart, printSubExport, printSubExportAll, setPrintOpt,

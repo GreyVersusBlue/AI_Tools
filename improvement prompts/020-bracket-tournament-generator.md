@@ -16,7 +16,12 @@ ambitious and are **not** scoped to a single session.
 
 - **Single and double elimination** brackets, with byes handled automatically
   (`nextPowerOf2`, `buildDoubleElimBracket`, `buildGrandFinalMatch`)
-- Click-to-advance live picks with auto-advance through byes
+- Click-to-advance live picks with auto-advance through byes, **or enter both
+  sides' scores and the higher one decides the match automatically**
+  (structured `{ a, b }` per-match scores — shipped Round 5, see below)
+- A **derived, printable standings table** (W/L/Played, plus PF/PA/Diff once
+  any score has been entered) for every format — round robin, single
+  elimination, and double elimination alike (Round 5)
 - Multiple saved brackets (`gvb-bracket:list` / `gvb-bracket:data:*`)
 - Print the live bracket or a **blank** bracket
 - Share by QR code and by `state-link.js` URL
@@ -37,8 +42,10 @@ ambitious and are **not** scoped to a single session.
   are the formats teachers actually want. *(Shipped Round 4 as a third
   bracket type using the circle-method scheduling algorithm; pools-into-a-
   bracket and a ladder are still open — see Round 4 update below.)*
-- **Score entry, not just a winner tap.** "21–18" makes the printed bracket a
-  record rather than a diagram.
+- **Done —** **Score entry, not just a winner tap.** "21–18" makes the printed bracket a
+  record rather than a diagram. *(Shipped Round 5 as structured per-side
+  number inputs that auto-decide the match and feed a printable standings
+  table — see Round 5 update below.)*
 - **Done —** **Undo the last advance** (P11) — a mis-tap currently propagates.
   *(Shipped Pass 2 as a single-level "Undo last pick" button — see Pass 2
   update below.)*
@@ -335,7 +342,171 @@ tool served locally:
   ever becomes a real ask, the snapshot mechanism here (`captureUndoSnapshot`
   / `undoSnapshot`) is the obvious place to extend into a stack rather than
   a single slot — see the Challenges note above.
-- Score entry into standings/records (Quick Wins) is still open — scores
+- **Done — see Round 5 below.** ~~Score entry into standings/records (Quick Wins) is still open — scores
   are free text today and don't feed round-robin standings or elimination
-  results.
+  results.~~
+- Team names with members (Quick Wins) is still open.
+
+## Round 5 — 2026-08-13
+
+Closed out the last open Quick Win from Round 4/Pass 2: **score entry that
+feeds standings** (the backlog row "Scores that feed standings," claimed
+2026-08-13).
+
+### Scope judgment call
+
+The backlog row's premise names "round-robin W/L, point differential." At
+the time of claiming, round robin was not this tool's only match format —
+Round 4 had already shipped single elimination, double elimination, *and*
+round robin (see "What it does today"). Per the assignment's own scoping
+note, this round did not restrict the feature to round robin: the same
+structured-score → derived-standings idea was generalized to single and
+double elimination too, since "the printed bracket becomes a real record"
+applies just as much to an elimination bracket as to a round-robin sheet,
+and doing all three in one pass avoided leaving two of the tool's three
+formats with the old free-text field while round robin alone got the new
+one. No new match-format work (pools, Swiss, ladder) was in scope here —
+those remain open under Major Features, unchanged.
+
+### What shipped
+
+- **Structured per-match scores.** Every score field (`.match-score`) that
+  used to be one free-text `<input type="text">` is now a pair of
+  `<input type="number">` boxes — `buildScoreInputs()` — one per side,
+  stored as `state.scores[key] = { a, b }` under the exact same key scheme
+  the old free-text version used (`r_m` for single elim, `w r_m` / `l r_m`
+  / `g0` / `g1` for double elim, `rr r_m` for round robin), so nothing about
+  how a match's score is *addressed* changed, only its *shape*.
+- **Scores decide matches automatically.** When both sides have a number
+  and they differ, the higher score is applied exactly like a winner-tap —
+  same `captureUndoSnapshot()` call, same `winnerSide`/`loserWinnerSide`/
+  `grandFinal` mutations the click handlers already made, same
+  `state.rounds[r][m].winner` assignment for round robin. Each call site
+  re-checks the match isn't already decided before acting (defends against
+  a stale closure firing after a click meanwhile decided it some other
+  way), and a tied score never auto-decides — this tool still has no draw
+  support (a known limitation from Round 4), so a tie just sits there until
+  a click or a differing score breaks it.
+- **A derived, printable standings table for every format.** Round robin's
+  existing `computeStandings()` gained `pf`/`pa`/`diff` fields (summed from
+  each round's `state.scores['rr'+r+'_'+m]`) and a diff-based tiebreaker
+  after wins. A parallel `computeEliminationStandings()` (backed by
+  `eliminationMatches()`, which walks the winners bracket and, for double
+  elimination, the losers bracket and grand final too) produces the same
+  shape of record for single and double elimination — every entrant starts
+  0-0, a bye-advance never counts as a played match (matching
+  `autoAdvance()`'s own "nobody really played that" framing), and the
+  champion's row is highlighted by name (`eliminationChampionName()`) rather
+  than by "most wins," since an elimination bracket's win leader and its
+  actual champion aren't always the same team (e.g. two finalists can tie
+  on win count). A shared `renderStandingsTable()` renders both flavors;
+  the PF/PA/Diff columns only appear once `standingsHasScores()` finds at
+  least one entered score anywhere in the bracket, so a bracket nobody has
+  scored yet still shows the plain W/L/Played table it always did. The
+  elimination table sits under a new "Standings" heading below the bracket
+  (single) and below the Grand Final (double), inside `#bracketView`, so it
+  prints and shares exactly like everything else already there — no new
+  print CSS was needed.
+- **Legacy free-text scores migrate on load.** `migrateScores()` runs from
+  `loadBracketByName()` and `importSharedBracketFromUrl()` and best-effort
+  parses any leftover `"21-18"`-shaped string into `{ a: 21, b: 18 }`;
+  anything unparseable is dropped rather than silently displayed as a fake
+  record. Migration is deliberately *passive* — it normalizes the stored
+  value but does not retroactively re-decide a match nobody has touched
+  since the old free-text version, so a teacher's already-completed
+  bracket doesn't have results flip out from under them on first open after
+  this update. Touching the score again (typing, or even re-confirming the
+  same numbers) decides it going forward, same as any fresh entry.
+- **CSS**: `.match-score` became a flex-row pair (`.match-score-pair`) with
+  an en-dash separator; number-input spin buttons are hidden
+  (`-webkit-appearance: none` / `-moz-appearance: textfield`) since the
+  field is narrow. No print-CSS changes were needed — the existing
+  `.match-score { border: none; background: transparent; ... }` print rule
+  already targets the class name, which both new inputs still carry.
+
+### Verification
+
+No `test/` folder existed for this tool before this round; added
+`Tools/bracket-tournament-generator/test/smoke-standings.mjs` (not wired
+into root `package.json` — that file was out of bounds for this
+assignment; run it directly with
+`node Tools/bracket-tournament-generator/test/smoke-standings.mjs`, same
+as any other suite once Playwright is installed per the repo's normal
+`npm ci && npx playwright install chromium` setup). It covers, headless:
+- **Round robin** (4 entrants, as-entered): enters 6 match scores, confirms
+  the correct side is auto-marked `.slot-winner` in each, confirms the
+  standings table gains `PF/PA/Diff` columns once scores exist, confirms
+  the exact ranked order and W/L/PF/PA/Diff numbers for the leader and the
+  last-place team, confirms the champion banner names the standings
+  leader, and confirms the standings table (and thus the score data behind
+  it) survives a blank-print/live-restore cycle unchanged.
+- **Single elimination** (4 entrants, as-entered): enters scores for both
+  round-0 matches, confirms both winners auto-advance into a real (no
+  longer TBD) final matchup, decides the final by score, confirms the
+  champion banner and the exact derived W/L/Played/PF/PA/Diff record for
+  all four entrants including the two first-round losers (who get a loss
+  but no bye credit).
+- **Legacy migration**: seeds `localStorage` with an old-shape
+  `{ scores: { '0_0': '21-9' } }` bracket, reloads the page, confirms the
+  text migrated into the two structured inputs, confirms the match is
+  *not* auto-decided by the migration alone, then confirms a fresh
+  `change` event on the now-structured field does decide it.
+- All three sub-suites assert zero console/page errors and zero requests
+  leaving the site.
+
+Beyond the automated suite, an ad hoc headless run (not kept as a
+committed script) exercised the full double-elimination path this suite
+doesn't cover — winners bracket round 0 and final, a losers-bracket
+round A and round B (interleaving a dropped WB loser), a **grand-final
+bracket reset** (LB side wins game 1, forcing a second game), and the
+final championship game — confirming the champion banner, every
+intermediate matchup, and the derived standings table (including a team
+with a losers-bracket win folded into its record) were all correct with
+zero console errors throughout.
+
+### Challenges / tradeoffs
+
+- **Editing a score after a match is already decided updates the record
+  but never re-flips the result.** `decideFn` bails out if the match (or
+  grand-final game) is already decided by the time it fires — correcting a
+  typo in an already-decided match's score updates PF/PA/Diff in standings
+  but does not undo/redo the winner, even if the corrected score would
+  reverse it. Re-deciding after the fact would mean unwinding whatever
+  auto-advance/bye-cascade/losers-bracket-drop had already happened
+  downstream, which is exactly the complexity Pass 2's single-level undo
+  already chose not to solve generally. A teacher who mis-types a score
+  before a bracket has cascaded further should use "Undo last pick" (which
+  works identically whether the pick was made by a click or by a score,
+  since both call `captureUndoSnapshot()`) rather than editing the score
+  box after the fact.
+- **No draw/tie support**, carried over unchanged from Round 4: a tied
+  score never auto-decides a match in any format. Sports with legitimate
+  draws still aren't well served.
+- **Elimination standings are a new interpretation, not something the
+  backlog literally asked for.** The ask named round robin specifically;
+  extending the same idea to single/double elimination was a judgment call
+  (see "Scope judgment call" above) made because the tool's actual format
+  lineup had already grown past round-robin-only by the time this was
+  picked up, and restricting the standings idea to one of three formats
+  would have felt arbitrary and inconsistent in the UI.
+- **`match-score-pair` widths get tight at very small print sizes** on a
+  32-entry-class single-elimination bracket (the same P6 print-quality gap
+  already tracked under Platform Themes) — not something this round
+  attempted to fix.
+
+### Where the next round should pick up
+
+- Scheduling for double elimination (Round 4 carryover, still open).
+- Pools-into-a-bracket and/or Swiss (Major Features, still open).
+- A real second-display presentation mode (Round 4 carryover, still open).
+- The P7 engine-sharing question with `021-pe-tournament-stations.html`
+  (Round 4 carryover, still open).
+- If a full undo history (not just single-level) or undo-across-reload
+  ever becomes a real ask, the snapshot mechanism here (`captureUndoSnapshot`
+  / `undoSnapshot`) is the obvious place to extend into a stack rather than
+  a single slot.
+- Draw/tie support for round robin and any future everybody-plays format
+  (carried over, still open).
+- Re-deciding an already-decided match from a corrected score (see
+  Challenges above) — currently requires Undo instead.
 - Team names with members (Quick Wins) is still open.

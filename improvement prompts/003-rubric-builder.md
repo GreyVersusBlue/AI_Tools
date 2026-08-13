@@ -1,13 +1,99 @@
 # Improvement Prompts — 003 — Rubric Builder
 
 **Tool file:** `Tools/003-rubric-builder.html`
-**Support folder:** `Tools/rubric-builder/` — `rb-store.js`, `rb-templates.js`
+**Support folder:** `Tools/rubric-builder/` — `rb-store.js`, `rb-templates.js`,
+`rb-gdv-handoff.js` (score handoff to Grade Distribution Visualizer, see
+Status below)
 
 **Current description (from README):** Build a grading rubric from a template or from scratch — editable criteria and performance levels, live point totals, print a clean landscape table. Saves multiple named rubrics.
 
 ---
 
 ## Status
+
+### 2026-08-13 — backlog row: "Rubric scores flow to grade tools"
+
+Picked up the `IDEAS_BACKLOG.md` "Existing Tools — Enhancement Ideas" row
+asking for "a read-only bridge writing rubric totals into Final Grade
+Checker / Grade Distribution Visualizer's storage contract, mirroring the
+existing `wpg-rubric-link.js` pattern" — the P7 item this file's Status/Open
+Questions sections have flagged as open since Round 1.
+
+**Premise correction, checked before building anything:** the backlog row
+named two targets. `036-final_grade_checker.html`'s only `localStorage` use
+is `SETTINGS_KEY` (`final-grade-checker:settings-v1`) — rounding rule,
+weights, show-work toggle — written only once a teacher opts in via
+"Remember these settings" (see that file's own comment directly above
+`SETTINGS_KEY`: *"Student names and grades are never written to storage
+anywhere in this file"*). There is no named-list gradebook contract there to
+write into; gradebook data is pasted in fresh every session by design, not
+an oversight this round could "finish." So this shipped **Grade Distribution
+Visualizer only** — the row's premise was half-right, same kind of
+undersell/oversell correction Round 1 and Pass 2 Round 1 both made about
+other rows. If Final Grade Checker ever grows a real saved-gradebook store,
+a Rubric Builder → Final Grade Checker leg could be added the same way; it
+isn't one today.
+
+**What shipped:** `Tools/rubric-builder/rb-gdv-handoff.js`, a small
+write-only bridge in the same spirit as `wpg-rubric-link.js` but in the
+opposite direction — that file only *reads* Rubric Builder's store and
+points its `:current` key at an existing rubric; this one *writes* a
+brand-new entry into `037-grade-distribution-visualizer.html`'s own store
+(`gvb-grade-distribution:list` / `:data:<name>` / `:current`), matching its
+`{ name, text, cutA, cutB, cutC, cutD, bucketWidth, compareNames }` shape
+exactly (read straight out of that file's `saveSet`/`loadSet`/`newList`).
+That store has no per-criterion structure — it's one pasted score per
+student — so only the rubric TOTAL travels, as a percent of the rubric's
+total possible points (matching the 0-100 scale Grade Distribution
+Visualizer's own default cutoffs of 90/80/70/60 assume), never the
+criteria/level breakdown.
+
+A new **"Send scores to Grade Distribution Visualizer"** button appears in
+both Score mode and the class-wide grid (both already share the same
+`RubricStore.getAllScores(state.name)` data CSV export uses). Clicking it:
+1. Reads every currently scored student for the open rubric, computes each
+   one's `earnedPoints() ÷ totalPossiblePoints() × 100`.
+2. **Always mints a new, unique assignment name** in Grade Distribution
+   Visualizer's list — the same " (2)", " (3)"... dedup convention several
+   other tools' own saved-list naming already uses in this repo — so a
+   second handoff (e.g. after scoring more students) never silently
+   overwrites the first one sent over.
+3. Points Grade Distribution Visualizer's `:current` at the new entry and
+   opens it in a new tab, so it boots straight into the exported set.
+
+Verified with a new headless-browser suite,
+`Tools/rubric-builder/test/smoke-gdv-handoff.mjs` (32 checks, not yet wired
+into `package.json` — see Testing note below): scores two students on a
+loaded template (one at the bottom of the scale, one at the top), triggers
+the handoff, and checks the exact `gvb-grade-distribution:*` keys/shape
+(the list has exactly one name, the data blob's own `name` field matches its
+key, cutoffs/bucketWidth/`compareNames` all match a freshly-minted
+assignment, exactly three `gvb-grade-distribution:*` keys exist total).
+Then, using the **real popup Rubric Builder's `window.open()` produces**
+(same browser context, so real shared `localStorage` — not a second,
+storage-isolated test context), confirms Grade Distribution Visualizer
+actually boots into the exported assignment: its `#listName` and
+`#scoreInput` fields show the minted name/text, its own tolerant score
+parser reads both students back out within 0.5 points of what Rubric
+Builder computed, and its own stats table reports `n = 2` with `0` excluded
+as blank/non-numeric — a real round trip through the target tool's own
+parsing and rendering, not just a storage-shape assertion. A second handoff
+from the same rubric was also verified to mint a second, uniquely-named
+assignment (`"<name> (2)"`) while leaving the first one's data untouched.
+
+**Testing note — `package.json` boundary:** this round's instructions listed
+`package.json` as out of bounds, so the new suite above is **not** wired
+into the root `test` / `test:rubric` npm scripts the way every other suite
+in this repo is (see "Test tooling" in `CLAUDE.md`) — it only runs via
+`node Tools/rubric-builder/test/smoke-gdv-handoff.mjs` directly today. A
+future round (or whichever session owns `package.json` centrally) should add
+it to both scripts, same as every other suite here.
+
+**Precache note — `sw.js` boundary:** `Tools/rubric-builder/rb-gdv-handoff.js`
+is a new file `003-rubric-builder.html` now `<script src>`s and needs adding
+to `sw.js`'s `PRECACHE_URLS` (with a `CACHE_VERSION` bump) for offline use to
+keep working; this round's instructions listed `sw.js` as out of bounds too,
+so that edit is left for whichever session owns it centrally.
 
 ### Pass 2 — Round 1 — 2026-08-10 — session `yjj7k6`
 
@@ -131,6 +217,15 @@ Real findings from this pass:
 - **Rubric analytics** — class average per criterion, lowest first, as the
   reteaching signal (`classAnalytics`, `renderAnalytics`)
 - **Export all scores as CSV** for the gradebook
+- **Send scores to Grade Distribution Visualizer** (P7, 2026-08-13) — a
+  read-only-of-its-own-data, write-only-of-the-target write handoff
+  (`rubric-builder/rb-gdv-handoff.js`): sends every currently scored
+  student's total, as a percent of the rubric's total possible points, into
+  Grade Distribution Visualizer as a brand-new named assignment there
+  (never overwriting one that already exists), then opens it. Final Grade
+  Checker was **not** wired up the same way — it has no saved-gradebook
+  storage contract to write into (see Status); only Grade Distribution
+  Visualizer does.
 - **Five print/preview formats**, chosen from one dropdown that drives both
   the live preview and the print output (`currentPreviewHtml`): the standard
   grid, a **student-friendly version with an "I can…" per-level option and a
@@ -180,8 +275,11 @@ Real findings from this pass:
   self-assessment column substantially covers this use case per the brief.
 - **Feed the grade tools** (P7). Rubric scores should flow into
   `036-final_grade_checker.html` and `037-grade-distribution-visualizer.html` instead
-  of being retyped. **Skipped this round** (cross-tool integration, deferred);
-  CSV export is the interim bridge.
+  of being retyped. **Done 2026-08-13, for Grade Distribution Visualizer** —
+  see Status. Final Grade Checker has no saved-gradebook storage contract to
+  write into (verified, not assumed — see Status), so that leg stays
+  not-applicable until that tool's storage model changes, not because it was
+  skipped.
 - **Done —** **Rubric analytics.** Across a class, which criterion did students score
   lowest on? That's the reteaching signal, computable from data already
   stored.
@@ -219,9 +317,12 @@ work, and don't promote one without Devon saying so.
 
 - **P2 (shared roster)** — **Addressed 2026-08-10.** Scoring mode and the
   class-wide grid both load from `np_rosters` now.
-- **P7 (cross-tool)** — scores should feed the grade tools; the peer-review
-  backlog item belongs here. Still open — CSV export (done this round) is an
-  interim bridge, not the real handoff.
+- **P7 (cross-tool)** — scores should feed the grade tools. **Addressed
+  2026-08-13 for Grade Distribution Visualizer** (`rb-gdv-handoff.js`, see
+  Status) — a real write handoff into that tool's own store, not just CSV
+  export. Final Grade Checker has no gradebook store to feed (see Status);
+  CSV export remains the interim bridge for that tool specifically, until/
+  unless its storage model changes.
 - **P3 (share links)** — already adopts `state-link.js`; the natural use is
   sharing a rubric with a co-teacher or a department.
 - **P6 (print quality)** — **Addressed 2026-08-10.** Table rows now carry
@@ -233,10 +334,14 @@ work, and don't promote one without Devon saying so.
 ## Open Questions
 
 - Where should scored student data live — here, or in a shared assessment
-  store that the grade tools also read? Keeping it here is simpler; sharing it
-  is what makes the handoff work. **Still open** — this round kept scores
-  local and added CSV export as a manual bridge rather than deciding this;
-  a real P7 handoff still needs Devon's call on the shared store's shape.
+  store that the grade tools also read? **Resolved 2026-08-13, for Grade
+  Distribution Visualizer:** scores stay local to Rubric Builder (the source
+  of truth), and a totals-only copy is written out into Grade Distribution
+  Visualizer's own store on demand, same "write a copy into the target's own
+  shape" pattern as other cross-tool handoffs in this repo rather than a new
+  shared store both tools read from. Final Grade Checker still has no store
+  to write into at all (see Status) — that half of the original question is
+  moot until/unless it gets one.
 - Is standards-based reporting something this district needs, or is
   points-based the only realistic model? **Still open** — standards
   alignment/tagging was explicitly skipped this round rather than

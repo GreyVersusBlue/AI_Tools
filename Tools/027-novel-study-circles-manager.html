@@ -322,6 +322,7 @@
         <div class="btn-row" style="margin-top:.6rem;">
           <button type="button" class="secondary" id="printVocabBtn">Print vocabulary list</button>
           <button type="button" class="secondary" id="exportVocabBtn">Export vocabulary to Flashcard Generator</button>
+          <button type="button" class="secondary" id="exportReviewBoardBtn">Export vocabulary to Review Game Board</button>
         </div>
       </div>
     </div>
@@ -443,7 +444,7 @@
    'splitValueLabel', 'splitValue', 'splitBtn', 'groupEditList',
    'roleList', 'addRoleBtn',
    'meetingDate', 'checkpointInputs', 'meetingVocab', 'logMeetingBtn', 'printBtn', 'printLogBtn', 'resetHistoryBtn', 'historyHint',
-   'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'exportVocabBtn', 'msg', 'undoRow', 'undoBtn',
+   'resultsArea', 'meetingHistory', 'vocabLog', 'printVocabBtn', 'exportVocabBtn', 'exportReviewBoardBtn', 'msg', 'undoRow', 'undoBtn',
    'printArea', 'printTitle', 'printSub', 'printGroups',
    'printLogArea', 'printLogTitle', 'printLogSub', 'printLogMeetings',
    'printVocabArea', 'printVocabTitle', 'printVocabSub', 'printVocabBody',
@@ -1257,6 +1258,135 @@
     }
     showMsg('Exported ' + items.length + ' word' + (items.length === 1 ? '' : 's') + ' to the Flashcard Generator as "' + listName + '".', true);
     window.open('040-vocab-flashcard-generator.html', '_blank');
+  });
+
+  // ── Vocabulary handoff to Review Game Board ─────────────────────────────
+  // Writes into 030-review-game-board.html's own localStorage contract
+  // (Tools/review-game-board/rgb-store.js): a list of saved-board names
+  // under 'gvb-review-board:list', one JSON blob per name under
+  // 'gvb-review-board:data:<name>', and a 'gvb-review-board:current'
+  // pointer that tool reads on boot. Same reasoning as the Flashcard
+  // Generator handoff above applies here too — there's no pre-existing
+  // board for a brand-new novel study's vocabulary to point at — so this
+  // always mints one new, uniquely-named board rather than only pointing
+  // :current at something the user already saved there.
+  //
+  // Direction (judgment call): a review game is played by reading a clue
+  // aloud and having a team name the answer, so this goes
+  // question = definition, answer = word — the definition gets read out,
+  // the word is what a team has to produce. That's the opposite of the
+  // Flashcard export's "term: definition" line, which is read front-to-back
+  // by one student studying alone rather than played as a guessing game.
+  // A word logged with no definition can't make a real clue in either
+  // direction (a review-game board needs actual question text, not a
+  // blank), so unlike the Flashcard export — which can still show a
+  // word-only card — words with no definition anywhere in the log are
+  // skipped here rather than exported half-empty.
+  //
+  // Grouping (judgment call): one category per meeting checkpoint that has
+  // vocabulary, using meetingCheckpointLabel() — the same label the printed
+  // vocabulary list above already groups by — in the order those meetings
+  // happened. A study whose vocabulary was all logged at one meeting ends
+  // up with one category, which is the correct "flat" fallback rather than
+  // something contrived to force multiple categories.
+  //
+  // Points (judgment call): within a category, clues are numbered
+  // 100/200/300/... in the order the words were logged at that meeting —
+  // an ordinary review-game point ladder. This tool has no basis to judge
+  // word difficulty, so it doesn't try.
+  var REVIEW_BOARD_LIST_KEY = 'gvb-review-board:list';
+  var REVIEW_BOARD_DATA_PREFIX = 'gvb-review-board:data:';
+  var REVIEW_BOARD_CURRENT_KEY = 'gvb-review-board:current';
+
+  function reviewBoardListNames() {
+    try {
+      var names = JSON.parse(localStorage.getItem(REVIEW_BOARD_LIST_KEY) || '[]');
+      return Array.isArray(names) ? names : [];
+    } catch (e) { return []; }
+  }
+
+  function uniqueReviewBoardName(base, existingNames) {
+    if (existingNames.indexOf(base) === -1) return base;
+    var n = 2, candidate = base + ' (' + n + ')';
+    while (existingNames.indexOf(candidate) !== -1) { n++; candidate = base + ' (' + n + ')'; }
+    return candidate;
+  }
+
+  // Chronological meetings, each vocab word deduped case-insensitively and
+  // kept against the checkpoint of the meeting where it was *first* logged
+  // (definition backfilled from a later meeting if it was first logged
+  // without one) — the same dedup rule as collectVocabForExport, but this
+  // one also tracks which checkpoint to group the clue under, and drops
+  // any word that never picked up a definition.
+  function collectVocabForReviewBoard() {
+    var chronological = (state.meetings || []).slice().reverse();
+    var seen = {}; // word.toLowerCase() -> index into out
+    var out = [];
+    chronological.forEach(function (m) {
+      var checkpoint = meetingCheckpointLabel(m);
+      (m.vocab || []).forEach(function (v) {
+        var word = (v.word || '').trim();
+        if (!word) return;
+        var key = word.toLowerCase();
+        var definition = (v.definition || '').trim();
+        if (seen.hasOwnProperty(key)) {
+          if (!out[seen[key]].definition && definition) out[seen[key]].definition = definition;
+          return;
+        }
+        seen[key] = out.length;
+        out.push({ word: word, definition: definition, checkpoint: checkpoint });
+      });
+    });
+    return out;
+  }
+
+  // Board shape: { name, categories:[{name, clues:[{points,question,answer,used}]}], teams }
+  // — see 030-review-game-board.html's own `state` comment and normalizeBoard().
+  function vocabToReviewBoardCategories(items) {
+    var order = [];
+    var byCheckpoint = {};
+    items.forEach(function (it) {
+      if (!byCheckpoint.hasOwnProperty(it.checkpoint)) {
+        byCheckpoint[it.checkpoint] = [];
+        order.push(it.checkpoint);
+      }
+      byCheckpoint[it.checkpoint].push(it);
+    });
+    return order.map(function (checkpoint) {
+      var clues = byCheckpoint[checkpoint].map(function (it, i) {
+        return { points: (i + 1) * 100, question: it.definition, answer: it.word, used: false, dailyDouble: false };
+      });
+      return { name: checkpoint, clues: clues };
+    });
+  }
+
+  els.exportReviewBoardBtn.addEventListener('click', function () {
+    var collected = collectVocabForReviewBoard();
+    var items = collected.filter(function (it) { return it.definition; });
+    if (!items.length) { showMsg('Log some vocabulary words with a definition before exporting to the Review Game Board.'); return; }
+    var existingNames = reviewBoardListNames();
+    var baseName = (state.bookTitle || state.name || 'Novel Study') + ' Vocabulary';
+    var boardName = uniqueReviewBoardName(baseName, existingNames);
+    var boardState = {
+      name: boardName,
+      categories: vocabToReviewBoardCategories(items),
+      teams: [{ name: 'Team 1', score: 0 }, { name: 'Team 2', score: 0 }],
+      dailyDoubleEnabled: false, lightningRoundEnabled: false, lightningRoundSeconds: 15
+    };
+    try {
+      existingNames.push(boardName);
+      localStorage.setItem(REVIEW_BOARD_LIST_KEY, JSON.stringify(existingNames));
+      localStorage.setItem(REVIEW_BOARD_DATA_PREFIX + boardName, JSON.stringify(boardState));
+      localStorage.setItem(REVIEW_BOARD_CURRENT_KEY, boardName);
+    } catch (e) {
+      showMsg("Could not save to this browser's storage (private browsing, or storage full?).");
+      return;
+    }
+    var skipped = collected.length - items.length;
+    var msgText = 'Exported ' + items.length + ' word' + (items.length === 1 ? '' : 's') + ' to the Review Game Board as "' + boardName + '".';
+    if (skipped > 0) msgText += ' (' + skipped + ' word' + (skipped === 1 ? '' : 's') + ' with no definition skipped.)';
+    showMsg(msgText, true);
+    window.open('030-review-game-board.html', '_blank');
   });
 
   els.printRoleCardsBtn.addEventListener('click', function () {

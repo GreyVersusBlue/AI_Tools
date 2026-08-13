@@ -11,6 +11,78 @@ moved it to the single site-wide `_shared/vendor/qrcode/qrcode.js`.)
 
 ## Status
 
+**2026-08-13 — Scan returned slips to check them off.** The backlog's own
+next-round pointer (bottom of the 2026-08-12 entry below) called this out, so
+this round built it: a "Scan a returned slip" button on the collection
+tracker card opens a camera modal (`_shared/qr-scan.js` +
+`_shared/vendor/jsqr/jsqr.js`, wired the same way `016-qr-code-generator.html`
+already does it) and checks a student off the moment their slip's QR decodes.
+
+**What the QR already encoded, and what changed.** Before this round, every
+slip in a batch — all 30 students — carried the *identical* QR: a plain-text
+`"trip name | destination | date"` string with nothing that identified which
+student the printed page belonged to. That made scan-to-check-off impossible
+as a starting point; the QR had to change to be scannable per-student, not
+just added a scanner on top of what existed. It now encodes tagged JSON —
+`{"ftps":1,"trip":"<trip name>","student":"<student name>"}` — via
+`buildSlipQrPayload(studentName)`, called with each student's own name at the
+point each slip is built (`slipHtml()` already had `studentName` in scope, it
+just wasn't reaching the QR). A blank copy (no name filled in yet) encodes
+`student: ""`, since there's nothing yet to check off. Nothing about the QR
+is persisted in trip state — it was already generated fresh from the current
+form on every render — so this is a pure behavior change, not a migration.
+
+**How a scan resolves to a specific student.** `resolveScannedSlip(text)`:
+parse the decoded text as JSON and require `ftps === 1` (rejects an unrelated
+QR — a library book, someone else's flyer — instead of guessing at it);
+require a non-empty `student`; if the payload's `trip` is set and doesn't
+match the currently-loaded trip's name, refuse rather than checking off a
+same-named student under the wrong trip; then match `student` case-
+insensitively/trimmed against `batchNamesList()` — the exact list the
+tracker's rows and the chaperone assignment panel already read. A match
+flips `state.collected[name].returned = true` (the same field the manual
+"Returned" checkbox writes) and re-renders the tracker; no match, no trip, no
+roster, or unparseable text each return a distinct status the UI turns into a
+plain-language banner without ever throwing. A second scan of an
+already-returned student's slip is recognized as `'duplicate'` and left
+alone — no double-count, no error.
+
+**Testing.** Camera access can't be driven under headless Playwright, so
+`Tools/field-trip-permission-slip/test/smoke-scan-tracker.mjs` (45
+assertions, new this round) decodes the QR the tool actually renders — using
+the page's own vendored jsQR against each printed slip's `<img>` data URL,
+the same decoder the camera path uses — and feeds the resulting text into
+`window.__ftpsResolveScan(text)`, a small hook exposed specifically so a test
+can call exactly what the camera's `onResult` callback calls. It holds down:
+each student's slip carries its own distinct QR (not a shared trip-level
+one); a first scan checks off and updates the "N of M returned" count; a
+duplicate scan is a no-op with an "already checked off" message; an
+unmatched student name, a different trip's QR, a blank copy's QR (no
+student), an empty roster, and outright garbage text are all reported
+through the status banner and never crash; the scan modal itself opens,
+reports "no camera" gracefully in this headless environment, and closes on
+Cancel; and zero console errors or off-site requests anywhere in the run.
+The pre-existing `test/smoke-bilingual.mjs` (44 assertions) was re-run
+unchanged and still passes — the QR payload change doesn't touch anything
+that suite asserts on.
+
+**Not wired into `package.json`.** This round's task scope explicitly
+excluded editing `package.json`; the new suite runs directly
+(`node Tools/field-trip-permission-slip/test/smoke-scan-tracker.mjs`) but
+isn't yet added to `npm test` or given its own `test:*` script the way
+`smoke-bilingual.mjs` has `test:permission-slip`. A future round (or whoever
+owns `package.json` centrally) should add it.
+
+**Left for a future round:** the trip-mismatch check only fires when the
+scanned QR's `trip` field is non-empty and the current trip's name is also
+set — an untitled trip (`state.name === ''`) can't be distinguished this way,
+though that's an edge case (every trip gets named on creation via a prompt).
+Also unaddressed: there's no visible list of *who's been scanned this
+session* versus checked off manually — the tracker rows already show that,
+so it wasn't duplicated, but a teacher standing at a bus door scanning 28
+slips in a row gets no separate "just scanned" feed, only the running total
+and the per-row checkbox state.
+
 **2026-08-11 — Round 2 (session `gb5c6e`).** Shipped `.ics` calendar export
 (Major Features), reusing the exact hand-built-VCALENDAR pattern already
 proven in `013-lab-safety-contract-tracker.html`: `icsEscape`/`icsTimestamp`/
@@ -145,8 +217,9 @@ structurally different print output, batch printing pairing every student, the
 language switching off again, persistence, and a trip saved before any of this
 opening as English-only — no console errors.
 
-**Next round should pick up** per-language translation storage (above), and
-the backlog's own row about scanning returned slips with `_shared/qr-scan.js`.
+**Next round should pick up** per-language translation storage (above); the
+scanning row that used to be listed here shipped 2026-08-13 (see the Status
+entry above it).
 
 ## What it does today
 
@@ -172,7 +245,12 @@ the backlog's own row about scanning returned slips with `_shared/qr-scan.js`.
   chaperone
 - **`.ics` calendar export** — one event for the trip, plus a separate
   slip-due reminder event with a live missing-count snapshot
-- QR code on the slip; print
+- **QR code per slip, scannable to check a student off** — each slip's QR
+  encodes tagged JSON naming the trip and *that* student (not a copy of one
+  shared trip-level code); the collection tracker's "Scan a returned slip"
+  camera button decodes it and checks the matching roster row off, handling
+  a duplicate scan, an unmatched name, and a different trip's slip without
+  erroring
 
 ## Quick Wins
 
@@ -221,9 +299,10 @@ the backlog's own row about scanning returned slips with `_shared/qr-scan.js`.
   rosters; merging them and splitting into buses/groups is currently manual.
 - **Skipped — deferred.** **Year-over-year reuse that actually works** (P14). "Same trip as last year,
   new dates, new roster" should be two clicks.
-- **Skipped — deferred.** **Return-slip scanning.** Each slip carries a QR already; scanning returned
-  slips with `_shared/qr-scan.js` to tick the collection tracker would make
-  the tracking step take seconds instead of a prep period.
+- **Done —** **Return-slip scanning.** Each slip's QR now names the specific student it
+  was printed for; scanning it with `_shared/qr-scan.js` on the collection
+  tracker checks that student off in seconds instead of a prep period spent
+  reading a paper list.
 
 ## Moonshot / North Star
 
@@ -244,8 +323,11 @@ thing forward to next year's dates in two clicks.
   through an actual print test on paper this round.
 - **P14 (year lifecycle)** — trips repeat annually; this is the clearest case
   for rollover.
-- **P7 (cross-tool)** — **addressed 2026-08-11** for `.ics` generation (see
-  Status); QR scanning still exists only elsewhere on the site, not here.
+- **P7 (cross-tool)** — **addressed 2026-08-11** for `.ics` generation, and
+  **addressed 2026-08-13** for QR scanning: `_shared/qr-scan.js` +
+  `_shared/vendor/jsqr/jsqr.js` (already shared by `016-qr-code-generator.html`)
+  are now wired up here too, not just generating a QR with the shared encoder
+  but decoding one back with the shared scanner.
 
 ## Open Questions
 

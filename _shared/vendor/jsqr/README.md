@@ -30,6 +30,7 @@ separate consolidation job — see `REFACTOR_PLAN.md`.
 | File | Tag |
 | --- | --- |
 | `Tools/004-Classroom Timer.html` | `<script src="../_shared/vendor/jsqr/jsqr.js">` |
+| `Tools/013-lab-safety-contract-tracker.html` | `<script src="../_shared/vendor/jsqr/jsqr.js">` |
 | `Tools/016-qr-code-generator.html` | `<script src="../_shared/vendor/jsqr/jsqr.js">` |
 | `Tools/035-schedule-visualizer.html` | `<script src="../_shared/vendor/jsqr/jsqr.js" defer>` |
 | `Tools/classroom-timer/mirror.html` | `<script src="../../_shared/vendor/jsqr/jsqr.js">` |

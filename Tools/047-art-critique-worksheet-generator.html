@@ -109,6 +109,15 @@
       <button type="button" class="secondary small" id="duplicateWorksheetBtn">Duplicate</button>
       <button type="button" class="danger small" id="deleteWorksheetBtn">Delete</button>
     </div>
+    <div>
+      <label for="modeSwitch">Worksheet mode</label>
+      <select id="modeSwitch">
+        <option value="other">Critiquing someone else's work</option>
+        <option value="self">Reflecting on my own work</option>
+      </select>
+      <p class="hint">Switching mode rewords the four steps' default prompts and follow-up questions to first- or
+        third-person. Any wording you've already customized is left exactly as you wrote it.</p>
+    </div>
     <div class="info-grid">
       <div>
         <label for="activityName">Activity / gallery walk name</label>
@@ -134,23 +143,37 @@
   var DATA_PREFIX = 'acw_worksheet_data_v1:';
   var CURRENT_KEY = 'acw_worksheet_current_v1';
 
-  var DEFAULT_STEPS = [
-    { key: 'describe', label: 'Describe', prompt: 'What do you see? List the colors, shapes, materials, and subject matter.',
-      subs: ['What is the medium (paint, sculpture, photography, etc.)?', 'What objects or subjects are shown?'] },
-    { key: 'analyze', label: 'Analyze', prompt: 'How is the artwork organized? Think about composition, balance, and use of color, line, or texture.',
-      subs: ['Where does your eye go first, and why?', 'How does the artist use color or contrast?'] },
-    { key: 'interpret', label: 'Interpret', prompt: 'What do you think the artist is trying to say or make you feel?',
-      subs: ['What mood or emotion does this piece create?', 'What might the title or subject suggest about its meaning?'] },
-    { key: 'judge', label: 'Judge', prompt: 'Do you think this artwork is successful? Why or why not?',
-      subs: ['What is the strongest part of this piece?', 'What is one suggestion you would give the artist?'] }
-  ];
+  var MODE_STEPS = {
+    other: [
+      { key: 'describe', label: 'Describe', prompt: 'What do you see? List the colors, shapes, materials, and subject matter.',
+        subs: ['What is the medium (paint, sculpture, photography, etc.)?', 'What objects or subjects are shown?'] },
+      { key: 'analyze', label: 'Analyze', prompt: 'How is the artwork organized? Think about composition, balance, and use of color, line, or texture.',
+        subs: ['Where does your eye go first, and why?', 'How does the artist use color or contrast?'] },
+      { key: 'interpret', label: 'Interpret', prompt: 'What do you think the artist is trying to say or make you feel?',
+        subs: ['What mood or emotion does this piece create?', 'What might the title or subject suggest about its meaning?'] },
+      { key: 'judge', label: 'Judge', prompt: 'Do you think this artwork is successful? Why or why not?',
+        subs: ['What is the strongest part of this piece?', 'What is one suggestion you would give the artist?'] }
+    ],
+    self: [
+      { key: 'describe', label: 'Describe', prompt: 'What did I make? Describe the colors, shapes, materials, and subject matter in my finished piece.',
+        subs: ['What medium did I use (paint, sculpture, photography, etc.)?', 'What objects or subjects did I include?'] },
+      { key: 'analyze', label: 'Analyze', prompt: 'How did I organize my artwork? Think about composition, balance, and my use of color, line, or texture.',
+        subs: ["Where do I want a viewer's eye to go first, and why?", 'How did I use color or contrast?'] },
+      { key: 'interpret', label: 'Interpret', prompt: 'What am I trying to say or make a viewer feel with this piece?',
+        subs: ['What mood or emotion do I want this piece to create?', 'What does my title or subject suggest about its meaning?'] },
+      { key: 'judge', label: 'Judge', prompt: 'Do I think this finished piece is successful? Why or why not?',
+        subs: ['What is the strongest part of my piece?', 'What is one thing I would change or improve next time?'] }
+    ]
+  };
+  var DEFAULT_MODE = 'other';
 
   var els = {};
   ['activityName', 'copyCount', 'stepsWrap', 'printBtn', 'printArea',
-   'worksheetSwitch', 'worksheetName', 'newWorksheetBtn', 'duplicateWorksheetBtn', 'deleteWorksheetBtn'
+   'worksheetSwitch', 'worksheetName', 'newWorksheetBtn', 'duplicateWorksheetBtn', 'deleteWorksheetBtn',
+   'modeSwitch'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { name: 'New Worksheet', activityName: '', copyCount: 10, steps: [] };
+  var state = { name: 'New Worksheet', activityName: '', copyCount: 10, mode: DEFAULT_MODE, steps: [] };
 
   function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -160,9 +183,28 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
-  function defaultSteps() {
-    return DEFAULT_STEPS.map(function (s) {
+  function defaultSteps(mode) {
+    var templates = MODE_STEPS[mode] || MODE_STEPS[DEFAULT_MODE];
+    return templates.map(function (s) {
       return { key: s.key, label: s.label, prompt: s.prompt, subs: s.subs.map(function (t) { return { id: uid(), text: t }; }) };
+    });
+  }
+
+  /* Rewords any step prompt/follow-up still matching its default text in
+     `fromMode` to the equivalent default text in `toMode`. Text the teacher
+     has customized away from the default is left untouched. */
+  function rewordStepsForMode(fromMode, toMode) {
+    var fromDefs = MODE_STEPS[fromMode] || MODE_STEPS[DEFAULT_MODE];
+    var toDefs = MODE_STEPS[toMode] || MODE_STEPS[DEFAULT_MODE];
+    state.steps.forEach(function (step) {
+      var fromDef = fromDefs.filter(function (d) { return d.key === step.key; })[0];
+      var toDef = toDefs.filter(function (d) { return d.key === step.key; })[0];
+      if (!fromDef || !toDef) return;
+      if (step.prompt.trim() === fromDef.prompt.trim()) step.prompt = toDef.prompt;
+      step.subs.forEach(function (sub) {
+        var idx = fromDef.subs.indexOf(sub.text.trim());
+        if (idx !== -1 && toDef.subs[idx] !== undefined) sub.text = toDef.subs[idx];
+      });
     });
   }
 
@@ -215,9 +257,10 @@
       state = loaded;
       if (!state.name) state.name = 'My Worksheet';
     } else {
-      state = { name: uniqueName('New Worksheet'), activityName: '', copyCount: 10, steps: [] };
+      state = { name: uniqueName('New Worksheet'), activityName: '', copyCount: 10, mode: DEFAULT_MODE, steps: [] };
     }
-    if (!state.steps.length) state.steps = defaultSteps();
+    if (!state.mode) state.mode = DEFAULT_MODE;
+    if (!state.steps.length) state.steps = defaultSteps(state.mode);
     save();
   }
   function save() {
@@ -235,7 +278,8 @@
     var loaded = loadNamed(name);
     if (!loaded) return;
     state = loaded;
-    if (!state.steps.length) state.steps = defaultSteps();
+    if (!state.mode) state.mode = DEFAULT_MODE;
+    if (!state.steps.length) state.steps = defaultSteps(state.mode);
     localStorage.setItem(CURRENT_KEY, name);
     renderAll();
   }
@@ -244,6 +288,7 @@
     els.worksheetName.value = state.name;
     els.activityName.value = state.activityName;
     els.copyCount.value = state.copyCount;
+    els.modeSwitch.value = state.mode || DEFAULT_MODE;
     renderWorksheetSwitch();
     renderSteps();
   }
@@ -318,9 +363,19 @@
   els.newWorksheetBtn.addEventListener('click', function () {
     var name = prompt('Name for the new worksheet:', 'New Worksheet');
     if (!name) return;
-    state = { name: uniqueName(name.trim()), activityName: '', copyCount: 10, steps: defaultSteps() };
+    state = { name: uniqueName(name.trim()), activityName: '', copyCount: 10, mode: DEFAULT_MODE, steps: defaultSteps(DEFAULT_MODE) };
     save();
     renderAll();
+  });
+
+  els.modeSwitch.addEventListener('change', function () {
+    var newMode = els.modeSwitch.value;
+    var oldMode = state.mode || DEFAULT_MODE;
+    if (newMode === oldMode) return;
+    rewordStepsForMode(oldMode, newMode);
+    state.mode = newMode;
+    save();
+    renderSteps();
   });
 
   els.duplicateWorksheetBtn.addEventListener('click', function () {
@@ -338,14 +393,19 @@
     if (names.length) {
       switchTo(names[0]);
     } else {
-      state = { name: 'New Worksheet', activityName: '', copyCount: 10, steps: defaultSteps() };
+      state = { name: 'New Worksheet', activityName: '', copyCount: 10, mode: DEFAULT_MODE, steps: defaultSteps(DEFAULT_MODE) };
       save();
       renderAll();
     }
   });
 
   function halfSheetHtml() {
-    var title = state.activityName.trim() ? escapeHtml(state.activityName.trim()) : 'Art Critique Worksheet';
+    var isSelf = (state.mode || DEFAULT_MODE) === 'self';
+    var title = state.activityName.trim() ? escapeHtml(state.activityName.trim()) :
+      (isSelf ? 'Self-Reflection Worksheet' : 'Art Critique Worksheet');
+    var namesLine = isSelf ?
+      'My artwork title: _______________________ &nbsp; My name: _______________________' :
+      'Artwork title: _______________________ &nbsp; Reviewer: _______________________';
     var steps = state.steps.map(function (step, i) {
       var subs = step.subs.filter(function (s) { return s.text.trim(); }).map(function (s) {
         return '<div style="font-size:.8rem;margin:.15rem 0 0 .8rem;">&bull; ' + escapeHtml(s.text) + '<span class="hs-line"></span></div>';
@@ -354,7 +414,7 @@
         '<p class="prompt">' + escapeHtml(step.prompt) + '</p><span class="hs-line"></span>' + subs + '</div>';
     }).join('');
     return '<div class="half-sheet"><h2>' + title + '</h2>' +
-      '<div class="names">Artwork title: _______________________ &nbsp; Reviewer: _______________________</div>' +
+      '<div class="names">' + namesLine + '</div>' +
       steps + '</div>';
   }
 

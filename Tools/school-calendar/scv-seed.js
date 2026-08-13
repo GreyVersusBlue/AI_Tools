@@ -83,7 +83,8 @@ export function seedCalendar2026() {
     meta: { yearLabel: "2026–27 School Year", start: "2026-08-31", end: "2027-06-11" },
     dayTypes: DEFAULT_DAY_TYPES.map(t => ({ ...t })),
     days: buildDays(),
-    pacing: emptyPacing()
+    pacing: emptyPacing(),
+    units: []
   };
 }
 
@@ -93,6 +94,7 @@ export function blankCalendar(yearLabel, start, end) {
     meta: { yearLabel: yearLabel || "School Year", start: start || "2026-08-31", end: end || "2027-06-11" },
     dayTypes: DEFAULT_DAY_TYPES.map(t => ({ ...t })),
     days: {},
-    pacing: emptyPacing()
+    pacing: emptyPacing(),
+    units: []
   };
 }

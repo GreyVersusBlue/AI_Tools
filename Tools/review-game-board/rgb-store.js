@@ -7,6 +7,11 @@
   var LIST_KEY = 'gvb-review-board:list';
   var DATA_PREFIX = 'gvb-review-board:data:';
   var CURRENT_KEY = 'gvb-review-board:current';
+  // The reusable question bank (rgb-bank-store.js) is a separate store, but
+  // its one key still lives on this same origin and this same tool. Counting
+  // it into the "other tools" share of the readout below would blame some
+  // other page on the site for space this tool is using itself.
+  var BANK_PREFIX = 'gvb-review-board-bank:';
 
   /* NOTE: localStorage.getItem returns `null` for a missing key, and
      JSON.parse(null) parses that as the *string* "null" -> the value
@@ -84,7 +89,7 @@
       if (key === null) continue;
       var size = bytesOf(key) + bytesOf(localStorage.getItem(key));
       total += size;
-      if (key.indexOf(DATA_PREFIX) === 0 || key === LIST_KEY || key === CURRENT_KEY) boards += size;
+      if (key.indexOf(DATA_PREFIX) === 0 || key === LIST_KEY || key === CURRENT_KEY || key.indexOf(BANK_PREFIX) === 0) boards += size;
     }
     return { total: total, boards: boards };
   }
