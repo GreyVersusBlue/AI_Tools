@@ -25,6 +25,10 @@ import {
 } from "../np-pick.js";
 import { report, overdue, summaryLine, daysBetween, shiftDay, dayKey } from "../np-equity.js";
 import { DETAILS_KEY, loadDetails, parseDetails, lookupDetail, displayName } from "../np-details.js";
+import {
+  SEATING_KEY, looseKey, parseSeatingState, loadSeatingState, pickSection,
+  derivePositions, joinCallRates, byRow, byRegion, seatEquityReport, seatSummaryLine
+} from "../np-seat-equity.js";
 
 let pass = 0, fail = 0;
 function assert(cond, msg) {
@@ -878,6 +882,147 @@ console.log("name-picker smoke\n");
            `the least-called student sits earlier in the round than the most-called (${avgLeast.toFixed(2)} vs ${avgMost.toFixed(2)})`);
     console.log(`  average position in a weighted round: least-called ${avgLeast.toFixed(2)}, most-called ${avgMost.toFixed(2)} of 8`);
   }
+}
+
+/* ── seat-position equity: joining np_history call counts onto
+   seating-chart-v1 by row and region ─────────────────────────────────────
+   seating-chart-v1 is owned by 005-Seating Chart Generator and read-only
+   here — this file must never assume a shape stricter than "an object with
+   a sections array", because a teacher who has never opened that tool, or
+   whose chart is mid-edit, still gets a working Equity tab. */
+{
+  // parseSeatingState / loadSeatingState never throw, whatever they're handed.
+  assert(parseSeatingState(null) === null, "no stored value reads as no chart");
+  assert(parseSeatingState("{not json") === null, "unparsable JSON reads as no chart, not a throw");
+  assert(parseSeatingState("{}") === null, "an object with no sections array reads as no chart");
+  assert(parseSeatingState(JSON.stringify({ sections: [] })) === null, "an empty sections array reads as no chart");
+  const validRaw = JSON.stringify({ active: "sec1", sections: [{ id: "sec1", name: "Period 3", students: [], desks: [], assign: {} }] });
+  assert(parseSeatingState(validRaw).sections.length === 1, "a real chart parses");
+
+  assert(loadSeatingState(stubStorage()) === null, "no key at all reads as no chart");
+  assert(loadSeatingState(stubStorage({ [SEATING_KEY]: validRaw })).sections[0].name === "Period 3",
+         "the real key name is seating-chart-v1");
+  assert(loadSeatingState({ getItem() { throw new Error("blocked"); } }) === null,
+         "storage that throws on read is survivable, same as np-store's own guard");
+
+  // looseKey: case, punctuation and whitespace all fall away.
+  assert(looseKey("  Aiden   Alvarez ") === "aiden alvarez", "extra whitespace collapses");
+  assert(looseKey("O'Brien-Sam") === "o brien sam", "punctuation becomes a space, not nothing");
+  assert(looseKey("") === "" && looseKey(null) === "" && looseKey(undefined) === "", "empty/missing reads as empty");
+
+  // pickSection: exact loose match, then substring, then active, then first.
+  const twoSections = {
+    active: "secB",
+    sections: [
+      { id: "secA", name: "Period 3", desks: [], assign: {}, students: [] },
+      { id: "secB", name: "Period 5 - Honors Bio", desks: [], assign: {}, students: [] }
+    ]
+  };
+  assert(pickSection(twoSections, "period 3").id === "secA", "an exact loose-name match wins");
+  assert(pickSection(twoSections, "Period 5").id === "secB", "a substring match finds the fuller section name");
+  assert(pickSection(twoSections, "Nothing Like Either").id === "secB", "no name match falls back to the active section");
+  assert(pickSection(twoSections, "").id === "secB", "no roster name at all also falls back to active");
+  assert(pickSection({ active: "nope", sections: twoSections.sections }, "").id === "secA",
+         "an active id that no longer exists falls back to the first section");
+  assert(pickSection(null, "anything") === null, "no chart at all gives no section");
+  assert(pickSection({ sections: [] }, "x") === null, "a chart with no sections gives no section");
+
+  /* A 3x3 room: three rows of three desks, front to back. Column position
+     puts each seat in a distinct left/center/right band, and row puts each
+     in a distinct front/middle/back band, so this fixture exercises every
+     one of the nine region labels at once. */
+  const NAMES9 = CLASS_OF_28.slice(0, 9);
+  const desks = [];
+  const assign = {};
+  const ys = [110, 204, 298];     // front, middle, back (row tolerance is 70*0.6 = 42, gap here is 94)
+  const xs = [40, 168, 296];      // left, center, right
+  let n = 0;
+  const students = NAMES9.map((name, i) => ({ id: `s${i + 1}`, name }));
+  for (const y of ys) {
+    for (const x of xs) {
+      const deskId = `d${desks.length + 1}`;
+      desks.push({ id: deskId, x, y, rot: 0, locked: false });
+      assign[deskId] = students[n].id;
+      n++;
+    }
+  }
+  const section = { id: "sec1", name: "Period 3", students, desks, assign };
+
+  const positions = derivePositions(section);
+  assert(positions.length === 9, "every assigned desk contributes one seated student");
+  const byName = Object.fromEntries(positions.map(p => [p.name, p]));
+  assert(byName["Aiden Alvarez"].row === 1 && byName["Grace Gallagher"].row === 3,
+         "row is 1-based, front to back");
+  assert(byName["Aiden Alvarez"].region === "front-left", "top-left desk resolves to front-left");
+  assert(byName["Brooklyn Bell"].region === "front-center", "middle column, front row");
+  assert(byName["Camila Castro"].region === "front-right", "rightmost column, front row");
+  assert(byName["Elena Espinoza"].region === "middle-center", "the room's dead center");
+  assert(byName["Isabel Ibarra"].region === "back-right", "bottom-right desk resolves to back-right");
+
+  assert(derivePositions({ desks: [], students: [], assign: {} }).length === 0, "no desks, nobody seated");
+  assert(derivePositions({ desks: [{ id: "d1", x: 0, y: 0 }], students: [], assign: {} }).length === 0,
+         "an empty desk contributes nobody");
+  assert(derivePositions({ desks: [{ id: "d1", x: 0, y: 0 }], students: [{ id: "s1", name: "Ghost" }], assign: { d1: "gone" } }).length === 0,
+         "a desk assigned to a student id that no longer exists is skipped, not guessed at");
+
+  // joinCallRates: loose-matched by name; one student (Isabel) has no row in
+  // the equity report at all, and one (Grace) matches despite different
+  // case and spacing — the same looseness the seat-position feature exists
+  // to tolerate, because a chart's roster and the picker's roster are typed
+  // independently.
+  const equityRows = [
+    ...["Aiden Alvarez", "Brooklyn Bell", "Camila Castro"].map(name => ({ name, count: 10, lifetime: 40, daysSince: 0 })),
+    ...["Declan Doyle", "Elena Espinoza", "Finn Fletcher"].map(name => ({ name, count: 5, lifetime: 20, daysSince: 3 })),
+    { name: "  grace   GALLAGHER  ", count: 1, lifetime: 2, daysSince: 12 },   // Grace Gallagher, loosely
+    { name: "Hassan Haddad", count: 1, lifetime: 2, daysSince: 12 }
+    // Isabel Ibarra: deliberately absent — never called, or simply not on this roster
+  ];
+  const { matched, unmatched } = joinCallRates(positions, equityRows);
+  assert(matched.length === 8, "eight of nine seated students found a loosely-matching pick count");
+  assert(unmatched.length === 1 && unmatched[0] === "Isabel Ibarra", "the one that didn't match is reported by name, not silently dropped");
+  const graceJoined = matched.find(m => m.name === "Grace Gallagher");
+  assert(graceJoined && graceJoined.count === 1 && graceJoined.matchedName === "  grace   GALLAGHER  ",
+         "case- and whitespace-different names still join");
+
+  // byRow / byRegion: seats, totals and the per-seat average, in the right order.
+  const rows = byRow(matched);
+  assert(rows.map(r => r.key).join(",") === "1,2,3", "rows sort front-to-back, not by insertion order");
+  assert(rows[0].seats === 3 && rows[0].totalCount === 30 && rows[0].avgCount === 10, "front row: three seats, 30 picks, 10 per seat");
+  assert(rows[1].avgCount === 5, "middle row averages 5 picks per seat");
+  assert(rows[2].seats === 2 && rows[2].totalCount === 2 && rows[2].avgCount === 1,
+         "back row only counts its two MATCHED seats — Isabel's empty slot doesn't drag the average down");
+
+  const regions = byRegion(matched);
+  assert(regions.map(r => r.key).join(",") === "front-left,front-center,front-right,middle-left,middle-center,middle-right,back-left,back-center",
+         "regions sort front-to-back, left-to-right, and only include occupied+matched bands (back-right is Isabel's, and she didn't match)");
+  assert(regions.find(r => r.key === "back-left").avgCount === 1, "Grace's region shows her joined count");
+
+  // seatEquityReport / seatSummaryLine: the whole join in one call, and the
+  // plain-text line that goes on a printed page.
+  const state = { active: "sec1", sections: [section] };
+  const full = seatEquityReport(state, "Period 3", equityRows);
+  assert(full.sectionName === "Period 3" && full.seated === 9 && full.matched === 8, "the report names its section and both counts");
+  assert(full.byRow.length === 3 && full.byRegion.length === 8, "row and region breakdowns both come back on the same report");
+  const line = seatSummaryLine(full);
+  assert(/8 of 9 seated students matched/.test(line), "the summary states the match rate plainly");
+  assert(/row 3 is called 10% as often as row 1/.test(line), "…and names the widest row-to-row gap");
+  assert(/1 seated student could not be matched/.test(line), "…and the one seat it could not account for");
+
+  assert(seatEquityReport(null, "Period 3", equityRows) === null, "no chart at all gives no report");
+  const emptySection = { id: "sec2", name: "Period 7", students: [], desks: [], assign: {} };
+  const emptyReport = seatEquityReport({ sections: [emptySection] }, "Period 7", []);
+  assert(emptyReport.seated === 0 && emptyReport.byRow.length === 0,
+         "a matching section with nobody seated yet is a report, not a null — so the UI can say so instead of just hiding");
+  assert(/no seats assigned yet/.test(seatSummaryLine(emptyReport)), "and the summary line says exactly that");
+  assert(seatSummaryLine(null) === "No seating chart found in this browser.", "with no chart the summary says that plainly too");
+
+  // A single seated row can't have a "widest gap" sentence — the summary
+  // degrades to just the match count rather than comparing a row to itself.
+  const oneRowDesks = [{ id: "d1", x: 0, y: 0, rot: 0, locked: false }];
+  const oneRowSection = { id: "sec3", name: "Solo", students: [{ id: "s1", name: "Aiden Alvarez" }], desks: oneRowDesks, assign: { d1: "s1" } };
+  const oneRowReport = seatEquityReport({ sections: [oneRowSection] }, "Solo", [{ name: "Aiden Alvarez", count: 3, lifetime: 3, daysSince: 0 }]);
+  assert(oneRowReport.byRow.length === 1, "one desk is one row");
+  assert(!/is called/.test(seatSummaryLine(oneRowReport)), "with only one row there is nothing to compare it to");
 }
 
 console.log(`\nname-picker: ${pass} passed, ${fail} failed`);

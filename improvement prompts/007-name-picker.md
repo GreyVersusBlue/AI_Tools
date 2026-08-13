@@ -9,6 +9,73 @@
 
 ## Status
 
+**2026-08-13 — Round 3 (worktree `row-06-name-picker`).** Shipped **equity by
+seat position** — item 2 from "Where the next round should pick up" below,
+the equity report's "most interesting unbuilt column."
+
+- **New module: `Tools/name-picker/np-seat-equity.js`.** Not inlined into the
+  main file, which the previous round already flagged as unaddressed debt at
+  2,400+ lines (now larger). DOM-free, storage-injectable, same shape as
+  `np-store.js`/`np-equity.js`.
+- **What it reads.** `seating-chart-v1`, owned by `005-Seating Chart
+  Generator.html` / `Tools/seating-chart/seating.mjs` — **read-only**, never
+  written here, and the key name itself is never touched (locked decision
+  #36: it stays exactly `seating-chart-v1` forever). A missing, corrupt, or
+  differently-shaped chart parses to `null` and the seat-position section on
+  the Equity tab simply doesn't show, the same "stand quietly next to a
+  teacher who never opened that tool" behaviour `np-details.js` established
+  for Class Roster Hub's sidecar.
+- **Two joins, both loose on purpose.** Which seating-chart *section* is "this
+  roster" is matched by name the same way
+  `010-command-center-dashboard.html`'s own seating panel matches a class
+  period to a section (exact loose match, then substring, then whatever the
+  chart has marked active, then the first section). Which *seated student* is
+  which `np_history` name is matched by a case/punctuation/whitespace-
+  insensitive key — the same strength of "loose" `_shared/student-details.js`
+  already uses, **not** nickname-aware or typo-tolerant: a seated "Bobby
+  Chen" will not match a roster "Robert Chen". A seated student who doesn't
+  match is dropped from the report rather than guessed at, and the report
+  says how many (`unmatched`) so the printed page can say so too instead of
+  quietly under-counting a row.
+- **Row and region, derived from desk x/y, not stored anywhere.** Desks are
+  grouped into rows by one pass over y sorted ascending — a new row starts
+  once the gap since the last desk exceeds `deskH * 0.6`, the exact tolerance
+  `seating.mjs`'s own `frontRowDeskIds` uses to decide what counts as "the
+  front row" for its rotation-fairness report, copied here (not imported —
+  see the file header for why) rather than reinvented. Region is a
+  front/middle/back × left/center/right label from thirds of the *seated
+  students'* own bounding box, not the fixed 1280x900 room, so a chart that
+  only uses half the room still splits meaningfully.
+- **On the Equity tab**: a "Call rate by seat position" panel under the
+  existing per-student list, two small tables (by row, by region: seats,
+  picks in the window, picks per seat) plus a one-line summary in the same
+  plain-text style as `np-equity.js`'s own `summaryLine` — e.g. "8 of 9
+  seated students matched to pick history · row 3 is called 10% as often as
+  row 1 · 1 seated student could not be matched by name." **On the printed
+  Participation Summary**: the same two tables, added to `printReportArea`
+  and shown only when there is seat data to show — the Team Draft and
+  Today's Picks print buttons explicitly hide the section so it can't leak
+  into an unrelated report from a stale DOM state.
+- **Inherits np-equity's 500-entry `np_history` cap.** A seat-position report
+  is built from the same capped history a windowed equity report is, so the
+  same "a long window may be reporting on less than it claims" risk applies
+  here too — this file doesn't add a new instance of the problem, but it does
+  add a second feature that inherits it, which is worth weighing if the cap
+  is ever revisited.
+- **Verified with 48 new pure-function assertions** in `test/smoke.mjs`
+  (276 → 324): row/region derivation from a 3x3 desk fixture that exercises
+  all nine region labels, loose name-matching including a case/whitespace
+  mismatch that must still join, an unmatched seat that must not silently
+  drop from the count, row/region aggregation math, and the degenerate cases
+  (no chart, a matching section with nobody seated yet, a single-row room
+  with nothing to compare it to). No new browser-driven test was added —
+  `test/drive-weighting.mjs` is the existing precedent for that and this
+  round's environment could not run it (`Executable doesn't exist at
+  .../chromium_headless_shell`, a Playwright browser install gap, not a
+  regression caused by this change) to confirm one could be modeled on it
+  cleanly; a future round should add a `drive-*` suite that seeds
+  `seating-chart-v1` in a real page and checks the rendered tables.
+
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **weighted fairness
 picking** (backlog rank 10): an optional persistent lean toward whoever the
 lifetime pick counts say has been called least.
@@ -157,21 +224,32 @@ What shipped, against the backlog below:
 
 1. **The 500-entry history cap** is now load-bearing for a feature teachers
    might be asked to defend. Either raise it or add a per-day rollup key that
-   survives the trim.
-2. **Seat-position distribution** — the equity report's most interesting
-   unbuilt column, and it needs `seating-chart-v1` (P7). "You call on the
-   back row a third as often" is a sharper finding than any of the numbers
-   currently shown.
-3. **Split the file.** Still 2,400+ lines, and this round added to it. The
-   themes table, the sound engine, and each pick mode are the obvious
-   extractions; `np-store`/`np-pick`/`np-equity`/`np-details` show the shape.
+   survives the trim. Round 3 added a second feature (seat-position equity)
+   that inherits this same limit rather than fixing it — still the real fix.
+2. ~~**Seat-position distribution**~~ — shipped in Round 3
+   (`np-seat-equity.js`), joined against `seating-chart-v1`. What's still
+   open: a browser-driven test (this round's environment couldn't run
+   Playwright to build one — see the Round 3 status entry), and the
+   name-matching is loose-but-exact (case/punctuation/whitespace only), not
+   nickname-aware — a chart typed with different nicknames than the picker's
+   roster will under-report via `unmatched` rather than mis-join.
+3. **Split the file.** Still 2,400+ lines, and both this round and the last
+   added to it. The themes table, the sound engine, and each pick mode are
+   the obvious extractions; `np-store`/`np-pick`/`np-equity`/`np-details`/
+   `np-seat-equity` show the shape.
 4. **Second-screen mirror (P9)** and **theme packs as data** are untouched.
 5. **Team Draft still ends in a board**, not an artifact — the handoff to
    Group/Team Generator and the bracket seed are unbuilt.
 6. The **Open Questions** below are unchanged and still want Devon's call —
    particularly whether the participation data should have its own front door
    and its own erase button now that it is a reportable artifact rather than
-   a bar chart.
+   a bar chart. Seat-position data raises the stakes on that question rather
+   than settling it: a printed row/region breakdown is a more sensitive
+   artifact than a bar chart was.
+7. **`np-equity.js` was already missing from `sw.js`'s `PRECACHE_URLS`**
+   despite being imported by the page (Round 2 added `np-details.js` there
+   but not `np-equity.js`) — the same gap now also applies to the new
+   `np-seat-equity.js`. Both need adding in the next integration pass.
 
 ## What it does today
 
