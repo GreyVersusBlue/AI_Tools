@@ -124,6 +124,16 @@
   .group-card li .role.member { color: var(--muted); font-weight: 600; }
   .group-card li .role.absent { color: var(--err); font-style: italic; }
   .group-card li.absent-row .name { text-decoration: line-through; color: var(--muted); }
+  .no-contract-badge {
+    display: inline-block; margin-left: .4rem; font-size: .64rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .03em; color: var(--err);
+    border: 1px solid var(--err); border-radius: 999px; padding: .05rem .45rem; white-space: nowrap;
+  }
+  .t-no-contract {
+    display: inline-block; margin-top: .1rem; font-size: .62rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .03em; color: var(--err);
+    border: 1px solid var(--err); border-radius: 999px; padding: .05rem .45rem; white-space: nowrap;
+  }
   .absent-check { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
   .absent-check input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
   .absent-hint { margin: -.2rem 0 .9rem; }
@@ -171,6 +181,8 @@
     .group-card li .role.member { color: #444; }
     .group-card .group-station { color: #333; }
     .group-card .group-station strong { color: #000; }
+    .no-contract-badge { color: #a3372b; border-color: #a3372b; }
+    .t-no-contract { color: #a3372b; border-color: #a3372b; }
     .checkout-row { display: none !important; }
     .group-card li.absent-row { display: none !important; }
     .absent-check input[type="checkbox"] { display: none !important; }
@@ -229,7 +241,26 @@
       </div>
 
       <div class="card">
-        <div class="card-title">2 &middot; Grouping</div>
+        <div class="card-title">2 &middot; Safety Contract Gate (optional)</div>
+        <p class="hint">Reads a class you pick from <strong>Lab Safety Contract Tracker</strong> (read-only &mdash; nothing here changes it) and checks each name on the roster above against it. Matching is by exact name spelling, since the two tools keep separate rosters.</p>
+        <label style="display:flex;align-items:center;gap:.5rem;font-weight:600;font-size:.85rem;margin-bottom:.3rem;">
+          <input type="checkbox" id="safetyGateEnabled" style="width:auto;margin:0;"> Check names against a signed safety contract
+        </label>
+        <div id="safetyGateOptions" style="display:none;margin-top:.5rem;">
+          <label for="safetySectionSelect">Class in the Lab Safety Contract Tracker</label>
+          <select id="safetySectionSelect"><option value="">Select a class&hellip;</option></select>
+          <div class="toggle-group" style="margin-top:.2rem;">
+            <input type="radio" name="safety-mode" id="safety-mode-flag" value="flag" checked>
+            <label for="safety-mode-flag">Flag, keep in groups</label>
+            <input type="radio" name="safety-mode" id="safety-mode-exclude" value="exclude">
+            <label for="safety-mode-exclude">Exclude from groups</label>
+          </div>
+          <p class="hint" id="safetyGateReadout" style="margin:.2rem 0 0;"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">3 &middot; Grouping</div>
         <div class="toggle-group">
           <input type="radio" name="split-mode" id="mode-count" value="count" checked>
           <label for="mode-count">Number of groups</label>
@@ -253,21 +284,21 @@
       </div>
 
       <div class="card">
-        <div class="card-title">3 &middot; Roles</div>
+        <div class="card-title">4 &middot; Roles</div>
         <p class="hint">Every group gets these roles, one per student, distinct within the group. Extra students beyond the role list are labeled "Team Member." Add, rename, or remove roles freely.</p>
         <div class="role-list" id="roleList"></div>
         <button type="button" class="secondary small" id="addRoleBtn" style="width:100%;">+ Add role</button>
       </div>
 
       <div class="card">
-        <div class="card-title">4 &middot; Stations &amp; Equipment (optional)</div>
+        <div class="card-title">5 &middot; Stations &amp; Equipment (optional)</div>
         <p class="hint">Give each group a station and its equipment set — "I have 7 microscopes" is the real constraint, not just "groups of 4." Leave this empty to skip station assignment. If there are fewer stations than groups, some groups will share.</p>
         <div class="station-list" id="stationList"></div>
         <button type="button" class="secondary small" id="addStationBtn" style="width:100%;">+ Add station</button>
       </div>
 
       <div class="card">
-        <div class="card-title">5 &middot; Keep Apart (optional)</div>
+        <div class="card-title">6 &middot; Keep Apart (optional)</div>
         <div class="pair-row">
           <select id="pairA"><option value="">Select a name&hellip;</option></select>
           <span style="color:var(--muted);font-size:.8rem;">&amp;</span>
@@ -279,7 +310,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">6 &middot; Shuffle</div>
+        <div class="card-title">7 &middot; Shuffle</div>
         <div class="btn-row">
           <button type="button" id="shuffleBtn">Shuffle groups &amp; roles</button>
         </div>
@@ -344,6 +375,7 @@
   var els = {};
   ['toolbar', 'rosterSwitch', 'newRosterBtn', 'deleteRosterBtn', 'exportRosterBtn', 'importRosterBtn', 'importRosterFile',
    'rosterName', 'namesInput', 'nameCount',
+   'safetyGateEnabled', 'safetyGateOptions', 'safetySectionSelect', 'safetyGateReadout',
    'splitValueLabel', 'splitValue', 'splitNumberWrap', 'equipWrap', 'equipList', 'addEquipBtn', 'equipReadout', 'equipToStationsBtn',
    'roleList', 'addRoleBtn',
    'stationList', 'addStationBtn',
@@ -361,7 +393,10 @@
   //   lastGroups: [{ station: {name, equipment}|null, members: [{name, role}] }, ...],
   //   checkoutLog: [{ outAt: iso|null, inAt: iso|null }, ...] parallel to lastGroups,
   //   absent: [studentName, ...] — marked absent on the *current* shuffle only;
-  //   reset to [] on every reshuffle (a new shuffle is a new day's attendance) }
+  //   reset to [] on every reshuffle (a new shuffle is a new day's attendance),
+  //   safetyGate: { enabled: bool, section: lsctSectionName, mode: 'flag'|'exclude' },
+  //   lastExcludedForSafety: [studentName, ...] — who "exclude" mode left out of
+  //   the most recent shuffle, kept only for the post-shuffle message }
   var state = null;
 
   function escapeHtml(s) {
@@ -468,6 +503,149 @@
       els.namesInput.value = list.join('\n');
       onNamesChanged(true);
     } catch (e) { showMsg('Could not read that roster from this browser.'); }
+  });
+
+  // ── Safety contract gate (read-only reuse of 013-lab-safety-contract-tracker) ─
+  // Reads 'lsct_sections_v1' — a completely separate storage key and roster
+  // namespace from this tool's own 'lgrr_rosters' / 'np_rosters' — so matching
+  // is by exact name string only, same caveat as the Roster Hub reuse above.
+  // Never written to from here.
+  var LSCT_SECTIONS_KEY = 'lsct_sections_v1';
+
+  function readSafetySections() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(LSCT_SECTIONS_KEY) || '{}');
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) { return {}; }
+  }
+
+  /** Looks up one class/section by exact name. Returns { ok:true, documents,
+      contracts } when it's readable, or { ok:false } when the section doesn't
+      exist (not yet created there, renamed, or a corrupt localStorage value) —
+      callers use `ok` to tell "nobody's missing a contract" apart from
+      "couldn't check." */
+  function sectionSafetyStatus(sectionName) {
+    if (!sectionName) return { ok: false };
+    var data = readSafetySections()[sectionName];
+    if (!data || typeof data !== 'object') return { ok: false };
+    var documents = Array.isArray(data.documents) ? data.documents.filter(function (d) { return d && d.id; }) : [];
+    var contracts = (data.contracts && typeof data.contracts === 'object') ? data.contracts : {};
+    return { ok: true, documents: documents, contracts: contracts };
+  }
+
+  /** A student counts as signed only if every required document for that
+      section is signed — same "fully signed" definition 013 itself uses.
+      A student with no contract record at all (never appeared there, or the
+      name doesn't match) defaults to unsigned, same as that tool's own
+      getDoc() helper: a missing entry is never assumed to mean signed. Also
+      understands the pre-multi-document {signed:bool} shape 013 migrates from,
+      so a section saved before that tool's multi-document support still
+      reads correctly here. */
+  function isSignedForSection(name, status) {
+    if (!status.documents.length) return true; // nothing required there -> nobody's blocked
+    var record = status.contracts[name];
+    var docsMap = null;
+    if (record && record.docs && typeof record.docs === 'object') {
+      docsMap = record.docs;
+    } else if (record && typeof record.signed === 'boolean') {
+      docsMap = {};
+      docsMap[status.documents[0].id] = { signed: !!record.signed };
+    }
+    return status.documents.every(function (d) {
+      var rec = docsMap && docsMap[d.id];
+      return !!(rec && rec.signed);
+    });
+  }
+
+  /** The gate's live status object, or null when the gate is off / has no
+      class picked yet. Reads localStorage fresh every call so a contract
+      signed in the tracker in another tab shows up here without a reshuffle. */
+  function currentSafetyStatus() {
+    var gate = state.safetyGate;
+    if (!gate || !gate.enabled || !gate.section) return null;
+    return sectionSafetyStatus(gate.section);
+  }
+
+  function isNameUnsigned(name, status) {
+    return !!(status && status.ok && !isSignedForSection(name, status));
+  }
+
+  function populateSafetySectionSelect() {
+    if (!els.safetySectionSelect) return;
+    var names = Object.keys(readSafetySections());
+    var current = (state.safetyGate && state.safetyGate.section) || '';
+    els.safetySectionSelect.innerHTML = '<option value="">Select a class&hellip;</option>' +
+      names.map(function (n) { return '<option value="' + escapeHtml(n) + '"' + (n === current ? ' selected' : '') + '>' + escapeHtml(n) + '</option>'; }).join('');
+    if (current && names.indexOf(current) === -1) {
+      // Keep the saved choice visible (rather than silently reverting it to
+      // blank) so the readout below can explain *why* nothing is being
+      // flagged instead of the setting quietly resetting itself.
+      var opt = document.createElement('option');
+      opt.value = current; opt.selected = true;
+      opt.textContent = current + ' (not found)';
+      els.safetySectionSelect.appendChild(opt);
+    }
+  }
+
+  function renderSafetyReadout() {
+    if (!els.safetyGateReadout) return;
+    var gate = state.safetyGate;
+    if (!gate || !gate.enabled) { els.safetyGateReadout.textContent = ''; return; }
+    if (!gate.section) { els.safetyGateReadout.textContent = 'Pick a class above to check names against.'; return; }
+    var status = sectionSafetyStatus(gate.section);
+    if (!status.ok) {
+      els.safetyGateReadout.innerHTML = 'No class named &ldquo;' + escapeHtml(gate.section) + '&rdquo; was found in the Lab Safety Contract Tracker on this device (or its saved data couldn’t be read). ' +
+        'Nothing will be ' + (gate.mode === 'exclude' ? 'excluded' : 'flagged') + ' until a class with that exact name exists there.';
+      return;
+    }
+    if (!status.documents.length) {
+      els.safetyGateReadout.textContent = 'That class has no required document set up in the Lab Safety Contract Tracker, so nobody will be flagged.';
+      return;
+    }
+    var names = studentNames();
+    if (!names.length) { els.safetyGateReadout.textContent = 'Add students to the roster to check them against this class.'; return; }
+    var missing = names.filter(function (n) { return !isSignedForSection(n, status); });
+    if (!missing.length) {
+      els.safetyGateReadout.textContent = 'All ' + names.length + ' student' + (names.length === 1 ? '' : 's') + ' on this roster have a signed contract for “' + gate.section + '”.';
+      return;
+    }
+    els.safetyGateReadout.innerHTML = missing.length + ' of ' + names.length + ' student' + (names.length === 1 ? '' : 's') +
+      ' on this roster ' + (missing.length === 1 ? 'is' : 'are') + ' missing a signed contract for &ldquo;' + escapeHtml(gate.section) + '&rdquo;: ' +
+      missing.map(escapeHtml).join(', ') + '. ' +
+      (gate.mode === 'exclude' ? 'They’ll be left out of the next shuffle.' : 'They’ll stay in groups, flagged.');
+  }
+
+  function syncSafetyGateUI() {
+    var gate = state.safetyGate || { enabled: false, section: '', mode: 'flag' };
+    els.safetyGateEnabled.checked = gate.enabled;
+    els.safetyGateOptions.style.display = gate.enabled ? '' : 'none';
+    document.getElementById('safety-mode-' + (gate.mode === 'exclude' ? 'exclude' : 'flag')).checked = true;
+    populateSafetySectionSelect();
+    renderSafetyReadout();
+  }
+
+  els.safetyGateEnabled.addEventListener('change', function () {
+    state.safetyGate.enabled = els.safetyGateEnabled.checked;
+    els.safetyGateOptions.style.display = state.safetyGate.enabled ? '' : 'none';
+    if (state.safetyGate.enabled) populateSafetySectionSelect();
+    renderSafetyReadout();
+    saveCurrent();
+    renderResults(state.lastGroups);
+  });
+
+  els.safetySectionSelect.addEventListener('change', function () {
+    state.safetyGate.section = els.safetySectionSelect.value;
+    saveCurrent();
+    renderSafetyReadout();
+    renderResults(state.lastGroups);
+  });
+
+  document.querySelectorAll('input[name="safety-mode"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      state.safetyGate.mode = document.getElementById('safety-mode-exclude').checked ? 'exclude' : 'flag';
+      saveCurrent();
+      renderSafetyReadout();
+    });
   });
 
   // ── Role list editor ────────────────────────────────────────────────────
@@ -820,7 +998,33 @@
     var roleNames = (state.roles || []).map(function (r) { return (r.name || '').trim(); }).filter(Boolean);
     if (!roleNames.length) { showMsg('Add at least one role first.'); return; }
 
-    undoSnapshot = { lastGroups: deepClone(state.lastGroups), history: deepClone(state.history), checkoutLog: deepClone(state.checkoutLog), absent: deepClone(state.absent) };
+    // Safety gate: "exclude" mode removes unsigned names before the groups
+    // are even formed, so the group count/size (including "equipment on
+    // hand" mode) is based on who's actually eligible for lab today — the
+    // same "what the room can support today" idea equipment mode is built on.
+    // "flag" mode leaves `names` untouched; unsigned members stay in groups
+    // and get a badge at render time instead (computed live, not here).
+    var gate = state.safetyGate;
+    var safetyUnavailable = false;
+    var excludedNames = [];
+    if (gate && gate.enabled && gate.section) {
+      var status = sectionSafetyStatus(gate.section);
+      if (!status.ok) {
+        safetyUnavailable = true;
+      } else if (gate.mode === 'exclude') {
+        excludedNames = names.filter(function (n) { return !isSignedForSection(n, status); });
+        if (excludedNames.length) {
+          names = names.filter(function (n) { return excludedNames.indexOf(n) === -1; });
+          if (names.length < 1) {
+            showMsg('Every student on this roster is missing a signed contract for “' + gate.section +
+              '” — nobody is left to group. Sign contracts in the Lab Safety Contract Tracker, or switch the safety gate to “Flag” instead.');
+            return;
+          }
+        }
+      }
+    }
+
+    undoSnapshot = { lastGroups: deepClone(state.lastGroups), history: deepClone(state.history), checkoutLog: deepClone(state.checkoutLog), absent: deepClone(state.absent), lastExcludedForSafety: deepClone(state.lastExcludedForSafety) };
 
     var groups = makeGroups(names);
     var violations = findApartViolations(groups);
@@ -837,6 +1041,7 @@
     state.lastGroups = result;
     state.checkoutLog = result.map(function () { return { outAt: null, inAt: null }; });
     state.absent = []; // a new shuffle is a new day's attendance — old absences don't carry over
+    state.lastExcludedForSafety = excludedNames;
     saveCurrent();
     clearMsg();
     var warnings = [];
@@ -848,6 +1053,13 @@
     }
     if (stationInfo.shortage) {
       warnings.push('⚠ Fewer stations than groups — some groups are sharing a station and its equipment.');
+    }
+    if (safetyUnavailable) {
+      warnings.push('⚠ The safety gate is on, but no class named “' + escapeHtml(gate.section) +
+        '” was found in the Lab Safety Contract Tracker on this device — nothing was flagged or excluded this shuffle.');
+    } else if (excludedNames.length) {
+      warnings.push('🛈 Excluded ' + excludedNames.length + ' student' + (excludedNames.length === 1 ? '' : 's') +
+        ' missing a signed contract for “' + escapeHtml(gate.section) + '”: ' + excludedNames.map(escapeHtml).join(', ') + '.');
     }
     els.warnArea.innerHTML = warnings.length ? warnings.map(function (w) { return '<div class="warn-box">' + w + '</div>'; }).join('') : '';
     renderResults(result);
@@ -863,6 +1075,7 @@
     state.history = undoSnapshot.history || {};
     state.checkoutLog = undoSnapshot.checkoutLog || [];
     state.absent = undoSnapshot.absent || [];
+    state.lastExcludedForSafety = undoSnapshot.lastExcludedForSafety || [];
     undoSnapshot = null;
     saveCurrent();
     var violations = state.lastGroups ? findApartViolations(state.lastGroups.map(function (g) { return g.members.map(function (m) { return m.name; }); })) : [];
@@ -949,6 +1162,11 @@
       els.resultsArea.innerHTML = '<p class="empty-hint">Add a roster on the left, then click "Shuffle groups &amp; roles."</p>';
       return;
     }
+    // Live, not baked in at shuffle time: a contract signed in the tracker
+    // after this shuffle un-flags a student here on the very next render,
+    // no reshuffle needed. Only meaningful in "flag" mode — "exclude" mode
+    // already kept unsigned students out of `result` entirely at shuffle time.
+    var safetyStatus = currentSafetyStatus();
     els.resultsArea.innerHTML =
       '<p class="hint absent-hint">Check a name if that student is absent today &mdash; their role transfers to a present groupmate automatically.</p>' +
       '<div class="groups-grid">' + result.map(function (group, i) {
@@ -958,9 +1176,11 @@
         '<ul>' + effMembers.map(function (m) {
           var roleText = m.absent ? 'Absent' : (m.effectiveRole || MEMBER_LABEL);
           var cls = m.absent ? 'role absent' : (m.effectiveRole ? 'role' : 'role member');
+          var badge = (!m.absent && isNameUnsigned(m.name, safetyStatus))
+            ? '<span class="no-contract-badge" title="No signed contract on file for this class in the Lab Safety Contract Tracker">No contract</span>' : '';
           return '<li class="' + (m.absent ? 'absent-row' : '') + '">' +
             '<label class="absent-check"><input type="checkbox" data-absent-name="' + escapeHtml(m.name) + '"' + (m.absent ? ' checked' : '') + '>' +
-            '<span class="name">' + escapeHtml(m.name) + '</span></label>' +
+            '<span class="name">' + escapeHtml(m.name) + '</span>' + badge + '</label>' +
             '<span class="' + cls + '">' + escapeHtml(roleText) + '</span></li>';
         }).join('') + '</ul>' +
         checkoutRowHtml(i, group.station) +
@@ -1015,12 +1235,14 @@
     // shows the combined role text but only gets a printed description when
     // it's still their own single role — a merged "A + B" role has no single
     // matching description to print.
+    var safetyStatus = currentSafetyStatus();
     var rows = computeEffectiveMembers(group).filter(function (m) { return !m.absent; }).map(function (m) {
       var roleText = m.effectiveRole || MEMBER_LABEL;
       var cls = m.effectiveRole ? 't-role' : 't-role member';
       var desc = (m.effectiveRole && m.effectiveRole === m.role) ? roleDescription(m.role) : '';
+      var badge = isNameUnsigned(m.name, safetyStatus) ? '<span class="t-no-contract">No signed contract</span>' : '';
       return '<li><span class="t-name-row"><span class="t-name">' + escapeHtml(m.name) + '</span><span class="' + cls + '">' + escapeHtml(roleText) + '</span></span>' +
-        (desc ? '<span class="t-role-desc">' + escapeHtml(desc) + '</span>' : '') + '</li>';
+        (desc ? '<span class="t-role-desc">' + escapeHtml(desc) + '</span>' : '') + badge + '</li>';
     }).join('');
     return '<div class="tent-group">Group ' + groupNum + '</div>' + stationHtml + '<ul class="tent-list">' + rows + '</ul>';
   }
@@ -1245,6 +1467,7 @@
     document.getElementById('mode-' + (state.mode === 'size' ? 'size' : state.mode === 'equip' ? 'equip' : 'count')).checked = true;
     els.splitValue.value = state.splitValue || 4;
     syncSplitLabel();
+    syncSafetyGateUI();
     renderRoleList();
     renderStationList();
     onNamesChanged(false);
@@ -1284,6 +1507,17 @@
     });
   }
 
+  /** Roster gains a `safetyGate` field only with this round; anything saved
+      before it, or a hand-built import, gets a safe off-by-default value. */
+  function normalizeSafetyGate(g) {
+    if (!g || typeof g !== 'object') return { enabled: false, section: '', mode: 'flag' };
+    return {
+      enabled: !!g.enabled,
+      section: typeof g.section === 'string' ? g.section : '',
+      mode: g.mode === 'exclude' ? 'exclude' : 'flag'
+    };
+  }
+
   /** Backfills defaults for a roster object loaded from anywhere (this
       browser's storage, a JSON import) so every field a older/partial
       record might be missing still has a safe value. */
@@ -1312,7 +1546,9 @@
       lastGroups: lastGroups,
       checkoutLog: checkoutLog,
       keepApart: Array.isArray(loaded.keepApart) ? loaded.keepApart : [],
-      absent: Array.isArray(loaded.absent) ? loaded.absent : []
+      absent: Array.isArray(loaded.absent) ? loaded.absent : [],
+      safetyGate: normalizeSafetyGate(loaded.safetyGate),
+      lastExcludedForSafety: Array.isArray(loaded.lastExcludedForSafety) ? loaded.lastExcludedForSafety : []
     };
   }
 
@@ -1376,6 +1612,7 @@
     els.nameCount.textContent = names.length + ' name' + (names.length === 1 ? '' : 's');
     els.shuffleBtn.disabled = names.length < 1;
     if (state.mode === 'equip') renderEquipReadout();
+    renderSafetyReadout();
     populatePairSelects();
     if (persist !== false) {
       state.students = els.namesInput.value;
