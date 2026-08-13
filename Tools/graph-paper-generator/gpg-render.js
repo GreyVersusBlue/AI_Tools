@@ -11,6 +11,12 @@
   var BOLD = 0.022;
   var INK_COLOR = '#1a1a1a';
   var FADE_COLOR = '#a8a8a8'; // ink-saving mode: lighter gridlines, pencil work still stands out
+  // Worksheet-mode answer key: the plotted line/curve is the answer itself,
+  // so it's drawn with an explicit color (not currentColor) rather than
+  // through the faded/ink-saving <g> — like the header, it stays full
+  // strength and visually distinct even when "lighter gridlines" is on.
+  var PLOT_COLOR = '#c43a2f';
+  var PLOT_WIDTH = 0.032;
 
   function pageSize(orientation) {
     return orientation === 'landscape' ? { w: 11, h: 8.5 } : { w: 8.5, h: 11 };
@@ -45,6 +51,38 @@
 
   function dotEl(x, y, r) {
     return '<circle cx="' + x.toFixed(4) + '" cy="' + y.toFixed(4) + '" r="' + r + '" fill="currentColor"/>';
+  }
+
+  // Samples plotFn(x) across [xMin, xMax], keeping only the runs of points
+  // whose y actually falls inside [yMin, yMax] (a run breaks — and a fresh
+  // one starts — at a non-finite value, a division-by-zero null, or a point
+  // that plots off the visible plane, e.g. a steep line or a parabola arm
+  // running past the top of a small grid). Each surviving run of 2+ points
+  // becomes one <polyline>, drawn in PLOT_COLOR so it reads as the answer,
+  // not another gridline.
+  function plotExprSvg(plotFn, xMin, xMax, yMin, yMax, toSvgX, toSvgY, steps) {
+    steps = steps || 240;
+    var runs = [];
+    var current = null;
+    for (var s = 0; s <= steps; s++) {
+      var xv = xMin + (xMax - xMin) * s / steps;
+      var yv;
+      try { yv = plotFn(xv); } catch (e) { yv = null; }
+      var valid = typeof yv === 'number' && isFinite(yv) && yv >= yMin - 1e-9 && yv <= yMax + 1e-9;
+      if (valid) {
+        var pt = [toSvgX(xv), toSvgY(yv)];
+        if (!current) { current = []; runs.push(current); }
+        current.push(pt);
+      } else {
+        current = null;
+      }
+    }
+    return runs.map(function (run) {
+      if (run.length < 2) return '';
+      var pts = run.map(function (p) { return p[0].toFixed(4) + ',' + p[1].toFixed(4); }).join(' ');
+      return '<polyline points="' + pts + '" fill="none" stroke="' + PLOT_COLOR + '" stroke-width="' +
+        PLOT_WIDTH + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    }).join('');
   }
 
   // Same as lineEl but with a dash pattern — used for the handwriting-practice
@@ -346,6 +384,13 @@
       parts.push(textEl(toSvgX(0) - labelSize, toSvgY(0) + labelSize * 1.6, '0', 'end', labelSize));
     }
 
+    // Worksheet-mode answer key: opts.plotFn (x -> y | null), when present,
+    // is drawn on top of the grid. Absent for every existing caller
+    // (renderCoordinatePlane never sets it), so this is a no-op for them.
+    if (typeof opts.plotFn === 'function') {
+      parts.push(plotExprSvg(opts.plotFn, xMin, xMax, yMin, yMax, toSvgX, toSvgY));
+    }
+
     return parts.join('');
   }
 
@@ -371,6 +416,276 @@
     var gridColor = opts.faded ? FADE_COLOR : INK_COLOR;
     var svgInner = headerSvg(opts.header, page, headerH) + gridGroup(gridColor, planeParts.join(''));
     return { svg: svgWrap(page.w, page.h, svgInner), copies: copies };
+  }
+
+  /* ---------- Worksheet mode: expression parsing ----------
+     Ported from 024-number-talks-board.html's tokenizeExpr / parseExpression /
+     parseTerm / parseFactor arithmetic parser (a hand-rolled tokenizer +
+     recursive-descent evaluator, no eval()), adapted for a single free
+     variable instead of pure arithmetic:
+       - 'x' is a variable token here, not — as it is in the number-talks
+         bank — a spelled-out multiplication operator. Explicit
+         multiplication uses '*' or '×' only.
+       - '^' is added (right-associative) so a simple curve — a parabola —
+         can be plotted, not just a line.
+       - adjacent value-ish tokens with no operator between them ("2x",
+         "3(x+1)", "x(x+2)") get an implicit '*' inserted, the way algebra
+         is actually handwritten.
+     This is a direct copy/adapt for this tool, not a shared extraction —
+     024's own doc has an open, unresolved question about whether the
+     arithmetic parser belongs in _shared/, and per that row's guidance this
+     row does not attempt that extraction. */
+
+  // raw -> token list, or null if raw contains anything this grammar
+  // doesn't recognize. An optional leading "y=" / "f(x)=" is stripped
+  // before tokenizing (the caller still prints the original text as typed).
+  function tokenizeGraphExpr(raw) {
+    var str = String(raw == null ? '' : raw).replace(/\s+/g, '');
+    str = str.replace(/^y=/i, '').replace(/^f\(x\)=/i, '');
+    if (!str) return null;
+    if (!/^[\d.x+\-*×÷/^()]+$/i.test(str)) return null;
+    var tokens = [];
+    var i = 0;
+    while (i < str.length) {
+      var c = str[i];
+      if ((c >= '0' && c <= '9') || c === '.') {
+        var j = i;
+        while (j < str.length && ((str[j] >= '0' && str[j] <= '9') || str[j] === '.')) j++;
+        var numStr = str.slice(i, j);
+        if (!/^\d+(\.\d+)?$/.test(numStr)) return null;
+        tokens.push({ type: 'num', value: parseFloat(numStr) });
+        i = j;
+      } else if (c === 'x' || c === 'X') {
+        tokens.push({ type: 'var' }); i++;
+      } else if (c === '+' || c === '-') {
+        tokens.push({ type: 'op', value: c }); i++;
+      } else if (c === '*' || c === '×') {
+        tokens.push({ type: 'op', value: '*' }); i++;
+      } else if (c === '/' || c === '÷') {
+        tokens.push({ type: 'op', value: '/' }); i++;
+      } else if (c === '^') {
+        tokens.push({ type: 'op', value: '^' }); i++;
+      } else if (c === '(' || c === ')') {
+        tokens.push({ type: c === '(' ? 'lparen' : 'rparen' }); i++;
+      } else {
+        return null;
+      }
+    }
+    var withImplicit = [];
+    for (var k = 0; k < tokens.length; k++) {
+      var tok = tokens[k];
+      if (k > 0) {
+        var prev = tokens[k - 1];
+        var prevEndsValue = prev.type === 'num' || prev.type === 'var' || prev.type === 'rparen';
+        var curStartsValue = tok.type === 'num' || tok.type === 'var' || tok.type === 'lparen';
+        if (prevEndsValue && curStartsValue) withImplicit.push({ type: 'op', value: '*' });
+      }
+      withImplicit.push(tok);
+    }
+    return withImplicit;
+  }
+
+  // Recursive-descent parse into a small AST (rather than evaluating
+  // straight through, as the number-talks version does) because a plotted
+  // curve needs the same expression evaluated at ~240 different x values —
+  // parse once, evaluate many times.
+  // Precedence, loosest to tightest: + - , * / , unary -, ^ (right-assoc).
+  function parseGraphExprAst(tokens) {
+    var pos = 0;
+    function peek() { return tokens[pos]; }
+    function next() { return tokens[pos++]; }
+
+    function parseExpression() {
+      var node = parseTerm();
+      if (node === null) return null;
+      while (peek() && peek().type === 'op' && (peek().value === '+' || peek().value === '-')) {
+        var op = next().value;
+        var rhs = parseTerm();
+        if (rhs === null) return null;
+        node = { type: 'bin', op: op, left: node, right: rhs };
+      }
+      return node;
+    }
+    function parseTerm() {
+      var node = parseUnary();
+      if (node === null) return null;
+      while (peek() && peek().type === 'op' && (peek().value === '*' || peek().value === '/')) {
+        var op = next().value;
+        var rhs = parseUnary();
+        if (rhs === null) return null;
+        node = { type: 'bin', op: op, left: node, right: rhs };
+      }
+      return node;
+    }
+    function parseUnary() {
+      if (peek() && peek().type === 'op' && peek().value === '-') {
+        next();
+        var v = parseUnary();
+        return v === null ? null : { type: 'neg', arg: v };
+      }
+      if (peek() && peek().type === 'op' && peek().value === '+') { next(); return parseUnary(); }
+      return parsePower();
+    }
+    function parsePower() {
+      var base = parseFactor();
+      if (base === null) return null;
+      if (peek() && peek().type === 'op' && peek().value === '^') {
+        next();
+        var exp = parseUnary(); // right-associative: x^-1, x^2^1, etc.
+        if (exp === null) return null;
+        return { type: 'bin', op: '^', left: base, right: exp };
+      }
+      return base;
+    }
+    function parseFactor() {
+      var tok = peek();
+      if (!tok) return null;
+      if (tok.type === 'lparen') {
+        next();
+        var v = parseExpression();
+        if (v === null) return null;
+        var closing = next();
+        if (!closing || closing.type !== 'rparen') return null;
+        return v;
+      }
+      if (tok.type === 'num') { next(); return { type: 'num', value: tok.value }; }
+      if (tok.type === 'var') { next(); return { type: 'var' }; }
+      return null;
+    }
+
+    var result = parseExpression();
+    if (result === null || pos !== tokens.length) return null;
+    return result;
+  }
+
+  function evalGraphAst(node, x) {
+    switch (node.type) {
+      case 'num': return node.value;
+      case 'var': return x;
+      case 'neg': { var v = evalGraphAst(node.arg, x); return v === null ? null : -v; }
+      case 'bin': {
+        var l = evalGraphAst(node.left, x), r = evalGraphAst(node.right, x);
+        if (l === null || r === null) return null;
+        if (node.op === '+') return l + r;
+        if (node.op === '-') return l - r;
+        if (node.op === '*') return l * r;
+        if (node.op === '/') return r === 0 ? null : l / r;
+        if (node.op === '^') return Math.pow(l, r);
+        return null;
+      }
+      default: return null;
+    }
+  }
+
+  // The one entry point worksheet rendering (and the UI) actually needs:
+  // raw problem text -> a function x -> y|null, or null if the text isn't
+  // a plottable expression at all (an empty box, a word problem, a typo).
+  function parseGraphExpression(raw) {
+    var tokens = tokenizeGraphExpr(raw);
+    if (!tokens || !tokens.length) return null;
+    var ast = parseGraphExprAst(tokens);
+    if (!ast) return null;
+    return function (x) {
+      var v = evalGraphAst(ast, x);
+      return (typeof v === 'number' && isFinite(v)) ? v : null;
+    };
+  }
+
+  /* ---------- Worksheet mode: random problem generation ---------- */
+  function termStr(coef, varPart, isFirst) {
+    if (coef === 0) return '';
+    var neg = coef < 0;
+    var abs = Math.abs(coef);
+    var coefStr = (abs === 1 && varPart) ? '' : String(abs);
+    var body = coefStr + varPart;
+    if (isFirst) return neg ? '-' + body : body;
+    return (neg ? ' - ' : ' + ') + body;
+  }
+
+  function randInt(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
+  function nonZeroRandInt(rng, min, max) {
+    var v;
+    do { v = randInt(rng, min, max); } while (v === 0);
+    return v;
+  }
+
+  // type: 'linear' (y = mx + b) or 'quadratic' (y = ax^2 + bx + c).
+  // rng defaults to Math.random but is injectable so this stays testable —
+  // pass a fixed sequence and the output is deterministic.
+  function generateProblem(type, opts, rng) {
+    rng = rng || Math.random;
+    if (type === 'quadratic') {
+      var a = nonZeroRandInt(rng, -2, 2);
+      var b = randInt(rng, -4, 4);
+      var c = randInt(rng, -6, 6);
+      var terms = [termStr(a, 'x^2', true), termStr(b, 'x', false), termStr(c, '', false)].join('');
+      return 'y = ' + (terms || '0');
+    }
+    var m = nonZeroRandInt(rng, -4, 4);
+    var b2 = randInt(rng, -8, 8);
+    var terms2 = [termStr(m, 'x', true), termStr(b2, '', false)].join('');
+    return 'y = ' + (terms2 || '0');
+  }
+
+  /* ---------- Worksheet mode: the sheet itself ----------
+     opts: { orientation, copies (1/2/4/6, PLANE_LAYOUTS), quadrants,
+     xMin, xMax, yMin, yMax, interval, labelEvery — same shape as
+     renderCoordinatePlane's plane options, shared by every cell — plus
+     problems: [string, ...] (one per plane; padded/truncated to copies),
+     showAnswer (plot each problem's line/curve) and faded/header. }
+     Reuses onePlaneSvg/PLANE_LAYOUTS exactly as renderCoordinatePlane does;
+     the only difference is a caption band reserved above each plane for the
+     problem text, and — when showAnswer is on — a parsed plotFn handed to
+     that plane's onePlaneSvg call. */
+  function renderWorksheet(opts) {
+    var page = pageSize(opts.orientation);
+    var headerH = headerBlockHeight(opts.header);
+    var usableW = page.w - MARGIN * 2;
+    var usableH = page.h - MARGIN * 2 - headerH;
+    var copies = PLANE_LAYOUTS[opts.copies] ? opts.copies : 1;
+    var layout = PLANE_LAYOUTS[copies];
+
+    var problems = Array.isArray(opts.problems) ? opts.problems.slice(0, copies) : [];
+    while (problems.length < copies) problems.push('');
+
+    var cellW = (usableW - (layout.cols - 1) * PLANE_GUTTER) / layout.cols;
+    var cellH = (usableH - (layout.rows - 1) * PLANE_GUTTER) / layout.rows;
+    var captionH = Math.min(0.32, cellH * 0.22);
+    var planeH = cellH - captionH;
+    var captionSize = layout.cols >= 3 ? 0.11 : 0.14;
+
+    var captionParts = [];
+    var planeParts = [];
+    var plottedCount = 0;
+    for (var idx = 0; idx < copies; idx++) {
+      var col = idx % layout.cols, row = Math.floor(idx / layout.cols);
+      var cellX = MARGIN + col * (cellW + PLANE_GUTTER);
+      var cellY = MARGIN + headerH + row * (cellH + PLANE_GUTTER);
+      var problemText = problems[idx] || '';
+
+      captionParts.push(textEl(
+        cellX + cellW / 2, cellY + captionH * 0.65,
+        escapeXml((idx + 1) + ') ' + problemText), 'middle', captionSize));
+
+      var planeOpts = {
+        quadrants: opts.quadrants, xMin: opts.xMin, xMax: opts.xMax,
+        yMin: opts.yMin, yMax: opts.yMax, interval: opts.interval, labelEvery: opts.labelEvery
+      };
+      if (opts.showAnswer && problemText) {
+        var fn = parseGraphExpression(problemText);
+        if (fn) { planeOpts.plotFn = fn; plottedCount++; }
+      }
+      planeParts.push(onePlaneSvg(planeOpts, cellX, cellY + captionH, cellW, planeH));
+    }
+
+    var gridColor = opts.faded ? FADE_COLOR : INK_COLOR;
+    // Captions are the problem itself, not a gridline — like the header,
+    // they stay full ink outside the faded group even in ink-saving mode,
+    // so the question is never the thing that got harder to read.
+    var svgInner = headerSvg(opts.header, page, headerH) +
+      captionParts.join('') +
+      gridGroup(gridColor, planeParts.join(''));
+    return { svg: svgWrap(page.w, page.h, svgInner), copies: copies, plottedCount: plottedCount };
   }
 
   /* ---------- Cornell notes ---------- */
@@ -576,6 +891,10 @@
     renderCoordinatePlane: renderCoordinatePlane,
     renderCornellNotes: renderCornellNotes,
     renderHandwritingLines: renderHandwritingLines,
-    renderCalibration: renderCalibration
+    renderCalibration: renderCalibration,
+    renderWorksheet: renderWorksheet,
+    tokenizeGraphExpr: tokenizeGraphExpr,
+    parseGraphExpression: parseGraphExpression,
+    generateProblem: generateProblem
   };
 })(typeof window !== 'undefined' ? window : global);

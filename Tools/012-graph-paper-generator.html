@@ -120,6 +120,7 @@
           <div class="mode-tab active" data-mode="graph">Graph paper</div>
           <div class="mode-tab" data-mode="numberline">Number line</div>
           <div class="mode-tab" data-mode="plane">Coordinate plane</div>
+          <div class="mode-tab" data-mode="worksheet">Worksheet</div>
           <div class="mode-tab" data-mode="isometric">Isometric</div>
           <div class="mode-tab" data-mode="cornell">Cornell notes</div>
           <div class="mode-tab" data-mode="handwriting">Handwriting lines</div>
@@ -244,6 +245,61 @@
           </select>
         </div>
 
+        <!-- ===== Worksheet panel ===== -->
+        <div class="mode-panel" id="panel-worksheet">
+          <p class="hint" style="margin-top:0;">A problem printed above each small coordinate plane. Uncheck &ldquo;Show
+            answer key&rdquo; below for the blank student worksheet, check it for a matching sheet with each line or
+            curve already plotted.</p>
+
+          <label for="wsCopies">Planes per page</label>
+          <select id="wsCopies">
+            <option value="1">1 (full page)</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
+          </select>
+
+          <label for="wsType">Problem type</label>
+          <select id="wsType">
+            <option value="linear">Linear (y = mx + b)</option>
+            <option value="quadratic">Quadratic (y = ax&sup2; + bx + c)</option>
+            <option value="custom">Custom (type your own)</option>
+          </select>
+
+          <label for="wsQuadrants">Quadrants</label>
+          <select id="wsQuadrants">
+            <option value="four">Full (four quadrants)</option>
+            <option value="first">First quadrant only</option>
+          </select>
+
+          <div class="row2">
+            <div><label for="wsXMin">X min</label><input type="number" id="wsXMin" value="-10"></div>
+            <div><label for="wsXMax">X max</label><input type="number" id="wsXMax" value="10"></div>
+          </div>
+          <div class="row2">
+            <div><label for="wsYMin">Y min</label><input type="number" id="wsYMin" value="-10"></div>
+            <div><label for="wsYMax">Y max</label><input type="number" id="wsYMax" value="10"></div>
+          </div>
+          <div class="row2">
+            <div><label for="wsInterval">Gridline interval</label><input type="number" id="wsInterval" value="1" min="0.5" step="0.5"></div>
+            <div><label for="wsLabelEvery">Label every Nth line</label><input type="number" id="wsLabelEvery" value="5" min="1" step="1"></div>
+          </div>
+
+          <div class="btnRow" id="wsGenerateRow" style="margin-bottom:.8rem;">
+            <button type="button" class="secondary" id="wsGenerateBtn">Generate new problems</button>
+          </div>
+
+          <label>Problems (one per plane)</label>
+          <p class="hint">Edit any line &mdash; e.g. <code>y = 2x + 3</code> or <code>y = x^2 - 4</code>. Whatever is
+            here is exactly what gets graphed on the answer key.</p>
+          <div id="wsProblemsContainer"></div>
+
+          <div class="checkline">
+            <input type="checkbox" id="wsShowAnswer">
+            <label style="margin:0;" for="wsShowAnswer">Show answer key (plot each line/curve)</label>
+          </div>
+        </div>
+
         <!-- ===== Isometric panel ===== -->
         <div class="mode-panel" id="panel-isometric">
           <label for="isoStyle">Style</label>
@@ -330,6 +386,8 @@
    'labelAxesLine','labelAxes','labelAxesFields','labelInterval',
    'nlUniformFields','nlMin','nlMax','nlInterval','nlLabelEvery','nlCopies','nlIndependent','nlRowsHint','nlRowsContainer',
    'planeQuadrants','planeXMin','planeXMax','planeYMin','planeYMax','planeInterval','planeLabelEvery','planeCopies',
+   'wsCopies','wsType','wsQuadrants','wsXMin','wsXMax','wsYMin','wsYMax','wsInterval','wsLabelEvery',
+   'wsGenerateRow','wsGenerateBtn','wsProblemsContainer','wsShowAnswer',
    'isoStyle','isoSizePreset','isoSizeCustom',
    'cornellCueWidth','cornellSummaryHeight','cornellRuleSpacing',
    'hwSizePreset','hwSizeCustom',
@@ -356,6 +414,10 @@
       nlIndependent: false, nlRows: [],
       planeQuadrants: 'four', planeXMin: -10, planeXMax: 10, planeYMin: -10, planeYMax: 10,
       planeInterval: 1, planeLabelEvery: 5, planeCopies: 1,
+      worksheetCopies: 4, worksheetType: 'linear', worksheetQuadrants: 'four',
+      worksheetXMin: -10, worksheetXMax: 10, worksheetYMin: -10, worksheetYMax: 10,
+      worksheetInterval: 1, worksheetLabelEvery: 5,
+      worksheetProblems: [], worksheetShowAnswer: false,
       isoStyle: 'dot', isoSizePreset: '0.5', isoSizeCustom: 2,
       cornellCueWidth: 2.5, cornellSummaryHeight: 2, cornellRuleSpacing: 0.34,
       hwSizePreset: '0.5', hwSizeCustom: 0.5,
@@ -414,6 +476,17 @@
     els.planeYMin.value = settings.planeYMin; els.planeYMax.value = settings.planeYMax;
     els.planeInterval.value = settings.planeInterval; els.planeLabelEvery.value = settings.planeLabelEvery;
 
+    els.wsCopies.value = settings.worksheetCopies;
+    els.wsType.value = settings.worksheetType;
+    els.wsGenerateRow.style.display = settings.worksheetType === 'custom' ? 'none' : '';
+    els.wsQuadrants.value = settings.worksheetQuadrants;
+    els.wsXMin.value = settings.worksheetXMin; els.wsXMax.value = settings.worksheetXMax;
+    els.wsYMin.value = settings.worksheetYMin; els.wsYMax.value = settings.worksheetYMax;
+    els.wsInterval.value = settings.worksheetInterval; els.wsLabelEvery.value = settings.worksheetLabelEvery;
+    els.wsShowAnswer.checked = settings.worksheetShowAnswer;
+    ensureWorksheetProblemsLength();
+    buildWorksheetProblemsUI();
+
     els.isoStyle.value = settings.isoStyle;
     var isoPreset = ['0.25', '0.5', '0.3937'].indexOf(String(settings.isoSizePreset)) !== -1 ? String(settings.isoSizePreset) : 'custom';
     els.isoSizePreset.value = isoPreset;
@@ -467,6 +540,17 @@
     settings.planeInterval = parseFloat(els.planeInterval.value) || 1;
     settings.planeLabelEvery = parseInt(els.planeLabelEvery.value, 10) || 1;
 
+    settings.worksheetCopies = parseInt(els.wsCopies.value, 10) || 1;
+    settings.worksheetType = els.wsType.value;
+    settings.worksheetQuadrants = els.wsQuadrants.value;
+    settings.worksheetXMin = parseFloat(els.wsXMin.value) || 0;
+    settings.worksheetXMax = parseFloat(els.wsXMax.value) || 0;
+    settings.worksheetYMin = parseFloat(els.wsYMin.value) || 0;
+    settings.worksheetYMax = parseFloat(els.wsYMax.value) || 0;
+    settings.worksheetInterval = parseFloat(els.wsInterval.value) || 1;
+    settings.worksheetLabelEvery = parseInt(els.wsLabelEvery.value, 10) || 1;
+    settings.worksheetShowAnswer = els.wsShowAnswer.checked;
+
     settings.isoStyle = els.isoStyle.value;
     var isoPreset = els.isoSizePreset.value;
     settings.isoSizePreset = isoPreset;
@@ -518,6 +602,37 @@
     });
     Array.prototype.slice.call(els.nlRowsContainer.querySelectorAll('.nlRowInterval')).forEach(function (inp) {
       settings.nlRows[parseInt(inp.dataset.i, 10)].interval = parseFloat(inp.value) || 1;
+    });
+  }
+
+  /* ---------- Worksheet mode: problem list UI ----------
+     Same shape as the number-line "independent rows" UI above: grow/trim
+     settings.worksheetProblems to match worksheetCopies, seeding new slots
+     with a generated problem (linear/quadratic) or a blank one (custom). */
+  function ensureWorksheetProblemsLength() {
+    while (settings.worksheetProblems.length < settings.worksheetCopies) {
+      var seedType = settings.worksheetType === 'quadratic' ? 'quadratic' : (settings.worksheetType === 'custom' ? null : 'linear');
+      settings.worksheetProblems.push(seedType ? window.GraphPaperRender.generateProblem(seedType, {}) : '');
+    }
+    settings.worksheetProblems.length = settings.worksheetCopies;
+  }
+
+  function buildWorksheetProblemsUI() {
+    els.wsProblemsContainer.innerHTML = settings.worksheetProblems.map(function (p, i) {
+      return '<div class="row2" style="grid-template-columns:2.4rem 1fr;align-items:center;">' +
+        '<label style="margin:0;font-weight:400;color:var(--muted);">#' + (i + 1) + '</label>' +
+        '<input type="text" class="wsProblemInput" data-i="' + i + '" value="' + String(p).replace(/"/g, '&quot;') + '">' +
+        '</div>';
+    }).join('');
+    Array.prototype.slice.call(els.wsProblemsContainer.querySelectorAll('.wsProblemInput')).forEach(function (inp) {
+      inp.addEventListener('input', function () { readWorksheetProblemsFromUI(); persist(); render(); });
+      inp.addEventListener('change', function () { readWorksheetProblemsFromUI(); persist(); render(); });
+    });
+  }
+
+  function readWorksheetProblemsFromUI() {
+    Array.prototype.slice.call(els.wsProblemsContainer.querySelectorAll('.wsProblemInput')).forEach(function (inp) {
+      settings.worksheetProblems[parseInt(inp.dataset.i, 10)] = inp.value;
     });
   }
 
@@ -587,6 +702,19 @@
         faded: settings.faded,
         header: headerOpt()
       });
+    } else if (settings.mode === 'worksheet') {
+      result = window.GraphPaperRender.renderWorksheet({
+        orientation: settings.orientation,
+        copies: settings.worksheetCopies,
+        quadrants: settings.worksheetQuadrants,
+        xMin: settings.worksheetXMin, xMax: settings.worksheetXMax,
+        yMin: settings.worksheetYMin, yMax: settings.worksheetYMax,
+        interval: settings.worksheetInterval, labelEvery: settings.worksheetLabelEvery,
+        problems: settings.worksheetProblems,
+        showAnswer: settings.worksheetShowAnswer,
+        faded: settings.faded,
+        header: headerOpt()
+      });
     } else if (settings.mode === 'isometric') {
       result = window.GraphPaperRender.renderGraphPaper({
         orientation: settings.orientation,
@@ -644,6 +772,17 @@
     if (!settings.cornellRuleSpacing) settings.cornellRuleSpacing = 0.34;
     if (!settings.hwSizePreset) settings.hwSizePreset = '0.5';
     if (!settings.hwSizeCustom) settings.hwSizeCustom = 0.5;
+    if (!settings.worksheetCopies) settings.worksheetCopies = 4;
+    if (!settings.worksheetType) settings.worksheetType = 'linear';
+    if (!settings.worksheetQuadrants) settings.worksheetQuadrants = 'four';
+    if (settings.worksheetXMin === undefined) settings.worksheetXMin = -10;
+    if (settings.worksheetXMax === undefined) settings.worksheetXMax = 10;
+    if (settings.worksheetYMin === undefined) settings.worksheetYMin = -10;
+    if (settings.worksheetYMax === undefined) settings.worksheetYMax = 10;
+    if (!settings.worksheetInterval) settings.worksheetInterval = 1;
+    if (!settings.worksheetLabelEvery) settings.worksheetLabelEvery = 5;
+    if (!settings.worksheetProblems) settings.worksheetProblems = [];
+    if (settings.worksheetShowAnswer === undefined) settings.worksheetShowAnswer = false;
     GraphPaperStore.setCurrentName(name);
     applySettingsToForm();
     refreshSwitcher();
@@ -729,6 +868,26 @@
   els.nlCopies.addEventListener('input', function () {
     settings.nlCopies = Math.max(1, Math.min(10, parseInt(els.nlCopies.value, 10) || 1));
     if (settings.nlIndependent) { ensureRowsLength(); buildRowsUI(); }
+  });
+
+  els.wsCopies.addEventListener('change', function () {
+    settings.worksheetCopies = parseInt(els.wsCopies.value, 10) || 1;
+    ensureWorksheetProblemsLength();
+    buildWorksheetProblemsUI();
+  });
+  els.wsType.addEventListener('change', function () {
+    settings.worksheetType = els.wsType.value;
+    els.wsGenerateRow.style.display = settings.worksheetType === 'custom' ? 'none' : '';
+  });
+  els.wsGenerateBtn.addEventListener('click', function () {
+    var genType = settings.worksheetType === 'quadratic' ? 'quadratic' : 'linear';
+    settings.worksheetProblems = [];
+    for (var wi = 0; wi < settings.worksheetCopies; wi++) {
+      settings.worksheetProblems.push(window.GraphPaperRender.generateProblem(genType, {}));
+    }
+    buildWorksheetProblemsUI();
+    persist();
+    render();
   });
 
   Array.prototype.slice.call(document.querySelectorAll('input, select')).forEach(function (el) {
