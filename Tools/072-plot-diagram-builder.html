@@ -75,6 +75,53 @@
   .print-mountain-wrap { position: relative; height: 340px; margin-top: .5rem; }
   .print-stage-box { position: absolute; width: 200px; font-size: .82rem; }
   .print-stage-box .stage-label { font-weight: 700; color: var(--accent); }
+
+  /* ── Presentation mode — a large-type, borderless, read-only render of
+     the current diagram for projecting live during class discussion.
+     Independent CSS overlay (not gated on the Fullscreen API succeeding)
+     so it works the same in every browser, including ones that refuse
+     fullscreen; requestFullscreen() is layered on top only as a bonus
+     that also hides the browser chrome when the browser allows it. This
+     mirrors the projector-mode pattern already used by Number Talks
+     Board (Tools/024), which hardcodes its own dark stage background
+     independent of the page's ink/paper theme for the same reason:
+     legibility from the back of a room matters more than theme
+     consistency for a projected view. ── */
+  #presentStage { display: none; }
+  #presentStage.active {
+    display: flex; flex-direction: column; align-items: center;
+    position: fixed; inset: 0; z-index: 2147483000;
+    background: #0c0f16; color: #f4f6fa;
+    padding: clamp(1.2rem, 3vw, 3rem) clamp(1.2rem, 4vw, 3.5rem);
+    overflow: auto;
+  }
+  body.presenting { overflow: hidden; }
+  .present-exit-btn {
+    position: absolute; top: 1rem; right: 1rem;
+    background: rgba(255,255,255,.08); color: #f4f6fa; border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px; padding: .5rem .9rem; font-size: .85rem; font-weight: 600; cursor: pointer;
+  }
+  .present-exit-btn:hover { background: rgba(255,255,255,.18); }
+  .present-content { width: min(94vw, 1500px); margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
+  .present-title { font-size: clamp(1.6rem, 4vw, 3rem); margin: 0 0 .1rem; text-align: center; }
+  .present-author { font-size: clamp(1rem, 1.6vw, 1.4rem); color: #b9c2cf; margin: 0 0 1.2rem; text-align: center; }
+  .present-elements {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .5rem 2rem;
+    width: 100%; max-width: 1300px; font-size: clamp(.95rem, 1.5vw, 1.25rem); margin-bottom: clamp(1rem, 2.5vw, 2rem);
+  }
+  .present-elements b { color: #8fb4d6; font-weight: 700; }
+  .present-mountain-wrap { position: relative; width: 100%; max-width: 1500px; aspect-ratio: 1000 / 420; }
+  .present-mountain-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .present-stage-box { position: absolute; width: 19%; text-align: center; }
+  .present-stage-label {
+    font-weight: 700; font-size: clamp(.85rem, 1.6vw, 1.3rem); color: #8fb4d6;
+    margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .03em;
+  }
+  .present-stage-text {
+    font-size: clamp(1rem, 1.9vw, 1.6rem); line-height: 1.3; white-space: pre-wrap;
+    background: rgba(255,255,255,.06); border-radius: 10px; padding: .6rem .7rem;
+  }
+  .present-stage-text.empty { color: #6b7688; font-style: italic; }
 </style>
 </head>
 <body>
@@ -86,6 +133,7 @@
       <p class="sub">Build a plot-mountain diagram and story elements summary, then print or project it.</p>
     </div>
     <div>
+      <button class="secondary" id="presentBtn">Present</button>
       <button class="secondary" id="printBtn">Print diagram</button>
     </div>
   </div>
@@ -152,6 +200,11 @@
 
 <div id="printArea"></div>
 
+<div id="presentStage" aria-hidden="true">
+  <button type="button" class="present-exit-btn" id="presentExitBtn" title="Exit presentation (Esc)">&#10005; Exit presentation</button>
+  <div class="present-content" id="presentContent"></div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -162,7 +215,8 @@
 
   var els = {};
   ['storyTitle', 'storyAuthor', 'elChar', 'elSetting', 'elConflict', 'elTheme', 'printBtn', 'printArea',
-   'diagramSelect', 'newDiagramBtn', 'renameDiagramBtn', 'deleteDiagramBtn'].forEach(function (id) {
+   'diagramSelect', 'newDiagramBtn', 'renameDiagramBtn', 'deleteDiagramBtn',
+   'presentBtn', 'presentStage', 'presentContent', 'presentExitBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
   var stageEls = document.querySelectorAll('[data-stage]');
@@ -342,6 +396,85 @@
       '<polyline points="20,300 260,300 500,20 740,300 980,300" fill="none" stroke="#1f3550" stroke-width="4" stroke-linejoin="round"/></svg>' +
       stagesHtml + '</div>';
     window.print();
+  });
+
+  /* ---------- presentation mode ----------
+     A large-type, borderless, read-only render of the current diagram for
+     projecting live during a class discussion. Built from the same state
+     the print view uses, so it can never drift out of sync with what's
+     actually in the form. The overlay is shown via a CSS class regardless
+     of whether the Fullscreen API is available; requestFullscreen() is
+     layered on top as a bonus (hides the browser chrome too) where the
+     browser allows it, but the read-only view works either way. */
+  function renderPresentContent() {
+    var title = state.title.trim() || 'Plot Diagram';
+    var author = state.author.trim() ? 'by ' + escapeHtml(state.author.trim()) : '';
+    var EM_DASH = '—';
+    var elementsHtml = '<div class="present-elements">' +
+      '<div><b>Characters:</b> ' + escapeHtml(state.characters || EM_DASH) + '</div>' +
+      '<div><b>Setting:</b> ' + escapeHtml(state.setting || EM_DASH) + '</div>' +
+      '<div><b>Conflict:</b> ' + escapeHtml(state.conflict || EM_DASH) + '</div>' +
+      '<div><b>Theme:</b> ' + escapeHtml(state.theme || EM_DASH) + '</div>' +
+      '</div>';
+    var stagesHtml = Object.keys(STAGE_LABELS).map(function (key) {
+      var pos = STAGE_POS[key];
+      var raw = state.stages[key] || '';
+      var cls = raw.trim() ? 'present-stage-text' : 'present-stage-text empty';
+      return '<div class="present-stage-box" style="left:' + pos.left + ';top:' + pos.top + ';">' +
+        '<div class="present-stage-label">' + STAGE_LABELS[key] + '</div>' +
+        '<div class="' + cls + '">' + escapeHtml(raw || EM_DASH) + '</div></div>';
+    }).join('');
+    els.presentContent.innerHTML = '<h1 class="present-title">' + escapeHtml(title) + '</h1>' +
+      (author ? '<p class="present-author">' + author + '</p>' : '') +
+      elementsHtml +
+      '<div class="present-mountain-wrap"><svg class="present-mountain-svg" viewBox="0 0 1000 380" preserveAspectRatio="none">' +
+      '<polyline points="20,340 260,340 500,40 740,340 980,340" fill="none" stroke="#f4f6fa" stroke-width="4" stroke-linejoin="round"/></svg>' +
+      stagesHtml + '</div>';
+  }
+
+  function enterPresent() {
+    renderPresentContent();
+    els.presentStage.classList.add('active');
+    els.presentStage.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('presenting');
+    var el = els.presentStage;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(function () { /* overlay is already showing regardless */ });
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    }
+    els.presentExitBtn.focus();
+  }
+
+  function exitPresent() {
+    if (document.fullscreenElement === els.presentStage && document.exitFullscreen) {
+      document.exitFullscreen().catch(function () { /* ignore */ });
+    } else if (document.webkitFullscreenElement === els.presentStage && document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+    els.presentStage.classList.remove('active');
+    els.presentStage.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('presenting');
+    els.presentBtn.focus();
+  }
+
+  els.presentBtn.addEventListener('click', enterPresent);
+  els.presentExitBtn.addEventListener('click', exitPresent);
+
+  document.addEventListener('fullscreenchange', function () {
+    // Covers the browser's own Esc/F11 exit of a real fullscreen session:
+    // drop the overlay too so it doesn't get stranded on-screen.
+    if (!document.fullscreenElement && els.presentStage.classList.contains('active')) {
+      els.presentStage.classList.remove('active');
+      els.presentStage.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('presenting');
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && els.presentStage.classList.contains('active')) {
+      exitPresent();
+    }
   });
 
   /* ---------- boot ---------- */

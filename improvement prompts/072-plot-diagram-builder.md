@@ -63,6 +63,51 @@ character-arc-tracking Major Features, and the collaborative share-link
 Moonshot, remain fully open — see this file's own Open Questions for the
 scoping tradeoffs on both.
 
+**2026-08-13 — Presentation view for discussion (backlog item, shipped).**
+Added a "Present" button next to Print diagram: a full-viewport, borderless,
+read-only render of the current diagram (title, author, story-elements
+summary, and the five-stage plot mountain) in large, high-contrast type for
+projecting during a class discussion, built from the same `state` object the
+Print view already uses so the two can never drift apart. Exit via a visible
+"Exit presentation" button, the Escape key, or the browser's own fullscreen
+exit. Implementation follows the projector-mode pattern already established
+by Number Talks Board (`Tools/024-number-talks-board.html`): a CSS overlay
+(`#presentStage.active`, `position: fixed; inset: 0`) that shows the view in
+every browser regardless of Fullscreen API support, with `requestFullscreen()`
+layered on top only as a bonus (hides the browser chrome too) where the
+browser allows it — so the read-only view isn't gated on fullscreen actually
+succeeding. Empty fields render as an em dash (real Unicode character, not
+the `&mdash;` entity-name bug fixed in Round 2), matching the Print view's
+existing convention. The presentation view intentionally keeps its own
+hardcoded dark stage background (`#0c0f16`) independent of the page's
+ink/paper palette, the same call Number Talks Board made — legibility from
+the back of a room matters more than matching the edit-mode theme, and this
+tool has no dark-mode variant of `_shared/theme.css`/`theme-toggle.js` wired
+in to match against (it uses the more common `_shared/ink-paper.css` +
+`_shared/a11y.js` filter-based dark mode instead, the pattern used by 67 of
+this toolkit's tools vs. 5 using `theme.css`); swapping that whole token
+system was out of scope for this one feature and not something this pattern
+requires. No new files were created — everything is inline in
+`Tools/072-plot-diagram-builder.html`, so `sw.js`'s `PRECACHE_URLS` needs no
+changes for this round.
+
+Verified with a headless Chromium smoke test (fill every field, enter
+Present, confirm the read-only view renders the title/author/story
+elements/all five stages and contains zero editable `textarea`/`input`/
+`select` elements and exactly one `button` — the exit button — confirm exit
+via both Escape and the exit button restores the editable view with data
+intact, and confirm a brand-new empty diagram presents cleanly with em-dash
+placeholders instead of erroring) — zero console errors, zero offsite
+requests. `npm run check:dedupe` still passes.
+
+**Where the next round should pick up:** JSON export/import is the
+remaining open Quick Win (a natural pairing with the multi-save feature —
+export a named diagram, import it into another browser/section, reusing the
+migration code's diagram-shape validation). The alternate-shapes,
+per-chapter sub-notes, and character-arc-tracking Major Features, and the
+collaborative share-link Moonshot, remain fully open — see this file's Open
+Questions for the scoping tradeoffs on the first two.
+
 ## What it does today
 
 - Title/author fields
@@ -73,14 +118,17 @@ scoping tradeoffs on both.
   with automatic one-time migration of any pre-existing single diagram
 - Print renders the same diagram on one page, with a real em dash (not
   literal `&mdash;` text) for any empty field
+- **Present mode**: a full-viewport, borderless, read-only, large-type
+  render of the current diagram for projecting during a class discussion,
+  exited via a button, Escape, or the browser's fullscreen exit
 
 ## Quick Wins
 
 - **Done — Multiple named saved diagrams.**
-- **A live class-discussion mode**: bigger fonts and no visible textarea
-  borders in a "presentation" view, versus the current always-editable
-  look, since the backlog explicitly calls out projecting this live with a
-  class. *(Still open — the next round's best pick per Status above.)*
+- **Done — A live class-discussion presentation mode**: bigger fonts and
+  no visible textarea borders in a "Present" view, versus the current
+  always-editable look, since the backlog explicitly calls out projecting
+  this live with a class.
 - **JSON export/import**, for sharing a completed diagram between class
   periods studying the same novel, or archiving one from a past year.
   *(Still open — natural pairing with the new multi-save feature.)*
