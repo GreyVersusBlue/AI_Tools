@@ -9,6 +9,81 @@
 
 ## Status
 
+### 2026-08-13 — unit pacing layer (backlog: "Existing Tools — Enhancement Ideas")
+
+**Shipped a new "Units" layer** — named date-range spans laid across the
+calendar, computed instructional-day counts, and a printable pacing
+calendar. This is a genuinely different feature from everything
+`smoke-pacing.mjs` already covered — see the clarification below, it
+matters for scoping.
+
+- **A new "Units" card** (`cal.units`, an array of
+  `{ id, name, start, end, color }`) lets a teacher name a unit and give it
+  a start/end date, e.g. "Unit 3: Fractions", 2027-01-11 to 2027-02-05.
+  Not persisted through `scv-store.js`'s `isValid()`/`migrate()` — like
+  `cal.abCycle` before it, it's read lazily (`ensureUnits()` defaults it to
+  `[]`) so old saved calendars keep loading with the feature simply off
+  until a teacher adds a unit. No `VERSION` bump needed.
+- **Instructional-day counting** is a new pure function,
+  `unitInstructionalStats(startISO, endISO, days, dayTypes)` in
+  `scv-pacing.js`, built on the same `isTeachableDay` predicate the lesson
+  placer and the A/B cycle already share — a unit's count can never
+  disagree with what the rest of the tool considers a school day. Half
+  days stay instructional (matching the tool's existing convention that a
+  half day still has students in the building) but are called out
+  separately (`halfDays`) rather than counted as 0.5, since nothing else
+  in this tool does fractional day counting.
+- **Units render as a colored band** across the days they cover on the
+  month grid — a thin bar along the bottom of each cell, with the unit's
+  name labelled only on its first day (labelling every cell would drown
+  out the day-type chips, A/B badge, and lesson text already competing for
+  a 58px cell). Year-grid badges were skipped for the same space/clutter
+  reason the A/B cycle's year-grid badges were skipped in Round 2 — a
+  natural next step, not done here.
+- **A fourth print mode, "Unit pacing calendar"** — a table (unit, start,
+  end, instructional days, half days, with a total row), following the
+  week strip's precedent of swapping the on-screen view rather than only
+  appearing in `@media print`, since a table isn't something to discover
+  for the first time on paper.
+- **Verified** by extending both existing suites rather than adding a new
+  one (the assignment's boundaries excluded touching `package.json`, so a
+  new unwired test file would never run in `npm test`):
+  `Tools/school-calendar/test/smoke-pacing.mjs` gained a pure-logic section
+  for `unitInstructionalStats` (14 assertions: a range spanning a holiday
+  *and* a half day, a clean week, single-day ranges landing on/off a
+  holiday, a weekend-only range, and invalid ranges reporting zeros rather
+  than throwing); `Tools/school-calendar/test/smoke-week.mjs` gained an
+  end-to-end browser section (18 assertions) that adds a unit through the
+  UI, confirms its computed count against a range with both a tagged
+  holiday and a tagged half day, checks the band/label rendering on the
+  month grid, and confirms the printable table's row and its print-media
+  visibility. `npm run test:school-calendar` is 86 + 52 = 138 assertions,
+  0 failed.
+
+**Is this the same thing `smoke-pacing.mjs` already tested? No — read this
+before touching either feature again.** `smoke-pacing.mjs` is named for the
+tool's pre-existing **lesson pacing** feature: a pasted list of individual
+lesson codes (`U1-03-A-Title`) gets distributed one-per-teachable-day
+across the calendar, with a "bump forward" mechanic for gaps. It has no
+notion of a named unit with an explicit date range, no instructional-day
+count for a span, and nothing printable beyond what already shows on the
+calendar. This round's "Units" layer is a separate, additive data
+structure (`cal.units`, not `cal.pacing`) — a teacher can use either, both,
+or neither. They do share underlying machinery (`isTeachableDay`), which is
+exactly the reuse the assignment asked to check for, but they are not the
+same feature and neither subsumes the other. **This backlog row was not
+previously done** — `smoke-pacing.mjs`'s existence was a name collision
+with a different, earlier feature, not partial completion of this one.
+
+**Where a future round should pick up:** year-grid unit bands (space
+reasons, see above); overlap handling when two units cover the same date
+(currently just stacks a band per unit — untested with 3+ overlapping);
+and the more ambitious version described in Major Features below — auto-
+flowing a unit's *length* (a target day count) around holidays rather than
+requiring a teacher to pick the end date by hand — is still open. This
+round intentionally scoped to explicit start/end dates only, per the
+assignment.
+
 ### 2026-08-11 — session `m3r8ro`
 
 **Shipped the week-at-a-glance print view** (backlog rank 16). The month grid
@@ -139,10 +214,15 @@ session.
 - **Start New Year From This Template** — the only tool on the site with a
   real year-rollover concept (P14)
 - Export **.ics** (calendar subscription/import) and JSON backup; import backup
-- Print / Save PDF, in three modes: month-by-month, whole year, or a
+- Print / Save PDF, in four modes: month-by-month, whole year, a
   **one-week planner strip** (five wide columns with day type as a word, A/B
   letter, paced lesson, free-text lesson and the full note, plus a blank
-  notes block)
+  notes block), or a **unit pacing calendar** (a table of named units with
+  their computed instructional-day counts)
+- **Units layer** — named date-range spans (`cal.units`), separate from the
+  lesson pacing sequence below, rendered as a colored band across the month
+  grid with a computed instructional-day count per unit (half days called
+  out, not fractional)
 - Stored under `scv_calendar_v1` — read by `010-command-center-dashboard.html`
   and `045-sub-binder-generator.html`
 
@@ -174,11 +254,13 @@ session.
 
 ## Major Features
 
-- **Pacing layer, properly.** The description promises "lay lesson pacing on
-  top" — the natural full version is: define units with a target number of
-  instructional days, drop them on the calendar, and have the tool
-  automatically flow them around holidays, half days, and testing windows,
-  then tell you when you're three days behind. A pacing calendar that
+- **Pacing layer, properly.** *(Partially done 2026-08-13 — see Status: named
+  units with explicit start/end dates, a computed instructional-day count,
+  a calendar band, and a printable pacing table all exist now.)* Still
+  open: a unit defined by a *target* instructional-day count rather than an
+  explicit end date, auto-flowing its end around holidays/half days/testing
+  windows as they change, and a "you're three days behind" comparison
+  against where a unit should be by today. A pacing calendar that
   *recomputes* when you lose a day to a snow day is worth a great deal.
 - **Grading-period awareness everywhere.** If the calendar knows quarter
   boundaries, Final Grade Checker knows what "the remaining quarter" means,

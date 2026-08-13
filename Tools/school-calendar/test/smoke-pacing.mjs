@@ -9,7 +9,7 @@
 import {
   parseLessonCode, parseLessonList, excelSerialToISO, addDaysISO, isWeekdayISO,
   classifySchoolNote, isTeachableDay, listTeachableDays, placeLessons,
-  parsePacingRows, rebindAdjustments, emptyPacing,
+  parsePacingRows, rebindAdjustments, emptyPacing, unitInstructionalStats,
 } from '../scv-pacing.js';
 import { isValid, migrate, VERSION } from '../scv-store.js';
 import { seedCalendar2026, blankCalendar, DEFAULT_DAY_TYPES } from '../scv-seed.js';
@@ -240,6 +240,45 @@ console.log('store migration + seeds');
   const blank = blankCalendar('X', '2026-08-31', '2027-06-11');
   ok(isValid(blank) && blank.pacing.adjustments.length === 0, 'blankCalendar is valid v2');
   deep(migrate(seed), seed, 'migrate is a no-op on v2');
+}
+
+/* ---------- 14. unitInstructionalStats (the unit pacing layer) ----------
+   This is deliberately a different feature from everything above: no lesson
+   codes, no placement, no adjustments — just "how many instructional days
+   fall in this named date range". It reuses isTeachableDay so it can never
+   disagree with the lesson placer or the A/B cycle about what a school day
+   is, but it is exercised here as its own thing since a unit never touches
+   a lesson list. */
+console.log('unitInstructionalStats');
+{
+  // Mon 9/1 through Fri 9/18: 14 weekdays, one holiday (Labor Day, 9/7,
+  // noSchool) and one half day (9/18, still instructional) inside the range.
+  const s = unitInstructionalStats('2026-09-01', '2026-09-18', FIX_DAYS, FIX_TYPES);
+  eq(s.weekdays, 14, 'Mon 9/1–Fri 9/18 spans 14 weekdays');
+  eq(s.instructionalDays, 13, 'Labor Day is excluded, the half day is not: 14 - 1');
+  eq(s.halfDays, 1, 'the one half day in range is called out, not folded into the count');
+
+  // A range with neither a holiday nor a half day in it.
+  const plain = unitInstructionalStats('2026-09-08', '2026-09-11', FIX_DAYS, FIX_TYPES);
+  deep(plain, { weekdays: 4, instructionalDays: 4, halfDays: 0 }, 'a clean week has no exclusions or half days');
+
+  // Single-day range.
+  eq(unitInstructionalStats('2026-09-01', '2026-09-01', FIX_DAYS, FIX_TYPES).instructionalDays, 1,
+    'a one-day unit counts that one day');
+  eq(unitInstructionalStats('2026-09-07', '2026-09-07', FIX_DAYS, FIX_TYPES).instructionalDays, 0,
+    'a one-day unit landing exactly on a holiday counts zero');
+
+  // Weekend-only range: zero weekdays, not an error.
+  deep(unitInstructionalStats('2026-09-05', '2026-09-06', FIX_DAYS, FIX_TYPES),
+    { weekdays: 0, instructionalDays: 0, halfDays: 0 }, 'a weekend-only range has nothing to count');
+
+  // Invalid / incomplete ranges report zeros rather than throwing.
+  deep(unitInstructionalStats('2026-09-10', '2026-09-01', FIX_DAYS, FIX_TYPES),
+    { weekdays: 0, instructionalDays: 0, halfDays: 0 }, 'start after end reports zeros');
+  deep(unitInstructionalStats('', '2026-09-01', FIX_DAYS, FIX_TYPES),
+    { weekdays: 0, instructionalDays: 0, halfDays: 0 }, 'missing start reports zeros');
+  deep(unitInstructionalStats(null, null, FIX_DAYS, FIX_TYPES),
+    { weekdays: 0, instructionalDays: 0, halfDays: 0 }, 'null dates report zeros, not a throw');
 }
 
 /* ---------- summary ---------- */

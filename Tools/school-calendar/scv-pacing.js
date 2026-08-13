@@ -251,3 +251,49 @@ export function rebindAdjustments(adjustments, oldLessons, newLessons) {
 export function emptyPacing() {
   return { startDate: null, lessons: [], adjustments: [] };
 }
+
+/* --- unit pacing layer ---
+   A "unit" here is a different, simpler idea than the lesson-by-lesson
+   sequence above: a named span of the calendar ("Unit 3: Fractions",
+   2027-01-11 to 2027-02-05) with no notion of individual lessons at all.
+   The only arithmetic it needs is "how many instructional days actually
+   fall in that range once holidays and workdays are excluded" — the same
+   teachable-day predicate the lesson placer and the A/B cycle already
+   share, so the three can never disagree about what counts as a school
+   day. */
+
+/** A day tagged with an early-dismissal ("half day") type: not itself
+    noSchool, but conventionally id "halfday" or reads as one. Mirrors the
+    tool's own isEarlyDismissalDay so a unit's half-day count and the
+    calendar's ½ markers never disagree. */
+function isHalfDayEntry(entry, dayTypes) {
+  if (!entry || !entry.types || !entry.types.length) return false;
+  return entry.types.some(id => {
+    const t = (dayTypes || []).find(dt => dt.id === id);
+    return t && !t.noSchool && (t.id === "halfday" || /early dismissal|half day/i.test(t.label));
+  });
+}
+
+/**
+ * Instructional-day stats for a unit's date range [startISO, endISO]:
+ *   weekdays          — Mon-Fri count in the range
+ *   instructionalDays — weekdays not tagged with a noSchool day type (half
+ *                        days stay instructional — students are still there)
+ *   halfDays          — instructional days additionally tagged as a half
+ *                        day, called out separately rather than counted as
+ *                        0.5, matching how the rest of the tool treats them
+ * An empty or invalid range (missing dates, start after end) reports zeros.
+ */
+export function unitInstructionalStats(startISO, endISO, days, dayTypes) {
+  if (!startISO || !endISO || startISO > endISO) return { weekdays: 0, instructionalDays: 0, halfDays: 0 };
+  let weekdays = 0, instructionalDays = 0, halfDays = 0;
+  for (let ms = isoToUtcMs(startISO), end = isoToUtcMs(endISO); ms <= end; ms += DAY_MS) {
+    const dateISO = utcMsToISO(ms);
+    if (!isWeekdayISO(dateISO)) continue;
+    weekdays++;
+    if (!isTeachableDay(dateISO, days, dayTypes)) continue;
+    instructionalDays++;
+    if (isHalfDayEntry(days && days[dateISO], dayTypes)) halfDays++;
+  }
+  return { weekdays, instructionalDays, halfDays };
+}
