@@ -97,9 +97,15 @@ export function serve(port) {
 // school network, a sandboxed CI container) but a compatible Chromium is already
 // on disk. Unset — the normal case — Playwright resolves its own browser exactly
 // as before.
-export async function launch() {
+// `opts.args` is additive Chromium launch flags, e.g. the fake-microphone
+// pair a MediaRecorder suite needs (['--use-fake-device-for-media-stream',
+// '--use-fake-ui-for-media-stream']). Optional and empty by default, so
+// every existing no-arg call site (`launch()`) is unaffected.
+export async function launch(opts = {}) {
   const exe = process.env.PW_CHROMIUM_EXECUTABLE;
-  return chromium.launch(exe ? { headless: true, executablePath: exe } : { headless: true });
+  const base = exe ? { headless: true, executablePath: exe } : { headless: true };
+  if (opts.args && opts.args.length) base.args = opts.args;
+  return chromium.launch(base);
 }
 
 // The shared _ds stylesheet @imports Google Fonts over HTTPS on every page
@@ -121,13 +127,17 @@ const KNOWN_NOISE = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
  * page.__blocked. Page errors, console errors, failed requests and >=400
  * responses land in page.__errs.
  */
-export async function prepPage(browser, base, { width, height, dsf = 1, mobile = false } = {}) {
+export async function prepPage(browser, base, { width, height, dsf = 1, mobile = false, permissions } = {}) {
   const context = await browser.newContext({
     viewport: { width, height },
     deviceScaleFactor: dsf,
     isMobile: mobile,
     hasTouch: mobile,
     acceptDownloads: true,
+    // Optional and undefined by default (Playwright treats that the same as
+    // omitting the key) — only a suite that passes e.g. ['microphone'] for a
+    // MediaRecorder flow changes behavior here.
+    permissions,
     // Every tool registers sw.js, and a controlled page gets its responses
     // from the SW's precache — which bypasses the route() interception below
     // entirely (the CSS strip, the offsite abort, the __blocked bookkeeping
