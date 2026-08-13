@@ -18,6 +18,10 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   :root { --good: #2f7d4f; }
   * { box-sizing: border-box; }
@@ -155,8 +159,36 @@
   .proj-dest-row.empty { color: #9aa3b0; font-size: 1rem; padding: .9rem 1.3rem; }
   .proj-alert { font-size: 1.1rem; font-weight: 700; color: #ff8c7a; min-height: 1.6rem; margin-bottom: 1.4rem; }
   .proj-note { font-size: .82rem; color: #6c7484; margin-bottom: 1.2rem; }
+  .proj-sync-note { font-size: .85rem; color: #9aa3b0; margin: -0.8rem 0 1rem; }
+  .proj-sync-note.paired { color: #7fd6a3; font-weight: 600; }
+  .proj-sync-note.stale { color: #e0a85c; font-weight: 600; }
   .projector-view button { background: #2e3948; border-color: #2e3948; }
   .projector-view button:hover { background: #3d4b5e; border-color: #3d4b5e; }
+
+  /* ── Hallway Sync (two-teacher peer pairing) ─────────────────────────── */
+  .sync-status-line { font-size: .82rem; font-weight: 600; margin: -.3rem 0 .7rem; }
+  .sync-status-line.paired { color: var(--good); }
+  .sync-status-line .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: .35rem; animation: syncPulse 1.6s ease-in-out infinite; }
+  @keyframes syncPulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .sync-status-line .dot { animation: none; } }
+
+  .sync-overlay { display: flex; position: fixed; inset: 0; background: rgba(20,20,18,.55); align-items: center; justify-content: center; z-index: 800; padding: 1rem; }
+  .sync-overlay[hidden] { display: none; }
+  .sync-modal { background: #fff; border-radius: 12px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+  .sync-head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.2rem; border-bottom: 1px solid var(--line); }
+  .sync-head h2 { font-size: 1.05rem; margin: 0; }
+  .sync-close { background: transparent; border: none; color: var(--muted); font-size: 1.3rem; line-height: 1; cursor: pointer; padding: .2rem .4rem; }
+  .sync-close:hover { background: transparent; color: var(--err); border-color: transparent; }
+  .sync-body { padding: 1.1rem 1.2rem; font-size: .88rem; line-height: 1.5; }
+  .sync-body p { margin: 0 0 .8rem; color: var(--muted); }
+  .sync-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .sync-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
+  .sync-body textarea { font-family: Consolas, monospace; font-size: .72rem; min-height: 3.6rem; }
+  .sync-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .sync-actions button { flex: 1 1 auto; width: auto; }
+  .sync-status-msg { font-size: .82rem; color: var(--muted); margin-top: .4rem; min-height: 1.2em; }
+  .sync-status-msg.bad { color: var(--err); }
+  .sync-status-msg.good { color: var(--good); }
 
   /* ── Live board ───────────────────────────────────────────────────── */
   .board-wrap { background: #eeece3; border-radius: 10px; padding: 1.2rem; }
@@ -305,6 +337,16 @@
       </div>
 
       <div class="card">
+        <div class="card-title"><span>Hallway Sync</span></div>
+        <div class="hint">Pair with another teacher&rsquo;s Hall Pass Log covering the same hallway so <b>Projector View</b> shows one combined out-count and overtime alert instead of two blind halves. Only the same redacted counts already shown in Projector View are ever sent &mdash; no names, no per-student destinations. Works between two devices on the same Wi-Fi/LAN; no server involved.</div>
+        <div class="sync-status-line" id="syncStatusLine">Not paired.</div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="secondary" type="button" id="syncBtn">Pair with another board</button>
+          <button class="danger" type="button" id="syncStopBtn" style="display:none;">Unpair</button>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title"><span>Day</span></div>
         <div class="hint">Archiving saves today&rsquo;s log to history and clears the board for a fresh day. The roster and destination list carry over. Everyone must be signed in first.</div>
         <div class="btn-row" style="margin-top:0;">
@@ -393,8 +435,19 @@
     <div class="proj-label">students currently out</div>
     <div class="proj-dests" id="projDests"></div>
     <div class="proj-alert" id="projAlert"></div>
+    <div class="proj-sync-note" id="projSyncNote"></div>
     <div class="proj-note">Names and destinations are not shown here on purpose.</div>
     <button class="secondary" type="button" id="projectorCloseBtn">Exit (Esc)</button>
+  </div>
+</div>
+
+<div class="sync-overlay" id="syncOverlay" hidden>
+  <div class="sync-modal" role="dialog" aria-modal="true" aria-label="Hallway Sync — pair with another board">
+    <div class="sync-head">
+      <h2>Hallway Sync</h2>
+      <button type="button" class="sync-close" id="syncCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="sync-body" id="syncBody"></div>
   </div>
 </div>
 
@@ -446,7 +499,8 @@
    'destChips', 'studentGrid', 'liveBoard', 'undoBar', 'alertSoundToggle', 'printSelect', 'printBtn', 'activityFeed',
    'printArea', 'printTitle', 'printSub', 'printBody', 'msg',
    'oneOutToggle', 'weeklyBudget', 'teacherInitials', 'approvalList',
-   'projectorBtn', 'projectorView', 'projClock', 'projOutCount', 'projDests', 'projAlert', 'projectorCloseBtn',
+   'projectorBtn', 'projectorView', 'projClock', 'projOutCount', 'projDests', 'projAlert', 'projSyncNote', 'projectorCloseBtn',
+   'syncBtn', 'syncStopBtn', 'syncStatusLine', 'syncOverlay', 'syncBody', 'syncCloseBtn',
    'passOverlay', 'passCode', 'passName', 'passDest', 'passTime', 'passInitials', 'passPrintBtn', 'passCloseBtn',
    'passPrintArea', 'passPrintCode', 'passPrintName', 'passPrintDest', 'passPrintTime', 'passPrintInitials',
    'rangeFrom', 'rangeTo', 'buildRangeBtn', 'rangeReportWrap',
@@ -1271,25 +1325,71 @@
   });
 
   // ── Projector view (deliberately reduced — no names, no per-student destinations) ──
+  // computeLocalSnapshot() below is the exact same redacted shape Projector
+  // View has always computed for itself (a total out-count, counts per
+  // destination *label* with no student attached, and whether anything is
+  // over time) — Hallway Sync (further down) reuses this one function both
+  // to render this board's own numbers and as the only thing ever sent to a
+  // paired board, so the privacy stance already established for this view
+  // extends to the sync feature for free.
   var projectorTimer = null;
+
+  function computeLocalSnapshot(s, nowMs) {
+    var byDest = {};
+    var overTime = false;
+    (s.outNow || []).forEach(function (o) {
+      byDest[o.destLabel] = (byDest[o.destLabel] || 0) + 1;
+      var dest = (s.destinations || []).filter(function (d) { return d.id === o.destId; })[0];
+      var threshold = dest ? dest.overtimeMin : OVER_TIME_MIN;
+      if (Math.floor((nowMs - o.outMs) / 60000) >= threshold) overTime = true;
+    });
+    return { outCount: (s.outNow || []).length, byDest: byDest, overTime: overTime };
+  }
+
+  // Merges this board's own snapshot with a peer's (or just returns the local
+  // one, unchanged, if there's no peer) — summing out-counts, summing
+  // per-destination-label counts, and OR-ing the overtime flags. No peer
+  // identity, no per-board breakdown: once combined, the two boards read as
+  // one hallway, which is the point.
+  function combineSnapshots(local, peer) {
+    if (!peer) return { outCount: local.outCount, byDest: local.byDest, overTime: !!local.overTime, paired: false };
+    var byDest = {};
+    Object.keys(local.byDest || {}).forEach(function (k) { byDest[k] = (byDest[k] || 0) + local.byDest[k]; });
+    Object.keys(peer.byDest || {}).forEach(function (k) { byDest[k] = (byDest[k] || 0) + peer.byDest[k]; });
+    return {
+      outCount: (local.outCount || 0) + (peer.outCount || 0),
+      byDest: byDest,
+      overTime: !!local.overTime || !!peer.overTime,
+      paired: true,
+    };
+  }
+
   function renderProjector() {
     if (!state) return;
     els.projClock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-    els.projOutCount.textContent = state.outNow.length;
     var nowMs = Date.now();
-    var byDest = {};
-    var anyOver = false;
-    state.outNow.forEach(function (o) {
-      byDest[o.destLabel] = (byDest[o.destLabel] || 0) + 1;
-      var dest = state.destinations.filter(function (d) { return d.id === o.destId; })[0];
-      var threshold = dest ? dest.overtimeMin : OVER_TIME_MIN;
-      if (Math.floor((nowMs - o.outMs) / 60000) >= threshold) anyOver = true;
-    });
-    var destKeys = Object.keys(byDest);
+    var local = computeLocalSnapshot(state, nowMs);
+    var combined = combineSnapshots(local, sync.connected ? sync.peerSnapshot : null);
+    els.projOutCount.textContent = combined.outCount;
+    var destKeys = Object.keys(combined.byDest);
     els.projDests.innerHTML = destKeys.length
-      ? destKeys.map(function (k) { return '<div class="proj-dest-row"><span>' + escapeHtml(k) + '</span><span>' + byDest[k] + '</span></div>'; }).join('')
+      ? destKeys.map(function (k) { return '<div class="proj-dest-row"><span>' + escapeHtml(k) + '</span><span>' + combined.byDest[k] + '</span></div>'; }).join('')
       : '<div class="proj-dest-row empty">No one out</div>';
-    els.projAlert.textContent = anyOver ? 'One or more passes are over the time limit' : '';
+    els.projAlert.textContent = combined.overTime ? 'One or more passes are over the time limit' : '';
+
+    if (!sync.connected) {
+      els.projSyncNote.className = 'proj-sync-note';
+      els.projSyncNote.textContent = '';
+    } else if (!sync.peerSnapshot) {
+      els.projSyncNote.className = 'proj-sync-note';
+      els.projSyncNote.textContent = 'Paired — waiting for the other board’s first update…';
+    } else if ((nowMs - (sync.peerSnapshot.ts || 0)) > SYNC_STALE_MS) {
+      els.projSyncNote.className = 'proj-sync-note stale';
+      els.projSyncNote.textContent = 'Paired, but the other board hasn’t updated in a while — numbers may be out of date.';
+    } else {
+      els.projSyncNote.className = 'proj-sync-note paired';
+      els.projSyncNote.textContent = 'Paired — combined with another board.';
+    }
   }
 
   function openProjector() {
@@ -1311,10 +1411,319 @@
     if (e.key !== 'Escape') return;
     if (els.projectorView.classList.contains('show')) closeProjector();
     if (els.passOverlay.classList.contains('show')) closePass();
+    if (!els.syncOverlay.hidden) closeSyncModal();
   });
   document.addEventListener('fullscreenchange', function () {
     if (!document.fullscreenElement && els.projectorView.classList.contains('show')) closeProjector();
   });
+
+  // ── Hallway Sync — pairs this board with exactly one other Hall Pass Log
+  // over a direct WebRTC data channel (_shared/webrtc-pair.js), no server
+  // involved. Deliberately syncs ONLY the same {outCount, byDest, overTime}
+  // shape computeLocalSnapshot() above already computes for this board's own
+  // Projector View — never outNow/log/history, never a student name, never
+  // which student is at which destination. That both inherits Projector
+  // View's existing privacy stance for free and sidesteps real conflict
+  // questions a full-board merge would raise (same destination labels? same
+  // overtime thresholds?) that this round doesn't try to solve.
+  //
+  // The combined numbers live only in this in-memory `sync` object — nothing
+  // received from a peer is ever written to hall-pass-log-sections, so this
+  // can't collide with Command Center's own signInStudent() writer on that
+  // same key. Pairing state is intentionally NOT persisted: a reload starts
+  // unpaired, same as classroom-timer's mirror pairing.
+  var SYNC_PUSH_MS = 3000;   // how often a snapshot is pushed to the peer
+  var SYNC_STALE_MS = 12000; // how long since the peer's last push before its numbers are flagged stale
+
+  var sync = {
+    pc: null,
+    channel: null,
+    connected: false,
+    peerSnapshot: null,
+    pushTimer: null,
+    scanHandle: null,
+  };
+
+  function renderSyncStatusLine() {
+    if (sync.connected) {
+      els.syncStatusLine.className = 'sync-status-line paired';
+      els.syncStatusLine.innerHTML = '<span class="dot" aria-hidden="true"></span>Paired — Projector View shows a combined count.';
+      els.syncStopBtn.style.display = '';
+    } else {
+      els.syncStatusLine.className = 'sync-status-line';
+      els.syncStatusLine.textContent = 'Not paired.';
+      els.syncStopBtn.style.display = 'none';
+    }
+  }
+
+  function teardownSync() {
+    if (sync.pushTimer) { clearInterval(sync.pushTimer); sync.pushTimer = null; }
+    if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+    if (sync.pc) { try { sync.pc.close(); } catch (e) { /* already closed */ } }
+    sync.pc = null;
+    sync.channel = null;
+    sync.connected = false;
+    sync.peerSnapshot = null;
+    renderSyncStatusLine();
+    if (els.projectorView.classList.contains('show')) renderProjector();
+  }
+
+  els.syncStopBtn.addEventListener('click', function () {
+    if (!confirm('Unpair from the other board? Projector View will go back to showing this board alone.')) return;
+    teardownSync();
+  });
+
+  function pushLocalSnapshot() {
+    if (!sync.channel || sync.channel.readyState !== 'open' || !state) return;
+    var snap = computeLocalSnapshot(state, Date.now());
+    snap.ts = Date.now();
+    try { sync.channel.send(JSON.stringify(snap)); } catch (e) { /* channel not actually ready yet */ }
+  }
+
+  function onChannelOpen() {
+    sync.connected = true;
+    renderSyncStatusLine();
+    pushLocalSnapshot();
+    if (sync.pushTimer) clearInterval(sync.pushTimer);
+    sync.pushTimer = setInterval(pushLocalSnapshot, SYNC_PUSH_MS);
+    if (!els.syncOverlay.hidden) renderSyncConnected();
+    if (els.projectorView.classList.contains('show')) renderProjector();
+  }
+
+  function onChannelClose() {
+    var wasConnected = sync.connected;
+    teardownSync();
+    if (wasConnected) setSyncStatus('Disconnected. Pair again if the other board is still around.', 'bad');
+  }
+
+  function onChannelMessage(raw) {
+    var data;
+    try { data = JSON.parse(raw); } catch (e) { return; }
+    if (!data || typeof data.outCount !== 'number' || typeof data.byDest !== 'object') return;
+    sync.peerSnapshot = data;
+    if (els.projectorView.classList.contains('show')) renderProjector();
+  }
+
+  function wireChannel(channel) {
+    sync.channel = channel;
+    channel.addEventListener('open', onChannelOpen);
+    channel.addEventListener('close', onChannelClose);
+    channel.addEventListener('message', function (e) { onChannelMessage(e.data); });
+  }
+
+  /* A small self-contained QR-drawing helper — the same approach as
+     Tools/classroom-timer/ct-mirror.js's drawQR (sizing the canvas's pixel
+     buffer off the actual module count so a payload this dense stays
+     scannable), reimplemented here rather than imported because ct-mirror.js
+     is that tool's own support module, not a _shared one. The vendored
+     qrcode.js encoder underneath it, which this does share, is loaded above. */
+  function drawSyncQR(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount();
+    var quiet = 4;
+    var total = count + quiet * 2;
+    var MIN_PX_PER_MODULE = 8;
+    var size = total * MIN_PX_PER_MODULE;
+    canvas.width = size;
+    canvas.height = size;
+    var px = size / total;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16222e';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          var x0 = Math.round((quiet + c) * px);
+          var x1 = Math.round((quiet + c + 1) * px);
+          var y0 = Math.round((quiet + r) * px);
+          var y1 = Math.round((quiet + r + 1) * px);
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+      }
+    }
+  }
+
+  function openSyncModal() {
+    els.syncOverlay.hidden = false;
+    if (sync.connected) renderSyncConnected();
+    else renderSyncIntro();
+  }
+  function closeSyncModal() {
+    els.syncOverlay.hidden = true;
+    if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+  }
+  els.syncBtn.addEventListener('click', openSyncModal);
+  els.syncCloseBtn.addEventListener('click', closeSyncModal);
+  els.syncOverlay.addEventListener('mousedown', function (e) { if (e.target === els.syncOverlay) closeSyncModal(); });
+
+  function setSyncStatus(text, kind) {
+    var el = document.getElementById('syncModalStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'sync-status-msg' + (kind ? ' ' + kind : '');
+  }
+
+  function renderSyncIntro() {
+    els.syncBody.innerHTML =
+      '<p>Pair this board with another teacher&rsquo;s Hall Pass Log for the same hallway. Once connected, each board&rsquo;s Projector View shows one combined out-count and overtime alert &mdash; still no names, still no per-student destinations.</p>' +
+      '<div class="sync-actions"><button type="button" id="sHost">Show a pairing code</button></div>' +
+      '<div class="sync-actions"><button type="button" id="sJoin">Scan / enter a code</button></div>' +
+      '<p class="sync-status-msg" id="syncModalStatus"></p>';
+    document.getElementById('sHost').addEventListener('click', beginHost);
+    document.getElementById('sJoin').addEventListener('click', renderJoinEntry);
+  }
+
+  function renderSyncConnected() {
+    els.syncBody.innerHTML =
+      '<p><b>Paired.</b> Projector View on both boards now shows one combined out-count and overtime alert.</p>' +
+      '<div class="sync-actions"><button type="button" class="danger" id="sUnpair">Unpair</button></div>';
+    document.getElementById('sUnpair').addEventListener('click', function () {
+      teardownSync();
+      closeSyncModal();
+    });
+  }
+
+  /* ── Host role: create the offer, show it as a QR / text code, then accept
+     the other board's reply (scanned or pasted). Either teacher can be the
+     host — there's no fixed role here, unlike classroom-timer's teacher/
+     student mirror. ── */
+  function beginHost() {
+    els.syncBody.innerHTML = '<p>Preparing a pairing code&hellip;</p>';
+    window.WebRTCPair.createOffer('hallpass').then(function (host) {
+      sync.pc = host.pc;
+      renderHostOffer(host);
+    }).catch(function (err) {
+      els.syncBody.innerHTML = '<p>Couldn&rsquo;t start pairing: ' + escapeHtml(err.message) + '</p>' +
+        '<div class="sync-actions"><button type="button" id="sBack">Back</button></div>';
+      document.getElementById('sBack').addEventListener('click', renderSyncIntro);
+    });
+  }
+
+  function renderHostOffer(host) {
+    els.syncBody.innerHTML =
+      '<p>On the other teacher&rsquo;s board, open <b>Hallway Sync &rarr; Scan / enter a code</b> and scan this, or copy/paste it by hand:</p>' +
+      '<canvas id="sOfferCanvas" width="320" height="320"></canvas>' +
+      '<div class="sync-actions"><button type="button" id="sCopyOffer">Copy code</button></div>' +
+      '<p style="margin-top:1rem;">Then connect their reply:</p>' +
+      '<div class="sync-actions"><button type="button" id="sScanAnswer">Scan their code with camera</button></div>' +
+      '<textarea id="sAnswerPaste" rows="3" placeholder="&hellip;or paste their reply code here"></textarea>' +
+      '<div class="sync-actions"><button type="button" id="sConnect">Connect</button></div>' +
+      '<p class="sync-status-msg" id="syncModalStatus"></p>';
+    drawSyncQR(document.getElementById('sOfferCanvas'), host.offerPayload);
+    document.getElementById('sCopyOffer').addEventListener('click', function () {
+      navigator.clipboard.writeText(host.offerPayload).then(function () { setSyncStatus('Code copied.', 'good'); },
+        function () { setSyncStatus('Could not copy — select the code by hand from the QR reader.', 'bad'); });
+    });
+    document.getElementById('sConnect').addEventListener('click', function () {
+      var val = document.getElementById('sAnswerPaste').value.trim();
+      if (!val) { setSyncStatus('Paste the reply code first.', 'bad'); return; }
+      connectHostWithAnswer(host, val);
+    });
+    document.getElementById('sScanAnswer').addEventListener('click', function () { scanForAnswer(host); });
+  }
+
+  function scanForAnswer(host) {
+    els.syncBody.insertAdjacentHTML('beforeend',
+      '<video id="sScanVideo" autoplay muted playsinline></video>' +
+      '<div class="sync-actions"><button type="button" id="sCancelScan">Cancel</button></div>');
+    document.getElementById('sScanAnswer').disabled = true;
+    document.getElementById('sCancelScan').addEventListener('click', function () {
+      if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+      renderHostOffer(host);
+    });
+    sync.scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('sScanVideo'), {
+      onResult: function (text) {
+        if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+        connectHostWithAnswer(host, text);
+      },
+      onError: function (err) { setSyncStatus('Camera unavailable: ' + err.message, 'bad'); },
+    });
+  }
+
+  function connectHostWithAnswer(host, answerPayload) {
+    setSyncStatus('Connecting…');
+    window.WebRTCPair.applyAnswer(host.pc, answerPayload).then(function () {
+      wireChannel(host.channel);
+      var failTimer = setTimeout(function () {
+        setSyncStatus('Still trying — make sure both boards are on the same Wi-Fi.', 'bad');
+      }, 8000);
+      host.channel.addEventListener('open', function () { clearTimeout(failTimer); }, { once: true });
+    }).catch(function (err) {
+      setSyncStatus(err.message, 'bad');
+    });
+  }
+
+  /* ── Join role: scan/paste the other board's offer, show the reply back. ── */
+  function renderJoinEntry() {
+    els.syncBody.innerHTML =
+      '<p>Ask the other teacher to open <b>Hallway Sync &rarr; Show a pairing code</b> on their board, then scan it here or paste it below.</p>' +
+      '<div class="sync-actions"><button type="button" id="sJoinScan">Scan with camera</button></div>' +
+      '<textarea id="sOfferPaste" rows="3" placeholder="&hellip;or paste their code here"></textarea>' +
+      '<div class="sync-actions"><button type="button" id="sJoinConnect">Connect</button></div>' +
+      '<p class="sync-status-msg" id="syncModalStatus"></p>';
+    document.getElementById('sJoinConnect').addEventListener('click', function () {
+      var val = document.getElementById('sOfferPaste').value.trim();
+      if (!val) { setSyncStatus('Paste the code first.', 'bad'); return; }
+      connectJoin(val);
+    });
+    document.getElementById('sJoinScan').addEventListener('click', function () {
+      els.syncBody.insertAdjacentHTML('beforeend',
+        '<video id="sJoinVideo" autoplay muted playsinline></video>' +
+        '<div class="sync-actions"><button type="button" id="sJoinCancelScan">Cancel</button></div>');
+      document.getElementById('sJoinScan').disabled = true;
+      document.getElementById('sJoinCancelScan').addEventListener('click', function () {
+        if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+        renderJoinEntry();
+      });
+      sync.scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('sJoinVideo'), {
+        onResult: function (text) {
+          if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+          connectJoin(text);
+        },
+        onError: function (err) { setSyncStatus('Camera unavailable: ' + err.message, 'bad'); },
+      });
+    });
+  }
+
+  function connectJoin(offerPayload) {
+    if (sync.scanHandle) { sync.scanHandle.stop(); sync.scanHandle = null; }
+    setSyncStatus('Connecting…');
+    window.WebRTCPair.createAnswer(offerPayload, function (channel) { wireChannel(channel); }).then(function (result) {
+      sync.pc = result.pc;
+      renderJoinReply(result.answerPayload);
+    }).catch(function (err) {
+      setSyncStatus(err.message, 'bad');
+    });
+  }
+
+  function renderJoinReply(answerPayload) {
+    els.syncBody.innerHTML =
+      '<p>Show this code back to the other teacher, or read them the text below:</p>' +
+      '<canvas id="sAnswerCanvas" width="320" height="320"></canvas>' +
+      '<textarea id="sAnswerText" rows="3" readonly></textarea>' +
+      '<div class="sync-actions"><button type="button" id="sCopyAnswer">Copy code</button></div>' +
+      '<p class="sync-status-msg" id="syncModalStatus">Waiting for the other board to connect&hellip;</p>';
+    drawSyncQR(document.getElementById('sAnswerCanvas'), answerPayload);
+    document.getElementById('sAnswerText').value = answerPayload;
+    document.getElementById('sCopyAnswer').addEventListener('click', function () {
+      navigator.clipboard.writeText(answerPayload).catch(function () { /* textarea already shows it, selectable */ });
+    });
+  }
+
+  renderSyncStatusLine();
+
+  // Test-only hook (matches this repo's window.__ convention, e.g.
+  // window.__ftpsResolveScan in field-trip-permission-slip) so
+  // Tools/hall-pass-log/test/smoke-hallway-sync.mjs can exercise the
+  // combined-count/overtime math directly as pure functions.
+  window.__hallPassSync = {
+    computeLocalSnapshot: computeLocalSnapshot,
+    combineSnapshots: combineSnapshots,
+  };
 
   // ── Long-range report ─────────────────────────────────────────────────────
   var lastRangeReport = null;
