@@ -192,7 +192,34 @@ await page.fill('#newStats', 'Born: 1900');
 await page.waitForTimeout(250);
 ok(!(await page.isVisible('#statWarn')), 'and it clears when the stats fit again');
 
-/* ── 9. no console noise anywhere in the run ─────────────────────────────── */
+/* ── 9. deck themes and rarity render everywhere, geometry intact ────────── */
+await page.click('.theme-swatch[data-theme="parchment"]');
+await settle(page);
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .trading-card.theme-parchment')),
+   'picking a theme restyles the preview card');
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .card-frame')),
+   'the themed card carries its decorative frame overlay');
+await page.selectOption('#newRarity', 'legendary');
+await page.waitForTimeout(250);
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .trading-card.rarity-legendary')),
+   'rarity applies to the preview card');
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .rarity-badge')),
+   'a legendary card shows its foil badge');
+await page.selectOption('#cardSize', 'standard');
+await settle(page);
+const themed = await measureCards();
+near(themed.width / IN, 2.5, 0.02, 'a themed card still measures 2.5in across');
+near(themed.height / IN, 3.5, 0.02, 'and 3.5in tall — frames add no layout size');
+ok(await page.evaluate(() => !!document.querySelector('#printArea .trading-card.theme-parchment')),
+   'the print run uses the deck theme');
+ok(await page.evaluate(() => !!document.querySelector('#printArea svg.htcm-defs')),
+   'the print subtree carries its own copy of the shared SVG defs');
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page);
+ok(await page.evaluate(() => !!document.querySelector('.theme-swatch[data-theme="parchment"].selected')),
+   'the theme choice survives a reload');
+
+/* ── 10. no console noise anywhere in the run ────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
