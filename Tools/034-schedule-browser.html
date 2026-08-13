@@ -207,6 +207,23 @@
 #app-browser .cwho.free{color:#9a8430;font-weight:700}
 #app-browser .blockrow.common{background:#fdf3d9}
 #app-browser .blockrow.common .bk .n{color:#9a7415}
+/* ── Substitute view ── */
+#app-browser .subchip{cursor:default;pointer-events:none}
+#app-browser .subdate-blank{display:inline-block;min-width:150px;border-bottom:1.5px solid var(--br-ink)}
+#app-browser .subcov-wrap{display:flex;flex-wrap:wrap;gap:18px;margin-top:4px}
+#app-browser .subcov-day{flex:1;min-width:260px}
+#app-browser .subcov-day h4{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--br-forest);margin:0 0 8px}
+#app-browser .subcov-row{border:1px solid var(--br-line);border-radius:10px;padding:10px 14px;margin-bottom:10px;background:#fff}
+#app-browser .subcov-hd{font-size:13.5px;color:var(--br-ink);margin-bottom:6px}
+#app-browser .subcov-list{display:flex;flex-wrap:wrap;gap:6px}
+#app-browser .subcov-name{display:inline-flex;flex-direction:column;line-height:1.35;border-left:4px solid var(--br-forest);
+  background:var(--br-paper);border-radius:6px;padding:4px 10px;font-size:12.5px;font-weight:700;color:var(--br-ink)}
+#app-browser .subcov-name .d{font-weight:500;color:var(--br-muted);font-size:11.5px}
+#app-browser .subcov-none{font-size:12.5px;color:#9a5b2a;font-weight:600}
+#app-browser .footnote-sub{color:var(--br-muted);font-size:12.5px;margin:22px 2px 0;line-height:1.6}
+@media print{
+  #app-browser .subcov-row{break-inside:avoid}
+}
 /* Building map */
 #app-browser .maptop{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between;margin-bottom:6px}
 #app-browser .maptop h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0;color:var(--br-forest)}
@@ -322,6 +339,7 @@ html,body{margin:0;padding:0;background:#f4f7f4}
           <button id="br-mCompare" onclick="brSetMode('compare')">Common Planning</button>
           <button id="br-mFree"    onclick="brSetMode('free')">Who's Free Now</button>
           <button id="br-mMap"     onclick="brSetMode('map')">Building Map</button>
+          <button id="br-mSub"     onclick="brSetMode('sub')">Substitute Plan</button>
         </div>
         <div class="br-field" id="br-searchField">
           <label id="br-searchLabel" for="br-search">Find a teacher</label>
@@ -476,7 +494,7 @@ let brMode = 'teacher', brCurrent = null, brActiveIdx = -1, brOpts = [];
 let brGrpDay = 'A', brMapFloorIdx = 0;
 let brCompareSel = [];
 function brBuildOpts() {
-  if (brMode === 'teacher' || brMode === 'compare') {
+  if (brMode === 'teacher' || brMode === 'compare' || brMode === 'sub') {
     brOpts = Object.keys(BR_TEACHERS).map(n => ({
       key:n, label:n, dept:BR_TEACHERS[n].dept,
       tag:BR_TEACHERS[n].room,
@@ -539,6 +557,7 @@ function brSetMode(mo) {
   document.getElementById('br-mCompare').classList.toggle('on', mo==='compare');
   document.getElementById('br-mFree').classList.toggle('on',    mo==='free');
   document.getElementById('br-mMap').classList.toggle('on',     mo==='map');
+  document.getElementById('br-mSub').classList.toggle('on',     mo==='sub');
   const sf = document.getElementById('br-searchField');
   if (mo==='map') {
     sf.style.display='none';
@@ -564,6 +583,17 @@ function brSetMode(mo) {
     brRenderCompareView();
     return;
   }
+  if (mo==='sub') {
+    document.getElementById('br-searchLabel').textContent='Pick the absent teacher';
+    document.getElementById('br-search').placeholder='Type a name…';
+    document.getElementById('br-search').value='';
+    document.getElementById('br-view').classList.remove('show');
+    document.getElementById('br-empty').style.display='';
+    document.getElementById('br-empty-title').textContent='Pick the absent teacher.';
+    document.getElementById('br-empty-sub').innerHTML='One printable page: their day, rooms, classes, coverage candidates, and a map crop.';
+    brBuildOpts(); brRenderMenu();
+    return;
+  }
   document.getElementById('br-searchLabel').textContent = mo==='teacher'?'Find a teacher':'Find a student group';
   document.getElementById('br-search').placeholder = mo==='teacher'?'Type a name…':'Type a class, like 7-5…';
   document.getElementById('br-search').value='';
@@ -575,11 +605,13 @@ function brSetMode(mo) {
 }
 
 function brChoose(key) {
-  document.getElementById('br-search').value = brMode==='teacher' ? key : ('Class '+key);
+  document.getElementById('br-search').value = (brMode==='teacher' || brMode==='sub') ? key : ('Class '+key);
   brCloseMenu(); brCurrent=key;
   document.getElementById('br-empty').style.display='none';
   const v=document.getElementById('br-view'); v.classList.remove('show'); void v.offsetWidth;
-  if (brMode==='teacher') brRenderTeacher(key); else brRenderGroup(key);
+  if (brMode==='teacher') brRenderTeacher(key);
+  else if (brMode==='sub') brRenderSub(key);
+  else brRenderGroup(key);
   v.classList.add('show');
   v.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -963,6 +995,84 @@ function brFreeTeachersFor(day, idx) {
     return !sec || sec === 'Planning';
   }).sort((a, b) => (brOrderOf(brTDept(a)) - brOrderOf(brTDept(b))) || a.localeCompare(b));
 }
+/* ── Substitute view — one printable page for the absent teacher's day:
+   their schedule, their classes, who's free to cover each period they
+   normally teach, and a cropped map of the building near their room.
+   Coverage candidates reuse brFreeTeachersFor exactly as Who's Free Now
+   does — "free" here means "on Planning at the period that needs covering",
+   the same computation, just run once per class period instead of once for
+   the current moment. ── */
+function brSubCoverageHTML(n, day) {
+  const t = BR_TEACHERS[n]; if (!t) return '';
+  const arr = day === 'B' ? t.B : t.A;
+  const bell = BR_BELL ? (day === 'B' ? BR_BELL.B : BR_BELL.A) : null;
+  const rows = [];
+  for (let i = 0; i < BR_MODCOUNT; i++) {
+    const sec = arr[i];
+    if (!sec || sec === 'Planning') continue;
+    rows.push({ i, sec, time: bell ? (bell[i] || '') : '', free: brFreeTeachersFor(day, i).filter(f => f !== n) });
+  }
+  if (!rows.length) return `<p class="hint">No classes on ${day}&nbsp;day — nothing to cover.</p>`;
+  return rows.map(r => {
+    const names = r.free.length
+      ? r.free.map(f => {
+          const ft = BR_TEACHERS[f]; const c = brDColor(ft.dept);
+          return `<span class="subcov-name" style="border-left-color:${c}">${brEscHtml(f)}<span class="d">${brEscHtml((BR_DEPT[ft.dept]||{}).name||ft.dept)} · Rm&nbsp;${brEscHtml(ft.room)}</span></span>`;
+        }).join('')
+      : `<span class="subcov-none">No one is free ${brEscHtml(BR_MOD_LABEL)} ${r.i+1} — check with the office.</span>`;
+    return `<div class="subcov-row"><div class="subcov-hd"><b>${brEscHtml(BR_MOD_LABEL)} ${r.i+1}</b>${r.time?` · ${brEscHtml(r.time)}`:''} — Class ${brEscHtml(r.sec)}</div><div class="subcov-list">${names}</div></div>`;
+  }).join('');
+}
+/* The map crop: reuses brGeoFloorSVG's own drawing exactly (same highlight
+   mechanism the mini-map uses), just with a tight viewBox around the
+   teacher's room instead of the whole floor. Because every teacher in this
+   published dataset teaches from a single fixed room (students rotate to
+   them, not the other way around — see PUBLISHED_DATA.teachers[].room), one
+   room is the correct crop target for "the rooms that teacher uses that
+   day"; a teacher whose own room varies by period isn't representable in
+   the currently-published data, so this can't yet crop around more than one
+   room per teacher. See improvement prompts/034-schedule-browser.md. */
+function brSubMapHTML(n) {
+  const t = BR_TEACHERS[n]; if (!t) return '';
+  const loc = brGeoFindRoom(t.room);
+  if (!loc) {
+    const hasGeo = BR_GEOM && BR_GEOM.floors && BR_GEOM.floors.length;
+    return `<div class="offmap">Room <b>${brEscHtml(t.room)}</b> isn't on the blueprint floor plan${hasGeo?'':' — no blueprint data is available'}. Ask the front office for directions.</div>`;
+  }
+  const hiOne = {}; hiOne[t.room] = true;
+  const crop = brGeoCropBox(loc.floor, [t.room], 26, 6);
+  return `<div class="mini-card"><div class="mhd">${brEscHtml(loc.floor.label)} — near Room ${brEscHtml(t.room)}</div><div class="msvg">${brGeoFloorSVG(loc.floor,{highlights:hiOne, crop:crop})}</div></div>`;
+}
+function brSubHTML(n) {
+  const t = BR_TEACHERS[n]; if (!t) return '';
+  const col = brDColor(t.dept);
+  const split = JSON.stringify(t.A) !== JSON.stringify(t.B);
+  const deptLabel = (BR_DEPT[t.dept]||{}).name || t.dept;
+  return `
+   <div class="idhead">
+     <div class="ibadge" style="background:${col}">${brEscHtml(n[0])}</div>
+     <div><h2>Substitute plan — ${brEscHtml(n)}</h2><div class="role" style="color:${col}">${brEscHtml(deptLabel)} · Room ${brEscHtml(t.room)}</div></div>
+   </div>
+   <p class="factline">Absent: <b>${brEscHtml(n)}</b> &nbsp;·&nbsp; Date: <span class="subdate-blank">&nbsp;</span></p>
+   <div class="days">
+     <div class="daycard"><h3>${split?'A&nbsp;Day':'Every day (A &amp; B the same)'}</h3>${brDayRows(t.A,t.room,'A',n)}</div>
+     ${split?`<div class="daycard B"><h3>B&nbsp;Day</h3>${brDayRows(t.B,t.room,'B',n)}</div>`:''}
+   </div>
+   <h3 class="block-title">Classes taught</h3>
+   <div class="classrow">${t.sec.map(s=>`<span class="gchip subchip">${brEscHtml(s)}</span>`).join('')}</div>
+   <h3 class="block-title">Coverage candidates</h3>
+   <p class="hint">Teachers free (on planning) during each of ${brEscHtml(n)}'s classes — the first calls to make for coverage.</p>
+   <div class="subcov-wrap">
+     <div class="subcov-day"><h4>A&nbsp;Day</h4>${brSubCoverageHTML(n,'A')}</div>
+     ${split?`<div class="subcov-day"><h4>B&nbsp;Day</h4>${brSubCoverageHTML(n,'B')}</div>`:''}
+   </div>
+   <h3 class="block-title">Building map</h3>
+   <p class="hint">A cropped view of the floor around Room ${brEscHtml(t.room)}.</p>
+   ${brSubMapHTML(n)}
+   <p class="footnote-sub">Generated from the published schedule — double-check room numbers, notes, and coverage before handing this to a substitute.</p>`;
+}
+function brRenderSub(n) { document.getElementById('br-view').innerHTML = brSubHTML(n); }
+
 function brFreeHTML() {
   const bell = BR_BELL ? (brFreeDay === 'B' ? BR_BELL.B : BR_BELL.A) : null;
   const dayToggle = `<div class="daychips"><button class="${brFreeDay==='A'?'on':''}" onclick="brSetFreeDay('A')">A Day</button><button class="${brFreeDay==='B'?'on':''}" onclick="brSetFreeDay('B')">B Day</button></div>`;
@@ -1095,8 +1205,31 @@ function brGeoFloorSVG(fg, opts) {
     }
   }
   s += rings.join('') + badges.join('');
-  const vbW = W + 16;
-  return `<svg class="geoplan" viewBox="-8 -${px+6} ${vbW} ${H+px+18}" style="width:100%;--geo-w:${vbW}px" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  /* opts.crop: {x,y,w,h} in the same px-scaled coordinate space as the cells
+     above — lets a caller show a cropped region (e.g. "near this room")
+     instead of the whole floor, reusing every bit of markup already drawn. */
+  let vbX = -8, vbY = -(px + 6), vbW = W + 16, vbH = H + px + 18;
+  if (opts.crop) { vbX = opts.crop.x; vbY = opts.crop.y; vbW = opts.crop.w; vbH = opts.crop.h; }
+  return `<svg class="geoplan" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" style="width:100%;--geo-w:${vbW}px" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+
+/** Bounding box (in the same px-scaled space brGeoFloorSVG draws in) around
+    one or more named rooms on a floor, expanded by `pad` cells and clamped
+    to the floor's extent — the basis of the substitute view's map crop. */
+function brGeoCropBox(fg, roomNames, px, pad) {
+  px = px || 26; pad = (pad == null) ? 6 : pad;
+  let minC = Infinity, minR = Infinity, maxC = -1, maxR = -1;
+  (fg.rooms || []).forEach(r => {
+    if (!r.rn || roomNames.indexOf(r.rn) === -1) return;
+    (r.cells || []).forEach(([c, rr]) => {
+      if (c < minC) minC = c; if (rr < minR) minR = rr;
+      if (c > maxC) maxC = c; if (rr > maxR) maxR = rr;
+    });
+  });
+  if (maxC < 0) return null;
+  minC = Math.max(0, minC - pad); minR = Math.max(0, minR - pad);
+  maxC = Math.min(fg.cols - 1, maxC + pad); maxR = Math.min(fg.rows - 1, maxR + pad);
+  return { x: minC * px, y: minR * px, w: (maxC - minC + 1) * px, h: (maxR - minR + 1) * px };
 }
 
 function brMiniMapHTML(name) {

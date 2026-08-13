@@ -10,6 +10,77 @@
 
 ## Status
 
+### 2026-08-13 — One-page substitute view (backlog rank — Major Feature "Substitute view")
+
+Shipped a "Substitute Plan" mode: pick the absent teacher and the app builds
+one page containing their day (both A and B when they differ, personal
+notes and all — reuses `brDayRows` exactly as By Teacher does, so any note
+already left on that teacher's page prints here too), the list of classes
+they teach, a per-period **coverage candidates** list, and a **map crop**
+around their room. It uses the existing "Print / Save PDF" button in the
+toolbar — no new print machinery was needed.
+
+- **Coverage candidates reuse `brFreeTeachersFor` verbatim**, run once per
+  class period on the absent teacher's day instead of once for "right now."
+  A teacher is a candidate for covering 3rd period if and only if they are
+  on Planning that same period/day — identical logic to Who's Free Now, just
+  applied across a whole day instead of the current moment. This was the
+  right level for "common-planning coverage candidates": the tool has no
+  concept of a *shared* common-planning group beyond that (Compare mode
+  finds mutual free time for a chosen set of teachers, which answers a
+  different question — "when could these specific people meet" — not "who
+  can cover this specific class"). A period nobody is free for says so
+  plainly rather than rendering an empty list.
+- **The map crop is real, not a substitute.** The published geometry
+  (`PUBLISHED_DATA.geometry`) gives per-room cell coordinates, and every
+  teacher in the currently-published data teaches from one fixed room all
+  day (students rotate to them — see `groupRooms` vs. the static `room`
+  field on each teacher). That made a genuine crop straightforward:
+  `brGeoFloorSVG` gained an `opts.crop` override (a `{x,y,w,h}` viewBox in
+  the same coordinate space it already draws in) and a new
+  `brGeoCropBox(floor, roomNames, px, pad)` helper computes a padded
+  bounding box around the teacher's room. No new rendering path was
+  invented — it's the exact same SVG markup the mini-map and full building
+  map already produce, just windowed tighter. **The one real gap**: because
+  the published data models a teacher's room as a single fixed value, this
+  cannot crop around *multiple* rooms for a teacher whose room varies by
+  period — that shape of data isn't published today. If a future publish
+  ever gives a teacher a per-period room, `brGeoCropBox` already accepts a
+  list of room names and would need the caller to pass all of them; today it
+  only ever gets one. Not a fallback to a room list — an actual cropped
+  floor-plan image, just scoped to what's currently publishable.
+- Teachers whose room isn't on the blueprint at all (`brGeoFindRoom` returns
+  null) get a plain-text notice instead of a broken crop, matching how the
+  existing mini-map already handles that case.
+
+New test: `Tools/schedule-browser/test/smoke-substitute-view.mjs` (16
+assertions) — the day renders with notes intact, every listed coverage
+candidate is cross-checked against `brFreeTeachersFor` directly, the absent
+teacher never lists themselves, the map crop's viewBox is verified narrower
+than the full floor and correctly labels the teacher's room, an unmapped
+teacher doesn't throw, and print rules hide the toolbar the same as every
+other mode. **This file could not be added to `package.json`'s `test` /
+`test:schedule-browser` scripts** — `package.json` was out of bounds for
+this round (another session owns backlog/build-file bookkeeping) — so
+`npm test` does not yet run it; it must be run directly
+(`node Tools/schedule-browser/test/smoke-substitute-view.mjs`) until a
+session that can touch `package.json` wires it in. Verified locally against
+the real file with Playwright, using the `PW_CHROMIUM_EXECUTABLE` escape
+hatch in `Tools/board-check/harness.mjs` (this sandbox's network policy
+blocks `cdn.playwright.dev`, so `npx playwright install chromium` cannot
+fetch a matching build; a stale cached Chromium at
+`/opt/pw-browsers/chromium-1194` was used instead — same escape hatch the
+harness already documents for locked-down school networks). The existing
+29-assertion `smoke-personal-notes.mjs` suite was re-run against the edited
+file and still passes unchanged.
+
+**Where the next round should pick up:** wiring
+`smoke-substitute-view.mjs` into `package.json` is the one loose end from
+this round. Room finder and duty/meeting overlays (below) are still open;
+room finder in particular could reuse `brGeoCropBox` for "show me where this
+empty room is" the same way this feature reuses it for "show me where this
+teacher is."
+
 ### 2026-08-11 — Personal notes overlay (backlog rank 7)
 
 Shipped the "Personal overlay" Major Feature. The published schedule says what
@@ -136,7 +207,8 @@ session.
 
 ## What it does today
 
-- Three view modes: **By Teacher**, **By Student Group**, **Building Map**
+- Four view modes: **By Teacher**, **By Student Group**, **Building Map**,
+  **Substitute Plan** (plus Compare and Who's Free Now as toolbar modes too)
 - Per-teacher view: where to find you, your classes, other teachers for your
   students, common planning
 - A/B day toggle; per-class view showing who teaches it and where it goes
@@ -153,6 +225,10 @@ session.
   keyed by teacher + day + period, saved on the device, printed with the
   schedule and invisible when empty
 - Type-ahead search (`brOnType`, `brFindKeyCI`)
+- **Substitute Plan** (`brSubHTML`, `brSubCoverageHTML`, `brSubMapHTML`,
+  `brGeoCropBox`) — one printable page for an absent teacher: their day
+  (with notes), classes, per-period coverage candidates, and a cropped
+  building-map view around their room
 
 ## Quick Wins
 
@@ -198,8 +274,13 @@ session.
   room B; the visualizer already has pathfinding (`astar`,
   `buildMultiFloorGraph`, `computeTravelTimes`) that the published browser
   does not expose.
-- **Substitute view.** One page: the absent teacher's day, their rooms, their
-  classes, and a map — printable, and exactly what a sub needs at 7:15am.
+- **Done — 2026-08-13.** **Substitute view.** One page: the absent teacher's
+  day, their rooms, their classes, and a map — printable, and exactly what a
+  sub needs at 7:15am. *(See the Status entry above — coverage candidates
+  and the map crop are both real, not stubbed; the one open gap is that the
+  published data only ever gives a teacher one room, so the crop can't yet
+  follow a teacher across rooms in a hypothetical future dataset that has
+  them moving.)*
 
 ## Moonshot / North Star
 
