@@ -63,9 +63,12 @@
     "check:social": "node Tools/board-check/check-social.mjs",
     "check:dedupe": "node Tools/board-check/check-dedupe.mjs",
     "check:tests": "node Tools/board-check/check-tests.mjs",
-    "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs"
+    "phase4:next": "node Tools/board-check/list-base-css-candidates.mjs",
+    "offline:build": "node Tools/board-check/make-offline-copy.mjs",
+    "offline:verify": "node Tools/board-check/verify-offline-copy.mjs"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "playwright": "^1.62.1"
   }
 }
