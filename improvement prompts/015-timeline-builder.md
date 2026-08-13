@@ -12,7 +12,148 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
-### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
+### Pass 2 — Round 2 — 2026-08-13
+
+Shipped the **tiled wall-timeline print** Quick Win (P7, P6) — the item both
+Round 1 and Round 3 explicitly flagged as still open, pointing at
+`046-blank-map-generator.html`'s `printTiledPages` as the pattern to reuse.
+
+- **Correction to the backlog premise going in:** the assignment described
+  reusing `printTiledPages`'s approach of rasterizing the content onto a
+  virtual `<canvas>` and slicing that into per-page `<img>`s. That's the
+  right move for the map tool because it already renders to a pannable
+  canvas. The timeline renders as plain positioned DOM (`renderTimelineCanvas`
+  builds `<div>`s for the line, markers, labels, era bands, gridlines — no
+  canvas or SVG anywhere in the file), and there is no vendored
+  html-to-canvas/rasterization library in `_shared/vendor/` to add one
+  (and CLAUDE.md's vendoring rule means that's not a decision to make
+  lightly for one tool). So this shipped as a **pure CSS crop-and-scale** of
+  cloned DOM instead of a canvas rasterization: build one full-size,
+  off-screen copy of the real spatial timeline (`buildTimelinePoster()`,
+  reusing `renderTimelineCanvas` — the exact function the on-screen scrolling
+  view already calls, so colors/eras/gridlines/tracks are guaranteed
+  identical to what's on screen), then for each output page, clone that
+  whole poster and position it with `transform: scale(...)` plus a
+  `left`/`top` offset inside an `overflow: hidden` page box, so only that
+  page's slice is visible. Text and lines print vector-crisp, not as a raster
+  image, and there's no `img.decode()`-on-a-fresh-`toDataURL()` race to guard
+  against for the timeline geometry itself (only the event photos, which are
+  already-loaded `<img src="data:...">` elements being cloned, not newly
+  rasterized — still waited on before printing, out of caution, the same way
+  every other print path in this repo does).
+- **The cols x rows picker means something different here than in the map
+  tool, and that's a second, smaller premise correction worth recording.**
+  Blank Map's `cols`/`rows` size a poster canvas at the map's *current pan/
+  zoom* — more tiles just capture more of whatever the user is already
+  looking at, and content can run off the edge of the grid with no warning.
+  The timeline has no independent zoom control, and "spread the whole
+  timeline across taped-together sheets" only means something if the whole
+  timeline is actually on the sheets. So `cols`/`rows` here instead set a
+  target page grid, and the whole timeline is scaled **uniformly** (never
+  stretched non-uniformly on one axis, never silently cropped) to the
+  largest size that fits entirely inside that grid — `scale =
+  Math.min(pageGridWidth / posterWidth, pageGridHeight / posterHeight)`,
+  centered in the leftover space on whichever axis doesn't divide evenly.
+  Picking more columns makes the print bigger and more legible; more rows
+  helps a multi-track timeline that's tall relative to how wide the grid is.
+- **A legend page is appended automatically** when the timeline uses
+  category colors (`TimelineLayout.collectCategories(state.events).length`),
+  built from the same `legendHtml()` helper the screen/print views already
+  use — so a colored wall timeline doesn't lose its color key once it's cut
+  apart from the editor page. Mirrors Blank Map's optional legend-page
+  behavior for the same reason (a key with no context is useless on a wall).
+- **Landscape, not portrait, tiles** — a horizontal timeline tapes together
+  more naturally as a strip of landscape sheets than portrait ones. The
+  injected `@page { size: landscape; margin: 0.4in; }` deliberately leaves
+  the paper size unspecified (just the orientation) rather than hardcoding
+  Letter, so it works on A4 printers too; it's added right before
+  `window.print()` and removed again on `afterprint` (new
+  `#tiledPageSizeStyle` `<style>` element, same technique Blank Map uses for
+  `setPrintPageSize`) so a tiled print never leaves the plain single-page
+  Print button stuck in landscape afterward.
+- **Alongside, not replacing**, the existing single-page print: a new "Wall
+  print (tiled)…" secondary button next to the existing Print button opens a
+  small panel (Columns / Rows selects, matching the spirit of Blank Map's
+  own tiled-print panel) without touching `printMode`, `printBtn`,
+  `printViewHtml`, or anything else the existing print path uses.
+
+**Verified**: `npm ci` (this repo had no `node_modules` yet in this
+worktree) then a manual headless Playwright pass (Chromium at
+`/opt/pw-browsers/chromium-1194`, not committed as a permanent suite —
+`Tools/timeline-builder/` has no `test/` folder) against a 5-event timeline
+spanning 476 CE to 1969 with 3 categories: added the events, opened the tiled
+panel, set 3 columns x 1 row, clicked "Print tiled pages", and confirmed —
+zero console/page errors, zero offsite requests — that it built exactly 4
+page elements (3 tile pages + 1 legend page), the legend page listed all 3
+categories, and the page-number labels read "Page 1 of 4" / "Page 2 of 4" /
+"Page 3 of 4" correctly. Re-ran with `page.emulateMedia({media:'print'})` and
+checked real bounding rects: the leftmost tile page showed only the earliest
+event's marker inside its own crop rectangle, the rightmost tile page showed
+only the two latest events', and the same three marker elements (cloned into
+every tile page, then clipped by `overflow:hidden`) reported bounding boxes
+outside a tile's own rect wherever they weren't supposed to be visible on
+that page — confirming the scale/offset math actually crops distinct,
+correctly-ordered regions of the timeline per page rather than just
+repeating the same view three times. Also re-ran the *existing* single-page
+Print button afterward (in the same session, after a tiled print) and
+confirmed `#printArea` still renders normally in `@media print` — the new
+`body.tiled-printing`-scoped rules don't leak into the plain print path.
+One assertion needed a workaround, not a fix: headless Chromium's
+`window.print()` is a documented no-op that never fires `afterprint` at all
+(confirmed on a bare page with no other logic, isolated from this tool's own
+code) — the `afterprint` cleanup listener (clearing `tiled-printing`,
+emptying `#tiledPrintPages`, removing the injected `@page` style) was instead
+verified by dispatching a synthetic `afterprint` event and checking all
+three effects fired correctly; this is a headless-testing limitation shared
+by Blank Map Generator's own tiled print, not something either tool's code
+can work around.
+
+### Challenges
+
+- The task framing (correctly, per the assignment's own wording) anticipated
+  adapting the map's canvas-rasterization pattern to "however the timeline
+  actually renders." Reading `renderTimelineCanvas` first — before writing
+  any tiling code — showed the render target is `<div>`s with inline pixel
+  widths and CSS `position: absolute` children, not a canvas, which ruled
+  out reusing `drawMapContent`-style pixel drawing entirely and pointed at a
+  CSS-transform crop instead. Grepping the file for `<canvas` or `getContext`
+  first (finding neither) would have saved a moment of instinctively reaching
+  for `canvas.toDataURL()` out of habit from the map tool.
+- Getting the off-screen poster's *measured* size right took one wrong turn:
+  a bare `<div>` appended to `document.body` is block-level and stretches to
+  fill the viewport width by default, so `getBoundingClientRect()` on it
+  reports the *viewport's* width, not the timeline's actual (often much
+  wider) content width — silently producing a poster far too narrow and
+  scaling everything wrong. `display: inline-block` on the wrapper fixes it
+  by shrink-wrapping to the canvas's own explicit inline-style width, caught
+  by reasoning through the CSS box model rather than by trial and error, and
+  confirmed correct in the bounding-rect verification pass above (the tiled
+  pages actually show *different* content on each page, not the same crop
+  three times).
+
+### Where the next round should pick up
+
+- **Wall-timeline tiled printing is done** as of this round — the item below
+  from Round 1/Round 3 pointing at it is now stale; left in place per this
+  file's own convention of not retroactively pruning older rounds' notes (see
+  e.g. Round 1's own note that "compressed scale" stayed listed in Quick Wins
+  below even after Round 1 shipped it — the Status section, top-down, is the
+  source of truth for what's actually shipped).
+- **Map handoff** (Major Feature, P7 — timeline along the bottom, map above,
+  events pinned to both) is still the most distinctive unbuilt idea in the
+  file, and would now have two tiled-print implementations to draw on for its
+  own combined print.
+- The legend page added to the tiled print reuses the screen legend's fixed
+  8-color palette as-is; if a future round changes how >8 categories are
+  handled (still an open item below), the tiled legend page inherits
+  whatever that becomes for free since it calls the same `legendHtml()`.
+- Not attempted here: a "fit to N pages, tell me how many you'll need"
+  auto-suggestion for cols/rows. The teacher currently has to guess-and-check
+  ("3 columns felt small, try 4"); computing a recommended grid from the
+  poster's natural aspect ratio and a target minimum on-page font size would
+  remove that guesswork.
+
+### Where the next round should pick up
 
 Shipped the **logarithmic/compressed scale** Quick Win flagged at the end
 of Round 3 as "probably the single most requested remaining capability."
@@ -210,6 +351,10 @@ fixed and reverified before calling this done.
   dotted line styles
 - Two views: **on-screen scrolling** and **paginated print layout** with a
   preview (`renderPrintPreview`, `printViewHtml`)
+- **Tiled wall-timeline print** (`printTiledPages`, `buildTimelinePoster`) —
+  spreads the spatial timeline across a chosen cols x rows grid of landscape
+  pages, scaled to fit and overlapping slightly at each edge, plus an
+  auto-appended category legend page, for taping into a hallway wall print
 - **Compare two timelines** (`renderCompareView`, `ensureTracksForCompare`)
 - Multiple saved timelines (`gvb-timeline:list` / `:data:*`), JSON
   import/export
