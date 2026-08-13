@@ -23,6 +23,12 @@
 //   are not `number symbol number` and a missing aText silently prints
 //   "undefined".
 //
+// It also covers mdg-selfcheck.js — the riddle/colour-by-answer/maze
+// self-checking OUTPUT FORMATS — with the same "check it independently of
+// the module under test" discipline: a riddle decoder that quietly decodes
+// to the wrong letter, or a maze junction with two "correct" doors, would
+// hand a teacher a self-checking sheet that doesn't actually self-check.
+//
 // Exits 1 on any failure.
 
 import fs from 'node:fs';
@@ -37,8 +43,10 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const globalShim = {};
 new Function('global', fs.readFileSync(path.join(dir, '..', 'mdg-generate.js'), 'utf8'))(globalShim);
 new Function('global', fs.readFileSync(path.join(dir, '..', 'mdg-templates.js'), 'utf8'))(globalShim);
+new Function('global', fs.readFileSync(path.join(dir, '..', 'mdg-selfcheck.js'), 'utf8'))(globalShim);
 const G = globalShim.MathDrillGenerate;
 const T = globalShim.MathDrillTemplates;
+const S = globalShim.MathDrillSelfCheck;
 
 let passed = 0, failed = 0;
 const fails = [];
@@ -206,6 +214,118 @@ eq(G.fractionText(7, 6), '1 1/6', 'improper becomes mixed');
 eq(G.fractionText(9, 3), '3', 'and reduces to a whole number when it can');
 eq(G.fractionText(0, 5), '0', 'zero is zero');
 eq(G.fractionText(13, 4), '3 1/4', 'a larger improper fraction');
+
+/* ── self-checking formats: riddle ───────────────────────────────────────── */
+group('Riddle — decoder consistency');
+for (const [key, count] of [['addition', 30], ['multiplication', 30], ['fractions', 25], ['ooo', 20], ['addition', 5], ['multiplication', 100]]) {
+  const ps = bulk(key, count);
+  const r = S.buildRiddle(ps);
+  if (!ok(!!r, `buildRiddle returns something for ${count} "${key}" problems`)) continue;
+  ok(typeof r.setup === 'string' && r.setup.length > 0, 'has a setup line');
+  ok(r.positions.length > 0, 'has at least one punchline position');
+  // The core invariant: decoding every letter position through the decoder
+  // table must reproduce that exact position's letter — this is what makes
+  // "look up your answer" actually spell the right thing.
+  const decoderMap = {}; r.decoder.forEach(d => { decoderMap[d.value] = d.letter; });
+  let decodeOk = true;
+  for (const p of r.positions) {
+    if (p.isLetter && decoderMap[p.value] !== p.ch) decodeOk = false;
+  }
+  ok(decodeOk, `every letter position decodes back to its own letter (${key}, n=${count})`);
+  // The decoder must be a clean function: one value never maps to two
+  // different letters (it MAY map several positions to the same letter,
+  // that's expected when a letter repeats in the punchline).
+  const seen = {};
+  let noDupValues = true;
+  r.decoder.forEach(d => { if (seen[d.value] !== undefined && seen[d.value] !== d.letter) noDupValues = false; seen[d.value] = d.letter; });
+  ok(noDupValues, `decoder is a clean value->letter function (${key}, n=${count})`);
+  // Every decoder value must be a real answer from the problem set — the
+  // whole self-check mechanic depends on that, otherwise no problem's
+  // answer would ever match a key entry.
+  const realAnswers = new Set(ps.map(p => String(p.answerText != null ? p.answerText : p.answer)));
+  ok(r.decoder.every(d => realAnswers.has(String(d.value))), `every decoder value is a real answer in the set (${key}, n=${count})`);
+}
+{
+  const ps = bulk('addition', 30);
+  const one = S.buildRiddle(ps), two = S.buildRiddle(ps);
+  eq(one.punchline, two.punchline, 'the same problem set always picks the same riddle (deterministic, no RNG)');
+}
+{
+  // Degenerate case: a tiny, narrow-range set with very few distinct
+  // answers still returns something sane (truncated) rather than throwing.
+  const t = T.byKey('addition');
+  const tiny = G.generateProblems({ key: 'tiny', label: 'Tiny', operation: 'add', operand1: { min: 1, max: 1 }, operand2: { min: 1, max: 1 } }, 5, { seed: 1 });
+  const r = S.buildRiddle(tiny);
+  ok(!!r, 'a degenerate (one distinct answer) set still returns a riddle');
+  ok(r.positions.length >= 1, 'and it has at least one position');
+}
+ok(S.buildRiddle([]) === null, 'an empty problem set returns null rather than throwing');
+
+/* ── self-checking formats: colour-by-answer ─────────────────────────────── */
+group('Colour-by-answer — legend consistency');
+for (const [key, count] of [['addition', 30], ['multiplication', 15], ['decimals', 40]]) {
+  const ps = bulk(key, count);
+  const g = S.buildColorByAnswer(ps);
+  if (!ok(!!g, `buildColorByAnswer returns something for ${count} "${key}" problems`)) continue;
+  const filled = g.cells.filter(c => c.filled);
+  ok(filled.length > 0, 'the picture has filled cells');
+  ok(filled.every(c => c.problemNum >= 1 && c.problemNum <= ps.length), 'every filled cell points at a real problem number');
+  // Colour assignment must be a clean function of the answer value: the
+  // same value always gets the same colour everywhere on the grid.
+  const valueColor = {};
+  let consistent = true;
+  filled.forEach(c => {
+    if (valueColor[c.value] && valueColor[c.value] !== c.color.name) consistent = false;
+    valueColor[c.value] = c.color.name;
+  });
+  ok(consistent, `every answer value colours consistently across the grid (${key}, n=${count})`);
+  // Every legend entry's colour must match what's actually painted on the grid.
+  const legendMap = {}; g.legend.forEach(l => { legendMap[l.value] = l.color.name; });
+  ok(filled.every(c => legendMap[c.value] === c.color.name), 'the legend matches the grid for every filled cell');
+}
+ok(S.buildColorByAnswer([]) === null, 'an empty problem set returns null rather than throwing');
+
+/* ── self-checking formats: maze ──────────────────────────────────────────── */
+group('Maze — structural validity');
+for (const [key, count] of [['addition', 10], ['multiplication', 30], ['fractions', 20], ['addition', 5]]) {
+  const ps = bulk(key, count);
+  const maze = S.buildMaze(ps, { seed: 20260813 });
+  if (!ok(!!maze, `buildMaze returns something for ${count} "${key}" problems`)) continue;
+  ok(maze.path.length >= 2, 'the solution path has at least a start and an exit');
+  // The path must be a real walk on the grid: consecutive cells always
+  // adjacent, never a jump or a diagonal.
+  let contiguous = true;
+  for (let i = 0; i < maze.path.length - 1; i++) {
+    const [r1, c1] = maze.path[i], [r2, c2] = maze.path[i + 1];
+    const dr = Math.abs(r1 - r2), dc = Math.abs(c1 - c2);
+    if (!((dr === 1 && dc === 0) || (dr === 0 && dc === 1))) contiguous = false;
+  }
+  ok(contiguous, `the solution path is a contiguous walk (${key}, n=${count})`);
+  ok(maze.junctions.length > 0, `at least one junction was found to gate (${key}, n=${count})`);
+  eq(maze.junctions.length + maze.bonus.length, count, `every problem is accounted for as a junction or a bonus problem (${key}, n=${count})`);
+  // Exactly one correct choice per junction, and no two choices share a
+  // value — the whole point of "only the correct one continues".
+  let oneCorrect = true, noDupChoices = true;
+  maze.junctions.forEach(j => {
+    if (j.choices.filter(c => c.correct).length !== 1) oneCorrect = false;
+    const vals = j.choices.map(c => String(c.value));
+    if (new Set(vals).size !== vals.length) noDupChoices = false;
+  });
+  ok(oneCorrect, `every junction has exactly one correct choice (${key}, n=${count})`);
+  ok(noDupChoices, `no junction has two choices with the same value (${key}, n=${count})`);
+  ok(maze.junctions.every(j => j.choices.length >= 2 && j.choices.length <= 3), 'every junction offers 2-3 choices');
+}
+{
+  const ps = bulk('addition', 30);
+  const one = S.buildMaze(ps, { seed: 555 });
+  const two = S.buildMaze(ps, { seed: 555 });
+  eq(JSON.stringify(one.junctions.map(j => j.choices)), JSON.stringify(two.junctions.map(j => j.choices)),
+     'the same seed reproduces the same maze junctions (so "Lock seed" also locks the maze)');
+  const three = S.buildMaze(ps, { seed: 999 });
+  ok(JSON.stringify(one.path) !== JSON.stringify(three.path) || JSON.stringify(one.junctions) !== JSON.stringify(three.junctions),
+     'a different seed produces a different maze');
+}
+ok(S.buildMaze([]) === null, 'an empty problem set returns null rather than throwing');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { fails.forEach(f => console.log('  - ' + f)); process.exit(1); }

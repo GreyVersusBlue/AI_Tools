@@ -17,6 +17,13 @@
 //
 //   No console errors, ever — the site's standing bar for every tool.
 //
+// Also covers the riddle / colour-by-answer / maze self-checking OUTPUT
+// FORMATS on the page: that the picker offers all three, that each renders
+// real content (not "undefined" where a decoder value or a maze junction
+// should be), that the maze's plain problem list is genuinely replaced
+// rather than left behind underneath it, and that printing carries the
+// self-check section through the same way it carries the plain worksheet.
+//
 // Exits 1 on any failure.
 
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
@@ -132,7 +139,103 @@ const printed = await page.evaluate(() =>
 ok(printed.length > 0, 'the printed sheet has problems on it');
 eq(printed[0], before, 'and they are the ones that were previewed');
 
-/* ── 7. no console noise anywhere in the run ─────────────────────────────── */
+/* ── 7. the self-checking format picker offers all three ─────────────────── */
+await chooseTemplate('addition');
+const selfCheckOptions = await page.evaluate(() =>
+  Array.from(document.getElementById('selfCheck').options).map(o => o.value));
+for (const v of ['none', 'riddle', 'colorByAnswer', 'maze']) {
+  ok(selfCheckOptions.includes(v), `"${v}" is offered in the self-checking format picker`);
+}
+
+async function chooseSelfCheck(mode) {
+  await page.selectOption('#selfCheck', mode);
+  await settle(page, 400);
+}
+
+/* ── 8. riddle: worksheet shows blanks + decoder, key shows it solved ────── */
+await chooseSelfCheck('riddle');
+const riddleWorksheet = await page.evaluate(() => ({
+  hasBlanks: document.querySelectorAll('#previewArea .riddle-blank').length > 0,
+  blankNums: Array.from(document.querySelectorAll('#previewArea .riddle-blank-num')).map(e => e.textContent),
+  decoderItems: document.querySelectorAll('#previewArea .riddle-decoder-item').length,
+  plainProblemsStillThere: document.querySelectorAll('#previewArea .problems .p').length,
+}));
+ok(riddleWorksheet.hasBlanks, 'riddle worksheet shows the punchline as blanks');
+ok(riddleWorksheet.blankNums.length > 0 && riddleWorksheet.blankNums.every(n => /^\d+(\.\d+)?$/.test(n)),
+   'every blank is labelled with a real decoder number, not "undefined": ' + JSON.stringify(riddleWorksheet.blankNums));
+ok(riddleWorksheet.decoderItems > 0, 'the decoder key is printed on the worksheet');
+ok(riddleWorksheet.plainProblemsStillThere > 0, 'riddle mode keeps the plain problem list (it only adds a section)');
+
+await page.click('#viewAnswersBtn');
+await settle(page, 300);
+const riddleKey = await page.evaluate(() => {
+  const el = document.querySelector('#previewArea .riddle-solved');
+  return el ? el.textContent.trim() : null;
+});
+ok(!!riddleKey && riddleKey.length > 0, 'the answer key shows the solved riddle text');
+ok(!/undefined|NaN/.test(riddleKey || ''), 'and it has no "undefined"/"NaN" in it: ' + JSON.stringify(riddleKey));
+await page.click('#viewWorksheetBtn');
+await settle(page, 200);
+
+/* ── 9. colour-by-answer: worksheet is plain numbers, key is coloured ────── */
+await chooseSelfCheck('colorByAnswer');
+const cbaWorksheet = await page.evaluate(() => ({
+  cells: document.querySelectorAll('#previewArea .cba-cell:not(.cba-blank)').length,
+  anyColored: Array.from(document.querySelectorAll('#previewArea .cba-cell')).some(e => e.getAttribute('style')),
+  legendItems: document.querySelectorAll('#previewArea .cba-legend-item').length,
+}));
+ok(cbaWorksheet.cells > 0, 'colour-by-answer worksheet has numbered cells');
+ok(!cbaWorksheet.anyColored, 'the printable worksheet grid is left uncoloured (black-and-white safe)');
+ok(cbaWorksheet.legendItems > 0, 'a colour-name legend is printed for photocopying');
+
+await page.click('#viewAnswersBtn');
+await settle(page, 300);
+const cbaKey = await page.evaluate(() => {
+  const filled = Array.from(document.querySelectorAll('#previewArea .cba-cell-filled'));
+  return { count: filled.length, allColored: filled.every(e => /background/.test(e.getAttribute('style') || '')) };
+});
+ok(cbaKey.count > 0, 'the answer key grid has filled cells');
+ok(cbaKey.allColored, 'and every one of them actually has a background colour set');
+await page.click('#viewWorksheetBtn');
+await settle(page, 200);
+
+/* ── 10. maze: replaces the plain problem list entirely ──────────────────── */
+await chooseSelfCheck('maze');
+const mazeWorksheet = await page.evaluate(() => ({
+  mazeGridCells: document.querySelectorAll('#previewArea .maze-grid .maze-cell').length,
+  junctions: document.querySelectorAll('#previewArea .maze-junction').length,
+  choices: Array.from(document.querySelectorAll('#previewArea .maze-junction-choices')).map(e => e.textContent),
+  plainProblemsGone: document.querySelectorAll('#previewArea > .sheet > .problems').length,
+}));
+ok(mazeWorksheet.mazeGridCells > 0, 'the maze grid renders cells');
+ok(mazeWorksheet.junctions > 0, 'at least one junction is offered');
+ok(mazeWorksheet.choices.every(c => !/undefined|NaN/.test(c)), 'no undefined/NaN in any junction\'s choices');
+eq(mazeWorksheet.plainProblemsGone, 0, 'maze mode replaces the plain problem grid rather than leaving it underneath');
+
+await page.click('#viewAnswersBtn');
+await settle(page, 300);
+const mazeKey = await page.evaluate(() => ({
+  correctMarked: document.querySelectorAll('#previewArea .maze-choice-correct').length,
+  onPath: document.querySelectorAll('#previewArea .maze-onpath').length,
+}));
+ok(mazeKey.correctMarked > 0, 'the answer key marks the correct choice at every junction');
+ok(mazeKey.onPath > 0, 'and shades the solved path on the map');
+await page.click('#viewWorksheetBtn');
+await settle(page, 200);
+
+/* ── 11. printing carries the self-check section through ─────────────────── */
+await page.evaluate(() => { window.print = function () {}; });
+await page.click('#printBtn');
+await settle(page);
+const printedMaze = await page.evaluate(() => ({
+  mazeGrid: document.querySelectorAll('#printArea .maze-grid').length,
+  junctionList: document.querySelectorAll('#printArea .maze-junction-list').length,
+}));
+ok(printedMaze.mazeGrid > 0 && printedMaze.junctionList > 0, 'the printed sheet carries the maze through');
+
+await chooseSelfCheck('none');
+
+/* ── 12. no console noise anywhere in the run ─────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
