@@ -161,6 +161,23 @@
   .shared-banner { font-size: 0.8rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(108,142,245,.12); border: 1px solid rgba(108,142,245,.35); line-height: 1.5; }
   #share-note { margin-top: 0.5rem; }
 
+  /* Year-long pairing grid (who has worked with whom) — deliberately its own
+     overlay rather than another export-row button, because unlike a shared
+     grouping this never leaves the device: no link, no QR, no payload. */
+  .grid-overlay { position: fixed; inset: 0; background: rgba(10,10,14,.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 80; }
+  .grid-overlay[hidden] { display: none; }
+  .grid-modal { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; max-width: min(94vw, 900px); max-height: 88vh; display: flex; flex-direction: column; gap: 0.7rem; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  .grid-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; }
+  .grid-scroll { overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+  .grid-summary { font-size: 0.8rem; color: var(--text-dim); }
+  table.pairing-grid { border-collapse: collapse; font-size: 0.72rem; }
+  table.pairing-grid th, table.pairing-grid td { border: 1px solid var(--border); padding: 0.25rem 0.45rem; text-align: center; white-space: nowrap; }
+  table.pairing-grid th { background: var(--surface2); color: var(--text-dim); font-weight: 600; position: sticky; }
+  table.pairing-grid th:first-child, table.pairing-grid tr:first-child th { left: 0; top: 0; z-index: 1; }
+  table.pairing-grid td.grid-self { color: var(--text-dim); background: var(--surface2); }
+  table.pairing-grid td.grid-hit { color: var(--accent2); font-weight: 700; }
+  table.pairing-grid td.grid-miss { color: var(--text-dim); }
+
   .warn-box { font-size: 0.78rem; padding: 0.6rem 0.75rem; border-radius: 6px; margin-bottom: 0.85rem; background: rgba(251, 191, 36, 0.1); color: var(--warn); border: 1px solid rgba(251, 191, 36, 0.3); line-height: 1.5; }
   #msg { font-size: 0.78rem; padding: 0.55rem 0.75rem; border-radius: 6px; display: none; margin-top: 0.75rem; width: 100%; white-space: pre-line; }
   #msg.error { display: block; background: rgba(248, 113, 113, 0.12); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
@@ -193,6 +210,11 @@
     .sheet-page { border: 1px solid #999; break-after: page; break-inside: avoid; }
     .sheet-page:last-child { break-after: auto; }
     .sheet-task-box { border: 1px solid #999; color: #333; }
+
+    .grid-overlay { display: none !important; }
+    .grid-summary { color: #333; }
+    table.pairing-grid { font-size: 0.62rem; }
+    table.pairing-grid th, table.pairing-grid td { border: 1px solid #999; color: #000; background: #fff; }
   }
 </style>
 <script src="../_shared/state-link.js"></script>
@@ -253,6 +275,7 @@
           <option value="balanced">Balanced by skill (equal group averages)</option>
           <option value="heterogeneous">Heterogeneous (deliberately mixed ability)</option>
           <option value="homogeneous">Homogeneous (grouped by readiness)</option>
+          <option value="coverage">Everyone pairs with everyone (uses pairing history)</option>
         </select>
         <div class="hint" id="strategy-hint"></div>
       </div>
@@ -314,6 +337,7 @@
     </div>
     <p class="hint" id="pair-history-hint"></p>
     <div class="btn-row" style="margin-top:0;">
+      <button class="btn-secondary btn-small" id="view-pairing-grid-btn">📊 Pairing Grid</button>
       <button class="btn-secondary btn-small" id="reset-pair-history-btn">Reset pairing memory</button>
     </div>
     <div id="msg"></div>
@@ -327,6 +351,20 @@
       </div>
       <canvas id="share-canvas"></canvas>
       <p class="hint">Opens a read-only copy of this exact arrangement. It is a copy &mdash; a reshuffle there does not come back here.</p>
+    </div>
+  </div>
+
+  <div class="grid-overlay" id="grid-overlay" hidden>
+    <div class="grid-modal" role="dialog" aria-modal="true" aria-label="Pairing grid">
+      <div class="grid-head">
+        <span>Who has worked with whom this year</span>
+        <button type="button" class="btn-secondary" id="grid-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div id="grid-content"></div>
+      <div class="btn-row" style="margin-top:0;">
+        <button class="btn-secondary btn-small" id="grid-print-btn">🖨️ Print Grid</button>
+      </div>
+      <p class="hint">Built from retained pairing history for this class only. It stays on this device &mdash; the grid is never part of a shared link or QR code.</p>
     </div>
   </div>
 
@@ -420,8 +458,13 @@
     random: 'Random',
     balanced: 'Balanced by skill (equal group averages)',
     heterogeneous: 'Heterogeneous (deliberately mixed ability)',
-    homogeneous: 'Homogeneous (grouped by readiness)'
+    homogeneous: 'Homogeneous (grouped by readiness)',
+    coverage: 'Everyone pairs with everyone (uses pairing history)'
   };
+  // Strategies that only make sense once at least one skill rating exists;
+  // 'coverage' deliberately isn't one of these — it works off pairHistory,
+  // never skill, so it's available for any roster.
+  var SKILL_STRATEGIES = ['balanced', 'heterogeneous', 'homogeneous'];
 
   // ── Named, saved configurations (one per class/period) ──────────────────
   function safeParse(json, fallback) {
@@ -455,9 +498,12 @@
       // namingMode/customNames drive the printed/exported group labels;
       // absentNames excludes roster members from today's grouping only.
       strategy: 'random', oddMode: 'extra', namingMode: 'number', customNames: '', absentNames: [],
-      // Recent-pairing memory: pairHistory maps a sorted "nameA␟name B"
-      // key to the generation number (pairGen) they were last grouped
-      // together, so reshuffles can bias away from repeating that pairing.
+      // Retained pairing memory: pairHistory maps a sorted "nameA␟nameB" key
+      // to { gen, count } — the generation number (pairGen) that pair last
+      // shared a group, and how many times ever. It is kept for the whole
+      // school year (see recordPairHistory/prunePairHistoryToRoster below for
+      // the retention-policy decision), driving both the short-term
+      // recency bias and the year-long pairing grid / coverage strategy.
       pairHistory: {}, pairGen: 0
     };
   }
@@ -549,6 +595,13 @@
     if (!Array.isArray(state.absentNames)) state.absentNames = [];
     if (!state.pairHistory || typeof state.pairHistory !== 'object') state.pairHistory = {};
     if (typeof state.pairGen !== 'number') state.pairGen = 0;
+    // A config saved before the retention-policy change stored a bare
+    // generation number per pair; migrate it to { gen, count } in place so
+    // every downstream reader can assume the object shape. Count is unknown
+    // for a pre-existing pair, so it's seeded at 1 (at least once is true).
+    Object.keys(state.pairHistory).forEach(function (k) {
+      if (typeof state.pairHistory[k] === 'number') state.pairHistory[k] = { gen: state.pairHistory[k], count: 1 };
+    });
     if (!state.strategy) state.strategy = state.balance ? 'balanced' : 'random';
     if (!state.oddMode) state.oddMode = 'extra';
     if (!state.namingMode) state.namingMode = 'number';
@@ -712,13 +765,15 @@
   function syncStrategyAvailability() {
     var hasSkills = students.some(function (s) { return s.skill !== null; });
     Array.prototype.forEach.call(els.strategySelect.options, function (opt) {
-      if (opt.value === 'random') return;
+      if (SKILL_STRATEGIES.indexOf(opt.value) === -1) return;
       opt.disabled = !hasSkills;
     });
-    if (!hasSkills && els.strategySelect.value !== 'random') els.strategySelect.value = 'random';
-    els.strategyHint.textContent = hasSkills
+    if (!hasSkills && SKILL_STRATEGIES.indexOf(els.strategySelect.value) !== -1) els.strategySelect.value = 'random';
+    var hint = hasSkills
       ? 'Balanced keeps every group’s average skill equal; heterogeneous deliberately mixes ability levels within each group; homogeneous groups similar-readiness students together for targeted instruction.'
       : 'Add a skill rating (", 1-5") to at least one name above to unlock the skill-based strategies.';
+    hint += ' Everyone pairs with everyone steers toward students who haven’t shared a group yet, using the full retained pairing history — not just the last shuffle or two.';
+    els.strategyHint.textContent = hint;
   }
 
   els.strategySelect.addEventListener('change', saveCurrentConfig);
@@ -909,17 +964,43 @@
     }
   }
 
+  // "Everyone pairs with everyone": greedily places each student into the
+  // target group its members it has the *least* combined history with,
+  // according to pairHistoryCount (the full retained count, not just the
+  // last shuffle or two) — so the shuffle actively steers toward pairs that
+  // have never shared a group, rather than merely avoiding a recent repeat.
+  // Group sizes are kept within one of each other by only ever choosing
+  // among the currently-smallest target groups, the same balance guarantee
+  // assignRandom's round robin gives.
+  function assignCoverage(pool, groups, targetIdx) {
+    var sizes = {};
+    targetIdx.forEach(function (i) { sizes[i] = groups[i].length; });
+    shuffle(pool).forEach(function (s) {
+      var minSize = Math.min.apply(null, targetIdx.map(function (i) { return sizes[i]; }));
+      var candidates = shuffle(targetIdx.filter(function (i) { return sizes[i] === minSize; }));
+      var best = candidates[0], bestCost = Infinity;
+      candidates.forEach(function (i) {
+        var cost = groups[i].reduce(function (sum, m) { return sum + pairHistoryCount(s.name, m.name); }, 0);
+        if (cost < bestCost) { bestCost = cost; best = i; }
+      });
+      groups[best].push(s);
+      sizes[best]++;
+    });
+  }
+
   function assignPool(pool, groups, targetIdx, strategy) {
     if (!targetIdx.length) return;
     if (strategy === 'balanced') assignBalanced(pool, groups, targetIdx);
     else if (strategy === 'heterogeneous') assignHeterogeneous(pool, groups, targetIdx);
     else if (strategy === 'homogeneous') assignHomogeneous(pool, groups, targetIdx);
+    else if (strategy === 'coverage') assignCoverage(pool, groups, targetIdx);
     else assignRandom(pool, groups, targetIdx);
   }
 
   function getStrategy() {
     var hasSkills = students.some(function (s) { return s.skill !== null; });
-    return hasSkills ? els.strategySelect.value : 'random';
+    var v = els.strategySelect.value;
+    return (SKILL_STRATEGIES.indexOf(v) !== -1 && !hasSkills) ? 'random' : v;
   }
 
   // ── Odd-number handling ──────────────────────────────────────────────────
@@ -947,6 +1028,10 @@
   // Returns { groups, violations, togetherViolations, repeatViolations, floaters, meta }
   function makeGroups(opts) {
     opts = opts || {};
+    // Roster-membership GC for the retained pairHistory — see the
+    // retention-policy note above prunePairHistoryToRoster's definition.
+    // Run once per deliberate generation, not per keystroke.
+    prunePairHistoryToRoster();
     var activeStudents = getActiveStudents();
     var strategy = getStrategy();
     var oddMode = els.oddModeSelect.value;
@@ -981,6 +1066,9 @@
     var violations = findApartViolations(groups);
     var togetherViolations = findTogetherViolations(groups);
     var repeatViolations = findRecentPairViolations(groups);
+    // Read BEFORE recordPairHistory bumps the counts, so "brand new" means
+    // genuinely never-before-seen going into this shuffle.
+    var pairStats = countPairingsInGroups(groups);
     recordPairHistory(groups);
 
     return {
@@ -992,9 +1080,27 @@
       meta: {
         strategy: strategy, oddMode: oddMode, lockedCount: lockedCount, reshuffledCount: reshuffledCount,
         usedLocks: usedLocks, totalActive: activeStudents.length, groupCountTarget: targetIdx.length,
-        fallbackNote: oddResult.fallbackNote, bonusGroupSize: oddResult.bonusGroupSize
+        fallbackNote: oddResult.fallbackNote, bonusGroupSize: oddResult.bonusGroupSize,
+        newPairsThisGen: pairStats.brandNew, totalPairsThisGen: pairStats.total
       }
     };
+  }
+
+  /** Every same-group pairing in this arrangement, and how many of them have
+   *  never happened before (per the retained history) — used both by the
+   *  "why this grouping" explanation and available for a future coverage
+   *  visualization beyond the grid. */
+  function countPairingsInGroups(groups) {
+    var total = 0, brandNew = 0;
+    groups.forEach(function (group) {
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) {
+          total++;
+          if (pairHistoryCount(group[i].name, group[j].name) === 0) brandNew++;
+        }
+      }
+    });
+    return { total: total, brandNew: brandNew };
   }
 
   function locksAreValid(lockedFlagsIn, activeStudents) {
@@ -1030,26 +1136,55 @@
     });
   }
 
-  // ── Recent-pairing memory ────────────────────────────────────────────────
-  // state.pairHistory maps a sorted "nameA␟nameB" key to the generation
-  // number (state.pairGen) in which that pair last shared a group. Each
-  // shuffle bumps pairGen and records every co-membership at the new
-  // generation. Only the most recent couple of generations matter for the
-  // bias, so entries older than that window are pruned right away — this
-  // keeps storage bounded instead of accumulating every pairing ever seen.
-  var PAIR_MEMORY_WINDOW = 2; // "immediately preceding 1-2 shuffles"
-
+  // ── Retained pairing memory ──────────────────────────────────────────────
+  // state.pairHistory maps a sorted "nameA␟nameB" key to { gen, count }: the
+  // generation number (state.pairGen) that pair last shared a group, and how
+  // many times ever. Each shuffle bumps pairGen and records every
+  // co-membership at the new generation.
+  //
+  // RETENTION-POLICY DECISION (2026-08-13): history used to be deleted the
+  // moment it fell outside PAIR_MEMORY_WINDOW (2) generations — the recency
+  // bias only needs the last shuffle or two, so everything older was thrown
+  // away, which made a year-long "who has worked with whom" view impossible
+  // by construction. That pruning is gone. What replaces it is NOT unbounded
+  // accumulation: prunePairHistoryToRoster (below), run once per generation
+  // (not on every keystroke, so an in-progress roster edit can't destroy a
+  // student's history mid-rename), deletes any entry naming someone no
+  // longer on the roster at all. Storage is therefore bounded to at most
+  // C(current roster size, 2) entries, indefinitely — the same shape it was
+  // always going to have — while genuinely never discarding a pairing just
+  // because it's old. A currently-enrolled pair's very first shuffle in
+  // September is still visible in June. The explicit, deliberate way to
+  // discard everything remains the existing "Reset pairing memory" button.
   function pairKey(a, b) {
     return a < b ? a + '␟' + b : b + '␟' + a;
+  }
+
+  // Tolerates a not-yet-migrated legacy entry (a bare generation number)
+  // defensively; loadConfigByName migrates these to { gen, count } on load,
+  // but a snapshot restored via Undo could in principle still be legacy-shaped.
+  function historyGen(entry) { return entry && typeof entry === 'object' ? entry.gen : (entry || 0); }
+  function historyCount(entry) { return entry && typeof entry === 'object' ? (entry.count || 0) : (entry ? 1 : 0); }
+
+  /** How many times, ever (for as long as both names have been continuously
+   *  on the roster), this pair has shared a group. 0 if never. This is what
+   *  the pairing grid and the "everyone pairs with everyone" strategy read —
+   *  distinct from pairRecencyPenalty below, which only cares about the last
+   *  shuffle or two. */
+  function pairHistoryCount(a, b) {
+    if (!state || !state.pairHistory) return 0;
+    return historyCount(state.pairHistory[pairKey(a, b)]);
   }
 
   // Lower is better/rarer. A pair grouped together last shuffle scores much
   // worse than one grouped together two shuffles ago; anything older (or
   // never) scores 0, same spirit as the role-fairness recency score in
-  // 022-lab-group-role-randomizer.html.
+  // 022-lab-group-role-randomizer.html. Unaffected by the retention-policy
+  // change above: it always only looked at the most recent generation a pair
+  // shared a group, never at the full history.
   function pairRecencyPenalty(a, b) {
     if (!state || !state.pairHistory) return 0;
-    var lastGen = state.pairHistory[pairKey(a, b)];
+    var lastGen = historyGen(state.pairHistory[pairKey(a, b)]);
     if (!lastGen) return 0;
     var gap = ((state.pairGen || 0) + 1) - lastGen;
     if (gap <= 1) return 1000;
@@ -1083,6 +1218,26 @@
     return result;
   }
 
+  /** GC step for the retention policy above: deletes any pairHistory entry
+   *  naming a student who is no longer on the roster at all (not merely
+   *  absent today — see getActiveStudents for that separate, non-destructive
+   *  exclusion). Bounds storage to the current roster's C(n,2) pairs without
+   *  ever pruning by age. Deliberately called once per generation (from
+   *  makeGroups) rather than from onNamesChanged, which fires on every
+   *  keystroke — pruning mid-edit would risk deleting a student's whole
+   *  history the moment their name is temporarily malformed while being
+   *  fixed or retyped. */
+  function prunePairHistoryToRoster() {
+    if (!state || !state.pairHistory) return;
+    var current = {};
+    students.forEach(function (s) { current[s.name] = true; });
+    Object.keys(state.pairHistory).forEach(function (key) {
+      var sep = key.indexOf('␟');
+      var a = key.slice(0, sep), b = key.slice(sep + 1);
+      if (!current[a] || !current[b]) delete state.pairHistory[key];
+    });
+  }
+
   function recordPairHistory(groups) {
     if (!state) return;
     var newGen = (state.pairGen || 0) + 1;
@@ -1091,14 +1246,16 @@
     groups.forEach(function (group) {
       for (var i = 0; i < group.length; i++) {
         for (var j = i + 1; j < group.length; j++) {
-          state.pairHistory[pairKey(group[i].name, group[j].name)] = newGen;
+          var key = pairKey(group[i].name, group[j].name);
+          var prevCount = historyCount(state.pairHistory[key]);
+          state.pairHistory[key] = { gen: newGen, count: prevCount + 1 };
         }
       }
     });
-    var cutoff = newGen - PAIR_MEMORY_WINDOW;
-    Object.keys(state.pairHistory).forEach(function (key) {
-      if (state.pairHistory[key] < cutoff) delete state.pairHistory[key];
-    });
+    // No age-based pruning here by design — see the retention-policy note
+    // above. Roster-membership pruning already ran once, up front, in
+    // makeGroups (prunePairHistoryToRoster), which is what keeps this
+    // bounded instead of literally unbounded.
   }
 
   // Hard constraints (apart/together) always dominate the score; the recent-
@@ -1207,6 +1364,12 @@
         ? 'Repeats ' + result.repeatViolations.length + ' recent pairing' + (result.repeatViolations.length === 1 ? '' : 's') + ' from the last shuffle or two: ' + pairsText(result.repeatViolations) + '.'
         : 'No recently-paired students ended up together again.');
     }
+    if (result.meta.strategy === 'coverage' && result.meta.totalPairsThisGen) {
+      var np = result.meta.newPairsThisGen, tp = result.meta.totalPairsThisGen;
+      lines.push(np + ' of ' + tp + ' pairing' + (tp === 1 ? '' : 's') + ' in this grouping ' + (tp === 1 ? 'is' : 'are') +
+        ' brand new — nobody in ' + (tp === 1 ? 'it has' : 'them has') +
+        ' shared a group before, going back to the last pairing-memory reset.');
+    }
     if (result.meta.bonusGroupSize) {
       lines.push('The ' + result.meta.bonusGroupSize + ' leftover student' + (result.meta.bonusGroupSize === 1 ? '' : 's') +
         ' formed a separate small group instead of enlarging the others.');
@@ -1285,18 +1448,18 @@
   function renderPairHistoryHint() {
     var count = state && state.pairHistory ? Object.keys(state.pairHistory).length : 0;
     els.pairHistoryHint.textContent = count
-      ? 'Remembering ' + count + ' recent pairing' + (count === 1 ? '' : 's') + ' from the last shuffle or two, so reshuffles bias away from repeating them.'
-      : 'No pairing memory yet for this class — shuffle once to start avoiding repeat pairings.';
+      ? 'Retaining ' + count + ' pairing' + (count === 1 ? '' : 's') + ' for this class, going back to the last reset — reshuffles bias away from repeating the most recent one or two, and the pairing grid uses the full history.'
+      : 'No pairing memory yet for this class — shuffle once to start tracking who has worked with whom.';
   }
 
   els.resetPairHistoryBtn.addEventListener('click', function () {
     if (!state) return;
-    if (!confirm('Clear pairing memory for "' + state.name + '"? The next shuffle won\'t try to avoid repeating any pairing.')) return;
+    if (!confirm('Clear ALL retained pairing history for "' + state.name + '"? This also blanks the pairing grid and can\'t be undone — the next shuffle won\'t try to avoid repeating any pairing, and "everyone pairs with everyone" starts over from scratch.')) return;
     state.pairHistory = {};
     state.pairGen = 0;
     saveCurrentConfig();
     renderPairHistoryHint();
-    showMsg('Pairing memory reset for this class.');
+    showMsg('Pairing memory and pairing grid reset for this class.');
   });
 
   // ── Transient per-shuffle state (locks, undo) ────────────────────────────
@@ -1437,6 +1600,79 @@
   });
   els.printSheetsBtn.addEventListener('click', function () {
     printAlternateView('Group Sheets', groupSheetHtml);
+  });
+
+  // ── Pairing grid: who has worked with whom, built from retained history ─
+  // Deliberately local-only — see the module doc comment above the share
+  // feature. A single grouping's result is something a teacher hands to a
+  // co-teacher; the full pairing history of a class is a different kind of
+  // information (a social map of the room, accumulated over a year) and
+  // nothing here builds a link or QR for it. Print or screenshot it
+  // yourself if you need to hand it to someone; the tool won't do that step
+  // for you the way it does for a single grouping.
+  function shortLabel(name) {
+    var parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return parts[0] + ' ' + parts[parts.length - 1].charAt(0).toUpperCase() + '.';
+  }
+
+  function pairingGridHtml() {
+    // The whole current roster, not just today's active students — a
+    // student absent today still has pairing history worth showing. (Names
+    // no longer on the roster at all were already pruned — see
+    // prunePairHistoryToRoster.)
+    var names = students.map(function (s) { return s.name; });
+    if (names.length < 2) {
+      return '<p class="empty-hint">Add at least two names to the roster to see the pairing grid.</p>';
+    }
+    var totalPairs = names.length * (names.length - 1) / 2;
+    var pairedCount = 0;
+    var headCells = '<th></th>' + names.map(function (n) {
+      return '<th title="' + escapeAttr(n) + '">' + escapeHtml(shortLabel(n)) + '</th>';
+    }).join('');
+    var bodyRows = names.map(function (a, i) {
+      var cells = names.map(function (b, j) {
+        if (i === j) return '<td class="grid-self">&mdash;</td>';
+        var c = pairHistoryCount(a, b);
+        if (c > 0 && j > i) pairedCount++;
+        return '<td class="' + (c ? 'grid-hit' : 'grid-miss') + '" title="' + escapeAttr(a) + ' &amp; ' + escapeAttr(b) + '">' + (c || '') + '</td>';
+      }).join('');
+      return '<tr><th title="' + escapeAttr(a) + '">' + escapeHtml(a) + '</th>' + cells + '</tr>';
+    }).join('');
+    var pct = totalPairs ? Math.round(100 * pairedCount / totalPairs) : 0;
+    return '<div class="grid-summary">' + pairedCount + ' of ' + totalPairs + ' possible pair' + (totalPairs === 1 ? '' : 's') +
+      ' (' + pct + '%) have worked together at least once, going back to the last pairing-memory reset. A number is how many times; a blank cell means never.</div>' +
+      '<div class="grid-scroll"><table class="pairing-grid">' + '<tr>' + headCells + '</tr>' + bodyRows + '</table></div>';
+  }
+
+  var gridEls = {
+    viewBtn: document.getElementById('view-pairing-grid-btn'),
+    overlay: document.getElementById('grid-overlay'),
+    closeBtn: document.getElementById('grid-close-btn'),
+    content: document.getElementById('grid-content'),
+    printBtn: document.getElementById('grid-print-btn')
+  };
+
+  gridEls.viewBtn.addEventListener('click', function () {
+    gridEls.content.innerHTML = pairingGridHtml();
+    gridEls.overlay.hidden = false;
+  });
+  gridEls.closeBtn.addEventListener('click', function () { gridEls.overlay.hidden = true; });
+  gridEls.overlay.addEventListener('mousedown', function (e) { if (e.target === gridEls.overlay) gridEls.overlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !gridEls.overlay.hidden) gridEls.overlay.hidden = true; });
+
+  gridEls.printBtn.addEventListener('click', function () {
+    var savedResults = els.results.innerHTML, savedWarn = els.warnArea.innerHTML, savedExplain = els.explainArea.innerHTML;
+    els.printTitle.textContent = 'Pairing Grid' + (state && state.name ? ' — ' + state.name : '') + ' — ' + new Date().toLocaleDateString();
+    els.warnArea.innerHTML = '';
+    els.explainArea.innerHTML = '';
+    els.results.innerHTML = gridEls.content.innerHTML || pairingGridHtml();
+    gridEls.overlay.hidden = true;
+    window.print();
+    els.results.innerHTML = savedResults;
+    els.warnArea.innerHTML = savedWarn;
+    els.explainArea.innerHTML = savedExplain;
+    els.exportRow.style.display = lastGroups ? 'flex' : 'none';
   });
 
   function showMsg(text) { els.msg.textContent = text; els.msg.className = 'error'; }
