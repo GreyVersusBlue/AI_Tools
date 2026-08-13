@@ -8,7 +8,15 @@ to a colleague to unzip and double-click, no server involved.
 
 1. Make sure dev tooling is installed: `npm ci` if `node_modules/` is stale
    or missing, and `npx playwright install chromium` if Chromium isn't
-   already installed for Playwright.
+   already installed for Playwright. If that download fails because the
+   host is unreachable (common in sandboxed cloud environments, which often
+   set `PLAYWRIGHT_BROWSERS_PATH` to a pre-installed browser instead of
+   allowing downloads), look for an existing Chromium binary there (e.g.
+   `$PLAYWRIGHT_BROWSERS_PATH/chromium/` or a versioned subfolder under it)
+   and export `PW_CHROMIUM_EXECUTABLE` to its path before continuing —
+   `Tools/board-check/harness.mjs`'s `launch()` already reads that variable
+   as an escape hatch for exactly this case, so `offline:verify` will pick
+   it up with no code changes needed.
 2. Run `npm run offline:build`. It wipes and rebuilds
    `Tools/board-check/.offline-copy-staging/` from a fresh `git ls-files`
    snapshot, patches the staged copy's `bmg-vector.js` to bundle its 4
