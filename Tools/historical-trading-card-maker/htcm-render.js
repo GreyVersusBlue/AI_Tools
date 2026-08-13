@@ -28,11 +28,24 @@
     return '<div class="' + cls + '">' + frame + badge;
   }
 
+  var MEDALLION = { circle: 1, shield: 1, arch: 1 }; // centered boxes; the rest span the card
+
+  /** The shaped photo window: clipped img with its parametric crop applied,
+      plus a rim stroke in the theme accent tracing the same shape. */
+  function photoWindowHtml(image) {
+    var shape = HtcmFrames.SHAPES[image.shape] ? image.shape : 'rrect';
+    var rim = '<svg class="pwin-rim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="' + HtcmFrames.shapePath(shape, 100, 100) + '" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+    return '<div class="pwin shape-' + shape + (MEDALLION[shape] ? ' medallion' : '') +
+      '" style="clip-path:url(#htcm-clip-' + shape + ')">' +
+      '<img src="' + image.src + '" alt="" style="' + HtcmPhoto.photoStyle(image) + '">' + rim + '</div>';
+  }
+
   /** Front of a card: photo (if any), name, stat lines. null → an invisible
       spacer card, used to pad incomplete print rows. */
   function frontHtml(e, opts) {
     if (!e) return '<div class="trading-card blank"></div>';
-    var img = e.image ? '<img src="' + e.image.src + '" alt="">' : '';
+    var img = e.image ? photoWindowHtml(e.image) : '';
     var stats = e.stats.map(function (s) { return '<div><b>' + escapeHtml(s.label) + ':</b> ' + escapeHtml(s.value) + '</div>'; }).join('');
     return shellOpen(e, opts, false) + img + '<div class="cname">' + escapeHtml(e.name) + '</div><div class="cstats">' + stats + '</div></div>';
   }

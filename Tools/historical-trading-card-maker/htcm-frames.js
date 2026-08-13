@@ -163,6 +163,68 @@
       body + '</svg>';
   }
 
+  /* ---- photo window shapes ----
+     Each shape is one generator emitting an SVG path for a w × h box. It has
+     two consumers that must never disagree: called with (1, 1) it yields the
+     normalized path inside the objectBoundingBox <clipPath> below (CSS
+     clip-path: url(#htcm-clip-…) — one definition, any box size), and called
+     with real pixel sizes it feeds new Path2D(...) in the canvas exporter and
+     the stroked rim overlay. Radii use min(w,h) so corners and circles stay
+     round wherever the box isn't square. */
+
+  function n(v) { return Math.round(v * 1000) / 1000; }
+
+  var SHAPE_DRAW = {
+    rrect: function (w, h) {
+      var r = 0.09 * Math.min(w, h);
+      return 'M' + n(r) + ',0 H' + n(w - r) + ' Q' + w + ',0 ' + w + ',' + n(r) +
+        ' V' + n(h - r) + ' Q' + w + ',' + h + ' ' + n(w - r) + ',' + h +
+        ' H' + n(r) + ' Q0,' + h + ' 0,' + n(h - r) +
+        ' V' + n(r) + ' Q0,0 ' + n(r) + ',0 Z';
+    },
+    oval: function (w, h) {
+      return 'M' + n(w / 2) + ',0 A' + n(w / 2) + ',' + n(h / 2) + ' 0 1 1 ' + n(w / 2) + ',' + h +
+        ' A' + n(w / 2) + ',' + n(h / 2) + ' 0 1 1 ' + n(w / 2) + ',0 Z';
+    },
+    circle: function (w, h) { // true circle in a square window; ellipse elsewhere
+      return SHAPE_DRAW.oval(w, h);
+    },
+    hex: function (w, h) {
+      return 'M' + n(w * 0.25) + ',0 H' + n(w * 0.75) + ' L' + w + ',' + n(h / 2) +
+        ' L' + n(w * 0.75) + ',' + h + ' H' + n(w * 0.25) + ' L0,' + n(h / 2) + ' Z';
+    },
+    shield: function (w, h) {
+      return 'M0,0 H' + w + ' V' + n(h * 0.45) +
+        ' C' + w + ',' + n(h * 0.75) + ' ' + n(w * 0.8) + ',' + n(h * 0.92) + ' ' + n(w / 2) + ',' + h +
+        ' C' + n(w * 0.2) + ',' + n(h * 0.92) + ' 0,' + n(h * 0.75) + ' 0,' + n(h * 0.45) + ' Z';
+    },
+    arch: function (w, h) {
+      return 'M0,' + h + ' V' + n(h * 0.4) + ' Q0,0 ' + n(w / 2) + ',0 Q' + w + ',0 ' + w + ',' + n(h * 0.4) +
+        ' V' + h + ' Z';
+    }
+  };
+
+  var SHAPES = {
+    rrect: { label: 'Rounded' },
+    oval: { label: 'Oval' },
+    circle: { label: 'Circle' },
+    hex: { label: 'Hexagon' },
+    shield: { label: 'Shield' },
+    arch: { label: 'Arch' }
+  };
+
+  function shapePath(key, w, h) {
+    var draw = SHAPE_DRAW[key] || SHAPE_DRAW.rrect;
+    return draw(w, h);
+  }
+
+  function clipDefs() {
+    return Object.keys(SHAPE_DRAW).map(function (key) {
+      return '<clipPath id="htcm-clip-' + key + '" clipPathUnits="objectBoundingBox">' +
+        '<path d="' + shapePath(key, 1, 1) + '"/></clipPath>';
+    }).join('');
+  }
+
   function gradient(id, stops) {
     return '<linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1">' +
       stops.map(function (s) { return '<stop offset="' + s[0] + '" stop-color="' + s[1] + '"/>'; }).join('') +
@@ -177,13 +239,16 @@
       gradient('htcm-foil-silver', [[0, '#dfe5ea'], [0.35, '#98a2ac'], [0.55, '#eef1f4'], [0.8, '#7e8792'], [1, '#b7bfc7']]) +
       gradient('htcm-foil-purple', [[0, '#c9a6ea'], [0.35, '#6b3fa0'], [0.55, '#e6d4f7'], [0.8, '#55307f'], [1, '#9a6fc4']]) +
       gradient('htcm-foil-gold', [[0, '#f0dc8f'], [0.35, '#b08d2f'], [0.55, '#f7ecc0'], [0.8, '#8a6d1d'], [1, '#d4b354']]) +
+      clipDefs() +
       '</defs></svg>';
   }
 
   global.HtcmFrames = {
     W: W, H: H,
     FRAMES: FRAMES,
+    SHAPES: SHAPES,
     frameSvg: frameSvg,
+    shapePath: shapePath,
     defsSvg: defsSvg
   };
 })(window);

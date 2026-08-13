@@ -119,10 +119,21 @@
   .size-fill .card-grid { max-width: 7.7in; margin-left: auto; margin-right: auto; }
   .size-standard .card-grid { grid-template-columns: repeat(3, 2.5in); justify-content: center; gap: .15in; }
   .size-standard .trading-card { height: 3.5in; width: 2.5in; border-radius: 6px; padding: .15in; }
-  .size-standard .trading-card img { height: 1.35in; }
+  .size-standard .pwin { height: 1.35in; }
   .size-standard .trading-card .cname { font-size: .95rem; }
   .trading-card.blank { visibility: hidden; }
-  .trading-card img { width: 100%; height: 1.4in; object-fit: cover; border-radius: 4px; margin-bottom: .1in; }
+
+  /* the shaped photo window (htcm-photo.js applies the crop; the clip-path
+     shapes are <clipPath> defs from htcm-frames.js). Medallion shapes
+     (circle/shield/arch) are centered boxes and keep their size on every
+     card preset, so their rules sit after the .size-standard override. */
+  .pwin { width: 100%; height: 1.4in; margin-bottom: .1in; position: relative; overflow: hidden; flex-shrink: 0; }
+  .pwin img { width: 100%; height: 100%; display: block; }
+  .pwin-rim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .9; }
+  .pwin.medallion { margin-left: auto; margin-right: auto; }
+  .pwin.shape-circle { width: 1.5in; height: 1.5in; }
+  .pwin.shape-shield { width: 1.45in; height: 1.6in; }
+  .pwin.shape-arch { width: 1.45in; height: 1.7in; }
   .trading-card .cname { font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: .1in; }
   .trading-card .cstats { font-size: .74rem; flex: 1; overflow: hidden; }
   .trading-card .cstats div { margin-bottom: .05in; }
@@ -147,6 +158,26 @@
   }
   .theme-swatch:hover { border-color: var(--muted); }
   .theme-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+  /* ---- photo editor overlay (htcm-photo.js) ---- */
+  .photo-editor-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-editor {
+    background: #fff; border-radius: 10px; padding: 1rem 1.2rem;
+    width: min(380px, 92vw); max-height: 92vh; overflow: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  }
+  .photo-editor h3 { margin: 0 0 .6rem; font-size: 1rem; }
+  .pe-stage { display: flex; justify-content: center; margin-bottom: .4rem; }
+  .pe-viewport { position: relative; overflow: hidden; background: #eee; touch-action: none; }
+  .pe-hint { margin: 0 0 .6rem; }
+  .pe-zoom { width: 100%; margin-bottom: .6rem; }
+  .pe-row { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }
+  .pe-row .selected { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
+  .pe-actions { display: flex; gap: .5rem; }
+  .pe-spacer { flex: 1; }
 
   @media print {
     body * { visibility: hidden; }
@@ -186,6 +217,7 @@
         <label for="newImage">Photo / flag image (optional)</label>
         <input type="file" id="newImage" accept="image/*">
         <p class="hint" id="editImageHint" style="display:none;">Editing keeps the current image unless you choose a new file above.</p>
+        <button type="button" class="secondary small" id="adjustBtn" style="display:none; margin-bottom:.6rem;">Adjust photo: crop, shape &amp; filter</button>
         <label for="newRarity">Rarity</label>
         <select id="newRarity">
           <option value="common">Common</option>
@@ -243,6 +275,7 @@
 <script src="historical-trading-card-maker/htcm-image.js"></script>
 <script src="historical-trading-card-maker/htcm-frames.js"></script>
 <script src="historical-trading-card-maker/htcm-themes.js"></script>
+<script src="historical-trading-card-maker/htcm-photo.js"></script>
 <script src="historical-trading-card-maker/htcm-render.js"></script>
 <script>
 (function () {
@@ -250,7 +283,8 @@
   var els = {};
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
    'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
-   'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity'].forEach(function (id) {
+   'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
+   'adjustBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -331,6 +365,7 @@
       return '<div class="entry-row" data-id="' + e.id + '">' + img +
         '<div class="info"><div class="ename">' + escapeHtml(e.name) + '</div>' +
         '<div class="estats">' + e.stats.length + ' stats &middot; ' + e.facts.length + ' facts' + kb + warn + '</div></div>' +
+        (e.image ? '<button type="button" class="secondary small" data-adjust="' + e.id + '">Photo</button>' : '') +
         '<button type="button" class="secondary small" data-edit="' + e.id + '">Edit</button>' +
         '<button type="button" class="danger small" data-del="' + e.id + '">Delete</button></div>';
     }).join('');
@@ -346,6 +381,18 @@
     }
     var editId = ev.target.getAttribute('data-edit');
     if (editId) { startEdit(editId); return; }
+    var adjId = ev.target.getAttribute('data-adjust');
+    if (adjId) {
+      var target = entries.filter(function (e) { return e.id === adjId; })[0];
+      if (target && target.image) {
+        HtcmPhoto.openEditor(target.image, function (updated) {
+          target.image = updated;
+          save(); renderEntries();
+          previewId = adjId; setFlip(false); updatePreview();
+        });
+      }
+      return;
+    }
     var row = ev.target.closest('.entry-row');
     if (row) { previewId = row.getAttribute('data-id'); setFlip(false); updatePreview(); }
   });
@@ -487,6 +534,21 @@
   /* live preview needs a rarity change reflected immediately */
   els.newRarity.addEventListener('change', schedulePreview);
 
+  /* ---------- photo adjust (form) ----------
+     The editor works on the form's image state: a freshly picked file
+     (pendingImage), or — while editing a card that keeps its photo — a copy
+     of the saved image, which becomes pendingImage so Save-changes persists
+     the adjustments. */
+  els.adjustBtn.addEventListener('click', function () {
+    var img = formImage();
+    if (!img) return;
+    HtcmPhoto.openEditor(img, function (updated) {
+      pendingImage = updated;
+      previewId = null;
+      updatePreview();
+    });
+  });
+
   /* ---------- print: row-mirrored duplex front/back grids ----------
      paginate() and mirrorPageRows() below are adapted from VocabLayout in
      Tools/vocab-flashcard-generator/vfg-layout.js (the sibling Vocabulary
@@ -545,10 +607,15 @@
     }
     return draft;
   }
+  function formImage() {
+    var existing = editingEntry();
+    return pendingImage || (existing ? existing.image : null);
+  }
   function updatePreview() {
     var e = previewEntry();
     els.previewFront.innerHTML = frontCardHtml(e);
     els.previewBack.innerHTML = backCardHtml(e);
+    els.adjustBtn.style.display = formImage() ? '' : 'none';
     updateStatWarning();
   }
   var previewTimer = null;
