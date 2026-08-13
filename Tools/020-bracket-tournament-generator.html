@@ -152,6 +152,8 @@
 
   .match-schedule { font-size: .74rem; color: var(--muted); margin-top: -.1rem; }
 
+  .stage-action { margin: .4rem 0 1.4rem; display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+
   .modal-overlay {
     position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.5);
     display: flex; align-items: center; justify-content: center; padding: 1rem;
@@ -263,19 +265,42 @@
     <div class="row">
       <div>
         <label for="bracketType">Bracket type</label>
-        <p class="hint">Double elimination adds a losers bracket — a team isn't out until it loses twice. Round robin plays everybody against everybody, no eliminations.</p>
+        <p class="hint">Double elimination adds a losers bracket — a team isn't out until it loses twice. Round robin plays everybody against everybody, no eliminations. Pools splits entrants into round-robin groups that feed an elimination bracket. Swiss pairs similar records for a fixed number of rounds — nobody is out after one loss.</p>
         <select id="bracketType">
           <option value="single" selected>Single elimination</option>
           <option value="double">Double elimination</option>
           <option value="roundrobin">Round robin (everybody plays)</option>
+          <option value="pools">Pools into a bracket</option>
+          <option value="swiss">Swiss (everybody keeps playing)</option>
         </select>
+      </div>
+    </div>
+
+    <div class="row" id="poolsFields" style="display:none;">
+      <div>
+        <label for="poolCount">Number of pools</label>
+        <p class="hint">Entrants are split evenly across pools (snake-distributed, so pools stay balanced under Ranked seeding). Each pool plays a full round robin.</p>
+        <input type="number" id="poolCount" min="2" step="1" value="2">
+      </div>
+      <div>
+        <label for="poolAdvance">Advance per pool</label>
+        <p class="hint">How many finishers from each pool move on to the elimination bracket, once every pool match is decided and you click "Generate bracket."</p>
+        <input type="number" id="poolAdvance" min="1" step="1" value="2">
+      </div>
+    </div>
+
+    <div class="row" id="swissFields" style="display:none;">
+      <div>
+        <label for="swissRounds">Number of rounds</label>
+        <p class="hint">Every round pairs each player/team against someone with a similar win-loss record so far (skipping repeat matchups where possible), for this many rounds — nobody is eliminated after one loss.</p>
+        <input type="number" id="swissRounds" min="1" step="1" value="4">
       </div>
     </div>
 
     <div class="row">
       <div>
         <label for="seedMode">Seeding</label>
-        <p class="hint">Random shuffles the list. As entered keeps your list order (also used for byes). Ranked treats your list as seed 1..N in order and places seeds so the top two can't meet before the final — seed 1 plays the lowest seed in round 1. Round robin only affects the standings table's Seed column.</p>
+        <p class="hint">Random shuffles the list. As entered keeps your list order (also used for byes). Ranked treats your list as seed 1..N in order and places seeds so the top two can't meet before the final — seed 1 plays the lowest seed in round 1. Round robin only affects the standings table's Seed column. Pools uses it to order entrants before splitting into pools; Swiss uses it for round 1's pairing and its standings' Seed column.</p>
         <select id="seedMode">
           <option value="random" selected>Random (shuffle)</option>
           <option value="asEntered">As entered (no shuffle)</option>
@@ -360,6 +385,11 @@
     rosterSelect: document.getElementById('rosterSelect'),
     loadRosterBtn: document.getElementById('loadRosterBtn'),
     bracketType: document.getElementById('bracketType'),
+    poolsFields: document.getElementById('poolsFields'),
+    poolCount: document.getElementById('poolCount'),
+    poolAdvance: document.getElementById('poolAdvance'),
+    swissFields: document.getElementById('swissFields'),
+    swissRounds: document.getElementById('swissRounds'),
     seedMode: document.getElementById('seedMode'),
     generateBtn: document.getElementById('generateBtn'),
     bracketCard: document.getElementById('bracketCard'),
@@ -787,6 +817,279 @@
     });
   }
 
+  /* ---------- pools (round robin groups feeding an elimination bracket) ----
+     A pool is *literally* a buildRoundRobin() result — same {players, rounds}
+     shape — so computeStandings() above is reused completely unmodified for
+     pool standings; the only wrinkle is that a pool's own `.scores` field is
+     discarded (see below) and a view derived from the top-level state.scores
+     is passed in its place at read time, so every pool's match scores still
+     live in the one place buildScoreInputs already knows how to read/write
+     (the top-level `state.scores`), namespaced by a 'poolN_' key prefix the
+     same way double-elimination already namespaces its winners/losers/grand-
+     final scores with 'w'/'l'/'g' prefixes in one shared map.
+
+     Once every pool's round robin is fully decided, seedOrderFromPools()
+     ranks the advancing entrants (top `advancePerPool` from each pool,
+     grouped by finish position — every pool's winner, then every pool's
+     runner-up, and so on, so the strongest teams from different pools don't
+     collide before they have to) and hands that ordered list straight to the
+     existing buildBracket(..., 'ranked') — reusing standardSeedOrder's
+     "protect the top seeds" placement exactly as ranked single-elimination
+     already does, rather than inventing a second seeding algorithm. */
+
+  /* Snake distribution (1,2,..,P, P,..,2,1, 1,2,..) keeps pools balanced in
+     both size and (when the incoming order carries seed meaning) strength,
+     regardless of whether `orderedNames` came from Ranked seeding, a
+     shuffle, or plain list order — harmless either way, so it's always used
+     rather than branching on seedMode a second time. */
+  function distributeIntoPools(orderedNames, numPools) {
+    var pools = [];
+    for (var i = 0; i < numPools; i++) pools.push([]);
+    orderedNames.forEach(function (nm, i) {
+      var cycle = Math.floor(i / numPools);
+      var posInCycle = i % numPools;
+      var poolIdx = (cycle % 2 === 0) ? posInCycle : (numPools - 1 - posInCycle);
+      pools[poolIdx].push(nm);
+    });
+    return pools;
+  }
+
+  function buildPools(name, names, seedMode, numPools, advancePerPool) {
+    var ordered = (seedMode === 'random') ? shuffle(names) : names.slice();
+    var groups = distributeIntoPools(ordered, numPools);
+    var pools = groups.map(function (group, i) {
+      var pool = buildRoundRobin('Pool ' + (i + 1), group, 'asEntered');
+      delete pool.scores; // pool match scores live in the top-level state.scores — see comment above
+      delete pool.type;
+      delete pool.seedMode;
+      return pool;
+    });
+    var out = {
+      name: name, type: 'pools', seedMode: seedMode,
+      pools: pools, advancePerPool: Math.max(1, advancePerPool | 0),
+      bracket: null, scores: {}
+    };
+    if (seedMode === 'ranked') {
+      out.seeds = {};
+      names.forEach(function (p, i) { out.seeds[p] = i + 1; });
+      pools.forEach(function (pool) {
+        pool.seeds = {};
+        pool.players.forEach(function (p) { pool.seeds[p] = out.seeds[p]; });
+      });
+    }
+    return out;
+  }
+
+  function poolRoundRobinComplete(pool) {
+    return pool.rounds.every(function (round) {
+      return round.every(function (m) { return m.a == null || m.b == null || m.winner !== null; });
+    });
+  }
+
+  function poolsComplete(poolsState) {
+    return poolsState.pools.every(poolRoundRobinComplete);
+  }
+
+  /* True once at least one { a } or { b } number exists among the scores
+     namespaced under `prefix` — the same "has any score been typed" check
+     standingsHasScores() already does for a whole bracket, scoped down to
+     one pool (or, with 'br_', the pools-fed bracket) so each standings table
+     only grows PF/PA/Diff columns once its own section actually has one. */
+  function prefixedHasScores(scoresState, prefix) {
+    return !!(scoresState.scores && Object.keys(scoresState.scores).some(function (k) {
+      if (k.indexOf(prefix) !== 0) return false;
+      var v = scoresState.scores[k];
+      return v && (typeof v.a === 'number' || typeof v.b === 'number');
+    }));
+  }
+
+  function poolScoresView(poolsState, poolIdx) {
+    var prefix = 'pool' + poolIdx + '_';
+    var view = {};
+    Object.keys(poolsState.scores || {}).forEach(function (k) {
+      if (k.indexOf(prefix) === 0) view[k.slice(prefix.length)] = poolsState.scores[k];
+    });
+    return view;
+  }
+
+  function poolStandingsFor(poolsState, poolIdx) {
+    var pool = poolsState.pools[poolIdx];
+    return computeStandings({ players: pool.players, rounds: pool.rounds, scores: poolScoresView(poolsState, poolIdx), seeds: pool.seeds });
+  }
+
+  /* Ranks advancing entrants by finish position across pools (every pool's
+     1st place, then every pool's 2nd place, ...) rather than pool-by-pool,
+     so the top of the seed list is the actual strongest tier of the whole
+     field — buildBracket's existing 'ranked' placement then keeps seed 1 and
+     seed 2 apart until the final exactly as it already does for a plain
+     ranked single-elimination bracket. */
+  function seedOrderFromPools(poolsState) {
+    var standingsByPool = poolsState.pools.map(function (_, i) { return poolStandingsFor(poolsState, i); });
+    var seeded = [];
+    for (var rank = 0; rank < poolsState.advancePerPool; rank++) {
+      standingsByPool.forEach(function (standings) {
+        if (standings[rank]) seeded.push(standings[rank].name);
+      });
+    }
+    return seeded;
+  }
+
+  function bracketScoresView(poolsState) {
+    var prefix = 'br_';
+    var view = {};
+    Object.keys(poolsState.scores || {}).forEach(function (k) {
+      if (k.indexOf(prefix) === 0) view[k.slice(prefix.length)] = poolsState.scores[k];
+    });
+    return view;
+  }
+
+  function generateBracketFromPools() {
+    if (!state || state.type !== 'pools') return;
+    if (!poolsComplete(state)) { alert('Finish every pool match first.'); return; }
+    var seeded = seedOrderFromPools(state);
+    if (seeded.length < 2) { alert('Need at least two advancing teams to build a bracket.'); return; }
+    captureUndoSnapshot();
+    var bracket = buildBracket(state.name + ' — Bracket', seeded, 'ranked');
+    delete bracket.scores; // this bracket's scores live in state.scores under 'br_' keys — see bracketScoresView
+    state.bracket = bracket;
+    render();
+  }
+
+  /* ---------- Swiss pairing ----------
+     Round 1 has no results to pair by, so it uses the standard Swiss
+     "split the field in half, top half vs bottom half" opening (seed 1 vs
+     seed ceil(n/2)+1, seed 2 vs seed ceil(n/2)+2, ...) over `ordered`'s own
+     order — seed order under Ranked, list order otherwise — rather than
+     falling through a standings tiebreak that would make Ranked seeding
+     invisible in the one round it matters most. An odd field gives the
+     LAST entrant (the weakest seed, under Ranked) a bye, the same "byes
+     land on the weakest seed" choice the elimination formats already make.
+
+     Every round after that pairs by current record (computeSwissStandings,
+     below), grouped best-to-worst, matching each player against the next
+     player in that order they haven't already played where possible (a
+     small-field or late-round tournament can run out of fresh opponents —
+     when that happens this falls back to a repeat rather than leaving
+     someone unpaired). A repeated bye is avoided the same way: the player
+     with the fewest byes so far gets this round's, ties broken toward the
+     weaker current record. */
+  function buildSwiss(name, names, seedMode, numRounds) {
+    var ordered = (seedMode === 'random') ? shuffle(names) : names.slice();
+    var out = { name: name, type: 'swiss', seedMode: seedMode, players: ordered, numRounds: Math.max(1, numRounds | 0), rounds: [], scores: {} };
+    if (seedMode === 'ranked') {
+      out.seeds = {};
+      names.forEach(function (p, i) { out.seeds[p] = i + 1; });
+    }
+    out.rounds.push(buildSwissRound1(ordered));
+    return out;
+  }
+
+  function buildSwissRound1(ordered) {
+    var arr = ordered.slice();
+    var bye = null;
+    if (arr.length % 2 === 1) bye = arr.pop();
+    var half = arr.length / 2;
+    var matches = [];
+    for (var i = 0; i < half; i++) {
+      matches.push({ a: arr[i], b: arr[i + half], winner: null });
+    }
+    if (bye !== null) matches.push({ a: bye, b: null, winner: 0 }); // a bye is an automatic win — see computeSwissStandings
+    return matches;
+  }
+
+  function swissPastOpponents(swState) {
+    var seen = {};
+    swState.rounds.forEach(function (round) {
+      round.forEach(function (m) {
+        if (m.a == null || m.b == null) return;
+        (seen[m.a] = seen[m.a] || {})[m.b] = true;
+        (seen[m.b] = seen[m.b] || {})[m.a] = true;
+      });
+    });
+    return seen;
+  }
+
+  function swissByeCounts(swState) {
+    var counts = {};
+    swState.players.forEach(function (p) { counts[p] = 0; });
+    swState.rounds.forEach(function (round) {
+      round.forEach(function (m) {
+        if (m.a == null && m.b != null) counts[m.b]++;
+        else if (m.b == null && m.a != null) counts[m.a]++;
+      });
+    });
+    return counts;
+  }
+
+  function buildSwissRound(swState) {
+    var standings = computeSwissStandings(swState); // best to worst
+    var opponents = swissPastOpponents(swState);
+    var byeCounts = swissByeCounts(swState);
+    var pool = standings.map(function (r) { return r.name; });
+
+    var byePlayer = null;
+    if (pool.length % 2 === 1) {
+      var worstFirst = pool.slice().reverse();
+      var minByes = Math.min.apply(null, worstFirst.map(function (p) { return byeCounts[p] || 0; }));
+      byePlayer = worstFirst.filter(function (p) { return (byeCounts[p] || 0) === minByes; })[0];
+      pool = pool.filter(function (p) { return p !== byePlayer; });
+    }
+
+    var unpaired = pool.slice();
+    var matches = [];
+    while (unpaired.length) {
+      var p1 = unpaired.shift();
+      var idx = -1;
+      for (var i = 0; i < unpaired.length; i++) {
+        if (!(opponents[p1] && opponents[p1][unpaired[i]])) { idx = i; break; }
+      }
+      if (idx === -1) idx = 0; // every remaining candidate is a repeat — small-field edge case
+      var p2 = unpaired.splice(idx, 1)[0];
+      matches.push({ a: p1, b: p2, winner: null });
+    }
+    if (byePlayer !== null) matches.push({ a: byePlayer, b: null, winner: 0 });
+    return matches;
+  }
+
+  /* Same shape and tie-break as computeStandings (wins, then point diff,
+     then fewer losses, then name) but with one deliberate divergence: a bye
+     round credits the present player a genuine win (and a played match),
+     not round robin's "sitting out, no credit." Swiss pairing depends on
+     every player having a decisive record each round, which a neutral bye
+     can't provide — documented here rather than folded silently into
+     computeStandings, which round robin (and pools, built on it) still use
+     unmodified with the opposite, "a bye is nobody's result" convention. */
+  function computeSwissStandings(swState) {
+    var records = {};
+    swState.players.forEach(function (p) {
+      records[p] = { name: p, w: 0, l: 0, played: 0, pf: 0, pa: 0, diff: 0, seed: (swState.seeds && swState.seeds[p]) || null };
+    });
+    swState.rounds.forEach(function (round, r) {
+      round.forEach(function (m, mi) {
+        if (m.a == null && m.b == null) return;
+        if (m.a == null || m.b == null) {
+          var byeWinner = m.a == null ? m.b : m.a;
+          if (records[byeWinner]) { records[byeWinner].w++; records[byeWinner].played++; }
+          return;
+        }
+        if (m.winner === null) return;
+        var winnerName = m.winner === 0 ? m.a : m.b;
+        var loserName = m.winner === 0 ? m.b : m.a;
+        records[winnerName].w++; records[winnerName].played++;
+        records[loserName].l++; records[loserName].played++;
+        var sc = swState.scores && swState.scores['rr' + r + '_' + mi];
+        if (sc && typeof sc.a === 'number' && typeof sc.b === 'number') {
+          records[m.a].pf += sc.a; records[m.a].pa += sc.b;
+          records[m.b].pf += sc.b; records[m.b].pa += sc.a;
+        }
+      });
+    });
+    Object.keys(records).forEach(function (k) { records[k].diff = records[k].pf - records[k].pa; });
+    return Object.keys(records).map(function (k) { return records[k]; }).sort(function (x, y) {
+      return y.w - x.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);
+    });
+  }
+
   /* ---------- elimination standings (single & double) ----------
      The backlog ask ("scores that feed standings") named round robin
      explicitly, but a bracket that eliminates people is exactly the kind of
@@ -1092,6 +1395,42 @@
       }
       return null;
     }
+    if (state.type === 'pools') {
+      for (var pi = 0; pi < state.pools.length; pi++) {
+        var pool = state.pools[pi];
+        for (var pr = 0; pr < pool.rounds.length; pr++) {
+          var prow = pool.rounds[pr];
+          for (var pm = 0; pm < prow.length; pm++) {
+            var pmatch = prow[pm];
+            if (pmatch.a != null && pmatch.b != null && pmatch.winner === null) {
+              return { label: pool.name + ' — Round ' + (pr + 1), text: pmatch.a + ' vs ' + pmatch.b };
+            }
+          }
+        }
+      }
+      if (state.bracket) {
+        var wb2 = state.bracket.slots;
+        for (var r4 = 0; r4 < wb2.length - 1; r4++) {
+          var round4 = wb2[r4], next4 = wb2[r4 + 1];
+          for (var m4 = 0; m4 < next4.length; m4++) {
+            if (next4[m4] === false && round4[m4 * 2] && round4[m4 * 2 + 1]) {
+              return { label: 'Bracket — Round ' + (r4 + 1), text: round4[m4 * 2] + ' vs ' + round4[m4 * 2 + 1] };
+            }
+          }
+        }
+      }
+      return null;
+    }
+    if (state.type === 'swiss') {
+      var lastRound = state.rounds[state.rounds.length - 1];
+      for (var sm = 0; sm < lastRound.length; sm++) {
+        var smatch = lastRound[sm];
+        if (smatch.a != null && smatch.b != null && smatch.winner === null) {
+          return { label: 'Swiss — Round ' + state.rounds.length, text: smatch.a + ' vs ' + smatch.b };
+        }
+      }
+      return null;
+    }
     for (var r3 = 0; r3 < state.slots.length - 1; r3++) {
       var round3 = state.slots[r3], next3 = state.slots[r3 + 1];
       for (var m3 = 0; m3 < next3.length; m3++) {
@@ -1129,9 +1468,15 @@
   function render() {
     if (!state) return;
     updateUndoButton();
-    els.scheduleBtn.style.display = (state.type === 'double') ? 'none' : '';
+    // Scheduling assumes a round's match count is knowable up front (see
+    // matchesPerRoundFor's comment); pools and Swiss share double
+    // elimination's problem — pool/round pairings past round 1 depend on
+    // results — so all three are excluded the same way double elim is.
+    els.scheduleBtn.style.display = (state.type === 'double' || state.type === 'pools' || state.type === 'swiss') ? 'none' : '';
     if (state.type === 'double') { renderDouble(); return; }
     if (state.type === 'roundrobin') { renderRoundRobin(); return; }
+    if (state.type === 'pools') { renderPools(); return; }
+    if (state.type === 'swiss') { renderSwiss(); return; }
     renderSingle();
   }
 
@@ -1139,6 +1484,8 @@
     if (!state) return;
     if (state.type === 'double') { renderBlankDouble(); return; }
     if (state.type === 'roundrobin') { renderBlankRoundRobin(); return; }
+    if (state.type === 'pools') { renderBlankPools(); return; }
+    if (state.type === 'swiss') { renderBlankSwiss(); return; }
     renderBlankSingle();
   }
 
@@ -2096,6 +2443,497 @@
     els.championBanner.classList.remove('show');
   }
 
+  /* ---------- pools rendering ----------
+     Each pool renders exactly like round robin's own section (same markup,
+     same click/score-entry convention) followed by its own standings table;
+     a "Bracket" section below either invites generating the bracket (once
+     every pool match is decided) or renders it, reusing the single-
+     elimination slot/round markup and click convention against the embedded
+     `state.bracket` object instead of `state` itself. */
+  function renderPools() {
+    if (!state) return;
+    save();
+    refreshSwitcher();
+
+    els.setupCard.style.display = 'none';
+    els.bracketCard.style.display = '';
+    els.toolbar.style.display = '';
+    els.bracketTitle.textContent = state.name;
+
+    els.bracketView.innerHTML = '';
+    els.championBanner.classList.remove('show'); // renderPoolsBracketSection() re-shows it once there's a champion
+
+    state.pools.forEach(function (pool, pi) {
+      var heading = document.createElement('p');
+      heading.className = 'bracket-subtitle';
+      heading.textContent = pool.name;
+      els.bracketView.appendChild(heading);
+
+      var box = document.createElement('div');
+      box.className = 'bracket';
+      pool.rounds.forEach(function (round, r) {
+        var col = document.createElement('div');
+        col.className = 'round';
+        var label = document.createElement('div');
+        label.className = 'round-label';
+        label.textContent = 'Round ' + (r + 1);
+        col.appendChild(label);
+
+        round.forEach(function (match, m) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          if (match.a == null || match.b == null) {
+            var byePlayer = match.a == null ? match.b : match.a;
+            var byeSlot = document.createElement('div');
+            byeSlot.className = 'slot slot-decided';
+            byeSlot.textContent = byePlayer;
+            matchWrap.appendChild(byeSlot);
+            var restSlot = document.createElement('div');
+            restSlot.className = 'slot slot-bye';
+            restSlot.textContent = 'Sitting out';
+            matchWrap.appendChild(restSlot);
+          } else {
+            [0, 1].forEach(function (side) {
+              var pname = side === 0 ? match.a : match.b;
+              var slotEl = document.createElement('div');
+              if (match.winner !== null) {
+                slotEl.textContent = pname;
+                slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '');
+              } else {
+                slotEl.textContent = pname;
+                slotEl.className = 'slot';
+                slotEl.addEventListener('click', (function (poolIdx, roundIdx, matchIdx, sideIdx) {
+                  return function () {
+                    captureUndoSnapshot();
+                    state.pools[poolIdx].rounds[roundIdx][matchIdx].winner = sideIdx;
+                    render();
+                  };
+                })(pi, r, m, side));
+              }
+              matchWrap.appendChild(slotEl);
+            });
+
+            var scoreKey = 'pool' + pi + '_rr' + r + '_' + m;
+            var decideFn = (match.winner === null) ? (function (poolIdx, roundIdx, matchIdx, aName, bName) {
+              return function (aNum, bNum) {
+                if (state.pools[poolIdx].rounds[roundIdx][matchIdx].winner !== null) return; // decided meanwhile
+                captureUndoSnapshot();
+                state.pools[poolIdx].rounds[roundIdx][matchIdx].winner = aNum > bNum ? 0 : 1;
+              };
+            })(pi, r, m, match.a, match.b) : null;
+            matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, match.a, match.b));
+          }
+          col.appendChild(matchWrap);
+        });
+
+        box.appendChild(col);
+      });
+      els.bracketView.appendChild(box);
+
+      var poolStandingsHeading = document.createElement('p');
+      poolStandingsHeading.className = 'bracket-subtitle';
+      poolStandingsHeading.textContent = pool.name + ' — Standings';
+      els.bracketView.appendChild(poolStandingsHeading);
+      els.bracketView.appendChild(renderStandingsTable(poolStandingsFor(state, pi), {
+        hasSeeds: !!pool.seeds,
+        hasScores: prefixedHasScores(state, 'pool' + pi + '_'),
+        complete: poolRoundRobinComplete(pool)
+      }));
+    });
+
+    var bracketHeading = document.createElement('p');
+    bracketHeading.className = 'bracket-subtitle';
+    bracketHeading.textContent = 'Bracket';
+    els.bracketView.appendChild(bracketHeading);
+
+    if (!state.bracket) {
+      var actionWrap = document.createElement('div');
+      actionWrap.className = 'stage-action';
+      if (poolsComplete(state)) {
+        var genBtn = document.createElement('button');
+        genBtn.type = 'button';
+        genBtn.textContent = 'Generate bracket from pool results';
+        genBtn.addEventListener('click', generateBracketFromPools);
+        actionWrap.appendChild(genBtn);
+      } else {
+        var note = document.createElement('p');
+        note.className = 'hint';
+        note.style.cssText = 'margin:0;';
+        note.textContent = 'Finish every pool match to generate the elimination bracket.';
+        actionWrap.appendChild(note);
+      }
+      els.bracketView.appendChild(actionWrap);
+    } else {
+      renderPoolsBracketSection(els.bracketView);
+    }
+
+    updatePresentBar();
+  }
+
+  /* Renders `state.bracket` (a plain buildBracket() result) using the exact
+     same slot/round markup and click-to-advance convention as
+     renderSingle() above, but writing into `state.bracket` instead of
+     `state` and appending into the given container instead of directly into
+     els.bracketView — the pools section above has already put other content
+     there. A "regenerate" action re-seeds from the pools' current standings,
+     but only while the bracket has zero picks yet (autoAdvance byes don't
+     count — winnerSide only records a real advance), so a correction to a
+     pool score can't silently overwrite bracket results already in play. */
+  function renderPoolsBracketSection(container) {
+    var bracket = state.bracket;
+    autoAdvance(bracket);
+    var totalRounds = bracket.slots.length;
+    var box = document.createElement('div');
+    box.className = 'bracket';
+
+    bracket.slots.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = (r === totalRounds - 1) ? 'Champion' : 'Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === totalRounds - 1) {
+        var champ = round[0];
+        var slot = document.createElement('div');
+        slot.className = 'slot ' + (champ ? 'slot-winner' : 'slot-empty');
+        slot.textContent = champ || 'TBD';
+        var wrapMatch = document.createElement('div');
+        wrapMatch.className = 'match';
+        wrapMatch.appendChild(slot);
+        col.appendChild(wrapMatch);
+      } else {
+        var next = bracket.slots[r + 1];
+        for (var m = 0; m < next.length; m++) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          [0, 1].forEach(function (side) {
+            var idx = m * 2 + side;
+            var contestant = round[idx];
+            var decidedWinner = next[m];
+            var slotEl = document.createElement('div');
+            if (contestant === null) {
+              slotEl.textContent = 'BYE';
+              slotEl.className = 'slot slot-bye';
+            } else if (contestant === false) {
+              slotEl.textContent = 'TBD';
+              slotEl.className = 'slot slot-empty';
+            } else if (decidedWinner !== false) {
+              slotEl.textContent = contestant;
+              slotEl.className = 'slot slot-decided' + (bracket.winnerSide[(r + 1) + '_' + m] === idx ? ' slot-winner' : '');
+            } else {
+              slotEl.textContent = contestant;
+              slotEl.className = 'slot';
+              slotEl.addEventListener('click', (function (roundIdx, matchIdx, name, sourceIdx) {
+                return function () {
+                  captureUndoSnapshot();
+                  bracket.slots[roundIdx + 1][matchIdx] = name;
+                  bracket.winnerSide[(roundIdx + 1) + '_' + matchIdx] = sourceIdx;
+                  render();
+                };
+              })(r, m, contestant, idx));
+            }
+            matchWrap.appendChild(slotEl);
+          });
+
+          var isByeMatch = round[m * 2] === null || round[m * 2 + 1] === null;
+          if (!isByeMatch) {
+            var scoreKey = 'br_' + r + '_' + m;
+            var decideFn = (next[m] === false) ? (function (roundIdx, matchIdx, aName, bName) {
+              return function (aNum, bNum) {
+                if (bracket.slots[roundIdx + 1][matchIdx] !== false) return; // decided meanwhile
+                captureUndoSnapshot();
+                var aWins = aNum > bNum;
+                bracket.slots[roundIdx + 1][matchIdx] = aWins ? aName : bName;
+                bracket.winnerSide[(roundIdx + 1) + '_' + matchIdx] = aWins ? matchIdx * 2 : matchIdx * 2 + 1;
+              };
+            })(r, m, round[m * 2], round[m * 2 + 1]) : null;
+            matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, round[m * 2], round[m * 2 + 1]));
+          }
+
+          col.appendChild(matchWrap);
+        }
+      }
+      box.appendChild(col);
+    });
+    container.appendChild(box);
+
+    if (Object.keys(bracket.winnerSide).length === 0) {
+      var regenWrap = document.createElement('div');
+      regenWrap.className = 'stage-action';
+      var regenBtn = document.createElement('button');
+      regenBtn.type = 'button';
+      regenBtn.className = 'secondary';
+      regenBtn.textContent = 'Regenerate bracket seeding from pools';
+      regenBtn.title = 'Safe until the first bracket pick is made — rebuilds the seed order from the pools’ current standings.';
+      regenBtn.addEventListener('click', generateBracketFromPools);
+      regenWrap.appendChild(regenBtn);
+      container.appendChild(regenWrap);
+    }
+
+    var standingsHeading = document.createElement('p');
+    standingsHeading.className = 'bracket-subtitle';
+    standingsHeading.textContent = 'Bracket — Standings';
+    container.appendChild(standingsHeading);
+    var shim = { slots: bracket.slots, winnerSide: bracket.winnerSide, type: bracket.type, scores: bracketScoresView(state) };
+    container.appendChild(renderStandingsTable(computeEliminationStandings(shim), {
+      hasSeeds: false,
+      hasScores: prefixedHasScores(state, 'br_'),
+      championName: eliminationChampionName(shim)
+    }));
+
+    var champion = bracket.slots[totalRounds - 1][0];
+    if (champion) {
+      els.championBanner.textContent = '🏆 Champion: ' + champion;
+      els.championBanner.classList.add('show');
+    } else {
+      els.championBanner.classList.remove('show');
+    }
+  }
+
+  /* Blank/print counterpart of renderPools(): every pool's matchups (fully
+     known up front, same as round robin), no picks/scores/standings, and no
+     bracket section at all — which pools even advance isn't knowable until
+     pool play is scored, so there is nothing yet to print a prediction sheet
+     for. */
+  function renderBlankPools() {
+    if (!state) return;
+    els.bracketTitle.textContent = state.name;
+    els.bracketView.innerHTML = '';
+
+    state.pools.forEach(function (pool) {
+      var heading = document.createElement('p');
+      heading.className = 'bracket-subtitle';
+      heading.textContent = pool.name;
+      els.bracketView.appendChild(heading);
+
+      var box = document.createElement('div');
+      box.className = 'bracket';
+      pool.rounds.forEach(function (round, r) {
+        var col = document.createElement('div');
+        col.className = 'round';
+        var label = document.createElement('div');
+        label.className = 'round-label';
+        label.textContent = 'Round ' + (r + 1);
+        col.appendChild(label);
+
+        round.forEach(function (match) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          if (match.a == null || match.b == null) {
+            var byePlayer = match.a == null ? match.b : match.a;
+            var byeSlot = document.createElement('div');
+            byeSlot.className = 'slot slot-decided';
+            byeSlot.textContent = byePlayer;
+            matchWrap.appendChild(byeSlot);
+            var restSlot = document.createElement('div');
+            restSlot.className = 'slot slot-bye';
+            restSlot.textContent = 'Sitting out';
+            matchWrap.appendChild(restSlot);
+          } else {
+            [0, 1].forEach(function (side) {
+              var slotEl = document.createElement('div');
+              slotEl.textContent = side === 0 ? match.a : match.b;
+              slotEl.className = 'slot';
+              matchWrap.appendChild(slotEl);
+            });
+          }
+          col.appendChild(matchWrap);
+        });
+
+        box.appendChild(col);
+      });
+      els.bracketView.appendChild(box);
+    });
+
+    els.championBanner.classList.remove('show');
+  }
+
+  /* ---------- Swiss rendering ----------
+     Rounds render like round robin's, except a bye slot reads "BYE (win)"
+     — a Swiss bye is a decisive result, not round robin's neutral "sitting
+     out" (see computeSwissStandings) — and a "Generate next round" action
+     appears once the latest round is fully decided and more rounds remain. */
+  function renderSwiss() {
+    if (!state) return;
+    save();
+    refreshSwitcher();
+
+    els.setupCard.style.display = 'none';
+    els.bracketCard.style.display = '';
+    els.toolbar.style.display = '';
+    els.bracketTitle.textContent = state.name;
+
+    els.bracketView.innerHTML = '';
+    var swHeading = document.createElement('p');
+    swHeading.className = 'bracket-subtitle';
+    swHeading.textContent = 'Swiss Rounds';
+    els.bracketView.appendChild(swHeading);
+
+    var swBox = document.createElement('div');
+    swBox.className = 'bracket';
+    state.rounds.forEach(function (round, r) {
+      var col = document.createElement('div');
+      col.className = 'round';
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = 'Round ' + (r + 1);
+      col.appendChild(label);
+
+      round.forEach(function (match, m) {
+        var matchWrap = document.createElement('div');
+        matchWrap.className = 'match';
+        if (match.b == null) {
+          var byeSlot = document.createElement('div');
+          byeSlot.className = 'slot slot-winner';
+          byeSlot.textContent = match.a + ' — BYE (win)';
+          matchWrap.appendChild(byeSlot);
+        } else {
+          [0, 1].forEach(function (side) {
+            var pname = side === 0 ? match.a : match.b;
+            var slotEl = document.createElement('div');
+            if (match.winner !== null) {
+              slotEl.textContent = pname;
+              slotEl.className = 'slot slot-decided' + (match.winner === side ? ' slot-winner' : '');
+            } else {
+              slotEl.textContent = pname;
+              slotEl.className = 'slot';
+              slotEl.addEventListener('click', (function (roundIdx, matchIdx, sideIdx) {
+                return function () {
+                  captureUndoSnapshot();
+                  state.rounds[roundIdx][matchIdx].winner = sideIdx;
+                  render();
+                };
+              })(r, m, side));
+            }
+            matchWrap.appendChild(slotEl);
+          });
+
+          var scoreKey = 'rr' + r + '_' + m;
+          var decideFn = (match.winner === null) ? (function (roundIdx, matchIdx, aName, bName) {
+            return function (aNum, bNum) {
+              if (state.rounds[roundIdx][matchIdx].winner !== null) return; // decided meanwhile
+              captureUndoSnapshot();
+              state.rounds[roundIdx][matchIdx].winner = aNum > bNum ? 0 : 1;
+            };
+          })(r, m, match.a, match.b) : null;
+          matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, match.a, match.b));
+        }
+        col.appendChild(matchWrap);
+      });
+
+      swBox.appendChild(col);
+    });
+    els.bracketView.appendChild(swBox);
+
+    var lastRound = state.rounds[state.rounds.length - 1];
+    var lastDecided = lastRound.every(function (m) { return m.b == null || m.winner !== null; });
+    if (lastDecided && state.rounds.length < state.numRounds) {
+      var actionWrap = document.createElement('div');
+      actionWrap.className = 'stage-action';
+      var nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.textContent = 'Generate Round ' + (state.rounds.length + 1) + ' pairings';
+      nextBtn.addEventListener('click', function () {
+        captureUndoSnapshot();
+        state.rounds.push(buildSwissRound(state));
+        render();
+      });
+      actionWrap.appendChild(nextBtn);
+      els.bracketView.appendChild(actionWrap);
+    }
+
+    var standingsHeading = document.createElement('p');
+    standingsHeading.className = 'bracket-subtitle';
+    standingsHeading.textContent = 'Standings';
+    els.bracketView.appendChild(standingsHeading);
+    var complete = lastDecided && state.rounds.length === state.numRounds;
+    els.bracketView.appendChild(renderStandingsTable(computeSwissStandings(state), {
+      hasSeeds: !!state.seeds,
+      hasScores: standingsHasScores(state),
+      complete: complete
+    }));
+
+    if (complete) {
+      var finalStandings = computeSwissStandings(state);
+      var topWins = finalStandings.length ? finalStandings[0].w : 0;
+      var leaders = finalStandings.filter(function (row) { return row.w === topWins; }).map(function (row) { return row.name; });
+      els.championBanner.textContent = (leaders.length > 1 ? '🏆 Co-Champions: ' : '🏆 Champion: ') + leaders.join(' & ');
+      els.championBanner.classList.add('show');
+    } else {
+      els.championBanner.classList.remove('show');
+    }
+    updatePresentBar();
+  }
+
+  /* Blank/print counterpart of renderSwiss(): round 1's pairings are always
+     knowable up front (built at generation time) and print filled in;
+     rounds 2+ depend on results as they come in, so they print as blank
+     placeholder columns sized to the field, the same "round 0 only" print
+     philosophy the elimination formats use for their own later rounds. */
+  function renderBlankSwiss() {
+    if (!state) return;
+    els.bracketTitle.textContent = state.name;
+    els.bracketView.innerHTML = '';
+
+    var swHeading = document.createElement('p');
+    swHeading.className = 'bracket-subtitle';
+    swHeading.textContent = 'Swiss Rounds';
+    els.bracketView.appendChild(swHeading);
+
+    var swBox = document.createElement('div');
+    swBox.className = 'bracket';
+    var round1 = state.rounds[0];
+    var matchesPerRound = Math.floor(state.players.length / 2);
+
+    for (var r = 0; r < state.numRounds; r++) {
+      var col = document.createElement('div');
+      col.className = 'round';
+      var label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = 'Round ' + (r + 1);
+      col.appendChild(label);
+
+      if (r === 0) {
+        round1.forEach(function (match) {
+          var matchWrap = document.createElement('div');
+          matchWrap.className = 'match';
+          if (match.b == null) {
+            var byeSlot = document.createElement('div');
+            byeSlot.className = 'slot slot-bye';
+            byeSlot.textContent = match.a + ' — BYE';
+            matchWrap.appendChild(byeSlot);
+          } else {
+            [0, 1].forEach(function (side) {
+              var slotEl = document.createElement('div');
+              slotEl.textContent = side === 0 ? match.a : match.b;
+              slotEl.className = 'slot';
+              matchWrap.appendChild(slotEl);
+            });
+          }
+          col.appendChild(matchWrap);
+        });
+      } else {
+        for (var m = 0; m < matchesPerRound; m++) {
+          var blankWrap = document.createElement('div');
+          blankWrap.className = 'match';
+          [0, 1].forEach(function () {
+            var slotEl = document.createElement('div');
+            slotEl.textContent = 'TBD';
+            slotEl.className = 'slot slot-empty';
+            blankWrap.appendChild(slotEl);
+          });
+          col.appendChild(blankWrap);
+        }
+      }
+      swBox.appendChild(col);
+    }
+    els.bracketView.appendChild(swBox);
+
+    els.championBanner.classList.remove('show');
+  }
+
   /* Score entries were free text before this round ("21-18", or nothing
      parseable at all) — now they're a structured { a, b } number pair the
      standings tables above derive win/loss and point differential from. On
@@ -2139,8 +2977,11 @@
     if (!loaded) return;
     state = loaded;
     undoSnapshot = null; // undo never reaches across a bracket switch
-    if (state.type === 'roundrobin') {
+    if (state.type === 'roundrobin' || state.type === 'swiss') {
       if (!state.scores) state.scores = {};
+    } else if (state.type === 'pools') {
+      if (!state.scores) state.scores = {};
+      if (state.bracket === undefined) state.bracket = null;
     } else {
       if (!state.winnerSide) state.winnerSide = {}; // brackets saved before this field existed
       if (!state.scores) state.scores = {}; // brackets saved before this field existed
@@ -2166,6 +3007,10 @@
     els.contestants.value = '';
     els.bracketType.value = 'single';
     els.seedMode.value = 'random';
+    els.poolCount.value = '2';
+    els.poolAdvance.value = '2';
+    els.swissRounds.value = '4';
+    updateFormatFields();
     populateRosterSelect();
     refreshSwitcher();
   }
@@ -2176,6 +3021,15 @@
     return buildBracket(name, names, seedMode);
   }
 
+  /* Shows/hides the setup fields that only apply to one bracket type
+     (pool count/advance for Pools, round count for Swiss). */
+  function updateFormatFields() {
+    var type = els.bracketType.value;
+    els.poolsFields.style.display = (type === 'pools') ? '' : 'none';
+    els.swissFields.style.display = (type === 'swiss') ? '' : 'none';
+  }
+  els.bracketType.addEventListener('change', updateFormatFields);
+
   els.generateBtn.addEventListener('click', function () {
     var names = parseNames(els.contestants.value);
     if (names.length < 2) {
@@ -2183,7 +3037,18 @@
       return;
     }
     var name = els.bracketName.value.trim() || ('Bracket ' + new Date().toISOString().slice(0, 10));
-    state = buildForType(els.bracketType.value, name, names, els.seedMode.value);
+    var type = els.bracketType.value;
+    if (type === 'pools') {
+      var numPools = parseInt(els.poolCount.value, 10) || 2;
+      numPools = Math.max(1, Math.min(numPools, Math.floor(names.length / 2) || 1));
+      var advance = Math.max(1, parseInt(els.poolAdvance.value, 10) || 1);
+      state = buildPools(name, names, els.seedMode.value, numPools, advance);
+    } else if (type === 'swiss') {
+      var numRounds = Math.max(1, parseInt(els.swissRounds.value, 10) || 1);
+      state = buildSwiss(name, names, els.seedMode.value, numRounds);
+    } else {
+      state = buildForType(type, name, names, els.seedMode.value);
+    }
     undoSnapshot = null;
     BracketStore.setCurrentName(name);
     refreshSwitcher();
@@ -2209,6 +3074,19 @@
       state = buildRoundRobin(state.name, state.players, 'asEntered');
       if (schedule) state.schedule = schedule;
       if (seeds) state.seeds = seeds;
+    } else if (state.type === 'pools') {
+      // Keeps the same pool membership/order — only clears results, the
+      // embedded bracket, and every pool/bracket score, matching the other
+      // formats' "structure survives, results don't" reset.
+      state.pools.forEach(function (pool) {
+        pool.rounds.forEach(function (round) { round.forEach(function (m) { m.winner = null; }); });
+      });
+      state.bracket = null;
+      Object.keys(state.scores || {}).forEach(function (k) {
+        if (k.indexOf('pool') === 0 || k.indexOf('br_') === 0) delete state.scores[k];
+      });
+    } else if (state.type === 'swiss') {
+      state = buildSwiss(state.name, state.players, 'asEntered', state.numRounds);
     } else {
       var round0 = state.slots[0];
       var entrants = round0.filter(function (n) { return n != null; });
