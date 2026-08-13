@@ -18,6 +18,7 @@
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="exit-ticket-generator/etg-sequence.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -73,6 +74,42 @@
   /* ── Prompt & Display tab ────────────────────────────────────────── */
   .controls { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin-bottom: 1.1rem; }
   .controls select { min-width: 14rem; }
+
+  /* ── Mode tabs: shuffle vs. planned sequence ───────────────────────── */
+  .mode-tabs { display: flex; gap: .5rem; margin-bottom: .8rem; }
+  .mode-tabs .pill {
+    font-size: .85rem; font-weight: 700; padding: .4rem .9rem; border-radius: 999px; cursor: pointer;
+    background: #fff; color: var(--muted); border: 1px solid var(--line-strong);
+  }
+  .mode-tabs .pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mode-tabs .pill:hover:not(.active) { border-color: var(--accent-2); color: var(--accent-2); }
+
+  .seq-nav { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .9rem; }
+  .seq-nav select { min-width: 14rem; }
+  .seq-day { font-family: Consolas, monospace; font-size: .82rem; color: var(--muted); white-space: nowrap; }
+  .seq-nav button:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── Prompt Sets ──────────────────────────────────────────────────── */
+  .set-editor-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; align-items: center; }
+  .set-editor-row input[type="text"] { flex: 1 1 16rem; }
+  .set-date-label { display: flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--muted); font-weight: 400; margin: 0; }
+  .set-date-label input[type="date"] { font-family: inherit; font-size: .85rem; padding: .4rem .5rem; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink); }
+  .set-add-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .set-add-manual { display: flex; flex-direction: column; gap: .6rem; padding: .8rem; border: 1px dashed var(--line-strong); border-radius: 8px; margin-bottom: .9rem; }
+  .set-items { list-style: none; margin: 0; padding: 0; }
+  .set-items li { display: flex; align-items: flex-start; gap: .6rem; padding: .6rem 0; border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
+  .set-items li:last-child { border-bottom: none; }
+  .set-items .si-day { font-family: Consolas, monospace; font-size: .72rem; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 4px; padding: .1rem .4rem; flex-shrink: 0; margin-top: .15rem; }
+  .set-items .si-body { flex: 1 1 14rem; min-width: 0; }
+  .set-items .si-text { font-size: .9rem; margin-bottom: .35rem; }
+  .set-items .si-tags { display: flex; gap: .3rem; flex-wrap: wrap; }
+  .set-items .si-tags .tag { font-family: Consolas, monospace; font-size: .66rem; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 4px; padding: .1rem .35rem; }
+  .set-items .si-btns { display: flex; gap: .3rem; flex-shrink: 0; align-items: center; }
+  .set-items .si-btns button { font-size: .78rem; padding: .25rem .5rem; background: #fff; color: var(--muted); border: 1px solid var(--line-strong); }
+  .set-items .si-btns button:hover:not(:disabled) { color: var(--accent-2); border-color: var(--accent-2); }
+  .set-items .si-btns button:disabled { opacity: .35; cursor: not-allowed; }
+  .set-items .si-btns .remove-btn { color: var(--err); border-color: var(--err); }
+  .set-items .si-btns .remove-btn:hover { background: var(--err); color: #fff; }
 
   .stage {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -347,6 +384,19 @@
       <button type="button" class="secondary" id="fullscreenBtn" title="Toggle fullscreen (F)">&#9974; Fullscreen</button>
     </div>
 
+    <div class="mode-tabs" id="modeTabs">
+      <div class="pill active" data-mode="shuffle">Shuffle</div>
+      <div class="pill" data-mode="sequence">Planned Sequence</div>
+    </div>
+
+    <div class="seq-nav" id="seqNavRow" style="display:none;">
+      <select id="seqSetSelect"><option value="">Create a prompt set below&hellip;</option></select>
+      <button type="button" class="secondary" id="seqPrevBtn">&larr; Prev</button>
+      <span class="seq-day" id="seqDayLabel"></span>
+      <button type="button" class="secondary" id="seqNextBtn">Next &rarr;</button>
+      <button type="button" id="seqJumpBtn" style="display:none;">Jump to today</button>
+    </div>
+
     <div class="stage" id="stage">
       <p class="prompt-text empty" id="promptText">Press Shuffle to get a prompt.</p>
       <p class="think-timer" id="thinkTimer" aria-live="polite"></p>
@@ -368,6 +418,34 @@
       </div>
       <div id="bankList"></div>
       <p class="hint">Saved prompts stay on this device across visits. Check &ldquo;Also include My Prompts&rdquo; above, or pick &ldquo;My Prompts (only)&rdquo; from the category list, to draw from them.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Prompt Sets</span>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+          <select id="setSelect"><option value="">+ New set&hellip;</option></select>
+          <button type="button" class="secondary" id="deleteSetBtn" disabled>Delete set</button>
+        </div>
+      </div>
+      <p class="hint" style="margin:0 0 .8rem;">Plan a prompt per day for a week or unit &mdash; in order, instead of a shuffle each morning. Switch to &ldquo;Planned Sequence&rdquo; above to display one.</p>
+      <div id="setEditor" style="display:none;">
+        <div class="set-editor-row">
+          <input type="text" id="setNameInput" placeholder="Set name (e.g. Week 3 Warm-Ups)">
+          <label class="set-date-label">Start date <input type="date" id="setStartDate"></label>
+        </div>
+        <div class="set-add-row">
+          <button type="button" class="secondary" id="addRandomToSetBtn">+ Add random prompt (current filters)</button>
+          <span class="hint">or add a specific one below</span>
+        </div>
+        <div class="set-add-manual">
+          <textarea id="setItemText" rows="2" placeholder="Type or paste a prompt&hellip;"></textarea>
+          <select id="setItemCategory" style="max-width:16rem;"></select>
+          <button type="button" id="addManualToSetBtn">Add to set</button>
+        </div>
+        <ol class="set-items" id="setItemsList"></ol>
+      </div>
+      <p class="bank-empty" id="setEmptyMsg">No prompt sets yet &mdash; choose &ldquo;+ New set&hellip;&rdquo; above to plan one.</p>
     </div>
 
     <div class="history">
@@ -585,6 +663,8 @@
   var CAT_TALLY_KEY = 'gvb-exit-ticket:categoryTally';
   var TRIAGE_KEY = 'gvb-exit-ticket:triage';
   var DISCUSSION_KEY = 'gvb-exit-ticket:discussion';
+  var SETS_KEY = 'gvb-exit-ticket:sets';
+  var ACTIVE_SET_KEY = 'gvb-exit-ticket:activeSet';
   var NP_ROSTERS_KEY = 'np_rosters';
   var HISTORY_LIMIT = 10;
   var AVOID_REPEAT_WINDOW = 8;
@@ -605,7 +685,10 @@
    'triageResultsCard', 'triageResults', 'printTriageBtn', 'triagePrintArea',
    'discussionInput', 'addDiscussionBtn', 'discussionManageList', 'clearDiscussionBtn',
    'discussionStage', 'discussionBoard', 'discussionEmpty', 'discussionFullscreenBtn',
-   'batchModeCheck', 'batchRosterRow', 'batchRosterSelect', 'batchNamesInput'
+   'batchModeCheck', 'batchRosterRow', 'batchRosterSelect', 'batchNamesInput',
+   'modeTabs', 'seqNavRow', 'seqSetSelect', 'seqPrevBtn', 'seqDayLabel', 'seqNextBtn', 'seqJumpBtn',
+   'setSelect', 'deleteSetBtn', 'setEditor', 'setNameInput', 'setStartDate', 'addRandomToSetBtn',
+   'setItemText', 'setItemCategory', 'addManualToSetBtn', 'setItemsList', 'setEmptyMsg'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var THINK_TIME_OPTIONS = [0, 30, 60, 120];
@@ -729,7 +812,7 @@
     { cat: 'sel', text: "What's one small thing that would make tomorrow better for you?" }
   ];
 
-  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false, answerStyle: 'lines', answerSpace: 'auto' };
+  var settings = { category: 'all', perPage: 2, showName: true, showDate: true, includeMine: false, thinkTime: 0, slipMode: 'same', qrEnabled: false, qrUrl: '', batchMode: false, answerStyle: 'lines', answerSpace: 'auto', mode: 'shuffle' };
   var currentPrompt = { cat: '', text: '' };
   var history = []; // [{ cat, text }], most recent first
   var customBank = []; // [{ id, text }], the teacher's saved persistent prompts
@@ -738,6 +821,15 @@
   var differentSlipPrompts = []; // texts, one per slip, when settings.slipMode === 'different'
   var batchSlipPrompts = []; // texts, one per roster name, when batchMode + settings.slipMode === 'different'
   var tally = [0, 0, 0, 0]; // taps for options 1-4
+
+  // Prompt Sets: a teacher-planned day-by-day sequence, advanced by school
+  // date or by hand, instead of a random draw each morning. A separate
+  // record from the shuffle history / tally / triage logs above — adding or
+  // stepping through a set never touches those. Mirrors Writing Prompt
+  // Generator's Prompt Sets (Tools/025-writing-prompt-generator.html).
+  var promptSets = []; // {id, name, startDate: 'YYYY-MM-DD'|null, cursor, items: [{id, category, text}]} — persisted across sessions
+  var selectedSetId = null; // which set is shown/edited right now — persisted so a reload reopens the same one
+  var shufflePrompt = null; // last shuffle-mode pick (or custom "Use This Prompt"), kept separately so switching to Planned Sequence and back doesn't lose or reshuffle it — session-only, matching `history` above
   var catTally = { categories: [], history: [] }; // categories: [{id, label, count}], history: [{ts, total, entries:[{id,label,count}]}]
   var triage = { groupSize: 4, students: [] }; // students: [{ id, name, status }], status: '' | 'got' | 'almost' | 'reteach'
   var triageCurrentId = null;
@@ -776,6 +868,8 @@
     // before it, which is why these are defaulted above rather than assumed.
     if (ANSWER_STYLES.indexOf(saved.answerStyle) !== -1) settings.answerStyle = saved.answerStyle;
     if (Object.prototype.hasOwnProperty.call(ANSWER_SPACE, saved.answerSpace)) settings.answerSpace = saved.answerSpace;
+    // Added with Prompt Sets — absent from every settings blob saved before it.
+    if (saved.mode === 'shuffle' || saved.mode === 'sequence') settings.mode = saved.mode;
   }
 
   function loadCustomBank() {
@@ -879,6 +973,29 @@
     catch (e) { /* private browsing / storage full — silently skip */ }
   }
 
+  function loadSets() {
+    try {
+      var raw = localStorage.getItem(SETS_KEY);
+      if (!raw) return [];
+      var v = JSON.parse(raw);
+      return Array.isArray(v) ? v : [];
+    } catch (e) { return []; }
+  }
+  function saveSets() {
+    try { localStorage.setItem(SETS_KEY, JSON.stringify(promptSets)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+  function loadActiveSetId() {
+    try { return localStorage.getItem(ACTIVE_SET_KEY) || null; }
+    catch (e) { return null; }
+  }
+  function saveActiveSetId() {
+    try {
+      if (selectedSetId) localStorage.setItem(ACTIVE_SET_KEY, selectedSetId);
+      else localStorage.removeItem(ACTIVE_SET_KEY);
+    } catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
   function loadNpRosters() {
     try {
       var v = JSON.parse(localStorage.getItem(NP_ROSTERS_KEY) || '{}');
@@ -887,6 +1004,11 @@
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+  function todayStr() {
+    var d = new Date();
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -943,6 +1065,7 @@
     var items = pool();
     if (!items.length) {
       currentPrompt = { cat: '', text: '' };
+      shufflePrompt = currentPrompt;
       renderStage();
       stopThinkTimer();
       renderHandoutPromptDisplay();
@@ -955,6 +1078,7 @@
     var pick = candidates[Math.floor(Math.random() * candidates.length)];
 
     currentPrompt = { cat: pick.cat, text: pick.text };
+    shufflePrompt = currentPrompt;
     els.customPrompt.value = '';
     pushHistory(currentPrompt);
     renderStage();
@@ -968,6 +1092,7 @@
     var val = els.customPrompt.value.trim();
     if (!val) return;
     currentPrompt = { cat: 'custom', text: val };
+    shufflePrompt = currentPrompt;
     pushHistory(currentPrompt);
     renderStage();
     startThinkTimer();
@@ -997,6 +1122,250 @@
     els.historyList.innerHTML = history.map(function (h) {
       return '<li><span class="h-tag">' + escapeHtml(categoryLabel(h.cat)) + '</span>' + escapeHtml(h.text) + '</li>';
     }).join('');
+  }
+
+  // ── Mode switching (shuffle vs. planned sequence) ─────────────────────────
+  function switchMode(mode) {
+    settings.mode = mode;
+    saveSettings();
+    Array.prototype.slice.call(els.modeTabs.querySelectorAll('.pill')).forEach(function (p) {
+      p.classList.toggle('active', p.dataset.mode === mode);
+    });
+    els.shuffleBtn.style.display = mode === 'shuffle' ? '' : 'none';
+    els.seqNavRow.style.display = mode === 'sequence' ? '' : 'none';
+    if (mode === 'sequence') {
+      renderSequenceStage();
+    } else {
+      currentPrompt = shufflePrompt || { cat: '', text: '' };
+      renderStage();
+      startThinkTimer();
+      renderHandoutPromptDisplay();
+      renderHandout();
+    }
+  }
+
+  // ── Prompt Sets (sequenced days, planned ahead of time) ───────────────────
+  // A set's item list is its own record — nothing here reads or writes the
+  // shuffle `history`, Quick Tally, Paper Triage or Discussion Board data.
+  function currentSet() {
+    return promptSets.filter(function (s) { return s.id === selectedSetId; })[0] || null;
+  }
+
+  function clampSetCursor(set) {
+    var idx = EtgSequence.clampIndex(set.cursor || 0, set.items.length);
+    set.cursor = idx;
+    return idx;
+  }
+
+  function suggestedSetIndex(set) {
+    return EtgSequence.suggestedIndex(set.items.length, set.startDate, todayStr());
+  }
+
+  function renderSetSelects() {
+    var opts = '<option value="">+ New set&hellip;</option>' + promptSets.map(function (s) {
+      return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.name) + ' (' + s.items.length + ')</option>';
+    }).join('');
+    els.setSelect.innerHTML = opts;
+    els.setSelect.value = selectedSetId || '';
+    var setOpts = promptSets.map(function (s) {
+      return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.name) + ' (' + s.items.length + ')</option>';
+    }).join('');
+    els.seqSetSelect.innerHTML = promptSets.length
+      ? (selectedSetId ? setOpts : '<option value="">Choose a set&hellip;</option>' + setOpts)
+      : '<option value="">Create a prompt set below&hellip;</option>';
+    els.seqSetSelect.value = selectedSetId || '';
+  }
+
+  function selectSet(id) {
+    selectedSetId = id || null;
+    saveActiveSetId();
+    renderSetSelects();
+    renderSetEditor();
+    if (settings.mode === 'sequence') renderSequenceStage();
+  }
+
+  function createSet() {
+    var base = 'Untitled Set';
+    var name = base;
+    var n = 2;
+    while (promptSets.some(function (s) { return s.name === name; })) { name = base + ' (' + n + ')'; n++; }
+    var set = { id: 'set' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, startDate: null, cursor: 0, items: [] };
+    promptSets.push(set);
+    saveSets();
+    selectSet(set.id);
+    els.setNameInput.focus();
+    els.setNameInput.select();
+  }
+
+  function deleteSet() {
+    var set = currentSet();
+    if (!set) return;
+    if (!confirm('Delete "' + set.name + '" and all its planned prompts? This cannot be undone.')) return;
+    promptSets = promptSets.filter(function (s) { return s.id !== set.id; });
+    saveSets();
+    selectSet(null);
+  }
+
+  function renderSetEditor() {
+    var set = currentSet();
+    els.deleteSetBtn.disabled = !set;
+    if (!set) {
+      els.setEditor.style.display = 'none';
+      els.setEmptyMsg.style.display = '';
+      els.setEmptyMsg.textContent = promptSets.length
+        ? 'Pick a set above to edit it, or choose “+ New set…” to plan another.'
+        : 'No prompt sets yet — choose “+ New set…” above to plan one.';
+      return;
+    }
+    els.setEditor.style.display = '';
+    els.setEmptyMsg.style.display = 'none';
+    els.setNameInput.value = set.name;
+    els.setStartDate.value = set.startDate || '';
+    renderSetItemsList(set);
+  }
+
+  function renderSetItemsList(set) {
+    if (!set.items.length) {
+      els.setItemsList.innerHTML = '<li class="bank-empty" style="border:none;padding:.4rem 0;">No prompts in this set yet &mdash; add one above.</li>';
+      return;
+    }
+    els.setItemsList.innerHTML = set.items.map(function (it, idx) {
+      return '<li data-id="' + escapeHtml(it.id) + '">' +
+        '<span class="si-day">Day ' + (idx + 1) + '</span>' +
+        '<span class="si-body">' +
+          '<span class="si-text">' + escapeHtml(it.text) + '</span>' +
+          '<span class="si-tags"><span class="tag">' + escapeHtml(categoryLabel(it.category)) + '</span></span>' +
+        '</span>' +
+        '<span class="si-btns">' +
+          '<button type="button" class="up-btn" data-id="' + escapeHtml(it.id) + '"' + (idx === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+          '<button type="button" class="down-btn" data-id="' + escapeHtml(it.id) + '"' + (idx === set.items.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+          '<button type="button" class="remove-btn" data-id="' + escapeHtml(it.id) + '">Remove</button>' +
+        '</span>' +
+      '</li>';
+    }).join('');
+
+    Array.prototype.forEach.call(els.setItemsList.querySelectorAll('.up-btn'), function (btn) {
+      btn.addEventListener('click', function () { moveSetItem(set, btn.dataset.id, -1); });
+    });
+    Array.prototype.forEach.call(els.setItemsList.querySelectorAll('.down-btn'), function (btn) {
+      btn.addEventListener('click', function () { moveSetItem(set, btn.dataset.id, 1); });
+    });
+    Array.prototype.forEach.call(els.setItemsList.querySelectorAll('.remove-btn'), function (btn) {
+      btn.addEventListener('click', function () { removeSetItem(set, btn.dataset.id); });
+    });
+  }
+
+  function moveSetItem(set, id, dir) {
+    var idx = set.items.findIndex(function (i) { return i.id === id; });
+    var swapIdx = idx + dir;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= set.items.length) return;
+    var tmp = set.items[idx]; set.items[idx] = set.items[swapIdx]; set.items[swapIdx] = tmp;
+    saveSets();
+    renderSetItemsList(set);
+    if (settings.mode === 'sequence' && currentSet() === set) renderSequenceStage();
+  }
+
+  function removeSetItem(set, id) {
+    var idx = set.items.findIndex(function (i) { return i.id === id; });
+    if (idx === -1) return;
+    set.items.splice(idx, 1);
+    if (set.cursor >= set.items.length) set.cursor = Math.max(0, set.items.length - 1);
+    saveSets();
+    renderSetSelects();
+    renderSetItemsList(set);
+    if (settings.mode === 'sequence' && currentSet() === set) renderSequenceStage();
+  }
+
+  function addRandomToSet() {
+    var set = currentSet();
+    if (!set) return;
+    var items = pool();
+    if (!items.length) return;
+    var existingTexts = set.items.map(function (i) { return i.text; });
+    var fresh = items.filter(function (i) { return existingTexts.indexOf(i.text) === -1; });
+    var candidates = fresh.length ? fresh : items;
+    var pick = candidates[Math.floor(Math.random() * candidates.length)];
+    set.items.push({ id: 'si' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), category: pick.cat, text: pick.text });
+    saveSets();
+    renderSetSelects();
+    renderSetItemsList(set);
+    if (settings.mode === 'sequence' && currentSet() === set) renderSequenceStage();
+  }
+
+  function addManualToSet() {
+    var set = currentSet();
+    if (!set) return;
+    var text = els.setItemText.value.trim();
+    if (!text) return;
+    set.items.push({
+      id: 'si' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      category: els.setItemCategory.value,
+      text: text
+    });
+    saveSets();
+    els.setItemText.value = '';
+    renderSetSelects();
+    renderSetItemsList(set);
+    if (settings.mode === 'sequence' && currentSet() === set) renderSequenceStage();
+  }
+
+  function buildSetItemCategorySelect() {
+    CATEGORIES.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.key; opt.textContent = c.label;
+      els.setItemCategory.appendChild(opt);
+    });
+  }
+
+  function renderSequenceStage() {
+    var set = currentSet();
+    if (!set || !set.items.length) {
+      currentPrompt = { cat: '', text: '' };
+      els.promptText.textContent = promptSets.length
+        ? 'Pick a prompt set above, or add prompts to it below.'
+        : 'Create a prompt set below, then come back here.';
+      els.promptText.classList.add('empty');
+      els.metaRow.innerHTML = '';
+      els.seqDayLabel.textContent = '';
+      els.seqPrevBtn.disabled = true;
+      els.seqNextBtn.disabled = true;
+      els.seqJumpBtn.style.display = 'none';
+      stopThinkTimer();
+      renderHandoutPromptDisplay();
+      renderHandout();
+      return;
+    }
+    var idx = clampSetCursor(set);
+    saveSets();
+    var item = set.items[idx];
+    currentPrompt = { cat: item.category, text: item.text };
+    renderStage();
+    els.seqDayLabel.textContent = 'Day ' + (idx + 1) + ' of ' + set.items.length;
+    els.seqPrevBtn.disabled = idx === 0;
+    els.seqNextBtn.disabled = idx === set.items.length - 1;
+    var suggested = suggestedSetIndex(set);
+    els.seqJumpBtn.style.display = (suggested !== null && suggested !== idx) ? '' : 'none';
+    startThinkTimer();
+    renderHandoutPromptDisplay();
+    renderHandout();
+  }
+
+  function sequenceStep(dir) {
+    var set = currentSet();
+    if (!set) return;
+    set.cursor = EtgSequence.nextCursor(set.cursor, dir, set.items.length);
+    saveSets();
+    renderSequenceStage();
+  }
+
+  function sequenceJumpToToday() {
+    var set = currentSet();
+    if (!set) return;
+    var suggested = suggestedSetIndex(set);
+    if (suggested === null) return;
+    set.cursor = suggested;
+    saveSets();
+    renderSequenceStage();
   }
 
   // ── Think-time countdown ─────────────────────────────────────────────────
@@ -1062,6 +1431,40 @@
     saveSettings();
     startThinkTimer();
   });
+
+  // ── Mode tabs ───────────────────────────────────────────────────────────
+  Array.prototype.slice.call(els.modeTabs.querySelectorAll('.pill')).forEach(function (p) {
+    p.addEventListener('click', function () { switchMode(p.dataset.mode); });
+  });
+
+  // ── Prompt Sets ─────────────────────────────────────────────────────────
+  els.setSelect.addEventListener('change', function () {
+    if (els.setSelect.value) selectSet(els.setSelect.value);
+    else createSet();
+  });
+  els.seqSetSelect.addEventListener('change', function () {
+    if (els.seqSetSelect.value) selectSet(els.seqSetSelect.value);
+  });
+  els.deleteSetBtn.addEventListener('click', deleteSet);
+  els.setNameInput.addEventListener('input', function () {
+    var set = currentSet();
+    if (!set) return;
+    set.name = els.setNameInput.value.trim() || 'Untitled Set';
+    saveSets();
+    renderSetSelects();
+  });
+  els.setStartDate.addEventListener('change', function () {
+    var set = currentSet();
+    if (!set) return;
+    set.startDate = EtgSequence.isDateStr(els.setStartDate.value) ? els.setStartDate.value : null;
+    saveSets();
+    if (settings.mode === 'sequence') renderSequenceStage();
+  });
+  els.addRandomToSetBtn.addEventListener('click', addRandomToSet);
+  els.addManualToSetBtn.addEventListener('click', addManualToSet);
+  els.seqPrevBtn.addEventListener('click', function () { sequenceStep(-1); });
+  els.seqNextBtn.addEventListener('click', function () { sequenceStep(1); });
+  els.seqJumpBtn.addEventListener('click', sequenceJumpToToday);
 
   // ── Fullscreen / projector mode ──────────────────────────────────────────
   function updateFullscreenLabel() {
@@ -1936,7 +2339,29 @@
   discussionResponses = loadDiscussion();
   renderDiscussion();
 
-  pickPrompt();
+  // Prompt Sets: loaded after CATEGORIES/MINE_KEY exist above, so item
+  // categories can be validated against the real list.
+  (function loadPromptSets() {
+    var validItemCats = CATEGORIES.map(function (c) { return c.key; }).concat(['custom', MINE_KEY]);
+    promptSets = loadSets().filter(function (s) {
+      return s && typeof s.id === 'string' && typeof s.name === 'string' && Array.isArray(s.items);
+    }).map(function (s) {
+      var items = s.items.filter(function (it) {
+        return it && typeof it.id === 'string' && typeof it.text === 'string' && it.text.trim() &&
+          validItemCats.indexOf(it.category) !== -1;
+      }).map(function (it) { return { id: it.id, category: it.category, text: it.text }; });
+      var cursor = typeof s.cursor === 'number' && s.cursor >= 0 ? Math.floor(s.cursor) : 0;
+      return { id: s.id, name: s.name, startDate: EtgSequence.isDateStr(s.startDate) ? s.startDate : null, cursor: cursor, items: items };
+    });
+    selectedSetId = loadActiveSetId();
+    if (selectedSetId && !promptSets.some(function (s) { return s.id === selectedSetId; })) selectedSetId = null;
+  })();
+  buildSetItemCategorySelect();
+  renderSetSelects();
+  renderSetEditor();
+
+  switchMode(settings.mode);
+  if (settings.mode === 'shuffle') pickPrompt();
   if (settings.slipMode === 'different' && !settings.batchMode) refreshDifferentSlipPrompts();
   else if (settings.batchMode) renderHandout();
 })();

@@ -9,6 +9,42 @@
 
 ## Status
 
+**2026-08-13.** **Bell-ringer sequences**, shipped as **Prompt Sets** — the
+oldest still-open Major Feature in this file. The Prompt & Display tab now
+has a Shuffle / Planned Sequence mode toggle; Planned Sequence shows a
+teacher-built day-by-day list (a new "Prompt Sets" card: add/reorder/remove
+items, random-from-current-filters or manual entry, a name and an optional
+start date) instead of a random draw.
+
+- Mirrors Writing Prompt Generator's Prompt Sets (`025-writing-prompt-generator.html`)
+  cadence, per the P7 convergence note above: school-day-counted advancement
+  from the set's start date (Mon-Fri only, start date = Day 1), a "Jump to
+  today" button that appears only when the cursor isn't already there and
+  hides once it is, and manual Prev/Next that clamps at either end instead of
+  walking off the list.
+- The date/cursor math is a pure module, `Tools/exit-ticket-generator/etg-sequence.js`
+  (`schoolDaysSince`, `clampIndex`, `nextCursor`, `suggestedIndex`), shared
+  between the tool and its tests rather than duplicated — same "pull the logic
+  out so it can be unit-tested without a browser" shape as
+  `Tools/math-drill-generator`'s drill-math module.
+- Sets are their own record — `gvb-exit-ticket:sets` / `gvb-exit-ticket:activeSet`
+  — separate from Quick Tally, Tally by Category, Paper Triage, and the
+  Discussion Board; stepping through a planned sequence never touches the
+  shuffle history log, and switching back to Shuffle restores whatever it was
+  last showing rather than drawing a new prompt. The Printable Handout tab
+  picks up whatever the active mode (shuffle or sequence) is currently
+  displaying, same as before this round.
+- Two new suites: `Tools/exit-ticket-generator/test/sequence-logic.test.mjs`
+  (23 checks, pure date/cursor math, no browser) and
+  `Tools/exit-ticket-generator/test/smoke-prompt-sets.mjs` (46 checks,
+  Playwright — mode switching, set CRUD, Prev/Next/Jump-to-today, reload
+  persistence, and that the shuffle history/handout tab are unaffected).
+  `smoke-response-area.mjs` (36 checks) still passes unchanged.
+- Still open from the P7 note: Number Talks Board and Writing Prompt
+  Generator remain separate implementations of "bank + display + handout";
+  this round ports one cadence pattern between them but doesn't converge the
+  three tools onto a shared engine.
+
 **2026-08-12 — session `r8kq4t`.** A fourth response style: a **quarter-inch
 grid**, for the maths and science prompts that want a graph or a scale drawing
 rather than sentences.
@@ -64,6 +100,9 @@ below.
   adds to (`gvb-exit-ticket:customPrompts`)
 - Shuffle / next prompt, "new set of prompts", and a session history of what's
   already been shown today
+- **Prompt Sets** (Planned Sequence mode): a teacher-planned prompt per day
+  for a week or a unit, advanced by school-day count from a start date or by
+  hand with Prev/Next/Jump-to-today — see `etg-sequence.js`
 - **Think time** timer with a chime (30s / 1min / 2min / off)
 - Handout printing at 2-per-page (half sheets) or 4-per-page (quarter sheets),
   with either the same prompt on every slip or **a different prompt on each**
@@ -116,9 +155,10 @@ below.
   Tally — see the Pass 2 — Round 2 update below. "Chart it over time" is
   addressed with a dated history log per the improvement doc's own
   "date-stamped log entry" suggestion, not a chart widget.)*
-- **Skipped — deferred, Round 4.** **Bell-ringer sequences.** A prompt per day for a week or a unit, planned in
+- **Done — 2026-08-13.** **Bell-ringer sequences.** A prompt per day for a week or a unit, planned in
   advance and advanced automatically by date, rather than shuffled each
-  morning.
+  morning. *(Shipped as "Prompt Sets" — see the 2026-08-13 status entry
+  below.)*
 - **Skipped — deferred, Round 4.** **Standards / objective tagging** so the prompt bank can be filtered by what
   you're actually teaching that day.
 - **Skipped — deferred, Round 4.** **Number Talks and Writing Prompt convergence** (P7). This tool, 
