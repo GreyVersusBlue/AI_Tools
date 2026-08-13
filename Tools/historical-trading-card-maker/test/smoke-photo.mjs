@@ -56,7 +56,7 @@ await page.waitForTimeout(400); // downscale is async
 ok(await page.isVisible('#adjustBtn'), 'picking a photo reveals the Adjust button');
 await page.click('#addEntryBtn');
 await settle(page);
-const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm_cards_v2')).cards[0].image);
+const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm:data:My cards')).cards[0].image);
 ok(stored && /^data:image\/jpeg/.test(stored.src), 'the photo is stored re-encoded by the downscaler');
 eq(stored.shape, 'rrect', 'the default window shape is the rounded rect');
 near(stored.crop.x, 0.5, 0.001, 'the default focal point is centered');
@@ -67,7 +67,7 @@ ok(clip && clip.includes('htcm-clip-rrect'), 'the window is clipped by the share
 
 /* ── 2. the editor round-trips shape, zoom, and filter ───────────────────── */
 await page.click('[data-adjust]');
-ok(await page.isVisible('.photo-editor'), 'the Photo button opens the editor');
+ok(await page.isVisible('.pe-save'), 'the Photo button opens the editor');
 await page.click('.pe-shapes [data-shape="shield"]');
 await page.evaluate(() => {
   const z = document.querySelector('.pe-zoom');
@@ -76,7 +76,7 @@ await page.evaluate(() => {
 await page.click('.pe-filters [data-filter="sepia"]');
 await page.click('.pe-save');
 await settle(page);
-const after = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm_cards_v2')).cards[0].image);
+const after = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm:data:My cards')).cards[0].image);
 eq(after.shape, 'shield', 'the shape choice is saved');
 near(after.crop.scale, 2, 0.001, 'the zoom is saved');
 eq(after.filter, 'sepia', 'the filter is saved');

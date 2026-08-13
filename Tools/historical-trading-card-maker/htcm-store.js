@@ -1,6 +1,14 @@
 /* htcm-store.js — persistence for the Historical Trading Card Maker.
 
-   Schema v2 (key htcm_cards_v2), one JSON document:
+   Storage is a list of named decks, the same triple-key shape as
+   vfg-store.js and the bracket/review-board/formula-sheet stores:
+   `htcm:list` (deck names), `htcm:data:<name>` (one v2 document each),
+   `htcm:current` (last-open deck). Earlier releases stored one flat
+   document (htcm_cards_v2) or a bare array (htcm_cards_v1); on first load
+   either one becomes the deck "My cards", and the legacy keys are left in
+   place as a one-release backup.
+
+   Schema v2 (the per-deck document):
      { v: 2,
        cards: [{
          id, name,
@@ -24,9 +32,13 @@
 (function () {
   'use strict';
 
+  var LIST_KEY = 'htcm:list';
+  var DATA_PREFIX = 'htcm:data:';
+  var CURRENT_KEY = 'htcm:current';
   var KEY_V2 = 'htcm_cards_v2';
   var KEY_V1 = 'htcm_cards_v1';
   var KEY_V1_SIZE = 'htcm_card_size_v1';
+  var DEFAULT_DECK = 'My cards';
 
   var DEFAULT_CROP = { x: 0.5, y: 0.5, scale: 1 };
 
@@ -118,34 +130,74 @@
     return repairDoc({ cards: v1, settings: { size: size } });
   }
 
-  /** Always returns a valid v2 document. Migrates v1 (writing v2, keeping the
-      v1 keys as a one-release backup) the first time it runs. */
-  function load() {
-    var doc = readJson(KEY_V2);
-    if (doc) return repairDoc(doc);
-    var migrated = migrateV1();
-    if (migrated) {
-      save(migrated); // best effort; v1 keys stay untouched as backup
-      return migrated;
-    }
-    return repairDoc(null);
+  /* ---------- named decks ---------- */
+
+  function listDecks() {
+    var names = readJson(LIST_KEY);
+    return Array.isArray(names) ? names.filter(function (n) { return typeof n === 'string' && n; }) : [];
   }
 
   /** Returns {ok:true} or {ok:false, error} — callers must surface a failure
       to the teacher; a swallowed quota error means silent data loss. */
-  function save(doc) {
+  function saveDeck(name, doc) {
     try {
-      localStorage.setItem(KEY_V2, JSON.stringify(doc));
+      var names = listDecks();
+      if (names.indexOf(name) === -1) {
+        names.push(name);
+        localStorage.setItem(LIST_KEY, JSON.stringify(names));
+      }
+      localStorage.setItem(DATA_PREFIX + name, JSON.stringify(doc));
+      localStorage.setItem(CURRENT_KEY, name);
       return { ok: true };
     } catch (e) {
       return { ok: false, error: e };
     }
   }
 
+  /** A repaired v2 document, or null if the deck doesn't exist. */
+  function loadDeck(name) {
+    var doc = readJson(DATA_PREFIX + name);
+    return doc ? repairDoc(doc) : null;
+  }
+
+  function deleteDeck(name) {
+    try {
+      var names = listDecks().filter(function (n) { return n !== name; });
+      localStorage.setItem(LIST_KEY, JSON.stringify(names));
+      localStorage.removeItem(DATA_PREFIX + name);
+      if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+    } catch (e) { /* removals can't meaningfully fail */ }
+  }
+
+  /** The deck to open at boot: the current one, else the first listed, else
+      whatever a legacy flat v2 / v1 store migrates into "My cards", else a
+      fresh empty "My cards". Legacy keys stay behind as a backup. */
+  function loadCurrent() {
+    var names = listDecks();
+    var current = null;
+    try { current = localStorage.getItem(CURRENT_KEY); } catch (e) { /* ignore */ }
+    if (current && names.indexOf(current) !== -1) {
+      var doc = loadDeck(current);
+      if (doc) return { name: current, doc: doc };
+    }
+    if (names.length) {
+      var first = loadDeck(names[0]);
+      if (first) return { name: names[0], doc: first };
+    }
+    var flat = readJson(KEY_V2);
+    var migrated = flat ? repairDoc(flat) : migrateV1();
+    if (!migrated) migrated = repairDoc(null);
+    saveDeck(DEFAULT_DECK, migrated); // best effort
+    return { name: DEFAULT_DECK, doc: migrated };
+  }
+
   window.HtcmStore = {
-    KEY_V2: KEY_V2,
-    load: load,
-    save: save,
+    DEFAULT_DECK: DEFAULT_DECK,
+    listDecks: listDecks,
+    saveDeck: saveDeck,
+    loadDeck: loadDeck,
+    deleteDeck: deleteDeck,
+    loadCurrent: loadCurrent,
     repairDoc: repairDoc
   };
 })();

@@ -161,9 +161,11 @@ await page.reload({ waitUntil: 'networkidle' });
 await settle(page);
 eq(await page.textContent('#entryCount'), '1', 'a v1 deck still loads');
 eq(await page.inputValue('#cardSize'), 'fill', 'the v1 size choice migrates');
-const v2 = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm_cards_v2') || 'null'));
-ok(v2 && v2.v === 2 && v2.cards.length === 1, 'a v2 document was written on first load');
+const v2 = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm:data:My cards') || 'null'));
+ok(v2 && v2.v === 2 && v2.cards.length === 1, 'the v1 store became the named deck "My cards"');
 eq(v2 && v2.cards[0].image && v2.cards[0].image.shape, 'rrect', 'the bare v1 image string became an image object with defaults');
+ok(await page.evaluate(() => (JSON.parse(localStorage.getItem('htcm:list') || '[]')).includes('My cards')),
+   'and the deck is listed');
 ok(await page.evaluate(() => !!localStorage.getItem('htcm_cards_v1')), 'the v1 key is kept as a one-release backup');
 
 /* ── 7. the live preview shows the form draft and flips ──────────────────── */
@@ -240,13 +242,34 @@ await page.fill('#setNameInput', 'Ancient Rome');
 await page.click('#numberBtn');
 await settle(page);
 ok(await page.evaluate(() => {
-  const d = JSON.parse(localStorage.getItem('htcm_cards_v2'));
+  const d = JSON.parse(localStorage.getItem('htcm:data:My cards'));
   return d.cards.every((c, i) => c.meta.cardNo === i + 1 && c.meta.setSize === d.cards.length && c.meta.setName === 'Ancient Rome');
 }), 'Number the deck stamps set name and n-of-m onto every card');
 ok(await page.evaluate(() => ((document.querySelector('#previewFront .cset') || {}).textContent || '').includes('Ancient Rome')),
    'the set strip shows along the card front’s bottom edge');
 
-/* ── 11. no console noise anywhere in the run ────────────────────────────── */
+/* ── 11. named decks and roster batch-add ────────────────────────────────── */
+await page.click('#rosterBtn');
+await page.fill('#rosterText', 'Augustus\nNero\n');
+await page.click('#rosterAddBtn');
+await settle(page);
+eq(await page.textContent('#entryCount'), '4', 'roster batch-add creates one blank card per pasted line');
+ok(await page.evaluate(() => {
+  const d = JSON.parse(localStorage.getItem('htcm:data:My cards'));
+  return d.cards[3].name === 'Nero' && d.cards[3].meta.setName === 'Ancient Rome';
+}), 'roster cards inherit the set name');
+page.once('dialog', (d) => d.accept('Period 2'));
+await page.click('#newDeckBtn');
+await settle(page);
+eq(await page.textContent('#entryCount'), '0', 'a new deck starts empty');
+eq(await page.inputValue('#deckSelect'), 'Period 2', 'and becomes the current deck');
+ok(await page.evaluate(() => !!document.querySelector('.theme-swatch[data-theme="parchment"].selected')),
+   'a new deck inherits the current theme');
+await page.selectOption('#deckSelect', 'My cards');
+await settle(page);
+eq(await page.textContent('#entryCount'), '4', 'switching decks brings the original cards back');
+
+/* ── 12. no console noise anywhere in the run ────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
