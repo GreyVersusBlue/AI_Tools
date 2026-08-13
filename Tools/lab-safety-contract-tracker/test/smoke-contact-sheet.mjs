@@ -12,6 +12,14 @@
 // the teacher's note) and leaves blank what only the teacher will know, and
 // the existing prints are untouched.
 //
+// Also covers the per-student QR code stamped on "Print blank forms" and the
+// "Scan returned forms" check-off tracker built on top of it: the printed
+// code actually decodes (via the same jsQR build the scanner uses) to the
+// code the tracker generated, and the decode -> match -> check-off pipeline
+// (fed decoded text directly, the same shape the camera would deliver) is
+// exercised for the checked / duplicate / unmatched-code / unmatched-student
+// / wrong-class paths.
+//
 // Exits 1 on any failure. Every student name here is invented.
 
 import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
@@ -112,6 +120,88 @@ await page.click('#printContactBtn');
 await settle(page, 250);
 ok(/nobody to contact/.test(await page.textContent('#printContactArea')),
    'with nothing to chase, the sheet says so');
+
+/* ── per-student codes on the printed blank contract, and the scan-to-check-
+   off tracker that reads them back ("Scan returned forms") ───────────────
+   Isolated in a fresh class so the mark-all-signed state above doesn't get
+   in the way of testing the checked/duplicate/unmatched paths below. */
+page.once('dialog', d => d.accept('QR Scan Test Class'));
+await page.click('#newSectionBtn');
+await settle(page, 300);
+
+await page.fill('#rosterInput', 'Aiden Kapoor\nBrianna Cole\nCarmen Diaz');
+await page.click('#saveRosterBtn');
+await settle(page, 300);
+
+const scanDocId = await page.$eval('#docsEditor .doc-row', el => el.dataset.id);
+
+await page.click('#printFormsBtn');
+await settle(page, 300);
+
+const activeForms = await page.evaluate(() =>
+  Array.from(document.querySelectorAll('.print-only.active')).map(e => e.id));
+eq(JSON.stringify(activeForms), JSON.stringify(['printFormsArea']), 'print blank forms is the active print area');
+
+eq(await page.$$eval('#printFormsBody .form-page', e => e.length), 3, 'one blank form per roster student');
+
+const firstQr = await page.$eval('#printFormsBody .form-page:first-child .form-qr img', img => ({
+  src: img.getAttribute('src') || '',
+  alt: img.getAttribute('alt') || '',
+}));
+ok(firstQr.src.startsWith('data:image/png'), 'each blank form carries a rendered QR code, not a dead include');
+ok(firstQr.alt.includes('Aiden Kapoor'), 'the code is captioned with the student it identifies: ' + firstQr.alt);
+
+// Decode the actual printed image with the same jsQR build the scanner
+// uses, and confirm it round-trips to exactly the code the tracker itself
+// would generate — not just "some image got drawn".
+const expectedCode = await page.evaluate(
+  ({ docId, name }) => window.LSCT_TEST.buildStudentCodeText(docId, name),
+  { docId: scanDocId, name: 'Aiden Kapoor' }
+);
+const decodedFromPrint = await page.evaluate((src) => new Promise((resolve) => {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = window.jsQR(data.data, data.width, data.height);
+    resolve(code ? code.data : null);
+  };
+  img.onerror = () => resolve(null);
+  img.src = src;
+}), firstQr.src);
+eq(decodedFromPrint, expectedCode, 'the printed QR decodes to exactly the per-student code the tracker generated');
+
+/* ── the scanner's decode → match → check-off pipeline, fed decoded text
+   directly (same shape scanQRFromCamera's onResult delivers) — no camera
+   needed, matching how scanning a returned paper actually behaves ────── */
+const firstScan = await page.evaluate(code => window.LSCT_TEST.processScannedCode(code), expectedCode);
+eq(firstScan.status, 'checked', 'scanning a returned form checks that student off');
+ok(await page.$eval('#studentRows .student-row[data-name="Aiden Kapoor"]', el => el.classList.contains('signed')),
+   'Aiden now reads as signed after the scan');
+
+const secondScan = await page.evaluate(code => window.LSCT_TEST.processScannedCode(code), expectedCode);
+eq(secondScan.status, 'duplicate', 'scanning the same returned form twice is a no-op, not a second check-off');
+
+const badCodeScan = await page.evaluate(() => window.LSCT_TEST.processScannedCode('not a real qr payload'));
+eq(badCodeScan.status, 'bad-code', 'a code this tracker never printed is reported clearly, not silently dropped');
+
+const unknownStudentCode = await page.evaluate(
+  ({ docId }) => window.LSCT_TEST.buildStudentCodeText(docId, 'Someone Not On Roster'),
+  { docId: scanDocId }
+);
+const unknownStudentScan = await page.evaluate(code => window.LSCT_TEST.processScannedCode(code), unknownStudentCode);
+eq(unknownStudentScan.status, 'unknown-student', 'a code for a student not on this roster is reported as unmatched');
+
+const wrongClassCode = 'LSCT1|' + encodeURIComponent('Some Other Class') + '|' +
+  encodeURIComponent(scanDocId) + '|' + encodeURIComponent('Brianna Cole');
+const wrongClassScan = await page.evaluate(code => window.LSCT_TEST.processScannedCode(code), wrongClassCode);
+eq(wrongClassScan.status, 'wrong-class', 'a code printed for a different class is not silently applied to this one');
+
+ok(!(await page.$eval('#studentRows .student-row[data-name="Brianna Cole"]', el => el.classList.contains('signed'))),
+   'Brianna is untouched by the bad/unmatched scans above — only a matching code checks anyone off');
 
 /* ── no console noise, nothing left the site ───────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs.slice(0, 3)));
