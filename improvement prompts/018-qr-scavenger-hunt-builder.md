@@ -15,6 +15,50 @@ Reviewed — structural read of the source. The README undersells this one
 considerably — it has a full live-run mode. Ideas below are deliberately
 ambitious and **not** scoped to a single session.
 
+**2026-08-13 — Round 6 (paper no-device hunt mode).** Shipped the Major
+Feature flagged at the end of Round 5: "the day the Chromebooks stayed in the
+cart." Every station now gets a short, stable **code word** (from a fixed
+classroom-safe word list, falling back to `STATION1`/`STATION2`/... if a hunt
+somehow outgrows the list), assigned once and kept through
+`ensureStationCodeWords()` — a station that already has a word keeps it, so a
+reprinted card never disagrees with one already taped to a wall. A ↻ button
+next to each station's code in the Build table regenerates just that one
+word. Three printed pieces tie together:
+
+- **Print Clue Cards (No Device)** — the same per-station text the QR station
+  cards show (label, question/choices/numeric/photo instruction) but with no
+  QR canvas, ending in the station's code word and an instruction to write it
+  on the team's answer sheet.
+- **Print Answer Sheets** (Live Run tab) — one blank sheet per team, in that
+  team's own route order (reusing the same `teamRoute()` rotation the
+  staggered-start route cards already use, so a paper run gets the same
+  spread-out starts a device-based run gets), with one row per station: a
+  blank for the code word found and a blank for the answer, plus a short
+  per-type instruction line (circle a letter / write the number / nothing to
+  write for photo proof).
+- **Answer Key** — gained a Code Word column so a teacher can grade a stack
+  of paper sheets against the one key they already print, without a separate
+  paper-mode key.
+
+Verified with a new 26-assertion headless Chromium suite,
+`Tools/qr-scavenger-hunt-builder/test/smoke-paper-mode.mjs`, run directly with
+`node` (no npm script added — see package.json boundary). It checks: every
+station gets a distinct, non-empty code word, stable across a reload; clue
+cards carry no `<canvas>` and print the right label/question/choices/code
+word; the answer key's new column matches the clue cards word-for-word;
+answer sheets are one per team with the team's check-in code, one row per
+station in that team's own staggered route order (independently
+re-derived, the same way `smoke-staggered-starts.mjs` does, rather than
+assumed), and exactly two blank cells per row; regenerating a station's code
+word changes what the next print shows; and no console/page errors anywhere
+in the run. Also re-ran `smoke-staggered-starts.mjs` (29 assertions) to
+confirm the route-card rotation logic this mode reuses is untouched — still
+green.
+
+**Left for next round:** the annotated floor-plan map, pulling questions from
+other toolkit content, the post-hunt debrief print, and any joint planning
+with `escape-room-builder`.
+
 **2026-08-12 — Round 5 (backlog rank 10: staggered station starts).** Teams no
 longer all start at station 1. Each team gets a **route card** — its own
 rotation of the station list, starting at a different point — printed
@@ -80,8 +124,9 @@ per-team walking order a paper packet would be built around.
   line suggested — see the Round 5 note above for why.
 - **Hints with a time penalty** — the standard mechanic that keeps a stuck
   team moving.
-- **Print a team answer sheet** the team carries and fills in, since not every
-  hunt should require a device.
+- **Done — Print a team answer sheet** the team carries and fills in, since not every
+  hunt should require a device. *(Shipped 2026-08-13 as part of the paper
+  no-device hunt mode — see the Round 6 note above.)*
 - **Location hint per station** ("outside the library") printed on the answer
   key, so the teacher can find their own stations again.
 - **Timer visible on the projector** for the return-to-class moment.
@@ -104,9 +149,10 @@ per-team walking order a paper packet would be built around.
 - **Map of the hunt.** `046-blank-map-generator.html` can annotate a floor plan;
   a printed map with numbered station markers would make setup and cleanup far
   easier, and `035-schedule-visualizer.html` already holds a real building map.
-- **Outdoor/no-device mode** — printed clue cards with a code word at each
+- **Done — Outdoor/no-device mode** — printed clue cards with a code word at each
   station and a paper answer sheet, for the field trip or the day the
-  Chromebooks stayed in the cart.
+  Chromebooks stayed in the cart. *(Shipped 2026-08-13 — see the Round 6
+  note above.)*
 - **Post-hunt debrief.** Print each team's answers with the key beside them,
   which is where the learning actually happens and currently doesn't exist.
 

@@ -110,6 +110,10 @@
   .btn-recode { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 1.9rem; height: 1.9rem; flex-shrink: 0; border-radius: 4px; font-size: 0.9rem; padding: 0; }
   .btn-recode:hover:not(:disabled) { border-color: var(--accent); color: var(--text); background: var(--surface2); }
 
+  .stations-table td.code-cell { width: 6.6rem; text-align: center; white-space: nowrap; }
+  .stn-code { font-family: var(--mono); font-size: 0.7rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.3rem 0.4rem; letter-spacing: 0.04em; display: inline-block; }
+  .code-cell .btn-recode { width: 1.6rem; height: 1.6rem; margin-left: 0.2rem; vertical-align: middle; }
+
   .timer-display { font-family: var(--mono); font-size: 2.6rem; font-weight: 700; text-align: center; letter-spacing: 0.04em; padding: 0.4rem 0 1rem; }
 
   .checkin-panel { margin-top: 0.75rem; padding: 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; }
@@ -180,6 +184,16 @@
     .print-station-grid .p-card .p-route li.first { font-weight: 700; }
     .print-station-grid .p-card .p-route-note { font-size: 0.76rem; color: #555; margin-top: 8px; }
 
+    /* No-device paper mode: clue cards (no QR) and per-team answer sheets */
+    .print-station-grid .p-card .p-clue-text { font-size: 0.98rem; color: #111; margin: 2px 0 8px; line-height: 1.45; }
+    .print-station-grid .p-card .p-code-word { font-family: monospace; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.08em; border: 1.5px dashed #999; border-radius: 6px; padding: 6px 12px; margin-top: 8px; }
+    .print-station-grid .p-card .p-code-word span { text-transform: uppercase; }
+    table.p-answersheet { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; text-align: left; }
+    table.p-answersheet th, table.p-answersheet td { border: 1px solid #999; padding: 5px 7px; vertical-align: top; }
+    table.p-answersheet th { background: #eee; }
+    table.p-answersheet td.p-as-blank { min-width: 80px; height: 30px; }
+    .p-as-hint { display: block; font-size: 0.68rem; color: #555; margin-top: 2px; }
+
     .print-station-grid.pp-1 .p-card { width: calc(100% - 8px); }
     .print-station-grid.pp-2 .p-card { width: calc(50% - 8px); }
     .print-station-grid.pp-4 .p-card { width: calc(50% - 8px); }
@@ -232,7 +246,7 @@
         <button class="btn-link" id="toggle-import" type="button">Paste from a spreadsheet instead</button>
       </div>
       <table class="stations-table">
-        <thead><tr><th></th><th>Label</th><th>QR content (link or text)</th><th>Answer key note (optional)</th><th>Type</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Label</th><th>QR content (link or text)</th><th>Answer key note (optional)</th><th>Type</th><th>Code word</th><th></th></tr></thead>
         <tbody id="stations-body"></tbody>
       </table>
       <div class="btn-row" style="margin-top:0.75rem;">
@@ -278,9 +292,10 @@
       <div class="btn-row">
         <button class="btn-primary" id="print-stations-btn" disabled>🖨️ Print Station Cards</button>
         <button class="btn-secondary" id="print-answers-btn" disabled>📋 Print Answer Key</button>
+        <button class="btn-secondary" id="print-clues-btn" disabled>🧾 Print Clue Cards (No Device)</button>
         <button class="btn-secondary" id="export-csv-btn" type="button">⬇️ Export CSV</button>
       </div>
-      <div class="hint">The answer key prints separately, with your notes and the raw QR content — keep it with you, not with the students. Export CSV saves your typed station list (not the print-ready QR content) for your own records.</div>
+      <div class="hint">The answer key prints separately, with your notes and the raw QR content — keep it with you, not with the students. Export CSV saves your typed station list (not the print-ready QR content) for your own records. Clue cards post the same station text with no QR code, plus a code word — pair them with the printed Team Answer Sheets in Live Run for a day with no Chromebooks.</div>
     </div>
     <div id="msg"></div>
   </div>
@@ -304,8 +319,9 @@
         <button class="btn-secondary" id="add-team-btn" type="button">+ Add Team</button>
         <button class="btn-secondary" id="print-teams-btn" type="button">🖨️ Print Team Cards</button>
         <button class="btn-secondary" id="print-routes-btn" type="button">🖨️ Print Route Cards</button>
+        <button class="btn-secondary" id="print-answersheets-btn" type="button">📝 Print Answer Sheets</button>
       </div>
-      <div class="hint">Each team gets a check-in code (shown next to its name) so it can check itself in below without you hunting through a roster — print the cards so teams can carry or show their code.</div>
+      <div class="hint">Each team gets a check-in code (shown next to its name) so it can check itself in below without you hunting through a roster — print the cards so teams can carry or show their code. Answer Sheets print one per team, blank, in that team's own route order — for a day with no devices, pair them with the Build tab's Clue Cards and check them against the Print Answer Key.</div>
       <label class="stagger-row" for="stagger-starts" style="margin-top:0.7rem;">
         <input type="checkbox" id="stagger-starts" checked> Stagger team starts
       </label>
@@ -371,9 +387,10 @@
 <div class="print-only answer-key" id="print-answer-area">
   <h2 id="answer-key-title">Scavenger Hunt Answer Key</h2>
   <table>
-    <thead><tr><th>#</th><th>Label</th><th>QR Content</th><th>Note</th><th>Answer / Type</th></tr></thead>
+    <thead><tr><th>#</th><th>Label</th><th>QR Content</th><th>Note</th><th>Answer / Type</th><th>Code word</th></tr></thead>
     <tbody id="answer-key-body"></tbody>
   </table>
+  <p style="font-size:0.78rem; color:#555; margin-top:10px;">Code words are also printed on the no-device Clue Cards — check each team's filled-in Answer Sheet against this key.</p>
 </div>
 <div class="print-only" id="print-teams-area">
   <div class="print-station-grid" id="print-teams-grid"></div>
@@ -381,6 +398,14 @@
 
 <div class="print-only" id="print-routes-area">
   <div class="print-station-grid pp-2" id="print-routes-grid"></div>
+</div>
+
+<div class="print-only" id="print-clues-area">
+  <div class="print-station-grid" id="print-clues-grid"></div>
+</div>
+
+<div class="print-only" id="print-answersheets-area">
+  <div class="print-station-grid pp-2" id="print-answersheets-grid"></div>
 </div>
 
 <script>
@@ -394,10 +419,12 @@
   ['hunt-toolbar', 'hunt-switch', 'new-hunt-btn', 'delete-hunt-btn', 'hunt-name',
    'stations-body', 'add-row-btn', 'toggle-import', 'import-box', 'import-text', 'import-btn',
    'cards-per-page', 'ec-level', 'show-number', 'print-stations-btn', 'print-answers-btn', 'export-csv-btn',
+   'print-clues-btn', 'print-clues-area', 'print-clues-grid',
    'cards-preview', 'print-station-area', 'print-station-grid', 'print-answer-area', 'answer-key-body', 'msg',
    'tab-build', 'tab-run', 'build-view', 'run-view', 'run-hunt-info', 'teams-body', 'add-team-btn',
    'print-teams-btn', 'print-teams-area', 'print-teams-grid',
    'print-routes-btn', 'print-routes-area', 'print-routes-grid', 'stagger-starts', 'stagger-info',
+   'print-answersheets-btn', 'print-answersheets-area', 'print-answersheets-grid',
    'checkin-station', 'checkin-station-info', 'checkin-code', 'checkin-submit-btn', 'checkin-hint-btn', 'checkin-hint-panel',
    'checkin-answer-panel', 'checkin-feedback',
    'timer-display', 'timer-start-btn', 'timer-pause-btn', 'timer-reset-btn', 'clear-progress-btn', 'undo-clear-btn',
@@ -412,6 +439,50 @@
   var Q_TYPE_LABELS = { text: 'Open-ended', choice: 'Multiple choice', numeric: 'Numeric answer', photo: 'Photo proof' };
   var TEAM_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L — easy to read back or key in by hand
 
+  // Paper (no-device) mode: each station gets a short code word, printed on
+  // its Clue Card and the Answer Key. A team copies the word onto its Answer
+  // Sheet as proof it actually found the station — the same role a QR scan
+  // plays when devices are available. Picked from a fixed classroom-safe
+  // list rather than random letters so it reads and calls out easily; falls
+  // back to STATION1/STATION2/... if a hunt somehow has more stations than
+  // the list has words.
+  var CODE_WORDS = [
+    'MAPLE', 'COMET', 'TIGER', 'ORBIT', 'ECHO', 'GRANITE', 'HARBOR', 'LANTERN',
+    'MERIDIAN', 'PEBBLE', 'QUARTZ', 'RIVER', 'SUMMIT', 'TRAIL', 'VELVET', 'WILLOW',
+    'ANCHOR', 'BEACON', 'CANYON', 'DRIFT', 'FALCON', 'GLACIER', 'HOLLOW', 'IVORY',
+    'JASPER', 'KESTREL', 'LOOKOUT', 'MOSAIC', 'NUGGET', 'OPAL',
+  ];
+
+  function generateCodeWord(existing) {
+    var pool = CODE_WORDS.filter(function (w) { return existing.indexOf(w) === -1; });
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+    var n = 1, w;
+    do { w = 'STATION' + n; n++; } while (existing.indexOf(w) !== -1);
+    return w;
+  }
+
+  /** Assigns a unique code word to every station missing one. Safe to call
+      repeatedly — a station that already has a word keeps it, so reprinted
+      Clue Cards and Answer Keys stay stable across sessions. Persists right
+      away when it actually assigns something new: this runs from render
+      paths like renderRows()/validStations() that happen well before any
+      user edit would otherwise trigger a save(), and a code word that only
+      lived in memory until the next edit would print differently on a
+      reload — the opposite of "stable" for a card already posted on a wall. */
+  function ensureStationCodeWords() {
+    var used = [];
+    state.stations.forEach(function (s) { if (typeof s.codeWord === 'string' && s.codeWord) used.push(s.codeWord); });
+    var changed = false;
+    state.stations.forEach(function (s) {
+      if (typeof s.codeWord !== 'string' || !s.codeWord) {
+        s.codeWord = generateCodeWord(used);
+        used.push(s.codeWord);
+        changed = true;
+      }
+    });
+    if (changed) save();
+  }
+
   function ensureStationDefaults(s) {
     if (!Q_TYPE_LABELS[s.qType]) s.qType = 'text';
     if (!Array.isArray(s.choices)) s.choices = [];
@@ -420,6 +491,7 @@
     if (typeof s.tolerance !== 'string') s.tolerance = s.tolerance != null ? String(s.tolerance) : '0';
     if (typeof s.hint !== 'string') s.hint = s.hint != null ? String(s.hint) : '';
     if (typeof s.hintPenalty !== 'string') s.hintPenalty = s.hintPenalty != null ? String(s.hintPenalty) : '0';
+    if (typeof s.codeWord !== 'string') s.codeWord = '';
     return s;
   }
 
@@ -496,7 +568,7 @@
   }
 
   // ── Row editor ───────────────────────────────────────────────────────────
-  function blankStation() { return { label: '', content: '', note: '', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0', hint: '', hintPenalty: '0' }; }
+  function blankStation() { return { label: '', content: '', note: '', qType: 'text', choices: [], correctChoice: 0, numericAnswer: '', tolerance: '0', hint: '', hintPenalty: '0', codeWord: '' }; }
 
   function ensureAtLeastOneRow() {
     if (!state.stations.length) state.stations.push(blankStation());
@@ -536,6 +608,8 @@
   }
 
   function renderRows() {
+    state.stations.forEach(ensureStationDefaults);
+    ensureStationCodeWords();
     els.stationsBody.innerHTML = state.stations.map(function (s, i) {
       ensureStationDefaults(s);
       var row = '<tr data-idx="' + i + '">' +
@@ -544,6 +618,8 @@
         '<td><input type="text" class="f-content" value="' + escapeAttr(s.content) + '" placeholder="https://... or clue text"></td>' +
         '<td><input type="text" class="f-note" value="' + escapeAttr(s.note) + '" placeholder="For your eyes only"></td>' +
         '<td>' + renderQTypeSelect(s, i) + '</td>' +
+        '<td class="code-cell"><span class="stn-code" title="Printed on this station\'s Clue Card and the Answer Key, for the no-device paper hunt mode">' + escapeHtml(s.codeWord) + '</span>' +
+          '<button type="button" class="btn-recode" data-recode-station="' + i + '" title="Generate a new code word">&#8635;</button></td>' +
         '<td class="actions-cell"><div class="row-actions">' +
           '<button type="button" class="move-row-btn" data-move="-1" title="Move up"' + (i === 0 ? ' disabled' : '') + '>&#8593;</button>' +
           '<button type="button" class="move-row-btn" data-move="1" title="Move down"' + (i === state.stations.length - 1 ? ' disabled' : '') + '>&#8595;</button>' +
@@ -590,7 +666,7 @@
         '<div><label>Time penalty if used (minutes)</label><input type="number" step="any" min="0" class="f-hint-penalty" data-idx="' + i + '" value="' + escapeAttr(s.hintPenalty) + '"></div>' +
       '</div>' +
       '</div>';
-    return '<tr class="detail-row"><td colspan="6"><div class="detail-inner">' + body + '</div></td></tr>';
+    return '<tr class="detail-row"><td colspan="7"><div class="detail-inner">' + body + '</div></td></tr>';
   }
 
   els.stationsBody.addEventListener('input', function (e) {
@@ -648,6 +724,17 @@
     var addChoiceBtn = e.target.closest('.btn-choice-add');
     var removeChoiceBtn = e.target.closest('.btn-choice-remove');
     var hintToggleBtn = e.target.closest('[data-hint-toggle]');
+    var recodeStationBtn = e.target.closest('[data-recode-station]');
+    if (recodeStationBtn) {
+      var rsi = parseInt(recodeStationBtn.dataset.recodeStation, 10);
+      var usedWords = state.stations.map(function (s) { return s.codeWord; }).filter(Boolean);
+      var wi = usedWords.indexOf(state.stations[rsi].codeWord);
+      if (wi !== -1) usedWords.splice(wi, 1);
+      state.stations[rsi].codeWord = generateCodeWord(usedWords);
+      renderRows();
+      save();
+      return;
+    }
     if (hintToggleBtn) {
       var hs = state.stations[parseInt(hintToggleBtn.dataset.hintToggle, 10)];
       if (hintEditorsOpen.has(hs)) hintEditorsOpen.delete(hs); else hintEditorsOpen.add(hs);
@@ -767,9 +854,10 @@
   }
 
   function validStations() {
+    state.stations.forEach(ensureStationDefaults);
+    ensureStationCodeWords();
     return state.stations
       .map(function (s, i) {
-        ensureStationDefaults(s);
         return {
           idx: i,
           label: (s.label || '').trim() || ('Station ' + (i + 1)),
@@ -782,6 +870,7 @@
           tolerance: s.tolerance,
           hint: (s.hint || '').trim(),
           hintPenalty: parseFloat(s.hintPenalty) || 0,
+          codeWord: s.codeWord,
         };
       })
       .filter(function (s) { return s.content.length > 0; });
@@ -816,6 +905,7 @@
       els.cardsPreview.innerHTML = '<p class="empty-hint">Add at least one station with content to see a preview.</p>';
       els.printStationsBtn.disabled = true;
       els.printAnswersBtn.disabled = true;
+      els.printCluesBtn.disabled = true;
       return;
     }
 
@@ -842,6 +932,7 @@
 
     els.printStationsBtn.disabled = false;
     els.printAnswersBtn.disabled = false;
+    els.printCluesBtn.disabled = false;
   }
 
   function buildPrintStations() {
@@ -873,12 +964,35 @@
     return '';
   }
 
+  // ── Paper (no-device) mode: Clue Cards ───────────────────────────────────
+  // Same station text as the QR station cards (label, choices/numeric/photo
+  // instruction) but no QR code — instead each card ends with the station's
+  // code word, which is what a team without a device copies onto its paper
+  // Answer Sheet as proof it found the station.
+  function buildPrintClueCards() {
+    var valid = validStations();
+    var showNum = els.showNumber.checked;
+    els.printCluesGrid.className = 'print-station-grid pp-' + els.cardsPerPage.value;
+    els.printCluesGrid.innerHTML = '';
+    valid.forEach(function (s, n) {
+      var card = document.createElement('div');
+      card.className = 'p-card';
+      card.innerHTML = (showNum ? '<div class="p-num">Station ' + (n + 1) + '</div>' : '') +
+        '<div class="p-label">' + escapeHtml(s.label) + '</div>' +
+        (s.content ? '<div class="p-clue-text">' + escapeHtml(s.content) + '</div>' : '') +
+        printStationExtra(s) +
+        '<div class="p-code-word">Code word: <span>' + escapeHtml(s.codeWord) + '</span></div>' +
+        '<div class="p-route-note">Write this word on your team&rsquo;s answer sheet to prove you found this station.</div>';
+      els.printCluesGrid.appendChild(card);
+    });
+  }
+
   function buildAnswerKey() {
     var valid = validStations();
     els.answerKeyBody.innerHTML = valid.map(function (s, n) {
       var answerCell = escapeHtml(answerSummary(s));
       if (s.hint) answerCell += '<br><span style="color:#666;">Hint (&minus;' + s.hintPenalty + ' min if used): ' + escapeHtml(s.hint) + '</span>';
-      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.label) + '</td><td>' + escapeHtml(s.content) + '</td><td>' + escapeHtml(s.note || '—') + '</td><td>' + answerCell + '</td></tr>';
+      return '<tr><td>' + (n + 1) + '</td><td>' + escapeHtml(s.label) + '</td><td>' + escapeHtml(s.content) + '</td><td>' + escapeHtml(s.note || '—') + '</td><td>' + answerCell + '</td><td>' + escapeHtml(s.codeWord || '—') + '</td></tr>';
     }).join('');
   }
 
@@ -897,6 +1011,11 @@
     if (!validStations().length) return;
     buildAnswerKey();
     printSection(els.printAnswerArea);
+  });
+  els.printCluesBtn.addEventListener('click', function () {
+    if (!validStations().length) return;
+    buildPrintClueCards();
+    printSection(els.printCluesArea);
   });
 
   [els.cardsPerPage, els.ecLevel, els.showNumber].forEach(function (el) {
@@ -917,9 +1036,10 @@
   }
 
   els.exportCsvBtn.addEventListener('click', function () {
-    var rows = [['Label', 'Content', 'Note', 'Type', 'Answer Details', 'Hint', 'Hint Penalty (min)']].concat(state.stations.map(function (s) {
-      ensureStationDefaults(s);
-      return [s.label, s.content, s.note, Q_TYPE_LABELS[s.qType] || 'Open-ended', answerSummary(s), s.hint, s.hintPenalty];
+    state.stations.forEach(ensureStationDefaults);
+    ensureStationCodeWords();
+    var rows = [['Label', 'Content', 'Note', 'Type', 'Answer Details', 'Hint', 'Hint Penalty (min)', 'Code Word']].concat(state.stations.map(function (s) {
+      return [s.label, s.content, s.note, Q_TYPE_LABELS[s.qType] || 'Open-ended', answerSummary(s), s.hint, s.hintPenalty, s.codeWord];
     }));
     var csv = rows.map(function (row) { return row.map(csvField).join(','); }).join('\r\n');
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1058,6 +1178,48 @@
     });
   }
 
+  // Paper (no-device) mode: Team Answer Sheets. One printed sheet per team,
+  // in that team's own route order (same rotation as the route card), with a
+  // blank per station for the code word the team finds there and for its
+  // answer. Reuses the answer-key's "what does this station need" logic via
+  // a short per-type instruction line rather than the full station text —
+  // that text is what the Clue Card posted at the station is for.
+  function answerSheetExtra(s) {
+    if (s.qType === 'choice') {
+      var letters = 'ABCDEF';
+      var opts = [];
+      for (var i = 0; i < s.choices.length; i++) opts.push(letters[i]);
+      return 'Circle one: ' + opts.join('  ');
+    }
+    if (s.qType === 'numeric') return 'Write the number.';
+    if (s.qType === 'photo') return 'Show your teacher — nothing to write here.';
+    return '';
+  }
+
+  function buildPrintAnswerSheets() {
+    var teams = state.run.teams;
+    var stations = validStations();
+    els.printAnswersheetsGrid.innerHTML = '';
+    teams.forEach(function (t, i) {
+      var route = teamRoute(i, teams.length, stations);
+      var card = document.createElement('div');
+      card.className = 'p-card';
+      card.innerHTML = '<div class="p-num">Answer Sheet</div>' +
+        '<div class="p-label">' + escapeHtml(t.name || ('Team ' + (i + 1))) + '</div>' +
+        '<div class="p-extra p-team-code">Code: ' + escapeHtml(t.code) + '</div>' +
+        '<table class="p-answersheet"><thead><tr><th>#</th><th>Station</th><th>Code word found</th><th>Your answer</th></tr></thead><tbody>' +
+        route.map(function (st, ri) {
+          var extra = answerSheetExtra(st);
+          return '<tr><td>' + (ri + 1) + '</td><td>' + escapeHtml(st.label) +
+            (extra ? '<span class="p-as-hint">' + escapeHtml(extra) + '</span>' : '') +
+            '</td><td class="p-as-blank"></td><td class="p-as-blank"></td></tr>';
+        }).join('') +
+        '</tbody></table>' +
+        '<div class="p-route-note">Start at the first station on this list and work down it. Write the code word you find and your answer for each stop.</div>';
+      els.printAnswersheetsGrid.appendChild(card);
+    });
+  }
+
   function renderTeamsSetup() {
     var teams = state.run.teams;
     if (!teams.length) {
@@ -1132,6 +1294,13 @@
     if (!validStations().length) { showMsg('Add at least one station with content before printing route cards.'); return; }
     buildPrintRoutes();
     printSection(els.printRoutesArea);
+  });
+
+  els.printAnswersheetsBtn.addEventListener('click', function () {
+    if (!state || !state.run.teams.length) return;
+    if (!validStations().length) { showMsg('Add at least one station with content before printing answer sheets.'); return; }
+    buildPrintAnswerSheets();
+    printSection(els.printAnswersheetsArea);
   });
 
   els.staggerStarts.addEventListener('change', function () {
