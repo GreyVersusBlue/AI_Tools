@@ -470,6 +470,33 @@
   #scan-msg.error { display: block; background: rgba(248, 113, 113, 0.12); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
   #scan-msg.info { display: block; background: rgba(74, 222, 128, 0.12); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.3); }
 
+  /* Equipment check-out ledger — built on top of the scan-result handler
+     above, not a new decode path. A "badge" reuses the recent-item look so it
+     reads as part of the same family of lists as Recent/Recently scanned. */
+  .inv-current { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+  .inv-current-label { font-size: 0.95rem; font-weight: 700; color: var(--text); word-break: break-word; }
+  .inv-badge {
+    display: inline-block; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 0.18rem 0.5rem; border-radius: 999px; white-space: nowrap;
+  }
+  .inv-badge.inv-out { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+  .inv-badge.inv-in { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+  .inv-item .recent-label { display: flex; align-items: center; gap: 0.4rem; white-space: normal; }
+  #inventory-summary { margin: 0 0 0.6rem; }
+  #checkout-msg {
+    font-size: 0.78rem; padding: 0.55rem 0.75rem; border-radius: 6px;
+    display: none; margin-top: 0.75rem; white-space: pre-line;
+  }
+  #checkout-msg.error { display: block; background: rgba(248, 113, 113, 0.12); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
+
+  /* Printed inventory sheet — same swap-in-a-body-class technique as the bulk
+     grid's print path above, just a third, independent print-only area. */
+  .inv-print-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  .inv-print-table th, .inv-print-table td {
+    border: 1px solid #999; padding: 6px 10px; text-align: left; font-size: 0.85rem;
+  }
+  .inv-print-table th { background: #eee; }
+
   /* Single / Bulk / Scan mode — exactly one of the three body classes below
      is ever set (none = single, the default); each pane is hidden unless its
      own mode is active. */
@@ -559,6 +586,19 @@
       gap: 14px; padding: 10px; background: #fff;
     }
     .bulk-item { break-inside: avoid; page-break-inside: avoid; }
+
+    /* Equipment inventory sheet print — swapped in via the .print-inventory
+       body class right before window.print(), same technique as the bulk
+       grid above, and independent of it (only one is ever active at once). */
+    body.print-inventory #print-area { display: none !important; }
+    body.print-inventory #print-area-bulk { display: none !important; }
+    body.print-inventory #print-area-inventory, body.print-inventory #print-area-inventory * { visibility: visible; }
+    body.print-inventory #print-area-inventory {
+      display: block !important; position: static; inset: auto;
+      background: #fff; color: #111; padding: 10px;
+    }
+    body.print-inventory #print-area-inventory h1 { font-size: 1.3rem; margin: 0 0 0.3rem; }
+    body.print-inventory #print-area-inventory p { font-size: 0.85rem; color: #444; margin: 0; }
   }
 </style>
 </head>
@@ -817,12 +857,33 @@
       <div id="scan-result"><p class="hint" style="margin:0;">Scan a code with the camera, or upload a photo of one, to see its contents here.</p></div>
     </div>
 
+    <div class="card scan-only" id="scan-checkout-card">
+      <div class="card-title">Equipment check-out</div>
+      <p class="hint" style="margin:0 0 0.8rem;">Track this scanned code as a piece of equipment — a lab kit,
+        a Chromebook cart, a set of library books — and check it in or out to a student or group. This uses
+        the code just scanned above, not a new scan.</p>
+      <div id="checkout-panel"><p class="hint" style="margin:0;">Scan or upload a code above, then check it in or out here.</p></div>
+      <div id="checkout-msg"></div>
+    </div>
+
     <div class="card scan-only">
       <div class="card-title">Recently scanned (this session)</div>
       <div id="scanned-list" class="recent-list"></div>
     </div>
+
+    <div class="card scan-only" id="inventory-card">
+      <div class="card-title">Equipment inventory</div>
+      <p class="hint" id="inventory-summary">No equipment tracked yet — scan a code above and click &ldquo;Start
+        tracking this item.&rdquo;</p>
+      <div id="inventory-list" class="recent-list"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" type="button" id="btn-print-inventory" disabled>🖨️ Print inventory sheet</button>
+      </div>
+    </div>
   </div>
 </div>
+
+<datalist id="checkout-who-list"></datalist>
 
 <div class="cam-overlay" id="cam-overlay" hidden>
   <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Camera test scan">
@@ -857,6 +918,7 @@
 </div>
 
 <div class="print-only" id="print-area-bulk"></div>
+<div class="print-only" id="print-area-inventory"></div>
 <style id="print-page-style"></style>
 
 <script>
@@ -924,6 +986,13 @@
     scanMsg: document.getElementById('scan-msg'),
     scanResult: document.getElementById('scan-result'),
     scannedList: document.getElementById('scanned-list'),
+    checkoutPanel: document.getElementById('checkout-panel'),
+    checkoutMsg: document.getElementById('checkout-msg'),
+    inventorySummary: document.getElementById('inventory-summary'),
+    inventoryList: document.getElementById('inventory-list'),
+    btnPrintInventory: document.getElementById('btn-print-inventory'),
+    printAreaInventory: document.getElementById('print-area-inventory'),
+    checkoutWhoList: document.getElementById('checkout-who-list'),
   };
 
   var ctx = els.canvas.getContext('2d');
@@ -2365,6 +2434,8 @@
     if (!entry) return;
     clearScanMsg();
     renderScanResult(entry.text);
+    currentScanText = entry.text;
+    renderCheckoutPanel();
   });
 
   function handleScannedText(text, source) {
@@ -2372,7 +2443,274 @@
     renderScanResult(text);
     addScanned(text, source);
     renderScannedList();
+    currentScanText = text;
+    renderCheckoutPanel();
   }
+
+  // ── Equipment check-out ledger ───────────────────────────────────────────
+  // Built entirely on top of the scan result above: `currentScanText` is set
+  // by handleScannedText() (camera or upload — same decode plumbing as
+  // before, nothing new here) and by clicking a "Recently scanned" entry.
+  // Persisted separately from every other key this tool uses, keyed on the
+  // raw scanned/decoded text itself rather than the (editable, possibly
+  // shared) human label — that's what a scanner actually reads off a sticker
+  // and can't collide by accident the way a typed label could.
+  var INVENTORY_KEY = 'qr-code-generator-inventory';
+  var INVENTORY_HISTORY_MAX = 25;
+  var currentScanText = null; // most recently decoded/selected code, scan mode only
+  var invRenderList = [];     // codes in the order the inventory list last rendered, for index-based clicks
+
+  function loadInventory() {
+    try {
+      var v = JSON.parse(localStorage.getItem(INVENTORY_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveInventory(map) {
+    try { localStorage.setItem(INVENTORY_KEY, JSON.stringify(map)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+
+  function getAssetRecord(code) {
+    var map = loadInventory();
+    return map[code] || null;
+  }
+
+  function pushHistory(rec, event, who) {
+    rec.history = rec.history || [];
+    rec.history.unshift({ event: event, who: who || '', ts: Date.now() });
+    rec.history = rec.history.slice(0, INVENTORY_HISTORY_MAX);
+  }
+
+  // Creates a new tracked asset in the "available" state. A no-op (keeps the
+  // existing record untouched) if this code is already tracked, so re-scanning
+  // something already on the ledger never wipes its history.
+  function registerAsset(code, label) {
+    var map = loadInventory();
+    if (!map[code]) {
+      map[code] = {
+        label: label || (code.length > 60 ? code.slice(0, 60) + '…' : code),
+        status: 'in',
+        assignedTo: '',
+        checkedOutAt: null,
+        checkedInAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        history: []
+      };
+      saveInventory(map);
+    }
+    return map[code];
+  }
+
+  function checkOutAsset(code, who) {
+    var map = loadInventory();
+    var rec = map[code];
+    if (!rec) return;
+    rec.status = 'out';
+    rec.assignedTo = who;
+    rec.checkedOutAt = Date.now();
+    rec.updatedAt = Date.now();
+    pushHistory(rec, 'out', who);
+    saveInventory(map);
+  }
+
+  function checkInAsset(code) {
+    var map = loadInventory();
+    var rec = map[code];
+    if (!rec) return;
+    var who = rec.assignedTo;
+    rec.status = 'in';
+    rec.assignedTo = '';
+    rec.checkedInAt = Date.now();
+    rec.updatedAt = Date.now();
+    pushHistory(rec, 'in', who);
+    saveInventory(map);
+  }
+
+  function removeAsset(code) {
+    var map = loadInventory();
+    delete map[code];
+    saveInventory(map);
+  }
+
+  function formatTs(ts) {
+    if (!ts) return '';
+    try { return new Date(ts).toLocaleString(); } catch (e) { return ''; }
+  }
+
+  function showCheckoutMsg(text) { els.checkoutMsg.textContent = text; els.checkoutMsg.className = 'error'; }
+  function clearCheckoutMsg() { els.checkoutMsg.textContent = ''; els.checkoutMsg.className = ''; }
+
+  // Every name across every saved roster, de-duplicated, as suggestions for
+  // "checking out to" — a convenience on top of np_rosters (read-only, same
+  // as the bulk-mode roster panel above), not a requirement: free text works
+  // just as well for a group name like "Table 3" that isn't on any roster.
+  function renderWhoDatalist() {
+    var rosters = readRosters();
+    var seen = {}, names = [];
+    Object.keys(rosters).forEach(function (r) {
+      rosterNames(rosters[r]).forEach(function (n) {
+        if (!seen[n]) { seen[n] = true; names.push(n); }
+      });
+    });
+    els.checkoutWhoList.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeHtml(n) + '">';
+    }).join('');
+  }
+
+  function renderCheckoutPanel() {
+    clearCheckoutMsg();
+    var panel = els.checkoutPanel;
+    if (!currentScanText) {
+      panel.innerHTML = '<p class="hint" style="margin:0;">Scan or upload a code above, then check it in or out here.</p>';
+      return;
+    }
+    var code = currentScanText;
+    var rec = getAssetRecord(code);
+    if (!rec) {
+      var guess = escapeHtml(code.length > 60 ? code.slice(0, 60) + '…' : code);
+      panel.innerHTML =
+        '<p class="hint" style="margin:0 0 0.6rem;">This code isn&rsquo;t tracked as equipment yet.</p>' +
+        '<div class="control-group"><label for="checkout-new-label">Label this item</label>' +
+        '<input type="text" id="checkout-new-label" maxlength="80" value="' + guess +
+        '" placeholder="e.g. Chromebook Cart 3 — Unit 07"></div>' +
+        '<div class="btn-row" style="margin-top:0.3rem;"><button type="button" class="btn-primary" id="btn-track-asset">Start tracking this item</button></div>';
+      document.getElementById('btn-track-asset').addEventListener('click', function () {
+        var input = document.getElementById('checkout-new-label');
+        var label = (input.value || '').trim() || code.slice(0, 60);
+        registerAsset(code, label);
+        renderCheckoutPanel();
+        renderInventoryList();
+      });
+      return;
+    }
+    renderWhoDatalist();
+    var badge = rec.status === 'out'
+      ? '<span class="inv-badge inv-out">Checked out</span>'
+      : '<span class="inv-badge inv-in">Available</span>';
+    var html = '<div class="inv-current"><div class="inv-current-label">' + escapeHtml(rec.label) + '</div>' + badge + '</div>';
+    if (rec.status === 'out') {
+      html += '<div class="hint" style="margin:0.4rem 0 0.8rem;">Checked out to <strong>' +
+        escapeHtml(rec.assignedTo || '(unspecified)') + '</strong>' +
+        (rec.checkedOutAt ? ' on ' + formatTs(rec.checkedOutAt) : '') + '</div>' +
+        '<div class="btn-row" style="margin-top:0;"><button type="button" class="btn-primary" id="btn-check-in">Check in</button></div>';
+    } else {
+      html += '<div class="control-group" style="margin-top:0.7rem;"><label for="checkout-who">Checking out to (student or group)</label>' +
+        '<input type="text" id="checkout-who" maxlength="80" placeholder="e.g. Table 3, or Marisol R." list="checkout-who-list" autocomplete="off"></div>' +
+        '<div class="btn-row" style="margin-top:0;"><button type="button" class="btn-primary" id="btn-check-out">Check out</button></div>';
+    }
+    html += '<div class="btn-row" style="margin-top:0.6rem;"><button type="button" class="btn-secondary" id="btn-stop-tracking">Stop tracking this item</button></div>';
+    panel.innerHTML = html;
+
+    if (rec.status === 'out') {
+      document.getElementById('btn-check-in').addEventListener('click', function () {
+        checkInAsset(code);
+        renderCheckoutPanel();
+        renderInventoryList();
+      });
+    } else {
+      document.getElementById('btn-check-out').addEventListener('click', function () {
+        var who = (document.getElementById('checkout-who').value || '').trim();
+        if (!who) { showCheckoutMsg('Enter who — or which group — this is going out to.'); return; }
+        checkOutAsset(code, who);
+        renderCheckoutPanel();
+        renderInventoryList();
+      });
+    }
+    document.getElementById('btn-stop-tracking').addEventListener('click', function () {
+      removeAsset(code);
+      renderCheckoutPanel();
+      renderInventoryList();
+    });
+  }
+
+  function renderInventoryList() {
+    var map = loadInventory();
+    var codes = Object.keys(map);
+    invRenderList = codes.slice().sort(function (a, b) {
+      var ra = map[a], rb = map[b];
+      if (ra.status !== rb.status) return ra.status === 'out' ? -1 : 1;
+      return ra.label.localeCompare(rb.label);
+    });
+    if (!codes.length) {
+      els.inventorySummary.textContent = 'No equipment tracked yet — scan a code above and click “Start tracking this item.”';
+      els.inventoryList.innerHTML = '';
+      els.btnPrintInventory.disabled = true;
+      return;
+    }
+    var outCount = codes.filter(function (c) { return map[c].status === 'out'; }).length;
+    els.inventorySummary.textContent = codes.length + ' item' + (codes.length === 1 ? '' : 's') +
+      ' tracked, ' + outCount + ' checked out.';
+    els.btnPrintInventory.disabled = false;
+    els.inventoryList.innerHTML = invRenderList.map(function (code, i) {
+      var rec = map[code];
+      var badge = rec.status === 'out'
+        ? '<span class="inv-badge inv-out">Out</span>' : '<span class="inv-badge inv-in">In</span>';
+      var sub = rec.status === 'out'
+        ? 'to ' + escapeHtml(rec.assignedTo || '(unspecified)') + (rec.checkedOutAt ? ' · ' + formatTs(rec.checkedOutAt) : '')
+        : (rec.checkedInAt ? 'checked in ' + formatTs(rec.checkedInAt) : 'not yet checked out');
+      return '<div class="recent-item inv-item" data-i="' + i + '" title="Click to view this item above">' +
+        '<div class="recent-main"><div class="recent-label">' + escapeHtml(rec.label) + badge + '</div>' +
+        '<div class="recent-text">' + sub + '</div></div>' +
+        '<button type="button" class="recent-remove" data-i="' + i + '" aria-label="Stop tracking ' + escapeHtml(rec.label) + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  els.inventoryList.addEventListener('click', function (e) {
+    var removeBtn = e.target.closest('.recent-remove');
+    if (removeBtn) {
+      var codeR = invRenderList[Number(removeBtn.dataset.i)];
+      if (!codeR) return;
+      removeAsset(codeR);
+      renderInventoryList();
+      if (currentScanText === codeR) renderCheckoutPanel();
+      return;
+    }
+    var item = e.target.closest('.recent-item');
+    if (!item) return;
+    var code = invRenderList[Number(item.dataset.i)];
+    if (!code) return;
+    currentScanText = code;
+    clearScanMsg();
+    renderScanResult(code);
+    renderCheckoutPanel();
+  });
+
+  function buildInventoryPrintSheet() {
+    var map = loadInventory();
+    var codes = invRenderList.length ? invRenderList : Object.keys(map);
+    var rows = codes.map(function (code) {
+      var rec = map[code];
+      if (!rec) return '';
+      var since = rec.status === 'out' ? formatTs(rec.checkedOutAt) : formatTs(rec.checkedInAt);
+      return '<tr>' +
+        '<td>' + escapeHtml(rec.label) + '</td>' +
+        '<td>' + (rec.status === 'out' ? 'Checked out' : 'Available') + '</td>' +
+        '<td>' + escapeHtml(rec.status === 'out' ? (rec.assignedTo || '') : '') + '</td>' +
+        '<td>' + escapeHtml(since || '') + '</td>' +
+        '</tr>';
+    }).join('');
+    els.printAreaInventory.innerHTML =
+      '<h1>Equipment Inventory</h1>' +
+      '<p>Printed ' + escapeHtml(new Date().toLocaleString()) + ' — ' + codes.length +
+      ' item' + (codes.length === 1 ? '' : 's') + '</p>' +
+      '<table class="inv-print-table"><thead><tr><th>Item</th><th>Status</th><th>Checked out to</th><th>Since</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>';
+  }
+
+  els.btnPrintInventory.addEventListener('click', function () {
+    if (!Object.keys(loadInventory()).length) return;
+    buildInventoryPrintSheet();
+    document.body.classList.add('print-inventory');
+    window.print();
+  });
+
+  window.addEventListener('afterprint', function () {
+    document.body.classList.remove('print-inventory');
+  });
 
   // ── Scan mode: camera input (reuses the QRScan helper the same way the
   // verify-scan check above does, but accepts whatever it decodes instead
@@ -2470,6 +2808,8 @@
   syncRosterModeUI();
   renderRecent();
   renderScannedList();
+  renderInventoryList();
+  renderCheckoutPanel();
   render();
 
 })();

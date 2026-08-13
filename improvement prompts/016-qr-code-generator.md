@@ -9,6 +9,56 @@
 
 ## Status
 
+### 2026-08-13 — equipment check-out mode
+
+Shipped the **equipment check-out ledger** — the Major Feature the previous
+round's "where the next round should pick up" note pointed at. Built entirely
+on top of the existing scan-result handler in scan mode; no new decode path.
+
+- Scanning or uploading a code (or clicking a "Recently scanned" entry) now
+  also feeds a new "Equipment check-out" card. An untracked code offers to
+  start tracking it with an editable label; a tracked code shows its
+  in/out status and a check-in or check-out control.
+- The ledger is keyed on the **scanned code's own text**, not the editable
+  label, in a new `qr-code-generator-inventory` localStorage key kept separate
+  from settings/recent/scanned. Checking out requires a non-empty "who" —
+  a blank name is rejected with an inline error rather than recorded. Each
+  transition appends a capped history entry (who, event, timestamp).
+- "Checking out to" suggests names from every saved `np_rosters` roster
+  (read-only, same pattern the roster code-sheet row already uses) but takes
+  free text too, since a check-out target is often "Table 3", not a student.
+- A printable inventory sheet (`btn-print-inventory` / `#print-area-inventory`)
+  lists every tracked item, its status, who has it, and since-when, using the
+  same swap-in-a-body-class-then-`window.print()` technique as the existing
+  bulk-grid print path, independent of it.
+- `Tools/qr-code-generator/test/smoke-checkout.mjs` (46 checks) drives the
+  upload/drop scan path — not the camera, same reasoning `smoke-roster.mjs`'s
+  neighbor already gives for scan mode generally — using a code the page
+  generates for itself first. It pins: tracking is keyed on code not label
+  (re-scanning a tracked code shows its state, not a duplicate "start
+  tracking" prompt); an empty "who" is rejected; check-in clears the
+  assignment and flips the badge without dropping the item; the ledger
+  persists under its own key and survives a reload; "stop tracking" removes
+  the entry from storage and from the panel currently showing it; the print
+  sheet reflects only tracked items and the print-only body class comes back
+  off on `afterprint`; `np_rosters` stays untouched. One assertion needed
+  `window.print` stubbed to a no-op before the print-button click (the
+  established pattern elsewhere in this repo, e.g.
+  `field-trip-permission-slip/test/smoke-scan-tracker.mjs`) — headless
+  Chromium's real `window.print()` doesn't reliably leave the class in place
+  for the assertion that follows. Not wired into `package.json`'s `test:qr`
+  script (out of scope for this pass); run directly with
+  `node Tools/qr-code-generator/test/smoke-checkout.mjs`.
+- Reuses `escapeHtml`, `readRosters`, and `rosterNames`, all already defined
+  in the file — no duplicated helpers.
+
+**Where the next round should pick up:** the ledger has no export/import or
+CSV download, so a semester's worth of check-out history lives only in one
+browser's localStorage — worth a look if a teacher wants to hand off records
+at term end. `crh_students_v1` (Class Roster Hub's sidecar id) is still not
+used as the "who", per the prior round's note; free-text names remain the
+simplest thing that works across a whole classroom's worth of ad hoc groups.
+
 ### 2026-08-12 — session `r8kq4t` — a suite for the roster code sheet
 
 Backlog rank 3 (as it then stood). The roster-labelled code sheet shipped
