@@ -179,6 +179,113 @@ ok(!(await page.textContent('#testRunBody')).includes('Accepts:'), 'and the answ
 await page.click('#testRunClose');
 await settle(page, 150);
 
+/* ── paper packet ─────────────────────────────────────────────────────────
+   The printable non-digital fallback: cut-apart station cards plus a
+   teacher key, built from the same buildRoomPayload/validStations data as
+   everything else — no QR codes, no player link. Extends the same
+   3-station branching room (station 1 jumps past the orphaned station 2 to
+   station 3) with a digit-lock station and a cipher station, so the packet
+   is exercised against every puzzle type, a costed hint, an awarded
+   letter, and an unreachable station in one pass. */
+function caesarEncodeJs(text, shift) {
+  const sh = ((shift % 26) + 26) % 26;
+  return String(text).replace(/[a-zA-Z]/g, (ch) => {
+    const base = ch === ch.toUpperCase() ? 65 : 97;
+    return String.fromCharCode((ch.charCodeAt(0) - base + sh) % 26 + base);
+  });
+}
+
+await page.evaluate(() => { window.print = function () {}; }); // no real print dialog in headless
+
+// Station 4: digit lock, costed hint, awards a letter.
+await page.click('#addStationBtn');
+await settle(page, 200);
+let rows = await page.$$('#stationsList > *');
+await rows[3].$eval('.f-type', (el) => { el.value = 'digits'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+await settle(page, 150);
+rows = await page.$$('#stationsList > *'); // DOM rebuilt by the type change
+await rows[3].$eval('.f-clue', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, 'Crack the locker.');
+await rows[3].$eval('.f-answers', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, '482');
+await rows[3].$eval('.f-hint', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, 'Half of 964.');
+await rows[3].$eval('.f-hint-cost', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, '15');
+await rows[3].$eval('.f-award-letter', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, 'R');
+await settle(page, 200);
+
+// Station 5: cipher, fixed shift so the ciphertext is predictable.
+await page.click('#addStationBtn');
+await settle(page, 200);
+rows = await page.$$('#stationsList > *');
+await rows[4].$eval('.f-type', (el) => { el.value = 'cipher'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+await settle(page, 150);
+rows = await page.$$('#stationsList > *');
+await rows[4].$eval('.f-clue', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, 'Decode the vault message.');
+await rows[4].$eval('.f-cipher-plain', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, 'open the vault');
+await rows[4].$eval('.f-cipher-shift', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, '3');
+await settle(page, 200);
+
+// Route station 3 ("What is 1/2 + 1/4?", was the chain's end) on to the new
+// digit-lock station, which auto-advances into the cipher station — leaves
+// station 2 ("Orphaned station...") the only one still unreachable.
+rows = await page.$$('#stationsList > *');
+await rows[2].$eval('.f-next', (el, v) => { el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); }, '3');
+await settle(page, 250);
+
+eq(await page.isDisabled('#printPacketBtn'), false, 'the paper-packet button enables once the room is valid');
+
+await page.click('#printPacketBtn');
+await settle(page, 250);
+
+/* ── it warns about (but still prints) the unreachable station ─────────── */
+const packetMsg = await page.textContent('#msg');
+ok(/Heads up: station 2/.test(packetMsg), 'the packet flags the still-orphaned station: ' + packetMsg);
+ok(/nothing in the chain routes to it/.test(packetMsg), 'and explains why');
+
+ok(await page.evaluate(() => document.getElementById('printPacketArea').classList.contains('active')),
+   'the packet print area is the one made active');
+
+/* ── every valid station gets a card, in order, reachable or not ────────── */
+const cardTexts = await page.$$eval('#packetCardsGrid .packet-card', els => els.map(el => el.textContent));
+eq(cardTexts.length, 5, 'one card per valid station, including the orphaned one');
+[1, 2, 3, 4, 5].forEach((n, i) => ok(new RegExp('Station ' + n).test(cardTexts[i]), `card ${i} is labeled Station ${n}`));
+
+/* ── digit-lock card: boxes, not the code; hint and its cost; no bare letter ── */
+const digitCardHtml = await page.$eval('#packetCardsGrid .packet-card:nth-child(4)', el => el.innerHTML);
+const digitCardText = await page.$eval('#packetCardsGrid .packet-card:nth-child(4)', el => el.textContent);
+eq((digitCardHtml.match(/pc-digit-box/g) || []).length, 3, 'three digit boxes, matching the length of "482"');
+ok(!digitCardText.includes('482'), 'the code itself never prints on the student card: ' + digitCardText);
+ok(digitCardText.includes('Half of 964.'), 'the hint text is there to be flipped and read');
+ok(/15 pts/.test(digitCardText), 'and its point cost is printed with it');
+ok(digitCardHtml.includes('pc-hint-text'), 'the hint sits in the upside-down block');
+ok(digitCardHtml.includes('pc-letter-box'), 'an empty letter box prints for the awarded letter');
+const letterLine = await page.$eval('#packetCardsGrid .packet-card:nth-child(4) .pc-letter', el => el.textContent);
+ok(!/\bR\b/.test(letterLine), 'but the letter itself is not on the card, only in the teacher key: ' + letterLine);
+
+/* ── cipher card: shows the ciphertext, never the plaintext ─────────────── */
+const expectedCipher = caesarEncodeJs('open the vault', 3);
+eq(expectedCipher, 'rshq wkh ydxow', 'sanity check on the test\'s own cipher helper');
+const cipherCardText = await page.$eval('#packetCardsGrid .packet-card:nth-child(5)', el => el.textContent);
+ok(cipherCardText.includes(expectedCipher), 'the card shows the encoded message: ' + cipherCardText);
+ok(!cipherCardText.toLowerCase().includes('open the vault'), 'never the plaintext');
+
+/* ── teacher key at the end of the packet is complete ────────────────────── */
+const keyRows = await page.$$eval('#packetKeyBody tr', rows => rows.map(r => r.textContent));
+eq(keyRows.length, 5, 'one key row per station, same count as cards');
+ok(keyRows[3].includes('482') && /Digit lock/.test(keyRows[3]), 'the digit code is spelled out in the key');
+ok(keyRows[3].includes('R'), 'and the awarded letter, unlike on the card');
+ok(keyRows[4].includes(expectedCipher) && keyRows[4].includes('open the vault'),
+   'the cipher row shows both the ciphertext and the decoded phrase');
+ok(/Station 4/.test(keyRows[2]), 'the key\'s Next column reflects the new branch (station 3 now points to the digit lock)');
+
+/* ── cards-per-page selection actually changes the printed layout ───────── */
+eq(await page.evaluate(() => document.getElementById('packetCardsGrid').className), 'packet-cards-grid pk-2',
+   'defaults to two cards per page');
+await page.selectOption('#packetCardsPerPage', '1');
+await settle(page, 150);
+await page.click('#printPacketBtn');
+await settle(page, 200);
+eq(await page.evaluate(() => document.getElementById('packetCardsGrid').className), 'packet-cards-grid pk-1',
+   'switching to one-per-page rebuilds the grid with the new class');
+
 /* ── no console noise, nothing left the site ───────────────────────────── */
 for (const [name, p] of [['builder', page], ['lock', lockPage]]) {
   eq(p.__errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(p.__errs.slice(0, 3)));

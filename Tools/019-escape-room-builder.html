@@ -193,6 +193,46 @@
     .ref-sheet th, .ref-sheet td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
     .ref-sheet th { background: #eee; }
 
+    /* ── Paper packet: cut-apart station cards + a teacher key, so the room ─
+       runs with no devices. Same page-break-inside/nth-child pagination
+       approach as .print-qr-grid above, since it's already proven for this
+       exact "N station cards, cut apart, don't split across a page" job —
+       just with room for clue text, an image and a hint instead of a QR canvas. */
+    .packet-header { margin-bottom: 10px; }
+    .packet-header h2 { font-size: 1.2rem; margin: 0 0 4px; }
+    .packet-header .packet-intro { font-size: .9rem; color: #333; white-space: pre-wrap; margin: 0; }
+    .packet-cards-grid { display: flex; flex-wrap: wrap; }
+    .packet-card {
+      box-sizing: border-box; border: 1.5px dashed #888; border-radius: 8px; padding: 12px 14px;
+      page-break-inside: avoid; margin: 4px;
+    }
+    .packet-cards-grid.pk-1 .packet-card { width: calc(100% - 8px); page-break-after: always; }
+    .packet-cards-grid.pk-1 .packet-card:last-child { page-break-after: auto; }
+    .packet-cards-grid.pk-2 .packet-card { width: calc(50% - 8px); min-height: 46vh; }
+    .packet-cards-grid.pk-2 .packet-card:nth-child(2n) { page-break-after: always; }
+    .packet-cards-grid.pk-2 .packet-card:last-child { page-break-after: auto; }
+    .pc-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+    .pc-num { font-weight: 700; font-size: 1rem; }
+    .pc-type { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #555; }
+    .pc-clue { font-size: 1rem; line-height: 1.4; white-space: pre-wrap; margin: 0 0 8px; }
+    .pc-img { max-width: 100%; max-height: 26vh; object-fit: contain; display: block; margin: 0 0 8px; }
+    .pc-cipher { font-family: Consolas, monospace; font-size: 1.05rem; letter-spacing: .08em; background: #f1f0ea; border-radius: 4px; padding: 6px 8px; margin-bottom: 8px; word-break: break-word; }
+    .pc-line-label { font-size: .78rem; color: #444; margin-bottom: 2px; }
+    .pc-line { border-bottom: 1px solid #999; height: 1.5em; margin-bottom: 6px; }
+    .pc-digits { display: flex; gap: 5px; margin: 2px 0 8px; }
+    .pc-digit-box { width: 1.6em; height: 1.6em; border: 1.5px solid #444; border-radius: 3px; }
+    .pc-letter { font-size: .82rem; color: #333; margin-top: 4px; }
+    .pc-letter-box { display: inline-block; width: 1.1em; height: 1.1em; border: 1.5px solid #444; border-radius: 2px; vertical-align: middle; margin-left: 2px; }
+    .pc-hint { margin-top: 8px; border-top: 1px dashed #aaa; padding-top: 6px; }
+    .pc-hint-label { font-size: .74rem; color: #555; margin-bottom: 3px; }
+    .pc-hint-text { display: inline-block; transform: rotate(180deg); font-size: .82rem; }
+    .packet-key-page { page-break-before: always; }
+    .packet-key-page h2 { font-size: 1.1rem; margin-bottom: 4px; }
+    .packet-key-page .packet-key-note { font-size: .85rem; color: #333; margin: 0 0 10px; }
+    .packet-key-page table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .packet-key-page th, .packet-key-page td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+    .packet-key-page th { background: #eee; }
+
     .cover-sheet {
       border: 3px double #333; border-radius: 4px; padding: 48px 40px; margin: 24px;
       min-height: 80vh; display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -315,6 +355,20 @@
         <div class="hint">Each printed code is stamped for its own station, so scanning Station 3's code before solving Station 1 or 2 tells the player to go find those first. The answer key prints separately &mdash; keep it with you, not with the students.</div>
       </div>
 
+      <div class="card">
+        <div class="card-title"><span>Paper packet (no devices)</span></div>
+        <div class="hint">The same puzzle chain as cut-apart station cards &mdash; no QR codes, no Chromebooks, no scanning. Print it, cut the cards apart, and hand out Station 1. When a team gets it right, check their answer against the teacher key at the end of the packet and hand them the card the key says comes next.</div>
+        <label for="packetCardsPerPage">Cards per printed page</label>
+        <select id="packetCardsPerPage">
+          <option value="1">1 &mdash; full page, room for a bigger image</option>
+          <option value="2" selected>2 &mdash; half-sheet cards</option>
+        </select>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="secondary" id="printPacketBtn" disabled type="button">&#128196; Print Paper Packet</button>
+        </div>
+        <div class="hint">A hint prints upside-down under a dashed line on its card &mdash; readable, but reading it takes a deliberate flip, the paper stand-in for the on-screen "spend N points" click. A station that awards a letter prints a blank box on the card instead of the letter itself; the letter is only in the teacher key, so the card doesn't spoil the final meta-puzzle. Every station prints, reachable or not &mdash; run a test run first if you want to catch an orphaned station before you cut anything apart.</div>
+      </div>
+
       <div id="msg"></div>
     </div>
 
@@ -367,6 +421,21 @@
     </div>
   </div>
 </div>
+<div class="print-only" id="printPacketArea">
+  <div class="packet-header">
+    <h2 id="packetRoomTitle">Escape Room</h2>
+    <p class="packet-intro" id="packetIntro"></p>
+  </div>
+  <div class="packet-cards-grid" id="packetCardsGrid"></div>
+  <div class="packet-key-page">
+    <h2 id="packetKeyTitle">Teacher Key</h2>
+    <p class="packet-key-note">Check the team's answer against this key. If it matches, hand them the card named in "Next on success" &mdash; or tell them they've finished if it says Finish.</p>
+    <table>
+      <thead><tr><th>#</th><th>Clue</th><th>Accepted answers / details</th><th>Hint</th><th>Letter</th><th>Next on success</th></tr></thead>
+      <tbody id="packetKeyBody"></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -383,7 +452,9 @@
    'countdownEnabled', 'countdownMinutes', 'countdownMinutesRow', 'printCodesBtn', 'printAnswersBtn',
    'cards-preview', 'answerPreview', 'printQrArea', 'printQrGrid', 'printAnswerArea', 'printAnswerBody',
    'answerSheetTitle', 'previewNote', 'msg',
-   'testRunBtn', 'testRunOverlay', 'testRunClose', 'testRunStep', 'testRunBody'
+   'testRunBtn', 'testRunOverlay', 'testRunClose', 'testRunStep', 'testRunBody',
+   'packetCardsPerPage', 'printPacketBtn', 'printPacketArea', 'packetRoomTitle', 'packetIntro',
+   'packetCardsGrid', 'packetKeyTitle', 'packetKeyBody'
   ].forEach(function (id) { els[toCamel(id)] = document.getElementById(id); });
   function toCamel(id) { return id.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); }); }
 
@@ -444,7 +515,7 @@
       stations: [{ clue: '', answers: '', hint: '', next: null, image: '', type: 'text', hintCost: 0, awardLetter: '', cipherPlain: '', cipherShift: 0, maxAttempts: 0, numericTolerance: null }],
       cardsPerPage: '4', ecLevel: 'Q', showNumber: true, randomizeStart: false,
       countdownEnabled: false, countdownMinutes: 20,
-      storyIntro: '',
+      storyIntro: '', packetCardsPerPage: '2',
     };
     applyStateToForm();
     refreshSwitcher();
@@ -460,6 +531,7 @@
     if (!Array.isArray(loaded.stations)) loaded.stations = [];
     if (!loaded.roomId) loaded.roomId = makeRoomId();
     if (typeof loaded.storyIntro !== 'string') loaded.storyIntro = '';
+    if (typeof loaded.packetCardsPerPage !== 'string') loaded.packetCardsPerPage = '2';
     state = loaded;
     ensureAtLeastOneStation();
     applyStateToForm();
@@ -477,6 +549,7 @@
     els.countdownEnabled.checked = !!state.countdownEnabled;
     els.countdownMinutes.value = state.countdownMinutes || 20;
     els.countdownMinutesRow.style.display = state.countdownEnabled ? '' : 'none';
+    els.packetCardsPerPage.value = state.packetCardsPerPage || '2';
     renderStations();
   }
 
@@ -912,6 +985,7 @@
       els.printCodesBtn.disabled = true;
       els.printAnswersBtn.disabled = true;
       els.testRunBtn.disabled = true;
+      els.printPacketBtn.disabled = true;
       els.previewNote.textContent = 'Live preview.';
       return;
     }
@@ -947,6 +1021,7 @@
     els.printCodesBtn.disabled = false;
     els.printAnswersBtn.disabled = false;
     els.testRunBtn.disabled = false;
+    els.printPacketBtn.disabled = false;
   }
 
   /* ── Teacher test run ───────────────────────────────────────────────────
@@ -1189,6 +1264,74 @@
     els.coverStory.textContent = story || 'Solve each station’s puzzle to unlock the next clue — crack them all to escape!';
   }
 
+  /* ── Paper packet ──────────────────────────────────────────────────────
+     The same puzzle chain as cut-apart student cards, with a teacher key
+     appended at the end — no QR codes, no player link, nothing digital.
+     Reuses buildRoomPayload/validStations for the source data and
+     answerRowHtml for the key, so the packet can't say something different
+     from the digital room built from the same stations. */
+
+  // Digit-lock boxes on the card are sized off the first accepted code's
+  // length — the same known convention as lock.html's own box sizing and
+  // the builder's inline digit-length warning (see digitLengthWarningHtml).
+  function digitBoxesHtml(s) {
+    var len = (s.answers[0] || '').length || 4;
+    var boxes = '';
+    for (var i = 0; i < len; i++) boxes += '<span class="pc-digit-box"></span>';
+    return '<div class="pc-digits">' + boxes + '</div>';
+  }
+
+  function packetCardHtml(s, n) {
+    var typeTag = s.type === 'cipher' ? 'Caesar cipher' : (s.type === 'digits' ? 'Digit lock' : '');
+    var answerArea;
+    if (s.type === 'cipher') {
+      // Only the ciphertext prints on the card — same as lock.html — so the
+      // shift itself stays part of the puzzle, not given away on the card.
+      var shown = s.answers.map(function (a) { return caesarEncode(a, s.cipherShift); });
+      answerArea = '<div class="pc-cipher">' + escapeHtml(shown.join('   /   ')) + '</div>' +
+        '<div class="pc-line-label">Decoded message:</div><div class="pc-line"></div>';
+    } else if (s.type === 'digits') {
+      answerArea = '<div class="pc-line-label">Enter the code:</div>' + digitBoxesHtml(s);
+    } else {
+      answerArea = '<div class="pc-line-label">Your answer:</div><div class="pc-line"></div><div class="pc-line"></div>';
+    }
+    var img = s.image ? '<img class="pc-img" src="' + escapeAttr(s.image) + '" alt="">' : '';
+    // The hint is printed upside-down, not omitted — reading it takes a
+    // deliberate flip, the paper stand-in for the on-screen "spend N points"
+    // button (a real point deduction still needs a teacher to track it).
+    var hint = s.hint
+      ? '<div class="pc-hint"><div class="pc-hint-label">Hint' + (s.hintCost ? ' (&minus;' + s.hintCost + ' pts if you use it)' : ' (free)') +
+        ' &mdash; turn the card upside down to read it</div><div class="pc-hint-text">' + escapeHtml(s.hint) + '</div></div>'
+      : '';
+    // The letter itself is never printed on the card — only a blank box —
+    // so a curious team can't read every card's letter and skip solving the
+    // meta-puzzle. The actual letter is in the teacher key only.
+    var letter = s.awardLetter
+      ? '<div class="pc-letter">Solve this station to earn a letter <span class="pc-letter-box"></span> (your teacher will fill it in)</div>'
+      : '';
+    return '<div class="packet-card">' +
+      '<div class="pc-head"><span class="pc-num">Station ' + (n + 1) + '</span>' + (typeTag ? '<span class="pc-type">' + typeTag + '</span>' : '') + '</div>' +
+      '<div class="pc-clue">' + escapeHtml(s.clue) + '</div>' +
+      img +
+      '<div class="pc-answer">' + answerArea + '</div>' +
+      letter + hint +
+    '</div>';
+  }
+
+  function buildPrintPacket() {
+    var valid = validStations();
+    if (!valid.length) return;
+    els.packetRoomTitle.textContent = state.name || 'Escape Room';
+    els.packetIntro.textContent = (state.storyIntro || '').trim();
+    els.packetCardsGrid.className = 'packet-cards-grid pk-' + els.packetCardsPerPage.value;
+    els.packetCardsGrid.innerHTML = valid.map(function (s, n) { return packetCardHtml(s, n); }).join('');
+    // Teacher key reuses the exact same row markup as Print Answer Key —
+    // one source of truth for "what does a teacher need to see per station",
+    // whether the room runs by QR or by paper.
+    els.packetKeyTitle.textContent = (state.name ? state.name + ' — ' : '') + 'Teacher Key (Paper Packet)';
+    els.packetKeyBody.innerHTML = valid.map(function (s, n) { return answerRowHtml(s, n, valid); }).join('');
+  }
+
   function printSection(area, buildFn) {
     buildFn();
     document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
@@ -1199,6 +1342,18 @@
   els.printCodesBtn.addEventListener('click', function () { printSection(els.printQrArea, buildPrintCodes); });
   els.printAnswersBtn.addEventListener('click', function () { printSection(els.printAnswerArea, buildPrintAnswers); });
   els.printCoverBtn.addEventListener('click', function () { printSection(els.printCoverArea, buildPrintCover); });
+  els.printPacketBtn.addEventListener('click', function () {
+    var valid = validStations();
+    if (valid.length) {
+      var unreachable = unreachableStations(buildRoomPayload(valid));
+      if (unreachable.length) {
+        showMsg('Heads up: station' + (unreachable.length === 1 ? ' ' : 's ') + unreachable.join(', ') +
+          ' — nothing in the chain routes to ' + (unreachable.length === 1 ? 'it' : 'them') +
+          ', so that card will never come up as a "next" in the teacher key. Printing anyway.');
+      }
+    }
+    printSection(els.printPacketArea, buildPrintPacket);
+  });
 
   els.copyLinkBtn.addEventListener('click', function () {
     if (!els.playerLink.value) return;
@@ -1219,10 +1374,11 @@
     state.countdownEnabled = els.countdownEnabled.checked;
     state.countdownMinutes = Math.max(1, parseInt(els.countdownMinutes.value, 10) || 20);
     els.countdownMinutesRow.style.display = state.countdownEnabled ? '' : 'none';
+    state.packetCardsPerPage = els.packetCardsPerPage.value;
     save();
     scheduleRender();
   }
-  [els.cardsPerPage, els.ecLevel, els.showNumber, els.randomizeStart, els.countdownEnabled, els.countdownMinutes].forEach(function (el) {
+  [els.cardsPerPage, els.ecLevel, els.showNumber, els.randomizeStart, els.countdownEnabled, els.countdownMinutes, els.packetCardsPerPage].forEach(function (el) {
     el.addEventListener('change', syncOptionFields);
   });
   els.countdownMinutes.addEventListener('input', syncOptionFields);
