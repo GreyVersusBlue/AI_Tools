@@ -193,6 +193,7 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
+| Primary Source Analysis Worksheet Generator | `qzmvhx` | 2026-08-13 23:58 UTC | `claude/ssdemo-028-qzmvhx` |
 
 ---
 
