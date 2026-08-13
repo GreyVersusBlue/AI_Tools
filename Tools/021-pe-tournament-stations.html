@@ -20,6 +20,14 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<!-- Phone-to-display remote pairing (WebRTC over the local Wi-Fi, no signaling
+     server — see _shared/webrtc-pair.js). Plain global scripts, loaded before
+     the page's own inline script that uses window.WebRTCPair / window.QRScan
+     / window.qrcode / window.jsQR. -->
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   :root { --good: #2f7d4f; }
   * { box-sizing: border-box; }
@@ -196,6 +204,33 @@
   .remote-controls button.danger { background: rgba(255,255,255,.12); color: #ffd8d0; border-color: #e08a7a; }
   .remote-tiles { text-align: left; font-size: .85rem; }
   .remote-tile { background: rgba(255,255,255,.08); border-radius: 6px; padding: .5rem .7rem; margin-bottom: .5rem; }
+  .remote-pair-btn { margin-bottom: 1.1rem; }
+
+  /* ── "Pair over Wi-Fi" modal — WebRTC data-channel pairing between this
+     display and a phone on the same LAN, an alternative to the same-device
+     BroadcastChannel remote above. Styling mirrors Classroom Timer's
+     mirror-to-a-device modal (Tools/004-Classroom Timer.html). ─────────── */
+  .pair-overlay {
+    position: fixed; inset: 0; background: rgba(20,18,14,.55); z-index: 60;
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .pair-overlay[hidden] { display: none; }
+  .pair-modal {
+    background: var(--paper); color: var(--ink); border-radius: 12px; width: 100%;
+    max-width: 420px; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  }
+  .pair-head { display: flex; justify-content: space-between; align-items: center; padding: .9rem 1.1rem; border-bottom: 1px solid var(--line); }
+  .pair-head h2 { font-size: 1.05rem; margin: 0; }
+  .pair-close { background: transparent; border: none; color: var(--muted); font-size: 1.3rem; line-height: 1; padding: .2rem .4rem; cursor: pointer; }
+  .pair-close:hover { color: var(--err); background: transparent; border-color: transparent; }
+  .pair-body { padding: 1.1rem; font-size: .9rem; line-height: 1.5; }
+  .pair-body p { margin: 0 0 .8rem; color: var(--muted); }
+  .pair-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .pair-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
+  .pair-body textarea { min-height: auto; }
+  .pair-status { font-size: .82rem; color: var(--muted); margin-top: .5rem; }
+  .pair-status.bad { color: var(--err); }
+  .pair-status.good { color: var(--good); }
 
   /* ── Bracket (matches Bracket / Tournament Generator styling) ─────── */
   .champion-banner { display: none; background: #fff9e8; border: 1px solid #e5c56a; color: #6b5410; border-radius: 8px; padding: .8rem 1rem; font-weight: 700; margin-bottom: 1rem; }
@@ -345,6 +380,7 @@
       <button id="resetRotationBtn" class="danger" type="button">Reset</button>
       <button id="fullscreenBtn" class="secondary" type="button" title="Toggle fullscreen (F)">&#9970; Fullscreen</button>
       <button id="openRemoteBtn" class="secondary" type="button">Open remote control</button>
+      <button id="pairPhoneBtn" class="secondary" type="button">Pair a phone (Wi-Fi)</button>
     </div>
     <div class="station-tiles" id="stationTiles"></div>
   </div>
@@ -396,6 +432,7 @@
   <div class="remote-inner">
     <div class="remote-title" id="remoteTitle">PE Rotation Remote</div>
     <div class="remote-conn" id="remoteConn">Connecting to the display&hellip;</div>
+    <button id="pairJoinBtn" class="secondary remote-pair-btn" type="button">On a different device? Pair over Wi-Fi</button>
     <div class="remote-sub" id="remoteSub">Rotation 1</div>
     <div class="remote-time" id="remoteTime">--:--</div>
     <div class="remote-status" id="remoteStatus"></div>
@@ -407,6 +444,16 @@
       <button id="remoteResetBtn" class="danger" type="button">Reset</button>
     </div>
     <div class="remote-tiles" id="remoteTiles"></div>
+  </div>
+</div>
+
+<div class="pair-overlay" id="pairOverlay" hidden>
+  <div class="pair-modal" role="dialog" aria-modal="true" aria-label="Pair a phone over Wi-Fi">
+    <div class="pair-head">
+      <h2>Pair over Wi-Fi</h2>
+      <button type="button" class="pair-close" id="pairCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="pair-body" id="pairBody"></div>
   </div>
 </div>
 
@@ -446,7 +493,8 @@
    'printArea', 'printTitle', 'printSub', 'printScheduleWrap', 'printBracketWrap', 'printCardsArea',
    'printScoresArea', 'printScoresTitle', 'printScoresSub', 'printScoresWrap',
    'remoteView', 'remoteConn', 'remoteSub', 'remoteTime', 'remoteStatus', 'remoteTiles',
-   'remoteStartBtn', 'remotePauseBtn', 'remoteResumeBtn', 'remoteRotateBtn', 'remoteResetBtn'
+   'remoteStartBtn', 'remotePauseBtn', 'remoteResumeBtn', 'remoteRotateBtn', 'remoteResetBtn',
+   'pairPhoneBtn', 'pairJoinBtn', 'pairOverlay', 'pairBody', 'pairCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var isRemote = (function () {
@@ -1089,18 +1137,39 @@
     }
   });
 
-  /* ---------- remote control (phone/second window) via BroadcastChannel ----------
-     BroadcastChannel only reaches other tabs/windows in the *same browser on the
-     same device* — it cannot bridge a phone to a laptop over wifi without a
-     backend. This is a same-device "second screen" remote (e.g. a small control
-     window on the same machine driving the fullscreen display), not yet a true
-     phone-to-separate-display remote. See the improvement notes for the tradeoff. */
+  /* ---------- remote control: same-device (BroadcastChannel) + phone-to-laptop (WebRTC) ----------
+     Two transports, one command vocabulary. Both ends only ever exchange
+     {type:'cmd', cmd:'start'|'pause'|'resume'|'rotate'|'reset'} — applied
+     through the exact same doStart/doPause/doResume/doRotateNow/doReset the
+     on-screen buttons call — and {type:'state', ...} snapshots built by
+     buildStateMessage() below. The display window remains the sole timer
+     authority (tick()/endAt) no matter which transport a command arrived on;
+     isRemote already short-circuits tick() on the remote/phone page.
+
+     1. BroadcastChannel — same browser context only (verified: two separate
+        Playwright browser *contexts*, i.e. two independent devices/profiles,
+        never receive each other's BroadcastChannel messages, over both
+        file:// and http://). This is a genuine, working same-device "second
+        screen" remote (e.g. a small control window on the same laptop that's
+        mirroring/HDMI'd to the gym TV) — kept as-is, it costs nothing and
+        some teachers' setups are exactly that same-device case.
+
+     2. _shared/webrtc-pair.js — a real LAN peer connection (QR-code offer/
+        answer, no signaling server, host-candidates-only), the same pattern
+        Classroom Timer's "Mirror to a device" uses (Tools/classroom-timer/
+        ct-mirror.js). This is what actually lets a phone on the gym Wi-Fi
+        drive a laptop that's a different device entirely — the gap the
+        BroadcastChannel remote could never close. Reachable from the display
+        via "Pair a phone (Wi-Fi)" and from the remote page via "Pair over
+        Wi-Fi instead". */
   var CHANNEL_NAME = 'pe-tournament-stations-remote';
   var bc = null;
   try { if ('BroadcastChannel' in window) bc = new BroadcastChannel(CHANNEL_NAME); } catch (e) { bc = null; }
 
-  function broadcastState() {
-    if (!bc || isRemote || !state) return;
+  var rtc = { pc: null, channel: null, scanHandle: null };
+  var remoteConnected = false; // (remote page only) true once either transport has delivered a state snapshot
+
+  function buildStateMessage() {
     var map = computeAssignment();
     var nextMap = state.stations.length > 1 ? computeAssignment(state.rotation.count + 1) : map;
     var tiles = state.stations.map(function (st, i) {
@@ -1110,68 +1179,340 @@
         next: (nextMap[i] || []).map(function (g) { return g.name || 'Group'; })
       };
     });
-    try {
-      bc.postMessage({
-        type: 'state', unit: state.name,
-        sub: els.stageSub.textContent, time: els.stageTime.textContent, status: els.stageStatus.textContent,
-        running: state.rotation.running, paused: state.rotation.paused, tiles: tiles
-      });
-    } catch (e) { /* ignore — remote sync is a bonus feature */ }
-  }
-
-  if (bc && !isRemote) {
-    bc.onmessage = function (e) {
-      var msg = e && e.data;
-      if (!msg || !state) return;
-      if (msg.type === 'hello') { broadcastState(); return; }
-      if (msg.type !== 'cmd') return;
-      if (msg.cmd === 'start') doStart();
-      else if (msg.cmd === 'pause') doPause();
-      else if (msg.cmd === 'resume') doResume();
-      else if (msg.cmd === 'rotate') doRotateNow();
-      else if (msg.cmd === 'reset') doReset();
+    return {
+      type: 'state', unit: state.name,
+      sub: els.stageSub.textContent, time: els.stageTime.textContent, status: els.stageStatus.textContent,
+      running: state.rotation.running, paused: state.rotation.paused, tiles: tiles
     };
   }
+
+  function broadcastState() {
+    if (isRemote || !state) return;
+    var haveBc = !!bc, haveRtc = rtc.channel && rtc.channel.readyState === 'open';
+    if (!haveBc && !haveRtc) return;
+    var msg = buildStateMessage();
+    if (haveBc) { try { bc.postMessage(msg); } catch (e) { /* ignore — remote sync is a bonus feature */ } }
+    if (haveRtc) { try { rtc.channel.send(JSON.stringify(msg)); } catch (e) { /* ignore */ } }
+  }
+
+  /** Display side: applies a {type:'cmd'} message, from either transport, the
+   *  same way the on-screen buttons do. */
+  function applyRemoteCmd(msg) {
+    if (!msg || !state) return;
+    if (msg.type === 'hello') { broadcastState(); return; }
+    if (msg.type !== 'cmd') return;
+    if (msg.cmd === 'start') doStart();
+    else if (msg.cmd === 'pause') doPause();
+    else if (msg.cmd === 'resume') doResume();
+    else if (msg.cmd === 'rotate') doRotateNow();
+    else if (msg.cmd === 'reset') doReset();
+  }
+
+  if (bc && !isRemote) bc.onmessage = function (e) { applyRemoteCmd(e && e.data); };
 
   if (els.openRemoteBtn) {
     els.openRemoteBtn.addEventListener('click', function () {
       var base = window.location.href.split('?')[0].split('#')[0];
       var win = window.open(base + '?remote=1', 'pe-tournament-remote', 'width=420,height=760');
       if (!win) showMsg('Your browser blocked the remote control popup — allow popups for this page and try again.', 'info');
-      else showMsg('Remote control opened in a new window. It mirrors and controls this display as long as both stay open in the same browser.', 'info');
+      else showMsg('Remote control opened in a new window. It mirrors and controls this display as long as both stay open in the same browser. On a phone or a different device instead, use "Pair a phone (Wi-Fi)".', 'info');
     });
   }
 
+  /** Remote/phone side: renders a {type:'state'} snapshot, from either transport. */
+  function applyDisplayState(msg) {
+    if (!msg || msg.type !== 'state') return;
+    remoteConnected = true;
+    els.remoteConn.textContent = 'Connected — ' + (msg.unit || 'unit');
+    els.remoteSub.textContent = msg.sub || '';
+    els.remoteTime.textContent = msg.time || '--:--';
+    els.remoteStatus.textContent = msg.status || '';
+    els.remoteStartBtn.hidden = msg.running || msg.paused;
+    els.remotePauseBtn.hidden = !msg.running;
+    els.remoteResumeBtn.hidden = !msg.paused;
+    els.remoteTiles.innerHTML = (msg.tiles || []).map(function (t) {
+      return '<div class="remote-tile"><strong>' + escapeHtml(t.name) + '</strong><br>Here: ' + (t.here.length ? t.here.map(escapeHtml).join(', ') : '&mdash;') + '<br>Next: ' + (t.next.length ? t.next.map(escapeHtml).join(', ') : '&mdash;') + '</div>';
+    }).join('');
+  }
+
+  /** Remote/phone side: sends a {type:'cmd'} — over the WebRTC data channel if
+   *  paired, otherwise over BroadcastChannel (the same-device case). */
+  function sendRemoteCmd(cmd) {
+    var msg = { type: 'cmd', cmd: cmd };
+    if (rtc.channel && rtc.channel.readyState === 'open') { try { rtc.channel.send(JSON.stringify(msg)); } catch (e) { /* ignore */ } return; }
+    if (bc) { try { bc.postMessage(msg); } catch (e) { /* ignore */ } }
+  }
+
   if (isRemote && bc) {
-    var remoteConnected = false;
-    bc.onmessage = function (e) {
-      var msg = e && e.data;
-      if (!msg || msg.type !== 'state') return;
-      remoteConnected = true;
-      els.remoteConn.textContent = 'Connected — ' + (msg.unit || 'unit');
-      els.remoteSub.textContent = msg.sub || '';
-      els.remoteTime.textContent = msg.time || '--:--';
-      els.remoteStatus.textContent = msg.status || '';
-      els.remoteStartBtn.hidden = msg.running || msg.paused;
-      els.remotePauseBtn.hidden = !msg.running;
-      els.remoteResumeBtn.hidden = !msg.paused;
-      els.remoteTiles.innerHTML = (msg.tiles || []).map(function (t) {
-        return '<div class="remote-tile"><strong>' + escapeHtml(t.name) + '</strong><br>Here: ' + (t.here.length ? t.here.map(escapeHtml).join(', ') : '&mdash;') + '<br>Next: ' + (t.next.length ? t.next.map(escapeHtml).join(', ') : '&mdash;') + '</div>';
-      }).join('');
-    };
-    els.remoteStartBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'start' }); });
-    els.remotePauseBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'pause' }); });
-    els.remoteResumeBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'resume' }); });
-    els.remoteRotateBtn.addEventListener('click', function () { bc.postMessage({ type: 'cmd', cmd: 'rotate' }); });
+    bc.onmessage = function (e) { applyDisplayState(e && e.data); };
+    els.remoteStartBtn.addEventListener('click', function () { sendRemoteCmd('start'); });
+    els.remotePauseBtn.addEventListener('click', function () { sendRemoteCmd('pause'); });
+    els.remoteResumeBtn.addEventListener('click', function () { sendRemoteCmd('resume'); });
+    els.remoteRotateBtn.addEventListener('click', function () { sendRemoteCmd('rotate'); });
     els.remoteResetBtn.addEventListener('click', function () {
-      if (confirm('Reset the rotation on the display?')) bc.postMessage({ type: 'cmd', cmd: 'reset' });
+      if (confirm('Reset the rotation on the display?')) sendRemoteCmd('reset');
     });
     bc.postMessage({ type: 'hello' });
     setTimeout(function () {
-      if (!remoteConnected) els.remoteConn.textContent = 'Waiting for a display window to be open in this same browser…';
+      if (!remoteConnected) els.remoteConn.textContent = 'Waiting for a display window open in this same browser… or tap "Pair over Wi-Fi instead" to control a laptop on the same Wi-Fi.';
     }, 1500);
   } else if (isRemote && !bc) {
-    els.remoteConn.textContent = 'This browser does not support the remote control feature (BroadcastChannel is unavailable). Try an up-to-date Chrome, Edge, Firefox, or Safari.';
+    els.remoteStartBtn.addEventListener('click', function () { sendRemoteCmd('start'); });
+    els.remotePauseBtn.addEventListener('click', function () { sendRemoteCmd('pause'); });
+    els.remoteResumeBtn.addEventListener('click', function () { sendRemoteCmd('resume'); });
+    els.remoteRotateBtn.addEventListener('click', function () { sendRemoteCmd('rotate'); });
+    els.remoteResetBtn.addEventListener('click', function () {
+      if (confirm('Reset the rotation on the display?')) sendRemoteCmd('reset');
+    });
+    els.remoteConn.textContent = 'This browser has no BroadcastChannel — tap "Pair over Wi-Fi instead" to control a laptop over Wi-Fi instead.';
+  }
+
+  /* ---------- "Pair over Wi-Fi": WebRTC data-channel remote (phone-to-laptop) ----------
+     No signaling server — the offer/answer SDP is shown as a QR code (and as
+     plain text) and relayed by hand between the two devices, exactly the
+     pattern Classroom Timer's "Mirror to a device" uses. See
+     _shared/webrtc-pair.js for why there's no STUN/TURN (LAN-only, by
+     design) and why the wire format is compact rather than base64(JSON). */
+
+  /** Draws `text` as a QR code onto `canvas`, sized off the actual module
+   *  count so a payload that lands on an awkward module count for a fixed
+   *  pixel size still renders with a readable, even pixels-per-module ratio.
+   *  Copied from Tools/classroom-timer/ct-mirror.js's drawQR — that file is a
+   *  per-tool ES module (not a _shared/ export), so this tool keeps its own
+   *  small copy on top of the shared vendored qrcode.js library rather than
+   *  importing a sibling tool's module. */
+  function drawQR(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount();
+    var quiet = 4;
+    var total = count + quiet * 2;
+    var MIN_PX_PER_MODULE = 8;
+    var size = total * MIN_PX_PER_MODULE;
+    canvas.width = size;
+    canvas.height = size;
+    var px = size / total;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16222e';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          var x0 = Math.round((quiet + c) * px);
+          var x1 = Math.round((quiet + c + 1) * px);
+          var y0 = Math.round((quiet + r) * px);
+          var y1 = Math.round((quiet + r + 1) * px);
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+      }
+    }
+  }
+
+  function pairSetStatus(text, kind) {
+    var el = document.getElementById('pairStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'pair-status' + (kind ? ' ' + kind : '');
+  }
+
+  function teardownRtc() {
+    if (rtc.scanHandle) { rtc.scanHandle.stop(); rtc.scanHandle = null; }
+    if (rtc.channel) { try { rtc.channel.close(); } catch (e) { /* ignore */ } rtc.channel = null; }
+    if (rtc.pc) { try { rtc.pc.close(); } catch (e) { /* ignore */ } rtc.pc = null; }
+  }
+
+  function pairCloseModal() {
+    els.pairOverlay.hidden = true;
+    if (rtc.scanHandle) { rtc.scanHandle.stop(); rtc.scanHandle = null; }
+  }
+  els.pairCloseBtn.addEventListener('click', pairCloseModal);
+  els.pairOverlay.addEventListener('mousedown', function (e) { if (e.target === els.pairOverlay) pairCloseModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.pairOverlay.hidden) pairCloseModal(); });
+
+  if (!isRemote && els.pairPhoneBtn) {
+    /* ---- host role: this display shows the offer, applies the phone's reply ---- */
+    els.pairPhoneBtn.addEventListener('click', function () {
+      els.pairOverlay.hidden = false;
+      if (rtc.channel && rtc.channel.readyState === 'open') renderPairHostConnected();
+      else renderPairHostIntro();
+    });
+
+    var renderPairHostIntro = function () {
+      els.pairBody.innerHTML =
+        '<p>Control this display from a phone on the same Wi-Fi network &mdash; no app, no account. On the phone, open <b>Open remote control</b>, then tap &ldquo;Pair over Wi-Fi instead.&rdquo;</p>' +
+        '<div class="btn-row"><button type="button" id="pairStartBtn">Start pairing</button></div>';
+      document.getElementById('pairStartBtn').addEventListener('click', pairHostBegin);
+    };
+
+    var pairHostBegin = function () {
+      els.pairBody.innerHTML = '<p>Preparing a pairing code&hellip;</p>';
+      window.WebRTCPair.createOffer('pe-remote').then(function (result) {
+        rtc.pc = result.pc;
+        rtc.channel = result.channel;
+        renderPairHostOffer(result.offerPayload);
+      }, function (err) {
+        els.pairBody.innerHTML = '<p>Couldn&rsquo;t start pairing: ' + escapeHtml(err && err.message || String(err)) + '</p><div class="btn-row"><button type="button" id="pairBackBtn">Back</button></div>';
+        document.getElementById('pairBackBtn').addEventListener('click', renderPairHostIntro);
+      });
+    };
+
+    var renderPairHostOffer = function (offerPayload) {
+      els.pairBody.innerHTML =
+        '<p>On the phone&rsquo;s remote screen, scan this code, or paste the text below by hand:</p>' +
+        '<canvas id="pairOfferCanvas" width="320" height="320"></canvas>' +
+        '<textarea id="pairOfferText" rows="3" readonly style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;"></textarea>' +
+        '<div class="btn-row"><button type="button" id="pairCopyOffer">Copy code</button></div>' +
+        '<p style="margin-top:1rem;">Then connect the phone&rsquo;s reply:</p>' +
+        '<div class="btn-row"><button type="button" id="pairScanAnswer">Scan the phone&rsquo;s code with camera</button></div>' +
+        '<textarea id="pairAnswerPaste" rows="3" style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;margin-top:.6rem;" placeholder="&hellip;or paste the phone&rsquo;s reply code here"></textarea>' +
+        '<div class="btn-row"><button type="button" id="pairConnectBtn">Connect</button></div>' +
+        '<p class="pair-status" id="pairStatus"></p>';
+      drawQR(document.getElementById('pairOfferCanvas'), offerPayload);
+      document.getElementById('pairOfferText').value = offerPayload;
+      document.getElementById('pairCopyOffer').addEventListener('click', function () {
+        if (!navigator.clipboard) { pairSetStatus('Copy not available — select the code by hand.', 'bad'); return; }
+        navigator.clipboard.writeText(offerPayload).then(function () { pairSetStatus('Code copied.', 'good'); }, function () { pairSetStatus('Could not copy — select the code by hand.', 'bad'); });
+      });
+      document.getElementById('pairConnectBtn').addEventListener('click', function () {
+        var val = document.getElementById('pairAnswerPaste').value.trim();
+        if (!val) { pairSetStatus('Paste the phone&rsquo;s reply code first.', 'bad'); return; }
+        pairHostConnect(val);
+      });
+      document.getElementById('pairScanAnswer').addEventListener('click', function () { pairHostScanAnswer(offerPayload); });
+    };
+
+    var pairHostScanAnswer = function (offerPayload) {
+      els.pairBody.insertAdjacentHTML('beforeend', '<video id="pairScanVideo" autoplay muted playsinline></video><div class="btn-row"><button type="button" id="pairCancelScan">Cancel</button></div>');
+      document.getElementById('pairScanAnswer').disabled = true;
+      document.getElementById('pairCancelScan').addEventListener('click', function () {
+        if (rtc.scanHandle) { rtc.scanHandle.stop(); rtc.scanHandle = null; }
+        renderPairHostOffer(offerPayload);
+      });
+      rtc.scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('pairScanVideo'), {
+        onResult: function (text) { if (rtc.scanHandle) { rtc.scanHandle.stop(); rtc.scanHandle = null; } pairHostConnect(text); },
+        onError: function (err) { pairSetStatus('Camera unavailable: ' + err.message, 'bad'); }
+      });
+    };
+
+    var pairHostConnect = function (answerPayload) {
+      pairSetStatus('Connecting…');
+      window.WebRTCPair.applyAnswer(rtc.pc, answerPayload).then(function () {
+        var failTimer = setTimeout(function () {
+          pairSetStatus('Still trying — make sure both devices are on the same Wi-Fi network.', 'bad');
+        }, 8000);
+        rtc.channel.addEventListener('open', function () {
+          clearTimeout(failTimer);
+          // Close the modal rather than lingering on a "Connected" screen —
+          // it's a full-screen overlay that would otherwise sit on top of
+          // this display's own Start/Pause/Rotate/Reset buttons. Reopening
+          // "Pair a phone (Wi-Fi)" while still paired shows the connected
+          // screen (with Stop pairing) instead of starting over.
+          pairCloseModal();
+          showMsg('A phone is now paired and controlling this display over Wi-Fi.', 'info');
+          broadcastState();
+        });
+        rtc.channel.addEventListener('close', function () {
+          if (!els.pairOverlay.hidden) renderPairHostIntro();
+          teardownRtc();
+        });
+        rtc.channel.addEventListener('message', function (e) {
+          var msg; try { msg = JSON.parse(e.data); } catch (err) { return; }
+          applyRemoteCmd(msg);
+        });
+      }, function (err) {
+        pairSetStatus(err && err.message || String(err), 'bad');
+      });
+    };
+
+    var renderPairHostConnected = function () {
+      els.pairBody.innerHTML = '<p><b>Connected.</b> The phone can now control this display &mdash; Start, Pause, Rotate now, Reset.</p><div class="btn-row"><button type="button" id="pairStopBtn">Stop pairing</button></div>';
+      document.getElementById('pairStopBtn').addEventListener('click', function () { teardownRtc(); pairCloseModal(); });
+    };
+  }
+
+  if (isRemote && els.pairJoinBtn) {
+    /* ---- join role: this phone scans the display's offer, shows a reply back ---- */
+    els.pairJoinBtn.addEventListener('click', function () {
+      els.pairOverlay.hidden = false;
+      if (rtc.channel && rtc.channel.readyState === 'open') renderPairJoinConnected();
+      else renderPairJoinIntro();
+    });
+
+    var renderPairJoinIntro = function () {
+      els.pairBody.innerHTML =
+        '<p>On the display, click &ldquo;Pair a phone (Wi-Fi)&rdquo; and scan the code it shows, or paste it below.</p>' +
+        '<div class="btn-row"><button type="button" id="pairJoinScanBtn">Scan with camera</button></div>' +
+        '<textarea id="pairJoinPaste" rows="3" style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;" placeholder="&hellip;or paste the display&rsquo;s code here"></textarea>' +
+        '<div class="btn-row"><button type="button" id="pairJoinConnectBtn">Connect</button></div>' +
+        '<p class="pair-status" id="pairStatus"></p>';
+      document.getElementById('pairJoinConnectBtn').addEventListener('click', function () {
+        var val = document.getElementById('pairJoinPaste').value.trim();
+        if (!val) { pairSetStatus('Paste the display&rsquo;s code first.', 'bad'); return; }
+        pairJoinConnect(val);
+      });
+      document.getElementById('pairJoinScanBtn').addEventListener('click', pairJoinScan);
+    };
+
+    var pairJoinScan = function () {
+      els.pairBody.insertAdjacentHTML('beforeend', '<video id="pairScanVideo" autoplay muted playsinline></video><div class="btn-row"><button type="button" id="pairCancelScan">Cancel</button></div>');
+      document.getElementById('pairJoinScanBtn').disabled = true;
+      document.getElementById('pairCancelScan').addEventListener('click', function () {
+        if (rtc.scanHandle) { rtc.scanHandle.stop(); rtc.scanHandle = null; }
+        renderPairJoinIntro();
+      });
+      rtc.scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('pairScanVideo'), {
+        onResult: function (text) { if (rtc.scanHandle) { rtc.scanHandle.stop(); rtc.scanHandle = null; } pairJoinConnect(text); },
+        onError: function (err) { pairSetStatus('Camera unavailable: ' + err.message, 'bad'); }
+      });
+    };
+
+    var pairJoinConnect = function (offerPayload) {
+      pairSetStatus('Connecting…');
+      window.WebRTCPair.createAnswer(offerPayload, function (channel) {
+        rtc.channel = channel;
+        channel.addEventListener('open', function () {
+          // Close the modal so the big Start/Pause/Rotate/Reset buttons
+          // underneath are reachable right away — reopening "Pair over
+          // Wi-Fi" while still paired shows the connected screen instead.
+          pairCloseModal();
+        });
+        channel.addEventListener('close', function () {
+          els.remoteConn.textContent = 'Wi-Fi pairing disconnected. Tap "Pair over Wi-Fi instead" to reconnect.';
+          teardownRtc();
+        });
+        channel.addEventListener('message', function (e) {
+          var msg; try { msg = JSON.parse(e.data); } catch (err) { return; }
+          applyDisplayState(msg);
+        });
+      }).then(function (result) {
+        rtc.pc = result.pc;
+        renderPairJoinAnswer(result.answerPayload);
+      }, function (err) {
+        pairSetStatus(err && err.message || String(err), 'bad');
+      });
+    };
+
+    var renderPairJoinAnswer = function (answerPayload) {
+      els.pairBody.innerHTML =
+        '<p>Show this code back to whoever is at the display, or read them the text below:</p>' +
+        '<canvas id="pairAnswerCanvas" width="320" height="320"></canvas>' +
+        '<textarea id="pairAnswerText" rows="3" readonly style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;"></textarea>' +
+        '<div class="btn-row"><button type="button" id="pairCopyAnswer">Copy code</button></div>' +
+        '<p class="pair-status" id="pairStatus">Waiting for the display to connect&hellip;</p>';
+      drawQR(document.getElementById('pairAnswerCanvas'), answerPayload);
+      document.getElementById('pairAnswerText').value = answerPayload;
+      document.getElementById('pairCopyAnswer').addEventListener('click', function () {
+        if (navigator.clipboard) navigator.clipboard.writeText(answerPayload);
+      });
+    };
+
+    var renderPairJoinConnected = function () {
+      els.pairBody.innerHTML = '<p><b>Paired.</b> This phone is now controlling the display over Wi-Fi.</p><div class="btn-row"><button type="button" id="pairStopBtn">Stop pairing</button></div>';
+      document.getElementById('pairStopBtn').addEventListener('click', function () { teardownRtc(); pairCloseModal(); });
+    };
   }
 
   /* ---------- bracket (same algorithm as Bracket / Tournament Generator) ---------- */
