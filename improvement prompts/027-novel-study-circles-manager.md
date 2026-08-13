@@ -64,7 +64,9 @@ session.
 - **Meeting log** with chapter checkpoints (`meetingCheckpointLabel`,
   `renderCheckpointInputs`, pace radios) and per-meeting delete
 - **Vocabulary log** (`parseVocabLines`, `renderVocabLog`) accumulated across
-  the study
+  the study, with handoff exports to both `040-vocab-flashcard-generator.html`
+  and `030-review-game-board.html` (each mints a new, uniquely-named list/
+  board there rather than overwriting anything)
 - Prints: today's roles sheet, full meeting log, vocabulary list
 
 ## Quick Wins
@@ -87,8 +89,8 @@ session.
 - **Done — Pass 2, Round 2 — Vocabulary handoff** (P7). The vocabulary log
   now exports directly to `040-vocab-flashcard-generator.html` via an
   "Export vocabulary to Flashcard Generator" button, in addition to the
-  printed list. *(`030-review-game-board.html` handoff still open — see
-  update below.)*
+  printed list. *(`030-review-game-board.html` handoff shipped 2026-08-13 —
+  see update below.)*
 - **Done — Pass 2, Round 2 — Undo on "Delete this meeting"** and on
   role-history reset (P11).
 
@@ -204,6 +206,66 @@ re-disabled). Zero console errors on either page throughout.
 **What's still open** (see Major Features above for the full picture):
 multiple books at once (differentiated circles reading different books in
 one class), discussion assessment (a per-meeting participation rubric),
-book/reading-log integration with `033-ssr-log-tracker.html`, reusable
-templates for roles/question banks/schedules across the year, and the
-`030-review-game-board.html` half of the vocabulary handoff.
+book/reading-log integration with `033-ssr-log-tracker.html`, and reusable
+templates for roles/question banks/schedules across the year.
+
+## Pass 2, Round 3 update — 2026-08-13
+
+**Shipped — Vocabulary handoff to Review Game Board (P7), the other half of
+the original idea.** New "Export vocabulary to Review Game Board" button next
+to the two existing vocabulary outputs (print, Flashcard Generator export).
+Same non-overwriting bridge pattern as the Flashcard Generator handoff,
+targeting `030-review-game-board.html`'s own localStorage contract
+(`Tools/review-game-board/rgb-store.js`): a new, uniquely-named entry
+appended to `gvb-review-board:list`, the full board blob at
+`gvb-review-board:data:<name>` (`{name, categories:[{name, clues:[{points,
+question, answer, used, dailyDouble}]}], teams:[{name,score}],
+dailyDoubleEnabled:false, lightningRoundEnabled:false,
+lightningRoundSeconds:15}`), and the `gvb-review-board:current` pointer that
+tool reads on boot — written directly to those keys rather than going through
+`ReviewBoardStore`'s API, matching how the Flashcard handoff also writes its
+target's raw keys instead of loading `vfg-store.js`. Opens
+`030-review-game-board.html` in a new tab afterward.
+
+Three judgment calls, each recorded in a comment at the handoff site:
+
+- **Clue direction: `question = definition`, `answer = word`.** A review
+  game is played by reading a clue aloud and having a team name the answer,
+  so the definition is what gets read out and the word is what a team has
+  to produce — the opposite of the Flashcard export's `term: definition`
+  line, which is read front-to-back by one student studying alone. A word
+  logged with no definition anywhere in the log can't make a real clue in
+  either direction, so (unlike the Flashcard export, which can still show a
+  word-only card) it's dropped from this export; the success message says
+  how many were skipped when that happens.
+- **Grouping: one category per meeting checkpoint that has vocabulary**, via
+  `meetingCheckpointLabel()` — the same label the printed vocabulary list
+  already groups by — in the order those meetings happened. A study whose
+  vocabulary was all logged at a single meeting collapses to one category
+  on its own, which is the right flat fallback without special-casing it.
+  Two meetings sharing the same checkpoint label (e.g. both logged the same
+  date) also naturally collapse into one category, since the label itself
+  is the grouping key.
+- **Points: 100/200/300/... in logging order within each category.** An
+  ordinary review-game point ladder; the tool has no basis to judge word
+  difficulty, so it doesn't invent one.
+
+**Testing.** `node --check` on the extracted inline script. Ad hoc headless
+Chromium (`PW_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium-1194/...`,
+`Tools/board-check/harness.mjs`) smoke test since this tool has no `test/`
+folder: built a roster, split into groups, logged two meetings on different
+dates with overlapping vocabulary (one word logged without a definition at
+meeting 1 and backfilled at meeting 2), exported to the Review Game Board and
+inspected the exact localStorage keys/shape written (one board, two
+categories matching the two meeting dates, correct clue counts, backfilled
+definition preserved, `question`/`answer` in the intended direction,
+ascending points, default two teams), then loaded
+`030-review-game-board.html` in a second page/context sharing that storage
+and confirmed it booted straight into the exported board (setup screen
+skipped, board card visible) — a real round-trip, not just a write. Zero
+console/page errors on either page throughout. `npm run check:dedupe` still
+passes (no new files, nothing vendored duplicated).
+
+**What's still open**: multiple books at once, discussion assessment,
+book/reading-log integration with `033-ssr-log-tracker.html`, and reusable
+templates across the year — see Major Features above.
