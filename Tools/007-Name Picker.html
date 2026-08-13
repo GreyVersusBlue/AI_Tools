@@ -200,6 +200,15 @@ textarea:focus{outline:none;border-color:var(--accent2);}
 .equity-row.eq-overdue .eq-when{color:var(--accent);font-weight:700;}
 .equity-row.eq-never .eq-name::after{content:' — never called';color:var(--accent);font-size:0.85em;}
 .equity-summary{font-size:0.92em;line-height:1.5;margin:6px 0 12px;}
+.seat-equity{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);}
+.seat-equity h4{font-size:0.9em;margin:0 0 6px;color:var(--accent2);}
+.seat-equity-summary{font-size:0.88em;line-height:1.5;color:var(--muted);margin:0 0 10px;}
+.seat-grid{display:flex;flex-wrap:wrap;gap:14px;}
+.seat-grid-col{flex:1;min-width:160px;}
+.seat-grid-col table{width:100%;border-collapse:collapse;font-size:0.85em;}
+.seat-grid-col th,.seat-grid-col td{padding:4px 6px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.07);}
+.seat-grid-col th:first-child,.seat-grid-col td:first-child{text-align:left;}
+.seat-grid-col caption{caption-side:top;text-align:left;font-size:0.8em;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
 .undo-bar{display:none;align-items:center;gap:10px;background:var(--name-bg);border-left:3px solid var(--accent2);padding:8px 12px;border-radius:6px;font-size:0.85em;margin:0 0 8px;}
 .undo-bar.show{display:flex;}
 .stat-bar{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:0 10px;}
@@ -438,6 +447,12 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   #printReportTable{width:100%;border-collapse:collapse;}
   #printReportTable th,#printReportTable td{border:1px solid #999;padding:6px 10px;text-align:left;font-size:13px;}
   #printReportTable th{background:#eee;}
+  #printSeatSection{margin-top:22px;}
+  #printSeatTitle{font-size:16px;margin:0 0 4px;}
+  #printSeatSub{margin:0 0 10px;color:#333;font-size:12px;}
+  #printSeatTable,#printRegionTable{width:100%;border-collapse:collapse;margin-bottom:14px;}
+  #printSeatTable th,#printSeatTable td,#printRegionTable th,#printRegionTable td{border:1px solid #999;padding:5px 9px;text-align:left;font-size:12px;}
+  #printSeatTable th,#printRegionTable th{background:#eee;}
 }
 </style>
 </head>
@@ -536,6 +551,11 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <p class="equity-summary" id="equitySummary"></p>
     <div id="equityList"></div>
     <p style="font-size:0.8em;color:var(--muted);line-height:1.5;margin-top:10px;" id="equityCaveat"></p>
+    <div class="seat-equity" id="seatEquitySection" style="display:none;">
+      <h4>Call rate by seat position</h4>
+      <p class="seat-equity-summary" id="seatEquitySummary"></p>
+      <div class="seat-grid" id="seatEquityGrid"></div>
+    </div>
     <div class="button-row">
       <button id="printEquity">🖨️ Print Equity Report</button>
     </div>
@@ -660,6 +680,18 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <thead><tr><th>#</th><th>Time</th><th>Name</th><th>Prompt</th></tr></thead>
     <tbody id="printReportBody"></tbody>
   </table>
+  <div id="printSeatSection" style="display:none;">
+    <h2 id="printSeatTitle">Call rate by seat position</h2>
+    <p id="printSeatSub"></p>
+    <table id="printSeatTable">
+      <thead><tr><th>Row</th><th>Seats</th><th>Picks in window</th><th>Picks per seat</th></tr></thead>
+      <tbody id="printSeatBody"></tbody>
+    </table>
+    <table id="printRegionTable">
+      <thead><tr><th>Region</th><th>Seats</th><th>Picks in window</th><th>Picks per seat</th></tr></thead>
+      <tbody id="printRegionBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script id="appScript" type="module">
@@ -672,6 +704,7 @@ import { createStore, OPTION_DEFAULTS } from './name-picker/np-store.js';
 import { freshRotation, pickOne, pickMany, shuffle, makeGroups as splitGroups, leastPicked, fairnessWeights } from './name-picker/np-pick.js';
 import { report as equityReport, summaryLine as equitySummaryLine, dayKey } from './name-picker/np-equity.js';
 import { loadDetails, lookupDetail, displayName } from './name-picker/np-details.js';
+import { loadSeatingState, seatEquityReport, seatSummaryLine } from './name-picker/np-seat-equity.js';
 
 const store = createStore();
 let opts = { ...OPTION_DEFAULTS };
@@ -1710,6 +1743,48 @@ function currentEquityReport(){
   return equityReport(names,history,statsCache,{days:equityWindowDays,today:todayKey()});
 }
 
+/* Reads seating-chart-v1, owned by 005-Seating Chart Generator — read-only,
+   never written here. Guarded the same way np-store's own boxed() guards a
+   storage read: a browser that blocks storage, or simply hasn't got that key,
+   both come back null and the seat-position section just doesn't show. */
+function loadSeatingChart(){
+  try{return loadSeatingState(window.localStorage);}
+  catch(e){return null;}
+}
+
+/* Row/region call rates, joined against the same equity rows the name list
+   above is built from — see np-seat-equity.js. `null` means no chart to read;
+   a chart with a matching section but nobody seated yet still returns a
+   report (seated:0) so the UI can say so instead of just hiding. */
+function currentSeatEquityReport(rep){
+  const state=loadSeatingChart();
+  if(!state)return null;
+  return seatEquityReport(state,currentRosterName,rep.rows);
+}
+
+const REGION_LABEL={'front-left':'Front left','front-center':'Front center','front-right':'Front right','middle-left':'Middle left','middle-center':'Middle center','middle-right':'Middle right','back-left':'Back left','back-center':'Back center','back-right':'Back right'};
+
+function seatRowsTable(title,rows,keyLabel){
+  if(!rows.length)return '';
+  const body=rows.map(r=>`<tr><td>${escapeHtml(keyLabel(r.key))}</td><td>${r.seats}</td><td>${r.totalCount}</td><td>${r.avgCount.toFixed(1)}</td></tr>`).join('');
+  return `<div class="seat-grid-col"><table><caption>${escapeHtml(title)}</caption><thead><tr><th></th><th>Seats</th><th>Picks</th><th>Per seat</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function renderSeatEquity(rep){
+  const section=document.getElementById('seatEquitySection');
+  const seatRep=currentSeatEquityReport(rep);
+  if(!seatRep){section.style.display='none';return;}
+  section.style.display='';
+  document.getElementById('seatEquitySummary').textContent=seatSummaryLine(seatRep);
+  const grid=document.getElementById('seatEquityGrid');
+  grid.innerHTML=
+    seatRowsTable('By row (front → back)',seatRep.byRow,k=>'Row '+k)+
+    seatRowsTable('By region',seatRep.byRegion,k=>REGION_LABEL[k]||k);
+  if(!seatRep.byRow.length&&!seatRep.byRegion.length&&seatRep.seated===0){
+    grid.innerHTML='';
+  }
+}
+
 function renderEquity(){
   const rep=currentEquityReport();
   document.getElementById('equitySummary').textContent=equitySummaryLine(rep);
@@ -1718,6 +1793,7 @@ function renderEquity(){
   if(!rep.rows.length){
     list.innerHTML='<p class="muted-text">Load a roster to see who is due.</p>';
     caveatEl.textContent='';
+    document.getElementById('seatEquitySection').style.display='none';
     return;
   }
   const threshold=Math.max(7,equityWindowDays||30);
@@ -1733,6 +1809,7 @@ function renderEquity(){
   if(rep.undated)notes.push(`${rep.undated} older pick${rep.undated===1?'':'s'} were recorded before this tool stamped dates — they count towards lifetime totals only.`);
   if(rep.truncated)notes.push('Pick history keeps the most recent 500 picks, so a long window may be reporting on less than it claims.');
   caveatEl.textContent=notes.join(' ');
+  renderSeatEquity(rep);
 }
 
 /* =====================================================================
@@ -1989,6 +2066,7 @@ function draftPick(name){
 }
 function printDraftReport(){
   if(!draftTeams.length)return;
+  document.getElementById('printSeatSection').style.display='none';
   document.getElementById('printReportTitle').textContent='Team Draft Results';
   document.getElementById('printReportSub').textContent=`${new Date().toLocaleDateString()} · ${draftTeams.length} teams`;
   document.querySelector('#printReportTable thead').innerHTML='<tr><th>Team</th><th>Size</th><th>Members</th></tr>';
@@ -2558,6 +2636,7 @@ document.getElementById('exportHistory').addEventListener('click',()=>{
 });
 document.getElementById('printHistory').addEventListener('click',()=>{
   if(!history.length){alert('No picks yet today to print.');return;}
+  document.getElementById('printSeatSection').style.display='none';
   document.getElementById('printReportTitle').textContent="Today's Picks";
   document.querySelector('#printReportTable thead').innerHTML='<tr><th>#</th><th>Time</th><th>Name</th><th>Prompt</th></tr>';
   document.getElementById('printReportSub').textContent=`${new Date().toLocaleDateString()} · ${history.length} pick${history.length===1?'':'s'}`;
@@ -2610,6 +2689,21 @@ document.getElementById('printEquity').addEventListener('click',()=>{
     const when=r.daysSince===null?'never on record':`${r.last} (${r.daysSince===0?'today':r.daysSince+' days ago'})`;
     return `<tr><td>${i+1}</td><td>${escapeHtml(r.name)}</td><td>${r.count}</td><td>${escapeHtml(when)}</td><td>${r.lifetime}</td></tr>`;
   }).join('');
+  const seatSection=document.getElementById('printSeatSection');
+  const seatRep=currentSeatEquityReport(rep);
+  if(seatRep&&(seatRep.byRow.length||seatRep.byRegion.length)){
+    seatSection.style.display='';
+    document.getElementById('printSeatSub').textContent=
+      `${seatRep.sectionName?seatRep.sectionName+' · ':''}${seatSummaryLine(seatRep)}`;
+    document.getElementById('printSeatBody').innerHTML=seatRep.byRow.map(r=>
+      `<tr><td>Row ${r.key}</td><td>${r.seats}</td><td>${r.totalCount}</td><td>${r.avgCount.toFixed(1)}</td></tr>`
+    ).join('');
+    document.getElementById('printRegionBody').innerHTML=seatRep.byRegion.map(r=>
+      `<tr><td>${escapeHtml(REGION_LABEL[r.key]||r.key)}</td><td>${r.seats}</td><td>${r.totalCount}</td><td>${r.avgCount.toFixed(1)}</td></tr>`
+    ).join('');
+  }else{
+    seatSection.style.display='none';
+  }
   window.print();
 });
 document.getElementById('sortStatsMost').addEventListener('click',()=>{currentStatsSort='most';updateStatsUI();});

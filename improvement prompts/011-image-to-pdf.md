@@ -237,6 +237,85 @@ currently one answer for the whole queue, and a packet mixing board photos
 with ordinary pictures wants it per file, exactly like the Word merger's
 per-document options shipped this same round.
 
+**2026-08-13 — Student portfolio mode (Major Features: "Student portfolio
+mode").** New "5 · Student Portfolios (optional)" card: a checkbox that, when
+on, groups the queued images by student name parsed from each filename,
+builds one complete PDF per student (using all the same layout/quality/
+header/title-page/caption options already on the page), and bundles every
+student's PDF into a single `.zip` download via the newly-vendored
+`_shared/vendor/jszip/jszip.min.js` (linked with a plain relative
+`<script src>`, same pattern as the existing jsPDF vendoring — no per-tool
+copy, nothing from cdnjs).
+
+- **Filename → student name convention (new — nothing existed to match, so
+  this one is now the canonical reference for the site):**
+  1. Drop the extension.
+  2. Strip one trailing run of separator characters (space/underscore/
+     hyphen), an optional "page number" word (`pg`, `p`, `page`, `pic`,
+     `photo`, `img`, `image`, `scan`), and a digit run — e.g. `_04`,
+     `" - pg2"`, `-photo3`. That's the sequence/page-number part of the name.
+  3. Turn remaining underscores/hyphens into spaces and collapse whitespace —
+     that's the student name.
+  4. If nothing is left, what's left is purely numeric, or it matches a short
+     list of camera-default/generic tokens (`img`, `dsc`, `dscn`, `photo`,
+     `pic`, `picture`, `scan`, `page`, `pg`, `screenshot`, `image`, `pxl`,
+     `mvimg` — case-insensitive), the file did **not** carry a student name.
+     It is never dropped: every such file is grouped into one shared
+     "Unsorted" PDF instead, so a forgotten rename can't silently lose a
+     photo. "Unsorted" always sorts last regardless of where the word would
+     otherwise fall alphabetically.
+  - `extractStudentName`, `groupEntriesByStudent`, `sanitizeForFilename`, and
+    `substituteStudentToken` are exposed as `window.__imgToPdfPortfolio` for
+    test/devtools introspection, mirroring the existing
+    `window.__imgToPdfLastRun` pattern.
+  - A live preview under the checkbox lists every group and its image count
+    before anything is generated, so a bad rename is visible before the
+    student finds out their packet is missing a page.
+  - `{student}` in the shared title-page Title or Subtitle is substituted
+    (case-insensitively) with each group's actual name, so one title-page
+    template personalizes every student's PDF.
+  - Target output size, when set, applies **per student PDF**, not to the
+    zip as a whole — "keep it emailable" means each kid's file individually.
+  - Zip entry names are the sanitized student name + `.pdf`
+    (`sanitizeForFilename` strips filesystem-unsafe characters); collisions
+    are de-duplicated with a `(2)`, `(3)`, … suffix.
+- **Known limitation, not a bug:** a filename that runs two names together
+  with no delimiter (`SmithJohn_2.jpg`) comes out as one token
+  (`"SmithJohn"`) — there is no dictionary-free way to guess where to split
+  it. Documented in the UI's own help text as well as here.
+- **Test coverage:** `Tools/image-to-pdf/test/smoke-portfolio.mjs` (50
+  assertions, all passing), following `smoke.mjs`'s conventions exactly —
+  same browser-launch/network-guard pattern, same "assert on real PDF bytes,
+  no vendored PDF parser" approach (`%PDF-` header, `/Type /Page` dict
+  counts). Since no zip parser is vendored either, the suite hand-rolls a
+  minimal ZIP reader (End Of Central Directory → Central Directory → Local
+  File Header, via node's built-in `zlib` for the deflate case) the same way
+  `make-fixtures.mjs` hand-rolls PNG chunks. Covers: the parsing/grouping
+  helpers directly (including the camera-default, bare-number, and
+  run-together edge cases above), an end-to-end run with real files on disk
+  named like real student photos (grouped preview text, downloaded zip byte
+  signature, exactly 3 entries for 2 students + 1 Unsorted bucket, correct
+  page count in each resulting PDF), `{student}` title-page substitution
+  reaching the actual generated PDFs, and the filename field's auto-swap
+  between `assembled.pdf`/`portfolios.zip` defaults. Run directly with `node
+  Tools/image-to-pdf/test/smoke-portfolio.mjs`; **not yet wired into the
+  `test:image-to-pdf` npm script** (`package.json` was out of scope for this
+  round) — next round should add it there alongside `smoke.mjs` and
+  `smoke-enhance.mjs`.
+- **Known limitations / next round:**
+  - No manual QA pass yet with a real folder of phone-camera photos with
+    inconsistent naming (mixed casing, trailing spaces, non-Latin names) —
+    only synthetic fixtures and the documented convention have been
+    exercised.
+  - The portfolio checkbox's state and the zip filename default are
+    deliberately **not** persisted to `localStorage`, same reasoning as the
+    target-size input (see Pass 2 Round 1 Challenges above): a forgotten
+    toggle silently switching every future session into zip-download mode is
+    a worse surprise than an unchecked box.
+  - No per-student title/subtitle override beyond the shared `{student}`
+    template — every student gets the same layout, just a personalized
+    title.
+
 ## What it does today
 
 - Add many images (drag-drop), reorder, rotate, remove, clear; sort modes
@@ -249,6 +328,9 @@ per-document options shipped this same round.
 - **Whiteboard / worksheet cleanup**: canvas-only flat-field correction that
   evens out the lighting, white-balances, whitens the board or paper and
   darkens the writing, with a before/after preview
+- **Student portfolio mode**: group queued images by student name parsed from
+  filename, produce one PDF per student, zip them all into a single download
+  (`_shared/vendor/jszip/jszip.min.js`)
 - **SVG support** (`processSVG`, `svgToDataURL`) alongside raster
 - Rotation-aware embedding (`rotateForEmbed`), mm-accurate page math
   (`pxToMm`, `clampPageDimsMm`), progress reporting
@@ -300,8 +382,12 @@ per-document options shipped this same round.
 - **Print-shop presets**: two-sided, booklet imposition, saddle-stitch order,
   N-up with cut marks. Booklet imposition in particular is something teachers
   need and no free local tool does well.
-- **Student portfolio mode.** Group photos by student name from filenames and
-  produce one PDF per student in a single pass.
+- **Done —** **Student portfolio mode.** Group photos by student name from
+  filenames and produce one PDF per student in a single pass. *(Shipped
+  2026-08-13 — see Status above for the naming convention and known
+  limitations; one PDF per parsed student name, unparseable filenames grouped
+  into a shared "Unsorted" PDF rather than dropped, all zipped together via
+  the newly-vendored `_shared/vendor/jszip/jszip.min.js`.)*
 
 ## Moonshot / North Star
 

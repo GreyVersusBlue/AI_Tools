@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v111';
+const CACHE_VERSION = 'v112';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -44,7 +44,10 @@ const PRECACHE_URLS = [
   "Tools/047-art-critique-worksheet-generator.html",
   "Tools/048-art-portfolio-label-maker.html",
   "Tools/009-backup-restore.html",
+  "Tools/backup-restore/br-pair.js",
+  "Tools/backup-restore/br-transfer.js",
   "Tools/008-behavior-points-tracker.html",
+  "Tools/behavior-points-tracker/seating-layout.js",
   "Tools/046-blank-map-generator.html",
   "Tools/blank-map-generator/bmg-colors.js",
   "Tools/blank-map-generator/bmg-commons.js",
@@ -82,6 +85,8 @@ const PRECACHE_URLS = [
   "Tools/classroom-timer/mirror.html",
   "Tools/052-cognates-false-friends-builder.html",
   "Tools/010-command-center-dashboard.html",
+  "Tools/command-center/cc-remote.js",
+  "Tools/command-center/remote.html",
   "Tools/053-cultural-trivia-card-generator.html",
   "Tools/054-current-events-discussion-guide-generator.html",
   "Tools/055-daily-editing-warmup-generator.html",
@@ -95,6 +100,7 @@ const PRECACHE_URLS = [
   "Tools/escape-room-builder/lock.html",
   "Tools/escape-room-builder/monitor.html",
   "Tools/023-exit-ticket-generator.html",
+  "Tools/exit-ticket-generator/etg-sequence.js",
   "Tools/059-experiment-design-planner.html",
   "Tools/043-field-trip-permission-slip.html",
   "Tools/final-grade-checker/grade-math.mjs",
@@ -142,7 +148,9 @@ const PRECACHE_URLS = [
   "Tools/name-picker/fonts/outfit-latin-ext-700-normal.woff2",
   "Tools/name-picker/fonts/press-start-2p-latin-400-normal.woff2",
   "Tools/name-picker/np-details.js",
+  "Tools/name-picker/np-equity.js",
   "Tools/name-picker/np-pick.js",
+  "Tools/name-picker/np-seat-equity.js",
   "Tools/name-picker/np-store.js",
   "Tools/027-novel-study-circles-manager.html",
   "Tools/024-number-talks-board.html",

@@ -9,6 +9,55 @@
 
 ## Status
 
+**2026-08-13.** Shipped **"Printable non-digital version"** (Major Features,
+below) — the paper-packet fallback for the day the Chromebooks aren't
+charged, all inside `019-escape-room-builder.html`; no other file touched.
+
+- A new "Paper packet (no devices)" card sits next to the QR/answer-key print
+  buttons. **Print Paper Packet** builds `buildRoomPayload(validStations())`
+  — the same source of truth as the QR codes, the on-screen preview, and the
+  test run — into cut-apart station cards followed by a teacher-key page, so
+  the packet can't say something different from the digital room built from
+  the same stations.
+- Each card shows the clue, the station's image, and a type-appropriate
+  answer area (blank lines for text, per-digit boxes sized off the first
+  accepted code for a digit lock, only the *ciphertext* for a cipher — never
+  the plaintext). A costed or free hint prints upside-down under a dashed
+  rule, the paper stand-in for the on-screen "spend N points" click. A
+  station that awards a meta-puzzle letter prints an empty box, not the
+  letter — the letter only appears in the teacher key, so a curious team
+  can't read every card and skip solving the meta-puzzle.
+- The teacher key reuses `answerRowHtml` — the exact same per-station row
+  markup as the existing Print Answer Key — so there is one source of truth
+  for "what does a teacher need to see per station," whether the room runs by
+  QR or by paper.
+- Every valid station gets a card, reachable or not; clicking Print Paper
+  Packet runs `unreachableStations(buildRoomPayload(valid))` first and warns
+  in `#msg` (by station number, printing anyway) if the chain has an orphan —
+  the same check the test run already surfaces, now also on the print path.
+- "Cards per printed page" (1 or 2) is a saved-state option
+  (`state.packetCardsPerPage`, defaults `'2'`), following the existing
+  `cardsPerPage`/QR pattern; the printed grid gets a `pk-1`/`pk-2` class that
+  drives page-break placement so cards don't split across a page.
+- No new files, so no `sw.js` change — everything lives inside the one HTML
+  file that was already precached.
+
+**Testing performed:** `Tools/escape-room-builder/test/smoke-test-run.mjs`
+grew from 39 to 84 assertions covering the packet specifically: extends the
+existing 3-station branching room with a digit-lock station (costed hint,
+awarded letter) and a cipher station, re-routes the chain's old end into the
+new stations (leaving the original orphan still orphaned) to exercise
+ordering and branching together, then asserts — one card per valid station
+in order; the digit code never appears on the card but the right number of
+boxes do; the hint text and its point cost are on the card but the awarded
+letter is not; the cipher card shows the ciphertext and never the plaintext;
+the `#msg` warning names the still-orphaned station and explains why;
+`packetKeyBody` has one row per station with the digit code, the awarded
+letter, and both the cipher's ciphertext and decoded plaintext present — full
+answer-key completeness; and that switching "cards per page" actually
+changes the grid's class on reprint. `npm run test:escape-room`: 84 passed, 0
+failed. `node Tools/board-check/check-dedupe.mjs`: clean.
+
 **2026-08-12 — session `r8kq4t`.** Backlog rank 2, "answer matching for
 contractions", filed as a live bug. **The bug it named was not real, and two
 adjacent ones in the same function were.** Worth recording exactly, because
@@ -130,8 +179,10 @@ a single session; items confirmed shipped are tagged **Done** below.
   `030-review-game-board.html`'s bank or vocabulary from
   `040-vocab-flashcard-generator.html` so building a room for Friday doesn't mean
   writing eight new questions.
-- **Printable non-digital version** — the same puzzle chain as a paper packet,
-  for the day the Chromebooks aren't charged.
+- **Done — 2026-08-13.** **Printable non-digital version** — the same puzzle
+  chain as a paper packet, for the day the Chromebooks aren't charged. *(A
+  "Print Paper Packet" button builds cut-apart station cards plus a teacher
+  key from `buildRoomPayload(validStations())`; see the Status entry above.)*
 
 ## Moonshot / North Star
 

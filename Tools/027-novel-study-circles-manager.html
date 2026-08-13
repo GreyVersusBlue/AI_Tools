@@ -161,6 +161,13 @@
   .acct-sheet .acct-field .acct-line { display: block; border-bottom: 1px solid #999; height: 1.1rem; margin-top: .15rem; }
   .acct-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; }
 
+  .unit-project-list { display: flex; flex-direction: column; gap: .35rem; margin: .3rem 0 .8rem; max-height: 11rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; background: #fdfdfb; }
+  .unit-project-list label { display: flex; align-items: center; gap: .45rem; font-weight: 500; margin: 0; font-size: .85rem; }
+  .unit-project-list input[type="checkbox"] { width: auto; margin: 0; }
+  .group-card.unit-row-none { opacity: .55; }
+  .group-card .unit-status { font-size: .78rem; color: var(--muted); font-weight: 600; margin: 0 0 .5rem; }
+  .group-card .unit-status.meeting { color: var(--accent-2); }
+
   @media print {
     body { background: #fff; padding: 0; }
     .wrap > *:not(.print-only) { display: none !important; }
@@ -200,6 +207,30 @@
   <div id="msg"></div>
   <div class="btn-row" id="undoRow" style="margin-bottom:.8rem;">
     <button type="button" class="secondary" id="undoBtn" disabled>Undo</button>
+  </div>
+
+  <div class="card" id="unitCard">
+    <div class="card-title">Multi-Book Unit &middot; Combined Meeting-Day View</div>
+    <p class="hint">Four circles can read four different books at four different paces &mdash; each book stays its own project above (own roster split, own schedule, own pace), and a unit just points at the projects that belong together so you can see which ones are meeting on a given day in one place. Creating or editing a unit never changes the projects themselves.</p>
+    <div class="btn-row" style="margin-bottom:.8rem;">
+      <select id="unitSwitch" aria-label="Multi-book unit" style="margin-bottom:0;"><option value="">(no unit selected)</option></select>
+      <button type="button" class="secondary small" id="newUnitBtn" style="width:auto;margin-bottom:0;">New unit</button>
+      <button type="button" class="danger small" id="deleteUnitBtn" style="width:auto;margin-bottom:0;" disabled>Delete unit</button>
+    </div>
+    <div id="unitBody" style="display:none;">
+      <label for="unitName">Unit name</label>
+      <input type="text" id="unitName" placeholder="e.g. 3rd Period Book Clubs">
+      <label>Book-circle projects in this unit</label>
+      <p class="hint">Check every saved project (one book + its circles) that belongs to this unit.</p>
+      <div id="unitProjectList" class="unit-project-list"></div>
+      <label for="unitDate">Combined view for</label>
+      <input type="date" id="unitDate" style="margin-bottom:.6rem;">
+      <div id="unitCombinedView"></div>
+      <div class="btn-row">
+        <button type="button" class="secondary" id="printUnitBtn" style="display:none;">Print combined meeting-day view</button>
+      </div>
+    </div>
+    <p class="hint" id="unitEmptyHint" style="margin:0;">Pick a unit above, or create a new one, to group several book projects together.</p>
   </div>
 
   <div class="layout">
@@ -380,12 +411,31 @@
   <div id="printAcctGrid" class="acct-grid"></div>
 </div>
 
+<div class="print-only" id="printUnitArea">
+  <h2 id="printUnitTitle">Combined Meeting-Day View</h2>
+  <p class="p-sub" id="printUnitSub"></p>
+  <div id="printUnitGrid" class="groups-grid"></div>
+</div>
+
 <script>
 (function () {
   'use strict';
 
   var STORE_KEY = 'novel-study-circles';
   var CURRENT_KEY = 'novel-study-circles-current';
+  // A "unit" groups several existing novel-study-circles projects (books) so
+  // a teacher running four circles on four different books at four paces can
+  // see, for one date, which circles are meeting. It is a separate, additive
+  // storage bucket that only ever *references* projects above by name — it
+  // never changes their shape or contents, and no migration of existing
+  // single-book projects is needed: every project that already exists (or
+  // ever existed before this feature shipped) is usable as a unit member
+  // exactly as-is, and a project with no unit is unaffected in every way.
+  // See the Status entry in the improvement-prompts doc for the full
+  // reasoning behind treating this as a reference layer rather than
+  // reshaping state.groups/meetings to nest multiple books.
+  var UNIT_STORE_KEY = 'novel-study-units';
+  var UNIT_CURRENT_KEY = 'novel-study-units-current';
   var DEFAULT_ROLES = ['Discussion Director', 'Summarizer', 'Word Wizard', 'Passage Picker', 'Connector', 'Illustrator'];
   var MEMBER_LABEL = 'Group Member';
 
@@ -451,7 +501,10 @@
    'schTotalChapters', 'schUnitLabel', 'schStartDate', 'schEndDate', 'schWeekdays', 'scheduleGenBtn', 'scheduleResult', 'printScheduleBtn',
    'printScheduleArea', 'printScheduleTitle', 'printScheduleSub', 'printScheduleBody',
    'printRoleCardsBtn', 'printRoleCardsArea', 'printRoleCardsTitle', 'printRoleCardsSub', 'printRoleCardsGrid',
-   'printAcctBtn', 'printAcctArea', 'printAcctTitle', 'printAcctSub', 'printAcctGrid'
+   'printAcctBtn', 'printAcctArea', 'printAcctTitle', 'printAcctSub', 'printAcctGrid',
+   'unitCard', 'unitSwitch', 'newUnitBtn', 'deleteUnitBtn', 'unitBody', 'unitEmptyHint', 'unitName',
+   'unitProjectList', 'unitDate', 'unitCombinedView', 'printUnitBtn',
+   'printUnitArea', 'printUnitTitle', 'printUnitSub', 'printUnitGrid'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
   els.nameCount = document.getElementById('name-count');
 
@@ -1509,6 +1562,7 @@
     refreshSwitcher();
     els.toolbar.style.display = '';
     clearMsg();
+    renderUnitProjectList();
   }
 
   function loadProjectByName(name) {
@@ -1550,9 +1604,12 @@
     var all = loadAll();
     delete all[state.name];
     saveAll(all);
+    removeProjectFromAllUnits(state.name);
     var remaining = Object.keys(all);
     if (remaining.length) loadProjectByName(remaining[0]);
     else newProject('New Project');
+    renderUnitProjectList();
+    renderCombinedView();
   });
 
   // ── Export / Import whole project (groups, meetings, checkpoints, role history) ──
@@ -1614,6 +1671,7 @@
       els.toolbar.style.display = '';
       applyStateToForm();
       refreshSwitcher();
+      renderUnitProjectList();
       showMsg('Imported as "' + newName + '".', true);
       els.importProjectFile.value = '';
     };
@@ -1635,6 +1693,9 @@
       saveAll(all);
       saveCurrent();
       refreshSwitcher();
+      renameProjectInAllUnits(oldName, newName);
+      renderUnitProjectList();
+      renderCombinedView();
     }
   });
 
@@ -1660,6 +1721,261 @@
   }
   els.namesInput.addEventListener('input', function () { onNamesChanged(true); });
 
+  // ── Multi-book units (combined meeting-day view) ────────────────────────
+  // unit = { name, projectNames: [projectName, ...] } — a pure reference
+  // layer over the projects stored under STORE_KEY above. Nothing here ever
+  // reads or writes a project's own record except loadAll()/loadUnits() to
+  // look member projects up by name for the combined view, so a unit can
+  // never corrupt or lose a book's own data.
+  var unit = null;
+
+  function loadUnits() {
+    try { return JSON.parse(localStorage.getItem(UNIT_STORE_KEY) || '{}'); }
+    catch (e) { return {}; }
+  }
+  function saveUnits(all) {
+    try { localStorage.setItem(UNIT_STORE_KEY, JSON.stringify(all)); }
+    catch (e) { /* private browsing / storage full — silently skip */ }
+  }
+  function listUnitNames() { return Object.keys(loadUnits()); }
+  function saveCurrentUnit() {
+    if (!unit) return;
+    var all = loadUnits();
+    all[unit.name] = unit;
+    saveUnits(all);
+    try { localStorage.setItem(UNIT_CURRENT_KEY, unit.name); } catch (e) { /* ignore */ }
+  }
+  function getCurrentUnitName() {
+    try { return localStorage.getItem(UNIT_CURRENT_KEY); } catch (e) { return null; }
+  }
+
+  // Keeps every saved unit's project references in sync when a project is
+  // renamed or deleted, so a unit doesn't silently point at a name that no
+  // longer exists (deleting a project doesn't delete any unit — it just
+  // stops that circle from showing up in the combined view).
+  function renameProjectInAllUnits(oldName, newName) {
+    var all = loadUnits();
+    var changed = false;
+    Object.keys(all).forEach(function (uname) {
+      var u = all[uname];
+      if (!u || !Array.isArray(u.projectNames)) return;
+      var idx = u.projectNames.indexOf(oldName);
+      if (idx !== -1) { u.projectNames[idx] = newName; changed = true; }
+    });
+    if (changed) saveUnits(all);
+    if (unit) {
+      var idx2 = unit.projectNames.indexOf(oldName);
+      if (idx2 !== -1) unit.projectNames[idx2] = newName;
+    }
+  }
+  function removeProjectFromAllUnits(name) {
+    var all = loadUnits();
+    var changed = false;
+    Object.keys(all).forEach(function (uname) {
+      var u = all[uname];
+      if (!u || !Array.isArray(u.projectNames)) return;
+      var idx = u.projectNames.indexOf(name);
+      if (idx !== -1) { u.projectNames.splice(idx, 1); changed = true; }
+    });
+    if (changed) saveUnits(all);
+    if (unit) {
+      var idx2 = unit.projectNames.indexOf(name);
+      if (idx2 !== -1) unit.projectNames.splice(idx2, 1);
+    }
+  }
+
+  function refreshUnitSwitcher() {
+    var names = listUnitNames();
+    els.unitSwitch.innerHTML = '<option value="">(no unit selected)</option>' + names.map(function (n) {
+      return '<option value="' + escapeHtml(n) + '"' + (unit && n === unit.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
+  function applyUnitToForm() {
+    if (!unit) {
+      els.unitBody.style.display = 'none';
+      els.unitEmptyHint.style.display = '';
+      els.deleteUnitBtn.disabled = true;
+      return;
+    }
+    els.unitBody.style.display = '';
+    els.unitEmptyHint.style.display = 'none';
+    els.deleteUnitBtn.disabled = false;
+    els.unitName.value = unit.name;
+    if (!els.unitDate.value) els.unitDate.value = todayStr();
+    renderUnitProjectList();
+    renderCombinedView();
+  }
+
+  function newUnit(name) {
+    unit = { name: name, projectNames: [] };
+    saveCurrentUnit();
+    refreshUnitSwitcher();
+    applyUnitToForm();
+  }
+
+  function loadUnitByName(name) {
+    var all = loadUnits();
+    var loaded = all[name];
+    if (!loaded) return;
+    unit = { name: loaded.name, projectNames: Array.isArray(loaded.projectNames) ? loaded.projectNames.slice() : [] };
+    try { localStorage.setItem(UNIT_CURRENT_KEY, name); } catch (e) { /* ignore */ }
+    refreshUnitSwitcher();
+    applyUnitToForm();
+  }
+
+  function renderUnitProjectList() {
+    if (!unit) { els.unitProjectList.innerHTML = ''; return; }
+    var names = listProjectNames();
+    if (!names.length) {
+      els.unitProjectList.innerHTML = '<p class="hint" style="margin:0;">No saved projects yet — set up at least one book above first.</p>';
+      return;
+    }
+    els.unitProjectList.innerHTML = names.map(function (n) {
+      var checked = unit.projectNames.indexOf(n) !== -1;
+      return '<label><input type="checkbox" data-unit-project="' + escapeHtml(n).replace(/"/g, '&quot;') + '"' + (checked ? ' checked' : '') + '>' + escapeHtml(n) + '</label>';
+    }).join('');
+  }
+
+  els.unitProjectList.addEventListener('change', function (e) {
+    var cb = e.target.closest('[data-unit-project]');
+    if (!cb || !unit) return;
+    var name = cb.dataset.unitProject;
+    var idx = unit.projectNames.indexOf(name);
+    if (cb.checked && idx === -1) unit.projectNames.push(name);
+    else if (!cb.checked && idx !== -1) unit.projectNames.splice(idx, 1);
+    saveCurrentUnit();
+    renderCombinedView();
+  });
+
+  // For one date, look at each member project's own record directly (never
+  // loaded as the active `state`) and classify it as: a meeting already
+  // logged that date (richest — shows the real checkpoint(s) that were
+  // recorded), a meeting only planned for that date via that project's own
+  // Reading Schedule Planner (shows the planned target), or neither. Each
+  // project keeps its own independent pace and schedule; this only reads
+  // them side by side.
+  function combinedMeetingDayRows(dateStr) {
+    if (!unit || !unit.projectNames.length) return [];
+    var all = loadAll();
+    return unit.projectNames.map(function (name) {
+      var proj = all[name];
+      if (!proj) return { name: name, missing: true };
+      var meeting = (proj.meetings || []).find(function (m) { return m.date === dateStr; });
+      var schedRow = (proj.schedule && proj.schedule.rows || []).find(function (r) { return r.date === dateStr; });
+      return {
+        name: name,
+        bookTitle: proj.bookTitle || '',
+        status: meeting ? 'logged' : (schedRow ? 'scheduled' : 'none'),
+        meeting: meeting || null,
+        schedRow: schedRow || null,
+        groupLabels: (proj.groups || []).map(function (g) { return g.label; })
+      };
+    });
+  }
+
+  function unitRowHtml(row) {
+    if (row.missing) {
+      return '<div class="group-card unit-row-none"><h3>' + escapeHtml(row.name) +
+        '</h3><p class="unit-status">Project no longer exists in this browser</p></div>';
+    }
+    var title = row.bookTitle ? (row.name + ' — ' + row.bookTitle) : row.name;
+    var groupsHtml = row.groupLabels.length
+      ? '<ul>' + row.groupLabels.map(function (l) { return '<li><span class="name">' + escapeHtml(l) + '</span></li>'; }).join('') + '</ul>'
+      : '';
+    if (row.status === 'logged') {
+      var m = row.meeting, cpBits = [];
+      if (m.together && m.wholeClassCheckpoint) cpBits.push(escapeHtml(m.wholeClassCheckpoint));
+      else if (!m.together) cpBits = m.groups.map(function (g) { return escapeHtml(g.label) + ': ' + (g.checkpoint ? escapeHtml(g.checkpoint) : '—'); });
+      return '<div class="group-card"><h3>' + escapeHtml(title) + '</h3>' +
+        '<p class="unit-status meeting">Meeting logged' + (cpBits.length ? ' · ' + cpBits.join(' · ') : '') + '</p>' + groupsHtml + '</div>';
+    }
+    if (row.status === 'scheduled') {
+      return '<div class="group-card"><h3>' + escapeHtml(title) + '</h3>' +
+        '<p class="unit-status meeting">Planned: Through ' + escapeHtml(row.schedRow.throughLabel) + '</p>' + groupsHtml + '</div>';
+    }
+    return '<div class="group-card unit-row-none"><h3>' + escapeHtml(title) + '</h3><p class="unit-status">Not meeting this date</p></div>';
+  }
+
+  function renderCombinedView() {
+    if (!unit || !unit.projectNames.length) {
+      els.unitCombinedView.innerHTML = unit
+        ? '<p class="empty-hint">Check at least one book-circle project above to see a combined view.</p>'
+        : '';
+      els.printUnitBtn.style.display = 'none';
+      return;
+    }
+    if (!els.unitDate.value) els.unitDate.value = todayStr();
+    var dateStr = els.unitDate.value;
+    var rows = combinedMeetingDayRows(dateStr);
+    var meetingCount = rows.filter(function (r) { return !r.missing && r.status !== 'none'; }).length;
+    els.unitCombinedView.innerHTML =
+      '<p class="hint" id="unitCombinedSummary" style="margin:.2rem 0 .5rem;font-weight:700;color:var(--accent);">' +
+      meetingCount + ' of ' + rows.length + ' circle' + (rows.length === 1 ? '' : 's') + ' meeting on ' + escapeHtml(dateStr) + '</p>' +
+      '<div class="groups-grid">' + rows.map(unitRowHtml).join('') + '</div>';
+    els.printUnitBtn.style.display = '';
+  }
+
+  els.unitDate.addEventListener('change', renderCombinedView);
+
+  els.unitSwitch.addEventListener('change', function () {
+    var v = els.unitSwitch.value;
+    if (!v) {
+      unit = null;
+      try { localStorage.removeItem(UNIT_CURRENT_KEY); } catch (e) { /* ignore */ }
+      applyUnitToForm();
+      return;
+    }
+    loadUnitByName(v);
+  });
+
+  els.newUnitBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new multi-book unit:', 'New Unit');
+    if (!name) return;
+    name = name.trim();
+    if (!name) return;
+    newUnit(name);
+  });
+
+  els.deleteUnitBtn.addEventListener('click', function () {
+    if (!unit) return;
+    if (!confirm('Delete the unit "' + unit.name + '"? This only removes the grouping — none of its book-circle projects are affected.')) return;
+    var all = loadUnits();
+    delete all[unit.name];
+    saveUnits(all);
+    unit = null;
+    try { localStorage.removeItem(UNIT_CURRENT_KEY); } catch (e) { /* ignore */ }
+    refreshUnitSwitcher();
+    applyUnitToForm();
+  });
+
+  els.unitName.addEventListener('change', function () {
+    if (!unit) return;
+    var oldName = unit.name;
+    var newName = els.unitName.value.trim() || oldName;
+    if (newName !== oldName) {
+      var all = loadUnits();
+      delete all[oldName];
+      unit.name = newName;
+      saveUnits(all);
+      saveCurrentUnit();
+      refreshUnitSwitcher();
+    }
+  });
+
+  els.printUnitBtn.addEventListener('click', function () {
+    if (!unit || !unit.projectNames.length) return;
+    var dateStr = els.unitDate.value || todayStr();
+    var rows = combinedMeetingDayRows(dateStr);
+    els.printUnitTitle.textContent = unit.name + ' — Combined Meeting-Day View';
+    var meetingCount = rows.filter(function (r) { return !r.missing && r.status !== 'none'; }).length;
+    els.printUnitSub.textContent = dateStr + ' · ' + meetingCount + ' of ' + rows.length + ' circles meeting';
+    els.printUnitGrid.innerHTML = rows.map(unitRowHtml).join('');
+    document.querySelectorAll('.print-only').forEach(function (el) { el.classList.remove('active'); });
+    els.printUnitArea.classList.add('active');
+    window.print();
+  });
+
   // ── Init ─────────────────────────────────────────────────────────────────
   var current = getCurrentName();
   var all = loadAll();
@@ -1672,6 +1988,11 @@
   }
   els.toolbar.style.display = '';
   populateRosterHubSelect();
+
+  var currentUnitName = getCurrentUnitName();
+  var allUnits = loadUnits();
+  if (currentUnitName && allUnits[currentUnitName]) loadUnitByName(currentUnitName);
+  else { refreshUnitSwitcher(); applyUnitToForm(); }
 
 })();
 </script>

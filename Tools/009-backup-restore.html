@@ -20,6 +20,12 @@
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
+<script src="backup-restore/br-transfer.js"></script>
+<script src="backup-restore/br-pair.js"></script>
 <style>
   :root {
     --good: #2f7d4f;
@@ -117,6 +123,35 @@
   .verify .flags li.bad { color: var(--err); background: #fbeceA; border-color: #e6c6c1; }
   .untouched { color: var(--good); font-weight: 700; }
 
+  /* ---------- device-to-device transfer ---------- */
+  .xfer-overlay {
+    position: fixed; inset: 0; background: rgba(20, 20, 16, .55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; z-index: 40;
+  }
+  .xfer-overlay[hidden] { display: none; }
+  .xfer-modal {
+    background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px;
+    max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto;
+  }
+  .xfer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .8rem 1.1rem; border-bottom: 1px solid var(--line);
+  }
+  .xfer-head h2 { font-size: 1.05rem; margin: 0; }
+  .xfer-close {
+    background: none; border: none; color: var(--muted); font-size: 1.3rem; line-height: 1;
+    cursor: pointer; padding: .1rem .4rem;
+  }
+  .xfer-close:hover { color: var(--err); border-color: transparent; background: none; }
+  .xfer-body { padding: 1.1rem; font-size: .9rem; line-height: 1.5; }
+  .xfer-body p { margin: 0 0 .8rem; color: var(--muted); }
+  .xfer-body canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .xfer-body video { display: block; width: 100%; max-width: 280px; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
+  .xfer-status { font-size: .85rem; color: var(--muted); margin: .5rem 0 0; }
+  .xfer-status.bad { color: var(--err); }
+  .xfer-status.good { color: var(--good); }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 </style>
 </head>
@@ -197,6 +232,16 @@
   </div>
 
   <div class="card">
+    <div class="card-title">Send directly to another device</div>
+    <p class="hint">Skip the file. Pair this browser with another device over Wi-Fi &mdash; a QR code shown here and scanned there, the same way Classroom Timer&rsquo;s mirror works &mdash; and send the same backup straight across the connection. Nothing is written to disk on either end. Works only when both devices can reach each other directly (the same classroom Wi-Fi or LAN); it cannot cross the open internet.</p>
+    <div class="btn-row">
+      <button class="secondary" id="sendDeviceBtn" type="button">Send this backup to a device&hellip;</button>
+      <button class="secondary" id="receiveDeviceBtn" type="button">Receive from a device&hellip;</button>
+    </div>
+    <div id="xferMsg"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title">End of the school year</div>
     <p class="hint">Archiving a year is one workflow, not two: take a full backup, then clear the student data and keep everything you spent the year building. Nothing is cleared until the backup file has actually downloaded.</p>
     <div id="rolloverSummary"></div>
@@ -208,6 +253,16 @@
 
   <footer class="note">Runs entirely in your browser &mdash; nothing here is uploaded anywhere. A backup file is just a copy of what this browser already has stored.</footer>
 
+</div>
+
+<div class="xfer-overlay" id="transferOverlay" hidden>
+  <div class="xfer-modal" role="dialog" aria-modal="true" aria-label="Send or receive a backup directly">
+    <div class="xfer-head">
+      <h2>Device-to-device transfer</h2>
+      <button type="button" class="xfer-close" id="transferCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="xfer-body" id="transferBody"></div>
+  </div>
 </div>
 
 <script>
@@ -825,13 +880,17 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  var dlMsgEl = document.getElementById('dlMsg');
-  function showDlMsg(kind, text) {
-    dlMsgEl.innerHTML = '<div id="dlMsgInner" class="' + kind + '" style="font-size:.85rem;padding:.6rem .8rem;border-radius:6px;margin-top:.8rem;' +
+  /* Shared little status box used by every card that needs one-off feedback
+     (download, device transfer, …) rather than each rolling its own markup. */
+  function showBoxMsg(el, kind, text) {
+    el.innerHTML = '<div class="' + kind + '" style="font-size:.85rem;padding:.6rem .8rem;border-radius:6px;margin-top:.8rem;' +
       (kind === 'good' ? 'background:#e4f5ea;color:var(--good);border:1px solid #bfe3cd;'
        : kind === 'error' ? 'background:#fbeceA;color:var(--err);border:1px solid #e6c6c1;'
        : 'background:#eaf1f5;color:var(--accent-2);border:1px solid #c9dbe3;') + '">' + escapeHtml(text) + '</div>';
   }
+
+  var dlMsgEl = document.getElementById('dlMsg');
+  function showDlMsg(kind, text) { showBoxMsg(dlMsgEl, kind, text); }
 
   var downloadBtn = document.getElementById('downloadBtn');
   downloadBtn.addEventListener('click', function () {
@@ -930,6 +989,37 @@
     document.getElementById('verifyBox').innerHTML = html;
   }
 
+  /**
+   * The single entry point for arming the restore preview, whichever way the
+   * envelope's JSON text arrived — a file picked from disk, or the exact
+   * same text reassembled on the other end of a device-to-device transfer
+   * (see the "device-to-device transfer" section below). Parses it, verifies
+   * it, and — on success — sets `pending` and renders the same restore
+   * preview / mode picker / Restore button used by every restore, so there
+   * is exactly one restore implementation no matter how the bytes got here.
+   * Returns `{ ok: true, envelope }` or `{ error }`; never throws.
+   */
+  function loadEnvelopeText(text, byteSize) {
+    clearMsg();
+    pending = null;
+    lastRestoreGroups = {};
+    preview.classList.remove('active');
+
+    var parsed;
+    try { parsed = JSON.parse(text); }
+    catch (e) { return { error: 'That file isn’t valid JSON — pick a backup downloaded from this page.' }; }
+
+    var read = readEnvelope(parsed);
+    if (read.error) return { error: read.error };
+
+    var env = read.envelope;
+    renderVerify(env, read.flags, byteSize);
+    pending = env;
+    renderRestorePreview();
+    preview.classList.add('active');
+    return { ok: true, envelope: env };
+  }
+
   fileInput.addEventListener('change', function () {
     var file = fileInput.files && fileInput.files[0];
     clearMsg();
@@ -940,22 +1030,8 @@
 
     var reader = new FileReader();
     reader.onload = function () {
-      var parsed;
-      try { parsed = JSON.parse(reader.result); }
-      catch (e) {
-        showMsg('error', 'That file isn’t valid JSON — pick a backup downloaded from this page.');
-        fileInput.value = '';
-        return;
-      }
-      var read = readEnvelope(parsed);
-      if (read.error) { showMsg('error', read.error); fileInput.value = ''; return; }
-
-      var env = read.envelope;
-      renderVerify(env, read.flags, file.size);
-
-      pending = env;
-      renderRestorePreview();
-      preview.classList.add('active');
+      var result = loadEnvelopeText(reader.result, file.size);
+      if (result.error) { showMsg('error', result.error); fileInput.value = ''; }
     };
     reader.onerror = function () { showMsg('error', 'Couldn’t read that file. Try again.'); };
     reader.readAsText(file);
@@ -1262,6 +1338,271 @@
       else showMsg('good', text + ' Reopen any tool from the toolkit to see it.');
     }).then(function () { restoreBtn.disabled = false; });
   });
+
+  /* ══ device-to-device transfer ══════════════════════════════════════════
+     Pairs this browser with exactly one other device over a direct WebRTC
+     data channel (backup-restore/br-pair.js, built on _shared/webrtc-pair.js
+     — manual QR/paste signaling, host-candidates-only, so this only works
+     between devices on the same Wi-Fi/LAN) and sends it the exact same
+     envelope buildEnvelope() would put in a downloaded file — built from the
+     same checked rows in the scan table above, not a second copy of that
+     logic. backup-restore/br-transfer.js frames that JSON text into
+     wire-sized chunks and reassembles them on the other end; the moment the
+     full text is back, it is handed to loadEnvelopeText() above — the exact
+     function the file-picker restore path uses — so the receiving device
+     sees the ordinary verify report and record-level restore preview and
+     presses the same Restore button. There is no second restore path here,
+     only a second way to get the bytes onto the machine. */
+  var transferOverlay = document.getElementById('transferOverlay');
+  var transferBody = document.getElementById('transferBody');
+  var xferMsgEl = document.getElementById('xferMsg');
+  var xfer = null; // { pair, scanHandle } for whichever role is currently active
+
+  function setXferStatus(text, kind) {
+    var el = document.getElementById('xferStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'xfer-status' + (kind ? ' ' + kind : '');
+  }
+  function xferMeter(pct) {
+    var meter = document.getElementById('xMeter');
+    if (meter && meter.firstElementChild) meter.firstElementChild.style.width = Math.max(1, pct) + '%';
+  }
+
+  function teardownTransfer() {
+    if (xfer) {
+      if (xfer.scanHandle) { try { xfer.scanHandle.stop(); } catch (e) {} }
+      if (xfer.pair && xfer.pair.pc) { try { xfer.pair.pc.close(); } catch (e) {} }
+    }
+    xfer = null;
+  }
+  function closeTransferModal() {
+    transferOverlay.hidden = true;
+    teardownTransfer();
+  }
+  document.getElementById('transferCloseBtn').addEventListener('click', closeTransferModal);
+  transferOverlay.addEventListener('mousedown', function (e) { if (e.target === transferOverlay) closeTransferModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !transferOverlay.hidden) closeTransferModal(); });
+
+  document.getElementById('sendDeviceBtn').addEventListener('click', function () {
+    xferMsgEl.innerHTML = '';
+    if (!lastScanGroups.length) { showBoxMsg(xferMsgEl, 'error', 'Nothing saved in this browser yet — there’s nothing to send.'); return; }
+    if (!selectedGroups().length) { showBoxMsg(xferMsgEl, 'error', 'Check at least one row in “What’s saved right now” above before sending.'); return; }
+    teardownTransfer();
+    transferOverlay.hidden = false;
+    renderSendIntro();
+  });
+  document.getElementById('receiveDeviceBtn').addEventListener('click', function () {
+    xferMsgEl.innerHTML = '';
+    teardownTransfer();
+    transferOverlay.hidden = false;
+    renderReceiveIntro();
+  });
+
+  /* ---------- send (host) side ---------- */
+  function renderSendIntro() {
+    transferBody.innerHTML =
+      '<p>Shows a pairing code on this screen. On the other device, open this same page and choose “Receive from a device”, then scan it. Works only when both devices are on the same Wi-Fi.</p>' +
+      '<div class="btn-row"><button type="button" id="xStart">Start pairing</button></div>';
+    document.getElementById('xStart').addEventListener('click', beginSendPairing);
+  }
+
+  function beginSendPairing() {
+    transferBody.innerHTML = '<p>Preparing a pairing code&hellip;</p>';
+    window.BRPair.startHost('backup').then(function (pair) {
+      xfer = { pair: pair };
+      renderSendOffer();
+    }).catch(function (err) {
+      transferBody.innerHTML = '<p>Could not start pairing: ' + escapeHtml(err.message) + '</p>' +
+        '<div class="btn-row"><button type="button" class="secondary" id="xBack">Back</button></div>';
+      document.getElementById('xBack').addEventListener('click', renderSendIntro);
+    });
+  }
+
+  function renderSendOffer() {
+    transferBody.innerHTML =
+      '<p>On the other device, choose “Receive from a device” and scan this code, or copy/paste it by hand:</p>' +
+      '<canvas id="xOfferCanvas" width="320" height="320"></canvas>' +
+      '<div class="btn-row"><button type="button" class="secondary" id="xCopyOffer">Copy code</button></div>' +
+      '<p style="margin-top:1rem;">Then connect their reply:</p>' +
+      '<div class="btn-row"><button type="button" class="secondary" id="xScanAnswer">Scan their code with camera</button></div>' +
+      '<textarea id="xAnswerPaste" rows="3" style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;margin-top:.6rem;" placeholder="…or paste their reply code here"></textarea>' +
+      '<div class="btn-row"><button type="button" id="xConnect">Connect</button></div>' +
+      '<p class="xfer-status" id="xferStatus"></p>';
+    window.BRPair.drawQR(document.getElementById('xOfferCanvas'), xfer.pair.offerPayload);
+    document.getElementById('xCopyOffer').addEventListener('click', function () {
+      if (!navigator.clipboard) { setXferStatus('Could not copy — select the code by hand.', 'bad'); return; }
+      navigator.clipboard.writeText(xfer.pair.offerPayload)
+        .then(function () { setXferStatus('Code copied.', 'good'); })
+        .catch(function () { setXferStatus('Could not copy — select the code by hand.', 'bad'); });
+    });
+    document.getElementById('xConnect').addEventListener('click', function () {
+      var val = document.getElementById('xAnswerPaste').value.trim();
+      if (!val) { setXferStatus('Paste the reply code first.', 'bad'); return; }
+      connectSendWithAnswer(val);
+    });
+    document.getElementById('xScanAnswer').addEventListener('click', function () {
+      transferBody.insertAdjacentHTML('beforeend',
+        '<video id="xScanVideo" autoplay muted playsinline></video>' +
+        '<div class="btn-row"><button type="button" class="secondary" id="xCancelScan">Cancel</button></div>');
+      document.getElementById('xScanAnswer').disabled = true;
+      document.getElementById('xCancelScan').addEventListener('click', function () {
+        if (xfer && xfer.scanHandle) { xfer.scanHandle.stop(); xfer.scanHandle = null; }
+        renderSendOffer();
+      });
+      xfer.scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('xScanVideo'), {
+        onResult: function (text) {
+          if (xfer && xfer.scanHandle) { xfer.scanHandle.stop(); xfer.scanHandle = null; }
+          connectSendWithAnswer(text);
+        },
+        onError: function (err) { setXferStatus('Camera unavailable: ' + err.message, 'bad'); }
+      });
+    });
+  }
+
+  function connectSendWithAnswer(answerPayload) {
+    setXferStatus('Connecting…');
+    xfer.pair.applyAnswer(answerPayload).catch(function (err) { setXferStatus(err.message, 'bad'); });
+    var failTimer = setTimeout(function () {
+      setXferStatus('Still trying — make sure both devices are on the same Wi-Fi network.', 'bad');
+    }, 8000);
+    xfer.pair.onOpen(function () {
+      clearTimeout(failTimer);
+      xfer.pair.onMessage(function (raw) {
+        if (raw === 'K') setXferStatus('Received and opened on the other device — check its screen to review and restore.', 'good');
+        else if (typeof raw === 'string' && raw.charAt(0) === 'E') setXferStatus('The other device could not read it: ' + raw.slice(1), 'bad');
+      });
+      startSendingBackup();
+    });
+    xfer.pair.onClose(function () {
+      if (!transferOverlay.hidden) setXferStatus('Disconnected.', 'bad');
+    });
+  }
+
+  function startSendingBackup() {
+    var groups = selectedGroups();
+    var idbNames = selectedIdbNames();
+    transferBody.innerHTML =
+      '<p><b>Connected.</b> Building the backup&hellip;</p>' +
+      '<div class="meter" id="xMeter"><span style="width:1%"></span></div>' +
+      '<p class="xfer-status" id="xferStatus">Preparing&hellip;</p>';
+    buildEnvelope(groups, idbNames).then(function (envelope) {
+      var text = JSON.stringify(envelope);
+      var count = Object.keys(envelope.data).length;
+      setXferStatus('Sending ' + count + ' item' + (count === 1 ? '' : 's') + '…');
+      return window.BRTransfer.sendPayload(xfer.pair.channel, text, {
+        onProgress: function (sent, total) {
+          var pct = Math.round((sent / total) * 100);
+          xferMeter(pct);
+          setXferStatus('Sending… ' + pct + '%');
+        }
+      });
+    }).then(function () {
+      xferMeter(100);
+      setXferStatus('Sent — waiting for the other device to confirm it opened cleanly…', 'good');
+      transferBody.insertAdjacentHTML('beforeend',
+        '<div class="btn-row" style="margin-top:.8rem;"><button type="button" class="secondary" id="xDone">Close</button></div>');
+      document.getElementById('xDone').addEventListener('click', closeTransferModal);
+    }).catch(function (err) {
+      setXferStatus('Could not send: ' + (err && err.message ? err.message : 'something went wrong.'), 'bad');
+    });
+  }
+
+  /* ---------- receive (join) side ---------- */
+  function renderReceiveIntro() {
+    transferBody.innerHTML =
+      '<p>Ask the other device to choose “Send this backup to a device”, then scan the code it shows here, or paste it below.</p>' +
+      '<div class="btn-row"><button type="button" id="xScanOffer">Scan with camera</button></div>' +
+      '<textarea id="xOfferPaste" rows="3" style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;" placeholder="…or paste the other device’s code here"></textarea>' +
+      '<div class="btn-row"><button type="button" class="secondary" id="xJoinConnect">Connect</button></div>' +
+      '<p class="xfer-status" id="xferStatus"></p>';
+    xfer = {};
+    document.getElementById('xJoinConnect').addEventListener('click', function () {
+      var val = document.getElementById('xOfferPaste').value.trim();
+      if (!val) { setXferStatus('Paste the code first.', 'bad'); return; }
+      connectReceive(val);
+    });
+    document.getElementById('xScanOffer').addEventListener('click', function () {
+      transferBody.insertAdjacentHTML('beforeend',
+        '<video id="xScanVideo2" autoplay muted playsinline></video>' +
+        '<div class="btn-row"><button type="button" class="secondary" id="xCancelScan2">Cancel</button></div>');
+      document.getElementById('xScanOffer').disabled = true;
+      document.getElementById('xCancelScan2').addEventListener('click', function () {
+        if (xfer && xfer.scanHandle) { xfer.scanHandle.stop(); xfer.scanHandle = null; }
+        renderReceiveIntro();
+      });
+      xfer.scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('xScanVideo2'), {
+        onResult: function (text) {
+          if (xfer && xfer.scanHandle) { xfer.scanHandle.stop(); xfer.scanHandle = null; }
+          connectReceive(text);
+        },
+        onError: function (err) { setXferStatus('Camera unavailable: ' + err.message, 'bad'); }
+      });
+    });
+  }
+
+  function connectReceive(offerPayload) {
+    if (xfer && xfer.scanHandle) { xfer.scanHandle.stop(); }
+    setXferStatus('Connecting…');
+    window.BRPair.startJoin(offerPayload).then(function (pair) {
+      xfer = { pair: pair };
+      var receiver = window.BRTransfer.createReceiver({
+        onProgress: function (got, total) {
+          var pct = Math.round((got / total) * 100);
+          xferMeter(pct);
+          setXferStatus('Receiving… ' + pct + '%');
+        },
+        onComplete: function (text) {
+          var byteSize;
+          try { byteSize = new Blob([text]).size; } catch (e) { byteSize = text.length; }
+          var result = loadEnvelopeText(text, byteSize);
+          if (result.error) {
+            setXferStatus(result.error, 'bad');
+            pair.send('E' + result.error.slice(0, 200));
+            return;
+          }
+          pair.send('K');
+          closeTransferModal();
+          showMsg('good', 'Received straight from the other device — review what changes below, then Restore.');
+          preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+        onError: function (err) {
+          setXferStatus(err.message, 'bad');
+          pair.send('E' + err.message.slice(0, 200));
+        }
+      });
+      pair.onMessage(function (raw) { receiver.handleMessage(raw); });
+      pair.onOpen(function () { renderReceiveWaiting(); });
+      pair.onClose(function () {
+        if (!transferOverlay.hidden) setXferStatus('Disconnected.', 'bad');
+      });
+      renderReceiveAnswer(pair);
+    }).catch(function (err) {
+      setXferStatus(err.message, 'bad');
+    });
+  }
+
+  function renderReceiveAnswer(pair) {
+    transferBody.innerHTML =
+      '<p>Show this code back to the other device, or read them the text below:</p>' +
+      '<canvas id="xAnswerCanvas" width="320" height="320"></canvas>' +
+      '<textarea id="xAnswerText" rows="3" readonly style="width:100%;font-family:ui-monospace,monospace;font-size:.75rem;"></textarea>' +
+      '<div class="btn-row"><button type="button" class="secondary" id="xCopyAnswer">Copy code</button></div>' +
+      '<p class="xfer-status" id="xferStatus">Waiting for the other device to connect&hellip;</p>';
+    window.BRPair.drawQR(document.getElementById('xAnswerCanvas'), pair.answerPayload);
+    document.getElementById('xAnswerText').value = pair.answerPayload;
+    document.getElementById('xCopyAnswer').addEventListener('click', function () {
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText(pair.answerPayload).catch(function () {});
+    });
+  }
+
+  function renderReceiveWaiting() {
+    transferBody.innerHTML =
+      '<p><b>Connected.</b> Waiting for the backup to arrive&hellip;</p>' +
+      '<div class="meter" id="xMeter"><span style="width:1%"></span></div>' +
+      '<p class="xfer-status" id="xferStatus">Receiving…</p>';
+  }
 
   /* ---------- end-of-year archive and clear ---------- */
   function renderRolloverSummary(groups) {

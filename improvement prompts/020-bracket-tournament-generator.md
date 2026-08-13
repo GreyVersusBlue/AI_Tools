@@ -14,6 +14,8 @@ ambitious and are **not** scoped to a single session.
 
 ## What it does today
 
+- **Five formats**: single elimination, double elimination, round robin,
+  **pools-into-a-bracket**, and **Swiss** (Round 6)
 - **Single and double elimination** brackets, with byes handled automatically
   (`nextPowerOf2`, `buildDoubleElimBracket`, `buildGrandFinalMatch`)
 - Click-to-advance live picks with auto-advance through byes, **or enter both
@@ -58,9 +60,14 @@ ambitious and are **not** scoped to a single session.
 
 ## Major Features
 
-- **Consolation / everybody-plays formats.** A "loser's side that keeps
+- **Done — pools and Swiss; a loser's-side consolation bracket is still open.**
+  **Consolation / everybody-plays formats.** A "loser's side that keeps
   playing", a Swiss format, or guaranteed-three-games pool play. This is the
   difference between a tool used once a year and a tool used every unit.
+  *(Pools-into-a-bracket and Swiss shipped Round 6 — see below. A true
+  double-elimination-style "loser's side keeps playing" consolation bracket
+  for the single-elimination format specifically is not the same thing as
+  double elimination, which already exists, and remains open.)*
 - **Done — single elimination and round robin only.** **Match scheduling with stations and time.** Which match is on which court
   or table, in which round, at what time — which is precisely what
   `021-pe-tournament-stations.html` does for rotations. These two tools overlap
@@ -510,3 +517,154 @@ zero console errors throughout.
 - Re-deciding an already-decided match from a corrected score (see
   Challenges above) — currently requires Undo instead.
 - Team names with members (Quick Wins) is still open.
+
+## Round 6 — 2026-08-13
+
+Closed out the two open items at the top of "Where the next round should
+pick up": **pools-into-a-bracket** and **Swiss**, both carried over from
+Round 4 through Round 5 under Major Features / "Consolation / everybody-plays
+formats."
+
+### What shipped
+
+- **Pools into a bracket** (`#bracketType` = `pools`). Entrants are split
+  into N pools (`poolCount`) via a snake distribution
+  (`distributeIntoPools` — 1,2,…,P,P,…,2,1,1,2,… — so pools stay balanced in
+  both size and, under Ranked seeding, strength), and each pool plays a full
+  round robin. A pool is *literally* a `buildRoundRobin()` result, so
+  `computeStandings()` is reused completely unmodified for pool standings —
+  the only wrinkle is that a pool's own `.scores` is discarded in favor of a
+  view derived from the top-level `state.scores`, namespaced by a
+  `'poolN_'` prefix (the same way double elimination already namespaces its
+  winners/losers/grand-final scores with `w`/`l`/`g` prefixes in one shared
+  map). Once every pool match is decided, a "Generate bracket from pool
+  results" action appears; `seedOrderFromPools()` ranks advancing entrants
+  by **finish position across pools** (every pool's 1st place, then every
+  pool's 2nd place, …) rather than pool-by-pool, so the top of the seed list
+  is the actual strongest tier of the field, and hands that list straight to
+  the existing `buildBracket(..., 'ranked')` — reusing `standardSeedOrder`'s
+  "protect the top seeds" placement exactly as ranked single elimination
+  already does, rather than inventing a second seeding algorithm. A
+  "Regenerate bracket seeding from pools" action stays available until the
+  first real bracket pick is made (a bye auto-advance doesn't count), so a
+  pool-score correction can't silently overwrite a bracket result already in
+  play.
+- **Swiss** (`#bracketType` = `swiss`). Round 1 has no results to pair by, so
+  it uses the standard Swiss opening — split the field in half, seed 1 vs
+  seed ⌈n/2⌉+1, seed 2 vs seed ⌈n/2⌉+2, … — over the seed/entry order (an odd
+  field gives the *last* entrant a bye, same "byes land on the weakest seed"
+  choice the elimination formats already make). Every round after that pairs
+  by current record (`computeSwissStandings`, best to worst), matching each
+  player against the next player in that order they haven't already played
+  where possible; a small field or late round can run out of fresh
+  opponents, so pairing falls back to a repeat rather than leaving someone
+  unpaired. A repeated bye is avoided the same way: the player with the
+  fewest byes so far gets the round's bye, ties broken toward the weaker
+  current record. A "Generate Round N pairings" action appears once the
+  latest round is fully decided and rounds remain; the tournament ends after
+  the configured round count, naming co-champions on a tie.
+- **Tie-handling decision.** Both new formats keep the existing tool-wide
+  rule unchanged: **a tied score never auto-decides a match** — there is no
+  draw support anywhere in this tool (carried over from Round 4/Pass 2), so
+  a tied entry just sits there until a click or a differing score breaks it.
+  The one new tie-adjacent decision made this round is **how a Swiss bye is
+  scored**: `computeSwissStandings` shares `computeStandings`' shape and
+  tiebreak order (wins, then point differential, then fewer losses, then
+  name) but deliberately diverges on byes — a Swiss bye credits the present
+  player a genuine win and a played match, not round robin's neutral
+  "sitting out, no credit." This was necessary rather than cosmetic: Swiss
+  pairing depends on every player having a decisive record each round to
+  pair by, which a neutral bye can't provide. Pools' own standings keep
+  round robin's original "a bye is nobody's result" convention unchanged,
+  since a pool is a literal `buildRoundRobin()` result reused as-is — so the
+  same tool now intentionally scores a bye two different ways depending on
+  format, each documented at its definition site.
+- **New test suite.** No coverage existed for either format before this
+  round; added
+  `Tools/bracket-tournament-generator/test/smoke-pools-swiss.mjs` (same
+  pattern as `smoke-standings.mjs` — not wired into root `package.json`, run
+  directly). Every scenario is worked out by hand against the tool's own
+  pairing/seeding math rather than just asserting "something rendered":
+  - **Pool standings**: 8 entrants in 2 pools of 4, full round robin scored
+    to a known finish order in each pool; asserts the exact ranked order and
+    W/L/Played/PF/PA/Diff for the leader and last place in both pools.
+  - **Pool-to-bracket seeding**: confirms the generated bracket's round-0
+    order is `[T1, T3, T2, T4]` for finish order `[T1,T2]` (rank 1) then
+    `[T4,T3]` (rank 2) — i.e. both pools' winners are kept apart from each
+    other by `standardSeedOrder(4) = [1,4,2,3]`, exactly like ranked single
+    elimination would place them — then plays the generated bracket to a
+    champion.
+  - **Swiss round-by-record pairing**: 4 players, 3 rounds; confirms Round 1
+    is top-half-vs-bottom-half, Round 2 pairs winners together and losers
+    together after Round 1's results, and Round 3 is forced into the one
+    remaining valid pairing that avoids every repeat matchup (a strong,
+    non-fragile assertion since it holds regardless of any standings
+    tiebreak ambiguity). Also confirms a tied score doesn't auto-decide a
+    Swiss match.
+  - **Swiss byes**: 3 players, 2 rounds; confirms the odd-numbered opening
+    bye lands on the last entrant, confirms the bye does NOT repeat on the
+    same player next round even though that player still outranks the
+    alternative in the standings (bye assignment is driven by bye count
+    first, standings only as the tiebreak), and confirms a bye contributes a
+    win and a played match with zero PF/PA to the final standings.
+  - All three sub-suites assert zero console/page errors and zero requests
+    leaving the site.
+
+### Verification
+
+`node Tools/bracket-tournament-generator/test/smoke-pools-swiss.mjs` — 29
+assertions, all green. Re-ran the pre-existing
+`node Tools/bracket-tournament-generator/test/smoke-standings.mjs` alongside
+it (30 assertions, unchanged, still green) to confirm the new formats didn't
+regress single elimination / double elimination / round robin. Also ran
+`node Tools/board-check/check-dedupe.mjs` clean.
+
+### Challenges / tradeoffs
+
+- **Pools and Swiss are both excluded from match scheduling** (the
+  Schedule button), for the same reason double elimination already is:
+  scheduling depends on a round's match *count* being knowable up front, and
+  a pool's later rounds are fine (round robin's round sizes are fixed at
+  generation time) but the pools-fed *bracket*'s later rounds, and every
+  Swiss round after the first, depend on results not yet known. Rather than
+  build a partial/inconsistent schedule, the Schedule button hides for
+  `state.type === 'pools'` and `'swiss'` exactly like it already does for
+  `'double'`.
+- **The bracket-fed-from-pools reuses single elimination's own rendering
+  quirk**: a not-yet-reached match's score-input pair is rendered (with
+  placeholder TBD contestants) as soon as its round exists in the data,
+  not only once both real names are known — this is pre-existing behavior
+  in `renderSingle()` (an `isByeMatch` check that only special-cases a true
+  `null` bye, not a `false` "undecided" slot), faithfully carried into the
+  new `renderPoolsBracketSection()` rather than changed, since fixing it
+  would be a single-elimination-wide change out of scope for this round.
+- **No draw/tie support**, carried over unchanged: neither pools nor Swiss
+  can represent a legitimate draw. See "Tie-handling decision" above for
+  what *was* decided (Swiss bye scoring), which is a related but separate
+  question from draw support.
+- **Reset picks for pools regenerates nothing** — it clears every pool
+  match's winner, the embedded bracket, and every pool/bracket score, but
+  keeps the same pool membership and pool order (matching the other
+  formats' "structure survives, results don't" convention). Reset for Swiss
+  is different by necessity: because Swiss pairings past Round 1 depend on
+  results, "reset" rebuilds the whole Swiss state from scratch via
+  `buildSwiss()` (same players, same round count, same seed mode) rather
+  than trying to preserve and re-derive prior pairings.
+
+### Where the next round should pick up
+
+- Scheduling for double elimination, pools, and Swiss, once there's a
+  concrete need for it (all three now share the same "match count not known
+  up front" gap).
+- A real second-display presentation mode (carried over, still open).
+- The P7 engine-sharing question with `021-pe-tournament-stations.html`
+  (carried over, still open).
+- Draw/tie support (carried over, still open) — would touch pools and Swiss
+  too now, not just round robin/elimination.
+- Re-deciding an already-decided match from a corrected score (carried
+  over, still open) — currently requires Undo instead.
+- Team names with members (Quick Wins) is still open.
+- A true "loser's side keeps playing" consolation bracket for single
+  elimination specifically (see Major Features note above) — distinct from
+  both double elimination (already exists) and pools/Swiss (shipped this
+  round).

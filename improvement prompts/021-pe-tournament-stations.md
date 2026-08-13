@@ -2,14 +2,126 @@
 
 **Tool file:** `Tools/021-pe-tournament-stations.html`
 **Support folder:** `Tools/pe-tournament-stations/test/` — the browser suite
-(`smoke-pe-stations.mjs`, `npm run test:pe-stations`). The page itself is
-still a single file.
+(`smoke-pe-stations.mjs`, `npm run test:pe-stations`, plus
+`smoke-pe-remote.mjs`, added 2026-08-13, not yet wired into `package.json`).
+The page itself is still a single file.
 
 **Current description (from README):** A station rotation timer with named stations and groups, plus a tournament bracket for PE units.
 
 ---
 
 ## Status
+
+**2026-08-13 — Real phone-to-laptop remote (WebRTC pairing).** Closed the
+gap Round 4 flagged and left open: BroadcastChannel's `?remote=1` window only
+ever worked same-device (verified again in this round — see "How this was
+verified" below). Added a second, additional transport built on
+`_shared/webrtc-pair.js` — a real LAN peer connection with no signaling
+server (QR-code or paste offer/answer, host-candidates-only ICE) — using the
+exact connection-lifecycle pattern `Tools/classroom-timer/ct-mirror.js` /
+`Tools/004-Classroom Timer.html`'s "Mirror to a device" already established
+for this site. The BroadcastChannel remote was **kept, not replaced** — both
+transports coexist behind the same command vocabulary, and a teacher whose
+setup really is same-device (a small control window on the same laptop
+mirroring to the gym TV) loses nothing.
+
+**What shipped, still single-file** (`Tools/021-pe-tournament-stations.html`
+grew a `<head>` include of `_shared/webrtc-pair.js`, `_shared/qr-scan.js`, and
+the two vendored `qrcode`/`jsqr` libraries already used elsewhere on the site
+— no new per-tool copy of any vendored library, `check-dedupe.mjs` stays
+clean):
+
+- **"Pair a phone (Wi-Fi)"** button next to the existing "Open remote
+  control" on the display. Opens a modal (host role): creates a
+  `WebRTCPair.createOffer('pe-remote')`, shows the offer as both a QR code
+  (`drawQR`, a small local copy of `ct-mirror.js`'s canvas-drawing function —
+  that function lives in a per-tool ES module, not `_shared/`, so this tool
+  keeps its own copy on top of the shared vendored `qrcode.js` rather than
+  importing a sibling tool's module) and a readonly text field, then accepts
+  the phone's reply either via camera scan (`_shared/qr-scan.js`) or paste.
+- **"On a different device? Pair over Wi-Fi"** button on the `?remote=1`
+  remote screen. Same modal, join role: scans or pastes the display's offer,
+  shows its own answer back (QR + text), and once the data channel opens the
+  remote's Start/Pause/Resume/Rotate now/Reset buttons and live countdown
+  switch to sending/receiving over that channel instead of BroadcastChannel.
+- **One command vocabulary, two transports.** Both the display and the
+  remote page share one `sendRemoteCmd(cmd)` (remote side) and one
+  `applyRemoteCmd(msg)` (display side): `applyRemoteCmd` is unchanged in
+  substance from the BroadcastChannel-only version — it still just calls
+  `doStart/doPause/doResume/doRotateNow/doReset`, the same functions the
+  on-screen buttons call — only now it's invoked from either
+  `bc.onmessage` or the WebRTC channel's `message` event. Likewise
+  `broadcastState()` now pushes the same `{type:'state', ...}` snapshot
+  (factored out into `buildStateMessage()`) over whichever of BroadcastChannel
+  or an open WebRTC channel is available, so the remote's mirrored countdown
+  and station tiles work identically over either transport. The display
+  remains the sole timer authority regardless of transport — `tick()` is
+  still short-circuited by `isRemote` exactly as before, nothing about the
+  `endAt`-based countdown changed.
+- **Modal auto-closes on connect.** Both the host and join "Connected"
+  screens close the pairing modal automatically once the data channel opens,
+  rather than lingering on a full-screen overlay that would otherwise sit on
+  top of the display's own Start/Pause/Rotate/Reset buttons (on the display)
+  or the remote's own big control buttons (on the phone) — the exact bug the
+  test in "How this was verified" below caught on the first run. Reopening
+  the pairing button while already paired shows the "Connected — Stop
+  pairing" screen instead of restarting the handshake.
+
+**How this was verified.** `Tools/pe-tournament-stations/test/smoke-pe-remote.mjs`
+(new file, 14 checks, not yet wired into `package.json`'s `test` script or
+`test:pe-stations` — flagging for whoever does the integration pass). Follows
+the same real-WebRTC pattern `Tools/class-roster-hub/test/smoke-export.mjs`'s
+Part 2 already established for this site: two independent Playwright browser
+*contexts* (the closest headless stand-in for two separate devices — separate
+storage, no shared BroadcastChannel) drive the actual UI — display hosts,
+phone joins via the paste-code fallback path (no `getUserMedia` in a headless
+run, so the camera-scan buttons aren't exercised, matching how
+`smoke-export.mjs` already handles this) — and negotiate a genuine
+`RTCPeerConnection` over 127.0.0.1 loopback, a valid host ICE candidate since
+`_shared/webrtc-pair.js` is host-candidates-only by design. Once paired, the
+suite taps the phone's real Start / Rotate now / Reset buttons and asserts
+the effect by reading the display's own `localStorage` rotation state
+afterwards (running flag, rotation count, both zeroed by Reset) — not just
+trusting the phone's own mirrored UI — and separately asserts the display's
+live countdown actually reaches the phone over the channel. A final check
+opens a *second* remote window in the display's own browser context (so
+BroadcastChannel really does reach it) and confirms that same-device remote
+still works independently while the WebRTC phone stays paired — proving the
+two transports coexist rather than one disabling the other. Zero console
+errors and zero off-site requests on either simulated device throughout.
+`node --check` on the extracted inline script block; `node
+Tools/board-check/check-dedupe.mjs` stays clean (no new per-tool copy of
+`qrcode.js`/`jsqr.js` — both already vendored and already used by
+Classroom Timer's mirror feature). The pre-existing
+`smoke-pe-stations.mjs` (14 checks, the saved-unit overwrite guard) was run
+first to confirm it was green before starting, and re-run after, unaffected
+by this round's changes.
+
+**Known limitations, stated plainly rather than glossed over.** This is LAN
+pairing, not internet pairing — both devices need to reach each other
+directly (same Wi-Fi/classroom network), which is the realistic gym use case
+but won't work over cellular data or across separate networks; that's a
+deliberate scope choice inherited from `_shared/webrtc-pair.js` (no STUN/TURN,
+by design — see that file's own header comment), not something this round
+tried to lift. Pairing is manual per session — there's no "remember this
+phone" — so a dropped connection or a page reload means re-pairing from
+scratch (tap "Pair a phone (Wi-Fi)" again, scan/paste again); this matches
+Classroom Timer's mirror feature exactly and wasn't treated as a gap worth
+closing here. The camera-scan path (`_shared/qr-scan.js`) is implemented and
+present in the UI on both ends, matching Classroom Timer's pattern exactly,
+but — as noted above — isn't exercised by the automated test (no camera in a
+headless browser); it was, however, screenshotted manually mid-flow (offer
+QR renders correctly, join-role paste flow renders correctly) as a sanity
+check, not a substitute for a real device test on an actual phone camera,
+which no session in this environment can perform.
+
+**Where the next round should pick up:** wiring `smoke-pe-remote.mjs` into
+`package.json` (left undone per this repo's boundary rule — new files only,
+`package.json` is off-limits here); a real-device pass on an actual phone
+camera scanning the display's QR code (only the paste-code fallback path has
+been exercised end-to-end so far); uneven groups/stations modeling; team/
+group memory across a unit; and the cross-tool rotation/bracket engine
+unification (P7), all still open from prior rounds and untouched by this one.
 
 **2026-08-11 — Pass 2, Round 3 (session `m3r8ro`).** Shipped the
 overwrite guard (backlog rank 3) — a genuine data-loss bug, not a polish

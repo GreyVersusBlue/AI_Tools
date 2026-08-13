@@ -19,6 +19,10 @@
 <!-- gvb:social:end -->
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <style>
   :root { --good: #2f7d4f; }
   * { box-sizing: border-box; }
@@ -184,6 +188,34 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 1.6rem; text-align: center; }
 
+  /* ── Remote control (phone pairing) ───────────────────────────────────
+     Same modal shape as Classroom Timer's "Mirror to a device" dialog, since
+     it's the one existing pairing UI on the site and there's no reason for a
+     teacher to relearn a second look for the same kind of flow. */
+  .remote-live-badge { display: none; align-items: center; gap: .4rem; font-size: .82rem; color: var(--accent-2); font-weight: 600; }
+  .remote-live-badge.show { display: inline-flex; }
+  .remote-live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); animation: rc-pulse 1.6s ease-in-out infinite; }
+  @keyframes rc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+  .remote-overlay { position: fixed; inset: 0; background: rgba(20, 20, 16, .5); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+  .remote-overlay[hidden] { display: none; }
+  .remote-modal { background: var(--card); border-radius: 10px; max-width: 420px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 1.2rem 1.3rem; }
+  .remote-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+  .remote-head h2 { margin: 0; font-size: 1.15rem; }
+  .remote-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; line-height: 1; padding: .2rem .4rem; }
+  .remote-close:hover { color: var(--ink); background: none; }
+  .remote-body p { color: var(--muted); font-size: .9rem; line-height: 1.5; }
+  .remote-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .remote-actions button { flex: 1 1 auto; }
+  .remote-status { font-size: .84rem; color: var(--muted); margin-top: .5rem; }
+  .remote-status.bad { color: var(--err); }
+  .remote-status.good { color: var(--accent-2); }
+  .remote-modal canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  .remote-modal video { display: block; width: 100%; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
+  .remote-modal textarea { width: 100%; font-family: ui-monospace, monospace; font-size: .72rem; margin-bottom: .6rem; min-height: 3.6rem; }
+  .remote-cmd-list { list-style: none; margin: .6rem 0 0; padding: 0; }
+  .remote-cmd-list li { padding: .3rem 0; border-top: 1px dashed var(--line); font-size: .86rem; }
+  .remote-cmd-list li:first-child { border-top: none; }
+
   /* ── Projector mode ────────────────────────────────────────────────────
      Everything the room does not need to read is hidden, and the things it
      does are made bigger. Deliberately a display state rather than a separate
@@ -217,9 +249,21 @@
       <p class="sub">A timer, today's school-calendar day, and a quick roster call, side by side &mdash; run the whole period from this one page.</p>
     </div>
     <div class="header-actions">
+      <span class="remote-live-badge" id="remoteLiveBadge"><span class="dot" aria-hidden="true"></span>Phone connected</span>
       <button type="button" class="secondary small" id="panelConfigBtn">Panels&hellip;</button>
+      <button type="button" class="secondary small" id="remoteBtn">Remote control&hellip;</button>
       <button type="button" class="secondary small" id="projectorBtn">Projector mode</button>
       <button type="button" class="secondary small" id="fullscreenBtn">Fullscreen</button>
+    </div>
+  </div>
+
+  <div class="remote-overlay" id="remoteOverlay" hidden>
+    <div class="remote-modal" role="dialog" aria-modal="true" aria-label="Remote control">
+      <div class="remote-head">
+        <h2>Remote control</h2>
+        <button type="button" class="remote-close" id="remoteCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="remote-body" id="remoteBody"></div>
     </div>
   </div>
 
@@ -1422,18 +1466,129 @@
       (already ? '<p class="hint" style="margin-top:.5rem;">Already run today.</p>' : '');
 
     el.querySelector('#recheckBtn').addEventListener('click', function () { buildStartDayPanel(el); });
-    el.querySelector('#startDayBtn').addEventListener('click', function () {
-      pickedSet = {};
-      excludedSet = {};
-      if (settings.rosterName) { savePicked(settings.rosterName); saveExcluded(settings.rosterName); }
-      settings.dayStartedOn = todayKey();
-      saveSettings();
-      if (mounted.roster) buildRosterPanel(mounted.roster);
-      buildStartDayPanel(el);
-    });
+    el.querySelector('#startDayBtn').addEventListener('click', runStartOfDayReset);
+  }
+
+  /** The "Start the day" button's action, pulled out so the Remote Control
+      panel (see below) can fire the exact same reset a press on the board
+      would — one button, no parameters, which is why it doubled as this
+      feature's fifth remote action. */
+  function runStartOfDayReset() {
+    pickedSet = {};
+    excludedSet = {};
+    if (settings.rosterName) { savePicked(settings.rosterName); saveExcluded(settings.rosterName); }
+    settings.dayStartedOn = todayKey();
+    saveSettings();
+    if (mounted.roster) buildRosterPanel(mounted.roster);
+    if (mounted.startday) buildStartDayPanel(mounted.startday);
   }
 
   PANELS.startday = { id: 'startday', title: 'Start the Day', build: buildStartDayPanel };
+
+  /** The fourth remote action: pull up the *next* scheduled period's mapped
+      roster right now, instead of waiting for the wall clock to reach it —
+      useful when the day is running ahead of or behind the printed bell
+      times. Deliberately does not move the live clock/period readout at the
+      top of the page: that strip is wall-clock driven by design (see the
+      Status doc on why the schedule is owned outright rather than editable
+      state), and faking it would fight that decision rather than extend it.
+      What it *does* reuse is exactly onPeriodChange's own roster-switch —
+      same guard (only a period with a mapped, still-saved roster does
+      anything), same panels refreshed. Returns false only when there is no
+      next period *and* no current one to fall back to (an empty schedule). */
+  function advanceToNextPeriod() {
+    var at = periodAt(nowMinutes());
+    var target = at.next || at.current;
+    if (!target) return false;
+    if (target.roster) {
+      var rosters = loadRosters();
+      if (rosters[target.roster]) {
+        rosterManuallyChosen = false;
+        settings.rosterName = target.roster;
+        saveSettings();
+        if (mounted.roster) buildRosterPanel(mounted.roster);
+      }
+    }
+    if (mounted.schedule) buildSchedulePanel(mounted.schedule);
+    return true;
+  }
+
+  /* =====================================================================
+     REMOTE CONTROL — pair a phone over _shared/webrtc-pair.js (via
+     command-center/cc-remote.js) and let it drive five named actions on this
+     page, instead of mirroring the whole board. The panel registry already
+     turned each of these into one callable function; this is what calls
+     them from a message instead of a click.
+     ===================================================================== */
+
+  /** Applies one command from the paired phone, exactly the way the matching
+      on-screen control would. Returns { ok, error? } — never throws, since
+      an unrecognised or malformed message from a phone across the room
+      should be ignored, not take the dashboard down. Also the hook the
+      command-dispatch tests call directly (see
+      Tools/command-center/test/smoke-remote-commands.mjs) — real WebRTC
+      between two headless pages is not what this suite is testing; whether
+      each command produces the right state change is. */
+  function applyRemoteCommand(msg) {
+    if (!msg || typeof msg !== 'object' || typeof msg.cmd !== 'string') return { ok: false, error: 'bad message' };
+    switch (msg.cmd) {
+      case 'timer_toggle':
+        if (!mounted.timer) return { ok: false, error: 'timer panel is off' };
+        if (timerState.running) pauseTimer(); else startTimer();
+        return { ok: true };
+      case 'next_student':
+        if (!mounted.roster) return { ok: false, error: 'roster panel is off' };
+        if (!currentRoster.length) return { ok: false, error: 'no roster loaded' };
+        pickStudent(mounted.roster);
+        return { ok: true };
+      case 'sign_in': {
+        if (typeof msg.section !== 'string' || typeof msg.id !== 'string') return { ok: false, error: 'missing student' };
+        var didSignIn = signInFromDashboard(msg.section, msg.id);
+        if (didSignIn && mounted.hallpass) buildHallPassPanel(mounted.hallpass);
+        return { ok: didSignIn, error: didSignIn ? undefined : 'not currently out' };
+      }
+      case 'advance_period': {
+        var advanced = advanceToNextPeriod();
+        return { ok: advanced, error: advanced ? undefined : 'no periods scheduled' };
+      }
+      case 'start_day':
+        runStartOfDayReset();
+        return { ok: true };
+      default:
+        return { ok: false, error: 'unknown command' };
+    }
+  }
+
+  /** What the phone sees between commands: enough of the board's live state
+      to render five buttons that make sense — which student was last called,
+      who is out right now (so "sign in" can offer names instead of asking
+      for an id blind), the timer, and the next period's name. Pushed on an
+      interval while a phone is connected, the same shape as Classroom
+      Timer's getDisplaySnapshot() (a pull the remote-pairing script polls,
+      not something the panels themselves need to know exists). */
+  function remoteSnapshot() {
+    var at = periodAt(nowMinutes());
+    var out = hallPassOutNow();
+    var pickedEl = mounted.roster && mounted.roster.querySelector('#pickedName');
+    return {
+      timer: { remaining: timerState.remaining, total: timerState.total, running: timerState.running, panelOn: !!mounted.timer },
+      roster: {
+        panelOn: !!mounted.roster,
+        name: settings.rosterName || '',
+        picked: pickedEl ? pickedEl.textContent : '—',
+        count: currentRoster.length
+      },
+      hallpass: out.rows.map(function (r) { return { id: r.id, section: r.section, name: r.name, destLabel: r.destLabel }; }),
+      period: { current: at.current ? at.current.label : null, next: at.next ? at.next.label : null },
+      dayStarted: settings.dayStartedOn === todayKey()
+    };
+  }
+
+  /* Exposed for the phone-pairing script below (a plain <script>, not this
+     module) and for the headless test suite, which calls it directly the way
+     a received data-channel message would. */
+  window.__ccApplyRemoteCommand = applyRemoteCommand;
+  window.__ccRemoteSnapshot = remoteSnapshot;
 
   /* =====================================================================
      Projector mode, fullscreen, keyboard
@@ -1497,6 +1652,178 @@
     if (e.key === SEATING_KEY && mounted.seating) buildSeatingPanel(mounted.seating);
   });
 })();
+</script>
+<script type="module">
+/* Pairing UI for "Remote control…" — the dashboard is always the HOST role
+   (it draws the first QR code), matching Classroom Timer's Mirror feature so
+   a teacher who has used one already knows the shape of the other. Unlike
+   Mirror, the data this channel carries runs phone-to-laptop: incoming
+   messages are handed to window.__ccApplyRemoteCommand (defined in the
+   classic script above — see REMOTE CONTROL there), and a snapshot goes back
+   out on an interval so the phone has something to show between taps. */
+import { drawQR, startHost } from './command-center/cc-remote.js';
+
+const overlay = document.getElementById('remoteOverlay');
+const body = document.getElementById('remoteBody');
+const closeBtn = document.getElementById('remoteCloseBtn');
+const openBtn = document.getElementById('remoteBtn');
+const liveBadge = document.getElementById('remoteLiveBadge');
+
+const REMOTE_PUSH_MS = 1000;
+
+let host = null;
+let pushTimer = null;
+let scanHandle = null;
+
+function stopPushing() {
+  if (pushTimer) { clearInterval(pushTimer); pushTimer = null; }
+}
+function stopScanning() {
+  if (scanHandle) { scanHandle.stop(); scanHandle = null; }
+}
+function teardownConnection() {
+  stopPushing();
+  stopScanning();
+  if (host && host.pc) host.pc.close();
+  host = null;
+  liveBadge.classList.remove('show');
+}
+
+function openModal() { overlay.hidden = false; }
+function closeModal() { overlay.hidden = true; stopScanning(); }
+
+closeBtn.addEventListener('click', closeModal);
+overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) closeModal(); });
+
+openBtn.addEventListener('click', () => {
+  openModal();
+  if (host) renderConnected();
+  else renderIntro();
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderIntro() {
+  body.innerHTML = `
+    <p>Drive this board from a phone across the room &mdash; no apps, no accounts. Works between devices on the same Wi-Fi.</p>
+    <ul class="remote-cmd-list">
+      <li>Start / pause the timer</li>
+      <li>Call the next student</li>
+      <li>Sign a student back in</li>
+      <li>Pull up the next period's roster</li>
+      <li>Run the start-of-day reset</li>
+    </ul>
+    <div class="remote-actions" style="margin-top:.8rem;"><button type="button" id="rStart">Start pairing</button></div>
+  `;
+  document.getElementById('rStart').addEventListener('click', beginPairing);
+}
+
+async function beginPairing() {
+  body.innerHTML = `<p>Preparing a pairing code&hellip;</p>`;
+  try {
+    host = await startHost();
+  } catch (err) {
+    body.innerHTML = `<p>Couldn&rsquo;t start pairing: ${escapeHtml(err.message)}</p>
+      <div class="remote-actions"><button type="button" id="rBack">Back</button></div>`;
+    document.getElementById('rBack').addEventListener('click', renderIntro);
+    return;
+  }
+  renderOffer();
+}
+
+function renderOffer() {
+  body.innerHTML = `
+    <p>On the phone, open this Command Center's <b>Remote control</b> page and scan this code, or copy/paste it by hand:</p>
+    <canvas id="rOfferCanvas" width="320" height="320"></canvas>
+    <div class="remote-actions"><button type="button" id="rCopyOffer">Copy code</button></div>
+    <p style="margin-top:1rem;">Then connect their reply:</p>
+    <div class="remote-actions"><button type="button" id="rScanAnswer">Scan their code with camera</button></div>
+    <textarea id="rAnswerPaste" rows="3" placeholder="…or paste their reply code here"></textarea>
+    <div class="remote-actions"><button type="button" id="rConnect">Connect</button></div>
+    <p class="remote-status" id="rStatus"></p>
+  `;
+  drawQR(document.getElementById('rOfferCanvas'), host.offerPayload);
+  document.getElementById('rCopyOffer').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(host.offerPayload); setStatus('Code copied.', 'good'); }
+    catch (e) { setStatus('Could not copy — select the code by hand from the QR reader.', 'bad'); }
+  });
+  document.getElementById('rConnect').addEventListener('click', () => {
+    const val = document.getElementById('rAnswerPaste').value.trim();
+    if (!val) { setStatus('Paste the reply code first.', 'bad'); return; }
+    connectWithAnswer(val);
+  });
+  document.getElementById('rScanAnswer').addEventListener('click', scanAnswerWithCamera);
+}
+
+function setStatus(text, kind) {
+  const el = document.getElementById('rStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'remote-status' + (kind ? ' ' + kind : '');
+}
+
+function scanAnswerWithCamera() {
+  body.insertAdjacentHTML('beforeend', `
+    <video id="rScanVideo" autoplay muted playsinline></video>
+    <div class="remote-actions"><button type="button" id="rCancelScan">Cancel</button></div>
+  `);
+  document.getElementById('rScanAnswer').disabled = true;
+  document.getElementById('rCancelScan').addEventListener('click', () => {
+    stopScanning();
+    renderOffer();
+  });
+  scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('rScanVideo'), {
+    onResult: (text) => { stopScanning(); connectWithAnswer(text); },
+    onError: (err) => { setStatus('Camera unavailable: ' + err.message, 'bad'); },
+  });
+}
+
+async function connectWithAnswer(answerPayload) {
+  setStatus('Connecting…');
+  try {
+    await host.applyAnswer(answerPayload, host.pc);
+  } catch (err) {
+    setStatus(err.message, 'bad');
+    return;
+  }
+  const failTimer = setTimeout(() => {
+    setStatus('Still trying — make sure both devices are on the same Wi-Fi network.', 'bad');
+  }, 8000);
+  host.onOpen(() => {
+    clearTimeout(failTimer);
+    host.send(window.__ccRemoteSnapshot());
+    pushTimer = setInterval(() => host.send(window.__ccRemoteSnapshot()), REMOTE_PUSH_MS);
+    liveBadge.classList.add('show');
+    renderConnected();
+  });
+  host.onMessage((data) => {
+    window.__ccApplyRemoteCommand(data);
+    // Push back immediately after applying a command, rather than waiting up
+    // to REMOTE_PUSH_MS, so the phone's own UI (e.g. the picked name, or the
+    // student it just signed in dropping off the "who's out" list) updates
+    // right away instead of looking like the tap did nothing for a second.
+    host.send(window.__ccRemoteSnapshot());
+  });
+  host.onClose(() => {
+    stopPushing();
+    liveBadge.classList.remove('show');
+    if (!overlay.hidden) renderIntro();
+  });
+}
+
+function renderConnected() {
+  body.innerHTML = `
+    <p><b>Connected.</b> The phone can now drive the timer, quick call, hall pass sign-in, next period, and start-of-day reset.</p>
+    <div class="remote-actions"><button type="button" id="rStop">Stop</button></div>
+  `;
+  document.getElementById('rStop').addEventListener('click', () => {
+    teardownConnection();
+    closeModal();
+  });
+}
 </script>
 <script src="../_shared/sw-register.js" defer></script>
 </body>

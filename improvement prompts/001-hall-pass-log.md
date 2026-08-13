@@ -2,13 +2,72 @@
 
 **Tool file:** `Tools/001-hall-pass-log.html`
 **Support folder:** `Tools/hall-pass-log/test/` — the browser suite
-(`smoke-export.mjs`, `npm run test:hall-pass`). The page itself is a single file.
+(`smoke-export.mjs`, `npm run test:hall-pass`; `smoke-hallway-sync.mjs`, run
+directly with `node`). The page itself is a single file.
 
 **Current description (from README):** Tap a destination, tap a student — a live board tracks who's out and for how long, with a per-day log, archived history, and a printable report.
 
 ---
 
 ## Status
+
+**2026-08-13 — Hallway Sync (two-teacher peer pairing, backlog "Multi-teacher
+awareness", P9).** Two teachers covering the same hallway were each tracking
+passes blind to the other. Shipped a new "Hallway Sync" card that pairs this
+board with exactly one other Hall Pass Log directly over WebRTC
+(`_shared/webrtc-pair.js`, the same offer/answer QR-or-paste flow
+classroom-timer's mirror pairing uses, via the shared `_shared/qr-scan.js`
+camera scanner and the vendored `qrcode`/`jsqr` encoder-decoder pair) — no
+server, no account, works on any shared Wi-Fi/LAN.
+
+- **Privacy/data-minimization approach.** The only thing ever sent over the
+  data channel is the exact same redacted shape Projector View already
+  computed for itself before this round — `{outCount, byDest, overTime}`
+  (a total out-count, counts per destination *label* with zero students
+  attached, and a boolean overtime flag) — via a new shared
+  `computeLocalSnapshot()` that both this board's own Projector View and the
+  sync push now call. Never sent: `outNow`, the per-day `log`, `history`, any
+  student name, or which student is at which destination. That's not a new
+  privacy decision, it's the existing Projector View redaction reused
+  verbatim, so the two features can't drift apart on what's safe to show a
+  wall screen versus what's safe to put on the wire.
+- Each side pushes its own snapshot every 3s once paired
+  (`SYNC_PUSH_MS`); a `combineSnapshots()` sums both boards' out-counts and
+  per-destination-label counts and ORs their overtime flags. Projector View
+  renders the combined numbers when paired, with a status line that
+  distinguishes "paired and fresh" from "paired but the peer hasn't pushed in
+  12s+" (`SYNC_STALE_MS`) so a dropped connection doesn't silently show stale
+  counts as current.
+- Pairing state is deliberately **not persisted** — a page reload always
+  starts unpaired, same precedent as classroom-timer's mirror. The combined
+  numbers live only in the in-memory `sync` object; nothing received from a
+  peer is ever written to `hall-pass-log-sections`, so it can't collide with
+  this tool's own `signInStudent()` writer on that key.
+- Either teacher can be the host (unlike classroom-timer's fixed
+  teacher/student roles) — "Show a pairing code" or "Scan / enter a code",
+  same offer/answer exchange either way, by camera or copy/paste.
+- **Known limitations.** Two conflict questions a full-board merge would
+  raise — same destination labels across boards? same overtime thresholds? —
+  are sidestepped entirely by only ever syncing the pre-redacted summary, not
+  attempted. Pairing is exactly one-to-one (no relay/mesh for a 3+ teacher
+  hallway). No reconnect-on-drop: if the connection closes, Projector View
+  falls back to this board's own numbers immediately and a teacher has to
+  re-pair by hand. Camera scanning depends on the same browser permission
+  prompt every other QR flow in this repo already depends on; copy/paste is
+  the fallback.
+- Verified by `Tools/hall-pass-log/test/smoke-hallway-sync.mjs` (43 checks):
+  `computeLocalSnapshot`/`combineSnapshots` as pure functions (via a
+  `window.__hallPassSync` test hook, same convention as
+  `window.__ftpsResolveScan`), plus a real end-to-end pairing — the tool's
+  own "join" UI driven through the DOM against a second, independent
+  `RTCPeerConnection` created directly via `window.WebRTCPair` in the same
+  page (a real data channel, no mock) — that captures the exact bytes sent
+  over the wire and asserts no student name and no `outNow`/log/history ever
+  appear in them, confirms Projector View shows the combined count and reacts
+  to a peer-reported overtime the local board doesn't have yet, and confirms
+  a disconnect falls back to solo numbers. Re-run three times with no
+  flakiness. `npm run test:hall-pass` (the existing export suite) and
+  `node Tools/board-check/check-dedupe.mjs` both still pass unaffected.
 
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **pass-log
 spreadsheet export** (backlog rank 5). The long-range report could be read and
@@ -117,7 +176,8 @@ design space, not a bug.
 **Where a future round should pick up:** everything explicitly skipped per
 the task scope — bell-schedule/period correlation (needs School Calendar
 Visualizer, P7), student-initiated request flow via device pairing (P9),
-multi-teacher peer-to-peer sync (P9), and the Moonshot section. Also worth
+and the Moonshot section. (Multi-teacher peer-to-peer sync, also P9, shipped
+2026-08-13 as Hallway Sync — see Status.) Also worth
 a look: stable per-student IDs (P2) so a roster rename doesn't fragment a
 student's weekly/long-range history under two different name strings — that
 gap already existed and this round didn't touch it. The long-range report
@@ -140,6 +200,10 @@ currently buckets by exact name-string match for the same reason.
 - **One-level undo** for the most recent sign-out or sign-in
 - **Projector view** — a fullscreen, deliberately name-free/destination-free
   summary (counts and an over-time alert only) safe to put on a wall screen
+- **Hallway Sync** — pairs with one other Hall Pass Log over WebRTC
+  (no server) so Projector View on both boards shows one combined out-count
+  and overtime alert; only ever exchanges the same redacted counts Projector
+  View already showed, never names or per-student destinations
 - Quick sign-in directly from a student's card in the main grid (in addition
   to the live board's own Sign In button)
 - Sign in, per-day log (now carrying an optional note per trip), **archived
@@ -203,10 +267,12 @@ currently buckets by exact name-string match for the same reason.
   work.)*
 - **Done —** **Nurse / office / counselor destinations with a note field**, since those
   are the ones that get asked about later.
-- **Skipped — deferred.** **Multi-teacher awareness.** Two teachers in the same hallway both tracking
+- **Done —** **Multi-teacher awareness.** Two teachers in the same hallway both tracking
   passes is the real scenario; peer-to-peer sync between two browsers (P9)
-  would be a genuinely novel answer that keeps data local. *(Explicitly out
-  of scope for this round.)*
+  keeps data local. *(Shipped 2026-08-13 as "Hallway Sync" — see Status.
+  Deliberately syncs only the redacted Projector View summary, not the full
+  board, so it doesn't have to solve destination-label or overtime-threshold
+  conflicts between two boards.)*
 - **Done —** **Long-range reporting.** Per-quarter per-student totals, printable, for a
   conference or an attendance conversation. *("If time allows" item — time
   allowed. Buckets by exact student name string; see Status for the stable-ID
@@ -226,7 +292,9 @@ room and what was happening in class at the time.
   history that survives a roster edit.
 - **P7 (cross-tool)** — already consumed by Command Center; wants the
   bell schedule and the seating chart.
-- **P9 (device pairing)** — student request flow and multi-teacher awareness.
+- **P9 (device pairing)** — multi-teacher awareness shipped 2026-08-13
+  (Hallway Sync, WebRTC peer pairing); student-initiated request flow is
+  still open.
 - **P1 (projector mode)** — with a genuine privacy caveat about what gets
   projected.
 

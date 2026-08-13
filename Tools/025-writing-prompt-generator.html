@@ -177,6 +177,52 @@
   .rsl-prompt { flex: 1; color: var(--ink); min-width: 14rem; }
   .roster-sheet-empty { color: var(--muted); font-size: .88rem; font-style: italic; margin: 0; }
 
+  /* ── Writing Record (teacher-kept per-student log for conferences) ────── */
+  .writing-record { border-top: 1px solid var(--line); padding-top: 1rem; margin-bottom: 1.4rem; }
+  .writing-record-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .6rem; margin-bottom: .6rem; }
+  .writing-record-header h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .writing-record-header select {
+    font-family: inherit; font-size: .85rem; padding: .4rem .6rem; border: 1px solid var(--line-strong);
+    border-radius: 6px; background: #fff; color: var(--ink);
+  }
+  .writing-record .hint { color: var(--muted); font-size: .82rem; margin: 0 0 .8rem; line-height: 1.4; }
+  .record-entry-form { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
+  .record-entry-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .record-entry-row label { display: flex; flex-direction: column; gap: .25rem; font-size: .78rem; color: var(--muted); flex: 1 1 10rem; }
+  .record-entry-row input[type="text"], .record-entry-row input[type="date"] {
+    font-family: inherit; font-size: .9rem; padding: .5rem .6rem; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--ink);
+  }
+  .record-entry-form textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; padding: .55rem .65rem; border: 1px solid var(--line-strong);
+    border-radius: 6px; min-height: 3.4rem; resize: vertical; box-sizing: border-box; margin-bottom: .6rem; color: var(--ink);
+  }
+  .record-entry-form .use-current-row { display: flex; justify-content: flex-end; margin: -.3rem 0 .6rem; }
+  .record-entry-form .use-current-row button { font-size: .8rem; padding: .4rem .8rem; }
+  .record-entry-form .add-btn { font-size: .85rem; padding: .55rem 1.1rem; }
+
+  .record-viewer { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .record-viewer-header { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-bottom: .7rem; }
+  .record-viewer-header h3 { font-size: 1rem; margin: 0; color: var(--ink); }
+  .record-viewer-header button { font-size: .82rem; padding: .5rem .9rem; background: #fff; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; }
+  .record-viewer-header button:hover:not(:disabled) { background: #f1f0ea; border-color: var(--muted); }
+  .record-viewer-header button:disabled { opacity: .45; cursor: not-allowed; }
+  .record-entries { list-style: none; margin: 0; padding: 0; }
+  .record-entries li { padding: .6rem 0; border-bottom: 1px dashed var(--line); }
+  .record-entries li:last-child { border-bottom: none; }
+  .record-entry-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .3rem; }
+  .record-entry-meta { font-size: .78rem; color: var(--muted); }
+  .record-entry-head .remove-btn {
+    margin-left: auto; background: #fff; color: #a3372b; border: 1px solid #a3372b; border-radius: 6px;
+    padding: .2rem .5rem; font-size: .72rem; font-weight: 700;
+  }
+  .record-entry-head .remove-btn:hover { background: #a3372b; color: #fff; }
+  .record-entry-prompt { font-size: .92rem; margin: 0 0 .35rem; color: var(--ink); }
+  .record-entry-note {
+    width: 100%; font-family: inherit; font-size: .85rem; padding: .4rem .55rem; border: 1px solid var(--line-strong);
+    border-radius: 6px; min-height: 2.4rem; resize: vertical; box-sizing: border-box; color: var(--ink); background: #fff;
+  }
+  .record-empty { color: var(--muted); font-size: .88rem; font-style: italic; border-bottom: none !important; }
+
   /* ── Mode tabs (random draw vs planned sequence) ─────────────────────── */
   .mode-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
 
@@ -327,6 +373,19 @@
     .hs-meta span + span::before { content: " · "; }
     .hs-lines { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .hs-line { border-bottom: 1px solid #666; flex: 0 0 auto; }
+
+    /* per-student writing record: a conference artifact — date, prompt, and
+       the teacher's note, oldest concerns first read top-to-bottom by date
+       (newest first, same convention as the on-screen list and the prompt
+       history). Reuses the generic .print-only h1/.print-meta/ol/li rules
+       above (same as the roster assignment sheet) and adds only the bits a
+       plain list doesn't have: a meta line and a note paragraph per entry. */
+    .rp-head { display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap; margin-bottom: .05in; }
+    .rp-date { font-weight: 700; }
+    .rp-meta { color: #555; font-size: .82rem; }
+    .rp-prompt { font-weight: 700; margin: 0 0 .05in; }
+    .rp-note { color: #333; margin: 0; }
+    .rp-note b { font-weight: 800; }
 
     @page { size: letter portrait; margin: 0.5in; }
   }
@@ -497,6 +556,40 @@
     </div>
   </div>
 
+  <div class="writing-record">
+    <div class="writing-record-header">
+      <h2>Writing Record</h2>
+      <select id="recordRosterLoadSelect"><option value="">Load a saved roster&hellip;</option></select>
+    </div>
+    <p class="hint">A teacher-kept log of which prompt each student wrote to, with your notes &mdash; the artifact for a conference. Nothing here is submitted by students; you type it.</p>
+    <div class="record-entry-form">
+      <div class="record-entry-row">
+        <label for="recordStudentInput">Student
+          <input type="text" id="recordStudentInput" list="recordStudentDatalist" placeholder="Type or pick a student name&hellip;">
+          <datalist id="recordStudentDatalist"></datalist>
+        </label>
+        <label for="recordDateInput">Date
+          <input type="date" id="recordDateInput">
+        </label>
+      </div>
+      <textarea id="recordPromptText" placeholder="Which prompt did they write to?"></textarea>
+      <div class="use-current-row">
+        <button type="button" class="secondary" id="useCurrentPromptBtn" disabled>Use the prompt on stage</button>
+      </div>
+      <textarea id="recordNoteText" placeholder="Teacher's note for the conference &mdash; strengths, next steps, what to watch for&hellip;"></textarea>
+      <button type="button" class="add-btn" id="addRecordEntryBtn">Add to record</button>
+    </div>
+    <div class="record-viewer">
+      <div class="record-viewer-header">
+        <h3 id="recordViewerName">No student selected</h3>
+        <button type="button" class="secondary" id="printRecordBtn" disabled>Print this student&rsquo;s record</button>
+      </div>
+      <ol class="record-entries" id="recordEntriesList">
+        <li class="record-empty">Type or pick a student name above to see or add to their writing record.</li>
+      </ol>
+    </div>
+  </div>
+
   <div class="anon-section">
     <div class="anon-header">
       <h2>Anonymous Response Display</h2>
@@ -530,6 +623,7 @@
 <div class="print-only" id="posterPrintArea"></div>
 <div class="print-only" id="handoutPrintArea"></div>
 <div class="print-only" id="rosterPrintArea"></div>
+<div class="print-only" id="recordPrintArea"></div>
 
 <div class="anon-overlay" id="anonOverlay">
   <div class="anon-overlay-bar">
@@ -565,6 +659,9 @@
    'customPromptGenre','addCustomPromptBtn','customPromptsList',
    'rosterLoadSelect','rosterNamesInput','rosterCount','buildRosterSheetBtn','printRosterSheetBtn',
    'rosterSheetPreview','rosterPrintArea',
+   'recordRosterLoadSelect','recordStudentInput','recordStudentDatalist','recordDateInput',
+   'recordPromptText','useCurrentPromptBtn','recordNoteText','addRecordEntryBtn',
+   'recordViewerName','printRecordBtn','recordEntriesList','recordPrintArea',
    'modeTabs','seqNavRow','seqSetSelect','seqPrevBtn','seqNextBtn','seqJumpBtn','seqDayLabel',
    'rubricRow','rubricSelect','openRubricBtn','rubricSummary',
    'setSelect','deleteSetBtn','setEditor','setNameInput','setStartDate','addRandomToSetBtn',
@@ -585,6 +682,11 @@
   var drawPrompt = null; // last random-draw pick, kept separately so switching to Sequence mode and back doesn't lose it
   var rosterAssignments = []; // {name, band, genre, text} — built on demand, not persisted
   var NP_ROSTERS_KEY = 'np_rosters';
+
+  // Writing Record: { [studentName]: [{id, date, promptText, band, genre, rubricName, note}] } —
+  // teacher-typed, persisted across sessions. See wpg-store.js for the storage contract.
+  var writingRecord = {};
+  var recordRosterNames = []; // names from whichever roster was last picked in this panel — a convenience list for the student datalist, not persisted itself (the roster it came from already is, in np_rosters)
 
   var promptSets = []; // {id, name, startDate: 'YYYY-MM-DD'|null, cursor, items: [{id, band, genre, text, rubricName}]} — persisted across sessions
   var selectedSetId = null; // set shown/edited right now — persisted so a reload reopens the same one
@@ -664,12 +766,33 @@
     });
     selectedSetId = WritingPromptStore.loadActiveSetId();
     if (selectedSetId && !promptSets.some(function (s) { return s.id === selectedSetId; })) selectedSetId = null;
+
+    var rawRecord = WritingPromptStore.loadRecord();
+    writingRecord = {};
+    Object.keys(rawRecord).forEach(function (name) {
+      if (typeof name !== 'string' || !name.trim() || !Array.isArray(rawRecord[name])) return;
+      var entries = rawRecord[name].filter(function (e) {
+        return e && typeof e.id === 'string' && typeof e.promptText === 'string' && e.promptText.trim() && isDate(e.date);
+      }).map(function (e) {
+        return {
+          id: e.id,
+          date: e.date,
+          promptText: e.promptText,
+          band: validBands.indexOf(e.band) !== -1 ? e.band : null,
+          genre: validGenres.indexOf(e.genre) !== -1 ? e.genre : null,
+          rubricName: typeof e.rubricName === 'string' && e.rubricName ? e.rubricName : null,
+          note: typeof e.note === 'string' ? e.note : ''
+        };
+      });
+      if (entries.length) writingRecord[name] = entries;
+    });
   }
   function persist() { WritingPromptStore.save(settings); }
   function persistHistory() { WritingPromptStore.saveHistory(history); }
   function persistCustom() { WritingPromptStore.saveCustom(customPrompts); }
   function persistSets() { WritingPromptStore.saveSets(promptSets); }
   function persistSelectedSetId() { WritingPromptStore.saveActiveSetId(selectedSetId); }
+  function persistRecord() { WritingPromptStore.saveRecord(writingRecord); }
 
   function buildGenreSelect() {
     var allOpt = document.createElement('option');
@@ -801,6 +924,7 @@
       '<span class="tag">' + escapeHtml(genreLabel(pick.genre)) + '</span>';
     els.printPosterBtn.disabled = false;
     els.printHandoutBtn.disabled = false;
+    els.useCurrentPromptBtn.disabled = false;
     renderRubricRow();
   }
 
@@ -979,6 +1103,7 @@
         els.metaRow.innerHTML = '';
         els.printPosterBtn.disabled = true;
       els.printHandoutBtn.disabled = true;
+        els.useCurrentPromptBtn.disabled = true;
         renderRubricRow();
       }
     } else {
@@ -1206,6 +1331,7 @@
       els.seqJumpBtn.style.display = 'none';
       els.printPosterBtn.disabled = true;
       els.printHandoutBtn.disabled = true;
+      els.useCurrentPromptBtn.disabled = true;
       renderRubricRow();
       return;
     }
@@ -1227,6 +1353,7 @@
     els.seqJumpBtn.style.display = (suggested !== null && suggested !== idx) ? '' : 'none';
     els.printPosterBtn.disabled = false;
     els.printHandoutBtn.disabled = false;
+    els.useCurrentPromptBtn.disabled = false;
     renderRubricRow();
   }
 
@@ -1373,10 +1500,12 @@
     } catch (e) { return {}; }
   }
 
-  function populateRosterLoadSelect() {
+  // Shared by the Roster Assignment Sheet's loader and the Writing Record's —
+  // both list the same np_rosters saved rosters, just for different uses.
+  function populateRosterLoadSelect(selectEl) {
     var rosters = loadNpRosters();
     var names = Object.keys(rosters);
-    els.rosterLoadSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
+    selectEl.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
       names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
   }
 
@@ -1473,6 +1602,130 @@
     return String(s || '').replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+
+  /* ---------- Writing Record (teacher-kept per-student log for conferences) ----------
+     A student picker (reusing the same np_rosters read-only pattern as the
+     Roster Assignment Sheet, plus free typing for a student not on a saved
+     roster), a prompt field, and a note field. "Use the prompt on stage"
+     copies whatever's showing right now; typing/pasting a different prompt
+     is just as valid, since a teacher backfilling a conference record from a
+     stack of papers isn't necessarily looking at the matching prompt on
+     screen. Deliberately not tied to Prompt Sets or the random-draw history —
+     this is its own record, same reasoning Round 4 gave for keeping a set's
+     item list separate from the draw generator's history. */
+
+  function currentRecordName() {
+    return (els.recordStudentInput.value || '').trim();
+  }
+
+  function renderRecordStudentDatalist() {
+    var names = recordRosterNames.slice();
+    Object.keys(writingRecord).forEach(function (n) { if (names.indexOf(n) === -1) names.push(n); });
+    names.sort(function (a, b) { return a.localeCompare(b); });
+    els.recordStudentDatalist.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeHtml(n) + '"></option>';
+    }).join('');
+  }
+
+  function renderRecordViewer() {
+    var name = currentRecordName();
+    var entries = (writingRecord[name] || []).slice().sort(function (a, b) {
+      return b.date === a.date ? b.id.localeCompare(a.id) : b.date.localeCompare(a.date);
+    });
+    els.recordViewerName.textContent = name || 'No student selected';
+    els.printRecordBtn.disabled = !name || !entries.length;
+    if (!name) {
+      els.recordEntriesList.innerHTML = '<li class="record-empty">Type or pick a student name above to see or add to their writing record.</li>';
+      return;
+    }
+    if (!entries.length) {
+      els.recordEntriesList.innerHTML = '<li class="record-empty">No entries yet for ' + escapeHtml(name) + ' &mdash; add one above.</li>';
+      return;
+    }
+    els.recordEntriesList.innerHTML = entries.map(function (e) {
+      var metaBits = [];
+      if (e.band) metaBits.push(e.band === 'ms' ? 'MS' : 'HS');
+      if (e.genre) metaBits.push(genreLabel(e.genre));
+      if (e.rubricName) metaBits.push('Rubric: ' + e.rubricName);
+      return '<li data-id="' + escapeHtml(e.id) + '">' +
+        '<div class="record-entry-head">' +
+          '<span class="hist-date">' + escapeHtml(e.date) + '</span>' +
+          (metaBits.length ? '<span class="record-entry-meta">' + metaBits.map(escapeHtml).join(' &middot; ') + '</span>' : '') +
+          '<button type="button" class="remove-btn" data-id="' + escapeHtml(e.id) + '">Remove</button>' +
+        '</div>' +
+        '<p class="record-entry-prompt">' + escapeHtml(e.promptText) + '</p>' +
+        '<textarea class="record-entry-note" data-id="' + escapeHtml(e.id) + '" placeholder="Teacher note&hellip;">' + escapeHtml(e.note) + '</textarea>' +
+      '</li>';
+    }).join('');
+    Array.prototype.forEach.call(els.recordEntriesList.querySelectorAll('.remove-btn'), function (btn) {
+      btn.addEventListener('click', function () { removeRecordEntry(name, btn.dataset.id); });
+    });
+    Array.prototype.forEach.call(els.recordEntriesList.querySelectorAll('.record-entry-note'), function (ta) {
+      ta.addEventListener('input', function () { updateRecordEntryNote(name, ta.dataset.id, ta.value); });
+    });
+  }
+
+  function addRecordEntry() {
+    var name = currentRecordName();
+    var promptText = els.recordPromptText.value.trim();
+    if (!name || !promptText) return;
+    var date = isDate(els.recordDateInput.value) ? els.recordDateInput.value : todayStr();
+    var matchesCurrent = !!(currentPrompt && currentPrompt.text === promptText);
+    var entry = {
+      id: 'wr' + Date.now() + Math.floor(Math.random() * 1000),
+      date: date,
+      promptText: promptText,
+      band: matchesCurrent ? currentPrompt.band : null,
+      genre: matchesCurrent ? currentPrompt.genre : null,
+      rubricName: matchesCurrent ? (currentPrompt.rubricName || null) : null,
+      note: els.recordNoteText.value.trim()
+    };
+    if (!writingRecord[name]) writingRecord[name] = [];
+    writingRecord[name].push(entry);
+    persistRecord();
+    els.recordPromptText.value = '';
+    els.recordNoteText.value = '';
+    renderRecordStudentDatalist();
+    renderRecordViewer();
+  }
+
+  function removeRecordEntry(name, id) {
+    if (!writingRecord[name]) return;
+    writingRecord[name] = writingRecord[name].filter(function (e) { return e.id !== id; });
+    if (!writingRecord[name].length) delete writingRecord[name];
+    persistRecord();
+    renderRecordStudentDatalist();
+    renderRecordViewer();
+  }
+
+  function updateRecordEntryNote(name, id, note) {
+    var entry = (writingRecord[name] || []).filter(function (e) { return e.id === id; })[0];
+    if (!entry) return;
+    entry.note = note;
+    persistRecord();
+  }
+
+  function renderRecordPrintArea(name) {
+    var entries = (writingRecord[name] || []).slice().sort(function (a, b) {
+      return b.date === a.date ? b.id.localeCompare(a.id) : b.date.localeCompare(a.date);
+    });
+    els.recordPrintArea.innerHTML =
+      '<h1>Writing Record &mdash; ' + escapeHtml(name) + '</h1>' +
+      '<p class="print-meta">Printed ' + escapeHtml(todayStr()) + ' &mdash; ' + entries.length +
+      ' prompt' + (entries.length === 1 ? '' : 's') + '</p>' +
+      '<ol class="record-print-list">' + entries.map(function (e) {
+        var metaBits = [];
+        if (e.band) metaBits.push(e.band === 'ms' ? 'Middle School' : 'High School');
+        if (e.genre) metaBits.push(genreLabel(e.genre));
+        if (e.rubricName) metaBits.push('Rubric: ' + e.rubricName);
+        return '<li>' +
+          '<div class="rp-head"><span class="rp-date">' + escapeHtml(e.date) + '</span>' +
+          (metaBits.length ? '<span class="rp-meta">' + metaBits.map(escapeHtml).join(' &middot; ') + '</span>' : '') + '</div>' +
+          '<p class="rp-prompt">' + escapeHtml(e.promptText) + '</p>' +
+          (e.note ? '<p class="rp-note"><b>Note:</b> ' + escapeHtml(e.note) + '</p>' : '') +
+        '</li>';
+      }).join('') + '</ol>';
   }
 
   /* ---------- Word-count goal (static display, not live tracking) ---------- */
@@ -1667,6 +1920,30 @@
     els.rosterPrintArea.classList.remove('active');
     els.posterPrintArea.classList.remove('active');
     els.handoutPrintArea.classList.remove('active');
+    els.recordPrintArea.classList.remove('active');
+  });
+
+  /* ---------- Writing Record ---------- */
+  els.recordRosterLoadSelect.addEventListener('change', function () {
+    var name = els.recordRosterLoadSelect.value;
+    if (!name) { recordRosterNames = []; renderRecordStudentDatalist(); return; }
+    var rosters = loadNpRosters();
+    var list = rosters[name];
+    recordRosterNames = Array.isArray(list) ? list.slice() : [];
+    renderRecordStudentDatalist();
+  });
+  els.recordStudentInput.addEventListener('input', renderRecordViewer);
+  els.useCurrentPromptBtn.addEventListener('click', function () {
+    if (!currentPrompt) return;
+    els.recordPromptText.value = currentPrompt.text;
+  });
+  els.addRecordEntryBtn.addEventListener('click', addRecordEntry);
+  els.printRecordBtn.addEventListener('click', function () {
+    var name = currentRecordName();
+    if (!name || !(writingRecord[name] || []).length) return;
+    renderRecordPrintArea(name);
+    els.recordPrintArea.classList.add('active');
+    window.print();
   });
 
   els.fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -1782,8 +2059,12 @@
   applyBandTabs();
   renderHistory();
   renderCustomPromptsList();
-  populateRosterLoadSelect();
+  populateRosterLoadSelect(els.rosterLoadSelect);
   onRosterNamesChanged();
+  populateRosterLoadSelect(els.recordRosterLoadSelect);
+  els.recordDateInput.value = todayStr();
+  renderRecordStudentDatalist();
+  renderRecordViewer();
   renderSetSelects();
   renderSetEditor();
   renderAnonList();

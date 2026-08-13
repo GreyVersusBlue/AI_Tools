@@ -18,6 +18,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -79,6 +80,21 @@
     background: #fbe7c6; color: #8a5a00; border: 1px solid #e0b876; display: none;
   }
   #dupWarning.show { display: block; }
+
+  /* ── Scan-verify: decode every code right after drawing it (same in-canvas
+     jsQR check the QR Code Generator's bulk mode uses) and flag any that
+     didn't come back reading the same content, before a teacher prints. ── */
+  .preview-card.scan-unverified { background: #fbeceA; border-color: #d8a89f; }
+  .scan-warn-badge {
+    display: inline-block; margin-top: .25rem; font-size: .68rem; font-weight: 700;
+    color: var(--err); background: #f6d9d4; border: 1px solid #d8a89f; border-radius: 4px;
+    padding: .1rem .35rem; letter-spacing: .01em; white-space: nowrap;
+  }
+  #scanWarning {
+    font-size: .8rem; padding: .55rem .75rem; border-radius: 6px; margin-bottom: .7rem;
+    background: #fbeceA; color: var(--err); border: 1px solid #d8a89f; display: none;
+  }
+  #scanWarning.show { display: block; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -385,6 +401,7 @@
           <button type="button" class="danger" id="resetReactionsBtn">Reset all reaction counts</button>
         </div>
         <div id="dupWarning"></div>
+        <div id="scanWarning"></div>
         <div class="btn-row">
           <button id="printCodesBtn" disabled type="button">Print QR Codes</button>
           <button class="secondary" id="printRefBtn" disabled type="button">Print Reference Sheet</button>
@@ -578,7 +595,7 @@
    'importCsvBtn', 'importCsvInput',
    'rosterHubSelect', 'rosterHubLoadBtn',
    'cardsPerPage', 'ecLevel', 'showNumber', 'enableReactions', 'reactionsResetRow', 'resetReactionsBtn',
-   'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning',
+   'printCodesBtn', 'printRefBtn', 'copyLinksBtn', 'dupWarning', 'scanWarning',
    'cards-preview', 'refPreview', 'printQrArea', 'printQrGrid', 'printRefArea', 'printRefBody',
    'refSheetTitle', 'previewNote', 'msg',
    'enableFeedbackSlips', 'feedbackConfig', 'feedbackStyle', 'feedbackCopies', 'feedbackPrompt', 'feedbackPerPage',
@@ -986,6 +1003,27 @@
     }
   }
 
+  // ── Batch verification — decode what was just drawn ─────────────────────
+  // Same in-canvas jsQR check the QR Code Generator's bulk mode uses
+  // (verifyBulkCanvas in 016-qr-code-generator.html): no camera involved, it
+  // just confirms the pixels this tool rendered actually decode back to the
+  // exact text they were built from, so a station whose printed code will
+  // fail to scan gets caught before it's on the wall — not after a student
+  // reports it. Returns true/false, or null if jsQR isn't available at all
+  // (vendored locally, so this should never trip in practice — treated as
+  // "unknown" rather than a false failure).
+  function verifyQRCanvas(canvas, expectedText) {
+    if (!window.jsQR) return null;
+    try {
+      var ctx = canvas.getContext('2d');
+      var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var result = window.jsQR(imgData.data, canvas.width, canvas.height);
+      return !!(result && result.data === expectedText);
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ── Preview + print rendering ────────────────────────────────────────────
   var renderTimer = null;
   function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 150); }
@@ -1010,6 +1048,7 @@
     }
 
     var failures = [];
+    var unverified = [];
     els.cardsPreview.innerHTML = '';
     valid.forEach(function (e, n) {
       try {
@@ -1024,7 +1063,17 @@
                 '&#11088; <span class="reaction-count">' + (state.entries[e.idx].reactionCount || 0) + '</span></button>'
             : '');
         els.cardsPreview.appendChild(card);
-        drawQR(card.querySelector('canvas'), qr, 200);
+        var canvas = card.querySelector('canvas');
+        drawQR(canvas, qr, 200);
+        if (verifyQRCanvas(canvas, e.content) === false) {
+          card.classList.add('scan-unverified');
+          var badge = document.createElement('div');
+          badge.className = 'scan-warn-badge';
+          badge.title = 'This code was decoded right after drawing it and did not come back reading the same link/text — it may not scan reliably once printed.';
+          badge.innerHTML = '&#9888; Won’t scan reliably';
+          card.querySelector('.meta').appendChild(badge);
+          unverified.push(e.name);
+        }
       } catch (err) {
         failures.push(e.name);
       }
@@ -1033,11 +1082,27 @@
     if (failures.length) {
       showMsg('Could not build a QR code for: ' + failures.join(', ') + '. Try shortening that link/text or lowering error correction.');
     }
+    updateScanWarning(unverified);
 
-    els.previewNote.textContent = valid.length + ' QR code' + (valid.length === 1 ? '' : 's') + ' ready.';
+    els.previewNote.textContent = valid.length + ' QR code' + (valid.length === 1 ? '' : 's') + ' ready.' +
+      (unverified.length ? ' ' + unverified.length + ' flagged below.' : '');
     els.printCodesBtn.disabled = false;
     els.printRefBtn.disabled = false;
     els.copyLinksBtn.disabled = false;
+  }
+
+  // Summary banner above the print buttons — mirrors updateDupWarning so a
+  // teacher sees "some of these won't scan" without reading every card.
+  function updateScanWarning(unverified) {
+    if (!unverified.length) {
+      els.scanWarning.className = '';
+      els.scanWarning.textContent = '';
+      return;
+    }
+    els.scanWarning.className = 'show';
+    els.scanWarning.textContent = '⚠ ' + unverified.length + ' code' + (unverified.length === 1 ? '' : 's') +
+      ' did not scan back correctly in a local test-scan (' + unverified.join(', ') + ') — try Error correction: High, ' +
+      'shortening that link/text, or a larger print size before relying on it.';
   }
 
   function updateSlipsButton() {
@@ -1320,12 +1385,17 @@
     printSection(els.printRouteCardsArea);
   });
 
+  // Returns the names of any station whose code — the actual pixels about to
+  // go to paper, drawn at print resolution, not the smaller preview canvas —
+  // failed the same local test-scan the live preview already flagged. A
+  // build failure counts too: no code at all definitely won't scan.
   function buildPrintCodes() {
     var valid = validEntries();
     var ecLevel = els.ecLevel.value;
     var showNum = els.showNumber.checked;
     els.printQrGrid.className = 'print-qr-grid pp-' + els.cardsPerPage.value;
     els.printQrGrid.innerHTML = '';
+    var unverified = [];
     valid.forEach(function (e, n) {
       var card = document.createElement('div');
       card.className = 'p-card';
@@ -1334,9 +1404,14 @@
         '<div class="p-name">' + escapeHtml(e.name) + '</div>' + instructions + '<canvas></canvas>';
       els.printQrGrid.appendChild(card);
       try {
-        drawQR(card.querySelector('canvas'), buildQR(e.content, ecLevel), 600);
-      } catch (err) { /* already reported in the live preview */ }
+        var canvas = card.querySelector('canvas');
+        drawQR(canvas, buildQR(e.content, ecLevel), 600);
+        if (verifyQRCanvas(canvas, e.content) === false) unverified.push(e.name);
+      } catch (err) {
+        unverified.push(e.name); // already reported in the live preview
+      }
     });
+    return unverified;
   }
 
   function buildPrintRef() {
@@ -1357,7 +1432,18 @@
 
   els.printCodesBtn.addEventListener('click', function () {
     if (!validEntries().length) return;
-    buildPrintCodes();
+    var unverified = buildPrintCodes();
+    if (unverified.length) {
+      var list = unverified.length <= 6
+        ? unverified.join(', ')
+        : unverified.slice(0, 6).join(', ') + ', and ' + (unverified.length - 6) + ' more';
+      var proceed = confirm(
+        (unverified.length === 1 ? 'One code' : unverified.length + ' codes') +
+        ' did not scan back correctly in a local test-scan and may not work once printed: ' + list +
+        '.\n\nPrint anyway?'
+      );
+      if (!proceed) return;
+    }
     printSection(els.printQrArea);
   });
   els.printRefBtn.addEventListener('click', function () {

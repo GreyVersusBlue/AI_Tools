@@ -1,14 +1,76 @@
 # Improvement Prompts — 009 — Backup & Restore
 
 **Tool file:** `Tools/009-backup-restore.html`
-**Support folder:** `Tools/backup-restore/test/` — the browser suite
-(`smoke-restore-diff.mjs`, `npm run test:backup`). The page itself is a single file.
+**Support folder:** `Tools/backup-restore/` — `br-pair.js` (WebRTC pairing
+wrapper) and `br-transfer.js` (chunk/reassemble framing) for the
+device-to-device transfer feature, plus `test/` — the browser suites
+(`smoke-restore-diff.mjs`, `npm run test:backup`; `smoke-transfer.mjs`, run
+directly with `node Tools/backup-restore/test/smoke-transfer.mjs`). The page
+itself is still a single file; these are its only support files.
 
 **Current description (from README):** Scans your browser for everything every tool on this site has saved and downloads it as one file, or restores it back on a new computer or after a wiped cache.
 
 ---
 
 ## Status
+
+### Pass 2 — Round 3 — 2026-08-13
+
+**Shipped direct device-to-device transfer** (the standout unbuilt idea from
+Round 2's "where the next round should pick up", backlog P9). Moving a whole
+year of work from the old laptop to the new one now needs no file at all: a
+"Send this backup to a device…" / "Receive from a device…" pair of buttons on
+the card next to the existing download button pairs two browsers over
+`_shared/webrtc-pair.js`'s manual QR/paste signaling and streams the same
+envelope `buildEnvelope()` builds for a download straight across a WebRTC
+data channel.
+
+- **New files:** `Tools/backup-restore/br-pair.js` (a thin host/join wrapper
+  around `_shared/webrtc-pair.js`, plus a copy of `ct-mirror.js`'s `drawQR` —
+  copied rather than imported, per CLAUDE.md's per-tool-folder guidance) and
+  `Tools/backup-restore/br-transfer.js` (frames a JSON string into
+  wire-sized chunks with backpressure via `bufferedamountlow`, and a receiver
+  state machine that reassembles them by concatenation — safe because
+  `RTCDataChannel` is ordered and reliable by default). Both are plain global
+  scripts, matching the page's own non-module IIFE.
+- **`Tools/009-backup-restore.html` changes:** a new "Send directly to
+  another device" card, a modal (`#transferOverlay`) that walks both the
+  send and receive roles through pairing, and `loadEnvelopeText()` — the
+  file-input JSON-parse/verify/arm-preview logic pulled out of the
+  `fileInput` change handler into a standalone function so the transfer path
+  calls the exact same code a picked file does. There is exactly one restore
+  implementation; device-to-device is only a second way to get the envelope
+  bytes onto the machine. New script tags: `_shared/webrtc-pair.js`,
+  `_shared/qr-scan.js`, `_shared/vendor/qrcode/qrcode.js`,
+  `_shared/vendor/jsqr/jsqr.js` (all already vendored/shared for other
+  tools — none of this added a new vendored library or a per-tool copy of
+  one; `check:dedupe` stays clean).
+- **No new storage.** Nothing about this feature persists anything new in
+  `localStorage` — it moves the same envelope bytes a download would produce,
+  over a peer connection, instead of through a file.
+- **Known limitations**, inherited from `_shared/webrtc-pair.js` by design
+  (see that file's header): host-candidates-only, no STUN/TURN, so it only
+  works between two devices that can reach each other directly — the same
+  classroom Wi-Fi or LAN, never across the open internet. Pairing is manual
+  (scan a QR or copy/paste the offer/answer text) since there is no
+  signaling server. The payload is chunked to a fixed character size
+  (`BRTransfer.CHUNK_CHARS`, 16000) with a small header announcing the chunk
+  count up front — there is no resume-after-drop; a connection that closes
+  mid-transfer needs the pairing redone from the start, not a rejected
+  chunk retried in place.
+- Verified by `Tools/backup-restore/test/smoke-transfer.mjs` (19 checks):
+  `br-transfer.js`'s chunk/reassemble protocol in isolation (an empty
+  payload, an exact chunk-size boundary, a UTF-16 surrogate pair split
+  across a chunk boundary, and both receiver error paths), then a *real*
+  two-peer `RTCDataChannel` opened between two Playwright pages loading this
+  page in the same headless browser, carrying the exact bytes the "Download
+  backup" button produces, landing byte-for-byte identical on the other
+  side, and finally fed into `#fileInput` on the receiving page to confirm
+  the transferred bytes drive the same restore preview and produce the same
+  restored `localStorage` a picked file would. `npm run test:backup` (the
+  existing `smoke-restore-diff.mjs` suite, 22 checks) still passes unchanged.
+- Updated "Where the next round should pick up" and "Major Features" below
+  to mark this shipped; renumbered the remaining open items.
 
 ### Pass 2 — Round 2 — 2026-08-11 — session `m3r8ro`
 
@@ -199,27 +261,27 @@ What shipped, against the backlog below:
 
 **Where the next round should pick up:**
 
-1. **Direct device-to-device transfer (Major, P9)** — the standout unbuilt
-   idea and now the obvious next one: the envelope format is versioned and
-   self-describing, so `_shared/webrtc-pair.js` has a well-defined payload to
-   carry. Moving a year of work from the old laptop to the new one without
-   producing a file at all.
-2. **Scheduled reminder (Major)** — still unbuilt. The banner nags when you
+1. **Scheduled reminder (Major)** — still unbuilt. The banner nags when you
    visit; nothing brings you here.
-3. **Per-tool restore from the tool itself (Major)** — a shared mountable
+2. **Per-tool restore from the tool itself (Major)** — a shared mountable
    control. `readEnvelope` and `combineValue` are the reusable pieces; they
    currently live inside this page and would need extracting to `_shared/`.
-4. **Per-record conflict resolution** — the three modes are whole-file. "Keep
+3. **Per-record conflict resolution** — the three modes are whole-file. "Keep
    the newer of each" is impossible without per-record timestamps, which no
    tool writes; that is a P8 convention question worth deciding before
    building anything on it.
-5. **Keep `STUDENT_KEYS` and `KNOWN_GROUPS` current.** Both grew this round
+4. **Keep `STUDENT_KEYS` and `KNOWN_GROUPS` current.** Both grew this round
    (Class Roster Hub, Hall Pass, Novel Circles, Command Center and a dozen
    others were missing from the group list entirely and were showing up as
    "Other saved data"). This is the maintenance cost of the friendlier answer
    to the first Open Question below — worth it, but real.
-6. The **encrypted-backup question** below is untouched and still needs
+5. The **encrypted-backup question** below is untouched and still needs
    Devon's call.
+6. **Resume-after-drop for device-to-device transfer.** Round 3 shipped the
+   happy path only — a connection that drops mid-transfer needs pairing
+   redone from scratch, not a resumed send. Worth doing only if teachers
+   actually hit it in practice; the file-download path is always the
+   fallback.
 
 ## What it does today
 
@@ -282,10 +344,12 @@ What shipped, against the backlog below:
   currently writes; see Where the next round should pick up.)*
 - **Scheduled reminder.** A local, opt-in reminder — end of each grading
   period, or every N days — surfaced on the site rather than emailed.
-- **Direct device-to-device transfer** (P9). `_shared/webrtc-pair.js` already
-  does serverless peer-to-peer with QR pairing. Moving a whole year's work
-  from the old laptop to the new one without producing a file at all is a
-  genuinely delightful, genuinely private answer to the migration problem.
+- **Done —** **Direct device-to-device transfer** (P9). `_shared/webrtc-pair.js`
+  already did serverless peer-to-peer with QR pairing; `br-pair.js` and
+  `br-transfer.js` (Round 3) put it to work moving a whole year's work from
+  the old laptop to the new one without producing a file at all. *(Shipped —
+  same-Wi-Fi/LAN only, no STUN/TURN by design; see Round 3's Status entry
+  for the chunking approach and its limitations.)*
 - **Done —** **Archive-and-clear for a school year** (P14). "Save last year to a file,
   then clear last year's student data but keep my templates, rubrics, and
   standing details." Right now backup and rollover are unrelated ideas; they
