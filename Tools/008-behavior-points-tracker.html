@@ -26,6 +26,17 @@
   import { loadDetails, lookupDetail, loadIds, lookupId, normalize } from '../_shared/student-details.js';
   window.StudentDetails = { loadDetails, lookupDetail, loadIds, lookupId, normalize };
   window.dispatchEvent(new Event('student-details-ready'));
+
+  /* Read-only bridge to Seating Chart Generator's saved room layout
+     (seating-chart-v1), for the "Seating chart" board layout mode — arranging
+     tap targets the way the room actually is instead of alphabetically. See
+     Tools/behavior-points-tracker/seating-layout.js for why this is a module
+     import rather than a copy: it's the same "single source of truth for a
+     name-matching rule" reasoning that promoted student-details.js to
+     _shared/ in the first place, just for the desk-layout math instead. */
+  import * as SeatingLayout from './behavior-points-tracker/seating-layout.js';
+  window.SeatingLayout = SeatingLayout;
+  window.dispatchEvent(new Event('seating-layout-ready'));
 </script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -153,6 +164,26 @@
   .student-card.flash-pos { background: #e4f5ea; border-color: var(--good); }
   .student-card.flash-neg { background: #fbeceA; border-color: var(--err); }
 
+  /* ── Seating-chart board layout ──────────────────────────────────────────
+     A room-shaped box holding one absolutely-positioned .student-card per
+     matched desk, so tapping is arranged the way the room actually is. Every
+     card in here is still a plain .student-card with the same data-name
+     attribute the grid layout uses, so the existing click / long-press /
+     flash / keyboard-arm handling (all delegated from #studentGrid) needs no
+     changes at all — only how the cards are positioned differs. */
+  .seat-room { position: relative; width: 100%; background: #eeece3; border: 1px dashed var(--line-strong); border-radius: 10px; margin-bottom: .9rem; overflow: hidden; }
+  .seat-room .front-label { position: absolute; top: .4rem; left: 50%; transform: translateX(-50%); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
+  .seat-room .student-card.seat-card {
+    position: absolute; margin: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: .2rem; overflow: hidden; min-width: 0;
+  }
+  .seat-room .student-card.seat-card .s-name { font-size: .74rem; line-height: 1.1; margin-bottom: .1rem; }
+  .seat-room .student-card.seat-card .s-points { font-size: 1.15rem; }
+  .seat-room .student-card.seat-card .s-sub,
+  .seat-room .student-card.seat-card .s-goal { display: none; }   /* no room in a desk box */
+  .seating-note { font-size: .78rem; color: var(--muted); margin: -.2rem 0 .7rem; }
+  .unseated-title { font-size: .78rem; font-weight: 700; color: var(--muted); margin: 0 0 .5rem; }
+
   .activity-feed { max-height: 230px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .3rem .8rem; }
   .activity-item { display: flex; justify-content: space-between; gap: .6rem; font-size: .82rem; padding: .35rem 0; border-bottom: 1px dashed var(--line); }
   .activity-item:last-child { border-bottom: none; }
@@ -276,6 +307,12 @@
       <div class="tag-chips" id="tagChips"></div>
 
       <div class="board-controls">
+        <label for="layoutMode">Layout:</label>
+        <select id="layoutMode" title="Arrange the board alphabetically, or the way the room is actually seated">
+          <option value="sorted">Sorted list</option>
+          <option value="seating">Seating chart</option>
+        </select>
+        <select id="seatingSectionPick" style="display:none;" aria-label="Which seating chart to use"></select>
         <label for="sortMode">Sort:</label>
         <select id="sortMode">
           <option value="name">Name</option>
@@ -293,6 +330,7 @@
         <button class="secondary" id="printBtn" type="button" disabled>Print Report</button>
       </div>
       <p class="display-note" id="displayNote"></p>
+      <p class="seating-note" id="seatingNote" style="display:none;"></p>
 
       <div class="board-controls" style="margin-bottom:.7rem;">
         <button class="secondary" id="awardAllBtn" type="button">Award everyone</button>
@@ -351,6 +389,7 @@
    'printArea', 'printTitle', 'printSub', 'printBody', 'msg',
    'displayMode', 'displayNote', 'awardAllBtn', 'awardSelectedBtn', 'awardUnselectedBtn',
    'clearPickedBtn', 'pickHint', 'noteMode', 'clearDayBtn',
+   'layoutMode', 'seatingSectionPick', 'seatingNote',
    'goalStudent', 'goalValue', 'setGoalBtn', 'goalList', 'trendWrap',
    'summaryStudent', 'printSummaryBtn', 'summaryArea', 'summaryTitle', 'summarySub', 'summaryBody'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -448,6 +487,14 @@
        first load. */
     if (!s.idNames || typeof s.idNames !== 'object') s.idNames = {};
     if (typeof s.rosterName !== 'string') s.rosterName = '';
+    /* Board layout: 'sorted' (the grid this tool has always had) or 'seating'
+       (arranged the way the room actually is, read from seating-chart-v1).
+       Additive — a section saved before this round has neither field and
+       loads exactly as it always did, sorted. seatingSectionId remembers
+       which chart section this tracker section was pointed at, the same way
+       state.rosterName remembers which Name Picker roster it follows. */
+    if (['sorted', 'seating'].indexOf(s.boardLayout) === -1) s.boardLayout = 'sorted';
+    if (typeof s.seatingSectionId !== 'string') s.seatingSectionId = '';
     s.tags.forEach(function (t) { if (CATEGORIES.indexOf(t.cat) === -1) t.cat = 'other'; });
     s.history.forEach(function (h) {
       if (!Array.isArray(h.rows)) h.rows = [];
@@ -479,6 +526,7 @@
     els.sortMode.value = state.sortMode;
     els.displayMode.value = state.displayMode;
     els.noteMode.checked = !!state.noteMode;
+    els.layoutMode.value = state.boardLayout;
     picked = {};
     updateNameCount();
     renderTagsEditor();
@@ -585,6 +633,89 @@
     });
     return true;
   }
+
+  /* ── Seating-chart board layout ────────────────────────────────────────────
+     Read-only. Like the shared student record above, this reads another
+     tool's key (`seating-chart-v1`, owned by 005-Seating Chart Generator) and
+     never writes it — the pure matching/layout math lives in
+     Tools/behavior-points-tracker/seating-layout.js so it can be driven under
+     plain Node (see smoke-seating-layout.mjs), and is copied in shape from
+     Tools/010-command-center-dashboard.html's existing seating panel rather
+     than re-derived. A missing or corrupt chart, or one with no desks placed
+     for this class, leaves the board exactly as it was — the "sorted" layout
+     — never a broken or blank one. ───────────────────────────────────────── */
+  var seatingCache = null;   // parseSeatingState() output, or null
+
+  function refreshSeatingCache() {
+    if (!window.SeatingLayout) { seatingCache = null; return; }
+    try { seatingCache = window.SeatingLayout.parseSeatingState(localStorage.getItem(window.SeatingLayout.SEATING_KEY)); }
+    catch (e) { seatingCache = null; }
+  }
+
+  /** The chart section this tracker section is currently pointed at, or null
+      if there's no usable chart at all. */
+  function seatingSection() {
+    if (!seatingCache || !window.SeatingLayout || !state) return null;
+    return window.SeatingLayout.pickSeatingSection(seatingCache, {
+      chosenId: state.seatingSectionId,
+      rosterName: state.rosterName,
+      sectionName: state.name,
+    });
+  }
+
+  /** Every roster name's preferred name, where Class Roster Hub has one — the
+      same alternate-name idea a card already shows, offered to the seating
+      matcher in case a desk was labeled with the name the class calls a
+      student rather than the roster line. */
+  function altNamesForSeating(names) {
+    var out = {};
+    names.forEach(function (n) {
+      var d = detailFor(n);
+      if (d && d.preferred) out[n] = d.preferred;
+    });
+    return out;
+  }
+
+  /** { seats, unseated, box } for the current roster against the current
+      chart section, or null if there's no chart section to try at all. */
+  function seatingLayout() {
+    var section = seatingSection();
+    if (!section || !window.SeatingLayout) return null;
+    var names = parseNames();
+    return {
+      section: section,
+      layout: window.SeatingLayout.layoutSeats(section, names, {
+        mirror: seatingCache.mirror === true,
+        altNames: altNamesForSeating(names),
+      }),
+    };
+  }
+
+  function renderSeatingSectionPick() {
+    if (!seatingCache || seatingCache.sections.length < 2 || state.boardLayout !== 'seating') {
+      els.seatingSectionPick.style.display = 'none';
+      els.seatingSectionPick.innerHTML = '';
+      return;
+    }
+    var current = seatingSection();
+    els.seatingSectionPick.innerHTML = seatingCache.sections.map(function (s) {
+      return '<option value="' + escapeAttr(s.id) + '"' + (current && s.id === current.id ? ' selected' : '') + '>' +
+        escapeHtml(s.name || 'Untitled') + '</option>';
+    }).join('');
+    els.seatingSectionPick.style.display = '';
+  }
+
+  els.seatingSectionPick.addEventListener('change', function () {
+    state.seatingSectionId = els.seatingSectionPick.value;
+    save();
+    renderBoard();
+  });
+
+  els.layoutMode.addEventListener('change', function () {
+    state.boardLayout = els.layoutMode.value;
+    save();
+    renderBoard();
+  });
 
   // ── Roster ───────────────────────────────────────────────────────────────
   function parseNames() {
@@ -776,12 +907,93 @@
     total: 'Only the class total is on the board. Nobody is named, and no individual tally is visible.'
   };
 
+  /** One student's board card. `extraClass`/`extraStyle` are how the seating
+      layout below positions the same card absolutely inside a desk box
+      instead of leaving it to the grid — everything else about the card
+      (label, points, sub-line, goal) is identical either way; CSS hides the
+      sub-line/goal inside a desk box, where there's no room for them. */
+  function cardHtml(n, cumulative, extraClass, extraStyle) {
+    var pts = state.points[n] || 0;
+    var shownPts = state.displayMode === 'positive' ? Math.max(0, pts) : pts;
+    var cls = shownPts > 0 ? 'pos-total' : (shownPts < 0 ? 'neg-total' : '');
+    if (picked[n]) cls += ' picked';
+    if (extraClass) cls += ' ' + extraClass;
+    var card = cardLabel(n);
+    var label = state.displayMode === 'initials' ? initialsOf(card.big) : card.big;
+    /* The roster name under the preferred one, so a card can still be tied
+       back to the gradebook. Dropped in initials mode, where the whole point
+       is that nothing readable is on screen. */
+    var alias = (card.sub && state.displayMode !== 'initials')
+      ? '<div class="s-sub">' + escapeHtml(card.sub) + '</div>' : '';
+    /* Today and the quarter answer different questions: +14 for the term and
+       −2 today is a different conversation from −2 for both. */
+    /* Shown for everyone once any day is archived, including the students
+       with nothing on record — a blank where a peer has a number reads as a
+       rendering bug, and "0 to date" is the honest answer for a student who
+       joined this week. */
+    var toDate = cumulative ? (cumulative[n] || 0) : null;
+    var sub = cumulative ? '<div class="s-sub">' + (toDate > 0 ? '+' : '') + toDate + ' to date</div>' : '';
+    var goal = '';
+    if (state.goals[n] !== undefined && state.goals[n] !== null && state.displayMode !== 'positive') {
+      var met = pts >= state.goals[n];
+      goal = '<div class="s-goal ' + (met ? 'met' : 'missed') + '">goal ' +
+             (state.goals[n] > 0 ? '+' : '') + state.goals[n] + (met ? ' \u2713' : '') + '</div>';
+    }
+    var style = extraStyle ? ' style="' + extraStyle + '"' : '';
+    return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '"' + style + '>' +
+      '<div class="s-name">' + escapeHtml(label) + '</div>' +
+      alias +
+      '<div class="s-points">' + (shownPts > 0 ? '+' : '') + shownPts + '</div>' +
+      sub + goal +
+      '</div>';
+  }
+
+  /** The seating-layout board: a room-shaped box of absolutely-positioned
+      cards for every matched desk, plus an ordinary row of cards below for
+      anyone on the roster the chart doesn't (yet) know about. Returns false
+      if there's no usable seat to show, so the caller falls back to the
+      sorted grid instead of rendering an empty room — the "leave the panel
+      standing" contract for a missing/corrupt chart, or a chart with no
+      desks placed for this class. */
+  function renderSeatingBoard(names, cumulative) {
+    var sc = seatingLayout();
+    var seats = (sc && sc.layout) ? sc.layout.seats : [];
+    renderSeatingSectionPick();
+    if (!seats.length) {
+      els.seatingNote.textContent = seatingCache
+        ? 'No seats matched for this class yet — showing the alphabetical layout instead. Check that the right class is picked above, or lay desks out in Seating Chart Generator.'
+        : 'No seating chart saved yet — showing the alphabetical layout. Build one in Seating Chart Generator and it will be used here automatically.';
+      els.seatingNote.style.display = '';
+      return false;
+    }
+    els.seatingNote.style.display = 'none';
+    var box = sc.layout.box;
+    var seatsHtml = seats.map(function (seat) {
+      var style = 'left:' + seat.leftPct.toFixed(3) + '%; top:' + seat.topPct.toFixed(3) + '%; ' +
+        'width:' + seat.wPct.toFixed(3) + '%; height:' + seat.hPct.toFixed(3) + '%;' +
+        (seat.rot ? ' transform: rotate(' + seat.rot + 'deg);' : '');
+      return cardHtml(seat.name, cumulative, 'seat-card', style);
+    }).join('');
+    var roomHtml = '<div class="seat-room" style="grid-column:1/-1;aspect-ratio:' + box.w + '/' + box.h + ';">' +
+      '<span class="front-label">Front of room</span>' + seatsHtml + '</div>';
+    var unseatedSet = {};
+    sc.layout.unseated.forEach(function (n) { unseatedSet[n] = true; });
+    var unseatedNames = names.filter(function (n) { return unseatedSet[n]; });
+    var dividerHtml = unseatedNames.length
+      ? '<p class="unseated-title" style="grid-column:1/-1;">Not on the seating chart yet (' + unseatedNames.length + '):</p>'
+      : '';
+    els.studentGrid.innerHTML = roomHtml + dividerHtml + unseatedNames.map(function (n) { return cardHtml(n, cumulative); }).join('');
+    return true;
+  }
+
   function renderBoard() {
     var names = sortedNames();
     if (!names.length) {
       els.studentGrid.innerHTML = '<p class="empty-hint">Add a roster on the left to get started.</p>';
       els.printBtn.disabled = true;
       els.displayNote.textContent = '';
+      els.seatingNote.style.display = 'none';
+      els.seatingSectionPick.style.display = 'none';
       return;
     }
     els.displayNote.textContent = DISPLAY_NOTES[state.displayMode] || '';
@@ -796,43 +1008,18 @@
         '<div class="s-sub">' + names.length + ' students &middot; switch "Show" back to award points</div>' +
         '</div>';
       els.printBtn.disabled = false;
+      els.seatingNote.style.display = 'none';
+      els.seatingSectionPick.style.display = 'none';
       return;
     }
 
     var cumulative = state.history.length ? cumulativePoints() : null;
-    els.studentGrid.innerHTML = names.map(function (n) {
-      var pts = state.points[n] || 0;
-      var shownPts = state.displayMode === 'positive' ? Math.max(0, pts) : pts;
-      var cls = shownPts > 0 ? 'pos-total' : (shownPts < 0 ? 'neg-total' : '');
-      if (picked[n]) cls += ' picked';
-      var card = cardLabel(n);
-      var label = state.displayMode === 'initials' ? initialsOf(card.big) : card.big;
-      /* The roster name under the preferred one, so a card can still be tied
-         back to the gradebook. Dropped in initials mode, where the whole point
-         is that nothing readable is on screen. */
-      var alias = (card.sub && state.displayMode !== 'initials')
-        ? '<div class="s-sub">' + escapeHtml(card.sub) + '</div>' : '';
-      /* Today and the quarter answer different questions: +14 for the term and
-         −2 today is a different conversation from −2 for both. */
-      /* Shown for everyone once any day is archived, including the students
-         with nothing on record — a blank where a peer has a number reads as a
-         rendering bug, and "0 to date" is the honest answer for a student who
-         joined this week. */
-      var toDate = cumulative ? (cumulative[n] || 0) : null;
-      var sub = cumulative ? '<div class="s-sub">' + (toDate > 0 ? '+' : '') + toDate + ' to date</div>' : '';
-      var goal = '';
-      if (state.goals[n] !== undefined && state.goals[n] !== null && state.displayMode !== 'positive') {
-        var met = pts >= state.goals[n];
-        goal = '<div class="s-goal ' + (met ? 'met' : 'missed') + '">goal ' +
-               (state.goals[n] > 0 ? '+' : '') + state.goals[n] + (met ? ' \u2713' : '') + '</div>';
-      }
-      return '<div class="student-card ' + cls + '" data-name="' + escapeAttr(n) + '">' +
-        '<div class="s-name">' + escapeHtml(label) + '</div>' +
-        alias +
-        '<div class="s-points">' + (shownPts > 0 ? '+' : '') + shownPts + '</div>' +
-        sub + goal +
-        '</div>';
-    }).join('');
+
+    var usedSeating = state.boardLayout === 'seating' && renderSeatingBoard(names, cumulative);
+    if (!usedSeating) {
+      if (state.boardLayout !== 'seating') { els.seatingNote.style.display = 'none'; els.seatingSectionPick.style.display = 'none'; }
+      els.studentGrid.innerHTML = names.map(function (n) { return cardHtml(n, cumulative); }).join('');
+    }
     els.printBtn.disabled = false;
   }
 
@@ -1400,6 +1587,7 @@
   /* ---------- boot ---------- */
   populateRosterSelect();
   refreshSharedRecord();
+  refreshSeatingCache();
   var initial = loadStore();
   if (initial.current && initial.sets[initial.current]) {
     loadSetByName(initial.current);
@@ -1434,6 +1622,26 @@
   }
   if (window.StudentDetails) adoptSharedRecord();
   else window.addEventListener('student-details-ready', adoptSharedRecord, { once: true });
+
+  /* seating-layout.js is likewise an ES module, evaluating after this classic
+     script — catch up once it lands so a chart saved before this tool was
+     ever opened is picked up on first load, not just after a manual refresh. */
+  function adoptSeatingLayout() {
+    refreshSeatingCache();
+    if (state) renderBoard();
+  }
+  if (window.SeatingLayout) adoptSeatingLayout();
+  else window.addEventListener('seating-layout-ready', adoptSeatingLayout, { once: true });
+
+  /* Another tab saving a seating chart — Seating Chart Generator open side by
+     side with this board, the common case this feature exists for — should
+     show up here without a manual refresh. Same cross-tab freshness
+     Tools/010-command-center-dashboard.html's seating panel already keeps. */
+  window.addEventListener('storage', function (e) {
+    if (!window.SeatingLayout || e.key !== window.SeatingLayout.SEATING_KEY) return;
+    refreshSeatingCache();
+    if (state) renderBoard();
+  });
 
 })();
 </script>
