@@ -39,7 +39,10 @@ const VENDORED = [
   'jszip.min.js',
 ];
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', '.claude']);
+// .offline-copy-staging is a disposable, gitignored full-repo copy built by
+// make-offline-copy.mjs — it legitimately contains its own copy of every
+// vendored library, so it must be skipped the same way node_modules is.
+const SKIP_DIRS = new Set(['.git', 'node_modules', '.claude', '.offline-copy-staging']);
 const REF_EXEMPT = ['Tools/Old Designs/', 'Tools/New Designs/'];
 
 const rel = p => path.relative(SITE, p).split(path.sep).join('/');
