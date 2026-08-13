@@ -581,7 +581,7 @@
 </div>
 <script type="module" src="classroom-timer/ct-app.js"></script>
 <script type="module">
-import { getDisplaySnapshot } from './classroom-timer/ct-app.js';
+import { getDisplaySnapshot, applyRemoteCommand } from './classroom-timer/ct-app.js';
 import { drawQR, startHost } from './classroom-timer/ct-mirror.js';
 
 const overlay = document.getElementById('mirrorOverlay');
@@ -625,7 +625,7 @@ openBtn.addEventListener('click', () => {
 
 function renderIntro() {
   body.innerHTML = `
-    <p>Show this timer's live countdown on a student's phone or another device &mdash; no apps, no accounts. Works between devices on the same Wi-Fi.</p>
+    <p>Show this timer's live countdown on a phone or another device &mdash; no apps, no accounts &mdash; and use that device's Start/Pause/Resume/Next-segment buttons as a remote while you walk the room. Works between devices on the same Wi-Fi.</p>
     <div class="mirror-actions"><button type="button" id="mStart">Start pairing</button></div>
   `;
   document.getElementById('mStart').addEventListener('click', beginPairing);
@@ -635,6 +635,13 @@ async function beginPairing() {
   body.innerHTML = `<p>Preparing a pairing code&hellip;</p>`;
   try {
     host = await startHost();
+    // The paired phone's remote-control buttons (mirror.html) send
+    // {type:'cmd', cmd:'start'|'pause'|'resume'|'next'} over this same
+    // connection the display snapshot is pushed out on — apply each one
+    // through the exact function the matching on-screen button calls.
+    host.onMessage((data) => {
+      if (data && data.type === 'cmd') applyRemoteCommand(data.cmd);
+    });
   } catch (err) {
     body.innerHTML = `<p>Couldn&rsquo;t start pairing: ${escapeHtml(err.message)}</p>
       <div class="mirror-actions"><button type="button" id="mBack">Back</button></div>`;
@@ -727,7 +734,7 @@ async function connectWithAnswer(answerPayload) {
 
 function renderConnected() {
   body.innerHTML = `
-    <p><b>Connected.</b> The other device is showing this timer live.</p>
+    <p><b>Connected.</b> The other device is showing this timer live, and its Start/Pause/Resume/Next-segment buttons now control this timer too.</p>
     <div class="mirror-actions"><button type="button" id="mStop">Stop mirroring</button></div>
   `;
   document.getElementById('mStop').addEventListener('click', () => {

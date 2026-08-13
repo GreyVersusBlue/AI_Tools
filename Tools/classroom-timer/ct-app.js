@@ -146,14 +146,41 @@ document.addEventListener('visibilitychange', () => {
     device" feature (see the inline script at the bottom of the page) to
     poll and relay over its data channel. Deliberately a pull, not a push —
     the timer's own lifecycle (five modes, each with their own start/pause/
-    resume/reset paths) shouldn't need to know a mirror might be listening. */
+    resume/reset paths) shouldn't need to know a mirror might be listening.
+    `running`/`paused` and `mode` also drive the mirrored device's own remote
+    -control buttons (see mirror.html) — which of Start/Pause/Resume to show,
+    and whether "Next segment" makes sense at all. */
 export function getDisplaySnapshot() {
   return {
     text: els.timeDisplay.textContent,
     sub: els.subDisplay.textContent,
     running: phase.status === 'running',
+    paused: phase.status === 'paused',
     mode,
   };
+}
+
+/** Applies a command sent from the paired phone's remote-control buttons
+    (see mirror.html / ct-mirror.js) by calling the exact same functions the
+    on-screen Start/Pause/Resume buttons call — this is not a second
+    implementation of start/pause/resume, just a second caller of the first
+    one. Each branch re-checks the phase status a visible button's own
+    hidden/shown state would otherwise have gated, since a remote command
+    isn't guaranteed to arrive while the phone's last-known button state
+    still matches reality (e.g. two quick taps, or a stale snapshot). A
+    no-op in strip mode — the ambient strip is a read-only second window and
+    was never the thing being paired with in the first place. */
+export function applyRemoteCommand(cmd) {
+  if (STRIP_MODE) return;
+  if (cmd === 'start') {
+    if (phase.status === 'idle' || phase.status === 'done') onStart();
+  } else if (cmd === 'pause') {
+    if (phase.status === 'running') onPause();
+  } else if (cmd === 'resume') {
+    if (phase.status === 'paused') onResume();
+  } else if (cmd === 'next') {
+    skipAgendaSegment();
+  }
 }
 
 function updateSubDisplay(text) {
@@ -375,6 +402,49 @@ function beginOvertime() {
   syncRunningPersistence();
 }
 
+/** Moves Agenda mode from its current segment to `nextIndex` — shared by
+    onPhaseZero()'s natural "this segment's clock hit zero" path and
+    skipAgendaSegment()'s manual "advance early" path (the mirrored remote's
+    "Next segment" button), so there is exactly one place that knows how to
+    change segments. Handles running and paused the same way onPause()/
+    onResume() do: a fresh `endAt` while running, or a fresh
+    `remainingAtPause` while paused, so a paused-then-resumed timer picks up
+    the *new* segment's full duration rather than whatever was left of the
+    old one. Repaints immediately rather than waiting for the next tick,
+    since a paused advance has no running tick loop to do that for it. */
+function goToAgendaSegment(nextIndex) {
+  const seg = phase.segments[nextIndex];
+  phase.agendaElapsedBase += phase.totalMs;
+  phase.segIndex = nextIndex;
+  phase.totalMs = getAgendaSegmentMs(seg);
+  if (phase.status === 'paused') {
+    phase.remainingAtPause = phase.totalMs;
+  } else {
+    phase.endAt = Date.now() + phase.totalMs;
+  }
+  setAgendaCurrent(phase.segments, nextIndex);
+  updateSubDisplay(agendaNextText(phase.segments, nextIndex));
+  updateAgendaBar(0);
+  paint(phase.totalMs, phase.totalMs > 0 ? 1 : 0);
+  updateUrgency(phase.totalMs > 0 ? 1 : null);
+  syncRunningPersistence();
+}
+
+/** "Next segment" from the mirrored remote — advances Agenda mode early
+    instead of waiting for the current segment's clock to reach zero. Goes
+    through the same goToAgendaSegment() the natural end-of-segment path
+    uses; unlike that path, this doesn't play the end-of-segment sound/flash,
+    since nothing actually ended, it was skipped. No-op outside Agenda mode,
+    when nothing is running or paused, or already on the last segment
+    (matching onPhaseZero, which stops auto-advancing there too — overtime/
+    completion is a distinct state this button doesn't reach into). */
+function skipAgendaSegment() {
+  if (mode !== 'agenda') return;
+  if (phase.status !== 'running' && phase.status !== 'paused') return;
+  if (!phase.segments || phase.segIndex >= phase.segments.length - 1) return;
+  goToAgendaSegment(phase.segIndex + 1);
+}
+
 function onPhaseZero() {
   Sounds.play(prefs.sound.choice, effectiveVolume());
   flashDisplay();
@@ -399,15 +469,7 @@ function onPhaseZero() {
     updateSubDisplay('All stations complete!');
   } else if (mode === 'agenda') {
     if (phase.segIndex < phase.segments.length - 1) {
-      phase.agendaElapsedBase += phase.totalMs;
-      phase.segIndex += 1;
-      const seg = phase.segments[phase.segIndex];
-      phase.totalMs = getAgendaSegmentMs(seg);
-      phase.endAt = Date.now() + phase.totalMs;
-      setAgendaCurrent(phase.segments, phase.segIndex);
-      updateSubDisplay(agendaNextText(phase.segments, phase.segIndex));
-      updateAgendaBar(0);
-      syncRunningPersistence();
+      goToAgendaSegment(phase.segIndex + 1);
       return;
     }
     phase.agendaElapsedBase += phase.totalMs;
