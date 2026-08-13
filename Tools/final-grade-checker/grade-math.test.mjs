@@ -12,6 +12,7 @@ import {
   getLetter, getQP, qpToFinalLetter, calcFinals, toScore, curveScores,
   parseGradeToken, splitRow, parsePastedData, findQuarterWindow, isGradeCell,
   LETTER_CUTOFFS_STRICT, QP_CUTOFFS_STRICT,
+  missingWork, letterAbove, requiredScoreForQuarter, triageStudent,
 } from './grade-math.mjs';
 
 let passed = 0, failed = 0;
@@ -374,6 +375,91 @@ group('Rounding options — weights (opts.weights)');
 }
 eq(calcFinals([90, 90, 90, 90], { weights: [0, 0, 0, 0] }).finalLetter, 'A',
   'all-zero weights fall back to the unweighted average rather than dividing by zero');
+
+// ── Missing-work triage ───────────────────────────────────────
+group('Missing-work triage — zeros vs. blanks');
+eq(missingWork([85, 90, 95, 100]), { zeros: [], blanks: [], hasAny: false },
+  'a full house of real scores has nothing to flag');
+eq(missingWork([0, 85, null, 90]), { zeros: [0], blanks: [2], hasAny: true },
+  'a recorded zero and a genuinely blank cell are kept apart, by index');
+eq(missingWork([0, 0, null, null]), { zeros: [0, 1], blanks: [2, 3], hasAny: true },
+  'multiple zeros and multiple blanks are all reported');
+eq(missingWork([null, null, null, null]), { zeros: [], blanks: [0, 1, 2, 3], hasAny: true },
+  'four blanks, no zeros');
+
+group('Missing-work triage — letterAbove');
+eq(letterAbove('F'), 'D', 'F -> D (no E in this scale)');
+eq(letterAbove('D'), 'C', 'D -> C');
+eq(letterAbove('C'), 'B', 'C -> B');
+eq(letterAbove('B'), 'A', 'B -> A');
+eq(letterAbove('A'), null, 'nothing above an A');
+eq(letterAbove('Z'), null, 'an unrecognised letter has nothing above it either');
+
+group('Missing-work triage — requiredScoreForQuarter (single-quarter backward solve)');
+{
+  // Q1-3 = 90 (A, QP 4 each); Q4 = 60 (D, QP 1). What does Q4 alone need to
+  // pull the final from its current B up to an A?
+  const scores = [90, 90, 90, 60];
+  const req = requiredScoreForQuarter(scores, 3, 'A');
+  // Percentage route: (90+90+90+x)/4 >= 89.5  =>  x >= 88.00
+  eq(req.requiredPct, 88, 'percentage-average route needs Q4 at 88.00 for a 89.50 average');
+  // Quality-points route: Q4 only has to reach a C (QP 2) — (4+4+4+2)/4 = 3.5 -> A.
+  eq(req.requiredQP, 69.5, 'quality-points route only needs Q4 to reach a C (69.50), the cheaper path');
+}
+{
+  // Solving for a quarter that is itself still blank is the same question the
+  // on-screen "What Do I Need" solver already answers — this generalises it,
+  // it doesn't replace it.
+  const req = requiredScoreForQuarter([50, 50, 50, null], 3, 'A');
+  eq(req.requiredPct, 208, 'percentage route needs more than a possible 100 — reported honestly as 208');
+  eq(req.requiredQP, Infinity, 'and the quality-points route needs more QP than a perfect score can give');
+}
+eq(requiredScoreForQuarter([null, 50, 50, 50], 1, 'B'), null,
+  'no unique answer when a quarter OTHER than the one being solved for is still blank');
+eq(requiredScoreForQuarter([50, 50, 50, 50], 9, 'B'), null,
+  'an out-of-range quarter index is rejected rather than reading undefined');
+
+group('Missing-work triage — triageStudent (missing work + one quarter from a letter change)');
+{
+  // The zero-bring-up case named in the improvement prompt: Q1 is a recorded
+  // zero, the other three are strong. Current final is a B (quality points
+  // beats a dragged-down percentage average); raising just the zero to a B
+  // (79.50) on quality points alone reaches an A.
+  const scores = [0, 85, 90, 95];
+  const f = calcFinals(scores);
+  eq(f.finalLetter, 'B', 'sanity check: this student is currently a B');
+  const t = triageStudent(scores);
+  eq(t.missing, { zeros: [0], blanks: [], hasAny: true }, 'the zero on Q1 is flagged as missing work');
+  eq(t.oneAway, {
+    quarterIdx: 0, currentScore: 0, fromLetter: 'B', toLetter: 'A', neededPct: 79.5,
+  }, 'and Q1 alone, raised to 79.50, is the one-quarter lever from B to A');
+}
+{
+  // A student missing an entire quarter has no final grade to move UP from —
+  // this is a missing-work case, not a one-quarter-away case, and the two
+  // lists must not overlap for the same reason a three-quarter average never
+  // gets printed as a final grade.
+  const t = triageStudent([70, 80, null, 90]);
+  eq(t.missing, { zeros: [], blanks: [2], hasAny: true }, 'the blank Q3 is flagged');
+  eq(t.oneAway, null, 'but there is no final grade yet to be "one quarter" away from');
+}
+{
+  // Already an A: nothing above it to move to.
+  const t = triageStudent([95, 96, 97, 98]);
+  eq(t.missing.hasAny, false, 'no missing work');
+  eq(t.oneAway, null, 'an A has no next letter up');
+}
+{
+  // Four flat 50s: an F all round, with plenty of room in any one quarter to
+  // pull the final up to a D.
+  const scores = [50, 50, 50, 50];
+  const f = calcFinals(scores);
+  eq(f.finalLetter, 'F', 'sanity check: a flat 50 average is an F');
+  const t = triageStudent(scores);
+  eq(t.oneAway, {
+    quarterIdx: 0, currentScore: 50, fromLetter: 'F', toLetter: 'D', neededPct: 69.5,
+  }, 'the first (tied-lowest) quarter, raised to 69.50, is enough via quality points');
+}
 
 // ── End-to-end: a paste, through the arithmetic, to a letter ─
 group('End to end — a pasted class');
