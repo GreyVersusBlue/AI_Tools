@@ -118,13 +118,16 @@
   .slot-decided { cursor: default; }
   .slot-decided:not(.slot-winner) { opacity: .5; text-decoration: line-through; }
 
+  .match-score-pair { display: flex; align-items: center; gap: .3rem; width: 100%; margin-top: -.05rem; }
   .match-score {
-    width: 100%; font-family: inherit; font-size: .78rem; color: var(--muted);
+    flex: 1 1 0; min-width: 0; font-family: inherit; font-size: .78rem; color: var(--muted);
     border: 1px solid var(--line); border-radius: 5px; background: #fbfaf7;
-    padding: .2rem .4rem; margin-top: -.05rem;
+    padding: .2rem .35rem; -moz-appearance: textfield;
   }
+  .match-score::-webkit-outer-spin-button, .match-score::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .match-score:focus { outline: none; border-color: var(--accent-2); color: var(--ink); }
   .match-score::placeholder { color: var(--line-strong); }
+  .match-score-sep { flex: 0 0 auto; color: var(--muted); font-size: .78rem; }
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
@@ -333,7 +336,7 @@
   </div>
 
   <footer class="note">
-    Runs entirely in your browser — nothing is uploaded. Click a name to advance it to the next round.
+    Runs entirely in your browser — nothing is uploaded. Click a name, or enter both scores, to advance it to the next round.
   </footer>
 
 </div>
@@ -753,23 +756,118 @@
     return out;
   }
 
+  /* w/l/played come from who was clicked (or score-derived, see
+     buildScoreInputs) as the match winner; pf/pa/diff come separately from
+     whatever structured {a,b} score was entered for that same match key
+     ('rr' + round + '_' + matchIndex) — a match can be decided without a
+     score ever being typed, so these two data sources are kept independent
+     and just happen to be looked up by the same key. */
   function computeStandings(state) {
     var records = {};
     state.players.forEach(function (p) {
-      records[p] = { name: p, w: 0, l: 0, played: 0, seed: (state.seeds && state.seeds[p]) || null };
+      records[p] = { name: p, w: 0, l: 0, played: 0, pf: 0, pa: 0, diff: 0, seed: (state.seeds && state.seeds[p]) || null };
     });
-    state.rounds.forEach(function (round) {
-      round.forEach(function (m) {
+    state.rounds.forEach(function (round, r) {
+      round.forEach(function (m, mi) {
         if (m.a == null || m.b == null || m.winner === null) return;
         var winnerName = m.winner === 0 ? m.a : m.b;
         var loserName = m.winner === 0 ? m.b : m.a;
         records[winnerName].w++; records[winnerName].played++;
         records[loserName].l++; records[loserName].played++;
+        var sc = state.scores && state.scores['rr' + r + '_' + mi];
+        if (sc && typeof sc.a === 'number' && typeof sc.b === 'number') {
+          records[m.a].pf += sc.a; records[m.a].pa += sc.b;
+          records[m.b].pf += sc.b; records[m.b].pa += sc.a;
+        }
       });
     });
+    Object.keys(records).forEach(function (k) { records[k].diff = records[k].pf - records[k].pa; });
     return Object.keys(records).map(function (k) { return records[k]; }).sort(function (x, y) {
-      return y.w - x.w || x.l - y.l || x.name.localeCompare(y.name);
+      return y.w - x.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);
     });
+  }
+
+  /* ---------- elimination standings (single & double) ----------
+     The backlog ask ("scores that feed standings") named round robin
+     explicitly, but a bracket that eliminates people is exactly the kind of
+     "record" a printed sheet should carry too — so this derives the same
+     shape of table (W/L/Played/PF/PA/Diff) from the actual decided matches
+     in the winners bracket (and, for double elimination, the losers bracket
+     and grand final), rather than restricting the standings idea to
+     round-robin only. A bye-advance is not a played match (autoAdvance()'s
+     own framing: "nobody real reaches this slot" / "nobody really played
+     that match") so it never contributes a win or a loss here either. */
+  function eliminationEntrants(state) {
+    var names = [];
+    state.slots[0].forEach(function (n) { if (n != null) names.push(n); });
+    return names;
+  }
+
+  function eliminationMatches(state) {
+    var matches = [];
+    function scanBracket(slots, winnerSideMap, keyPrefix) {
+      for (var r = 0; r < slots.length - 1; r++) {
+        var round = slots[r], next = slots[r + 1];
+        for (var m = 0; m < next.length; m++) {
+          var a = round[m * 2], b = round[m * 2 + 1];
+          if (a == null || b == null) continue; // a bye — nobody really played
+          if (next[m] === false) continue; // not decided yet
+          var winSide = winnerSideMap[(r + 1) + '_' + m];
+          matches.push({ a: a, b: b, winner: (winSide === m * 2) ? a : b, scoreKey: keyPrefix + r + '_' + m });
+        }
+      }
+    }
+    scanBracket(state.slots, state.winnerSide, (state.type === 'double') ? 'w' : '');
+    if (state.type === 'double') {
+      var lb = state.loserSlots;
+      for (var r2 = 0; r2 < lb.length - 1; r2++) {
+        var lround = lb[r2];
+        var count = lround.length / 2;
+        for (var m2 = 0; m2 < count; m2++) {
+          var a2 = lround[m2 * 2], b2 = lround[m2 * 2 + 1];
+          if (a2 == null || b2 == null) continue;
+          var winSide2 = state.loserWinnerSide[r2 + '_' + m2];
+          if (winSide2 === undefined) continue;
+          matches.push({ a: a2, b: b2, winner: (winSide2 === m2 * 2) ? a2 : b2, scoreKey: 'l' + r2 + '_' + m2 });
+        }
+      }
+      var gf = state.grandFinal;
+      if (gf.p[0] !== false && gf.p[1] !== false) {
+        if (gf.m1Winner !== null) matches.push({ a: gf.p[0], b: gf.p[1], winner: gf.p[gf.m1Winner], scoreKey: 'g0' });
+        if (gf.needsReset && gf.m2Winner !== null) matches.push({ a: gf.p[0], b: gf.p[1], winner: gf.p[gf.m2Winner], scoreKey: 'g1' });
+      }
+    }
+    return matches;
+  }
+
+  function computeEliminationStandings(state) {
+    var records = {};
+    function ensure(name) {
+      if (!records[name]) records[name] = { name: name, w: 0, l: 0, played: 0, pf: 0, pa: 0, diff: 0 };
+      return records[name];
+    }
+    eliminationEntrants(state).forEach(ensure);
+    eliminationMatches(state).forEach(function (mt) {
+      var loserName = (mt.winner === mt.a) ? mt.b : mt.a;
+      var winnerRec = ensure(mt.winner), loserRec = ensure(loserName);
+      winnerRec.w++; winnerRec.played++;
+      loserRec.l++; loserRec.played++;
+      var sc = state.scores && state.scores[mt.scoreKey];
+      if (sc && typeof sc.a === 'number' && typeof sc.b === 'number') {
+        ensure(mt.a).pf += sc.a; ensure(mt.a).pa += sc.b;
+        ensure(mt.b).pf += sc.b; ensure(mt.b).pa += sc.a;
+      }
+    });
+    Object.keys(records).forEach(function (k) { records[k].diff = records[k].pf - records[k].pa; });
+    return Object.keys(records).map(function (k) { return records[k]; }).sort(function (x, y) {
+      return y.w - x.w || y.diff - x.diff || x.l - y.l || x.name.localeCompare(y.name);
+    });
+  }
+
+  function eliminationChampionName(state) {
+    if (state.type === 'double') return state.grandFinal.champion || null;
+    var totalRounds = state.slots.length;
+    return state.slots[totalRounds - 1][0] || null;
   }
 
   function roundRobinComplete(state) {
@@ -1122,20 +1220,16 @@
           var isByeMatch = round[m * 2] === null || round[m * 2 + 1] === null;
           if (!isByeMatch) {
             var scoreKey = r + '_' + m;
-            var scoreInput = document.createElement('input');
-            scoreInput.type = 'text';
-            scoreInput.className = 'match-score';
-            scoreInput.placeholder = 'Score (optional)';
-            scoreInput.value = (state.scores && state.scores[scoreKey]) || '';
-            scoreInput.addEventListener('change', (function (key) {
-              return function (e) {
-                if (!state.scores) state.scores = {};
-                var v = e.target.value.trim();
-                if (v) state.scores[key] = v; else delete state.scores[key];
-                save();
+            var decideFn = (next[m] === false) ? (function (roundIdx, matchIdx, aName, bName) {
+              return function (aNum, bNum) {
+                if (state.slots[roundIdx + 1][matchIdx] !== false) return; // decided (e.g. by a click) meanwhile
+                captureUndoSnapshot();
+                var aWins = aNum > bNum;
+                state.slots[roundIdx + 1][matchIdx] = aWins ? aName : bName;
+                state.winnerSide[(roundIdx + 1) + '_' + matchIdx] = aWins ? matchIdx * 2 : matchIdx * 2 + 1;
               };
-            })(scoreKey));
-            matchWrap.appendChild(scoreInput);
+            })(r, m, round[m * 2], round[m * 2 + 1]) : null;
+            matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, round[m * 2], round[m * 2 + 1]));
 
             var badge = scheduleBadgeFor(scheduleSlots, r, scheduleIndexFor(state, r, m));
             if (badge) matchWrap.appendChild(badge);
@@ -1150,6 +1244,12 @@
     els.bracketView.appendChild(bracketBox);
 
     if (state.schedule) renderScheduleTable(els.bracketView, state, false);
+
+    var standingsHeading = document.createElement('p');
+    standingsHeading.className = 'bracket-subtitle';
+    standingsHeading.textContent = 'Standings';
+    els.bracketView.appendChild(standingsHeading);
+    els.bracketView.appendChild(eliminationStandingsTable(state));
 
     var champion = state.slots[totalRounds - 1][0];
     if (champion) {
@@ -1313,20 +1413,16 @@
           var isByeMatch = round[m * 2] === null || round[m * 2 + 1] === null;
           if (!isByeMatch) {
             var scoreKey = 'w' + r + '_' + m;
-            var scoreInput = document.createElement('input');
-            scoreInput.type = 'text';
-            scoreInput.className = 'match-score';
-            scoreInput.placeholder = 'Score (optional)';
-            scoreInput.value = (state.scores && state.scores[scoreKey]) || '';
-            scoreInput.addEventListener('change', (function (key) {
-              return function (e) {
-                if (!state.scores) state.scores = {};
-                var v = e.target.value.trim();
-                if (v) state.scores[key] = v; else delete state.scores[key];
-                save();
+            var decideFn = (next[m] === false) ? (function (roundIdx, matchIdx, aName, bName) {
+              return function (aNum, bNum) {
+                if (state.slots[roundIdx + 1][matchIdx] !== false) return; // decided (e.g. by a click) meanwhile
+                captureUndoSnapshot();
+                var aWins = aNum > bNum;
+                state.slots[roundIdx + 1][matchIdx] = aWins ? aName : bName;
+                state.winnerSide[(roundIdx + 1) + '_' + matchIdx] = aWins ? matchIdx * 2 : matchIdx * 2 + 1;
               };
-            })(scoreKey));
-            matchWrap.appendChild(scoreInput);
+            })(r, m, round[m * 2], round[m * 2 + 1]) : null;
+            matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, round[m * 2], round[m * 2 + 1]));
           }
 
           col.appendChild(matchWrap);
@@ -1405,20 +1501,16 @@
           var lIsByeMatch = round[lm * 2] === null || round[lm * 2 + 1] === null;
           if (!lIsByeMatch) {
             var lScoreKey = 'l' + r + '_' + lm;
-            var lScoreInput = document.createElement('input');
-            lScoreInput.type = 'text';
-            lScoreInput.className = 'match-score';
-            lScoreInput.placeholder = 'Score (optional)';
-            lScoreInput.value = (state.scores && state.scores[lScoreKey]) || '';
-            lScoreInput.addEventListener('change', (function (key) {
-              return function (e) {
-                if (!state.scores) state.scores = {};
-                var v = e.target.value.trim();
-                if (v) state.scores[key] = v; else delete state.scores[key];
-                save();
+            var lDecideFn = lDecided ? null : (function (roundIdx, matchIdx, aName, bName, target) {
+              return function (aNum, bNum) {
+                if (state.loserWinnerSide[roundIdx + '_' + matchIdx] !== undefined) return; // decided meanwhile
+                captureUndoSnapshot();
+                var aWins = aNum > bNum;
+                state.loserSlots[roundIdx + 1][target] = aWins ? aName : bName;
+                state.loserWinnerSide[roundIdx + '_' + matchIdx] = aWins ? matchIdx * 2 : matchIdx * 2 + 1;
               };
-            })(lScoreKey));
-            lMatchWrap.appendChild(lScoreInput);
+            })(r, lm, round[lm * 2], round[lm * 2 + 1], targetPos);
+            lMatchWrap.appendChild(buildScoreInputs(lScoreKey, lDecideFn, round[lm * 2], round[lm * 2 + 1]));
           }
 
           col.appendChild(lMatchWrap);
@@ -1483,18 +1575,23 @@
       });
 
       var gScoreKey = 'g' + gameIdx;
-      var gScoreInput = document.createElement('input');
-      gScoreInput.type = 'text';
-      gScoreInput.className = 'match-score';
-      gScoreInput.placeholder = 'Score (optional)';
-      gScoreInput.value = (state.scores && state.scores[gScoreKey]) || '';
-      gScoreInput.addEventListener('change', function (e) {
-        if (!state.scores) state.scores = {};
-        var v = e.target.value.trim();
-        if (v) state.scores[gScoreKey] = v; else delete state.scores[gScoreKey];
-        save();
-      });
-      matchWrap.appendChild(gScoreInput);
+      var gDecideFn = (canPlay && winnerIdx === null) ? function (aNum, bNum) {
+        var curWinner = (gameIdx === 0) ? gf.m1Winner : gf.m2Winner;
+        if (curWinner !== null) return; // decided (e.g. by a click) meanwhile
+        captureUndoSnapshot();
+        var sideIdx = aNum > bNum ? 0 : 1;
+        if (gameIdx === 0) {
+          gf.m1Winner = sideIdx;
+          if (sideIdx === 1) gf.needsReset = true; // LB side won game 1 — bracket reset
+          else gf.champion = gf.p[0]; // WB side won game 1 — tournament over
+        } else {
+          gf.m2Winner = sideIdx;
+          gf.champion = gf.p[sideIdx];
+        }
+      } : null;
+      var gALabel = (typeof gf.p[0] === 'string') ? gf.p[0] : 'first finalist';
+      var gBLabel = (typeof gf.p[1] === 'string') ? gf.p[1] : 'second finalist';
+      matchWrap.appendChild(buildScoreInputs(gScoreKey, gDecideFn, gALabel, gBLabel));
 
       return matchWrap;
     }
@@ -1538,6 +1635,12 @@
     gfBox.appendChild(champCol);
 
     els.bracketView.appendChild(gfBox);
+
+    var standingsHeading = document.createElement('p');
+    standingsHeading.className = 'bracket-subtitle';
+    standingsHeading.textContent = 'Standings';
+    els.bracketView.appendChild(standingsHeading);
+    els.bracketView.appendChild(eliminationStandingsTable(state));
 
     if (gf.champion) {
       els.championBanner.textContent = '🏆 Champion: ' + gf.champion;
@@ -1699,24 +1802,132 @@
     els.championBanner.classList.remove('show');
   }
 
-  function standingsTable(state) {
-    var standings = computeStandings(state);
-    var hasSeeds = !!state.seeds;
+  /* Shared renderer for both the round-robin standings table and the
+     elimination-bracket one below — same columns (Seed is round-robin-only,
+     PF/PA/Diff appear only once at least one structured score exists
+     anywhere in this bracket, so a bracket nobody has scored yet still shows
+     the plain W/L/Played table it always has). `championName`, when given,
+     highlights that exact row instead of the generic "tied for most wins"
+     rule (elimination brackets have one specific crowned winner, not
+     necessarily the standings leader by wins — e.g. two finalists can share
+     the same win count). */
+  function renderStandingsTable(records, opts) {
+    opts = opts || {};
     var table = document.createElement('table');
     table.className = 'standings-table';
-    var leaderWins = standings.length ? standings[0].w : 0;
-    var complete = roundRobinComplete(state);
-    var thead = '<thead><tr>' + (hasSeeds ? '<th class="num">Seed</th>' : '') +
-      '<th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Played</th></tr></thead>';
-    var tbody = '<tbody>' + standings.map(function (row) {
-      var isLeader = complete && row.w === leaderWins && leaderWins > 0;
+    var leaderWins = records.length ? records[0].w : 0;
+    var showScores = !!opts.hasScores;
+    var thead = '<thead><tr>' + (opts.hasSeeds ? '<th class="num">Seed</th>' : '') +
+      '<th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Played</th>' +
+      (showScores ? '<th class="num">PF</th><th class="num">PA</th><th class="num">Diff</th>' : '') +
+      '</tr></thead>';
+    var tbody = '<tbody>' + records.map(function (row) {
+      var isLeader = opts.championName ? (row.name === opts.championName)
+        : (opts.complete && row.w === leaderWins && leaderWins > 0);
+      var diffText = row.diff > 0 ? ('+' + row.diff) : String(row.diff);
       return '<tr' + (isLeader ? ' class="leader"' : '') + '>' +
-        (hasSeeds ? '<td class="num">' + (row.seed || '') + '</td>' : '') +
-        '<td>' + escapeHtml(row.name) + '</td><td class="num">' +
-        row.w + '</td><td class="num">' + row.l + '</td><td class="num">' + row.played + '</td></tr>';
+        (opts.hasSeeds ? '<td class="num">' + (row.seed || '') + '</td>' : '') +
+        '<td>' + escapeHtml(row.name) + '</td><td class="num">' + row.w + '</td><td class="num">' + row.l +
+        '</td><td class="num">' + row.played + '</td>' +
+        (showScores ? '<td class="num">' + row.pf + '</td><td class="num">' + row.pa + '</td><td class="num">' + diffText + '</td>' : '') +
+        '</tr>';
     }).join('') + '</tbody>';
     table.innerHTML = thead + tbody;
     return table;
+  }
+
+  function standingsHasScores(state) {
+    return !!(state.scores && Object.keys(state.scores).some(function (k) {
+      var v = state.scores[k];
+      return v && (typeof v.a === 'number' || typeof v.b === 'number');
+    }));
+  }
+
+  function standingsTable(state) {
+    return renderStandingsTable(computeStandings(state), {
+      hasSeeds: !!state.seeds,
+      hasScores: standingsHasScores(state),
+      complete: roundRobinComplete(state)
+    });
+  }
+
+  function eliminationStandingsTable(state) {
+    return renderStandingsTable(computeEliminationStandings(state), {
+      hasSeeds: false,
+      hasScores: standingsHasScores(state),
+      championName: eliminationChampionName(state)
+    });
+  }
+
+  /* ---------- structured per-match score entry ----------
+     Two number inputs (one per side), replacing the old single free-text
+     "21-18" field. Typed scores are stored as { a, b } under the match's
+     existing key (unchanged from the old free-text scheme — 'r_m' for
+     single elim, 'w r_m' / 'l r_m' / 'g0' / 'g1' for double elim, 'rr r_m'
+     for round robin) so standings above can look a match's score up by the
+     same key its winner is recorded under.
+
+     `decideFn(aNum, bNum)`, when given, is called once both sides have a
+     number and they differ — it should decide the match exactly like a
+     winner-tap would (including captureUndoSnapshot()) and is expected to
+     re-check the match isn't already decided before doing anything, since a
+     stale closure could otherwise fire twice. Passing null means "this match
+     is already decided (or has no winner concept, e.g. an unplayable grand
+     final slot) — record the score but never move a result." A tied score
+     never auto-decides (this tool has no draw support — see the improvement
+     prompt) and just sits there until a click or a differing score breaks
+     the tie. */
+  function buildScoreInputs(key, decideFn, aLabel, bLabel) {
+    var wrap = document.createElement('div');
+    wrap.className = 'match-score-pair';
+    var current = (state.scores && state.scores[key]) || {};
+
+    var aInput = document.createElement('input');
+    aInput.type = 'number';
+    aInput.inputMode = 'decimal';
+    aInput.className = 'match-score';
+    aInput.placeholder = 'Score';
+    aInput.setAttribute('aria-label', 'Score for ' + (aLabel || 'first side'));
+    if (typeof current.a === 'number') aInput.value = current.a;
+
+    var sep = document.createElement('span');
+    sep.className = 'match-score-sep';
+    sep.textContent = '–';
+    sep.setAttribute('aria-hidden', 'true');
+
+    var bInput = document.createElement('input');
+    bInput.type = 'number';
+    bInput.inputMode = 'decimal';
+    bInput.className = 'match-score';
+    bInput.placeholder = 'Score';
+    bInput.setAttribute('aria-label', 'Score for ' + (bLabel || 'second side'));
+    if (typeof current.b === 'number') bInput.value = current.b;
+
+    function commit() {
+      var rawA = aInput.value.trim(), rawB = bInput.value.trim();
+      if (!state.scores) state.scores = {};
+      if (rawA === '' && rawB === '') {
+        delete state.scores[key];
+      } else {
+        state.scores[key] = {
+          a: rawA === '' ? null : parseFloat(rawA),
+          b: rawB === '' ? null : parseFloat(rawB)
+        };
+      }
+      save();
+      var rec = state.scores[key];
+      if (decideFn && rec && typeof rec.a === 'number' && typeof rec.b === 'number' && rec.a !== rec.b) {
+        decideFn(rec.a, rec.b);
+      }
+      render(); // always — even a plain score edit can change PF/PA/Diff in standings
+    }
+    aInput.addEventListener('change', commit);
+    bInput.addEventListener('change', commit);
+
+    wrap.appendChild(aInput);
+    wrap.appendChild(sep);
+    wrap.appendChild(bInput);
+    return wrap;
   }
 
   /* ---------- round robin rendering ----------
@@ -1789,20 +2000,14 @@
           });
 
           var scoreKey = 'rr' + r + '_' + m;
-          var scoreInput = document.createElement('input');
-          scoreInput.type = 'text';
-          scoreInput.className = 'match-score';
-          scoreInput.placeholder = 'Score (optional)';
-          scoreInput.value = (state.scores && state.scores[scoreKey]) || '';
-          scoreInput.addEventListener('change', (function (key) {
-            return function (e) {
-              if (!state.scores) state.scores = {};
-              var v = e.target.value.trim();
-              if (v) state.scores[key] = v; else delete state.scores[key];
-              save();
+          var decideFn = (match.winner === null) ? (function (roundIdx, matchIdx, aName, bName) {
+            return function (aNum, bNum) {
+              if (state.rounds[roundIdx][matchIdx].winner !== null) return; // decided (e.g. by a click) meanwhile
+              captureUndoSnapshot();
+              state.rounds[roundIdx][matchIdx].winner = aNum > bNum ? 0 : 1;
             };
-          })(scoreKey));
-          matchWrap.appendChild(scoreInput);
+          })(r, m, match.a, match.b) : null;
+          matchWrap.appendChild(buildScoreInputs(scoreKey, decideFn, match.a, match.b));
 
           var badge = scheduleBadgeFor(scheduleSlots, r, scheduleIndexFor(state, r, m));
           if (badge) matchWrap.appendChild(badge);
@@ -1891,6 +2096,33 @@
     els.championBanner.classList.remove('show');
   }
 
+  /* Score entries were free text before this round ("21-18", or nothing
+     parseable at all) — now they're a structured { a, b } number pair the
+     standings tables above derive win/loss and point differential from. On
+     load, best-effort parse any leftover legacy text into the new shape;
+     anything that doesn't look like "<number> vs <number>" is dropped
+     rather than silently treated as a real score. Structured entries with a
+     non-numeric a/b (shouldn't happen from this tool's own UI, but a
+     shared/imported link is untrusted input) are normalized the same way. */
+  function migrateScores(state) {
+    if (!state.scores || typeof state.scores !== 'object') { state.scores = {}; return; }
+    Object.keys(state.scores).forEach(function (key) {
+      var v = state.scores[key];
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        var aNum = (typeof v.a === 'number' && isFinite(v.a)) ? v.a : null;
+        var bNum = (typeof v.b === 'number' && isFinite(v.b)) ? v.b : null;
+        if (aNum === null && bNum === null) delete state.scores[key];
+        else state.scores[key] = { a: aNum, b: bNum };
+        return;
+      }
+      if (typeof v === 'string') {
+        var m = /(-?\d+(?:\.\d+)?)\s*[-:–]\s*(-?\d+(?:\.\d+)?)/.exec(v);
+        if (m) { state.scores[key] = { a: parseFloat(m[1]), b: parseFloat(m[2]) }; return; }
+      }
+      delete state.scores[key];
+    });
+  }
+
   function refreshSwitcher() {
     var names = BracketStore.listBrackets();
     els.bracketSwitch.innerHTML = '';
@@ -1917,6 +2149,7 @@
         if (!state.grandFinal) state.grandFinal = { p: [false, false], m1Winner: null, needsReset: false, m2Winner: null, champion: null };
       }
     }
+    migrateScores(state); // normalizes any pre-structured-score free-text scores
     BracketStore.setCurrentName(name);
     refreshSwitcher();
     render();
@@ -2127,6 +2360,7 @@
     if (state.type !== 'roundrobin' && typeof decoded.seedMode === 'string') {
       state.seedMode = decoded.seedMode;
     }
+    migrateScores(state); // normalizes any pre-structured-score free-text scores from an old share link
     BracketStore.saveBracket(name, state);
     render();
     return true;
