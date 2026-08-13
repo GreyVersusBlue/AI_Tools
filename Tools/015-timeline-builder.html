@@ -141,11 +141,44 @@
 
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
+  /* Tiled wall-timeline print — see printTiledPages() below. Follows the
+     spirit of 046-blank-map-generator.html's printTiledPages/tiledPrintPanel,
+     adapted for a DOM-rendered timeline instead of a canvas map: instead of
+     rasterizing to a canvas, each page is a CSS-scaled+cropped *clone* of the
+     same DOM the on-screen timeline uses, so the wall print stays crisp
+     vector/text output rather than a raster image. */
+  #tiledPrintPanel .tileRow { margin-top: .3rem; }
+  #tiledPrintPanel select { width: auto; margin: 0; }
+  #tiledPrintPanel .row2 { margin-bottom: .8rem; }
+  #tiledPrintPanel button { width: auto; display: inline-block; margin: 0 .5rem .3rem 0; }
+  #tiledPrintPages { display: none; }
+  .tiledPage { position: relative; overflow: hidden; background: #fff; }
+  .tiledPageLabel {
+    position: absolute; bottom: 4px; right: 6px; font-size: 8px; color: #888;
+    background: rgba(255,255,255,.85); padding: 1px 5px; border-radius: 2px;
+  }
+  .tiledLegendPage { display: flex; align-items: center; justify-content: center; }
+  .tiledLegendPage .tiledLegendInner { text-align: center; padding: 2rem; }
+  .tiledLegendPage h2 { margin: 0 0 1rem; font-size: 1.3rem; }
+  .tiledLegendPage .legend-row { justify-content: center; font-size: 1.1rem; gap: .6rem 1.6rem; }
+  .tiledLegendPage .legend-swatch { width: 1.1rem; height: 1.1rem; }
+
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0.4in; }
     #printArea .print-view { box-shadow: none; max-width: none; }
+
+    /* Higher specificity than the plain #printArea rule above, so a tiled
+       print never shows both containers at once. */
+    body.tiled-printing #printArea { display: none !important; }
+    body.tiled-printing #tiledPrintPages,
+    body.tiled-printing #tiledPrintPages * { visibility: visible !important; }
+    body.tiled-printing #tiledPrintPages {
+      display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+    }
+    .tiledPage { page-break-after: always; }
+    .tiledPage:last-child { page-break-after: auto; }
   }
 </style>
 </head>
@@ -263,6 +296,37 @@
         <option value="blankDates">Blank dates &mdash; student fills in when</option>
       </select>
       <button type="button" id="printBtn">Print</button>
+      <button type="button" class="secondary" id="tiledPrintToggleBtn">Wall print (tiled)&hellip;</button>
+      <div class="card" id="tiledPrintPanel" hidden>
+        <label style="margin-bottom:.4rem;">Tiled wall-timeline print</label>
+        <p class="hint">
+          Spreads the whole timeline &mdash; the spatial view above, not the
+          print list &mdash; across full-size pages scaled to fill the grid
+          you pick below, so it can be trimmed and taped together into one
+          strip for a hallway wall. Pages overlap slightly at each edge to
+          make lining them up easier. Uses whatever scale, line style, and
+          category colors are currently set.
+        </p>
+        <div class="row2">
+          <div>
+            <label for="tileCols">Columns (page width)</label>
+            <select id="tileCols">
+              <option>1</option><option>2</option><option selected>3</option>
+              <option>4</option><option>5</option><option>6</option><option>8</option>
+            </select>
+          </div>
+          <div>
+            <label for="tileRows">Rows (page height)</label>
+            <select id="tileRows">
+              <option selected>1</option><option>2</option><option>3</option><option>4</option>
+            </select>
+          </div>
+        </div>
+        <div class="tileRow">
+          <button type="button" id="btnTiledPrintGo">Print tiled pages</button>
+          <button type="button" class="secondary" id="btnTiledPrintClose">Close</button>
+        </div>
+      </div>
     </div>
 
     <div class="preview-wrap">
@@ -300,6 +364,7 @@
 </div>
 
 <div id="printArea" style="display:none;"></div>
+<div id="tiledPrintPages" aria-hidden="true"></div>
 
 <script>
 (function () {
@@ -314,6 +379,7 @@
    'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evCategory','categoryOptions','evDisplayDate','evDescription','evPhoto',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
    'saveEventBtn','cancelEditBtn','eventList','printMode','printBtn',
+   'tiledPrintToggleBtn','tiledPrintPanel','tileCols','tileRows','btnTiledPrintGo','btnTiledPrintClose','tiledPrintPages',
    'viewScreenBtn','viewPrintBtn','viewCompareBtn','screenView','printPreview','compareView',
    'timelineCanvas','screenLegend','printViewInner','compareSelect','compareCanvas','compareLegend'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -846,6 +912,183 @@
   function renderPrintPreview() {
     els.printViewInner.innerHTML = printViewHtml(els.printMode.value);
   }
+
+  /* ---------- tiled wall-timeline print ----------
+     Reuses the *spatial* timeline (renderTimelineCanvas, the same thing the
+     on-screen scrolling view shows) rather than the print-list view above —
+     printEventsHtml is a plain top-to-bottom list with no year axis (see
+     improvement prompts/015-timeline-builder.md), and a wall timeline is
+     specifically about the chronological spatial layout.
+
+     046-blank-map-generator.html's printTiledPages rasterizes its pannable
+     canvas to an image because that's how the map already renders. This
+     timeline renders as plain DOM (absolutely-positioned divs), so instead of
+     adding a canvas-rasterization step, each tile page is a CSS
+     scale()+translate() *crop* of a cloned copy of that same DOM — text and
+     lines stay vector-crisp on paper instead of becoming a raster image, and
+     there's no img.decode()-on-a-fresh-data-URL race to guard against for the
+     timeline content itself (see blank map's comments on that) since nothing
+     here is freshly rasterized.
+
+     Unlike the map (which tiles whatever region is currently zoomed/panned
+     into, at the current zoom), the timeline has no independent zoom control,
+     so cols x rows here instead sets the *target page grid* and the whole
+     timeline is scaled — uniformly, so circles and text aren't stretched — to
+     the largest size that fits entirely inside that grid. Pick more columns
+     for a bigger, more legible print; more rows if a multi-track timeline is
+     tall relative to how wide the printed grid is. */
+  var TILE_PAGE_W_IN = 10;   // usable page width per tile, inches (landscape, safely inside an 11x8.5 or A4-landscape sheet's margins)
+  var TILE_PAGE_H_IN = 7.5;  // usable page height per tile, inches
+  var CSS_PX_PER_IN = 96;    // fixed by the CSS spec, not the display's real DPI
+  var TILE_PAGE_W_PX = TILE_PAGE_W_IN * CSS_PX_PER_IN;
+  var TILE_PAGE_H_PX = TILE_PAGE_H_IN * CSS_PX_PER_IN;
+  var TILE_OVERLAP_PX = 30; // ~0.3in of shared content on each edge, for lining pages up when taping
+
+  /** Renders a fresh, full-size (unscrolled) copy of the current spatial
+      timeline into a detached, off-screen element and measures it. Returns
+      { el, width, height } — el is NOT attached to the document; the caller
+      clones it per tile page. display:inline-block makes the wrapper
+      shrink-wrap to the canvas's own explicit pixel width/height (a bare
+      block div would instead stretch to fill the viewport, which is not
+      what we want to measure). */
+  function buildTimelinePoster() {
+    var canvas = document.createElement('div');
+    canvas.className = 'timeline-canvas';
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute; left:-99999px; top:0; display:inline-block; padding:3rem 1rem; background:#fff;';
+    wrap.appendChild(canvas);
+    document.body.appendChild(wrap);
+    renderTimelineCanvas(canvas, {
+      events: state.events, eras: state.eras, tracks: state.tracks,
+      compactLabels: state.compactLabels, scaleMode: state.scaleMode
+    }, state.lineStyle, '');
+    var rect = wrap.getBoundingClientRect();
+    document.body.removeChild(wrap);
+    return { el: wrap, width: rect.width, height: rect.height };
+  }
+
+  async function printTiledPages(cols, rows) {
+    if (!state || (!state.events.length && !state.eras.length)) {
+      alert('Add at least one event first.');
+      return;
+    }
+    var btn = els.btnTiledPrintGo;
+    var origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+    try {
+      var poster = buildTimelinePoster();
+      var posterW = poster.width, posterH = poster.height;
+      if (!posterW || !posterH) { alert("Couldn't measure the timeline — try again."); return; }
+
+      // Largest uniform scale that fits the whole timeline inside the
+      // cols x rows page grid (never stretched non-uniformly, never cropped).
+      var scale = Math.min((TILE_PAGE_W_PX * cols) / posterW, (TILE_PAGE_H_PX * rows) / posterH);
+      var scaledW = posterW * scale, scaledH = posterH * scale;
+      var offsetX = (TILE_PAGE_W_PX * cols - scaledW) / 2;
+      var offsetY = (TILE_PAGE_H_PX * rows - scaledH) / 2;
+
+      var categories = TimelineLayout.collectCategories(state.events);
+      var legendNeeded = categories.length > 0;
+      var total = cols * rows + (legendNeeded ? 1 : 0);
+
+      var container = els.tiledPrintPages;
+      container.innerHTML = '';
+      var pageNum = 0;
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          pageNum++;
+          var sx = Math.max(0, c * TILE_PAGE_W_PX - TILE_OVERLAP_PX);
+          var sy = Math.max(0, r * TILE_PAGE_H_PX - TILE_OVERLAP_PX);
+          var ex = Math.min(cols * TILE_PAGE_W_PX, (c + 1) * TILE_PAGE_W_PX + TILE_OVERLAP_PX);
+          var ey = Math.min(rows * TILE_PAGE_H_PX, (r + 1) * TILE_PAGE_H_PX + TILE_OVERLAP_PX);
+
+          var page = document.createElement('div');
+          page.className = 'tiledPage';
+          page.style.width = (ex - sx) + 'px';
+          page.style.height = (ey - sy) + 'px';
+
+          var inner = poster.el.cloneNode(true);
+          inner.style.position = 'absolute';
+          inner.style.left = (offsetX - sx) + 'px';
+          inner.style.top = (offsetY - sy) + 'px';
+          inner.style.transformOrigin = '0 0';
+          inner.style.transform = 'scale(' + scale + ')';
+          inner.style.width = posterW + 'px';
+          inner.style.height = posterH + 'px';
+          page.appendChild(inner);
+
+          var label = document.createElement('div');
+          label.className = 'tiledPageLabel';
+          label.textContent = 'Page ' + pageNum + ' of ' + total + ' — row ' + (r + 1) + ' of ' + rows + ', column ' + (c + 1) + ' of ' + cols;
+          page.appendChild(label);
+
+          container.appendChild(page);
+        }
+      }
+
+      if (legendNeeded) {
+        var legendPage = document.createElement('div');
+        legendPage.className = 'tiledPage tiledLegendPage';
+        legendPage.style.width = TILE_PAGE_W_PX + 'px';
+        legendPage.style.height = TILE_PAGE_H_PX + 'px';
+        legendPage.innerHTML = '<div class="tiledLegendInner"><h2>' + escapeHtml(state.title || state.name) +
+          ' — category key</h2><div class="legend-row">' + legendHtml(state.events) + '</div></div>';
+        container.appendChild(legendPage);
+      }
+
+      // Same reason as the single-page print / blank map's tiled print: wait
+      // for every <img> (event photos) before printing so nothing prints blank.
+      await Promise.all([].slice.call(container.querySelectorAll('img')).map(function (img) {
+        return img.complete ? Promise.resolve() : new Promise(function (resolve) {
+          img.onload = resolve; img.onerror = resolve;
+        });
+      }));
+
+      setTiledPrintPageSize();
+      els.tiledPrintPanel.hidden = true;
+      document.body.classList.add('tiled-printing');
+      window.print();
+    } catch (err) {
+      alert("Couldn't build the tiled print pages (" + err.message + ").");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+    }
+  }
+
+  /** Landscape orientation for the tiled print only — removed again on
+      afterprint (below) so the plain single-page Print button isn't left
+      switched to landscape by a previous tiled print. Size left unspecified
+      (just "landscape") rather than hardcoded to Letter, so it also works on
+      A4 printers. */
+  function setTiledPrintPageSize() {
+    var styleEl = document.getElementById('tiledPageSizeStyle');
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'tiledPageSizeStyle';
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = '@page { size: landscape; margin: 0.4in; }';
+  }
+
+  window.addEventListener('afterprint', function () {
+    if (!document.body.classList.contains('tiled-printing')) return;
+    document.body.classList.remove('tiled-printing');
+    els.tiledPrintPages.innerHTML = '';
+    var styleEl = document.getElementById('tiledPageSizeStyle');
+    if (styleEl) styleEl.remove();
+  });
+
+  els.tiledPrintToggleBtn.addEventListener('click', function () {
+    els.tiledPrintPanel.hidden = !els.tiledPrintPanel.hidden;
+  });
+  els.btnTiledPrintClose.addEventListener('click', function () { els.tiledPrintPanel.hidden = true; });
+  els.btnTiledPrintGo.addEventListener('click', function () {
+    var cols = parseInt(els.tileCols.value, 10) || 1;
+    var rows = parseInt(els.tileRows.value, 10) || 1;
+    printTiledPages(cols, rows);
+  });
 
   function renderAll() {
     save();
