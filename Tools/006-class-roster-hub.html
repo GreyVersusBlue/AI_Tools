@@ -19,6 +19,13 @@
 <!-- gvb:social:end -->
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<!-- Device-to-device transfer ("Move Everything to Another Device"): manual-
+     signaling WebRTC pairing, no server — see _shared/webrtc-pair.js's header
+     for why. The QR decoder is shared site-wide; the qrcode.js encoder above
+     is already loaded for the existing per-roster QR share. -->
+<script src="../_shared/webrtc-pair.js"></script>
+<script src="../_shared/qr-scan.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -158,6 +165,13 @@
   #qrCanvas { display: block; width: 260px; height: 260px; margin: 0 auto; image-rendering: pixelated; }
   .qr-hint { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; max-width: 260px; }
 
+  /* Device-to-device transfer modal */
+  .handoff-qr { display: block; width: 220px; height: 220px; margin: 0 auto .6rem; image-rendering: pixelated; }
+  .handoff-video { display: block; width: 100%; max-width: 280px; margin: 0 auto .6rem; border-radius: 6px; background: #000; }
+  .handoff-status { font-size: .8rem; color: var(--muted); margin: .6rem 0 0; }
+  .handoff-status.bad { color: var(--err); }
+  .handoff-status.good { color: var(--good); }
+
   .preview-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin-bottom: .8rem; }
   .preview-table th, .preview-table td { border: 1px solid var(--line); padding: .3rem .45rem; text-align: left; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .preview-table th { background: #f1f0ea; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -228,6 +242,69 @@
       </div>
       <canvas id="qrCanvas"></canvas>
       <p class="qr-hint">Scanning imports a new copy of this roster on the other device &mdash; it won&rsquo;t stay in sync after that.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="handoffOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Move everything to another device" style="max-width:460px;">
+      <div class="modal-head">
+        <span>Move Everything to Another Device</span>
+        <button type="button" class="modal-close" id="handoffCloseBtn" aria-label="Close">&times;</button>
+      </div>
+
+      <div id="handoffIntro">
+        <p class="hint">Send every saved roster &mdash; names, preferred names, pronunciations, periods and courses, and everything archived &mdash; straight to another computer on the same Wi&#8209;Fi. No file is created, nothing is emailed, and nothing leaves your local network.</p>
+        <div class="btn-row">
+          <button type="button" id="handoffStartSendBtn">Send everything from this device</button>
+          <button type="button" class="secondary" id="handoffStartReceiveBtn">Receive from another device</button>
+        </div>
+      </div>
+
+      <div id="handoffStepOffer" style="display:none;">
+        <p class="hint">1. On the <b>other device</b>, open Class Roster Hub, choose &ldquo;Receive from another device,&rdquo; and scan this code &mdash; or paste it there.</p>
+        <canvas id="handoffOfferCanvas" class="handoff-qr"></canvas>
+        <textarea id="handoffOfferText" readonly rows="3" style="font-family:Consolas,monospace;font-size:.7rem;margin-bottom:.4rem;"></textarea>
+        <div class="btn-row" style="margin-bottom:.7rem;">
+          <button type="button" class="secondary small" id="handoffOfferCopyBtn">Copy code</button>
+        </div>
+        <p class="hint">2. Then bring back its reply code:</p>
+        <div class="btn-row" style="margin-bottom:.4rem;">
+          <button type="button" class="secondary small" id="handoffScanAnswerBtn">Scan their code with camera</button>
+        </div>
+        <textarea id="handoffAnswerInput" rows="3" placeholder="&hellip;or paste the other device&rsquo;s reply code here" style="font-family:Consolas,monospace;font-size:.78rem;"></textarea>
+        <div class="btn-row">
+          <button type="button" id="handoffConnectBtn">Connect &amp; send</button>
+        </div>
+        <p class="handoff-status" id="handoffSendStatus"></p>
+      </div>
+
+      <div id="handoffStepJoin" style="display:none;">
+        <p class="hint">1. Scan the code shown on the <b>sending device</b>, or paste it:</p>
+        <div class="btn-row" style="margin-bottom:.4rem;">
+          <button type="button" class="secondary small" id="handoffScanOfferBtn">Scan with camera</button>
+        </div>
+        <textarea id="handoffOfferInput" rows="3" placeholder="&hellip;or paste the sending device&rsquo;s code here" style="font-family:Consolas,monospace;font-size:.78rem;"></textarea>
+        <div class="btn-row">
+          <button type="button" id="handoffCreateAnswerBtn">Generate reply code</button>
+        </div>
+        <div id="handoffAnswerWrap" style="display:none;margin-top:.7rem;">
+          <p class="hint">2. Show this reply code back to the sending device:</p>
+          <canvas id="handoffAnswerCanvas" class="handoff-qr"></canvas>
+          <textarea id="handoffAnswerText" readonly rows="3" style="font-family:Consolas,monospace;font-size:.7rem;margin-bottom:.4rem;"></textarea>
+          <div class="btn-row">
+            <button type="button" class="secondary small" id="handoffAnswerCopyBtn">Copy code</button>
+          </div>
+        </div>
+        <p class="handoff-status" id="handoffJoinStatus"></p>
+      </div>
+
+      <div id="handoffStepApply" style="display:none;">
+        <p class="hint" id="handoffApplySummary"></p>
+        <div class="btn-row">
+          <button type="button" id="handoffApplyBtn">Import onto this device</button>
+          <button type="button" class="secondary" id="handoffDiscardBtn">Discard</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -435,6 +512,14 @@
         <ul class="archive-list" id="archiveList" style="max-height:300px;"></ul>
         <p class="empty-hint" id="archiveEmptyHint" style="padding:.6rem 0;">Nothing archived yet.</p>
       </div>
+
+      <div class="card">
+        <div class="card-title">Move Everything to Another Device</div>
+        <p class="hint">Every saved roster, its preferred names and pronunciations, and everything archived &mdash; sent straight to another computer over the same Wi&#8209;Fi, device to device. No file to email, upload, or lose.</p>
+        <div class="btn-row">
+          <button class="secondary small" id="handoffBtn" type="button">Send / Receive&hellip;</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -482,7 +567,13 @@
    'importOverlay', 'importCloseBtn', 'importCancelBtn', 'importConfirmBtn', 'importHasHeader', 'importFlip',
    'importReplace', 'mapMode', 'mapNameCol', 'mapFirstCol', 'mapLastCol', 'mapOneWrap', 'mapFirstWrap', 'mapLastWrap',
    'importPreviewWrap', 'importSummary',
-   'confirmOverlay', 'confirmCloseBtn', 'confirmCancelBtn', 'confirmOkBtn', 'confirmTitle', 'confirmBody', 'confirmDeps'
+   'confirmOverlay', 'confirmCloseBtn', 'confirmCancelBtn', 'confirmOkBtn', 'confirmTitle', 'confirmBody', 'confirmDeps',
+   'handoffBtn', 'handoffOverlay', 'handoffCloseBtn', 'handoffIntro', 'handoffStartSendBtn', 'handoffStartReceiveBtn',
+   'handoffStepOffer', 'handoffOfferCanvas', 'handoffOfferText', 'handoffOfferCopyBtn', 'handoffScanAnswerBtn', 'handoffAnswerInput',
+   'handoffConnectBtn', 'handoffSendStatus',
+   'handoffStepJoin', 'handoffScanOfferBtn', 'handoffOfferInput', 'handoffCreateAnswerBtn', 'handoffAnswerWrap',
+   'handoffAnswerCanvas', 'handoffAnswerText', 'handoffAnswerCopyBtn', 'handoffJoinStatus',
+   'handoffStepApply', 'handoffApplySummary', 'handoffApplyBtn', 'handoffDiscardBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var currentName = null;
@@ -2010,6 +2101,7 @@
     if (!els.qrOverlay.hidden) els.qrOverlay.hidden = true;
     if (!els.importOverlay.hidden) closeImport();
     if (!els.confirmOverlay.hidden) closeConfirm();
+    if (!els.handoffOverlay.hidden) closeHandoff();
   });
 
   function looksLikeRosterPayload(obj) {
@@ -2059,6 +2151,314 @@
     showMsg('Imported shared roster as "' + name + '".', true);
     return true;
   }
+
+  // ── Device-to-device transfer ("Move Everything to Another Device") ───────
+  /* One-shot bulk transfer over the same manual-signaling WebRTC pairing
+     Classroom Timer's "Mirror to a device" and School Layout Visualizer's
+     "Hand off an in-progress layout" already use (_shared/webrtc-pair.js —
+     see its header for why there's no signaling server and no STUN/TURN:
+     same-Wi-Fi/LAN only, by design). Unlike either of those, this is not a
+     live feed — connect, send everything once, done — so it follows Layout
+     Visualizer's sv-handoff.js shape (chunked JSON over the data channel)
+     rather than Classroom Timer's small continuously-pushed snapshots.
+
+     "Everything" is defined the same way the dependency scanner above
+     already defines "this tool's own data": OWN_KEYS, not a hand-picked
+     subset, so a future fifth key doesn't quietly fall out of a transfer
+     that still claims to move "every roster, sidecar record, and archive".
+     Concretely, in this tool's actual schema that's:
+       - every active roster, via snapshotRoster() — the same helper the
+         archive/year-rollover code already uses, which folds in the
+         roster's crh_students_v1 sidecar (meta, per-student preferred name
+         and pronunciation) and its own crh_archived_students withdrawn list;
+       - every individually archived roster and every archived school year
+         from crh_archive_v1.
+
+     Import is additive only, never a destructive overwrite: each incoming
+     roster goes through restoreSnapshot(), the exact function "Restore" on
+     an archived roster or year already uses, which auto-renames on a name
+     collision rather than replacing what's already on the receiving device.
+     A teacher moving to a new laptop with nothing on it yet gets an exact
+     copy; a teacher who already has rosters here loses nothing of their own. */
+  var HANDOFF_CHUNK_SIZE = 12000; // chars per data-channel message — mirrors schedule-visualizer/sv-handoff.js's own limit, comfortably under every browser's practical per-message ceiling
+  var handoffPc = null, handoffChannel = null, handoffScan = null, handoffPendingPayload = null;
+
+  function buildHandoffPayload() {
+    if (currentName) saveRoster(true); // flush on-screen edits first, same as Archive/New-year already do
+    var names = Object.keys(loadAll()).sort(function (a, b) { return a.localeCompare(b); });
+    var archiveDb = loadRosterArchive();
+    return {
+      v: 1, kind: 'crh-handoff', exportedAt: Date.now(),
+      activeRosters: names.map(snapshotRoster),
+      archivedRosters: archiveDb.rosters,
+      archivedYears: archiveDb.years
+    };
+  }
+
+  function applyHandoffPayload(payload) {
+    if (!payload || payload.kind !== 'crh-handoff' || !Array.isArray(payload.activeRosters)) {
+      throw new Error('That doesn’t look like a Class Roster Hub transfer.');
+    }
+    var addedActive = 0;
+    payload.activeRosters.forEach(function (snap) {
+      if (snap && typeof snap.name === 'string' && Array.isArray(snap.names) && restoreSnapshot(snap, '')) addedActive++;
+    });
+    var addedArchived = 0, addedYears = 0;
+    if (Array.isArray(payload.archivedRosters) && payload.archivedRosters.length) {
+      var db = loadRosterArchive();
+      db.rosters = payload.archivedRosters.concat(db.rosters);
+      addedArchived = payload.archivedRosters.length;
+      saveRosterArchive(db);
+    }
+    if (Array.isArray(payload.archivedYears) && payload.archivedYears.length) {
+      var db2 = loadRosterArchive();
+      db2.years = payload.archivedYears.concat(db2.years);
+      addedYears = payload.archivedYears.length;
+      saveRosterArchive(db2);
+    }
+    return { addedActive: addedActive, totalActive: payload.activeRosters.length, addedArchived: addedArchived, addedYears: addedYears };
+  }
+
+  function handoffSendChunked(channel, payload) {
+    var json = JSON.stringify(payload);
+    var total = Math.max(1, Math.ceil(json.length / HANDOFF_CHUNK_SIZE));
+    channel.send(JSON.stringify({ t: 'meta', total: total }));
+    for (var i = 0; i < total; i++) {
+      channel.send(JSON.stringify({ t: 'chunk', i: i, data: json.slice(i * HANDOFF_CHUNK_SIZE, (i + 1) * HANDOFF_CHUNK_SIZE) }));
+    }
+    channel.send(JSON.stringify({ t: 'end' }));
+  }
+
+  /** Reassembles chunked messages arriving on `channel`. */
+  function handoffAttachReceiver(channel, onProgress, onComplete, onError) {
+    var total = 0, parts = [];
+    channel.addEventListener('message', function (e) {
+      var msg;
+      try { msg = JSON.parse(e.data); } catch (err) { return; }
+      if (msg.t === 'meta') { total = msg.total; parts.length = 0; }
+      else if (msg.t === 'chunk') {
+        parts[msg.i] = msg.data;
+        if (onProgress) onProgress(parts.filter(function (p) { return p !== undefined; }).length, total);
+      } else if (msg.t === 'end') {
+        try { onComplete(JSON.parse(parts.join(''))); }
+        catch (err) { if (onError) onError(err); }
+      }
+    });
+  }
+
+  function handoffSetStatus(id, text, cls) {
+    els[id].textContent = text;
+    els[id].className = 'handoff-status' + (cls ? ' ' + cls : '');
+  }
+
+  function stopHandoffScan() { if (handoffScan) { handoffScan.stop(); handoffScan = null; } }
+
+  function teardownHandoff() {
+    stopHandoffScan();
+    if (handoffPc) { try { handoffPc.close(); } catch (e) {} }
+    handoffPc = null; handoffChannel = null; handoffPendingPayload = null;
+  }
+
+  function openHandoff() {
+    els.handoffIntro.style.display = '';
+    els.handoffStepOffer.style.display = 'none';
+    els.handoffStepJoin.style.display = 'none';
+    els.handoffStepApply.style.display = 'none';
+    els.handoffAnswerInput.value = '';
+    els.handoffOfferInput.value = '';
+    els.handoffOfferText.value = '';
+    els.handoffAnswerText.value = '';
+    els.handoffAnswerWrap.style.display = 'none';
+    handoffSetStatus('handoffSendStatus', '');
+    handoffSetStatus('handoffJoinStatus', '');
+    els.handoffOverlay.hidden = false;
+  }
+  function closeHandoff() {
+    teardownHandoff();
+    els.handoffOverlay.hidden = true;
+  }
+  els.handoffBtn.addEventListener('click', openHandoff);
+  els.handoffCloseBtn.addEventListener('click', closeHandoff);
+  els.handoffOverlay.addEventListener('mousedown', function (e) { if (e.target === els.handoffOverlay) closeHandoff(); });
+
+  // ── Send side ────────────────────────────────────────────────────────────
+  /* The channel's 'open' listener is attached the moment the channel exists
+     (right after createOffer resolves) rather than after applyAnswer — a
+     data channel can only reach 'open' once a remote description has been
+     applied, which can't happen before the user pastes/scans a reply, so
+     attaching this early can never race a fired-before-we-listened event.
+     Attaching it *after* applyAnswer instead — tempting, since that's the
+     step that makes 'open' possible at all — was tried first and is wrong:
+     on a fast local connection 'open' can fire before that .then() callback
+     even runs, and a listener added after an event has already fired never
+     sees it. */
+  els.handoffStartSendBtn.addEventListener('click', function () {
+    els.handoffIntro.style.display = 'none';
+    els.handoffStepOffer.style.display = '';
+    handoffSetStatus('handoffSendStatus', 'Preparing a pairing code…');
+    window.WebRTCPair.createOffer('crh-handoff').then(function (result) {
+      handoffPc = result.pc;
+      handoffChannel = result.channel;
+      handoffChannel.addEventListener('open', function () {
+        try {
+          var payload = buildHandoffPayload();
+          handoffSendChunked(handoffChannel, payload);
+          handoffSetStatus('handoffSendStatus',
+            'Sent ' + plural(payload.activeRosters.length, 'roster') +
+            (payload.archivedRosters.length || payload.archivedYears.length ? ', plus the archive,' : '') +
+            ' to the other device. It will show a confirmation once it applies the import.', 'good');
+        } catch (e) {
+          handoffSetStatus('handoffSendStatus', 'Send failed: ' + e.message, 'bad');
+        }
+      });
+      handoffChannel.addEventListener('close', function () {
+        handoffSetStatus('handoffSendStatus', 'Connection closed.');
+      });
+      drawShareQr(els.handoffOfferCanvas, result.offerPayload);
+      els.handoffOfferText.value = result.offerPayload;
+      handoffSetStatus('handoffSendStatus', 'Show this to the other device, or paste its reply below once you have it.');
+      els.handoffOfferCopyBtn.onclick = function () {
+        navigator.clipboard.writeText(result.offerPayload).then(function () {
+          handoffSetStatus('handoffSendStatus', 'Code copied.', 'good');
+        }).catch(function () {});
+      };
+    }).catch(function (err) {
+      handoffSetStatus('handoffSendStatus', 'Could not start pairing: ' + err.message, 'bad');
+    });
+  });
+
+  function handoffConnectWithAnswer(answerPayload) {
+    if (!handoffPc) return;
+    handoffSetStatus('handoffSendStatus', 'Connecting…');
+    window.WebRTCPair.applyAnswer(handoffPc, answerPayload).then(function () {
+      setTimeout(function () {
+        if (!handoffChannel || handoffChannel.readyState !== 'open') {
+          handoffSetStatus('handoffSendStatus', 'Still trying — make sure both devices are on the same Wi-Fi.', 'bad');
+        }
+      }, 8000);
+    }).catch(function (err) {
+      handoffSetStatus('handoffSendStatus', err.message || 'Could not read that reply code.', 'bad');
+    });
+  }
+
+  els.handoffConnectBtn.addEventListener('click', function () {
+    var val = els.handoffAnswerInput.value.trim();
+    if (!val) { handoffSetStatus('handoffSendStatus', 'Paste the reply code first, or scan it.', 'bad'); return; }
+    handoffConnectWithAnswer(val);
+  });
+
+  els.handoffScanAnswerBtn.addEventListener('click', function () {
+    els.handoffStepOffer.insertAdjacentHTML('beforeend',
+      '<video id="handoffOfferScanVideo" class="handoff-video" autoplay muted playsinline></video>' +
+      '<div class="btn-row" id="handoffOfferScanRow"><button type="button" class="secondary small" id="handoffCancelOfferScanBtn">Cancel scan</button></div>');
+    els.handoffScanAnswerBtn.disabled = true;
+    function cleanup() {
+      var v = document.getElementById('handoffOfferScanVideo'); if (v) v.remove();
+      var row = document.getElementById('handoffOfferScanRow'); if (row) row.remove();
+      els.handoffScanAnswerBtn.disabled = false;
+    }
+    document.getElementById('handoffCancelOfferScanBtn').addEventListener('click', function () { stopHandoffScan(); cleanup(); });
+    handoffScan = window.QRScan.scanQRFromCamera(document.getElementById('handoffOfferScanVideo'), {
+      onResult: function (text) { stopHandoffScan(); cleanup(); els.handoffAnswerInput.value = text; handoffConnectWithAnswer(text); },
+      onError: function (err) { handoffSetStatus('handoffSendStatus', 'Camera unavailable: ' + err.message, 'bad'); cleanup(); }
+    });
+  });
+
+  // ── Receive side ─────────────────────────────────────────────────────────
+  function renderHandoffApply(payload) {
+    els.handoffStepJoin.style.display = 'none';
+    els.handoffStepApply.style.display = '';
+    var activeN = Array.isArray(payload.activeRosters) ? payload.activeRosters.length : 0;
+    var archN = Array.isArray(payload.archivedRosters) ? payload.archivedRosters.length : 0;
+    var yearN = Array.isArray(payload.archivedYears) ? payload.archivedYears.length : 0;
+    els.handoffApplySummary.textContent =
+      'Received ' + plural(activeN, 'roster') +
+      (archN ? ', ' + plural(archN, 'archived roster') : '') +
+      (yearN ? ', ' + plural(yearN, 'archived school year') : '') +
+      '. Importing adds these onto whatever is already saved on this device — nothing here gets overwritten or deleted; a roster sharing a name with one already here is kept as a separate, renamed copy.';
+  }
+
+  els.handoffStartReceiveBtn.addEventListener('click', function () {
+    els.handoffIntro.style.display = 'none';
+    els.handoffStepJoin.style.display = '';
+  });
+
+  function handoffCreateAnswerFromOffer(offerText) {
+    handoffSetStatus('handoffJoinStatus', 'Generating reply code…');
+    window.WebRTCPair.createAnswer(offerText, function (channel) {
+      handoffChannel = channel;
+      handoffAttachReceiver(channel,
+        function (i, total) { handoffSetStatus('handoffJoinStatus', 'Receiving the roster data… (' + i + '/' + total + ')'); },
+        function (payload) { handoffPendingPayload = payload; renderHandoffApply(payload); },
+        function (err) { handoffSetStatus('handoffJoinStatus', 'Transfer failed: ' + err.message, 'bad'); }
+      );
+      channel.addEventListener('open', function () {
+        handoffSetStatus('handoffJoinStatus', 'Connected — waiting for the roster data…');
+      });
+      channel.addEventListener('close', function () {
+        if (!handoffPendingPayload) handoffSetStatus('handoffJoinStatus', 'Connection closed.');
+      });
+    }).then(function (result) {
+      handoffPc = result.pc;
+      drawShareQr(els.handoffAnswerCanvas, result.answerPayload);
+      els.handoffAnswerText.value = result.answerPayload;
+      els.handoffAnswerWrap.style.display = '';
+      els.handoffAnswerCopyBtn.onclick = function () {
+        navigator.clipboard.writeText(result.answerPayload).then(function () {
+          handoffSetStatus('handoffJoinStatus', 'Code copied.', 'good');
+        }).catch(function () {});
+      };
+      handoffSetStatus('handoffJoinStatus', 'Show this reply code back to the sending device…');
+    }).catch(function (err) {
+      handoffSetStatus('handoffJoinStatus', err.message || 'Could not read that code.', 'bad');
+    });
+  }
+
+  els.handoffCreateAnswerBtn.addEventListener('click', function () {
+    var val = els.handoffOfferInput.value.trim();
+    if (!val) { handoffSetStatus('handoffJoinStatus', 'Paste the sending device’s code first, or scan it.', 'bad'); return; }
+    handoffCreateAnswerFromOffer(val);
+  });
+
+  els.handoffScanOfferBtn.addEventListener('click', function () {
+    els.handoffStepJoin.insertAdjacentHTML('beforeend',
+      '<video id="handoffJoinScanVideo" class="handoff-video" autoplay muted playsinline></video>' +
+      '<div class="btn-row" id="handoffJoinScanRow"><button type="button" class="secondary small" id="handoffCancelJoinScanBtn">Cancel scan</button></div>');
+    els.handoffScanOfferBtn.disabled = true;
+    function cleanup() {
+      var v = document.getElementById('handoffJoinScanVideo'); if (v) v.remove();
+      var row = document.getElementById('handoffJoinScanRow'); if (row) row.remove();
+      els.handoffScanOfferBtn.disabled = false;
+    }
+    document.getElementById('handoffCancelJoinScanBtn').addEventListener('click', function () { stopHandoffScan(); cleanup(); });
+    handoffScan = window.QRScan.scanQRFromCamera(document.getElementById('handoffJoinScanVideo'), {
+      onResult: function (text) { stopHandoffScan(); cleanup(); els.handoffOfferInput.value = text; handoffCreateAnswerFromOffer(text); },
+      onError: function (err) { handoffSetStatus('handoffJoinStatus', 'Camera unavailable: ' + err.message, 'bad'); cleanup(); }
+    });
+  });
+
+  els.handoffApplyBtn.addEventListener('click', function () {
+    if (!handoffPendingPayload) return;
+    try {
+      var result = applyHandoffPayload(handoffPendingPayload);
+      refreshSwitcher();
+      renderRosterArchive();
+      if (!currentName) {
+        var all = loadAll();
+        var remaining = Object.keys(all);
+        if (remaining.length) loadRosterByName(remaining[0]);
+      }
+      showMsg('Imported ' + plural(result.addedActive, 'roster') +
+        (result.addedArchived || result.addedYears ? ' plus its archive' : '') + ' from another device.', true);
+      closeHandoff();
+    } catch (e) {
+      handoffSetStatus('handoffJoinStatus', 'Could not apply the transfer: ' + e.message, 'bad');
+    }
+  });
+  els.handoffDiscardBtn.addEventListener('click', function () {
+    handoffPendingPayload = null;
+    closeHandoff();
+  });
 
   // ── Init ─────────────────────────────────────────────────────────────────
   (function init() {
