@@ -94,6 +94,13 @@
 
   .stat-warn { color: var(--err); font-size: .78rem; font-weight: 600; margin: -.35rem 0 .6rem; }
   .entry-row .warn-badge { color: var(--err); font-size: .72rem; font-weight: 700; margin-left: .5rem; }
+  .entry-row .kb-badge { color: var(--muted); font-size: .72rem; margin-left: .5rem; }
+
+  .save-warn {
+    display: none; background: #fff; border: 1.5px solid var(--err); border-radius: 8px;
+    color: var(--err); font-size: .85rem; font-weight: 600; padding: .6rem .8rem; margin: 0 0 1rem;
+  }
+  .save-warn.show { display: block; }
 
   @media print {
     body * { visibility: hidden; }
@@ -121,6 +128,8 @@
       <p class="hint" style="margin:.4rem 0 0; max-width: 220px;">Prints fronts, then backs (row-mirrored) &mdash; flip the whole printed stack along its long edge before reprinting for the backs.</p>
     </div>
   </div>
+
+  <div class="save-warn" id="saveWarn" role="alert"></div>
 
   <div class="card">
     <h2 id="formTitle">Add a card</h2>
@@ -162,14 +171,14 @@
 
 <div id="printArea"></div>
 
+<script src="historical-trading-card-maker/htcm-store.js"></script>
+<script src="historical-trading-card-maker/htcm-image.js"></script>
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'htcm_cards_v1';
-  var SIZE_KEY = 'htcm_card_size_v1';
   var els = {};
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
-   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint'].forEach(function (id) {
+   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -179,9 +188,9 @@
     fill: 'The layout this tool printed before card size was a choice: three across a 7.7-inch band, about ' +
       '2.43 × 3.4 inches each. Slightly under standard size in both directions, so these will not sit in a card sleeve.'
   };
-  var cardSize = 'standard';
-
-  var entries = [];
+  var doc = HtcmStore.load(); // v2 document: { v, cards, settings } (v1 migrated on first load)
+  var entries = doc.cards;
+  var cardSize = doc.settings.size;
   var editingId = null; // id of the entry currently loaded into the form, or null when adding new
   var KEEP_IMAGE = {}; // sentinel passed to addEntry(): "no new file was chosen while editing — keep the existing image"
 
@@ -193,12 +202,24 @@
   }
   function parseLines(text) { return text.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); }
 
-  function load() {
-    try { entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { entries = []; }
-    if (!Array.isArray(entries)) entries = [];
+  function totalImageKb() {
+    var kb = 0;
+    entries.forEach(function (e) { if (e.image) kb += HtcmImage.approxKb(e.image.src); });
+    return kb;
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); } catch (e) { /* storage full/blocked, e.g. too many images */ }
+    doc.cards = entries;
+    doc.settings.size = cardSize;
+    var result = HtcmStore.save(doc);
+    if (result.ok) {
+      els.saveWarn.classList.remove('show');
+    } else {
+      els.saveWarn.textContent = '⚠ Couldn’t save your cards — browser storage is full. ' +
+        'Photos take the most room (about ' + totalImageKb() + ' KB across this deck); ' +
+        'delete a card or two, or remove some photos, and the deck will save again.';
+      els.saveWarn.classList.add('show');
+    }
+    return result.ok;
   }
 
   function applyCardSize() {
@@ -208,7 +229,7 @@
   }
   els.cardSize.addEventListener('change', function () {
     cardSize = els.cardSize.value === 'fill' ? 'fill' : 'standard';
-    try { localStorage.setItem(SIZE_KEY, cardSize); } catch (e) { /* storage full/blocked */ }
+    save();
     applyCardSize();
   });
 
@@ -229,11 +250,12 @@
   function renderEntries() {
     els.entryCount.textContent = entries.length;
     els.entriesWrap.innerHTML = entries.map(function (e) {
-      var img = e.image ? '<img class="thumb" src="' + e.image + '" alt="">' : '';
+      var img = e.image ? '<img class="thumb" src="' + e.image.src + '" alt="">' : '';
+      var kb = e.image ? '<span class="kb-badge">' + HtcmImage.approxKb(e.image.src) + ' KB photo</span>' : '';
       var warn = statOverflowRisk(e.stats.length, !!e.image) ? '<span class="warn-badge">&#9888; may overflow when printed</span>' : '';
       return '<div class="entry-row" data-id="' + e.id + '">' + img +
         '<div class="info"><div class="ename">' + escapeHtml(e.name) + '</div>' +
-        '<div class="estats">' + e.stats.length + ' stats &middot; ' + e.facts.length + ' facts' + warn + '</div></div>' +
+        '<div class="estats">' + e.stats.length + ' stats &middot; ' + e.facts.length + ' facts' + kb + warn + '</div></div>' +
         '<button type="button" class="secondary small" data-edit="' + e.id + '">Edit</button>' +
         '<button type="button" class="danger small" data-del="' + e.id + '">Delete</button></div>';
     }).join('');
@@ -313,12 +335,16 @@
       var idx2 = -1;
       for (var i = 0; i < entries.length; i++) { if (entries[i].id === editingId) { idx2 = i; break; } }
       if (idx2 !== -1) {
-        var finalImage = image === KEEP_IMAGE ? entries[idx2].image : (image || null);
-        entries[idx2] = { id: editingId, name: name, image: finalImage, stats: stats, facts: facts };
+        var prev = entries[idx2];
+        var finalImage = image === KEEP_IMAGE ? prev.image : (image || null);
+        entries[idx2] = { id: editingId, name: name, image: finalImage, stats: stats, facts: facts, meta: prev.meta, theme: prev.theme };
       }
       editingId = null;
     } else {
-      entries.push({ id: uid(), name: name, image: (image === KEEP_IMAGE ? null : image) || null, stats: stats, facts: facts });
+      entries.push({
+        id: uid(), name: name, image: (image === KEEP_IMAGE ? null : image) || null, stats: stats, facts: facts,
+        meta: { rarity: 'common', setName: '', cardNo: 0, setSize: 0, stars: 0 }, theme: null
+      });
     }
     save(); renderEntries(); updateFormMode();
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
@@ -327,10 +353,15 @@
   els.addEntryBtn.addEventListener('click', function () {
     var file = els.newImage.files && els.newImage.files[0];
     if (!file) { addEntry(editingId ? KEEP_IMAGE : null); return; }
-    var reader = new FileReader();
-    reader.onload = function () { addEntry(reader.result); };
-    reader.onerror = function () { addEntry(editingId ? KEEP_IMAGE : null); };
-    reader.readAsDataURL(file);
+    HtcmImage.readAndDownscale(file, function (scaled) {
+      addEntry({
+        src: scaled.src, w: scaled.w, h: scaled.h,
+        crop: { x: 0.5, y: 0.5, scale: 1 }, shape: 'rrect', filter: 'none'
+      });
+    }, function (msg) {
+      alert(msg + ' The card was saved without that photo.');
+      addEntry(editingId ? KEEP_IMAGE : null);
+    });
   });
 
   /* ---------- print: row-mirrored duplex front/back grids ----------
@@ -367,7 +398,7 @@
 
   function frontCardHtml(e) {
     if (!e) return '<div class="trading-card blank"></div>';
-    var img = e.image ? '<img src="' + e.image + '" alt="">' : '';
+    var img = e.image ? '<img src="' + e.image.src + '" alt="">' : '';
     var stats = e.stats.map(function (s) { return '<div><b>' + escapeHtml(s.label) + ':</b> ' + escapeHtml(s.value) + '</div>'; }).join('');
     return '<div class="trading-card">' + img + '<div class="cname">' + escapeHtml(e.name) + '</div><div class="cstats">' + stats + '</div></div>';
   }
@@ -398,8 +429,6 @@
   });
 
   /* ---------- boot ---------- */
-  load();
-  try { cardSize = localStorage.getItem(SIZE_KEY) === 'fill' ? 'fill' : 'standard'; } catch (e) { /* ignore */ }
   applyCardSize();
   renderEntries();
   updateFormMode();

@@ -148,7 +148,25 @@ const [fronts, backs] = await page.evaluate(() => {
 eq(fronts.slice(0, 3).join(','), 'Harriet Tubman,Sojourner Truth,Frederick Douglass', 'fronts print in entry order');
 eq(backs.slice(0, 3).join(','), 'Frederick Douglass,Sojourner Truth,Harriet Tubman', 'backs are still row-mirrored for the flip');
 
-/* ── 6. no console noise anywhere in the run ─────────────────────────────── */
+/* ── 6. a v1 deck (bare data-URL images, separate size key) migrates ─────── */
+await page.evaluate(() => {
+  localStorage.clear();
+  const px = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  localStorage.setItem('htcm_cards_v1', JSON.stringify([
+    { id: 'c1', name: 'Cleopatra', image: px, stats: [{ label: 'Reign', value: '51-30 BC' }], facts: ['Ruled Egypt.'] },
+  ]));
+  localStorage.setItem('htcm_card_size_v1', 'fill');
+});
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page);
+eq(await page.textContent('#entryCount'), '1', 'a v1 deck still loads');
+eq(await page.inputValue('#cardSize'), 'fill', 'the v1 size choice migrates');
+const v2 = await page.evaluate(() => JSON.parse(localStorage.getItem('htcm_cards_v2') || 'null'));
+ok(v2 && v2.v === 2 && v2.cards.length === 1, 'a v2 document was written on first load');
+eq(v2 && v2.cards[0].image && v2.cards[0].image.shape, 'rrect', 'the bare v1 image string became an image object with defaults');
+ok(await page.evaluate(() => !!localStorage.getItem('htcm_cards_v1')), 'the v1 key is kept as a one-release backup');
+
+/* ── 7. no console noise anywhere in the run ─────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
