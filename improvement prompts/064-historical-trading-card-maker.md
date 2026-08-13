@@ -4,11 +4,67 @@
 **Support folder:** `Tools/historical-trading-card-maker/` — test suite only;
 the tool itself is still one self-contained file.
 
-**Current description (from README):** Batch-add cards with a photo/flag image, label:value stats, and back-of-card facts, printed as matching card-front and card-back grids.
+**Current description (from README):** Build collectible-style research cards with a live preview: era themes and decorative frames, rarity foil tiers, photo crop/shape editing, stat bars, set numbering, named decks, and roster batch-add — printed as duplex front/back grids or exported as PNG / PDF / zip.
 
 ---
 
 ## Status
+
+**2026-08-13 — Visual-upgrade round (branch
+`claude/trading-card-builder-upgrades-ntodvr`).** The big redesign, shipped
+in six commits, each independently green (`npm run test:trading-cards`, now
+55 + 34 assertions across `smoke-card-size.mjs` and a new
+`smoke-photo.mjs`; `npm run check:dedupe` clean throughout). The tool is no
+longer a single self-contained file: per repo convention it now loads
+seven plain-global modules from `Tools/historical-trading-card-maker/`
+(`htcm-store/image/render/frames/themes/photo/export.js`), all precached
+(`sw.js` v103 → v109 across the round).
+
+- **Schema v2 + honesty:** versioned per-deck document with
+  repair-on-load (gvb-save discipline); photos downscale to 1000px JPEG on
+  import (fifth copy of that pattern — `_shared/image-import.js` extraction
+  is still the recorded follow-up); storage-full saves show a banner with
+  per-photo KB instead of silently dropping work. v1 keys migrate and are
+  kept one release as backup.
+- **Live preview:** a flippable, true-size card beside the form renders
+  through the same `htcm-render.js` the print path uses. The stat-overflow
+  warning now *measures* the laid-out card (retiring the line-count
+  heuristic and the "re-derive per size" debt). The preview counter-inverts
+  per-face under the a11y dark-mode filter (a filter on an ancestor would
+  flatten the 3D flip).
+- **Themes/frames/rarity:** seven era themes generated from one data array
+  (CSS, swatch picker, and canvas exporter all read the same values);
+  procedural stroke-SVG frames on the cam-borders model; rare/epic/
+  legendary swap frame strokes for silver/purple/gold SVG gradients plus a
+  corner badge. Print-first: 4.5:1 ink contrast, ≤6% alpha textures,
+  `print-color-adjust: exact`, foil defs duplicated into `#printArea`.
+- **Photo editor:** non-destructive `{crop:{x,y,scale}, shape, filter}`
+  against the downscaled master; pan/zoom editor whose viewport is the
+  card's real photo window; six shapes from normalized paths consumed as
+  objectBoundingBox clipPaths (DOM/print) and Path2D (export); sepia/gray
+  filters. `photoStyle()` and `sourceRect()` sit adjacent in
+  `htcm-photo.js` as the anti-drift defense.
+- **Flash, all printable:** `Label: 7/10` stat bars with the number inside
+  the bar, keyword stat icons, 0–5 stars, "n / total · SET NAME" strip
+  with a Number-the-deck button, embossed name plate, and a static foil
+  glint on rare+ (no animation anywhere, per the print-fidelity decision).
+- **Export:** hand-drawn 300 DPI canvas renderer (no html2canvas, no
+  foreignObject) reusing the theme data + SVG strings; per-card PNG pair,
+  whole-deck jsPDF letter PDF with the same duplex mirroring as print, and
+  a JSZip batch of all PNGs. **This was the third-consumer moment:**
+  `paginate`/`mirrorPageRows` extracted to `_shared/duplex-print.js`
+  (vfg still carries its own copy — migrating it is a separate change).
+- **Named decks + roster:** vfg-store triple-key shape
+  (`htcm:list` / `htcm:data:<name>` / `htcm:current`), Decks panel
+  (new/rename/delete/switch, theme travels with the deck), and
+  batch-add-from-roster (one blank card per pasted line, set name
+  prefilled) — clearing the backlog item.
+
+**Deliberately not done this round:** the P3 student share-link fill-in
+mode (still the natural next step, now easier since a card is
+identified by deck + name and exports its own PNG), the flag library
+(open question below stands), and pointing vocab-flashcards at
+`_shared/duplex-print.js`.
 
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: add a card with a name, an optional uploaded photo/flag

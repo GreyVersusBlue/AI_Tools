@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Historical Figure / Country Trading Card Maker</title>
-<meta name="description" content="Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list.">
+<meta name="description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, and PNG/PDF export, from a roster or an assigned list.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AsPerMyLessonPlan.com">
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/064-historical-trading-card-maker.html">
 <meta property="og:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
-<meta property="og:description" content="Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list.">
+<meta property="og:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, and PNG/PDF export, from a roster or an assigned list.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
-<meta name="twitter:description" content="Batch-generate printable trading cards (photo/flag + stats on the front, facts on the back) for a research project, from a roster or an assigned list.">
+<meta name="twitter:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, and PNG/PDF export, from a roster or an assigned list.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='5' width='18' height='22' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='13' r='3.5' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 22c1-3 4-4 6-4s5 1 6 4' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -41,6 +41,34 @@
   }
   textarea { resize: vertical; min-height: 4rem; }
   .add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+  @media (min-width: 1000px) { .add-grid { grid-template-columns: 1fr 1fr auto; } }
+  @media (max-width: 999px) { .preview-col { grid-column: 1 / -1; } }
+
+  /* ---- live preview: the real print card, flippable ---- */
+  .preview-col { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+  .htcm-preview-stage { perspective: 1200px; }
+  .htcm-flipper {
+    position: relative; width: 2.5in; height: 3.5in; cursor: pointer;
+    transform-style: preserve-3d; transition: transform .55s;
+  }
+  .htcm-preview-stage.size-fill .htcm-flipper { width: 2.43in; height: 3.4in; }
+  .htcm-flipper.flipped { transform: rotateY(180deg); }
+  .htcm-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .htcm-face.face-back { transform: rotateY(180deg); }
+  .htcm-face .trading-card { width: 100%; height: 100%; background: #fff; }
+  /* a11y dark mode is a whole-page invert filter (see _shared/a11y.css); the
+     preview must show true print colors, so each face counter-inverts —
+     exactly the treatment a11y.css gives photos — and the photo inside then
+     needs the page-wide img counter-invert switched off to avoid a double
+     negative. Faces, not the stage: a filter on the stage or flipper would
+     flatten the 3D flip (CSS filters force transform-style: flat). */
+  html.a11y-filter-dark .htcm-face { filter: invert(1) hue-rotate(180deg); }
+  html.a11y-filter-dark .htcm-face img { filter: none; }
+
+  /* offscreen host for measuring real card layout (stat-overflow warning) */
+  .htcm-measure { position: absolute; left: -10000px; top: 0; width: 2.5in; }
+  .htcm-measure.size-fill { width: 2.43in; }
+  .htcm-measure .trading-card { width: 100%; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -65,7 +93,17 @@
   .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .2in; margin-bottom: .3in; }
   .print-page { page-break-after: always; }
   .print-page:last-child { page-break-after: auto; }
-  .trading-card { border: 1.5px solid #333; border-radius: 8px; height: 3.4in; padding: .2in; display: flex; flex-direction: column; page-break-inside: avoid; }
+  .trading-card {
+    border: 1.5px solid #333; border-radius: 8px; height: 3.4in; padding: .2in;
+    display: flex; flex-direction: column; page-break-inside: avoid;
+    position: relative; overflow: hidden;
+    /* themed papers/textures must survive the print dialog's default
+       "no backgrounds" behavior, or every theme prints as plain white */
+    print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  /* decorative frame overlay (htcm-frames.js): absolutely positioned so it
+     adds zero layout size — card geometry must not drift */
+  .card-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
   /* Standard trading-card stock is 2.5in × 3.5in — the size that fits a card
      sleeve or a nine-pocket page. The default layout instead divides whatever
@@ -81,19 +119,99 @@
   .size-fill .card-grid { max-width: 7.7in; margin-left: auto; margin-right: auto; }
   .size-standard .card-grid { grid-template-columns: repeat(3, 2.5in); justify-content: center; gap: .15in; }
   .size-standard .trading-card { height: 3.5in; width: 2.5in; border-radius: 6px; padding: .15in; }
-  .size-standard .trading-card img { height: 1.35in; }
+  .size-standard .pwin { height: 1.35in; }
   .size-standard .trading-card .cname { font-size: .95rem; }
   .trading-card.blank { visibility: hidden; }
-  .trading-card img { width: 100%; height: 1.4in; object-fit: cover; border-radius: 4px; margin-bottom: .1in; }
-  .trading-card .cname { font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: .1in; }
+
+  /* the shaped photo window (htcm-photo.js applies the crop; the clip-path
+     shapes are <clipPath> defs from htcm-frames.js). Medallion shapes
+     (circle/shield/arch) are centered boxes and keep their size on every
+     card preset, so their rules sit after the .size-standard override. */
+  .pwin { width: 100%; height: 1.4in; margin-bottom: .1in; position: relative; overflow: hidden; flex-shrink: 0; }
+  .pwin img { width: 100%; height: 100%; display: block; }
+  .pwin-rim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .9; }
+  .pwin.medallion { margin-left: auto; margin-right: auto; }
+  .pwin.shape-circle { width: 1.5in; height: 1.5in; }
+  .pwin.shape-shield { width: 1.45in; height: 1.6in; }
+  .pwin.shape-arch { width: 1.45in; height: 1.7in; }
+  .trading-card .cname {
+    font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: .1in;
+    /* a subtle embossed plate: tonal edges that print as a gentle relief on
+       any paper and vanish gracefully on a rough B/W copier */
+    padding: .015in .04in; border-radius: 3px;
+    background: linear-gradient(rgba(255,255,255,.35), rgba(0,0,0,.05));
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.07);
+    text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(0,0,0,.18);
+  }
+  .trading-card .cstars { text-align: center; font-size: .7rem; letter-spacing: .06em; margin: -.06in 0 .05in; }
   .trading-card .cstats { font-size: .74rem; flex: 1; overflow: hidden; }
   .trading-card .cstats div { margin-bottom: .05in; }
+  .trading-card .stat-ico { width: .11in; height: .11in; margin-right: .03in; vertical-align: -.015in; }
+  .cstat-meter { display: flex; align-items: center; gap: .04in; }
+  .cstat-meter .meter-track {
+    flex: 1; position: relative; height: .12in; margin-left: .03in;
+    border: 1px solid currentColor; border-radius: .06in; overflow: hidden;
+    background: rgba(255,255,255,.5);
+  }
+  .cstat-meter .meter-fill { position: absolute; top: 0; bottom: 0; left: 0; opacity: .4; }
+  .cstat-meter .meter-num {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: .58rem; font-weight: 700;
+  }
+  .trading-card .cset {
+    margin-top: auto; padding-top: .04in; border-top: 1px solid currentColor;
+    display: flex; justify-content: space-between; gap: .1in;
+    font-size: .58rem; letter-spacing: .05em; text-transform: uppercase; opacity: .85;
+  }
+  /* static foil glint for rare+ cards: one soft diagonal light band — plain
+     alpha compositing (no blend modes, no animation) so every print pipeline
+     renders it as a sheen or not at all, never as garbage */
+  .trading-card .holo {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 32%, rgba(200,190,160,.18) 45%,
+      rgba(255,255,255,.4) 50%, rgba(180,170,150,.18) 55%, transparent 68%);
+  }
   .trading-card.back .cfacts { font-size: .76rem; }
   .trading-card.back .cfacts li { margin-bottom: .05in; }
   .section-label { font-size: .8rem; color: var(--muted); margin: .3in 0 .1in; text-align: center; text-transform: uppercase; letter-spacing: .05em; }
 
   .stat-warn { color: var(--err); font-size: .78rem; font-weight: 600; margin: -.35rem 0 .6rem; }
   .entry-row .warn-badge { color: var(--err); font-size: .72rem; font-weight: 700; margin-left: .5rem; }
+  .entry-row .kb-badge { color: var(--muted); font-size: .72rem; margin-left: .5rem; }
+
+  .save-warn {
+    display: none; background: #fff; border: 1.5px solid var(--err); border-radius: 8px;
+    color: var(--err); font-size: .85rem; font-weight: 600; padding: .6rem .8rem; margin: 0 0 1rem;
+  }
+  .save-warn.show { display: block; }
+
+  .theme-swatches { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+  .theme-swatch {
+    font-size: .78rem; font-weight: 700; color: #222; text-shadow: 0 1px 2px rgba(255,255,255,.85);
+    border: 2px solid var(--line-strong); border-radius: 8px; padding: .45rem .7rem;
+  }
+  .theme-swatch:hover { border-color: var(--muted); }
+  .theme-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+  /* ---- photo editor overlay (htcm-photo.js) ---- */
+  .photo-editor-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-editor {
+    background: #fff; border-radius: 10px; padding: 1rem 1.2rem;
+    width: min(380px, 92vw); max-height: 92vh; overflow: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  }
+  .photo-editor h3 { margin: 0 0 .6rem; font-size: 1rem; }
+  .pe-stage { display: flex; justify-content: center; margin-bottom: .4rem; }
+  .pe-viewport { position: relative; overflow: hidden; background: #eee; touch-action: none; }
+  .pe-hint { margin: 0 0 .6rem; }
+  .pe-zoom { width: 100%; margin-bottom: .6rem; }
+  .pe-row { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }
+  .pe-row .selected { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
+  .pe-actions { display: flex; gap: .5rem; }
+  .pe-spacer { flex: 1; }
 
   @media print {
     body * { visibility: hidden; }
@@ -118,8 +236,23 @@
     </div>
     <div>
       <button class="secondary" id="printBtn">Print cards</button>
-      <p class="hint" style="margin:.4rem 0 0; max-width: 220px;">Prints fronts, then backs (row-mirrored) &mdash; flip the whole printed stack along its long edge before reprinting for the backs.</p>
+      <button class="secondary" id="pdfBtn">Download PDF</button>
+      <button class="secondary" id="zipBtn">All PNGs (zip)</button>
+      <p class="hint" style="margin:.4rem 0 0; max-width: 260px;">Print and PDF lay out fronts, then backs (row-mirrored) &mdash; flip the whole printed stack along its long edge before reprinting for the backs.</p>
     </div>
+  </div>
+
+  <div class="save-warn" id="saveWarn" role="alert"></div>
+
+  <div class="card">
+    <h2>Decks</h2>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-start;">
+      <select id="deckSelect" style="width:auto; flex:1; min-width:160px;"></select>
+      <button type="button" class="secondary" id="newDeckBtn">New deck</button>
+      <button type="button" class="secondary" id="renameDeckBtn">Rename</button>
+      <button type="button" class="danger" id="deleteDeckBtn">Delete</button>
+    </div>
+    <p class="hint" style="margin-bottom:0;">Each deck keeps its own cards, theme, and set name &mdash; e.g. one per class period or unit.</p>
   </div>
 
   <div class="card">
@@ -131,21 +264,74 @@
         <label for="newImage">Photo / flag image (optional)</label>
         <input type="file" id="newImage" accept="image/*">
         <p class="hint" id="editImageHint" style="display:none;">Editing keeps the current image unless you choose a new file above.</p>
+        <button type="button" class="secondary small" id="adjustBtn" style="display:none; margin-bottom:.6rem;">Adjust photo: crop, shape &amp; filter</button>
+        <label for="newRarity">Rarity</label>
+        <select id="newRarity">
+          <option value="common">Common</option>
+          <option value="rare">Rare &mdash; silver foil &#9670;</option>
+          <option value="epic">Epic &mdash; purple foil &#10038;&#10038;</option>
+          <option value="legendary">Legendary &mdash; gold foil &#9819;</option>
+        </select>
+        <label for="newStars">Star rating</label>
+        <select id="newStars">
+          <option value="0">None</option>
+          <option value="1">&#9733;</option>
+          <option value="2">&#9733;&#9733;</option>
+          <option value="3">&#9733;&#9733;&#9733;</option>
+          <option value="4">&#9733;&#9733;&#9733;&#9733;</option>
+          <option value="5">&#9733;&#9733;&#9733;&#9733;&#9733;</option>
+        </select>
       </div>
       <div>
         <label for="newStats">Stats, one per line: Label: Value</label>
-        <textarea id="newStats" placeholder="Born: 1822&#10;Died: 1913&#10;Known for: Underground Railroad"></textarea>
-        <p class="stat-warn" id="statWarn" style="display:none;">&#9888; That's a lot of stats &mdash; they may get clipped on the printed card. Consider trimming the list.</p>
+        <textarea id="newStats" placeholder="Born: 1822&#10;Died: 1913&#10;Known for: Underground Railroad&#10;Courage: 9/10 &larr; becomes a stat bar"></textarea>
+        <p class="stat-warn" id="statWarn" style="display:none;">&#9888; Those stats don't all fit &mdash; they'll be clipped on the printed card. Trim the list or remove the photo.</p>
+      </div>
+      <div class="preview-col">
+        <label id="previewLabel">Live preview</label>
+        <div class="htcm-preview-stage size-standard" id="previewStage">
+          <div class="htcm-flipper" id="previewFlipper" role="button" tabindex="0"
+               aria-label="Card preview — press Enter to flip between front and back">
+            <div class="htcm-face face-front" id="previewFront"></div>
+            <div class="htcm-face face-back" id="previewBack"></div>
+          </div>
+        </div>
+        <button type="button" class="secondary small" id="flipBtn">Flip to back</button>
+        <button type="button" class="secondary small" id="pngBtn">Download PNG</button>
+        <p class="hint" style="margin:0; text-align:center; max-width: 2.5in;">Exactly what prints &mdash; it updates as you type. Click the card to flip it.</p>
       </div>
     </div>
     <label for="newFacts">Facts for the back, one per line</label>
     <textarea id="newFacts" placeholder="Escaped slavery in 1849.&#10;Led dozens of enslaved people to freedom."></textarea>
     <button id="addEntryBtn">Add card</button>
     <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+    <button type="button" class="secondary" id="rosterBtn">Batch-add from roster&hellip;</button>
+  </div>
+
+  <div class="photo-editor-overlay" id="rosterOverlay" style="display:none;">
+    <div class="photo-editor" role="dialog" aria-label="Batch-add from a roster">
+      <h3>Batch-add from a roster</h3>
+      <p class="hint">One name per line &mdash; a historical figure, a country, or a student&rsquo;s assigned topic. Each line becomes a blank card to fill in.</p>
+      <textarea id="rosterText" style="min-height:8rem;" placeholder="Harriet Tubman&#10;Frederick Douglass&#10;Sojourner Truth"></textarea>
+      <div class="pe-actions">
+        <span class="pe-spacer"></span>
+        <button type="button" class="secondary" id="rosterCancelBtn">Cancel</button>
+        <button type="button" id="rosterAddBtn">Add cards</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">
-    <h2>Print layout</h2>
+    <h2>Card design &amp; print layout</h2>
+    <label>Deck theme</label>
+    <p class="hint">Applies to every card in the deck. Every theme is built to stay legible on a black-and-white printer.</p>
+    <div class="theme-swatches" id="themeSwatches"></div>
+    <label for="setNameInput">Set name &amp; numbering</label>
+    <p class="hint">Stamps &ldquo;n / total &middot; SET NAME&rdquo; along the bottom of every card front.</p>
+    <div style="display:flex; gap:.5rem; align-items:flex-start;">
+      <input type="text" id="setNameInput" placeholder="e.g. Ancient Rome">
+      <button type="button" class="secondary" id="numberBtn" style="flex-shrink:0;">Number the deck</button>
+    </div>
     <label for="cardSize">Card size</label>
     <select id="cardSize">
       <option value="standard">Standard trading card &mdash; 2.5 &times; 3.5 in (6 per page)</option>
@@ -162,14 +348,26 @@
 
 <div id="printArea"></div>
 
+<script src="historical-trading-card-maker/htcm-store.js"></script>
+<script src="historical-trading-card-maker/htcm-image.js"></script>
+<script src="historical-trading-card-maker/htcm-frames.js"></script>
+<script src="historical-trading-card-maker/htcm-themes.js"></script>
+<script src="historical-trading-card-maker/htcm-photo.js"></script>
+<script src="historical-trading-card-maker/htcm-render.js"></script>
+<script src="../_shared/duplex-print.js"></script>
+<script src="historical-trading-card-maker/htcm-export.js"></script>
+<script src="../_shared/vendor/jspdf/jspdf.umd.min.js" defer></script>
+<script src="../_shared/vendor/jszip/jszip.min.js" defer></script>
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'htcm_cards_v1';
-  var SIZE_KEY = 'htcm_card_size_v1';
   var els = {};
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
-   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint'].forEach(function (id) {
+   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
+   'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
+   'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
+   'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
+   'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -179,61 +377,80 @@
     fill: 'The layout this tool printed before card size was a choice: three across a 7.7-inch band, about ' +
       '2.43 × 3.4 inches each. Slightly under standard size in both directions, so these will not sit in a card sleeve.'
   };
-  var cardSize = 'standard';
-
-  var entries = [];
+  var stored = HtcmStore.loadCurrent(); // named-deck store; legacy flat v2/v1 migrate into "My cards"
+  var deckName = stored.name;
+  var doc = stored.doc; // v2 document: { v, cards, settings }
+  var entries = doc.cards;
+  var cardSize = doc.settings.size;
   var editingId = null; // id of the entry currently loaded into the form, or null when adding new
-  var KEEP_IMAGE = {}; // sentinel passed to addEntry(): "no new file was chosen while editing — keep the existing image"
+  var previewId = null; // id of a saved card shown in the preview, or null = the live form draft
 
   function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  var escapeHtml = HtcmRender.escapeHtml;
   function parseLines(text) { return text.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); }
 
-  function load() {
-    try { entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { entries = []; }
-    if (!Array.isArray(entries)) entries = [];
+  function totalImageKb() {
+    var kb = 0;
+    entries.forEach(function (e) { if (e.image) kb += HtcmImage.approxKb(e.image.src); });
+    return kb;
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); } catch (e) { /* storage full/blocked, e.g. too many images */ }
+    doc.cards = entries;
+    doc.settings.size = cardSize;
+    var result = HtcmStore.saveDeck(deckName, doc);
+    if (result.ok) {
+      els.saveWarn.classList.remove('show');
+    } else {
+      els.saveWarn.textContent = '⚠ Couldn’t save your cards — browser storage is full. ' +
+        'Photos take the most room (about ' + totalImageKb() + ' KB across this deck); ' +
+        'delete a card or two, or remove some photos, and the deck will save again.';
+      els.saveWarn.classList.add('show');
+    }
+    return result.ok;
   }
 
   function applyCardSize() {
     els.printArea.className = 'size-' + cardSize;
+    els.previewStage.className = 'htcm-preview-stage size-' + cardSize;
     els.cardSize.value = cardSize;
     els.cardSizeHint.textContent = SIZE_HINTS[cardSize] || '';
+    updatePreview();
   }
   els.cardSize.addEventListener('change', function () {
     cardSize = els.cardSize.value === 'fill' ? 'fill' : 'standard';
-    try { localStorage.setItem(SIZE_KEY, cardSize); } catch (e) { /* storage full/blocked */ }
+    save();
     applyCardSize();
   });
 
-  /* ---------- stat-overflow heuristic ----------
+  /* ---------- stat-overflow check ----------
      The front card's stats box (.cstats) is a fixed-height flex area with
-     overflow:hidden — so print output can't grow the card to fit — past a
-     rough line count it clips instead of wrapping into view. This isn't
-     pixel-exact (font size, label length, and text wrapping all matter
-     too), just enough to warn a teacher before they print and discover
-     clipped stats. A card with a photo has roughly half the vertical room
-     of one without, since the image eats into the same fixed card height. */
-  var MAX_STAT_LINES_WITH_IMAGE = 6;
-  var MAX_STAT_LINES_NO_IMAGE = 11;
-  function statOverflowRisk(statCount, hasImage) {
-    return statCount > (hasImage ? MAX_STAT_LINES_WITH_IMAGE : MAX_STAT_LINES_NO_IMAGE);
+     overflow:hidden — print output can't grow the card to fit, so past a
+     point stats clip. Earlier rounds guessed with a line-count heuristic
+     derived against the old 3.4in card; now the check renders the real card
+     offscreen at the chosen print size and asks the box itself whether it
+     overflows, so font size, label length, wrapping, and the photo's
+     presence are all accounted for automatically. */
+  var measureHost = document.createElement('div');
+  document.body.appendChild(measureHost);
+  function entryOverflows(entry) {
+    measureHost.className = 'htcm-measure size-' + cardSize;
+    measureHost.innerHTML = frontCardHtml(entry);
+    var box = measureHost.querySelector('.cstats');
+    var over = !!box && box.scrollHeight > box.clientHeight + 1;
+    measureHost.innerHTML = '';
+    return over;
   }
 
   function renderEntries() {
     els.entryCount.textContent = entries.length;
     els.entriesWrap.innerHTML = entries.map(function (e) {
-      var img = e.image ? '<img class="thumb" src="' + e.image + '" alt="">' : '';
-      var warn = statOverflowRisk(e.stats.length, !!e.image) ? '<span class="warn-badge">&#9888; may overflow when printed</span>' : '';
+      var img = e.image ? '<img class="thumb" src="' + e.image.src + '" alt="">' : '';
+      var kb = e.image ? '<span class="kb-badge">' + HtcmImage.approxKb(e.image.src) + ' KB photo</span>' : '';
+      var warn = entryOverflows(e) ? '<span class="warn-badge">&#9888; stats clip when printed</span>' : '';
       return '<div class="entry-row" data-id="' + e.id + '">' + img +
         '<div class="info"><div class="ename">' + escapeHtml(e.name) + '</div>' +
-        '<div class="estats">' + e.stats.length + ' stats &middot; ' + e.facts.length + ' facts' + warn + '</div></div>' +
+        '<div class="estats">' + e.stats.length + ' stats &middot; ' + e.facts.length + ' facts' + kb + warn + '</div></div>' +
+        (e.image ? '<button type="button" class="secondary small" data-adjust="' + e.id + '">Photo</button>' : '') +
         '<button type="button" class="secondary small" data-edit="' + e.id + '">Edit</button>' +
         '<button type="button" class="danger small" data-del="' + e.id + '">Delete</button></div>';
     }).join('');
@@ -243,28 +460,81 @@
     if (delId) {
       entries = entries.filter(function (e) { return e.id !== delId; });
       if (editingId === delId) cancelEdit();
-      save(); renderEntries();
+      if (previewId === delId) previewId = null;
+      save(); renderEntries(); updatePreview();
       return;
     }
     var editId = ev.target.getAttribute('data-edit');
-    if (editId) startEdit(editId);
+    if (editId) { startEdit(editId); return; }
+    var adjId = ev.target.getAttribute('data-adjust');
+    if (adjId) {
+      var target = entries.filter(function (e) { return e.id === adjId; })[0];
+      if (target && target.image) {
+        HtcmPhoto.openEditor(target.image, function (updated) {
+          target.image = updated;
+          save(); renderEntries();
+          setFlip(false); previewCard(adjId);
+        });
+      }
+      return;
+    }
+    var row = ev.target.closest('.entry-row');
+    if (row) { setFlip(false); previewCard(row.getAttribute('data-id')); }
   });
 
   /* ---------- add / edit form ---------- */
-  function currentFormHasImage() {
-    if (els.newImage.files && els.newImage.files[0]) return true;
-    if (editingId) {
-      var existing = entries.filter(function (e) { return e.id === editingId; })[0];
-      return !!(existing && existing.image);
-    }
-    return false;
+  var pendingImage = null; // image chosen in the form (downscaled eagerly on pick) but not yet saved to a card
+
+  function parseStats(text) {
+    return parseLines(text).map(function (line) {
+      var idx = line.indexOf(':');
+      return idx === -1 ? { label: line, value: '' } : { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
+    });
+  }
+  function editingEntry() {
+    return editingId ? entries.filter(function (e) { return e.id === editingId; })[0] || null : null;
+  }
+  /** The card the form currently describes — the single parse path shared by
+      the live preview, the overflow warning, and addEntry(). */
+  function parseFormEntry() {
+    var existing = editingEntry();
+    return {
+      id: editingId || 'draft',
+      name: els.newName.value.trim(),
+      image: pendingImage || (existing ? existing.image : null),
+      stats: parseStats(els.newStats.value),
+      facts: parseLines(els.newFacts.value),
+      meta: {
+        rarity: els.newRarity.value || 'common',
+        setName: existing ? existing.meta.setName : '',
+        cardNo: existing ? existing.meta.cardNo : 0,
+        setSize: existing ? existing.meta.setSize : 0,
+        stars: parseInt(els.newStars.value, 10) || 0
+      },
+      theme: existing ? existing.theme : null
+    };
   }
   function updateStatWarning() {
-    var count = parseLines(els.newStats.value).length;
-    els.statWarn.style.display = statOverflowRisk(count, currentFormHasImage()) ? '' : 'none';
+    els.statWarn.style.display = entryOverflows(parseFormEntry()) ? '' : 'none';
   }
-  els.newStats.addEventListener('input', updateStatWarning);
-  els.newImage.addEventListener('change', updateStatWarning);
+
+  els.newImage.addEventListener('change', function () {
+    var file = els.newImage.files && els.newImage.files[0];
+    if (!file) { pendingImage = null; previewId = null; updatePreview(); return; }
+    HtcmImage.readAndDownscale(file, function (scaled) {
+      pendingImage = {
+        src: scaled.src, w: scaled.w, h: scaled.h,
+        crop: { x: 0.5, y: 0.5, scale: 1 }, shape: 'rrect', filter: 'none'
+      };
+      previewId = null;
+      updatePreview();
+    }, function (msg) {
+      pendingImage = null;
+      els.newImage.value = '';
+      alert(msg);
+      updatePreview();
+    });
+  });
 
   function updateFormMode() {
     if (editingId) {
@@ -289,93 +559,283 @@
     els.newStats.value = e.stats.map(function (s) { return s.value ? (s.label + ': ' + s.value) : s.label; }).join('\n');
     els.newFacts.value = e.facts.join('\n');
     els.newImage.value = ''; // file inputs can't be prefilled; existing image is kept unless a new file is chosen
+    els.newRarity.value = e.meta.rarity;
+    els.newStars.value = String(e.meta.stars || 0);
+    pendingImage = null;
+    previewId = null;
     updateFormMode();
+    updatePreview();
     els.newName.focus();
     els.newName.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   function cancelEdit() {
     editingId = null;
+    pendingImage = null;
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
+    els.newRarity.value = 'common';
+    els.newStars.value = '0';
     updateFormMode();
+    updatePreview();
   }
   els.cancelEditBtn.addEventListener('click', cancelEdit);
 
-  function addEntry(image) {
-    var name = els.newName.value.trim();
-    if (!name) { alert('Add a name at least.'); return; }
-    var stats = parseLines(els.newStats.value).map(function (line) {
-      var idx = line.indexOf(':');
-      return idx === -1 ? { label: line, value: '' } : { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
-    });
-    var facts = parseLines(els.newFacts.value);
-
+  function addEntry() {
+    var draft = parseFormEntry();
+    if (!draft.name) { alert('Add a name at least.'); return; }
     if (editingId) {
-      var idx2 = -1;
-      for (var i = 0; i < entries.length; i++) { if (entries[i].id === editingId) { idx2 = i; break; } }
-      if (idx2 !== -1) {
-        var finalImage = image === KEEP_IMAGE ? entries[idx2].image : (image || null);
-        entries[idx2] = { id: editingId, name: name, image: finalImage, stats: stats, facts: facts };
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].id === editingId) { draft.id = editingId; entries[i] = draft; break; }
       }
       editingId = null;
     } else {
-      entries.push({ id: uid(), name: name, image: (image === KEEP_IMAGE ? null : image) || null, stats: stats, facts: facts });
+      draft.id = uid();
+      entries.push(draft);
     }
+    pendingImage = null;
     save(); renderEntries(); updateFormMode();
+    previewCard(draft.id); // keep showing the card that was just saved
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
+    els.newRarity.value = 'common';
+    els.newStars.value = '0';
   }
+  els.addEntryBtn.addEventListener('click', addEntry);
 
-  els.addEntryBtn.addEventListener('click', function () {
-    var file = els.newImage.files && els.newImage.files[0];
-    if (!file) { addEntry(editingId ? KEEP_IMAGE : null); return; }
-    var reader = new FileReader();
-    reader.onload = function () { addEntry(reader.result); };
-    reader.onerror = function () { addEntry(editingId ? KEEP_IMAGE : null); };
-    reader.readAsDataURL(file);
+  /* ---------- exports ---------- */
+  function busy(btn, label, fn) {
+    var old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = label;
+    fn(function () { btn.disabled = false; btn.textContent = old; });
+  }
+  els.pngBtn.addEventListener('click', function () {
+    busy(els.pngBtn, 'Rendering…', function (done) {
+      HtcmExport.exportPng(previewEntry(), renderOpts(), done);
+    });
+  });
+  els.pdfBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    busy(els.pdfBtn, 'Rendering…', function (done) {
+      HtcmExport.exportPdf(entries, renderOpts(), done);
+    });
+  });
+  els.zipBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    busy(els.zipBtn, 'Rendering…', function (done) {
+      HtcmExport.exportZip(entries, renderOpts(), done);
+    });
+  });
+
+  /* ---------- named decks ---------- */
+  function renderDeckSelect() {
+    var names = HtcmStore.listDecks();
+    els.deckSelect.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeHtml(n) + '"' + (n === deckName ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+  /** Points the whole UI at a different deck document. */
+  function openDeck(name, deckDoc) {
+    deckName = name;
+    doc = deckDoc;
+    entries = doc.cards;
+    cardSize = doc.settings.size;
+    editingId = null;
+    previewId = null;
+    pendingImage = null;
+    els.setNameInput.value = (entries.length && entries[0].meta.setName) || '';
+    cancelEdit(); // clears the form and re-renders the preview
+    renderDeckSelect();
+    renderThemeSwatches();
+    applyCardSize();
+    renderEntries();
+  }
+  els.deckSelect.addEventListener('change', function () {
+    var name = els.deckSelect.value;
+    var deckDoc = HtcmStore.loadDeck(name);
+    if (deckDoc) openDeck(name, deckDoc);
+    else renderDeckSelect(); // stale option — resync the list
+  });
+  els.newDeckBtn.addEventListener('click', function () {
+    var name = (window.prompt('Name for the new deck?', '') || '').trim();
+    if (!name) return;
+    if (HtcmStore.listDecks().indexOf(name) !== -1) { alert('A deck with that name already exists.'); return; }
+    // a fresh deck inherits the current theme, since a teacher usually wants
+    // the same look across periods
+    var fresh = HtcmStore.repairDoc({ settings: { theme: doc.settings.theme, size: cardSize } });
+    HtcmStore.saveDeck(name, fresh);
+    openDeck(name, fresh);
+  });
+  els.renameDeckBtn.addEventListener('click', function () {
+    var name = (window.prompt('Rename this deck to:', deckName) || '').trim();
+    if (!name || name === deckName) return;
+    if (HtcmStore.listDecks().indexOf(name) !== -1) { alert('A deck with that name already exists.'); return; }
+    var old = deckName;
+    deckName = name;
+    if (save()) HtcmStore.deleteDeck(old);
+    else deckName = old; // storage full — keep the old name rather than lose the deck
+    renderDeckSelect();
+  });
+  els.deleteDeckBtn.addEventListener('click', function () {
+    if (!window.confirm('Delete the deck “' + deckName + '” and all its cards? This can’t be undone.')) return;
+    HtcmStore.deleteDeck(deckName);
+    var names = HtcmStore.listDecks();
+    if (names.length) {
+      openDeck(names[0], HtcmStore.loadDeck(names[0]) || HtcmStore.repairDoc(null));
+    } else {
+      var fresh = HtcmStore.repairDoc(null);
+      HtcmStore.saveDeck(HtcmStore.DEFAULT_DECK, fresh);
+      openDeck(HtcmStore.DEFAULT_DECK, fresh);
+    }
+  });
+
+  /* ---------- roster batch-add ---------- */
+  els.rosterBtn.addEventListener('click', function () {
+    els.rosterOverlay.style.display = '';
+    els.rosterText.focus();
+  });
+  els.rosterCancelBtn.addEventListener('click', function () {
+    els.rosterOverlay.style.display = 'none';
+  });
+  els.rosterOverlay.addEventListener('click', function (ev) {
+    if (ev.target === els.rosterOverlay) els.rosterOverlay.style.display = 'none';
+  });
+  els.rosterAddBtn.addEventListener('click', function () {
+    var names = parseLines(els.rosterText.value);
+    if (!names.length) { alert('Paste at least one name.'); return; }
+    var setName = els.setNameInput.value.trim();
+    names.forEach(function (name) {
+      entries.push({
+        id: uid(), name: name, image: null, stats: [], facts: [],
+        meta: { rarity: 'common', setName: setName, cardNo: 0, setSize: 0, stars: 0 }, theme: null
+      });
+    });
+    els.rosterText.value = '';
+    els.rosterOverlay.style.display = 'none';
+    save(); renderEntries(); updatePreview();
+  });
+
+  /* ---------- set name & numbering ---------- */
+  els.numberBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    var setName = els.setNameInput.value.trim();
+    entries.forEach(function (e, i) {
+      e.meta.setName = setName;
+      e.meta.cardNo = i + 1;
+      e.meta.setSize = entries.length;
+    });
+    save(); renderEntries(); updatePreview();
+  });
+
+  /* ---------- theme picker ---------- */
+  function renderThemeSwatches() {
+    els.themeSwatches.innerHTML = HtcmThemes.THEMES.map(function (t) {
+      var sel = t.key === doc.settings.theme;
+      return '<button type="button" class="theme-swatch' + (sel ? ' selected' : '') + '" data-theme="' + t.key +
+        '" style="background: linear-gradient(135deg, ' + t.paper + ' 55%, ' + t.accent + ')"' +
+        ' aria-pressed="' + sel + '">' + escapeHtml(t.label) + '</button>';
+    }).join('');
+  }
+  els.themeSwatches.addEventListener('click', function (ev) {
+    var key = ev.target.getAttribute('data-theme');
+    if (!key) return;
+    doc.settings.theme = key;
+    save();
+    renderThemeSwatches();
+    renderEntries(); // the overflow badge re-measures under the new theme's font
+    updatePreview();
+  });
+
+  /* live preview needs rarity and star changes reflected immediately */
+  els.newRarity.addEventListener('change', schedulePreview);
+  els.newStars.addEventListener('change', schedulePreview);
+
+  /* ---------- photo adjust (form) ----------
+     The editor works on the form's image state: a freshly picked file
+     (pendingImage), or — while editing a card that keeps its photo — a copy
+     of the saved image, which becomes pendingImage so Save-changes persists
+     the adjustments. */
+  els.adjustBtn.addEventListener('click', function () {
+    var img = formImage();
+    if (!img) return;
+    HtcmPhoto.openEditor(img, function (updated) {
+      pendingImage = updated;
+      previewId = null;
+      updatePreview();
+    });
   });
 
   /* ---------- print: row-mirrored duplex front/back grids ----------
-     paginate() and mirrorPageRows() below are adapted from VocabLayout in
-     Tools/vocab-flashcard-generator/vfg-layout.js (the sibling Vocabulary
-     Flashcard & Word Wall Generator tool), which already solved this same
-     front/back print-alignment problem for its own card grids. The logic
-     is copied in — not loaded via a shared <script> tag — so this file
-     stays self-contained. */
+     paginate() and mirrorPageRows() started life in the Vocabulary Flashcard
+     Generator, were hand-copied here, and moved to _shared/duplex-print.js
+     when the PDF exporter became their third consumer — the extraction
+     trigger recorded in this tool's improvement prompt. */
   var PRINT_COLS = 3;
   var PRINT_ROWS = 2; // 6 cards/page: fits this tool's 3.4in-tall card comfortably within a letter page alongside the section label
   var PRINT_PER_PAGE = PRINT_COLS * PRINT_ROWS;
+  var paginate = DuplexPrint.paginate;
+  var mirrorPageRows = DuplexPrint.mirrorPageRows;
 
-  function paginate(items, perPage) {
-    var pages = [];
-    for (var i = 0; i < items.length; i += perPage) pages.push(items.slice(i, i + perPage));
-    return pages;
+  function renderOpts() { return { theme: doc.settings.theme }; }
+  function frontCardHtml(e) { return HtcmRender.frontHtml(e, renderOpts()); }
+  function backCardHtml(e) { return HtcmRender.backHtml(e, renderOpts()); }
+
+  /* ---------- live preview: the same render the printer gets ---------- */
+  var flipped = false;
+  function setFlip(f) {
+    flipped = f;
+    els.previewFlipper.classList.toggle('flipped', flipped);
+    els.flipBtn.textContent = flipped ? 'Flip to front' : 'Flip to back';
   }
-  /** Reverse item order within each row of a page so that printing this
-      page on the back of the matching front page (flipping the whole
-      printed stack over along its long edge, then running it back
-      through the printer) lines each back card up under its matching
-      front card. Incomplete rows are padded with `null` (blank cards)
-      before mirroring so the padding also ends up on the correct side. */
-  function mirrorPageRows(pageItems, cols) {
-    var mirrored = [];
-    for (var i = 0; i < pageItems.length; i += cols) {
-      var row = pageItems.slice(i, i + cols);
-      while (row.length < cols) row.push(null);
-      mirrored = mirrored.concat(row.slice().reverse());
+  function previewEntry() {
+    if (previewId) {
+      var e = entries.filter(function (x) { return x.id === previewId; })[0];
+      if (e) return e;
+      previewId = null;
     }
-    return mirrored;
+    var draft = parseFormEntry();
+    if (!draft.name && !draft.stats.length && !draft.facts.length && !draft.image) {
+      // nothing typed yet — show a placeholder card instead of an empty frame
+      draft.name = 'Your card';
+      draft.stats = [{ label: 'Stats', value: 'appear here' }];
+      draft.facts = ['Facts you type appear on the back.'];
+    }
+    return draft;
   }
-
-  function frontCardHtml(e) {
-    if (!e) return '<div class="trading-card blank"></div>';
-    var img = e.image ? '<img src="' + e.image + '" alt="">' : '';
-    var stats = e.stats.map(function (s) { return '<div><b>' + escapeHtml(s.label) + ':</b> ' + escapeHtml(s.value) + '</div>'; }).join('');
-    return '<div class="trading-card">' + img + '<div class="cname">' + escapeHtml(e.name) + '</div><div class="cstats">' + stats + '</div></div>';
+  function formImage() {
+    var existing = editingEntry();
+    return pendingImage || (existing ? existing.image : null);
   }
-  function backCardHtml(e) {
-    if (!e) return '<div class="trading-card back blank"></div>';
-    var facts = e.facts.map(function (f) { return '<li>' + escapeHtml(f) + '</li>'; }).join('') || '<li>&mdash;</li>';
-    return '<div class="trading-card back"><div class="cname">' + escapeHtml(e.name) + '</div><ul class="cfacts">' + facts + '</ul></div>';
+  function updatePreview() {
+    var e = previewEntry();
+    els.previewFront.innerHTML = frontCardHtml(e);
+    els.previewBack.innerHTML = backCardHtml(e);
+    els.adjustBtn.style.display = formImage() ? '' : 'none';
+    updateStatWarning();
   }
+  var previewTimer = null;
+  function schedulePreview() {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(function () {
+      previewTimer = null;
+      previewId = null; // typing switches the preview back to the form draft
+      updatePreview();
+    }, 100);
+  }
+  /* anything that points the preview at a saved card must cancel a pending
+     debounce, or the stale timer fires ~100ms later and yanks the preview
+     back to the (possibly just-cleared) form draft */
+  function previewCard(id) {
+    if (previewTimer) { clearTimeout(previewTimer); previewTimer = null; }
+    previewId = id;
+    updatePreview();
+  }
+  ['newName', 'newStats', 'newFacts'].forEach(function (id) {
+    els[id].addEventListener('input', schedulePreview);
+  });
+  els.previewFlipper.addEventListener('click', function () { setFlip(!flipped); });
+  els.previewFlipper.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setFlip(!flipped); }
+  });
+  els.flipBtn.addEventListener('click', function () { setFlip(!flipped); });
 
   els.printBtn.addEventListener('click', function () {
     if (!entries.length) { alert('Add at least one card first.'); return; }
@@ -392,15 +852,21 @@
       return '<div class="print-page"><div class="card-grid">' + mirrored.map(backCardHtml).join('') + '</div></div>';
     });
     els.printArea.innerHTML =
+      // a second copy of the shared SVG defs (foil gradients, clip shapes)
+      // lives inside the print subtree: browsers have been unreliable about
+      // resolving url(#…) into parts of the page the print stylesheet hides
+      HtcmFrames.defsSvg() +
       '<div class="section-label">Card fronts</div>' + frontPages.join('') +
       '<div class="section-label">Card backs (row-mirrored to align when you flip the printed front stack and reprint)</div>' + backPages.join('');
     window.print();
   });
 
   /* ---------- boot ---------- */
-  load();
-  try { cardSize = localStorage.getItem(SIZE_KEY) === 'fill' ? 'fill' : 'standard'; } catch (e) { /* ignore */ }
+  document.body.insertAdjacentHTML('afterbegin', HtcmFrames.defsSvg());
+  if (entries.length && entries[0].meta.setName) els.setNameInput.value = entries[0].meta.setName;
+  renderDeckSelect();
   applyCardSize();
+  renderThemeSwatches();
   renderEntries();
   updateFormMode();
 })();
