@@ -19,16 +19,25 @@ to a colleague to unzip and double-click, no server involved.
    it up with no code changes needed.
 2. Run `npm run offline:build`. It wipes and rebuilds
    `Tools/board-check/.offline-copy-staging/` from a fresh `git ls-files`
-   snapshot, patches the staged copy's `bmg-vector.js` to bundle its 4
-   GeoJSON files instead of fetching them, bundles the site's inline
-   ES-module tools into classic `<script defer>` bundles with esbuild,
-   rewrites their HTML, and zips the result into `AI_Tools-offline.zip` at
-   the repo root. It fails loudly and specifically if a source file it
-   depends on (`bmg-vector.js`'s shape, or any of the known module
-   `<script>` tags) no longer matches what it expects — if that happens,
-   update `Tools/board-check/make-offline-copy.mjs` to match the new
-   source; never work around it by changing a live tool file to suit the
-   generator.
+   snapshot — filtered down to what a tool actually needs at runtime, via
+   the `EXCLUDED_EXACT` / `EXCLUDED_PREFIXES` allowlist-by-exception near
+   the top of `make-offline-copy.mjs` (drops planning docs, `.claude/`,
+   retired landing-page drafts, and dev/test tooling, none of which a
+   colleague unzipping this needs or can make sense of) — patches the
+   staged copy's `bmg-vector.js` to bundle its 4 GeoJSON files instead of
+   fetching them, bundles the site's inline ES-module tools into classic
+   `<script defer>` bundles with esbuild, rewrites their HTML, renames
+   `index.html` to `Click Me! (Start Here).html` and repoints every tool's
+   back-link at the new name, and zips the result into
+   `AI_Tools-offline.zip` at the repo root. It fails loudly and
+   specifically if a source file it depends on (`bmg-vector.js`'s shape,
+   or any of the known module `<script>` tags) no longer matches what it
+   expects — if that happens, update `Tools/board-check/make-offline-copy.mjs`
+   to match the new source; never work around it by changing a live tool
+   file to suit the generator. If a newly-added top-level file or folder is
+   dev-only (planning notes, design drafts, test tooling) and isn't already
+   covered by an existing `EXCLUDED_PREFIXES` prefix, add it there too —
+   this list needs the same upkeep as `PRECACHE_URLS` in `sw.js`.
 3. Run `npm run offline:verify` — unzips the result outside the repo and
    opens every patched entry point from a real `file://` URL in headless
    Chromium, asserting no console/page errors, and confirms Blank Map
@@ -40,7 +49,7 @@ to a colleague to unzip and double-click, no server involved.
    the gitignored zip, and self-checks this internally too.
 5. Report back: the zip's absolute path and size
    (`ls -lh AI_Tools-offline.zip`), and note it's ready to hand out as-is —
-   unzip anywhere, double-click any `Tools/*.html` file, no server needed.
+   unzip anywhere and open `Click Me! (Start Here).html`, no server needed.
 
 If either step fails, stop and report the actual error rather than a
 generic "it didn't work" — the failure messages are written to name the
