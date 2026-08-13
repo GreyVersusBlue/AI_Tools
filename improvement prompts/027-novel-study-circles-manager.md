@@ -68,6 +68,9 @@ session.
   and `030-review-game-board.html` (each mints a new, uniquely-named list/
   board there rather than overwriting anything)
 - Prints: today's roles sheet, full meeting log, vocabulary list
+- **Multi-Book Units** group several book projects (each with its own pace
+  and schedule) and show a combined meeting-day view + print across all of
+  them for one chosen date
 
 ## Quick Wins
 
@@ -96,10 +99,13 @@ session.
 
 ## Major Features
 
-- **Multiple books at once.** Differentiated reading circles mean four groups
-  reading four different books at four different paces — the single most
-  common real shape of this activity and currently one project per book with
-  no shared view.
+- **Done — Multiple books at once**, via a new "Multi-Book Unit" grouping
+  layer (Pass 2, Round 4, 2026-08-13 — see Status). Differentiated reading
+  circles mean four groups reading four different books at four different
+  paces; each book stays its own project (own roster split, own schedule,
+  own pace) and a unit just points at the projects that belong together, with
+  a combined meeting-day view showing which circles are meeting, planned to
+  meet, or not meeting on a chosen date.
 - **Discussion assessment.** A quick per-meeting rubric tap (participated /
   prepared / advanced the conversation) with a printable summary. This is the
   hardest thing to grade in an ELA classroom and the tool is already in the
@@ -269,3 +275,103 @@ passes (no new files, nothing vendored duplicated).
 **What's still open**: multiple books at once, discussion assessment,
 book/reading-log integration with `033-ssr-log-tracker.html`, and reusable
 templates across the year — see Major Features above.
+
+## Pass 2, Round 4 update — 2026-08-13
+
+**Shipped — Multiple books at once, via a new "Multi-Book Unit" grouping
+layer (Major Features).** Four circles reading four different books at four
+paces is now a real thing this tool can show in one place, without touching
+how a single book is modeled.
+
+**Data-model decision.** Rather than reshape `state` (one project = one
+book) into something that nests several books' worth of groups/schedules/
+meetings inside a single project, a **unit** is a small, separate, additive
+record: `{ name, projectNames: [projectName, ...] }`, stored under its own
+keys (`novel-study-units` / `novel-study-units-current`) and never mixed
+into a project's own storage. A unit does nothing but *reference* existing
+projects by name — it reads their `bookTitle`, `groups`, `schedule.rows`,
+and `meetings` at render time to build the combined view, and writes
+nothing back into them. Considered and rejected: (a) nesting multiple books
+inside one project's state — would have touched nearly every function in
+this file (groups, roles, schedule, meetings, vocab, undo, print) for a
+feature that's fundamentally about *looking across* independently-paced
+projects, not merging them; (b) a "current project has sub-books" toggle —
+same problem, plus it would have broken every existing saved project's
+shape. The reference-layer design sidesteps both.
+
+**Migration decision: none needed.** Every project that exists today (or
+ever existed before this shipped) is usable as a unit member exactly as-is
+— a unit just points at it by name. A project with no unit is completely
+unaffected: same storage, same UI, same behavior. There is no "upgrade this
+project to a unit" step and no old-shape/new-shape branching anywhere in
+`state` — the existing single-book `state` shape is untouched by this
+feature, full stop. The only place any migration-like logic exists is
+bookkeeping so a unit's references don't go stale: renaming a project
+rewrites that name inside every unit that references it (across all saved
+units, not just the currently-open one), and deleting a project prunes it
+from every unit's `projectNames` rather than leaving a dangling reference
+that would silently vanish from the combined view after the next reload
+anyway (now it's an explicit, immediate removal instead).
+
+**New UI — "Multi-Book Unit · Combined Meeting-Day View" card**, sitting
+above the existing single-project editor (so it reads as "group what's
+below," not as a second competing workflow): a unit switcher (New/Delete,
+same shape as the existing Project switcher), a checklist of every saved
+project to include, a date field, and the combined view itself — one card
+per member project, each showing:
+
+- **"Meeting logged"** with the real checkpoint(s) that were recorded, when
+  that project has an actual meeting logged on the chosen date (together
+  mode: the whole-class checkpoint; per-group pacing: each group's own
+  checkpoint) — the richest case, since it's real data, not a prediction.
+- **"Planned: Through &lt;label&gt;"**, when there's no logged meeting for
+  that date but that project's own Reading Schedule Planner has a row
+  landing on it.
+- **"Not meeting this date"** (visually muted), when neither applies —
+  shown explicitly rather than the project just disappearing from the grid,
+  so a teacher scanning the board can tell "not meeting" apart from "I
+  forgot to add this book."
+
+A "N of M circles meeting on &lt;date&gt;" summary line sits above the
+grid, and a "Print combined meeting-day view" button reuses the same
+print-area pattern (`.print-only` + `window.print()`) every other output in
+this tool already uses.
+
+**Known limitations.** (1) A unit's own selected date is a UI convenience,
+not a saved preference — it resets to today on reopening, same as the "Log
+a Meeting" date field already does per project, rather than persisting a
+specific date that would usually just be stale next time. (2) The combined
+view is read-only — there's no way to log a meeting for a member project
+from inside the unit card; a teacher still switches to that project via the
+ordinary Project dropdown to log it, then the unit view picks it up
+automatically next render. (3) A project's Reading Schedule Planner is
+still whole-project (one shared schedule), not per-group — a project in
+per-group pacing mode with a schedule shows the same "Planned" line
+regardless of which of its groups the schedule was really meant to pace;
+this mirrors a pre-existing limitation of the schedule planner itself
+(documented in "What it does today" above), not something new this round
+introduced. (4) No cross-unit reordering/drag UI — projects are added to a
+unit purely via checkboxes.
+
+**Testing.** `node --check` on the extracted inline script (no separate
+build step — the script is inline). This tool had no `test/` folder before
+this round; added `Tools/novel-study-circles-manager/test/smoke-multi-book-unit.mjs`
+using the shared `Tools/board-check/harness.mjs` Playwright plumbing (same
+pattern as `022-lab-group-role-randomizer.html`'s suite), covering: two
+independently-paced projects (one with a schedule row landing on a date,
+one with an actual meeting logged on that date) grouped into one unit,
+correctly told apart as "planned" vs. "meeting logged" for the same date; a
+date neither is meeting on reading 0-of-N rather than a stale count;
+renaming a member project keeping the unit's reference and combined-view
+card intact (old name gone from the checklist, not duplicated); deleting a
+member project pruning it from the unit's own stored record (not just the
+rendered view); the unit's name and pruned project list surviving a reload
+via its own storage keys, independent of `novel-study-circles`; and
+deleting a unit leaving its member projects fully intact and switchable.
+23 assertions, 0 console/page errors. `node Tools/board-check/check-dedupe.mjs`
+still clean (no new vendored files).
+
+**What's still open**: discussion assessment (a per-meeting participation
+rubric), book/reading-log integration with `033-ssr-log-tracker.html`, and
+reusable templates for roles/question banks/schedules across the year — see
+Major Features above.
