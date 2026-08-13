@@ -68,16 +68,16 @@ list in parallel without colliding.
 
 | Rank | Tool | Idea | What it would do |
 |---|---|---|---|
-| 1 | Quiz / Review Game Board | Audio in a clue | Record or attach a short clip — a pronunciation, a music excerpt, a primary-source recording — stored in IndexedDB rather than inline, with a play control on the projected clue. |
-| 2 | Quiz / Review Game Board | Reusable tagged question bank | A bank separate from any one board, tagged by unit, standard, and difficulty, that multiple boards and future game formats draw from. |
-| 3 | Vocabulary Flashcard & Word Wall Generator | More printables from one list | Generate a word search, crossword, bingo cards, and a matching quiz from the same term-and-definition list. |
-| 4 | School Calendar Visualizer | Unit pacing layer | Lay named units across date ranges, auto-counting actual instructional days after holidays and half days, printable as a pacing calendar. |
-| 5 | Math Fact Drill Sheet Generator | Self-checking sheet formats | Riddle-answer, colour-by-answer, and maze transformations of an existing problem set, each with a key. |
-| 6 | Field Trip Permission Slip Generator | Scan returned slips to check off | Use `_shared/qr-scan.js` on the QR each slip already carries, so the collection tracker ticks students off in seconds. |
-| 7 | Lab Safety Contract Tracker | Scan returned forms | Print a per-student code on each blank contract and tick off a returned stack with `_shared/qr-scan.js` in under a minute. |
-| 8 | Sub Plan Builder | Richer document output | Extend the document builder with per-period tables, headers and footers with page numbers, and an embedded seating-chart image. |
-| 9 | Rubric Builder | Rubric scores flow to grade tools | A read-only bridge writing rubric totals into Final Grade Checker / Grade Distribution Visualizer's storage contract, mirroring the existing `wpg-rubric-link.js` pattern. |
-| 10 | Class Roster Hub | All-rosters device transfer | Move every roster, sidecar record, and archive to another machine over `_shared/webrtc-pair.js` with QR pairing, producing no file to lose or email. |
+| 1 | Quiz / Review Game Board | 🔒 **CLAIMED (2026-08-13)** — Audio in a clue | Record or attach a short clip — a pronunciation, a music excerpt, a primary-source recording — stored in IndexedDB rather than inline, with a play control on the projected clue. |
+| 2 | Quiz / Review Game Board | 🔒 **CLAIMED (2026-08-13)** — Reusable tagged question bank | A bank separate from any one board, tagged by unit, standard, and difficulty, that multiple boards and future game formats draw from. |
+| 3 | Vocabulary Flashcard & Word Wall Generator | 🔒 **CLAIMED (2026-08-13)** — More printables from one list | Generate a word search, crossword, bingo cards, and a matching quiz from the same term-and-definition list. |
+| 4 | School Calendar Visualizer | 🔒 **CLAIMED (2026-08-13)** — Unit pacing layer | Lay named units across date ranges, auto-counting actual instructional days after holidays and half days, printable as a pacing calendar. |
+| 5 | Math Fact Drill Sheet Generator | 🔒 **CLAIMED (2026-08-13)** — Self-checking sheet formats | Riddle-answer, colour-by-answer, and maze transformations of an existing problem set, each with a key. |
+| 6 | Field Trip Permission Slip Generator | 🔒 **CLAIMED (2026-08-13)** — Scan returned slips to check off | Use `_shared/qr-scan.js` on the QR each slip already carries, so the collection tracker ticks students off in seconds. |
+| 7 | Lab Safety Contract Tracker | 🔒 **CLAIMED (2026-08-13)** — Scan returned forms | Print a per-student code on each blank contract and tick off a returned stack with `_shared/qr-scan.js` in under a minute. |
+| 8 | Sub Plan Builder | 🔒 **CLAIMED (2026-08-13)** — Richer document output | Extend the document builder with per-period tables, headers and footers with page numbers, and an embedded seating-chart image. |
+| 9 | Rubric Builder | 🔒 **CLAIMED (2026-08-13)** — Rubric scores flow to grade tools | A read-only bridge writing rubric totals into Final Grade Checker / Grade Distribution Visualizer's storage contract, mirroring the existing `wpg-rubric-link.js` pattern. |
+| 10 | Class Roster Hub | 🔒 **CLAIMED (2026-08-13)** — All-rosters device transfer | Move every roster, sidecar record, and archive to another machine over `_shared/webrtc-pair.js` with QR pairing, producing no file to lose or email. |
 | 11 | Backup & Restore | Device-to-device migration | Carry the versioned backup envelope straight to a new laptop over `_shared/webrtc-pair.js`, with no file ever written to disk. |
 | 12 | Classroom Timer | Phone as timer remote | Extend the existing `webrtc-pair.js` mirror so the paired phone starts, pauses, and advances agenda segments while the teacher walks the room. |
 | 13 | Command Center | Phone remote for the dashboard | Pair a phone via `_shared/webrtc-pair.js` to drive five named actions — timer, next student, sign in, advance period — from across the room. |
