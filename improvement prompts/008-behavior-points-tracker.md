@@ -1,15 +1,86 @@
 # Improvement Prompts — 008 — Behavior & Points Tracker
 
 **Tool file:** `Tools/008-behavior-points-tracker.html`
-**Support folder:** `Tools/behavior-points-tracker/test/` — the browser suite
-(`smoke-shared-record.mjs`, `npm run test:behavior`). The page itself is a
-single file.
+**Support folder:** `Tools/behavior-points-tracker/` — `seating-layout.js`
+(the read-only bridge to Seating Chart Generator's saved room layout) plus
+`test/` for the browser and data-transform suites
+(`smoke-shared-record.mjs`, `npm run test:behavior`; `smoke-seating-layout.mjs`
+and `smoke-seating-board.mjs`, run directly with `node` — see Status). The
+tool's own page is still a single file.
 
 **Current description (from README):** Arm a behavior (built-in +1/-1, or an editable list of point-valued behaviors) and tap any student's card to apply it — a live, projector-friendly per-student point tally with an activity feed and undo. Archive a day into an expandable history and print a report of the current totals.
 
 ---
 
 ## Status
+
+**2026-08-13 — Round 3.** Shipped **the seating-chart board layout** (backlog
+rank 1, "the single biggest speed-up available here and untouched" per the
+previous round's notes): a "Layout" control next to Sort, with "Sorted list"
+(unchanged) and "Seating chart" — the board arranged the way the room is
+actually seated instead of alphabetically.
+
+- **Read-only, on purpose.** The board reads `seating-chart-v1` (owned by
+  `005-Seating Chart Generator`) and never writes it —
+  `Tools/behavior-points-tracker/seating-layout.js` only ever calls
+  `localStorage.getItem` on that key. A student's points, goals, log and
+  history stay exactly where they always lived, keyed by roster name; the
+  seating chart only ever supplies *positions* for the cards that already
+  exist.
+- **The matching/layout math lives in its own DOM-free module** so it can be
+  driven under plain Node
+  (`Tools/behavior-points-tracker/test/smoke-seating-layout.mjs`, 43 checks):
+  which chart section to use (an explicit remembered choice, then the Name
+  Picker roster this section follows, then this section's own name, then the
+  chart's own active section), and turning a chart section's desks into
+  0-100% boxes a plain `<div>` can be positioned with — including the same
+  mirror-by-coordinate-reflection and bounding-box-plus-padding approach
+  `010-command-center-dashboard.html`'s existing seating panel already uses,
+  so the two readers of `seating-chart-v1` don't quietly disagree about what
+  a chart means.
+- **The fallback contract is explicit, not incidental.** A missing chart, a
+  corrupt one, a chart with no desks placed for this class, or a chart
+  section that doesn't overlap this roster at all — every one of those
+  leaves the board exactly as it was (the sorted grid), with a one-line note
+  explaining why, never a blank or broken panel. A roster name the chart
+  doesn't know about, or a chart desk assigned to someone not on this
+  roster, is handled per-student: it's left out of the room and — for a
+  roster name — shown as an ordinary tappable card underneath, under "Not on
+  the seating chart yet," rather than silently dropped or taking the rest of
+  the layout down with it.
+- **Every seated card is still a plain `.student-card`** with the same
+  `data-name` the sorted grid uses, absolutely positioned inside a
+  room-shaped box instead of left to the grid — so the existing click /
+  long-press / flash / keyboard-arm handling, all delegated from
+  `#studentGrid`, needed no changes to award points on a seated card.
+- **Cross-tab freshness:** a chart saved in Seating Chart Generator in one
+  tab while this board is open in another picks it up via a `storage`
+  listener, the same freshness the command-center dashboard's seating panel
+  already keeps — no manual refresh needed.
+- Storage stayed additive: `state.boardLayout` (`'sorted'` | `'seating'`,
+  defaulting to `'sorted'`) and `state.seatingSectionId` are new, optional
+  fields on a section; a section saved before this round has neither and
+  loads exactly as it always did.
+- Verified by `Tools/behavior-points-tracker/test/smoke-seating-layout.mjs`
+  (43 checks, pure data-transform, no browser) and
+  `Tools/behavior-points-tracker/test/smoke-seating-board.mjs` (27 checks,
+  Playwright — no chart, a corrupt chart, a real chart with a partial-roster
+  match, tapping a seated card, switching between two chart sections, and
+  switching back to the sorted grid). Neither is wired into `npm test` /
+  `npm run test:behavior` yet (that's a `package.json` edit, out of scope
+  for this round); run them directly with
+  `node Tools/behavior-points-tracker/test/smoke-seating-layout.mjs` and
+  `node Tools/behavior-points-tracker/test/smoke-seating-board.mjs`
+  (set `PW_CHROMIUM_EXECUTABLE` first if the default Chromium path isn't
+  present).
+- `sw.js` `PRECACHE_URLS` and `CACHE_VERSION` were **not** touched this
+  round — out of scope for this pass (`sw.js` is a listed boundary file for
+  this session) — so the new `seating-layout.js` module is not yet precached
+  for offline use. That's the one loose end the next round touching `sw.js`
+  should close: add `Tools/behavior-points-tracker/seating-layout.js` to
+  `PRECACHE_URLS` and bump `CACHE_VERSION`, or the "Seating chart" layout
+  mode will silently be unavailable offline until the module has been
+  fetched online once.
 
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **adoption of the shared
 student record** (backlog rank 8): preferred names on the cards, and — the part
@@ -141,10 +212,10 @@ What shipped, against the backlog below:
 
 **Where the next round should pick up:**
 
-1. **Seating-chart board layout (Major, P7)** — still the single biggest
-   speed-up available here and untouched. Tapping students arranged the way
-   the room actually is beats alphabetical every time mid-lesson; the layout
-   is in `seating-chart-v1`.
+1. **Precache the new module.** `Tools/behavior-points-tracker/seating-layout.js`
+   is not yet in `sw.js`'s `PRECACHE_URLS` (out of scope for the round that
+   added it — see Status, 2026-08-13); add it and bump `CACHE_VERSION` so the
+   seating layout mode works offline.
 2. **Team / house points and the redeemable-points economy** are both
    unbuilt. House points now have most of what they need — the ticking
    mechanism and group awards exist — but the group definitions should come
@@ -226,9 +297,10 @@ What shipped, against the backlog below:
   economy that currently needs a whiteboard.
 - **Redeemable points / classroom economy.** Points spent on rewards, with a
   balance rather than a total.
-- **Seating-chart board layout** (P7). Tapping students arranged the way the
+- **Done —** **Seating-chart board layout** (P7). Tapping students arranged the way the
   room actually is, rather than alphabetically, is dramatically faster mid-
-  lesson — read the layout from Seating Chart Generator.
+  lesson. *(Shipped — a "Layout" control reads `seating-chart-v1` read-only;
+  see Status.)*
 - **Done —** **Parent-facing printable summary.** A single, kindly-worded page per
   student for a conference, drawing on the notes and the trend, kept local.
   *(Shipped — one page per student: totals, positives, entries needing
