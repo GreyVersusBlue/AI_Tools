@@ -17,6 +17,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='7' width='14' height='19' rx='2' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Crect x='13' y='5' width='6' height='3' rx='1' fill='%232A6DB0'/%3E%3Cpath d='M12.5 17l3 3 5-6' fill='none' stroke='%23C43A2F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
+<script src="../_shared/qr-scan.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -163,7 +166,7 @@
 
   /* ── Blank form print (one signable copy per student) ────────────────── */
   @media print {
-    .form-page { page-break-after: always; padding-top: .4in; }
+    .form-page { page-break-after: always; padding-top: .4in; position: relative; }
     .form-page:last-child { page-break-after: auto; }
     .form-page h2 { font-size: 1.3rem; margin-bottom: .5rem; }
     .form-page .form-body { white-space: pre-wrap; font-size: .95rem; line-height: 1.6; margin-bottom: 2rem; }
@@ -171,7 +174,44 @@
     .sig-line { font-size: .95rem; margin: 1.3rem 0 0; }
     .fill { display: inline-block; min-width: 3.2in; border-bottom: 1px solid #000; height: 1.05em; margin-left: .3rem; }
     .fill.short { min-width: 1.4in; }
+    /* Per-student code so a returned paper can be matched back to a roster
+       name with a camera scan instead of hunting through the list — see
+       "Scan returned forms". Top-right corner, out of the way of the form
+       text and signature lines. */
+    .form-qr { position: absolute; top: .4in; right: .4in; text-align: center; }
+    .form-qr img { width: .9in; height: .9in; display: block; }
+    .form-qr .form-qr-cap { font-size: .62rem; color: #555; margin-top: .12rem; max-width: 1.1in; word-break: break-word; }
   }
+
+  /* ── Scan returned forms (camera check-off) ───────────────────────────
+     Same overlay/video/status shape as the QR Code Generator's test-scan
+     modal (Tools/016-qr-code-generator.html), restyled to this tool's
+     ink/paper palette instead of that tool's dark theme. */
+  .cam-overlay {
+    position: fixed; inset: 0; z-index: 500; background: rgba(20,18,12,.55);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .cam-overlay[hidden] { display: none; }
+  .cam-modal {
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 10px;
+    max-width: 380px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .cam-head { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.1rem; border-bottom: 1px solid var(--line); font-weight: 700; color: var(--accent); }
+  .cam-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
+  .cam-close:hover { color: var(--err); }
+  .cam-body { padding: 1rem 1.1rem; }
+  .cam-body video { width: 100%; max-width: 300px; border-radius: 8px; background: #000; margin: 0 auto .7rem; display: block; }
+  .cam-status { font-size: .85rem; color: var(--muted); margin: 0 0 .6rem; text-align: center; }
+  .cam-status.ok { color: var(--good); font-weight: 700; }
+  .cam-status.warn { color: var(--paid); font-weight: 700; }
+  .cam-status.bad { color: var(--err); font-weight: 700; }
+  .scan-tally { font-size: .85rem; font-weight: 700; color: var(--accent); text-align: center; margin: 0 0 .6rem; }
+  .scan-log { display: flex; flex-direction: column; gap: .3rem; max-height: 8.5rem; overflow-y: auto; margin-bottom: .8rem; }
+  .scan-log-row { font-size: .78rem; padding: .35rem .5rem; border-radius: 6px; border: 1px solid var(--line); }
+  .scan-log-row.ok { background: #eaf7ee; border-color: var(--good); color: #1e5b37; }
+  .scan-log-row.warn { background: #fbf3e2; border-color: var(--paid); color: #7d5809; }
+  .scan-log-row.bad { background: #fbeceA; border-color: var(--err); color: var(--err); }
+  #scanCamOverlay .cam-body button.secondary { width: 100%; }
 
   /* ── Reminder slips (quarter-sheet cut-apart) ─────────────────────────── */
   @media print {
@@ -238,7 +278,18 @@
       </div>
     </div>
     <div id="docsEditor"></div>
-    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms. The form text prints on the blank copy — leave it empty to print just a title and signature lines. If a document has a fee, set it and a paid/unpaid toggle appears for that document per student &mdash; leave the fee blank for documents that don&rsquo;t collect money.</p>
+    <p class="hint">Each document gets its own signed/unsigned toggle per student. Most classes only need one &mdash; add more (e.g. &ldquo;Chemical Handling&rdquo; alongside &ldquo;Lab Safety Contract&rdquo;) if your class requires several signed forms. The form text prints on the blank copy — leave it empty to print just a title and signature lines. If a document has a fee, set it and a paid/unpaid toggle appears for that document per student &mdash; leave the fee blank for documents that don&rsquo;t collect money. Each printed copy also carries a small code identifying which student it belongs to, for &ldquo;Scan returned forms&rdquo; below.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Scan returned forms</span>
+      <div class="btn-row">
+        <button type="button" class="secondary small" id="scanFormsBtn">📷 Scan a stack</button>
+      </div>
+    </div>
+    <p class="hint">Point a camera at the returned papers, one at a time &mdash; each scan reads that student&rsquo;s printed code and checks them off, no typing or hunting through the list. Works from &ldquo;Print blank forms&rdquo; copies only, since that&rsquo;s what stamps the code on.</p>
+    <p class="hint" id="scanSessionSummary" style="margin:0;"></p>
   </div>
 
   <div class="card">
@@ -280,6 +331,22 @@
 
   <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded, and no student data leaves this device.</footer>
 
+</div>
+
+<div class="cam-overlay" id="scanCamOverlay" hidden>
+  <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Scan returned forms">
+    <div class="cam-head">
+      <span>Scan returned forms</span>
+      <button type="button" class="cam-close" id="scanCamClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="cam-body">
+      <video id="scanCamVideo" autoplay muted playsinline></video>
+      <p class="cam-status" id="scanCamStatus">Point the camera at a student&rsquo;s code&hellip;</p>
+      <p class="scan-tally" id="scanTally">0 checked off this session</p>
+      <div class="scan-log" id="scanLog"></div>
+      <button type="button" class="secondary" id="scanCamDone">Done</button>
+    </div>
+  </div>
 </div>
 
 <div class="print-only" id="printFullArea">
@@ -338,7 +405,9 @@
     'printFullArea', 'printFullTitle', 'printFullSub', 'printFullBody',
     'printMissingArea', 'printMissingTitle', 'printMissingSub', 'printMissingBody',
     'printContactBtn', 'printContactArea', 'printContactTitle', 'printContactSub', 'printContactBody',
-    'printFormsArea', 'printFormsBody', 'printSlipsArea', 'printSlipsBody'
+    'printFormsArea', 'printFormsBody', 'printSlipsArea', 'printSlipsBody',
+    'scanFormsBtn', 'scanSessionSummary', 'scanCamOverlay', 'scanCamVideo', 'scanCamStatus',
+    'scanCamClose', 'scanCamDone', 'scanTally', 'scanLog'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state = { name, dueDate, documents: [{id,label}], roster: [names...],
@@ -1022,9 +1091,67 @@
     activatePrint(els.printContactArea);
   });
 
-  /* ---------- print blank forms (one signable copy per document) ---------- */
-  function buildFormHtml(doc) {
+  /* ---------- per-student code (encoder) ----------
+     A short, self-identifying code stamped on each printed blank contract so
+     "Scan returned forms" can read a returned paper back to a roster name
+     with a camera instead of the teacher hunting through the list. Not a
+     copy of the contract itself — just enough to look the student up:
+     which class, which document, which student. */
+  var CODE_PREFIX = 'LSCT1';
+  function buildStudentCodeText(docId, name) {
+    return [CODE_PREFIX, encodeURIComponent(state.name), encodeURIComponent(docId), encodeURIComponent(name)].join('|');
+  }
+  function decodeStudentCode(text) {
+    if (typeof text !== 'string') return null;
+    var parts = text.split('|');
+    if (parts.length !== 4 || parts[0] !== CODE_PREFIX) return null;
+    try {
+      return {
+        section: decodeURIComponent(parts[1]),
+        docId: decodeURIComponent(parts[2]),
+        name: decodeURIComponent(parts[3])
+      };
+    } catch (e) { return null; } // malformed percent-encoding — not a code we made
+  }
+
+  // Rendered per (docId, name) pair, not per print click — a re-print of the
+  // same class/document draws identical canvases, so cache by that key.
+  var qrImageCache = {};
+  function buildStudentQrDataUrl(docId, name) {
+    var key = docId + '|' + name;
+    if (qrImageCache[key]) return qrImageCache[key];
+    try {
+      var qr = window.qrcode(0, 'M');
+      qr.addData(buildStudentCodeText(docId, name));
+      qr.make();
+      var count = qr.getModuleCount();
+      var quiet = 2, px = 4;
+      var size = (count + quiet * 2) * px;
+      var canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000';
+      for (var r = 0; r < count; r++) {
+        for (var c = 0; c < count; c++) {
+          if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+        }
+      }
+      var url = canvas.toDataURL('image/png');
+      qrImageCache[key] = url;
+      return url;
+    } catch (e) { return null; } // qrcode.js missing/failed — form still prints, just without the code
+  }
+
+  /* ---------- print blank forms (one signable copy per student) ---------- */
+  function buildFormHtml(doc, name) {
+    var qrUrl = name ? buildStudentQrDataUrl(doc.id, name) : null;
+    var qrBlock = qrUrl
+      ? '<div class="form-qr"><img src="' + qrUrl + '" width="90" height="90" alt="Scan to record ' + escapeAttr(name) + '’s return">' +
+        '<div class="form-qr-cap">' + escapeHtml(name) + '</div></div>'
+      : '';
     return '<div class="form-page">' +
+      qrBlock +
       '<h2>' + escapeHtml(doc.label) + '</h2>' +
       (doc.body ? '<p class="form-body">' + escapeHtml(doc.body) + '</p>' : '') +
       '<div class="form-sig-block">' +
@@ -1046,12 +1173,115 @@
       if (!(idx >= 0 && idx < state.documents.length)) { alert('Not a valid choice.'); return; }
       doc = state.documents[idx];
     }
-    var copies = Math.max(1, state.roster.length || 1);
+    // One copy per roster student, each carrying that student's own code —
+    // with no roster yet, fall back to a single generic blank (no code to
+    // stamp on it, since there's no student to identify).
+    var names = state.roster.length ? state.roster : [null];
     var html = '';
-    for (var i = 0; i < copies; i++) html += buildFormHtml(doc);
+    names.forEach(function (name) { html += buildFormHtml(doc, name); });
     els.printFormsBody.innerHTML = html;
     activatePrint(els.printFormsArea);
   });
+
+  /* ---------- scan returned forms (decoder + collection tracker) ----------
+     Reads a returned paper's printed code and checks that student off —
+     mirrors the tap-to-toggle a teacher would otherwise do by hand, just
+     driven by the camera instead. `processScannedCode` is the pure
+     decode → match → check-off pipeline: no DOM, no camera, safe to call
+     with any string. That's what makes it testable without a real camera
+     (see the smoke test) and reusable if a future page ever wants a scan
+     entry point that isn't this one modal. */
+  function processScannedCode(text) {
+    if (!state) return { status: 'no-class', message: 'No class is loaded.' };
+    var decoded = decodeStudentCode(text);
+    if (!decoded) {
+      return { status: 'bad-code', message: 'That doesn’t look like a code this tracker printed.' };
+    }
+    if (decoded.section !== state.name) {
+      return { status: 'wrong-class', message: 'That code is from “' + decoded.section + '” — switch to that class to record it.' };
+    }
+    var doc = state.documents.filter(function (d) { return d.id === decoded.docId; })[0];
+    if (!doc) {
+      return { status: 'unknown-doc', message: 'That code doesn’t match a document this class tracks.' };
+    }
+    if (state.roster.indexOf(decoded.name) === -1) {
+      return { status: 'unknown-student', message: '“' + decoded.name + '” isn’t on this class’s roster.' };
+    }
+    if (getDoc(decoded.name, doc.id).signed) {
+      return { status: 'duplicate', name: decoded.name, docLabel: doc.label, message: decoded.name + ' was already recorded as returned.' };
+    }
+    setDocSigned(decoded.name, doc.id, true);
+    saveCurrentState();
+    renderAll();
+    return { status: 'checked', name: decoded.name, docLabel: doc.label, message: decoded.name + ' — ' + doc.label + ' checked off.' };
+  }
+
+  var scanSession = { checked: 0, duplicate: 0, unmatched: 0 };
+  var scanStopFn = null;
+
+  function scanStatusClass(status) {
+    if (status === 'checked') return 'ok';
+    if (status === 'duplicate') return 'warn';
+    return 'bad';
+  }
+  function scanStatusBucket(status) {
+    return status === 'checked' ? 'checked' : (status === 'duplicate' ? 'duplicate' : 'unmatched');
+  }
+
+  function updateScanTally() {
+    var total = scanSession.checked + scanSession.duplicate + scanSession.unmatched;
+    var line = total
+      ? scanSession.checked + ' checked off · ' + scanSession.duplicate + ' already recorded · ' + scanSession.unmatched + ' unmatched'
+      : '0 checked off this session';
+    els.scanTally.textContent = line + (total ? '' : '');
+    els.scanSessionSummary.textContent = total ? (line + ' — this session.') : '';
+  }
+
+  function logScanResult(result) {
+    scanSession[scanStatusBucket(result.status)]++;
+    updateScanTally();
+    var row = document.createElement('div');
+    row.className = 'scan-log-row ' + scanStatusClass(result.status);
+    row.textContent = result.message;
+    els.scanLog.insertBefore(row, els.scanLog.firstChild);
+    while (els.scanLog.children.length > 8) els.scanLog.removeChild(els.scanLog.lastChild);
+    els.scanCamStatus.textContent = result.message;
+    els.scanCamStatus.className = 'cam-status ' + scanStatusClass(result.status);
+  }
+
+  function startScanLoop() {
+    scanStopFn = QRScan.scanQRFromCamera(els.scanCamVideo, {
+      onResult: function (text) {
+        logScanResult(processScannedCode(text));
+        if (!els.scanCamOverlay.hidden) startScanLoop(); // keep going for the rest of the stack
+      },
+      onError: function (err) {
+        els.scanCamStatus.textContent = (err && err.message) || 'Camera access isn’t available.';
+        els.scanCamStatus.className = 'cam-status bad';
+      }
+    });
+  }
+
+  function openScanModal() {
+    if (!state) return;
+    els.scanCamOverlay.hidden = false;
+    els.scanCamStatus.textContent = 'Point the camera at a student’s code…';
+    els.scanCamStatus.className = 'cam-status';
+    startScanLoop();
+  }
+  function closeScanModal() {
+    if (scanStopFn) { scanStopFn.stop(); scanStopFn = null; }
+    els.scanCamOverlay.hidden = true;
+  }
+
+  els.scanFormsBtn.addEventListener('click', openScanModal);
+  els.scanCamClose.addEventListener('click', closeScanModal);
+  els.scanCamDone.addEventListener('click', closeScanModal);
+  updateScanTally();
+
+  // Test-only seam: lets a headless suite feed decoded text straight into
+  // the same pipeline scanQRFromCamera's onResult would, without a camera.
+  window.LSCT_TEST = { processScannedCode: processScannedCode, buildStudentCodeText: buildStudentCodeText };
 
   /* ---------- print reminder slips (quarter-sheet, cut-apart, for the missing list) ---------- */
   els.printSlipsBtn.addEventListener('click', function () {

@@ -12,6 +12,120 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Scan returned forms — 2026-08-13
+
+Shipped **QR-scan check-in**, the last remaining unbuilt Major Feature from
+the original list.
+
+**What was actually found about the `qrcode.js`/`jszip.min.js` premise:**
+the brief for this round said the tool already `<script>`-linked
+`_shared/vendor/qrcode/qrcode.js` and `_shared/vendor/jszip/jszip.min.js` as
+unused boilerplate. That wasn't true of the file as found — a full-file grep
+turned up **no reference to `qrcode`, `jsqr`, `jszip`, or `QRScan` anywhere**
+in `013-lab-safety-contract-tracker.html`. Neither script tag existed, dead
+or otherwise; both the printed per-student code and the scanner had to be
+built from nothing, not switched on. `jszip.min.js` was never added — nothing
+in this feature needs a zip (no bulk file export), so pulling it in would
+just be an unused include of the exact kind `check:dedupe` exists to catch.
+
+**What ships:**
+
+- **Print blank forms now stamps a per-student code.** `buildStudentCodeText`
+  encodes `LSCT1|<class name>|<document id>|<student name>` (each part
+  `encodeURIComponent`-escaped, `|`-joined) — enough to look a returned paper
+  back up to a roster row, not a copy of the contract itself.
+  `buildStudentQrDataUrl` draws it with `_shared/vendor/qrcode/qrcode.js`
+  straight to a `<canvas>` → PNG data URL (same manual module-grid draw loop
+  `043-field-trip-permission-slip.html` already uses for its trip-info code —
+  copied for consistency, not reinvented), cached per `(docId, name)` pair so
+  a big roster print doesn't redraw identical canvases. Each `form-page` now
+  gets one copy per **roster student** instead of N identical anonymous
+  copies — the code has to be tied to somebody. No roster yet still falls
+  back to one generic codeless blank, same as before.
+- **"Scan returned forms"** is a new card with its own camera modal (same
+  overlay/video/status shape as `016-qr-code-generator.html`'s test-scan
+  modal, restyled to this tool's ink/paper palette). It loops
+  `_shared/qr-scan.js`'s `scanQRFromCamera` — decode one code, handle it,
+  immediately restart the scan loop — so a teacher can point the camera at a
+  stack and work through it without re-tapping a button between papers.
+  Session tally and an 8-row scrollback log (color-coded ok/warn/bad) sit in
+  the modal; a one-line summary persists on the card underneath after it's
+  closed.
+- **`processScannedCode(text)`** is the pure decode → match → check-off
+  pipeline, deliberately factored out from any DOM/camera code so it can be
+  unit-exercised directly: bad/foreign code → `bad-code`; code from a
+  different class than the one currently loaded → `wrong-class`; code for a
+  document this class doesn't track → `unknown-doc`; code for a name not on
+  the active roster → `unknown-student`; already-checked-off student scanned
+  again → `duplicate` (no-op, no double-count); otherwise → `checked`, which
+  calls the same `setDocSigned(name, docId, true)` a manual tap would, so a
+  scanned return is indistinguishable from a hand-ticked one in every other
+  print/summary/export path already built on that field — no parallel
+  "collected" flag was introduced.
+- Exposed as `window.LSCT_TEST = { processScannedCode, buildStudentCodeText }`
+  — a deliberate, narrow test seam (no DOM, no camera) so a headless suite
+  can feed it decoded text the same shape `scanQRFromCamera`'s `onResult`
+  delivers, without needing a real camera in CI.
+
+Verified with a headless Chromium run extending the existing
+`test/smoke-contact-sheet.mjs` (33 checks total, 12 new, run via
+`npm run test:lab-safety`): a fresh 3-student class prints one `form-page`
+per student, each with a `data:image/png` QR image captioned with that
+student's name; the printed image is decoded with the same `jsQR` build the
+scanner itself loads and round-trips to exactly the code
+`buildStudentCodeText` generates (not just "some image got drawn"); feeding
+that decoded text to `processScannedCode` checks the right student off and
+flips their row to `.signed`; scanning the identical code again reports
+`duplicate` with no second state change; a garbage string reports
+`bad-code`; a well-formed code for a name not on the roster reports
+`unknown-student`; a well-formed code stamped for a different class name
+reports `wrong-class` and leaves an uninvolved roster student untouched.
+`check:dedupe` and `check:tests` both stay green, and `check:social` still
+shows no drift for this file's head block.
+
+#### Challenges
+
+- The code has to identify *class + document + student*, not just student —
+  a class can track more than one document (`renderDocsEditor`), and a
+  student's code for "Lab Safety Contract" must not silently check off
+  "Chemical Handling" if a teacher scans it while the wrong document happens
+  to be selected. Solved by baking the document id into the code itself at
+  print time, so the scanner never needs the teacher to pre-select which
+  document a given stack is for — it reads that off the paper.
+- No storage schema change. It was tempting to add a `collected` boolean
+  parallel to `signed` (e.g. "the paper physically showed up" vs. "it's
+  actually signed") but that distinction isn't what this tool tracks
+  anywhere else, and the brief's own framing ("check that student off") maps
+  directly onto the existing signed/date field this tool already prints,
+  summarizes, and exports everywhere. If a future round wants "returned but
+  not yet verified as signed" as a distinct state, that's a real schema
+  migration, not a rename.
+- Playwright's `getUserMedia` isn't available (or meaningfully mockable) in
+  the headless harness this repo uses, so the actual `scanQRFromCamera` camera
+  loop and the modal's open/close wiring are exercised only by hand-reading
+  the code and by the `016-qr-code-generator.html` precedent that already
+  ships the identical `_shared/qr-scan.js` + `jsQR` pairing in production;
+  what the test suite pins down is everything downstream of "a string came
+  back from the camera," via `processScannedCode` directly — which is also
+  the entire point of factoring it out as a separate, DOM-free function.
+
+### Where the next round should pick up
+
+- **Merge with the permission-slip collection tracker**
+  (`043-field-trip-permission-slip.html`) and **generalize beyond lab
+  safety** are the two remaining open Major Features — unchanged from
+  Round 3/Pass 2's notes, and now more clearly the same feature built twice:
+  043's `renderCollectionTracker` is a manual-checkbox collection tracker
+  with a QR code that encodes fixed trip info (not per-student, not
+  scan-to-check-off) — a genuinely different pattern from what this round
+  built, not a duplicate of it. Whoever merges the two tools should decide
+  which of the two collection-tracking UX patterns wins, not assume this
+  round's is automatically the answer.
+- Real-camera scanning has still never been exercised end-to-end by an
+  automated test on this site (see Challenges) — if the harness ever gains a
+  way to feed a synthetic video track to `getUserMedia`, this tool and
+  `016-qr-code-generator.html` would both be worth revisiting.
+
 ### Pass 2 — Round 1 — 2026-08-10 — session `v19h3x`
 
 Shipped **money collection** (the first of the two remaining Major
@@ -185,6 +299,10 @@ produces 2 slips naming the 2 missing students with the due date shown.
 - **Optional per-document fee with a paid/unpaid toggle** per student,
   a parallel "N of M paid" count in the live summary, and unpaid status
   on the missing-list print and reminder slips
+- **A per-student QR code on every printed blank form**, and a **"Scan
+  returned forms" camera tracker** (`processScannedCode`) that decodes a
+  returned paper's code and checks that student off — duplicate scans no-op,
+  unmatched/foreign codes are reported, not silently accepted
 
 ## Quick Wins
 
@@ -227,8 +345,12 @@ produces 2 slips naming the 2 missing students with the due date shown.
   paid/unpaid toggle, a parallel "N of M paid ($X each)" count in the live
   summary, and unpaid status on both the missing-list print and the
   reminder slips.)*
-- **Scan returned forms** with `_shared/qr-scan.js` if each printed form
-  carries a per-student code — ticking off thirty returns in under a minute.
+- **Done — Scan returned forms** with `_shared/qr-scan.js` if each printed
+  form carries a per-student code — ticking off thirty returns in under a
+  minute. *(Shipped 2026-08-13 — "Print blank forms" now stamps a per-student
+  code from `_shared/vendor/qrcode/qrcode.js`; a new "Scan returned forms"
+  camera modal reads a returned stack one paper at a time and checks each
+  student off, with duplicate-scan and unmatched-code handling.)*
 - **Parent contact list for the stragglers** — print the missing list with a
   place to record call/email attempts, which is what the follow-up actually
   requires.
