@@ -11,6 +11,116 @@ fonts, and `test/` (`smoke-seating.mjs`, `smoke-sub-packet.mjs`,
 
 ## Status
 
+**2026-08-13 — Seating history and rotation (backlog: "Seating history and
+rotation").** Shipped the Major Feature this Status previously listed as
+"Not done" for two rounds running: a dated record of who sat where, plus two
+best-effort constraints derived from it, plus the printable evidence a
+parent/admin conversation about seating fairness actually needs.
+
+- **A new "Seating History" sidebar block**, per section. **Record this
+  arrangement** snapshots the current desks and assignment — a section's own
+  `history[]` array, each entry `{ id, date, label, quarter, desks, assign,
+  students }` — prompted for a label (default `Unit N`) and a quarter
+  (default the toolbar's current-quarter field). The entry caches student
+  names at record time, so a student later removed from the roster still
+  reads by name in an old record instead of "(removed)", the same trick
+  `newLayout()` already uses for desks.
+- **How "unit" was decided:** whatever the teacher labels it, on whatever
+  date they hit Record. No implicit unit boundary is inferred from time
+  elapsed or roster changes — a teacher records when it matters to them
+  (start of a unit, a seating quiz, a rearrangement worth keeping evidence
+  of), and the tool imposes no cadence. This matches the existing "layout"
+  concept's philosophy: a named, teacher-triggered snapshot, not an
+  automatic one.
+- **How "quarter" was decided:** a **freeform, editable string tag**, not a
+  read from a real school calendar — this tool has none (School Calendar
+  does, and could be a future integration; not attempted here to keep this
+  round's surface area to the seating chart itself). `suggestQuarter(date)`
+  guesses Q1–Q4 from a common US Aug–Jun school year purely as the prompt's
+  starting default; a teacher whose school's quarters don't land on those
+  boundaries just types over it. The toolbar keeps one "current quarter"
+  field (`state.currentQuarter`) that seeds both the record prompt and the
+  front-row-due check.
+- **The two constraints, and how enforce-vs-warn was decided: warn by
+  default, nudge the solver when it's free to.** Both "don't repeat a seat"
+  and "front row once a quarter" are folded into `assignSeats()`'s existing
+  candidate-filtering (the same mechanism Keep Apart / Put Together already
+  use) as a **third and fourth soft preference**, tried after apart/together
+  are satisfied and abandoned the moment they'd cost a seat — never a hard
+  block, and never reported as a broken "rule" the way an impossible
+  Keep-Apart is. Full enforcement (treating "everyone gets a front-row turn"
+  as something the solver must satisfy over time, across future units it
+  hasn't seen yet) is a materially different, harder problem — a real
+  scheduling problem across a *sequence* of charts, not a single-shot
+  constraint-satisfaction problem the existing 800-attempts-and-score solver
+  is shaped for — and was judged out of scope for this round. Both nudges
+  are gated on `section.history.length > 0`: a section that has never used
+  this feature gets no behavior change and no nagging, full stop (see the
+  regression below for why this gate matters, not just why it's tidy).
+  Surfaced in two places: the sidebar's live `#histChecks` box (updates on
+  every render) and the status line after Auto-assign, both reusing
+  `checkHistoryConstraints()` — one function, so the two views can't drift.
+- **Two printable reports**, both plain HTML tables reusing the sub packet's
+  `.print-head`/`.print-contents` CSS rather than a third copy of table
+  styling, swapped in through a new `#printHistoryWrap` (the same
+  swap-a-static-container-in trick `#printAllWrap` already uses, so the live
+  floor's own print machinery is untouched):
+  - **Print history for one student** — every recorded unit that student
+    was seated in, with front-row and repeat-seat flagged per row. This is
+    the artifact the assignment asked for: dated, labeled, printable
+    evidence for "why is my kid always in the back."
+  - **Print whole-class fairness report** — one row per current roster
+    student: total recorded appearances, front-row appearances in the
+    current quarter, and how many of their own recorded seats repeated an
+    earlier one. The admin-conversation version of the same evidence.
+- **A regression the mobile toolbar test caught, and how it changed the
+  design.** The first cut computed "who's overdue for front row" the moment
+  a quarter was set — which is always, since `state.currentQuarter` has a
+  default from boot. That made `reportConstraints()` append a "N haven't had
+  front row" clause to the status line after *every* Auto-assign, on *every*
+  section, whether or not the teacher had ever touched Seating History —
+  which both nagged teachers who never opted in, and (concretely, caught by
+  `drive-seating.mjs`'s existing "one swipe of the top" mobile assertion)
+  made the toolbar wrap an extra line at 375px, pushing the known-red
+  baseline from 1132px to 1158px — an actual regression, not just noise.
+  Gating both the live-nudge report and the solver's front-row bias on
+  `history.length > 0` fixed both problems at once and is the shape shipped
+  above. Left as a cautionary note for the next quarter-aware feature: a
+  state field with a default is not the same as a feature being "on."
+- **Verified.** `smoke-seating.mjs` gained ~65 assertions: shape/defaults,
+  `suggestQuarter()` across month boundaries, `seatKey`/`frontRowDeskIds`,
+  recording → `seatHistoryMap`/`frontRowStatus`/`checkHistoryConstraints`
+  agreeing with each other, `studentHistoryRows`/`classHistorySummary`
+  arithmetic, the two `assignSeats()` solver nudges (each pinned
+  deterministically across five seeds by locking every other desk down to a
+  single free choice — the same "no scoring loop to hide behind" technique
+  `test: one pass in a full row honours every keep-apart` already uses for
+  the same reason), and history's slice of `repairState()` (junk entries,
+  bad dates, an assign pointing at nobody in the entry's own name cache,
+  idempotency). `drive-seating.mjs` gained two browser blocks: the real
+  Record/delete UI including its two sequential `prompt()`s, and a seeded
+  fixture proving both print reports' numbers against a hand-built two-unit
+  history. **Fixed a real bug found by writing that second test**:
+  `studentHistoryRows()` looked up `h.assign[studentId]` (assign is keyed by
+  *desk* id, not student id) and silently returned zero rows for everyone;
+  fixed to search the entries for the desk this student was assigned. Also
+  tightened `repairHistoryEntry()`'s assign-cleaning to route through the
+  same `cleanAssign()` helper `repairLayout()` uses (it wasn't checking a
+  saved assign's student id against the entry's own name cache at all,
+  first pass) — caught by the repair test's "assign drops ... an unnamed
+  student id" case.
+- **Confirmed unchanged:** the one pre-existing known-red assertion in
+  `drive-seating.mjs` ("the chart is within one swipe of the top") still
+  fails at the same 1132px it did before this round's other 100 checks
+  around it — not fixed, not worsened.
+- **Not done / left for a future round:** no IndexedDB migration (still not
+  attempted — see the standing P12 note below); history is included
+  wholesale in a section's `state-link.js` share URL and file export/import,
+  same as every other section field, which was not specifically revisited;
+  no per-desk "you sat here before" indicator on the live floor itself (the
+  live nudge box lists names, not desk-by-desk); no integration with School
+  Calendar's real quarter boundaries.
+
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **whole-day sub
 packet** (backlog rank 9). The single-section Sub export already put one
 period's chart, notes and rule conflicts on one page; a teacher out for the day
@@ -171,6 +281,14 @@ time someone is in `duplicateSection()`.
   notes or rule conflicts, then every section's sub export in order);
   independent print toggles for names, photos and rule conflicts; share a
   section by `state-link.js` URL
+- **Seating history and rotation**: record a dated, labeled snapshot of who
+  sat where (`section.history[]`); Auto-assign then nudges — best-effort,
+  never a hard block — away from reseating a student in a seat they've
+  already had, and toward a front-row seat for whoever hasn't had one yet
+  this quarter; a live "haven't had front row yet" / "seated in a repeated
+  spot" check in the sidebar and status line; and two printable reports (one
+  student's seating history, or the whole class's fairness numbers) for a
+  parent or admin conversation
 
 ## Quick Wins
 
@@ -215,10 +333,13 @@ time someone is in `duplicateSection()`.
   a projector wall, immovable obstacles — enough that the printed chart is a
   map of the room rather than a grid of boxes. The Schedule Visualizer already
   has a full tile-based floor editor; some of that machinery is reusable (P7).
-- **Seating history and rotation.** "Nobody sits in the same seat two units in
-  a row", "everybody sits in the front row once per quarter", and a record of
-  who sat where when — which is exactly the artifact you want when a parent
-  asks why their kid is at the back.
+- **Done (2026-08-13) — Seating history and rotation.** "Nobody sits in the
+  same seat twice", "everybody sits in the front row once per quarter", and
+  a record of who sat where when — the artifact you want when a parent asks
+  why their kid is at the back. Both constraints are best-effort solver
+  nudges (see Status for why full enforcement across future units was ruled
+  out of scope), and the record is printable per-student or for the whole
+  class.
 - **Done (2026-08-10) — Multiple layouts per section.** Rows for testing,
   pods for group work, a circle for Socratic seminar — saved as named
   arrangements (`section.layouts[]`) you can switch between and print,

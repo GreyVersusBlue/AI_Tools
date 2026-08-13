@@ -437,6 +437,161 @@ async function buildChart(page) {
   await page.close();
 }
 
+/* ================================================ seating history UI === */
+{
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+
+  // prompt()s from recordHistory() are answered from this queue, in order;
+  // any other dialog (a confirm()) falls back to accept() with no argument.
+  let dialogQueue = [];
+  page.on('dialog', async d => {
+    if (dialogQueue.length) { await d.accept(dialogQueue.shift()); }
+    else { await d.accept(); }
+  });
+
+  await page.goto(URL_PAGE, { waitUntil: 'load' });
+  await settle(page, 400);
+
+  await page.evaluate(names => { document.getElementById('nameInput').value = names.join('\n'); }, NAMES.slice(0, 6));
+  await page.click('button[onclick="addNames()"]');
+  await page.evaluate(() => {
+    document.getElementById('gridCols').value = '3';
+    document.getElementById('gridRows').value = '2';
+  });
+  await page.click('button[onclick="makeGrid()"]');
+  await page.click('button[onclick="autoAssign()"]');
+  await settle(page, 300);
+
+  await page.evaluate(() => {
+    const q = document.getElementById('historyQuarter');
+    q.value = 'Q1';
+    q.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await settle(page, 200);
+
+  dialogQueue = ['Unit 1', 'Q1'];
+  await page.click('button[onclick="recordHistory()"]');
+  await settle(page, 1600);   // autosave is debounced 1200ms
+  eq(await page.locator('#historyCount').textContent(), '1', 'recording an arrangement adds one to the history count');
+  ok((await page.locator('#historyList .layout-row').count()) === 1, 'the recorded entry shows up in the list');
+  ok(/Unit 1/.test(await page.locator('#historyList').innerText()), 'with the label the prompt was given');
+
+  const savedHistory = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('seating-chart-v1'));
+    return s.sections[0].history;
+  });
+  eq(savedHistory.length, 1, 'the record is actually persisted, not just rendered');
+  eq(savedHistory[0].quarter, 'Q1', 'tagged with the quarter that was set');
+  eq(Object.keys(savedHistory[0].assign).length, 6, 'and carries a full snapshot of who was seated');
+
+  // Shuffle again so the live floor differs from what was just recorded, then
+  // confirm the sidebar's live nudge box rendered SOMEthing (it has real
+  // history to compare against now) rather than the "nothing recorded yet"
+  // placeholder.
+  await page.click('button[onclick="autoAssign()"]');
+  await settle(page, 300);
+  const checksText = await page.locator('#histChecks').innerText();
+  ok(checksText.length > 0, 'the history-checks box renders once something is on record');
+  ok(!/Record an arrangement to start/.test(checksText), 'and stops showing the empty-state hint');
+
+  // Delete it — confirm() is answered by the fallback branch above.
+  await page.click('#historyList .layout-row .icon-btn');
+  await settle(page, 300);
+  eq(await page.locator('#historyCount').textContent(), '0', 'deleting the record brings the count back to zero');
+  await page.close();
+}
+
+/* ============================================ history print reports === */
+{
+  // Seeded through the tool's own storage key, the same way smoke-sub-packet
+  // does it — a hand-built fixture makes the repeat-seat and front-row
+  // numbers provable instead of left to the auto-assigner's dice.
+  const page = await prepPage(browser, BASE, { width: 1400, height: 1000 });
+  const students = ['Ada Lovelace', 'Marco Polo', 'Mansa Musa', 'Ida B Wells']
+    .map((n, i) => ({ id: 's' + i, name: n, note: '', flag: false, photo: '' }));
+  const deskShape = [
+    { id: 'f0', x: 40, y: 110 }, { id: 'f1', x: 170, y: 110 },     // front row
+    { id: 'b0', x: 40, y: 260 }, { id: 'b1', x: 170, y: 260 },     // back row
+  ].map(d => ({ ...d, rot: 0, locked: false }));
+  const historyEntry = (date, label, assign) => ({
+    id: 'h-' + label, date, label, quarter: 'Q1',
+    desks: deskShape.map(d => ({ id: d.id, x: d.x, y: d.y })),
+    assign, students: students.map(s => ({ id: s.id, name: s.name })),
+  });
+  const FIXTURE = {
+    __v: 1, active: 'p1', theme: 'light', zoom: 'fit', lastFirst: false, numbered: false, mirror: false,
+    printNames: true, printPhotos: true, printViolations: true, currentQuarter: 'Q1',
+    sections: [{
+      id: 'p1', name: 'History Report Test', students, desks: deskShape,
+      // s0 keeps the exact same seat both times (a repeat); s3 never once
+      // lands in the front row across either recorded unit (overdue).
+      assign: { f0: 's0', f1: 's2', b0: 's1', b1: 's3' },
+      apart: [], together: [], layouts: [],
+      history: [
+        historyEntry('2026-08-01', 'Unit 1', { f0: 's0', f1: 's1', b0: 's2', b1: 's3' }),
+        historyEntry('2026-08-08', 'Unit 2', { f0: 's0', f1: 's2', b0: 's3', b1: 's1' }),
+      ],
+    }],
+  };
+
+  await page.goto(URL_PAGE, { waitUntil: 'load' });
+  await settle(page, 300);
+  await page.evaluate(f => localStorage.setItem('seating-chart-v1', JSON.stringify(f)), FIXTURE);
+  await page.reload({ waitUntil: 'load' });
+  await settle(page, 400);
+  eq(await page.locator('#historyCount').textContent(), '2', 'both seeded history entries survive a reload through repair');
+
+  async function runPrint(fn) {
+    await page.evaluate(f => { window.print = () => {}; window[f](); }, fn);
+    await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
+    await settle(page, 200);
+  }
+  async function endPrint() {
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await page.emulateMedia({ media: 'screen' });
+    await settle(page, 200);
+  }
+  const reportRows = () => page.evaluate(() =>
+    Array.from(document.querySelectorAll('#printHistoryWrap table tbody tr')).map(tr =>
+      Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())));
+
+  // Nobody picked in the (empty-by-default) select: printStudentHistory()
+  // refuses before ever touching window.print(), rather than opening the
+  // print dialog on a blank sheet.
+  await page.evaluate(() => { window.print = () => {}; window.printStudentHistory(); });
+  await settle(page, 200);
+  ok(/Pick a student first/.test(await page.locator('#status').innerText()), 'and says why, in the status line');
+  eq(await page.evaluate(() => document.body.classList.contains('printing-history')), false,
+    'nothing was actually sent to print');
+
+  // Pick s0 (the repeat-seat student) and print their own report.
+  await page.selectOption('#historyStudentSelect', 's0');
+  await runPrint('printStudentHistory');
+  await page.emulateMedia({ media: 'print' });
+  const s0Rows = await reportRows();
+  eq(s0Rows.length, 2, "s0's report has one row per recorded unit");
+  eq(s0Rows[0][3], 'Yes', 'the first unit shows front row');
+  eq(s0Rows[0][4], '', 'and is not flagged as a repeat the first time');
+  eq(s0Rows[1][4], 'Repeats an earlier seat', 'the second time in the same seat is flagged');
+  await endPrint();
+
+  // The whole-class fairness report.
+  await runPrint('printClassHistory');
+  await page.emulateMedia({ media: 'print' });
+  const classRows = await reportRows();
+  eq(classRows.length, 4, 'one row per student on the roster');
+  const bySid = Object.fromEntries(classRows.map(r => [r[0], r]));
+  eq(bySid['Ada Lovelace'][1], '2', "Ada (s0) was seated in both recorded units");
+  eq(bySid['Ada Lovelace'][3], '1', 'and her repeat-seat count is exactly one');
+  eq(bySid['Ida B Wells'][2], '0', "Ida (s3), never once in front row, shows zero for this quarter");
+  await endPrint();
+
+  const errs = page.__errs.filter(e => !/favicon/.test(e));
+  eq(errs.length, 0, 'no console/page errors while building or printing a history report'
+    + (errs.length ? ':\n       ' + errs.join('\n       ') : ''));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 

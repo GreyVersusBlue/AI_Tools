@@ -12,6 +12,9 @@ import {
   neighborMap, togetherGroups, apartMap, assignSeats, checkConstraints,
   pickNext, parseRoster, gridDesks, rowDesks, nextSpot, contentBox, snap,
   QUOTA_BYTES, estimateStorageBytes, storageReport, matchPhotoFilenames,
+  todayISO, suggestQuarter, seatKey, frontRowDeskIds, newHistoryEntry,
+  seatHistoryMap, frontRowStatus, checkHistoryConstraints,
+  studentHistoryRows, classHistorySummary,
 } from '../seating.mjs';
 import { defaultStorage } from '../../../assets/js/gvb-save.js';
 
@@ -533,6 +536,207 @@ console.log('seating chart — pure logic\n');
     if (had) Object.defineProperty(globalThis, 'localStorage', had);
     else delete globalThis.localStorage;
   }
+}
+
+/* ================================================================
+   Seating history and rotation — "not the same seat twice" and
+   "front row once per quarter" as real, printable-evidence constraints.
+================================================================ */
+
+/* -------------------------------------------------- shape / defaults ---- */
+{
+  const s = newSection('Test', rngFrom(60));
+  deep(s.history, [], 'a fresh section starts with no recorded history');
+  const state = freshState(rngFrom(61));
+  ok(typeof state.currentQuarter === 'string' && state.currentQuarter, 'freshState guesses a starting quarter');
+}
+
+/* ------------------------------------------------------ suggestQuarter --- */
+{
+  eq(suggestQuarter('2026-09-01'), 'Q1', 'September is Q1');
+  eq(suggestQuarter('2026-10-31'), 'Q1', 'October is Q1');
+  eq(suggestQuarter('2026-11-15'), 'Q2', 'November is Q2');
+  eq(suggestQuarter('2026-12-25'), 'Q2', 'December is Q2');
+  eq(suggestQuarter('2027-01-10'), 'Q2', 'January is Q2');
+  eq(suggestQuarter('2026-02-20'), 'Q3', 'February is Q3');
+  eq(suggestQuarter('2026-03-15'), 'Q3', 'March is Q3');
+  eq(suggestQuarter('2026-05-01'), 'Q4', 'May is Q4');
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(todayISO()), 'todayISO returns a plain YYYY-MM-DD string');
+}
+
+/* ---------------------------------------------------- seatKey / front row --- */
+{
+  const desks = gridDesks(3, 2, rngFrom(70));   // 3 cols x 2 rows: desks 0-2 are the front row
+  const front = frontRowDeskIds(desks);
+  eq(front.length, 3, 'the front row is exactly one row of desks');
+  ok(front.includes(desks[0].id) && front.includes(desks[1].id) && front.includes(desks[2].id),
+    'the front row is the three desks closest to the board');
+  ok(!front.includes(desks[3].id), 'the second row is not the front row');
+  eq(seatKey(desks[0]), seatKey({ id: 'other', x: desks[0].x, y: desks[0].y }),
+    'seatKey identifies a seat by its room position, not its desk id');
+  ok(seatKey(desks[0]) !== seatKey(desks[1]), 'two different desks have different seat keys');
+}
+
+/* ---------------------------------------- recording, repeats, front row --- */
+{
+  const desks = gridDesks(3, 2, rngFrom(71));   // desks[0..2] front, desks[3..5] back
+  const s = sectionWith(NAMES28.slice(0, 6), desks, rngFrom(71));
+  const [d0, d1, d2, d3, d4, d5] = desks;
+
+  // Unit 1: s0/s1/s2 in front, s3/s4/s5 in back.
+  s.assign = { [d0.id]: 's0', [d1.id]: 's1', [d2.id]: 's2', [d3.id]: 's3', [d4.id]: 's4', [d5.id]: 's5' };
+  const entry1 = newHistoryEntry(s, { date: '2026-08-01', label: 'Unit 1', quarter: 'Q1' }, rngFrom(72));
+  s.history.push(entry1);
+  eq(entry1.students.length, 6, 'a recorded entry caches the roster names at the time');
+  eq(Object.keys(entry1.assign).length, 6, 'a recorded entry snapshots the full assignment');
+
+  // Unit 2: s0 keeps the SAME seat (repeat); front row rotates to s0/s3/s4.
+  s.assign = { [d0.id]: 's0', [d1.id]: 's3', [d2.id]: 's4', [d3.id]: 's1', [d4.id]: 's5', [d5.id]: 's2' };
+  const entry2 = newHistoryEntry(s, { date: '2026-08-08', label: 'Unit 2', quarter: 'Q1' }, rngFrom(73));
+  s.history.push(entry2);
+
+  // What's actually on the floor right now (not yet recorded): a THIRD
+  // arrangement, built so only s0 (who has now had d0 twice) repeats one of
+  // their own past seats, and the due student (s5, see below) is back-row
+  // again rather than accidentally already covered by this arrangement.
+  s.assign = { [d0.id]: 's0', [d1.id]: 's2', [d2.id]: 's1', [d3.id]: 's5', [d4.id]: 's3', [d5.id]: 's4' };
+
+  const seatHist = seatHistoryMap(s.history);
+  ok(seatHist.s0.has(seatKey(d0)), 's0 shows up as having sat at d0');
+  eq(seatHist.s0.size, 1, 's0 sat at exactly one distinct seat across both units (it repeated)');
+  eq(seatHist.s1.size, 2, 's1 sat at two distinct seats (no repeat)');
+
+  const status = frontRowStatus(s, 'Q1');
+  const dueNames = [...status.dueIds].sort();
+  deep(dueNames, ['s5'], 'only the student never seated in front this quarter is due');
+
+  const hc = checkHistoryConstraints(s, 'Q1');
+  deep(hc.repeats.map(r => r.studentId), ['s0'], 'the live floor flags exactly the repeated seat');
+  deep(hc.dueUnseated.map(d => d.studentId), ['s5'], "and flags the one student the live floor doesn't cover");
+
+  eq(checkHistoryConstraints(s, '').dueUnseated.length, 0, 'an empty quarter skips the front-row half of the report');
+
+  // The bug this guards: `currentQuarter` always has a default value (see
+  // freshState), so a section that has never recorded anything must not
+  // report students as "due" just because a quarter happens to be set —
+  // that would nag every teacher who has never touched this feature, and it
+  // did, once, until the gate below existed.
+  const untouched = newSection('Untouched', rngFrom(74));
+  untouched.students = s.students;
+  untouched.desks = desks;
+  untouched.assign = s.assign;
+  eq(checkHistoryConstraints(untouched, 'Q1').dueUnseated.length, 0,
+    'a section with zero recorded history reports nobody as overdue, even with a quarter set');
+
+  const rowsS0 = studentHistoryRows(s, 's0');
+  eq(rowsS0.length, 2, "s0's report has one row per recorded unit they were seated in");
+  eq(rowsS0[0].frontRow, true, 'front row is read from that entry, not the live floor');
+  eq(rowsS0[0].repeat, false, 'the first time in a seat is never a repeat');
+  eq(rowsS0[1].repeat, true, 'the second time in the SAME seat is flagged as a repeat');
+
+  const rowsS5 = studentHistoryRows(s, 's5');
+  eq(rowsS5.length, 2, "s5's report also has two rows");
+  ok(rowsS5.every(r => r.frontRow === false), 's5 never had a front-row row, matching the due check above');
+  ok(rowsS5.every(r => r.repeat === false), 's5 never repeated a seat');
+
+  const summary = classHistorySummary(s, 'Q1');
+  const bySid = Object.fromEntries(summary.map(r => [r.studentId, r]));
+  eq(bySid.s0.total, 2, "s0's summary counts both recorded units");
+  eq(bySid.s0.repeats, 1, "s0's summary counts the one repeated seat");
+  eq(bySid.s0.frontRowThisQuarter, 2, 's0 had front row both units');
+  eq(bySid.s5.frontRowThisQuarter, 0, "s5's summary agrees with the due check: zero front-row units");
+  ok(summary.every(r => r.total === 2), 'everyone on the roster shows up with both recorded units counted');
+}
+
+/* -------------------------------- assignSeats: the two solver nudges ---- */
+{
+  // Nudge 1 (no repeat seat): lock every other student down so only the
+  // repeat-history student is left to place, between their old seat and one
+  // fresh one — deterministic regardless of rng, since after the no-repeat
+  // filter only one candidate desk remains.
+  const oldSeat = { id: 'old', x: 0, y: 0 };
+  const freshSeat = { id: 'fresh', x: 300, y: 0 };
+  const lockedSeat = { id: 'locked', x: 600, y: 0, locked: true };
+  const s = newSection('Repeat nudge', rngFrom(80));
+  s.students = [{ id: 's0', name: 'A' }, { id: 's1', name: 'B' }];
+  s.desks = [oldSeat, freshSeat, lockedSeat];
+  s.assign = { locked: 's1' };   // s1 is pinned at the locked desk; s0 is the only one to place
+  s.history = [newHistoryEntry(
+    { desks: [oldSeat], assign: { old: 's0' }, students: s.students },
+    { date: '2026-08-01', label: 'Unit 1', quarter: 'Q1' }, rngFrom(81),
+  )];
+  for (let seed = 1; seed <= 5; seed++) {
+    const r = assignSeats(s, { rng: rngFrom(seed), attempts: 1 });
+    eq(r.assign.fresh, 's0', `seed ${seed}: the repeat-history student takes the fresh seat, not the old one`);
+    eq(r.assign.old, undefined, `seed ${seed}: the old seat is left empty rather than reused`);
+  }
+
+  // Nudge 2 (front row once per quarter): same trick — lock everyone else
+  // down, leaving the overdue student a choice between one front-row desk
+  // and one back-row desk.
+  const front = { id: 'front', x: 0, y: 0 };
+  const back = { id: 'back', x: 0, y: 300 };
+  const takenFront = { id: 'takenFront', x: 200, y: 0, locked: true };
+  const s2 = newSection('Front-row nudge', rngFrom(82));
+  s2.students = [{ id: 's0', name: 'A' }, { id: 's1', name: 'B' }];
+  s2.desks = [front, back, takenFront];
+  s2.assign = { takenFront: 's1' };
+  // s0 has one prior front-row appearance this quarter, so it isn't "due";
+  // s1 has none — but s1 is locked in place, so the due student left to
+  // place is s0 only if we make s0 the due one instead. Flip it: give s1
+  // (the locked student) the prior front-row credit, leaving s0 overdue.
+  s2.history = [newHistoryEntry(
+    { desks: [{ id: 'x', x: 0, y: 0 }], assign: { x: 's1' }, students: s2.students },
+    { date: '2026-08-01', label: 'Unit 1', quarter: 'Q1' }, rngFrom(83),
+  )];
+  for (let seed = 1; seed <= 5; seed++) {
+    const r = assignSeats(s2, { rng: rngFrom(seed), attempts: 1, quarter: 'Q1' });
+    eq(r.assign.front, 's0', `seed ${seed}: the student overdue for front row gets the free front desk`);
+  }
+  // Without a quarter, the nudge is off — assignSeats behaves as it always
+  // has, i.e. it does NOT reach for frontRowStatus/quarter logic at all.
+  const rNoQuarter = assignSeats(s2, { rng: rngFrom(1), attempts: 1 });
+  eq(Object.keys(rNoQuarter.assign).length, 2, 'omitting quarter still seats both students normally');
+}
+
+/* -------------------------------------------------------- repair: history --- */
+{
+  const raw = {
+    sections: [{
+      name: 'Room',
+      students: [{ id: 'a', name: 'Ada' }, { id: 'b', name: 'Marco' }],
+      desks: [{ id: 'd1', x: 40, y: 110 }, { id: 'd2', x: 150, y: 110 }],
+      assign: { d1: 'a' },
+      history: [
+        'not an entry',
+        {
+          date: 'not-a-date',
+          label: '  Unit 1  ',
+          quarter: '',
+          desks: [{ id: 'hd1', x: 40, y: 110 }, { id: 'hd2', x: 'junk', y: undefined }],
+          assign: { hd1: 'a', hd9: 'a', hd2: 'gone-student' },
+          students: [{ id: 'a', name: 'Ada' }, { id: 'ghost' }, { name: 'no id' }],
+        },
+      ],
+    }],
+  };
+  const repaired = repairState(raw, rngFrom(90));
+  const hist = repaired.sections[0].history;
+  eq(hist.length, 1, 'repair drops a non-object history entry');
+  eq(hist[0].label, 'Unit 1', 'repair trims a history entry label');
+  ok(hist[0].id, 'repair generates a history entry id when none is saved');
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(hist[0].date), 'repair replaces an unparseable date with a real one');
+  eq(hist[0].quarter, suggestQuarter(hist[0].date), 'an empty quarter falls back to the calendar guess');
+  ok(Number.isFinite(hist[0].desks[1].x) && Number.isFinite(hist[0].desks[1].y),
+    'a history desk with junk coordinates is repaired the same way a live desk is');
+  deep(hist[0].assign, { hd1: 'a' }, 'a history assign drops a desk that does not exist and an unnamed student id');
+  eq(hist[0].students.length, 1, 'repair drops a nameless or idless student from the name cache');
+
+  const twice = repairState(repairState(raw, rngFrom(90)), rngFrom(90));
+  deep(twice.sections[0].history[0].assign, hist[0].assign, 'repairing history is idempotent');
+
+  ok(validateState({ sections: [{ students: [], desks: [], history: 'not an array' }] }),
+    'validateState does not inspect history shape at all — repair is where a junk value gets cleaned up');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
