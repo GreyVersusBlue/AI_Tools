@@ -95,7 +95,9 @@
       '.trading-card.theme-' + t.key + ' .cname { color: ' + t.accent + ';' +
       (t.nameFont ? ' font-family: ' + t.nameFont + ';' : '') + ' }\n' +
       '.trading-card.theme-' + t.key + ' .cstats b { color: ' + t.accent2 + '; }\n' +
-      '.trading-card.theme-' + t.key + ' .card-frame { color: ' + t.accent + '; }\n';
+      '.trading-card.theme-' + t.key + ' .card-frame, .trading-card.theme-' + t.key + ' .pwin-rim { color: ' + t.accent + '; }\n' +
+      '.trading-card.theme-' + t.key + ' .meter-fill { background: ' + t.accent + '; }\n' +
+      '.trading-card.theme-' + t.key + ' .cstars { color: ' + t.accent + '; }\n';
     return css;
   }
 

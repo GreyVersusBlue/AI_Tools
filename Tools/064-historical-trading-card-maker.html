@@ -134,9 +134,43 @@
   .pwin.shape-circle { width: 1.5in; height: 1.5in; }
   .pwin.shape-shield { width: 1.45in; height: 1.6in; }
   .pwin.shape-arch { width: 1.45in; height: 1.7in; }
-  .trading-card .cname { font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: .1in; }
+  .trading-card .cname {
+    font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: .1in;
+    /* a subtle embossed plate: tonal edges that print as a gentle relief on
+       any paper and vanish gracefully on a rough B/W copier */
+    padding: .015in .04in; border-radius: 3px;
+    background: linear-gradient(rgba(255,255,255,.35), rgba(0,0,0,.05));
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.07);
+    text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(0,0,0,.18);
+  }
+  .trading-card .cstars { text-align: center; font-size: .7rem; letter-spacing: .06em; margin: -.06in 0 .05in; }
   .trading-card .cstats { font-size: .74rem; flex: 1; overflow: hidden; }
   .trading-card .cstats div { margin-bottom: .05in; }
+  .trading-card .stat-ico { width: .11in; height: .11in; margin-right: .03in; vertical-align: -.015in; }
+  .cstat-meter { display: flex; align-items: center; gap: .04in; }
+  .cstat-meter .meter-track {
+    flex: 1; position: relative; height: .12in; margin-left: .03in;
+    border: 1px solid currentColor; border-radius: .06in; overflow: hidden;
+    background: rgba(255,255,255,.5);
+  }
+  .cstat-meter .meter-fill { position: absolute; top: 0; bottom: 0; left: 0; opacity: .4; }
+  .cstat-meter .meter-num {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: .58rem; font-weight: 700;
+  }
+  .trading-card .cset {
+    margin-top: auto; padding-top: .04in; border-top: 1px solid currentColor;
+    display: flex; justify-content: space-between; gap: .1in;
+    font-size: .58rem; letter-spacing: .05em; text-transform: uppercase; opacity: .85;
+  }
+  /* static foil glint for rare+ cards: one soft diagonal light band — plain
+     alpha compositing (no blend modes, no animation) so every print pipeline
+     renders it as a sheen or not at all, never as garbage */
+  .trading-card .holo {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 32%, rgba(200,190,160,.18) 45%,
+      rgba(255,255,255,.4) 50%, rgba(180,170,150,.18) 55%, transparent 68%);
+  }
   .trading-card.back .cfacts { font-size: .76rem; }
   .trading-card.back .cfacts li { margin-bottom: .05in; }
   .section-label { font-size: .8rem; color: var(--muted); margin: .3in 0 .1in; text-align: center; text-transform: uppercase; letter-spacing: .05em; }
@@ -225,10 +259,19 @@
           <option value="epic">Epic &mdash; purple foil &#10038;&#10038;</option>
           <option value="legendary">Legendary &mdash; gold foil &#9819;</option>
         </select>
+        <label for="newStars">Star rating</label>
+        <select id="newStars">
+          <option value="0">None</option>
+          <option value="1">&#9733;</option>
+          <option value="2">&#9733;&#9733;</option>
+          <option value="3">&#9733;&#9733;&#9733;</option>
+          <option value="4">&#9733;&#9733;&#9733;&#9733;</option>
+          <option value="5">&#9733;&#9733;&#9733;&#9733;&#9733;</option>
+        </select>
       </div>
       <div>
         <label for="newStats">Stats, one per line: Label: Value</label>
-        <textarea id="newStats" placeholder="Born: 1822&#10;Died: 1913&#10;Known for: Underground Railroad"></textarea>
+        <textarea id="newStats" placeholder="Born: 1822&#10;Died: 1913&#10;Known for: Underground Railroad&#10;Courage: 9/10 &larr; becomes a stat bar"></textarea>
         <p class="stat-warn" id="statWarn" style="display:none;">&#9888; Those stats don't all fit &mdash; they'll be clipped on the printed card. Trim the list or remove the photo.</p>
       </div>
       <div class="preview-col">
@@ -255,6 +298,12 @@
     <label>Deck theme</label>
     <p class="hint">Applies to every card in the deck. Every theme is built to stay legible on a black-and-white printer.</p>
     <div class="theme-swatches" id="themeSwatches"></div>
+    <label for="setNameInput">Set name &amp; numbering</label>
+    <p class="hint">Stamps &ldquo;n / total &middot; SET NAME&rdquo; along the bottom of every card front.</p>
+    <div style="display:flex; gap:.5rem; align-items:flex-start;">
+      <input type="text" id="setNameInput" placeholder="e.g. Ancient Rome">
+      <button type="button" class="secondary" id="numberBtn" style="flex-shrink:0;">Number the deck</button>
+    </div>
     <label for="cardSize">Card size</label>
     <select id="cardSize">
       <option value="standard">Standard trading card &mdash; 2.5 &times; 3.5 in (6 per page)</option>
@@ -284,7 +333,7 @@
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
    'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
    'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
-   'adjustBtn'].forEach(function (id) {
+   'adjustBtn', 'newStars', 'setNameInput', 'numberBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -388,13 +437,13 @@
         HtcmPhoto.openEditor(target.image, function (updated) {
           target.image = updated;
           save(); renderEntries();
-          previewId = adjId; setFlip(false); updatePreview();
+          setFlip(false); previewCard(adjId);
         });
       }
       return;
     }
     var row = ev.target.closest('.entry-row');
-    if (row) { previewId = row.getAttribute('data-id'); setFlip(false); updatePreview(); }
+    if (row) { setFlip(false); previewCard(row.getAttribute('data-id')); }
   });
 
   /* ---------- add / edit form ---------- */
@@ -424,7 +473,7 @@
         setName: existing ? existing.meta.setName : '',
         cardNo: existing ? existing.meta.cardNo : 0,
         setSize: existing ? existing.meta.setSize : 0,
-        stars: existing ? existing.meta.stars : 0
+        stars: parseInt(els.newStars.value, 10) || 0
       },
       theme: existing ? existing.theme : null
     };
@@ -475,6 +524,7 @@
     els.newFacts.value = e.facts.join('\n');
     els.newImage.value = ''; // file inputs can't be prefilled; existing image is kept unless a new file is chosen
     els.newRarity.value = e.meta.rarity;
+    els.newStars.value = String(e.meta.stars || 0);
     pendingImage = null;
     previewId = null;
     updateFormMode();
@@ -487,6 +537,7 @@
     pendingImage = null;
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
     els.newRarity.value = 'common';
+    els.newStars.value = '0';
     updateFormMode();
     updatePreview();
   }
@@ -505,12 +556,25 @@
       entries.push(draft);
     }
     pendingImage = null;
-    previewId = draft.id; // keep showing the card that was just saved
-    save(); renderEntries(); updateFormMode(); updatePreview();
+    save(); renderEntries(); updateFormMode();
+    previewCard(draft.id); // keep showing the card that was just saved
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
     els.newRarity.value = 'common';
+    els.newStars.value = '0';
   }
   els.addEntryBtn.addEventListener('click', addEntry);
+
+  /* ---------- set name & numbering ---------- */
+  els.numberBtn.addEventListener('click', function () {
+    if (!entries.length) { alert('Add at least one card first.'); return; }
+    var setName = els.setNameInput.value.trim();
+    entries.forEach(function (e, i) {
+      e.meta.setName = setName;
+      e.meta.cardNo = i + 1;
+      e.meta.setSize = entries.length;
+    });
+    save(); renderEntries(); updatePreview();
+  });
 
   /* ---------- theme picker ---------- */
   function renderThemeSwatches() {
@@ -531,8 +595,9 @@
     updatePreview();
   });
 
-  /* live preview needs a rarity change reflected immediately */
+  /* live preview needs rarity and star changes reflected immediately */
   els.newRarity.addEventListener('change', schedulePreview);
+  els.newStars.addEventListener('change', schedulePreview);
 
   /* ---------- photo adjust (form) ----------
      The editor works on the form's image state: a freshly picked file
@@ -627,6 +692,14 @@
       updatePreview();
     }, 100);
   }
+  /* anything that points the preview at a saved card must cancel a pending
+     debounce, or the stale timer fires ~100ms later and yanks the preview
+     back to the (possibly just-cleared) form draft */
+  function previewCard(id) {
+    if (previewTimer) { clearTimeout(previewTimer); previewTimer = null; }
+    previewId = id;
+    updatePreview();
+  }
   ['newName', 'newStats', 'newFacts'].forEach(function (id) {
     els[id].addEventListener('input', schedulePreview);
   });
@@ -662,6 +735,7 @@
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', HtcmFrames.defsSvg());
+  if (entries.length && entries[0].meta.setName) els.setNameInput.value = entries[0].meta.setName;
   applyCardSize();
   renderThemeSwatches();
   renderEntries();

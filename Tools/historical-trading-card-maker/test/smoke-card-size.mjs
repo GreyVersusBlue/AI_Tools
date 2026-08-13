@@ -219,7 +219,34 @@ await settle(page);
 ok(await page.evaluate(() => !!document.querySelector('.theme-swatch[data-theme="parchment"].selected')),
    'the theme choice survives a reload');
 
-/* ── 10. no console noise anywhere in the run ────────────────────────────── */
+/* ── 10. print-first flash: meters, icons, stars, set strip, foil glint ──── */
+await page.fill('#newName', 'Julius Caesar');
+await page.fill('#newStats', 'Courage: 7/10\nBorn: 100 BC');
+await page.selectOption('#newRarity', 'rare');
+await page.selectOption('#newStars', '4');
+await page.click('#addEntryBtn');
+await settle(page);
+eq(await page.evaluate(() => (document.querySelector('#previewFront .meter-fill') || {}).style?.width ?? null),
+   '70%', 'a 7/10 stat renders as a meter filled to 70%');
+eq(await page.evaluate(() => (document.querySelector('#previewFront .meter-num') || {}).textContent ?? null),
+   '7/10', 'with the number printed inside the bar, for B/W printers');
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .cstats .stat-ico')),
+   'a recognized stat label gets its stroke icon');
+eq(await page.evaluate(() => (document.querySelector('#previewFront .cstars') || {}).textContent ?? null),
+   '★★★★☆', 'the star rating renders four of five stars');
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .holo')),
+   'a rare card carries the static foil glint overlay');
+await page.fill('#setNameInput', 'Ancient Rome');
+await page.click('#numberBtn');
+await settle(page);
+ok(await page.evaluate(() => {
+  const d = JSON.parse(localStorage.getItem('htcm_cards_v2'));
+  return d.cards.every((c, i) => c.meta.cardNo === i + 1 && c.meta.setSize === d.cards.length && c.meta.setName === 'Ancient Rome');
+}), 'Number the deck stamps set name and n-of-m onto every card');
+ok(await page.evaluate(() => ((document.querySelector('#previewFront .cset') || {}).textContent || '').includes('Ancient Rome')),
+   'the set strip shows along the card front’s bottom edge');
+
+/* ── 11. no console noise anywhere in the run ────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
