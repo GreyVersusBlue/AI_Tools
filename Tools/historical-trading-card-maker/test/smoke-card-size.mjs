@@ -166,7 +166,33 @@ ok(v2 && v2.v === 2 && v2.cards.length === 1, 'a v2 document was written on firs
 eq(v2 && v2.cards[0].image && v2.cards[0].image.shape, 'rrect', 'the bare v1 image string became an image object with defaults');
 ok(await page.evaluate(() => !!localStorage.getItem('htcm_cards_v1')), 'the v1 key is kept as a one-release backup');
 
-/* ── 7. no console noise anywhere in the run ─────────────────────────────── */
+/* ── 7. the live preview shows the form draft and flips ──────────────────── */
+ok(await page.isVisible('#previewFlipper'), 'a live preview card is on screen');
+await page.fill('#newName', 'Test Person');
+await page.fill('#newStats', 'Born: 1900');
+await page.waitForTimeout(250); // preview updates are debounced ~100ms
+ok((await page.textContent('#previewFront')).includes('Test Person'), 'typing a name updates the preview front');
+ok(await page.evaluate(() => !!document.querySelector('#previewFront .trading-card .cstats')),
+   'the preview renders the same card structure that prints');
+eq(await page.evaluate(() => document.getElementById('previewFlipper').classList.contains('flipped')), false,
+   'the preview starts on the front');
+await page.click('#flipBtn');
+eq(await page.evaluate(() => document.getElementById('previewFlipper').classList.contains('flipped')), true,
+   'the flip button turns the card over');
+ok((await page.textContent('#previewBack')).length > 0, 'the back face is rendered');
+await page.click('#previewFlipper');
+eq(await page.evaluate(() => document.getElementById('previewFlipper').classList.contains('flipped')), false,
+   'clicking the card flips it back to the front');
+
+/* ── 8. the overflow warning comes from measuring the real card ──────────── */
+await page.fill('#newStats', Array.from({ length: 20 }, (_, i) => `Stat ${i}: value`).join('\n'));
+await page.waitForTimeout(250);
+ok(await page.isVisible('#statWarn'), 'twenty stat lines trip the measured overflow warning');
+await page.fill('#newStats', 'Born: 1900');
+await page.waitForTimeout(250);
+ok(!(await page.isVisible('#statWarn')), 'and it clears when the stats fit again');
+
+/* ── 9. no console noise anywhere in the run ─────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 

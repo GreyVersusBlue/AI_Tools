@@ -41,6 +41,34 @@
   }
   textarea { resize: vertical; min-height: 4rem; }
   .add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+  @media (min-width: 1000px) { .add-grid { grid-template-columns: 1fr 1fr auto; } }
+  @media (max-width: 999px) { .preview-col { grid-column: 1 / -1; } }
+
+  /* ---- live preview: the real print card, flippable ---- */
+  .preview-col { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+  .htcm-preview-stage { perspective: 1200px; }
+  .htcm-flipper {
+    position: relative; width: 2.5in; height: 3.5in; cursor: pointer;
+    transform-style: preserve-3d; transition: transform .55s;
+  }
+  .htcm-preview-stage.size-fill .htcm-flipper { width: 2.43in; height: 3.4in; }
+  .htcm-flipper.flipped { transform: rotateY(180deg); }
+  .htcm-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .htcm-face.face-back { transform: rotateY(180deg); }
+  .htcm-face .trading-card { width: 100%; height: 100%; background: #fff; }
+  /* a11y dark mode is a whole-page invert filter (see _shared/a11y.css); the
+     preview must show true print colors, so each face counter-inverts —
+     exactly the treatment a11y.css gives photos — and the photo inside then
+     needs the page-wide img counter-invert switched off to avoid a double
+     negative. Faces, not the stage: a filter on the stage or flipper would
+     flatten the 3D flip (CSS filters force transform-style: flat). */
+  html.a11y-filter-dark .htcm-face { filter: invert(1) hue-rotate(180deg); }
+  html.a11y-filter-dark .htcm-face img { filter: none; }
+
+  /* offscreen host for measuring real card layout (stat-overflow warning) */
+  .htcm-measure { position: absolute; left: -10000px; top: 0; width: 2.5in; }
+  .htcm-measure.size-fill { width: 2.43in; }
+  .htcm-measure .trading-card { width: 100%; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -144,7 +172,19 @@
       <div>
         <label for="newStats">Stats, one per line: Label: Value</label>
         <textarea id="newStats" placeholder="Born: 1822&#10;Died: 1913&#10;Known for: Underground Railroad"></textarea>
-        <p class="stat-warn" id="statWarn" style="display:none;">&#9888; That's a lot of stats &mdash; they may get clipped on the printed card. Consider trimming the list.</p>
+        <p class="stat-warn" id="statWarn" style="display:none;">&#9888; Those stats don't all fit &mdash; they'll be clipped on the printed card. Trim the list or remove the photo.</p>
+      </div>
+      <div class="preview-col">
+        <label id="previewLabel">Live preview</label>
+        <div class="htcm-preview-stage size-standard" id="previewStage">
+          <div class="htcm-flipper" id="previewFlipper" role="button" tabindex="0"
+               aria-label="Card preview — press Enter to flip between front and back">
+            <div class="htcm-face face-front" id="previewFront"></div>
+            <div class="htcm-face face-back" id="previewBack"></div>
+          </div>
+        </div>
+        <button type="button" class="secondary small" id="flipBtn">Flip to back</button>
+        <p class="hint" style="margin:0; text-align:center; max-width: 2.5in;">Exactly what prints &mdash; it updates as you type. Click the card to flip it.</p>
       </div>
     </div>
     <label for="newFacts">Facts for the back, one per line</label>
@@ -173,12 +213,14 @@
 
 <script src="historical-trading-card-maker/htcm-store.js"></script>
 <script src="historical-trading-card-maker/htcm-image.js"></script>
+<script src="historical-trading-card-maker/htcm-render.js"></script>
 <script>
 (function () {
   'use strict';
   var els = {};
   ['newName', 'newImage', 'newStats', 'newFacts', 'addEntryBtn', 'cancelEditBtn', 'formTitle', 'editImageHint',
-   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn'].forEach(function (id) {
+   'statWarn', 'entriesWrap', 'entryCount', 'printBtn', 'printArea', 'cardSize', 'cardSizeHint', 'saveWarn',
+   'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -192,14 +234,10 @@
   var entries = doc.cards;
   var cardSize = doc.settings.size;
   var editingId = null; // id of the entry currently loaded into the form, or null when adding new
-  var KEEP_IMAGE = {}; // sentinel passed to addEntry(): "no new file was chosen while editing — keep the existing image"
+  var previewId = null; // id of a saved card shown in the preview, or null = the live form draft
 
   function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  var escapeHtml = HtcmRender.escapeHtml;
   function parseLines(text) { return text.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); }
 
   function totalImageKb() {
@@ -224,8 +262,10 @@
 
   function applyCardSize() {
     els.printArea.className = 'size-' + cardSize;
+    els.previewStage.className = 'htcm-preview-stage size-' + cardSize;
     els.cardSize.value = cardSize;
     els.cardSizeHint.textContent = SIZE_HINTS[cardSize] || '';
+    updatePreview();
   }
   els.cardSize.addEventListener('change', function () {
     cardSize = els.cardSize.value === 'fill' ? 'fill' : 'standard';
@@ -233,18 +273,23 @@
     applyCardSize();
   });
 
-  /* ---------- stat-overflow heuristic ----------
+  /* ---------- stat-overflow check ----------
      The front card's stats box (.cstats) is a fixed-height flex area with
-     overflow:hidden — so print output can't grow the card to fit — past a
-     rough line count it clips instead of wrapping into view. This isn't
-     pixel-exact (font size, label length, and text wrapping all matter
-     too), just enough to warn a teacher before they print and discover
-     clipped stats. A card with a photo has roughly half the vertical room
-     of one without, since the image eats into the same fixed card height. */
-  var MAX_STAT_LINES_WITH_IMAGE = 6;
-  var MAX_STAT_LINES_NO_IMAGE = 11;
-  function statOverflowRisk(statCount, hasImage) {
-    return statCount > (hasImage ? MAX_STAT_LINES_WITH_IMAGE : MAX_STAT_LINES_NO_IMAGE);
+     overflow:hidden — print output can't grow the card to fit, so past a
+     point stats clip. Earlier rounds guessed with a line-count heuristic
+     derived against the old 3.4in card; now the check renders the real card
+     offscreen at the chosen print size and asks the box itself whether it
+     overflows, so font size, label length, wrapping, and the photo's
+     presence are all accounted for automatically. */
+  var measureHost = document.createElement('div');
+  document.body.appendChild(measureHost);
+  function entryOverflows(entry) {
+    measureHost.className = 'htcm-measure size-' + cardSize;
+    measureHost.innerHTML = HtcmRender.frontHtml(entry);
+    var box = measureHost.querySelector('.cstats');
+    var over = !!box && box.scrollHeight > box.clientHeight + 1;
+    measureHost.innerHTML = '';
+    return over;
   }
 
   function renderEntries() {
@@ -252,7 +297,7 @@
     els.entriesWrap.innerHTML = entries.map(function (e) {
       var img = e.image ? '<img class="thumb" src="' + e.image.src + '" alt="">' : '';
       var kb = e.image ? '<span class="kb-badge">' + HtcmImage.approxKb(e.image.src) + ' KB photo</span>' : '';
-      var warn = statOverflowRisk(e.stats.length, !!e.image) ? '<span class="warn-badge">&#9888; may overflow when printed</span>' : '';
+      var warn = entryOverflows(e) ? '<span class="warn-badge">&#9888; stats clip when printed</span>' : '';
       return '<div class="entry-row" data-id="' + e.id + '">' + img +
         '<div class="info"><div class="ename">' + escapeHtml(e.name) + '</div>' +
         '<div class="estats">' + e.stats.length + ' stats &middot; ' + e.facts.length + ' facts' + kb + warn + '</div></div>' +
@@ -265,28 +310,63 @@
     if (delId) {
       entries = entries.filter(function (e) { return e.id !== delId; });
       if (editingId === delId) cancelEdit();
-      save(); renderEntries();
+      if (previewId === delId) previewId = null;
+      save(); renderEntries(); updatePreview();
       return;
     }
     var editId = ev.target.getAttribute('data-edit');
-    if (editId) startEdit(editId);
+    if (editId) { startEdit(editId); return; }
+    var row = ev.target.closest('.entry-row');
+    if (row) { previewId = row.getAttribute('data-id'); setFlip(false); updatePreview(); }
   });
 
   /* ---------- add / edit form ---------- */
-  function currentFormHasImage() {
-    if (els.newImage.files && els.newImage.files[0]) return true;
-    if (editingId) {
-      var existing = entries.filter(function (e) { return e.id === editingId; })[0];
-      return !!(existing && existing.image);
-    }
-    return false;
+  var pendingImage = null; // image chosen in the form (downscaled eagerly on pick) but not yet saved to a card
+
+  function parseStats(text) {
+    return parseLines(text).map(function (line) {
+      var idx = line.indexOf(':');
+      return idx === -1 ? { label: line, value: '' } : { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
+    });
+  }
+  function editingEntry() {
+    return editingId ? entries.filter(function (e) { return e.id === editingId; })[0] || null : null;
+  }
+  /** The card the form currently describes — the single parse path shared by
+      the live preview, the overflow warning, and addEntry(). */
+  function parseFormEntry() {
+    var existing = editingEntry();
+    return {
+      id: editingId || 'draft',
+      name: els.newName.value.trim(),
+      image: pendingImage || (existing ? existing.image : null),
+      stats: parseStats(els.newStats.value),
+      facts: parseLines(els.newFacts.value),
+      meta: existing ? existing.meta : { rarity: 'common', setName: '', cardNo: 0, setSize: 0, stars: 0 },
+      theme: existing ? existing.theme : null
+    };
   }
   function updateStatWarning() {
-    var count = parseLines(els.newStats.value).length;
-    els.statWarn.style.display = statOverflowRisk(count, currentFormHasImage()) ? '' : 'none';
+    els.statWarn.style.display = entryOverflows(parseFormEntry()) ? '' : 'none';
   }
-  els.newStats.addEventListener('input', updateStatWarning);
-  els.newImage.addEventListener('change', updateStatWarning);
+
+  els.newImage.addEventListener('change', function () {
+    var file = els.newImage.files && els.newImage.files[0];
+    if (!file) { pendingImage = null; previewId = null; updatePreview(); return; }
+    HtcmImage.readAndDownscale(file, function (scaled) {
+      pendingImage = {
+        src: scaled.src, w: scaled.w, h: scaled.h,
+        crop: { x: 0.5, y: 0.5, scale: 1 }, shape: 'rrect', filter: 'none'
+      };
+      previewId = null;
+      updatePreview();
+    }, function (msg) {
+      pendingImage = null;
+      els.newImage.value = '';
+      alert(msg);
+      updatePreview();
+    });
+  });
 
   function updateFormMode() {
     if (editingId) {
@@ -311,58 +391,40 @@
     els.newStats.value = e.stats.map(function (s) { return s.value ? (s.label + ': ' + s.value) : s.label; }).join('\n');
     els.newFacts.value = e.facts.join('\n');
     els.newImage.value = ''; // file inputs can't be prefilled; existing image is kept unless a new file is chosen
+    pendingImage = null;
+    previewId = null;
     updateFormMode();
+    updatePreview();
     els.newName.focus();
     els.newName.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   function cancelEdit() {
     editingId = null;
+    pendingImage = null;
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
     updateFormMode();
+    updatePreview();
   }
   els.cancelEditBtn.addEventListener('click', cancelEdit);
 
-  function addEntry(image) {
-    var name = els.newName.value.trim();
-    if (!name) { alert('Add a name at least.'); return; }
-    var stats = parseLines(els.newStats.value).map(function (line) {
-      var idx = line.indexOf(':');
-      return idx === -1 ? { label: line, value: '' } : { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
-    });
-    var facts = parseLines(els.newFacts.value);
-
+  function addEntry() {
+    var draft = parseFormEntry();
+    if (!draft.name) { alert('Add a name at least.'); return; }
     if (editingId) {
-      var idx2 = -1;
-      for (var i = 0; i < entries.length; i++) { if (entries[i].id === editingId) { idx2 = i; break; } }
-      if (idx2 !== -1) {
-        var prev = entries[idx2];
-        var finalImage = image === KEEP_IMAGE ? prev.image : (image || null);
-        entries[idx2] = { id: editingId, name: name, image: finalImage, stats: stats, facts: facts, meta: prev.meta, theme: prev.theme };
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].id === editingId) { draft.id = editingId; entries[i] = draft; break; }
       }
       editingId = null;
     } else {
-      entries.push({
-        id: uid(), name: name, image: (image === KEEP_IMAGE ? null : image) || null, stats: stats, facts: facts,
-        meta: { rarity: 'common', setName: '', cardNo: 0, setSize: 0, stars: 0 }, theme: null
-      });
+      draft.id = uid();
+      entries.push(draft);
     }
-    save(); renderEntries(); updateFormMode();
+    pendingImage = null;
+    previewId = draft.id; // keep showing the card that was just saved
+    save(); renderEntries(); updateFormMode(); updatePreview();
     els.newName.value = ''; els.newStats.value = ''; els.newFacts.value = ''; els.newImage.value = '';
   }
-
-  els.addEntryBtn.addEventListener('click', function () {
-    var file = els.newImage.files && els.newImage.files[0];
-    if (!file) { addEntry(editingId ? KEEP_IMAGE : null); return; }
-    HtcmImage.readAndDownscale(file, function (scaled) {
-      addEntry({
-        src: scaled.src, w: scaled.w, h: scaled.h,
-        crop: { x: 0.5, y: 0.5, scale: 1 }, shape: 'rrect', filter: 'none'
-      });
-    }, function (msg) {
-      alert(msg + ' The card was saved without that photo.');
-      addEntry(editingId ? KEEP_IMAGE : null);
-    });
-  });
+  els.addEntryBtn.addEventListener('click', addEntry);
 
   /* ---------- print: row-mirrored duplex front/back grids ----------
      paginate() and mirrorPageRows() below are adapted from VocabLayout in
@@ -396,17 +458,54 @@
     return mirrored;
   }
 
-  function frontCardHtml(e) {
-    if (!e) return '<div class="trading-card blank"></div>';
-    var img = e.image ? '<img src="' + e.image.src + '" alt="">' : '';
-    var stats = e.stats.map(function (s) { return '<div><b>' + escapeHtml(s.label) + ':</b> ' + escapeHtml(s.value) + '</div>'; }).join('');
-    return '<div class="trading-card">' + img + '<div class="cname">' + escapeHtml(e.name) + '</div><div class="cstats">' + stats + '</div></div>';
+  var frontCardHtml = HtcmRender.frontHtml;
+  var backCardHtml = HtcmRender.backHtml;
+
+  /* ---------- live preview: the same render the printer gets ---------- */
+  var flipped = false;
+  function setFlip(f) {
+    flipped = f;
+    els.previewFlipper.classList.toggle('flipped', flipped);
+    els.flipBtn.textContent = flipped ? 'Flip to front' : 'Flip to back';
   }
-  function backCardHtml(e) {
-    if (!e) return '<div class="trading-card back blank"></div>';
-    var facts = e.facts.map(function (f) { return '<li>' + escapeHtml(f) + '</li>'; }).join('') || '<li>&mdash;</li>';
-    return '<div class="trading-card back"><div class="cname">' + escapeHtml(e.name) + '</div><ul class="cfacts">' + facts + '</ul></div>';
+  function previewEntry() {
+    if (previewId) {
+      var e = entries.filter(function (x) { return x.id === previewId; })[0];
+      if (e) return e;
+      previewId = null;
+    }
+    var draft = parseFormEntry();
+    if (!draft.name && !draft.stats.length && !draft.facts.length && !draft.image) {
+      // nothing typed yet — show a placeholder card instead of an empty frame
+      draft.name = 'Your card';
+      draft.stats = [{ label: 'Stats', value: 'appear here' }];
+      draft.facts = ['Facts you type appear on the back.'];
+    }
+    return draft;
   }
+  function updatePreview() {
+    var e = previewEntry();
+    els.previewFront.innerHTML = HtcmRender.frontHtml(e);
+    els.previewBack.innerHTML = HtcmRender.backHtml(e);
+    updateStatWarning();
+  }
+  var previewTimer = null;
+  function schedulePreview() {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(function () {
+      previewTimer = null;
+      previewId = null; // typing switches the preview back to the form draft
+      updatePreview();
+    }, 100);
+  }
+  ['newName', 'newStats', 'newFacts'].forEach(function (id) {
+    els[id].addEventListener('input', schedulePreview);
+  });
+  els.previewFlipper.addEventListener('click', function () { setFlip(!flipped); });
+  els.previewFlipper.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setFlip(!flipped); }
+  });
+  els.flipBtn.addEventListener('click', function () { setFlip(!flipped); });
 
   els.printBtn.addEventListener('click', function () {
     if (!entries.length) { alert('Add at least one card first.'); return; }
