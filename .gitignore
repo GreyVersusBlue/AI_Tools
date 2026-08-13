@@ -1,4 +1,9 @@
-.claude/
+# Personal Claude Code settings/session state stay local and unshared, but
+# .claude/commands/ is deliberately carved out below: those are shareable
+# slash-command prompts (like /refresh-offline-copy) meant to travel with
+# the repo so they work in any clone's Claude Code, not just this machine.
+.claude/*
+!.claude/commands/
 
 # Dev-only test tooling (see CLAUDE.md "Test tooling"). Never served, never precached.
 node_modules/
