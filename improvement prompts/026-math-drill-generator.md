@@ -162,6 +162,146 @@ Verified with two suites, both wired into `npm run test:math-drill`:
 one-step equations — the same display-text mechanism now carries them without
 touching the renderer.
 
+## Status — 2026-08-13 — self-checking output formats (backlog: "Self-checking sheet formats")
+
+**Shipped and verified.** Riddle-answer, colour-by-answer, and maze are three
+new OUTPUT FORMATS — a new "Self-checking format" dropdown next to Format —
+that transform how an already-generated problem set prints. They don't add a
+new problem type and don't touch `MathDrillGenerate.generateProblems()`; all
+three are pure functions of a `{ answer, answerText }` problem list in a new
+module, `Tools/math-drill-generator/mdg-selfcheck.js`, so every existing
+template (the four fact drills, fact families, mixed, integers, decimals,
+fractions, percent, order of operations) gets all three formats for free.
+Each format has a worksheet rendering and an answer-key rendering, wired
+into `worksheetHtml()`/`answersHtml()` in the tool's inline script.
+
+- **Riddle-answer.** A built-in bank of 15 short classroom riddles
+  (`RIDDLES` in `mdg-selfcheck.js`). Each **distinct** answer value in the
+  set (not each problem — basic fact drills often have far fewer distinct
+  answers than problems, e.g. addition on 1-12 has ~23 distinct sums for
+  what might be 30 problems) is assigned one letter of the punchline, in
+  order of first appearance, so the decoder table (value -> letter) is
+  always a clean function even when many problems share an answer. The
+  riddle with a distinct-letter count that fits the available distinct
+  answers, and a total length closest to the problem count, is picked; if
+  nothing in the bank fits (a tiny or very narrow-range set), the bank's
+  simplest riddle is **truncated** to as many letters as the set can
+  support and a note says so on the sheet. The worksheet prints the
+  punchline as blanks (each blank labelled with the *value* it needs, not
+  the letter) plus the decoder key (value = letter); the answer key prints
+  the solved punchline. Self-checking comes from the lookup step: an answer
+  that isn't in the decoder key means an arithmetic mistake, the same way a
+  commercial riddle worksheet works.
+- **Colour-by-answer.** Five hand-authored pixel-grid pictures (heart,
+  star, house, arrow, smiley — `COLOR_PATTERNS`) and an 8-colour named
+  palette (`PALETTE`). The picture whose filled-cell count is closest to
+  the problem count is picked; filled cells are numbered and cycle through
+  the problem list with `%` (so a picture bigger than the problem count
+  reuses problems, and one smaller than the count leaves the excess
+  problems out of the picture — they're still on the plain worksheet).
+  Colour is assigned per **distinct** answer value, cycling the palette, so
+  the same answer always colours the same cell colour everywhere. The
+  worksheet prints numbered, uncoloured cells plus a colour-name legend —
+  explicitly kept black-and-white-photocopy-safe per the assignment; the
+  answer key prints the same grid with the cells actually filled in colour
+  (`-webkit-print-color-adjust: exact` so it survives printing too) for a
+  fast visual check.
+- **Maze.** A real generated maze — recursive-backtracker on a small grid
+  (6x6 to 10x9 depending on problem count), not a linear illusion of
+  branching. Empirical measurement (documented in `mdg-selfcheck.js`) found
+  that a perfect maze's *corner-to-corner* path branches surprisingly
+  rarely (~1-2 junctions on a 6x6), so the solution path is instead the
+  **tree's diameter** (the two cells farthest apart, found by the standard
+  double-BFS trick), which roughly doubles the junction count for the same
+  grid size, and `buildMaze()` keeps the best of 6 generated candidates.
+  Even so, a typical maze only gates something like 3-10 problems out of a
+  30-problem set — the rest print afterward as a "Bonus problems" list on
+  the same page rather than silently disappearing. Each junction is one
+  problem from the set; its answer is the "continue" choice, and the
+  junction's other open doors carry decoy values (other problems' real
+  answers, or a numeric perturbation if the set doesn't have enough
+  distinct alternatives) — 2-3 choices per junction as the assignment
+  specified. The maze replaces the plain problem list entirely (it doesn't
+  get appended after it, unlike the other two formats) since the maze *is*
+  the delivery mechanism for its problems. Walls render as plain CSS
+  borders on a grid of cells (open side = no border, so adjoining open
+  cells visually merge) — deliberately not SVG or absolutely-positioned
+  wall segments, to stay simple and printable. **Accepted limitation,
+  stated directly in the module's header comment:** a student who traces
+  which printed choice bubble sits nearer the exit instead of doing the
+  arithmetic can shortcut the maze, the same way tracing a printed maze's
+  walls instead of solving it always could — this format doesn't try to
+  defeat that, only to add real friction.
+- All three **ignore "problems per page"** and always print as one page —
+  a deliberate simplification stated in the UI hint text, not a bug; a
+  self-checking sheet is meant to be one activity, not paginated fragments.
+  All three also **suppress the "answer key on same sheet, in a corner"**
+  checkbox's box, since a corner box listing every plain answer would
+  trivially spoil the puzzle these formats exist to be. Riddle and
+  colour-by-answer still honour Format/Font size/pagination for the *plain
+  problem section* they're appended to; maze ignores Format entirely (its
+  junction problems always print across, like fractions/percent/ooo
+  already do) since there's no way to stack a problem inside a maze cell.
+- **Seeded/reproducible**, consistent with the tool's existing "Lock seed"
+  promise: `buildMaze()` takes the sheet's own `settings.seed`, so locking
+  the seed reproduces the identical maze too. Riddle and colour-by-answer
+  selection needed no RNG at all — both are fully deterministic
+  (order-of-first-appearance + best-fit search), which was a deliberate
+  design choice over introducing randomness that would then need seeding.
+
+**Testing performed**, added to the two existing suites already wired into
+`npm run test:math-drill` (package.json is off-limits for this round per the
+assignment boundaries, so no new top-level test file was created — new
+assertions were added into the two files already in the chain instead):
+
+- `Tools/math-drill-generator/test/drill-math.test.mjs` gained a
+  "Self-checking formats" section (**106 new assertions**, 3812 -> 3918
+  total): riddle decoder round-trips correctly for every letter position,
+  the decoder is a clean function (no value maps to two letters), every
+  decoder value is a real answer from the set; colour-by-answer legend
+  matches what's actually painted on every filled cell; maze paths are
+  contiguous walks, every junction has exactly one correct choice and no
+  duplicate-valued choices, every problem ends up as a junction or a bonus
+  problem, seeding is reproducible and different seeds differ, and all
+  three formats return `null` rather than throwing on an empty problem set.
+- `Tools/math-drill-generator/test/smoke-new-types.mjs` gained a browser
+  section (**22 new assertions**, 50 -> 72 total): the picker offers all
+  three formats; riddle/colour-by-answer worksheets keep the plain problem
+  list and add their section, with no "undefined"/"NaN" anywhere; maze
+  worksheets have zero `.problems` elements (confirming the replacement,
+  not an addition); each answer key reveals its solution (solved
+  punchline, filled colour cells, underlined correct maze choices, shaded
+  solved path); and the printed sheet carries the maze section through the
+  same way it already carried the plain problems.
+- Manual verification via headless-Chromium screenshots in both screen and
+  `emulateMedia('print')` modes for all three formats, worksheet and
+  answer key: confirmed no horizontal overflow (`scrollWidth === clientWidth`
+  on every `.sheet`), confirmed content that runs long (the maze sheet
+  runs to about 1.75 printed pages at 30 problems) flows onto a second
+  physical page instead of clipping — no `overflow: hidden` was added
+  anywhere in the new CSS, per the standing print-clipping warning in
+  CLAUDE.md, and `.sheet` keeps its existing `min-height` (not a fixed
+  `height`) so it's free to grow.
+
+**New file, needs central `sw.js` precaching** (not done here — `sw.js` is
+in this round's do-not-touch list; the session responsible for `sw.js`
+should add this and bump `CACHE_VERSION`):
+`Tools/math-drill-generator/mdg-selfcheck.js`.
+
+**Where a future round should pick up:** the maze's "3-10 junctions out of
+30 problems" ratio is inherent to how sparsely a perfect maze branches, not
+a bug — a future round wanting to gate *more* of a large problem set with
+one maze would need either a bigger grid (print-real-estate tradeoff) or a
+maze variant that deliberately adds loops/extra walls removed (an
+"imperfect" maze) to manufacture more junctions per cell. The riddle bank
+is only 15 riddles; more variety, or a topic-themed sub-bank per subject,
+would extend it cheaply since `pickRiddle()`'s best-fit search doesn't care
+how many entries are in `RIDDLES`. Colour-by-answer's five pictures are
+simple hand-authored pixel art (recognizable but not elaborate, as the
+assignment allowed) — more pictures, or an actual small SVG/procedural
+shape library, is future scope. Everything else under Major Features below
+remains untouched.
+
 ## What it does today
 
 - Operation templates (`mdg-templates.js`) with configurable number ranges
@@ -174,6 +314,10 @@ touching the renderer.
 - Settings import/export (`exportSettings`, `importSettingsFromFile`,
   `isPlausibleSettings`)
 - **Fluency header** (`fluencyHeaderHtml`) — name/date/score/time
+- **Self-checking output formats** (`mdg-selfcheck.js`) — riddle-answer,
+  colour-by-answer, and maze, any already-generated problem set rendered as
+  a self-checking puzzle instead of (or, for riddle/colour-by-answer, in
+  addition to) the plain worksheet, each with its own answer key
 
 ## Quick Wins
 
@@ -225,10 +369,12 @@ touching the renderer.
 - **"Find the mistake" mode** — also on the backlog — is this generator plus
   a deliberate error and a worked solution. Cheap to add on top of what
   exists.
-- **Self-checking formats**: a riddle whose answer is spelled by correct
-  answers, a colour-by-answer grid, a maze. These are the formats students
-  actually engage with and they're all mechanical transformations of a
-  problem set.
+- **Done — 2026-08-13 —** **Self-checking formats**: a riddle whose answer
+  is spelled by correct answers, a colour-by-answer grid, a maze. *(All
+  three ship as a "Self-checking format" dropdown — `mdg-selfcheck.js` —
+  transforming an already-generated problem set rather than adding a new
+  problem type; see the dated Status entry above for the design and
+  scoping tradeoffs on the riddle bank and the maze generator.)*
 - **On-screen practice mode** with immediate feedback via a share link (P3),
   for a student on a device — with no accounts and nothing stored.
 

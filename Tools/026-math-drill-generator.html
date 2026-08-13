@@ -19,6 +19,7 @@
 <!-- gvb:social:end -->
 <script src="math-drill-generator/mdg-templates.js"></script>
 <script src="math-drill-generator/mdg-generate.js"></script>
+<script src="math-drill-generator/mdg-selfcheck.js"></script>
 <script src="math-drill-generator/mdg-store.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -113,6 +114,46 @@
   }
   .same-sheet-key .ssk-grid .num { color: var(--muted); margin-right: .15rem; }
 
+  /* ---------- self-checking formats ---------- */
+  .riddle-section { margin-top: 1.1rem; padding-top: .8rem; border-top: 1px dashed var(--line-strong); }
+  .riddle-setup { font-weight: 600; margin-bottom: .5rem; }
+  .riddle-blanks { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .15rem .35rem; margin-bottom: .8rem; }
+  .riddle-blank { display: flex; flex-direction: column; align-items: center; min-width: 1.15em; }
+  .riddle-blank-line { border-bottom: 2px solid var(--ink); width: 100%; min-width: 1.15em; height: 1.1em; }
+  .riddle-blank-num { font-size: .58em; color: var(--muted); margin-top: .1rem; white-space: nowrap; }
+  .riddle-gap { width: .6em; flex: 0 0 auto; }
+  .riddle-punct { align-self: flex-end; padding-bottom: .15em; }
+  .riddle-decoder-title { font-weight: 600; font-size: .82rem; margin-bottom: .35rem; }
+  .riddle-decoder { display: flex; flex-wrap: wrap; gap: .3rem .6rem; font-size: .82rem; font-family: Consolas, monospace; }
+  .riddle-decoder-item { border: 1px solid var(--line-strong); border-radius: 4px; padding: .1rem .4rem; }
+  .riddle-solved { font-family: Consolas, monospace; font-size: 1.05rem; font-weight: 700; letter-spacing: .03em; word-break: break-word; margin-top: .3rem; }
+  .riddle-note { color: var(--muted); font-size: .74rem; margin-top: .5rem; }
+
+  .cba-section { margin-top: 1.1rem; padding-top: .8rem; border-top: 1px dashed var(--line-strong); }
+  .cba-title { font-weight: 600; margin-bottom: .5rem; font-size: .9rem; }
+  .cba-grid { display: grid; gap: 2px; margin: 0 0 .7rem; max-width: 5.6in; }
+  .cba-cell { aspect-ratio: 1 / 1; border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; font-size: .62rem; font-family: Consolas, monospace; }
+  .cba-blank { border-color: transparent; }
+  .cba-cell-filled { color: #fff; text-shadow: 0 0 2px rgba(0,0,0,.65); font-weight: 700; }
+  .cba-legend { display: flex; flex-wrap: wrap; gap: .25rem .8rem; font-size: .78rem; }
+  .cba-legend-item { display: flex; align-items: center; gap: .3rem; }
+  .cba-swatch { width: .85em; height: .85em; border: 1px solid var(--line-strong); display: inline-block; flex: 0 0 auto; }
+
+  .maze-section { margin-top: 1.1rem; }
+  .maze-instructions { font-size: .8rem; color: var(--muted); margin-bottom: .6rem; }
+  .maze-grid { display: grid; gap: 0; margin: 0 0 .9rem; max-width: 5.6in; }
+  .maze-cell { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: .68rem; font-weight: 700; box-sizing: border-box; }
+  .maze-onpath { background: rgba(74,155,87,.16); }
+  .maze-junction-title { font-weight: 600; font-size: .85rem; margin-bottom: .5rem; }
+  .maze-junction-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .8rem; }
+  .maze-junction { border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .6rem; break-inside: avoid; }
+  .maze-junction-num { font-weight: 700; font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .maze-junction-problem { font-family: Consolas, monospace; margin: .2rem 0 .35rem; }
+  .maze-junction-choices { display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .82rem; }
+  .maze-choice-correct { font-weight: 700; text-decoration: underline; }
+  .maze-bonus-title { font-weight: 600; font-size: .85rem; margin: .9rem 0 .4rem; }
+  .cba-cell-filled, .maze-onpath { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   @media print {
@@ -189,6 +230,15 @@
           <div><label for="perPage">Problems per page (blank = one page)</label><input type="number" id="perPage" min="1" max="100" placeholder="auto"></div>
           <div><label for="seedDisplay">Sheet seed</label><input type="text" id="seedDisplay" readonly aria-label="Sheet seed, used to reprint this exact sheet"></div>
         </div>
+
+        <label for="selfCheck">Self-checking format</label>
+        <select id="selfCheck">
+          <option value="none" selected>None (plain worksheet)</option>
+          <option value="riddle">Riddle answer</option>
+          <option value="colorByAnswer">Colour-by-answer</option>
+          <option value="maze">Maze</option>
+        </select>
+        <p class="hint" id="selfCheckHint">Adds a self-checking puzzle built from this same problem set. Riddle and colour-by-answer add a section after the plain worksheet; maze replaces the problem list with a generated maze whose junctions are gated by a few of the problems &mdash; any leftover problems print afterward as bonus practice. All three ignore "problems per page" and print as one page, and include their own answer key.</p>
 
         <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
           <input type="checkbox" id="avoidTrivial" style="width:auto;margin:0;"> Avoid trivial facts (&times;0, &times;1, &divide;1, +0)
@@ -274,13 +324,13 @@
    'operand1Min','operand1Max','operand2Min','operand2Max','resetRangeBtn',
    'timedFluency','fluencyTargetRow','fluencyTargetSeconds',
    'format','fontSize','perPage','seedDisplay','avoidTrivial','lockSeed','lockSeedHint',
-   'sameSheetKey','sameSheetKeyModeRow','sameSheetKeyMode','reorderedVersions'
+   'sameSheetKey','sameSheetKeyModeRow','sameSheetKeyMode','reorderedVersions','selfCheck'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var settings = { templateKey: 'addition', sheetTitle: '', problemCount: 30, columns: 3, versions: 1, rangesByTemplate: {},
     timedFluency: false, fluencyTargetSeconds: '',
     format: 'horizontal', fontSize: 'md', perPage: '', avoidTrivial: false, lockSeed: false, seed: null,
-    sameSheetKey: false, sameSheetKeyMode: 'both', reorderedVersions: false };
+    sameSheetKey: false, sameSheetKeyMode: 'both', reorderedVersions: false, selfCheck: 'none' };
   var problemSets = []; // [{ label: 'Version A'|null, problems: [...] }, ...]
   var currentVersionIndex = 0;
   var isLeveledSet = false; // true when problemSets came from "Generate Leveled Set" — just changes preview/print copy
@@ -432,39 +482,216 @@
     return pages;
   }
 
+  function sheetMetaHtml(blankLeft) {
+    return '<div class="sheet-meta"><span>' + (blankLeft ? '&nbsp;' : ('Name: <span class="fill-line">&nbsp;</span>')) +
+      '</span><span>Date: ' + todayStr + '</span></div>';
+  }
+
+  /* ---------- self-checking format sections ----------
+     These transform how an already-generated problem set PRINTS; they never
+     change what MathDrillGenerate produced. Riddle and colour-by-answer are
+     appended to the plain worksheet/key; maze replaces the problem grid
+     entirely (mazeSheetHtml below), since a maze IS the delivery mechanism
+     for its problems rather than something layered on top of a list. All
+     three ignore "problems per page" — a self-checking sheet is meant to be
+     one page — which is why worksheetHtml() special-cases settings.selfCheck
+     before it ever calls paginate(). */
+
+  /** Riddle section for the worksheet: the punchline as blanks (each letter
+      blank shows the decoder VALUE it needs, not the letter itself) plus the
+      decoder key (value -> letter) that makes it self-checking — a wrong
+      arithmetic answer simply won't be in the key. */
+  function riddleSectionHtml(set) {
+    if (settings.selfCheck !== 'riddle') return '';
+    var r = MathDrillSelfCheck.buildRiddle(set.problems);
+    if (!r) return '';
+    var blanks = r.positions.map(function (p) {
+      if (!p.isLetter) return p.ch === ' ' ? '<span class="riddle-gap"></span>' : '<span class="riddle-punct">' + escapeHtml(p.ch) + '</span>';
+      return '<span class="riddle-blank"><span class="riddle-blank-line">&nbsp;</span><span class="riddle-blank-num">' + escapeHtml(String(p.value)) + '</span></span>';
+    }).join('');
+    var decoder = r.decoder.map(function (d) {
+      return '<span class="riddle-decoder-item"><b>' + escapeHtml(String(d.value)) + '</b> = ' + escapeHtml(d.letter) + '</span>';
+    }).join('');
+    return (
+      '<div class="riddle-section">' +
+        '<div class="riddle-setup">Riddle: ' + escapeHtml(r.setup) + '</div>' +
+        '<div class="riddle-blanks">' + blanks + '</div>' +
+        '<div class="riddle-decoder-title">Decoder key &mdash; look up your answer, write the matching letter above every blank showing that number:</div>' +
+        '<div class="riddle-decoder">' + decoder + '</div>' +
+        (r.truncated ? '<div class="riddle-note">(This problem set only has enough distinct answers to spell the start of the joke.)</div>' : '') +
+      '</div>'
+    );
+  }
+
+  /** Riddle section for the answer key: the same layout with the letters
+      already filled in, plus the fully solved punchline. */
+  function riddleAnswerHtml(set) {
+    if (settings.selfCheck !== 'riddle') return '';
+    var r = MathDrillSelfCheck.buildRiddle(set.problems);
+    if (!r) return '';
+    var text = r.positions.map(function (p) { return p.ch; }).join('');
+    return (
+      '<div class="riddle-section">' +
+        '<div class="riddle-setup">Riddle: ' + escapeHtml(r.setup) + '</div>' +
+        '<div class="riddle-solved">' + escapeHtml(text) + (r.truncated ? '&hellip;' : '') + '</div>' +
+      '</div>'
+    );
+  }
+
+  /** Colour-by-answer grid, worksheet (blank, numbered cells + a colour-name
+      legend so it photocopies fine in black and white) or answer-key mode
+      (the cells actually filled with their colour, for a fast visual check). */
+  function colorGridHtml(set, answerMode) {
+    if (settings.selfCheck !== 'colorByAnswer') return '';
+    var g = MathDrillSelfCheck.buildColorByAnswer(set.problems);
+    if (!g) return '';
+    var cells = g.cells.map(function (cell) {
+      if (!cell.filled) return '<span class="cba-cell cba-blank"></span>';
+      var cls = 'cba-cell' + (answerMode ? ' cba-cell-filled' : '');
+      var style = answerMode ? ' style="background:' + cell.color.hex + ';"' : '';
+      return '<span class="' + cls + '"' + style + '>' + cell.problemNum + '</span>';
+    }).join('');
+    var legend = g.legend.map(function (l) {
+      return '<span class="cba-legend-item"><span class="cba-swatch" style="background:' + l.color.hex + ';"></span>' +
+        escapeHtml(String(l.value)) + ' = ' + l.color.name + '</span>';
+    }).join('');
+    return (
+      '<div class="cba-section">' +
+        '<div class="cba-title">Colour-by-answer' + (answerMode ? ' &mdash; answer key' : ' (' + g.pattern.name + ')') + '</div>' +
+        '<div class="cba-grid" style="grid-template-columns:repeat(' + g.pattern.cols + ',1fr);">' + cells + '</div>' +
+        '<div class="cba-legend">' + legend + '</div>' +
+      '</div>'
+    );
+  }
+
+  /** Extra self-check content appended after the plain worksheet's last
+      page. Maze doesn't come through here — it replaces the whole sheet,
+      see mazeSheetHtml(). */
+  function selfCheckWorksheetExtraHtml(set) {
+    if (settings.selfCheck === 'riddle') return riddleSectionHtml(set);
+    if (settings.selfCheck === 'colorByAnswer') return colorGridHtml(set, false);
+    return '';
+  }
+
+  /** One maze cell: its walls become CSS borders (an open side just has no
+      border there, so adjoining open cells visually merge into a passage —
+      no absolute positioning, nothing that can clip in print). Junction
+      cells get a numbered marker; Start/Finish get a letter. */
+  function mazeCellsHtml(maze, showSolution) {
+    var junctionAt = {};
+    maze.junctions.forEach(function (j, i) { junctionAt[j.row + ',' + j.col] = i + 1; });
+    var onPath = {};
+    if (showSolution) maze.path.forEach(function (p) { onPath[p[0] + ',' + p[1]] = true; });
+    var html = '';
+    for (var r = 0; r < maze.rows; r++) {
+      for (var c = 0; c < maze.cols; c++) {
+        var cell = maze.cells[r][c];
+        var isStart = r === maze.start[0] && c === maze.start[1];
+        var isExit = r === maze.exit[0] && c === maze.exit[1];
+        var key = r + ',' + c;
+        var label = isStart ? 'S' : isExit ? 'F' : (junctionAt[key] != null ? String(junctionAt[key]) : '');
+        var style = 'border-top:' + (cell.N ? '2px solid var(--ink)' : 'none') + ';' +
+          'border-right:' + (cell.E ? '2px solid var(--ink)' : 'none') + ';' +
+          'border-bottom:' + (cell.S ? '2px solid var(--ink)' : 'none') + ';' +
+          'border-left:' + (cell.W ? '2px solid var(--ink)' : 'none') + ';';
+        html += '<span class="maze-cell' + (onPath[key] ? ' maze-onpath' : '') + '" style="' + style + '">' + label + '</span>';
+      }
+    }
+    return html;
+  }
+
+  /** The junction key: each maze stop's problem plus its 2-3 answer choices,
+      labelled with the compass direction that choice's door opens onto the
+      maze diagram. `answerMode` bolds/underlines the correct choice. */
+  function mazeJunctionKeyHtml(maze, answerMode) {
+    var items = maze.junctions.map(function (j, i) {
+      var choices = j.choices.map(function (ch) {
+        var cls = 'maze-choice' + (answerMode && ch.correct ? ' maze-choice-correct' : '');
+        return '<span class="' + cls + '">' + MathDrillSelfCheck.DIR_LABEL[ch.dir] + ': ' + escapeHtml(String(ch.value)) + '</span>';
+      }).join('');
+      return (
+        '<div class="maze-junction">' +
+          '<div class="maze-junction-num">Stop ' + (i + 1) + '</div>' +
+          '<div class="maze-junction-problem">' + problemText(j.problem) + '</div>' +
+          '<div class="maze-junction-choices">' + choices + '</div>' +
+        '</div>'
+      );
+    }).join('');
+    return '<div class="maze-junction-list">' + items + '</div>';
+  }
+
+  /** Bonus problems: whatever the maze's junctions didn't use, printed as a
+      plain list (still real, still gradeable) so nothing from the generated
+      set silently disappears just because the maze couldn't gate it. */
+  function mazeBonusHtml(maze) {
+    if (!maze.bonus.length) return '';
+    var items = maze.bonus.map(function (p, i) { return problemItemHtml(p, maze.junctions.length + i + 1); }).join('');
+    return (
+      '<div class="maze-bonus-title">Bonus problems (extra practice, not part of the maze)</div>' +
+      '<div class="problems" style="column-count:' + Math.min(settings.columns, 4) + ';">' + items + '</div>'
+    );
+  }
+
+  function mazeSheetHtml(set, answerMode) {
+    var maze = MathDrillSelfCheck.buildMaze(set.problems, { seed: settings.seed });
+    if (!maze) return '<div class="sheet"><div class="sheet-title">' + sheetTitleFor(set.label) + '</div></div>';
+    return (
+      '<div class="sheet">' +
+        '<div class="sheet-title">' + sheetTitleFor(set.label) + (answerMode ? ' &mdash; Maze Answer Key' : '') + '</div>' +
+        sheetMetaHtml(answerMode) +
+        (answerMode ? '' : fluencyHeaderHtml()) +
+        '<div class="maze-section">' +
+          '<div class="maze-instructions">Solve each numbered stop&rsquo;s problem, then follow the door matching your answer through the maze from S (start) to F (finish).' +
+            (answerMode ? ' The correct door at each stop is underlined below; the solved path is shaded on the map.' : '') + '</div>' +
+          '<div class="maze-grid" style="grid-template-columns:repeat(' + maze.cols + ',1fr);">' + mazeCellsHtml(maze, answerMode) + '</div>' +
+          '<div class="maze-junction-title">Maze stops</div>' +
+          mazeJunctionKeyHtml(maze, answerMode) +
+          mazeBonusHtml(maze) +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function worksheetHtml(set) {
+    if (settings.selfCheck === 'maze') return mazeSheetHtml(set, false);
     var cols = settings.format === 'vertical' ? Math.min(settings.columns, 4) : settings.columns;
     var fsClass = settings.fontSize === 'md' ? '' : ' fs-' + settings.fontSize;
     var vertClass = settings.format === 'vertical' ? ' vertical' : '';
-    var pages = paginate(set.problems);
+    var pages = settings.selfCheck === 'none' ? paginate(set.problems) : [set.problems];
     var num = 0;
     return pages.map(function (pageProblems, pageIndex) {
       var startNum = num + 1;
       var items = pageProblems.map(function (p) { num++; return problemItemHtml(p, num); }).join('');
       var pageLabel = pages.length > 1 ? ' <span class="page-label">(page ' + (pageIndex + 1) + ' of ' + pages.length + ')</span>' : '';
+      var extra = pageIndex === pages.length - 1 ? selfCheckWorksheetExtraHtml(set) : '';
       return (
         '<div class="sheet">' +
           '<div class="sheet-title">' + sheetTitleFor(set.label) + pageLabel + '</div>' +
-          '<div class="sheet-meta"><span>Name: <span class="fill-line">&nbsp;</span></span><span>Date: ' + todayStr + '</span></div>' +
+          sheetMetaHtml(false) +
           (pageIndex === 0 ? fluencyHeaderHtml() : '') +
-          sameSheetKeyHtml(pageProblems, startNum) +
+          (settings.selfCheck === 'none' ? sameSheetKeyHtml(pageProblems, startNum) : '') +
           '<div class="problems' + vertClass + fsClass + '" style="column-count:' + cols + ';--vcols:' + cols + ';">' + items + '</div>' +
+          extra +
         '</div>'
       );
     }).join('');
   }
 
   function answersHtml(set) {
+    if (settings.selfCheck === 'maze') return mazeSheetHtml(set, true);
     var cols = settings.columns + 1;
     var fsClass = settings.fontSize === 'md' ? '' : ' fs-' + settings.fontSize;
     var items = set.problems.map(function (p, i) {
       return '<div class="a"><span class="num">' + (i + 1) + '.</span>' + answerText(p) + '</div>';
     }).join('');
+    var extra = settings.selfCheck === 'riddle' ? riddleAnswerHtml(set)
+      : settings.selfCheck === 'colorByAnswer' ? colorGridHtml(set, true) : '';
     return (
       '<div class="sheet">' +
         '<div class="sheet-title">' + sheetTitleFor(set.label) + ' &mdash; Answer Key</div>' +
-        '<div class="sheet-meta"><span>&nbsp;</span><span>Date: ' + todayStr + '</span></div>' +
+        sheetMetaHtml(true) +
         '<div class="answers' + fsClass + '" style="column-count:' + cols + ';">' + items + '</div>' +
+        extra +
       '</div>'
     );
   }
@@ -533,6 +760,7 @@
     settings.sameSheetKey = els.sameSheetKey.checked;
     settings.sameSheetKeyMode = els.sameSheetKeyMode.value === 'replace' ? 'replace' : 'both';
     settings.reorderedVersions = els.reorderedVersions.checked;
+    settings.selfCheck = ['none', 'riddle', 'colorByAnswer', 'maze'].indexOf(els.selfCheck.value) >= 0 ? els.selfCheck.value : 'none';
   }
 
   /** Fresh 32-bit seed unless the sheet is locked, in which case the last
@@ -649,6 +877,7 @@
     els.sameSheetKeyMode.value = obj.sameSheetKeyMode === 'replace' ? 'replace' : 'both';
     els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
     els.reorderedVersions.checked = !!obj.reorderedVersions;
+    els.selfCheck.value = ['none', 'riddle', 'colorByAnswer', 'maze'].indexOf(obj.selfCheck) >= 0 ? obj.selfCheck : 'none';
     settings.seed = (typeof obj.seed === 'number') ? obj.seed : null;
     loadRangeInputs();
     generate();
@@ -713,6 +942,7 @@
   });
   els.sameSheetKeyMode.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
   els.reorderedVersions.addEventListener('change', generate);
+  els.selfCheck.addEventListener('change', function () { readFormIntoSettings(); persist(); renderPreview(); });
 
   els.viewWorksheetBtn.addEventListener('click', function () {
     view = 'worksheet';
@@ -760,6 +990,7 @@
   els.sameSheetKeyMode.value = settings.sameSheetKeyMode === 'replace' ? 'replace' : 'both';
   els.sameSheetKeyModeRow.style.display = els.sameSheetKey.checked ? '' : 'none';
   els.reorderedVersions.checked = !!settings.reorderedVersions;
+  els.selfCheck.value = ['none', 'riddle', 'colorByAnswer', 'maze'].indexOf(settings.selfCheck) >= 0 ? settings.selfCheck : 'none';
   loadRangeInputs();
   generate();
 })();
