@@ -19,6 +19,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="rubric-builder/rb-templates.js"></script>
 <script src="rubric-builder/rb-store.js"></script>
+<script src="rubric-builder/rb-gdv-handoff.js"></script>
 <script src="../_shared/state-link.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -354,6 +355,7 @@
 
       <button type="button" id="printScoreBtn" class="full">Print this student&rsquo;s scored rubric</button>
       <button type="button" class="secondary full" id="exportScoresCsvBtn">Export all scores as CSV</button>
+      <button type="button" class="secondary full" id="exportScoresGdvBtn">Send scores to Grade Distribution Visualizer</button>
     </div>
 
     <div class="preview-wrap">
@@ -374,6 +376,7 @@
       <input type="text" id="classAddStudentInput" placeholder="Student name">
       <button type="button" class="secondary" id="classAddStudentBtn">Add</button>
       <button type="button" class="secondary" id="exportClassCsvBtn">Export scores as CSV</button>
+      <button type="button" class="secondary" id="exportClassGdvBtn">Send scores to Grade Distribution Visualizer</button>
     </div>
     <p class="hint">Pick a level per student per criterion right in the grid &mdash; grades a class of 28 from one screen. Comments and half points are still per-student in &ldquo;Score a student.&rdquo;</p>
     <div class="class-grid-wrap">
@@ -413,9 +416,9 @@
    'studentNameInput','studentNamesList','loadStudentScoreBtn','deleteScoreBtn',
    'scoreCriteriaList','scoreEmptyHint','scoreStudentLabel','scoreTotalPoints',
    'overallCommentCard','overallCommentInput',
-   'scorePreviewArea','printScoreBtn','exportScoresCsvBtn',
+   'scorePreviewArea','printScoreBtn','exportScoresCsvBtn','exportScoresGdvBtn',
    'classRosterSelect','classRosterLoadBtn','classAddStudentInput','classAddStudentBtn',
-   'exportClassCsvBtn','classGridTable','classEmptyHint','analyticsList'
+   'exportClassCsvBtn','exportClassGdvBtn','classGridTable','classEmptyHint','analyticsList'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = null; // { name, title, levels: [{id,label,points}], criteria: [{id,name,weight,cells:{levelId:text},studentCells:{levelId:text},commentBank:[str]}], showStudentText, singlePointLevelId }
@@ -1387,6 +1390,38 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
+  /** Read-only-of-its-own-data write handoff (P7): sends this rubric's
+      scored totals — student name + percent of total possible points, one
+      per currently scored student, the same set exportScoresCsv() uses — to
+      Grade Distribution Visualizer as a brand-new assignment there, then
+      opens it. Never overwrites an existing assignment there; see
+      rubric-builder/rb-gdv-handoff.js for the dedup + storage-shape
+      discipline. No per-criterion breakdown travels, only the total —
+      that's all Grade Distribution Visualizer's own store has room for. */
+  function exportScoresToGdv() {
+    if (!state) return;
+    if (typeof RbGdvHandoff === 'undefined') {
+      alert('Could not reach the Grade Distribution Visualizer bridge.');
+      return;
+    }
+    var scores = RubricStore.getAllScores(state.name);
+    var students = Object.keys(scores).sort(function (a, b) { return a.localeCompare(b); });
+    if (!students.length) { alert('No scored students yet for this rubric.'); return; }
+    var possible = totalPossiblePoints();
+    if (!(possible > 0)) {
+      alert('This rubric has no point value yet — add levels and criteria before sending scores.');
+      return;
+    }
+    var payload = students.map(function (name) {
+      var earned = earnedPoints(scores[name]);
+      return { student: name, percent: fmtNum((earned / possible) * 100) };
+    });
+    var baseName = state.title || state.name;
+    var written = RbGdvHandoff.exportAndOpen(baseName, payload);
+    alert('Sent ' + payload.length + ' student score' + (payload.length === 1 ? '' : 's') +
+      ' to Grade Distribution Visualizer as a new assignment: "' + written + '".');
+  }
+
   function setMode(mode) {
     currentMode = mode;
     els.buildMode.style.display = mode === 'build' ? '' : 'none';
@@ -1664,6 +1699,8 @@
 
   els.exportScoresCsvBtn.addEventListener('click', exportScoresCsv);
   els.exportClassCsvBtn.addEventListener('click', exportScoresCsv);
+  els.exportScoresGdvBtn.addEventListener('click', exportScoresToGdv);
+  els.exportClassGdvBtn.addEventListener('click', exportScoresToGdv);
 
   /* ---------- class-wide scoring: wiring ---------- */
   els.classRosterLoadBtn.addEventListener('click', function () {
