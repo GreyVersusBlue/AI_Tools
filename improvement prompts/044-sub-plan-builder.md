@@ -11,6 +11,86 @@
 
 ## Status
 
+**2026-08-13 — Round 3.** Shipped **richer .docx output** (Major Features —
+"Richer .docx"), the last of that bullet's three parts: per-period tables,
+a real header/footer with a running page-number field, and an embedded
+seating-chart image.
+
+- **Per-period tables.** "Period-Specific Details" was a Heading3 + bullet
+  list per period; it's now a real `<w:tbl>` (Period / Time / Notes columns,
+  navy header row, borders, `tblHeader` so the header row repeats if the
+  table spans a page break) — one table per day out, faster to scan under
+  pressure than repeated headings.
+- **Real header/footer with page numbers.** `word/header1.xml` (teacher name
+  left, room number right, on every page) and `word/footer1.xml` (centered
+  "Page X of Y") now ship as real parts, wired through
+  `word/_rels/document.xml.rels` (`rId3`/`rId4`) and referenced from
+  `sectPr` via `headerReference`/`footerReference`. The page number is a
+  live `PAGE`/`NUMPAGES` field (`fldChar begin/separate/end` +
+  `instrText`), not a baked-in number — it recomputes itself as pages are
+  added or removed. Multi-day plans are still one continuous section (page
+  breaks between days are manual `<w:br w:type="page"/>`, same as before),
+  so one header/footer pair covers every day automatically; page numbering
+  runs continuously across the whole absence rather than restarting per day.
+- **Embedded seating-chart image.** A new "Seating chart image" control in
+  Today's Plan (file input → canvas re-encode to PNG, longest side capped at
+  900px) attaches a `word/media/image1.png` part plus an image relationship
+  (`rId5`, only written when an image is actually attached — no dangling
+  relationship or content-type entry when it isn't) and a real `<w:drawing>`
+  (`wp:inline` → `a:graphic` → `pic:pic` → `a:blip r:embed`) sized in EMU to
+  fit the page's content width. The image applies to the whole absence, not
+  one day, but — like Emergency Info and the Quick Checklist — it's repeated
+  on every day's page so a page pulled out on its own still has it; because
+  every placement reuses the same relationship id, only one media part is
+  ever written regardless of how many days repeat it. **The image is
+  session-only, on purpose** — exactly the same rule Student Notes already
+  follows: never written to `localStorage`, never part of the share-link/QR
+  payload (an image would blow past both size limits), never in a saved
+  history entry. Refreshing the page clears it; the page says so.
+- **Verification went past "does it parse."** Beyond structural checks (see
+  below), a generated two-day .docx with an attached image was written to
+  disk and round-tripped through **headless LibreOffice 24.2** (`soffice
+  --headless --convert-to pdf`, installed into this sandbox specifically to
+  do this check — it was not present at the start of the round) — a real
+  Word-compatible engine, not a bundled test harness. It converted cleanly
+  (`writer_pdf_Export`, no repair/recovery message), and the rendered PDF
+  was inspected page by page: the header/footer render on every page with
+  the *correct*, LibreOffice-computed page numbers ("Page 1 of 7" … "Page 7
+  of 7" across the two days), the period table renders as an actual table
+  with a shaded header row, the seating-chart image renders at the right
+  size and aspect ratio on both days' pages from a single embedded copy, and
+  inline `**bold**` inside a table cell still renders bold. A second
+  generation with the image removed converted equally cleanly with no
+  image part, no image relationship, and no png content-type entry left
+  behind. This is strictly more verification than "opens without an
+  exception" — it's confirmation from an actual document engine that a
+  human would use.
+- Extended `Tools/sub-plan-builder/test/smoke-share.mjs` (still the only
+  test file for this tool; `test:sub-plan` wires up nothing else) rather
+  than adding a second suite, since wiring a new file into `package.json` is
+  out of scope for this round. 20 new checks (60 total, up from 40): the
+  attach-image status line, the generated .docx has `word/header1.xml`,
+  `word/footer1.xml`, and `word/media/image1.png` as real zip parts, every
+  one of those parts plus `document.xml`/`document.xml.rels`/
+  `[Content_Types].xml` parses as XML with zero errors, `document.xml`
+  contains real `<w:tbl>` markup (one per day out) and
+  `headerReference`/`footerReference`, the footer contains live
+  `PAGE`/`NUMPAGES` field codes, the embedded image is sized within the
+  page's content width, and — the check that matters most for "does this
+  actually open in Word" — **every `r:id`/`r:embed` referenced anywhere in
+  `document.xml` is cross-checked against the relationships actually defined
+  in `document.xml.rels`, with zero unresolved**. Then the image is removed
+  and the doc regenerated to confirm no orphaned media part, relationship,
+  or content-type entry is left behind. Run via `npm run test:sub-plan`
+  (Playwright-in-browser JSZip + DOMParser, the same pattern
+  `docx-merger/test/smoke-per-file-options.mjs` already uses) — no Node-side
+  zip/XML library was added.
+- Not attempted: per-day seating-chart images (one image, shared across the
+  whole absence, as described above); persisting the attached image
+  (deliberately not done — see above); table styling beyond a single fixed
+  three-column layout; a distinct header/footer per day (multi-day plans
+  share one, since they're one continuous section).
+
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped **share a plan by link or
 QR** (backlog rank 11, platform theme P3). A finished sub plan almost always
 has to reach somebody else — the front office, the department chair, whoever is
@@ -132,9 +212,16 @@ feedback slip; shareable link/QR; standing-details versioning.
 - JSZip is now **vendored locally** (`Tools/sub-plan-builder/lib/jszip.min.js`)
   instead of loaded from cdnjs — works fully offline
 - **Generates a real .docx from scratch** — hand-built OOXML (document,
-  styles, numbering, content types, rels, core/app props) zipped with JSZip,
-  one page break per day for multi-day plans. This is the most technically
-  impressive export on the site.
+  styles, numbering, content types, rels, header/footer, core/app props)
+  zipped with JSZip, one page break per day for multi-day plans. This is the
+  most technically impressive export on the site.
+- **Real header/footer with a live page-number field**, and **period-specific
+  details as an actual table** (Period / Time / Notes) instead of a bulleted
+  list — both verified in Round 3 by round-tripping a generated file through
+  headless LibreOffice, not just by parsing the XML
+- **Attach a seating chart image** (Today's Plan) and it's embedded directly
+  into the .docx as a real image part — session-only, same never-saved rule
+  as Student Notes
 - Plain-text "quick copy" mode with clipboard copy and **Read aloud**
   (`speechSynthesis`) — also multi-day aware
 - Print / Save as PDF
@@ -211,11 +298,14 @@ feedback slip; shareable link/QR; standing-details versioning.
 - **Skipped — deferred.** **Sub feedback loop.** Generate the plan *and* a one-page feedback slip the
   sub fills in — already on `IDEAS_BACKLOG.md` as its own tool, but it belongs
   in the same document.
-- **Skipped — deferred.** **Richer .docx.** The OOXML builder is already substantial; extending it to
+- **Done — 2026-08-13.** **Richer .docx.** The OOXML builder is already substantial; extending it to
   tables (per-period grids), headers/footers with page numbers, and an
   embedded seating-chart image would make the output look like something the
-  front office produced. *(This round added new sections and a page break
-  between multi-day pages, but no tables, headers/footers, or images.)*
+  front office produced. *(All three shipped: period-specific details are a
+  real `<w:tbl>`, `word/header1.xml`/`word/footer1.xml` carry a live
+  PAGE/NUMPAGES field wired through `sectPr`, and an attached image embeds as
+  a real `word/media/image1.png` part + `<w:drawing>`. Verified against
+  headless LibreOffice, not just XML parsing — see this round's Status entry.)*
 - **Skipped — deferred.** **Shareable link / QR of the plan** (P3) so a plan can reach a colleague or
   the office without email.
 - **Skipped — deferred.** **Standing-details versioning** (P8) so a mid-year room change doesn't

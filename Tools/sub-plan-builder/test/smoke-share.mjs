@@ -171,8 +171,131 @@ eq(await page.evaluate(() => document.getElementById('qrOverlay').hidden), true,
    'and no unscannable square is shown');
 ok((await shareLink()).length > 4000, 'while the link itself still works at that size');
 
-/* ── 7. no console noise ───────────────────────────────────────────────── */
-for (const [name, p] of [['builder', page], ['arrival', arrival], ['declined', declined], ['broken', broken]]) {
+/* ── 7. richer .docx output: per-period tables, header/footer with page
+   numbers, and an embedded seating-chart image ─────────────────────────
+   A separate page/fixture, so it doesn't disturb the share-link state above
+   (in particular the deliberately-huge overviewText from the QR-size test).
+   The .docx is inspected two ways: structurally (every new XML part is
+   present, every r:id used in document.xml resolves to a relationship
+   actually defined in document.xml.rels, and every part parses as XML with
+   zero errors) and, further down (outside Node, see the improvement-prompt
+   Status entry for this round), by round-tripping a real generated file
+   through headless LibreOffice — this suite alone cannot drive that, but a
+   subtly-broken part list or a dangling r:id is exactly what this section
+   catches before it ever reaches a real Word-compatible viewer. */
+const docxPage = await prepPage(browser, BASE, { width: 1200, height: 1000 });
+await docxPage.goto(URL_PAGE, { waitUntil: 'networkidle' });
+await settle(docxPage, 400);
+
+await docxPage.fill('#teacherName', 'D. Moore');
+await docxPage.fill('#roomNumber', '214');
+await docxPage.fill('#planDate', '2026-09-14');
+await docxPage.fill('#numDays', '2');
+await docxPage.dispatchEvent('#numDays', 'input');
+await settle(docxPage, 250);
+await docxPage.fill('#lessonTitle', 'Fall of Rome — video');
+await docxPage.fill('#overviewText', 'Play the video, then the written response.');
+await docxPage.fill('#scheduleText', '**First 10 min:** attendance and the do-now on the board.');
+await docxPage.fill('#sharedPeriodNotes', 'Start with story #7\nBe kind, **bold** emphasis test');
+await docxPage.fill('#materialsNote', 'Worksheets are stapled on my desk.');
+await settle(docxPage, 300);
+
+// A real (if tiny) PNG built in-page, the same way the docx-merger suite
+// builds its .docx fixtures — no binary checked into the repo.
+const fakeImage = await docxPage.evaluate(async () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 400; canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#2e4c6d'; ctx.fillRect(0, 0, 400, 300);
+  ctx.fillStyle = '#fff'; ctx.fillRect(40, 40, 320, 220);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  return Array.from(new Uint8Array(await blob.arrayBuffer()));
+});
+await docxPage.setInputFiles('#seatingChartFile', {
+  name: 'seating.png', mimeType: 'image/png', buffer: Buffer.from(fakeImage),
+});
+await settle(docxPage, 400);
+ok(/Attached/.test(await docxPage.textContent('#seatingChartStatus')), 'attaching an image updates the status line');
+
+async function generateAndInspect() {
+  await docxPage.click('#btnGenerate');
+  await docxPage.waitForSelector('#downloadArea[style*="block"]', { timeout: 20000 }).catch(() => {});
+  await settle(docxPage, 800);
+  return docxPage.evaluate(async () => {
+    const href = document.getElementById('downloadLink').getAttribute('href');
+    if (!href) return null;
+    const buf = await (await fetch(href)).arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    const names = Object.keys(zip.files);
+    const readXml = async (name) => zip.files[name] ? await zip.files[name].async('string') : null;
+    const [docXml, relsXml, ctXml, headerXml, footerXml] = await Promise.all(
+      ['word/document.xml', 'word/_rels/document.xml.rels', '[Content_Types].xml', 'word/header1.xml', 'word/footer1.xml'].map(readXml));
+    const parser = new DOMParser();
+    const parseOk = (xml) => !!xml && !parser.parseFromString(xml, 'application/xml').querySelector('parsererror');
+    const usedRelIds = docXml ? Array.from(docXml.matchAll(/r:(?:id|embed)="([^"]+)"/g)).map(m => m[1]) : [];
+    const definedRelIds = relsXml ? Array.from(relsXml.matchAll(/Id="([^"]+)"/g)).map(m => m[1]) : [];
+    const extentMatch = docXml ? docXml.match(/<wp:extent cx="(\d+)" cy="(\d+)"\/>/) : null;
+    return {
+      names,
+      hasHeaderPart: names.includes('word/header1.xml'),
+      hasFooterPart: names.includes('word/footer1.xml'),
+      hasImagePart: names.includes('word/media/image1.png'),
+      docParses: parseOk(docXml), relsParses: parseOk(relsXml), ctParses: parseOk(ctXml),
+      headerParses: parseOk(headerXml), footerParses: parseOk(footerXml),
+      hasTable: /<w:tbl>/.test(docXml || ''),
+      tableCount: ((docXml || '').match(/<w:tbl>/g) || []).length,
+      hasHeaderRef: /<w:headerReference/.test(docXml || ''),
+      hasFooterRef: /<w:footerReference/.test(docXml || ''),
+      footerHasPageField: /PAGE/.test(footerXml || ''),
+      footerHasNumPagesField: /NUMPAGES/.test(footerXml || ''),
+      ctHasHeaderOverride: /header1\.xml/.test(ctXml || ''),
+      ctHasFooterOverride: /footer1\.xml/.test(ctXml || ''),
+      ctHasPngDefault: /Extension="png"/.test(ctXml || ''),
+      relsHasImage: /relationships\/image/.test(relsXml || ''),
+      usedRelIds, definedRelIds,
+      extentWithinContentWidth: extentMatch ? Number(extentMatch[1]) > 0 && Number(extentMatch[1]) <= 5943600 : null,
+    };
+  });
+}
+
+const withImage = await generateAndInspect();
+ok(withImage, 'the .docx generated with an image attached is downloadable');
+ok(withImage.docParses && withImage.relsParses && withImage.ctParses && withImage.headerParses && withImage.footerParses,
+   'every part — document, rels, content types, header, footer — parses as XML with no error');
+ok(withImage.hasHeaderPart && withImage.hasFooterPart, 'header1.xml and footer1.xml are real parts in the zip');
+ok(withImage.hasImagePart, 'the attached seating chart is embedded as word/media/image1.png');
+ok(withImage.hasTable, 'period-specific details render as a real <w:tbl>, not a bullet list');
+eq(withImage.tableCount, 2, 'one table per day out (2 days out in this fixture)');
+ok(withImage.hasHeaderRef && withImage.hasFooterRef, 'the section wires up the header and footer via sectPr references');
+ok(withImage.footerHasPageField && withImage.footerHasNumPagesField, 'the footer carries a live PAGE/NUMPAGES field, not a hard-coded number');
+ok(withImage.ctHasHeaderOverride && withImage.ctHasFooterOverride, '[Content_Types].xml declares the header/footer parts');
+ok(withImage.ctHasPngDefault && withImage.relsHasImage, '[Content_Types].xml and document.xml.rels both know about the embedded png');
+ok(withImage.extentWithinContentWidth, 'the embedded image is sized to fit inside the page content width, not overflowing it');
+{
+  const unresolved = withImage.usedRelIds.filter(id => !withImage.definedRelIds.includes(id));
+  eq(unresolved.length, 0, 'every r:id/r:embed referenced in document.xml resolves to a relationship actually defined in document.xml.rels: ' + JSON.stringify(unresolved));
+}
+
+/* Removing the image must leave no dangling reference behind — no orphaned
+   media part, no image relationship, no png content-type entry — since a
+   relationship or content-type override with nothing to back it is exactly
+   the kind of thing that opens with a repair prompt in a real Word client. */
+await docxPage.click('#seatingChartRemoveBtn');
+await settle(docxPage, 200);
+eq(await docxPage.textContent('#seatingChartStatus'), 'No image attached.', 'removing the image resets the status line');
+const withoutImage = await generateAndInspect();
+ok(withoutImage, 'the .docx still generates once the image is removed');
+ok(!withoutImage.hasImagePart && !withoutImage.relsHasImage && !withoutImage.ctHasPngDefault,
+   'and carries no image part, no image relationship, and no png content-type entry');
+ok(withoutImage.hasHeaderRef && withoutImage.hasFooterRef && withoutImage.hasTable,
+   'while the header/footer/table — which do not depend on an image — are unaffected');
+{
+  const unresolved = withoutImage.usedRelIds.filter(id => !withoutImage.definedRelIds.includes(id));
+  eq(unresolved.length, 0, 'and every remaining r:id still resolves: ' + JSON.stringify(unresolved));
+}
+
+/* ── 8. no console noise ───────────────────────────────────────────────── */
+for (const [name, p] of [['builder', page], ['arrival', arrival], ['declined', declined], ['broken', broken], ['docx', docxPage]]) {
   eq(p.__errs.length, 0, `no page/console errors (${name}): ` + JSON.stringify(p.__errs.slice(0, 3)));
   eq(p.__blocked.length, 0, `nothing left the site (${name}): ` + JSON.stringify(p.__blocked.slice(0, 3)));
 }
