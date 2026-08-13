@@ -18,6 +18,8 @@
 <script src="../_shared/a11y.js"></script>
 <!-- gvb:social:end -->
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../_shared/vendor/jsqr/jsqr.js"></script>
+<script src="../_shared/qr-scan.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -93,6 +95,26 @@
 
   .print-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .7rem; }
   .print-actions button { width: auto; flex: 1 1 auto; }
+
+  /* ---- collection tracker: scan-to-check-off ---- */
+  .scan-actions { margin-top: .7rem; }
+  .scan-status { font-size: .85rem; font-weight: 600; margin: .5rem 0 0; padding: .5rem .7rem; border-radius: 6px; display: none; }
+  .scan-status.show { display: block; }
+  .scan-status.ok { background: #e9f6ee; color: var(--good); border: 1px solid var(--good); }
+  .scan-status.bad { background: #fbeceb; color: var(--err); border: 1px solid var(--err); }
+  .scan-status.muted { background: #f2f2ef; color: var(--muted); border: 1px solid var(--line-strong); }
+
+  .cam-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .cam-overlay[hidden] { display: none; }
+  .cam-modal { background: #fff; border: 1px solid var(--line-strong); border-radius: 10px; max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  .cam-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--line-strong); font-weight: 700; color: var(--ink); font-family: "Segoe UI", Georgia, serif; }
+  .cam-close { border: none; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0; }
+  .cam-close:hover { color: var(--err); }
+  .cam-body { padding: 1.1rem; text-align: center; }
+  .cam-body video { width: 100%; max-width: 280px; border-radius: 8px; background: #000; margin: 0 auto .8rem; display: block; }
+  .cam-body .cam-status { font-size: .85rem; color: var(--muted); margin: 0 0 .8rem; }
+  .cam-body .cam-status.ok { color: var(--good); }
+  .cam-body .cam-status.bad { color: var(--err); }
 
   .chaperone-row { display: flex; gap: .5rem; margin-bottom: .6rem; align-items: center; }
   .chaperone-row input { margin-bottom: 0; }
@@ -345,6 +367,13 @@
           list as &ldquo;Whole class (batch)&rdquo; above. This is separate from what prints on the slip.</p>
         <div id="deadlineLine"></div>
         <div id="collectionWrap"></div>
+        <div class="scan-actions">
+          <button type="button" class="secondary full" id="scanSlipBtn">&#128247; Scan a returned slip</button>
+          <p class="hint">Point the camera at the QR code on a returned slip &mdash; it checks that student
+            off automatically. Each slip's code identifies the student it was printed for; nothing is
+            uploaded, the camera feed stays on this device.</p>
+          <div class="scan-status" id="scanStatus" role="status" aria-live="polite"></div>
+        </div>
         <div class="print-actions">
           <button type="button" class="secondary" id="printMissingListBtn">Print missing list</button>
           <button type="button" class="secondary" id="printReminderSlipsBtn">Print reminder slips</button>
@@ -378,6 +407,20 @@
 </div>
 
 <div id="printArea" style="display:none;"></div>
+
+<div class="cam-overlay" id="scanCamOverlay" hidden>
+  <div class="cam-modal" role="dialog" aria-modal="true" aria-label="Scan a returned slip">
+    <div class="cam-head">
+      <span>Scan a returned slip</span>
+      <button type="button" class="cam-close" id="scanCamClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="cam-body">
+      <video id="scanCamVideo" autoplay muted playsinline></video>
+      <p class="cam-status" id="scanCamStatus">Point the camera at the QR on a returned slip&hellip;</p>
+      <button type="button" class="secondary" id="scanCamCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -434,6 +477,7 @@
     'studentName', 'rosterSelect', 'loadRosterBtn', 'batchNames', 'batchNameCount', 'blankCount',
     'printBtn', 'previewArea', 'previewNote', 'deadlineLine', 'collectionWrap',
     'printMissingListBtn', 'printReminderSlipsBtn',
+    'scanSlipBtn', 'scanStatus', 'scanCamOverlay', 'scanCamVideo', 'scanCamStatus', 'scanCamClose', 'scanCamCancel',
     'chaperoneRows', 'addChaperoneBtn', 'chaperoneAssignWrap', 'printChaperoneBtn',
     'secondLang', 'langLayout', 'langOptions', 'untranslatedHint',
     'purposeAlt', 'whatToBringAlt', 'emergencyInstructionsAlt'
@@ -747,6 +791,120 @@
     updateCollectionSummary(batchNamesList());
   });
 
+  /* ---------- collection tracker: scan a returned slip's QR to check it off ----------
+     The QR on every printed slip encodes { ftps: 1, trip, student } (see
+     buildSlipQrPayload above). Decoding it back to a specific roster row is
+     the whole point of scanning: match `student` (trimmed, case-insensitive)
+     against the current "Whole class (batch)" list, the same list the
+     tracker rows above are built from. Every outcome is reported through one
+     status object rather than throwing, so a camera pointed at someone
+     else's QR code, an already-checked-off student, or a slip from a
+     different saved trip are all handled the same way — clearly, without an
+     error. */
+  function normalizeForMatch(s) { return String(s || '').trim().toLowerCase(); }
+
+  function resolveScannedSlip(text) {
+    var parsed = parseSlipQrPayload(text);
+    if (!parsed) return { status: 'invalid' };
+    var names = batchNamesList();
+    if (!names.length) return { status: 'no-roster' };
+    if (!parsed.student) return { status: 'no-student' };
+    if (parsed.trip && state.name && normalizeForMatch(parsed.trip) !== normalizeForMatch(state.name)) {
+      return { status: 'trip-mismatch', student: parsed.student, tripName: parsed.trip };
+    }
+    var matchName = null;
+    for (var i = 0; i < names.length; i++) {
+      if (normalizeForMatch(names[i]) === normalizeForMatch(parsed.student)) { matchName = names[i]; break; }
+    }
+    if (!matchName) return { status: 'unmatched', student: parsed.student };
+    var rec = collectedRecord(matchName);
+    if (rec.returned) return { status: 'duplicate', student: matchName };
+    if (!state.collected) state.collected = {};
+    if (!state.collected[matchName]) state.collected[matchName] = { returned: false, payment: 'unpaid', paid: false };
+    state.collected[matchName].returned = true;
+    normalizeCollectedRecord(state.collected[matchName]);
+    save();
+    renderCollectionTracker();
+    return { status: 'checked-off', student: matchName };
+  }
+
+  function renderScanStatus(result) {
+    var el = els.scanStatus;
+    if (!el) return;
+    var kind = 'bad';
+    var text = '';
+    switch (result.status) {
+      case 'checked-off':
+        kind = 'ok';
+        text = '✓ Checked off: ' + result.student;
+        break;
+      case 'duplicate':
+        kind = 'muted';
+        text = result.student + ' was already checked off — no change made.';
+        break;
+      case 'unmatched':
+        kind = 'bad';
+        text = 'No student named “' + result.student + '” on this trip’s list. Check the roster, or that the right trip is loaded.';
+        break;
+      case 'trip-mismatch':
+        kind = 'bad';
+        text = 'That slip is for a different trip (“' + result.tripName + '”), not the one currently loaded (“' + (state.name || 'Untitled') + '”). Switch trips before scanning it.';
+        break;
+      case 'no-student':
+        kind = 'bad';
+        text = 'That QR code doesn’t name a student — a blank copy has no name printed on it until one is filled in by hand.';
+        break;
+      case 'no-roster':
+        kind = 'bad';
+        text = 'Add student names in the “Whole class (batch)” tab above before scanning slips.';
+        break;
+      case 'invalid':
+      default:
+        kind = 'bad';
+        text = 'That doesn’t look like a QR code from one of this trip’s slips.';
+        break;
+    }
+    el.textContent = text;
+    el.className = 'scan-status show ' + kind;
+  }
+
+  // Exposed for the headless test suite: a device camera can't be driven
+  // under Playwright, so the suite calls this directly with the text a real
+  // scan's onResult callback would have decoded, exercising the exact same
+  // decode -> match -> check-off path the camera uses.
+  window.__ftpsResolveScan = function (text) {
+    var result = resolveScannedSlip(text);
+    renderScanStatus(result);
+    return result;
+  };
+
+  var scanCamHandle = null;
+  function stopScanCam() {
+    if (scanCamHandle) { scanCamHandle.stop(); scanCamHandle = null; }
+    els.scanCamOverlay.hidden = true;
+  }
+  els.scanSlipBtn.addEventListener('click', function () {
+    els.scanCamOverlay.hidden = false;
+    els.scanCamStatus.textContent = 'Point the camera at the QR on a returned slip…';
+    els.scanCamStatus.className = 'cam-status';
+    scanCamHandle = window.QRScan.scanQRFromCamera(els.scanCamVideo, {
+      onResult: function (text) {
+        stopScanCam();
+        window.__ftpsResolveScan(text);
+      },
+      onError: function (err) {
+        els.scanCamStatus.textContent = 'Camera unavailable: ' + err.message;
+        els.scanCamStatus.className = 'cam-status bad';
+      }
+    });
+  });
+  els.scanCamClose.addEventListener('click', stopScanCam);
+  els.scanCamCancel.addEventListener('click', stopScanCam);
+  els.scanCamOverlay.addEventListener('mousedown', function (e) { if (e.target === els.scanCamOverlay) stopScanCam(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !els.scanCamOverlay.hidden) stopScanCam();
+  });
+
   /* ---------- deadline / countdown ---------- */
   function renderDeadlineLine() {
     var names = batchNamesList();
@@ -773,11 +931,34 @@
       '</div>';
   }
 
-  /* ---------- QR code encoding trip name/date/destination ---------- */
-  var qrCache = { key: '', url: null };
-  function buildTripQrDataUrl() {
+  /* ---------- QR code: identifies the student, for the collection tracker's
+     camera scan to check them off ----------
+     The payload is a small tagged JSON object rather than free text, so the
+     scanner can tell "a slip from this tool" apart from an unrelated QR code
+     (a library book, a locker combo) instead of guessing. `ftps: 1` is a
+     schema marker/version, `trip` lets a scan from the wrong trip's stack of
+     slips be caught instead of silently mismatched, and `student` is what
+     the tracker matches back to a name on the current roster. A blank copy
+     (no name filled in yet) encodes `student: ''` — nothing to check off
+     until a name is on it. */
+  function buildSlipQrPayload(studentName) {
+    return JSON.stringify({ ftps: 1, trip: state.name || '', student: studentName || '' });
+  }
+
+  function parseSlipQrPayload(text) {
+    var obj;
+    try { obj = JSON.parse(text); } catch (e) { return null; }
+    if (!obj || typeof obj !== 'object' || obj.ftps !== 1) return null;
+    return {
+      trip: typeof obj.trip === 'string' ? obj.trip : '',
+      student: typeof obj.student === 'string' ? obj.student : ''
+    };
+  }
+
+  var qrCache = {};
+  function buildTripQrDataUrl(studentName) {
     try {
-      var payload = [state.name, state.destination, tripDateLine().replace(/&ndash;/g, '-')].filter(Boolean).join(' | ') || 'Field Trip';
+      var payload = buildSlipQrPayload(studentName);
       var qr = window.qrcode(0, 'M');
       qr.addData(payload);
       qr.make();
@@ -800,15 +981,12 @@
     } catch (e) { return null; }
   }
 
-  // Cached by trip identity so a 30-student batch print doesn't redraw an
-  // identical QR canvas 30 times.
-  function getTripQrDataUrl() {
-    var key = state.name + '|' + state.destination + '|' + tripDateLine();
-    if (qrCache.key !== key) {
-      qrCache.key = key;
-      qrCache.url = buildTripQrDataUrl();
-    }
-    return qrCache.url;
+  // Cached by trip identity + student name so re-rendering the same slip
+  // (preview, then print) doesn't redraw an identical QR canvas twice.
+  function getTripQrDataUrl(studentName) {
+    var key = state.name + '' + (studentName || '') + '' + state.destination + '' + tripDateLine();
+    if (!(key in qrCache)) qrCache[key] = buildTripQrDataUrl(studentName);
+    return qrCache[key];
   }
 
 
@@ -916,7 +1094,7 @@
     }
 
     var dateLine = tripDateLine();
-    var qrDataUrl = getTripQrDataUrl();
+    var qrDataUrl = getTripQrDataUrl(isBlank ? '' : studentName);
     var timesLine = [];
     if (state.departureTime) timesLine.push(L.depart + ' ' + formatTime(state.departureTime));
     if (state.returnTime) timesLine.push(L.ret + ' ' + formatTime(state.returnTime));
@@ -955,7 +1133,9 @@
         '<div class="slip-footer">' +
           '<div>' + escapeHtml(L.returnBy) + '</div>' +
           '<div class="due">' + (formatDate(state.dueDate) || '&mdash;') + '</div>' +
-          (qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code encoding this trip\'s name, destination, and date" title="Scan for trip details">' : '') +
+          (qrDataUrl ? '<img class="slip-qr" src="' + qrDataUrl + '" alt="QR code identifying ' +
+            (isBlank ? 'this slip' : escapeHtml(studentName || '')) +
+            ' &mdash; scan it in the collection tracker to check them off" title="Scan in the collection tracker to check off">' : '') +
         '</div>' +
       '</div>'
     );
@@ -1417,6 +1597,9 @@
     renderCollectionTracker();
     renderChaperoneRows();
     renderChaperoneAssign();
+    // A "Checked off: …" message left over from a previous trip would be
+    // misleading pinned above a different trip's roster.
+    if (els.scanStatus) { els.scanStatus.textContent = ''; els.scanStatus.className = 'scan-status'; }
   }
 
   function newTrip(name) {
