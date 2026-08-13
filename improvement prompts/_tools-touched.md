@@ -195,6 +195,7 @@ here.
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
 | Primary Source Analysis Worksheet Generator | `qzmvhx` | 2026-08-13 23:58 UTC | `claude/ssdemo-028-qzmvhx` |
 | Current Events Discussion Guide Generator | `qfx7mz` | 2026-08-13 23:55 UTC | `claude/ssdemo-054-qfx7mz` |
+| Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 
 ---
 
