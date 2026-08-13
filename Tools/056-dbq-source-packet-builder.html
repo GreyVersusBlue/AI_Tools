@@ -59,7 +59,20 @@
   .source-block h3 { font-size: 1.05rem; margin: 0 0 .5rem; color: var(--accent); }
   .qrow { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .qrow input { margin-bottom: 0; }
-  .thumb-preview { max-width: 8rem; max-height: 6rem; border: 1px solid var(--line-strong); border-radius: 4px; margin-bottom: .5rem; }
+
+  .crop-tool {
+    position: relative; width: 100%; max-width: 320px; overflow: hidden;
+    border: 1px solid var(--line-strong); border-radius: 4px; cursor: crosshair;
+    touch-action: none; -webkit-user-select: none; user-select: none; margin-bottom: .3rem;
+  }
+  .crop-tool img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
+  .crop-box { position: absolute; border: 2px solid var(--accent); background: rgba(31,53,80,.15); box-sizing: border-box; pointer-events: none; }
+  .crop-hint { color: var(--muted); font-size: .76rem; margin: 0 0 .5rem; }
+  .scale-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+  .scale-row input[type="range"] { flex: 1; margin-bottom: 0; }
+  .scale-val { font-size: .78rem; color: var(--muted); min-width: 2.6rem; text-align: right; }
+  .crop-frame { position: relative; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 4px; background: #f1f0ea; margin-bottom: .6rem; }
+  .crop-frame img { display: block; max-width: none; }
 
   .print-title { font-size: 1.4rem; margin: 0 0 .2rem; }
   .print-context { font-size: .9rem; margin: .3rem 0 1rem; }
@@ -68,6 +81,8 @@
   .source-page .citation { font-size: .78rem; color: #555; font-style: italic; margin-bottom: .6rem; }
   .source-page .source-text { font-size: .92rem; white-space: pre-line; margin-bottom: .8rem; }
   .source-page img { max-width: 100%; margin-bottom: .8rem; }
+  .source-page .crop-frame { margin-bottom: .8rem; }
+  .source-page .crop-frame img { max-width: none; margin-bottom: 0; }
   .source-page .q-item { font-size: .9rem; margin-bottom: .1rem; }
   .fill-line { display: block; border-bottom: 1px solid #999; height: 1.2rem; margin: .1rem 0 .5rem; }
   .shared-q { font-size: .9rem; margin-top: 1.5rem; }
@@ -143,9 +158,47 @@
     if (!state.sharedQuestions.length) state.sharedQuestions = [{ id: uid(), text: 'What is the main idea of this source?' }, { id: uid(), text: 'Who created this source, and why might that matter?' }];
     if (!state.sources.length) state.sources = [{ id: uid(), title: '', type: 'text', text: '', image: null, citation: '', questions: [{ id: uid(), text: '' }] }];
     if (typeof state.essayPrompt !== 'string') state.essayPrompt = '';
+    state.sources.forEach(function (s) {
+      if (!s.crop || typeof s.crop.w !== 'number') s.crop = { x: 0, y: 0, w: 1, h: 1 };
+      if (typeof s.widthPct !== 'number') s.widthPct = 100;
+    });
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked, e.g. large images */ }
+  }
+
+  /* ---------- image crop/scale (non-destructive: crop+widthPct sit
+     alongside the untouched original data URL in src.image/src.imgW/imgH) ---------- */
+  function clamp01(n) { return Math.min(1, Math.max(0, n)); }
+  function normCrop(c) {
+    c = c || {};
+    var w = Math.max(clamp01(typeof c.w === 'number' ? c.w : 1), 0.02);
+    var h = Math.max(clamp01(typeof c.h === 'number' ? c.h : 1), 0.02);
+    var x = Math.min(clamp01(typeof c.x === 'number' ? c.x : 0), 1 - w);
+    var y = Math.min(clamp01(typeof c.y === 'number' ? c.y : 0), 1 - h);
+    return { x: x, y: y, w: w, h: h };
+  }
+  /* Container style: sized to widthPct of its column, clipped to the crop's
+     own aspect ratio (once natural image dimensions are known). */
+  function cropFrameStyle(src) {
+    var s = 'width:' + (src.widthPct || 100) + '%;';
+    if (src.imgW && src.imgH) {
+      var c = normCrop(src.crop);
+      s += 'aspect-ratio:' + ((c.w * src.imgW) / (c.h * src.imgH)).toFixed(4) + ';';
+    }
+    return s;
+  }
+  /* Foreground <img> inside a .crop-frame, scaled/offset so only the crop
+     rect shows — a real <img>, not a CSS background, so it always prints
+     without needing "print background graphics" turned on. */
+  function cropImgStyle(crop) {
+    var c = normCrop(crop);
+    var left = (-(c.x / c.w) * 100).toFixed(2), top = (-(c.y / c.h) * 100).toFixed(2), w = (100 / c.w).toFixed(2);
+    return 'position:absolute;left:' + left + '%;top:' + top + '%;width:' + w + '%;height:auto;';
+  }
+  function cropBoxStyle(crop) {
+    var c = normCrop(crop);
+    return 'left:' + (c.x * 100).toFixed(2) + '%;top:' + (c.y * 100).toFixed(2) + '%;width:' + (c.w * 100).toFixed(2) + '%;height:' + (c.h * 100).toFixed(2) + '%;';
   }
 
   function renderSharedQ() {
@@ -175,7 +228,26 @@
   function renderSources() {
     els.sourcesWrap.innerHTML = state.sources.map(function (src, i) {
       var label = 'Source ' + LETTERS[i % 26];
-      var imgPreview = src.type === 'image' && src.image ? '<img class="thumb-preview" src="' + src.image + '" alt="">' : '';
+      var imgPreview = '';
+      if (src.type === 'image' && src.image) {
+        imgPreview =
+          '<label>Crop</label>' +
+          '<p class="crop-hint">Drag on the photo to select the region that prints.</p>' +
+          '<div class="crop-tool" data-crop-src="' + src.id + '">' +
+          '<img src="' + src.image + '" alt="" draggable="false">' +
+          '<div class="crop-box" style="' + cropBoxStyle(src.crop) + '"></div>' +
+          '</div>' +
+          '<div class="btnrow" style="margin-bottom:.6rem;">' +
+          '<button type="button" class="secondary small" data-reset-crop="' + src.id + '">Reset crop</button>' +
+          '</div>' +
+          '<label>Print width (% of column)</label>' +
+          '<div class="scale-row">' +
+          '<input type="range" min="20" max="100" step="5" value="' + (src.widthPct || 100) + '" data-field="widthPct" data-src="' + src.id + '">' +
+          '<span class="scale-val">' + (src.widthPct || 100) + '%</span>' +
+          '</div>' +
+          '<label>Preview at print size</label>' +
+          '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + src.image + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>';
+      }
       var questions = src.questions.map(function (q) {
         return '<div class="qrow" data-src="' + src.id + '" data-q="' + q.id + '"><input type="text" data-field="qtext" value="' + escapeAttr(q.text) + '" placeholder="Source-specific question">' +
           '<button type="button" class="danger small" data-del-q="' + q.id + '" data-del-src="' + src.id + '">&times;</button></div>';
@@ -217,6 +289,18 @@
         save();
         return;
       }
+      if (field === 'widthPct') {
+        // Update in place (no renderSources()) so dragging the range input
+        // isn't interrupted by the innerHTML rebuild mid-drag.
+        src.widthPct = parseInt(ev.target.value, 10) || 100;
+        save();
+        var block = ev.target.closest('.source-block');
+        var frame = block && block.querySelector('.crop-frame');
+        var valSpan = block && block.querySelector('.scale-val');
+        if (frame) frame.style.width = src.widthPct + '%';
+        if (valSpan) valSpan.textContent = src.widthPct + '%';
+        return;
+      }
       src[field] = ev.target.value;
       save();
     }
@@ -229,9 +313,58 @@
     var file = ev.target.files && ev.target.files[0];
     if (!src || !file) return;
     var reader = new FileReader();
-    reader.onload = function () { src.image = reader.result; save(); renderSources(); };
+    reader.onload = function () {
+      src.image = reader.result;
+      src.imgW = 0; src.imgH = 0;
+      src.crop = { x: 0, y: 0, w: 1, h: 1 };
+      if (typeof src.widthPct !== 'number') src.widthPct = 100;
+      save(); renderSources();
+      var probe = new Image();
+      probe.onload = function () {
+        // A fresh upload always matches src.image at this point (no
+        // re-upload race in this single-file <input>), so it's safe to store.
+        src.imgW = probe.naturalWidth; src.imgH = probe.naturalHeight;
+        save(); renderSources();
+      };
+      probe.src = src.image;
+    };
     reader.readAsDataURL(file);
   });
+
+  /* crop-box drag-to-select: pointerdown starts a rubber-band rectangle
+     over the full (uncropped) thumbnail, pointerup commits it as the new
+     normalized crop rect. Listeners are delegated on sourcesWrap since the
+     .crop-tool elements are replaced whenever renderSources() runs. */
+  var cropDrag = null;
+  els.sourcesWrap.addEventListener('pointerdown', function (ev) {
+    var tool = ev.target.closest('.crop-tool');
+    if (!tool) return;
+    ev.preventDefault();
+    var rect = tool.getBoundingClientRect();
+    var sx = clamp01((ev.clientX - rect.left) / rect.width);
+    var sy = clamp01((ev.clientY - rect.top) / rect.height);
+    cropDrag = { srcId: tool.getAttribute('data-crop-src'), box: tool.querySelector('.crop-box'), rect: rect, startX: sx, startY: sy, pending: null };
+    try { tool.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+  });
+  els.sourcesWrap.addEventListener('pointermove', function (ev) {
+    if (!cropDrag) return;
+    var sx = clamp01((ev.clientX - cropDrag.rect.left) / cropDrag.rect.width);
+    var sy = clamp01((ev.clientY - cropDrag.rect.top) / cropDrag.rect.height);
+    var x = Math.min(sx, cropDrag.startX), y = Math.min(sy, cropDrag.startY);
+    var w = Math.abs(sx - cropDrag.startX), h = Math.abs(sy - cropDrag.startY);
+    cropDrag.pending = { x: x, y: y, w: w, h: h };
+    if (cropDrag.box) cropDrag.box.style.cssText = cropBoxStyle(cropDrag.pending);
+  });
+  function endCropDrag() {
+    if (!cropDrag) return;
+    var srcId = cropDrag.srcId, pending = cropDrag.pending;
+    cropDrag = null;
+    if (!pending || pending.w < 0.04 || pending.h < 0.04) return; // negligible drag: keep existing crop
+    var src = findSource(srcId);
+    if (src) { src.crop = normCrop(pending); save(); renderSources(); }
+  }
+  els.sourcesWrap.addEventListener('pointerup', endCropDrag);
+  els.sourcesWrap.addEventListener('pointercancel', endCropDrag);
 
   els.sourcesWrap.addEventListener('click', function (ev) {
     var addQSrc = ev.target.getAttribute('data-add-q');
@@ -239,6 +372,12 @@
     var delSrcBtn = ev.target.getAttribute('data-del-src-btn');
     var moveUp = ev.target.getAttribute('data-move-up');
     var moveDown = ev.target.getAttribute('data-move-down');
+    var resetCrop = ev.target.getAttribute('data-reset-crop');
+    if (resetCrop) {
+      var rsrc = findSource(resetCrop);
+      if (rsrc) { rsrc.crop = { x: 0, y: 0, w: 1, h: 1 }; save(); renderSources(); }
+      return;
+    }
     if (moveUp || moveDown) {
       var id = moveUp || moveDown;
       var pos = state.sources.findIndex(function (s) { return s.id === id; });
@@ -266,7 +405,7 @@
   });
 
   els.addSourceBtn.addEventListener('click', function () {
-    state.sources.push({ id: uid(), title: '', type: 'text', text: '', image: null, citation: '', questions: [{ id: uid(), text: '' }] });
+    state.sources.push({ id: uid(), title: '', type: 'text', text: '', image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100, citation: '', questions: [{ id: uid(), text: '' }] });
     save(); renderSources();
   });
 
@@ -283,7 +422,7 @@
     var sourcesHtml = state.sources.map(function (src, i) {
       var label = 'Source ' + LETTERS[i % 26];
       var body = src.type === 'image' && src.image
-        ? '<img src="' + src.image + '" alt="">'
+        ? '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + src.image + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>'
         : '<div class="source-text">' + escapeHtml(src.text || '(no text entered)') + '</div>';
       var allQuestions = src.questions.filter(function (q) { return q.text.trim(); }).concat(state.sharedQuestions.filter(function (q) { return q.text.trim(); }));
       var qHtml = allQuestions.map(function (q) {

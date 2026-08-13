@@ -44,13 +44,53 @@ source up reorders it to the front, essay prompt text survives a reload)
 plus a separate print-path check confirming the essay page renders with
 the right heading and text — zero console errors in either pass.
 
-**Not started this round:** multiple named saved packets, image size/
-crop control, the Primary Source Analysis Worksheet Generator
-integration, a source bank/library, JSON export/import,
-scaffolding/differentiation levels. See Major Features/Moonshot below —
-the Primary Source Analysis Worksheet Generator integration is still the
-clearest named opportunity (it's an explicit backlog pairing, per
-Platform theme P7) and hasn't been touched.
+**2026-08-13 — Image size/crop control (Quick Win).** Each image source
+now stores a non-destructive `{ crop: {x, y, w, h}, widthPct, imgW,
+imgH }` alongside the untouched original upload data URL (`src.image`
+itself is never rewritten): `crop` is a normalized top-left rect (`x, y,
+w, h` all 0&ndash;1) instead of Historical Trading Card Maker's centered
+`{x, y, scale}` shape, since a DBQ source photo needs an arbitrary
+sub-rectangle (a specific paragraph or clipping out of a scanned page),
+not just a centered zoom; `widthPct` (20&ndash;100%, a range slider) caps
+how much of the print column width the image is allowed to fill, so a
+small clipping doesn't get blown up to full page width by default.
+
+The editor shows the full original photo in a `.crop-tool` box; dragging
+on it rubber-bands a new crop rect (pointer events, delegated so it
+survives re-renders; a `< 4%` drag is treated as a stray click and
+ignored) with a "Reset crop" button back to the full image. A "Preview
+at print size" box directly beneath it renders the same crop+scale the
+print output will use, so there's no surprise between editor and paper.
+
+Both the live preview and the print packet render the crop as a real
+foreground `<img>` inside an `overflow:hidden` container sized via CSS
+`aspect-ratio` (computed from the crop rect against the image's natural
+pixel dimensions, captured once via a probe `Image()` on upload) —
+deliberately **not** a `background-image`, because most browsers hide
+background graphics on print by default unless the user opts in via
+"print background graphics," which would have made cropped source
+photos silently vanish from printed packets. The width slider updates
+the DOM directly (not through a full `renderSources()`) so dragging the
+`<input type="range">` isn't interrupted by an innerHTML rebuild
+mid-drag.
+
+Verified with a headless Chromium smoke test: upload a real (non-1&times;1)
+PNG, confirm natural width/height get probed and stored, drag a crop
+rect and confirm the stored `{x,y,w,h}` matches, move the width slider
+to 40% and confirm both the live preview and `#printArea`'s
+`.crop-frame` reflect the narrower width and the offset/scaled `<img>`,
+reload and confirm crop/width survive, and exercise Reset crop — zero
+console errors throughout. (Old saved packets without `crop`/`widthPct`
+default to the full image at 100%, matching the prior stretch-to-column
+behavior exactly, so existing autosaved packets aren't affected.)
+
+**Not started this round:** multiple named saved packets, the Primary
+Source Analysis Worksheet Generator integration, a source bank/library,
+JSON export/import, scaffolding/differentiation levels. See Major
+Features/Moonshot below — the Primary Source Analysis Worksheet
+Generator integration is still the clearest named opportunity (it's an
+explicit backlog pairing, per Platform theme P7) and hasn't been
+touched.
 
 ## What it does today
 
@@ -58,6 +98,9 @@ Platform theme P7) and hasn't been touched.
 - Shared guiding questions asked of every source
 - Sources: text or image, citation, source-specific questions,
   auto-lettered (A, B, C&hellip;)
+- Image sources: drag-to-crop box (arbitrary rectangle, non-destructive
+  against the original upload) plus a 20&ndash;100% print-width slider,
+  applied identically in the editor preview and the printed packet
 - Print: cover page + one page per source with all applicable questions
 
 ## Quick Wins
@@ -70,9 +113,10 @@ Platform theme P7) and hasn't been touched.
   used by most builder tools in this round — one packet per browser right
   now, so a unit with several DBQ activities can't keep them all ready at
   once.
-- **Image size/crop control** on upload — right now an uploaded image
-  prints at its natural size scaled to page width, which may be too large
-  or awkwardly cropped for some source images.
+- ~~**Image size/crop control** on upload~~ — **done, 2026-08-13** (a
+  drag-to-select crop box plus a 20&ndash;100% print-width slider, stored
+  non-destructively per source and applied in both the editor preview and
+  the print output).
 
 ## Major Features
 
@@ -108,9 +152,9 @@ appropriately-leveled versions without duplicated authoring work.
   Analysis Worksheet Generator is the clearest opportunity in this tool;
   a source library would also benefit any future tool needing
   reusable historical-document content.
-- **P6 (print quality)** — image size/crop control matters here more than
-  most tools, since source images vary enormously in size and aspect
-  ratio.
+- **P6 (print quality)** — image size/crop control (shipped 2026-08-13)
+  mattered here more than most tools, since source images vary enormously
+  in size and aspect ratio.
 - **P15 (first run)** — a source library reduces the single biggest
   recurring cost of using this tool (finding and uploading the same
   sources again and again).
