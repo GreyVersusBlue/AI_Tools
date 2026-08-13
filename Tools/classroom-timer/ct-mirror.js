@@ -6,12 +6,24 @@
 // _shared/webrtc-pair.js for why there's no STUN/TURN server, and
 // _shared/qr-scan.js for the camera-scanning half.
 //
+// The data channel itself is bidirectional (it's a plain RTCDataChannel),
+// and both sides expose the same send()/onMessage() shape so either side can
+// push to the other — HOST pushes getDisplaySnapshot() one-way to drive the
+// mirrored display, and JOIN pushes `{type:'cmd', cmd:'start'|'pause'|
+// 'resume'|'next'}` the other way so the phone can act as a remote. Neither
+// side has to know in advance which messages the other will send; the
+// message shape itself (a `type` field) is agreed by the callers in
+// 004-Classroom Timer.html and mirror.html, not by this module.
+//
 // Covers both roles so the QR-drawing code and the small message shape the
 // two sides agree on live in exactly one place:
 //   - HOST, used by 004-Classroom Timer.html itself — creates the offer, scans
-//     the reply, then pushes out whatever startHost().send() is given.
+//     the reply, then pushes out whatever startHost().send() is given, and
+//     hands incoming messages (the phone's remote-control commands) to
+//     onMessage().
 //   - JOIN, used by classroom-timer/mirror.html — scans the offer, shows the
-//     reply, then hands incoming messages to onMessage().
+//     reply, hands incoming messages (the mirrored display snapshot) to
+//     onMessage(), and can send({...}) back (the remote-control commands).
 
 /**
  * Draws `text` as a QR code onto `canvas`, sizing the canvas's actual pixel
@@ -73,12 +85,13 @@ export function drawQR(canvas, text) {
 
 /** Host side. Resolves once the offer is ready; `offerPayload` is what to draw as a QR. */
 export function startHost() {
-  const handlers = { open: [], close: [] };
+  const handlers = { open: [], close: [], message: [] };
   let channel = null;
   const api = {
     offerPayload: null,
     onOpen(fn) { handlers.open.push(fn); },
     onClose(fn) { handlers.close.push(fn); },
+    onMessage(fn) { handlers.message.push(fn); },
     applyAnswer(answerPayload, pc) { return window.WebRTCPair.applyAnswer(pc, answerPayload); },
     send(data) { if (channel && channel.readyState === 'open') channel.send(JSON.stringify(data)); },
   };
@@ -88,6 +101,11 @@ export function startHost() {
     api.offerPayload = result.offerPayload;
     channel.addEventListener('open', () => handlers.open.forEach((fn) => fn()));
     channel.addEventListener('close', () => handlers.close.forEach((fn) => fn()));
+    channel.addEventListener('message', (e) => {
+      let data;
+      try { data = JSON.parse(e.data); } catch (err) { return; }
+      handlers.message.forEach((fn) => fn(data));
+    });
     return api;
   });
 }
@@ -95,13 +113,16 @@ export function startHost() {
 /** Join side. Resolves once the answer is ready; `answerPayload` is what to draw as a QR back. */
 export function startJoin(offerPayload) {
   const handlers = { open: [], close: [], message: [] };
+  let channel = null;
   const api = {
     answerPayload: null,
     onOpen(fn) { handlers.open.push(fn); },
     onClose(fn) { handlers.close.push(fn); },
     onMessage(fn) { handlers.message.push(fn); },
+    send(data) { if (channel && channel.readyState === 'open') channel.send(JSON.stringify(data)); },
   };
-  return window.WebRTCPair.createAnswer(offerPayload, (channel) => {
+  return window.WebRTCPair.createAnswer(offerPayload, (ch) => {
+    channel = ch;
     channel.addEventListener('open', () => handlers.open.forEach((fn) => fn()));
     channel.addEventListener('close', () => handlers.close.forEach((fn) => fn()));
     channel.addEventListener('message', (e) => {

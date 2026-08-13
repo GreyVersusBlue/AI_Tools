@@ -10,6 +10,75 @@
 
 ## Status
 
+**2026-08-13 — Phone as timer remote.** Turned the existing passive "Mirror
+to a device" pairing into a two-way remote: from the paired phone you can now
+Start/Pause/Resume the timer and advance Agenda to its next segment, applied
+on the laptop through the exact functions the on-screen buttons already call.
+
+- **The transport needed nothing new — just the other direction.**
+  `_shared/webrtc-pair.js`'s `RTCDataChannel` was always bidirectional; only
+  `ct-mirror.js`'s `startHost()`/`startJoin()` wrappers only ever wired up one
+  direction each (host `send()`-only, join `onMessage()`-only). Both now
+  expose `send()` *and* `onMessage()`, so the message shape itself
+  (`{type:'cmd', cmd:'start'|'pause'|'resume'|'next'}` one way,
+  `getDisplaySnapshot()`'s object the other) is entirely a convention the two
+  pages agree on, not something the transport module enforces.
+- **Commands are applied through a new `applyRemoteCommand(cmd)` export from
+  `ct-app.js`**, which itself just calls whichever of the existing
+  `onStart()/onPause()/onResume()` module-scope functions the matching
+  on-screen button already calls — same pattern as
+  `021-pe-tournament-stations.html`'s `{type:'cmd'}` remote dispatch, ported
+  from that tool's `BroadcastChannel` transport to this one's WebRTC data
+  channel. Each branch re-checks `phase.status` the way a hidden/shown button
+  would have gated it, since a command arriving over the wire isn't
+  guaranteed to still match the phone's last-drawn button state.
+- **"Next segment" had no on-screen equivalent to route through** — Agenda
+  previously only ever advanced automatically, when a segment's own clock hit
+  zero (inside `onPhaseZero()`). Rather than duplicate that advance logic for
+  the manual case, it's now factored out into `goToAgendaSegment(nextIndex)`,
+  used by both `onPhaseZero()` (natural, plays the end-of-segment sound) and
+  the new `skipAgendaSegment()` (manual, silent — nothing actually ended). The
+  factor-out also fixed a latent gap: advancing while paused now sets a fresh
+  `remainingAtPause` for the new segment instead of leaving stale
+  running-mode timestamps in a paused `phase`, and repaints immediately
+  instead of waiting for a tick that a paused timer doesn't have running.
+- **`getDisplaySnapshot()` grew one field** (`paused`, alongside the existing
+  `running` and `mode`) so the mirrored phone's remote buttons know which of
+  Start/Pause/Resume to show — `running` alone couldn't distinguish paused
+  from idle/done.
+- **The phone side (`mirror.html`) grew four buttons**
+  (Start/Pause/Resume/Next segment) that call `join.send({type:'cmd', ...})`
+  and toggle their own `hidden` state off the same snapshot fields that
+  already drive the mirrored time/sub-text — only one of Start/Pause/Resume
+  shown at a time, and Next segment only offered when the teacher's timer is
+  actually in Agenda mode and running or paused.
+- **Verified with a new `Tools/classroom-timer/test/smoke-remote.mjs`**
+  (34 checks) that pairs two real pages through the actual production UI —
+  no mocking of WebRTC or the pairing flow: the offer is read back off its
+  own QR canvas with the same vendored `jsQR` a phone camera would use, the
+  answer is read out of `mirror.html`'s visible reply textarea, and the
+  two `RTCPeerConnection`s connect for real over loopback. It then drives the
+  phone's actual on-screen remote buttons and asserts the teacher page's own
+  on-screen state (button visibility, `#agendaCurrent` text, `ct_running_v1`)
+  changes exactly as clicking the equivalent on-screen button would — plus
+  guard cases: a stray command in the wrong phase (idle, or Agenda's last
+  segment) is a no-op, and repeated Next-segment cannot advance past the
+  final segment or throw. This was expected to need mocking or a
+  direct-function-call fallback going in, per the brief — headless Chromium's
+  host-candidates-only ICE turned out to connect fine over loopback in this
+  sandbox, so the real thing was tested instead.
+- **Not done — reconnect after a dropped connection.** Exactly the known gap
+  flagged going in: if the WebRTC connection drops mid-lesson, both sides
+  still have to redo the whole QR/pairing flow from scratch; there is no
+  persisted pairing or auto-reoffer. Out of scope for this round per the
+  brief, and unchanged by this work.
+- **Not done — a visible way for the teacher to see the phone is connected
+  as a *remote*, not just a mirror.** The "Mirror to a device" modal's
+  "Connected." text was updated to mention the buttons now work as a remote,
+  but there's no separate on-screen cue if the phone connects and later goes
+  idle without a clean close (the data channel `onClose` handler still
+  covers the phone disconnecting cleanly).
+
 **2026-08-11 — Round 2 (session `m3r8ro`).** Shipped the **ambient period
 strip** (backlog rank 12) — the bonus Round 1 explicitly did not get to.
 

@@ -90,6 +90,10 @@
   .mirror-live { font-size: 0.8rem; color: var(--color-success); display: inline-flex; align-items: center; gap: 0.4rem; }
   .mirror-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-success); animation: pulse 1.6s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .mirror-remote { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; width: 100%; margin-top: 0.6rem; }
+  .mirror-remote button { width: auto; flex: 1 1 130px; margin-bottom: 0; padding: 0.9rem 0.7rem; font-size: 1rem; }
+  .mirror-remote button[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -114,6 +118,12 @@
     <span class="mirror-live"><span class="dot" aria-hidden="true"></span>Live</span>
     <div class="mirror-time" id="mirrorTime">&mdash;</div>
     <div class="mirror-sub" id="mirrorSub"></div>
+    <div class="mirror-remote" id="mirrorRemote">
+      <button type="button" id="remoteStart">&#9654; Start</button>
+      <button type="button" id="remotePause" hidden>&#10074;&#10074; Pause</button>
+      <button type="button" id="remoteResume" hidden>&#9654; Resume</button>
+      <button type="button" id="remoteNext" hidden>Next segment &rarr;</button>
+    </div>
   </div>
 
 </div>
@@ -127,6 +137,10 @@ const setupStatus = document.getElementById('setupStatus');
 const mirrorStage = document.getElementById('mirrorStage');
 const mirrorTime = document.getElementById('mirrorTime');
 const mirrorSub = document.getElementById('mirrorSub');
+const remoteStart = document.getElementById('remoteStart');
+const remotePause = document.getElementById('remotePause');
+const remoteResume = document.getElementById('remoteResume');
+const remoteNext = document.getElementById('remoteNext');
 
 let scanHandle = null;
 
@@ -186,7 +200,27 @@ async function connect(offerPayload) {
   join.onMessage((data) => {
     if (typeof data.text === 'string') mirrorTime.textContent = data.text;
     if (typeof data.sub === 'string') mirrorSub.textContent = data.sub;
+    // Drive the remote-control buttons off the same snapshot the display
+    // text comes from — only one of Start/Pause/Resume shown at a time,
+    // matching how the teacher's own on-screen buttons behave, and "Next
+    // segment" only offered when the teacher's timer is actually in Agenda
+    // mode (it's a no-op everywhere else on the receiving end, but hiding it
+    // avoids a student tapping a button that visibly does nothing).
+    remoteStart.hidden = !!(data.running || data.paused);
+    remotePause.hidden = !data.running;
+    remoteResume.hidden = !data.paused;
+    remoteNext.hidden = data.mode !== 'agenda' || !(data.running || data.paused);
   });
+
+  // Sends a remote-control command back over the same data channel the
+  // display snapshot arrives on — see applyRemoteCommand() in ct-app.js for
+  // how the teacher's device applies each one (through the exact function
+  // its own matching on-screen button calls, not a second implementation).
+  function sendCmd(cmd) { join.send({ type: 'cmd', cmd }); }
+  remoteStart.addEventListener('click', () => sendCmd('start'));
+  remotePause.addEventListener('click', () => sendCmd('pause'));
+  remoteResume.addEventListener('click', () => sendCmd('resume'));
+  remoteNext.addEventListener('click', () => sendCmd('next'));
 
   // Show the reply code either way — some browsers/devices can't reach each
   // other's camera at all, so the paste-back path always has to work too.
