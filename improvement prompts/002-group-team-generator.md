@@ -10,6 +10,65 @@
 
 ## Status
 
+### 2026-08-13 — year-long pairing matrix
+
+**Shipped the "Group history across the year" item** that Round 1
+(2026-08-10) explicitly skipped, with the retention-policy decision that
+skip note flagged as a prerequisite: *"`pairHistory` currently only retains
+`PAIR_MEMORY_WINDOW` (2) generations, so a real 'across the year' view would
+need a retention-policy decision first."*
+
+- **The retention-policy decision:** age-based pruning is gone.
+  `pairHistory` used to delete any entry older than the last 2 generations
+  (`PAIR_MEMORY_WINDOW`) — fine for the short-term "don't immediately repeat
+  a pair" bias, but it made a year-long view impossible by construction,
+  since the data teachers would want to see was thrown away within a
+  shuffle or two of being created. The replacement is **full-year retention,
+  bounded by roster membership rather than by age, with an explicit reset**:
+  `prunePairHistoryToRoster()` runs once per deliberate generation (not on
+  every `names-input` keystroke — see the mid-edit test in
+  `smoke-pairing-history.mjs`) and deletes only entries naming a student who
+  has left the roster entirely. A currently-enrolled pair's very first
+  shuffle in September is still visible in June; storage stays bounded to at
+  most C(current roster size, 2) entries indefinitely, so this is not silent
+  unbounded growth. The only way to blank the history early is the existing
+  "Reset pairing memory" button, whose confirm dialog and hint text were
+  updated to say plainly that this also blanks the pairing grid and cannot
+  be undone. `pairHistory` entries changed shape from a bare generation
+  number to `{ gen, count }` to support this (count is what the grid and the
+  new strategy read); a legacy numeric entry from a config saved before this
+  change is migrated in place on load, seeded at `count: 1` since the true
+  historical count isn't recoverable.
+- **The grid.** A "📊 Pairing Grid" button opens a who-has-worked-with-whom
+  matrix — full roster (not just today's active students) by full roster,
+  self-diagonal dashed out, each cell either blank (never paired) or a count
+  of how many times, with a summary line ("N of M possible pairs (X%) have
+  worked together at least once"). It is deliberately **not** part of the
+  existing share-a-grouping link/QR feature from 2026-08-11 — a single
+  grouping result is something to hand a co-teacher; a year of accumulated
+  pairing data is a social map of the room and stays device-local by design.
+  It has its own print path (`🖨️ Print Grid`) rather than piggybacking on
+  the grouping print flow.
+- **The fifth strategy.** "Everyone pairs with everyone" (`coverage`) greedily
+  assigns each student to whichever same-size candidate group it has the
+  *least* total retained history with, so it steers toward pairs that have
+  never shared a group rather than merely avoiding the last repeat (that's
+  still what the existing recency bias does, unchanged, for the other
+  strategies). It reads `pairHistoryCount`, not skill, so — unlike
+  balanced/heterogeneous/homogeneous — it stays selectable on a roster with
+  no skill ratings at all. The "why this grouping" explanation now reports
+  how many pairings in a coverage-strategy shuffle were brand new.
+- **Verified** by `Tools/group-team-generator/test/smoke-pairing-history.mjs`
+  (34 checks): history surviving well past the old 2-generation window,
+  roster-membership pruning firing only on a real generation (not mid-edit),
+  legacy-shape migration, explicit reset clearing the grid too, the grid
+  rendering correctly against `localStorage` cell-by-cell, a too-small
+  roster getting a plain-English message, and the coverage strategy reaching
+  full pairwise coverage (with a bounded count spread) after enough
+  generations. `smoke-share.mjs` (33 checks) still passes unchanged, so the
+  2026-08-11 share feature's guarantee — pairing memory never travels in a
+  shared link/QR payload — still holds.
+
 ### 2026-08-11 — session `m3r8ro`
 
 **Shipped share-a-grouping by link or QR** (backlog rank 15, platform theme P3).
