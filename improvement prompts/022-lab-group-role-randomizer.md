@@ -62,6 +62,20 @@ rest", and the backlog's own row about gating groups on a returned lab safety
 contract — which would compose neatly with this mode, since both are about
 what the room can actually support today.
 
+**2026-08-13 — Round 6 (gate groups on the safety contract).** Picked up the
+"Integration with the safety contract" Major Feature named above. A new
+"2 · Safety Contract Gate (optional)" card reads `lsct_sections_v1`
+(read-only — 013's own storage is never written to) and checks the roster
+against whichever class the teacher picks there, exactly matching 013's own
+"fully signed" definition. Off by default; when on, **Flag** mode badges
+unsigned students in place on-screen, on the printed group sheet, and on
+table tents, while **Exclude** mode removes them from the roster before
+`makeGroups` runs — composing with Round 5's equipment mode exactly as
+predicted above, since an excluded student also shrinks the scarcest-item
+group count. A missing/unreadable class degrades to a warning rather than a
+crash or a silent no-op. Full detail, data-model notes, and the test suite
+run are in the Round 6 update below.
+
 ## What it does today
 
 - Split a roster into groups three ways — by group count, by group size, or
@@ -115,9 +129,12 @@ what the room can actually support today.
   the period. This is a genuine, unserved need in a science classroom. *(Per-group
   checked-out/returned toggle with timestamps, plus a "Print equipment
   checkout sheet" button.)*
-- **Integration with the safety contract** (P7).
+- **Done — Round 6.** **Integration with the safety contract** (P7).
   `013-lab-safety-contract-tracker.html` knows who has signed; this tool should
   refuse to assign an unsigned student to a lab, or at least flag it.
+  *(Read-only "Safety Contract Gate" card: Flag badges unsigned students in
+  place, Exclude removes them from the roster before groups are formed and
+  refuses the shuffle rather than producing an empty lab.)*
 - **Skipped — deferred, Round 4.** **One grouping engine** (P7). This tool, `002-group-team-generator.html`,
   `027-novel-study-circles-manager.html`, and Name Picker all implement group
   formation, and two of them implement role rotation with recency memory. The
@@ -346,3 +363,138 @@ wants covering roles to be more visually distinct (e.g., a small "(covering
 for Name)" note) that's a display-only follow-up, not a data model change,
 since `computeEffectiveMembers` already has everything needed to know who
 originally held the role.
+
+## Round 6 update — 2026-08-13 (safety-contract gate)
+
+Shipped the last remaining Major Feature on this file: **gating groups on
+the safety contract** (backlog rank — "Read `lsct_sections_v1` and flag or
+exclude students who have not returned a signed lab safety contract").
+Still a single file — the read side of `013-lab-safety-contract-tracker.html`'s
+storage needed no support module, same as the Roster Hub (`np_rosters`)
+reuse already in this tool.
+
+**What shipped:**
+
+- A new "2 · Safety Contract Gate (optional)" card, off by default so it
+  changes nothing for a roster that never touches it. Turning it on reveals
+  a class picker populated from `lsct_sections_v1`'s keys (read-only —
+  nothing here ever writes to that key) and a **Flag / Exclude** toggle:
+  - **Flag** (the default) leaves every student in their group and adds a
+    small "No contract" badge next to an unsigned name — on the on-screen
+    group cards, the printed group sheet (same markup, print stylesheet
+    already covers it), and the printed table tents.
+  - **Exclude** removes unsigned students from the roster *before* groups
+    are formed, the same point in the pipeline where "equipment on hand"
+    mode's scarcest-item count is applied — so an excluded student also
+    correctly shrinks the group count under that mode, composing the two
+    features the way the prior round's note predicted. A post-shuffle
+    banner (reusing the existing keep-apart/station-shortage warning box)
+    names who was left out and why; if excluding would leave nobody to
+    group, the shuffle is refused with a message telling the teacher to
+    either sign contracts or switch to Flag mode instead of silently
+    producing an empty or partial lab.
+  - A live readout under the picker previews who's missing a contract
+    *before* the teacher shuffles, not just after.
+- **A student counts as signed only if every required document for that
+  class is signed** — the same "fully signed" definition
+  `013-lab-safety-contract-tracker.html` itself uses (`isFullySigned`),
+  reimplemented read-only here as `isSignedForSection`. A student with no
+  contract record at all for the picked class (never entered there, or a
+  name that doesn't match) defaults to **unsigned**, mirroring 013's own
+  `getDoc()` helper — a missing entry is never assumed to mean signed. The
+  pre-multi-document `{signed: bool}` shape 013 migrates old sections from
+  on load is also read directly here (without needing 013's own migration
+  to have run), so a class saved before that tool's multi-document support
+  still gates correctly.
+- **Flagging is live, not a shuffle-time snapshot.** `currentSafetyStatus()`
+  re-reads `lsct_sections_v1` from `localStorage` on every render, so
+  signing a student off in the tracker (in another tab, or after switching
+  back from it) clears their badge here immediately — no reshuffle needed.
+  Exclusion can't be live in the same way since it actually changes who's
+  in a group; that decision is necessarily fixed at shuffle time, same as
+  every other input to `makeGroups`.
+- **Name matching is exact-string only**, same caveat already documented for
+  the `np_rosters` Roster Hub reuse: `lsct_sections_v1` is a completely
+  separate roster namespace from this tool's own roster, so "Aiden Smith"
+  here and "Aiden  Smith" (double space) or "A. Smith" there won't match.
+  No fuzzy matching was attempted.
+- **Missing or corrupt tracker data degrades to a clear warning, not a
+  crash or a silent no-op.** A class name picked here that doesn't exist in
+  `lsct_sections_v1` (never created there, renamed, or the whole key is
+  missing/unparseable) shows "No class named … was found" in the readout
+  and, if a shuffle is run anyway, a warning banner saying the gate could
+  not be applied that round — the full roster is grouped rather than
+  guessing. The picked class name is preserved in the dropdown (as
+  "<name> (not found)") rather than silently reverting to blank, so the
+  teacher can see *what* went looking and didn't find anything.
+
+**Data model / compatibility notes:**
+
+- `state.safetyGate = { enabled: bool, section: string, mode: 'flag'|'exclude' }`,
+  new this round. `normalizeRosterData` defaults it to
+  `{ enabled: false, section: '', mode: 'flag' }` for any roster saved or
+  imported before this round, so existing rosters open exactly as before —
+  gate off, nothing flagged or excluded, until a teacher opts in.
+- `state.lastExcludedForSafety`: array of names left out of the most recent
+  shuffle by exclude mode, kept only so the post-shuffle warning can name
+  them; restored by Undo alongside `lastGroups`/`history`/`checkoutLog`/
+  `absent` for the same reason undo already bundles those — an undo that
+  reverted the grouping but not who'd been excluded from it would be a
+  half-revert.
+- No changes to `lastGroups`, `history`, `checkoutLog`, `stations`, or
+  `equipment` shapes. Equipment-on-hand mode's group-count math is
+  unchanged — it only now sees a possibly-smaller roster when exclude mode
+  has already filtered it, which is the intended composition, not a special
+  case in that mode's own code.
+
+**Testing performed:** `node --check` on the extracted inline script. A new
+36-assertion headless Chromium suite,
+`Tools/lab-group-role-randomizer/test/smoke-safety-gate.mjs`
+(not yet wired into `package.json` — see "Known limitations" below):
+the gate defaulting off and its options staying collapsed; the class picker
+listing every `lsct_sections_v1` key; the live readout correctly identifying
+exactly which of six seeded students are missing a signed contract,
+including two with **no contract record at all** (proving the
+default-unsigned path, not just the explicit-`false` path); flag mode
+badging precisely the unsigned students on-screen and leaving the signed
+ones alone; a contract signed in the tracker after a shuffle clearing that
+student's badge on the very next render with no reshuffle; exclude mode
+correctly shrinking the actual grouped roster and naming who was left out
+in the warning banner; the legacy pre-multi-document `{signed: bool}` shape
+read correctly via a second seeded class; excluding an entire tiny roster
+being refused with a clear message rather than producing an empty result;
+a class removed from (or never in) `lsct_sections_v1`, and separately
+corrupt JSON under that key, both degrading to the same "No class named…"
+message rather than a crash; gate settings (`enabled`, `section`, `mode`)
+surviving a reload; and turning the gate off clearing all badges
+immediately. Zero console/page errors across the run. Also re-ran the
+pre-existing `smoke-equipment-mode.mjs` (32 assertions, still green — the
+new card was inserted without touching that mode's markup or logic beyond
+renumbering the surrounding card titles) and `Tools/board-check/check-dedupe.mjs`
+(clean).
+
+**Known limitations / left out of scope:**
+
+- The new test file is **not yet wired into `package.json`'s
+  `test:lab-groups` script** — per this round's file-boundary rules,
+  `package.json` wiring is left to the orchestrating session's integration
+  pass. Run it directly in the meantime:
+  `node Tools/lab-group-role-randomizer/test/smoke-safety-gate.mjs`.
+- When a class has more than one required document, "signed" here means
+  *every* document is signed (matching 013's own `isFullySigned`) — there's
+  no per-document gating (e.g., "flag only if the chemical-handling form
+  specifically is missing"). Most classes in 013 only define one document,
+  so this is expected to be the common case in practice, but a class with
+  several distinct documents can't gate on a subset of them from here.
+  013's own `getDoc(name, docId)` would need to be exposed per-document if
+  a future round wants that.
+- Exact-name matching only, as noted above and already true of the
+  `np_rosters` reuse — no Levenshtein/fuzzy matching, no case-insensitive
+  fallback. A roster typed slightly differently between the two tools will
+  under- or over-flag.
+- The equipment checkout sheet and role-history/fairness-grid reports were
+  deliberately left unbadged — they're about equipment and role fairness,
+  not attendance eligibility, and adding a contract column there felt like
+  scope creep on reports that already have a settled, printed format.
+- Still open, unchanged from prior rounds: lock-a-group-or-role-and-reshuffle,
+  multi-day lab persistence, and the cross-tool shared grouping engine (P7).
