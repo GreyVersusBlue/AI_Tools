@@ -3092,6 +3092,21 @@
             </div>
           </div>
 
+          <!-- Evacuation door cards -->
+          <div class="bp-sidebar-section">
+            <div class="bp-sidebar-label">Evacuation</div>
+            <button class="bp-icon-btn" id="btn-print-evacuation-cards" style="width:100%;justify-content:flex-start;padding:8px var(--sp-3);" title="Print one evacuation-route door card per room on this floor, routed to the nearest marked exterior exit.">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <path d="M9 15l2 2 4-4"/>
+              </svg>Print Door Cards
+            </button>
+            <div style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-top:var(--sp-2);">
+              Mark a hallway tile as an <strong>Exterior exit</strong> (Select tool → click a perimeter hallway) first. One card per room on this floor, batched into a single PDF.
+            </div>
+          </div>
+
           <!-- Actions -->
           <div class="bp-sidebar-section">
             <div class="bp-sidebar-label">Canvas</div>
@@ -3321,14 +3336,38 @@
                 <input type="text" id="rp-corridor-label" class="rp-input"
                   placeholder="e.g. North Corridor, Main Hall…" maxlength="40" />
               </div>
-              <button class="rp-btn primary" id="rp-btn-save-corridor" style="margin-top:var(--sp-2);">
-                <svg viewBox="0 0 24 24" stroke-width="2" style="width:13px;height:13px;stroke:white;fill:none;display:inline;vertical-align:middle;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                Apply
-              </button>
               <div style="font-size:11px;color:var(--slate-400);line-height:1.5;margin-top:var(--sp-2);">
                 This label appears in the Congestion Hotspots panel when this hallway is a busy zone. Hallway tiles form the travel network — students move only through hallways and staircases.
               </div>
             </div>
+
+            <!-- Evacuation: mark this hallway tile as an exterior exit -->
+            <div class="rp-section" style="margin-top:var(--sp-3);border-top:1px solid var(--slate-100);padding-top:var(--sp-3);">
+              <div class="rp-field">
+                <label style="display:flex;align-items:flex-start;gap:var(--sp-2);cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="rp-hallway-is-exit" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);" />
+                  <span>
+                    <span style="font-size:12px;font-weight:600;color:var(--slate-700);display:block;">Exterior exit</span>
+                    <span style="font-size:11px;color:var(--slate-400);line-height:1.4;display:block;margin-top:2px;">This hallway tile is a door leading outside the building. Evacuation door cards route every room to the nearest marked exit.</span>
+                  </span>
+                </label>
+              </div>
+              <div id="rp-hallway-exit-fields" style="display:none;margin-top:var(--sp-2);">
+                <div class="rp-field">
+                  <label class="rp-label" for="rp-exit-label">Door label <span class="rp-label-opt">(optional)</span></label>
+                  <input type="text" id="rp-exit-label" class="rp-input" placeholder="e.g. Door B, North Exit" maxlength="40" />
+                </div>
+                <div class="rp-field" style="margin-top:var(--sp-2);">
+                  <label class="rp-label" for="rp-exit-assembly">Assembly point <span class="rp-label-opt">(optional)</span></label>
+                  <input type="text" id="rp-exit-assembly" class="rp-input" placeholder="e.g. Front lawn near flagpole" maxlength="60" />
+                </div>
+              </div>
+            </div>
+
+            <button class="rp-btn primary" id="rp-btn-save-corridor" style="margin:var(--sp-3) var(--sp-3) 0;width:calc(100% - var(--sp-3)*2);">
+              <svg viewBox="0 0 24 24" stroke-width="2" style="width:13px;height:13px;stroke:white;fill:none;display:inline;vertical-align:middle;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Apply
+            </button>
           </div>
 
           <!-- DUMMY ROOM EDITOR (hidden by default) -->
@@ -5937,6 +5976,7 @@ function generateExportFilename() {
 =============================================== */
 document.getElementById('btn-export-blueprint-png').addEventListener('click', exportBlueprintAsPNG);
 document.getElementById('btn-export-blueprint-pdf').addEventListener('click', exportBlueprintAsPDF);
+document.getElementById('btn-print-evacuation-cards')?.addEventListener('click', printEvacuationDoorCards);
 
 /* ==============================================
    JSON IMPORT
@@ -6747,6 +6787,251 @@ function exportBlueprintAsPDF() {
   }
 }
 
+/* ==============================================
+   EVACUATION DOOR CARDS
+   ──────────────────────────────────────────────────────────────
+   One postable card per room on the active floor: a cropped,
+   route-highlighted floor-plan image plus numbered turn-by-turn
+   text and the assigned assembly point, batched into a single
+   multi-page PDF. Reuses the exact ctx-swap → renderCanvas() →
+   restore technique renderBlueprintExportCanvas() uses just above,
+   then crops the result to the route's bounding box and draws the
+   path on top before cropping — no changes to renderCanvas() or
+   any tile-drawing helper were needed.
+=============================================== */
+
+/**
+ * Render a cropped PNG of the active floor with one evacuation route
+ * highlighted, or null when there is nothing to draw: no path, or the
+ * route leaves the active floor via a staircase (a single floor's canvas
+ * can't depict a different floor's plan, so those cards fall back to the
+ * numbered text steps alone — see drawEvacuationDoorCard()).
+ */
+function renderEvacuationMapCrop(result, floor) {
+  if (!result || !result.path || result.path.length < 2 || result.crossesFloor) return null;
+
+  const EXPORT_SCALE = 3;
+  const cellSize = getEffectiveCellSize();
+  const { gridCols, gridRows } = floor;
+  const W = gridCols * cellSize * EXPORT_SCALE;
+  const H = gridRows * cellSize * EXPORT_SCALE;
+  if (!(W > 0 && H > 0)) return null;
+
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const offCtx = off.getContext('2d');
+  offCtx.scale(EXPORT_SCALE, EXPORT_SCALE);
+
+  const savedCtx = ctx;
+  ctx = offCtx;
+  let minC = Infinity, minR = Infinity, maxC = -1, maxR = -1;
+  try {
+    renderCanvas(); // draws the plain floor plan for the ACTIVE floor, unmodified
+
+    offCtx.save();
+    offCtx.lineWidth = 3.2;
+    offCtx.strokeStyle = '#dc2626';
+    offCtx.lineCap = 'round';
+    offCtx.lineJoin = 'round';
+    offCtx.beginPath();
+    let started = false;
+    for (const key of result.path) {
+      const { x: c, y: r } = parseKey(key);
+      if (c < minC) minC = c; if (r < minR) minR = r;
+      if (c > maxC) maxC = c; if (r > maxR) maxR = r;
+      const cx = c * cellSize + cellSize / 2, cy = r * cellSize + cellSize / 2;
+      if (!started) { offCtx.moveTo(cx, cy); started = true; } else offCtx.lineTo(cx, cy);
+    }
+    offCtx.stroke();
+
+    const startPt = parseKey(result.path[0]);
+    const endPt   = parseKey(result.path[result.path.length - 1]);
+    offCtx.fillStyle = '#16a34a';
+    offCtx.beginPath();
+    offCtx.arc(startPt.x * cellSize + cellSize / 2, startPt.y * cellSize + cellSize / 2, cellSize * 0.3, 0, Math.PI * 2);
+    offCtx.fill();
+    offCtx.fillStyle = '#dc2626';
+    offCtx.beginPath();
+    offCtx.arc(endPt.x * cellSize + cellSize / 2, endPt.y * cellSize + cellSize / 2, cellSize * 0.3, 0, Math.PI * 2);
+    offCtx.fill();
+    offCtx.restore();
+  } finally {
+    ctx = savedCtx; // guaranteed restore even if a drawing call above throws
+  }
+
+  if (maxC < 0) return null;
+  const pad = 2;
+  const c0 = Math.max(0, minC - pad), r0 = Math.max(0, minR - pad);
+  const c1 = Math.min(gridCols, maxC + pad + 1), r1 = Math.min(gridRows, maxR + pad + 1);
+  const sx = c0 * cellSize * EXPORT_SCALE, sy = r0 * cellSize * EXPORT_SCALE;
+  const sw = (c1 - c0) * cellSize * EXPORT_SCALE, sh = (r1 - r0) * cellSize * EXPORT_SCALE;
+  if (!(sw > 0 && sh > 0)) return null;
+
+  const crop = document.createElement('canvas');
+  crop.width = sw; crop.height = sh;
+  crop.getContext('2d').drawImage(off, sx, sy, sw, sh, 0, 0, sw, sh);
+  return { dataURL: crop.toDataURL('image/png'), w: sw, h: sh };
+}
+
+/** Draw one room's door card onto the current jsPDF page. */
+function drawEvacuationDoorCard(doc, opts) {
+  const { pageW, pageH, margin, schoolName, floorLabel, roomNumber, result, graph, floor } = opts;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(90, 100, 110);
+  doc.text(String(schoolName).toUpperCase(), margin, y + 0.18);
+  doc.text('EVACUATION ROUTE', pageW - margin, y + 0.18, { align: 'right' });
+  y += 0.32;
+  doc.setDrawColor(210, 214, 220);
+  doc.setLineWidth(0.01);
+  doc.line(margin, y, pageW - margin, y);
+  y += 0.38;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(32);
+  doc.setTextColor(20, 25, 35);
+  doc.text(`Room ${roomNumber}`, margin, y);
+  y += 0.26;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(90, 100, 110);
+  doc.text(floorLabel || 'Floor 1', margin, y);
+  y += 0.4;
+
+  if (!result) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(185, 28, 28);
+    const msg = doc.splitTextToSize(
+      'No evacuation route found for this room. Mark at least one exterior exit ' +
+      '(select a hallway tile → check "Exterior exit") that this room can reach.', contentW);
+    doc.text(msg, margin, y);
+    y += msg.length * 0.24;
+    drawDoorCardFooter(doc, { pageW, pageH, margin });
+    return;
+  }
+
+  const mapImg = renderEvacuationMapCrop(result, floor);
+  if (mapImg) {
+    const maxImgW = contentW, maxImgH = 4.3;
+    const aspect = mapImg.w / mapImg.h;
+    let imgW = maxImgW, imgH = imgW / aspect;
+    if (imgH > maxImgH) { imgH = maxImgH; imgW = imgH * aspect; }
+    const imgX = margin + (contentW - imgW) / 2;
+    doc.setDrawColor(225, 228, 232);
+    doc.rect(imgX, y, imgW, imgH);
+    doc.addImage(mapImg.dataURL, 'PNG', imgX, y, imgW, imgH);
+    y += imgH + 0.28;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(20, 25, 35);
+  doc.text('Route', margin, y);
+  y += 0.22;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(40, 46, 56);
+  const steps = buildEvacuationSteps(result.path, result.exit, graph);
+  steps.forEach((step, idx) => {
+    const wrapped = doc.splitTextToSize(`${idx + 1}. ${step}`, contentW);
+    doc.text(wrapped, margin, y);
+    y += wrapped.length * 0.19;
+  });
+  y += 0.22;
+
+  const boxH = 0.62;
+  doc.setFillColor(236, 253, 245);
+  doc.setDrawColor(5, 150, 105);
+  doc.setLineWidth(0.012);
+  doc.roundedRect(margin, y, contentW, boxH, 0.06, 0.06, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(6, 95, 70);
+  doc.text('ASSEMBLY POINT', margin + 0.16, y + 0.22);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(15, 60, 45);
+  const assemblyText = result.exit.assemblyPoint || result.exit.label || 'Not set — see building evacuation plan';
+  doc.text(assemblyText, margin + 0.16, y + 0.46);
+  y += boxH + 0.18;
+
+  if (result.crossesFloor) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(120, 125, 135);
+    const note = doc.splitTextToSize(
+      'This route continues on another floor via a staircase — the map above shows only ' +
+      (floorLabel || 'this floor') + '; follow the numbered steps the rest of the way.', contentW);
+    doc.text(note, margin, y);
+  }
+
+  drawDoorCardFooter(doc, { pageW, pageH, margin });
+}
+
+function drawDoorCardFooter(doc, opts) {
+  const { pageW, pageH, margin } = opts;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(150, 155, 165);
+  doc.text(
+    `Generated ${new Date().toLocaleDateString()} · School Layout Visualizer ${TOOL_VERSION} · Post next to classroom door`,
+    margin, pageH - margin + 0.12);
+}
+
+/**
+ * Entry point for the "Print Door Cards" button: one door card per room
+ * on the currently active floor, batched into a single downloadable PDF.
+ */
+function printEvacuationDoorCards() {
+  if (!canvas) { showToast('Canvas not ready.', 'warn'); return; }
+
+  const graph = getPathfindingGraph();
+  const exits = collectExitPoints();
+  if (!exits.length) {
+    showToast('Mark at least one exterior exit first — select a hallway tile and check "Exterior exit".', 'warn');
+    return;
+  }
+
+  const floor = getActiveFloorData();
+  const rooms = [...graph.roomToKey.entries()]
+    .filter(([, key]) => key.startsWith(floor.id + ':'))
+    .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
+  if (!rooms.length) {
+    showToast('No rooms on this floor to route yet.', 'warn');
+    return;
+  }
+  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+    showToast('PDF export unavailable in this browser.', 'warn');
+    return;
+  }
+
+  showToast('Building evacuation door cards…', 'info');
+  try {
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' });
+    const pageOpts = { pageW: 8.5, pageH: 11, margin: 0.55,
+                        schoolName: AppState.settings.schoolName || 'School', floorLabel: floor.label, floor, graph };
+
+    rooms.forEach(([roomNumber, roomKey], idx) => {
+      if (idx > 0) doc.addPage();
+      const result = computeEvacuationRouteForRoom(roomKey, exits, graph);
+      drawEvacuationDoorCard(doc, { ...pageOpts, roomNumber, result });
+    });
+
+    const safeSchool = (AppState.settings.schoolName || 'School').replace(/[^\w\s-]/g, '').trim() || 'School';
+    const safeFloor   = (floor.label || 'Floor').replace(/[^\w\s-]/g, '').trim() || 'Floor';
+    doc.save(`Evacuation Door Cards — ${safeSchool} — ${safeFloor}.pdf`);
+    showToast(`Saved ${rooms.length} door card${rooms.length === 1 ? '' : 's'} as PDF`, 'success');
+  } catch (err) {
+    showToast('Door card export failed.', 'error');
+    console.warn('[STVIZ] Evacuation door card export error:', err);
+  }
+}
+
 function drawGrid(cols, rows, cellSize, W, H) {
   ctx.beginPath();
   ctx.strokeStyle = GRID_LINE_COLOR;
@@ -6909,6 +7194,21 @@ function drawTile(col, row, tile, cellSize, skipRoomLabel) {
   ctx.strokeStyle = colors.stroke;
   ctx.lineWidth = 1.5;
   ctx.stroke();
+
+  // Evacuation: green ring + door glyph on any hallway tile marked as an
+  // exterior exit (showHallwayEditor). Purely a visual cue in the editor —
+  // the evacuation door-card print reads tile.isExit directly, not this draw.
+  if (tile.isExit) {
+    ctx.save();
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    roundRectStroke(ctx, tx + 1, ty + 1, tw - 2, th - 2, r);
+    ctx.font = `${Math.max(10, Math.round(cellSize * 0.5))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🚪', x + cellSize / 2, y + cellSize / 2 + 1);
+    ctx.restore();
+  }
 }
 
 /**
@@ -7816,6 +8116,24 @@ function showHallwayEditor(col, row, tile) {
     input.value = tile && tile.corridorLabel ? tile.corridorLabel : '';
   }
 
+  // Evacuation: exterior-exit checkbox + its two fields.
+  const exitChk    = document.getElementById('rp-hallway-is-exit');
+  const exitFields = document.getElementById('rp-hallway-exit-fields');
+  const exitLabel  = document.getElementById('rp-exit-label');
+  const exitAssembly = document.getElementById('rp-exit-assembly');
+  if (exitChk) {
+    exitChk.checked = !!(tile && tile.isExit);
+    if (exitFields) exitFields.style.display = exitChk.checked ? '' : 'none';
+    // Replace any prior listener by cloning (same pattern as the Apply button below).
+    const newChk = exitChk.cloneNode(true);
+    exitChk.parentNode.replaceChild(newChk, exitChk);
+    newChk.addEventListener('change', () => {
+      if (exitFields) exitFields.style.display = newChk.checked ? '' : 'none';
+    });
+  }
+  if (exitLabel)    exitLabel.value    = (tile && tile.exitLabel)    ? tile.exitLabel    : '';
+  if (exitAssembly) exitAssembly.value = (tile && tile.assemblyPoint) ? tile.assemblyPoint : '';
+
   // Store target for the Apply button
   AppState.ui.editorTarget = { col, row };
 
@@ -7835,8 +8153,22 @@ function showHallwayEditor(col, row, tile) {
       } else {
         delete t.corridorLabel;
       }
+      // Evacuation: exterior-exit marker + its two optional labels.
+      const isExitNow = !!document.getElementById('rp-hallway-is-exit')?.checked;
+      if (isExitNow) {
+        t.isExit = true;
+        const dLabel = (document.getElementById('rp-exit-label')?.value || '').trim();
+        const aLabel = (document.getElementById('rp-exit-assembly')?.value || '').trim();
+        if (dLabel) t.exitLabel = dLabel; else delete t.exitLabel;
+        if (aLabel) t.assemblyPoint = aLabel; else delete t.assemblyPoint;
+      } else {
+        delete t.isExit;
+        delete t.exitLabel;
+        delete t.assemblyPoint;
+      }
       scheduleBlueprintAutosave();
-      showToast('Label saved', 'success');
+      renderCanvas();
+      showToast('Hallway settings saved', 'success');
     });
   }
 }
@@ -12954,6 +13286,150 @@ window.findPath = findPath;
 window.findGroupDayPath = findGroupDayPath;
 window.resolveRoomPath = resolveRoomPath;
 window.computeCongestionMap = computeCongestionMap;
+
+/* ==============================================================
+   EVACUATION ROUTES
+   ──────────────────────────────────────────────────────────────
+   Computes, for a room, the shortest path to the nearest marked
+   exterior exit — entirely by calling the existing astar() above
+   with different (startKey, goalKey) pairs. astar() itself is
+   untouched: no new edge type, no new heuristic case, and the
+   admissible teleport-aware heuristic documented above it still
+   applies unchanged to every one of these calls.
+
+   "Exterior exit" is NOT a new grid-tile TYPE (that would have meant
+   touching the classify pass, drawTile(), the doorway/eraser tools,
+   serialization, etc. throughout this file). It's a boolean flag —
+   tile.isExit, plus optional tile.exitLabel / tile.assemblyPoint —
+   on an ordinary hallway tile, following the exact precedent already
+   set by corridorLabel on the same tile shape (see showHallwayEditor
+   above). Because a flag on an existing tile object round-trips
+   through serializeBlueprint()/applyBlueprintData() for free (tiles
+   are already copied wholesale with `{...tile}`), none of the
+   blueprint save/load code needed to change for this to persist,
+   export, import, and survive the recovery-point ring.
+=============================================================== */
+
+/**
+ * Every marked exterior exit across all floors, as graph-scoped keys
+ * ("floorId:col,row") the astar() goal parameter already expects.
+ */
+function collectExitPoints() {
+  const graph = getPathfindingGraph();
+  const exits = [];
+  for (const floor of (AppState.blueprint.floors || [])) {
+    if (!floor.gridData) continue;
+    for (let r = 0; r < floor.gridRows; r++) {
+      for (let c = 0; c < floor.gridCols; c++) {
+        const t = floor.gridData[r] && floor.gridData[r][c];
+        if (t && t.type === 'hallway' && t.isExit) {
+          const key = floorCellKey(floor.id, c, r);
+          if (graph.adjacency.has(key)) {
+            exits.push({
+              key, floorId: floor.id, col: c, row: r,
+              label: t.exitLabel || '',
+              assemblyPoint: t.assemblyPoint || '',
+            });
+          }
+        }
+      }
+    }
+  }
+  return exits;
+}
+
+/**
+ * Re-derive a path's total edge cost from the same adjacency list astar()
+ * searched, so candidate exits can be compared by real cost (teleports are
+ * 0-cost) rather than by raw cell count.
+ */
+function evacPathCost(graph, path) {
+  let total = 0;
+  for (let i = 1; i < path.length; i++) {
+    const edges = graph.adjacency.get(path[i - 1]) || [];
+    const edge = edges.find(e => e.key === path[i]);
+    total += edge ? edge.cost : 1;
+  }
+  return total;
+}
+
+/**
+ * Shortest evacuation route from one room's graph key to the nearest
+ * marked exit: one astar() call per candidate exit (schools have very
+ * few marked exits, so this is cheap), keeping the lowest-cost result.
+ * Returns { path, exit, cost, crossesFloor } or null (room not in the
+ * graph, or no marked exit is reachable from it at all).
+ */
+function computeEvacuationRouteForRoom(roomKey, exits, graph) {
+  graph = graph || getPathfindingGraph();
+  if (!graph.adjacency.has(roomKey)) return null;
+  let best = null;
+  for (const exit of exits) {
+    const path = astar(graph, roomKey, exit.key);
+    if (!path) continue;
+    const cost = evacPathCost(graph, path);
+    if (!best || cost < best.cost) best = { path, exit, cost };
+  }
+  if (!best) return null;
+  const startFloorId = parseKey(roomKey).floorId;
+  best.crossesFloor = best.path.some(k => parseKey(k).floorId !== startFloorId);
+  return best;
+}
+
+/** Human direction word for one orthogonal step on the SAME floor. */
+function evacDirectionLabel(dx, dy) {
+  if (dx === 1) return 'east';
+  if (dx === -1) return 'west';
+  if (dy === 1) return 'south';
+  if (dy === -1) return 'north';
+  return null;
+}
+
+/**
+ * Turn a raw A* key path into short numbered turn-by-turn instructions,
+ * collapsing runs of same-direction steps into one line and calling out
+ * staircase teleports by the destination floor's own label. Reads the
+ * `teleport` flag straight off the matching adjacency edge (the same
+ * flag buildMultiFloorGraph() set when it built the edge) rather than
+ * inferring a floor change from coordinates, since paired staircases are
+ * not required to sit at the same col/row on each floor.
+ */
+function buildEvacuationSteps(path, exit, graph) {
+  const steps = [];
+  let i = 0;
+  while (i < path.length - 1) {
+    const edges = graph.adjacency.get(path[i]) || [];
+    const edge  = edges.find(e => e.key === path[i + 1]);
+    if (edge && edge.teleport) {
+      const toFloorId = parseKey(path[i + 1]).floorId;
+      steps.push(`Take the stairs to ${floorLabelById(toFloorId)}.`);
+      i++;
+      continue;
+    }
+    const a = parseKey(path[i]), b = parseKey(path[i + 1]);
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dir = evacDirectionLabel(dx, dy);
+    if (!dir) { i++; continue; }
+    let count = 1, j = i + 1;
+    while (j < path.length - 1) {
+      const e2 = (graph.adjacency.get(path[j]) || []).find(e => e.key === path[j + 1]);
+      if (!e2 || e2.teleport) break;
+      const c1 = parseKey(path[j]), c2 = parseKey(path[j + 1]);
+      if (c1.floorId !== c2.floorId || c2.x - c1.x !== dx || c2.y - c1.y !== dy) break;
+      count++; j++;
+    }
+    steps.push(`Head ${dir} ${count} tile${count === 1 ? '' : 's'}.`);
+    i = j;
+  }
+  steps.push(`Exit at ${(exit && exit.label) ? exit.label : 'the marked exit'}.`);
+  return steps;
+}
+
+// Expose for the door-card print pipeline (Blueprint export section) and
+// for manual/console verification the same way findPath/resolveRoomPath are.
+window.collectExitPoints              = collectExitPoints;
+window.computeEvacuationRouteForRoom  = computeEvacuationRouteForRoom;
+window.buildEvacuationSteps           = buildEvacuationSteps;
 
 /* ==============================================================
    ROUND 9 — PATH VISUALIZATION MODULE (Module 4, part 1)

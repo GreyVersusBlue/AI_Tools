@@ -2,14 +2,156 @@
 
 **Tool file:** `Tools/035-schedule-visualizer.html` (~19,400 lines — by far the largest tool on the site)
 **Support folder:** `Tools/schedule-visualizer/` — `sv-handoff.js`,
-`sv-recovery.js`, `test/smoke-recovery.mjs`; plus `Tools/schedule/` — fonts,
-the published-browser fixtures and test suite
+`sv-recovery.js`, `test/smoke-recovery.mjs`, `test/smoke-evacuation.mjs`;
+plus `Tools/schedule/` — fonts, the published-browser fixtures and test suite
 
 **Current description (from README):** Build a hyperlinked map of teachers, rooms, and clusters — and publish a schedule browser like the one above from it.
 
 ---
 
 ## Status
+
+### Pass 2 — Round 4 — 2026-08-13 — session `a91780`
+
+**Shipped the evacuation route planner and door cards (Major Features,
+"Emergency planning").** Every room on the currently active floor now routes,
+via the existing A* graph, to the nearest hand-marked exterior exit, and the
+whole floor's routes batch-print as one PDF of postable per-room door cards.
+
+- **New data: "exterior exit" is a flag on an existing hallway tile, not a
+  new grid-tile TYPE.** The prompt's own instructions flagged the
+  A*-admissibility subtlety in the portal-graph heuristic (lines
+  ~12554–12573 before this round) as something not to break, and the
+  surest way not to break it was to touch `astar()`, `buildHeuristic()`,
+  `buildMultiFloorGraph()`, and the classify pass in
+  `buildLocalFloorGraph()` **not at all**. A fourth tile TYPE would have
+  meant new cases in the classify pass, `drawTile()`, the doorway/eraser
+  tools, and the door-edge-restriction logic — real surface on a
+  19,900-line file for a feature that doesn't need new topology, only a
+  new kind of *destination* on topology that already exists. Instead,
+  three properties — `tile.isExit` (bool), `tile.exitLabel` (string),
+  `tile.assemblyPoint` (string) — live directly on an ordinary hallway
+  tile object, following the **exact existing precedent** of
+  `tile.corridorLabel` on the same tile shape (`showHallwayEditor()`,
+  originally "Change 5"). Because tiles are already copied wholesale
+  (`{ ...tile }`) by `serializeBlueprint()` / `applyBlueprintData()`, this
+  flag round-trips through save, export/import, and the Round-3 recovery
+  ring **for free** — none of that code needed to change, and
+  `validateBlueprintData()` doesn't constrain tile shape beyond
+  `col`/`row`/`tile` presence, so it doesn't reject the new fields either.
+- **Marking an exit:** select the Select tool, click a hallway tile, check
+  "Exterior exit" in the right panel (new fields under the existing
+  Corridor Label section), optionally name the door and its assembly
+  point, Apply. The tile gets a green ring + door glyph on the canvas so
+  authors can see what they've marked (`drawTile()`'s hallway branch).
+  Staircase tiles were deliberately **not** given the same checkbox — see
+  Deferred below.
+- **New pathfinding module** (`collectExitPoints`, `evacPathCost`,
+  `computeEvacuationRouteForRoom`, `evacDirectionLabel`,
+  `buildEvacuationSteps` — inserted right after the existing A* section's
+  own `window.findPath = …` export block, ~line 13030): for a room, try
+  `astar()` against every marked exit (schools have very few) and keep the
+  cheapest by re-summing real edge cost from the same adjacency list
+  `astar()` searched (path cell-count alone is misleading once a 0-cost
+  staircase teleport is in the path). `buildEvacuationSteps()` turns the
+  raw key path into numbered turn-by-turn text ("Head east 4 tiles.",
+  "Take the stairs to Floor 1.", "Exit at Door A."), reading the
+  `teleport` flag straight off the matching adjacency edge — the same
+  flag `buildMultiFloorGraph()` already sets — rather than inferring a
+  floor change from coordinates, since paired staircases are not required
+  to sit at the same col/row on each floor.
+- **Door cards:** "Print Door Cards" (new Evacuation section in the
+  Blueprint sidebar, next to the existing PNG/PDF export buttons) builds
+  one letter-size jsPDF page per room on the active floor — room number,
+  a cropped route-highlighted floor-plan image, the numbered steps, and an
+  assembly-point callout box — batched into one downloadable PDF, reusing
+  the *exact* ctx-swap-then-`renderCanvas()`-then-restore technique
+  `renderBlueprintExportCanvas()` already uses for the plain floor-plan
+  print, plus a path overlay drawn the same way the existing
+  `drawCorridorLabelHighlights()` overlay is drawn, then cropped to the
+  route's bounding box via a second canvas + `drawImage`. No changes to
+  `renderCanvas()` or any tile-drawing helper were needed.
+- **Verified:** `Tools/schedule-visualizer/test/smoke-recovery.mjs` (21
+  checks) and `Tools/schedule/test/smoke.mjs` (42 checks, the
+  publish/schedule-browser pipeline the parallel Schedule Browser session
+  is depending on) both still pass **unmodified**, confirming nothing
+  about the published-data format changed. New
+  `Tools/schedule-visualizer/test/smoke-evacuation.mjs` (15 checks, not
+  wired into `npm test` — see below) drives the real thing in headless
+  Chromium against the Northwind fixture: marking a hallway tile sets
+  `collectExitPoints()`'s one entry with its label/assembly text intact;
+  a same-floor room (101) finds a real multi-cell `astar()` route ending
+  in "Exit at Door A."; a room on the *other* floor (201, which has no
+  exit marked on its own floor) still finds a route and it correctly
+  reports `crossesFloor: true` (via the ground floor's staircase
+  teleport); zero marked exits returns `null` rather than throwing;
+  `printEvacuationDoorCards()` runs end-to-end — jsPDF build and save —
+  with zero new console errors and zero offsite requests. A separate
+  manual headless pass confirmed the new "Print Door Cards" button
+  renders in the sidebar with zero console errors on a cold page load.
+  `check:dedupe` and `check:social` both still pass clean, and neither
+  flags this tool.
+- **This round's environment note:** `npx playwright install chromium`
+  could not reach `cdn.playwright.dev` (blocked by this session's egress
+  policy — a 403 at the proxy, not retried, per `/root/.ccr/README.md`).
+  `Tools/board-check/harness.mjs`'s existing `PW_CHROMIUM_EXECUTABLE`
+  escape hatch pointed at a pre-installed Chromium at
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and every suite
+  above ran for real, headless, against the actual served pages — this
+  wasn't a change of test strategy, just using the accommodation the
+  harness already had for exactly this situation.
+- **Deliberately deferred** (named explicitly, per the assignment's own
+  prompt):
+  - **Multi-floor batch printing.** Door cards print for the *active*
+    floor only, one click per floor. The room-registry / roomToKey
+    grouping to do "every floor, one PDF, page breaks between floors" is
+    straightforward given what already exists, but doubles the surface
+    this round touched in the print path for a workflow (open each floor,
+    click the button once) that's already only a few clicks.
+  - **Staircase tiles as their own exit type.** Only hallway tiles got the
+    "Exterior exit" checkbox — real ground-floor stairwells that open
+    straight outside exist in real buildings, but `showStaircaseEditor()`
+    already owns non-trivial pairing-mode UI state (see its
+    `refreshStaircasePanel()`), and folding a second, unrelated checkbox
+    into that same panel without driving it by hand felt like the wrong
+    place to spend this round's remaining risk budget. A room whose
+    shortest route happens to pass through such a stairwell still routes
+    correctly to a hallway exit elsewhere; it just can't name the
+    stairwell itself as the exit.
+  - **Elevator / mobility-accommodation route variants.** The prompt named
+    this explicitly as a plausible deferral. `astar()` has no concept of
+    "avoid staircases" today; the multi-floor graph would need a second,
+    stair-excluding heuristic pass and a way to mark which staircases are
+    elevators. Real need, separate round — this is the "Accessibility
+    routing" Major Feature already listed below, and evacuation-specific
+    accessible routing compounds it (an evacuation route that must avoid
+    stairs may have no route at all on some floors without an elevator,
+    which needs its own UI treatment, not a silent fallback).
+  - **Transition-time / congestion-aware evacuation costing.** Routes use
+    the same uniform per-tile edge cost `astar()` always has; they don't
+    account for `computeCongestionMap()`'s existing crowding model (a
+    corridor that's a chokepoint during a congested passing period is a
+    genuinely different evacuation risk than an empty one). Cheap to
+    reason about, not cheap to verify without driving a full congestion
+    scenario, and out of scope for this round.
+  - **`npm test` wiring.** This round's boundaries excluded touching
+    `package.json`; `smoke-evacuation.mjs` runs directly
+    (`node Tools/schedule-visualizer/test/smoke-evacuation.mjs`) but isn't
+    in the `npm test`/`npm run test:*` script list yet. A future round
+    that's allowed to touch `package.json` should add
+    `"test:evacuation": "node Tools/schedule-visualizer/test/smoke-evacuation.mjs"`
+    next to `test:schedule-visualizer`.
+  - **No changes to `sv-handoff.js` or the publish pipeline.** Evacuation
+    data is editor-only; it isn't part of what `034-schedule-browser.html`
+    consumes, and nothing about the published/handoff format changed —
+    confirmed by the unmodified `Tools/schedule/test/smoke.mjs` passing.
+
+**Where a future round should pick up:** unchanged from Round 3/2 below —
+the R61–R63 backport (copy/share links next, then Compare/Common Planning
+mode, then PNG download) is still the highest-value item for the visualizer/
+browser tool pair. For this feature specifically: multi-floor batch printing
+and the `npm test` wiring above are the cheapest next steps; accessible
+routing and congestion-aware costing are their own rounds.
 
 ### Pass 2 — Round 3 — 2026-08-11 — session `m3r8ro`
 
@@ -233,6 +375,14 @@ multi-session on their own.
   on leaving the page, and before an import or a danger-zone clear; offered on
   load when the autosave is unreadable or the last session ended abnormally,
   and listed in Settings for a deliberate rollback
+- **Evacuation route planner and door cards** (Pass 2 Round 4): mark any
+  hallway tile as an exterior exit (`showHallwayEditor`, `tile.isExit`/
+  `tile.exitLabel`/`tile.assemblyPoint`), then "Print Door Cards" computes
+  every room's shortest route to its nearest marked exit via the existing
+  A* graph (`collectExitPoints`, `computeEvacuationRouteForRoom`,
+  `buildEvacuationSteps`) and batch-prints one postable per-room card —
+  route map crop, numbered turn-by-turn steps, assembly point — for the
+  active floor as a single PDF (`printEvacuationDoorCards`)
 - Onboarding flow (`stviz_onboarded`), PDF export via vendored jsPDF
 
 ## Quick Wins
@@ -275,6 +425,11 @@ multi-session on their own.
 - **Emergency planning.** Evacuation routes per room, assembly points,
   lockdown maps, and printed per-room posters — computed from the same graph.
   This is the highest-stakes use of the model already built.
+  **Partly shipped Pass 2 Round 4** — evacuation routes per room, marked
+  exterior exits with named assembly points, and printed per-room door
+  cards (single active floor, batched into one PDF) all now exist; see
+  Status above. Lockdown maps, multi-floor batch printing, and
+  accessibility-aware evacuation routing (see the item above) remain open.
 - **Publish more than the browser.** The publisher is excellent; publishing
   per-teacher one-page PDFs, a printed building map pack, or a room-by-room
   door sign set would extend it cheaply (P7).
