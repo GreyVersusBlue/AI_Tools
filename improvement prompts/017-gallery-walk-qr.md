@@ -9,6 +9,83 @@
 
 ## Status
 
+### 2026-08-13 — worktree `row-15-gallery-walk-qr` — batch scan-verify before printing
+
+Closed the last open Quick Win from every prior round's "deliberately left for
+a future round" list: **test-scan each code before printing.** All changes
+are in `017-gallery-walk-qr.html` only.
+
+- **What it does:** the tool already links `_shared/vendor/qrcode/qrcode.js`
+  to build each code; it now also links `_shared/vendor/jsqr/jsqr.js` and,
+  right after `drawQR()` fills a canvas, decodes that same canvas with jsQR
+  and confirms the result matches the exact text the code was built from.
+  This is the in-canvas "decode what you just drew" pattern
+  `016-qr-code-generator.html`'s bulk mode already uses
+  (`verifyBulkCanvas`/`bulkItemEl`'s amber "unverified" badge) — adapted here
+  rather than the live-camera `_shared/qr-scan.js` pattern used by
+  `013-lab-safety-contract-tracker.html`, because "verify a batch before
+  printing" doesn't need a camera in the loop at all, just a check that the
+  pixels the browser is about to send to the printer actually decode.
+- **Where it shows up:**
+  - The live preview flags any failing card directly (`.scan-unverified`
+    background + a `.scan-warn-badge` reading "⚠ Won't scan reliably"), and a
+    summary banner (`#scanWarning`, styled like the existing duplicate-link
+    warning) appears above the print buttons naming every flagged station —
+    so the signal is visible while a teacher is still editing, not just at
+    the moment of printing.
+  - `verifyQRCanvas()` is a small, self-contained helper (jsQR-in, expected
+    text in, true/false/null out) shared by both the 200px live-preview
+    canvas and the 600px print-grid canvas — `buildPrintCodes()` runs the
+    same check against the actual pixels about to go to paper (not the
+    smaller preview) and returns the list of stations that failed.
+  - **"Print QR Codes" gates on the result.** If any station is still
+    unverified when the button is clicked, a `confirm()` names every flagged
+    station (truncated past six) and asks "Print anyway?" — dismissing it
+    aborts before `window.print()` is ever called. With nothing flagged,
+    Print goes straight through with no dialog, matching the existing
+    single-click behaviour. This is the actual "before the ink is spent"
+    checkpoint the backlog row asked for; the live-preview badges alone are
+    easy to scroll past on a 30-station batch.
+- **Known limitation:** verification only checks that jsQR can decode the
+  canvas pixels this tool itself rendered — it cannot detect problems that
+  only appear after printing (toner starvation, a laminate glare, a card
+  taped at an angle). It catches "this code was never going to scan" (content
+  too dense for the chosen error-correction level, a degenerate render), not
+  "this code scanned fine here but the printer/paper ruined it." A physical
+  test-scan of at least one printed page is still worth doing for anything
+  that matters.
+- Fallback: if `window.jsQR` somehow isn't available (it's a same-origin
+  vendored file linked unconditionally, so this should never trip in
+  practice), `verifyQRCanvas()` returns `null` and nothing is flagged —
+  silently skipping the check rather than falsely accusing every code of
+  being unscannable.
+- **New suite:** `Tools/gallery-walk-qr/test/smoke-scan-verify.mjs` — a real
+  jsQR round-trip proves clean codes aren't flagged, then a wrapped
+  `window.jsQR` (returning altered data for one station's payload only, since
+  hand-constructing a QR code that jsQR itself can't read isn't something a
+  test should do) proves a genuine failure gets the per-card badge, the named
+  summary banner, the preview-note count, and — the part that actually
+  matters — that "Print QR Codes" raises a confirmation naming the station
+  and that dismissing it stops the print view from going live, while
+  accepting it (or having nothing flagged) lets it through. Not yet wired
+  into `package.json`'s `test`/`test:gallery-walk` scripts — flagged for the
+  orchestrating session's integration pass, per this worktree's boundaries.
+- `Tools/017-gallery-walk-qr.html` was already in `sw.js`'s
+  `PRECACHE_URLS`, and `_shared/vendor/jsqr/jsqr.js` already was too (another
+  tool vendors it in) — no `sw.js` changes were needed.
+- `node Tools/board-check/check-dedupe.mjs` stays clean: the new `<script>`
+  tag points at `_shared/vendor/jsqr/jsqr.js`, the one canonical copy, not a
+  per-tool duplicate.
+
+**Where the next round should pick up:** the phone-remote (P9) and
+on-board reaction counts noted below are both still open and unrelated to
+this change. If a future round wants to go further on print quality, the
+natural next step is surfacing the same warning on the printed reference
+sheet (so a teacher who prints from a saved gallery days later, without
+revisiting the live preview, still sees which stations were flagged last
+time) — not attempted here because the reference sheet is presently a plain
+lookup table with no per-row status concept.
+
 ### 2026-08-12 — session `r8kq4t` — the projector rotation display
 
 Backlog rank 4 (as it then stood). The rotation timer already worked; it was
@@ -87,9 +164,11 @@ ambitious and are **not** scoped to a single session.
   station 1. Print a per-student route card.
 - **QR code + label + a blank comment area on one card**, rather than a grid of
   bare codes — the card is the thing that gets taped next to the work.
-- **Test-scan each code before printing** — `_shared/qr-scan.js` and a
+- **Done —** **Test-scan each code before printing** — `_shared/qr-scan.js` and a
   vendored `jsqr.js` already exist elsewhere on the site (P7); a broken batch
-  of thirty printed codes is an expensive mistake.
+  of thirty printed codes is an expensive mistake. *(Shipped 2026-08-13 —
+  in-canvas jsQR decode-check on every generated code, flagged live and
+  gated behind a confirm() on "Print QR Codes"; see Status above.)*
 - **Short-link display** under each code so a student without a camera can
   type it.
 - **Undo / confirm on "Reset all reaction counts"** and on Delete gallery (P11).
