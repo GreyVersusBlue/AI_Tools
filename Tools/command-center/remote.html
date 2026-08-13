@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Command Center — Remote</title>
+<meta name="description" content="Scan a code from your Command Center dashboard to drive the timer, quick call, hall pass sign-in, next period and start-of-day reset from across the room — no apps, no accounts.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%232A6DB0' stroke-width='2'/%3E%3Cpath d='M16 10.5V16l4 2.5' stroke='%232A6DB0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='16' cy='16' r='1.3' fill='%23C43A2F'/%3E%3C/svg%3E">
+<script src="../../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../../_shared/a11y.css">
+<script src="../../_shared/webrtc-pair.js"></script>
+<script src="../../_shared/qr-scan.js"></script>
+<script src="../../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="../../_shared/vendor/jsqr/jsqr.js"></script>
+<link rel="stylesheet" href="../../_shared/ink-paper.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink);
+    min-height: 100vh; margin: 0; padding: 1.4rem 1rem 3rem; line-height: 1.45;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  .app-header { margin-bottom: 1.1rem; }
+  .app-header h1 { font-size: 1.3rem; margin: 0 0 .2rem; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.15rem; margin-bottom: .9rem; }
+  .card p { margin: 0 0 .8rem; color: var(--muted); line-height: 1.5; }
+  .card h2 { font-size: .95rem; margin: 0 0 .5rem; }
+  button, textarea {
+    font-family: inherit; font-size: .92rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 7px; padding: .55rem .8rem;
+  }
+  button { cursor: pointer; width: 100%; margin-bottom: .5rem; font-weight: 600; }
+  button:hover:not(:disabled) { border-color: var(--accent-2); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
+  button.pick { width: 100%; text-align: left; }
+  textarea { width: 100%; font-family: ui-monospace, monospace; font-size: .76rem; margin-bottom: .5rem; }
+  canvas { display: block; width: 100%; max-width: 260px; height: auto; margin: 0 auto .8rem; border-radius: 6px; }
+  video { display: block; width: 100%; margin: 0 auto .8rem; border-radius: 6px; background: #000; }
+  .status { font-size: .84rem; color: var(--muted); margin-top: .2rem; }
+  .status.bad { color: var(--err); }
+  .status.good { color: var(--accent-2); }
+
+  .live { display: none; align-items: center; gap: .4rem; font-size: .82rem; color: var(--accent-2); font-weight: 600; margin-bottom: .9rem; }
+  .live.show { display: inline-flex; }
+  .live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+  .stage { display: none; }
+  .stage.show { display: block; }
+  .row-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .4rem; }
+  .timer-remaining { font-family: Consolas, monospace; font-weight: 700; font-size: 1.9rem; text-align: center; margin-bottom: .6rem; }
+  .picked-name { text-align: center; font-size: 1.3rem; font-weight: 700; color: var(--accent); margin-bottom: .6rem; min-height: 1.3em; }
+  .empty-hint { color: var(--muted); font-size: .88rem; margin: 0; }
+  .cmd-status { font-size: .8rem; color: var(--muted); min-height: 1.2em; margin-top: .2rem; }
+  .cmd-status.bad { color: var(--err); }
+  .cmd-status.good { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="app-header">
+    <a class="back-link" href="../010-command-center-dashboard.html">&larr; Command Center</a>
+    <h1>Remote</h1>
+  </header>
+
+  <span class="live" id="liveBadge"><span class="dot" aria-hidden="true"></span>Connected</span>
+
+  <div class="card" id="setupCard">
+    <div id="setupBody">
+      <p>Ask your teacher to open <b>Remote control&hellip;</b> on their Command Center dashboard, then scan the code they show, or paste it below.</p>
+      <button type="button" class="primary" id="scanBtn">Scan with camera</button>
+      <textarea id="pastePayload" rows="3" placeholder="…or paste the teacher's code here"></textarea>
+      <button type="button" id="connectBtn">Connect</button>
+      <p class="status" id="setupStatus"></p>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="card">
+      <div class="row-label">Timer</div>
+      <div class="timer-remaining" id="timerRemaining">--:--</div>
+      <button type="button" class="primary" id="timerBtn" disabled>Start / Pause</button>
+      <p class="cmd-status" id="timerCmdStatus"></p>
+    </div>
+
+    <div class="card">
+      <div class="row-label">Quick call</div>
+      <div class="picked-name" id="pickedName">&mdash;</div>
+      <button type="button" id="nextStudentBtn" disabled>Call next student</button>
+      <p class="cmd-status" id="rosterCmdStatus"></p>
+    </div>
+
+    <div class="card">
+      <div class="row-label">Hall pass — sign in</div>
+      <div id="hallpassList"></div>
+      <p class="cmd-status" id="hallpassCmdStatus"></p>
+    </div>
+
+    <div class="card">
+      <div class="row-label">Period</div>
+      <p id="periodInfo" class="empty-hint">&mdash;</p>
+      <button type="button" id="advancePeriodBtn" disabled>Pull up next period's roster</button>
+      <p class="cmd-status" id="periodCmdStatus"></p>
+    </div>
+
+    <div class="card">
+      <div class="row-label">Start of day</div>
+      <button type="button" id="startDayBtn" disabled>Start the day</button>
+      <p class="cmd-status" id="startDayCmdStatus"></p>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { startJoin, drawQR } from './cc-remote.js';
+
+const setupCard = document.getElementById('setupCard');
+const setupBody = document.getElementById('setupBody');
+const setupStatus = document.getElementById('setupStatus');
+const stage = document.getElementById('stage');
+const liveBadge = document.getElementById('liveBadge');
+
+let scanHandle = null;
+let join = null;
+let latest = null; // most recent snapshot pushed from the dashboard
+
+function setStatus(text, kind) {
+  setupStatus.textContent = text;
+  setupStatus.className = 'status' + (kind ? ' ' + kind : '');
+}
+function cmdStatus(id, text, kind) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = 'cmd-status' + (kind ? ' ' + kind : '');
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function formatTime(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function stopScanning() {
+  if (scanHandle) { scanHandle.stop(); scanHandle = null; }
+}
+
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const val = document.getElementById('pastePayload').value.trim();
+  if (!val) { setStatus('Paste the code first.', 'bad'); return; }
+  connect(val);
+});
+
+document.getElementById('scanBtn').addEventListener('click', () => {
+  setupBody.insertAdjacentHTML('beforeend', `
+    <video id="scanVideo" autoplay muted playsinline></video>
+    <button type="button" id="cancelScanBtn">Cancel</button>
+  `);
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('cancelScanBtn').addEventListener('click', () => {
+    stopScanning();
+    document.getElementById('scanVideo').remove();
+    document.getElementById('cancelScanBtn').remove();
+    document.getElementById('scanBtn').disabled = false;
+  });
+  scanHandle = window.QRScan.scanQRFromCamera(document.getElementById('scanVideo'), {
+    onResult: (text) => { stopScanning(); connect(text); },
+    onError: (err) => { setStatus('Camera unavailable: ' + err.message, 'bad'); },
+  });
+});
+
+async function connect(offerPayload) {
+  stopScanning();
+  setStatus('Connecting…');
+  try {
+    join = await startJoin(offerPayload);
+  } catch (err) {
+    setStatus(err.message, 'bad');
+    return;
+  }
+
+  join.onOpen(() => {
+    setupCard.hidden = true;
+    stage.classList.add('show');
+    liveBadge.classList.add('show');
+  });
+  join.onClose(() => {
+    stage.classList.remove('show');
+    liveBadge.classList.remove('show');
+    setupCard.hidden = false;
+    setStatus('Disconnected. Ask your teacher to start pairing again.', 'bad');
+  });
+  join.onMessage((data) => { latest = data; render(); });
+
+  setupBody.innerHTML = `
+    <p>Show this code back to your teacher, or read them the text below:</p>
+    <canvas id="answerCanvas" width="320" height="320"></canvas>
+    <textarea id="answerText" rows="3" readonly></textarea>
+    <button type="button" id="copyAnswerBtn">Copy code</button>
+    <p class="status" id="setupStatus">Waiting for your teacher to connect&hellip;</p>
+  `;
+  drawQR(document.getElementById('answerCanvas'), join.answerPayload);
+  document.getElementById('answerText').value = join.answerPayload;
+  document.getElementById('copyAnswerBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(join.answerPayload); }
+    catch (e) { /* textarea already shows it selectable */ }
+  });
+}
+
+function send(cmd) {
+  if (!join) return;
+  join.send(cmd);
+}
+
+document.getElementById('timerBtn').addEventListener('click', () => {
+  send({ cmd: 'timer_toggle' });
+  cmdStatus('timerCmdStatus', 'Sent.', 'good');
+});
+document.getElementById('nextStudentBtn').addEventListener('click', () => {
+  send({ cmd: 'next_student' });
+  cmdStatus('rosterCmdStatus', 'Sent.', 'good');
+});
+document.getElementById('advancePeriodBtn').addEventListener('click', () => {
+  send({ cmd: 'advance_period' });
+  cmdStatus('periodCmdStatus', 'Sent.', 'good');
+});
+document.getElementById('startDayBtn').addEventListener('click', () => {
+  send({ cmd: 'start_day' });
+  cmdStatus('startDayCmdStatus', 'Sent.', 'good');
+});
+document.getElementById('hallpassList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-signin]');
+  if (!btn) return;
+  send({ cmd: 'sign_in', section: btn.dataset.section, id: btn.dataset.signin });
+  cmdStatus('hallpassCmdStatus', 'Signing in ' + btn.dataset.name + '…', 'good');
+});
+
+/** Redraws every card from the most recent snapshot pushed by the dashboard.
+    Buttons that don't make sense right now (nothing running, no roster
+    loaded, nobody out) are disabled rather than hidden — a phone screen
+    across the room is exactly where "why doesn't this button work" is
+    hardest to debug. */
+function render() {
+  if (!latest) return;
+
+  const t = latest.timer || {};
+  document.getElementById('timerRemaining').textContent = t.panelOn ? formatTime(t.remaining || 0) : '--:--';
+  const timerBtn = document.getElementById('timerBtn');
+  timerBtn.disabled = !t.panelOn;
+  timerBtn.textContent = t.running ? 'Pause timer' : 'Start timer';
+
+  const r = latest.roster || {};
+  document.getElementById('pickedName').textContent = r.picked || '—';
+  const nextBtn = document.getElementById('nextStudentBtn');
+  nextBtn.disabled = !r.panelOn || !r.count;
+  nextBtn.textContent = r.name ? 'Call next in ' + r.name : 'Call next student';
+
+  const out = Array.isArray(latest.hallpass) ? latest.hallpass : [];
+  const listEl = document.getElementById('hallpassList');
+  listEl.innerHTML = out.length
+    ? out.map((s) => '<button type="button" class="pick" data-signin="' + escapeHtml(s.id) + '" data-section="' + escapeHtml(s.section) + '" data-name="' + escapeHtml(s.name) + '">Sign in ' + escapeHtml(s.name) + (s.destLabel ? ' — ' + escapeHtml(s.destLabel) : '') + '</button>').join('')
+    : '<p class="empty-hint">Nobody is signed out right now.</p>';
+
+  const p = latest.period || {};
+  document.getElementById('periodInfo').textContent = p.current
+    ? ('Now: ' + p.current) + (p.next ? ' · Next: ' + p.next : '')
+    : (p.next ? 'Next: ' + p.next : 'No bell schedule set up yet.');
+  document.getElementById('advancePeriodBtn').disabled = !p.next && !p.current;
+
+  const startDayBtn = document.getElementById('startDayBtn');
+  startDayBtn.disabled = false;
+  startDayBtn.textContent = latest.dayStarted ? 'Run the start-of-day reset again' : 'Start the day';
+}
+</script>
+
+<script src="../../_shared/sw-register.js" defer></script>
+</body>
+</html>
