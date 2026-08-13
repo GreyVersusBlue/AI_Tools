@@ -18,6 +18,7 @@
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
 <script src="vocab-flashcard-generator/vfg-layout.js"></script>
+<script src="vocab-flashcard-generator/vfg-printables.js"></script>
 <script src="vocab-flashcard-generator/vfg-store.js"></script>
 <script src="vocab-flashcard-generator/vfg-conjdrill-link.js"></script>
 <script src="../_shared/state-link.js"></script>
@@ -67,8 +68,8 @@
   .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
   #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
 
-  .mode-tabs { display: flex; gap: .4rem; margin-bottom: .9rem; }
-  .mode-tab { flex: 1; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }
+  .mode-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+  .mode-tab { flex: 1 1 30%; min-width: 6.2rem; text-align: center; padding: .5rem; border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--muted); }
   .mode-tab.active { color: #fff; background: var(--accent); border-color: var(--accent); }
 
   button {
@@ -146,6 +147,40 @@
   .quiz-nav button.secondary { width: auto; margin: 0; }
   .quiz-empty { text-align: center; color: var(--muted); padding: 3rem; }
 
+  /* ---- more printables: word search / crossword / bingo / matching quiz ---- */
+  .printable-title { margin: 0 0 .5rem; font-size: 1.15rem; }
+  .printable-note { font-size: .82rem; color: var(--err); background: rgba(176,42,42,.08); border: 1px solid rgba(176,42,42,.3); border-radius: 6px; padding: .5rem .7rem; margin: 0 0 .8rem; }
+
+  .ws-grid { display: grid; gap: 1px; margin: 0 auto 1rem; background: #ccc; border: 1px solid #999; width: max-content; }
+  .ws-cell { display: flex; align-items: center; justify-content: center; width: 0.32in; height: 0.32in; background: #fff; font-family: Consolas, monospace; font-weight: 700; font-size: .78rem; }
+  .ws-cell.found { background: rgba(42, 109, 176, .18); color: var(--accent-2); }
+  .ws-wordlist ul { columns: 2; margin: 0; padding-left: 1.2rem; font-size: .85rem; }
+  .ws-wordlist li { margin-bottom: .2rem; break-inside: avoid; }
+
+  .cw-grid { display: grid; gap: 1px; margin: 0 auto 1rem; background: #999; border: 1px solid #999; width: max-content; }
+  .cw-cell { position: relative; width: 0.36in; height: 0.36in; background: #fff; display: flex; align-items: center; justify-content: center; font-family: Consolas, monospace; font-weight: 700; font-size: .85rem; }
+  .cw-cell.cw-block { background: #2a2a2a; }
+  .cw-num { position: absolute; top: 1px; left: 2px; font-size: .5rem; font-weight: 700; color: var(--muted); }
+  .cw-clues { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: .5rem; }
+  .cw-clues h3 { margin: 0 0 .3rem; font-size: .95rem; }
+  .cw-clue-list { margin: 0; padding-left: 1.2rem; font-size: .82rem; }
+  .cw-clue-list li { margin-bottom: .3rem; }
+
+  .bingo-grid { display: grid; gap: 2px; background: #999; border: 2px solid #333; width: 6in; height: 6in; margin: 0 auto; }
+  .bingo-cell { background: #fff; display: flex; align-items: center; justify-content: center; text-align: center; font-size: .78rem; padding: .2rem; overflow: hidden; }
+  .bingo-cell.free { font-weight: 800; color: var(--accent-2); background: #f1f0ea; }
+  .bingo-caller-list { columns: 2; margin: .5rem 0 0; padding-left: 1.1rem; font-size: .85rem; }
+  .bingo-caller-list li { margin-bottom: .3rem; break-inside: avoid; }
+  .bingo-caller-hint { color: var(--muted); font-style: italic; }
+
+  .match-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: .5rem; }
+  .match-row { display: flex; align-items: baseline; gap: .4rem; margin-bottom: .6rem; font-size: .92rem; }
+  .match-blank { display: inline-block; min-width: 2.4em; border-bottom: 1px solid var(--ink); text-align: center; }
+  .match-num { color: var(--muted); }
+  .match-letter { font-weight: 700; min-width: 1.4em; display: inline-block; }
+  .match-answer-list { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
+  .match-answer-list li { margin-bottom: .3rem; }
+
   footer.note { color: var(--muted); font-size: .82rem; margin-top: 2rem; }
 
   @media print {
@@ -218,6 +253,10 @@
           <div class="mode-tab active" data-mode="flashcards">Flashcards</div>
           <div class="mode-tab" data-mode="wordwall">Word wall cards</div>
           <div class="mode-tab" data-mode="quiz">Self-quiz</div>
+          <div class="mode-tab" data-mode="wordsearch">Word search</div>
+          <div class="mode-tab" data-mode="crossword">Crossword</div>
+          <div class="mode-tab" data-mode="bingo">Bingo</div>
+          <div class="mode-tab" data-mode="matching">Matching quiz</div>
         </div>
 
         <div class="row2">
@@ -274,6 +313,43 @@
           <p class="hint" style="margin:0 0 .6rem;">Click a card to flip between the term and its definition, or use Prev/Next to move through the list on a screen with a student.</p>
         </div>
 
+        <div id="wsOptions" style="display:none;">
+          <p class="hint" style="margin:0 0 .6rem;">Terms are hidden across, down, or on a forward diagonal (no
+            backwards words). Only the letters of each term make it into the grid &mdash; spaces and punctuation are
+            dropped, so "Cell division" becomes CELLDIVISION. A term that can't find room in the grid is dropped and
+            listed, not silently missing. Prints a puzzle page and a separate answer-key page.</p>
+        </div>
+
+        <div id="cwOptions" style="display:none;">
+          <p class="hint" style="margin:0 0 .6rem;">A best-effort layout, not a perfect solver: terms are placed
+            longest-first wherever they share a letter with something already on the grid, and a term that shares no
+            letters with anything else is dropped and listed rather than forcing a broken puzzle. Lists of related
+            terms (shared letters) place better than a grab-bag of unrelated words. Definitions become the clues, so
+            a term with no definition can't be included. Prints a clue page and a separate answer-key page.</p>
+        </div>
+
+        <div id="bingoOptions" style="display:none;">
+          <div class="row2">
+            <div><label for="bingoCount">Cards to print</label><input type="text" id="bingoCount" value="4"></div>
+            <div>
+              <label for="bingoField">Card contents</label>
+              <select id="bingoField">
+                <option value="term">Terms (caller reads definitions)</option>
+                <option value="definition">Definitions (caller reads terms)</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint" style="margin:0 0 .6rem;">Card size (3&times;3, 4&times;4, or 5&times;5 with a FREE center)
+            scales with how many words/definitions are available. Each card is a different random layout so a class
+            doesn't get identical cards. Prints one page per card, plus a caller's master list.</p>
+        </div>
+
+        <div id="matchOptions" style="display:none;">
+          <p class="hint" style="margin:0 0 .6rem;">Terms with a definition get a numbered left column and a
+            scrambled, lettered right column, with a blank for students to write the matching letter. Prints the quiz
+            and a separate answer key.</p>
+        </div>
+
         <button type="button" id="printBtn">Print</button>
       </div>
     </div>
@@ -301,14 +377,19 @@
   var els = {};
   ['toolbar','listSwitch','newListBtn','deleteListBtn','exportListBtn','importListBtn','importListFile','listName','wordInput',
    'importBridgeRow','conjDrillSetSelect','importConjDrillBtn',
-   'flashOptions','wallOptions','quizOptions','flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
-   'sortOrder','shuffleOrder','showGuides',
+   'flashOptions','wallOptions','quizOptions','wsOptions','cwOptions','bingoOptions','matchOptions',
+   'flashCols','flashRows','cardSizePreset','flashLayout','wallPerPage','wallShowDef',
+   'sortOrder','shuffleOrder','showGuides','bingoCount','bingoField',
    'printBtn','alignTestBtn','alignTestHint','previewArea','previewNote','printNote','sheetView',
    'shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   // state: { name, words: "raw textarea text", mode, flashCols, flashRows, wallPerPage, wallShowDef,
-  //   sortOrder: 'none'|'az'|'za', shuffle, showGuides, cardSizePreset: 'grid'|'3x5'|'4x6', flashLayout: 'duplex'|'fold' }
+  //   sortOrder: 'none'|'az'|'za', shuffle, showGuides, cardSizePreset: 'grid'|'3x5'|'4x6', flashLayout: 'duplex'|'fold',
+  //   bingoCount, bingoField: 'term'|'definition' }
+  // mode: 'flashcards'|'wordwall'|'quiz'|'wordsearch'|'crossword'|'bingo'|'matching' — the last four are the "more
+  // printables" formats built from the same parsed word list by VfgPrintables (vfg-printables.js), a pure-logic
+  // sibling of VocabLayout with its own Node test suite (test/printables-logic.test.mjs).
   var state = null;
   var currentPreviewIndex = 0;
   var currentPreviewSide = 'front';
@@ -319,6 +400,8 @@
     '3x5': { cols: 2, rows: 2, wIn: 3, hIn: 5 },
     '4x6': { cols: 2, rows: 1, wIn: 4, hIn: 6 }
   };
+
+  var VALID_MODES = ['flashcards', 'wordwall', 'quiz', 'wordsearch', 'crossword', 'bingo', 'matching'];
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -349,6 +432,8 @@
     state.sortOrder = els.sortOrder.value;
     state.shuffle = els.shuffleOrder.checked;
     state.showGuides = els.showGuides.checked;
+    state.bingoCount = Math.max(1, Math.min(12, parseInt(els.bingoCount.value, 10) || 4));
+    state.bingoField = els.bingoField.value === 'definition' ? 'definition' : 'term';
   }
 
   /** Sorted + shuffled items for whatever's currently in the textarea —
@@ -513,6 +598,158 @@
     });
   }
 
+  /* ---------- more printables: word search, crossword, bingo, matching quiz ----------
+     Each generator (VfgPrintables, vfg-printables.js) is pure logic with its own Node
+     test suite; everything below is just turning its output into print-ready HTML,
+     reusing the same .page/pageClass() wrapper the flashcard/word-wall pages use so
+     these get the same cut-line/margin-guide treatment and the same @media print rule. */
+
+  /** Plain-text explanation for a generator's `{ ok:false, reason, ... }` result —
+      shared between the on-screen message and the Print-button guard so the two
+      can't say different things about why nothing printed. */
+  function printableFailureMessage(mode, res) {
+    if (mode === 'crossword' && res.reason === 'no-fit') {
+      return 'None of the current terms share any letters with each other, so no crossword could be built. ' +
+        'Try a list of related terms (a crossword needs overlap), or use the word search instead.';
+    }
+    var need = res.minTerms != null ? res.minTerms : res.minItems;
+    var labels = {
+      wordsearch: 'A word search needs at least ' + need + ' terms with 2+ letters',
+      crossword: 'A crossword needs at least ' + need + ' terms that each have a definition',
+      bingo: 'Bingo cards need at least ' + need + ' words or definitions to fill even the smallest (3×3) card',
+      matching: 'A matching quiz needs at least ' + need + ' terms that each have a definition'
+    };
+    return (labels[mode] || 'Not enough terms yet') + ' (currently ' + res.have + ').';
+  }
+
+  function tooFewHtml(mode, res) {
+    return '<p class="quiz-empty">' + escapeHtml(printableFailureMessage(mode, res)) + '</p>';
+  }
+
+  /** One place that knows how to build each of the four generators' results
+      from the current items + current form settings, so the live preview and
+      the print output can never disagree about what "the puzzle" is. */
+  function generatePrintable(mode, items) {
+    if (mode === 'wordsearch') return VfgPrintables.generateWordSearch(items);
+    if (mode === 'crossword') return VfgPrintables.generateCrossword(items);
+    if (mode === 'bingo') {
+      return VfgPrintables.generateBingoCards(items, {
+        count: Math.max(1, Math.min(12, parseInt(els.bingoCount.value, 10) || 4)),
+        cellField: els.bingoField.value === 'definition' ? 'definition' : 'term'
+      });
+    }
+    if (mode === 'matching') return VfgPrintables.generateMatchingQuiz(items);
+    return null;
+  }
+
+  function wordSearchGridHtml(res, showAnswers) {
+    var foundCells = {};
+    if (showAnswers) {
+      res.placements.forEach(function (pl) {
+        for (var i = 0; i < pl.length; i++) foundCells[(pl.row + pl.dr * i) + ',' + (pl.col + pl.dc * i)] = true;
+      });
+    }
+    var cellsHtml = '';
+    for (var r = 0; r < res.size; r++) {
+      for (var c = 0; c < res.size; c++) {
+        cellsHtml += '<span class="ws-cell' + (foundCells[r + ',' + c] ? ' found' : '') + '">' + res.grid[r][c] + '</span>';
+      }
+    }
+    return '<div class="ws-grid" style="grid-template-columns:repeat(' + res.size + ',1fr);">' + cellsHtml + '</div>';
+  }
+
+  function wordSearchPageHtml(res, showAnswers) {
+    var title = showAnswers ? 'Word Search — Answer Key' : 'Word Search';
+    var skippedNote = (!showAnswers && res.skipped.length)
+      ? '<p class="printable-note">' + res.skipped.length + ' term(s) didn’t fit in the grid and were left out: ' +
+        res.skipped.map(escapeHtml).join(', ') + '.</p>'
+      : '';
+    var wordList = showAnswers ? '' : ('<div class="ws-wordlist"><strong>Find these words:</strong><ul>' +
+      res.words.filter(function (w) { return res.skipped.indexOf(w) === -1; })
+        .map(function (w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('') + '</ul></div>');
+    return '<div class="' + pageClass() + '"><h2 class="printable-title">' + title + '</h2>' +
+      skippedNote + wordSearchGridHtml(res, showAnswers) + wordList + '</div>';
+  }
+
+  function crosswordGridHtml(res, showAnswers) {
+    var numberAt = {};
+    res.placements.forEach(function (pl) { numberAt[pl.row + ',' + pl.col] = pl.number; });
+    var cellsHtml = '';
+    for (var r = 0; r < res.height; r++) {
+      for (var c = 0; c < res.width; c++) {
+        var letter = res.grid[r][c];
+        if (!letter) { cellsHtml += '<span class="cw-cell cw-block"></span>'; continue; }
+        var num = numberAt[r + ',' + c];
+        cellsHtml += '<span class="cw-cell">' +
+          (num ? '<span class="cw-num">' + num + '</span>' : '') +
+          (showAnswers ? letter : '') +
+        '</span>';
+      }
+    }
+    return '<div class="cw-grid" style="grid-template-columns:repeat(' + res.width + ',1fr);">' + cellsHtml + '</div>';
+  }
+
+  function crosswordCluesHtml(res) {
+    function list(dir) {
+      var rows = res.placements.filter(function (p) { return p.dir === dir; });
+      return '<ol class="cw-clue-list">' + rows.map(function (p) {
+        return '<li value="' + p.number + '">' + escapeHtml(p.definition) + '</li>';
+      }).join('') + '</ol>';
+    }
+    var skippedNote = res.skipped.length
+      ? '<p class="printable-note">' + res.skipped.length + ' term(s) shared no letters with the rest of the list and were left out: ' +
+        res.skipped.map(escapeHtml).join(', ') + '.</p>'
+      : '';
+    return '<div class="cw-clues"><div><h3>Across</h3>' + list('across') + '</div><div><h3>Down</h3>' + list('down') + '</div></div>' + skippedNote;
+  }
+
+  function crosswordPageHtml(res, showAnswers) {
+    var title = showAnswers ? 'Crossword — Answer Key' : 'Crossword';
+    return '<div class="' + pageClass() + '"><h2 class="printable-title">' + title + '</h2>' +
+      crosswordGridHtml(res, showAnswers) + (showAnswers ? '' : crosswordCluesHtml(res)) + '</div>';
+  }
+
+  function bingoCardHtml(card, cardNumber) {
+    var cellsHtml = card.cells.map(function (cell) {
+      return '<div class="bingo-cell' + (cell.free ? ' free' : '') + '">' + escapeHtml(cell.text) + '</div>';
+    }).join('');
+    return '<div class="' + pageClass() + '"><h2 class="printable-title">Bingo Card ' + cardNumber + '</h2>' +
+      '<div class="bingo-grid" style="grid-template-columns:repeat(' + card.size + ',1fr);">' + cellsHtml + '</div></div>';
+  }
+
+  function bingoCallerPageHtml(res) {
+    var otherField = res.cellField === 'term' ? 'definition' : 'term';
+    var itemsHtml = res.callList.map(function (c) {
+      var hint = c[otherField] ? ' <span class="bingo-caller-hint">(' + escapeHtml(c[otherField]) + ')</span>' : '';
+      return '<li>' + escapeHtml(c.text) + hint + '</li>';
+    }).join('');
+    return '<div class="' + pageClass() + '"><h2 class="printable-title">Bingo — Caller’s Master List</h2>' +
+      '<p class="hint">Cards show ' + (res.cellField === 'term' ? 'terms' : 'definitions') + '. Read the ' + otherField +
+      ' aloud (shown here in parentheses) and let students find the matching ' + res.cellField + ' on their card.</p>' +
+      '<ol class="bingo-caller-list">' + itemsHtml + '</ol></div>';
+  }
+
+  function matchingPageHtml(res, showAnswers) {
+    if (showAnswers) {
+      var rows = res.answerKey.map(function (r, i) {
+        return '<li>' + escapeHtml(r.term) + ' — <strong>' + (r.letter || '?') + '</strong></li>';
+      }).join('');
+      return '<div class="' + pageClass() + '"><h2 class="printable-title">Matching Quiz — Answer Key</h2>' +
+        '<ol class="match-answer-list">' + rows + '</ol></div>';
+    }
+    var leftHtml = res.left.map(function (l, i) {
+      return '<div class="match-row"><span class="match-blank">&nbsp;</span><span class="match-num">' + (i + 1) +
+        '.</span><span class="match-term">' + escapeHtml(l.term) + '</span></div>';
+    }).join('');
+    var rightHtml = res.right.map(function (r) {
+      return '<div class="match-row"><span class="match-letter">' + r.letter + '.</span><span class="match-def">' +
+        escapeHtml(r.definition) + '</span></div>';
+    }).join('');
+    return '<div class="' + pageClass() + '"><h2 class="printable-title">Matching Quiz</h2>' +
+      '<p class="hint">Write the letter of the matching definition in the blank next to each term.</p>' +
+      '<div class="match-columns"><div class="match-col">' + leftHtml + '</div><div class="match-col">' + rightHtml + '</div></div></div>';
+  }
+
   function renderQuiz(items) {
     els.printNote.style.display = 'none';
     quizIndex = Math.min(quizIndex, items.length - 1);
@@ -619,7 +856,7 @@
 
       els.previewArea.innerHTML = (currentPreviewSide === 'front' ? built.fronts[currentPreviewIndex] : built.backs[currentPreviewIndex]) || '';
       els.previewNote.textContent = items.length + ' words, ' + built.pageCount + ' page(s) per side.';
-    } else {
+    } else if (state.mode === 'wordwall') {
       els.printNote.style.display = 'none';
       var wallPages = buildWallPages(items);
       currentPreviewIndex = Math.min(currentPreviewIndex, wallPages.length - 1);
@@ -632,6 +869,88 @@
       });
       els.previewArea.innerHTML = wallPages[currentPreviewIndex] || '';
       els.previewNote.textContent = items.length + ' words, ' + wallPages.length + ' page(s), single-sided.';
+    } else if (state.mode === 'wordsearch') {
+      els.printNote.style.display = 'none';
+      var wsRes = generatePrintable('wordsearch', items);
+      if (!wsRes.ok) {
+        els.previewArea.innerHTML = tooFewHtml('wordsearch', wsRes);
+        els.previewNote.textContent = 'Not enough terms yet.';
+      } else {
+        if (currentPreviewSide !== 'puzzle' && currentPreviewSide !== 'answers') currentPreviewSide = 'puzzle';
+        [['puzzle', 'Puzzle'], ['answers', 'Answer key']].forEach(function (pair) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'secondary';
+          b.textContent = currentPreviewSide === pair[0] ? '[' + pair[1] + ']' : pair[1];
+          b.addEventListener('click', function () { currentPreviewSide = pair[0]; renderPreview(); });
+          els.sheetView.appendChild(b);
+        });
+        els.previewArea.innerHTML = wordSearchPageHtml(wsRes, currentPreviewSide === 'answers');
+        els.previewNote.textContent = wsRes.placements.length + ' of ' + wsRes.words.length + ' words placed in a ' +
+          wsRes.size + '×' + wsRes.size + ' grid' + (wsRes.skipped.length ? ' (' + wsRes.skipped.length + ' left out — see note).' : '.');
+      }
+    } else if (state.mode === 'crossword') {
+      els.printNote.style.display = 'none';
+      var cwRes = generatePrintable('crossword', items);
+      if (!cwRes.ok) {
+        els.previewArea.innerHTML = tooFewHtml('crossword', cwRes);
+        els.previewNote.textContent = 'Not enough terms yet.';
+      } else {
+        if (currentPreviewSide !== 'puzzle' && currentPreviewSide !== 'answers') currentPreviewSide = 'puzzle';
+        [['puzzle', 'Clues'], ['answers', 'Answer key']].forEach(function (pair) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'secondary';
+          b.textContent = currentPreviewSide === pair[0] ? '[' + pair[1] + ']' : pair[1];
+          b.addEventListener('click', function () { currentPreviewSide = pair[0]; renderPreview(); });
+          els.sheetView.appendChild(b);
+        });
+        els.previewArea.innerHTML = crosswordPageHtml(cwRes, currentPreviewSide === 'answers');
+        els.previewNote.textContent = cwRes.placements.length + ' of ' + (cwRes.placements.length + cwRes.skipped.length) +
+          ' terms placed in a ' + cwRes.width + '×' + cwRes.height + ' grid' + (cwRes.skipped.length ? ' (' + cwRes.skipped.length + ' left out — see note).' : '.');
+      }
+    } else if (state.mode === 'bingo') {
+      els.printNote.style.display = 'none';
+      var bgRes = generatePrintable('bingo', items);
+      if (!bgRes.ok) {
+        els.previewArea.innerHTML = tooFewHtml('bingo', bgRes);
+        els.previewNote.textContent = 'Not enough items yet.';
+      } else {
+        currentPreviewIndex = Math.min(currentPreviewIndex, bgRes.cards.length);
+        bgRes.cards.forEach(function (_, idx) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'secondary';
+          b.textContent = 'Card ' + (idx + 1);
+          b.addEventListener('click', function () { currentPreviewIndex = idx; renderPreview(); });
+          els.sheetView.appendChild(b);
+        });
+        var callerBtn = document.createElement('button');
+        callerBtn.type = 'button'; callerBtn.className = 'secondary';
+        callerBtn.textContent = "Caller's list";
+        callerBtn.addEventListener('click', function () { currentPreviewIndex = bgRes.cards.length; renderPreview(); });
+        els.sheetView.appendChild(callerBtn);
+        els.previewArea.innerHTML = currentPreviewIndex < bgRes.cards.length
+          ? bingoCardHtml(bgRes.cards[currentPreviewIndex], currentPreviewIndex + 1)
+          : bingoCallerPageHtml(bgRes);
+        els.previewNote.textContent = bgRes.cards.length + ' card(s), ' + bgRes.callList.length + ' items on the caller’s list (' +
+          bgRes.size + '×' + bgRes.size + (bgRes.free ? ', FREE center' : '') + ').';
+      }
+    } else if (state.mode === 'matching') {
+      els.printNote.style.display = 'none';
+      var mqRes = generatePrintable('matching', items);
+      if (!mqRes.ok) {
+        els.previewArea.innerHTML = tooFewHtml('matching', mqRes);
+        els.previewNote.textContent = 'Not enough terms yet.';
+      } else {
+        if (currentPreviewSide !== 'puzzle' && currentPreviewSide !== 'answers') currentPreviewSide = 'puzzle';
+        [['puzzle', 'Quiz'], ['answers', 'Answer key']].forEach(function (pair) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'secondary';
+          b.textContent = currentPreviewSide === pair[0] ? '[' + pair[1] + ']' : pair[1];
+          b.addEventListener('click', function () { currentPreviewSide = pair[0]; renderPreview(); });
+          els.sheetView.appendChild(b);
+        });
+        els.previewArea.innerHTML = matchingPageHtml(mqRes, currentPreviewSide === 'answers');
+        els.previewNote.textContent = mqRes.left.length + ' term(s) to match.';
+      }
     }
   }
 
@@ -643,6 +962,20 @@
     } else if (state.mode === 'flashcards') {
       var built = buildFlashPages(items);
       html = built.fronts.join('') + built.backs.join('');
+    } else if (state.mode === 'wordsearch') {
+      var wsRes = generatePrintable('wordsearch', items);
+      html = wsRes.ok ? (wordSearchPageHtml(wsRes, false) + wordSearchPageHtml(wsRes, true)) : '';
+    } else if (state.mode === 'crossword') {
+      var cwRes = generatePrintable('crossword', items);
+      html = cwRes.ok ? (crosswordPageHtml(cwRes, false) + crosswordPageHtml(cwRes, true)) : '';
+    } else if (state.mode === 'bingo') {
+      var bgRes = generatePrintable('bingo', items);
+      html = bgRes.ok
+        ? (bgRes.cards.map(function (c, i) { return bingoCardHtml(c, i + 1); }).join('') + bingoCallerPageHtml(bgRes))
+        : '';
+    } else if (state.mode === 'matching') {
+      var mqRes = generatePrintable('matching', items);
+      html = mqRes.ok ? (matchingPageHtml(mqRes, false) + matchingPageHtml(mqRes, true)) : '';
     } else {
       html = buildWallPages(items).join('');
     }
@@ -654,7 +987,7 @@
     state = {
       name: name, words: '', mode: 'flashcards', flashCols: 2, flashRows: 4,
       cardSizePreset: 'grid', flashLayout: 'duplex', wallPerPage: 2, wallShowDef: true,
-      sortOrder: 'none', shuffle: false, showGuides: true
+      sortOrder: 'none', shuffle: false, showGuides: true, bingoCount: 4, bingoField: 'term'
     };
     VocabStore.setCurrentName(name);
     quizIndex = 0; quizFlipped = false;
@@ -673,6 +1006,8 @@
     if (!state.flashLayout) state.flashLayout = 'duplex';
     if (!state.sortOrder) state.sortOrder = 'none';
     if (typeof state.showGuides !== 'boolean') state.showGuides = true;
+    if (!state.bingoCount) state.bingoCount = 4;
+    if (state.bingoField !== 'definition') state.bingoField = 'term';
     VocabStore.setCurrentName(name);
     quizIndex = 0; quizFlipped = false;
     applyStateToForm();
@@ -700,13 +1035,23 @@
     els.sortOrder.value = state.sortOrder || 'none';
     els.shuffleOrder.checked = !!state.shuffle;
     els.showGuides.checked = state.showGuides !== false;
+    els.bingoCount.value = state.bingoCount || 4;
+    els.bingoField.value = state.bingoField === 'definition' ? 'definition' : 'term';
     document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.mode === state.mode); });
-    els.flashOptions.style.display = state.mode === 'flashcards' ? '' : 'none';
-    els.wallOptions.style.display = state.mode === 'wordwall' ? '' : 'none';
-    els.quizOptions.style.display = state.mode === 'quiz' ? '' : 'none';
+    syncModeOptionVisibility();
+    refreshImportBridge();
+  }
+
+  /** Which option panel and Print button show for the current mode — one place,
+      called from applyStateToForm() (loading/switching lists) and the mode-tab
+      click handler, so the two can't drift apart on which panel goes with which
+      mode. Only "Self-quiz" is on-screen-only; everything else prints. */
+  function syncModeOptionVisibility() {
+    var panels = { flashcards: els.flashOptions, wordwall: els.wallOptions, quiz: els.quizOptions,
+      wordsearch: els.wsOptions, crossword: els.cwOptions, bingo: els.bingoOptions, matching: els.matchOptions };
+    Object.keys(panels).forEach(function (m) { panels[m].style.display = state.mode === m ? '' : 'none'; });
     els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
     syncAlignTestVisibility();
-    refreshImportBridge();
   }
 
   /* ---------- read-only cross-tool bridge: import from Vocab & Conjugation Drill ---------- */
@@ -768,18 +1113,17 @@
   els.sortOrder.addEventListener('change', renderPreview);
   els.shuffleOrder.addEventListener('change', renderPreview);
   els.showGuides.addEventListener('change', renderPreview);
+  els.bingoCount.addEventListener('input', function () { currentPreviewIndex = 0; renderPreview(); });
+  els.bingoField.addEventListener('change', renderPreview);
 
   document.querySelectorAll('.mode-tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
       document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.remove('active'); });
       tab.classList.add('active');
       state.mode = tab.dataset.mode;
-      els.flashOptions.style.display = state.mode === 'flashcards' ? '' : 'none';
-      els.wallOptions.style.display = state.mode === 'wordwall' ? '' : 'none';
-      els.quizOptions.style.display = state.mode === 'quiz' ? '' : 'none';
-      els.printBtn.style.display = state.mode === 'quiz' ? 'none' : '';
-      syncAlignTestVisibility();
+      syncModeOptionVisibility();
       currentPreviewIndex = 0;
+      currentPreviewSide = 'front';
       quizIndex = 0;
       quizFlipped = false;
       renderPreview();
@@ -817,7 +1161,7 @@
     return {
       name: name,
       words: String(parsed.words || ''),
-      mode: (parsed.mode === 'wordwall' || parsed.mode === 'quiz') ? parsed.mode : 'flashcards',
+      mode: VALID_MODES.indexOf(parsed.mode) !== -1 ? parsed.mode : 'flashcards',
       flashCols: Math.max(1, parseInt(parsed.flashCols, 10) || 2),
       flashRows: Math.max(1, parseInt(parsed.flashRows, 10) || 4),
       cardSizePreset: CARD_SIZE_PRESETS[parsed.cardSizePreset] ? parsed.cardSizePreset : 'grid',
@@ -826,7 +1170,9 @@
       wallShowDef: parsed.wallShowDef !== false,
       sortOrder: (parsed.sortOrder === 'az' || parsed.sortOrder === 'za') ? parsed.sortOrder : 'none',
       shuffle: !!parsed.shuffle,
-      showGuides: parsed.showGuides !== false
+      showGuides: parsed.showGuides !== false,
+      bingoCount: Math.max(1, Math.min(12, parseInt(parsed.bingoCount, 10) || 4)),
+      bingoField: parsed.bingoField === 'definition' ? 'definition' : 'term'
     };
   }
 
@@ -869,7 +1215,9 @@
       wallShowDef: state.wallShowDef,
       sortOrder: state.sortOrder,
       shuffle: state.shuffle,
-      showGuides: state.showGuides
+      showGuides: state.showGuides,
+      bingoCount: state.bingoCount,
+      bingoField: state.bingoField
     };
   }
 
@@ -996,7 +1344,12 @@
     reader.readAsText(file);
   });
 
+  var PRINTABLE_MODES = ['wordsearch', 'crossword', 'bingo', 'matching'];
   els.printBtn.addEventListener('click', function () {
+    if (PRINTABLE_MODES.indexOf(state.mode) !== -1) {
+      var res = generatePrintable(state.mode, currentItems());
+      if (!res.ok) { alert(printableFailureMessage(state.mode, res)); return; }
+    }
     buildPrintArea();
     window.print();
   });
