@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="../_shared/theme.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <script src="../_shared/vendor/jspdf/jspdf.umd.min.js"></script>
+<script src="../_shared/vendor/jszip/jszip.min.js"></script>
 
 <style>
   * { box-sizing: border-box; }
@@ -107,6 +108,13 @@
   .row-actions button:disabled { opacity: 0.25; cursor: not-allowed; }
   #file-list li.dragging { opacity: 0.4; }
   #file-list li[draggable="true"] { cursor: grab; }
+
+  /* Student portfolio preview */
+  #portfolio-preview {
+    font-size: 12.5px; margin-top: 8px; border: 1px solid var(--color-divider);
+    padding: var(--space-2) var(--space-3); max-height: 180px; overflow-y: auto;
+    line-height: 1.6;
+  }
 
   /* Progress */
   #progress-wrap { display: none; flex-direction: column; gap: var(--space-2); }
@@ -290,10 +298,36 @@
   <ul id="file-list"></ul>
 </div>
 
+<!-- Student portfolio mode -->
+<div class="card blueprint tool-card">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="card-title">5 · Student Portfolios (optional)</div>
+  <div class="controls">
+    <div class="control-group" style="flex-basis:100%;">
+      <label><input type="checkbox" id="opt-portfolio"> Group by student and produce one PDF per student, zipped into a single download</label>
+      <p style="font-size:12px; opacity:0.65; margin:6px 0 0;">
+        Parses a student's name out of each filename, builds every student's images (in the sort order above) into
+        their own PDF using all the layout/quality/header options above, then bundles every student's PDF into one
+        .zip. Put <code>{student}</code> in the title-page Title or Subtitle above to have it replaced by each
+        student's actual name.
+      </p>
+      <p style="font-size:12px; opacity:0.65; margin:6px 0 0;">
+        <strong>Naming convention:</strong> everything up to the last run of digits (and an optional word right
+        before them, like "pg", "photo", or "scan") is taken as the student's name; underscores and hyphens become
+        spaces. <code>Maria_Diaz_04.jpg</code> &rarr; "Maria Diaz". Files that don't parse to a name &mdash; a
+        camera default like <code>IMG_0421.jpg</code>, or a bare number &mdash; are grouped into a single
+        "Unsorted" PDF instead of being dropped. Names that run two people together with no separator (e.g.
+        <code>SmithJohn_2.jpg</code>) come out as one token &mdash; there's no way to guess where to split it.
+      </p>
+      <div id="portfolio-preview" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Generate -->
 <div class="card blueprint tool-card">
   <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-  <div class="card-title">5 · Generate PDF</div>
+  <div class="card-title">6 · Generate</div>
   <div id="progress-wrap">
     <div id="progress-bar-bg"><div id="progress-bar"></div></div>
     <div id="progress-label" aria-live="polite">Ready</div>
@@ -388,6 +422,28 @@
     titlepageFields2.style.display = on ? '' : 'none';
     saveSettingsPrefs();
   });
+
+  // ── Student portfolio mode: group by student, one PDF each, zipped ─────────
+  // Deliberately NOT persisted to SETTINGS_KEY — same reasoning as targetSize
+  // above: this changes the shape of the download entirely (a .zip instead of
+  // a .pdf), and a forgotten toggle silently switching every future session
+  // into zip mode is a worse surprise than an unchecked box.
+  const optPortfolio     = document.getElementById('opt-portfolio');
+  const portfolioPreview = document.getElementById('portfolio-preview');
+  const filenameInput    = document.getElementById('filename');
+
+  // Swap the filename field's placeholder default when portfolio mode is
+  // toggled, but only when it's still at the OTHER mode's own default — never
+  // clobber a name the user actually typed.
+  function updateFilenameForMode() {
+    const v = filenameInput.value.trim();
+    if (optPortfolio.checked && v === 'assembled.pdf') filenameInput.value = 'portfolios.zip';
+    else if (!optPortfolio.checked && v === 'portfolios.zip') filenameInput.value = 'assembled.pdf';
+  }
+  optPortfolio.addEventListener('change', () => {
+    updateFilenameForMode();
+    renderPortfolioPreview();
+  });
   optPagenum.addEventListener('change', saveSettingsPrefs);
 
   function extOf(name) {
@@ -480,6 +536,107 @@
     return copy;
   }
 
+  // ── Student portfolio mode: filename → student name ─────────────────────────
+  // No naming convention existed anywhere in this codebase to match, so this
+  // one is new — documented here, in the "5 · Student Portfolios" card in the
+  // UI, and in improvement prompts/011-image-to-pdf.md.
+  //
+  //   1. Drop the extension.
+  //   2. Strip ONE trailing run of separator characters (space/underscore/
+  //      hyphen), an optional "page number" word (pg, p, page, pic, photo,
+  //      img, image, scan), and a digit run — e.g. "_04", " - pg2",
+  //      "-photo3". That's the sequence/page-number part of the filename.
+  //   3. Turn any remaining underscores/hyphens into spaces and collapse
+  //      whitespace — that's the student name.
+  //   4. If nothing is left, or what's left is purely numeric, or it's one of
+  //      a short list of camera-default / generic tokens (img, dsc, dscn,
+  //      photo, pic, picture, scan, page, pg, screenshot, image, pxl, mvimg —
+  //      case-insensitive) — this file didn't carry a student name. It is
+  //      NOT dropped: it's grouped into a single shared "Unsorted" PDF so a
+  //      forgotten rename never silently loses a photo (see
+  //      groupEntriesByStudent below).
+  //
+  // Known limitation, not a bug: a filename that runs two names together with
+  // no delimiter ("SmithJohn_2.jpg") comes out as one token ("SmithJohn") —
+  // there is no dictionary-free way to guess where to split it.
+  const PORTFOLIO_UNSORTED = 'Unsorted';
+  const PORTFOLIO_TRAILING_RE = /[\s_-]+(?:pg|p|page|pic|photo|img|image|scan)?\.?\d+\s*$/i;
+  const PORTFOLIO_GENERIC_TOKENS = new Set([
+    'img', 'dsc', 'dscn', 'photo', 'pic', 'picture', 'scan',
+    'page', 'pg', 'screenshot', 'image', 'pxl', 'mvimg'
+  ]);
+
+  function extractStudentName(filename) {
+    let base = String(filename || '').replace(/\.[a-z0-9]+$/i, '');
+    base = base.replace(PORTFOLIO_TRAILING_RE, '');
+    base = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!base) return null;
+    if (/^\d+$/.test(base)) return null;
+    if (PORTFOLIO_GENERIC_TOKENS.has(base.toLowerCase())) return null;
+    return base;
+  }
+
+  // Groups entries by parsed student name, preserving each group's internal
+  // order from `ordered` (so whatever sort mode is active is respected inside
+  // each student's PDF too). Groups are sorted alphabetically by name; the
+  // synthetic "Unsorted" bucket always sorts last regardless of where the
+  // word "Unsorted" would otherwise fall, since it isn't a real student.
+  function groupEntriesByStudent(ordered) {
+    const map = new Map(); // name -> entries[]
+    ordered.forEach(entry => {
+      const name = extractStudentName(entry.file.name) || PORTFOLIO_UNSORTED;
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push(entry);
+    });
+    const names = [...map.keys()].sort((a, b) => {
+      if (a === PORTFOLIO_UNSORTED) return 1;
+      if (b === PORTFOLIO_UNSORTED) return -1;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    return names.map(name => ({ name, entries: map.get(name) }));
+  }
+
+  // A student name isn't automatically a safe zip entry name (path
+  // separators, quotes, etc.), and two students can't share one filename in
+  // the same zip — this sanitizes and then de-duplicates against what's
+  // already been used this run.
+  function sanitizeForFilename(name) {
+    const cleaned = String(name || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+    return cleaned || 'Student';
+  }
+
+  function uniqueZipName(base, usedLowercase) {
+    let candidate = base, n = 2;
+    while (usedLowercase.has(candidate.toLowerCase())) candidate = `${base} (${n++})`;
+    usedLowercase.add(candidate.toLowerCase());
+    return candidate;
+  }
+
+  // Replace a literal "{student}" token (case-insensitive) with the group's
+  // name — lets one Title/Subtitle produce a per-student title page instead
+  // of the same static text on every PDF in the zip.
+  function substituteStudentToken(text, studentName) {
+    return String(text || '').replace(/\{student\}/gi, studentName);
+  }
+
+  // Exposed for the smoke test (and devtools) — purely for introspection, the
+  // UI itself never reads this. Mirrors the window.__imgToPdfLastRun pattern
+  // already used for the target-size feature.
+  window.__imgToPdfPortfolio = { extractStudentName, groupEntriesByStudent, sanitizeForFilename, substituteStudentToken };
+
+  function renderPortfolioPreview() {
+    if (!optPortfolio.checked) { portfolioPreview.style.display = 'none'; return; }
+    const ordered = getOrderedEntries();
+    if (ordered.length === 0) { portfolioPreview.style.display = 'none'; return; }
+    const groups = groupEntriesByStudent(ordered);
+    const lines = groups.map(g =>
+      `${escapeHtml(g.name)} — ${g.entries.length} image${g.entries.length === 1 ? '' : 's'}`
+    );
+    portfolioPreview.innerHTML =
+      `<strong>${groups.length} PDF${groups.length === 1 ? '' : 's'} will be produced:</strong><br>` + lines.join('<br>');
+    portfolioPreview.style.display = '';
+  }
+
   // ── Reorder / remove ────────────────────────────────────────────────────────
   function indexOfId(id) { return loadedFiles.findIndex(e => e.id === id); }
 
@@ -550,6 +707,7 @@
 
   function renderList() {
     renderEnhancePreview();
+    renderPortfolioPreview();
     fileList.innerHTML = '';
     const ordered = getOrderedEntries();
     if (ordered.length === 0) {
@@ -713,7 +871,44 @@
   document.getElementById('enhance').addEventListener('change', renderEnhancePreview);
 
   // ── Generate PDF ───────────────────────────────────────────────────────────
-  btnGen.addEventListener('click', generatePDF);
+  btnGen.addEventListener('click', () => {
+    if (optPortfolio.checked) generatePortfolioZip(); else generatePDF();
+  });
+
+  // Runs the quality retry ladder (QUALITY_LADDER, see above) for ONE set of
+  // entries, rebuilding at successively cheaper tiers until the blob fits
+  // targetBytes or the ladder runs out. Pulled out of generatePDF so student
+  // portfolio mode can run the exact same retry/report logic once per
+  // student instead of copy-pasting it. `progressPrefix(attemptIdx,
+  // attemptCount, qualityMode)` returns the label prefix buildAtQuality's own
+  // per-image progress text is appended to.
+  async function buildWithQualityLadder(entries, opts, startQuality, targetBytes, progressPrefix) {
+    // Quality tiers to try, in order. With no target set, only the user's own
+    // choice is tried — the ladder only kicks in when a target is given, and
+    // it never goes above what the user picked (see QUALITY_LADDER comment).
+    let startIdx = QUALITY_LADDER.indexOf(startQuality);
+    if (startIdx === -1) startIdx = QUALITY_LADDER.indexOf('standard');
+    const attemptQualities = targetBytes > 0 ? QUALITY_LADDER.slice(startIdx) : [startQuality];
+
+    let result = null;
+    let usedQuality = startQuality;
+    const attempts = []; // [{quality, bytes}] — every tier actually tried, for the final report
+
+    for (let a = 0; a < attemptQualities.length; a++) {
+      const qualityMode = attemptQualities[a];
+      const prefix = progressPrefix(a, attemptQualities.length, qualityMode);
+      result = await buildAtQuality(entries, opts, qualityMode, prefix);
+      usedQuality = qualityMode;
+
+      if (!result.pdf || result.placedCount === 0) break; // nothing embedded — no point retrying at a different quality
+      attempts.push({ quality: qualityMode, bytes: result.blob.size });
+
+      if (targetBytes <= 0 || result.blob.size <= targetBytes) break; // no target, or target met — done
+      // Otherwise fall through and try the next (smaller) tier, if any is left.
+    }
+
+    return { result, usedQuality, attempts };
+  }
 
   // Builds one complete PDF at a single quality tier and returns it plus the
   // bookkeeping generatePDF() needs (page count, skipped files, output blob).
@@ -959,31 +1154,11 @@
     const opts = { pageMode, orient, gridDensity, headerText, pageNumEnabled,
                    wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions };
 
-    // Quality tiers to try, in order. With no target set, only the user's own
-    // choice is tried — the ladder only kicks in when a target is given, and
-    // it never goes above what the user picked (see QUALITY_LADDER comment).
-    let startIdx = QUALITY_LADDER.indexOf(startQuality);
-    if (startIdx === -1) startIdx = QUALITY_LADDER.indexOf('standard');
-    const attemptQualities = targetBytes > 0 ? QUALITY_LADDER.slice(startIdx) : [startQuality];
-
-    let result = null;
-    let usedQuality = startQuality;
-    const attempts = []; // [{quality, bytes}] — every tier actually tried, for the final report
-
-    for (let a = 0; a < attemptQualities.length; a++) {
-      const qualityMode = attemptQualities[a];
-      const prefix = attemptQualities.length > 1
-        ? `Attempt ${a + 1}/${attemptQualities.length} (${QUALITY_LABELS[qualityMode]} quality): `
-        : '';
-      result = await buildAtQuality(ordered, opts, qualityMode, prefix);
-      usedQuality = qualityMode;
-
-      if (!result.pdf || result.placedCount === 0) break; // nothing embedded — no point retrying at a different quality
-      attempts.push({ quality: qualityMode, bytes: result.blob.size });
-
-      if (targetBytes <= 0 || result.blob.size <= targetBytes) break; // no target, or target met — done
-      // Otherwise fall through and try the next (smaller) tier, if any is left.
-    }
+    const progressPrefix = (a, total, qualityMode) => total > 1
+      ? `Attempt ${a + 1}/${total} (${QUALITY_LABELS[qualityMode]} quality): `
+      : '';
+    const { result, usedQuality, attempts } =
+      await buildWithQualityLadder(ordered, opts, startQuality, targetBytes, progressPrefix);
 
     // Exposed for the smoke test (and anyone debugging in devtools) — not
     // read by the UI itself.
@@ -1025,6 +1200,120 @@
 
     if (skipped.length > 0) text += `\nSkipped ${skipped.length}: ${skipped.join('; ')}`;
     showMsg(text, (skipped.length > 0 || hadTargetShortfall) ? 'warn' : 'info');
+
+    btnGen.disabled = false;
+    btnClear.disabled = false;
+  }
+
+  // ── Generate student portfolios (one PDF per student, zipped) ──────────────
+  async function generatePortfolioZip() {
+    clearMsg();
+    const ordered = getOrderedEntries();
+    const groups = groupEntriesByStudent(ordered);
+
+    const pageMode    = document.getElementById('page-size').value;
+    const orient      = document.querySelector('input[name="orient"]:checked').value;
+    const startQuality = document.getElementById('quality').value;
+    const gridDensity = parseInt(document.getElementById('grid-density').value, 10) || 1;
+
+    let outName = filenameInput.value.trim() || 'portfolios.zip';
+    outName = outName.replace(/\.pdf$/i, '');
+    if (!/\.zip$/i.test(outName)) outName += '.zip';
+
+    const headerText   = headerTextInput.value.trim();
+    const pageNumEnabled = optPagenum.checked;
+    const wantTitlePage = optTitlepage.checked;
+    const rawTitleText    = titlepageTitle.value.trim();
+    const rawSubtitleText = titlepageSubtitle.value.trim();
+
+    // Target output size applies PER STUDENT PDF, not to the zip as a whole —
+    // "under 5 MB so I can email it" means each kid's file, individually.
+    const targetSizeMB = parseFloat(targetSizeInput.value);
+    const targetBytes  = (targetSizeMB > 0) ? targetSizeMB * 1024 * 1024 : 0;
+
+    if (typeof JSZip === 'undefined') {
+      showMsg('JSZip failed to load (check that _shared/vendor/jszip/jszip.min.js is reachable) — cannot build a portfolio zip.', 'error');
+      return;
+    }
+
+    btnGen.disabled = true;
+    btnClear.disabled = true;
+    progressWrap.classList.add('visible');
+    setProgress(0, `Preparing ${groups.length} student PDF${groups.length === 1 ? '' : 's'}…`);
+
+    const zip = new JSZip();
+    const usedNames = new Set();
+    const perStudent = []; // [{name, zipName, pages, bytes, metTarget}]
+    const allSkipped = [];
+
+    for (let g = 0; g < groups.length; g++) {
+      const group = groups[g];
+      // "{student}" in the title/subtitle becomes this group's actual name —
+      // one shared title page setting, personalized per student.
+      const titleText    = substituteStudentToken(rawTitleText, group.name);
+      const subtitleText = substituteStudentToken(rawSubtitleText, group.name);
+      const hasTitlePage = wantTitlePage && (titleText || subtitleText);
+      const anyCaptions  = group.entries.some(e => e.caption && e.caption.trim());
+      const opts = { pageMode, orient, gridDensity, headerText, pageNumEnabled,
+                     wantTitlePage, titleText, subtitleText, hasTitlePage, anyCaptions };
+
+      const progressPrefix = (a, total, qualityMode) => {
+        const studentPart = `Student ${g + 1}/${groups.length} (${group.name}): `;
+        return total > 1
+          ? `${studentPart}Attempt ${a + 1}/${total} (${QUALITY_LABELS[qualityMode]} quality): `
+          : studentPart;
+      };
+
+      const { result, usedQuality, attempts } =
+        await buildWithQualityLadder(group.entries, opts, startQuality, targetBytes, progressPrefix);
+
+      if (!result || !result.pdf || result.placedCount === 0) {
+        const reason = (result ? result.skipped : []).join('; ') || 'no readable images';
+        allSkipped.push(`${group.name}: nothing could be generated (${reason})`);
+        setProgress(Math.round(((g + 1) / groups.length) * 100), `Skipped ${group.name} (${g + 1}/${groups.length})`);
+        continue;
+      }
+
+      const zipName = uniqueZipName(sanitizeForFilename(group.name), usedNames) + '.pdf';
+      zip.file(zipName, result.blob);
+
+      const metTarget = targetBytes <= 0 || result.blob.size <= targetBytes;
+      perStudent.push({ name: group.name, zipName, pages: result.pdfPageCount, bytes: result.blob.size, metTarget, usedQuality, attempts });
+      if (result.skipped.length > 0) allSkipped.push(`${group.name}: ${result.skipped.join('; ')}`);
+
+      setProgress(Math.round(((g + 1) / groups.length) * 100), `Finished ${group.name} (${g + 1}/${groups.length})`);
+    }
+
+    // Exposed for the smoke test (and devtools) — not read by the UI itself.
+    window.__imgToPdfLastPortfolioRun = {
+      groupNames: groups.map(g => g.name), perStudent, allSkipped, targetBytes, targetSizeMB
+    };
+
+    if (perStudent.length === 0) {
+      showMsg('Nothing could be generated:\n' + allSkipped.join('\n'), 'error');
+      setProgress(0, 'Failed.');
+      btnGen.disabled = false;
+      btnClear.disabled = false;
+      return;
+    }
+
+    setProgress(100, 'Zipping…');
+    await new Promise(r => setTimeout(r, 30));
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    downloadBlob(zipBlob, outName);
+
+    const totalKb = Math.round(zipBlob.size / 1024);
+    const shortfalls = perStudent.filter(p => !p.metTarget);
+    setProgress(100, `✓ Done! Saved as "${outName}"`);
+    let text = `Portfolio ZIP saved: ${outName} — ${perStudent.length} student PDF${perStudent.length === 1 ? '' : 's'}, ${totalKb} KB total`;
+
+    if (targetBytes > 0) {
+      text += shortfalls.length === 0
+        ? ` — every student's PDF is within the ${targetSizeMB} MB target.`
+        : ` — ${shortfalls.length} of ${perStudent.length} student PDF(s) could not reach the ${targetSizeMB} MB target: ${shortfalls.map(s => s.name).join(', ')}.`;
+    }
+    if (allSkipped.length > 0) text += `\n${allSkipped.join('\n')}`;
+    showMsg(text, (allSkipped.length > 0 || shortfalls.length > 0) ? 'warn' : 'info');
 
     btnGen.disabled = false;
     btnClear.disabled = false;
