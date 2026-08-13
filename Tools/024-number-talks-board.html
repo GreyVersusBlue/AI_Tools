@@ -162,6 +162,17 @@
   .rec-space-label { font-size: .9rem; font-weight: 700; margin: .8rem 0 .25rem; }
   .rec-space { border: 1px solid #999; border-radius: 4px; height: 1.6in; }
 
+  /* Class strategy library: one poster per named strategy, full-page and
+     large-format for a classroom wall — distinct from the session record
+     above, which is a report, not something you'd pin up. */
+  .poster-page { page-break-after: always; padding: .8in .5in; text-align: center; }
+  .poster-page:last-child { page-break-after: auto; }
+  .poster-label { font-size: 1rem; letter-spacing: .09em; text-transform: uppercase; color: #666; margin-bottom: 1.6rem; }
+  .poster-name { font-size: 2.8rem; font-weight: 900; margin-bottom: .7rem; }
+  .poster-context { font-size: 1.2rem; color: #444; font-style: italic; margin-bottom: 1.4rem; }
+  .poster-text { font-size: 2rem; font-weight: 700; line-height: 1.4; white-space: pre-wrap; margin-bottom: 1.6rem; }
+  .poster-date { font-size: .9rem; color: #777; }
+
   .mode-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
   .mode-tab { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; padding: .55rem 1rem; font-weight: 700; font-size: .88rem; cursor: pointer; }
   .mode-tab:hover { border-color: var(--accent-2); color: var(--accent-2); }
@@ -366,6 +377,29 @@
   </div>
 
   <div class="card">
+    <div class="card-title"><span>Class Strategy Library (grows all year)</span></div>
+    <div class="hint">Unlike the board above &mdash; which clears out &mdash; a strategy saved here stays on this device across every session this year, and prints one full-page poster per strategy for the wall. Use &ldquo;+ Save to library&rdquo; on a card above while it&rsquo;s still on the board, or add one directly below.</div>
+    <div class="btn-row" style="margin-top:0;margin-bottom:.5rem;align-items:flex-end;">
+      <div style="flex:1;min-width:9rem;">
+        <label for="libraryNameInput">Student name</label>
+        <input type="text" id="libraryNameInput" list="strategyNameOptions" placeholder="Optional" style="width:100%;">
+      </div>
+      <div style="flex:1;min-width:9rem;">
+        <label for="libraryContextInput">For which problem/strategy type?</label>
+        <input type="text" id="libraryContextInput" placeholder="Optional, e.g. &ldquo;36 + 28&rdquo;" style="width:100%;">
+      </div>
+    </div>
+    <label for="libraryTextInput">Strategy</label>
+    <textarea class="custom-input" id="libraryTextInput" placeholder="Broke 36 into 30 + 6, doubled each, added&hellip;" style="min-height:3.4rem;"></textarea>
+    <div class="btn-row" style="margin-top:0;">
+      <button type="button" id="addToLibraryBtn">+ Add to library</button>
+      <button type="button" class="secondary" id="printLibraryBtn">Print all as wall posters</button>
+      <button type="button" class="danger" id="clearLibraryBtn">Clear library&hellip;</button>
+    </div>
+    <div id="libraryList" style="margin-top:.9rem;"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title"><span>Number talks used this session</span></div>
     <ol class="history-list" id="historyList"></ol>
     <div class="hint" id="historyEmptyHint" style="margin:0;">Nothing yet &mdash; this list resets when you reload the page.</div>
@@ -391,7 +425,7 @@
     <div class="hint" id="stringHistoryEmptyHint" style="margin:0;">Nothing logged yet &mdash; it fills in as you draw or use number talks.</div>
   </div>
 
-  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. The category filter, your &ldquo;My Number Talks&rdquo; bank, and the string history log are remembered between visits; any student first names you jot on the strategy board, and the session list above, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above first if you want a copy.</footer>
+  <footer class="note">Runs entirely in your browser &mdash; nothing is uploaded. The category filter, your &ldquo;My Number Talks&rdquo; bank, the string history log, and the class strategy library are remembered between visits; any student first names you jot on the strategy board, and the session list above, disappear the moment you reload &mdash; use &ldquo;Save this session&rdquo; above, or &ldquo;+ Save to library&rdquo; on a card, first if you want a copy.</footer>
 
 </div>
 
@@ -405,6 +439,7 @@
   var STORAGE_KEY = 'gvb-number-talks:settings';
   var BANK_KEY = 'gvb-number-talks:myBank';
   var STRING_HISTORY_KEY = 'gvb-number-talks:stringHistory';
+  var LIBRARY_KEY = 'gvb-number-talks:strategyLibrary'; // the class's named strategies, accumulated across the whole year — distinct from `strategies` (state.strategies), which is the per-session board and is cleared/reset per board
   var NP_ROSTERS_KEY = 'np_rosters'; // shared, read-only — written by Class Roster Hub / Name Picker and read by many other tools
   var MINE_KEY = 'mine';
   var HISTORY_LIMIT = 20;
@@ -412,6 +447,7 @@
   var BANK_LIMIT = 200;
   var STRING_HISTORY_LIMIT = 300;
   var STRING_HISTORY_DISPLAY_LIMIT = 40;
+  var LIBRARY_LIMIT = 500;
 
   /* ---------- the bank ----------
      A curated, strategy-organized number-string library, not a random
@@ -530,6 +566,7 @@
   var strategyIdCounter = 0;
   var boardUndoSnapshot = null; // single-level undo for "Clear board" — module-level only, never persisted
   var stringHistory = []; // [{text, category, ts}]  persists across reloads/sessions for this term
+  var library = []; // [{id, name, text, context, ts}]  the class's named strategies — persists in localStorage, accumulates all year, never cleared by "Clear board"
   var answerKeyVisible = false; // teacher-only reveal toggle; resets on each new prompt
   var mode = 'strings';   // 'strings' | 'dots' — which routine is active
   var dotState = null;    // { count, layout, dots, frameRects, groupA, groupB, phase, logged }
@@ -545,6 +582,7 @@
    'printRow', 'printHandoutBtn', 'printSessionBtn', 'printArea',
    'recordAnswersBox', 'recordAnswersHint',
    'stringHistoryList', 'stringHistoryEmptyHint', 'clearStringHistoryBtn',
+   'libraryNameInput', 'libraryContextInput', 'libraryTextInput', 'addToLibraryBtn', 'printLibraryBtn', 'clearLibraryBtn', 'libraryList',
    'stageArea', 'fullscreenBtn', 'exitFullscreenBtn', 'teachingNote',
    'modeStringsBtn', 'modeDotsBtn', 'stringsSection', 'stringsSection2', 'dotsSection',
    'dotRevealRow', 'dotFlashBtn', 'dotRevealKeepBtn', 'dotHideBtn',
@@ -649,6 +687,134 @@
       var date = new Date(h.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       return '<li><span class="h-cat">' + escapeHtml(categoryLabel(h.category)) + ' &middot; ' + escapeHtml(date) + ':</span> ' + escapeHtml(h.text) + '</li>';
     }).join('');
+  }
+
+  /* ---------- persistence (Class Strategy Library) ----------
+     The wall reference. Distinct from `strategies` (the per-session board,
+     in-memory only, wiped by clearBoard()/reload) and from `stringHistory`
+     (which logs number strings, not student strategies). A named strategy
+     saved here stays on this device across every session for the rest of
+     the year, and is what "Print all as wall posters" renders. */
+  function loadStrategyLibrary() {
+    try {
+      var raw = localStorage.getItem(LIBRARY_KEY);
+      if (!raw) return;
+      var saved = JSON.parse(raw);
+      if (!Array.isArray(saved)) return;
+      library = saved.filter(function (e) {
+        return e && typeof e === 'object' && typeof e.text === 'string' && e.text.trim();
+      }).map(function (e) {
+        return {
+          id: typeof e.id === 'string' && e.id ? e.id : nextLibraryId(),
+          name: typeof e.name === 'string' ? e.name.slice(0, 80) : '',
+          text: e.text.slice(0, 600),
+          context: typeof e.context === 'string' ? e.context.slice(0, 200) : '',
+          ts: typeof e.ts === 'number' ? e.ts : Date.now()
+        };
+      }).slice(0, LIBRARY_LIMIT);
+    } catch (e) { /* ignore corrupt storage */ }
+  }
+  function saveStrategyLibrary() {
+    try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(library)); }
+    catch (e) { /* private browsing / storage full */ }
+  }
+  function nextLibraryId() { return 'lib' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  /* What problem/context a strategy is "for", captured automatically when a
+     live strategy card is saved to the library. Informational only — it just
+     prints on the poster under the name, and is never re-derived after
+     saving. */
+  function currentPromptContext() {
+    if (mode === 'dots') return dotState ? ('Quick image — ' + dotState.count + ' dots') : '';
+    return current ? promptText(current.exprs) : '';
+  }
+
+  function addLibraryEntry(name, text, context) {
+    var trimmedText = (text || '').trim();
+    if (!trimmedText) return;
+    library.unshift({
+      id: nextLibraryId(),
+      name: (name || '').trim().slice(0, 80),
+      text: trimmedText.slice(0, 600),
+      context: (context || '').trim().slice(0, 200),
+      ts: Date.now()
+    });
+    library = library.slice(0, LIBRARY_LIMIT);
+    saveStrategyLibrary();
+    renderLibrary();
+  }
+
+  /* Copies a live strategy card (still on the per-session board) into the
+     library without retyping it. Requires actual text — an empty card isn't
+     a strategy worth keeping on the wall. */
+  function addStrategyToLibrary(strategyId) {
+    var s = strategies.filter(function (x) { return x.id === strategyId; })[0];
+    if (!s || !s.text || !s.text.trim()) return;
+    addLibraryEntry(s.name, s.text, currentPromptContext());
+  }
+
+  function removeLibraryEntry(id) {
+    library = library.filter(function (e) { return e.id !== id; });
+    saveStrategyLibrary();
+    renderLibrary();
+  }
+
+  function clearLibrary() {
+    if (!library.length) return;
+    if (!confirm('Clear the whole class strategy library? This removes every strategy saved across the year and cannot be undone.')) return;
+    library = [];
+    saveStrategyLibrary();
+    renderLibrary();
+  }
+
+  function libraryItemHtml(entry) {
+    var name = entry.name && entry.name.trim() ? entry.name.trim() : 'Unnamed strategy';
+    var date = new Date(entry.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    return '<li data-id="' + escapeAttr(entry.id) + '">' +
+      '<div class="bank-item-main">' +
+        '<span class="bank-item-text">' + escapeHtml(name) + '</span>' +
+        (entry.context ? '<span class="bank-item-cat">For: ' + escapeHtml(entry.context) + '</span>' : '') +
+        '<span class="bank-item-note">' + escapeHtml(entry.text) + '</span>' +
+        '<span class="bank-item-cat">Added ' + escapeHtml(date) + '</span>' +
+      '</div>' +
+      '<div class="bank-item-actions">' +
+        '<button type="button" class="bank-use-btn" data-print-poster="' + escapeAttr(entry.id) + '">Print poster</button>' +
+        '<button type="button" class="remove-row-btn" data-remove-library="' + escapeAttr(entry.id) + '" title="Remove from library">&#10005;</button>' +
+      '</div>' +
+    '</li>';
+  }
+
+  function renderLibrary() {
+    if (!library.length) {
+      els.libraryList.innerHTML = '<p class="bank-empty">No strategies saved to the library yet &mdash; add one above, or use &ldquo;+ Save to library&rdquo; on a strategy card while it&rsquo;s on the board.</p>';
+      return;
+    }
+    els.libraryList.innerHTML = '<ul class="bank-list">' + library.map(libraryItemHtml).join('') + '</ul>';
+  }
+
+  /* ---------- printable wall posters ----------
+     One full page per named strategy, large-format for pinning up — the
+     "wall reference" the backlog row asks for. Reuses printSessionRecord's
+     approach (build HTML into #printArea, then window.print()) but with its
+     own poster-* markup/CSS instead of the report-style rec-* ones. */
+  function posterCardHtml(entry) {
+    var name = entry.name && entry.name.trim() ? entry.name.trim() : 'Unnamed strategy';
+    var context = entry.context && entry.context.trim()
+      ? '<div class="poster-context">For: ' + escapeHtml(entry.context.trim()) + '</div>' : '';
+    var date = new Date(entry.ts).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    return '<div class="poster-page">' +
+      '<div class="poster-label">Number Talks &mdash; Strategy Wall</div>' +
+      '<div class="poster-name">' + escapeHtml(name) + '&rsquo;s Way</div>' +
+      context +
+      '<div class="poster-text">' + escapeHtml(entry.text.trim()) + '</div>' +
+      '<div class="poster-date">Added ' + escapeHtml(date) + '</div>' +
+    '</div>';
+  }
+
+  function printLibraryPosters(entries) {
+    if (!entries.length) return;
+    els.printArea.innerHTML = entries.map(posterCardHtml).join('');
+    window.print();
   }
 
   /* ---------- category select ---------- */
@@ -1269,6 +1435,9 @@
           '<button type="button" class="remove-row-btn" data-remove="' + escapeAttr(s.id) + '" title="Remove card">&#10005;</button>' +
         '</div>' +
         '<textarea class="s-text" placeholder="Broke 36 into 30 + 6, doubled each, added…">' + escapeHtml(s.text) + '</textarea>' +
+        '<div class="btn-row" style="margin-top:.4rem;">' +
+          '<button type="button" class="link-btn" data-save-to-library="' + escapeAttr(s.id) + '">+ Save to library</button>' +
+        '</div>' +
       '</div>';
     }).join('');
   }
@@ -1283,6 +1452,8 @@
   });
 
   els.strategyGrid.addEventListener('click', function (e) {
+    var saveBtn = e.target.closest('[data-save-to-library]');
+    if (saveBtn) { addStrategyToLibrary(saveBtn.dataset.saveToLibrary); return; }
     var btn = e.target.closest('[data-remove]');
     if (!btn) return;
     strategies = strategies.filter(function (s) { return s.id !== btn.dataset.remove; });
@@ -1518,6 +1689,24 @@
     renderRecordAnswersHint();
   });
   els.clearStringHistoryBtn.addEventListener('click', clearStringHistory);
+  els.addToLibraryBtn.addEventListener('click', function () {
+    addLibraryEntry(els.libraryNameInput.value, els.libraryTextInput.value, els.libraryContextInput.value);
+    els.libraryNameInput.value = '';
+    els.libraryContextInput.value = '';
+    els.libraryTextInput.value = '';
+  });
+  els.printLibraryBtn.addEventListener('click', function () { printLibraryPosters(library); });
+  els.clearLibraryBtn.addEventListener('click', clearLibrary);
+  els.libraryList.addEventListener('click', function (e) {
+    var posterBtn = e.target.closest('[data-print-poster]');
+    if (posterBtn) {
+      var entry = library.filter(function (x) { return x.id === posterBtn.dataset.printPoster; })[0];
+      if (entry) printLibraryPosters([entry]);
+      return;
+    }
+    var removeBtn = e.target.closest('[data-remove-library]');
+    if (removeBtn) removeLibraryEntry(removeBtn.dataset.removeLibrary);
+  });
   els.toggleAnswerBtn.addEventListener('click', function () {
     answerKeyVisible = !answerKeyVisible;
     renderAnswerKey();
@@ -1552,6 +1741,7 @@
   loadSettings();
   loadMyBank();
   loadStringHistory();
+  loadStrategyLibrary();
   buildCategorySelect();
   mode = settings.mode;
   els.dotCountModeSelect.value = settings.dotCountMode;
@@ -1568,6 +1758,7 @@
   renderTeachingNote();
   renderMyBank();
   renderStringHistory();
+  renderLibrary();
   renderModeUI();
 })();
 </script>

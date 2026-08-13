@@ -9,6 +9,61 @@
 
 ## Status
 
+**2026-08-13.** Shipped the Major Feature flagged since Round 4: **"Strategy
+library that persists across the year."** A new "Class Strategy Library"
+card sits below the per-session strategy board and stores named strategies
+under their own localStorage key, `gvb-number-talks:strategyLibrary` —
+deliberately separate from the per-session `strategies` array (in-memory
+only, wiped by `clearBoard()`/reload, and the thing "Undo clear board"
+restores) and from every other existing key (`...settings`, `...myBank`,
+`...stringHistory`). Clearing the board, reloading, or undoing a clear never
+touches the library; only the library's own "Clear library…" button does,
+and it's a confirmed act.
+
+- **Two ways in**: type a name/context/strategy directly into the card, or
+  click a new "+ Save to library" link on any live strategy card on the
+  board to copy it across (name + text + the number string or quick-image
+  count currently on stage, captured as free-text context) without
+  retyping. Either way is additive — it copies, it never moves or clears
+  the source card.
+- **Poster printing**, the "printable as posters" half of the backlog row:
+  one full page per strategy ("Priya's Way", the strategy text large, the
+  optional "For: 36 + 28" context, the date added), styled with its own
+  `poster-*` CSS distinct from the existing `rec-*` session-record styles so
+  the two print paths can't bleed into each other. "Print poster" on a
+  single row prints just that one; "Print all as wall posters" renders the
+  whole library, one `page-break-after` page per entry.
+  `printLibraryPosters()` reuses the existing `#printArea` +
+  `window.print()` pattern from `printSessionRecord()` rather than adding a
+  second print mechanism.
+- Reuses the existing roster-backed `#strategyNameOptions` datalist (P2) on
+  the library's own name field, so a name typed there autocompletes from
+  `np_rosters` the same way the board's card name field already does — no
+  second roster wiring.
+- New suite `Tools/number-talks-board/test/smoke-strategy-library.mjs` (40
+  checks), run via `node Tools/number-talks-board/test/smoke-strategy-library.mjs`
+  (not wired into `npm test` under its own script name this round — the
+  existing `test:number-talks` script still points at
+  `smoke-session-record.mjs`). Covers: the empty state, adding directly,
+  rejecting blank text, the board/library being genuinely separate stores,
+  "+ Save to library" copying without moving, surviving a reload while the
+  session board doesn't, "Clear board" never touching the library, the raw
+  stored shape (dedicated key, stable `id`/`ts` per entry), single- and
+  print-all poster rendering (with the poster markup confirmed distinct from
+  `rec-*`), an unnamed entry still printing a labeled poster instead of a
+  blank one, removing a single entry, and the clear-library confirm/decline/
+  no-op-when-empty paths. Zero console errors, nothing left the site.
+- `smoke-session-record.mjs` re-run unchanged (38 checks, still green) to
+  confirm the new card and markup didn't disturb the existing print/board
+  code it shares a file with.
+
+**Where the next round should pick up:** the library has no edit-in-place
+(remove and re-add is the only correction path), no export/backup of its
+own (unlike the session `.txt` export, a strategy saved here has no copy off
+the device it was saved on), and no way to reorder or group by strategy
+type as the wall grows past a handful of entries — all plausible next steps
+once a class has actually used it for a term.
+
 **2026-08-12 — session `r8kq4t`.** Backlog rank 3 (as it stood): the printed
 session record carries every computed answer, which is right for the teacher's
 copy and wrong for the copy that goes home with the student who was pulled
@@ -106,9 +161,12 @@ are **not** scoped to a single session; items confirmed shipped are tagged
   form of the routine, and one that needs generated images rather than
   expressions. *(Shipped as a "Quick Images (Dot Talk)" mode with ten-frame,
   dice/domino, scattered, and two-part-decomposition layouts.)*
-- **Strategy library that persists across the year.** The class's own named
+- **Done — 2026-08-13.** **Strategy library that persists across the year.** The class's own named
   strategies accumulate into a wall reference — printable as posters, which is
-  exactly what a number-talks classroom has on its walls.
+  exactly what a number-talks classroom has on its walls. *(Shipped as a
+  "Class Strategy Library" card storing under its own
+  `gvb-number-talks:strategyLibrary` key, with one full-page poster printed
+  per strategy; see the 2026-08-13 Status update above.)*
 - **Student-device strategy submission** (P9), so quiet students contribute
   without speaking.
 - **Convergence with the other prompt-bank tools** (P7) —
