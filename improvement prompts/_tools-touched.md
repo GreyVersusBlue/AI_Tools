@@ -192,7 +192,20 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| *(none)* | | | |
+| Timeline Builder (015) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| Primary Source Analysis Worksheet Generator (028) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| Blank Map Generator (046) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| Government/Civics Simulation Role Card Generator (050) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| Current Events Discussion Guide Generator (054) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| DBQ / Source Packet Builder (056) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| Geography Bee / Map Skills Quiz Generator (062) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+| Historical Figure / Country Trading Card Maker (064) | `c1jqjp` | 2026-08-14 07:08 UTC | `claude/tool-improvement-merge-status-c1jqjp` |
+
+> These eight are in **Already done** for this pass. Devon assigned them
+> directly on 2026-08-14 ("those are the most important tools on the entire
+> site"), which the header explicitly allows to override the
+> don't-re-pick-a-done-tool rule. The five tools still in **Not yet touched**
+> are untouched by this session and free for a concurrent one to claim.
 
 ---
 
