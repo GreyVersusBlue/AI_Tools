@@ -12,6 +12,145 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Social studies demo round 2 — 2026-08-14 — session `vt7kqa`
+
+Shipped **story mode** (the "Projected navigation mode" Major Feature — a
+timeline is a navigational object and was being wasted as a static image) plus
+the **timeline worksheet print** (the "Printed ordering activity" idea's
+paper half). Two new modules, `tlb-story.js` and `tlb-worksheet.js`, both
+pure — no DOM, no state — so the parts that go silently wrong are assertable.
+
+**Headline — story mode (projector playthrough).**
+
+- Present button → a full-screen overlay stepping one event at a time, driven
+  entirely by the teacher (no timers, no autoplay, nothing student-operated —
+  all explicit non-goals). Next/prev by click, arrow keys, space (a presenter
+  remote sends space), Home/End; Esc exits; a progress counter and a context
+  strip of the whole timeline with the current event highlighted.
+- Type is sized in **vmin, not rem**, which is the one sizing decision that
+  made this work on both a projector and the laptop it's built on: one set of
+  numbers reads from the back of a room at 1080p and still fits a 1366px
+  screen while the lesson is being assembled.
+- **The map is rendered once and moved with a CSS transform, not re-rendered
+  per step.** That is the whole design. `renderBaseMapCanvas` takes real time
+  and real memory; a render per click would put a visible pause between every
+  step on a projector while a class waits. So the whole pinned extent is
+  rendered once at ~3x the panel (capped at 3200px, so a zoomed view is made
+  of real pixels rather than four of them stretched, without asking a
+  Chromebook for a buffer it can't hold) and story mode pans and zooms inside
+  that one image. The consequence worth remembering: the animation is then an
+  interpolation of two numbers and a scale, which is what makes smooth motion
+  cheap enough to be worth having at all.
+- A **view is (centre, zoom), never a bounds box.** Interpolating two bounds
+  boxes lets the aspect ratio wander mid-flight and the map visibly squashes;
+  interpolating a centre point and a zoom cannot. Zoom interpolates
+  **geometrically** — 1x → 2.6x linearly spends most of the flight already
+  zoomed in and then crawls. `viewTransform` clamps the pan to the map's own
+  edges, so a coastal or border event looks deliberate rather than parking
+  half the panel on blank background.
+- Events with no place **keep the previous view and dim the map**, with a
+  plain-language note. The shipped example's Treaty of Paris is exactly this
+  case and demos it without being contrived.
+- `prefers-reduced-motion` gets instant cuts, not a slower pan.
+- Keyboard is bound on `document` **only while presenting** and removed on
+  exit — and the suite asserts that arrow keys and space reach the event form
+  again afterwards, because a leaked handler would leave a teacher unable to
+  type a space into a title and would look like a broken text box, not like a
+  presentation bug.
+- Fullscreen is requested **before the panel is measured**, since entering
+  fullscreen changes the panel size and the map extent is fitted to that
+  panel's aspect ratio. Leaving fullscreen is treated as leaving the
+  presentation (some browsers swallow the Esc that exits fullscreen);
+  `exitStoryMode` is idempotent so both paths firing is harmless.
+
+**Supporting 1 — timeline worksheet print.** Follows the Blank Map
+Generator's worksheet generator: numbered blanks on the artwork, a numbered
+answer line each, a shuffled word bank, an answer key page, and a seeded
+PRNG so version 3 reprints as the *same* paper the answer key on the desk was
+made for. One deliberate difference from the map tool: there, every version
+blanks the same labels and later versions shuffle the *numbering*; here the
+versions differ in **which events are blanked**, so numbering can stay
+chronological (left to right, the way a timeline is read) and two students
+side by side still get different papers. Built through the same
+`buildTimelinePoster`/`renderTimelineCanvas` as everything else, via a new
+optional `blankNumbers` + `blanksRevealed` on the render bundle — the same
+extension shape `pinNumbers` already used — so a worksheet can never show a
+different timeline than the one on the board. Photos are withheld on blanked
+events (a picture of the Boston Tea Party answers the question the blank is
+asking).
+
+**Supporting 2 — new suite** `Tools/timeline-builder/test/smoke-story-worksheet.mjs`,
+78 assertions, wired into `test:timeline` and the end of the `test` chain.
+
+**Verified**: `npm ci`; the existing suite green at 49/49 as a baseline
+*before* any code was written and again after; the new suite 78/78;
+`npm run check:dedupe` green; `npm run check:tests` green (103 suites wired);
+`npm run check:social` byte-identical before and after (same single
+pre-existing 019 problem, no new drift, no block added). Story mode was driven
+end to end in headless Chromium — zero console errors, zero offsite requests —
+and both features were **screenshotted and read by eye at every iteration**,
+which is how both quality bugs below were caught. The plain Print and the
+map + timeline print were re-driven afterwards, since there are now four
+print containers sharing one landscape `@page` rule.
+
+### Challenges
+
+- **The two real bugs this round were both invisible to every assertion, and
+  both were in the worksheet's printed strip.** First: the strip box had a
+  fixed 340px height, but a timeline is wide and short, so the fitted poster
+  became a thin ribbon floating in a half-empty rectangle with the type
+  squeezed to nothing. The box now takes the fitted poster's *own* height. A
+  fixed box is the intuitive choice and is wrong whenever the content's
+  aspect ratio is nothing like the box's.
+- **Second, and worse, it was a regression I introduced while fixing the
+  first.** Enlarging the numbered badge (correct — at the map print's badge
+  size the digit a student matches to their answer line printed about six
+  pixels tall) meant the existing `±.45rem` nudge no longer separated two
+  badges a year apart: the later badge sat squarely on the earlier one's
+  number and on a neighbour's marker dot. Caught only by zooming into the
+  rendered strip. The offset is now a full badge-height and the blanked
+  event's own label is pushed clear of it. **The lesson is that the nudge and
+  the badge size were coupled and nothing said so** — this file's Round 1
+  notes already record the same class of mistake (a cluster radius chosen
+  from the badge's own size), and it happened again in the other direction.
+- Measuring the story map panel is order-dependent in two ways that both look
+  like nothing: the panel is `display:none` until the `no-map` class comes
+  off, so the class has to be removed *before* `clientWidth` is read; and
+  fullscreen has to be awaited before measuring or the extent gets fitted to
+  the pre-fullscreen aspect ratio and the map is subtly wrong for the rest of
+  the lesson.
+- The worksheet's `test:timeline` script and the long `test` chain both end in
+  `smoke-choropleth.mjs`, so a naive string replace to append the new suite
+  hits two call sites. Anchor on the longer unique tail.
+
+### Where the next round should pick up
+
+- **The same-year label collision is now the most visible remaining flaw**,
+  and this round made it slightly more prominent rather than fixing it: two
+  events one year apart still put their markers at nearly the same x, and the
+  side-alternation nudge is the only thing separating them. A real de-overlap
+  pass along the time axis — the relaxation `spreadPins` already does for the
+  map, applied to x instead — would fix the screen view, the worksheet strip,
+  and the map print's badges in one change. It is the single highest-value
+  layout fix left in this tool.
+- **Story mode reads `state.events` across all tracks as one sequence.** That
+  is right for a projector (a class watches one story), but a two-track
+  comparison timeline — "what was happening in China while this happened in
+  Europe" — is exactly the case where a teacher would want the track named on
+  screen, or the two tracks interleaved with a visible lane label. Cheap to
+  add, deliberately not guessed at here.
+- The worksheet blanks titles only. Blanking **dates** (the existing print
+  mode's other half) on the spatial strip would be the natural companion, and
+  `blankNumbers` already carries everything needed.
+- `tlb-story.js`'s `viewTransform`/`lerpView` are a general "pan and zoom a
+  rendered map" pair, and the Blank Map Generator's own quiz mode wants the
+  same thing. If a second consumer appears, it has earned `_shared/` — which
+  this round could not touch.
+- Story mode still depends, through `TimelinePlaces.renderMapImage`, on
+  `Tools/blank-map-generator/bmg-vector.js`. Round 1 flagged that runtime
+  coupling; there are now **two** features in this tool that break silently if
+  that function's signature changes, not one.
+
 ### Social studies demo round — 2026-08-14 — session `mq7fkd`
 
 Shipped the **map handoff** (`IDEAS_BACKLOG.md` rank 2, "Timeline plus map
@@ -525,6 +664,18 @@ fixed and reverified before calling this done.
 - Events with exact years, **BCE support**, and ranges/eras; optional photo
   and optional **place** (name + lat/lon) each (`tlb-photo.js`,
   `tlb-places.js`)
+- **Story mode** (`tlb-story.js`, the Present button) — a full-screen
+  projector playthrough, one event at a time, driven by the teacher with
+  arrow keys / space / click. The map pans and zooms from each event's place
+  to the next; an event with no place holds the previous view and dims the
+  map. Progress counter, a context strip of the whole timeline with the
+  current event marked, Esc to exit, instant cuts under
+  `prefers-reduced-motion`
+- **Timeline worksheet + answer key** (`tlb-worksheet.js`) — the spatial
+  strip with a chosen number of events replaced by numbered blanks, a
+  shuffled word bank of the removed titles, numbered answer lines, and a
+  matching key. Up to four versions, each blanking a different set, seeded so
+  a reprint gives back the same paper
 - **Map + timeline print** (`printMapTimeline`, `tlb-places.js`) — one
   landscape page pairing a base map (numbered pins, auto-fitted extent, US
   state outlines or world countries as appropriate) with the spatial timeline
@@ -534,8 +685,8 @@ fixed and reverified before calling this done.
   Revolution unit with places, categories, an era band and a range event
 - **Share by link or QR** (`?timeline=`, `_shared/state-link.js`) — arrives as
   a new saved timeline; event photos stay on the sending device
-- Automated suite: `Tools/timeline-builder/test/smoke-map-print.mjs`
-  (`npm run test:timeline`)
+- Automated suites: `Tools/timeline-builder/test/smoke-map-print.mjs` and
+  `test/smoke-story-worksheet.mjs` (`npm run test:timeline`)
 - **Multiple tracks** (`renderTrackList`, `ensureTracks`, `updateEvTrackOptions`)
   — parallel timelines on one axis
 - Layout options: all above the line, compact alternating; solid / dashed /
