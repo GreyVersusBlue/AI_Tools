@@ -193,7 +193,6 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Government/Civics Simulation Role Card Generator | `pq4rvn` | 2026-08-14 02:39 UTC | `claude/ssdemo2-050-pq4rvn` |
-| DBQ / Source Packet Builder | `vn8trq` | 2026-08-14 02:41 UTC | `claude/ssdemo2-056-vn8trq` |
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
 | Timeline Builder | `vt7kqa` | 2026-08-14 02:41 UTC | `claude/ssdemo2-015-vt7kqa` |
 | Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
@@ -232,6 +231,59 @@ Primary Source Analysis Worksheet Generator
 - New suite `Tools/primary-source-analysis-generator/test/smoke-levels.mjs`
   (106 assertions), appended to `test:primary-source`. No `sw.js` change —
   only a `test/` folder was added.
+
+### Devon-assigned round 2 — tool 056 — 2026-08-14 03:05 UTC — session `vn8trq`
+
+DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`), social
+studies demo round 2. Full scope shipped, nothing cut.
+
+- **Essay planning organizer + scoring rubric page** (headline) — two
+  optional closing pages that carry a packet all the way to the essay. The
+  organizer has a thesis line with a level-appropriate sentence-frame hint, a
+  three-body-paragraph planning grid (claim / which documents support it /
+  strongest evidence), a counterargument box and a conclusion line, with the
+  document slots built from the packet's *real* sources — it names
+  "Source A — A Factory Inspector’s Report" and offers that packet’s own
+  letters as check boxes. The rubric is an editable criteria×levels grid
+  seeded with plain 7th-grade DBQ wording, printable as the full four-level
+  grid or as a student-facing checklist built from the "meets" column.
+  Organizer defaults on when an essay prompt exists; rubric is opt-in, so no
+  saved packet grows a page by surprise. Print order: cover → sources → essay
+  prompt → organizer → rubric.
+- **Differentiation levels** per the round-2 preamble spec — `Academic` /
+  `Honors` / `Honors GT`, default Honors, print output only. Academic adds a
+  "before you read" gloss of hard words drawn from that source’s own text, a
+  sentence starter matched to how the teacher worded each question, the essay
+  prompt chunked into numbered steps, and pre-filled organizer frames — same
+  questions, more support. Honors GT drops the frames and adds an
+  outside-evidence row, a "whose voice is missing from this packet?" question
+  and a so-what push. "Print all three levels" emits all three class sets in
+  one pass (21 pages for the example packet), each page footer-tagged; a
+  single-level print stays untagged, which is what keeps Honors output
+  byte-identical to before this round (proved by string-comparing the
+  rendered print area against the pre-round file, not by eyeballing a PDF).
+- **Send a source to Primary Source Analysis** — the P7 pairing the backlog
+  has named since this tool’s first build. A text source gets an "Analysis
+  worksheet →" button that encodes 028’s own round-1 `?worksheet=` payload
+  with the same `_shared/state-link.js` encoder 028 uses, on its SOAPSTone
+  framework, and opens it in a new tab. Image pixels stay behind, matching
+  both tools’ share rules.
+- **New smoke suite** `Tools/dbq-source-packet-builder/test/
+  smoke-essay-levels.mjs` (78 assertions, appended to `npm run test:dbq` and
+  the root chain) covering page order, the organizer naming real sources, the
+  rubric appearing/vanishing/printing edits/printing as a checklist, gloss and
+  starters present at Academic and absent at Honors, the GT extras, the
+  21-page footer-tagged all-levels run, level and toggles surviving a reload,
+  a **round-1 share link still importing** onto the Honors baseline after the
+  payload gained four fields, and the 028 handoff URL both decoding as a valid
+  028 payload and actually opening in 028 with the source text in it.
+
+No sw.js change (single-file tool; test files are not precached) and no new
+localStorage keys — the new fields ride the packet object, which
+`009-backup-restore.html` already covers via the `dbq:` prefix. A
+`_shared/levels.js` extraction (and a shared vocabulary glossary) is logged
+in `_site-requests.md`, since `_shared/` is off-limits during a parallel
+round.
 
 ### Devon-assigned round 2 — tool 054 — 2026-08-14 03:22 UTC — session `mk3jq7`
 
