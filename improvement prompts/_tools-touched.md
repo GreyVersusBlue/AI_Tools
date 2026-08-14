@@ -199,7 +199,6 @@ here.
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
-| Geography Bee / Map Skills Quiz Generator | `mee9kj` | 2026-08-14 00:01 UTC | `claude/ssdemo-062-mee9kj` |
 
 ---
 
@@ -1033,6 +1032,28 @@ empty tracks because a bare `<span>` is inline and ignores `width`.
 source, not the notes): Duty Roster per-staff counts, Experiment Design
 Planner reordering, and Fraction–Decimal–Percent seeded generation, all
 delivered by session `kq3g3h` and never taken off the list.
+
+### Devon-assigned round — tool 062 — 2026-08-14 00:09 UTC — session `mee9kj` — branch `claude/ssdemo-062-mee9kj`
+
+One of eight parallel social-studies-demo-round sessions (see
+`prompts/social-studies-demo/_preamble.md` and its own
+`062-geography-bee-mc.md` scope file), ahead of a live presentation to
+teachers. Shipped the full headline plus its scope-coupled supporting work;
+nothing was cut.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Geography Bee / Map Skills Quiz Generator | `062-geography-bee-quiz-generator.md` | **Multiple-choice quiz mode** (backlog rank 29) — a quiz-format setting (Short answer / Multiple choice, persisted in `gbq_settings_v1`) that auto-generates A&ndash;D options by sampling 3 distractors from other questions' answers in the same category, restricted to what the teacher can actually see (hidden built-ins excluded, active category filter honored); a category too thin for distractors falls back to short answer for that one question instead of padding with cross-category nonsense. The projector display shows lettered options with Reveal marking the correct one; the printed quiz gets lettered options and the key states the letter plus the answer text. A seeded mulberry32 PRNG (the Blank Map Generator's worksheet-versions pattern) makes a printed quiz reproducible by a teacher-facing "Quiz version" number. **Built-in bank grown from 30 to 90 questions** (30 per category, world-balanced beyond the original set's US/Europe lean, `bi30`&ndash;`bi89` appended — `bi0`&ndash;`bi29` untouched per the stable-id rule). **New smoke test** `Tools/geography-bee-quiz-generator/test/smoke-multiple-choice.mjs` (29 checks: distractor uniqueness/sourcing via the tool's own test hooks, hidden-built-in exclusion, same-seed-same-quiz, key-matches-paper, thin-pool fallback, format persistence, bank balance). |
+
+Verified: `npm run check:dedupe` and `check:social` clean (no new drift —
+062 already had no `gvb:social` block and stays that way, untouched per
+scope); new suite green (29/29); a headless Chromium pass driving the real
+MC flow end to end (projector reveal, hidden-built-in exclusion, print +
+key match, thin-pool fallback, settings persistence) with zero console
+errors and zero offsite requests. See `062-geography-bee-quiz-generator.md`
+for the fuller writeup and where a future round should pick up (Blank Map
+Generator integration remains the open Moonshot item, deliberately not
+guessed at this round).
 
 ---
 
