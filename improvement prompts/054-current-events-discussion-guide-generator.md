@@ -1,13 +1,114 @@
 # Improvement Prompts — 054 — Current Events Discussion Guide Generator
 
 **Tool file:** `Tools/054-current-events-discussion-guide-generator.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Support folder:** `Tools/current-events-discussion-guide-generator/test/` (two
+Playwright suites). All tool code is still inline in the one HTML file.
 
-**Current description (from README):** Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide.
+**Current description (from README):** Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide — or add a second article on the same event for a side-by-side bias/framing comparison guide with shared vocabulary. An optional media literacy kit adds a SIFT source-evaluation checklist, a headline rewrite exercise, and a claim vs. evidence organizer, printable at Academic, Honors, or Honors GT (or all three at once).
 
 ---
 
 ## Status
+
+**2026-08-14 — SS demo round 2: media literacy kit + differentiation levels
+shipped (session `mk3jq7`).** Devon-assigned round 2 ahead of the live teacher
+presentation (see `prompts/social-studies-demo-2/054-media-literacy-kit.md`
+and `_preamble.md`). Full scope shipped, nothing cut:
+
+- **Three optional printable kit pages**, each toggled per guide from a new
+  "Media literacy kit" card, all rendered inside the existing `#printArea`
+  (no new `@media print` block, `print-area.css` untouched):
+  - **Source evaluation checklist (SIFT)** — the four moves (Stop; Investigate
+    the source; Find better coverage; Trace the claim) with write-in lines
+    under each. In two-article mode every move splits into two columns headed
+    with the two real headlines. Move 3 says outright that the sheet cannot
+    look up other coverage and asks students to plan the search instead — the
+    honest version of the offline constraint rather than a fake one.
+  - **Headline rewrite exercise** — quotes the teacher's real headline(s) back,
+    then three tasks: rewrite it neutrally, rewrite it slanted the other way,
+    and name the exact words that were doing the work. With two articles it
+    adds a five-row matching block (which headline does what, answered A / B /
+    both / neither, plus the words that tipped you off).
+  - **Claim vs. evidence organizer** — claim / evidence / "fact, opinion, or
+    spin?" table, gaining a fourth "Article" column when comparing. The
+    teacher can pre-fill any cell from a row editor (ticking the box seeds
+    three blank rows to show the shape); anything left blank prints as
+    writing space.
+- **Differentiation levels** per the round-2 preamble spec: a Level selector
+  with exactly `Academic` / `Honors` / `Honors GT`, defaulting to Honors,
+  affecting print output only (the editing UI never changes). Academic adds
+  sentence starters on the SIFT lines, the headline reflection and the open
+  discussion questions, chunks the long prompts into numbered steps, prints a
+  plain-language gloss of the six words the kit itself introduces, and gets
+  three writing lines instead of two — more scaffolding, never fewer or
+  easier questions. Honors GT swaps in more open prompt wording, drops the
+  pre-structure, adds the "find and summarize a third source's framing"
+  extension under SIFT, a "write a headline with no slant at all — is that
+  even possible?" task, a "which claim matters most?" prompt under the
+  organizer, and a closing **So What?** synthesis section.
+- **Print all three levels** — one button emits all three class sets in one
+  pass, Academic → Honors → Honors GT, each set opening with a level banner,
+  closing with a `Level: … — <guide name>` footer, and carrying a small level
+  chip on every section heading. Sets are separated with `page-break-before`
+  declared in the tool's normal `<style>` (page-break properties are inert on
+  screen), so no competing print block was needed.
+- **Everything rides the existing guide object** (`level`, `kitSift`,
+  `kitHeadline`, `kitClaims`, `claimRows`) — no new localStorage key, so
+  `009-backup-restore.html` needed no change, and `normalizeGuide` defaults
+  every new field. A guide saved or a link shared before this round opens at
+  level Honors with the kit off and prints exactly the sheet it always did;
+  verified in the suite rather than assumed.
+- **Load two-article example now demos the whole kit in one click** — it turns
+  all three pages on and pre-fills three claims lifted from the skate-park
+  articles. The first two contradict each other on purpose ("the lot has sat
+  mostly empty" vs. "the lot gets full on weekends as it is"), which puts the
+  entire lesson in two table rows. Evidence and the fact/opinion/spin tag are
+  left blank, so it demos teacher pre-fill without doing the students' work.
+- **Fixed a real pre-existing CSS bug found while screenshotting the print
+  path:** `.q-row input { flex: 1 }` was written for the custom-question text
+  box but also matched the preset question checkboxes, stretching each one
+  across its row and shoving every question's text against the right edge of
+  the card. One scoped rule (`.q-row label input[type="checkbox"]`) fixes it;
+  the Guiding Questions and Comparing These Two Articles lists now read as
+  normal left-aligned checklists.
+- **New suite** —
+  `Tools/current-events-discussion-guide-generator/test/smoke-media-literacy.mjs`
+  (102 assertions): kit pages appear only when their own box is ticked, all
+  four SIFT moves print, SIFT goes two-column with the real headlines as
+  column heads once Article B has text, pre-filled claim cells print as-is
+  while untouched ones print as blank writing space, Academic really does add
+  starters/steps/gloss/more lines while Honors adds none and GT adds the
+  extension and synthesis instead, "Print all three levels" emits three
+  banner-and-footer-tagged sets in order, level and kit survive a reload,
+  a share link round-trips all of it, a pre-round link still opens at the old
+  defaults, and Load Example brings up the whole kit. Wired into
+  `npm run test:current-events` alongside the round-1 suite and appended to
+  the end of the main `test` chain.
+
+Verified with `npm run check:dedupe` (clean), `npm run check:social` (byte-for-
+byte the same pre-existing drift as before — this tool's `<head>` was not
+touched), both of this tool's suites green before starting (38 baseline) and
+after every step (38 + 102), and a manual headless pass that rendered the
+printed sheet at all three levels plus the all-three stack and inspected the
+screenshots, which is what turned up both the checkbox bug and two wording
+collisions (three separate headings called "So what?" on one GT sheet).
+
+**Where the next round should pick up:** `sw.js` needed no edit this round —
+the only file added is a test file, and test folders are deliberately not
+precached — so `CACHE_VERSION` was intentionally left alone. The per-page
+level tag is a banner at the top of each set, a chip on each section heading
+and a footer at the end of each set, rather than a true repeating per-page
+footer: a `position: fixed` print footer would repeat on every page in
+Chrome, but three of them in one document all repeat at once, so the tag
+lands on section boundaries instead. Worth revisiting if a teacher reports
+mixing piles up in practice. Still open from the lists below: the
+reading-level estimate, a real question-set library a teacher can add to
+(there are now three fixed sets — general, comparison, and the kit's own
+prompts), and the AI-assisted-mode Open Question. The claim organizer is
+currently one shared table across both articles with an A/B column rather
+than one table per article; that was the deliberate choice (it halves the
+teacher's setup and makes cross-article contradictions visible in adjacent
+rows) but it is a boundary someone could reasonably want moved.
 
 **2026-08-14 — SS demo round: two-article comparison guide shipped (backlog
 rank 21, session `qfx7mz`).** Devon-assigned round ahead of a live teacher
@@ -178,6 +279,19 @@ friction (one guide per browser, still overwritten week to week).
 - **Share a guide by link or QR code** (`_shared/state-link.js` +
   `_shared/vendor/qrcode/qrcode.js`); an incoming shared link always saves
   as a new guide rather than overwriting whatever the recipient had open.
+- **Media literacy kit** — three optional printable pages, ticked per guide:
+  a SIFT source-evaluation checklist (two columns when comparing), a headline
+  rewrite exercise (neutral, then slanted the other way, then "what did you
+  change?", plus a headline-to-framing matching block in comparison mode),
+  and a claim vs. evidence organizer with a fact/opinion/spin tag per row
+  that the teacher can pre-fill or leave blank.
+- **Three class levels** — `Academic` / `Honors` / `Honors GT`, stored with
+  the guide and carried by share links. Academic adds sentence starters,
+  chunked steps, a plain-language gloss of the kit's own vocabulary and more
+  writing space; Honors is the unchanged baseline; Honors GT opens the
+  prompts up and adds a third-source extension and a closing synthesis
+  question. "Print all three levels" prints all three class sets in one pass,
+  each banner- and footer-tagged so the piles sort.
 
 ## Quick Wins
 
