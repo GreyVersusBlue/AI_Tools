@@ -76,6 +76,8 @@ const PRECACHE_URLS = [
   "Tools/certificate-award-maker/cam-borders.js",
   "Tools/certificate-award-maker/cam-store.js",
   "Tools/050-civics-role-card-generator.html",
+  "Tools/civics-role-card-generator/crcg-store.js",
+  "Tools/civics-role-card-generator/crcg-templates.js",
   "Tools/006-class-roster-hub.html",
   "Tools/051-classroom-label-maker.html",
   "Tools/classroom-label-maker/speak.html",

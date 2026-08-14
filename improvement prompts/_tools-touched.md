@@ -192,7 +192,6 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Government/Civics Simulation Role Card Generator | `pq4rvn` | 2026-08-14 02:39 UTC | `claude/ssdemo2-050-pq4rvn` |
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
 | Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
 | Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
@@ -234,6 +233,38 @@ Timeline Builder (`015-timeline-builder.md`), social studies demo round 2.
   apart overlap until the nudge was scaled with them.
 - New suite `Tools/timeline-builder/test/smoke-story-worksheet.mjs`
   (78 checks), wired into `test:timeline` and the end of the `test` chain.
+
+### Devon-assigned round 2 — tool 050 — 2026-08-14 02:39 UTC — session `pq4rvn`
+
+Government/Civics Simulation Role Card Generator
+(`050-civics-role-card-generator.md`), social studies demo round 2.
+
+- **From role cards to a full simulation kit** (headline) — the tool prints
+  the whole class period, not just the cards: an agenda page (phases, time
+  boxes, one-line teacher cue each, tick column, auto total), ballots matched
+  to the simulation type (juror verdict slips / roll-call vote cards / judge
+  scoring slips), a scoring rubric page, and a half-page reflection sheet per
+  student carrying the assigned name and role. Each piece is individually
+  toggleable at print time; the stack comes out in the order the period runs
+  (agenda → cards → case files → ballots → rubric → reflections), each
+  section on a fresh page, all inside `#printArea`.
+- Slip counts are driven by a `ballot` flag on the role, so they follow the
+  copies count with nothing to keep in sync (12 jurors → 12 slips).
+- An empty kit piece prints nothing, which is what lets a simulation migrated
+  from the old flat blob print exactly what it always did with every toggle on.
+- **Multi-save** (deferred from round 1) on the sketched `crcg:list` /
+  `crcg:data:<name>` / `crcg:current` triple keys in a new
+  `Tools/civics-role-card-generator/crcg-store.js`; `crcg_roles_v1` migrates
+  in as "My simulation" and stays as a one-release backup; `crcg:` registered
+  in `009-backup-restore.html` `KNOWN_GROUPS`. A share link now files itself
+  under its own uniqued name instead of asking to replace what is on screen.
+- **Two new templates** in a new `crcg-templates.js` (all five moved there):
+  UN Security Council resolution debate and a Constitutional Convention
+  compromise session, both politically neutral and 7th-grade friendly.
+- New suite `Tools/civics-role-card-generator/test/smoke-simulation-kit.mjs`
+  (62 checks), wired into `test:civics-kit` and the end of the `test` chain;
+  the two existing suites updated for the storage/import change, green at 28
+  and 28.
 
 ### Devon-assigned round 2 — tool 028 — 2026-08-14 02:38 UTC — session `kx9rtm`
 
