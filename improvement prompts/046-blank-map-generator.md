@@ -9,6 +9,122 @@
 
 ## Status
 
+### 2026-08-13 — session `q4wmxz` — Devon-assigned social studies demo round
+
+**Shipped choropleth from pasted data** — `IDEAS_BACKLOG.md` **rank 13,
+"Choropleth from a data table"**, which this round covers in full for the
+built-in vector base maps. (Backlog file untouched, per the round rules —
+Devon runs one bookkeeping pass after the branches merge.)
+
+**Read this first if you are picking up phase 2:** Round 13's notes sequence
+choropleth *after* per-region hit-testing. **This round deliberately bypassed
+that sequencing, and the sequencing was wrong.** Hit-testing is a prerequisite
+for *click*-to-shade — turning a mouse position into a region — and for
+nothing else. Shading from a pasted table needs the region's *name* and its
+*polygon*, both of which the GeoJSON has already, so the fill can be painted
+during the base-map render with no picking involved. Per-region hit-testing is
+still open and still worth doing; it is simply not a dependency of this.
+
+- **A "Shade by data" panel** on the built-in base maps strip. Paste one
+  `place, number` per line, choose 4–6 bands and a colour ramp, press "Shade
+  the map". "Remove shading" puts it back. Built-in vector maps only —
+  Commons and uploaded rasters have no region shapes to fill.
+- **New `bmg-choropleth.js` holds all of the thinking and touches no DOM.**
+  Parsing tolerates tabs, semicolons, pipes and commas, thousands separators,
+  `$`/`%`, blank lines, and a header row (detected and skipped, and *said so*
+  in the report rather than silently). A name containing the delimiter still
+  parses, because the value has to match to the end of the line — so
+  `Congo, Dem. Rep., 95000000` comes out whole. Matching is case- and
+  accent-insensitive with an alias table covering the traps the prompt named
+  (United States/USA, UK, DRC, Burma, D.C. + all 50 postal abbreviations) and
+  the ones the *data* creates, which are worse: Natural Earth ships
+  `Dem. Rep. Congo`, `Bosnia and Herz.`, `Central African Rep.`, `Czechia`,
+  `eSwatini`, `W. Sahara`, `Côte d'Ivoire`. **No row is ever dropped
+  silently** — the panel prints "48 of 50 rows matched" and then names every
+  row that matched nothing.
+- **Quantile bands, not equal intervals.** Equal intervals on state
+  population put 46 states in the lightest band and California alone in the
+  darkest, which is a true map that shows nothing. The legend prints each
+  band's real numeric range, so the choice hides nothing either.
+- **Grayscale-safe here means one hue getting darker.** The tool's existing
+  grayscale-safe convention substitutes hatch/dot *patterns*, because that
+  convention is for *categorical* regions where two hues photocopy to the same
+  gray. Ordered bands need the opposite: falling luminance is exactly what a
+  b&w copier reproduces, and a hatch is not "more" than a dot. Four
+  single-hue ramps ship; `RAMP_LUMINANCE_STEP` states the minimum drop per
+  step and the suite enforces it. The grayscale render was inspected directly,
+  not just asserted.
+- **The wiring is thin on purpose, which is the whole containment strategy
+  for a 3,800-line tool.** `bmg-vector.js` paints the fills between the land
+  fill and the boundary strokes as it draws the base raster, so labels,
+  markers, worksheets, PNG, print, PDF and the poster tiles all work on a
+  shaded map without knowing one exists — the same trick Round 13 used for
+  base maps themselves. Total footprint in the main file: the panel's markup
+  and CSS, one `kind === 'choro'` clause in `drawPngLegend()`, and the panel's
+  event wiring.
+- **Cache ids gained a `:choro:<hash>` suffix**, so plain base maps keep their
+  own clean records. New `stripBaseMapId()` / `sameBaseMap()` let
+  `displayMap()` recognise that a re-shade is *the same piece of paper
+  redrawn* — same preset, crop, style, pixel size and calibration. That is
+  what stops a teacher's already-placed labels from being wiped when they add
+  or remove shading, which the naive version did (`isSameMap` was false, so
+  the fresh-map reset fired). Loading a genuinely different map still drops
+  the shaded state and its key so the legend can't advertise bands the picture
+  doesn't have, while keeping the pasted data itself.
+- **Legend rows go through the existing `bmg-legend.js` machinery** as
+  ordinary draggable, editable rows — range as the caption when nothing is
+  typed — and the same rows are drawn into every raster export by
+  `drawPngLegend()`. They are stored on the project rather than recomputed,
+  so a reload brings the key back without re-reading a 250 KB data file, and
+  the key can never disagree with the raster it belongs to.
+- **Bug found and fixed on the way:** Student Handout Mode blanks every legend
+  caption. On a shaded map that hands a student a picture with no way to read
+  it, so choropleth class ranges are now exempt in both the on-screen panel
+  and the raster export. A class range is the map's units, not its answer.
+- **"Load example data"** (P15): rounded populations for all 50 states,
+  written with thousands separators because that is what a spreadsheet
+  pastes and the parser should be seen coping with it. It also points the
+  picker at a US map, so a first click can't produce "none of those rows
+  matched".
+- **Persistence** rides in the existing `bmg_workspace_v1` project (no new
+  localStorage key, so Backup & Restore needs no change);
+  `normalizeProjectData()` backfills the new fields for older saves.
+
+**Verified.** `smoke-choropleth.mjs` (new, `npm run test:blank-map` runs it
+alongside the starters suite) — **59 checks, all green**, in two halves. The
+first runs the module against the real vendored GeoJSON: parsing, the alias
+table, quantile edge cases (four identical values collapse to one band, not
+five empty ones), ramp luminance, and the example data matching 50/50. The
+second drives the real UI and **reads the rendered pixels back**: California
+comes out darker than Wyoming, re-shading with inverted data flips both, the
+key gains five range rows, unmatched names appear in the report, labels
+survive a re-shade *and* an un-shade, and the whole thing comes back shaded
+after a reload. Zero console errors and **zero offsite requests** across the
+run. `smoke-starters.mjs` still 22/22, `check:dedupe` green,
+`check:social` byte-identical before and after.
+
+**Where the next round should pick up:**
+
+1. **Per-region hit-testing → click-to-shade** is still the keystone for the
+   *other* half of region work, and it is now the only thing standing between
+   this tool and "shade the states this treaty covers" without drawing
+   polygons by hand. The projection is `project()` in `bmg-vector.js` and the
+   names are already in memory.
+2. **Choropleth on a Commons or uploaded map** is not possible and should
+   stay out of scope: there are no region shapes in a JPEG.
+3. **A title for the key.** The class rows say "6.2M to 8.7M" but nothing says
+   *of what*. A one-line "what does this data show?" field feeding a legend
+   heading is the obvious next small thing, and the legend panel has no
+   heading row concept yet.
+4. **Equal-interval as an option.** Quantiles are right for population;
+   percentages (0–100 with real meaning at the boundaries) would read better
+   in equal intervals. `quantileBreaks()` is the only thing that would need a
+   sibling.
+5. **Shared-code opportunity, deliberately not taken:** `038-data-chart-
+   builder.html` parses two-column pasted data too, and `bmg-choropleth.js`'s
+   ramps/luminance helpers are generic. The round rules forbid touching
+   `_shared/`, so both were written locally. Logged in `_site-requests.md`.
+
 ### 2026-08-11 — session `m3r8ro`
 
 **Shipped starter map projects** (backlog rank 17, platform theme P15). A first
@@ -374,6 +490,12 @@ the projected half of the quiz-mode major feature.
 
 ## What it does today
 
+- **Choropleth shading from pasted data** — paste "place, number" rows and
+  the built-in base map shades itself in 4–6 quantile bands, with a key that
+  writes its own numeric ranges. Grayscale-safe by construction (one hue,
+  falling luminance), tolerant of spreadsheet paste, and it names every row
+  it couldn't match instead of dropping it. "Load example data" fills the box
+  with all 50 state populations
 - **Three starter projects** on the landing card — Europe countries, US
   states, world physical features — each a complete map assembled offline from
   a built-in base map plus a built-in label set, opening as its own new project
@@ -462,13 +584,18 @@ where. New quick wins surfaced by future rounds go here.
   loads. They go through the existing raster pipeline, so every feature
   works on them unchanged. Still open, and the reason this stays on the
   list: **live vector rendering in the viewer** (the generated map is a
-  raster, so zoom quality has a ceiling), **per-region hit-testing and
-  click-to-shade**, and **choropleth from a data table** — see Round 13's
-  "where phase 2 picks up" for the order and why hit-testing is the
-  keystone.
-- **Choropleth from a data table.** Paste "state, value" and shade
-  accordingly — directly reusing the parsing already in
-  `038-data-chart-builder.html` (P7).
+  raster, so zoom quality has a ceiling) and **per-region hit-testing and
+  click-to-shade**. **Choropleth shipped 2026-08-13** — Round 13's note that
+  it needed hit-testing first was wrong: hit-testing turns a *click* into a
+  region, and shading from a pasted table never has a click to turn.
+- **Done —** **Choropleth from a data table.** Paste "state, value" and shade
+  accordingly (P7). *(Shipped 2026-08-13 in `bmg-choropleth.js` — quantile
+  bands, a grayscale-safe single-hue ramp, an alias table, a self-writing
+  key, and unmatched rows reported by name. Built-in vector base maps only;
+  a raster has no region shapes to fill. The parsing was written fresh rather
+  than lifted from `038-data-chart-builder.html`: the round rules forbid
+  touching `_shared/`, and the two jobs differ anyway — a chart takes columns
+  of numbers, a map takes one number per named place.)*
 - **Projected quiz mode** — *shipped in Round 10* (reveal-next, counter, ✓/✗
   tally, reshuffle, projector text). What's still missing is persistence of
   which labels a class struggled with across sessions, which is the part
