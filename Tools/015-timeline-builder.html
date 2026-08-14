@@ -17,9 +17,13 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cline x1='5' y1='16' x2='27' y2='16' stroke='%232A6DB0' stroke-width='2'/%3E%3Ccircle cx='10' cy='16' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='19' cy='16' r='2.6' fill='%232A6DB0'/%3E%3Ccircle cx='25' cy='16' r='2.6' fill='%232A6DB0'/%3E%3C/svg%3E">
 <!-- gvb:social:end -->
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="timeline-builder/tlb-layout.js"></script>
 <script src="timeline-builder/tlb-photo.js"></script>
 <script src="timeline-builder/tlb-store.js"></script>
+<script src="timeline-builder/tlb-places.js"></script>
+<script src="timeline-builder/tlb-example.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -163,6 +167,62 @@
   .tiledLegendPage .legend-row { justify-content: center; font-size: 1.1rem; gap: .6rem 1.6rem; }
   .tiledLegendPage .legend-swatch { width: 1.1rem; height: 1.1rem; }
 
+  /* Share a timeline by link / QR — same pattern (and wording) as
+     028-primary-source-analysis-generator.html, which shares the same
+     "the pictures are too big to ride in a URL" problem. */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+
+  /* Map + timeline print — see printMapTimeline() below. One landscape page:
+     the base map on top with a numbered pin per placed event, the same
+     numbers down on the spatial timeline strip beneath it. */
+  #mapPrintPanel select { margin-bottom: 0; }
+  #mapPrintPanel button { width: auto; display: inline-block; margin: 0 .5rem .3rem 0; }
+  #mapPrintPages { display: none; }
+  .mapPage { position: relative; background: #fff; overflow: hidden; }
+  .mapPage h2 { margin: 0 0 .35rem; font-size: 1.15rem; text-align: center; }
+  .mapPage .mapBox { position: relative; border: 1px solid var(--line-strong); background: #fff; overflow: hidden; }
+  .mapPage .mapBox img { display: block; width: 100%; height: 100%; }
+  .mapPin {
+    position: absolute; transform: translate(-50%, -50%);
+    min-width: 19px; height: 19px; padding: 0 4px; border-radius: 10px;
+    background: var(--accent); color: #fff; border: 1.5px solid #fff;
+    box-shadow: 0 0 0 1px var(--accent);
+    font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; white-space: nowrap;
+  }
+  .mapDot {
+    position: absolute; transform: translate(-50%, -50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); border: 1px solid #fff;
+  }
+  .mapKey { font-size: .72rem; line-height: 1.5; text-align: center; color: var(--ink); margin: .3rem 0 0; }
+  .mapKey .mapKeyItem { white-space: nowrap; margin: 0 .5rem; }
+  .mapKey .mapKeyNum { font-weight: 700; color: var(--accent); }
+  .mapStrip { position: relative; overflow: hidden; border-top: 1px solid var(--line); margin-top: .3rem; }
+  .mapPage .legend-row { padding-top: .2rem; font-size: .72rem; }
+  /* The numbered badge that ties a timeline marker back to its map pin. Only
+     rendered when a pinNumbers map is handed to renderTimelineCanvas, so the
+     normal screen/compare views are untouched. */
+  /* Sits ON the line, directly over its marker, rather than floating above
+     it: the space above the line already belongs to the event label, and a
+     badge parked there lands on top of the title text. Covering the marker
+     costs nothing — the badge is the marker, in the same category colour. */
+  .pin-num {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    min-width: 1.15rem; height: 1.15rem; padding: 0 .2rem; border-radius: .6rem;
+    background: var(--accent); color: #fff; border: 2px solid #fff;
+    font-size: .68rem; font-weight: 700; line-height: 1rem; text-align: center; white-space: nowrap;
+  }
+  .print-event .pe-place { font-size: .82rem; color: var(--accent-2); margin-top: .1rem; }
+
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -179,6 +239,16 @@
     }
     .tiledPage { page-break-after: always; }
     .tiledPage:last-child { page-break-after: auto; }
+
+    /* Map + timeline print, same shape as the tiled rules above: a third
+       print container that takes over the page and hides the other two. */
+    body.map-printing #printArea { display: none !important; }
+    body.map-printing #tiledPrintPages { display: none !important; }
+    body.map-printing #mapPrintPages,
+    body.map-printing #mapPrintPages * { visibility: visible !important; }
+    body.map-printing #mapPrintPages {
+      display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+    }
   }
 </style>
 </head>
@@ -200,6 +270,22 @@
     <button class="secondary" style="width:auto;" id="exportTimelineBtn">Export JSON</button>
     <button class="secondary" style="width:auto;" id="importTimelineBtn">Import JSON</button>
     <input type="file" id="importTimelineFile" accept="application/json,.json" style="display:none;">
+    <button class="secondary" style="width:auto;" id="loadExampleBtn">Load example</button>
+    <button class="secondary" style="width:auto;" id="shareLinkBtn">🔗 Copy link</button>
+    <button class="secondary" style="width:auto;" id="shareQrBtn">▦ QR code</button>
+  </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+
+  <div class="share-overlay" id="shareOverlay" hidden>
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Timeline QR code">
+      <div class="share-head">
+        <span>Scan to open this timeline</span>
+        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="shareCanvas"></canvas>
+      <p class="hint" style="margin:.6rem 0 0;">Opens the same timeline on that device and saves it there as a copy &mdash;
+        edits on either side stay put. Event photos stay on this device.</p>
+    </div>
   </div>
 
   <div class="layout">
@@ -275,6 +361,16 @@
         <input type="text" id="evCategory" list="categoryOptions" placeholder="Category (optional), e.g. Political, Cultural, Technological">
         <datalist id="categoryOptions"></datalist>
         <p class="hint" style="margin-top:-.6rem;">Events sharing a category are colored the same on the timeline, with a legend below it.</p>
+        <input type="text" id="evPlace" list="placeOptions" placeholder="Place (optional), e.g. Philadelphia, Pennsylvania">
+        <datalist id="placeOptions"></datalist>
+        <div class="row2">
+          <div><input type="number" step="any" id="evLat" placeholder="Latitude (north is +)"></div>
+          <div><input type="number" step="any" id="evLon" placeholder="Longitude (east is +)"></div>
+        </div>
+        <p class="hint" style="margin-top:-.6rem;">Pick a place from the list and the coordinates fill in for you, or
+          type any place name and enter its own latitude and longitude. Events with a place get a numbered
+          pin on the &ldquo;Map + timeline&rdquo; print; events without one just stay off the map.</p>
+
         <input type="text" id="evDisplayDate" placeholder="Display label override (optional), e.g. Late Bronze Age">
         <textarea id="evDescription" placeholder="Short description (optional)"></textarea>
         <input type="file" id="evPhoto" accept="image/*">
@@ -327,6 +423,40 @@
           <button type="button" class="secondary" id="btnTiledPrintClose">Close</button>
         </div>
       </div>
+
+      <button type="button" class="secondary" id="mapPrintToggleBtn">Map + timeline print&hellip;</button>
+      <div class="card" id="mapPrintPanel" hidden>
+        <label style="margin-bottom:.4rem;">Map + timeline print</label>
+        <p class="hint">
+          One landscape page: a map on top with a numbered pin at every event
+          that has a place, and the timeline along the bottom carrying the same
+          numbers &mdash; so students can read when something happened and where
+          in one look. Events without a place stay on the timeline and off the
+          map. The map is drawn from map data already on this device; nothing
+          is downloaded.
+        </p>
+        <div class="row2">
+          <div>
+            <label for="mapExtent">Map area</label>
+            <select id="mapExtent">
+              <option value="fit">Fit to the pinned events</option>
+              <option value="world">Whole world</option>
+            </select>
+          </div>
+          <div>
+            <label for="mapStyle">Map style</label>
+            <select id="mapStyle">
+              <option value="outline">Outline only</option>
+              <option value="land" selected>Light land fill</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint" id="mapPinCount" style="margin-top:.6rem;"></p>
+        <div>
+          <button type="button" id="btnMapPrintGo">Print map + timeline</button>
+          <button type="button" class="secondary" id="btnMapPrintClose">Close</button>
+        </div>
+      </div>
     </div>
 
     <div class="preview-wrap">
@@ -365,6 +495,7 @@
 
 <div id="printArea" style="display:none;"></div>
 <div id="tiledPrintPages" aria-hidden="true"></div>
+<div id="mapPrintPages" aria-hidden="true"></div>
 
 <script>
 (function () {
@@ -377,9 +508,12 @@
    'trackList','addTrackBtn',
    'eraLabel','eraYearStart','eraYearEnd','eraColor','saveEraBtn','cancelEraEditBtn','eraList',
    'evTrackRow','evTrack','evTitle','evYearStart','evYearEnd','evCategory','categoryOptions','evDisplayDate','evDescription','evPhoto',
+   'evPlace','placeOptions','evLat','evLon',
    'evPhotoPreview','evPhotoImg','evPhotoRemove','storageWarn',
    'saveEventBtn','cancelEditBtn','eventList','printMode','printBtn',
    'tiledPrintToggleBtn','tiledPrintPanel','tileCols','tileRows','btnTiledPrintGo','btnTiledPrintClose','tiledPrintPages',
+   'mapPrintToggleBtn','mapPrintPanel','mapExtent','mapStyle','mapPinCount','btnMapPrintGo','btnMapPrintClose','mapPrintPages',
+   'loadExampleBtn','shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn',
    'viewScreenBtn','viewPrintBtn','viewCompareBtn','screenView','printPreview','compareView',
    'timelineCanvas','screenLegend','printViewInner','compareSelect','compareCanvas','compareLegend'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -433,6 +567,9 @@
     els.evYearStart.value = '';
     els.evYearEnd.value = '';
     els.evCategory.value = '';
+    els.evPlace.value = '';
+    els.evLat.value = '';
+    els.evLon.value = '';
     els.evDisplayDate.value = '';
     els.evDescription.value = '';
     els.evPhoto.value = '';
@@ -449,6 +586,9 @@
     els.evYearStart.value = ev.yearStart;
     els.evYearEnd.value = ev.yearEnd != null ? ev.yearEnd : '';
     els.evCategory.value = ev.category || '';
+    els.evPlace.value = (ev.place && ev.place.name) || '';
+    els.evLat.value = (ev.place && typeof ev.place.lat === 'number') ? ev.place.lat : '';
+    els.evLon.value = (ev.place && typeof ev.place.lon === 'number') ? ev.place.lon : '';
     els.evDisplayDate.value = ev.displayDate || '';
     els.evDescription.value = ev.description || '';
     if (ev.photo) {
@@ -477,6 +617,60 @@
     els.evPhotoPreview.style.display = 'none';
   });
 
+  /* ---------- place ----------
+     Typing (or picking from the datalist) a place the built-in gazetteer
+     knows fills the coordinates in. Anything else is left alone: the name is
+     free text and the two number boxes stay editable, so a place the
+     gazetteer has never heard of works exactly as well as a listed one.
+     Coordinates already typed by hand are never overwritten by a later name
+     edit unless that name actually resolves. */
+  function fillCoordsFromGazetteer() {
+    var match = TimelinePlaces.lookup(els.evPlace.value);
+    if (!match) return;
+    els.evLat.value = match.lat;
+    els.evLon.value = match.lon;
+  }
+  els.evPlace.addEventListener('change', fillCoordsFromGazetteer);
+  els.evPlace.addEventListener('input', fillCoordsFromGazetteer); // a datalist pick fires input, not change, in some browsers
+
+  /** The form's place fields as an event `place`, or null. A name with no
+      usable coordinates is still kept (it shows on the timeline label and can
+      be finished later) — it just can't be pinned. */
+  function readPlaceFromForm() {
+    var name = els.evPlace.value.trim();
+    var lat = parseFloat(els.evLat.value);
+    var lon = parseFloat(els.evLon.value);
+    var hasLat = els.evLat.value.trim() !== '' && !isNaN(lat);
+    var hasLon = els.evLon.value.trim() !== '' && !isNaN(lon);
+    if (!name && !(hasLat && hasLon)) return null;
+    return {
+      name: name || (hasLat && hasLon ? lat.toFixed(2) + ', ' + lon.toFixed(2) : ''),
+      lat: hasLat ? lat : null,
+      lon: hasLon ? lon : null
+    };
+  }
+
+  /** Every event that can actually be drawn on a map, in chronological order —
+      the one definition of "placed", shared by the pin count, the print, and
+      the numbering, so those three can never disagree about which events
+      are on the map. */
+  function placedEvents() {
+    return state.events.slice()
+      .sort(function (a, b) { return a.yearStart - b.yearStart; })
+      .filter(function (e) { return TimelinePlaces.hasCoords(e.place); });
+  }
+
+  function populatePlaceOptions() {
+    var used = [];
+    state.events.forEach(function (e) {
+      var n = e.place && e.place.name;
+      if (n && used.indexOf(n) === -1 && !TimelinePlaces.lookup(n)) used.push(n);
+    });
+    els.placeOptions.innerHTML = used.concat(TimelinePlaces.names()).map(function (n) {
+      return '<option value="' + escapeHtml(n) + '">';
+    }).join('');
+  }
+
   els.saveEventBtn.addEventListener('click', function () {
     var title = els.evTitle.value.trim();
     var yearStart = parseFloat(els.evYearStart.value);
@@ -491,6 +685,7 @@
       yearStart: yearStart,
       yearEnd: (yearEnd != null && !isNaN(yearEnd)) ? yearEnd : null,
       category: els.evCategory.value.trim() || null,
+      place: readPlaceFromForm(),
       displayDate: els.evDisplayDate.value.trim() || null,
       description: els.evDescription.value.trim(),
       photo: pendingPhoto
@@ -616,9 +811,13 @@
       var thumb = ev.photo ? '<img class="thumb" src="' + ev.photo + '" alt="">' : '';
       var trackTag = state.tracks.length > 1 ? ' &middot; ' + escapeHtml(trackName(ev.track)) : '';
       var catTag = ev.category ? ' &middot; ' + escapeHtml(ev.category) : '';
+      // 📍 only when the place can actually be pinned, so the list doubles as
+      // the answer to "why is this one missing from my map?"
+      var placeTag = (ev.place && ev.place.name)
+        ? ' &middot; ' + (TimelinePlaces.hasCoords(ev.place) ? '📍' : '') + escapeHtml(ev.place.name) : '';
       row.innerHTML = thumb +
         '<div class="info"><div class="t">' + escapeHtml(ev.title) + '</div>' +
-        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + catTag + '</div></div>';
+        '<div class="d">' + escapeHtml(TimelineLayout.formatDateLabel(ev)) + trackTag + catTag + placeTag + '</div></div>';
       var btns = document.createElement('div');
       btns.className = 'btns';
       var editBtn = document.createElement('button');
@@ -693,6 +892,11 @@
       return;
     }
     var scaleMode = data.scaleMode === 'compressed' ? 'compressed' : 'linear';
+    // Optional, and absent everywhere except the map+timeline print: an
+    // {eventId: number} map that draws a numbered badge on each marker tying
+    // it to that event's pin. Defaults off, so the screen and compare views
+    // render exactly as they did before.
+    var pinNumbers = data.pinNumbers || null;
     var catColorMap = TimelineLayout.buildCategoryColorMap(data.events);
     var range = TimelineLayout.yearRangeOf(data.events.concat(data.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
@@ -779,6 +983,26 @@
         marker.style.left = p.x + 'px';
         if (catColor) { marker.style.background = catColor; marker.style.boxShadow = '0 0 0 1px ' + catColor; }
         lane.appendChild(marker);
+
+        // The badge that ties this marker to its map pin. Only drawn when the
+        // caller supplied a pinNumbers map (the map+timeline print does; the
+        // screen and compare views don't), so those views are byte-for-byte
+        // what they were.
+        if (pinNumbers && pinNumbers[p.event.id] != null) {
+          var badge = document.createElement('div');
+          badge.className = 'pin-num';
+          badge.style.left = p.x + 'px';
+          // Nudged to the same side of the line as its own label. Two events
+          // in the same year sit at the same x, so without this the later
+          // badge simply hides the earlier one; in compact mode their labels
+          // already alternate sides, and following that splits the badges
+          // apart too. The offset is small enough to stay clear of the label
+          // text above/below (which starts 1.2rem off the line).
+          badge.style.marginTop = (p.side === 'below' ? '.45rem' : '-.45rem');
+          if (catColor) badge.style.background = catColor;
+          badge.textContent = pinNumbers[p.event.id];
+          lane.appendChild(badge);
+        }
 
         var label = document.createElement('div');
         label.className = 'event-label ' + p.side;
@@ -894,11 +1118,18 @@
       var dateHtml = mode === 'blankDates' ? '<span class="fill-blank">&nbsp;</span>' : escapeHtml(TimelineLayout.formatDateLabel(ev));
       var titleHtml = mode === 'blankTitles' ? '<span class="fill-blank">&nbsp;</span>' : escapeHtml(ev.title);
       var descHtml = (mode === 'full' && ev.description) ? '<div class="pe-desc">' + escapeHtml(ev.description) + '</div>' : '';
+      // The place belongs on the printed list too, not only on the map page —
+      // this is the handout a student reads at their desk. It stays out of the
+      // fill-in-the-blank modes, where naming the place would give away the
+      // title or the date the student is meant to supply.
+      var placeHtml = (mode === 'full' && ev.place && ev.place.name)
+        ? '<div class="pe-place">📍 ' + escapeHtml(ev.place.name) + '</div>' : '';
       return '<div class="print-event ' + (state.lineStyle !== 'solid' ? state.lineStyle : '') + '" style="' + borderStyle + '">' +
         (mode === 'full' && ev.photo ? '<img src="' + ev.photo + '" alt="">' : '') +
         '<div><div class="pe-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + dateHtml +
         (showTrackTag ? '<span class="pe-track">' + escapeHtml(trackName(ev.track)) + '</span>' : '') + '</div>' +
         '<div class="pe-title">' + titleHtml + '</div>' +
+        placeHtml +
         descHtml +
         '</div></div>';
     }).join('');
@@ -951,17 +1182,21 @@
       shrink-wrap to the canvas's own explicit pixel width/height (a bare
       block div would instead stretch to fill the viewport, which is not
       what we want to measure). */
-  function buildTimelinePoster() {
+  function buildTimelinePoster(extra) {
     var canvas = document.createElement('div');
     canvas.className = 'timeline-canvas';
     var wrap = document.createElement('div');
     wrap.style.cssText = 'position:absolute; left:-99999px; top:0; display:inline-block; padding:3rem 1rem; background:#fff;';
     wrap.appendChild(canvas);
     document.body.appendChild(wrap);
-    renderTimelineCanvas(canvas, {
+    var data = {
       events: state.events, eras: state.eras, tracks: state.tracks,
       compactLabels: state.compactLabels, scaleMode: state.scaleMode
-    }, state.lineStyle, '');
+    };
+    // `extra` is how the map+timeline print adds pinNumbers/showPlaces without
+    // a second, drifting copy of this function.
+    if (extra) Object.keys(extra).forEach(function (k) { data[k] = extra[k]; });
+    renderTimelineCanvas(canvas, data, state.lineStyle, '');
     var rect = wrap.getBoundingClientRect();
     document.body.removeChild(wrap);
     return { el: wrap, width: rect.width, height: rect.height };
@@ -1057,9 +1292,9 @@
     }
   }
 
-  /** Landscape orientation for the tiled print only — removed again on
-      afterprint (below) so the plain single-page Print button isn't left
-      switched to landscape by a previous tiled print. Size left unspecified
+  /** Landscape orientation for the tiled and map+timeline prints only —
+      removed again on afterprint (below) so the plain single-page Print button
+      isn't left switched to landscape by a previous one. Size left unspecified
       (just "landscape") rather than hardcoded to Letter, so it also works on
       A4 printers. */
   function setTiledPrintPageSize() {
@@ -1073,12 +1308,214 @@
   }
 
   window.addEventListener('afterprint', function () {
-    if (!document.body.classList.contains('tiled-printing')) return;
+    var tiled = document.body.classList.contains('tiled-printing');
+    var mapped = document.body.classList.contains('map-printing');
+    if (!tiled && !mapped) return; // a plain Print needs no teardown
     document.body.classList.remove('tiled-printing');
+    document.body.classList.remove('map-printing');
     els.tiledPrintPages.innerHTML = '';
+    els.mapPrintPages.innerHTML = '';
     var styleEl = document.getElementById('tiledPageSizeStyle');
     if (styleEl) styleEl.remove();
   });
+
+  /* ---------- map + timeline print ----------
+     Every historical event has a where as well as a when, and the two are
+     normally taught from two separate pieces of paper. This is one landscape
+     page carrying both: the base map on top with a numbered pin at each placed
+     event, the spatial timeline along the bottom with the same numbers on its
+     markers, and a one-line key between them naming each pin's place.
+
+     The map itself is rendered by Tools/blank-map-generator/bmg-vector.js from
+     the Natural Earth data already vendored (and already precached) for that
+     tool — see Tools/timeline-builder/tlb-places.js for why that module is
+     called rather than reimplemented. Nothing is fetched from off the device.
+
+     The timeline strip is the same renderTimelineCanvas the on-screen view and
+     the tiled wall print use, scaled to fit, so the three can't drift apart. */
+  var MAP_PAGE_W_PX = 10 * CSS_PX_PER_IN;   // 10in usable width on a landscape sheet
+  var MAP_PAGE_H_PX = 7.5 * CSS_PX_PER_IN;  // 7.5in usable height
+  // Heights are budgeted against MAP_PAGE_H_PX with slack left over for the
+  // title, the place key (which may wrap to two lines when a timeline has a
+  // lot of separate places) and the category legend.
+  var MAP_BOX_W_PX = MAP_PAGE_W_PX;
+  var MAP_BOX_H_PX = 372;
+  var MAP_STRIP_H_PX = 218;
+  // Two events within PIN_CLUSTER_PX of each other are the same place and
+  // share one numbered badge; anything further apart keeps its own badge, and
+  // badges are then nudged to at least PIN_SPREAD_PX apart so they stay
+  // readable without moving the dots that mark the true locations.
+  var PIN_CLUSTER_PX = 6;
+  var PIN_SPREAD_PX = 22;
+
+  /** Chronological pin numbers, keyed by event id. Only placed events get one,
+      so the numbers a student reads on the map are 1..N with no gaps even when
+      unplaced events sit between them on the timeline. */
+  function buildPinNumbers(placed) {
+    var map = {};
+    placed.forEach(function (ev, i) { map[ev.id] = i + 1; });
+    return map;
+  }
+
+  function updateMapPinCount() {
+    if (!state) return;
+    var placed = placedEvents().length;
+    var total = state.events.length;
+    els.mapPinCount.textContent = placed === 0
+      ? 'No events have a place yet, so there is nothing to pin. Add a place to an event above first.'
+      : placed + ' of ' + total + ' event' + (total === 1 ? '' : 's') +
+        ' will be pinned on the map. ' +
+        (total - placed === 0 ? 'All of them have a place.'
+          : (total - placed) + ' without a place will stay on the timeline only.');
+  }
+
+  async function printMapTimeline() {
+    if (!state) return;
+    var placed = placedEvents();
+    if (!placed.length) {
+      alert('None of these events has a place yet. Add a place (and its coordinates) to at least one event, then print.');
+      return;
+    }
+    var btn = els.btnMapPrintGo;
+    var origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Drawing the map…';
+    try {
+      var points = placed.map(function (e) { return e.place; });
+      var aspect = MAP_BOX_W_PX / MAP_BOX_H_PX;
+      var bounds = els.mapExtent.value === 'world'
+        ? TimelinePlaces.worldBounds(aspect)
+        : TimelinePlaces.fitBounds(points, aspect);
+      var dataset = TimelinePlaces.chooseDataset(points, bounds);
+      var mapUrl = await TimelinePlaces.renderMapImage(bounds, {
+        style: els.mapStyle.value, dataset: dataset,
+        outWidth: MAP_BOX_W_PX * 2, outHeight: MAP_BOX_H_PX * 2
+      });
+
+      var pinNumbers = buildPinNumbers(placed);
+      var pins = placed.map(function (ev) {
+        var pct = TimelinePlaces.projectPct(bounds, ev.place.lat, ev.place.lon);
+        return {
+          number: pinNumbers[ev.id],
+          placeName: ev.place.name || '',
+          xPx: pct.x / 100 * MAP_BOX_W_PX,
+          yPx: pct.y / 100 * MAP_BOX_H_PX
+        };
+      });
+      var clusters = TimelinePlaces.spreadPins(
+        TimelinePlaces.clusterPins(pins, PIN_CLUSTER_PX),
+        PIN_SPREAD_PX, MAP_BOX_W_PX, MAP_BOX_H_PX);
+
+      var page = document.createElement('div');
+      page.className = 'mapPage';
+      page.style.width = MAP_PAGE_W_PX + 'px';
+      page.style.height = MAP_PAGE_H_PX + 'px';
+
+      var heading = document.createElement('h2');
+      heading.textContent = state.title || state.name;
+      page.appendChild(heading);
+
+      var box = document.createElement('div');
+      box.className = 'mapBox';
+      box.style.width = MAP_BOX_W_PX + 'px';
+      box.style.height = MAP_BOX_H_PX + 'px';
+      var img = document.createElement('img');
+      img.src = mapUrl;
+      img.alt = '';
+      box.appendChild(img);
+      clusters.forEach(function (c) {
+        // The dot is the truth (exactly where the event happened); the badge
+        // may have been nudged a few pixels so its number stays readable next
+        // to a neighbour's.
+        var dot = document.createElement('div');
+        dot.className = 'mapDot';
+        dot.style.left = c.xPx + 'px';
+        dot.style.top = c.yPx + 'px';
+        box.appendChild(dot);
+
+        var pin = document.createElement('div');
+        pin.className = 'mapPin';
+        pin.style.left = c.labelX + 'px';
+        pin.style.top = c.labelY + 'px';
+        pin.textContent = c.numbers.join(',');
+        box.appendChild(pin);
+      });
+      page.appendChild(box);
+
+      // The key, not labels on the map: place names written next to pins
+      // overlap the moment two events happen near each other, and a
+      // de-overlapping pass is a much bigger thing than one legible line of
+      // text underneath.
+      var key = document.createElement('div');
+      key.className = 'mapKey';
+      // Joined with a space, not with nothing: each item is white-space:nowrap,
+      // so without a break opportunity *between* items the whole key becomes
+      // one unbreakable line and the last few places run off the paper.
+      key.innerHTML = clusters.map(function (c) {
+        return '<span class="mapKeyItem"><span class="mapKeyNum">' + escapeHtml(c.numbers.join(',')) + '</span> ' +
+          escapeHtml(c.places.join(' / ')) + '</span>';
+      }).join(' ');
+      page.appendChild(key);
+
+      var strip = document.createElement('div');
+      strip.className = 'mapStrip';
+      strip.style.width = MAP_BOX_W_PX + 'px';
+      strip.style.height = MAP_STRIP_H_PX + 'px';
+      var poster = buildTimelinePoster({ pinNumbers: pinNumbers });
+      if (poster.width && poster.height) {
+        // Uniform scale, exactly like the tiled print: never stretched on one
+        // axis, and centred in whichever direction has room left over.
+        var scale = Math.min(MAP_BOX_W_PX / poster.width, MAP_STRIP_H_PX / poster.height);
+        var inner = poster.el.cloneNode(true);
+        inner.style.position = 'absolute';
+        inner.style.left = ((MAP_BOX_W_PX - poster.width * scale) / 2) + 'px';
+        inner.style.top = ((MAP_STRIP_H_PX - poster.height * scale) / 2) + 'px';
+        inner.style.transformOrigin = '0 0';
+        inner.style.transform = 'scale(' + scale + ')';
+        inner.style.width = poster.width + 'px';
+        inner.style.height = poster.height + 'px';
+        strip.appendChild(inner);
+      }
+      page.appendChild(strip);
+
+      var legend = legendHtml(state.events);
+      if (legend) {
+        var legendRow = document.createElement('div');
+        legendRow.className = 'legend-row';
+        legendRow.innerHTML = legend;
+        page.appendChild(legendRow);
+      }
+
+      var container = els.mapPrintPages;
+      container.innerHTML = '';
+      container.appendChild(page);
+
+      // Same reason as every other print path here: wait for the map image
+      // (a fresh data URL) and any event photos, so nothing prints blank.
+      await Promise.all([].slice.call(container.querySelectorAll('img')).map(function (im) {
+        return im.complete ? Promise.resolve() : new Promise(function (resolve) {
+          im.onload = resolve; im.onerror = resolve;
+        });
+      }));
+
+      setTiledPrintPageSize(); // landscape, shared with the tiled print
+      els.mapPrintPanel.hidden = true;
+      document.body.classList.add('map-printing');
+      window.print();
+    } catch (err) {
+      alert("Couldn't build the map + timeline page (" + err.message + "). The map data may not have loaded yet — try again in a moment.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+    }
+  }
+
+  els.mapPrintToggleBtn.addEventListener('click', function () {
+    els.mapPrintPanel.hidden = !els.mapPrintPanel.hidden;
+    if (!els.mapPrintPanel.hidden) updateMapPinCount();
+  });
+  els.btnMapPrintClose.addEventListener('click', function () { els.mapPrintPanel.hidden = true; });
+  els.btnMapPrintGo.addEventListener('click', function () { printMapTimeline(); });
 
   els.tiledPrintToggleBtn.addEventListener('click', function () {
     els.tiledPrintPanel.hidden = !els.tiledPrintPanel.hidden;
@@ -1102,10 +1539,12 @@
     renderTrackList();
     updateEvTrackOptions();
     populateCategoryOptions();
+    populatePlaceOptions();
     renderEventList();
     renderEraList();
     renderScreenTimeline();
     renderPrintPreview();
+    updateMapPinCount();
     populateCompareSelect();
     renderCompareView();
   }
@@ -1253,6 +1692,170 @@
     reader.readAsText(file);
   });
 
+  /** Adopts a whole timeline object as the current one, under a name that
+      can't collide with anything already saved, and re-seeds the id counters
+      so the next event/era added doesn't reuse an id. Shared by the built-in
+      example and the shared-link import, both of which arrive as a complete
+      timeline from outside the editor. */
+  function installTimeline(st) {
+    var name = uniqueTimelineName(st.name);
+    st.name = name;
+    st.compareWith = null; // whatever the sender was comparing against isn't here
+    if (!Array.isArray(st.eras)) st.eras = [];
+    if (st.scaleMode !== 'compressed') st.scaleMode = 'linear';
+    state = st;
+    var maxId = 0;
+    state.events.forEach(function (ev) { if (typeof ev.id === 'number' && ev.id > maxId) maxId = ev.id; });
+    idCounter = Math.max(idCounter, maxId + 1);
+    var maxEraId = 0;
+    state.eras.forEach(function (era) { if (typeof era.id === 'number' && era.id > maxEraId) maxEraId = era.id; });
+    eraIdCounter = Math.max(eraIdCounter, maxEraId + 1);
+    ensureTracks(state);
+    TimelineStore.setCurrentName(name);
+    resetForm();
+    resetEraForm();
+    renderAll();
+    return name;
+  }
+
+  /** True when the current timeline holds work a teacher would be upset to
+      lose. A brand-new empty one doesn't, so the common case (open the tool,
+      click Load example) asks nothing. */
+  function hasUnsavedLookingWork() {
+    return !!state && (state.events.length > 0 || state.eras.length > 0);
+  }
+
+  els.loadExampleBtn.addEventListener('click', function () {
+    if (hasUnsavedLookingWork() &&
+        !confirm('Open the built-in American Revolution example?\n\n"' + state.name +
+          '" stays saved and you can switch back to it from the Timeline menu.')) return;
+    var name = installTimeline(TimelineExample.build());
+    setActiveView('screen');
+    setShareNote('Opened the example timeline as “' + name + '”. Ten of its eleven events have a place, ' +
+      'so try “Map + timeline print” to see the map and the timeline on one page.');
+  });
+
+  /* ---------- share by link / QR (state-link.js, same pattern as 028) ---------- */
+  var SHARE_PARAM = 'timeline';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /* Event photos are base64'd into the saved timeline and run to hundreds of
+     kilobytes each — far past what a URL, let alone a QR code, can carry. The
+     link deliberately travels without them; everything else, including each
+     event's place, travels intact. */
+  function buildSharePayload() {
+    if (!state) return null;
+    save();
+    var payload = { v: 1 };
+    Object.keys(state).forEach(function (k) {
+      if (k === 'events') {
+        payload.events = state.events.map(function (ev) {
+          var copy = {};
+          Object.keys(ev).forEach(function (f) { if (f !== 'photo') copy[f] = ev[f]; });
+          return copy;
+        });
+      } else if (k !== 'compareWith') {
+        payload[k] = state[k];
+      }
+    });
+    return payload;
+  }
+
+  function shareUrl() {
+    var payload = buildSharePayload();
+    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
+  }
+
+  function countPhotos() {
+    return state ? state.events.filter(function (ev) { return !!ev.photo; }).length : 0;
+  }
+
+  function shareSuccessMessage() {
+    var msg = 'Link copied. Opening it anywhere loads this timeline — events, dates, places, eras and categories — and saves it there as a copy.';
+    var photos = countPhotos();
+    if (photos) {
+      msg += ' The ' + photos + ' event photo' + (photos === 1 ? '' : 's') +
+        ' stay on this device: pictures are too large to ride in a link. Use Export JSON to send everything as a file.';
+    }
+    return msg;
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Nothing to share yet.', true); return; }
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote(shareSuccessMessage()); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Nothing to share yet.', true); return; }
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR code holds far less than a URL bar does. A timeline with long
+      // descriptions runs past it — say so rather than drawing a square
+      // nobody's phone can read.
+      setShareNote('This timeline is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote(countPhotos()
+      ? 'Heads up: event photos stay on this device — they are too large to ride in the QR code. The rest of the timeline travels intact.'
+      : '');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  /** Consume a ?timeline= link on load. Always saves the arrival as a NEW
+      uniquely-named timeline — a link a colleague sent can never silently
+      replace whatever was open here. Returns true if it imported. */
+  function importSharedTimeline() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
+    var decoded = StateLink.decodeState(raw);
+    if (!looksLikeTimeline(decoded)) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
+      return false;
+    }
+    delete decoded.v;
+    decoded.events.forEach(function (ev) { ev.photo = null; }); // photos never ride the link
+    var name = installTimeline(decoded);
+    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s. ' +
+      'Any photos the sender attached stayed on their device.');
+    return true;
+  }
+
   function setActiveView(name) {
     els.viewScreenBtn.classList.toggle('active', name === 'screen');
     els.viewPrintBtn.classList.toggle('active', name === 'print');
@@ -1276,13 +1879,16 @@
     window.print();
   });
 
-  /* ---------- boot ---------- */
+  /* ---------- boot ----------
+     A shared link wins over whatever was last open, but only by *adding* a
+     new timeline — the previous one stays saved and one menu click away. */
   var current = TimelineStore.getCurrentName();
   if (current && TimelineStore.loadTimeline(current)) {
     loadTimelineByName(current);
   } else {
     newTimeline('New Timeline');
   }
+  importSharedTimeline();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
