@@ -1,13 +1,80 @@
 # Improvement Prompts — 062 — Geography Bee / Map Skills Quiz Generator
 
-**Tool file:** `Tools/062-geography-bee-quiz-generator.html`
-**Support folder:** none yet — everything is inline in the one file.
+**Tool file:** `Tools/062-geography-bee-quiz-generator.html` (everything still
+inline in the one file — no support folder for the tool itself).
+**Test folder:** `Tools/geography-bee-quiz-generator/test/` (test-only,
+added 2026-08-14; the tool's own code has no separate module files).
 
-**Current description (from README):** A 30-question built-in bank across capitals, landmarks, and map-reading skills, filterable by category, projected one at a time or printed as a quiz with an answer key.
+**Current description (from README):** A 90-question built-in bank across capitals, landmarks, and map-reading skills, filterable by category, projected one at a time or printed as a quiz with an answer key &mdash; short answer or multiple choice, with auto-generated same-category distractors and a seeded, reprintable quiz version.
 
 ---
 
 ## Status
+
+**2026-08-14 — SS demo round: multiple-choice quiz mode shipped (backlog
+rank 29), session `mee9kj`.** The headline feature from
+`prompts/social-studies-demo/062-geography-bee-mc.md`, done in full:
+
+- A quiz-format setting (**Short answer** / **Multiple choice**) next to the
+  category filter, persisted in `gbq_settings_v1` and applied immediately on
+  change — no separate "apply" step, unlike the category filter.
+- For each question, 3 distractors are sampled from OTHER questions'
+  answers in the *same category*, drawn only from `filteredQuestions()` —
+  i.e. whatever the teacher can currently see (hidden built-ins excluded,
+  active category filter honored). Case-insensitive dedupe, never repeats
+  the correct answer, shuffled option order. When a category has fewer than
+  1 usable distractor left (checked live, not assumed), the question falls
+  back to short answer rather than crashing or padding with a wrong-category
+  answer — verified with a bank artificially thinned down to one visible
+  question.
+- Projector display: A&ndash;D options render under the question as soon as
+  it's shown (this is a multiple-choice quiz, so the choices aren't a
+  secret); Reveal highlights the correct option in green and adds a
+  "Correct answer: B) Tokyo"-style line for anyone too far back to see the
+  highlight. Prev/Next/Shuffle all still work as before and regenerate a
+  fresh option set (Math.random-seeded — no reproducibility requirement on
+  the live display, only on the printed paper below).
+- Printed quiz: lettered options print under each question; the key states
+  the letter and the answer text ("3. B &mdash; Tokyo"), and is guaranteed
+  to match what's on the paper because both are built from one pass over a
+  single seeded rng stream (recomputing distractors a second time for the
+  key, from a fresh rng call, would silently desync the two — the
+  implementation computes each question's options exactly once and reuses
+  them for both the problem and the key).
+- **Determinism**: a small mulberry32 PRNG (copied from the Blank Map
+  Generator's worksheet-versions pattern, the repo's existing precedent for
+  this) is seeded from a teacher-facing "Quiz version" number. Same version
+  + same filter/count/bank state always regenerates the identical paper —
+  useful for reprinting a lost copy or handing two class periods the same
+  quiz. A "New version" button bumps the number and rebuilds for a fresh mix.
+- **Built-in bank grown from 30 to 90** (scope-coupled to the headline per
+  the prompt file — distractor quality depends on pool size): 30 per
+  category, kept balanced, `bi30`&ndash;`bi89` appended after the untouched
+  original `bi0`&ndash;`bi29`. The additions deliberately pull in more of
+  Europe/Southeast Asia/the Middle East/South America than the original set
+  had, without tipping the whole bank US/Europe-only (capitals: Germany,
+  Spain, India, Indonesia, Nigeria, Argentina, Turkey, Thailand, Vietnam,
+  the Philippines, and more; landmarks: Petra, Angkor Wat, Ha Long Bay,
+  Victoria Falls, the Gobi Desert, Iguazu Falls, Table Mountain, and more;
+  map skills: cardinal/intermediate directions, absolute vs. relative
+  location, physical/political/topographic map types, the Tropics,
+  International Date Line, parallels/meridians, and more). Every answer was
+  checked against known geography, not generated and trusted.
+- New smoke test `Tools/geography-bee-quiz-generator/test/smoke-multiple-choice.mjs`
+  (`npm run test:geo-bee`, appended to the end of the root `test` chain) —
+  29 checks covering distractor uniqueness/same-category sourcing (via a
+  new test-only `window.__gbqTestHooks` following this repo's existing
+  `window.__` convention), hidden-built-in exclusion from both rotation and
+  MC pools, same-seed-same-quiz, key-matches-paper, the thin-pool fallback,
+  format persistence across reload, and bank balance (30/30/30). Verified
+  headless: zero console errors, zero offsite requests.
+
+Cut from this round: nothing — the full headline plus every listed
+Supporting item shipped. **Where the next round should pick up:** the Blank
+Map Generator integration is still the single highest-value Major Feature
+and the Open Questions below are still genuinely open — this round
+deliberately didn't guess at an answer, per its own scope file's Non-goals.
+A timed bee mode and region/continent tagging also remain unbuilt.
 
 **2026-08-12 — Backlog round: bulk import a custom bank shipped (backlog
 rank, then #5).** Identical shape to the same-day feature in
@@ -79,11 +146,17 @@ link) before implementation.
 
 ## What it does today
 
-- 30 built-in questions, 3 categories (Capitals, Landmarks, Map Skills)
+- 90 built-in questions, 3 categories (Capitals, Landmarks, Map Skills),
+  30 each, world-balanced
 - Category filter applies across all three views, and persists across
   page loads along with the printable-quiz question count
-- Projector mode: shuffle, reveal
-- Print: randomized quiz subset + matching answer key
+- **Quiz format**: Short answer or Multiple choice, persisted, applied to
+  both the projector display and the printed quiz
+- Projector mode: shuffle, reveal (in MC mode, reveal highlights the
+  correct A&ndash;D option and states it in text)
+- Print: randomized quiz subset + matching answer key, either short-answer
+  blanks or lettered MC options with a letter+text key; a "Quiz version"
+  number reseeds the same reproducible paper on demand
 - Custom question bank layered on the built-ins; individual built-ins can
   be hidden/shown without deleting them
 - **Bulk import** (tab/pipe lines, optional tolerant category token) that
@@ -91,20 +164,17 @@ link) before implementation.
 
 ## Quick Wins
 
-- **More built-in questions per category** — 10 each is a reasonable
-  starting bank but will repeat noticeably with daily use; doubling or
-  tripling is pure content work with no architecture changes, matching the
-  same gap flagged on other bank-based generators in this round.
-- **Multiple-choice mode** as an alternate display format (auto-generate
-  3 wrong options from other entries in the same category) — a geography
-  bee traditionally uses fill-in-the-blank/short-answer, but multiple
-  choice would make this usable as a quick formative check too.
-- **Settings persistence** — category filter and quiz question count both
-  reset on every page load, unlike most sibling generators in this
-  toolkit.
-- **Hide/disable individual built-ins**, matching the same gap flagged on
-  Daily Editing / DOL Warm-Up Generator and Math "Find the Mistake"
-  Warm-Up Generator's built-in banks.
+- ~~**More built-in questions per category**~~ — **done, 2026-08-14** (SS
+  demo round; grown 30 &rarr; 90, see Status).
+- ~~**Multiple-choice mode**~~ — **done, 2026-08-14** (SS demo round,
+  headline feature; see Status).
+- ~~**Settings persistence**~~ — **done, 2026-08-11** (Round 2; see
+  Status).
+- ~~**Hide/disable individual built-ins**~~ — **done, 2026-08-11** (Round
+  2; see Status).
+
+No Quick Wins remain open as of this round. A future round should look to
+Major Features below, or find a genuinely new gap.
 
 ## Major Features
 
@@ -112,7 +182,7 @@ link) before implementation.
   explicitly names as this tool's companion — e.g. a landmark or capital
   question could link to (or auto-open) the relevant location on a Blank
   Map Generator map, turning a text quiz into a map-and-quiz combined
-  activity.
+  activity. Still unbuilt; still blocked on the Open Question below.
 - **A timed "bee" mode**: sudden-death elimination format with a visible
   countdown per question, matching how an actual geography bee competition
   runs (as opposed to the current self-paced practice format).
@@ -121,6 +191,8 @@ link) before implementation.
   region's capitals and landmarks instead of the whole world.
 - ~~**Bulk import a custom bank** from a pasted list~~ — **done,
   2026-08-12** (backlog round; see Status).
+- ~~**Multiple-choice quiz mode**~~ — **done, 2026-08-14** (SS demo round;
+  see Status).
 
 ## Moonshot / North Star
 
