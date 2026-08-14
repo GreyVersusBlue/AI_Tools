@@ -178,10 +178,10 @@ export async function loadDividedGeoJson(preset) {
 const TARGET_LONG_SIDE = 4000;
 
 /** Pixel dimensions for a bounds rectangle: plate carrée means one degree of latitude and one of longitude occupy the same number of pixels, so the raster is simply the degree-extent scaled up. */
-export function pixelSizeFor(bounds) {
+export function pixelSizeFor(bounds, longSide = TARGET_LONG_SIDE) {
   const lonSpan = Math.abs(bounds.east - bounds.west);
   const latSpan = Math.abs(bounds.north - bounds.south);
-  const scale = TARGET_LONG_SIDE / Math.max(lonSpan, latSpan);
+  const scale = longSide / Math.max(lonSpan, latSpan);
   return {
     width: Math.max(2, Math.round(lonSpan * scale)),
     height: Math.max(2, Math.round(latSpan * scale)),
@@ -316,10 +316,14 @@ function paintChoropleth(ctx, geojson, bounds, width, height, fills) {
  * that describes it — which is not derived or guessed, it *is* the bounds
  * the drawing used.
  */
-export async function renderBaseMapCanvas(preset, { style = 'outline', borders = true, fills = null } = {}) {
+export async function renderBaseMapCanvas(preset, { style = 'outline', borders = true, fills = null, longSide = TARGET_LONG_SIDE } = {}) {
   const paint = STYLE_PAINT[style] || STYLE_PAINT.outline;
   const bounds = preset.bounds;
-  const { width, height } = pixelSizeFor(bounds);
+  // `longSide` exists for the time-slice series, which draws several maps as
+  // small panels on one sheet: rendering each of those at the full 4000 px
+  // and then throwing nine tenths of it away in the downscale is slow for no
+  // gain. Everything else takes the default and is unaffected.
+  const { width, height } = pixelSizeFor(bounds, longSide);
   const files = DATASETS[preset.dataset];
   if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
   const shading = fills && Object.keys(fills).length ? fills : null;

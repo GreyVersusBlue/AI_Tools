@@ -24,7 +24,10 @@ import { serve, launch, prepPage, settle } from '../../board-check/harness.mjs';
 import {
   parseDataRows, matchRegions, buildChoropleth, quantileBreaks,
   rampLuminances, RAMPS, RAMP_LUMINANCE_STEP, EXAMPLE_US_POPULATION,
+  parseDataTable, buildSeries, EXAMPLE_TIME_SLICES, relativeLuminance,
 } from '../bmg-choropleth.js';
+
+const relLum = relativeLuminance;
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 8171;
@@ -114,6 +117,52 @@ const again = buildChoropleth({ text: EXAMPLE_US_POPULATION, regionNames: US_NAM
 eq(again.key, example.key, 'the same data and settings hash to the same cache key');
 const fewer = buildChoropleth({ text: EXAMPLE_US_POPULATION, regionNames: US_NAMES, classes: 4 });
 ok(fewer.key !== example.key, 'changing the band count changes the key, so the two renders cannot share a cache record');
+
+/* ══ part 1b: time slices — several value columns, one set of bands ══════ */
+
+/* ── the header row is found even when it is made of years ─────────────── */
+const table = parseDataTable(EXAMPLE_TIME_SLICES);
+eq(table.slices.join(), '1790,1850,1900', 'a header of four-digit years is read as column names, not as the first row of data');
+eq(table.rows.length, 13, 'and all thirteen data rows survive it');
+eq(table.rows[0].values.length, 3, 'each row carries one value per column');
+eq(parseDataTable('State, Population\nMaryland, 6200000').slices.join(), 'Population',
+   'a classic word header still works');
+eq(parseDataTable('Virginia, 747000, 1119000\nMaryland, 320000, 583000').headerSkipped, null,
+   'and a six-digit data row is never mistaken for a header, so no row is eaten');
+
+/* ── an unambiguous delimiter takes precedence over commas ─────────────── */
+const tabbed = parseDataTable('State\t1900\t2000\nMaryland\t1,188,044\t5,296,486');
+eq(tabbed.delimiter, '\t', 'a tab in the paste is used as the column separator');
+eq(tabbed.rows[0].values.join(), '1188044,5296486',
+   'so thousands separators inside the numbers are no problem at all — the spreadsheet paste case');
+eq(parseDataTable('Country\t1900\t2000\nCongo, Dem. Rep.\t100\t200').rows[0].name, 'Congo, Dem. Rep.',
+   'and a name containing a comma survives, same as it does in the single-column parser');
+
+/* ── the one genuinely ambiguous case is reported, not guessed at ──────── */
+const ambiguous = parseDataTable('State, 1790, 1850\nRhode Island, 69,000, 148,000');
+eq(ambiguous.rows.length, 0, 'a comma-separated row whose numbers also use commas is not read');
+eq(ambiguous.ambiguous.length, 1, 'it is reported as ambiguous instead of being turned into a number that appears nowhere in the data');
+
+/* ── the bands are shared across the slices, which is the whole point ──── */
+const series = buildSeries({ text: EXAMPLE_TIME_SLICES, regionNames: US_NAMES, classes: 5 });
+eq(series.ok, true, 'the example time series builds');
+eq(series.sliceCount, 3, 'three slices');
+eq(series.matchedCount, 13, 'the original thirteen states all match the US map');
+eq(series.legendRows.length, 5, 'and there is exactly one key, not one per map');
+const nyEarly = series.slices[0].fills['New York'];
+const nyLate = series.slices[2].fills['New York'];
+ok(nyEarly !== nyLate, "New York changes colour between 1790 and 1900, because the bands don't move under it");
+ok(relLum(nyLate) < relLum(nyEarly), `and it gets darker as it grows (${nyEarly} then ${nyLate})`);
+const vaEarly = series.slices[0].fills['Virginia'];
+ok(relLum(vaEarly) < relLum(nyEarly),
+   'in 1790 Virginia is darker than New York, which is the map making the historically correct point');
+ok(series.breaks.length === 5 && series.breaks.every((b, i) => i === 0 || b > series.breaks[i - 1]),
+   'the shared bands ascend across every value in every column: ' + JSON.stringify(series.breaks));
+eq(new Set(series.slices.map(s => s.key)).size, 3, 'each slice hashes to its own cache key, so no two share a raster');
+
+/* ── single-column data is not a series, and says so ───────────────────── */
+eq(buildSeries({ text: EXAMPLE_US_POPULATION, regionNames: US_NAMES, classes: 5 }).ok, false,
+   'one value column is a single map, not a series — the series controls stay out of the way');
 
 /* ══ part 2: the tool itself ═════════════════════════════════════════════ */
 
@@ -289,6 +338,46 @@ const reloadedLegend = await page.evaluate(() =>
 eq(reloadedLegend, 4, 'and renders them without re-reading the map data');
 const caReloaded = await samplePixel(...CALIFORNIA, USA48);
 ok(caReloaded.lum < 160, `the reloaded map is still shaded (California luminance ${caReloaded.lum.toFixed(0)})`);
+
+/* ── the time-slice series, end to end ─────────────────────────────────── */
+// An alert() is how every export path in this tool reports failure, so a
+// captured dialog is the failure signal here rather than something to
+// dismiss and move on from.
+const dialogs = [];
+page.on('dialog', d => { dialogs.push(d.message()); d.dismiss().catch(() => {}); });
+
+// The reload above closed the panel, as a reload should.
+await page.click('#btnChoroToggle');
+await settle(page, 700);
+eq(await page.isVisible('#choroSeriesControls'), false,
+   'with one value column pasted, the series controls stay hidden');
+
+await page.click('#btnChoroSeriesExample');
+await settle(page, 900);
+eq(await page.isVisible('#choroSeriesControls'), true, 'loading a time series reveals "Print the series"');
+const seriesReport = await page.textContent('#choroReport');
+ok(/3 number columns found \(1790, 1850, 1900\)/.test(seriesReport),
+   'and the panel names the columns it found: ' + JSON.stringify(seriesReport));
+ok(/last column, 1900/.test(seriesReport),
+   'and says which column "Shade the map" would use, so the single map is not a mystery');
+
+// Building the PDF exercises the whole series composition — three base-map
+// renders, the grid plan and the shared key — which is the part with real
+// room to go wrong.
+await page.click('#btnSeriesPdf');
+await page.waitForFunction(() => !document.getElementById('btnSeriesPdf').disabled, null, { timeout: 120000 });
+await settle(page, 400);
+eq(dialogs.length, 0, 'the three-map series sheet builds without an error: ' + JSON.stringify(dialogs));
+
+// And "Shade the map" on multi-column data shades from the last column
+// rather than reading the whole row as one enormous number.
+await page.click('#btnChoroApply');
+await waitForMapId('choro');
+await settle(page, 900);
+const nyPixel = await samplePixel(42.9, -75.5, USA48); // upstate New York
+const dePixel = await samplePixel(39.0, -75.5, USA48); // Delaware
+ok(nyPixel.lum < dePixel.lum - 15,
+   `shading from the 1900 column puts New York (7.3M) darker than Delaware (0.19M): ${nyPixel.lum.toFixed(0)} vs ${dePixel.lum.toFixed(0)}`);
 
 /* ── nothing left the browser, nothing broke ───────────────────────────── */
 eq(page.__blocked.length, offsiteBefore,

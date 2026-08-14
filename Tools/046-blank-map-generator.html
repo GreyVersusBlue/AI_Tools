@@ -58,6 +58,10 @@
     border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--ink); resize: vertical;
   }
   .choroControls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  /* Same trap as .viewerToolbar and .lineArrowLabel below: a bare
+     `display: flex` outranks the browser's own [hidden] rule, so the series
+     row has to be told to disappear explicitly. */
+  .choroControls[hidden] { display: none; }
   .choroControls select { min-width: 88px; }
   #choroReport.err { color: var(--err); font-weight: 600; }
   #choroReport.ok { color: var(--ok); }
@@ -449,14 +453,19 @@
       </div>
       <p class="hint" id="baseMapHint">Drawn here on your own machine from map data that ships with this tool &mdash; no internet, no searching, and the map arrives already calibrated, so the lat/long grid, scale bar, distance tool and label sets all work straight away.</p>
       <div id="choroPanel" class="choroPanel" hidden>
-        <p class="hint" style="margin:0 0 7px;">Paste one place and one number per line, straight out of a spreadsheet. Places with bigger numbers come out darker, and the key writes itself. Works on the built-in base maps above.</p>
+        <p class="hint" style="margin:0 0 7px;">Paste one place and one number per line, straight out of a spreadsheet. Places with bigger numbers come out darker, and the key writes itself. Works on the built-in base maps above. Paste <strong>several number columns</strong> with a header row naming them (<code>State, 1790, 1850, 1900</code>) and you can print the whole series as one sheet of small maps.</p>
         <textarea id="choroInput" class="choroInput" rows="6" spellcheck="false" data-no-pan placeholder="Maryland, 6200000&#10;Virginia, 8700000&#10;Delaware, 1000000"></textarea>
         <div class="choroControls">
           <button id="btnChoroExample" class="small">Load example data</button>
+          <button id="btnChoroSeriesExample" class="small">Load a time series</button>
           <label class="baseMapCheck">Bands <select id="choroClassSelect" class="styleSelect" data-no-pan></select></label>
           <label class="baseMapCheck">Shades <select id="choroRampSelect" class="styleSelect" data-no-pan></select></label>
           <button id="btnChoroApply" class="small primary">Shade the map</button>
           <button id="btnChoroClear" class="small">Remove shading</button>
+        </div>
+        <div class="choroControls" id="choroSeriesControls" hidden>
+          <button id="btnSeriesPrint" class="small primary" title="Prints one small map per number column on a single sheet, all sharing one key, so the maps can be compared">Print the series</button>
+          <button id="btnSeriesPdf" class="small primary" title="Same sheet of small maps, saved as a PDF">Save the series as PDF</button>
         </div>
         <p class="hint" id="choroReport" style="margin:7px 0 0;"></p>
       </div>
@@ -784,7 +793,8 @@ import {
 import { BUILT_IN_LABEL_SETS, findBuiltInSet, isValidPlaceList } from './blank-map-generator/bmg-label-sets.js';
 import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey, regionGroupCaption } from './blank-map-generator/bmg-legend.js';
 import {
-  buildChoropleth, choroSwatchSvg, RAMPS, MIN_CLASSES, MAX_CLASSES, EXAMPLE_US_POPULATION,
+  buildChoropleth, buildSeries, choroSwatchSvg, RAMPS, MIN_CLASSES, MAX_CLASSES,
+  EXAMPLE_US_POPULATION, EXAMPLE_TIME_SLICES, MAX_SLICES,
 } from './blank-map-generator/bmg-choropleth.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
@@ -792,6 +802,7 @@ import * as cache from './blank-map-generator/bmg-map-cache.js';
 import {
   BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord,
   listRegionNames, sameBaseMap, presetFromBaseMapId, loadDividedGeoJson,
+  renderBaseMapCanvas, NATURAL_EARTH_ATTRIBUTION,
 } from './blank-map-generator/bmg-vector.js';
 import { buildRegionIndex, hitTestRegion, compactRings, largestRing } from './blank-map-generator/bmg-hittest.js';
 
@@ -2385,6 +2396,25 @@ async function buildActiveChoropleth(preset, { force = false } = {}) {
   const c = project.choropleth;
   if (!c || (!force && !c.enabled) || !c.text.trim()) return null;
   const regionNames = await listRegionNames(preset);
+  // A table with several value columns still has to be able to shade the one
+  // map on screen. It shades from the *last* column — the most recent slice,
+  // which is what a teacher means by "the map" when their data runs
+  // 1790/1850/1900 — and the report names which column that was. Handing
+  // multi-column text to the single-column parser instead would read
+  // "747000, 1119000, 1854000" as one enormous number and shade a state with
+  // a figure that appears nowhere in the data.
+  const series = buildSeries({ text: c.text, regionNames, classes: c.classes, ramp: c.ramp });
+  if (series.ok) {
+    const last = series.slices[series.slices.length - 1];
+    return {
+      ok: true, classes: series.legendRows.length, ramp: c.ramp,
+      rowCount: series.rowCount, headerSkipped: series.headerSkipped,
+      unreadable: series.unreadable, unmatched: series.unmatched,
+      matchedCount: series.matchedCount, breaks: series.breaks,
+      fills: last.fills, legendRows: series.legendRows, format: series.format,
+      key: last.key, fromSlice: last.label,
+    };
+  }
   return buildChoropleth({ text: c.text, regionNames, classes: c.classes, ramp: c.ramp });
 }
 
@@ -2394,14 +2424,38 @@ async function buildActiveChoropleth(preset, { force = false } = {}) {
  * didn't match is printed in full, because a silently-dropped row is a state
  * missing from a map a class is about to look at.
  */
-function renderChoroReport(result) {
+function renderChoroReport(result, series) {
   const out = el('choroReport');
   out.classList.remove('err', 'ok');
+  // A table with more than one number column is a series of maps, not one
+  // map, and the panel says so as soon as it can see one — before anything is
+  // drawn, so a teacher isn't left to guess whether the extra columns landed.
+  const seriesReady = !!(series && series.ok);
+  el('choroSeriesControls').hidden = !seriesReady;
   if (!project.choropleth.text.trim()) {
     out.textContent = 'Paste your data above, or load the example, then choose "Shade the map".';
     return;
   }
   if (!result) { out.textContent = ''; return; }
+  if (seriesReady) {
+    const parts = [
+      `${series.sliceCount} number columns found (${series.sliceLabels.join(', ')}), covering `
+      + `${series.matchedCount} place${series.matchedCount === 1 ? '' : 's'} on this map.`,
+      '"Print the series" puts one map per column on a single sheet, all sharing one key so they can be compared.',
+      `"Shade the map" shades the one map on screen from the last column, ${series.sliceLabels[series.sliceLabels.length - 1]}.`,
+    ];
+    if (series.dropped) parts.push(`Only the first ${MAX_SLICES} columns will print — past that the maps are too small to read.`);
+    if (series.unmatched.length) parts.push(`No match on this map for: ${series.unmatched.join(', ')}.`);
+    // The one case where a comma-separated paste cannot be read honestly.
+    if (series.ambiguous.length) {
+      parts.push(`${series.ambiguous.length} row${series.ambiguous.length === 1 ? '' : 's'} use commas both between columns and inside the numbers, `
+        + `so there is no way to tell which is which ("${series.ambiguous[0]}"). Paste straight from a spreadsheet (that gives tabs), `
+        + 'or take the thousands separators out.');
+    }
+    out.classList.add(series.unmatched.length || series.ambiguous.length ? 'err' : 'ok');
+    out.textContent = parts.join(' ');
+    return;
+  }
   const total = result.rowCount;
   const parts = [];
   if (!result.matchedCount) {
@@ -2426,8 +2480,11 @@ function scheduleChoroReport() {
   choroReportTimer = setTimeout(async () => {
     const preset = findPreset(el('baseMapSelect').value);
     if (!preset) return;
-    try { renderChoroReport(await buildActiveChoropleth(preset, { force: true })); }
-    catch (e) { /* the data files are unreachable; the map button reports it properly */ }
+    try {
+      const single = await buildActiveChoropleth(preset, { force: true });
+      const built = await buildActiveSeries();
+      renderChoroReport(single, built && built.series);
+    } catch (e) { /* the data files are unreachable; the map button reports it properly */ }
   }, 300);
 }
 
@@ -2485,7 +2542,10 @@ el('btnChoroApply').addEventListener('click', async () => {
   save();
   await useBuiltInBaseMap();
   const preset = findPreset(el('baseMapSelect').value);
-  if (preset) renderChoroReport(await buildActiveChoropleth(preset, { force: true }));
+  if (preset) {
+    const built = await buildActiveSeries();
+    renderChoroReport(await buildActiveChoropleth(preset, { force: true }), built && built.series);
+  }
   syncChoroControls();
 });
 
@@ -2497,6 +2557,200 @@ el('btnChoroClear').addEventListener('click', async () => {
   syncChoroControls();
   scheduleChoroReport();
 });
+
+// --- Time-slice series: one map per column ------------------------------
+//
+// Territorial and demographic change over time is the core visual argument
+// of most history units, and it is exactly what a single map cannot make.
+// Paste a table with several number columns and this prints one small map
+// per column on one sheet — 1790, 1850, 1900 side by side.
+//
+// bmg-choropleth.js's buildSeries() does the thinking, and the one decision
+// that matters is made there: **every map in the series is coloured by the
+// same bands**, pooled across all the columns. Classifying each map on its
+// own data would make three maps that each look reasonable and cannot be
+// compared, which defeats the entire purpose of printing them together.
+//
+// The sheet is composed on one canvas, in hundredths of an inch, so Print
+// and Save PDF share one layout implementation — the same approach the
+// worksheet builder takes, for the same reason.
+
+const SERIES_UNITS_PER_IN = 100;
+
+el('btnChoroSeriesExample').addEventListener('click', () => {
+  project.choropleth.text = EXAMPLE_TIME_SLICES;
+  el('choroInput').value = EXAMPLE_TIME_SLICES;
+  if (findPreset(el('baseMapSelect').value).dataset !== 'us') {
+    el('baseMapSelect').value = 'usa-48';
+    renderBaseMapHint();
+  }
+  save();
+  scheduleChoroReport();
+});
+
+/** Runs the pasted table as a multi-column series against the selected preset. Null when there is nothing to read. */
+async function buildActiveSeries() {
+  const preset = findPreset(el('baseMapSelect').value);
+  const c = project.choropleth;
+  if (!preset || !c || !c.text.trim()) return null;
+  const regionNames = await listRegionNames(preset);
+  return { preset, series: buildSeries({ text: c.text, regionNames, classes: c.classes, ramp: c.ramp }) };
+}
+
+/**
+ * Picks the panel grid that gets the most map onto the page. Trying every
+ * column count and keeping the one with the largest drawn map is a handful
+ * of arithmetic and beats any rule of thumb, because the answer depends on
+ * three aspect ratios at once: the page's, the map's, and the count's.
+ */
+function planSeriesGrid(count, boxW, boxH, mapAspect, labelH, gap) {
+  let best = null;
+  for (let cols = 1; cols <= count; cols++) {
+    const rows = Math.ceil(count / cols);
+    const cellW = (boxW - gap * (cols - 1)) / cols;
+    const cellH = (boxH - gap * (rows - 1)) / rows - labelH;
+    if (cellW <= 8 || cellH <= 8) continue;
+    const w = Math.min(cellW, cellH * mapAspect);
+    const h = w / mapAspect;
+    const area = w * h;
+    if (!best || area > best.area) best = { cols, rows, cellW, cellH, mapW: w, mapH: h, area };
+  }
+  return best;
+}
+
+function drawSeriesText(ctx, text, x, y, px, { align = 'left', weight = '400', color = '#1f2430' } = {}) {
+  ctx.font = `${weight} ${px}px "Segoe UI", sans-serif`;
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.fillText(text, x, y);
+  ctx.textAlign = 'left';
+}
+
+/**
+ * Composes the whole sheet: a heading, the grid of maps each captioned with
+ * its column name, one shared key underneath, and the attribution line every
+ * other export already carries.
+ */
+async function buildSeriesCanvas({ preset, series }, pageWIn, pageHIn, dpi) {
+  const U = SERIES_UNITS_PER_IN;
+  const pageW = pageWIn * U, pageH = pageHIn * U;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(pageWIn * dpi);
+  canvas.height = Math.round(pageHIn * dpi);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(canvas.width / pageW, canvas.height / pageH);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, pageW, pageH);
+
+  const margin = 40, gap = 18, labelH = 20;
+  const headingH = 30;
+  const keyRowH = 20;
+  const style = el('baseMapStyleSelect').value;
+  const borders = el('baseMapBorders').checked;
+
+  const keyCols = Math.min(series.legendRows.length, 6);
+  const keyRows = Math.ceil(series.legendRows.length / keyCols);
+  const keyH = keyRows * keyRowH + 14;
+  const creditH = 16;
+
+  drawSeriesText(ctx, preset.label, margin, margin + 16, 17, { weight: '700', color: '#1f3550' });
+  drawSeriesText(ctx, `${series.slices.length} maps, one per column, all shaded by the same bands so they can be compared`,
+                 margin, margin + 30, 9.5, { color: '#5c5a52' });
+
+  const gridTop = margin + headingH + 10;
+  const gridBottom = pageH - margin - keyH - creditH;
+  const plan = planSeriesGrid(series.slices.length, pageW - margin * 2, gridBottom - gridTop,
+                              currentSeriesAspect(preset), labelH, gap);
+  if (!plan) throw new Error('the page is too small for that many maps');
+
+  // Each panel is drawn at a shade over its printed size, not at the full
+  // 4000 px the viewer uses: nine tenths of that would be thrown away in the
+  // downscale, and a series of eight maps would take eight times as long for
+  // no visible difference.
+  const panelPx = Math.round((plan.mapW / U) * dpi * 1.15);
+  const longSide = Math.max(700, Math.min(4000, panelPx));
+
+  for (let i = 0; i < series.slices.length; i++) {
+    const slice = series.slices[i];
+    const col = i % plan.cols, row = Math.floor(i / plan.cols);
+    const cellX = margin + col * (plan.cellW + gap);
+    const cellY = gridTop + row * (plan.cellH + labelH + gap);
+    const mapX = cellX + (plan.cellW - plan.mapW) / 2;
+    drawSeriesText(ctx, slice.label, cellX + plan.cellW / 2, cellY + 13, 12,
+                   { align: 'center', weight: '700', color: '#1f3550' });
+    const { canvas: mapCanvas } = await renderBaseMapCanvas(preset, { style, borders, fills: slice.fills, longSide });
+    ctx.drawImage(mapCanvas, mapX, cellY + labelH, plan.mapW, plan.mapH);
+    ctx.strokeStyle = '#c9c6bd';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(mapX, cellY + labelH, plan.mapW, plan.mapH);
+  }
+
+  // One key for the whole sheet — there is only one set of bands, and
+  // repeating it under every panel would say the opposite.
+  const keyTop = pageH - margin - keyH - creditH;
+  drawSeriesText(ctx, 'KEY', margin, keyTop + 9, 9, { weight: '700', color: '#1f3550' });
+  const keyColW = (pageW - margin * 2) / keyCols;
+  series.legendRows.forEach((r, i) => {
+    const col = i % keyCols, row = Math.floor(i / keyCols);
+    const x = margin + col * keyColW;
+    const y = keyTop + 14 + row * keyRowH;
+    ctx.fillStyle = r.hex;
+    ctx.fillRect(x, y, 13, 11);
+    ctx.strokeStyle = '#7a776e';
+    ctx.lineWidth = 0.6;
+    ctx.strokeRect(x, y, 13, 11);
+    const caption = project.choroLegendText[r.key] || r.label;
+    drawSeriesText(ctx, caption, x + 18, y + 9.5, 9.5);
+  });
+
+  drawSeriesText(ctx, `Base map: ${preset.label} — ${NATURAL_EARTH_ATTRIBUTION.artist} (${NATURAL_EARTH_ATTRIBUTION.license})`,
+                 margin, pageH - margin + 8, 8, { color: '#7a776e' });
+  return canvas;
+}
+
+/** The width-to-height ratio of the preset's raster — plate carrée, so it is simply the degree extent. */
+function currentSeriesAspect(preset) {
+  const b = preset.bounds;
+  return Math.abs(b.east - b.west) / Math.abs(b.north - b.south);
+}
+
+async function withSeries(btn, busyLabel, fn) {
+  const built = await buildActiveSeries();
+  if (!built || !built.series.ok) {
+    setStatus('That data needs at least two number columns, and at least one place the selected map can draw.', true);
+    return;
+  }
+  await withBusyButton(btn, busyLabel, async () => {
+    try {
+      const { w: pageWIn, h: pageHIn } = getPhysicalPageInches();
+      const canvas = await buildSeriesCanvas(built, pageWIn, pageHIn, PRINT_DPI);
+      await fn(canvas, pageWIn, pageHIn, built);
+    } catch (err) {
+      alert(`Couldn't build the map series (${err.message}).`);
+    }
+  });
+}
+
+el('btnSeriesPrint').addEventListener('click', () => withSeries(el('btnSeriesPrint'), 'Preparing…', async (canvas, wIn, hIn) => {
+  const stage = el('printExportStage');
+  stage.innerHTML = '';
+  const img = document.createElement('img');
+  img.alt = '';
+  const loaded = new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+  img.src = canvas.toDataURL('image/png');
+  stage.appendChild(img);
+  setPrintPageSize(wIn, hIn);
+  await loaded;
+  document.body.classList.add('printing-map-export');
+  window.print();
+}));
+
+el('btnSeriesPdf').addEventListener('click', () => withSeries(el('btnSeriesPdf'), 'Building PDF…', async (canvas, wIn, hIn, built) => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: wIn >= hIn ? 'l' : 'p', unit: 'in', format: [wIn, hIn], compress: true });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, wIn, hIn);
+  pdf.save(`${built.preset.key}-series.pdf`);
+}));
 
 el('btnUploadMap').addEventListener('click', () => el('uploadMapInput').click());
 el('uploadMapInput').addEventListener('change', () => {

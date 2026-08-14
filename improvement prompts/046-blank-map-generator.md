@@ -1,13 +1,159 @@
 # Improvement Prompts — 046 — Blank Map Generator
 
 **Tool file:** `Tools/046-blank-map-generator.html`
-**Support folder:** `Tools/blank-map-generator/` — `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-label-sets.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-vector.js`, `bmg-viewer.js`, `test/smoke-starters.mjs`
+**Support folder:** `Tools/blank-map-generator/` — `bmg-choropleth.js`, `bmg-colors.js`, `bmg-commons.js`, `bmg-geography.js`, `bmg-hittest.js`, `bmg-label-sets.js`, `bmg-labels.js`, `bmg-latlong.js`, `bmg-legend.js`, `bmg-lines.js`, `bmg-locator.js`, `bmg-map-cache.js`, `bmg-markers.js`, `bmg-regions.js`, `bmg-store.js`, `bmg-vector.js`, `bmg-viewer.js`, `data/`, `test/smoke-starters.mjs`, `test/smoke-choropleth.mjs`, `test/smoke-hittest.mjs`
 
 **Current description (from README):** Search Wikimedia Commons for a map, pan/zoom into a region, and annotate it with draggable labels, markers (pin/star/dot/flag), and shaded polygon regions — all auto-building an editable legend. Optional compass rose, lat/long grid, and a locator inset. Undo for accidental deletes. Maps are cached for offline reuse; print or save as PDF.
 
 ---
 
 ## Status
+
+### 2026-08-14 — session `hx4pmz` — Devon-assigned SS demo round 2
+
+**Shipped click-to-shade** — per-region hit-testing on the built-in vector base
+maps, which every round since 13 has listed as the keystone still missing. Plus
+the time-slice choropleth from the supporting list.
+
+**The design decision that made this small.** A click-shaded region is stored
+as an ordinary `project.regions` entry. It carries a `rings` array (the real
+country/state outline, in the raster's own pixel space) and a `name`, and
+that is the whole of the new data model. Everything downstream already knew
+what a region was: the SVG layer draws it, `drawMapContent()` puts it in
+PNG/print/PDF/poster/worksheet output, `bmg-legend.js` builds its key row,
+`snapshotContent()` puts it on the undo stack, and `bmg_workspace_v1` saves
+it. **No storage migration and no new localStorage key** — an old project
+simply has regions without names, and `regionRings()` falls back to `points`.
+Total new surface: one module, ~40 lines of wiring, and three small edits to
+existing region code.
+
+- **`bmg-hittest.js` is pure geometry and imports the projection from
+  `bmg-vector.js` rather than reimplementing it.** That is the single most
+  important line in the module. A hit test with its own copy of the lat/lon
+  maths is a second source of truth that drifts, and when it drifts it
+  shades the wrong country *silently*. Importing `projectPoint` and
+  `drawableRings` also means the hit test inherits, for free, the two
+  awkward things Round 13 had to fix in the renderer: **the antimeridian**
+  (a straddling ring is drawn twice, shifted 360°, so Fiji and the Chukotka
+  tip of Russia are clickable on *both* edges of a world map, exactly where
+  they appear) and **Antarctica's polar closure** (it is only a filled shape
+  at all because the ring closes through the pole, so it is only clickable
+  because of that too).
+- **Holes and multi-polygons are one rule, not two.** Even-odd crossing
+  counting across every ring of a feature at once: a point inside South
+  Africa's outer ring *and* inside its Lesotho-shaped hole crosses two
+  boundaries, so it is outside South Africa, and Lesotho — a separate
+  feature — claims it. A point on one of Alaska's 137 rings crosses one, so
+  it is Alaska. Both are asserted against the real vendored data.
+- **The interaction.** A "Click to Shade" toolbar mode. Click cycles a
+  region through the existing 6-colour categorical palette and then back to
+  unshaded; Ctrl-click and right-click clear it outright; hovering names the
+  region in the tool hint, which doubles as a "what is this country called"
+  check with a map on the projector. The button is disabled, with a reason in
+  its tooltip, on a Commons or uploaded map — a photograph of a map has no
+  shapes behind it, and no amount of clicking invents them.
+- **It composes with round 1's data choropleth; the prompt's "warn before
+  discarding" case never arises.** A choropleth is baked into the base raster
+  by `bmg-vector.js`; click-shading is an SVG overlay in stage space. They
+  are different layers by construction, so a teacher can hand-shade five
+  states over a population choropleth and both survive — including through a
+  re-shade, which redraws the raster underneath while the overlay stays put.
+  Asserted in the suite.
+- **The key names what you shaded.** Region rows still group by
+  colour+pattern (one colour is one idea — "these fifteen states were
+  Confederate" is one key row, not fifteen), but an uncaptioned row now
+  writes itself from the names in it: "Texas and Louisiana", or "Texas,
+  Louisiana, Alabama and 8 more". That replaced the old fallback, which
+  printed "(red)" on paper and told a reader nothing they could not see.
+  Grayscale-safe fills apply unchanged, since these are ordinary solid-fill
+  regions.
+- **Bug found by the suite doing what a teacher would do:** the region delete
+  chip sits at a region's centroid, which is precisely where you click to
+  cycle its colour — so the third click on Texas deleted it. Chips are now
+  drawn for hand-drawn regions only; click-shaded ones have three other ways
+  out and would have put fifteen × buttons on a fifteen-state map.
+- **Second bug, the same one this tool hit in Round 10:** a bare
+  `display: flex` outranks the browser's `[hidden]` rule, so the new series
+  control row was visible whether or not it was meant to be. There is now a
+  `.choroControls[hidden]` rule next to the two that already existed.
+
+**Time-slice choropleth** (supporting item 1). Paste `State, 1790, 1850,
+1900` and "Print the series" puts one small map per column on a single sheet.
+
+- **All the maps share one set of bands, pooled across every column**, and
+  that is the entire point. Classifying each map on its own data gives three
+  maps that each look sensible and cannot be compared — a tenfold rise can
+  hide behind three identical-looking pictures. Shared bands are the only
+  reason to print them together. One key for the sheet, for the same reason.
+- **The comma problem, and why it is reported rather than guessed.** The
+  single-column parser gets away with commas because the value must run to
+  the end of the line, so `6,200,000` can only be one number. With several
+  columns that is gone and `Rhode Island, 69,000, 148,000` is genuinely
+  ambiguous. Tabs, semicolons and pipes are preferred whenever the paste has
+  one (every real spreadsheet paste does), and a comma-separated row with
+  surplus three-digit fields is **named in the report with advice** instead
+  of being turned into a number that appears nowhere in the data.
+- **Header detection had to be rewritten**, because a time-slice header is
+  itself numeric: `State, 1790, 1850, 1900` parses perfectly well as
+  Virginia-with-three-numbers. `looksLikeHeader()` tests shape instead — a
+  non-numeric first field plus values that are either words or four-digit
+  years. Six-digit populations are not years, so a data row is never eaten.
+- **"Shade the map" on multi-column data shades from the last column** and
+  says which one in the report. Left alone, the single-column parser would
+  have read `747000, 1119000, 1854000` as one enormous number and shaded a
+  state with a figure that is nowhere in the teacher's data.
+- Panels are rendered at a size matched to the printed panel
+  (`renderBaseMapCanvas`'s new `longSide` option) rather than the full
+  4,000 px, so an eight-map series doesn't render eight full-resolution
+  rasters to throw nine tenths of each away.
+- "Load a time series" fills the box with population for the thirteen
+  original states across 1790/1850/1900 — a real story a 7th grader can read
+  off three maps.
+
+**Verified.** New `smoke-hittest.mjs` — **73 checks**, in two halves. The
+first runs the module against the real vendored GeoJSON (Texas, Maryland, the
+Gulf of Mexico, Alaska's mainland *and* Unalaska *and* Kodiak, Hawaii's
+separate islands, the Lesotho hole asserted directly as "outside South
+Africa", Fiji on both edges of the antimeridian, Chukotka, Antarctica, plus
+the storage compaction and the key captions). The second drives the real UI:
+clicking a state shades it, the key names it, a second colour splits the key
+row, Ctrl-click and right-click both clear, undo/redo cover each click, a
+click on the Gulf says why nothing happened, a four-ring state renders as an
+`evenodd` path whose drawn bounds contain the click, hover names the region,
+shading survives a data choropleth *and* a reload, and "Clear click-shading"
+is one undoable edit. `smoke-choropleth.mjs` extended to **85** (was 59) with
+the time-slice half, including building the real three-map sheet end to end.
+`smoke-starters.mjs` still 22/22. **Zero console errors and zero offsite
+requests** across both browser runs. `check:dedupe` and `check:tests` green;
+`check:social` unchanged (no `<head>` touched — its one reported problem is
+pre-existing and belongs to `019-escape-room-builder.html`). The series sheet
+and a click-shaded print export were both rendered and **looked at directly**:
+the 1790/1850/1900 maps tell the right story (Virginia darkest, then New York
+and Pennsylvania, then the whole seaboard), and a shaded map prints with hatch
+and dot patterns and a key reading "Confederate states in this unit".
+
+**Where round 3 should pick up:**
+
+1. **Shade by clicking on a *world* map is shipped and works**, but the 110m
+   data is coarse for small countries — the Vatican, Monaco and the smaller
+   Caribbean islands are a pixel or two and `compactRings` drops them with an
+   honest "too small to shade on this map". The 50m dataset (~750 KB more
+   vendored) is the fix if it matters.
+2. **A title for the key** is still the obvious next small thing, and the
+   series sheet wants one even more than the single map does: the three maps
+   say "1790, 1850, 1900" but nothing says *of what*. Round 1 flagged this;
+   it is now flagged twice.
+3. **Equal-interval bands as an option** — unchanged from round 1, and the
+   series makes it slightly more pressing since percentages across slices
+   would read better in fixed intervals.
+4. **A shade-by-name box** ("shade Texas, Louisiana, Mississippi") would let
+   a teacher shade fifteen states without fifteen clicks, and every piece is
+   already here: `makeRegionResolver()` for the names, `buildRegionIndex()`
+   for the shapes.
+5. **Shared-code opportunity, again deliberately not taken.** `bmg-hittest.js`
+   is generic point-in-polygon and `regionGroupCaption()` is a generic list
+   formatter; the round rules forbid touching `_shared/`. Appended to
+   `_site-requests.md` alongside round 1's note.
 
 ### 2026-08-13 — session `q4wmxz` — Devon-assigned social studies demo round
 
@@ -490,6 +636,15 @@ the projected half of the quiz-mode major feature.
 
 ## What it does today
 
+- **Click to shade** — on a built-in base map, click a country or state and
+  it shades itself. Click again for the next colour, again to clear;
+  Ctrl-click or right-click clears outright. Hovering names the region.
+  Islands and enclaves are handled properly (Alaska's Aleutians shade with
+  Alaska; Lesotho is not South Africa), and the key writes its own caption
+  from the names of what you shaded
+- **Time-slice map series** — paste several number columns with a header row
+  naming them and print one small map per column on a single sheet, every map
+  sharing one set of bands and one key so they can actually be compared
 - **Choropleth shading from pasted data** — paste "place, number" rows and
   the built-in base map shades itself in 4–6 quantile bands, with a key that
   writes its own numeric ranges. Grayscale-safe by construction (one hue,
@@ -572,10 +727,15 @@ where. New quick wins surfaced by future rounds go here.
 
 ## Major Features
 
-- **Time-slice maps.** One project, several dated states — 1783 / 1803 / 1848
-  — that print as a sequence or animate on screen. Territorial change over
-  time is the core visual argument of most history units and there is no good
-  classroom tool for it.
+- **Partly done —** **Time-slice maps.** One project, several dated states —
+  1783 / 1803 / 1848 — that print as a sequence or animate on screen.
+  *(The data half shipped 2026-08-14: several value columns in the paste box
+  print as a labelled small-multiple series, one map per column, sharing one
+  set of quantile bands and one key so the maps are comparable. What is still
+  open is the harder half — several dated states of the **annotations**, so
+  a border drawn in 1783 can move in 1803. That needs a per-slice
+  labels/lines/regions store, which is a real change to the project model
+  rather than a new panel.)*
 - **Vector base maps — *phase 1 shipped in Round 13*.** Nine built-in
   base maps (World, six continents, two USA crops) render offline from
   vendored Natural Earth GeoJSON and, because the renderer owns the
@@ -584,8 +744,10 @@ where. New quick wins surfaced by future rounds go here.
   loads. They go through the existing raster pipeline, so every feature
   works on them unchanged. Still open, and the reason this stays on the
   list: **live vector rendering in the viewer** (the generated map is a
-  raster, so zoom quality has a ceiling) and **per-region hit-testing and
-  click-to-shade**. **Choropleth shipped 2026-08-13** — Round 13's note that
+  raster, so zoom quality has a ceiling). **Per-region hit-testing and
+  click-to-shade shipped 2026-08-14** in `bmg-hittest.js`, which reuses the
+  renderer's own projection so the picking and the picture cannot disagree.
+  **Choropleth shipped 2026-08-13** — Round 13's note that
   it needed hit-testing first was wrong: hit-testing turns a *click* into a
   region, and shading from a pasted table never has a click to turn.
 - **Done —** **Choropleth from a data table.** Paste "state, value" and shade

@@ -199,7 +199,6 @@ here.
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
 | Timeline Builder | `vt7kqa` | 2026-08-14 02:41 UTC | `claude/ssdemo2-015-vt7kqa` |
 | Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
-| Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
 
 ---
 
@@ -207,6 +206,35 @@ here.
 
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
+
+### Devon-assigned round 2 — tool 046 — 2026-08-14 03:41 UTC — session `hx4pmz`
+
+Blank Map Generator (`046-blank-map-generator.md`), SS demo round 2.
+
+- **Click to shade** (the headline, and the keystone every round since 13 has
+  listed as missing). New `bmg-hittest.js` turns a click on a built-in vector
+  base map into the country or state under it. It imports the projection from
+  `bmg-vector.js` rather than reimplementing it, so the picking and the
+  picture cannot disagree — and inherits the antimeridian handling and
+  Antarctica's polar closure for free. Holes and multi-polygons are one rule:
+  even-odd crossing counting across every ring of a feature at once, so
+  Lesotho is not South Africa and Unalaska is Alaska.
+- A click-shaded region is stored as an **ordinary `project.regions` entry**
+  with real rings and a name, which is why the change is small: the SVG
+  layer, every export path, the legend, the undo stack and the saved
+  workspace all already handled regions. No storage migration, no new
+  localStorage key, so Backup & Restore needs nothing.
+- It **composes** with round 1's data choropleth (baked raster vs. overlay),
+  so the prompt's "warn before discarding" case never arises.
+- **Time-slice choropleth** (supporting item): several value columns print as
+  a small-multiple series, one map per column, sharing one set of bands and
+  one key so the maps are comparable.
+- Two bugs found on the way: the region delete chip sat exactly where you
+  click to cycle a region's colour, and a bare `display: flex` was outranking
+  `[hidden]` on the new control row (the same trap Round 10 hit).
+- New `smoke-hittest.mjs` (73 checks), `smoke-choropleth.mjs` extended 59 →
+  85, `smoke-starters.mjs` still 22. Zero console errors, zero offsite
+  requests. `sw.js` v113 → v114 for the new module.
 
 ### Devon-assigned round — tool 046 — 2026-08-13 23:54 UTC — session `q4wmxz`
 

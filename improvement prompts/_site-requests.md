@@ -298,3 +298,35 @@ colour ramp plus a WCAG relative-luminance helper (`RAMPS`,
 by an ordered value — the grade distribution visualizer is the obvious one —
 wants exactly this, and "does it survive the photocopier" is a property worth
 asserting in one place rather than re-arguing per tool.
+
+## Point-in-polygon picking, and a list-to-sentence formatter (from 046, SS demo round 2)
+
+Two more small generic pieces written locally in `Tools/blank-map-generator/`
+because the round rules forbid touching `_shared/`. Neither is urgent; both
+are recorded so a third occurrence isn't written from scratch a third time.
+
+- `bmg-hittest.js` — even-odd point-in-polygon over a set of projected rings,
+  with bounding-box rejection, plus ring compaction for storage. It is written
+  against GeoJSON-shaped data, but the geometry itself has nothing to do with
+  maps: anything that has to turn a click into "which shape is this" wants it.
+  **The one thing worth carrying over if it ever moves:** the module
+  deliberately imports its projection from the *renderer* rather than owning a
+  copy, because a hit test that disagrees with what was drawn fails silently
+  and is very hard to notice. Whatever shape a shared version takes, it should
+  keep taking the transform as an argument rather than defining one.
+- `regionGroupCaption()` in `bmg-legend.js` — "A", "A and B", "A, B and C",
+  "A, B, C and 4 more". Small, but several tools on the site build that
+  sentence by hand and none of them agree about the Oxford comma or the
+  cut-off. A shared version would at least make the site consistent with
+  itself.
+
+Also worth noting for whoever picks up the `_shared/paste-table.js` question
+above: `bmg-choropleth.js` now has a **second** parser next to
+`parseDataRows()` — `parseDataTable()`, for several value columns — and the
+two make a genuinely instructive pair. The single-column one can afford to be
+relaxed about commas, because a value has to run to the end of the line, so
+`6,200,000` can only be one number. The multi-column one cannot: once there
+are three value columns, `Rhode Island, 69,000, 148,000` is truly ambiguous.
+It prefers tabs (which every real spreadsheet paste supplies) and *reports*
+the rows it can't read rather than guessing at them. Any shared version has to
+answer that, not paper over it.
