@@ -12,6 +12,185 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Social studies demo round — 2026-08-14 — session `mq7fkd`
+
+Shipped the **map handoff** (`IDEAS_BACKLOG.md` rank 2, "Timeline plus map
+print"; P7) — the Major Feature that the last three rounds each named as "the
+most distinctive unbuilt idea in the file" and each left alone.
+
+**Backlog rows this round covers:** rank 2 "Timeline plus map print"
+(shipped). Also shipped, from this file's own lists rather than from a
+numbered backlog row: the shipped-example idea (P15) and share links (P3).
+Nothing was found stale.
+
+**Headline — map + timeline print.**
+
+- Events gained an optional `place` — `{name, lat, lon}` on the event object,
+  so it rides through save/load/export/import/share with no schema migration
+  and no new localStorage key. Older saved timelines have no `place` at all,
+  which reads as "not on the map" without any backfill.
+- `Tools/timeline-builder/tlb-places.js` (new) holds a gazetteer of ~145
+  entries — well-known world cities, ~35 countries, all 50 US states, and the
+  US historic sites a 7th grade course actually visits (Jamestown, Yorktown,
+  Valley Forge, Gettysburg, Appomattox, Selma, Pearl Harbor). Picking one from
+  the `<datalist>` fills the coordinates in. **Typing an unlisted place is a
+  first-class path, not a fallback** — the name is free text and both number
+  boxes stay editable, which matters because a unit's places are as often
+  battlefields and crossroads as they are cities ("Lexington and Concord,
+  Massachusetts" is in the shipped example and is not in the gazetteer).
+- New "Map + timeline print…" panel and a third print container
+  (`#mapPrintPages`), built alongside the existing plain and tiled prints
+  rather than replacing either. One landscape page: title, base map with
+  numbered pins, a one-line key naming each pin's place, the spatial timeline
+  strip carrying the same numbers, and the category legend.
+
+**The base map: reused `bmg-vector.js` rather than writing a second renderer.**
+The assignment made this conditional on whether that module is entangled with
+046's app state. It isn't — `renderBaseMapCanvas` reads only `preset.bounds`,
+`preset.dataset` and a style, touches no map-tool state, and resolves its data
+directory from its own `import.meta.url`, so it renders correctly when called
+from a different tool's page. It is called with a **synthetic preset** built
+from the fitted bounds, which the module handles without knowing the
+difference. Re-deriving its `unwrapRing`/`drawableRings` antimeridian handling
+(the reason a naive plate carrée render of this data draws stray full-width
+lines across the South Pacific and northern Siberia) would have been the only
+real content of a hand-rolled renderer, and getting that subtly wrong is a bug
+that survives a visual check. **The coupling this buys is real and is worth a
+future round's attention:** this tool now depends at runtime on another tool's
+module. It is guarded (dynamic `import()` inside a try/catch, plain-language
+failure message rather than a broken page), and both `bmg-vector.js` and the
+`data/` files were already in `PRECACHE_URLS`, so offline is unaffected and
+nothing new was vendored.
+
+**Extent fitting is the piece that made the map drop into the page cleanly.**
+Because bmg-vector renders plate carrée, a rendered map's pixel aspect ratio
+*is* its degree extent's aspect ratio. So `fitBounds(points, aspect)` pads the
+pinned events' bounding box (18%, with a 2.5° floor so a single pin still gets
+a map around it) and then **grows the shorter axis** until lon:lat matches the
+printed box's width:height. The map then fills the box with no letterboxing
+and no stretching, and pin placement stays a straight linear mapping. Clamping
+at the world's edges slides the box rather than shrinking it (shrinking would
+skew the aspect and stretch the map); anything that still won't fit falls back
+to an honest whole-world view.
+
+**Dataset choice.** State outlines beat a bare coastline for a US history
+timeline, but the US data files contain nothing else, so Canada and Mexico
+would render as blank ocean. `chooseDataset` therefore requires *both* that
+every pin sits inside the 50-state box *and* that the window is ≤60° wide. The
+shipped American Revolution example lands on a 19°-wide window and gets state
+outlines; a Boston-to-Los-Angeles timeline still does; anything reaching into
+Mexico or across the Atlantic gets world countries.
+
+**Clustering and de-overlapping turned out to be two different jobs, and
+conflating them was the one real mistake this round.** The first version used
+a single roomy cluster radius (about one badge wide, 22px). It looked
+plausible and was quietly destructive: on the example timeline it merged
+**Philadelphia, Trenton and Valley Forge into one mid-Atlantic pin**, which is
+exactly the distinction a student is meant to read off the map. Caught by
+screenshotting the real output rather than by any assertion. Split into
+`clusterPins` (radius 6px — merges only points that are effectively identical,
+i.e. two events in the same town, which is the normal case: the example's
+Boston Massacre, Tea Party and Bunker Hill share one pin reading "1,2,5") and
+`spreadPins` (a bounded relaxation that nudges badges to ≥22px apart). Crucially
+`spreadPins` sets a separate `labelX/labelY` and **never moves `xPx/yPx`** — a
+5px dot is drawn at the true location and the numbered badge at the nudged one,
+so the map stays honest about where the event happened while the numbers stay
+readable. Clusters can never be coincident by construction, so the relaxation
+always has a direction to push and needs no jitter hack.
+
+**Supporting items, all three shipped:**
+
+1. **Load example** (P15) — `tlb-example.js`, an eleven-event American
+   Revolution timeline with places, categories, an era band and one range
+   event (Valley Forge). Confirms before replacing anything, and the previous
+   timeline stays saved. The Treaty of Paris deliberately has **no** place:
+   pinning Paris drags the extent across the Atlantic and squashes the ten
+   colonial pins into a thumb-width cluster, and leaving it off also
+   demonstrates the documented unplaced-event rule. That explanation lives in
+   the map panel's pin count, not in the event description — descriptions
+   print on a student handout and shouldn't discuss the tool.
+2. **Share link + QR** (P3) — copied from 028's pattern
+   (`_shared/state-link.js` + `_shared/vendor/qrcode/qrcode.js`), `?timeline=`.
+   Payload strips every event's `photo`; the note wording mirrors 028's and
+   names the photo count. An incoming link always installs as a **new**
+   uniquely-named timeline via `installTimeline()`, never over what's open.
+3. **First smoke test** — `Tools/timeline-builder/test/smoke-map-print.mjs`,
+   49 assertions, plus `test:timeline` and a slot in the `test` chain. This
+   tool had no `test/` folder at all despite two prior rounds shipping print
+   features.
+
+**Verified**: `npm ci` (no `node_modules` in this worktree), the new suite
+green at 49/49, `npm run check:dedupe` green, `npm run check:tests` green
+(95 suites wired), and `npm run check:social` byte-identical before and after
+(same single pre-existing 019 problem; no new drift, no block added). The
+headline was driven in headless Chromium end to end with **zero console errors
+and zero offsite requests**, and the built page screenshotted and read by eye
+at each iteration — which is how both quality bugs below were caught. Also
+re-drove the plain Print button and the tiled wall print *after* a map print
+in the same session, since all three now share the injected landscape `@page`
+rule and the "hide everything but my container" print CSS.
+
+### Challenges
+
+- **The pin-clustering regression above is the one to remember.** A radius
+  chosen from the badge's own size is the intuitive choice and is wrong: it
+  measures legibility, not sameness. Two pins 15px apart on a classroom map
+  are two different towns that need two badges nudged apart, not one badge
+  with two numbers. No assertion would have caught it — the count was
+  plausible, every pin was inside the box, and the key line was well-formed.
+  Only looking at the picture did.
+- **A second bug found only by looking:** the key line was built with
+  `.join('')`, and each item is `white-space: nowrap`. With no break
+  opportunity *between* items the whole key becomes one unbreakable line, and
+  on a ten-place timeline the last two places ran off the edge of the paper.
+  A one-character fix, invisible to every assertion that had been written.
+- The numbered badges first floated above the timeline line, where the event
+  label already lives — they landed on top of the title text. Moving them onto
+  the line (over the marker, in the same category colour) fixed it, and then
+  offsetting each badge to the same side its label is on separated the badges
+  for two events in the same year, which had been hiding one another.
+- **My own test assertion was wrong before the code was.** Philadelphia is
+  east of Yorktown even though both longitudes are negative; the first
+  north/east assertion had the sign backwards and failed against correct
+  output. Worth stating plainly because it is the natural direction to get
+  wrong when writing a geography assertion from memory.
+- Reading `offsetWidth` on the print container returns 0 — `#mapPrintPages` is
+  `display: none` on screen and only exists for `@media print`. The suite
+  reads the box's declared `style.width` instead, which is what the pin
+  coordinates were computed against anyway.
+
+### Where the next round should pick up
+
+- **The runtime dependency on `Tools/blank-map-generator/bmg-vector.js` is the
+  main thing to keep an eye on.** It is the right call today (one renderer,
+  one antimeridian implementation) but nothing enforces it: a future change to
+  `renderBaseMapCanvas`'s signature breaks this tool silently at print time,
+  and only this tool's smoke test would catch it. If a third consumer ever
+  wants that renderer, it has earned a move into `_shared/` — which this round
+  could not do, since `_shared/` was off limits to all eight parallel
+  sessions. Recorded in `_site-requests.md`.
+- `renderBaseMapCanvas` always renders at a 4000px long side, which is right
+  for the map tool's poster exports and more than a timeline's map panel
+  needs. The result is downscaled here to 2× the print box and the big buffer
+  released immediately, but an optional target-size argument on that function
+  would be a cheaper fix for both tools.
+- Two events in the **same year** still put their badges in nearly the same
+  place on the timeline strip; the side-alternation nudge separates them
+  enough to read, but a real de-overlap pass along the time axis (the same
+  relaxation `spreadPins` does for the map) would be better, and would help
+  the plain screen view too, where same-year labels already collide.
+- The map print is deliberately **one page** — the multi-page/tiled map+timeline
+  variant was an explicit non-goal this round. The tiled print's own
+  `buildTimelinePoster`/crop machinery is right there if a future round wants
+  a wall-sized version.
+- The gazetteer has no search beyond the browser's own datalist prefix match,
+  so "Boston" finds "Boston, Massachusetts" but "Massachusetts, Boston"
+  doesn't. Fine at 145 entries; worth revisiting if it grows.
+- Nothing here reads the Blank Map Generator's **label sets**, which already
+  carry hundreds of curriculum place names with coordinates. Sharing that
+  data (rather than this tool's own gazetteer) is the obvious consolidation,
+  and is a better use of a round than growing the gazetteer by hand.
+
 ### Pass 2 — Round 2 — 2026-08-13
 
 Shipped the **tiled wall-timeline print** Quick Win (P7, P6) — the item both
@@ -344,7 +523,19 @@ fixed and reverified before calling this done.
 ## What it does today
 
 - Events with exact years, **BCE support**, and ranges/eras; optional photo
-  each (`tlb-photo.js`)
+  and optional **place** (name + lat/lon) each (`tlb-photo.js`,
+  `tlb-places.js`)
+- **Map + timeline print** (`printMapTimeline`, `tlb-places.js`) — one
+  landscape page pairing a base map (numbered pins, auto-fitted extent, US
+  state outlines or world countries as appropriate) with the spatial timeline
+  carrying the same numbers, plus a place key. Rendered offline from the map
+  data already vendored for `046-blank-map-generator.html`
+- **Built-in example timeline** (`tlb-example.js`) — an eleven-event American
+  Revolution unit with places, categories, an era band and a range event
+- **Share by link or QR** (`?timeline=`, `_shared/state-link.js`) — arrives as
+  a new saved timeline; event photos stay on the sending device
+- Automated suite: `Tools/timeline-builder/test/smoke-map-print.mjs`
+  (`npm run test:timeline`)
 - **Multiple tracks** (`renderTrackList`, `ensureTracks`, `updateEvTrackOptions`)
   — parallel timelines on one axis
 - Layout options: all above the line, compact alternating; solid / dashed /

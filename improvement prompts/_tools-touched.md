@@ -193,7 +193,6 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
-| Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
 
 ---
 
@@ -1137,6 +1136,34 @@ Status for the full writeup. Then, per this round's own scope:
 | Tool | File | What shipped |
 |---|---|---|
 | Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` | Headline (P3): share a deck with another teacher by link or QR code (card text/stats/theme/rarity travel, photos never do; an oversized deck falls back to the copy-link message instead of an unscannable QR; an incoming link always lands as a new deck, never overwriting one already on the device). Supporting: a `np_rosters`-fed class-list dropdown next to the existing roster paste box (P2); a one-click "Load sample deck" with 5 real historical-figure cards, mixed rarity/theme, no photos (P15). New `smoke-share.mjs` (55 assertions) plus the two existing suites stayed green throughout. |
+
+### Devon-assigned round — tool 015 — 2026-08-14 00:52 UTC — session `mq7fkd`
+
+One of eight parallel sessions in the social studies demo round, each owning
+a single tool ahead of a live staff presentation. Devon-assigned, which
+overrides this file's "don't repick done tools" rule.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Timeline Builder | `015-timeline-builder.md` | **Map + timeline print** (`IDEAS_BACKLOG.md` rank 2 "Timeline plus map print"; P7) — events gained an optional place with a ~145-entry built-in gazetteer, and a new landscape print pairs an auto-fitted base map (numbered pins, US state outlines or world countries as appropriate) with the existing spatial timeline carrying the same numbers. Plus a one-click American Revolution example (P15), share by link/QR excluding photos (P3), and the tool's first automated suite (`npm run test:timeline`, 49 assertions). |
+
+**Backlog row:** rank 2, "Timeline plus map print" — shipped. Nothing found
+stale. The example and the share links came from this tool's own file rather
+than from a numbered row.
+
+The base map is rendered by calling
+`Tools/blank-map-generator/bmg-vector.js` (read first and confirmed
+standalone — it reads only `preset.bounds`/`preset.dataset` and resolves its
+own data directory), not by a second renderer. Nothing new was vendored; that
+module and its `data/` files were already precached. The runtime coupling
+that creates, and the case for moving the renderer into `_shared/`, is logged
+in `_site-requests.md` — it could not be done this round, since `_shared/` was
+off limits to all eight sessions and `Tools/blank-map-generator/` was owned by
+a concurrent one.
+
+Timeline Builder did not clear its list — the projected navigation mode and
+the printed cut-apart ordering activity are still open — so it does not move
+to `stable tools/`.
 
 ---
 

@@ -226,3 +226,46 @@ same-minute race, but two things would reduce the odds and the damage:
   two rounds picked the same Quick Win (redundant, discard one side) or
   different ones (complementary, needs a careful hand-merge, not a
   git-automatic one) before resolving.
+
+## Cross-tool vector map rendering wants a home in `_shared/`
+
+Found while shipping the map + timeline print for `015-timeline-builder.html`
+(social studies demo round, session `mq7fkd`).
+
+`Tools/blank-map-generator/bmg-vector.js` turns out to be a genuinely
+reusable, app-state-free vector map renderer: `renderBaseMapCanvas(preset,
+{style, borders})` reads only `preset.bounds` and `preset.dataset`, resolves
+its own data directory from `import.meta.url`, and returns a canvas plus the
+calibration that describes it. Timeline Builder now calls it directly, with a
+synthetic preset built from an auto-fitted extent, and gets a correct map with
+no duplicated code.
+
+That is the right call for one consumer — the alternative was a second
+plate-carrée renderer, and the only real content of one would have been
+re-deriving `unwrapRing`/`drawableRings`, the antimeridian handling that stops
+a naive render of this data drawing full-width lines across the South Pacific
+and northern Siberia. Getting that subtly wrong is a bug that survives a
+visual check.
+
+But it leaves a coupling nothing enforces: **a tool outside
+`Tools/blank-map-generator/` now breaks at print time if that module's
+signature changes**, and only Timeline Builder's own smoke test would notice.
+Two things worth doing when someone has the room:
+
+- Move the renderer (and the `data/` GeoJSON it reads) into `_shared/`, with
+  both tools importing from there. Neither could be done this round:
+  `_shared/` was off limits to all eight parallel sessions, and
+  `Tools/blank-map-generator/` was owned by a concurrent one.
+- Give `renderBaseMapCanvas` an optional output-size argument. It always
+  renders at a 4000px long side, which is right for the map tool's poster
+  exports and well past what a timeline's map panel needs — Timeline Builder
+  currently downscales to 2× its print box and releases the big buffer by
+  hand, which a size argument would make unnecessary for both tools.
+
+Related, and cheaper: `Tools/blank-map-generator/bmg-label-sets.js` already
+carries hundreds of curriculum place names with coordinates. Timeline Builder
+shipped its own ~145-entry gazetteer in `Tools/timeline-builder/tlb-places.js`
+because reaching into another tool's data for *content* felt like a bigger
+commitment than reaching into it for a *renderer*. If a third tool ever wants
+"a list of places a middle school course names", that data should be shared
+rather than hand-grown a third time.
