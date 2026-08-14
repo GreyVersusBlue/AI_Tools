@@ -24,6 +24,31 @@ export function regionLegendKey(color, pattern) {
   return pattern && pattern !== "solid" ? `${color}::${pattern}` : color;
 }
 
+/**
+ * The caption a shaded-region row writes for itself from the names of the
+ * regions in it — "Texas", or "Texas, Louisiana, Mississippi and 8 more".
+ *
+ * Click-to-shade knows what it shaded, so the key should say so instead of
+ * leaving a teacher to type "Texas" under a swatch of Texas. Rows still
+ * group by colour+pattern rather than one row per region, which is the more
+ * useful shape for the job this feature exists for: shading is how you say
+ * "these fifteen states were Confederate", and that is one idea and one key
+ * row, not fifteen. The generated names are what the row says until the
+ * teacher types the idea over the top.
+ *
+ * Hand-drawn regions have no names, so they get no generated caption and
+ * keep the prompt they always had.
+ */
+export function regionGroupCaption(names, max = 3) {
+  const list = (names || []).filter(Boolean);
+  if (!list.length) return "";
+  if (list.length <= max) {
+    if (list.length === 1) return list[0];
+    return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+  }
+  return `${list.slice(0, max).join(", ")} and ${list.length - max} more`;
+}
+
 // And for lines: plain solid lines keep the bare color key; dashed/dotted
 // compound it, so e.g. a dashed red line and a dotted red line get their
 // own rows instead of sharing one "red" caption.
@@ -192,12 +217,16 @@ export function createLegendPanel(panelEl, {
       groups.push({ style: m.style, color: m.color, size: m.size });
     });
     const regionGroups = [];
-    const seenRegionGroup = new Set();
+    const regionGroupIndex = new Map();
     (regions || []).forEach(r => {
       const gkey = regionLegendKey(r.color, r.pattern);
-      if (seenRegionGroup.has(gkey)) return;
-      seenRegionGroup.add(gkey);
-      regionGroups.push({ color: r.color, pattern: r.pattern });
+      let group = regionGroupIndex.get(gkey);
+      if (!group) {
+        group = { color: r.color, pattern: r.pattern, names: [] };
+        regionGroupIndex.set(gkey, group);
+        regionGroups.push(group);
+      }
+      if (r.name) group.names.push(r.name);
     });
     const lineGroups = [];
     const seenLineGroup = new Set();
@@ -223,7 +252,8 @@ export function createLegendPanel(panelEl, {
     numbered.forEach((m, i) => items.push(buildNumberedRow(m, i + 1, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions)));
     regionGroups.forEach(g => {
       const key = regionLegendKey(g.color, g.pattern);
-      items.push({ row: buildCaptionRow(key, regionLegendText, swatchSvg(g.color, 18, g.pattern), "What does this shading mean?", onRegionTextChange), key });
+      const placeholder = regionGroupCaption(g.names) || "What does this shading mean?";
+      items.push({ row: buildCaptionRow(key, regionLegendText, swatchSvg(g.color, 18, g.pattern), placeholder, onRegionTextChange), key });
     });
     lineGroups.forEach(g => {
       const key = lineLegendKey(g.color, g.style);

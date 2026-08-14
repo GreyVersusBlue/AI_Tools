@@ -192,6 +192,133 @@ export function parseDataRows(text) {
   return { rows: parsed, headerSkipped, unreadable };
 }
 
+/* ── parsing, several value columns at a time ──────────────────────────── */
+
+/**
+ * Which character separates the columns. Order matters and is not arbitrary:
+ * a real spreadsheet paste is tab-separated, and a tab can never appear
+ * inside a number, so preferring it removes the whole ambiguity below
+ * whenever it is available.
+ */
+function pickDelimiter(text) {
+  if (text.includes("\t")) return "\t";
+  if (text.includes(";")) return ";";
+  if (text.includes("|")) return "|";
+  return ",";
+}
+
+/** A field that is exactly three digits — the shape of a thousands group, and the reason a comma is a poor column separator for a table of big numbers. */
+const THOUSANDS_GROUP = /^\d{3}$/;
+
+function isNumberField(s) { return toNumber(s) !== null; }
+
+/** How many fields at the end of a row read as numbers. */
+function trailingNumberCount(fields) {
+  let n = 0;
+  for (let i = fields.length - 1; i >= 1; i--) {
+    if (!isNumberField(fields[i])) break;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Whether a line is naming the columns rather than filling them.
+ *
+ * The single-column parser could tell by asking "does this parse as data?",
+ * because a header like `State, Population` doesn't. A time-slice header
+ * does: `State, 1790, 1850, 1900` is, read literally, Virginia with three
+ * numbers in it. So the test is about *shape* instead. A header's first
+ * field is a label, never a number, and its remaining fields are either
+ * words (the classic case) or four-digit years (the case this whole feature
+ * exists for). Six-digit populations are not years, so a data row is never
+ * mistaken for a header and quietly eaten.
+ */
+function looksLikeHeader(fields) {
+  if (fields.length < 2 || isNumberField(fields[0]) || !fields[0]) return false;
+  const values = fields.slice(1);
+  if (values.every(v => v && !isNumberField(v))) return true;
+  return values.every(v => /^\d{4}$/.test(v) && Number(v) >= 1000 && Number(v) <= 2999);
+}
+
+/**
+ * Parses a table with one *or more* value columns per place:
+ *
+ *     State, 1790, 1850, 1900
+ *     Maryland, 320000, 583000, 1188000
+ *
+ * **The comma problem, stated honestly.** The single-column parser gets away
+ * with commas because it requires the value to run to the end of the line,
+ * so `6,200,000` is one token and can only be one number. With several value
+ * columns that trick is gone, and `Maryland, 69,000, 148,000` is genuinely
+ * ambiguous: two numbers with thousands separators, or four plain numbers?
+ * No rule decides that correctly in every case, and a parser that guesses
+ * puts a wrong number on a map a class is about to read.
+ *
+ * So it does not guess. A tab, semicolon or pipe removes the ambiguity
+ * outright and is preferred whenever the paste contains one — which covers
+ * every real spreadsheet paste. With commas, the header row fixes the column
+ * count, and a row that then carries surplus three-digit fields is reported
+ * by name with advice, rather than silently becoming a different number.
+ *
+ * A header row names the slices. Without one they are "Column 1", "Column
+ * 2", so a printed series is still labelled with something.
+ */
+export function parseDataTable(text) {
+  const raw = String(text == null ? "" : text);
+  const lines = raw.split(/\r?\n/).filter(l => l.trim());
+  const delim = pickDelimiter(raw);
+  const split = lines.map(line => line.split(delim).map(f => f.trim()));
+
+  if (!split.length) {
+    return { slices: [], rows: [], headerSkipped: null, unreadable: [], ambiguous: [], delimiter: delim };
+  }
+  const hasHeader = split.length > 1 && looksLikeHeader(split[0]);
+  const firstDataAt = hasHeader ? 1 : 0;
+  const headerFields = hasHeader ? split[0] : null;
+  const headerSkipped = hasHeader ? lines[0].trim() : null;
+
+  // With commas, only a header can establish how many value columns there
+  // are — the data rows alone cannot be trusted to say. With an unambiguous
+  // delimiter the first data row is enough.
+  let sliceCount;
+  if (headerFields && headerFields.length >= 2) sliceCount = headerFields.length - 1;
+  else if (delim === ",") sliceCount = 1;
+  else sliceCount = trailingNumberCount(split[firstDataAt]);
+  sliceCount = Math.max(1, sliceCount);
+
+  let slices = headerFields && headerFields.length >= sliceCount + 1
+    ? headerFields.slice(headerFields.length - sliceCount).map(s => s || "")
+    : null;
+  if (!slices || slices.some(s => !s)) {
+    slices = Array.from({ length: sliceCount }, (_, i) => `Column ${i + 1}`);
+  }
+
+  const rows = [];
+  const unreadable = [];
+  const ambiguous = [];
+  split.forEach((fields, i) => {
+    if (i < firstDataAt) return;
+    const line = lines[i].trim();
+    if (fields.length <= sliceCount) { unreadable.push(line); return; }
+    const values = fields.slice(fields.length - sliceCount).map(toNumber);
+    const nameParts = fields.slice(0, fields.length - sliceCount);
+    const name = nameParts.join(delim).trim();
+    if (values.some(v => v === null) || !name) { unreadable.push(line); return; }
+    // The surplus-field test: with commas, a name column that has picked up
+    // three-digit numeric fields is a thousands separator being read as a
+    // column break. Say so instead of shading a state with 69000148.
+    if (delim === "," && sliceCount > 1 && nameParts.length > 1
+        && nameParts.slice(1).every(f => THOUSANDS_GROUP.test(f) || isNumberField(f))) {
+      ambiguous.push(line);
+      return;
+    }
+    rows.push({ name, values });
+  });
+
+  return { slices, rows, headerSkipped, unreadable, ambiguous, delimiter: delim };
+}
+
 /* ── matching ──────────────────────────────────────────────────────────── */
 
 /**
@@ -200,22 +327,35 @@ export function parseDataRows(text) {
  * found nothing — by name, so the UI can print them.
  */
 export function matchRegions(rows, regionNames) {
-  const byNormal = new Map();
-  (regionNames || []).forEach(name => byNormal.set(normalizeName(name), name));
-
+  const resolve = makeRegionResolver(regionNames);
   const values = new Map(); // canonical region name → value
   const unmatched = [];
   rows.forEach(row => {
-    const key = normalizeName(row.name);
+    const region = resolve(row.name);
+    if (region) values.set(region, row.value);
+    else unmatched.push(row.name);
+  });
+  return { values, unmatched };
+}
+
+/**
+ * A reusable "what does this map call that place" function, built once from
+ * the map's own name list. Same rule matchRegions() has always used — exact
+ * normalized name first, then the alias table — pulled out so a multi-column
+ * table can resolve each place once instead of once per column.
+ */
+export function makeRegionResolver(regionNames) {
+  const byNormal = new Map();
+  (regionNames || []).forEach(name => byNormal.set(normalizeName(name), name));
+  return function resolve(name) {
+    const key = normalizeName(name);
     let region = byNormal.get(key);
     if (!region) {
       const alias = ALIAS_LOOKUP.get(key);
       if (alias) region = byNormal.get(normalizeName(alias));
     }
-    if (region) values.set(region, row.value);
-    else unmatched.push(row.name);
-  });
-  return { values, unmatched };
+    return region || null;
+  };
 }
 
 /* ── classification ────────────────────────────────────────────────────── */
@@ -379,6 +519,122 @@ export function buildChoropleth({ text, regionNames = [], classes = 5, ramp = DE
     key: choroplethKey({ f: Object.entries(fills).sort(([a], [b]) => (a < b ? -1 : 1)), r: ramp, c: classCount }),
   };
 }
+
+/* ── time slices: one map per column, one set of bands ─────────────────── */
+
+/** The most maps a series will print. Past this the panels are too small to read anything off, and the honest answer is a second sheet. */
+export const MAX_SLICES = 8;
+
+/**
+ * Parse → match → classify → colour, for a table with several value columns
+ * — the shape of every "territorial change over time" question a social
+ * studies unit asks. One map per column, printed as a labelled series.
+ *
+ * **The bands are computed once across every value in every column, and the
+ * same bands colour all of them.** That is the entire point and the one
+ * thing that would be easy to get wrong: classify each map on its own data
+ * and 1900's darkest band and 2000's darkest band mean different numbers, so
+ * a series that looks like it shows growth might show nothing at all, or
+ * hide a tenfold rise behind identical-looking maps. Shared bands mean the
+ * three maps are comparable at a glance, which is the only reason to put
+ * them side by side.
+ *
+ * The cost of that choice is honest and visible: if one slice's values are
+ * far larger, the other slices sit in the lightest band or two. That is the
+ * data saying so, and the key prints the real numeric range either way.
+ */
+export function buildSeries({ text, regionNames = [], classes = 5, ramp = DEFAULT_RAMP } = {}) {
+  const classCount = Math.max(MIN_CLASSES, Math.min(MAX_CLASSES, Math.round(classes) || 5));
+  const { slices, rows, headerSkipped, unreadable, ambiguous } = parseDataTable(text);
+  const capped = slices.slice(0, MAX_SLICES);
+
+  // A place is matched once, not once per column.
+  const resolve = makeRegionResolver(regionNames);
+  const canonicalOf = new Map();
+  const unmatched = [];
+  rows.forEach(r => {
+    const region = resolve(r.name);
+    if (region) canonicalOf.set(r.name, region);
+    else unmatched.push(r.name);
+  });
+  const matchedCount = new Set(canonicalOf.values()).size;
+
+  const pooled = [];
+  rows.forEach(r => { if (canonicalOf.has(r.name)) capped.forEach((_, i) => pooled.push(r.values[i])); });
+
+  const breaks = quantileBreaks(pooled, classCount);
+  const colors = rampColors(ramp, breaks.length);
+  const format = makeValueFormatter(pooled);
+  const classOf = v => {
+    for (let i = 0; i < breaks.length; i++) if (v <= breaks[i]) return i;
+    return breaks.length - 1;
+  };
+
+  const counts = breaks.map(() => 0);
+  const sliceResults = capped.map((label, i) => {
+    const fills = {};
+    rows.forEach(r => {
+      const region = canonicalOf.get(r.name);
+      if (!region) return;
+      const cls = classOf(r.values[i]);
+      fills[region] = colors[cls];
+      counts[cls]++;
+    });
+    return { label, fills, key: choroplethKey({ f: Object.entries(fills).sort(([a], [b]) => (a < b ? -1 : 1)), r: ramp, c: classCount, s: label }) };
+  });
+
+  const min = pooled.length ? Math.min(...pooled) : 0;
+  const legendRows = breaks.map((upper, i) => {
+    const lower = i === 0 ? min : breaks[i - 1];
+    return {
+      key: classKey(i),
+      hex: colors[i],
+      label: lower === upper ? format(upper) : `${format(lower)} to ${format(upper)}`,
+      count: counts[i],
+    };
+  });
+
+  return {
+    ok: sliceResults.length > 1 && matchedCount > 0,
+    sliceCount: slices.length,
+    dropped: Math.max(0, slices.length - capped.length),
+    slices: sliceResults,
+    sliceLabels: capped,
+    legendRows,
+    breaks,
+    matchedCount,
+    rowCount: rows.length,
+    unmatched,
+    unreadable,
+    ambiguous: ambiguous || [],
+    headerSkipped,
+    format,
+  };
+}
+
+/**
+ * Population of the thirteen original states across three censuses, so the
+ * time-slice series has something real to demonstrate on. Rounded, and
+ * deliberately a story a 7th grader can read off three maps: the whole
+ * seaboard is dark in 1790 because that is where everyone lived, and by 1900
+ * the same states are pale beside a country that has filled in behind them.
+ */
+export const EXAMPLE_TIME_SLICES = [
+  "State, 1790, 1850, 1900",
+  "Virginia, 747000, 1119000, 1854000",
+  "Pennsylvania, 434000, 2311000, 6302000",
+  "North Carolina, 394000, 869000, 1894000",
+  "Massachusetts, 379000, 995000, 2805000",
+  "New York, 340000, 3097000, 7269000",
+  "Maryland, 320000, 583000, 1188000",
+  "South Carolina, 249000, 668000, 1340000",
+  "Connecticut, 238000, 371000, 908000",
+  "New Jersey, 184000, 490000, 1884000",
+  "New Hampshire, 142000, 318000, 412000",
+  "Georgia, 83000, 906000, 2216000",
+  "Rhode Island, 69000, 148000, 428000",
+  "Delaware, 59000, 92000, 185000",
+].join("\n");
 
 /* ── legend swatch ─────────────────────────────────────────────────────── */
 
