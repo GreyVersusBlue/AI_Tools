@@ -170,6 +170,19 @@
         </select>
       </div>
       <div class="field">
+        <label for="regionFilter">Region</label>
+        <select id="regionFilter">
+          <option value="">All regions</option>
+          <option value="africa">Africa</option>
+          <option value="asia">Asia</option>
+          <option value="europe">Europe</option>
+          <option value="north-america">North America</option>
+          <option value="south-america">South America</option>
+          <option value="oceania">Oceania</option>
+          <option value="global">No particular region (map skills)</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="formatSelect">Quiz format</label>
         <select id="formatSelect">
           <option value="short">Short answer</option>
@@ -288,6 +301,16 @@
         <option value="landmarks">Landmarks</option>
         <option value="mapskills">Map Skills</option>
       </select>
+      <label for="newRegion">Region</label>
+      <select id="newRegion">
+        <option value="global">No particular region</option>
+        <option value="africa">Africa</option>
+        <option value="asia">Asia</option>
+        <option value="europe">Europe</option>
+        <option value="north-america">North America</option>
+        <option value="south-america">South America</option>
+        <option value="oceania">Oceania</option>
+      </select>
       <label for="newQ">Question</label>
       <input type="text" id="newQ" placeholder="e.g. What is the capital of Peru?">
       <label for="newA">Answer</label>
@@ -322,7 +345,9 @@
       <p class="hint">One question per line: <code>question | answer | category</code> (or paste straight from a
         spreadsheet &mdash; tab-separated works). Category is optional &mdash; <code>capitals</code>,
         <code>landmarks</code>, or <code>map skills</code>; lines without one use the Category picker above.
-        Everything is added to your custom bank without touching what&rsquo;s already there.</p>
+        A region can follow it (<code>Africa</code>, <code>South America</code>, &hellip;) in either order, and
+        lines without one use the Region picker above. Everything is added to your custom bank without touching
+        what&rsquo;s already there.</p>
       <textarea id="bulkInput" placeholder="What is the capital of Kenya? | Nairobi | capitals&#10;On which continent is the Amazon River? | South America | map skills"></textarea>
       <button type="button" class="secondary" id="bulkImportBtn">Add to bank</button>
       <p class="bulk-note" id="bulkNote" style="display:none;" aria-live="polite"></p>
@@ -344,103 +369,142 @@
   var TOURNAMENT_KEY = 'gbq_tournament_v1';
   var CAT_LABELS = { capitals: 'Capitals', landmarks: 'Landmarks', mapskills: 'Map Skills', maps: 'Map Questions' };
 
+  /* Region tagging, added 2026-08-14. The four categories say what *kind* of
+     question this is; the region says what part of the world it is about,
+     which is the axis a teacher covering a unit actually plans along ("we
+     are on South America this month"). The two are independent, so they
+     filter independently and combine.
+
+     Every built-in question carries its region as data — the fourth column
+     of BUILTIN_RAW — rather than being classified at runtime from the words
+     in it. gbq-map.js's own header explains why: an algorithm that decides
+     where a place belongs is confidently wrong often enough (it puts Iraq in
+     Africa and Russia in Europe) that shipping one for 90 questions would
+     mean a teacher filtering to Africa gets Baghdad. The tagging was
+     proposed from that module's continent lists and then read through
+     one by one.
+
+     'global' is a real answer, not a missing one: half the built-ins are map
+     skills — latitude, scale, contour lines — that belong to no continent
+     and should show up in every region's practice, which is what the filter
+     does with them.
+
+     Two transcontinental judgement calls, stated rather than buried: Russia
+     and Turkey are filed under Europe, because a teacher filtering for a
+     Europe unit expects Moscow and Ankara to appear. That is a *filter*
+     decision and it does not touch gbq-map.js's crop data, where Russia is
+     still drawn on a world map because its geometry wraps the antimeridian.
+
+     Named `area` throughout the code, not `region`: this file already uses
+     "region" for the state or country a map question highlights
+     (`item.map.region`, and the `REGION_LABELS` lists further down), and two
+     meanings of one word in one file is how the wrong one gets used. The UI
+     still says "Region", which is what a teacher calls it. */
+  var AREA_LABELS = {
+    africa: 'Africa', asia: 'Asia', europe: 'Europe',
+    'north-america': 'North America', 'south-america': 'South America',
+    oceania: 'Oceania', global: 'No particular region'
+  };
+  var AREA_ORDER = ['africa', 'asia', 'europe', 'north-america', 'south-america', 'oceania', 'global'];
+  function isArea(r) { return AREA_ORDER.indexOf(r) !== -1; }
+
   var BUILTIN_RAW = [
-    ['capitals', 'What is the capital of France?', 'Paris'],
-    ['capitals', 'What is the capital of Japan?', 'Tokyo'],
-    ['capitals', 'What is the capital of Australia?', 'Canberra'],
-    ['capitals', 'What is the capital of Canada?', 'Ottawa'],
-    ['capitals', 'What is the capital of Brazil?', 'Brasília'],
-    ['capitals', 'What is the capital of Egypt?', 'Cairo'],
-    ['capitals', 'What is the capital of South Korea?', 'Seoul'],
-    ['capitals', 'What is the capital of Kenya?', 'Nairobi'],
-    ['capitals', 'What is the capital of Mexico?', 'Mexico City'],
-    ['capitals', 'What is the capital of Russia?', 'Moscow'],
-    ['landmarks', 'In which country would you find the Great Pyramid of Giza?', 'Egypt'],
-    ['landmarks', 'In which country would you find the Eiffel Tower?', 'France'],
-    ['landmarks', 'In which country would you find Machu Picchu?', 'Peru'],
-    ['landmarks', 'In which country would you find the Great Wall?', 'China'],
-    ['landmarks', 'In which country would you find the Taj Mahal?', 'India'],
-    ['landmarks', 'In which country would you find Mount Kilimanjaro?', 'Tanzania'],
-    ['landmarks', 'In which country would you find the Colosseum?', 'Italy'],
-    ['landmarks', 'In which country would you find Uluru (Ayers Rock)?', 'Australia'],
-    ['landmarks', 'Which river is the longest in the world?', 'The Nile'],
-    ['landmarks', 'Which mountain range contains Mount Everest?', 'The Himalayas'],
-    ['mapskills', 'What is the imaginary line at 0° latitude called?', 'The Equator'],
-    ['mapskills', 'What is the imaginary line at 0° longitude called?', 'The Prime Meridian'],
-    ['mapskills', 'What tool on a map shows the meaning of its symbols?', 'The legend / key'],
-    ['mapskills', 'What do you call a line on a map connecting points of equal elevation?', 'A contour line'],
-    ['mapskills', 'What compass direction is directly opposite of North?', 'South'],
-    ['mapskills', 'What is the term for the ratio between map distance and real distance?', 'Scale'],
-    ['mapskills', 'What are the seven continents?', 'Africa, Antarctica, Asia, Australia, Europe, North America, South America'],
-    ['mapskills', 'What do lines of latitude measure?', 'Distance north or south of the Equator'],
-    ['mapskills', 'What do lines of longitude measure?', 'Distance east or west of the Prime Meridian'],
-    ['mapskills', 'What symbol on a map typically points north?', 'A compass rose'],
+    ['capitals', 'What is the capital of France?', 'Paris', 'europe'],
+    ['capitals', 'What is the capital of Japan?', 'Tokyo', 'asia'],
+    ['capitals', 'What is the capital of Australia?', 'Canberra', 'oceania'],
+    ['capitals', 'What is the capital of Canada?', 'Ottawa', 'north-america'],
+    ['capitals', 'What is the capital of Brazil?', 'Brasília', 'south-america'],
+    ['capitals', 'What is the capital of Egypt?', 'Cairo', 'africa'],
+    ['capitals', 'What is the capital of South Korea?', 'Seoul', 'asia'],
+    ['capitals', 'What is the capital of Kenya?', 'Nairobi', 'africa'],
+    ['capitals', 'What is the capital of Mexico?', 'Mexico City', 'north-america'],
+    ['capitals', 'What is the capital of Russia?', 'Moscow', 'europe'],
+    ['landmarks', 'In which country would you find the Great Pyramid of Giza?', 'Egypt', 'africa'],
+    ['landmarks', 'In which country would you find the Eiffel Tower?', 'France', 'europe'],
+    ['landmarks', 'In which country would you find Machu Picchu?', 'Peru', 'south-america'],
+    ['landmarks', 'In which country would you find the Great Wall?', 'China', 'asia'],
+    ['landmarks', 'In which country would you find the Taj Mahal?', 'India', 'asia'],
+    ['landmarks', 'In which country would you find Mount Kilimanjaro?', 'Tanzania', 'africa'],
+    ['landmarks', 'In which country would you find the Colosseum?', 'Italy', 'europe'],
+    ['landmarks', 'In which country would you find Uluru (Ayers Rock)?', 'Australia', 'oceania'],
+    ['landmarks', 'Which river is the longest in the world?', 'The Nile', 'africa'],
+    ['landmarks', 'Which mountain range contains Mount Everest?', 'The Himalayas', 'asia'],
+    ['mapskills', 'What is the imaginary line at 0° latitude called?', 'The Equator', 'global'],
+    ['mapskills', 'What is the imaginary line at 0° longitude called?', 'The Prime Meridian', 'global'],
+    ['mapskills', 'What tool on a map shows the meaning of its symbols?', 'The legend / key', 'global'],
+    ['mapskills', 'What do you call a line on a map connecting points of equal elevation?', 'A contour line', 'global'],
+    ['mapskills', 'What compass direction is directly opposite of North?', 'South', 'global'],
+    ['mapskills', 'What is the term for the ratio between map distance and real distance?', 'Scale', 'global'],
+    ['mapskills', 'What are the seven continents?', 'Africa, Antarctica, Asia, Australia, Europe, North America, South America', 'global'],
+    ['mapskills', 'What do lines of latitude measure?', 'Distance north or south of the Equator', 'global'],
+    ['mapskills', 'What do lines of longitude measure?', 'Distance east or west of the Prime Meridian', 'global'],
+    ['mapskills', 'What symbol on a map typically points north?', 'A compass rose', 'global'],
     /* Grown from 10 to 30 per category (SS demo round, backlog rank 29) —
        new ids append here, bi30 onward; the original bi0-bi29 above are
        never renumbered since teachers' hidden-question lists reference
        them by id. World-balanced on purpose: the original 30 leaned
        Asia/Africa/Americas already, these add more of Europe, Southeast
        Asia, and the Middle East without tipping the set US/Europe-only. */
-    ['capitals', 'What is the capital of Germany?', 'Berlin'],
-    ['capitals', 'What is the capital of Italy?', 'Rome'],
-    ['capitals', 'What is the capital of Spain?', 'Madrid'],
-    ['capitals', 'What is the capital of the United Kingdom?', 'London'],
-    ['capitals', 'What is the capital of India?', 'New Delhi'],
-    ['capitals', 'What is the capital of China?', 'Beijing'],
-    ['capitals', 'What is the capital of Indonesia?', 'Jakarta'],
-    ['capitals', 'What is the capital of Nigeria?', 'Abuja'],
-    ['capitals', 'What is the capital of Argentina?', 'Buenos Aires'],
-    ['capitals', 'What is the capital of Chile?', 'Santiago'],
-    ['capitals', 'What is the capital of Colombia?', 'Bogotá'],
-    ['capitals', 'What is the capital of Turkey?', 'Ankara'],
-    ['capitals', 'What is the capital of Saudi Arabia?', 'Riyadh'],
-    ['capitals', 'What is the capital of Thailand?', 'Bangkok'],
-    ['capitals', 'What is the capital of Vietnam?', 'Hanoi'],
-    ['capitals', 'What is the capital of the Philippines?', 'Manila'],
-    ['capitals', 'What is the capital of New Zealand?', 'Wellington'],
-    ['capitals', 'What is the capital of Sweden?', 'Stockholm'],
-    ['capitals', 'What is the capital of Poland?', 'Warsaw'],
-    ['capitals', 'What is the capital of Greece?', 'Athens'],
-    ['landmarks', 'In which country would you find the Statue of Liberty?', 'The United States'],
-    ['landmarks', 'In which country would you find Christ the Redeemer?', 'Brazil'],
-    ['landmarks', 'In which country would you find Petra, the ancient city carved into rock?', 'Jordan'],
-    ['landmarks', 'In which country would you find Angkor Wat?', 'Cambodia'],
-    ['landmarks', 'In which country would you find Stonehenge?', 'The United Kingdom'],
-    ['landmarks', 'In which country would you find Mount Fuji?', 'Japan'],
-    ['landmarks', 'In which country would you find the Great Barrier Reef?', 'Australia'],
-    ['landmarks', 'What is the name of the tallest mountain peak in North America?', 'Denali'],
-    ['landmarks', 'In which country would you find Salar de Uyuni, the world’s largest salt flat?', 'Bolivia'],
-    ['landmarks', 'In which country would you find the Leaning Tower of Pisa?', 'Italy'],
-    ['landmarks', 'In which country would you find the Great Sphinx?', 'Egypt'],
-    ['landmarks', 'In which country would you find Ha Long Bay?', 'Vietnam'],
-    ['landmarks', 'In which country would you find Neuschwanstein Castle?', 'Germany'],
-    ['landmarks', 'Victoria Falls sits on the border of Zambia and which other country?', 'Zimbabwe'],
-    ['landmarks', 'Which desert is the largest hot desert in the world?', 'The Sahara'],
-    ['landmarks', 'The Amazon Rainforest is located mostly within which country?', 'Brazil'],
-    ['landmarks', 'The Gobi Desert lies mainly in China and which other country?', 'Mongolia'],
-    ['landmarks', 'Iguazu Falls sits on the border of Brazil and which other country?', 'Argentina'],
-    ['landmarks', 'Table Mountain is a famous landmark overlooking which South African city?', 'Cape Town'],
-    ['landmarks', 'The Amazon River empties into which ocean?', 'The Atlantic Ocean'],
-    ['mapskills', 'What are the four cardinal directions?', 'North, South, East, and West'],
-    ['mapskills', 'What are the four intermediate directions (halfway between the cardinal ones)?', 'Northeast, Northwest, Southeast, and Southwest'],
-    ['mapskills', 'What is the term for a location described using exact latitude and longitude coordinates?', 'Absolute location'],
-    ['mapskills', 'What is the term for a location described in relation to other places, like "next to the river"?', 'Relative location'],
-    ['mapskills', 'What type of map shows natural features like mountains, rivers, and deserts?', 'A physical map'],
-    ['mapskills', 'What type of map shows human-made boundaries like countries, states, and cities?', 'A political map'],
-    ['mapskills', 'What type of map uses contour lines to show the shape and elevation of the land?', 'A topographic map'],
-    ['mapskills', 'What is the term for the height of land above sea level?', 'Elevation'],
-    ['mapskills', 'What is a small map inset into the corner of a larger map called?', 'An inset map'],
-    ['mapskills', 'What is the imaginary line at 23.5° north of the Equator called?', 'The Tropic of Cancer'],
-    ['mapskills', 'What is the imaginary line at 23.5° south of the Equator called?', 'The Tropic of Capricorn'],
-    ['mapskills', 'What is the name of the line at 180° longitude, opposite the Prime Meridian?', 'The International Date Line'],
-    ['mapskills', 'On a standard map, which cardinal direction is usually at the top?', 'North'],
-    ['mapskills', 'What is the name for the system of latitude and longitude lines used to locate any place on Earth?', 'A grid system'],
-    ['mapskills', 'What color usually represents the highest elevations on a relief or elevation map?', 'Brown'],
-    ['mapskills', 'What type of map shows the average weather patterns of a region over time?', 'A climate map'],
-    ['mapskills', 'What is the small bar on a map used to measure real-world distance called?', 'A scale bar'],
-    ['mapskills', 'What is another name for lines of latitude?', 'Parallels'],
-    ['mapskills', 'What is another name for lines of longitude?', 'Meridians'],
-    ['mapskills', 'On most maps, what symbol marks a country’s capital city?', 'A star']
+    ['capitals', 'What is the capital of Germany?', 'Berlin', 'europe'],
+    ['capitals', 'What is the capital of Italy?', 'Rome', 'europe'],
+    ['capitals', 'What is the capital of Spain?', 'Madrid', 'europe'],
+    ['capitals', 'What is the capital of the United Kingdom?', 'London', 'europe'],
+    ['capitals', 'What is the capital of India?', 'New Delhi', 'asia'],
+    ['capitals', 'What is the capital of China?', 'Beijing', 'asia'],
+    ['capitals', 'What is the capital of Indonesia?', 'Jakarta', 'asia'],
+    ['capitals', 'What is the capital of Nigeria?', 'Abuja', 'africa'],
+    ['capitals', 'What is the capital of Argentina?', 'Buenos Aires', 'south-america'],
+    ['capitals', 'What is the capital of Chile?', 'Santiago', 'south-america'],
+    ['capitals', 'What is the capital of Colombia?', 'Bogotá', 'south-america'],
+    ['capitals', 'What is the capital of Turkey?', 'Ankara', 'europe'],
+    ['capitals', 'What is the capital of Saudi Arabia?', 'Riyadh', 'asia'],
+    ['capitals', 'What is the capital of Thailand?', 'Bangkok', 'asia'],
+    ['capitals', 'What is the capital of Vietnam?', 'Hanoi', 'asia'],
+    ['capitals', 'What is the capital of the Philippines?', 'Manila', 'asia'],
+    ['capitals', 'What is the capital of New Zealand?', 'Wellington', 'oceania'],
+    ['capitals', 'What is the capital of Sweden?', 'Stockholm', 'europe'],
+    ['capitals', 'What is the capital of Poland?', 'Warsaw', 'europe'],
+    ['capitals', 'What is the capital of Greece?', 'Athens', 'europe'],
+    ['landmarks', 'In which country would you find the Statue of Liberty?', 'The United States', 'north-america'],
+    ['landmarks', 'In which country would you find Christ the Redeemer?', 'Brazil', 'south-america'],
+    ['landmarks', 'In which country would you find Petra, the ancient city carved into rock?', 'Jordan', 'asia'],
+    ['landmarks', 'In which country would you find Angkor Wat?', 'Cambodia', 'asia'],
+    ['landmarks', 'In which country would you find Stonehenge?', 'The United Kingdom', 'europe'],
+    ['landmarks', 'In which country would you find Mount Fuji?', 'Japan', 'asia'],
+    ['landmarks', 'In which country would you find the Great Barrier Reef?', 'Australia', 'oceania'],
+    ['landmarks', 'What is the name of the tallest mountain peak in North America?', 'Denali', 'north-america'],
+    ['landmarks', 'In which country would you find Salar de Uyuni, the world’s largest salt flat?', 'Bolivia', 'south-america'],
+    ['landmarks', 'In which country would you find the Leaning Tower of Pisa?', 'Italy', 'europe'],
+    ['landmarks', 'In which country would you find the Great Sphinx?', 'Egypt', 'africa'],
+    ['landmarks', 'In which country would you find Ha Long Bay?', 'Vietnam', 'asia'],
+    ['landmarks', 'In which country would you find Neuschwanstein Castle?', 'Germany', 'europe'],
+    ['landmarks', 'Victoria Falls sits on the border of Zambia and which other country?', 'Zimbabwe', 'africa'],
+    ['landmarks', 'Which desert is the largest hot desert in the world?', 'The Sahara', 'africa'],
+    ['landmarks', 'The Amazon Rainforest is located mostly within which country?', 'Brazil', 'south-america'],
+    ['landmarks', 'The Gobi Desert lies mainly in China and which other country?', 'Mongolia', 'asia'],
+    ['landmarks', 'Iguazu Falls sits on the border of Brazil and which other country?', 'Argentina', 'south-america'],
+    ['landmarks', 'Table Mountain is a famous landmark overlooking which South African city?', 'Cape Town', 'africa'],
+    ['landmarks', 'The Amazon River empties into which ocean?', 'The Atlantic Ocean', 'south-america'],
+    ['mapskills', 'What are the four cardinal directions?', 'North, South, East, and West', 'global'],
+    ['mapskills', 'What are the four intermediate directions (halfway between the cardinal ones)?', 'Northeast, Northwest, Southeast, and Southwest', 'global'],
+    ['mapskills', 'What is the term for a location described using exact latitude and longitude coordinates?', 'Absolute location', 'global'],
+    ['mapskills', 'What is the term for a location described in relation to other places, like "next to the river"?', 'Relative location', 'global'],
+    ['mapskills', 'What type of map shows natural features like mountains, rivers, and deserts?', 'A physical map', 'global'],
+    ['mapskills', 'What type of map shows human-made boundaries like countries, states, and cities?', 'A political map', 'global'],
+    ['mapskills', 'What type of map uses contour lines to show the shape and elevation of the land?', 'A topographic map', 'global'],
+    ['mapskills', 'What is the term for the height of land above sea level?', 'Elevation', 'global'],
+    ['mapskills', 'What is a small map inset into the corner of a larger map called?', 'An inset map', 'global'],
+    ['mapskills', 'What is the imaginary line at 23.5° north of the Equator called?', 'The Tropic of Cancer', 'global'],
+    ['mapskills', 'What is the imaginary line at 23.5° south of the Equator called?', 'The Tropic of Capricorn', 'global'],
+    ['mapskills', 'What is the name of the line at 180° longitude, opposite the Prime Meridian?', 'The International Date Line', 'global'],
+    ['mapskills', 'On a standard map, which cardinal direction is usually at the top?', 'North', 'global'],
+    ['mapskills', 'What is the name for the system of latitude and longitude lines used to locate any place on Earth?', 'A grid system', 'global'],
+    ['mapskills', 'What color usually represents the highest elevations on a relief or elevation map?', 'Brown', 'global'],
+    ['mapskills', 'What type of map shows the average weather patterns of a region over time?', 'A climate map', 'global'],
+    ['mapskills', 'What is the small bar on a map used to measure real-world distance called?', 'A scale bar', 'global'],
+    ['mapskills', 'What is another name for lines of latitude?', 'Parallels', 'global'],
+    ['mapskills', 'What is another name for lines of longitude?', 'Meridians', 'global'],
+    ['mapskills', 'On most maps, what symbol marks a country’s capital city?', 'A star', 'global']
   ];
 
   /* ---------- built-in map questions (SS demo round 2) ----------
@@ -495,19 +559,29 @@
       : 'Which country is highlighted on the map?';
   }
 
-  var BUILTIN = BUILTIN_RAW.map(function (row, i) { return { id: 'bi' + i, category: row[0], q: row[1], a: row[2], custom: false }; })
+  /* A map question's region comes from the crop it is already drawn on, which
+     is why the notes called this half of the tagging free. The two special
+     cases: every US state question is North America (its crop is usa-48 or
+     usa-50, which are not continents), and the one country whose crop is
+     'world' is Russia — filed under Europe here for the reason given above. */
+  function mapAreaFor(row) {
+    if (row[0] === 'us') return 'north-america';
+    return isArea(row[3]) ? row[3] : 'europe';
+  }
+
+  var BUILTIN = BUILTIN_RAW.map(function (row, i) { return { id: 'bi' + i, category: row[0], q: row[1], a: row[2], area: row[3], custom: false }; })
     .concat(MAP_BUILTINS.map(function (row, i) {
       return {
         id: 'bi' + (BUILTIN_RAW.length + i), category: 'maps', custom: false,
-        q: mapQuestionText(row[0]), a: row[2],
+        q: mapQuestionText(row[0]), a: row[2], area: mapAreaFor(row),
         map: { dataset: row[0], region: row[1], context: row[3] }
       };
     }));
 
   var els = {};
-  ['categoryFilter', 'formatSelect', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayMap', 'displayOptions', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+  ['categoryFilter', 'regionFilter', 'formatSelect', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayMap', 'displayOptions', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'quizVersion', 'buildSheetBtn', 'newVersionBtn', 'printBtn', 'sheetProblems', 'sheetKey',
-   'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
+   'newCategory', 'newRegion', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
    'bulkInput', 'bulkImportBtn', 'bulkNote',
    'mapGenDataset', 'mapGenCount', 'mapGenBtn', 'mapGenNote',
    'tourToggleBtn', 'tournamentCard', 'tourSetup', 'tourTeams', 'tourPoints', 'tourStartBtn', 'tourNames',
@@ -573,6 +647,7 @@
       var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
       if (s && typeof s === 'object') {
         if (typeof s.category === 'string') els.categoryFilter.value = s.category;
+        if (typeof s.region === 'string') els.regionFilter.value = s.region;
         if (s.sheetCount) els.sheetCount.value = s.sheetCount;
         if (s.format === 'mc' || s.format === 'short') els.formatSelect.value = s.format;
         if (s.quizVersion) els.quizVersion.value = s.quizVersion;
@@ -582,7 +657,7 @@
   function saveSettings() {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-        category: els.categoryFilter.value, sheetCount: els.sheetCount.value,
+        category: els.categoryFilter.value, region: els.regionFilter.value, sheetCount: els.sheetCount.value,
         format: els.formatSelect.value, quizVersion: els.quizVersion.value
       }));
     } catch (e) { /* storage full/blocked */ }
@@ -590,7 +665,10 @@
 
   function allQuestions() {
     return BUILTIN.concat(custom.map(function (c) {
-      return { category: c.category, q: c.q, a: c.a, custom: true, id: c.id, map: c.map || null };
+      /* A custom question saved before regions existed has none: it is
+         'global', which is also what the add form defaults to, so nothing a
+         teacher already typed disappears from an unfiltered bank. */
+      return { category: c.category, area: isArea(c.area) ? c.area : 'global', q: c.q, a: c.a, custom: true, id: c.id, map: c.map || null };
     }));
   }
   function activeQuestions() {
@@ -598,7 +676,13 @@
   }
   function filteredQuestions() {
     var cat = els.categoryFilter.value;
-    return activeQuestions().filter(function (item) { return !cat || item.category === cat; });
+    var region = els.regionFilter.value;
+    // Category and region are independent axes and combine with AND: "map
+    // questions about Africa" is a real request, and so is "everything about
+    // Africa" across all four categories.
+    return activeQuestions().filter(function (item) {
+      return (!cat || item.category === cat) && (!region || item.area === region);
+    });
   }
 
   function resetOrder() {
@@ -739,7 +823,8 @@
     }
     var item = all[order[idx]];
     els.displayNum.textContent = 'Question ' + (idx + 1) + ' of ' + order.length;
-    els.displayCat.textContent = CAT_LABELS[item.category] || item.category;
+    els.displayCat.textContent = (CAT_LABELS[item.category] || item.category) +
+      (item.area && item.area !== 'global' ? ' · ' + AREA_LABELS[item.area] : '');
     els.displayQ.textContent = item.q;
     if (item.map) renderDisplayMap(item, token);
 
@@ -858,7 +943,7 @@
     var q = els.newQ.value.trim();
     var a = els.newA.value.trim();
     if (!q || !a) { alert('Fill in both the question and the answer.'); return; }
-    custom.push({ id: uid(), category: els.newCategory.value, q: q, a: a });
+    custom.push({ id: uid(), category: els.newCategory.value, area: els.newRegion.value, q: q, a: a });
     saveCustom();
     els.newQ.value = ''; els.newA.value = '';
     resetOrder(); renderDisplay(); renderBank();
@@ -875,18 +960,47 @@
     if (t.indexOf('mapskill') === 0 || t === 'map' || t === 'maps') return 'mapskills';
     return null;
   }
-  function parseBulkLine(line, defaultCategory) {
+  /* "Africa", "north america", "n. america", "none" → a region key, or null
+     for anything that isn't one. Deliberately forgiving about spacing,
+     punctuation and case: this parses what a teacher types into a
+     spreadsheet column, not a controlled vocabulary. */
+  function parseRegionToken(tok) {
+    var t = String(tok || '').trim().toLowerCase().replace(/[._]/g, ' ').replace(/\s+/g, ' ');
+    if (!t) return null;
+    if (t === 'none' || t === 'global' || t === 'n/a' || t === 'any') return 'global';
+    if (t === 'africa') return 'africa';
+    if (t === 'asia') return 'asia';
+    if (t === 'europe') return 'europe';
+    if (t === 'oceania' || t === 'australia') return 'oceania';
+    if (/^n(orth)?\.? ?america$/.test(t)) return 'north-america';
+    if (/^s(outh)?\.? ?america$/.test(t)) return 'south-america';
+    if (t === 'north-america') return 'north-america';
+    if (t === 'south-america') return 'south-america';
+    return null;
+  }
+
+  function parseBulkLine(line, defaultCategory, defaultRegion) {
     var sep = line.indexOf('\t') !== -1 ? '\t' : (line.indexOf('|') !== -1 ? '|' : null);
     if (!sep) return null;
     var parts = line.split(sep).map(function (p) { return p.trim(); });
     while (parts.length && !parts[parts.length - 1]) parts.pop();
     if (parts.length < 2 || !parts[0] || !parts[1]) return null;
-    var category = null;
-    if (parts.length >= 3) {
-      category = parseCategoryToken(parts[parts.length - 1]);
-      if (category) parts.pop();
+    var category = null, region = null;
+    /* Trailing tokens are consumed from the right, and each one is only taken
+       if it really is a category or a region — so "Paris | France" keeps
+       "France" as part of the answer, and the column order of the two
+       optional tags doesn't matter. */
+    for (var i = 0; i < 2 && parts.length >= 3; i++) {
+      var tail = parts[parts.length - 1];
+      if (!category && parseCategoryToken(tail)) { category = parseCategoryToken(tail); parts.pop(); continue; }
+      if (!region && parseRegionToken(tail)) { region = parseRegionToken(tail); parts.pop(); continue; }
+      break;
     }
-    return { q: parts[0], a: parts.slice(1).join(' | '), category: category || defaultCategory };
+    return {
+      q: parts[0], a: parts.slice(1).join(' | '),
+      category: category || defaultCategory,
+      area: region || defaultRegion || 'global'
+    };
   }
   function setBulkNote(text, isError) {
     els.bulkNote.textContent = text || '';
@@ -898,9 +1012,9 @@
     if (!lines.length) { setBulkNote('Paste some lines first — one question per line.', true); return; }
     var added = 0, skipped = [];
     lines.forEach(function (line) {
-      var parsed = parseBulkLine(line, els.newCategory.value);
+      var parsed = parseBulkLine(line, els.newCategory.value, els.newRegion.value);
       if (!parsed) { skipped.push(line); return; }
-      custom.push({ id: uid(), category: parsed.category, q: parsed.q, a: parsed.a });
+      custom.push({ id: uid(), category: parsed.category, area: parsed.area, q: parsed.q, a: parsed.a });
       added++;
     });
     saveCustom();
@@ -1104,7 +1218,11 @@
         : '<button type="button" class="secondary small del-btn" data-toggle="' + item.id + '">' + (isHidden ? 'Show' : 'Hide') + '</button>';
       var status = item.custom ? '' : (isHidden ? ' <span class="hint" style="margin:0;">(hidden)</span>' : '');
       return '<div class="bank-row"' + (isHidden ? ' style="opacity:.55;"' : '') + '>' + actionBtn +
-        '<b>[' + CAT_LABELS[item.category] + ']</b> ' + escapeHtml(item.q) + ' &mdash; <em>' + escapeHtml(item.a) + '</em>' + status + '</div>';
+        '<b>[' + CAT_LABELS[item.category] + ']</b> ' +
+        // The region only earns space in the list when it says something —
+        // "No particular region" on half the bank is noise.
+        (item.area && item.area !== 'global' ? '<span class="hint" style="margin:0;">[' + AREA_LABELS[item.area] + ']</span> ' : '') +
+        escapeHtml(item.q) + ' &mdash; <em>' + escapeHtml(item.a) + '</em>' + status + '</div>';
     }).join('');
   }
   els.bankList.addEventListener('click', function (ev) {
