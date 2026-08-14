@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Historical Figure / Country Trading Card Maker</title>
-<meta name="description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, roster batch-add, and share a finished deck by link or QR code.">
+<meta name="description" content="Design collectible research trading cards with era, science, math, literature and vocabulary themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, deck share links, and a teacher-run projector review game.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AsPerMyLessonPlan.com">
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/064-historical-trading-card-maker.html">
 <meta property="og:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
-<meta property="og:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, roster batch-add, and share a finished deck by link or QR code.">
+<meta property="og:description" content="Design collectible research trading cards with era, science, math, literature and vocabulary themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, deck share links, and a teacher-run projector review game.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
-<meta name="twitter:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, roster batch-add, and share a finished deck by link or QR code.">
+<meta name="twitter:description" content="Design collectible research trading cards with era, science, math, literature and vocabulary themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, deck share links, and a teacher-run projector review game.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='5' width='18' height='22' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='13' r='3.5' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 22c1-3 4-4 6-4s5 1 6 4' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -206,6 +206,77 @@
   .theme-swatch:hover { border-color: var(--muted); }
   .theme-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
+  /* ---- review game (htcm-game.js) ----
+     A projector view, not a second card design: the big cards are the same
+     HtcmRender output the printer gets, dropped into a scaling box, so a
+     theme or frame change shows up here for free and this file never grows a
+     rival renderer. Everything below is scoped under #gameOverlay / .gm-* /
+     .gcard so no card geometry can drift. */
+  .gm-overlay {
+    position: fixed; inset: 0; z-index: 90; overflow: auto;
+    background: #11141b; color: #f3f5f8; padding: .9rem 1.1rem 1.6rem;
+  }
+  .gm-overlay[hidden] { display: none; }
+  .gm-bar { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; }
+  .gm-round { font-size: 1.05rem; font-weight: 700; letter-spacing: .02em; }
+  .gm-scores { display: flex; flex-wrap: wrap; gap: .35rem; flex: 1; }
+  .gm-score {
+    background: rgba(255,255,255,.12); border-radius: 999px;
+    padding: .22rem .8rem; font-size: 1rem; font-weight: 700; white-space: nowrap;
+  }
+  .gm-score.on-clock { background: #f0dc8f; color: #16181d; }
+  .gm-score.opponent { background: #b7bfc7; color: #16181d; }
+  .gm-overlay button.gm-quiet {
+    background: transparent; color: #f3f5f8; border-color: rgba(255,255,255,.45);
+  }
+  .gm-overlay button.gm-quiet:hover { background: rgba(255,255,255,.14); border-color: #fff; color: #fff; }
+
+  .gm-stage { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 1rem 1.4rem; margin: .9rem 0 .6rem; }
+  .gm-side { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+  .gm-team { font-size: 1.05rem; font-weight: 700; }
+  .gm-team .gm-tag { display: block; font-size: .75rem; font-weight: 600; opacity: .75; letter-spacing: .06em; text-transform: uppercase; }
+  .gm-mid { flex: 1; min-width: 260px; max-width: 30rem; }
+  .gm-ask { font-size: 1.25rem; font-weight: 700; margin: 0 0 .5rem; line-height: 1.3; }
+  .gm-sub { font-size: .95rem; margin: 0 0 .7rem; opacity: .85; line-height: 1.45; }
+  .gm-cats { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .6rem; }
+  .gm-cat { text-align: left; background: #f3f5f8; color: #16181d; border-color: #f3f5f8; font-size: 1rem; }
+  .gm-cat:hover { background: #fff; border-color: #fff; color: #16181d; }
+  .gm-cat .gm-key { display: inline-block; min-width: 1.4em; opacity: .6; font-weight: 700; }
+  .gm-verdict { font-size: 1.35rem; font-weight: 700; margin: 0 0 .4rem; }
+  .gm-tally { font-size: 1rem; margin: 0 0 .6rem; line-height: 1.6; }
+  .gm-tally .gm-win { color: #f0dc8f; font-weight: 700; }
+  .gm-facts { max-width: 62rem; margin: 0 auto; }
+  .gm-facts h3 { font-size: .95rem; margin: .8rem 0 .3rem; letter-spacing: .04em; text-transform: uppercase; opacity: .8; }
+  .gm-facts ul { margin: 0 0 .5rem; padding-left: 1.2rem; font-size: 1.02rem; line-height: 1.5; }
+  .gm-facts li { margin-bottom: .2rem; }
+  .gm-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: center; margin-top: .8rem; }
+  .gm-actions .gm-hint { font-size: .82rem; opacity: .75; margin: 0; }
+  .gm-standings { max-width: 32rem; margin: 1rem auto; }
+  .gm-standings .gm-row { display: flex; gap: .8rem; align-items: baseline; font-size: 1.15rem; padding: .35rem 0; border-bottom: 1px solid rgba(255,255,255,.16); }
+  .gm-standings .gm-place { font-weight: 700; opacity: .7; min-width: 2.2em; }
+  .gm-standings .gm-row .gm-pts { margin-left: auto; font-weight: 700; }
+
+  /* the projected card: a real 2.5 × 3.5in card scaled up as a whole, so its
+     internal proportions are identical to the printed one */
+  .gcard { position: relative; width: calc(2.5in * var(--gs, 1.4)); height: calc(3.5in * var(--gs, 1.4)); }
+  .gcard-inner {
+    position: absolute; top: 0; left: 0; width: 2.5in; height: 3.5in;
+    transform: scale(var(--gs, 1.4)); transform-origin: top left;
+  }
+  .gcard-down {
+    position: absolute; inset: 0; border-radius: 10px; border: 3px solid #8a6d1d;
+    background: repeating-linear-gradient(135deg, #232a38 0 10px, #1b2130 10px 20px);
+    display: flex; align-items: center; justify-content: center;
+    color: #d4b354; font-size: calc(0.6in * var(--gs, 1.4)); font-weight: 700;
+  }
+  /* same counter-invert the live preview uses: a11y dark mode inverts the
+     whole page, and a projected card has to show its true print colors */
+  html.a11y-filter-dark .gcard-inner { filter: invert(1) hue-rotate(180deg); }
+  html.a11y-filter-dark .gcard-inner img { filter: none; }
+
+  .gm-setup-teams { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+  .gm-setup-teams input[type="text"] { width: 9rem; margin-bottom: 0; }
+
   /* ---- photo editor overlay (htcm-photo.js) ---- */
   .photo-editor-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50;
@@ -269,6 +340,7 @@
     <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-start; margin-top:.7rem;">
       <button type="button" class="secondary" id="shareLinkBtn">&#128279; Share deck link</button>
       <button type="button" class="secondary" id="shareQrBtn">&#9638; QR code</button>
+      <select id="sampleSelect" style="width:auto; min-width:210px; margin-bottom:0;"></select>
       <button type="button" class="secondary" id="sampleDeckBtn">Load sample deck</button>
     </div>
     <p class="hint" id="shareHint" style="margin:.4rem 0 0;">A share link carries card text, stats, themes, and rarity &mdash; not photos, which stay on this device. To send finished cards with photos, use Download PDF or All PNGs (zip) above.</p>
@@ -285,6 +357,28 @@
       <p class="hint" style="margin:.6rem 0 0;">Opens on that device and saves there as a new deck &mdash;
         it never overwrites a deck already on that device. Photos stay behind.</p>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Review game</h2>
+    <p class="hint">Play this deck as a class review game on the projector. Two cards come up face down,
+      the team on the clock sees theirs and answers &ldquo;what do you remember about this figure?&rdquo;,
+      then picks a stat to challenge the next team with. Higher value takes the point. You run it &mdash;
+      no timers, no student devices.</p>
+    <label for="gmTeamCount">Teams</label>
+    <select id="gmTeamCount" style="width:auto; min-width:8rem;">
+      <option value="2">2 teams</option>
+      <option value="3">3 teams</option>
+      <option value="4" selected>4 teams</option>
+      <option value="5">5 teams</option>
+      <option value="6">6 teams</option>
+    </select>
+    <div class="gm-setup-teams" id="gmTeamNames"></div>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+      <button type="button" id="gmStartBtn">Start review game</button>
+      <button type="button" class="secondary" id="gmResumeBtn" style="display:none;">Resume game in progress</button>
+    </div>
+    <p class="hint" id="gmSetupNote" style="margin:.5rem 0 0;"></p>
   </div>
 
   <div class="card">
@@ -381,6 +475,32 @@
   </div>
 </div>
 
+<div class="gm-overlay" id="gameOverlay" hidden role="dialog" aria-modal="true" aria-label="Review game">
+  <div class="gm-bar">
+    <div class="gm-round">Round <span id="gmRound">1</span></div>
+    <div class="gm-scores" id="gmScores"></div>
+    <button type="button" class="gm-quiet" id="gmCloseBtn">Pause &amp; close</button>
+    <button type="button" class="gm-quiet" id="gmEndBtn">End game</button>
+  </div>
+  <div class="gm-stage">
+    <div class="gm-side">
+      <div class="gm-team" id="gmTeamALabel"></div>
+      <div class="gcard" id="gmCardA"></div>
+    </div>
+    <div class="gm-mid" id="gmMid"></div>
+    <div class="gm-side">
+      <div class="gm-team" id="gmTeamBLabel"></div>
+      <div class="gcard" id="gmCardB"></div>
+    </div>
+  </div>
+  <div class="gm-facts" id="gmFacts"></div>
+  <div class="gm-actions">
+    <button type="button" id="gmPrimaryBtn"></button>
+    <button type="button" class="gm-quiet" id="gmFactsToggle">Hide the facts</button>
+    <p class="gm-hint" id="gmHint"></p>
+  </div>
+</div>
+
 <div id="printArea"></div>
 
 <script src="historical-trading-card-maker/htcm-store.js"></script>
@@ -389,6 +509,7 @@
 <script src="historical-trading-card-maker/htcm-themes.js"></script>
 <script src="historical-trading-card-maker/htcm-photo.js"></script>
 <script src="historical-trading-card-maker/htcm-render.js"></script>
+<script src="historical-trading-card-maker/htcm-game.js"></script>
 <script src="../_shared/duplex-print.js"></script>
 <script src="historical-trading-card-maker/htcm-export.js"></script>
 <script src="../_shared/state-link.js"></script>
@@ -405,7 +526,11 @@
    'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
    'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
    'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn', 'rosterClassSelect',
-   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn', 'sampleDeckBtn'].forEach(function (id) {
+   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
+   'sampleDeckBtn', 'sampleSelect',
+   'gmTeamCount', 'gmTeamNames', 'gmStartBtn', 'gmResumeBtn', 'gmSetupNote', 'gameOverlay', 'gmRound',
+   'gmScores', 'gmCloseBtn', 'gmEndBtn', 'gmTeamALabel', 'gmTeamBLabel', 'gmCardA', 'gmCardB',
+   'gmMid', 'gmFacts', 'gmPrimaryBtn', 'gmFactsToggle', 'gmHint'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -492,6 +617,7 @@
         '<button type="button" class="secondary small" data-edit="' + e.id + '">Edit</button>' +
         '<button type="button" class="danger small" data-del="' + e.id + '">Delete</button></div>';
     }).join('');
+    updateGameSetup(); // whether the deck can carry a review game moves with the cards
   }
   els.entriesWrap.addEventListener('click', function (ev) {
     var delId = ev.target.getAttribute('data-del');
@@ -844,8 +970,18 @@
      (no stock photos: this schema's images are teacher-uploaded, so a
      "sample photo" would mean shipping a fake one), mixed rarities and
      themes to show off the visual system, saved as its own deck so it never
-     touches whatever a teacher already has. */
-  function sampleDeckCards() {
+     touches whatever a teacher already has.
+
+     There are five samples now, one per subject pack, chosen from the
+     dropdown beside the button. The history deck stays first and keeps the
+     deck name "Sample deck" it has always had, so a teacher who already
+     loaded it once gets the same deck back rather than a second copy under a
+     new name. The four subject decks deliberately repeat their stat labels
+     across every card in the deck (atomic number, difficulty, cleverness…),
+     which is what makes them play as proper top-trumps in the review game —
+     a class-built deck usually can't, and the game's "Top stat" wildcard
+     exists for that case. */
+  function foundingFiguresCards() {
     return [
       { name: 'George Washington', rarity: 'legendary', stars: 5, theme: null,
         stats: [['Born', '1732'], ['Died', '1799'], ['Known for', 'First U.S. President'], ['Leadership', '9/10'], ['Legacy', '10/10']],
@@ -874,9 +1010,118 @@
           'Her poetry gained her renown in both America and England.'] }
     ];
   }
+
+  var SAMPLE_DECKS = [
+    { label: 'Founding figures — Antiquity theme', deck: 'Sample deck', theme: 'parchment',
+      setName: 'American Revolution Figures', cards: foundingFiguresCards() },
+
+    { label: 'Elements — Science lab theme', deck: 'Elements sample deck', theme: 'science',
+      setName: 'Elements', cards: [
+        { name: 'Oxygen', rarity: 'legendary', stars: 5, theme: null,
+          stats: [['Symbol', 'O'], ['Atomic number', '8'], ['Melting point', '-218 °C'], ['Abundance on Earth', '10/10']],
+          facts: ['About 21% of the air you breathe is oxygen.',
+            'Joins with hydrogen to make water.',
+            'Two chemists, Scheele and Priestley, isolated it in the 1770s without knowing about each other.'] },
+        { name: 'Iron', rarity: 'epic', stars: 4, theme: null,
+          stats: [['Symbol', 'Fe'], ['Atomic number', '26'], ['Melting point', '1538 °C'], ['Abundance on Earth', '8/10']],
+          facts: ['Most of Earth’s core is iron and nickel.',
+            'Rusts when it meets oxygen and water at the same time.',
+            'Gave the Iron Age its name, because a plow or a blade made of it beat bronze.'] },
+        { name: 'Carbon', rarity: 'rare', stars: 4, theme: null,
+          stats: [['Symbol', 'C'], ['Atomic number', '6'], ['Melting point', '3550 °C'], ['Abundance on Earth', '7/10']],
+          facts: ['Every living thing on Earth is built around carbon.',
+            'Diamond and pencil graphite are both pure carbon, just stacked differently.',
+            'Carbon dating uses it to estimate the age of once-living material.'] },
+        { name: 'Helium', rarity: 'common', stars: 3, theme: null,
+          stats: [['Symbol', 'He'], ['Atomic number', '2'], ['Melting point', '-272 °C'], ['Abundance on Earth', '2/10']],
+          facts: ['The second most common element in the universe, and rare on Earth.',
+            'Lighter than air, which is why a balloon full of it floats.',
+            'It was spotted in sunlight before anyone found it on this planet.'] }
+      ] },
+
+    { label: 'Math concepts — Blueprint theme', deck: 'Math concepts sample deck', theme: 'blueprint',
+      setName: 'Math Concepts', cards: [
+        { name: 'The Pythagorean theorem', rarity: 'legendary', stars: 5, theme: null,
+          stats: [['Symbol', 'a² + b² = c²'], ['Used in', 'Geometry'], ['Shows up on tests', '10/10'], ['Difficulty', '6/10']],
+          facts: ['Works only on right triangles.',
+            'Lets you find a missing side when you already know the other two.',
+            'Named for Pythagoras, though Babylonian tablets were using it a thousand years earlier.'] },
+        { name: 'Pi', rarity: 'epic', stars: 5, theme: null,
+          stats: [['Symbol', 'π'], ['Used in', 'Geometry'], ['Shows up on tests', '9/10'], ['Difficulty', '4/10']],
+          facts: ['The distance around a circle divided by the distance across it.',
+            'It comes out the same for every circle, no matter the size.',
+            'Its digits never repeat and never end, so 3.14 is only ever a rounding.'] },
+        { name: 'Slope', rarity: 'rare', stars: 4, theme: null,
+          stats: [['Symbol', 'm'], ['Used in', 'Algebra'], ['Shows up on tests', '8/10'], ['Difficulty', '5/10']],
+          facts: ['Rise over run: how steep a line is, and which way it leans.',
+            'A positive slope climbs left to right; a negative slope falls.',
+            'A horizontal line has a slope of zero. A vertical line has no slope at all.'] },
+        { name: 'Prime numbers', rarity: 'common', stars: 3, theme: null,
+          stats: [['Symbol', 'p'], ['Used in', 'Number theory'], ['Shows up on tests', '7/10'], ['Difficulty', '3/10']],
+          facts: ['A prime has exactly two factors: 1 and itself.',
+            '2 is the only even prime, which makes it the odd one out.',
+            'Every whole number breaks down into one unique set of primes.'] }
+      ] },
+
+    { label: 'Novel characters — Literary theme', deck: 'Novel characters sample deck', theme: 'literary',
+      setName: 'Novel Characters', cards: [
+        { name: 'Odysseus', rarity: 'legendary', stars: 5, theme: null,
+          stats: [['Book', 'The Odyssey'], ['Cleverness', '10/10'], ['Courage', '9/10'], ['Growth', '5/10']],
+          facts: ['Spent ten years trying to get home after the Trojan War ended.',
+            'Talked his way out of the Cyclops’ cave by giving a false name.',
+            'His pride costs his crew dearly more than once, which is the point of the story.'] },
+        { name: 'Elizabeth Bennet', rarity: 'epic', stars: 5, theme: null,
+          stats: [['Book', 'Pride and Prejudice'], ['Cleverness', '9/10'], ['Courage', '7/10'], ['Growth', '10/10']],
+          facts: ['Turns down a proposal that would have secured her family’s future.',
+            'Her first read on Mr. Darcy turns out to be wrong, and she says so.',
+            'Sizes people up fast, which is both her gift and her blind spot.'] },
+        { name: 'Jim Hawkins', rarity: 'rare', stars: 4, theme: null,
+          stats: [['Book', 'Treasure Island'], ['Cleverness', '7/10'], ['Courage', '9/10'], ['Growth', '9/10']],
+          facts: ['Finds the treasure map in a dead sailor’s sea chest.',
+            'Overhears the whole mutiny while hiding in an apple barrel.',
+            'Has to work out for himself whether Long John Silver is a friend or a threat.'] },
+        { name: 'Tom Sawyer', rarity: 'common', stars: 3, theme: null,
+          stats: [['Book', 'The Adventures of Tom Sawyer'], ['Cleverness', '8/10'], ['Courage', '6/10'], ['Growth', '6/10']],
+          facts: ['Talks the other boys into whitewashing a fence for him, and into paying for the privilege.',
+            'Witnesses a murder in the graveyard and stays quiet out of fear.',
+            'Turns up at his own funeral after the town gives him up for dead.'] }
+      ] },
+
+    { label: 'Academic vocabulary — Vocabulary theme', deck: 'Vocabulary sample deck', theme: 'vocab',
+      setName: 'Unit Vocabulary', cards: [
+        { name: 'Sovereignty', rarity: 'epic', stars: 4, theme: null,
+          stats: [['Part of speech', 'noun'], ['Unit', 'Government'], ['How often it shows up', '8/10'], ['Word difficulty', '8/10']],
+          facts: ['A country’s power to govern itself without outside control.',
+            'It turns up in almost every unit about independence.',
+            'Word family: sovereign, sovereign state.'] },
+        { name: 'Migration', rarity: 'rare', stars: 4, theme: null,
+          stats: [['Part of speech', 'noun'], ['Unit', 'Geography'], ['How often it shows up', '9/10'], ['Word difficulty', '4/10']],
+          facts: ['Moving from one place to another to live there.',
+            'Push factors drive people out; pull factors draw them in.',
+            'Word family: migrant, immigrate, emigrate.'] },
+        { name: 'Scarcity', rarity: 'rare', stars: 3, theme: null,
+          stats: [['Part of speech', 'noun'], ['Unit', 'Economics'], ['How often it shows up', '9/10'], ['Word difficulty', '6/10']],
+          facts: ['There is never enough of everything to go around.',
+            'Scarcity is the reason every choice has a trade-off.',
+            'Word family: scarce, shortage.'] },
+        { name: 'Ratify', rarity: 'common', stars: 3, theme: null,
+          stats: [['Part of speech', 'verb'], ['Unit', 'Government'], ['How often it shows up', '7/10'], ['Word difficulty', '7/10']],
+          facts: ['To formally approve something so that it becomes official.',
+            'Nine of the thirteen states had to ratify the Constitution before it took effect.',
+            'Word family: ratification, ratified.'] }
+      ] }
+  ];
+
+  function renderSampleSelect() {
+    els.sampleSelect.innerHTML = SAMPLE_DECKS.map(function (s, i) {
+      return '<option value="' + i + '">' + escapeHtml(s.label) + '</option>';
+    }).join('');
+  }
+
   els.sampleDeckBtn.addEventListener('click', function () {
-    var raw = sampleDeckCards();
-    var name = 'Sample deck';
+    var sample = SAMPLE_DECKS[parseInt(els.sampleSelect.value, 10) || 0] || SAMPLE_DECKS[0];
+    var raw = sample.cards;
+    var name = sample.deck;
     var existing = HtcmStore.listDecks();
     if (existing.indexOf(name) !== -1) {
       if (!window.confirm('A deck named “' + name + '” already exists. Load another copy as a new deck?')) return;
@@ -889,11 +1134,11 @@
         id: uid(), name: c.name, image: null,
         stats: c.stats.map(function (s) { return { label: s[0], value: s[1] }; }),
         facts: c.facts,
-        meta: { rarity: c.rarity, setName: 'American Revolution Figures', cardNo: i + 1, setSize: raw.length, stars: c.stars },
+        meta: { rarity: c.rarity, setName: sample.setName, cardNo: i + 1, setSize: raw.length, stars: c.stars },
         theme: c.theme
       };
     });
-    var fresh = HtcmStore.repairDoc({ cards: cards, settings: { theme: 'parchment', size: cardSize } });
+    var fresh = HtcmStore.repairDoc({ cards: cards, settings: { theme: sample.theme, size: cardSize } });
     HtcmStore.saveDeck(name, fresh);
     openDeck(name, fresh);
   });
@@ -969,8 +1214,23 @@
     save(); renderEntries(); updatePreview();
   });
 
-  /* ---------- theme picker ---------- */
+  /* ---------- theme picker ----------
+     The subject packs carry their own form placeholders (HtcmThemes.hints):
+     picking "Science lab" should make the Stats box suggest an atomic number,
+     not a birth year. Placeholders only — nothing here reaches a card, which
+     is exactly why the seven era themes can keep the tool's original hint
+     text with no data change at all. */
+  var DEFAULT_HINTS = {
+    name: els.newName.getAttribute('placeholder') || '',
+    stats: els.newStats.getAttribute('placeholder') || ''
+  };
+  function applyThemeHints() {
+    var h = HtcmThemes.hints(doc.settings.theme) || DEFAULT_HINTS;
+    els.newName.placeholder = h.name;
+    els.newStats.placeholder = h.stats;
+  }
   function renderThemeSwatches() {
+    applyThemeHints();
     els.themeSwatches.innerHTML = HtcmThemes.THEMES.map(function (t) {
       var sel = t.key === doc.settings.theme;
       return '<button type="button" class="theme-swatch' + (sel ? ' selected' : '') + '" data-theme="' + t.key +
@@ -1105,9 +1365,243 @@
     window.print();
   });
 
+  /* ---------- review game ----------
+     The rules live in htcm-game.js; this is only the projector view. The big
+     cards are frontCardHtml() — the same renderer the print and PDF paths use
+     — dropped into a .gcard box that scales the whole 2.5 × 3.5in card as one
+     unit, so nothing about card geometry is re-specified here and a theme or
+     frame change shows up on the projector for free. */
+  var game = null;          // the game in progress, or null
+  var gameShowFacts = true; // teachers who want to ask before revealing can hide them
+
+  function gameMap() { return HtcmGame.byId(entries); }
+
+  function renderTeamInputs() {
+    var n = parseInt(els.gmTeamCount.value, 10) || 4;
+    var prev = [].slice.call(els.gmTeamNames.querySelectorAll('input')).map(function (i) { return i.value; });
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      var v = (prev[i] != null && prev[i] !== '') ? prev[i] : ('Team ' + (i + 1));
+      html += '<input type="text" aria-label="Name of team ' + (i + 1) + '" value="' + escapeHtml(v) + '">';
+    }
+    els.gmTeamNames.innerHTML = html;
+  }
+  els.gmTeamCount.addEventListener('change', renderTeamInputs);
+
+  function updateGameSetup() {
+    var playable = HtcmGame.eligible(entries).length;
+    var enough = playable >= HtcmGame.MIN_CARDS;
+    els.gmStartBtn.disabled = !enough;
+    if (enough) {
+      els.gmSetupNote.textContent = playable === entries.length
+        ? 'All ' + playable + ' cards in this deck have a stat the game can compare.'
+        : playable + ' of ' + entries.length + ' cards have a stat the game can compare — the rest sit this one out.';
+    } else {
+      els.gmSetupNote.textContent = 'The game needs at least ' + HtcmGame.MIN_CARDS +
+        ' cards carrying a stat it can compare — a plain number like 1732, or a rating like 7/10. This deck has ' +
+        playable + '. Load a sample deck above, or add a stat line or two to these cards.';
+    }
+    var saved = HtcmGame.load();
+    els.gmResumeBtn.style.display = saved ? '' : 'none';
+    if (saved) {
+      els.gmResumeBtn.textContent = 'Resume game in progress (' + saved.deck + ', round ' + saved.round + ')';
+    }
+  }
+
+  /** The projected card size: as big as the viewport allows, both cards and
+      the middle column side by side, never past a readable ceiling. */
+  function sizeGameCards() {
+    var byW = (window.innerWidth * 0.3) / (2.5 * 96);
+    var byH = (window.innerHeight * 0.52) / (3.5 * 96);
+    var s = Math.max(0.6, Math.min(2.4, Math.min(byW, byH)));
+    els.gameOverlay.style.setProperty('--gs', s.toFixed(3));
+  }
+  window.addEventListener('resize', function () { if (!els.gameOverlay.hidden) sizeGameCards(); });
+
+  function bigCard(entry, faceDown) {
+    if (!entry || faceDown) return '<div class="gcard-down" aria-hidden="true">?</div>';
+    return '<div class="gcard-inner size-standard">' + frontCardHtml(entry) + '</div>';
+  }
+  function factsBlock(title, entry) {
+    if (!entry) return '';
+    var items = entry.facts.length ? entry.facts : ['This card has no facts on the back yet.'];
+    return '<h3>' + escapeHtml(title) + '</h3><ul>' +
+      items.map(function (f) { return '<li>' + escapeHtml(f) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function renderGame() {
+    if (!game) return;
+    var map = gameMap();
+    var a = map[game.a] || null, b = map[game.b] || null;
+    var iA = HtcmGame.teamA(game), iB = HtcmGame.teamB(game);
+    var ta = game.teams[iA], tb = game.teams[iB];
+    var done = game.phase === 'done';
+
+    els.gmRound.textContent = done ? String(game.round - 1) + ' played' : String(game.round);
+    els.gmScores.innerHTML = game.teams.map(function (t, i) {
+      var cls = 'gm-score' + (done ? '' : (i === iA ? ' on-clock' : (i === iB ? ' opponent' : '')));
+      return '<span class="' + cls + '">' + escapeHtml(t.name) + ' ' + t.score + '</span>';
+    }).join('');
+
+    els.gmCardA.parentNode.style.display = done ? 'none' : '';
+    els.gmCardB.parentNode.style.display = done ? 'none' : '';
+    els.gmTeamALabel.innerHTML = '<span class="gm-tag">Picks the stat</span>' + escapeHtml(ta.name);
+    els.gmTeamBLabel.innerHTML = '<span class="gm-tag">Challenger</span>' + escapeHtml(tb.name);
+
+    var mid = '', facts = '', primary = '', hint = '';
+    var showToggle = false;
+
+    if (done) {
+      els.gmCardA.innerHTML = ''; els.gmCardB.innerHTML = '';
+      var rows = HtcmGame.standings(game);
+      mid = '<p class="gm-ask">That’s the deck.</p>' +
+        '<p class="gm-sub">Every card has been played once this pass. Shuffle to run the deck again with the scores carried over, or end the game here.</p>';
+      facts = '<div class="gm-standings">' + rows.map(function (r) {
+        return '<div class="gm-row"><span class="gm-place">' + r.place + '.</span>' +
+          '<span>' + escapeHtml(r.name) + '</span><span class="gm-pts">' + r.score +
+          (r.score === 1 ? ' point' : ' points') + '</span></div>';
+      }).join('') + '</div>';
+      primary = 'Shuffle and play again';
+      hint = 'Pass ' + game.pass + ' finished.';
+    } else if (game.phase === 'draw') {
+      els.gmCardA.innerHTML = bigCard(a, true);
+      els.gmCardB.innerHTML = bigCard(b, true);
+      mid = '<p class="gm-ask">Two cards, face down.</p>' +
+        '<p class="gm-sub">' + escapeHtml(ta.name) + ' is up against ' + escapeHtml(tb.name) +
+        '. Turn over ' + escapeHtml(ta.name) + '’s card and ask the class what they remember about it before anyone picks a stat.</p>';
+      primary = 'Reveal ' + ta.name + '’s card';
+      hint = 'Press Enter or the space bar to reveal.';
+    } else if (game.phase === 'reveal') {
+      els.gmCardA.innerHTML = bigCard(a, false);
+      els.gmCardB.innerHTML = bigCard(b, true);
+      var cats = HtcmGame.categories(a, b);
+      mid = '<p class="gm-ask">What do you remember about ' + escapeHtml(a ? a.name : 'this card') + '?</p>' +
+        '<p class="gm-sub">Take a few answers first. Then ' + escapeHtml(ta.name) +
+        ' picks the stat they think wins the round against ' + escapeHtml(tb.name) + '’s hidden card.</p>' +
+        '<div class="gm-cats">' + cats.map(function (c, i) {
+          return '<button type="button" class="gm-cat" data-cat="' + escapeHtml(c.key) + '">' +
+            '<span class="gm-key">' + (i + 1) + '</span>' + escapeHtml(c.label) +
+            (c.key === HtcmGame.TOP ? ' <span style="opacity:.6">(each card plays its own best stat bar)</span>' : '') +
+            '</button>';
+        }).join('') + '</div>';
+      facts = gameShowFacts ? factsBlock('What the card says about ' + (a ? a.name : 'this card'), a) : '';
+      showToggle = true;
+      hint = 'Click a stat, or press its number key.';
+    } else { // compare
+      els.gmCardA.innerHTML = bigCard(a, false);
+      els.gmCardB.innerHTML = bigCard(b, false);
+      var r = game.result || {};
+      var tie = r.winner === 'tie';
+      var winnerName = tie ? '' : (r.winner === 'a' ? ta.name : tb.name);
+      mid = '<p class="gm-verdict">' + (tie ? 'Tie — nobody scores' : escapeHtml(winnerName) + ' takes the point') + '</p>' +
+        '<p class="gm-tally">' +
+        '<span' + (r.winner === 'a' ? ' class="gm-win"' : '') + '>' + escapeHtml(ta.name) + ' · ' +
+        escapeHtml(a ? a.name : '') + ' — ' + escapeHtml(r.aLabel || '') + ': ' + escapeHtml(r.aValue || '') + '</span><br>' +
+        '<span' + (r.winner === 'b' ? ' class="gm-win"' : '') + '>' + escapeHtml(tb.name) + ' · ' +
+        escapeHtml(b ? b.name : '') + ' — ' + escapeHtml(r.bLabel || '') + ': ' + escapeHtml(r.bValue || '') + '</span></p>' +
+        '<p class="gm-sub">' + (tie
+          ? 'Equal values, so the round re-draws with the same teams up.'
+          : 'Why does that number make sense? Give it about ten seconds before you draw again.') + '</p>';
+      facts = gameShowFacts ? (factsBlock(a ? a.name : '', a) + factsBlock(b ? b.name : '', b)) : '';
+      showToggle = true;
+      primary = tie ? 'Draw again' : 'Next round';
+      hint = 'Press Enter or the space bar to keep going.';
+    }
+
+    els.gmMid.innerHTML = mid;
+    els.gmFacts.innerHTML = facts;
+    els.gmPrimaryBtn.textContent = primary;
+    els.gmPrimaryBtn.style.display = primary ? '' : 'none';
+    els.gmFactsToggle.style.display = showToggle ? '' : 'none';
+    els.gmFactsToggle.textContent = gameShowFacts ? 'Hide the facts' : 'Show the facts';
+    els.gmHint.textContent = hint;
+  }
+
+  function saveAndRender() { HtcmGame.save(game); renderGame(); }
+
+  function openGame() {
+    els.gameOverlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+    sizeGameCards();
+    renderGame();
+  }
+  function closeGame() {
+    els.gameOverlay.hidden = true;
+    document.body.style.overflow = '';
+    updateGameSetup();
+  }
+
+  els.gmStartBtn.addEventListener('click', function () {
+    var names = [].slice.call(els.gmTeamNames.querySelectorAll('input')).map(function (i) { return i.value; });
+    if (HtcmGame.eligible(entries).length < HtcmGame.MIN_CARDS) { updateGameSetup(); return; }
+    game = HtcmGame.newGame(deckName, names, entries);
+    gameShowFacts = true;
+    HtcmGame.save(game);
+    openGame();
+  });
+  els.gmResumeBtn.addEventListener('click', function () {
+    var saved = HtcmGame.load();
+    if (!saved) { updateGameSetup(); return; }
+    if (saved.deck !== deckName) {
+      var d = HtcmStore.loadDeck(saved.deck);
+      if (!d) {
+        alert('The deck this game was played with (“' + saved.deck + '”) isn’t on this device any more, so the game can’t pick up where it left off.');
+        HtcmGame.clear();
+        updateGameSetup();
+        return;
+      }
+      openDeck(saved.deck, d);
+    }
+    game = saved;
+    openGame();
+  });
+  els.gmPrimaryBtn.addEventListener('click', function () {
+    if (!game) return;
+    if (game.phase === 'draw') HtcmGame.reveal(game);
+    else if (game.phase === 'compare') HtcmGame.next(game, gameMap());
+    else if (game.phase === 'done') HtcmGame.reshuffle(game, entries);
+    saveAndRender();
+  });
+  els.gmMid.addEventListener('click', function (ev) {
+    var btn = ev.target.closest ? ev.target.closest('.gm-cat') : null;
+    if (!btn || !game || game.phase !== 'reveal') return;
+    HtcmGame.choose(game, gameMap(), btn.getAttribute('data-cat'));
+    saveAndRender();
+  });
+  els.gmFactsToggle.addEventListener('click', function () {
+    gameShowFacts = !gameShowFacts;
+    renderGame();
+  });
+  els.gmCloseBtn.addEventListener('click', function () {
+    if (game) HtcmGame.save(game); // paused, not ended — Resume picks it back up
+    closeGame();
+  });
+  els.gmEndBtn.addEventListener('click', function () {
+    if (!window.confirm('End the game and clear the scoreboard?')) return;
+    HtcmGame.clear();
+    game = null;
+    closeGame();
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (els.gameOverlay.hidden || !game) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); HtcmGame.save(game); closeGame(); return; }
+    if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      if (els.gmPrimaryBtn.style.display !== 'none') { ev.preventDefault(); els.gmPrimaryBtn.click(); }
+      return;
+    }
+    if (/^[1-9]$/.test(ev.key)) {
+      var buttons = els.gmMid.querySelectorAll('.gm-cat');
+      var pick = buttons[parseInt(ev.key, 10) - 1];
+      if (pick) { ev.preventDefault(); pick.click(); }
+    }
+  });
+
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', HtcmFrames.defsSvg());
   populateRosterClassSelect();
+  renderSampleSelect();
+  renderTeamInputs();
   if (!importSharedDeck()) {
     // openDeck() (called from inside importSharedDeck on success) already
     // renders everything a fresh boot needs; only run this path otherwise.
