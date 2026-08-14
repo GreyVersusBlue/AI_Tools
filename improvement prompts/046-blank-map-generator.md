@@ -9,6 +9,62 @@
 
 ## Status
 
+### 2026-08-14 — session `c1jqjp` — Devon-assigned round: the timeline
+handoff
+
+**Shipped the P7 map + timeline pairing from this side**, which was the last
+open Major Feature on this file. The combined print already existed — but
+only from the timeline's side, built from events a teacher typed *there*. A
+map that already has twenty places labelled had no way to hand them over,
+and a teacher's alternative was retyping twenty place names and their
+coordinates into another tool.
+
+- **"Send places to Timeline Builder →"**, in the label-set panel next to
+  the export/import buttons. Every text label becomes an event carrying that
+  label's name and its real latitude/longitude, taken through the map's own
+  calibration — the same `toLatLon` the "save as a label set" button uses,
+  so the two can't disagree about where a label is.
+- **It travels through 015's own `?timeline=` share format**, exactly the
+  way `056` hands a source to `028`: one tool's export is the other tool's
+  documented import. No third format, no cross-tool storage key, and nothing
+  written into the timeline's storage from here — 015 saves it there under
+  its own new name, precisely as it would a link from a colleague. The suite
+  asserts the arriving timeline lands *beside* whatever was already saved.
+- **Every event lands at year 0, and that is the honest answer.** Dates are
+  the one thing a map genuinely does not know. A plausible-looking invented
+  year would be worse than an obvious blank: a teacher can see that year 0
+  is a placeholder and type over it.
+- **This only became usable because of the label-packing work in 015 earlier
+  the same day.** Twenty events sharing one year means twenty labels at one
+  x; before that round they printed on top of each other and this handoff
+  would have delivered a mess to untangle by hand. The suite asserts zero
+  overlapping label boxes in the imported timeline — an assertion that
+  belongs here, because this is the feature that generates the worst case
+  for it.
+
+**Tests.** New `smoke-timeline-handoff.mjs` (22 assertions) drives the whole
+path end to end — load a vector base map, drop the 50 states on it, click the
+button, open the generated URL in the Timeline Builder, and check what
+actually arrived (count, names, real coordinates the right way round, the
+year-0 placeholder, no overlap, nothing overwritten). All three existing 046
+suites and both 015 suites pass unchanged.
+
+#### Where the next round should pick up
+
+- **The pairing is now two-way but not round-trip.** A timeline built this
+  way can print the combined map + timeline page, but there is no way back
+  into a *map project* from it. Whether that is even wanted is a real
+  question — the map is the thing a teacher already had — so it should be
+  asked before it is built.
+- **Only text labels are sent, not markers.** Markers carry a style and a
+  colour that a timeline has nowhere to put, and a label is what has a name
+  worth becoming an event title. If markers should go too, the question to
+  answer first is what their titles would be.
+- The handoff sends every label. On a 50-state map that is 50 events, which
+  is a lot to date by hand; a "send only the labels I've selected" would
+  need selection state the label layer doesn't have yet.
+
+
 ### 2026-08-14 — session `hx4pmz` — Devon-assigned SS demo round 2
 
 **Shipped click-to-shade** — per-region hit-testing on the built-in vector base
@@ -762,9 +818,14 @@ where. New quick wins surfaced by future rounds go here.
   tally, reshuffle, projector text). What's still missing is persistence of
   which labels a class struggled with across sessions, which is the part
   that would actually change reteaching.
-- **Map + timeline pairing** (P7). `015-timeline-builder.html` covers *when*;
-  this covers *where*. A combined print — timeline along the bottom, map
-  above, events pinned to both — would be a genuinely distinctive artifact.
+- ~~**Map + timeline pairing** (P7).~~ — **done, in both directions.** The
+  combined print shipped from the timeline's side on 2026-08-14 (015's SS
+  demo round); the handoff *from* this tool — "Send places to Timeline
+  Builder", turning labelled places into dated-later events through 015's
+  own share-link format — shipped the same day in session `c1jqjp`. See the
+  Status entry.
+
+No Major Features remain open.
 - **Done —** **Attribution done properly and automatically.** `renderAttribution` exists;
   making the Commons licence line unmissable on every export protects the
   teacher and models good practice for students. *(Shipped Round 12 —
