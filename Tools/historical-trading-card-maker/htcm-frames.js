@@ -141,6 +141,33 @@
       slash(0, 0, 1, 1) + slash(w, 0, -1, 1) + slash(w, h, -1, -1) + slash(0, h, 1, -1);
   }
 
+  /* Science lab: a plain rule with measurement ticks up both edges, every
+     fifth one long — a ruler, not an ornament. */
+  function ticks(w, h) {
+    var m = 7, step = 14, t = '', i = 0;
+    for (var y = m + step; y < h - m - 8; y += step, i++) {
+      var len = (i % 5 === 0) ? 9 : 5;
+      t += '<path d="M' + m + ',' + y + ' h' + len + '" stroke="currentColor" stroke-width="1" fill="none"/>' +
+        '<path d="M' + (w - m) + ',' + y + ' h-' + len + '" stroke="currentColor" stroke-width="1" fill="none"/>';
+    }
+    return rect(m, m, w - 2 * m, h - 2 * m, 1.4) + t;
+  }
+
+  /* Literary: a typographic double rule top and bottom with a small centered
+     lozenge, and hairline rails up the sides — a title-page look. */
+  function rule(w, h) {
+    var m = 8, d = 5;
+    function band(y, s) {
+      return '<path d="M' + m + ',' + y + ' H' + (w - m) + '" stroke="currentColor" stroke-width="1.6" fill="none"/>' +
+        '<path d="M' + (m + 8) + ',' + (y + s * 5) + ' H' + (w - m - 8) + '" stroke="currentColor" stroke-width="0.9" fill="none"/>' +
+        '<path d="M' + (w / 2) + ',' + (y - d) + ' L' + (w / 2 + d) + ',' + y +
+        ' L' + (w / 2) + ',' + (y + d) + ' L' + (w / 2 - d) + ',' + y + ' Z" fill="currentColor"/>';
+    }
+    return band(m + 6, 1) + band(h - m - 6, -1) +
+      '<path d="M' + m + ',' + (m + 6) + ' V' + (h - m - 6) + '" stroke="currentColor" stroke-width="0.9" fill="none"/>' +
+      '<path d="M' + (w - m) + ',' + (m + 6) + ' V' + (h - m - 6) + '" stroke="currentColor" stroke-width="0.9" fill="none"/>';
+  }
+
   var FRAMES = {
     'plain': { label: 'Plain', draw: null }, // the card's own border is the frame
     'double-line': { label: 'Double line', draw: doubleLine },
@@ -149,7 +176,9 @@
     'laurel': { label: 'Laurel', draw: laurel },
     'deco': { label: 'Art deco', draw: deco },
     'pixel': { label: 'Circuit brackets', draw: pixel },
-    'banner': { label: 'Corner slashes', draw: banner }
+    'banner': { label: 'Corner slashes', draw: banner },
+    'ticks': { label: 'Ruler ticks', draw: ticks },
+    'rule': { label: 'Title rules', draw: rule }
   };
 
   /** The frame overlay for one card. gradientId (optional) swaps every

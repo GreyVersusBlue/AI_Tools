@@ -192,7 +192,6 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
 | Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
 
 ---
@@ -375,6 +374,54 @@ localStorage keys — the new fields ride the packet object, which
 `_shared/levels.js` extraction (and a shared vocabulary glossary) is logged
 in `_site-requests.md`, since `_shared/` is off-limits during a parallel
 round.
+
+### Devon-assigned round 2 — tool 064 — 2026-08-14 04:05 UTC — session `h7ntqk`
+
+Historical Figure / Country Trading Card Maker
+(`064-historical-trading-card-maker.md`), social studies demo round 2. Full
+scope shipped, nothing cut.
+
+- **Review game mode (headline)** — a teacher-run projector view that plays
+  the deck as top trumps: 2–6 named teams, two cards dealt face down, the
+  team on the clock sees theirs and answers "what do you remember about this
+  figure?" with the card's facts on screen, then picks a stat to challenge
+  the next team with. Higher value takes the point, ties re-draw, no card
+  repeats until the deck cycles. Scoreboard, round counter, end-of-deck
+  standings, and a reshuffle that carries the scores. Clicks or keys only —
+  **no timers**, an explicit non-goal, so the "ten-second talking point" is
+  framing copy, not a countdown. Rules in a new DOM-free
+  `Tools/historical-trading-card-maker/htcm-game.js`; the projected cards
+  are `HtcmRender.frontHtml` in a box that scales the whole 2.5 × 3.5in card
+  as one unit, so the renderer is reused rather than forked.
+- **The generalizable finding: a class-built deck is not a printed
+  top-trumps set.** Top trumps only works because every card carries the
+  same stat categories, and a deck a class researched shares stat labels
+  almost never (the shipped 5-card sample deck shares one on 2 of its 10
+  pairings). Two rules fix that without arbitrariness, and any other tool
+  turning teacher-typed data into a comparison game will hit the same wall:
+  offer only the categories **both** items can answer, plus a "best stat"
+  wildcard where each side fields its own strongest normalized value; and
+  never deal an unplayable pair — scan forward for the first item that
+  shares a category, discarding (as already drawn) anything unpairable, so
+  a no-repeats promise still holds exactly.
+- **Four subject theme packs** (Science lab, Blueprint, Literary,
+  Vocabulary) as additive `THEMES` rows plus two new stroke frames, era
+  themes byte-for-byte untouched; the one new theme field is `hints`, which
+  drives the add-a-card form's placeholders only and never reaches a card.
+  **One 4-card sample deck per pack** behind a `<select>` next to the
+  existing button, with the history deck still option 0 under its original
+  deck name so the button alone behaves exactly as before.
+- New key `htcm:game`, registered in `Tools/009-backup-restore.html` as
+  `prefixes: ['htcm:']` — which also closes a pre-existing gap, since that
+  row still listed only `htcm_cards_v1` and the named-deck keys added by an
+  earlier round were never being backed up at all.
+- New suite `Tools/historical-trading-card-maker/test/smoke-game.mjs` (114
+  assertions, every round's winner computed from the deck rather than
+  hard-coded because the deal is shuffled), wired into `test:trading-cards`
+  and the end of the `test` chain. All four of this tool's suites green
+  (55 + 34 + 55 + 114 = 258), `check:dedupe` clean, `check:social`
+  unchanged from baseline, `sw.js` v113 → v114 with the new module
+  precached.
 
 ### Devon-assigned round 2 — tool 054 — 2026-08-14 03:22 UTC — session `mk3jq7`
 
