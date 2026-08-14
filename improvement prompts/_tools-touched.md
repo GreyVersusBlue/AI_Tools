@@ -193,6 +193,11 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Primary Source Analysis Worksheet Generator | `kx9rtm` | 2026-08-14 02:38 UTC | `claude/ssdemo2-028-kx9rtm` |
+| DBQ / Source Packet Builder | `vn8trq` | 2026-08-14 02:41 UTC | `claude/ssdemo2-056-vn8trq` |
+| Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
+| Timeline Builder | `vt7kqa` | 2026-08-14 02:41 UTC | `claude/ssdemo2-015-vt7kqa` |
+| Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
+| Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
 
 ---
 
@@ -232,6 +237,39 @@ Government/Civics Simulation Role Card Generator
   (62 checks), wired into `test:civics-kit` and the end of the `test` chain;
   the two existing suites updated for the storage/import change, green at 28
   and 28.
+### Devon-assigned round 2 — tool 054 — 2026-08-14 03:22 UTC — session `mk3jq7`
+
+Current Events Discussion Guide Generator
+(`054-current-events-discussion-guide-generator.md`), social studies demo
+round 2. Full scope shipped, nothing cut.
+
+- **Media literacy kit** — three optional printable pages, each ticked per
+  guide: a SIFT source-evaluation checklist (Stop / Investigate the source /
+  Find better coverage / Trace the claim, splitting into two headline-labelled
+  columns once Article B has text), a headline rewrite exercise (neutral,
+  then slanted the other way, then name the words that did the work, plus a
+  headline-to-framing matching block when comparing), and a claim vs. evidence
+  organizer with a fact/opinion/spin tag per row that a teacher can pre-fill
+  or leave blank. Kept honest throughout: SIFT's move 3 says on the page that
+  it cannot look up other coverage for you.
+- **Differentiation levels** per the round-2 preamble spec — `Academic` /
+  `Honors` / `Honors GT`, default Honors, print output only. Academic adds
+  starters, chunked steps, a plain-language gloss of the kit's own vocabulary
+  and a third writing line; GT opens the prompts, adds the third-source
+  extension and a closing So What? section. "Print all three levels" emits
+  all three sets in one pass, each banner- and footer-tagged.
+- No new localStorage key (the fields ride the existing guide object), so
+  `009-backup-restore.html` needed no change; pre-round guides and pre-round
+  share links open at the old defaults, asserted in the suite rather than
+  assumed. No `sw.js` change either — the only new file is a test file, and
+  test folders are deliberately not precached.
+- Fixed on the way: `.q-row input { flex: 1 }` also matched the preset
+  question checkboxes, stretching them across the row and pushing every
+  question's text to the right edge of the card.
+- New suite `Tools/current-events-discussion-guide-generator/test/smoke-media-literacy.mjs`
+  (102 checks), wired into `test:current-events` and the end of the `test`
+  chain. Both this tool's suites green (38 + 102), `check:dedupe` clean,
+  `check:social` unchanged.
 
 ### Devon-assigned round — tool 046 — 2026-08-13 23:54 UTC — session `q4wmxz`
 
