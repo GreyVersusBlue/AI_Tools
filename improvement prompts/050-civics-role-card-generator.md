@@ -4,7 +4,7 @@
 **Support folder:** `Tools/civics-role-card-generator/` — test suite only; the
 tool itself is still one self-contained file.
 
-**Current description (from README):** Three starter templates (Mock Trial, Debate, Legislative Simulation) or build from scratch, each role with an editable position and talking points list, printed as a card grid.
+**Current description (from README):** Three starter templates (Mock Trial, Debate, Legislative Simulation) or build from scratch, each role with an editable position, talking points, and an optional case-file that prints as a companion packet, as a card grid.
 
 ---
 
@@ -105,18 +105,67 @@ old role set printing unchanged — no console errors.
 **Next round should pick up** multiple named saved simulations, and per-role
 case-file packets (already on the backlog).
 
+**2026-08-14 — SS demo round (session `tjkd6u`), headline: per-role case file
+packets (backlog rank 17).** Each role now carries an optional long-form
+**Case file** textarea, right below Position. Printing appends one companion
+packet page per printed copy of any role with case-file text, after the full
+card grid: headed with the role name and — when a student is assigned to
+that copy — that student's name (reusing the same `r.students[c]` lookup the
+cards use). Each packet is forced onto its own fresh page
+(`page-break-inside: avoid` plus `page-break-before: always`, and a
+`min-height` rather than a fixed height, per the assignment note about that
+combination silently clipping print output). All three starter templates
+ship sample case-file text so the feature demos from the defaults: the mock
+trial gets a locker-search fact pattern (shared by the Judge and both
+attorney roles; the Witness gets a separate personal statement; the
+Juror gets none, since real jurors shouldn't see outside case facts before a
+trial), the debate gets a cell-phones-at-lunch resolution with a briefing per
+role, and the legislative sim gets a recess-extension bill with a briefing
+per role. That answers this file's open question about case files vs. talking
+points (see Open Questions below): case-file content is different enough
+from talking points (private background vs. public speaking points) to earn
+its own field.
+
+Two supporting items also shipped. **Share link + QR** (P3, copied from
+`028-primary-source-analysis-generator.html`'s pattern): a role set is pure
+text, so it travels intact through `state-link.js` — role, position, copies,
+talking points, and case-file text all round-trip. Since multi-save (the
+next supporting item) didn't ship this round, an incoming link can't be
+filed away under its own name — it asks with a confirm dialog before
+replacing whatever's on screen, and declining leaves the existing roles
+untouched. **The smoke suite gained a sibling file**,
+`Tools/civics-role-card-generator/test/smoke-case-file-packets.mjs`
+(`npm run test:civics-case-files`, 27 assertions): packet count matches
+copies, packets carry the right names in the right order, whitespace-only
+case-file text prints no packet, typed case-file text survives a reload, and
+the share link round-trips a full role set through both the accept and
+decline paths of the confirm dialog — no console errors.
+
+**Cut per the assignment's own cut rule:** multiple named saved simulations
+(item 2 of the supporting list) — the tool still holds one flat role set per
+browser. No new `localStorage` key was introduced this round (case-file text
+lives inside the existing `crcg_roles_v1` blob), so `009-backup-restore.html`
+needed no changes. Multi-save is still the right next step — see "Where the
+next round should pick up" below.
+
 ## What it does today
 
 - 3 starter templates (Mock Trial, Debate, Legislative Simulation) + blank,
-  each shipping realistic per-role copy counts
-- Fully editable: role name, position, talking points (add/remove)
+  each shipping realistic per-role copy counts and (except the blank) sample
+  case-file text so the packet feature demos out of the box
+- Fully editable: role name, position, talking points (add/remove), and an
+  optional long-form case file
 - **Per-role copies count** — print N cards for a role N students share
 - **Duplicate-role button** for cloning a role as a starting point
 - **Reorder roles and talking points** via up/down buttons
 - Assign a saved class list (`np_rosters`) across the role slots, optionally
   shuffled, growing the biggest role so nobody is left without a card
 - Print: 2-per-page role card grid, respecting each role's copy count, each
-  card carrying its assigned student's name or a blank name line
+  card carrying its assigned student's name or a blank name line, followed by
+  one **case-file companion packet per printed copy** of any role that has
+  case-file text, each starting on its own page
+- **Share link + QR code** — round-trips a full role set (state-link.js),
+  asking with a confirm dialog before replacing roles already on screen
 
 ## Quick Wins
 
@@ -124,23 +173,28 @@ case-file packets (already on the backlog).
 - ~~**Assign a student name to each role**~~ — **shipped 2026-08-12
   (Round 3)**, driven off a saved class list rather than a per-role text
   field; see the Round 3 note above.
+- ~~**Facts/case-file attachments per role**~~ — **shipped 2026-08-14 (SS
+  demo round)** as the round's headline; see above.
 
 ## Major Features
 
 - **Multiple named saved simulations**, matching the multi-save convention
   used by most builder tools in this round — one flat role set per
   browser right now, so a mock trial and a debate can't both stay ready at
-  once.
+  once. This is the one supporting item the 2026-08-14 round explicitly cut
+  (per its own cut rule) to ship the case-file packet headline and the share
+  link cleanly; the assignment file's suggested shape is the
+  `crcg:list` / `crcg:data:<name>` / `crcg:current` triple-key pattern the
+  trading card maker uses, migrating the existing `crcg_roles_v1` blob in as
+  the first named simulation, with the new keys registered in
+  `009-backup-restore.html` `KNOWN_GROUPS`.
 - **A scoring/rubric companion** tied to each role type, reusing Rubric
   Builder's existing pattern — a judge/moderator role naturally pairs with
   a scoring rubric for the simulation.
-- **Facts/case-file attachments per role** (e.g. a witness's specific
-  testimony details, a legislator's district information) as a longer
-  free-text field beyond just talking points — real mock trials and
-  simulations usually give each role private background information the
-  talking points alone don't capture.
 - **JSON export/import**, for sharing a built simulation with another
-  social studies teacher.
+  social studies teacher as a file rather than a link — the share link
+  shipped 2026-08-14 covers the common case, but a file still travels better
+  by email attachment than a URL some mail clients truncate.
 
 ## Moonshot / North Star
 
@@ -153,9 +207,10 @@ legislative simulation needs; a paired rubric closes the loop from
 
 ## Platform themes that matter here
 
-- **P7 (cross-tool)** — the rubric pairing (Rubric Builder) and the
-  assigned-student-name field (potentially loading from Name
-  Picker/Class Roster Hub) are both direct opportunities.
+- **P7 (cross-tool)** — the rubric pairing (Rubric Builder) is a direct
+  opportunity; the assigned-student-name field already loads from Name
+  Picker/Class Roster Hub (shipped Round 3), and the share link reuses
+  028's state-link.js/QR pattern (shipped 2026-08-14).
 - **P6 (print quality)** — **fixed in Round 1**: per-role copy count now
   drives the print step.
 - **P15 (first run)** — the 3 starter templates already cover the most
@@ -165,18 +220,23 @@ legislative simulation needs; a paired rubric closes the loop from
 
 ## Open Questions
 
-- Should assigned-student-name pull from a shared roster (Name Picker /
-  Class Roster Hub) or stay a simple manual text field per role, given a
-  simulation's role assignment (who plays what) is usually a deliberate
-  teacher choice rather than a random draw?
-- Is per-role case-file/fact-sheet content different enough from talking
-  points to deserve its own distinct field (risking a busier card), or
-  should a teacher just use longer talking points to cover both needs?
+*(Both prior Open Questions are resolved: assigned-student-name pulls from a
+saved roster — shipped 2026-08-12, Round 3 — and case-file content earned
+its own distinct field rather than folding into talking points — shipped
+2026-08-14.)*
+
+- When multiple named saved simulations land, should switching simulations
+  also swap the assigned-roster selection (so a debate and a mock trial can
+  each remember their own class list), or should the roster assignment stay
+  a one-at-a-time action independent of which simulation is loaded?
 
 ## Where the next round should pick up
 
-Assigned-student-name is the one remaining Quick Win and the bigger open
-item — the first Open Question above (manual field vs. roster pull) should
-get answered before building it, since it changes the shape of the
-feature. The file hasn't cleared its Major Features/Moonshot sections
-either, so it stays out of `stable tools/` for now.
+Multiple named saved simulations is the one remaining Quick Win/Major
+Feature and the clearest next step — the assignment file already names the
+shape (the `crcg:` triple-key pattern, migrating `crcg_roles_v1` in as the
+first named save, registering the new keys in `009-backup-restore.html`).
+After that, the Open Question above should get answered before building the
+roster-per-simulation behavior, since it changes the shape of the feature.
+The file hasn't cleared its Major Features/Moonshot sections either, so it
+stays out of `stable tools/` for now.
