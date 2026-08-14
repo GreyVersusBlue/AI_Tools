@@ -1,14 +1,110 @@
 # Improvement Prompts — 064 — Historical Figure / Country Trading Card Maker
 
 **Tool file:** `Tools/064-historical-trading-card-maker.html`
-**Support folder:** `Tools/historical-trading-card-maker/` — test suite only;
-the tool itself is still one self-contained file.
+**Support folder:** `Tools/historical-trading-card-maker/` — eight
+plain-global modules (`htcm-store/image/render/frames/themes/photo/export/
+game.js`) plus four browser suites under `test/`. (An older note here said
+"test suite only, the tool is one self-contained file"; that stopped being
+true at the visual-upgrade round.)
 
-**Current description (from README):** Build collectible-style research cards with a live preview: era themes and decorative frames, rarity foil tiers, photo crop/shape editing, stat bars, set numbering, named decks, and batch-add from a saved class roster or a pasted list — printed as duplex front/back grids, exported as PNG / PDF / zip, or shared as a finished deck by link or QR code (card text and design, not photos). A one-click sample deck shows off the whole visual system with zero setup.
+**Current description (from README):** Build collectible-style research cards with a live preview: seven era themes plus science, math, literature and vocabulary looks, decorative frames, rarity foil tiers, photo crop/shape editing, stat bars, set numbering, named decks, and batch-add from a saved class roster or a pasted list — printed as duplex front/back grids, exported as PNG / PDF / zip, or shared as a finished deck by link or QR code (card text and design, not photos). Then play the finished deck as a teacher-run projector review game: two cards face down, a recall question, a stat challenge, a scoreboard that survives a reload. Sample decks for every theme load with one click.
 
 ---
 
 ## Status
+
+**2026-08-14 — SS demo round 2: review game, subject theme packs, a sample
+deck per pack (branch `claude/ssdemo2-064-h7ntqk`, session `h7ntqk`).** The
+headline plus all three supporting items shipped; nothing was cut.
+
+- **Review game mode (headline).** A teacher-run projector view: pick 2–6
+  named teams, two cards deal face down, the team on the clock sees theirs
+  and answers *"what do you remember about this figure?"* with the card's
+  fact lines on screen, then picks a stat to challenge the next team with.
+  Higher value takes the point, ties re-draw the same round, and the deck
+  never repeats a card until it cycles. Scoreboard, round counter and
+  end-of-deck standings; a second pass reshuffles and carries the scores.
+  Teacher-operated by click or key (Enter/space advances, 1–9 pick a stat,
+  Esc pauses) — **no timers anywhere**, which was an explicit non-goal, so
+  the "ten-second talking point" is framing copy on the result screen, not
+  a countdown. The rules live in a new `htcm-game.js` with no DOM in it;
+  the projected cards are `HtcmRender.frontHtml` dropped into a `.gcard`
+  box that scales the whole 2.5 × 3.5in card as one unit, so the renderer
+  was reused rather than forked and a theme change shows up on the
+  projector for free.
+- **The hard part was that a class-built deck is not a printed top-trumps
+  set.** Real top trumps works because every card carries the same stat
+  categories; the round-1 sample deck's five cards share a stat label on
+  only 2 of its 10 possible pairings, and a deck a class actually builds is
+  worse. Two rules fix it without arbitrariness, and both are worth keeping:
+  (1) a round is played on a *category*, and the categories on offer are
+  the stat labels **both** cards can answer plus a **"Top stat" wildcard**
+  whenever both cards carry an `X/Y` meter — each card then fields its own
+  best stat, which turns the question into "what was your figure best at?",
+  exactly the recall the deck exists to practice; (2) the deal never hands
+  out an unplayable pair — it takes the next card, scans forward for the
+  first card that shares a category with it, and pairs those, discarding
+  (as drawn) any card that can't be paired, so "no repeats until the deck
+  cycles" still holds exactly. A value counts as comparable if it is `X/Y`
+  with Y > 0 (normalized, so 9/10 and 45/50 compare properly) or if it
+  starts with a number (`8`, `1538 °C`, `-218 °C`, `1,732`); plain numbers
+  only ever meet under the same label, so units match by construction.
+  Rejected along the way: "the opponent always answers with its best stat"
+  (three of the five sample figures top out at 10/10, so the demo would tie
+  constantly) and "a missing stat scores zero" (the picking team then wins
+  every round).
+- **Persistence** is one new key, `htcm:game`, holding card *ids* rather
+  than copies — the deck stays the source of truth and a card deleted
+  mid-game just drops out of the queue. Registered in
+  `Tools/009-backup-restore.html` as `prefixes: ['htcm:']`, which also
+  closes a pre-existing gap: that row still listed only `htcm_cards_v1`, so
+  the named-deck keys (`htcm:list` / `htcm:data:<name>` / `htcm:current`)
+  introduced by the visual-upgrade round were never backed up at all. Left
+  out of `STUDENT_KEYS` deliberately — the conservative direction, and the
+  same call the existing htcm row already made.
+- **Four subject theme packs (P1).** `science` (Science lab), `blueprint`
+  (Blueprint), `literary` (Literary), `vocab` (Vocabulary) — additive
+  `THEMES` rows in the existing shape, every ink ≥ 4.5:1 on its paper,
+  textures still pure CSS gradients at ≤ 6% alpha, plus three new texture
+  cases and two new stroke frames (`ticks`, `rule`; `double-line` was
+  already defined and unused, so Blueprint took it). The seven era themes
+  are byte-for-byte untouched. The one new data field is `hints`, which
+  feeds the add-a-card form's placeholders (Science lab suggests an atomic
+  number, not a birth year) — **form text only, it never reaches a card**,
+  which is why the era themes could keep the tool's original placeholder
+  with no data change at all. The canvas exporter needed nothing: it reads
+  theme data and frame keys generically.
+- **A sample deck per pack (P2).** Elements, Math concepts, Novel
+  characters (public-domain figures: Odysseus, Elizabeth Bennet, Jim
+  Hawkins, Tom Sawyer) and Academic vocabulary — four cards each, real
+  content, no photos. They are reachable through a `<select>` beside the
+  existing **Load sample deck** button rather than a modal picker,
+  deliberately: the history deck stays option 0 under its original deck
+  name "Sample deck", so the button alone behaves exactly as it did and no
+  teacher who already loaded it gets a stray second copy. Each subject deck
+  repeats its stat labels across all four cards (atomic number, difficulty,
+  cleverness…), which is what makes them play as *proper* top-trumps and
+  demo the shared-category path the wildcard exists to cover.
+- **New suite `smoke-game.mjs` (114 assertions)**: a full 12-card pass
+  driven to the end with every round's winner computed from the deck rather
+  than hard-coded (the deal is shuffled), no-repeat and
+  every-card-dealt-once checks, reshuffle carrying scores, a mid-game
+  reload restoring round/scores/pair through Resume, the new themes
+  measuring 2.5 × 3.5in in the print layout, and every theme-pack sample
+  deck loading on its own theme. `smoke-card-size.mjs` (55),
+  `smoke-photo.mjs` (34) and `smoke-share.mjs` (55) stayed green before and
+  after every commit — **258 assertions total**, no console errors, no
+  offsite requests. `sw.js` v113 → v114 with `htcm-game.js` precached.
+
+**Where round 3 should pick up.** The game is the natural home for two
+things this round deliberately left alone: a **per-card "played" record**
+(which figures a class has actually reviewed, across sessions, so a teacher
+can see the gaps) and **a printable round summary** for the cards a class
+struggled on. The overlay's own styling is a candidate for
+`_shared/` extraction if a second tool ever wants a projector view — it is
+one dark backdrop and a scaling box, so not yet worth moving. The
+`_shared/image-import.js` extraction recorded two rounds ago is still
+unclaimed. Nothing here belongs on `IDEAS_BACKLOG.md`.
 
 **2026-08-13 — SS demo round: share links, roster integration, sample deck
 (branch `claude/ssdemo-064-vqrmlk`).** Devon-assigned round ahead of the
@@ -233,14 +329,22 @@ with a photo / 11 without) and was not re-derived for the 3.5in card.
 
 - Named decks (new/rename/delete/switch), each with its own cards, theme,
   and set name — one per class period or unit
+- A **class review game** on the projector: 2–6 named teams, two cards
+  dealt face down with no repeats until the deck cycles, a recall question
+  and the card's facts before any stat is compared, then a stat challenge
+  that scores a point (ties re-draw). Scoreboard, round counter,
+  end-of-deck standings, and a reshuffle that carries the scores. Runs on
+  clicks or keys, no timers, and an in-progress game survives a reload
 - Add a card individually, or batch-add blank cards from a pasted list or a
   saved class list (`np_rosters`, shared with Name Picker / Class Roster
   Hub) — one card per name, set name prefilled
 - Edit an existing card in place
-- Seven era themes (deck-level default, with a per-card override), four
-  rarity tiers with foil badges and a static print-safe glint, 0–5 star
-  rating, `Label: 7/10` stats that render as a filled meter, keyword stat
-  icons, and set numbering (`n / total · SET NAME`)
+- Eleven card themes (deck-level default, with a per-card override): seven
+  era looks plus four subject packs — Science lab, Blueprint, Literary and
+  a neutral Vocabulary — each suggesting its own kind of stat in the form.
+  Four rarity tiers with foil badges and a static print-safe glint, 0–5
+  star rating, `Label: 7/10` stats that render as a filled meter, keyword
+  stat icons, and set numbering (`n / total · SET NAME`)
 - A non-destructive photo/flag editor: pan/zoom crop, six clip shapes,
   sepia/gray filters
 - A flippable, true-size live preview beside the form, rendering through
@@ -256,8 +360,11 @@ with a photo / 11 without) and was not re-derived for the 3.5in card.
   themes and rarity travel; photos stay on the sending device and the
   incoming deck always lands as a new save, never overwriting one already
   there
-- "Load sample deck" — one click loads a real 5-card demo (mixed rarity and
-  theme, no photos) as its own named deck, for a zero-setup live demo
+- "Load sample deck" — one click loads a real demo deck as its own named
+  deck, for a zero-setup live demo. Five to choose from: the original
+  5-card Founding Figures set (mixed rarity and theme, no photos) plus one
+  4-card deck per subject pack — Elements, Math concepts, Novel characters
+  and Academic vocabulary — each ready to play the review game as it lands
 
 ## Quick Wins
 

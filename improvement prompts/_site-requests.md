@@ -299,6 +299,61 @@ by an ordered value — the grade distribution visualizer is the obvious one —
 wants exactly this, and "does it survive the photocopier" is a property worth
 asserting in one place rather than re-arguing per tool.
 
+## Antimeridian-safe GeoJSON ring drawing now exists in three places (from 062, SS demo round 2)
+
+`unwrapRing()` / `drawableRings()` — the pair of functions that stop a plate
+carrée render of Natural Earth from ruling a stray line clean across the map
+every time a country's ring is clamped to ±180 (Fiji, Chukotka, Antarctica's
+closing edge) — now exists three times:
+
+- `Tools/blank-map-generator/bmg-vector.js` — the original, with the best
+  comments.
+- `Tools/timeline-builder/tlb-places.js` — delegates the render, but carries
+  its own copy of the projection maths for pin placement.
+- `Tools/geography-bee-quiz-generator/gbq-map.js` — added this round, adapted
+  from bmg-vector for snippet-sized renders.
+
+Three copies is the usual threshold. The natural extraction is a small
+`_shared/geo-project.js` holding the projection, its inverse, `unwrapRing`,
+`drawableRings` and a `traceFeature(ctx, …)` — deliberately *not* a renderer,
+since each consumer wants different paint and a different output size.
+`_shared/` is out of bounds during a parallel round, so this is a note rather
+than a change.
+
+Worth knowing before anyone does it: the three copies are not interchangeable.
+bmg-vector traces a whole FeatureCollection into one path; gbq-map has to be
+able to trace one named feature on its own, so a highlighted country's holes
+cancel against its own rings and not its neighbours'. A shared version needs
+both entry points, which is why the suggestion above is `traceFeature` rather
+than `traceFeatures`.
+
+## `_shared/levels.js` — one home for the three teaching levels (from 056, round 2)
+
+Round 2 asked several tools to implement the same differentiation spec: a
+selector with exactly `Academic` / `Honors` / `Honors GT`, defaulting to
+Honors, affecting printed output only, plus a "print all three levels" run
+whose pages carry a level footer tag. 056 (DBQ / Source Packet Builder) and
+028 (Primary Source Analysis) both built it independently in the same round,
+and more tools will want it.
+
+The duplicated part is small but exactly the kind that drifts: the three
+label strings, the default, and the footer-tag markup. If two tools ever
+disagree on a label ("Honors GT" vs "Honors-GT") the feature stops reading as
+one coherent thing across the toolkit, which was the whole point of
+specifying it centrally. A `_shared/levels.js` exporting the ordered list,
+`levelLabel(key)`, `isLevel(key)`, and a `levelTag(key, title)` markup
+helper would cost almost nothing and pin all of it.
+
+A second, larger candidate from the same work: 056 ships a ~60-entry
+plain-language glossary of social-studies vocabulary, used to build the
+Academic-level "before you read" gloss from the teacher's own source text,
+with an honest "check these words with a partner" fallback when nothing
+matches. Any tool that wants a vocabulary support line — 028, the vocab
+flashcard generator, the writing prompt generator — wants that same list, and
+a shared one can grow over time instead of three tools each hand-rolling
+sixty definitions. Worth one owner deciding where it lives before a third
+copy exists.
+
 ## Point-in-polygon picking, and a list-to-sentence formatter (from 046, SS demo round 2)
 
 Two more small generic pieces written locally in `Tools/blank-map-generator/`

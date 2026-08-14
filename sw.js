@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v114';
+const CACHE_VERSION = 'v118';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -77,6 +77,8 @@ const PRECACHE_URLS = [
   "Tools/certificate-award-maker/cam-borders.js",
   "Tools/certificate-award-maker/cam-store.js",
   "Tools/050-civics-role-card-generator.html",
+  "Tools/civics-role-card-generator/crcg-store.js",
+  "Tools/civics-role-card-generator/crcg-templates.js",
   "Tools/006-class-roster-hub.html",
   "Tools/051-classroom-label-maker.html",
   "Tools/classroom-label-maker/speak.html",
@@ -114,6 +116,7 @@ const PRECACHE_URLS = [
   "Tools/formula-sheet-builder/fsb-templates.js",
   "Tools/017-gallery-walk-qr.html",
   "Tools/062-geography-bee-quiz-generator.html",
+  "Tools/geography-bee-quiz-generator/gbq-map.js",
   "Tools/037-grade-distribution-visualizer.html",
   "Tools/063-grammar-mad-libs-generator.html",
   "Tools/012-graph-paper-generator.html",
@@ -129,6 +132,7 @@ const PRECACHE_URLS = [
   "Tools/historical-trading-card-maker/htcm-themes.js",
   "Tools/historical-trading-card-maker/htcm-photo.js",
   "Tools/historical-trading-card-maker/htcm-export.js",
+  "Tools/historical-trading-card-maker/htcm-game.js",
   "Tools/011-image-to-pdf.html",
   "Tools/022-lab-group-role-randomizer.html",
   "Tools/065-lab-report-template-builder.html",
@@ -209,6 +213,8 @@ const PRECACHE_URLS = [
   "Tools/timeline-builder/tlb-photo.js",
   "Tools/timeline-builder/tlb-places.js",
   "Tools/timeline-builder/tlb-store.js",
+  "Tools/timeline-builder/tlb-story.js",
+  "Tools/timeline-builder/tlb-worksheet.js",
   "Tools/078-unit-conversion-chart-builder.html",
   "Tools/079-verb-conjugation-poster-generator.html",
   "Tools/080-virtual-manipulatives-board.html",

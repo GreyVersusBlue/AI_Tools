@@ -14,7 +14,17 @@
      never mud, and no binary assets to precache;
    - frames are stroke-based (see htcm-frames.js) so they print crisp;
    - rarity escalates frame *ornateness* along with foil, so the tier still
-     reads on a grayscale printer. */
+     reads on a grayscale printer.
+
+   The last four rows are the subject packs — science, math, literature and a
+   neutral vocabulary look — added so a card deck is usable in any classroom,
+   not just a history one. They follow exactly the same shape as the seven era
+   themes above; the only extra field is `hints`, which feeds the add-a-card
+   form's placeholder text (never the card itself) so a science teacher's
+   first look at the Stats box suggests atomic number rather than a birth
+   year. The era themes deliberately keep no `hints` key: their placeholder is
+   the tool's original one, and leaving the data alone is what guarantees
+   their printed output is unchanged. */
 (function (global) {
   'use strict';
 
@@ -40,7 +50,30 @@
       ink: '#14213d', paper: '#ffffff', accent: '#b3202c', accent2: '#1f3550' },
     { key: 'scifi', label: 'Sci-fi', frame: 'pixel', texture: 'grid',
       font: '"Trebuchet MS", "Segoe UI", sans-serif', nameFont: null,
-      ink: '#16232a', paper: '#eef4f6', accent: '#0e5f76', accent2: '#40545e' }
+      ink: '#16232a', paper: '#eef4f6', accent: '#0e5f76', accent2: '#40545e' },
+
+    /* ---- subject packs ---- */
+    { key: 'science', label: 'Science lab', frame: 'ticks', texture: 'ruled',
+      font: '"Segoe UI", Calibri, Arial, sans-serif', nameFont: null,
+      ink: '#16211f', paper: '#ffffff', accent: '#0f6b52', accent2: '#35505c',
+      hints: { name: 'e.g. Oxygen',
+        stats: 'Symbol: O\nAtomic number: 8\nMelting point: -218 °C\nAbundance on Earth: 10/10 ← becomes a stat bar' } },
+    { key: 'blueprint', label: 'Blueprint', frame: 'double-line', texture: 'blueprint',
+      font: '"Segoe UI", "Trebuchet MS", Arial, sans-serif',
+      nameFont: 'Consolas, "Lucida Console", "Courier New", monospace',
+      ink: '#12233d', paper: '#eef3fa', accent: '#1f4e8c', accent2: '#3c5a7a',
+      hints: { name: 'e.g. Slope',
+        stats: 'Symbol: m\nUsed in: Algebra\nShows up on tests: 8/10\nDifficulty: 5/10 ← becomes a stat bar' } },
+    { key: 'literary', label: 'Literary', frame: 'rule', texture: 'foxing',
+      font: '"Book Antiqua", Palatino, Georgia, serif', nameFont: null,
+      ink: '#2b2622', paper: '#faf6ee', accent: '#6b3a2e', accent2: '#55483a',
+      hints: { name: 'e.g. Elizabeth Bennet',
+        stats: 'Book: Pride and Prejudice\nCleverness: 9/10\nCourage: 7/10\nGrowth: 10/10 ← becomes a stat bar' } },
+    { key: 'vocab', label: 'Vocabulary', frame: 'plain', texture: null,
+      font: '"Segoe UI", Arial, sans-serif', nameFont: null,
+      ink: '#23262b', paper: '#ffffff', accent: '#4a4f8c', accent2: '#5a5f6b',
+      hints: { name: 'e.g. Sovereignty',
+        stats: 'Part of speech: noun\nUnit: Government\nHow often it shows up: 8/10\nWord difficulty: 8/10 ← becomes a stat bar' } }
   ];
 
   var RARITIES = {
@@ -77,6 +110,17 @@
       case 'grid':
         return 'repeating-linear-gradient(0deg, rgba(14,95,118,0.06) 0 1px, transparent 1px 13px),' +
                'repeating-linear-gradient(90deg, rgba(14,95,118,0.06) 0 1px, transparent 1px 13px)';
+      /* ---- subject packs ---- */
+      case 'ruled': // lab-notebook rules: horizontal only, so the card reads clean
+        return 'repeating-linear-gradient(0deg, rgba(15,107,82,0.05) 0 1px, transparent 1px 12px)';
+      case 'blueprint': // fine grid with every fifth line drawn heavier
+        return 'repeating-linear-gradient(0deg, rgba(31,78,140,0.05) 0 1px, transparent 1px 10px),' +
+               'repeating-linear-gradient(90deg, rgba(31,78,140,0.05) 0 1px, transparent 1px 10px),' +
+               'repeating-linear-gradient(90deg, rgba(31,78,140,0.04) 0 1px, transparent 1px 50px)';
+      case 'foxing': // old-paper blotching plus a faint laid-paper grain
+        return 'radial-gradient(ellipse at 22% 78%, rgba(107,58,46,0.05), transparent 55%),' +
+               'radial-gradient(ellipse at 78% 20%, rgba(85,72,58,0.04), transparent 50%),' +
+               'repeating-linear-gradient(90deg, rgba(85,72,58,0.03) 0 1px, transparent 1px 4px)';
       default:
         return '';
     }
@@ -142,10 +186,20 @@
     document.head.appendChild(style);
   }
 
+  /** Placeholder copy for the add-a-card form under a given theme, or null
+      when the theme doesn't carry its own (the era themes, which keep the
+      tool's original history-flavored placeholders). Form text only — this
+      never reaches a printed card. */
+  function hints(key) {
+    var t = byKey[key];
+    return (t && t.hints) || null;
+  }
+
   global.HtcmThemes = {
     THEMES: THEMES,
     RARITIES: RARITIES,
     get: get,
+    hints: hints,
     injectCss: injectCss
   };
 

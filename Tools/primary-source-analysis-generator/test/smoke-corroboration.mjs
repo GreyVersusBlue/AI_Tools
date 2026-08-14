@@ -87,15 +87,17 @@ await page.evaluate(() => {
     el.value = v;
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  const steps = Array.from(document.querySelectorAll('#notesEditor .note-step'));
+  const steps = Array.from(document.querySelectorAll('#notesEditor [data-note-block="step"]'));
   // First step block belongs to the first HIPP step (Historical Context);
   // it should now carry two teacher-note textareas (Source A, then Source B).
   const first = steps[0];
   const textareas = first.querySelectorAll('textarea');
   setVal(textareas[0], 'Source A note: the engraving was propaganda meant to inflame colonial anger.');
   setVal(textareas[1], 'Source B note: the testimony reflects the defense\'s self-defense argument at trial.');
-  // Last block is the comparison editor (agree / disagree / reliable), three textareas.
-  const last = steps[steps.length - 1];
+  // The comparison editor (agree / disagree / reliable), three textareas.
+  // Addressed by its data attribute rather than by position — it stopped
+  // being the last block when the Honors GT synthesis note was added.
+  const last = document.querySelector('#notesEditor [data-note-block="comparison"]');
   const compTextareas = last.querySelectorAll('textarea');
   setVal(compTextareas[0], 'Both sources agree a shooting happened and colonists died.');
   setVal(compTextareas[1], 'They disagree about who was the aggressor and whether the soldiers were threatened.');
@@ -168,9 +170,8 @@ ok((await page.inputValue('#sourceBTitle')) !== 'My own edited Source B title',
    round trip below has something of its own to carry. */
 await page.evaluate(() => {
   function setVal(el, v) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }
-  const steps = Array.from(document.querySelectorAll('#notesEditor .note-step'));
-  const last = steps[steps.length - 1];
-  const compTextareas = last.querySelectorAll('textarea');
+  const comparison = document.querySelector('#notesEditor [data-note-block="comparison"]');
+  const compTextareas = comparison.querySelectorAll('textarea');
   setVal(compTextareas[0], 'Both sources agree a shooting happened and colonists died.');
 });
 await settle(page, 150);
