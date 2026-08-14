@@ -35,8 +35,10 @@
   .back-link:hover { color: var(--accent-2); }
 
   .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  .card h3 { font-size: .92rem; margin: 1.1rem 0 .45rem; padding-top: .8rem; border-top: 1px solid var(--line); }
+  .card h3:first-of-type { border-top: 0; padding-top: 0; margin-top: .2rem; }
   label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
-  input[type="text"], select {
+  input[type="text"], input[type="number"], select {
     width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
@@ -64,8 +66,9 @@
   .role-block { border: 1px solid var(--line); border-radius: 8px; padding: .8rem .9rem; margin-bottom: .8rem; }
   .role-block-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
   .role-block-head input { font-weight: 700; margin-bottom: 0; }
-  .copies-field { display: flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--muted); white-space: nowrap; }
-  .copies-field input { width: 3.4rem; margin-bottom: 0; text-align: center; }
+  .copies-field { display: flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--muted); white-space: nowrap; font-weight: 600; margin-bottom: 0; }
+  .copies-field input[type="number"] { width: 3.4rem; margin-bottom: 0; text-align: center; }
+  .copies-field input[type="checkbox"] { width: auto; margin: 0; }
   .point-row { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
   .point-row input { margin-bottom: 0; }
 
@@ -78,6 +81,20 @@
   .assign-summary { margin: .6rem 0 0; }
   .role-names { font-size: .78rem; color: var(--muted); margin: .3rem 0 0; }
   .role-names b { color: var(--ink); font-weight: 600; }
+
+  /* ---- simulation kit editor ---- */
+  .sim-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: flex-start; }
+  .sim-row select { flex: 1 1 14rem; min-width: 10rem; margin-bottom: 0; }
+  .kit-row { display: flex; align-items: center; gap: .45rem; padding: .2rem 0; flex-wrap: wrap; }
+  .kit-row input[type="text"] { margin-bottom: 0; }
+  .kit-row .grow { flex: 1 1 9rem; min-width: 7rem; }
+  .kit-row .grow-2 { flex: 2 1 14rem; min-width: 9rem; }
+  .kit-row .mins { width: 4.4rem; margin-bottom: 0; text-align: center; }
+  .kit-num { display: inline-block; color: var(--muted); font-size: .8rem; width: 1.2rem; text-align: right; }
+  .print-opts { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .84rem; margin: .2rem 0 .5rem; }
+  .print-opts label { display: flex; align-items: center; gap: .35rem; font-weight: 400; margin: 0; }
+  .print-opts input { width: auto; margin: 0; }
+  .kit-count { color: var(--muted); font-size: .78rem; margin: .35rem 0 0; }
 
   .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
@@ -110,6 +127,52 @@
   .role-packet-who { margin: 0; color: #555; font-size: .95rem; font-weight: 700; }
   .role-packet-body { white-space: pre-wrap; font-size: .95rem; line-height: 1.6; }
 
+  /* ---- simulation kit print pieces ----
+     Every kit piece is its own top-level section inside #printArea and starts
+     on a fresh page, so the stack comes off the printer in the order a
+     teacher runs the period: agenda, cards, case files, ballots, rubric,
+     reflections. The `:first-child` rule outranks `.kit-section` (an id
+     beats a class), so whichever piece happens to print first never wastes a
+     leading blank page. Heights are `min-height` throughout, never a fixed
+     height with overflow hidden, which silently clips on paper. */
+  .kit-section { page-break-before: always; }
+  #printArea > :first-child { page-break-before: auto; }
+  .kit-page-head { text-align: center; margin-bottom: .22in; border-bottom: 1px solid #ccc; padding-bottom: .1in; }
+  .kit-page-head h2 { margin: 0 0 .04in; font-size: 1.3rem; }
+  .kit-sim-title { margin: 0; color: #555; font-size: .9rem; font-style: italic; }
+  .kit-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .kit-table th, .kit-table td { border: 1px solid #333; padding: .1in .12in; text-align: left; vertical-align: top; }
+  .kit-table thead th { background: #eee; font-size: .82rem; }
+  .kit-table .tick { width: .55in; }
+  .kit-table .num { width: .4in; text-align: center; }
+  .kit-table .mins { width: .9in; text-align: center; white-space: nowrap; }
+  .agenda-cue { color: #333; }
+  .agenda-total td { font-weight: 700; }
+
+  .ballot-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .2in; }
+  .ballot-slip { border: 1.5px dashed #333; border-radius: 6px; padding: .2in .22in; min-height: 2.5in; page-break-inside: avoid; }
+  .slip-head { font-weight: 700; font-size: .95rem; margin-bottom: .06in; }
+  .slip-name { font-size: .82rem; color: #555; margin-bottom: .1in; }
+  .slip-q { font-size: .88rem; margin: 0 0 .1in; }
+  .slip-opts { display: flex; gap: .12in; flex-wrap: wrap; margin-bottom: .1in; }
+  .slip-opt { border: 1px solid #333; border-radius: 4px; padding: .04in .1in; font-size: .85rem; }
+  .slip-inst { font-size: .74rem; color: #555; margin: 0 0 .08in; }
+  .slip-line { border-bottom: 1px solid #999; height: .28in; font-size: .78rem; color: #555; }
+
+  .rubric-who { font-size: .85rem; margin: 0 0 .14in; color: #333; }
+  .rubric-table .lvl { width: .9in; text-align: center; height: .42in; }
+  .crit-top { display: block; font-size: .78rem; color: #555; font-style: italic; margin-top: .03in; }
+  .rubric-note { font-size: .82rem; margin: .14in 0 0; }
+
+  .reflect-sheet { border: 1.5px solid #333; border-radius: 8px; padding: .26in .3in; min-height: 4.2in;
+    margin-bottom: .18in; page-break-inside: avoid; }
+  .reflect-head { display: flex; justify-content: space-between; gap: .2in; align-items: baseline;
+    border-bottom: 1px solid #ccc; padding-bottom: .07in; margin-bottom: .1in; }
+  .reflect-head b { font-size: 1rem; }
+  .reflect-who { font-size: .85rem; color: #333; font-weight: 700; }
+  .reflect-role { font-size: .82rem; color: #555; font-style: italic; margin: 0 0 .1in; }
+  .reflect-q { font-size: .86rem; margin: .08in 0 .04in; }
+  .reflect-line { border-bottom: 1px solid #999; height: .26in; }
 </style>
 </head>
 <body>
@@ -118,37 +181,46 @@
     <div>
       <a class="back-link" href="../index.html">&larr; Toolkit</a>
       <h1>Government/Civics Simulation Role Card Generator</h1>
-      <p class="sub">Build role cards for a mock trial, debate, or legislative simulation.</p>
+      <p class="sub">Build and print the whole simulation: cards, case files, agenda, ballots, rubric, reflections.</p>
     </div>
     <div class="btnrow">
       <button class="secondary" id="shareLinkBtn">&#128279; Copy link</button>
       <button class="secondary" id="shareQrBtn">&#9638; QR code</button>
-      <button class="secondary" id="printBtn">Print role cards</button>
+      <button class="secondary" id="printBtn">Print the kit</button>
     </div>
   </div>
   <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
 
   <div class="share-overlay" id="shareOverlay" hidden>
-    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Role set QR code">
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Simulation QR code">
       <div class="share-head">
-        <span>Scan to open this role set</span>
+        <span>Scan to open this simulation</span>
         <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
       </div>
       <canvas id="shareCanvas"></canvas>
-      <p class="hint" style="margin:.6rem 0 0;">Opens the same roles, talking points, and case files on that device &mdash;
+      <p class="hint" style="margin:.6rem 0 0;">Opens the same roles, case files, and kit pages on that device &mdash;
         edits on either side stay put.</p>
     </div>
   </div>
 
   <div class="card">
+    <h2>Saved simulations</h2>
+    <div class="sim-row">
+      <select id="simSelect" aria-label="Saved simulations"></select>
+      <button type="button" class="secondary" id="newSimBtn">New</button>
+      <button type="button" class="secondary" id="renameSimBtn">Rename</button>
+      <button type="button" class="danger" id="deleteSimBtn">Delete</button>
+    </div>
+    <p class="hint" style="margin:.5rem 0 0;">Each saved simulation keeps its own roles, case files, and kit pages, so a
+      mock trial and a debate can both sit ready at once. Everything saves as you type.</p>
+  </div>
+
+  <div class="card">
     <h2>Start from a template</h2>
-    <select id="templateSelect">
-      <option value="mock_trial">Mock Trial</option>
-      <option value="debate">Debate</option>
-      <option value="legislative">Legislative Simulation</option>
-      <option value="blank">Blank / Custom</option>
-    </select>
-    <button class="secondary" id="loadTemplateBtn">Load template (replaces current roles)</button>
+    <select id="templateSelect"></select>
+    <button class="secondary" id="loadTemplateBtn">Load template (replaces this simulation)</button>
+    <p class="hint" style="margin:.5rem 0 0;">Every template arrives complete: roles with private case files, an agenda
+      with time boxes, ballots, a scoring rubric, and a reflection sheet.</p>
   </div>
 
   <div class="card">
@@ -174,54 +246,48 @@
     </div>
     <div id="rolesWrap"></div>
   </div>
+
+  <div class="card">
+    <h2>Simulation kit</h2>
+    <label for="kitTitle">Simulation title <span class="field-hint">(printed at the top of every kit page)</span></label>
+    <input type="text" id="kitTitle" placeholder="e.g. Mock Trial: The Search of Locker #214">
+    <label>What prints</label>
+    <div class="print-opts">
+      <label><input type="checkbox" id="ptAgenda"> Agenda</label>
+      <label><input type="checkbox" id="ptCards"> Role cards</label>
+      <label><input type="checkbox" id="ptCaseFiles"> Case files</label>
+      <label><input type="checkbox" id="ptBallots"> Ballots</label>
+      <label><input type="checkbox" id="ptRubric"> Rubric</label>
+      <label><input type="checkbox" id="ptReflections"> Reflections</label>
+    </div>
+    <p class="hint" id="printSummary" style="margin-bottom:0;"></p>
+    <div id="kitWrap"></div>
+  </div>
 </div>
 
 <div id="printArea"></div>
 
+<script src="civics-role-card-generator/crcg-store.js"></script>
+<script src="civics-role-card-generator/crcg-templates.js"></script>
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'crcg_roles_v1';
-
-  /* Shared fact pattern for the Mock Trial template's case-file text: Judge,
-     Prosecution, and Defense all get the same background (real mock trials
-     hand every side the same discovery packet); the Witness gets a separate,
-     personal statement instead. Jurors get none — they decide from what's
-     presented in the room, not outside facts. */
-  var MOCK_TRIAL_CASE = 'Case: In re Search of Locker #214, Roosevelt Middle School. On a Tuesday morning, an assistant principal received an anonymous tip that a student, Casey Bennett, was keeping a vape pen in locker #214. Without asking Casey first, the assistant principal opened the locker with the master key and found a vape pen wrapped in a jacket. School policy says lockers are school property and can be searched when there is reasonable suspicion. Casey says the tip was unreliable and the search violated their privacy.';
-  var TEMPLATES = {
-    mock_trial: [
-      { role: 'Judge', position: 'Neutral — oversees the trial and ensures rules are followed', copies: 1, points: ['Introduce the case and both sides', 'Rule on objections', 'Instruct the jury before deliberation'], caseFile: MOCK_TRIAL_CASE },
-      { role: 'Prosecution / Plaintiff Attorney', position: 'Arguing the defendant is responsible', copies: 2, points: ['Present opening statement', 'Call and question witnesses', 'Deliver closing argument summarizing the evidence'], caseFile: MOCK_TRIAL_CASE },
-      { role: 'Defense Attorney', position: 'Arguing the defendant is not responsible', copies: 2, points: ['Present opening statement', 'Cross-examine opposing witnesses', 'Deliver closing argument creating reasonable doubt'], caseFile: MOCK_TRIAL_CASE },
-      { role: 'Witness', position: 'Provides testimony for one side', copies: 4, points: ['Answer questions truthfully based on your assigned facts', 'Stay in character during cross-examination'], caseFile: 'You are the hall monitor who was standing near locker #214 that morning. You saw the assistant principal open the locker while Casey was still in first period, not present. You did not see or read the anonymous tip yourself. Under cross-examination, be honest that you don\'t know who sent the tip or whether it was reliable.' },
-      { role: 'Juror', position: 'Neutral — decides the verdict', copies: 12, points: ['Listen carefully to all evidence', 'Discuss respectfully during deliberation', 'Reach a verdict based on the evidence presented'], caseFile: '' }
-    ],
-    debate: [
-      { role: 'Affirmative Team', position: 'Arguing in favor of the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence supporting your position', 'Rebut the opposing team\'s points'], caseFile: 'Resolution: Students should be allowed to use cell phones during lunch. Your case: lunch is unstructured personal time, not instructional time. Allowing phones lets students contact family, listen to music, or use a translation app. Most students already carry phones in their backpacks, so supervised use during lunch only is a small, practical change.' },
-      { role: 'Negative Team', position: 'Arguing against the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence against the resolution', 'Rebut the affirmative team\'s points'], caseFile: 'Resolution: Students should be allowed to use cell phones during lunch. Your case: lunch is one of the few times students talk face-to-face, and phones make that harder. Phones at lunch also make it easier to record other students without permission, or to see a hurtful message that followed someone from home. Keeping lunch phone-free protects that social time and cuts down on conflict.' },
-      { role: 'Moderator', position: 'Neutral — keeps the debate on track', copies: 1, points: ['Introduce the resolution and both teams', 'Enforce time limits', 'Facilitate the audience Q&A if used'], caseFile: 'Your job is to keep the debate fair and on schedule, not to argue either side. Introduce the resolution and both teams, enforce the time limit for each speech, and remind teams to address the resolution instead of each other personally.' },
-      { role: 'Judge / Scorer', position: 'Neutral — evaluates the debate', copies: 3, points: ['Score each team on evidence and delivery', 'Decide which team argued more persuasively'], caseFile: 'Score each team on three things: how clearly they explained their argument, how well they backed it up with evidence or real examples, and how directly they answered the other side\'s points. Give each category a score out of 5, then add them up. Don\'t score based on which side you personally agree with — score the reasoning and delivery.' }
-    ],
-    legislative: [
-      { role: 'Bill Sponsor', position: 'Supports passing the bill', copies: 1, points: ['Explain what the bill does and why it\'s needed', 'Answer questions from other members', 'Rally support for a yes vote'], caseFile: 'Bill 24, the School Recess Extension Act, would add 15 minutes of recess to the middle school day, taken from the daily advisory period. Research shows a longer break improves focus and cuts down on afternoon discipline referrals. Be ready to explain why the extra 15 minutes of recess matters more than that same time in advisory.' },
-      { role: 'Committee Chair', position: 'Neutral — runs the session', copies: 1, points: ['Recognize speakers in order', 'Keep discussion on topic and on time', 'Call for and record the final vote'], caseFile: 'Your job is neutral: you run the meeting, you don\'t argue for or against Bill 24. Recognize speakers in the order they raise their hand, and keep each turn to about a minute. Before debate starts, read the bill\'s one-sentence summary aloud: it adds 15 minutes of recess by shortening advisory.' },
-      { role: 'Opposing Legislator', position: 'Opposes the bill as written', copies: 6, points: ['Raise specific concerns or objections', 'Propose an amendment if appropriate', 'Explain your reasoning for a no vote'], caseFile: 'Bill 24 would cut advisory time to add recess. Your case: advisory is used for makeup work, silent reading, and check-ins with a trusted adult, and losing 15 minutes of it hurts the students who need that support most. Propose an alternative, such as taking the extra recess time from lunch instead.' },
-      { role: 'Supporting Legislator', position: 'Supports the bill', copies: 6, points: ['Add supporting arguments beyond the sponsor\'s', 'Respond to the opposition\'s concerns'], caseFile: 'Bill 24 would add 15 minutes of recess by shortening advisory. Your case: students report advisory already runs short on structured activities most days, and unstructured recess time is proven to help kids focus for the rest of the school day. Back up the sponsor\'s argument with a reason of your own.' }
-    ],
-    blank: [
-      { role: 'New Role', position: '', points: [''], caseFile: '' }
-    ]
-  };
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'addRoleBtn', 'rolesWrap', 'printBtn', 'printArea',
    'rosterSelect', 'assignBtn', 'clearAssignBtn', 'shuffleAssign', 'growCopies', 'assignSummary',
+   'simSelect', 'newSimBtn', 'renameSimBtn', 'deleteSimBtn',
+   'kitTitle', 'kitWrap', 'printSummary',
+   'ptAgenda', 'ptCards', 'ptCaseFiles', 'ptBallots', 'ptRubric', 'ptReflections',
    'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { roles: [] };
+  var PRINT_KEYS = [['agenda', 'ptAgenda'], ['cards', 'ptCards'], ['caseFiles', 'ptCaseFiles'],
+                    ['ballots', 'ptBallots'], ['rubric', 'ptRubric'], ['reflections', 'ptReflections']];
 
-  function uid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  var uid = CrcgStore.uid;
+  var simName = CrcgStore.DEFAULT_NAME;
+  var doc = CrcgStore.repairDoc(null);
+
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -229,41 +295,17 @@
   }
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
-  function fromTemplate(key) {
-    state.roles = TEMPLATES[key].map(function (r) {
-      /* Templates carry their own copy counts: a mock trial is one judge and
-         a dozen jurors, not one of each. That is also what makes "grow the
-         biggest role" mean the jury rather than whichever role happens to be
-         listed first. */
-      return { id: uid(), role: r.role, position: r.position, copies: r.copies || 1, students: [], caseFile: r.caseFile || '', points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
-    });
+  function save() {
+    var res = CrcgStore.saveSim(simName, doc);
+    if (!res.ok) setShareNote('This browser refused to save. Its storage is probably full &mdash; open Backup & Restore and export, then clear something out.', true);
+    updatePrintSummary();
+    return res.ok;
   }
 
-  function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.roles) && saved.roles.length) state = saved;
-    } catch (e) { /* ignore */ }
-    if (!state.roles.length) fromTemplate('mock_trial');
-    state.roles.forEach(function (r) {
-      if (!r.copies || r.copies < 1) r.copies = 1;
-      /* Roles saved before names could be assigned carry no `students`. An
-         empty array means "nobody assigned", which prints the blank name line
-         the tool has always printed — so an existing set is unchanged. */
-      if (!Array.isArray(r.students)) r.students = [];
-      /* Roles saved before case files existed carry no `caseFile`. An empty
-         string means "no companion packet", so an existing set still prints
-         exactly what it used to — no packet pages appear until a teacher
-         actually types one in. */
-      if (typeof r.caseFile !== 'string') r.caseFile = '';
-    });
-  }
-  function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
-  }
+  /* ---------- roles ---------- */
 
   function renderRoles() {
-    els.rolesWrap.innerHTML = state.roles.map(function (r, i) {
+    els.rolesWrap.innerHTML = doc.roles.map(function (r, i) {
       var points = r.points.map(function (p, pi) {
         return '<div class="point-row" data-role="' + r.id + '"><input type="text" data-point="' + p.id + '" value="' + escapeAttr(p.text) + '" placeholder="Talking point">' +
           '<button type="button" class="secondary small" data-move-point-up="' + p.id + '" data-point-role="' + r.id + '"' + (pi === 0 ? ' disabled' : '') + '>&uarr;</button>' +
@@ -273,8 +315,10 @@
       return '<div class="role-block" data-role-id="' + r.id + '">' +
         '<div class="role-block-head"><input type="text" data-field="role" data-role="' + r.id + '" value="' + escapeAttr(r.role) + '" placeholder="Role name">' +
         '<label class="copies-field">Copies <input type="number" min="1" max="40" data-field="copies" data-role="' + r.id + '" value="' + (r.copies || 1) + '"></label>' +
+        '<label class="copies-field" title="Print a ballot slip for every copy of this role">' +
+        '<input type="checkbox" data-field="ballot" data-role="' + r.id + '"' + (r.ballot ? ' checked' : '') + '> Votes</label>' +
         '<button type="button" class="secondary small" data-move-role-up="' + r.id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
-        '<button type="button" class="secondary small" data-move-role-down="' + r.id + '"' + (i === state.roles.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="secondary small" data-move-role-down="' + r.id + '"' + (i === doc.roles.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
         '<button type="button" class="secondary small" data-dup-role="' + r.id + '">Duplicate</button>' +
         '<button type="button" class="danger small" data-del-role="' + r.id + '">Remove</button></div>' +
         '<label>Position</label><input type="text" data-field="position" data-role="' + r.id + '" value="' + escapeAttr(r.position) + '" placeholder="e.g. Arguing in favor of...">' +
@@ -317,7 +361,7 @@
   }
 
   function totalSlots() {
-    return state.roles.reduce(function (sum, r) { return sum + Math.max(1, r.copies || 1); }, 0);
+    return doc.roles.reduce(function (sum, r) { return sum + Math.max(1, r.copies || 1); }, 0);
   }
 
   function shuffled(list) {
@@ -338,15 +382,15 @@
     }
     var names = els.shuffleAssign.checked ? shuffled(list) : list.slice();
     var grown = null;
-    if (els.growCopies.checked && state.roles.length) {
+    if (els.growCopies.checked && doc.roles.length) {
       /* Grow the role that already has the most copies — in every template
          here that is the crowd role (jurors, the audience), the one designed
          to scale. Growing round-robin instead would end up with three judges. */
       var before = {};
       while (totalSlots() < names.length) {
-        var biggest = state.roles.reduce(function (best, r) {
+        var biggest = doc.roles.reduce(function (best, r) {
           return (r.copies || 1) > (best.copies || 1) ? r : best;
-        }, state.roles[0]);
+        }, doc.roles[0]);
         if (before[biggest.id] === undefined) before[biggest.id] = biggest.copies || 1;
         biggest.copies = (biggest.copies || 1) + 1;
         grown = biggest;
@@ -354,9 +398,9 @@
       if (grown) grown.grewFrom = before[grown.id];
     }
 
-    state.roles.forEach(function (r) { r.students = []; });
+    doc.roles.forEach(function (r) { r.students = []; });
     var i = 0;
-    state.roles.forEach(function (r) {
+    doc.roles.forEach(function (r) {
       for (var c = 0; c < Math.max(1, r.copies || 1) && i < names.length; c++) r.students.push(names[i++]);
     });
 
@@ -373,7 +417,7 @@
       parts.push((slots - names.length) + ' card' + (slots - names.length === 1 ? '' : 's') + ' will print with a blank name line.');
     }
     els.assignSummary.textContent = parts.join(' ');
-    save(); renderRoles();
+    save(); renderRoles(); renderKit();
   }
 
   function moveInArray(arr, id, dir) {
@@ -385,7 +429,7 @@
     arr[target] = tmp;
   }
 
-  function findRole(id) { return state.roles.find(function (r) { return r.id === id; }); }
+  function findRole(id) { return doc.roles.find(function (r) { return r.id === id; }); }
 
   els.rolesWrap.addEventListener('input', function (ev) {
     var field = ev.target.getAttribute('data-field');
@@ -393,8 +437,13 @@
     var pointId = ev.target.getAttribute('data-point');
     if (field && roleId) {
       var r = findRole(roleId);
-      if (r) r[field] = field === 'copies' ? (Math.max(1, Math.min(40, parseInt(ev.target.value, 10) || 1))) : ev.target.value;
+      if (r) {
+        if (field === 'copies') r.copies = Math.max(1, Math.min(40, parseInt(ev.target.value, 10) || 1));
+        else if (field === 'ballot') r.ballot = ev.target.checked;
+        else r[field] = ev.target.value;
+      }
       save();
+      if (field === 'copies' || field === 'ballot') renderKit();
     } else if (pointId) {
       var row = ev.target.closest('.point-row');
       var r2 = findRole(row.getAttribute('data-role'));
@@ -422,23 +471,23 @@
       if (r2) r2.points = r2.points.filter(function (p) { return p.id !== delPointId; });
       save(); renderRoles();
     } else if (delRoleId) {
-      state.roles = state.roles.filter(function (r) { return r.id !== delRoleId; });
-      save(); renderRoles();
+      doc.roles = doc.roles.filter(function (r) { return r.id !== delRoleId; });
+      save(); renderRoles(); renderKit();
     } else if (dupRoleId) {
       var orig = findRole(dupRoleId);
       if (orig) {
         var clone = JSON.parse(JSON.stringify(orig));
         clone.id = uid();
         clone.points.forEach(function (p) { p.id = uid(); });
-        var idx = state.roles.indexOf(orig);
-        state.roles.splice(idx + 1, 0, clone);
+        var idx = doc.roles.indexOf(orig);
+        doc.roles.splice(idx + 1, 0, clone);
       }
-      save(); renderRoles();
+      save(); renderRoles(); renderKit();
     } else if (moveRoleUp) {
-      moveInArray(state.roles, moveRoleUp, -1);
+      moveInArray(doc.roles, moveRoleUp, -1);
       save(); renderRoles();
     } else if (moveRoleDown) {
-      moveInArray(state.roles, moveRoleDown, 1);
+      moveInArray(doc.roles, moveRoleDown, 1);
       save(); renderRoles();
     } else if (movePointUp) {
       var r3 = findRole(ev.target.getAttribute('data-point-role'));
@@ -451,19 +500,318 @@
     }
   });
 
-  els.loadTemplateBtn.addEventListener('click', function () {
-    if (state.roles.length && !confirm('Replace the current roles with this template?')) return;
-    fromTemplate(els.templateSelect.value);
-    save(); renderRoles();
-  });
-  els.addRoleBtn.addEventListener('click', function () {
-    state.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, students: [], caseFile: '', points: [{ id: uid(), text: '' }] });
-    save(); renderRoles();
+  /* ---------- the simulation kit editor ----------
+     Agenda phases, ballot wording, rubric criteria and reflection prompts all
+     live in one card. Typing never re-renders (that would eat the caret);
+     only the structural buttons do. */
+
+  function agendaMinutes() {
+    return doc.agenda.reduce(function (sum, p) { return sum + (p.minutes || 0); }, 0);
+  }
+
+  /** How many ballot slips a print produces: every copy of every role ticked
+      "Votes", plus any spares. This is the number the teacher counts against
+      the pile coming out of the printer. */
+  function ballotSlipCount() {
+    var n = doc.roles.reduce(function (sum, r) {
+      return sum + (r.ballot ? Math.max(1, r.copies || 1) : 0);
+    }, 0);
+    return n ? n + (doc.ballot.extra || 0) : 0;
+  }
+
+  function moveRow(arr, id, dir) { moveInArray(arr, id, dir); save(); renderKit(); }
+
+  function rowButtons(kind, id, i, len) {
+    return '<button type="button" class="secondary small" data-move-' + kind + '-up="' + id + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+      '<button type="button" class="secondary small" data-move-' + kind + '-down="' + id + '"' + (i === len - 1 ? ' disabled' : '') + '>&darr;</button>' +
+      '<button type="button" class="danger small" data-del-' + kind + '="' + id + '">&times;</button>';
+  }
+
+  function renderKit() {
+    var slips = ballotSlipCount();
+    var votingRoles = doc.roles.filter(function (r) { return r.ballot; }).map(function (r) { return r.role || 'Untitled role'; });
+
+    var agenda = doc.agenda.map(function (p, i) {
+      return '<div class="kit-row" data-agenda-row="' + p.id + '">' +
+        '<span class="kit-num">' + (i + 1) + '.</span>' +
+        '<input type="text" class="grow" data-agenda="' + p.id + '" data-af="name" value="' + escapeAttr(p.name) + '" placeholder="Phase">' +
+        '<input type="number" class="mins" min="0" max="240" data-agenda="' + p.id + '" data-af="minutes" value="' + p.minutes + '" aria-label="Minutes">' +
+        '<input type="text" class="grow-2" data-agenda="' + p.id + '" data-af="cue" value="' + escapeAttr(p.cue) + '" placeholder="One-line teacher cue">' +
+        rowButtons('phase', p.id, i, doc.agenda.length) + '</div>';
+    }).join('');
+
+    var options = doc.ballot.options.map(function (o, i) {
+      return '<div class="kit-row"><span class="kit-num">' + (i + 1) + '.</span>' +
+        '<input type="text" class="grow" data-bopt="' + i + '" value="' + escapeAttr(o) + '" placeholder="Choice on the slip">' +
+        '<button type="button" class="danger small" data-del-opt="' + i + '">&times;</button></div>';
+    }).join('');
+
+    var levels = doc.rubric.levels.map(function (l, i) {
+      return '<input type="text" class="grow" data-rlevel="' + i + '" value="' + escapeAttr(l) + '" placeholder="Level ' + (i + 1) + '">';
+    }).join('');
+
+    var criteria = doc.rubric.criteria.map(function (c, i) {
+      return '<div class="kit-row">' +
+        '<input type="text" class="grow" data-crit="' + c.id + '" data-cf="name" value="' + escapeAttr(c.name) + '" placeholder="Criterion">' +
+        '<input type="text" class="grow-2" data-crit="' + c.id + '" data-cf="top" value="' + escapeAttr(c.top) + '" placeholder="What the top score looks like">' +
+        rowButtons('crit', c.id, i, doc.rubric.criteria.length) + '</div>';
+    }).join('');
+
+    var prompts = doc.reflection.prompts.map(function (p, i) {
+      return '<div class="kit-row"><span class="kit-num">' + (i + 1) + '.</span>' +
+        '<input type="text" class="grow-2" data-prompt="' + p.id + '" value="' + escapeAttr(p.text) + '" placeholder="Reflection question">' +
+        rowButtons('prompt', p.id, i, doc.reflection.prompts.length) + '</div>';
+    }).join('');
+
+    els.kitWrap.innerHTML =
+      '<h3>Agenda</h3>' +
+      '<p class="hint">The order of the period, with a time box and one line you can read aloud for each phase.</p>' +
+      agenda +
+      '<div class="btnrow" style="margin-top:.4rem;"><button type="button" class="secondary small" data-add-phase="1">+ Add phase</button></div>' +
+      '<p class="kit-count">' + doc.agenda.length + ' phase' + (doc.agenda.length === 1 ? '' : 's') + ', ' + agendaMinutes() + ' minutes total.</p>' +
+
+      '<h3>Ballots and vote slips</h3>' +
+      '<p class="hint">One slip prints for every copy of a role with "Votes" ticked in the Roles section above, so a full class set comes out in one go.</p>' +
+      '<label>Slip title</label><input type="text" data-kit="ballot.title" value="' + escapeAttr(doc.ballot.title) + '" placeholder="e.g. Juror Verdict Slip">' +
+      '<label>Question being voted on</label><input type="text" data-kit="ballot.question" value="' + escapeAttr(doc.ballot.question) + '" placeholder="e.g. On the passage of Bill 24:">' +
+      '<label>Instructions on the slip</label><input type="text" data-kit="ballot.instructions" value="' + escapeAttr(doc.ballot.instructions) + '" placeholder="e.g. Circle one and write one sentence of reasoning.">' +
+      '<label>Choices</label>' + options +
+      '<div class="btnrow" style="margin-top:.4rem;"><button type="button" class="secondary small" data-add-opt="1">+ Add choice</button></div>' +
+      '<div class="print-opts" style="margin-top:.6rem;">' +
+      '<label><input type="checkbox" data-kit="ballot.names"' + (doc.ballot.names ? ' checked' : '') + '> Print each student\'s name on their slip (a recorded vote, not a secret one)</label>' +
+      '<label>Spare slips <input type="number" class="mins" min="0" max="40" data-kit="ballot.extra" value="' + doc.ballot.extra + '"></label>' +
+      '</div>' +
+      '<p class="kit-count">' + (slips
+        ? slips + ' slip' + (slips === 1 ? '' : 's') + ' will print (' + escapeHtml(votingRoles.join(', ')) + ').'
+        : 'No slips will print &mdash; tick "Votes" on the roles that cast a vote.') + '</p>' +
+
+      '<h3>Scoring rubric</h3>' +
+      '<p class="hint">One page a scorer can circle. The four column headings are shared by every row; each row says what the top score looks like.</p>' +
+      '<label>Column headings</label><div class="kit-row">' + levels + '</div>' +
+      '<label style="margin-top:.6rem;">Criteria</label>' + criteria +
+      '<div class="btnrow" style="margin-top:.4rem;"><button type="button" class="secondary small" data-add-crit="1">+ Add criterion</button></div>' +
+
+      '<h3>Reflection sheet</h3>' +
+      '<p class="hint">A half-page exit reflection, one per student, with the assigned name and role already on it.</p>' +
+      '<label>Sheet title</label><input type="text" data-kit="reflection.title" value="' + escapeAttr(doc.reflection.title) + '" placeholder="e.g. Simulation Reflection">' +
+      '<label>Questions</label>' + prompts +
+      '<div class="btnrow" style="margin-top:.4rem;"><button type="button" class="secondary small" data-add-prompt="1">+ Add question</button></div>';
+
+    updatePrintSummary();
+  }
+
+  function setKitPath(path, value) {
+    var parts = path.split('.');
+    var obj = doc;
+    for (var i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+    obj[parts[parts.length - 1]] = value;
+  }
+
+  els.kitWrap.addEventListener('input', function (ev) {
+    var t = ev.target;
+    var kit = t.getAttribute('data-kit');
+    var agendaId = t.getAttribute('data-agenda');
+    var optIdx = t.getAttribute('data-bopt');
+    var lvlIdx = t.getAttribute('data-rlevel');
+    var critId = t.getAttribute('data-crit');
+    var promptId = t.getAttribute('data-prompt');
+    if (kit) {
+      if (t.type === 'checkbox') setKitPath(kit, t.checked);
+      else if (t.type === 'number') setKitPath(kit, Math.max(0, Math.min(40, parseInt(t.value, 10) || 0)));
+      else setKitPath(kit, t.value);
+    } else if (agendaId) {
+      var ph = doc.agenda.find(function (p) { return p.id === agendaId; });
+      if (ph) {
+        var af = t.getAttribute('data-af');
+        ph[af] = af === 'minutes' ? Math.max(0, Math.min(240, parseInt(t.value, 10) || 0)) : t.value;
+      }
+    } else if (optIdx !== null) {
+      doc.ballot.options[parseInt(optIdx, 10)] = t.value;
+    } else if (lvlIdx !== null) {
+      doc.rubric.levels[parseInt(lvlIdx, 10)] = t.value;
+    } else if (critId) {
+      var c = doc.rubric.criteria.find(function (x) { return x.id === critId; });
+      if (c) c[t.getAttribute('data-cf')] = t.value;
+    } else if (promptId) {
+      var pr = doc.reflection.prompts.find(function (x) { return x.id === promptId; });
+      if (pr) pr.text = t.value;
+    } else { return; }
+    save();
   });
 
-  els.printBtn.addEventListener('click', function () {
-    if (!state.roles.length) { alert('Add at least one role first.'); return; }
-    var cards = state.roles.map(function (r) {
+  els.kitWrap.addEventListener('click', function (ev) {
+    var t = ev.target, id;
+    if (t.getAttribute('data-add-phase')) {
+      doc.agenda.push({ id: uid(), name: '', minutes: 5, cue: '' });
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-del-phase'))) {
+      doc.agenda = doc.agenda.filter(function (p) { return p.id !== id; });
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-move-phase-up'))) { moveRow(doc.agenda, id, -1);
+    } else if ((id = t.getAttribute('data-move-phase-down'))) { moveRow(doc.agenda, id, 1);
+    } else if (t.getAttribute('data-add-opt')) {
+      doc.ballot.options.push('');
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-del-opt')) !== null && id !== undefined) {
+      doc.ballot.options.splice(parseInt(id, 10), 1);
+      save(); renderKit();
+    } else if (t.getAttribute('data-add-crit')) {
+      doc.rubric.criteria.push({ id: uid(), name: '', top: '' });
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-del-crit'))) {
+      doc.rubric.criteria = doc.rubric.criteria.filter(function (c) { return c.id !== id; });
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-move-crit-up'))) { moveRow(doc.rubric.criteria, id, -1);
+    } else if ((id = t.getAttribute('data-move-crit-down'))) { moveRow(doc.rubric.criteria, id, 1);
+    } else if (t.getAttribute('data-add-prompt')) {
+      doc.reflection.prompts.push({ id: uid(), text: '' });
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-del-prompt'))) {
+      doc.reflection.prompts = doc.reflection.prompts.filter(function (p) { return p.id !== id; });
+      save(); renderKit();
+    } else if ((id = t.getAttribute('data-move-prompt-up'))) { moveRow(doc.reflection.prompts, id, -1);
+    } else if ((id = t.getAttribute('data-move-prompt-down'))) { moveRow(doc.reflection.prompts, id, 1); }
+  });
+
+  els.kitTitle.addEventListener('input', function () { doc.title = els.kitTitle.value; save(); });
+
+  PRINT_KEYS.forEach(function (pair) {
+    els[pair[1]].addEventListener('change', function () {
+      doc.print[pair[0]] = els[pair[1]].checked;
+      save();
+    });
+  });
+
+  function updatePrintSummary() {
+    var bits = [];
+    var slots = totalSlots();
+    var packets = doc.roles.reduce(function (n, r) {
+      return n + (r.caseFile && r.caseFile.trim() ? Math.max(1, r.copies || 1) : 0);
+    }, 0);
+    var slips = ballotSlipCount();
+    if (doc.print.agenda && doc.agenda.length) bits.push('1 agenda page');
+    if (doc.print.cards && doc.roles.length) bits.push(slots + ' role card' + (slots === 1 ? '' : 's'));
+    if (doc.print.caseFiles && packets) bits.push(packets + ' case-file page' + (packets === 1 ? '' : 's'));
+    if (doc.print.ballots && slips && doc.ballot.options.length) bits.push(slips + ' ballot slip' + (slips === 1 ? '' : 's'));
+    if (doc.print.rubric && doc.rubric.criteria.length) bits.push('1 rubric page');
+    if (doc.print.reflections && doc.reflection.prompts.length && slots) bits.push(slots + ' reflection sheet' + (slots === 1 ? '' : 's'));
+    els.printSummary.textContent = bits.length
+      ? 'Printing now would produce: ' + bits.join(', ') + '.'
+      : 'Nothing is set to print yet. Tick a box above, or add roles and kit pages below.';
+  }
+
+  /* ---------- named simulations ---------- */
+
+  function renderSimSelect() {
+    var names = CrcgStore.listSims();
+    if (names.indexOf(simName) === -1) names = names.concat([simName]);
+    els.simSelect.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === simName ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
+  /** Points the whole UI at a different simulation document. */
+  function openSim(name, nextDoc) {
+    simName = name;
+    doc = nextDoc;
+    els.kitTitle.value = doc.title;
+    PRINT_KEYS.forEach(function (pair) { els[pair[1]].checked = !!doc.print[pair[0]]; });
+    els.assignSummary.textContent = '';
+    renderSimSelect();
+    renderRoles();
+    renderKit();
+  }
+
+  els.simSelect.addEventListener('change', function () {
+    var name = els.simSelect.value;
+    var next = CrcgStore.loadSim(name);
+    // saveSim is what records `crcg:current`, so re-saving the document we
+    // just opened is also what makes it the one that reopens next time.
+    if (next) { openSim(name, next); save(); }
+    else renderSimSelect(); // stale option — resync the list
+  });
+
+  els.newSimBtn.addEventListener('click', function () {
+    var name = (window.prompt('Name for the new simulation?', '') || '').trim();
+    if (!name) return;
+    if (CrcgStore.listSims().indexOf(name) !== -1) { alert('A simulation with that name already exists.'); return; }
+    var fresh = CrcgTemplates.build(els.templateSelect.value || 'blank', uid);
+    CrcgStore.saveSim(name, fresh);
+    openSim(name, fresh);
+    setShareNote('Started "' + name + '" from the ' + els.templateSelect.options[els.templateSelect.selectedIndex].text + ' template.');
+  });
+
+  els.renameSimBtn.addEventListener('click', function () {
+    var name = (window.prompt('Rename this simulation to:', simName) || '').trim();
+    if (!name || name === simName) return;
+    if (CrcgStore.listSims().indexOf(name) !== -1) { alert('A simulation with that name already exists.'); return; }
+    var old = simName;
+    simName = name;
+    if (save()) CrcgStore.deleteSim(old);
+    else simName = old; // storage full — keep the old name rather than lose the work
+    renderSimSelect();
+  });
+
+  els.deleteSimBtn.addEventListener('click', function () {
+    if (!window.confirm('Delete the simulation "' + simName + '" and everything in it? This cannot be undone.')) return;
+    CrcgStore.deleteSim(simName);
+    var names = CrcgStore.listSims();
+    if (names.length) {
+      openSim(names[0], CrcgStore.loadSim(names[0]) || CrcgStore.repairDoc(null));
+      save();
+    } else {
+      var fresh = CrcgTemplates.build('mock_trial', uid);
+      CrcgStore.saveSim(CrcgStore.DEFAULT_NAME, fresh);
+      openSim(CrcgStore.DEFAULT_NAME, fresh);
+    }
+  });
+
+  /* ---------- templates ---------- */
+
+  els.templateSelect.innerHTML = CrcgTemplates.options().map(function (o) {
+    return '<option value="' + escapeAttr(o.key) + '">' + escapeHtml(o.label) + '</option>';
+  }).join('');
+
+  els.loadTemplateBtn.addEventListener('click', function () {
+    if (doc.roles.length && !confirm('Replace everything in "' + simName + '" with this template?')) return;
+    doc = CrcgTemplates.build(els.templateSelect.value, uid);
+    save();
+    openSim(simName, doc);
+  });
+
+  els.addRoleBtn.addEventListener('click', function () {
+    doc.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, students: [], caseFile: '', ballot: false, points: [{ id: uid(), text: '' }] });
+    save(); renderRoles(); renderKit();
+  });
+
+  /* ---------- printing the kit ----------
+     Sections are appended in the order a teacher runs the period: agenda,
+     cards, case files, ballots, rubric, reflections. A piece that is ticked
+     but has no content contributes nothing, which is what lets a role set
+     migrated from the old single-document store print exactly the cards and
+     case files it always did. */
+
+  function pageHead(heading) {
+    return '<div class="kit-page-head"><h2>' + escapeHtml(heading) + '</h2>' +
+      (doc.title ? '<p class="kit-sim-title">' + escapeHtml(doc.title) + '</p>' : '') + '</div>';
+  }
+
+  function agendaHtml() {
+    var rows = doc.agenda.map(function (p, i) {
+      return '<tr><td class="tick"></td><td class="num">' + (i + 1) + '</td>' +
+        '<td>' + escapeHtml(p.name) + '</td>' +
+        '<td class="mins">' + p.minutes + ' min</td>' +
+        '<td class="agenda-cue">' + escapeHtml(p.cue) + '</td></tr>';
+    }).join('');
+    return '<section class="kit-section kit-agenda">' + pageHead('Agenda') +
+      '<table class="kit-table agenda-table"><thead><tr><th class="tick">Done</th><th class="num">#</th>' +
+      '<th>Phase</th><th class="mins">Time</th><th>Say this</th></tr></thead><tbody>' + rows +
+      '<tr class="agenda-total"><td class="tick"></td><td class="num"></td><td>Total</td>' +
+      '<td class="mins">' + agendaMinutes() + ' min</td><td></td></tr></tbody></table></section>';
+  }
+
+  function cardsHtml() {
+    var cards = doc.roles.map(function (r) {
       var points = r.points.filter(function (p) { return p.text.trim(); }).map(function (p) { return '<li>' + escapeHtml(p.text) + '</li>'; }).join('') || '<li>&mdash;</li>';
       /* Copies are no longer interchangeable — each one can carry a different
          student's name — so they are built individually rather than by
@@ -477,11 +825,16 @@
       }
       return out;
     }).join('');
-    /* Companion case-file packets, after the full card grid: one page per
-       printed copy of a role that has case-file text, headed with the role
-       name and — when a student is assigned to that copy — the student's
-       name, reusing the same r.students[c] lookup the cards above use. */
-    var packets = state.roles.filter(function (r) { return r.caseFile && r.caseFile.trim(); }).map(function (r) {
+    return '<section class="kit-section"><div class="role-card-grid">' + cards + '</div></section>';
+  }
+
+  /* Companion case-file packets: one page per printed copy of a role that has
+     case-file text, headed with the role name and — when a student is
+     assigned to that copy — the student's name, reusing the same
+     r.students[c] lookup the cards use. Left as direct children of #printArea
+     because each packet already forces its own page break. */
+  function packetsHtml() {
+    return doc.roles.filter(function (r) { return r.caseFile && r.caseFile.trim(); }).map(function (r) {
       var out = '';
       for (var c = 0; c < Math.max(1, r.copies || 1); c++) {
         var who = (r.students || [])[c];
@@ -491,13 +844,87 @@
       }
       return out;
     }).join('');
-    els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>' + packets;
+  }
+
+  function ballotsHtml() {
+    var b = doc.ballot;
+    var opts = b.options.filter(function (o) { return o.trim(); })
+      .map(function (o) { return '<span class="slip-opt">' + escapeHtml(o) + '</span>'; }).join('');
+    function slip(who) {
+      return '<div class="ballot-slip">' +
+        '<div class="slip-head">' + escapeHtml(b.title || 'Vote Slip') + '</div>' +
+        '<div class="slip-name">' + (who ? 'Name: <b>' + escapeHtml(who) + '</b>' : 'Name: ____________________') + '</div>' +
+        (b.question ? '<p class="slip-q">' + escapeHtml(b.question) + '</p>' : '') +
+        '<div class="slip-opts">' + opts + '</div>' +
+        (b.instructions ? '<p class="slip-inst">' + escapeHtml(b.instructions) + '</p>' : '') +
+        '<div class="slip-line">Reason:</div></div>';
+    }
+    var slips = '';
+    doc.roles.forEach(function (r) {
+      if (!r.ballot) return;
+      for (var c = 0; c < Math.max(1, r.copies || 1); c++) {
+        slips += slip(b.names ? (r.students || [])[c] : null);
+      }
+    });
+    for (var i = 0; i < (b.extra || 0); i++) slips += slip(null);
+    return '<section class="kit-section kit-ballots">' + pageHead(b.title || 'Vote Slips') +
+      '<div class="ballot-grid">' + slips + '</div></section>';
+  }
+
+  function rubricHtml() {
+    var heads = doc.rubric.levels.map(function (l) { return '<th class="lvl">' + escapeHtml(l) + '</th>'; }).join('');
+    var rows = doc.rubric.criteria.map(function (c) {
+      return '<tr><td><b>' + escapeHtml(c.name) + '</b>' +
+        (c.top ? '<span class="crit-top">Top score looks like: ' + escapeHtml(c.top) + '</span>' : '') + '</td>' +
+        '<td class="lvl"></td><td class="lvl"></td><td class="lvl"></td><td class="lvl"></td></tr>';
+    }).join('');
+    return '<section class="kit-section kit-rubric">' + pageHead('Scoring Rubric') +
+      '<p class="rubric-who">Student or team: ______________________ &nbsp; Role: ______________________ &nbsp; Scorer: ______________________</p>' +
+      '<table class="kit-table rubric-table"><thead><tr><th>Criterion</th>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="rubric-note">Circle one box in each row. Total: ______ out of ' + (doc.rubric.criteria.length * 4) + '</p></section>';
+  }
+
+  function reflectionsHtml() {
+    var lines = '<div class="reflect-line"></div><div class="reflect-line"></div>';
+    var qs = doc.reflection.prompts.filter(function (p) { return p.text.trim(); });
+    if (!qs.length) return '';
+    var sheets = '';
+    doc.roles.forEach(function (r) {
+      for (var c = 0; c < Math.max(1, r.copies || 1); c++) {
+        var who = (r.students || [])[c];
+        sheets += '<div class="reflect-sheet"><div class="reflect-head"><b>' + escapeHtml(doc.reflection.title || 'Reflection') + '</b>' +
+          '<span class="reflect-who">' + (who ? escapeHtml(who) : 'Name: ____________________') + '</span></div>' +
+          '<p class="reflect-role">Role: ' + escapeHtml(r.role || 'Role') + '</p>' +
+          qs.map(function (p, i) {
+            return '<div class="reflect-q">' + (i + 1) + '. ' + escapeHtml(p.text) + '</div>' + lines;
+          }).join('') + '</div>';
+      }
+    });
+    return '<section class="kit-section kit-reflections">' + sheets + '</section>';
+  }
+
+  function buildPrintHtml() {
+    var p = doc.print, out = '';
+    if (p.agenda && doc.agenda.length) out += agendaHtml();
+    if (p.cards && doc.roles.length) out += cardsHtml();
+    if (p.caseFiles) out += packetsHtml();
+    if (p.ballots && ballotSlipCount() && doc.ballot.options.filter(function (o) { return o.trim(); }).length) out += ballotsHtml();
+    if (p.rubric && doc.rubric.criteria.length) out += rubricHtml();
+    if (p.reflections && doc.roles.length) out += reflectionsHtml();
+    return out;
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    if (!doc.roles.length) { alert('Add at least one role first.'); return; }
+    var html = buildPrintHtml();
+    if (!html) { alert('Nothing is ticked to print. Choose at least one piece under "What prints".'); return; }
+    els.printArea.innerHTML = html;
     window.print();
   });
 
   els.assignBtn.addEventListener('click', assignStudents);
   els.clearAssignBtn.addEventListener('click', function () {
-    state.roles.forEach(function (r) { r.students = []; });
+    doc.roles.forEach(function (r) { r.students = []; });
     els.assignSummary.textContent = 'Names cleared — every card prints a blank name line again.';
     save(); renderRoles();
   });
@@ -507,35 +934,37 @@
   });
 
   /* ---------- share by link / QR (state-link.js, same pattern as 028/040) ----------
-     There is no multiple-named-save here yet (see the improvement notes'
-     cut list), so an incoming shared link can't be filed away under its own
-     name — the only safe move is to ask before it replaces whatever is
-     currently on screen. */
+     Now that simulations are saved by name, an incoming link no longer has to
+     ask permission to overwrite what is on screen: it files itself away under
+     its own (uniqued) name and opens it, and everything already saved is left
+     exactly where it was. */
   var SHARE_PARAM = 'roles';
 
   function setShareNote(text, isError) {
-    els.shareNote.textContent = text || '';
+    els.shareNote.innerHTML = text || '';
     els.shareNote.style.display = text ? '' : 'none';
     els.shareNote.classList.toggle('error', !!isError);
   }
 
-  function isPlausibleRoleSet(obj) {
-    return !!obj && typeof obj === 'object' && Array.isArray(obj.roles) && obj.roles.length > 0 &&
-      obj.roles.every(function (r) { return r && typeof r.role === 'string' && Array.isArray(r.points); });
+  function isPlausiblePayload(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+    var roles = Array.isArray(obj.roles) ? obj.roles : (obj.doc && Array.isArray(obj.doc.roles) ? obj.doc.roles : null);
+    return !!roles && roles.length > 0 &&
+      roles.every(function (r) { return r && typeof r.role === 'string' && Array.isArray(r.points); });
   }
 
   function shareUrl() {
     save();
-    return StateLink.buildShareUrl(SHARE_PARAM, { v: 1, roles: state.roles });
+    return StateLink.buildShareUrl(SHARE_PARAM, { v: 2, name: simName, doc: doc });
   }
 
   els.shareLinkBtn.addEventListener('click', function () {
-    if (!state.roles.length) { setShareNote('Add at least one role first.', true); return; }
+    if (!doc.roles.length) { setShareNote('Add at least one role first.', true); return; }
     var url = shareUrl();
     var copy = (navigator.clipboard && navigator.clipboard.writeText)
       ? navigator.clipboard.writeText(url) : Promise.reject();
     copy.then(
-      function () { setShareNote('Link copied. Opening it anywhere loads these roles, talking points, and case files — asking first if it would replace roles already there.'); },
+      function () { setShareNote('Link copied. Opening it anywhere saves this whole simulation there under its own name, without touching anything already saved.'); },
       function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
     );
   });
@@ -558,15 +987,15 @@
   }
 
   els.shareQrBtn.addEventListener('click', function () {
-    if (!state.roles.length) { setShareNote('Add at least one role first.', true); return; }
+    if (!doc.roles.length) { setShareNote('Add at least one role first.', true); return; }
     var url = shareUrl();
     try {
       drawShareQr(els.shareCanvas, url);
     } catch (e) {
-      // A QR code holds far less than a URL bar does. A role set with a few
+      // A QR code holds far less than a URL bar does. A simulation with a few
       // long case files can run past it — say so rather than drawing a
       // square nobody's phone can read.
-      setShareNote('This role set is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+      setShareNote('This simulation is too long to fit in a QR code (' + Math.round(url.length / 1024) +
         ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
       return;
     }
@@ -578,39 +1007,40 @@
   els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
 
-  /** Consume a ?roles= link on load. Returns true if it was imported.
-      Without multiple named saves, an incoming link can only ask before it
-      replaces the roles already on screen — never silently. */
-  function importSharedRoles() {
+  /** Consume a ?roles= link on load. Returns the name it was filed under, or
+      null. v1 links carried a bare `roles` array with no kit; v2 links carry
+      the whole document. Both are accepted — repairDoc fills in the rest. */
+  function importSharedSim() {
     var raw = StateLink.getParam(SHARE_PARAM);
-    if (!raw) return false;
-    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-ask
+    if (!raw) return null;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-import
     var decoded = StateLink.decodeState(raw);
-    if (!isPlausibleRoleSet(decoded)) {
+    if (!isPlausiblePayload(decoded)) {
       setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
-      return false;
+      return null;
     }
-    if (state.roles.length && !confirm('Open this shared role set? It will replace the ' + state.roles.length + ' role(s) currently on screen.')) {
-      return false;
-    }
-    state.roles = decoded.roles.map(function (r) {
-      return {
-        id: uid(), role: r.role || '', position: r.position || '', copies: r.copies || 1,
-        students: Array.isArray(r.students) ? r.students.slice() : [],
-        caseFile: typeof r.caseFile === 'string' ? r.caseFile : '',
-        points: (Array.isArray(r.points) ? r.points : []).map(function (p) { return { id: uid(), text: (p && p.text) || '' }; })
-      };
+    var incoming = CrcgStore.repairDoc(decoded.doc || { roles: decoded.roles });
+    /* Ids are regenerated: two teachers who both loaded the Mock Trial
+       template have the same role ids, and a shared copy landing beside the
+       original must not collide with it. */
+    incoming.roles.forEach(function (r) {
+      r.id = uid();
+      r.points.forEach(function (p) { p.id = uid(); });
     });
-    save();
-    setShareNote('Opened from a shared link.');
-    return true;
+    var name = CrcgStore.uniqueName(decoded.name || incoming.title || 'Shared simulation');
+    CrcgStore.saveSim(name, incoming);
+    openSim(name, incoming);
+    setShareNote('Opened from a shared link and saved as &ldquo;' + escapeHtml(name) + '&rdquo;. Nothing you already had was replaced.');
+    return name;
   }
 
   /* ---------- boot ---------- */
-  load();
-  importSharedRoles();
+  var current = CrcgStore.loadCurrent();
+  if (!current.doc.roles.length) current.doc = CrcgTemplates.build('mock_trial', uid);
+  openSim(current.name, current.doc);
+  save();
+  if (importSharedSim()) { /* the import already opened and saved itself */ }
   populateRosterSelect();
-  renderRoles();
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
