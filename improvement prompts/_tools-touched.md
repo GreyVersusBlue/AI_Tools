@@ -193,7 +193,6 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
-| Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
 
@@ -1109,6 +1108,22 @@ link" (backlog rank 23) in full, sequenced multi-save first as scoped:
 | Tool | File | What shipped |
 |---|---|---|
 | DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` | Multiple named saved packets (triple-key `dbq:*` store, migrated from the old single-blob save); share a packet by link/QR that excludes image pixel data but names on-device-only images by letter and title; an incoming link always saves as a new, uniquely-named packet; JSON export/import (carries images); a worked Industrial Revolution child-labor example packet a fresh install opens on. New smoke test `Tools/dbq-source-packet-builder/test/smoke-share.mjs` (`npm run test:dbq`), 32 assertions. |
+
+### Devon-assigned round — tool 050 — 2026-08-14 00:12 UTC — session `tjkd6u`
+
+Part of Devon's 8-session social studies demo round (`prompts/social-studies-demo/`),
+each session assigned exactly one tool ahead of a live presentation to
+teachers — an explicit override of the "don't repick done tools" default per
+that round's own preamble.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Government/Civics Simulation Role Card Generator | `050-civics-role-card-generator.md` | Headline: per-role case-file packets (backlog rank 17) — an optional long-form Case file field per role that prints as a companion page behind each printed copy of that role's card, headed with the role name and (when assigned) the student's name. All three starter templates ship sample case-file text so it demos from the defaults. Supporting: share link + QR (state-link.js, same pattern as 028), with a confirm-dialog fallback since multi-save didn't ship this round; a new sibling smoke-test file (`smoke-case-file-packets.mjs`, 27 assertions). Cut per the assignment's own cut rule: multiple named saved simulations. |
+
+No new `localStorage` key was introduced (case-file text lives inside the
+existing `crcg_roles_v1` blob), so `009-backup-restore.html` needed no
+changes. No `sw.js` changes either — the only new file is a test file, which
+this repo's convention excludes from `PRECACHE_URLS`.
 
 ---
 

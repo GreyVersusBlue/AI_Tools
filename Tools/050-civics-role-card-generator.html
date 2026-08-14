@@ -4,17 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Government/Civics Simulation Role Card Generator</title>
-<meta name="description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.">
+<meta name="description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position, talking points, and an optional case-file packet.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AsPerMyLessonPlan.com">
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/050-civics-role-card-generator.html">
 <meta property="og:title" content="Government/Civics Simulation Role Card Generator — AsPerMyLessonPlan.com">
-<meta property="og:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.">
+<meta property="og:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position, talking points, and an optional case-file packet.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Government/Civics Simulation Role Card Generator — AsPerMyLessonPlan.com">
-<meta name="twitter:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position and talking points.">
+<meta name="twitter:description" content="Printable role cards for a mock trial, debate, or legislative simulation, each with a position, talking points, and an optional case-file packet.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M16 6v3M9 20h14M7 26h18M9 20l-2-9h6zM23 20l-2-9h6z' fill='none' stroke='%231f3550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -39,6 +41,12 @@
     background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
     padding: .45rem .55rem; margin-bottom: .6rem;
   }
+  textarea {
+    width: 100%; font-family: inherit; font-size: .85rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem; margin-bottom: .3rem; resize: vertical; min-height: 3.6rem; line-height: 1.4;
+  }
+  .field-hint { font-weight: 400; color: var(--muted); font-size: .76rem; }
 
   button {
     font-family: inherit; font-size: .92rem; font-weight: 600; cursor: pointer;
@@ -71,6 +79,17 @@
   .role-names { font-size: .78rem; color: var(--muted); margin: .3rem 0 0; }
   .role-names b { color: var(--ink); font-weight: 600; }
 
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: #16181d; border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+
   .role-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25in; }
   .role-print-card .assigned { text-align: center; font-weight: 700; font-size: 1rem; margin-bottom: .12in; }
   .role-print-card .nameline { text-align: center; color: #555; font-size: .85rem; margin-bottom: .12in; }
@@ -79,6 +98,17 @@
   .role-print-card .position { font-style: italic; text-align: center; color: #555; margin-bottom: .2in; font-size: .9rem; }
   .role-print-card ul { margin: 0; padding-left: 1.2rem; font-size: .82rem; }
   .role-print-card li { margin-bottom: .1in; }
+
+  /* Case-file companion packets: one page per printed copy of a role that has
+     case-file text, printed after the full card grid. `page-break-before`
+     (never a fixed height + overflow:hidden — that combination clips print
+     output) puts every packet on its own fresh page, and `min-height` gives
+     it a full-page feel without forcing a second blank page for a short one. */
+  .role-packet { border: 1.5px solid #333; border-radius: 8px; padding: .4in .5in; min-height: 8in; page-break-before: always; page-break-inside: avoid; }
+  .role-packet-head { margin-bottom: .25in; border-bottom: 1px solid #ccc; padding-bottom: .12in; }
+  .role-packet-head h3 { margin: 0 0 .05in; font-size: 1.25rem; }
+  .role-packet-who { margin: 0; color: #555; font-size: .95rem; font-weight: 700; }
+  .role-packet-body { white-space: pre-wrap; font-size: .95rem; line-height: 1.6; }
 
 </style>
 </head>
@@ -91,7 +121,22 @@
       <p class="sub">Build role cards for a mock trial, debate, or legislative simulation.</p>
     </div>
     <div class="btnrow">
+      <button class="secondary" id="shareLinkBtn">&#128279; Copy link</button>
+      <button class="secondary" id="shareQrBtn">&#9638; QR code</button>
       <button class="secondary" id="printBtn">Print role cards</button>
+    </div>
+  </div>
+  <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+
+  <div class="share-overlay" id="shareOverlay" hidden>
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Role set QR code">
+      <div class="share-head">
+        <span>Scan to open this role set</span>
+        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="shareCanvas"></canvas>
+      <p class="hint" style="margin:.6rem 0 0;">Opens the same roles, talking points, and case files on that device &mdash;
+        edits on either side stay put.</p>
     </div>
   </div>
 
@@ -138,34 +183,41 @@
   'use strict';
   var STORE_KEY = 'crcg_roles_v1';
 
+  /* Shared fact pattern for the Mock Trial template's case-file text: Judge,
+     Prosecution, and Defense all get the same background (real mock trials
+     hand every side the same discovery packet); the Witness gets a separate,
+     personal statement instead. Jurors get none — they decide from what's
+     presented in the room, not outside facts. */
+  var MOCK_TRIAL_CASE = 'Case: In re Search of Locker #214, Roosevelt Middle School. On a Tuesday morning, an assistant principal received an anonymous tip that a student, Casey Bennett, was keeping a vape pen in locker #214. Without asking Casey first, the assistant principal opened the locker with the master key and found a vape pen wrapped in a jacket. School policy says lockers are school property and can be searched when there is reasonable suspicion. Casey says the tip was unreliable and the search violated their privacy.';
   var TEMPLATES = {
     mock_trial: [
-      { role: 'Judge', position: 'Neutral — oversees the trial and ensures rules are followed', copies: 1, points: ['Introduce the case and both sides', 'Rule on objections', 'Instruct the jury before deliberation'] },
-      { role: 'Prosecution / Plaintiff Attorney', position: 'Arguing the defendant is responsible', copies: 2, points: ['Present opening statement', 'Call and question witnesses', 'Deliver closing argument summarizing the evidence'] },
-      { role: 'Defense Attorney', position: 'Arguing the defendant is not responsible', copies: 2, points: ['Present opening statement', 'Cross-examine opposing witnesses', 'Deliver closing argument creating reasonable doubt'] },
-      { role: 'Witness', position: 'Provides testimony for one side', copies: 4, points: ['Answer questions truthfully based on your assigned facts', 'Stay in character during cross-examination'] },
-      { role: 'Juror', position: 'Neutral — decides the verdict', copies: 12, points: ['Listen carefully to all evidence', 'Discuss respectfully during deliberation', 'Reach a verdict based on the evidence presented'] }
+      { role: 'Judge', position: 'Neutral — oversees the trial and ensures rules are followed', copies: 1, points: ['Introduce the case and both sides', 'Rule on objections', 'Instruct the jury before deliberation'], caseFile: MOCK_TRIAL_CASE },
+      { role: 'Prosecution / Plaintiff Attorney', position: 'Arguing the defendant is responsible', copies: 2, points: ['Present opening statement', 'Call and question witnesses', 'Deliver closing argument summarizing the evidence'], caseFile: MOCK_TRIAL_CASE },
+      { role: 'Defense Attorney', position: 'Arguing the defendant is not responsible', copies: 2, points: ['Present opening statement', 'Cross-examine opposing witnesses', 'Deliver closing argument creating reasonable doubt'], caseFile: MOCK_TRIAL_CASE },
+      { role: 'Witness', position: 'Provides testimony for one side', copies: 4, points: ['Answer questions truthfully based on your assigned facts', 'Stay in character during cross-examination'], caseFile: 'You are the hall monitor who was standing near locker #214 that morning. You saw the assistant principal open the locker while Casey was still in first period, not present. You did not see or read the anonymous tip yourself. Under cross-examination, be honest that you don\'t know who sent the tip or whether it was reliable.' },
+      { role: 'Juror', position: 'Neutral — decides the verdict', copies: 12, points: ['Listen carefully to all evidence', 'Discuss respectfully during deliberation', 'Reach a verdict based on the evidence presented'], caseFile: '' }
     ],
     debate: [
-      { role: 'Affirmative Team', position: 'Arguing in favor of the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence supporting your position', 'Rebut the opposing team\'s points'] },
-      { role: 'Negative Team', position: 'Arguing against the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence against the resolution', 'Rebut the affirmative team\'s points'] },
-      { role: 'Moderator', position: 'Neutral — keeps the debate on track', copies: 1, points: ['Introduce the resolution and both teams', 'Enforce time limits', 'Facilitate the audience Q&A if used'] },
-      { role: 'Judge / Scorer', position: 'Neutral — evaluates the debate', copies: 3, points: ['Score each team on evidence and delivery', 'Decide which team argued more persuasively'] }
+      { role: 'Affirmative Team', position: 'Arguing in favor of the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence supporting your position', 'Rebut the opposing team\'s points'], caseFile: 'Resolution: Students should be allowed to use cell phones during lunch. Your case: lunch is unstructured personal time, not instructional time. Allowing phones lets students contact family, listen to music, or use a translation app. Most students already carry phones in their backpacks, so supervised use during lunch only is a small, practical change.' },
+      { role: 'Negative Team', position: 'Arguing against the resolution', copies: 3, points: ['Present a clear opening argument', 'Provide evidence against the resolution', 'Rebut the affirmative team\'s points'], caseFile: 'Resolution: Students should be allowed to use cell phones during lunch. Your case: lunch is one of the few times students talk face-to-face, and phones make that harder. Phones at lunch also make it easier to record other students without permission, or to see a hurtful message that followed someone from home. Keeping lunch phone-free protects that social time and cuts down on conflict.' },
+      { role: 'Moderator', position: 'Neutral — keeps the debate on track', copies: 1, points: ['Introduce the resolution and both teams', 'Enforce time limits', 'Facilitate the audience Q&A if used'], caseFile: 'Your job is to keep the debate fair and on schedule, not to argue either side. Introduce the resolution and both teams, enforce the time limit for each speech, and remind teams to address the resolution instead of each other personally.' },
+      { role: 'Judge / Scorer', position: 'Neutral — evaluates the debate', copies: 3, points: ['Score each team on evidence and delivery', 'Decide which team argued more persuasively'], caseFile: 'Score each team on three things: how clearly they explained their argument, how well they backed it up with evidence or real examples, and how directly they answered the other side\'s points. Give each category a score out of 5, then add them up. Don\'t score based on which side you personally agree with — score the reasoning and delivery.' }
     ],
     legislative: [
-      { role: 'Bill Sponsor', position: 'Supports passing the bill', copies: 1, points: ['Explain what the bill does and why it\'s needed', 'Answer questions from other members', 'Rally support for a yes vote'] },
-      { role: 'Committee Chair', position: 'Neutral — runs the session', copies: 1, points: ['Recognize speakers in order', 'Keep discussion on topic and on time', 'Call for and record the final vote'] },
-      { role: 'Opposing Legislator', position: 'Opposes the bill as written', copies: 6, points: ['Raise specific concerns or objections', 'Propose an amendment if appropriate', 'Explain your reasoning for a no vote'] },
-      { role: 'Supporting Legislator', position: 'Supports the bill', copies: 6, points: ['Add supporting arguments beyond the sponsor\'s', 'Respond to the opposition\'s concerns'] }
+      { role: 'Bill Sponsor', position: 'Supports passing the bill', copies: 1, points: ['Explain what the bill does and why it\'s needed', 'Answer questions from other members', 'Rally support for a yes vote'], caseFile: 'Bill 24, the School Recess Extension Act, would add 15 minutes of recess to the middle school day, taken from the daily advisory period. Research shows a longer break improves focus and cuts down on afternoon discipline referrals. Be ready to explain why the extra 15 minutes of recess matters more than that same time in advisory.' },
+      { role: 'Committee Chair', position: 'Neutral — runs the session', copies: 1, points: ['Recognize speakers in order', 'Keep discussion on topic and on time', 'Call for and record the final vote'], caseFile: 'Your job is neutral: you run the meeting, you don\'t argue for or against Bill 24. Recognize speakers in the order they raise their hand, and keep each turn to about a minute. Before debate starts, read the bill\'s one-sentence summary aloud: it adds 15 minutes of recess by shortening advisory.' },
+      { role: 'Opposing Legislator', position: 'Opposes the bill as written', copies: 6, points: ['Raise specific concerns or objections', 'Propose an amendment if appropriate', 'Explain your reasoning for a no vote'], caseFile: 'Bill 24 would cut advisory time to add recess. Your case: advisory is used for makeup work, silent reading, and check-ins with a trusted adult, and losing 15 minutes of it hurts the students who need that support most. Propose an alternative, such as taking the extra recess time from lunch instead.' },
+      { role: 'Supporting Legislator', position: 'Supports the bill', copies: 6, points: ['Add supporting arguments beyond the sponsor\'s', 'Respond to the opposition\'s concerns'], caseFile: 'Bill 24 would add 15 minutes of recess by shortening advisory. Your case: students report advisory already runs short on structured activities most days, and unstructured recess time is proven to help kids focus for the rest of the school day. Back up the sponsor\'s argument with a reason of your own.' }
     ],
     blank: [
-      { role: 'New Role', position: '', points: [''] }
+      { role: 'New Role', position: '', points: [''], caseFile: '' }
     ]
   };
 
   var els = {};
   ['templateSelect', 'loadTemplateBtn', 'addRoleBtn', 'rolesWrap', 'printBtn', 'printArea',
-   'rosterSelect', 'assignBtn', 'clearAssignBtn', 'shuffleAssign', 'growCopies', 'assignSummary'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'rosterSelect', 'assignBtn', 'clearAssignBtn', 'shuffleAssign', 'growCopies', 'assignSummary',
+   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { roles: [] };
 
@@ -183,7 +235,7 @@
          a dozen jurors, not one of each. That is also what makes "grow the
          biggest role" mean the jury rather than whichever role happens to be
          listed first. */
-      return { id: uid(), role: r.role, position: r.position, copies: r.copies || 1, students: [], points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
+      return { id: uid(), role: r.role, position: r.position, copies: r.copies || 1, students: [], caseFile: r.caseFile || '', points: r.points.map(function (t) { return { id: uid(), text: t }; }) };
     });
   }
 
@@ -199,6 +251,11 @@
          empty array means "nobody assigned", which prints the blank name line
          the tool has always printed — so an existing set is unchanged. */
       if (!Array.isArray(r.students)) r.students = [];
+      /* Roles saved before case files existed carry no `caseFile`. An empty
+         string means "no companion packet", so an existing set still prints
+         exactly what it used to — no packet pages appear until a teacher
+         actually types one in. */
+      if (typeof r.caseFile !== 'string') r.caseFile = '';
     });
   }
   function save() {
@@ -226,6 +283,8 @@
             (r.students.length < Math.max(1, r.copies || 1)
               ? ' &mdash; ' + (Math.max(1, r.copies || 1) - r.students.length) + ' blank' : '') + '</p>'
           : '') +
+        '<label>Case file <span class="field-hint">(optional &mdash; prints as a companion page behind this role\'s card)</span></label>' +
+        '<textarea data-field="caseFile" data-role="' + r.id + '" placeholder="Background facts, witness testimony, bill text, or other private details for this role...">' + escapeHtml(r.caseFile) + '</textarea>' +
         '<label>Talking points</label>' + points +
         '<button type="button" class="secondary small" data-add-point="' + r.id + '">+ Add talking point</button>' +
         '</div>';
@@ -398,7 +457,7 @@
     save(); renderRoles();
   });
   els.addRoleBtn.addEventListener('click', function () {
-    state.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, students: [], points: [{ id: uid(), text: '' }] });
+    state.roles.push({ id: uid(), role: 'New Role', position: '', copies: 1, students: [], caseFile: '', points: [{ id: uid(), text: '' }] });
     save(); renderRoles();
   });
 
@@ -418,7 +477,21 @@
       }
       return out;
     }).join('');
-    els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>';
+    /* Companion case-file packets, after the full card grid: one page per
+       printed copy of a role that has case-file text, headed with the role
+       name and — when a student is assigned to that copy — the student's
+       name, reusing the same r.students[c] lookup the cards above use. */
+    var packets = state.roles.filter(function (r) { return r.caseFile && r.caseFile.trim(); }).map(function (r) {
+      var out = '';
+      for (var c = 0; c < Math.max(1, r.copies || 1); c++) {
+        var who = (r.students || [])[c];
+        out += '<div class="role-packet"><div class="role-packet-head"><h3>Case file &mdash; ' + escapeHtml(r.role || 'Role') + '</h3>' +
+          (who ? '<p class="role-packet-who">' + escapeHtml(who) + '</p>' : '') + '</div>' +
+          '<div class="role-packet-body">' + escapeHtml(r.caseFile) + '</div></div>';
+      }
+      return out;
+    }).join('');
+    els.printArea.innerHTML = '<div class="role-card-grid">' + cards + '</div>' + packets;
     window.print();
   });
 
@@ -433,8 +506,109 @@
     if (ev.key === 'np_rosters') populateRosterSelect();
   });
 
+  /* ---------- share by link / QR (state-link.js, same pattern as 028/040) ----------
+     There is no multiple-named-save here yet (see the improvement notes'
+     cut list), so an incoming shared link can't be filed away under its own
+     name — the only safe move is to ask before it replaces whatever is
+     currently on screen. */
+  var SHARE_PARAM = 'roles';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  function isPlausibleRoleSet(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.roles) && obj.roles.length > 0 &&
+      obj.roles.every(function (r) { return r && typeof r.role === 'string' && Array.isArray(r.points); });
+  }
+
+  function shareUrl() {
+    save();
+    return StateLink.buildShareUrl(SHARE_PARAM, { v: 1, roles: state.roles });
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    if (!state.roles.length) { setShareNote('Add at least one role first.', true); return; }
+    var url = shareUrl();
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote('Link copied. Opening it anywhere loads these roles, talking points, and case files — asking first if it would replace roles already there.'); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    if (!state.roles.length) { setShareNote('Add at least one role first.', true); return; }
+    var url = shareUrl();
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR code holds far less than a URL bar does. A role set with a few
+      // long case files can run past it — say so rather than drawing a
+      // square nobody's phone can read.
+      setShareNote('This role set is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote('');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  /** Consume a ?roles= link on load. Returns true if it was imported.
+      Without multiple named saves, an incoming link can only ask before it
+      replaces the roles already on screen — never silently. */
+  function importSharedRoles() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-ask
+    var decoded = StateLink.decodeState(raw);
+    if (!isPlausibleRoleSet(decoded)) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
+      return false;
+    }
+    if (state.roles.length && !confirm('Open this shared role set? It will replace the ' + state.roles.length + ' role(s) currently on screen.')) {
+      return false;
+    }
+    state.roles = decoded.roles.map(function (r) {
+      return {
+        id: uid(), role: r.role || '', position: r.position || '', copies: r.copies || 1,
+        students: Array.isArray(r.students) ? r.students.slice() : [],
+        caseFile: typeof r.caseFile === 'string' ? r.caseFile : '',
+        points: (Array.isArray(r.points) ? r.points : []).map(function (p) { return { id: uid(), text: (p && p.text) || '' }; })
+      };
+    });
+    save();
+    setShareNote('Opened from a shared link.');
+    return true;
+  }
+
   /* ---------- boot ---------- */
   load();
+  importSharedRoles();
   populateRosterSelect();
   renderRoles();
 })();
