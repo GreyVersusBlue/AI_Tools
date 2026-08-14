@@ -194,7 +194,6 @@ here.
 |---|---|---|---|
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
 | DBQ / Source Packet Builder | `xo4v63` | 2026-08-13 23:56 UTC | `claude/ssdemo-056-xo4v63` |
-| Primary Source Analysis Worksheet Generator | `qzmvhx` | 2026-08-13 23:58 UTC | `claude/ssdemo-028-qzmvhx` |
 | Current Events Discussion Guide Generator | `qfx7mz` | 2026-08-13 23:55 UTC | `claude/ssdemo-054-qfx7mz` |
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
@@ -1033,6 +1032,31 @@ empty tracks because a bare `<span>` is inline and ignores `width`.
 source, not the notes): Duty Roster per-staff counts, Experiment Design
 Planner reordering, and Fraction–Decimal–Percent seeded generation, all
 delivered by session `kq3g3h` and never taken off the list.
+
+### Devon-assigned round — tool 028 — 2026-08-14 00:10 UTC — session `qzmvhx`
+
+One of 8 parallel sessions in Devon's social-studies demo round ahead of a
+live presentation to teachers (see `prompts/social-studies-demo/_preamble.md`
+and `028-primary-source-analysis.md`). Shipped the headline feature
+completely; no supporting items were cut.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Primary Source Analysis Worksheet Generator | `028-primary-source-analysis-generator.md` | Corroboration mode (backlog rank 3): an optional Source B (text/description/image, own citation) prints side by side with Source A under shared framework questions, with dual per-source answer areas and a closing agree/disagree/more-reliable comparison block; the answer key mirrors it with per-source teacher notes plus a comparison key. A "Load Boston Massacre example" button (P15) demos it with a real two-source pair. The share link now carries the corroboration fields (images still excluded). First automated test for this tool (`test:primary-source`, 42 assertions). |
+
+Backlog row covered: rank 3, "Side-by-side corroboration worksheet." No new
+localStorage keys, so `009-backup-restore.html` needed no changes; no new
+production files, so `sw.js` needed no changes either (only a `test/`
+subfolder was added, which the precache list already excludes). Verification:
+`npm run check:dedupe` and `npm run check:social` both clean (no `<head>`
+changes made, so social check wasn't required but was run anyway); inline
+script syntax-checked with `node --check`; new suite green (42/42, zero
+console errors, nothing left the site) both standalone and via
+`npm run test:primary-source`; headline feature also driven manually in a
+live headless-Chromium session. See the tool's own `improvement
+prompts/028-primary-source-analysis-generator.md` Status entry for the full
+writeup and where a future round should pick up (page-space testing with two
+large uploaded images side by side).
 
 ---
 
