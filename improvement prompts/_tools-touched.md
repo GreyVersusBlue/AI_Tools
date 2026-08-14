@@ -192,11 +192,10 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Primary Source Analysis Worksheet Generator | `kx9rtm` | 2026-08-14 02:38 UTC | `claude/ssdemo2-028-kx9rtm` |
 | Government/Civics Simulation Role Card Generator | `pq4rvn` | 2026-08-14 02:39 UTC | `claude/ssdemo2-050-pq4rvn` |
-| Current Events Discussion Guide Generator | `mk3jq7` | 2026-08-14 02:44 UTC | `claude/ssdemo2-054-mk3jq7` |
-| DBQ / Source Packet Builder | `vn8trq` | 2026-08-14 02:41 UTC | `claude/ssdemo2-056-vn8trq` |
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
+| Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
+| Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
 
 ---
 
@@ -235,6 +234,120 @@ Timeline Builder (`015-timeline-builder.md`), social studies demo round 2.
   apart overlap until the nudge was scaled with them.
 - New suite `Tools/timeline-builder/test/smoke-story-worksheet.mjs`
   (78 checks), wired into `test:timeline` and the end of the `test` chain.
+
+### Devon-assigned round 2 — tool 028 — 2026-08-14 02:38 UTC — session `kx9rtm`
+
+Primary Source Analysis Worksheet Generator
+(`028-primary-source-analysis-generator.md`), social studies demo round 2.
+
+- **Differentiation levels** — the reference implementation of the site-wide
+  three-level switch (`Academic` / `Honors` / `Honors GT`, default Honors),
+  which tools 054 and 056 copy. Academic chunks multi-part prompts into
+  lettered steps and hangs a sentence starter generated from each question's
+  own words under it, plus a plain-language gloss of hard words found in the
+  teacher's source. Honors GT adds a per-step open-ended "Go further" prompt
+  and a closing synthesis question, with less ruled space. Honors renders none
+  of it — the baseline worksheet is unchanged, asserted first in the suite.
+- Works in single-source and corroboration modes and on the answer key, which
+  states what a complete answer looks like at that level.
+- **Print all three levels** — three class sets in one flow, each tagged top
+  and bottom so the piles sort. Works for the key too.
+- The share link carries the level; the validator was loosened, not
+  tightened, so round-1 links and 056-built links keep working.
+- **Tagged source library** (`gvb-primary-source:library`) and **annotation
+  callouts** (numbered excerpt markers in the source text with "look closely"
+  questions).
+- Fixed on the way: Source B's type dropdown was never populated at all.
+- New suite `Tools/primary-source-analysis-generator/test/smoke-levels.mjs`
+  (106 assertions), appended to `test:primary-source`. No `sw.js` change —
+  only a `test/` folder was added.
+
+### Devon-assigned round 2 — tool 056 — 2026-08-14 03:05 UTC — session `vn8trq`
+
+DBQ / Source Packet Builder (`056-dbq-source-packet-builder.md`), social
+studies demo round 2. Full scope shipped, nothing cut.
+
+- **Essay planning organizer + scoring rubric page** (headline) — two
+  optional closing pages that carry a packet all the way to the essay. The
+  organizer has a thesis line with a level-appropriate sentence-frame hint, a
+  three-body-paragraph planning grid (claim / which documents support it /
+  strongest evidence), a counterargument box and a conclusion line, with the
+  document slots built from the packet's *real* sources — it names
+  "Source A — A Factory Inspector’s Report" and offers that packet’s own
+  letters as check boxes. The rubric is an editable criteria×levels grid
+  seeded with plain 7th-grade DBQ wording, printable as the full four-level
+  grid or as a student-facing checklist built from the "meets" column.
+  Organizer defaults on when an essay prompt exists; rubric is opt-in, so no
+  saved packet grows a page by surprise. Print order: cover → sources → essay
+  prompt → organizer → rubric.
+- **Differentiation levels** per the round-2 preamble spec — `Academic` /
+  `Honors` / `Honors GT`, default Honors, print output only. Academic adds a
+  "before you read" gloss of hard words drawn from that source’s own text, a
+  sentence starter matched to how the teacher worded each question, the essay
+  prompt chunked into numbered steps, and pre-filled organizer frames — same
+  questions, more support. Honors GT drops the frames and adds an
+  outside-evidence row, a "whose voice is missing from this packet?" question
+  and a so-what push. "Print all three levels" emits all three class sets in
+  one pass (21 pages for the example packet), each page footer-tagged; a
+  single-level print stays untagged, which is what keeps Honors output
+  byte-identical to before this round (proved by string-comparing the
+  rendered print area against the pre-round file, not by eyeballing a PDF).
+- **Send a source to Primary Source Analysis** — the P7 pairing the backlog
+  has named since this tool’s first build. A text source gets an "Analysis
+  worksheet →" button that encodes 028’s own round-1 `?worksheet=` payload
+  with the same `_shared/state-link.js` encoder 028 uses, on its SOAPSTone
+  framework, and opens it in a new tab. Image pixels stay behind, matching
+  both tools’ share rules.
+- **New smoke suite** `Tools/dbq-source-packet-builder/test/
+  smoke-essay-levels.mjs` (78 assertions, appended to `npm run test:dbq` and
+  the root chain) covering page order, the organizer naming real sources, the
+  rubric appearing/vanishing/printing edits/printing as a checklist, gloss and
+  starters present at Academic and absent at Honors, the GT extras, the
+  21-page footer-tagged all-levels run, level and toggles surviving a reload,
+  a **round-1 share link still importing** onto the Honors baseline after the
+  payload gained four fields, and the 028 handoff URL both decoding as a valid
+  028 payload and actually opening in 028 with the source text in it.
+
+No sw.js change (single-file tool; test files are not precached) and no new
+localStorage keys — the new fields ride the packet object, which
+`009-backup-restore.html` already covers via the `dbq:` prefix. A
+`_shared/levels.js` extraction (and a shared vocabulary glossary) is logged
+in `_site-requests.md`, since `_shared/` is off-limits during a parallel
+round.
+
+### Devon-assigned round 2 — tool 054 — 2026-08-14 03:22 UTC — session `mk3jq7`
+
+Current Events Discussion Guide Generator
+(`054-current-events-discussion-guide-generator.md`), social studies demo
+round 2. Full scope shipped, nothing cut.
+
+- **Media literacy kit** — three optional printable pages, each ticked per
+  guide: a SIFT source-evaluation checklist (Stop / Investigate the source /
+  Find better coverage / Trace the claim, splitting into two headline-labelled
+  columns once Article B has text), a headline rewrite exercise (neutral,
+  then slanted the other way, then name the words that did the work, plus a
+  headline-to-framing matching block when comparing), and a claim vs. evidence
+  organizer with a fact/opinion/spin tag per row that a teacher can pre-fill
+  or leave blank. Kept honest throughout: SIFT's move 3 says on the page that
+  it cannot look up other coverage for you.
+- **Differentiation levels** per the round-2 preamble spec — `Academic` /
+  `Honors` / `Honors GT`, default Honors, print output only. Academic adds
+  starters, chunked steps, a plain-language gloss of the kit's own vocabulary
+  and a third writing line; GT opens the prompts, adds the third-source
+  extension and a closing So What? section. "Print all three levels" emits
+  all three sets in one pass, each banner- and footer-tagged.
+- No new localStorage key (the fields ride the existing guide object), so
+  `009-backup-restore.html` needed no change; pre-round guides and pre-round
+  share links open at the old defaults, asserted in the suite rather than
+  assumed. No `sw.js` change either — the only new file is a test file, and
+  test folders are deliberately not precached.
+- Fixed on the way: `.q-row input { flex: 1 }` also matched the preset
+  question checkboxes, stretching them across the row and pushing every
+  question's text to the right edge of the card.
+- New suite `Tools/current-events-discussion-guide-generator/test/smoke-media-literacy.mjs`
+  (102 checks), wired into `test:current-events` and the end of the `test`
+  chain. Both this tool's suites green (38 + 102), `check:dedupe` clean,
+  `check:social` unchanged.
 
 ### Devon-assigned round — tool 046 — 2026-08-13 23:54 UTC — session `q4wmxz`
 
