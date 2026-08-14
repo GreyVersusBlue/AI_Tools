@@ -25,10 +25,11 @@
 //   Whitespace-only case-file text counts as "none" — no packet prints.
 //
 //   The share link/QR round-trips a full role set (role, position, points,
-//   copies, and case-file text) through state-link.js, and — since this tool
-//   has no multiple-named-save yet — asks with a confirm dialog before
-//   replacing whatever role set is already on screen, and truly does nothing
-//   if that confirm is declined.
+//   copies, and case-file text) through state-link.js. Since named saves
+//   landed, an incoming link no longer asks permission to overwrite what is
+//   on screen: it files itself away under its own uniqued name and leaves
+//   everything already saved exactly where it was, even when the same link
+//   is opened twice.
 //
 //   No console errors, ever — the site's standing bar for every tool.
 //
@@ -115,9 +116,10 @@ eq(witnessPacketNames.join(','), witnessCardNames.join(','), 'each witness packe
 
 /* ── 4. whitespace-only case-file text prints no packet ──────────────────── */
 await page.evaluate(() => {
-  const s = JSON.parse(localStorage.getItem('crcg_roles_v1'));
+  const key = 'crcg:data:' + localStorage.getItem('crcg:current');
+  const s = JSON.parse(localStorage.getItem(key));
   s.roles.forEach(r => { r.caseFile = '   '; });
-  localStorage.setItem('crcg_roles_v1', JSON.stringify(s));
+  localStorage.setItem(key, JSON.stringify(s));
 });
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page);
@@ -169,16 +171,28 @@ await settle(page);
 const link = await page.evaluate(() => window.__copied);
 ok(!!link && link.indexOf('roles=') !== -1, 'Copy link produces a URL carrying the roles= payload');
 
-// 6a. opening the link on a fresh page with nothing loaded: no roles yet
-// (localStorage empty) still boots the default template first, so the
-// confirm dialog fires — accept it and the shared set replaces the default.
+// 6a. Named saves changed what an incoming link does. It used to have
+// nowhere of its own to land, so it asked a confirm dialog before replacing
+// whatever was on screen. Now it files itself away under its own name,
+// uniqued against what is already saved, and asks nothing. The link's
+// payload is named "My simulation"; the fresh page boots its own default
+// under that name first, so the arriving copy becomes "My simulation 2".
 const fresh = await prepPage(browser, BASE, { width: 1280, height: 1000 });
 let dialogSeen = false;
 fresh.on('dialog', d => { dialogSeen = true; d.accept(); });
 await fresh.goto(link, { waitUntil: 'networkidle' });
 await settle(fresh);
-ok(dialogSeen, 'opening a shared link while roles already exist asks for confirmation first');
-const imported = await fresh.evaluate(() => JSON.parse(localStorage.getItem('crcg_roles_v1')));
+ok(!dialogSeen, 'a shared link no longer interrupts with a confirm dialog');
+const state = await fresh.evaluate(() => ({
+  list: JSON.parse(localStorage.getItem('crcg:list') || '[]'),
+  current: localStorage.getItem('crcg:current'),
+  doc: JSON.parse(localStorage.getItem('crcg:data:' + localStorage.getItem('crcg:current'))),
+  kept: JSON.parse(localStorage.getItem('crcg:data:My simulation')),
+}));
+eq(state.list.join(','), 'My simulation,My simulation 2', 'the shared copy lands under a uniqued name of its own');
+eq(state.current, 'My simulation 2', 'and it is the one now open');
+eq(state.kept.roles.length, 5, 'the simulation that was already there is untouched (still the 5 mock trial roles)');
+const imported = state.doc;
 eq(imported.roles.length, 2, 'both shared roles arrived');
 eq(imported.roles[0].role, 'Town Mayor', 'role name round-tripped');
 eq(imported.roles[0].position, 'Runs the council meeting', 'position round-tripped');
@@ -187,26 +201,18 @@ eq(imported.roles[0].caseFile, 'The town budget is short by $4,000 this year.', 
 eq(imported.roles[0].points.map(p => p.text).join(','), 'Open the session,Call for a vote', 'talking points round-tripped');
 eq(imported.roles[1].caseFile, '', 'an empty case file round-trips as empty, not missing');
 
-// 6b. declining the confirm leaves the current roles untouched.
-const declined = await prepPage(browser, BASE, { width: 1280, height: 1000 });
-await declined.goto(URL_PAGE, { waitUntil: 'networkidle' });
-await declined.evaluate(() => {
-  localStorage.setItem('crcg_roles_v1', JSON.stringify({
-    roles: [{ id: 'keep1', role: 'Keep Me', position: '', copies: 1, students: [], caseFile: '',
-      points: [{ id: 'kp1', text: 'stay' }] }],
-  }));
-});
-await declined.reload({ waitUntil: 'networkidle' });
-await settle(declined);
-declined.on('dialog', d => d.dismiss());
-await declined.goto(link, { waitUntil: 'networkidle' });
-await settle(declined);
-const afterDecline = await declined.evaluate(() => JSON.parse(localStorage.getItem('crcg_roles_v1')));
-eq(afterDecline.roles.length, 1, 'declining the confirm keeps the existing role set');
-eq(afterDecline.roles[0].role, 'Keep Me', 'and it is still the original role, not the shared one');
+// 6b. opening the same link twice never overwrites the first copy.
+await fresh.goto(link, { waitUntil: 'networkidle' });
+await settle(fresh);
+const twice = await fresh.evaluate(() => ({
+  list: JSON.parse(localStorage.getItem('crcg:list') || '[]'),
+  second: JSON.parse(localStorage.getItem('crcg:data:My simulation 2')),
+}));
+eq(twice.list.join(','), 'My simulation,My simulation 2,My simulation 3', 'the same link opened twice files a second copy rather than overwriting');
+eq(twice.second.roles[0].role, 'Town Mayor', 'and the first copy is still exactly where it was');
 
 /* ── 7. no console noise anywhere in the run ─────────────────────────────── */
-for (const [label, p] of [['main', page], ['fresh-import', fresh], ['declined-import', declined]]) {
+for (const [label, p] of [['main', page], ['fresh-import', fresh]]) {
   eq(p.__errs.length, 0, `no page/console errors on the ${label} page: ` + JSON.stringify(p.__errs));
   eq(p.__blocked.length, 0, `nothing left the site from the ${label} page: ` + JSON.stringify(p.__blocked));
 }
