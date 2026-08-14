@@ -12,6 +12,100 @@
 Reviewed — structural read of the source. Ideas below are deliberately
 ambitious and are **not** scoped to a single session.
 
+### Devon-assigned round — 2026-08-14 — session `c1jqjp`
+
+Shipped the **label de-overlap pass** the previous round named as "the single
+highest-value layout fix left in this tool", and corrected this file's own
+Quick Wins / Major Features lists, which had drifted badly out of date (see
+"Bookkeeping" below).
+
+**The flaw.** Two events one year apart are ~2px apart on a century-long
+axis, and a label is 9rem wide. The only defence was `assignLabelSides`,
+which alternates labels above and below the line — exactly two slots. So a
+third close event, or any two same-year events landing on the same side,
+printed one label directly on top of another. The same geometry hid the map
+print's pin badges and the worksheet's numbered blanks behind each other.
+
+**What shipped, in `tlb-layout.js` (pure, no DOM, unit-tested):**
+
+- `packLabels(items, opts)` — packs labels into **stacked rows** on one or
+  both sides of the line. Rows are unbounded, so a cluster degrades into a
+  taller stack instead of into unreadable overlap.
+- `packedDepth(packed)` — how deep the stack goes per side, so a lane can
+  size itself.
+- `spreadBadges(items, minSepPx)` — nudges the small on-the-line badges
+  apart along x, cluster-and-centre.
+- `estimateLabelHeightPx(event, opts)` — the fallback height for labels that
+  can't be measured.
+
+**The one real design decision: rows, not sliding labels along the axis.**
+The previous round's note proposed applying `spreadPins`' relaxation to x.
+Building it that way first showed why it's wrong here: a label is 9rem wide,
+so de-overlapping a cluster of five by pushing them apart in x moves the
+outermost labels ~300px from their own marker. That mandates leader lines,
+and the reader still has to trace one. Stacking keeps every label centred
+over the marker it describes — no leader line, nothing to trace, and the
+axis cannot mislead. **x-spreading was kept only for the badges**, which are
+~1.5rem wide and need a few px, not a few hundred; there the marker dot
+still marks the true year and only the number moves, the same bargain
+`spreadPins` makes on the map.
+
+**Render order changed to measure-then-place.** Heights depend on how the
+browser wrapped each title, and the packer needs them before it can assign
+rows, so `renderTimelineCanvas` now builds every element, measures, packs,
+and only then applies offsets and lane geometry. `offsetHeight` is 0 inside
+a hidden container — which is how every print artifact here is built — so an
+unmeasurable label falls back to `estimateLabelHeightPx` rather than to 0.
+Packing on zeros would have silently collapsed the stack back to one
+overlapping row on exactly the worksheet and map pages that most needed it.
+
+**Lanes now size themselves.** `LANE_REM` (9rem) became a *minimum* rather
+than the height: a lane grows to `2 × deepest side` so the line stays
+centred and the stack is never clipped, and lane tops are assigned in a
+second pass once every lane has packed. `.timeline-scroll` has no fixed
+height, so the white card simply grows with it — verified in a browser: five
+events inside two years render 0 overlapping label pairs, the canvas grows
+144px → 534px, and nothing is clipped or scrolled out of reach.
+
+`compactLabels` kept its dropdown but changed meaning slightly: it now
+selects whether the stack may use *both* sides of the line or only above it,
+so its option text is no longer "Compact (alternating)" — nothing alternates
+any more — but "Compact (both sides of the line)".
+`assignLabelSides` is still exported and still passes its own tests; nothing
+in the tool calls it any more.
+
+**Tests.** `Tools/timeline-builder/test/label-packing.test.mjs` (new, pure
+Node, no browser) asserts the geometry directly — no two labels overlap, x
+is never modified, a row clears the tallest label beneath it, badges stay
+ordered and centred on their group. 25 assertions. Both existing browser
+suites still pass unchanged (78 and 49 assertions).
+
+**Bookkeeping.** This file's checklists claimed several shipped things were
+unbuilt. Corrected against the source: compressed/log scale, category
+colours, gridlines, era bands, projected navigation mode (story mode, round
+2), map handoff and the printed ordering activity's paper half (round 1 and
+round 2) are all struck through now. A reader picking the next round off
+this file was being pointed at work that was already done.
+
+#### Where the next round should pick up
+
+- **A dense timeline now grows tall instead of overlapping, and nothing caps
+  that.** Twenty events in one year is a 20-row stack and a very tall card.
+  A cap — "after N rows, collapse the rest into a `+4 more` marker that
+  expands on click" — is the obvious next move, and it needs a real decision
+  about what the *print* does with a collapsed group, which is why it wasn't
+  guessed at here.
+- **The story-mode/worksheet track question from round 2 is still open** and
+  is unaffected by this round.
+- `packLabels` is a general "pack boxes into rows above/below a line", and
+  the map's `spreadPins` is its 2-D cousin in a different file. Neither has
+  earned `_shared/` yet on one consumer each, but if a third tool wants
+  either, that is the moment.
+- The label geometry is now assumed in two places: `packLabels` is told the
+  label is 9rem wide, and the CSS says `.event-label { width: 9rem }`.
+  Changing one without the other silently reintroduces overlap. A CSS custom
+  property read once at render time would tie them together.
+
 ### Social studies demo round 2 — 2026-08-14 — session `vt7kqa`
 
 Shipped **story mode** (the "Projected navigation mode" Major Feature — a
@@ -703,36 +797,48 @@ fixed and reverified before calling this done.
 
 ## Quick Wins
 
-- **Logarithmic or compressed scale.** A timeline spanning 3000 BCE to 2000 CE
-  puts everything modern in one pixel. A break-the-axis marker, or a
-  compressed-empty-centuries mode, is the difference between a usable timeline
-  and a line with a clump on it.
-- **Blank / student-fill version.** Print the timeline with the events removed
-  and the dates left, or vice versa — the standard worksheet, and one small
-  print mode.
-- **Colour-code by category** (political, cultural, technological) with a
-  legend, which is what makes a multi-track timeline readable.
-- **Duration bars for eras**, visually distinct from point events.
-- **Century/decade tick marks and gridlines** so a reader can estimate a date
-  without measuring.
-- **Wall-timeline print** — tiled across several sheets to tape up in a
-  hallway. `046-blank-map-generator.html` already implements tiled poster printing
-  (`printTiledPages`) and the code is reusable (P7).
-- **Downscale and warn on photos** (P12).
+Every one of these had already shipped by 2026-08-14 and was still listed as
+open; struck through in session `c1jqjp` after checking each against the
+source. The list was pointing later rounds at finished work.
+
+- ~~**Logarithmic or compressed scale**~~ — **done** (`yearToUnit`'s
+  `'compressed'` mode, anchored to years-before-the-recent-end so it works
+  across the BCE/CE boundary; the Scale dropdown selects it).
+- ~~**Blank / student-fill version**~~ — **done, 2026-08-14** (SS demo round
+  2: the timeline worksheet print, `tlb-worksheet.js`). Blanks titles only;
+  blanking *dates* instead is still open and is listed under "Where the next
+  round should pick up" for that round.
+- ~~**Colour-code by category** with a legend~~ — **done**
+  (`buildCategoryColorMap` + `legendHtml`; 8-colour palette, then repeats).
+- ~~**Duration bars for eras**~~ — **done** (`computeEraBands` draws era
+  bands behind the line; range events get a `.marker-bar` distinct from a
+  point event's dot).
+- ~~**Century/decade tick marks and gridlines**~~ — **done**
+  (`computeGridlines`, with a clean auto-picked interval).
+- ~~**Wall-timeline print**~~ — **done** (`printTiledPages`, uniform scale
+  across a cols × rows grid with overlap for taping).
+- ~~**Downscale and warn on photos** (P12)~~ — **done** (`tlb-photo.js`,
+  480px long edge at JPEG q0.72 before anything reaches localStorage).
+
+No Quick Wins remain open. A future round should look to Major Features
+below, or find a genuinely new gap — the label de-overlap fix that session
+`c1jqjp` shipped was one of those, and it came out of the previous round's
+notes rather than out of this list.
 
 ## Major Features
 
-- **Projected navigation mode.** Pan and zoom the timeline on the projector,
-  tap an event to expand it, and step through a period chronologically — a
-  timeline is a navigational object and is wasted as a static image, and the
-  teacher driving it is the classroom-appropriate way to use that.
-- **Printed ordering activity.** Given ten events on cut-apart cards, students
-  place them in sequence on paper — generated from the timeline along with a
-  teacher answer key. The layout engine already has everything needed.
-- **Map handoff** (P7). Every historical event has a place;
-  `046-blank-map-generator.html` covers where. A combined print — timeline along
-  the bottom, map above, events pinned to both — would be a distinctive
-  classroom artifact that no free tool produces.
+- ~~**Projected navigation mode.**~~ — **done, 2026-08-14** (SS demo round 2,
+  headline: story mode. Pans and zooms one pre-rendered map with a CSS
+  transform; see that round's Status entry.)
+- **Printed ordering activity** — *partly done*. The paper half shipped
+  2026-08-14 as the timeline worksheet (numbered blanks, word bank, answer
+  key). What is still unbuilt is the **cut-apart cards** version: ten events
+  on separate cards for students to physically sequence, which is a different
+  print layout from the worksheet's spatial strip.
+- ~~**Map handoff** (P7).~~ — **done, 2026-08-14** (SS demo round: the
+  map + timeline combined print, `tlb-places.js` + the Blank Map Generator's
+  vector renderer. Note the runtime coupling that creates, flagged in both
+  rounds' notes.)
 - **Comparative timelines as a first-class teaching device.** Compare mode
   exists; framing it as "what was happening in China while this happened in
   Europe" — with a shipped set of reference timelines for major periods —
