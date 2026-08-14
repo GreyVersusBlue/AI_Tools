@@ -9,6 +9,77 @@
 
 ## Status
 
+**2026-08-14 — SS demo round: two-article comparison guide shipped (backlog
+rank 21, session `qfx7mz`).** Devon-assigned round ahead of a live teacher
+presentation (see `prompts/social-studies-demo/054-current-events-comparison.md`
+and `_preamble.md`). Full scope shipped, nothing cut:
+
+- **Optional Article B** — new `titleB` / `sourceB` / `articleTextB` /
+  `summaryB` / `comparisonChecked` fields on the existing named-guide
+  object (no new localStorage key; older guides migrate for free by
+  treating the fields as absent, matching `normalizeGuide`'s existing
+  pattern). A "+ Add Article B (compare two articles)" button reveals a
+  second Article card; "Remove Article B" clears it back down (confirms
+  first if there's content to lose).
+- **Comparison analysis** — with Article B present, "Pull out vocabulary +
+  summary starters" runs the same heuristic on both articles, seeds both
+  summary boxes, and merges the two candidate-word lists into one
+  suggestion list (capped at 20) with words found in **both** articles
+  sorted first and marked with a star. The vocabulary list itself (however
+  words got added — suggestion chip, typed by hand) is flagged live by a
+  small "Both" badge whenever a term's word-boundary match is found in both
+  raw article texts — this is computed at render time from the actual
+  article text, not from suggestion-time state, so it stays honest even
+  after manual edits.
+- **A 6-question bias/framing preset set** ("What does each headline
+  emphasize?", "What did one article include that the other left out?",
+  "Which article would you trust more, and why?", etc.), shown only once
+  Article B is added, with its own checkbox state
+  (`state.comparisonChecked`) alongside the existing 6 general questions.
+- **Comparison print layout** — the printed guide switches to a two-column
+  side-by-side header (headline/source/summary per article) when Article B
+  has real text, a single shared vocabulary table with "core" tags on the
+  both-articles words, the existing Discussion Questions section, and a new
+  "Comparing These Two Articles" section for the checked bias questions.
+  Still entirely inside `#printArea`, no new `@media print` block.
+- **Load two-article example (P15)** — one click seeds two ~195-word
+  fictional articles about a town council voting to convert a parking lot
+  into a skate park: one framed around teens finally getting a safe place
+  to skate, the other around lost parking and worried business owners, same
+  facts throughout so the bias questions land visibly. Confirms before
+  overwriting a guide that already has content.
+- **Share by link / QR (P3)** — copied the pattern from
+  `028-primary-source-analysis-generator.html` (`_shared/state-link.js` +
+  `_shared/vendor/qrcode/qrcode.js`, already vendored/precached, no new
+  files). An incoming `?guide=` link always saves as a new uniquely-named
+  guide on the recipient's side rather than overwriting whatever they had
+  open.
+- **First automated test** —
+  `Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs`
+  (38 assertions): Article B fields survive a reload, shared vocabulary is
+  flagged correctly (and non-shared terms are not), the printed guide
+  renders the side-by-side layout with both headlines and the comparison
+  question section, the Load Example flow populates both articles and
+  flags shared words, and a share link round-trips a comparison guide to a
+  fresh tab/guide without touching the sender's own copy. Wired in as
+  `npm run test:current-events` and appended to the main `test` chain.
+  Zero console errors, zero offsite requests, across every page the suite
+  drives.
+
+Verified with `npm run check:dedupe` (clean) and `npm run check:social`
+(same pre-existing state as before touching `<head>` — this tool still has
+no `gvb:social` block, no new drift introduced) plus a manual headless pass
+confirming Load Example seeds both summary boxes and flags 8 words as
+shared between the two example articles.
+
+**Where the next round should pick up:** the reading-level estimate and a
+question-set library beyond the two built-in sets (general + comparison)
+are both still open from the Major Features list below; the AI-assisted-mode
+Open Question is also still unresolved. The comparison feature only compares
+two articles at a time — a three-or-more-article mode was explicitly out of
+scope for this round and isn't requested anywhere else in the backlog either,
+so it's not flagged as a gap, just noted as a boundary.
+
 **2026-08-12 — Backlog round: multiple named saved guides shipped (backlog
 rank 4).** Adopted the New/Duplicate/Rename/Delete multi-save convention,
 copied from `047-art-critique-worksheet-generator.html` (same
@@ -93,6 +164,20 @@ friction (one guide per browser, still overwritten week to week).
 - **Multiple named saved guides** (`cedg_guides_v1` / `cedg_guide_v1:<name>`
   / `cedg_current_v1`) with New/Duplicate/Rename/Delete; the pre-multi-save
   single guide migrates in automatically, named after its headline
+- **Optional Article B for a two-article comparison guide** — "+ Add
+  Article B" reveals a second headline/source/text card; analyzing runs
+  the heuristic on both articles, flags vocabulary that appears in both as
+  the event's shared "core" vocabulary (live badge on screen, "core" tag
+  in print), and unlocks a 6-question bias/framing preset set. Print
+  switches to a side-by-side two-article layout automatically once Article
+  B has real text.
+- **Load two-article example** — one click seeds a fictional, same-event,
+  different-framing pair of articles (a town skate park vote) and runs the
+  analyzer on both, for demoing the comparison feature without hunting for
+  real source text.
+- **Share a guide by link or QR code** (`_shared/state-link.js` +
+  `_shared/vendor/qrcode/qrcode.js`); an incoming shared link always saves
+  as a new guide rather than overwriting whatever the recipient had open.
 
 ## Quick Wins
 
@@ -104,6 +189,11 @@ friction (one guide per browser, still overwritten week to week).
 - ~~**A "clear and start over" button**~~ — **done, Round 2.**
 - ~~**Show word count and read time even before analyzing**~~ — **done,
   Round 2.**
+- ~~**Multi-article comparison mode**~~ — **done, 2026-08-14** (SS demo
+  round; see Status — two-article comparison, side-by-side print, shared
+  vocabulary flagging, bias/framing question set).
+- ~~**Share a guide by link/QR**~~ — **done, 2026-08-14** (SS demo round;
+  same `_shared/state-link.js` pattern as `028-primary-source-analysis-generator.html`).
 
 ## Major Features
 
@@ -117,10 +207,8 @@ friction (one guide per browser, still overwritten week to week).
 - **A bank of saved "generic" question sets beyond the 6 built-in ones**
   (e.g. a set skewed toward persuasive-writing follow-up, a set skewed
   toward historical-context articles) that a teacher can swap between,
-  instead of one fixed list.
-- **Multi-article comparison mode**: two pasted articles on the same topic,
-  side by side, with questions specifically about comparing perspectives —
-  a natural escalation of the single-article guide.
+  instead of one fixed list — now two sets exist (general + comparison),
+  both still fixed rather than a real bank a teacher could add to.
 
 ## Moonshot / North Star
 

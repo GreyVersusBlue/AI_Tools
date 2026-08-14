@@ -195,7 +195,6 @@ here.
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
 | DBQ / Source Packet Builder | `xo4v63` | 2026-08-13 23:56 UTC | `claude/ssdemo-056-xo4v63` |
 | Primary Source Analysis Worksheet Generator | `qzmvhx` | 2026-08-13 23:58 UTC | `claude/ssdemo-028-qzmvhx` |
-| Current Events Discussion Guide Generator | `qfx7mz` | 2026-08-13 23:55 UTC | `claude/ssdemo-054-qfx7mz` |
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
@@ -1033,6 +1032,29 @@ empty tracks because a bare `<span>` is inline and ignores `width`.
 source, not the notes): Duty Roster per-staff counts, Experiment Design
 Planner reordering, and Fraction–Decimal–Percent seeded generation, all
 delivered by session `kq3g3h` and never taken off the list.
+
+### Devon-assigned round — tool 054 — 2026-08-14 00:20 UTC — session `qfx7mz`
+
+One of Devon's 8-session social studies demo round, direct assignment ahead
+of a live presentation (per `prompts/social-studies-demo/_preamble.md`, not
+picked from "Not yet touched"). Shipped the full scope of
+`prompts/social-studies-demo/054-current-events-comparison.md` — headline plus
+all three supporting items, nothing cut.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Current Events Discussion Guide Generator | `054-current-events-discussion-guide-generator.md` | **Headline (backlog rank 21):** an optional Article B (headline/source/body) on the existing named-guide object. With Article B present, "Pull out vocabulary" analyzes both articles and merges suggestions, words appearing in **both** articles are flagged (chip badge on screen, "core" tag in print) as the event's shared vocabulary, and Print switches to a side-by-side two-article layout with a new 6-question bias/framing preset set ("What does each headline emphasize?", "Which article would you trust more, and why?", etc.) alongside the existing 6 general questions. **Supporting:** a one-click "Load two-article example" seeding two ~195-word fictional articles about a town skate-park vote with different framing (teens-get-a-safe-place vs. lost-parking-worries-businesses), confirming before it overwrites unsaved work; share-by-link/QR copied from `028-primary-source-analysis-generator.html`'s pattern (`_shared/state-link.js` + `_shared/vendor/qrcode/qrcode.js`), an incoming link saves as a new guide rather than overwriting the recipient's; a new smoke suite (`Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs`, 38 assertions) covering Article B persistence, shared-vocab flagging, the comparison print layout, the Load Example flow, and the share-link round trip, wired in as `test:current-events` and appended to the `test` chain. |
+
+Verified: `npm run check:dedupe` and `npm run check:social` clean (no new
+drift; this tool still has no `gvb:social` block, unchanged), the new suite
+green (38/38, zero console errors, zero offsite requests across all pages
+driven), and a manual headless-Chromium pass confirmed Load Example seeds
+both summaries and flags 8 shared words. No new localStorage keys — Article
+B rides the existing `cedg_guide_v1:<name>` guide object, so
+`009-backup-restore.html` needed no changes. Where a future round should
+pick up: this tool's own `improvement prompts/054-*.md` Status entry has the
+full list (reading-level estimate, a question-set library beyond the two
+built-in sets, and the still-open AI-assisted-mode question).
 
 ---
 
