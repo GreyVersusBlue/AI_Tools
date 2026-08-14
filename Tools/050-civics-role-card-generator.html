@@ -186,6 +186,9 @@
     <div class="btnrow">
       <button class="secondary" id="shareLinkBtn">&#128279; Copy link</button>
       <button class="secondary" id="shareQrBtn">&#9638; QR code</button>
+      <button class="secondary" id="exportFileBtn">&#11015; Save as file</button>
+      <button class="secondary" id="importFileBtn">&#11014; Open a file&hellip;</button>
+      <input type="file" id="importFileInput" accept=".json,application/json" hidden>
       <button class="secondary" id="printBtn">Print the kit</button>
     </div>
   </div>
@@ -279,7 +282,8 @@
    'simSelect', 'newSimBtn', 'renameSimBtn', 'deleteSimBtn',
    'kitTitle', 'kitWrap', 'printSummary',
    'ptAgenda', 'ptCards', 'ptCaseFiles', 'ptBallots', 'ptRubric', 'ptReflections',
-   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
+   'exportFileBtn', 'importFileBtn', 'importFileInput'].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var PRINT_KEYS = [['agenda', 'ptAgenda'], ['cards', 'ptCards'], ['caseFiles', 'ptCaseFiles'],
                     ['ballots', 'ptBallots'], ['rubric', 'ptRubric'], ['reflections', 'ptReflections']];
@@ -953,10 +957,91 @@
       roles.every(function (r) { return r && typeof r.role === 'string' && Array.isArray(r.points); });
   }
 
-  function shareUrl() {
+  /** The one payload shape both ways of handing a simulation to another
+      teacher use — a link and a saved file carry byte-identical JSON, so
+      neither can quietly grow a field the other doesn't understand, and a
+      file exported today still opens through the link importer. */
+  function sharePayload() {
     save();
-    return StateLink.buildShareUrl(SHARE_PARAM, { v: 2, name: simName, doc: doc });
+    return { v: 2, name: simName, doc: doc };
   }
+
+  function shareUrl() {
+    return StateLink.buildShareUrl(SHARE_PARAM, sharePayload());
+  }
+
+  /** Files and links both land here: validate, regenerate ids, file it under
+      a name that can't collide, open it. Returns the name, or null. */
+  function adoptPayload(decoded, badPayloadMessage) {
+    if (!isPlausiblePayload(decoded)) {
+      setShareNote(badPayloadMessage, true);
+      return null;
+    }
+    var incoming = CrcgStore.repairDoc(decoded.doc || { roles: decoded.roles });
+    /* Ids are regenerated: two teachers who both loaded the Mock Trial
+       template have the same role ids, and an imported copy landing beside
+       the original must not collide with it. */
+    incoming.roles.forEach(function (r) {
+      r.id = uid();
+      r.points.forEach(function (p) { p.id = uid(); });
+    });
+    var name = CrcgStore.uniqueName(decoded.name || incoming.title || 'Shared simulation');
+    CrcgStore.saveSim(name, incoming);
+    openSim(name, incoming);
+    return name;
+  }
+
+  function sanitizeFilename(s) {
+    var cleaned = String(s || 'simulation').trim().replace(/[^a-z0-9\- _]/gi, '').replace(/\s+/g, '-').toLowerCase();
+    return cleaned || 'simulation';
+  }
+
+  /* A file, not just a link, because the kit outgrew the link. A simulation
+     now carries six pieces (agenda, cards, case files, ballots, rubric,
+     reflections), so a full one runs to tens of KB of URL: past what a QR
+     code can hold at all (the QR button already says so), and past what some
+     mail clients and chat apps will carry without silently wrapping or
+     truncating it. A file has no length limit, survives email as an
+     attachment, and can be dropped in a shared drive or handed over on a
+     stick — which is also the only route that works when the school network
+     mangles long URLs. */
+  els.exportFileBtn.addEventListener('click', function () {
+    if (!doc.roles.length) { setShareNote('Add at least one role first.', true); return; }
+    var payload = sharePayload();
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(simName) + '.civics.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setShareNote('Saved as &ldquo;' + escapeHtml(a.download) + '&rdquo;. Opening that file here — on any computer — saves the whole simulation under its own name, without touching anything already saved.');
+  });
+
+  els.importFileBtn.addEventListener('click', function () { els.importFileInput.click(); });
+
+  els.importFileInput.addEventListener('change', function () {
+    var file = els.importFileInput.files && els.importFileInput.files[0];
+    // Cleared straight away so choosing the same file twice in a row still
+    // fires a change event the second time.
+    els.importFileInput.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onerror = function () { setShareNote('That file could not be read.', true); };
+    reader.onload = function () {
+      var decoded = null;
+      try { decoded = JSON.parse(String(reader.result)); } catch (e) { decoded = null; }
+      var name = adoptPayload(decoded,
+        'That file isn’t a simulation this tool can open. It should be a .civics.json file saved by this tool’s “Save as file” button.');
+      if (name) {
+        setShareNote('Opened &ldquo;' + escapeHtml(file.name) + '&rdquo; and saved it as &ldquo;' +
+          escapeHtml(name) + '&rdquo;. Nothing you already had was replaced.');
+      }
+    };
+    reader.readAsText(file);
+  });
 
   els.shareLinkBtn.addEventListener('click', function () {
     if (!doc.roles.length) { setShareNote('Add at least one role first.', true); return; }
@@ -1015,21 +1100,10 @@
     if (!raw) return null;
     StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-import
     var decoded = StateLink.decodeState(raw);
-    if (!isPlausiblePayload(decoded)) {
-      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
-      return null;
-    }
-    var incoming = CrcgStore.repairDoc(decoded.doc || { roles: decoded.roles });
-    /* Ids are regenerated: two teachers who both loaded the Mock Trial
-       template have the same role ids, and a shared copy landing beside the
-       original must not collide with it. */
-    incoming.roles.forEach(function (r) {
-      r.id = uid();
-      r.points.forEach(function (p) { p.id = uid(); });
-    });
-    var name = CrcgStore.uniqueName(decoded.name || incoming.title || 'Shared simulation');
-    CrcgStore.saveSim(name, incoming);
-    openSim(name, incoming);
+    var name = adoptPayload(decoded,
+      'That shared link could not be read — it may have been cut short when it was pasted or emailed. ' +
+      'If it keeps happening, ask for the simulation as a saved file instead: the “Save as file” button has no length limit.');
+    if (!name) return null;
     setShareNote('Opened from a shared link and saved as &ldquo;' + escapeHtml(name) + '&rdquo;. Nothing you already had was replaced.');
     return name;
   }

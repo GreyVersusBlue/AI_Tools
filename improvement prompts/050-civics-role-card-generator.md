@@ -11,6 +11,61 @@ test suites.
 
 ## Status
 
+**2026-08-14 — Devon-assigned round: save/open a simulation as a file
+(session `c1jqjp`).** Shipped the JSON export/import that the previous
+round's "where the next round should pick up" named as the clearer of the
+two remaining Major Features, and for the reason it gave: the kit outgrew
+the link.
+
+- **"Save as file" / "Open a file…"** next to the existing link and QR
+  buttons. The file is `<simulation-name>.civics.json` and carries the whole
+  document — roles, talking points, and all six kit pieces.
+- **Why a file at all, stated plainly:** a simulation now carries agenda,
+  cards, case files, ballots, rubric and reflections, so a full one runs to
+  tens of KB of URL. That is already past what a QR code can hold (the QR
+  button has said so since the kit round), and past what some mail clients
+  and chat apps carry without wrapping or truncating. A file has no length
+  limit, survives email as an attachment, and works when the school network
+  mangles long URLs — which was the failure mode the link path couldn't fix
+  from inside.
+- **One payload, two routes.** `sharePayload()` builds the JSON and both the
+  link and the file use it; `adoptPayload()` validates, regenerates ids,
+  names uniquely and opens, and both importers call it. The link path was
+  rewritten to go through it rather than keeping its own copy — the whole
+  point of doing it this way is that a later round *cannot* add a field to
+  one route and not the other. The suite asserts the two payloads are
+  byte-identical, so that stays true rather than being a good intention.
+- **Import keeps the standing promise:** a file lands beside what is already
+  saved, under a unique name, with fresh role and point ids, and replaces
+  nothing. Two teachers who both started from the Mock Trial template can
+  exchange simulations without colliding.
+- **Junk is refused by name.** Valid JSON that isn't a simulation — the
+  likely mistake, picking the wrong `.json` out of a downloads folder — gets
+  an error that says what the file should have been, not a silent no-op or a
+  half-loaded document. Same for a file that isn't JSON at all.
+- The link-failure message now points at the file as the fallback, which is
+  the advice a teacher actually needs when a pasted link arrives truncated.
+
+**Tests.** New `smoke-file-transfer.mjs` (24 assertions): the exported file
+carries the kit and not just the roles, a round trip lands beside the
+original with no shared ids, link and file payloads match byte for byte, and
+both flavours of junk are refused without saving anything. The three
+existing suites pass unchanged.
+
+#### Where the next round should pick up
+
+- **The per-simulation roster memory** is now the only open Major Feature,
+  and the note under it still stands: it should wait until the first Open
+  Question below is answered, since the answer changes the feature's shape.
+- **`crcg_roles_v1` and `crcg:` are still missing from
+  `009-backup-restore.html`'s `STUDENT_KEYS`** — flagged two rounds running
+  now, still out of scope for a hot-file edit in a parallel round, still
+  changing year-end-clear behavior for anyone who assigns students to roles.
+  Someone working in 009 should pick it up there.
+- Export/import is a *document*, not a *deck*: there is no "export all my
+  simulations" and no merge. If a teacher ever asks to move a whole library
+  between machines, that is a different feature from this one.
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: three starter templates (Mock Trial: judge, prosecution,
 defense, witness, juror; Debate: affirmative/negative teams, moderator,
@@ -277,11 +332,11 @@ just keeps whatever names were assigned when it was last open.
   rather than handed off to Rubric Builder (034). Whether the two should
   share a rubric format is still an open cross-tool question; the kit's grid
   is deliberately simpler than 034's.
-- **JSON export/import**, for sharing a built simulation with another
-  social studies teacher as a file rather than a link — the share link
-  covers the common case, but a file still travels better by email
-  attachment than a URL some mail clients truncate. This matters more now
-  that a simulation carries a whole kit and the QR path can overflow.
+- ~~**JSON export/import**, for sharing a built simulation with another
+  social studies teacher as a file rather than a link~~ — **done,
+  2026-08-14** (session `c1jqjp`). `<name>.civics.json`, carrying the whole
+  kit; link and file are built from one payload function so they cannot
+  drift apart. See the Status entry.
 - **A per-simulation roster memory**, so a debate and a mock trial each
   remember which class list they were built for (see the Open Question).
 
