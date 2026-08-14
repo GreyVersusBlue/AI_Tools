@@ -519,6 +519,8 @@
       <select id="markerColorSelect" class="styleSelect" hidden></select>
       <select id="markerSizeSelect" class="styleSelect" hidden></select>
       <button id="btnBatchPlace" class="small" title="Paste a list of name/latitude/longitude coordinates and place a marker + label for each at once">Batch Place Markers&hellip;</button>
+      <button id="btnShadeClick" class="small toggle" title="On a built-in base map, click a country or state and it shades itself. Click it again for the next colour, and once more to clear it.">Click to Shade</button>
+      <button id="btnClearShade" class="small" hidden title="Removes every region shaded by clicking. Regions you drew by hand are left alone.">Clear click-shading</button>
       <button id="btnAddRegion" class="small toggle">+ Shade Region</button>
       <select id="regionColorSelect" class="styleSelect" hidden></select>
       <select id="regionPatternSelect" class="styleSelect" hidden></select>
@@ -773,14 +775,14 @@ import {
 } from './blank-map-generator/bmg-markers.js';
 import {
   createRegionLayer, REGION_COLORS, regionColorHex, regionSwatchSvg,
-  REGION_PATTERNS, DEFAULT_REGION_PATTERN,
+  REGION_PATTERNS, DEFAULT_REGION_PATTERN, regionRings,
 } from './blank-map-generator/bmg-regions.js';
 import {
   createLineLayer, createMeasureLayer, LINE_COLORS, lineColorHex, lineSwatchSvg,
   LINE_TYPES, findLineType,
 } from './blank-map-generator/bmg-lines.js';
 import { BUILT_IN_LABEL_SETS, findBuiltInSet, isValidPlaceList } from './blank-map-generator/bmg-label-sets.js';
-import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } from './blank-map-generator/bmg-legend.js';
+import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey, regionGroupCaption } from './blank-map-generator/bmg-legend.js';
 import {
   buildChoropleth, choroSwatchSvg, RAMPS, MIN_CLASSES, MAX_CLASSES, EXAMPLE_US_POPULATION,
 } from './blank-map-generator/bmg-choropleth.js';
@@ -789,8 +791,9 @@ import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, com
 import * as cache from './blank-map-generator/bmg-map-cache.js';
 import {
   BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord,
-  listRegionNames, sameBaseMap,
+  listRegionNames, sameBaseMap, presetFromBaseMapId, loadDividedGeoJson,
 } from './blank-map-generator/bmg-vector.js';
+import { buildRegionIndex, hitTestRegion, compactRings, largestRing } from './blank-map-generator/bmg-hittest.js';
 
 const store = createStore();
 let project = store.getActiveProject();
@@ -1769,7 +1772,175 @@ const PLACE_HINTS = {
   region: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the shape',
   line: 'Click to add points, then Finish shape (or double-click the last point) &middot; Esc cancels the line',
   measure: 'Click two points to measure the distance between them &middot; click again to start a new measurement &middot; Esc clears',
+  shade: 'Click a country or state to shade it &middot; click again for the next colour &middot; Ctrl-click or right-click clears it &middot; Esc to stop',
 };
+
+// --- Click to shade ------------------------------------------------------
+//
+// The teacher clicks Texas and Texas shades. Everything hard about that is
+// in bmg-hittest.js (point-in-polygon against the same projection the raster
+// was drawn with); this section is the mode, the colour cycle, and the
+// conversion of a hit into an ordinary shaded region.
+//
+// **The result is a normal `project.regions` entry**, carrying the real
+// outline instead of one a teacher clicked out by hand, plus the region's
+// name. That single decision is why this feature is small in a 4,000-line
+// tool: the SVG layer already draws regions, the legend already builds rows
+// from them, `drawMapContent()` already puts them in every export, the undo
+// stack already covers them, and `bmg_workspace_v1` already saves them. None
+// of that had to learn what a country is.
+//
+// **It composes with round 1's data choropleth rather than fighting it,**
+// and the prompt's "warn before discarding" case never arises. A choropleth
+// is baked into the base raster by bmg-vector.js; click-shading is an
+// overlay drawn on top of it. They are different layers by construction, so
+// a teacher can shade five states by hand over a population choropleth and
+// both survive — including through a re-shade, which redraws the raster
+// underneath while the overlay stays put.
+
+const SHADE_CYCLE = REGION_COLORS.map(c => c.key);
+
+// The projected region shapes for the map currently on screen. Rebuilt when
+// the map (or its pixel size) changes, kept otherwise: projecting a whole
+// country file is a few tens of thousands of points, which is nothing once
+// but not something to repeat on every click.
+let shadeIndex = null;
+let shadeIndexLoading = null;
+
+/** True when the map on screen is a built-in vector base map — the only kind with region shapes behind it. A Commons photograph of a map has none, and no amount of clicking can invent them. */
+function canClickShade() {
+  return !!currentSize.width && !!presetFromBaseMapId(project.mapId);
+}
+
+/** The projected shapes, but only if they belong to the map on screen right now. */
+function shadeIndexEntries() {
+  if (!shadeIndex) return null;
+  if (shadeIndex.mapId !== project.mapId || shadeIndex.width !== currentSize.width) return null;
+  return shadeIndex.entries;
+}
+
+async function ensureShadeIndex() {
+  const ready = shadeIndexEntries();
+  if (ready) return ready;
+  const preset = presetFromBaseMapId(project.mapId);
+  if (!preset || !currentSize.width) return null;
+  if (shadeIndexLoading) return shadeIndexLoading;
+  const mapId = project.mapId;
+  const width = currentSize.width, height = currentSize.height;
+  shadeIndexLoading = (async () => {
+    const geo = await loadDividedGeoJson(preset);
+    const entries = buildRegionIndex(geo, preset.bounds, width, height);
+    shadeIndex = { mapId, width, entries };
+    return entries;
+  })();
+  try { return await shadeIndexLoading; }
+  finally { shadeIndexLoading = null; }
+}
+
+function updateShadeButton() {
+  const btn = el('btnShadeClick');
+  const ok = canClickShade();
+  btn.disabled = !ok;
+  btn.title = ok
+    ? 'Click a country or state and it shades itself. Click it again for the next colour, and once more to clear it.'
+    : 'Pick one of the built-in base maps first — a searched or uploaded map is a picture, with no country shapes behind it to click.';
+}
+
+function newRegionId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `rgn_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+/** The next colour in the cycle for a region, or null once it has been round the whole palette — which is how a third, fourth or seventh click eventually clears it again. */
+function nextShadeColor(existing) {
+  if (!existing) return SHADE_CYCLE[0];
+  const at = SHADE_CYCLE.indexOf(existing.color);
+  return at === -1 || at + 1 >= SHADE_CYCLE.length ? null : SHADE_CYCLE[at + 1];
+}
+
+/** Applies one click: cycle the region under this point, or clear it outright. */
+function shadeAtPoint(stagePt, { clear = false } = {}) {
+  const entries = shadeIndexEntries();
+  if (!entries) { showToolMsg('Still reading the region shapes — try that click again in a moment.'); return; }
+  const hit = hitTestRegion(entries, stagePt.x, stagePt.y);
+  if (!hit) { showToolMsg('No country or state there — that spot is water, or outside this map.'); return; }
+
+  const list = [...project.regions];
+  const at = list.findIndex(r => r.name === hit.name);
+  const existing = at >= 0 ? list[at] : null;
+  const color = clear ? null : nextShadeColor(existing);
+
+  if (color === null) {
+    if (at === -1) { showToolMsg(`${hit.name} isn't shaded.`); return; }
+    list.splice(at, 1);
+    showToolMsg(`Cleared ${hit.name}.`);
+  } else if (existing) {
+    list[at] = { ...existing, color };
+    showToolMsg(hit.name);
+  } else {
+    // The stored outline is rounded to whole raster pixels (see
+    // compactRings): a shaded region rides along in localStorage with the
+    // project, and sub-pixel coordinates on a 4,000 px map are bytes spent
+    // on nothing anyone can see. `points` keeps the biggest ring so any
+    // single-outline consumer still draws the region's main body.
+    const rings = compactRings(hit.rings);
+    if (!rings.length) { showToolMsg(`${hit.name} is too small to shade on this map.`); return; }
+    list.push({
+      id: newRegionId(), name: hit.name, color,
+      pattern: DEFAULT_REGION_PATTERN, rings, points: largestRing(rings),
+    });
+    showToolMsg(hit.name);
+  }
+  regionLayer.commit(list);
+}
+
+/** Drops every click-shaded region in one undoable edit, leaving hand-drawn ones alone. */
+function clearClickShading() {
+  const kept = project.regions.filter(r => !r.name);
+  const removed = project.regions.length - kept.length;
+  if (!removed) { showToolMsg('Nothing has been click-shaded on this map yet.'); return; }
+  regionLayer.commit(kept);
+  showToolMsg(`Cleared shading from ${removed} region${removed === 1 ? '' : 's'}.`);
+}
+
+async function toggleShadeMode() {
+  if (placeMode === 'shade') { setPlaceMode('none'); return; }
+  if (!canClickShade()) {
+    showToolMsg('Click to Shade works on the built-in base maps. Pick one from "Built-in base maps" above.');
+    return;
+  }
+  setPlaceMode('shade');
+  el('placeHint').innerHTML = 'Reading the region shapes&hellip;';
+  try {
+    await ensureShadeIndex();
+    if (placeMode === 'shade') el('placeHint').innerHTML = PLACE_HINTS.shade;
+  } catch (err) {
+    if (placeMode === 'shade') setPlaceMode('none');
+    showToolMsg(`Couldn't read the region shapes (${err.message}).`);
+  }
+}
+
+// Hover readout: the region name under the pointer, which doubles as a quick
+// "what is this country called" check while a map is on the projector.
+// Throttled to one hit test per animation frame — a pointermove stream is
+// far faster than anything worth recomputing.
+let shadeHoverPending = false;
+let shadeHoverPoint = null;
+let shadeHoverName = null;
+
+function runShadeHover() {
+  shadeHoverPending = false;
+  if (placeMode !== 'shade' || !shadeHoverPoint) return;
+  const entries = shadeIndexEntries();
+  if (!entries) return;
+  const pt = viewer.screenToStage(shadeHoverPoint.x, shadeHoverPoint.y);
+  const hit = hitTestRegion(entries, pt.x, pt.y);
+  const name = hit ? hit.name : null;
+  if (name === shadeHoverName) return;
+  shadeHoverName = name;
+  el('placeHint').innerHTML = name
+    ? `<strong>${escapeHtml(name)}</strong> &middot; click to shade &middot; Ctrl-click clears`
+    : PLACE_HINTS.shade;
+}
 
 // Regions (closed, min 3 points) and lines (open, min 2 points) share the
 // exact same click-to-draft workflow and Finish/Cancel buttons — this
@@ -1792,6 +1963,9 @@ function setPlaceMode(mode) {
   el('btnAddRegion').classList.toggle('active', mode === 'region');
   el('btnAddLine').classList.toggle('active', mode === 'line');
   el('btnMeasure').classList.toggle('active', mode === 'measure');
+  el('btnShadeClick').classList.toggle('active', mode === 'shade');
+  el('btnClearShade').hidden = mode !== 'shade';
+  if (mode !== 'shade') shadeHoverName = null;
   el('markerStyleSelect').hidden = mode !== 'marker';
   el('markerColorSelect').hidden = mode !== 'marker';
   el('markerSizeSelect').hidden = mode !== 'marker';
@@ -1830,6 +2004,27 @@ el('btnMeasure').addEventListener('click', () => {
   if (!isCalibrated(project.calibration)) { openCalibratePanel(); return; }
   setPlaceMode(placeMode === 'measure' ? 'none' : 'measure');
 });
+el('btnShadeClick').addEventListener('click', toggleShadeMode);
+el('btnClearShade').addEventListener('click', clearClickShading);
+
+viewport.addEventListener('pointermove', e => {
+  if (placeMode !== 'shade') return;
+  shadeHoverPoint = { x: e.clientX, y: e.clientY };
+  if (shadeHoverPending) return;
+  shadeHoverPending = true;
+  requestAnimationFrame(runShadeHover);
+});
+
+// Right-click clears a region outright rather than waiting for the colour
+// cycle to come round — and suppressing the browser menu only while shade
+// mode is on keeps the normal right-click available everywhere else.
+viewport.addEventListener('contextmenu', e => {
+  if (placeMode !== 'shade' || !currentSize.width) return;
+  if (e.target.closest('[data-no-pan]')) return;
+  e.preventDefault();
+  shadeAtPoint(viewer.screenToStage(e.clientX, e.clientY), { clear: true });
+});
+
 el('btnFinishRegion').addEventListener('click', finishShape);
 el('btnCancelRegion').addEventListener('click', () => { activeDraftLayer()?.layer.cancelDraft(); updateShapeButtons(); });
 
@@ -1927,6 +2122,12 @@ viewport.addEventListener('pointerup', e => {
     updateShapeButtons();
   } else if (placeMode === 'measure') {
     measureLayer.addPoint(stagePt.x, stagePt.y);
+  } else if (placeMode === 'shade') {
+    // A right-click raises pointerup as well as contextmenu, and contextmenu
+    // has already cleared this region — without this guard the same gesture
+    // would clear it and then immediately shade it again.
+    if (e.button === 2) return;
+    shadeAtPoint(stagePt, { clear: e.ctrlKey || e.metaKey });
   }
 });
 
@@ -2358,6 +2559,7 @@ function displayMap(record, opts = {}) {
   // whatever tool was active) into the NEW project using stale style/color.
   setPlaceMode('none');
   setQuizModeEnabled(false);
+  updateShadeButton(); // only a built-in base map has region shapes to click
   el('calibratePanel').hidden = true;
   el('btnGrid').classList.remove('active');
   el('batchPanel').hidden = true;
@@ -2689,12 +2891,16 @@ async function drawPngLegend(ctx) {
   });
   const numbered = numberedOrder(project.markers);
   const regionGroups = [];
-  const seenRegionGroup = new Set();
+  const regionGroupIndex = new Map();
   project.regions.forEach(r => {
     const gkey = regionLegendKey(r.color, r.pattern);
-    if (seenRegionGroup.has(gkey)) return;
-    seenRegionGroup.add(gkey);
-    regionGroups.push({ color: r.color, pattern: r.pattern });
+    let group = regionGroupIndex.get(gkey);
+    if (!group) {
+      group = { color: r.color, pattern: r.pattern, names: [] };
+      regionGroupIndex.set(gkey, group);
+      regionGroups.push(group);
+    }
+    if (r.name) group.names.push(r.name);
   });
   const lineGroups = [];
   const seenLineGroup = new Set();
@@ -2756,7 +2962,10 @@ async function drawPngLegend(ctx) {
       // "Solid" was picked isn't orphaned under a different key once this
       // toggle kicks in.
       img = await svgToImage(regionSwatchSvg(data.color, iconSize, effectiveRegionPattern(data, grayscaleMap)));
-      fallback = `(${key})`;
+      // A click-shaded group knows which countries or states are in it, so
+      // an uncaptioned row on paper says "Texas and Louisiana" rather than
+      // the old "(red)", which told a reader nothing they couldn't see.
+      fallback = regionGroupCaption(data.names) || `(${key})`;
       textVal = project.regionLegendText[key];
     } else {
       img = await svgToImage(lineSwatchSvg(data.color, iconSize, data.style));
@@ -2897,14 +3106,21 @@ async function drawMapContent(ctx, cssW, cssH, opts = {}) {
   project.regions.forEach(r => {
     const hex = regionColorHex(r.color);
     const pattern = effectiveRegionPattern(r, grayscaleMap);
-    const pts = r.points.map(p => viewer.stageToScreen(p.x, p.y));
+    // One path over every ring, then a single `evenodd` fill: a hand-drawn
+    // region has exactly one ring and comes out unchanged, while a
+    // click-shaded one gets its islands filled and its enclaves (Lesotho in
+    // South Africa, the Vatican in Italy) left as real holes rather than
+    // painted over.
     ctx.beginPath();
-    pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-    ctx.closePath();
+    regionRings(r).forEach(ring => {
+      const pts = ring.map(p => viewer.stageToScreen(p.x, p.y));
+      pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+    });
     ctx.fillStyle = (pattern && pattern !== 'solid')
       ? regionFillPatternTile(ctx, hex, pattern)
       : hexToRgba(hex, 0.32);
-    ctx.fill();
+    ctx.fill('evenodd');
     ctx.strokeStyle = hex;
     ctx.lineWidth = 2.5;
     ctx.stroke();
@@ -3760,6 +3976,7 @@ function showEmptyMapState(mapMissing) {
     ? "This project's map isn't cached in this browser anymore — search above and re-download it to keep annotating."
     : 'Search above and pick a map to get started.';
   setPlaceMode('none');
+  updateShadeButton();
   labelLayer.setLabels([]);
   markerLayer.setMarkers([]);
   regionLayer.setRegions([]);

@@ -78,6 +78,18 @@ export function findPreset(key) {
   return BASE_MAP_PRESETS.find(p => p.key === key) || null;
 }
 
+/**
+ * Which preset a cache/record id came from, or null if that id isn't a
+ * built-in base map at all (a Commons file title, an uploaded image). The id
+ * is the only thing a reloaded project keeps about *how* its map was made,
+ * so this is how click-to-shade knows, after a refresh, that the picture on
+ * screen has region shapes behind it — and which ones.
+ */
+export function presetFromBaseMapId(id) {
+  const m = /^vector:([^:]+):/.exec(String(id || ""));
+  return m ? findPreset(m[1]) : null;
+}
+
 // Fetched GeoJSON is kept in memory for the life of the page: switching
 // styles or re-cropping a continent shouldn't re-read a 200 KB file.
 const geoCache = new Map();
@@ -143,10 +155,20 @@ export function baseMapTitle(preset, style, borders, shaded) {
  * has no per-region names in it.
  */
 export async function listRegionNames(preset) {
-  const files = DATASETS[preset.dataset];
-  if (!files) return [];
-  const geo = await loadGeoJson(files.divided);
+  const geo = await loadDividedGeoJson(preset);
   return (geo.features || []).map(f => (f.properties && f.properties.name) || '').filter(Boolean);
+}
+
+/**
+ * The named-region FeatureCollection behind a preset — the same file the
+ * boundaries and the data shading are drawn from, handed out whole so
+ * bmg-hittest.js can project it for picking. Shares the in-memory cache, so
+ * entering shade mode on a map that is already drawn costs no second read.
+ */
+export async function loadDividedGeoJson(preset) {
+  const files = DATASETS[preset && preset.dataset];
+  if (!files) return { type: 'FeatureCollection', features: [] };
+  return loadGeoJson(files.divided);
 }
 
 // Target size of the raster's longer side. Big enough that a full-page or
@@ -166,8 +188,16 @@ export function pixelSizeFor(bounds) {
   };
 }
 
-/** The projection, in one place. Everything else here — and the calibration the record carries — is this function and its inverse. */
-function project(bounds, width, height, lon, lat) {
+/**
+ * The projection, in one place. Everything else here — and the calibration
+ * the record carries — is this function and its inverse.
+ *
+ * Exported (as `projectPoint`) so bmg-hittest.js can turn a click into a
+ * region using the identical arithmetic rather than a second copy of it: a
+ * hit test that disagrees with what was drawn is wrong silently, which is
+ * the worst way for it to be wrong.
+ */
+export function projectPoint(bounds, width, height, lon, lat) {
   return {
     x: ((lon - bounds.west) / (bounds.east - bounds.west)) * width,
     y: ((bounds.north - lat) / (bounds.north - bounds.south)) * height,
@@ -213,7 +243,7 @@ function unwrapRing(ring) {
  * emitted shifted a full 360°, so the part belonging at the opposite edge of
  * the map is drawn there.
  */
-function drawableRings(ring, forStroke) {
+export function drawableRings(ring, forStroke) {
   const un = unwrapRing(ring);
   const first = un[0][0], last = un[un.length - 1][0];
   const encircles = Math.abs(last - first) > 180;
@@ -237,7 +267,7 @@ function tracePolygon(ctx, rings, bounds, width, height, forStroke) {
   for (const ring of rings) {
     for (const { points, closed } of drawableRings(ring, forStroke)) {
       for (let i = 0; i < points.length; i++) {
-        const { x, y } = project(bounds, width, height, points[i][0], points[i][1]);
+        const { x, y } = projectPoint(bounds, width, height, points[i][0], points[i][1]);
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       if (closed) ctx.closePath();
