@@ -83,6 +83,17 @@
   .display-a.shown { display: block; }
   .display-nav { display: flex; gap: .8rem; justify-content: center; margin-top: 1rem; }
 
+  .display-options { display: flex; flex-direction: column; gap: .55rem; width: 100%; max-width: 30rem; margin: .3rem auto 0; text-align: left; }
+  .display-options.hidden { display: none; }
+  .mc-opt { display: flex; align-items: center; gap: .7rem; padding: .6rem .9rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); font-size: 1.08rem; }
+  .mc-opt .mc-letter { font-weight: 700; color: var(--accent-2); min-width: 1.5rem; }
+  .display-options.revealed .mc-opt.correct { background: rgba(44, 110, 63, .12); border-color: var(--ok); }
+  .display-options.revealed .mc-opt.correct .mc-letter,
+  .display-options.revealed .mc-opt.correct span:last-child { color: var(--ok); font-weight: 700; }
+
+  .mc-print-options { margin-top: .35rem; display: grid; grid-template-columns: 1fr 1fr; gap: .2rem .9rem; font-size: .9rem; }
+  .mc-print-opt { padding-left: .1rem; }
+
   .bank-row { padding: .4rem 0; border-bottom: 1px dashed var(--line); font-size: .86rem; }
   .bank-row:last-child { border-bottom: none; }
   .bank-list { max-height: 40vh; overflow-y: auto; }
@@ -128,6 +139,13 @@
         </select>
       </div>
       <div class="field">
+        <label for="formatSelect">Quiz format</label>
+        <select id="formatSelect">
+          <option value="short">Short answer</option>
+          <option value="mc">Multiple choice</option>
+        </select>
+      </div>
+      <div class="field">
         <button id="applyFilterBtn">Apply filter</button>
       </div>
     </div>
@@ -147,6 +165,7 @@
       <div class="display-num" id="displayNum"></div>
       <div class="display-cat" id="displayCat"></div>
       <div class="display-q" id="displayQ"></div>
+      <div class="display-options hidden" id="displayOptions"></div>
       <div class="display-a" id="displayA"></div>
       <div class="display-nav">
         <button class="secondary" id="prevBtn">&larr; Prev</button>
@@ -160,8 +179,13 @@
     <div class="card">
       <label for="sheetCount">How many questions on the quiz</label>
       <input type="number" id="sheetCount" value="10" min="1" max="30" style="max-width:8rem;">
+      <label for="quizVersion">Quiz version</label>
+      <p class="hint">Same version number + same settings always builds the identical paper &mdash; reprint a lost
+        copy by typing the same number back in. Bump it (or hit "New version") for a different mix.</p>
+      <input type="number" id="quizVersion" value="1" min="1" style="max-width:8rem;">
       <div class="btnrow">
         <button id="buildSheetBtn">Build quiz</button>
+        <button class="secondary" type="button" id="newVersionBtn">New version</button>
         <button class="secondary" id="printBtn">Print quiz + key</button>
       </div>
     </div>
@@ -249,13 +273,79 @@
     ['mapskills', 'What are the seven continents?', 'Africa, Antarctica, Asia, Australia, Europe, North America, South America'],
     ['mapskills', 'What do lines of latitude measure?', 'Distance north or south of the Equator'],
     ['mapskills', 'What do lines of longitude measure?', 'Distance east or west of the Prime Meridian'],
-    ['mapskills', 'What symbol on a map typically points north?', 'A compass rose']
+    ['mapskills', 'What symbol on a map typically points north?', 'A compass rose'],
+    /* Grown from 10 to 30 per category (SS demo round, backlog rank 29) —
+       new ids append here, bi30 onward; the original bi0-bi29 above are
+       never renumbered since teachers' hidden-question lists reference
+       them by id. World-balanced on purpose: the original 30 leaned
+       Asia/Africa/Americas already, these add more of Europe, Southeast
+       Asia, and the Middle East without tipping the set US/Europe-only. */
+    ['capitals', 'What is the capital of Germany?', 'Berlin'],
+    ['capitals', 'What is the capital of Italy?', 'Rome'],
+    ['capitals', 'What is the capital of Spain?', 'Madrid'],
+    ['capitals', 'What is the capital of the United Kingdom?', 'London'],
+    ['capitals', 'What is the capital of India?', 'New Delhi'],
+    ['capitals', 'What is the capital of China?', 'Beijing'],
+    ['capitals', 'What is the capital of Indonesia?', 'Jakarta'],
+    ['capitals', 'What is the capital of Nigeria?', 'Abuja'],
+    ['capitals', 'What is the capital of Argentina?', 'Buenos Aires'],
+    ['capitals', 'What is the capital of Chile?', 'Santiago'],
+    ['capitals', 'What is the capital of Colombia?', 'Bogotá'],
+    ['capitals', 'What is the capital of Turkey?', 'Ankara'],
+    ['capitals', 'What is the capital of Saudi Arabia?', 'Riyadh'],
+    ['capitals', 'What is the capital of Thailand?', 'Bangkok'],
+    ['capitals', 'What is the capital of Vietnam?', 'Hanoi'],
+    ['capitals', 'What is the capital of the Philippines?', 'Manila'],
+    ['capitals', 'What is the capital of New Zealand?', 'Wellington'],
+    ['capitals', 'What is the capital of Sweden?', 'Stockholm'],
+    ['capitals', 'What is the capital of Poland?', 'Warsaw'],
+    ['capitals', 'What is the capital of Greece?', 'Athens'],
+    ['landmarks', 'In which country would you find the Statue of Liberty?', 'The United States'],
+    ['landmarks', 'In which country would you find Christ the Redeemer?', 'Brazil'],
+    ['landmarks', 'In which country would you find Petra, the ancient city carved into rock?', 'Jordan'],
+    ['landmarks', 'In which country would you find Angkor Wat?', 'Cambodia'],
+    ['landmarks', 'In which country would you find Stonehenge?', 'The United Kingdom'],
+    ['landmarks', 'In which country would you find Mount Fuji?', 'Japan'],
+    ['landmarks', 'In which country would you find the Great Barrier Reef?', 'Australia'],
+    ['landmarks', 'What is the name of the tallest mountain peak in North America?', 'Denali'],
+    ['landmarks', 'In which country would you find Salar de Uyuni, the world’s largest salt flat?', 'Bolivia'],
+    ['landmarks', 'In which country would you find the Leaning Tower of Pisa?', 'Italy'],
+    ['landmarks', 'In which country would you find the Great Sphinx?', 'Egypt'],
+    ['landmarks', 'In which country would you find Ha Long Bay?', 'Vietnam'],
+    ['landmarks', 'In which country would you find Neuschwanstein Castle?', 'Germany'],
+    ['landmarks', 'Victoria Falls sits on the border of Zambia and which other country?', 'Zimbabwe'],
+    ['landmarks', 'Which desert is the largest hot desert in the world?', 'The Sahara'],
+    ['landmarks', 'The Amazon Rainforest is located mostly within which country?', 'Brazil'],
+    ['landmarks', 'The Gobi Desert lies mainly in China and which other country?', 'Mongolia'],
+    ['landmarks', 'Iguazu Falls sits on the border of Brazil and which other country?', 'Argentina'],
+    ['landmarks', 'Table Mountain is a famous landmark overlooking which South African city?', 'Cape Town'],
+    ['landmarks', 'The Amazon River empties into which ocean?', 'The Atlantic Ocean'],
+    ['mapskills', 'What are the four cardinal directions?', 'North, South, East, and West'],
+    ['mapskills', 'What are the four intermediate directions (halfway between the cardinal ones)?', 'Northeast, Northwest, Southeast, and Southwest'],
+    ['mapskills', 'What is the term for a location described using exact latitude and longitude coordinates?', 'Absolute location'],
+    ['mapskills', 'What is the term for a location described in relation to other places, like "next to the river"?', 'Relative location'],
+    ['mapskills', 'What type of map shows natural features like mountains, rivers, and deserts?', 'A physical map'],
+    ['mapskills', 'What type of map shows human-made boundaries like countries, states, and cities?', 'A political map'],
+    ['mapskills', 'What type of map uses contour lines to show the shape and elevation of the land?', 'A topographic map'],
+    ['mapskills', 'What is the term for the height of land above sea level?', 'Elevation'],
+    ['mapskills', 'What is a small map inset into the corner of a larger map called?', 'An inset map'],
+    ['mapskills', 'What is the imaginary line at 23.5° north of the Equator called?', 'The Tropic of Cancer'],
+    ['mapskills', 'What is the imaginary line at 23.5° south of the Equator called?', 'The Tropic of Capricorn'],
+    ['mapskills', 'What is the name of the line at 180° longitude, opposite the Prime Meridian?', 'The International Date Line'],
+    ['mapskills', 'On a standard map, which cardinal direction is usually at the top?', 'North'],
+    ['mapskills', 'What is the name for the system of latitude and longitude lines used to locate any place on Earth?', 'A grid system'],
+    ['mapskills', 'What color usually represents the highest elevations on a relief or elevation map?', 'Brown'],
+    ['mapskills', 'What type of map shows the average weather patterns of a region over time?', 'A climate map'],
+    ['mapskills', 'What is the small bar on a map used to measure real-world distance called?', 'A scale bar'],
+    ['mapskills', 'What is another name for lines of latitude?', 'Parallels'],
+    ['mapskills', 'What is another name for lines of longitude?', 'Meridians'],
+    ['mapskills', 'On most maps, what symbol marks a country’s capital city?', 'A star']
   ];
   var BUILTIN = BUILTIN_RAW.map(function (row, i) { return { id: 'bi' + i, category: row[0], q: row[1], a: row[2], custom: false }; });
 
   var els = {};
-  ['categoryFilter', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
-   'sheetCount', 'buildSheetBtn', 'printBtn', 'sheetProblems', 'sheetKey',
+  ['categoryFilter', 'formatSelect', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayOptions', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+   'sheetCount', 'quizVersion', 'buildSheetBtn', 'newVersionBtn', 'printBtn', 'sheetProblems', 'sheetKey',
    'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
    'bulkInput', 'bulkImportBtn', 'bulkNote'].forEach(function (id) { els[id] = document.getElementById(id); });
 
@@ -296,13 +386,16 @@
       if (s && typeof s === 'object') {
         if (typeof s.category === 'string') els.categoryFilter.value = s.category;
         if (s.sheetCount) els.sheetCount.value = s.sheetCount;
+        if (s.format === 'mc' || s.format === 'short') els.formatSelect.value = s.format;
+        if (s.quizVersion) els.quizVersion.value = s.quizVersion;
       }
     } catch (e) { /* ignore */ }
   }
   function saveSettings() {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-        category: els.categoryFilter.value, sheetCount: els.sheetCount.value
+        category: els.categoryFilter.value, sheetCount: els.sheetCount.value,
+        format: els.formatSelect.value, quizVersion: els.quizVersion.value
       }));
     } catch (e) { /* storage full/blocked */ }
   }
@@ -333,40 +426,147 @@
     return arr;
   }
 
+  /* ---------- multiple-choice mode ----------
+     A tiny seeded PRNG (mulberry32 — same ~10-line shape the Blank Map
+     Generator uses for its worksheet versions) so a printed quiz can be
+     reprinted identically: same version number + same bank/filter state
+     always regenerates the same paper. The projector display doesn't need
+     that guarantee, so it seeds fresh off Math.random on every render. */
+  function makeRng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffleWithRng(arr, rng) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+  /* The correct answer plus up to 3 distractors sampled from OTHER
+     questions in the same category within `pool` — which must already be
+     filtered to what the teacher can actually see (active category filter,
+     hidden built-ins excluded), so the choices never leak a question that
+     isn't in rotation. Case-insensitive, deduped, never the correct answer
+     itself. Returns null when the category has nothing else to draw from,
+     so the caller falls back to short answer for that one question instead
+     of padding with cross-category nonsense. */
+  function buildMcOptions(item, pool, rng) {
+    var seen = {};
+    seen[String(item.a).trim().toLowerCase()] = true;
+    var candidates = [];
+    pool.forEach(function (other) {
+      if (other === item || other.category !== item.category) return;
+      var key = String(other.a).trim().toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      candidates.push(other.a);
+    });
+    shuffleWithRng(candidates, rng);
+    var distractors = candidates.slice(0, 3);
+    if (!distractors.length) return null;
+    var options = distractors.map(function (t) { return { text: t, correct: false }; });
+    options.push({ text: item.a, correct: true });
+    shuffleWithRng(options, rng);
+    return options;
+  }
+  function mcCorrectIndex(opts) {
+    for (var i = 0; i < opts.length; i++) { if (opts[i].correct) return i; }
+    return -1;
+  }
+  var MC_LETTERS = ['A', 'B', 'C', 'D'];
+
+  var currentMc = null;
+
   function renderDisplay() {
     var all = filteredQuestions();
+    currentMc = null;
+    els.displayA.classList.remove('shown');
+    els.displayOptions.classList.remove('revealed');
     if (!all.length || !order.length) {
       els.displayNum.textContent = '';
       els.displayCat.textContent = '';
       els.displayQ.textContent = 'No questions match this filter.';
       els.displayA.textContent = '';
+      els.displayOptions.innerHTML = '';
+      els.displayOptions.classList.add('hidden');
       return;
     }
     var item = all[order[idx]];
     els.displayNum.textContent = 'Question ' + (idx + 1) + ' of ' + order.length;
     els.displayCat.textContent = CAT_LABELS[item.category] || item.category;
     els.displayQ.textContent = item.q;
-    els.displayA.textContent = item.a;
-    els.displayA.classList.remove('shown');
+
+    var opts = els.formatSelect.value === 'mc' ? buildMcOptions(item, all, Math.random) : null;
+    if (opts) {
+      currentMc = opts;
+      els.displayOptions.innerHTML = opts.map(function (o, i) {
+        return '<div class="mc-opt' + (o.correct ? ' correct' : '') + '"><span class="mc-letter">' + MC_LETTERS[i] +
+          '</span><span>' + escapeHtml(o.text) + '</span></div>';
+      }).join('');
+      els.displayOptions.classList.remove('hidden');
+      els.displayA.textContent = 'Correct answer: ' + MC_LETTERS[mcCorrectIndex(opts)] + ') ' + item.a;
+    } else {
+      els.displayOptions.innerHTML = '';
+      els.displayOptions.classList.add('hidden');
+      els.displayA.textContent = item.a;
+    }
   }
 
   els.applyFilterBtn.addEventListener('click', function () { saveSettings(); resetOrder(); renderDisplay(); });
+  els.formatSelect.addEventListener('change', function () { saveSettings(); renderDisplay(); });
   els.prevBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx - 1 + order.length) % order.length; renderDisplay(); });
   els.nextBtn.addEventListener('click', function () { if (!order.length) return; idx = (idx + 1) % order.length; renderDisplay(); });
-  els.revealBtn.addEventListener('click', function () { els.displayA.classList.toggle('shown'); });
+  els.revealBtn.addEventListener('click', function () {
+    els.displayA.classList.toggle('shown');
+    if (currentMc) els.displayOptions.classList.toggle('revealed');
+  });
   els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
 
   els.buildSheetBtn.addEventListener('click', function () {
     saveSettings();
-    var all = shuffle(filteredQuestions().slice());
-    var count = Math.max(1, Math.min(30, parseInt(els.sheetCount.value, 10) || 10, all.length));
-    var chosen = all.slice(0, count);
-    els.sheetProblems.innerHTML = chosen.map(function (item, i) {
-      return '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + escapeHtml(item.q) + '<span class="worksheet-line"></span></div>';
+    // Seeded so "Quiz version 3" always regenerates byte-for-byte the same
+    // paper: the seed depends only on the version number, never on the
+    // clock, and every draw below (which questions, which distractors, what
+    // order) comes from this one rng stream in a fixed sequence.
+    var version = Math.max(1, parseInt(els.quizVersion.value, 10) || 1);
+    var rng = makeRng(version * 104729);
+    var pool = filteredQuestions();
+    var shuffledPool = shuffleWithRng(pool.slice(), rng);
+    var count = Math.max(1, Math.min(30, parseInt(els.sheetCount.value, 10) || 10, shuffledPool.length));
+    var chosen = shuffledPool.slice(0, count);
+    var format = els.formatSelect.value;
+    // Distractors are computed once per question here and reused for both
+    // the problem list and the key below — recomputing them a second time
+    // would draw further from the same rng stream and desync the two.
+    var data = chosen.map(function (item) {
+      return { item: item, mc: format === 'mc' ? buildMcOptions(item, pool, rng) : null };
+    });
+    els.sheetProblems.innerHTML = data.map(function (d, i) {
+      var head = '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + escapeHtml(d.item.q);
+      if (d.mc) {
+        var optsHtml = d.mc.map(function (o, oi) {
+          return '<div class="mc-print-opt">' + MC_LETTERS[oi] + '. ' + escapeHtml(o.text) + '</div>';
+        }).join('');
+        return head + '<div class="mc-print-options">' + optsHtml + '</div></div>';
+      }
+      return head + '<span class="worksheet-line"></span></div>';
     }).join('');
-    els.sheetKey.innerHTML = chosen.map(function (item, i) {
-      return '<li>' + (i + 1) + '. ' + escapeHtml(item.a) + '</li>';
+    els.sheetKey.innerHTML = data.map(function (d, i) {
+      if (d.mc) {
+        return '<li>' + (i + 1) + '. ' + MC_LETTERS[mcCorrectIndex(d.mc)] + ' &mdash; ' + escapeHtml(d.item.a) + '</li>';
+      }
+      return '<li>' + (i + 1) + '. ' + escapeHtml(d.item.a) + '</li>';
     }).join('');
+  });
+  els.newVersionBtn.addEventListener('click', function () {
+    els.quizVersion.value = (parseInt(els.quizVersion.value, 10) || 1) + 1;
+    els.buildSheetBtn.click();
   });
   els.printBtn.addEventListener('click', function () {
     if (!els.sheetProblems.innerHTML.trim()) els.buildSheetBtn.click();
@@ -479,6 +679,17 @@
   resetOrder();
   renderDisplay();
   renderBank();
+
+  // Test-only hook (matches this repo's window.__ convention, e.g.
+  // window.__hallPassSync in 001-hall-pass-log.html) so the MC-mode smoke
+  // test can drive distractor sampling directly rather than reverse-
+  // engineering it from rendered HTML alone. Not used by the tool itself.
+  window.__gbqTestHooks = {
+    buildMcOptions: buildMcOptions,
+    makeRng: makeRng,
+    filteredQuestions: filteredQuestions,
+    allQuestions: allQuestions
+  };
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
