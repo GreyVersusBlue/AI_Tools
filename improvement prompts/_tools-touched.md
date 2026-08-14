@@ -193,7 +193,6 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
-| Timeline Builder | `vt7kqa` | 2026-08-14 02:41 UTC | `claude/ssdemo2-015-vt7kqa` |
 | Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
 
 ---
@@ -203,6 +202,7 @@ here.
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
 
+<<<<<<< HEAD
 ### Devon-assigned round 2 — tool 062 — 2026-08-14 03:48 UTC — session `gmq7xr`
 
 Geography Bee / Map Skills Quiz Generator
@@ -233,6 +233,37 @@ plus both Supporting items; nothing cut.
   through the renderer's own projection rather than trusting that an `<img>`
   appeared; wired into `test:geo-bee` and the end of the `test` chain. The
   existing 29-check MC suite still passes.
+
+### Devon-assigned round 2 — tool 015 — 2026-08-14 02:41 UTC — session `vt7kqa`
+
+Timeline Builder (`015-timeline-builder.md`), social studies demo round 2.
+
+- **Story mode** (headline) — the "Projected navigation mode" Major Feature.
+  A full-screen projector playthrough stepping one event at a time, driven
+  by the teacher (arrow keys, space, click; Esc exits), with the map panning
+  and zooming from each event’s place to the next, a progress counter, and a
+  context strip of the whole timeline with the current event marked.
+- The base map is rendered **once** over the whole pinned extent and moved
+  with a CSS transform, rather than re-rendered per step — a vector render
+  per click would pause the projector between every event. New
+  `Tools/timeline-builder/tlb-story.js` holds the view math (centre + zoom,
+  geometric zoom interpolation, edge clamping), pure and assertable.
+- Events with no place hold the previous view and dim the map;
+  `prefers-reduced-motion` gets instant cuts. Keyboard is bound only while
+  presenting, and the suite asserts the event form gets its arrow keys and
+  space back afterwards.
+- **Timeline worksheet + answer key** — the spatial strip with N events
+  replaced by numbered blanks, a shuffled word bank of the removed titles,
+  numbered answer lines, and a matching key. Up to four versions, each
+  blanking a different set, seeded so a reprint reproduces the same paper.
+  New `Tools/timeline-builder/tlb-worksheet.js`; follows the Blank Map
+  Generator’s worksheet pattern.
+- Fixed on the way, both caught only by screenshotting the real output: the
+  worksheet strip floated in a half-empty fixed-height box, and enlarging the
+  numbered badges (needed — they printed ~6px tall) made two badges a year
+  apart overlap until the nudge was scaled with them.
+- New suite `Tools/timeline-builder/test/smoke-story-worksheet.mjs`
+  (78 checks), wired into `test:timeline` and the end of the `test` chain.
 
 ### Devon-assigned round 2 — tool 050 — 2026-08-14 02:39 UTC — session `pq4rvn`
 
@@ -265,6 +296,7 @@ Government/Civics Simulation Role Card Generator
   (62 checks), wired into `test:civics-kit` and the end of the `test` chain;
   the two existing suites updated for the storage/import change, green at 28
   and 28.
+
 ### Devon-assigned round 2 — tool 028 — 2026-08-14 02:38 UTC — session `kx9rtm`
 
 Primary Source Analysis Worksheet Generator

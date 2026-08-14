@@ -23,6 +23,8 @@
 <script src="timeline-builder/tlb-photo.js"></script>
 <script src="timeline-builder/tlb-store.js"></script>
 <script src="timeline-builder/tlb-places.js"></script>
+<script src="timeline-builder/tlb-story.js"></script>
+<script src="timeline-builder/tlb-worksheet.js"></script>
 <script src="timeline-builder/tlb-example.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
@@ -223,6 +225,134 @@
   }
   .print-event .pe-place { font-size: .82rem; color: var(--accent-2); margin-top: .1rem; }
 
+  /* ---------- story mode (projector playthrough) ----------
+     A fixed overlay rather than a separate page, so the teacher's timeline,
+     saved work and scroll position are all still there the moment they press
+     Esc. Type is sized in vmin, not rem, so one set of numbers reads from the
+     back of the room on a projector and still fits a laptop screen while the
+     lesson is being built. */
+  .story-overlay {
+    position: fixed; inset: 0; z-index: 200; background: #101216; color: #f4f2ec;
+    display: flex; flex-direction: column; padding: 2.2vmin 2.6vmin;
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+  }
+  .story-overlay[hidden] { display: none; }
+  .story-top { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+  .story-top .story-title { font-size: 2.1vmin; font-weight: 700; color: #cfd6df; flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .story-counter { font-size: 2.1vmin; font-weight: 700; color: #cfd6df; white-space: nowrap; }
+  .story-overlay button {
+    width: auto; margin: 0; background: #2b3038; color: #f4f2ec; border-color: #454c57;
+    font-size: 2vmin; padding: .5vmin 1.4vmin;
+  }
+  .story-overlay button:hover:not(:disabled) { background: #3a414c; border-color: #6d7683; }
+  .story-overlay button:disabled { opacity: .35; cursor: default; }
+
+  .story-body { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2.4vmin; min-height: 0; margin: 1.6vmin 0; }
+  .story-body.no-map { grid-template-columns: 1fr; }
+  .story-body.no-map .story-map { display: none; }
+
+  .story-card { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .story-date { font-size: 3.4vmin; font-weight: 700; color: #7fb2dd; letter-spacing: .02em; }
+  .story-eventtitle { font-size: 5.4vmin; font-weight: 700; line-height: 1.1; margin: .6vmin 0; }
+  .story-place { font-size: 2.4vmin; color: #c3ccd6; margin-bottom: 1vmin; }
+  .story-desc { font-size: 2.5vmin; line-height: 1.45; color: #e4e2db; overflow: auto; }
+  .story-cat { display: inline-block; font-size: 1.9vmin; font-weight: 700; color: #101216;
+    border-radius: 1rem; padding: .3vmin 1.4vmin; margin-bottom: 1vmin; align-self: flex-start; background: #7fb2dd; }
+  .story-photo { max-height: 26vmin; max-width: 100%; object-fit: contain; border-radius: .8vmin; margin-top: 1.4vmin; align-self: flex-start; }
+
+  .story-map { position: relative; overflow: hidden; border-radius: 1vmin; background: #1b1f26; min-width: 0; }
+  .story-map-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+  .story-map-layer img { display: block; width: 100%; height: 100%; }
+  .story-map .story-pin {
+    position: absolute; transform: translate(-50%, -50%) scale(var(--pinz, 1)); transform-origin: 50% 50%;
+    width: 14px; height: 14px; border-radius: 50%; background: #cfd6df; border: 2px solid #101216;
+  }
+  .story-map .story-pin.current {
+    width: 22px; height: 22px; background: #e8b23a; border-color: #fff;
+    box-shadow: 0 0 0 6px rgba(232, 178, 58, .3);
+  }
+  /* Events with no place keep the last map view and dim it — the class stays
+     where the story was instead of being thrown back to a world view. */
+  .story-map .story-dim { position: absolute; inset: 0; background: rgba(16, 18, 22, .68); opacity: 0; transition: opacity .35s ease; pointer-events: none; }
+  .story-map.dimmed .story-dim { opacity: 1; }
+  .story-map .story-nomap-note {
+    position: absolute; inset: auto 0 42%; text-align: center; font-size: 2.4vmin; color: #cfd6df;
+    opacity: 0; transition: opacity .35s ease; pointer-events: none;
+  }
+  .story-map.dimmed .story-nomap-note { opacity: 1; }
+
+  /* The context strip: the whole timeline in one line so students keep the
+     sequence in view while one event is on screen. */
+  .story-strip { position: relative; height: 7vmin; flex-shrink: 0; margin: 0 1.5vmin; }
+  .story-strip .story-strip-line { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px solid #3d444f; }
+  .story-strip .story-tick {
+    position: absolute; top: 50%; width: 1.3vmin; height: 1.3vmin; border-radius: 50%;
+    background: #5c6675; transform: translate(-50%, -50%); transition: background .25s ease, width .25s ease, height .25s ease;
+  }
+  .story-strip .story-tick.done { background: #7fb2dd; }
+  .story-strip .story-tick.current { background: #e8b23a; width: 2.4vmin; height: 2.4vmin; box-shadow: 0 0 0 .7vmin rgba(232, 178, 58, .25); }
+  .story-strip .story-strip-end { position: absolute; top: calc(50% + 1.8vmin); font-size: 1.8vmin; color: #8f98a5; }
+  .story-strip .story-strip-end.left { left: 0; }
+  .story-strip .story-strip-end.right { right: 0; }
+
+  .story-bottom { display: flex; align-items: center; justify-content: center; gap: 1.4vmin; flex-shrink: 0; }
+  .story-hint { font-size: 1.8vmin; color: #8f98a5; margin-left: 1.4vmin; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .story-map .story-dim, .story-strip .story-tick, .story-map .story-nomap-note { transition: none; }
+  }
+
+  /* ---------- timeline worksheet print ----------
+     Same three-part shape as the Blank Map Generator's worksheet: numbered
+     blanks on the artwork, a numbered answer line per blank, a shuffled word
+     bank, and a matching answer key page. */
+  #worksheetPanel select, #worksheetPanel input[type="number"] { margin-bottom: 0; }
+  #worksheetPanel button { width: auto; display: inline-block; margin: 0 .5rem .3rem 0; }
+  #worksheetPanel .checkRow { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; margin: .8rem 0; }
+  #worksheetPanel .checkRow label { display: flex; align-items: center; gap: .35rem; font-weight: 600; font-size: .82rem; margin: 0; }
+  #worksheetPanel .checkRow input[type="checkbox"] { width: auto; margin: 0; }
+  #worksheetPages { display: none; }
+  /* min-height, never a fixed height with overflow hidden: a long word bank or
+     a big blank count has to push the page taller rather than being clipped
+     off the bottom of the paper where nobody sees it go missing. */
+  .wsPage { position: relative; background: #fff; color: #16181d; page-break-after: always; padding: 0; }
+  .wsPage:last-child { page-break-after: auto; }
+  .wsPage h2 { margin: 0 0 .2rem; font-size: 1.2rem; }
+  .wsPage .wsNameLine { font-size: .82rem; color: #444; margin-bottom: .35rem; display: flex; justify-content: space-between; gap: 1rem; }
+  .wsPage .wsInstructions { font-size: .84rem; margin-bottom: .4rem; }
+  /* Height is set per page from the fitted poster, not fixed here: a timeline
+     strip is wide and short, so a fixed box left it as a thin ribbon floating
+     in a half-empty rectangle. */
+  .wsPage .wsStrip { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; margin: .35rem 0; }
+  .wsPage .wsBank { border: 1px solid #16181d; border-radius: 5px; padding: .45rem .6rem; margin: .5rem 0; font-size: .9rem; }
+  .wsPage .wsBank .wsBankLabel { font-weight: 700; margin-right: .4rem; }
+  .wsPage .wsBank .wsBankWord { display: inline-block; margin: 0 .55rem; white-space: nowrap; }
+  .wsPage .wsList { column-count: 2; column-gap: 1.6rem; font-size: 1rem; margin-top: .4rem; }
+  .wsPage .wsList .wsItem { break-inside: avoid; padding: .5rem 0; }
+  .wsPage .wsList .wsNum { font-weight: 700; color: var(--accent); margin-right: .3rem; }
+  .wsPage .wsList .wsRule { display: inline-block; border-bottom: 1px solid #999; min-width: 14rem; }
+  .wsPage .wsList .wsAnswer { font-weight: 700; }
+  .wsPage .wsKeyTag { font-size: .8rem; font-weight: 700; color: var(--err); letter-spacing: .04em; }
+  /* The numbered badge on a blanked event, and the rule that replaces its
+     title. Same shape as the map print's pin badge — one visual language for
+     "this number ties to something else on the page" — but deliberately
+     bigger: the whole strip is scaled to about half size to fit the paper
+     width, and at the map badge's size the digit a student has to match to
+     their answer line came out around six pixels tall on paper. */
+  .blank-num {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    min-width: 1.6rem; height: 1.6rem; padding: 0 .25rem; border-radius: .8rem;
+    background: var(--accent); color: #fff; border: 2px solid #fff;
+    font-size: 1rem; font-weight: 700; line-height: 1.35rem; text-align: center; white-space: nowrap;
+  }
+  /* A blanked event's own label is pushed clear of its badge — the badge is
+     bigger than the map print's, so the 1.2rem the label normally sits at is
+     underneath it. Only blanked events move; every other label is untouched. */
+  .event-label.has-blank-badge.above { bottom: calc(50% + 2.2rem); }
+  .event-label.has-blank-badge.below { top: calc(50% + 2.2rem); }
+  .event-label .lbl-blank { display: inline-block; min-width: 6rem; border-bottom: 1px solid #666; }
+
   @media print {
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -249,6 +379,16 @@
     body.map-printing #mapPrintPages {
       display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
     }
+
+    /* Timeline worksheet — a fourth print container, same shape again. */
+    body.worksheet-printing #printArea { display: none !important; }
+    body.worksheet-printing #tiledPrintPages { display: none !important; }
+    body.worksheet-printing #mapPrintPages { display: none !important; }
+    body.worksheet-printing #worksheetPages,
+    body.worksheet-printing #worksheetPages * { visibility: visible !important; }
+    body.worksheet-printing #worksheetPages {
+      display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+    }
   }
 </style>
 </head>
@@ -271,6 +411,7 @@
     <button class="secondary" style="width:auto;" id="importTimelineBtn">Import JSON</button>
     <input type="file" id="importTimelineFile" accept="application/json,.json" style="display:none;">
     <button class="secondary" style="width:auto;" id="loadExampleBtn">Load example</button>
+    <button class="secondary" style="width:auto;" id="presentBtn">▶ Present</button>
     <button class="secondary" style="width:auto;" id="shareLinkBtn">🔗 Copy link</button>
     <button class="secondary" style="width:auto;" id="shareQrBtn">▦ QR code</button>
   </div>
@@ -457,6 +598,43 @@
           <button type="button" class="secondary" id="btnMapPrintClose">Close</button>
         </div>
       </div>
+
+      <button type="button" class="secondary" id="worksheetToggleBtn">Timeline worksheet&hellip;</button>
+      <div class="card" id="worksheetPanel" hidden>
+        <label style="margin-bottom:.4rem;">Timeline worksheet &amp; answer key</label>
+        <p class="hint">
+          The same timeline strip students have been looking at all unit, with
+          some events replaced by numbered blanks, a word bank of the titles
+          that were taken out, and a matching answer key. Ask for more than one
+          version and each one blanks a different set of events, so two
+          students side by side get different papers from one timeline.
+        </p>
+        <div class="row2">
+          <div>
+            <label for="wsBlankCount">Events to blank out</label>
+            <input type="number" id="wsBlankCount" min="1" step="1" value="5">
+          </div>
+          <div>
+            <label for="wsVersions">Versions</label>
+            <select id="wsVersions">
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+        </div>
+        <div class="checkRow">
+          <label><input type="checkbox" id="wsWordBank" checked> Word bank</label>
+          <label><input type="checkbox" id="wsAnswerKey" checked> Answer key page</label>
+          <label><input type="checkbox" id="wsNameLine" checked> Name / date line</label>
+        </div>
+        <p class="hint" id="wsCountNote" style="margin-top:0;"></p>
+        <div>
+          <button type="button" id="btnWorksheetGo">Print worksheet</button>
+          <button type="button" class="secondary" id="btnWorksheetClose">Close</button>
+        </div>
+      </div>
     </div>
 
     <div class="preview-wrap">
@@ -496,6 +674,42 @@
 <div id="printArea" style="display:none;"></div>
 <div id="tiledPrintPages" aria-hidden="true"></div>
 <div id="mapPrintPages" aria-hidden="true"></div>
+<div id="worksheetPages" aria-hidden="true"></div>
+
+<!-- Story mode. Hidden until Present is pressed; the teacher drives every
+     step, so there is no timer, no autoplay and nothing for a student to
+     operate. -->
+<div class="story-overlay" id="storyOverlay" hidden role="dialog" aria-modal="true" aria-label="Timeline presentation">
+  <div class="story-top">
+    <span class="story-title" id="storyTitle"></span>
+    <span class="story-counter" id="storyCounter"></span>
+    <button type="button" id="storyExitBtn">Exit (Esc)</button>
+  </div>
+
+  <div class="story-body" id="storyBody">
+    <div class="story-card">
+      <span class="story-cat" id="storyCat" hidden></span>
+      <div class="story-date" id="storyDate"></div>
+      <div class="story-eventtitle" id="storyEventTitle"></div>
+      <div class="story-place" id="storyPlace"></div>
+      <div class="story-desc" id="storyDesc"></div>
+      <img class="story-photo" id="storyPhoto" alt="" hidden>
+    </div>
+    <div class="story-map" id="storyMap">
+      <div class="story-map-layer" id="storyMapLayer"></div>
+      <div class="story-dim"></div>
+      <div class="story-nomap-note" id="storyNoMapNote">No place recorded for this event</div>
+    </div>
+  </div>
+
+  <div class="story-strip" id="storyStrip"></div>
+
+  <div class="story-bottom">
+    <button type="button" id="storyPrevBtn">&larr; Back</button>
+    <button type="button" id="storyNextBtn">Next &rarr;</button>
+    <span class="story-hint">Arrow keys or space step through. Esc closes.</span>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -513,6 +727,11 @@
    'saveEventBtn','cancelEditBtn','eventList','printMode','printBtn',
    'tiledPrintToggleBtn','tiledPrintPanel','tileCols','tileRows','btnTiledPrintGo','btnTiledPrintClose','tiledPrintPages',
    'mapPrintToggleBtn','mapPrintPanel','mapExtent','mapStyle','mapPinCount','btnMapPrintGo','btnMapPrintClose','mapPrintPages',
+   'worksheetToggleBtn','worksheetPanel','wsBlankCount','wsVersions','wsWordBank','wsAnswerKey','wsNameLine',
+   'wsCountNote','btnWorksheetGo','btnWorksheetClose','worksheetPages',
+   'presentBtn','storyOverlay','storyTitle','storyCounter','storyExitBtn','storyBody',
+   'storyCat','storyDate','storyEventTitle','storyPlace','storyDesc','storyPhoto',
+   'storyMap','storyMapLayer','storyNoMapNote','storyStrip','storyPrevBtn','storyNextBtn',
    'loadExampleBtn','shareLinkBtn','shareQrBtn','shareNote','shareOverlay','shareCanvas','shareCloseBtn',
    'viewScreenBtn','viewPrintBtn','viewCompareBtn','screenView','printPreview','compareView',
    'timelineCanvas','screenLegend','printViewInner','compareSelect','compareCanvas','compareLegend'
@@ -897,6 +1116,13 @@
     // it to that event's pin. Defaults off, so the screen and compare views
     // render exactly as they did before.
     var pinNumbers = data.pinNumbers || null;
+    // Also optional, and absent everywhere except the timeline worksheet: an
+    // {eventId: number} map whose events print as a numbered blank instead of
+    // their title (and whose photo is withheld, since a picture of the Boston
+    // Tea Party answers the question the blank is asking). `blanksRevealed`
+    // turns the same page into the answer key — same numbers, titles shown.
+    var blankNumbers = data.blankNumbers || null;
+    var blanksRevealed = !!data.blanksRevealed;
     var catColorMap = TimelineLayout.buildCategoryColorMap(data.events);
     var range = TimelineLayout.yearRangeOf(data.events.concat(data.eras));
     var pxPerYear = TimelineLayout.autoPxPerYear(range.min, range.max);
@@ -1004,13 +1230,35 @@
           lane.appendChild(badge);
         }
 
+        // The worksheet's numbered blank badge. Same placement logic as the
+        // map print's badge above (on the line, nudged to its label's side),
+        // so two events in the same year don't hide one another's number.
+        var blankNo = blankNumbers ? blankNumbers[p.event.id] : null;
+        if (blankNo != null) {
+          var blankBadge = document.createElement('div');
+          blankBadge.className = 'blank-num';
+          blankBadge.style.left = p.x + 'px';
+          // A full badge-height off the line, not the map badge's half-height:
+          // two events a year apart put their badges at nearly the same x, and
+          // at the smaller offset the later badge simply sat on top of the
+          // earlier one's number (and on top of a neighbour's marker dot).
+          // Opposite sides now clear each other by the badge's own height.
+          blankBadge.style.marginTop = (p.side === 'below' ? '1.05rem' : '-1.05rem');
+          if (catColor) blankBadge.style.background = catColor;
+          blankBadge.textContent = blankNo;
+          lane.appendChild(blankBadge);
+        }
+        var blanked = blankNo != null && !blanksRevealed;
+
         var label = document.createElement('div');
-        label.className = 'event-label ' + p.side;
+        label.className = 'event-label ' + p.side + (blankNo != null ? ' has-blank-badge' : '');
         label.style.left = p.x + 'px';
         label.innerHTML =
           '<div class="lbl-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + escapeHtml(p.label) + '</div>' +
-          '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>' +
-          (p.event.photo ? '<img src="' + p.event.photo + '" alt="">' : '');
+          (blanked
+            ? '<div class="lbl-title"><span class="lbl-blank">&nbsp;</span></div>'
+            : '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>') +
+          ((p.event.photo && !blanked) ? '<img src="' + p.event.photo + '" alt="">' : '');
         lane.appendChild(label);
       });
 
@@ -1310,11 +1558,14 @@
   window.addEventListener('afterprint', function () {
     var tiled = document.body.classList.contains('tiled-printing');
     var mapped = document.body.classList.contains('map-printing');
-    if (!tiled && !mapped) return; // a plain Print needs no teardown
+    var worksheet = document.body.classList.contains('worksheet-printing');
+    if (!tiled && !mapped && !worksheet) return; // a plain Print needs no teardown
     document.body.classList.remove('tiled-printing');
     document.body.classList.remove('map-printing');
+    document.body.classList.remove('worksheet-printing');
     els.tiledPrintPages.innerHTML = '';
     els.mapPrintPages.innerHTML = '';
+    els.worksheetPages.innerHTML = '';
     var styleEl = document.getElementById('tiledPageSizeStyle');
     if (styleEl) styleEl.remove();
   });
@@ -1527,6 +1778,471 @@
     printTiledPages(cols, rows);
   });
 
+  /* ---------- timeline worksheet print ----------
+     The paper counterpart of story mode: the same spatial strip, with some
+     events replaced by numbered blanks, a word bank of the titles taken out,
+     and an answer key. Selection/shuffle math lives in tlb-worksheet.js; this
+     is only the page building.
+
+     Landscape like the other two big prints (a timeline is wide), and built
+     from the same buildTimelinePoster()/renderTimelineCanvas the screen view
+     and both other prints use — so a worksheet can never show a different
+     timeline than the one on the board. */
+  var WS_PAGE_W_PX = MAP_PAGE_W_PX;
+  var WS_PAGE_H_PX = MAP_PAGE_H_PX;
+  var WS_STRIP_MAX_H_PX = 340; // a ceiling, not a target — see buildWorksheetPage
+
+  /** Events that can be an answer. A title is the answer, so an untitled event
+      can't be blanked — the same rule tlb-worksheet.js applies. */
+  function worksheetEligible() {
+    return state ? state.events.filter(function (e) { return !!(e.title || '').trim(); }) : [];
+  }
+
+  function readWorksheetSettings() {
+    var max = worksheetEligible().length;
+    var raw = parseInt(els.wsBlankCount.value, 10);
+    var count = isNaN(raw) ? Math.min(5, max) : Math.max(1, Math.min(Math.max(1, max), raw));
+    return {
+      count: count,
+      versions: parseInt(els.wsVersions.value, 10) || 1,
+      wordBank: els.wsWordBank.checked,
+      answerKey: els.wsAnswerKey.checked,
+      nameLine: els.wsNameLine.checked
+    };
+  }
+
+  /** Keeps the settings with the document, like every other per-timeline
+      choice here, so reopening a unit's timeline next year reopens the
+      worksheet it was set up for. */
+  function persistWorksheetSettings() {
+    if (!state) return;
+    state.worksheet = readWorksheetSettings();
+    save();
+  }
+
+  function applyWorksheetSettingsToForm() {
+    var ws = (state && state.worksheet) || {};
+    var max = worksheetEligible().length;
+    els.wsBlankCount.value = String(Math.max(1, Math.min(Math.max(1, max), ws.count != null ? ws.count : Math.min(5, max || 1))));
+    els.wsVersions.value = String(ws.versions || 1);
+    els.wsWordBank.checked = ws.wordBank !== false;
+    els.wsAnswerKey.checked = ws.answerKey !== false;
+    els.wsNameLine.checked = ws.nameLine !== false;
+  }
+
+  function updateWorksheetNote() {
+    if (!state) return;
+    var max = worksheetEligible().length;
+    els.wsBlankCount.max = String(Math.max(1, max));
+    var s = readWorksheetSettings();
+    // Reflect the clamp rather than silently printing a different number than
+    // the box shows — asking for 10 blanks on a six-event timeline blanks six.
+    // Skipped while the timeline is still empty, so opening a fresh tool
+    // doesn't quietly rewrite the default 5 down to 1 and leave it there.
+    if (max > 0 && String(s.count) !== els.wsBlankCount.value) els.wsBlankCount.value = String(s.count);
+    els.wsCountNote.textContent = max === 0
+      ? 'Add at least one event with a title first — the title is what the blank is asking for.'
+      : s.count + ' of ' + max + ' event' + (max === 1 ? '' : 's') + ' will be blanked out. ' +
+        (s.versions > 1
+          ? 'Each of the ' + s.versions + ' versions blanks a different set, so neighbours get different papers.'
+          : 'The rest stay on the strip as clues.');
+  }
+
+  /** One page. `items` are this version's blanks; `isKey` swaps the blanked
+      titles back in and fills the answer lines. */
+  function buildWorksheetPage(items, settings, version, isKey) {
+    var page = document.createElement('div');
+    page.className = 'wsPage';
+    page.style.width = WS_PAGE_W_PX + 'px';
+    page.style.minHeight = WS_PAGE_H_PX + 'px';
+
+    var heading = document.createElement('h2');
+    heading.textContent = (state.title || state.name) + (isKey ? ' — answer key' : ' — timeline worksheet');
+    page.appendChild(heading);
+
+    var nameLine = document.createElement('div');
+    nameLine.className = 'wsNameLine';
+    var left = isKey
+      ? '<span class="wsKeyTag">ANSWER KEY — TEACHER COPY</span>'
+      : (settings.nameLine ? 'Name ______________________________  Date ______________' : '');
+    var right = settings.versions > 1 ? 'Version ' + version + ' of ' + settings.versions : '';
+    nameLine.innerHTML = '<span>' + left + '</span><span>' + escapeHtml(right) + '</span>';
+    page.appendChild(nameLine);
+
+    var instructions = document.createElement('div');
+    instructions.className = 'wsInstructions';
+    instructions.textContent = isKey
+      ? 'The numbered blanks on this version, in order along the timeline.'
+      : 'Each numbered circle on the timeline is a missing event. Write the event that belongs there on the matching line below.' +
+        (settings.wordBank ? ' Every answer is in the word bank.' : '');
+    page.appendChild(instructions);
+
+    var strip = document.createElement('div');
+    strip.className = 'wsStrip';
+    strip.style.width = WS_PAGE_W_PX + 'px';
+    var poster = buildTimelinePoster({
+      blankNumbers: TimelineWorksheet.blankNumberMap(items),
+      blanksRevealed: !!isKey
+    });
+    // The box takes the fitted poster's own height rather than a fixed one.
+    // A timeline is wide and short, so the fit is almost always
+    // width-limited; a fixed box left the strip as a thin ribbon adrift in a
+    // half-empty rectangle, and handed the wasted inches to nobody.
+    var stripH = WS_STRIP_MAX_H_PX;
+    if (poster.width && poster.height) {
+      // Uniform scale, same as the tiled and map prints: fitted, never
+      // stretched on one axis and never cropped.
+      var scale = Math.min(WS_PAGE_W_PX / poster.width, WS_STRIP_MAX_H_PX / poster.height);
+      stripH = Math.max(40, Math.round(poster.height * scale));
+      var inner = poster.el.cloneNode(true);
+      inner.style.position = 'absolute';
+      inner.style.left = ((WS_PAGE_W_PX - poster.width * scale) / 2) + 'px';
+      inner.style.top = '0';
+      inner.style.transformOrigin = '0 0';
+      inner.style.transform = 'scale(' + scale + ')';
+      inner.style.width = poster.width + 'px';
+      inner.style.height = poster.height + 'px';
+      strip.appendChild(inner);
+    }
+    strip.style.height = stripH + 'px';
+    page.appendChild(strip);
+
+    // No word bank on the key page — the key already lists every answer, and
+    // the map tool learned the same lesson (a bank there is just noise).
+    if (settings.wordBank && !isKey && items.length) {
+      var bank = document.createElement('div');
+      bank.className = 'wsBank';
+      bank.innerHTML = '<span class="wsBankLabel">Word bank:</span>' +
+        TimelineWorksheet.wordBank(items, version).map(function (w) {
+          return '<span class="wsBankWord">' + escapeHtml(w) + '</span>';
+        }).join('');
+      page.appendChild(bank);
+    }
+
+    var list = document.createElement('div');
+    list.className = 'wsList';
+    list.innerHTML = items.map(function (it) {
+      var when = escapeHtml(TimelineLayout.formatDateLabel(it.event));
+      var answer = isKey
+        ? '<span class="wsAnswer">' + escapeHtml(it.event.title) + '</span>'
+        : '<span class="wsRule">&nbsp;</span>';
+      return '<div class="wsItem"><span class="wsNum">' + it.number + '.</span> (' + when + ') ' + answer + '</div>';
+    }).join('');
+    page.appendChild(list);
+
+    return page;
+  }
+
+  async function printWorksheet() {
+    if (!state) return;
+    var eligible = worksheetEligible();
+    if (!eligible.length) {
+      alert('Add at least one event with a title first — the title is the answer the blank is asking for.');
+      return;
+    }
+    var btn = els.btnWorksheetGo;
+    var origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Building…';
+    try {
+      var settings = readWorksheetSettings();
+      persistWorksheetSettings();
+      var container = els.worksheetPages;
+      container.innerHTML = '';
+      for (var v = 1; v <= settings.versions; v++) {
+        var items = TimelineWorksheet.buildItems(state.events, settings.count, v);
+        container.appendChild(buildWorksheetPage(items, settings, v, false));
+        if (settings.answerKey) container.appendChild(buildWorksheetPage(items, settings, v, true));
+      }
+
+      // Same reason as every other print path here: nothing prints blank.
+      await Promise.all([].slice.call(container.querySelectorAll('img')).map(function (im) {
+        return im.complete ? Promise.resolve() : new Promise(function (resolve) {
+          im.onload = resolve; im.onerror = resolve;
+        });
+      }));
+
+      setTiledPrintPageSize(); // landscape, shared with the tiled and map prints
+      els.worksheetPanel.hidden = true;
+      document.body.classList.add('worksheet-printing');
+      window.print();
+    } catch (err) {
+      alert("Couldn't build the worksheet (" + err.message + ").");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+    }
+  }
+
+  els.worksheetToggleBtn.addEventListener('click', function () {
+    els.worksheetPanel.hidden = !els.worksheetPanel.hidden;
+    if (!els.worksheetPanel.hidden) { applyWorksheetSettingsToForm(); updateWorksheetNote(); }
+  });
+  els.btnWorksheetClose.addEventListener('click', function () { els.worksheetPanel.hidden = true; });
+  els.btnWorksheetGo.addEventListener('click', function () { printWorksheet(); });
+  ['wsBlankCount', 'wsVersions', 'wsWordBank', 'wsAnswerKey', 'wsNameLine'].forEach(function (id) {
+    els[id].addEventListener('change', function () { updateWorksheetNote(); persistWorksheetSettings(); });
+  });
+
+  /* ---------- story mode (projector playthrough) ----------
+     One event at a time, full screen, documentary style, driven entirely by
+     the teacher — no timers, no autoplay, nothing a student operates (all
+     explicit non-goals). The map pans and zooms from one event's place to the
+     next; an event with no place keeps the previous view and dims the map.
+
+     The map is rendered ONCE, over the whole pinned extent, and then moved by
+     a CSS transform. Re-rendering per step would put a visible pause between
+     every click on a projector while a class waits, and the vector render is
+     the expensive part. See tlb-story.js for the view math. */
+  var STORY_ZOOM = 2.6;   // how far in a placed event is shown
+  var STORY_MS = 750;     // pan/zoom flight time
+  var story = null;       // null when not presenting; the presence of this object IS "are we presenting"
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function applyStoryView(view) {
+    if (!story || !story.map) return;
+    var t = TimelineStory.viewTransform(view, story.map.w, story.map.h);
+    els.storyMapLayer.style.transform = 'translate(' + t.tx + 'px,' + t.ty + 'px) scale(' + t.scale + ')';
+    // Counter-scale the pins so a zoomed-in map doesn't show dinner-plate dots.
+    els.storyMapLayer.style.setProperty('--pinz', String(1 / t.scale));
+  }
+
+  function animateStoryTo(target) {
+    if (!story || !story.map) return;
+    if (story.raf) { cancelAnimationFrame(story.raf); story.raf = null; }
+    var from = story.currentView || TimelineStory.overviewView();
+    // prefers-reduced-motion means instant cuts, not a slower pan.
+    if (prefersReducedMotion()) { story.currentView = target; applyStoryView(target); return; }
+    var t0 = performance.now();
+    function frame(now) {
+      var p = Math.min(1, (now - t0) / STORY_MS);
+      var v = p < 1 ? TimelineStory.lerpView(from, target, p) : target;
+      story.currentView = v;
+      applyStoryView(v);
+      story.raf = p < 1 ? requestAnimationFrame(frame) : null;
+    }
+    story.raf = requestAnimationFrame(frame);
+  }
+
+  function buildStoryStrip() {
+    els.storyStrip.innerHTML = '';
+    var line = document.createElement('div');
+    line.className = 'story-strip-line';
+    els.storyStrip.appendChild(line);
+    var positions = TimelineStory.stripPositions(state.events, state.scaleMode);
+    story.ticks = {};
+    positions.forEach(function (p) {
+      var tick = document.createElement('div');
+      tick.className = 'story-tick';
+      tick.style.left = p.pct + '%';
+      els.storyStrip.appendChild(tick);
+      story.ticks[p.id] = tick;
+    });
+    if (story.steps.length) {
+      var first = story.steps[0].event, last = story.steps[story.steps.length - 1].event;
+      ['left', 'right'].forEach(function (side, i) {
+        var end = document.createElement('div');
+        end.className = 'story-strip-end ' + side;
+        end.textContent = TimelineLayout.formatYear(i === 0 ? first.yearStart : (last.yearEnd != null ? last.yearEnd : last.yearStart));
+        els.storyStrip.appendChild(end);
+      });
+    }
+  }
+
+  function renderStoryStep(i) {
+    var step = story.steps[i];
+    var ev = step.event;
+    var catColorMap = TimelineLayout.buildCategoryColorMap(state.events);
+    var catColor = catColorMap[(ev.category || '').trim()] || null;
+
+    els.storyCat.hidden = !ev.category;
+    els.storyCat.textContent = ev.category || '';
+    if (catColor) els.storyCat.style.background = catColor;
+    els.storyDate.textContent = TimelineLayout.formatDateLabel(ev);
+    if (catColor) els.storyDate.style.color = catColor;
+    els.storyEventTitle.textContent = ev.title;
+    els.storyPlace.textContent = (ev.place && ev.place.name) ? '📍 ' + ev.place.name : '';
+    els.storyDesc.textContent = ev.description || '';
+    if (ev.photo) { els.storyPhoto.src = ev.photo; els.storyPhoto.hidden = false; }
+    else { els.storyPhoto.removeAttribute('src'); els.storyPhoto.hidden = true; }
+
+    els.storyCounter.textContent = (i + 1) + ' of ' + story.steps.length;
+    els.storyPrevBtn.disabled = i === 0;
+    els.storyNextBtn.disabled = i === story.steps.length - 1;
+
+    story.steps.forEach(function (s, si) {
+      var tick = story.ticks[s.event.id];
+      if (!tick) return;
+      tick.className = 'story-tick' + (si === i ? ' current' : (si < i ? ' done' : ''));
+    });
+
+    if (story.map) {
+      Object.keys(story.pins).forEach(function (id) {
+        story.pins[id].classList.toggle('current', String(ev.id) === id);
+      });
+      els.storyMap.classList.toggle('dimmed', !step.placed);
+      if (story.views) animateStoryTo(story.views[i]);
+    }
+  }
+
+  function goStory(i) {
+    if (!story) return;
+    var next = TimelineStory.clampStep(i, story.steps.length);
+    if (next === story.index) return;
+    story.index = next;
+    renderStoryStep(next);
+  }
+
+  function storyKeydown(e) {
+    if (!story) return;
+    if (e.key === 'Escape') { e.preventDefault(); exitStoryMode(); return; }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'PageDown') {
+      e.preventDefault(); goStory(story.index + 1); return;
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'Backspace' || e.key === 'PageUp') {
+      e.preventDefault(); goStory(story.index - 1); return;
+    }
+    if (e.key === 'Home') { e.preventDefault(); goStory(0); return; }
+    if (e.key === 'End') { e.preventDefault(); goStory(story.steps.length - 1); return; }
+  }
+
+  function storyFullscreenChange() {
+    // Some browsers swallow the Esc keypress that leaves fullscreen, so treat
+    // leaving fullscreen as leaving the presentation too. exitStoryMode is
+    // idempotent, so the keydown path firing as well is harmless.
+    if (story && story.wentFullscreen && !document.fullscreenElement) exitStoryMode();
+  }
+
+  function storyResize() {
+    if (!story || !story.map) return;
+    story.map.w = els.storyMap.clientWidth;
+    story.map.h = els.storyMap.clientHeight;
+    els.storyMapLayer.style.width = story.map.w + 'px';
+    els.storyMapLayer.style.height = story.map.h + 'px';
+    if (story.currentView) applyStoryView(story.currentView);
+  }
+
+  /** Draws the one base map story mode pans around inside, and its pins.
+      Runs after the overlay is already on screen, so the first event's text is
+      up immediately and the map arrives a moment later instead of the button
+      appearing to hang. */
+  async function prepareStoryMap() {
+    var placed = placedEvents();
+    if (!placed.length) {
+      els.storyBody.classList.add('no-map');
+      return;
+    }
+    els.storyBody.classList.remove('no-map');
+    var w = els.storyMap.clientWidth, h = els.storyMap.clientHeight;
+    if (!w || !h) { els.storyBody.classList.add('no-map'); return; }
+    var bounds = TimelinePlaces.fitBounds(placed.map(function (e) { return e.place; }), w / h);
+    // Rendered at ~3x the panel so a zoomed-in view is still made of real
+    // pixels rather than four of them stretched, capped so a big projector
+    // doesn't ask for a canvas nobody's Chromebook can hold.
+    var outW = Math.min(3200, Math.round(w * 3));
+    var url = await TimelinePlaces.renderMapImage(bounds, {
+      style: 'land',
+      dataset: TimelinePlaces.chooseDataset(placed.map(function (e) { return e.place; }), bounds),
+      outWidth: outW, outHeight: Math.round(outW * h / w)
+    });
+    if (!story) return; // the teacher pressed Esc while the map was drawing
+
+    els.storyMapLayer.innerHTML = '';
+    els.storyMapLayer.style.width = w + 'px';
+    els.storyMapLayer.style.height = h + 'px';
+    var img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    els.storyMapLayer.appendChild(img);
+
+    var pins = {};
+    placed.forEach(function (ev) {
+      var pct = TimelinePlaces.projectPct(bounds, ev.place.lat, ev.place.lon);
+      var pin = document.createElement('div');
+      pin.className = 'story-pin';
+      pin.dataset.eventId = ev.id; // which event this pin is, for the suite and for debugging
+      pin.style.left = pct.x + '%';
+      pin.style.top = pct.y + '%';
+      els.storyMapLayer.appendChild(pin);
+      pins[ev.id] = pin;
+    });
+
+    story.map = { w: w, h: h, bounds: bounds };
+    story.pins = pins;
+    story.views = TimelineStory.resolveViews(story.steps, function (lat, lon) {
+      return TimelinePlaces.projectPct(bounds, lat, lon);
+    }, STORY_ZOOM);
+    story.currentView = TimelineStory.overviewView();
+    applyStoryView(story.currentView);
+    renderStoryStep(story.index); // re-run now that there's a map to point
+  }
+
+  async function enterStoryMode() {
+    if (story) return;
+    if (!state || !state.events.length) {
+      alert('Add at least one event first — story mode steps through the events on this timeline.');
+      return;
+    }
+    story = {
+      steps: TimelineStory.buildSteps(state.events),
+      index: 0, map: null, views: null, pins: {}, ticks: {}, currentView: null, raf: null,
+      wentFullscreen: false
+    };
+    els.storyTitle.textContent = state.title || state.name;
+    els.storyBody.classList.add('no-map'); // until a map is actually drawn
+    els.storyMapLayer.innerHTML = '';
+    els.storyOverlay.hidden = false;
+    document.addEventListener('keydown', storyKeydown);
+    window.addEventListener('resize', storyResize);
+    document.addEventListener('fullscreenchange', storyFullscreenChange);
+    els.storyNextBtn.focus();
+
+    // Fullscreen first, then measure: entering fullscreen changes the panel's
+    // size, and the map's extent is fitted to that panel's aspect ratio.
+    if (els.storyOverlay.requestFullscreen) {
+      try {
+        await els.storyOverlay.requestFullscreen();
+        if (story) story.wentFullscreen = true;
+      } catch (e) { /* not permitted here; the overlay already covers the window */ }
+    }
+    if (!story) return;
+    buildStoryStrip();
+    renderStoryStep(0);
+    try {
+      await prepareStoryMap();
+    } catch (err) {
+      // A missing map is not a reason to lose the presentation — the events
+      // still read fine on their own.
+      if (story) els.storyBody.classList.add('no-map');
+    }
+  }
+
+  function exitStoryMode() {
+    if (!story) return;
+    if (story.raf) cancelAnimationFrame(story.raf);
+    var wasFullscreen = story.wentFullscreen;
+    story = null;
+    document.removeEventListener('keydown', storyKeydown);
+    window.removeEventListener('resize', storyResize);
+    document.removeEventListener('fullscreenchange', storyFullscreenChange);
+    els.storyOverlay.hidden = true;
+    els.storyMapLayer.innerHTML = ''; // release the base map bitmap
+    els.storyMapLayer.style.transform = '';
+    els.storyMap.classList.remove('dimmed');
+    if (wasFullscreen && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    }
+    els.presentBtn.focus();
+  }
+
+  els.presentBtn.addEventListener('click', function () { enterStoryMode(); });
+  els.storyExitBtn.addEventListener('click', exitStoryMode);
+  els.storyNextBtn.addEventListener('click', function () { goStory(story ? story.index + 1 : 0); });
+  els.storyPrevBtn.addEventListener('click', function () { goStory(story ? story.index - 1 : 0); });
+
   function renderAll() {
     save();
     refreshSwitcher();
@@ -1545,6 +2261,7 @@
     renderScreenTimeline();
     renderPrintPreview();
     updateMapPinCount();
+    updateWorksheetNote();
     populateCompareSelect();
     renderCompareView();
   }
