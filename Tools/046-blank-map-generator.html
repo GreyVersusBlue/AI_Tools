@@ -648,6 +648,7 @@
         <button id="btnRenameLabelSet" class="small" hidden>Rename&hellip;</button>
         <button id="btnEditLabelSet" class="small" title="Open this set's place list as editable text — fix a coordinate, trim places, or add more. Edits to a built-in set are saved as a copy of your own.">Edit places&hellip;</button>
         <button id="btnExportLabelSet" class="small" title="Download this set as a small JSON file — hand it to a colleague, who can Import it into their own copy of this tool">Export set&hellip;</button>
+        <button id="btnToTimeline" class="small" title="Open these places as events in the Timeline Builder, ready for you to add dates — this map covers where, the timeline covers when">Send places to Timeline Builder &rarr;</button>
         <button id="btnImportLabelSet" class="small" title="Load a label-set JSON file exported from this tool">Import set&hellip;</button>
         <input type="file" id="importLabelSetInput" accept="application/json,.json" hidden data-no-pan>
         <button id="btnDeleteLabelSet" class="small" hidden>Delete this saved set</button>
@@ -772,6 +773,9 @@
 <div id="worksheetPages" aria-hidden="true"></div>
 
 <script src="../_shared/vendor/jspdf/jspdf.umd.min.js"></script>
+<!-- Shared state-link encoder: used only by the "Send places to Timeline
+     Builder" handoff below, which builds a 015-format share URL. -->
+<script src="../_shared/state-link.js"></script>
 <script type="module">
 import { createStore } from './blank-map-generator/bmg-store.js';
 import { searchMaps, searchByRegion, fetchMapImage } from './blank-map-generator/bmg-commons.js';
@@ -1540,6 +1544,73 @@ el('btnSaveLabelSet').addEventListener('click', () => {
   const saved = store.saveLabelSet(name.trim() || 'My places', places);
   refreshLabelSetSelect(`${SAVED_SET_PREFIX}${saved.id}`);
   setLabelSetStatus(`Saved "${saved.name}" — ${places.length} places, ready to drop onto any calibrated map.`, false);
+});
+
+/* ---------- send these places to the Timeline Builder (P7 pairing) ----------
+   This map answers *where*; `015-timeline-builder.html` answers *when*. The
+   combined print already exists — but only from the timeline's side, built
+   from events a teacher typed there. This is the other direction: a map that
+   already has its places labelled hands them over as events, and the teacher
+   fills in the dates rather than retyping twenty place names and their
+   coordinates.
+
+   It goes through 015's own share-link format (`?timeline=`), the same way
+   056 hands a source to 028: one tool's export is the other's documented
+   import, so there is no third format to keep in sync and no cross-tool
+   storage key. Nothing is written to the timeline's storage from here —
+   015 saves it there, under its own new name, exactly as it would a link
+   from a colleague.
+
+   Every event lands at year 0 with its title and place set. Dates are the
+   one thing a map genuinely does not know, and inventing a plausible-looking
+   year would be worse than an obvious blank: a teacher can see that year 0
+   is a placeholder, and 015 stacks same-year labels into rows rather than
+   printing them on top of each other, so twenty placeholders arrive
+   readable. */
+el('btnToTimeline').addEventListener('click', () => {
+  if (!isCalibrated(project.calibration) || !currentSize.width) { openCalibratePanel(); return; }
+  const places = project.labels
+    .filter(l => l.text)
+    .map(l => {
+      const { lat, lon } = toLatLon(project.calibration, currentSize.width, currentSize.height, l.x, l.y);
+      return { name: l.text, lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
+    })
+    .filter(p => isFinite(p.lat) && isFinite(p.lon));
+  if (!places.length) {
+    setLabelSetStatus('This map has no text labels to send yet. Add labels for the places you want on the timeline first.', true);
+    return;
+  }
+
+  const payload = {
+    v: 1,
+    /* The worksheet title is the closest thing this tool has to a name for
+       what the map is about, and a teacher who has typed one has already
+       said it better than any default could. */
+    name: (el('wsTitle').value || '').trim() || 'Places from a map',
+    events: places.map((p, i) => ({
+      id: i + 1,
+      track: 0,
+      title: p.name,
+      yearStart: 0,
+      yearEnd: null,
+      category: null,
+      place: { name: p.name, lat: p.lat, lon: p.lon },
+      displayDate: null,
+      description: '',
+      photo: null
+    })),
+    eras: [],
+    tracks: [{ id: 0, name: 'Track A' }],
+    lineStyle: 'solid',
+    compactLabels: true,
+    scaleMode: 'linear'
+  };
+
+  const url = StateLink.buildShareUrl('timeline', payload, { base: new URL('015-timeline-builder.html', location.href).href });
+  const opened = window.open(url, '_blank', 'noopener');
+  setLabelSetStatus(opened
+    ? `Sent ${places.length} place${places.length === 1 ? '' : 's'} to the Timeline Builder in a new tab, as events dated year 0 — set each event's real year there. It saves as its own timeline; editing it does not change this map.`
+    : 'Your browser blocked the new tab. Allow pop-ups for this page and try again.', !opened);
 });
 
 el('btnDeleteLabelSet').addEventListener('click', () => {

@@ -450,7 +450,7 @@
             <label for="compactLabels">Labels</label>
             <select id="compactLabels">
               <option value="false">All above the line</option>
-              <option value="true">Compact (alternating)</option>
+              <option value="true">Compact (both sides of the line)</option>
             </select>
           </div>
           <div>
@@ -1131,7 +1131,22 @@
     var showTrackLabels = data.tracks.length > 1;
 
     canvas.style.width = masterLayout.totalWidth + 'px';
+    // A provisional height so era bands and gridlines (top:0/bottom:0) have
+    // something to span while the lanes are being built; the real height is
+    // set at the end of this function, once every lane has packed its labels
+    // and knows how deep its own stack goes.
     canvas.style.height = (data.tracks.length * LANE_REM) + 'rem';
+
+    // One measurement of the root font size, shared by every px conversion
+    // below, rather than assuming 16: the label geometry the packer works in
+    // is px, but every size this tool states is in rem.
+    var remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    var labelWidthPx = 9 * remPx;   // .event-label { width: 9rem }
+    // Distance from the line to the nearest row of labels. Matches the CSS
+    // that used to place every label: 1.2rem normally, 2.2rem on a worksheet
+    // page, where the bigger numbered-blank badge sits on the line first.
+    var labelBasePx = (blankNumbers ? 2.2 : 1.2) * remPx;
+    var lanes = [];
 
     // Era bands are appended first so they sit behind the gridlines, line,
     // markers, and labels appended below (later DOM siblings paint on top).
@@ -1169,11 +1184,11 @@
     // Each track gets its own lane, stacked vertically, sharing the same
     // x-axis (pxPerYear/sharedRange) so events on different tracks that
     // happened in the same year still line up in the same column.
-    data.tracks.forEach(function (track, laneIndex) {
+    data.tracks.forEach(function (track) {
       var lane = document.createElement('div');
       lane.className = 'track-lane';
-      lane.style.top = (laneIndex * LANE_REM) + 'rem';
-      lane.style.height = LANE_REM + 'rem';
+      // top/height are assigned after packing — see the end of this function.
+      lane.style.height = LANE_REM * remPx + 'px';
 
       if (showTrackLabels) {
         var laneLabel = document.createElement('div');
@@ -1190,11 +1205,28 @@
 
       var trackEvents = data.events.filter(function (e) { return e.track === track.id; });
       var trackLayout = TimelineLayout.computeLayout(trackEvents, pxPerYear, 70, sharedRange, scaleMode);
-      var positioned = data.compactLabels ?
-        TimelineLayout.assignLabelSides(trackLayout.positioned, 100) :
-        trackLayout.positioned.map(function (p) { return Object.assign({}, p, { side: 'above' }); });
+      var positioned = trackLayout.positioned;
 
-      positioned.forEach(function (p) {
+      // Labels are packed into stacked rows (TimelineLayout.packLabels) rather
+      // than merely alternated above/below. Alternation only ever had two
+      // slots, so two events a year apart — a couple of px apart on the axis —
+      // printed one label on top of the other on the screen view, the
+      // worksheet strip and the map print alike. `compactLabels` now selects
+      // whether the stack may use both sides of the line or only above it.
+      var packSides = data.compactLabels ? ['above', 'below'] : ['above'];
+      // Badges are nudged apart along x independently: they sit ON the line,
+      // where rows aren't available, and they're small enough that a few px
+      // of separation reads as "same moment" rather than as a different year.
+      var badgeXs = TimelineLayout.spreadBadges(positioned, Math.round(1.5 * remPx));
+
+      // Every element is created and appended first, then measured, then given
+      // its final offset — heights depend on how the browser wrapped each
+      // title, and the packer needs those heights before it can decide which
+      // row anything goes in.
+      var built = [];
+      canvas.appendChild(lane);
+
+      positioned.forEach(function (p, pIndex) {
         var catColor = catColorMap[(p.event.category || '').trim()] || null;
         if (p.width > 0) {
           var bar = document.createElement('div');
@@ -1217,14 +1249,12 @@
         if (pinNumbers && pinNumbers[p.event.id] != null) {
           var badge = document.createElement('div');
           badge.className = 'pin-num';
-          badge.style.left = p.x + 'px';
-          // Nudged to the same side of the line as its own label. Two events
-          // in the same year sit at the same x, so without this the later
-          // badge simply hides the earlier one; in compact mode their labels
-          // already alternate sides, and following that splits the badges
-          // apart too. The offset is small enough to stay clear of the label
-          // text above/below (which starts 1.2rem off the line).
-          badge.style.marginTop = (p.side === 'below' ? '.45rem' : '-.45rem');
+          // At the spread position, not the raw marker x: two events in the
+          // same year sit at the same x, and the later badge used to hide the
+          // earlier one outright. The marker dot above is still drawn at the
+          // true x, so the page keeps saying exactly when this happened —
+          // only the number moves, the same bargain the map's pin badges make.
+          badge.style.left = badgeXs[pIndex] + 'px';
           if (catColor) badge.style.background = catColor;
           badge.textContent = pinNumbers[p.event.id];
           lane.appendChild(badge);
@@ -1237,13 +1267,11 @@
         if (blankNo != null) {
           var blankBadge = document.createElement('div');
           blankBadge.className = 'blank-num';
-          blankBadge.style.left = p.x + 'px';
-          // A full badge-height off the line, not the map badge's half-height:
-          // two events a year apart put their badges at nearly the same x, and
-          // at the smaller offset the later badge simply sat on top of the
-          // earlier one's number (and on top of a neighbour's marker dot).
-          // Opposite sides now clear each other by the badge's own height.
-          blankBadge.style.marginTop = (p.side === 'below' ? '1.05rem' : '-1.05rem');
+          // Spread along the line for the same reason as the pin badge above.
+          // This badge is the bigger of the two (it carries the number a
+          // student writes against), so it is the one that used to collide
+          // first — a year's gap is ~2px and the badge is ~26px wide.
+          blankBadge.style.left = badgeXs[pIndex] + 'px';
           if (catColor) blankBadge.style.background = catColor;
           blankBadge.textContent = blankNo;
           lane.appendChild(blankBadge);
@@ -1251,7 +1279,8 @@
         var blanked = blankNo != null && !blanksRevealed;
 
         var label = document.createElement('div');
-        label.className = 'event-label ' + p.side + (blankNo != null ? ' has-blank-badge' : '');
+        // The side/offset classes are added after packing, below.
+        label.className = 'event-label' + (blankNo != null ? ' has-blank-badge' : '');
         label.style.left = p.x + 'px';
         label.innerHTML =
           '<div class="lbl-date"' + (catColor ? ' style="color:' + catColor + ';"' : '') + '>' + escapeHtml(p.label) + '</div>' +
@@ -1260,10 +1289,49 @@
             : '<div class="lbl-title">' + escapeHtml(p.event.title) + '</div>') +
           ((p.event.photo && !blanked) ? '<img src="' + p.event.photo + '" alt="">' : '');
         lane.appendChild(label);
+        built.push({ p: p, el: label, blanked: blanked });
       });
 
-      canvas.appendChild(lane);
+      // Measure, pack, then place. `offsetHeight` is 0 for a page built inside
+      // a hidden container — every print artifact here is built that way — so
+      // an unmeasurable label falls back to the estimate rather than to 0,
+      // which would collapse the whole stack into one overlapping row on
+      // exactly the pages that most need it.
+      var boxes = built.map(function (b) {
+        var measured = b.el.offsetHeight;
+        return {
+          x: b.p.x,
+          w: labelWidthPx,
+          h: measured > 0 ? measured : TimelineLayout.estimateLabelHeightPx(b.p.event, {
+            remPx: remPx, widthPx: labelWidthPx, blanked: b.blanked
+          })
+        };
+      });
+      var packed = TimelineLayout.packLabels(boxes, {
+        sides: packSides, gapX: Math.round(.4 * remPx), gapY: Math.round(.35 * remPx), base: labelBasePx
+      });
+      packed.forEach(function (slot, i) {
+        var el = built[i].el;
+        el.classList.add(slot.side);
+        el.style[slot.side === 'below' ? 'top' : 'bottom'] = 'calc(50% + ' + slot.offset + 'px)';
+      });
+
+      // The lane grows to fit its own deepest stack instead of clipping it.
+      // The line stays at the lane's vertical centre, so both sides get the
+      // room the deeper of the two needs.
+      var depth = TimelineLayout.packedDepth(packed);
+      var neededPx = 2 * Math.max(depth.above, depth.below) + remPx;
+      lanes.push({ el: lane, height: Math.max(LANE_REM * remPx, neededPx) });
     });
+
+    // Lanes are stacked only once every lane knows how tall it needs to be.
+    var laneTop = 0;
+    lanes.forEach(function (l) {
+      l.el.style.top = laneTop + 'px';
+      l.el.style.height = l.height + 'px';
+      laneTop += l.height;
+    });
+    canvas.style.height = laneTop + 'px';
   }
 
   function legendHtml(events) {

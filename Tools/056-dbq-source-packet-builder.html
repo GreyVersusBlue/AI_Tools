@@ -57,6 +57,14 @@
   button.small { padding: .2rem .5rem; font-size: .76rem; }
   .btnrow { display: flex; gap: .6rem; flex-wrap: wrap; }
 
+  .bank-row {
+    display: flex; gap: .6rem; align-items: center; justify-content: space-between;
+    padding: .45rem 0; border-bottom: 1px dashed var(--line, #d8d5cc);
+  }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-info { min-width: 0; }
+  .bank-title { display: block; font-weight: 600; }
+  .bank-meta { display: block; font-size: .76rem; color: var(--muted, #6b6b6b); }
   .source-block { border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; margin-bottom: .9rem; }
   .source-block h3 { font-size: 1.05rem; margin: 0 0 .5rem; color: var(--accent); }
   .qrow { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; }
@@ -237,6 +245,22 @@
     </div>
     <div id="sourcesWrap"></div>
   </div>
+
+  <div class="card">
+    <div class="btnrow">
+      <h2 style="margin:0;flex:1;">Source library</h2>
+      <button type="button" class="secondary small" id="toggleBankBtn" aria-expanded="false" aria-controls="bankPanel">Show library</button>
+    </div>
+    <p class="hint">Sources you save here are kept separately from any packet, so a document you cite every year
+      &mdash; and its citation, crop, print width and questions &mdash; is uploaded and typed once. Deleting a
+      packet never touches the library, and removing a source from the library never touches a packet built from it.</p>
+    <div id="bankPanel" hidden>
+      <label for="bankFilter">Find a source</label>
+      <input type="text" id="bankFilter" placeholder="Search titles and citations">
+      <div id="bankWrap"></div>
+      <p class="hint" id="bankNote" aria-live="polite" style="margin-bottom:0;"></p>
+    </div>
+  </div>
 </div>
 
 <div id="printArea"></div>
@@ -252,11 +276,18 @@
      packet, then left in place as a one-release backup. */
   var LEGACY_KEY = 'dbq_packet_v1';
   var LIST_KEY = 'dbq:list';
+  /* The source library: one array, its own key, deliberately outside the
+     packet documents. A source used every year belongs to the teacher, not
+     to whichever packet happened to introduce it — so deleting a packet
+     must not take the source with it, and that is only structurally true if
+     the library is stored apart from every packet. */
+  var BANK_KEY = 'dbq:bank';
   var DATA_PREFIX = 'dbq:data:';
   var CURRENT_KEY = 'dbq:current';
 
   var els = {};
   ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printAllLevelsBtn', 'printArea',
+   'toggleBankBtn', 'bankPanel', 'bankWrap', 'bankFilter', 'bankNote',
    'packetSwitch', 'packetName', 'newPacketBtn', 'duplicatePacketBtn', 'deletePacketBtn', 'loadExampleBtn',
    'levelSelect', 'organizerToggle', 'rubricToggle', 'rubricStyle', 'rubricGrid', 'addCriterionBtn', 'resetRubricBtn',
    'shareLinkBtn', 'shareQrBtn', 'exportJsonBtn', 'importJsonBtn', 'importJsonFile', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
@@ -332,7 +363,7 @@
     ];
   }
   function blankSource() {
-    return { id: uid(), title: '', type: 'text', text: '', image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100, citation: '', questions: [{ id: uid(), text: '' }] };
+    return { id: uid(), bankId: null, title: '', type: 'text', text: '', image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100, citation: '', questions: [{ id: uid(), text: '' }] };
   }
   function repairQuestion(q) {
     q = (q && typeof q === 'object') ? q : {};
@@ -342,6 +373,11 @@
     s = (s && typeof s === 'object') ? s : {};
     return {
       id: (typeof s.id === 'string' && s.id) ? s.id : uid(),
+      /* Which library entry this source came from, or null. Absent on every
+         packet saved before the library existed, and on every shared link
+         built before it — those load as null, i.e. "not from the library",
+         which is exactly right. */
+      bankId: (typeof s.bankId === 'string' && s.bankId) ? s.bankId : null,
       title: typeof s.title === 'string' ? s.title : '',
       type: s.type === 'image' ? 'image' : 'text',
       text: typeof s.text === 'string' ? s.text : '',
@@ -513,6 +549,174 @@
   function save() {
     saveNamed(state.name, state);
   }
+
+  /* ---------- source library ----------
+     Saved sources live in one array under dbq:bank, independent of every
+     packet. A packet's source carries `bankId` when it came from (or was
+     saved to) the library, which is what makes "Update in library" possible
+     without guessing by title — two different letters from 1776 can share a
+     title, and a teacher who renames a source still means the same source.
+
+     Images ride along as data URLs, exactly as they do inside a packet.
+     That is the same quota exposure the tool already has, so the failure is
+     handled the same way it is for packets — reported to the teacher rather
+     than swallowed — and the note says which source was too big. */
+  function loadBank() {
+    try {
+      var a = JSON.parse(localStorage.getItem(BANK_KEY) || '[]');
+      return Array.isArray(a) ? a.map(repairBankEntry).filter(Boolean) : [];
+    } catch (e) { return []; }
+  }
+  function repairBankEntry(e) {
+    if (!e || typeof e !== 'object') return null;
+    var src = repairSource(e.source);
+    return {
+      bankId: (typeof e.bankId === 'string' && e.bankId) ? e.bankId : uid(),
+      savedAt: (typeof e.savedAt === 'string') ? e.savedAt : '',
+      source: src
+    };
+  }
+  function writeBank(entries) {
+    try {
+      localStorage.setItem(BANK_KEY, JSON.stringify(entries));
+      return true;
+    } catch (e) { return false; } // storage full/blocked, e.g. a large image
+  }
+
+  function setBankNote(text, isError) {
+    els.bankNote.textContent = text || '';
+    els.bankNote.style.color = isError ? 'var(--err, #b02a2a)' : '';
+  }
+
+  /** A copy of a source with fresh ids, for moving between the library and a
+      packet. `bankId` is carried deliberately — that link is the point. */
+  function copySource(src, bankId) {
+    var copy = repairSource(JSON.parse(JSON.stringify(src)));
+    copy.id = uid();
+    copy.bankId = bankId || null;
+    copy.questions = copy.questions.map(function (q) { return { id: uid(), text: q.text }; });
+    return copy;
+  }
+
+  function bankLabel(src) {
+    var t = (src.title || '').trim();
+    if (t) return t;
+    var c = (src.citation || '').trim();
+    if (c) return c;
+    var body = (src.text || '').trim();
+    return body ? body.slice(0, 40) + (body.length > 40 ? '…' : '') : 'Untitled source';
+  }
+
+  function saveSourceToBank(srcId) {
+    var src = findSource(srcId);
+    if (!src) return;
+    var isEmpty = !(src.title || '').trim() && !(src.text || '').trim() && !src.image && !(src.citation || '').trim();
+    if (isEmpty) { setBankNote('That source is still empty — add a title, some text or an image first.', true); openBank(); return; }
+    var bank = loadBank();
+    var existingIndex = src.bankId ? bank.findIndex(function (e) { return e.bankId === src.bankId; }) : -1;
+    var bankId = existingIndex !== -1 ? src.bankId : uid();
+    var entry = { bankId: bankId, savedAt: new Date().toISOString(), source: copySource(src, null) };
+    entry.source.bankId = bankId;
+    if (existingIndex !== -1) bank[existingIndex] = entry; else bank.push(entry);
+    if (!writeBank(bank)) {
+      setBankNote('Could not save “' + bankLabel(src) + '” to the library — this browser’s storage is full. ' +
+        'A large image is the usual cause; remove a source from the library, or use a smaller image.', true);
+      openBank();
+      return;
+    }
+    // The packet's own copy now knows where it lives, so a later edit can
+    // update that entry rather than making a second one.
+    src.bankId = bankId;
+    save();
+    renderSources();
+    renderBank();
+    openBank();
+    setBankNote(existingIndex !== -1
+      ? 'Updated “' + bankLabel(src) + '” in the library. Packets already built from it are unchanged.'
+      : 'Saved “' + bankLabel(src) + '” to the library.');
+  }
+
+  function addBankSourceToPacket(bankId) {
+    var entry = loadBank().find(function (e) { return e.bankId === bankId; });
+    if (!entry) return;
+    // A blank first source is replaced rather than left above the added one:
+    // a new packet opens with one empty source, and adding from the library
+    // otherwise leaves an empty "Source A" ahead of it every time.
+    var onlyBlank = state.sources.length === 1 && !state.sources[0].title.trim() &&
+      !state.sources[0].text.trim() && !state.sources[0].image && !state.sources[0].citation.trim();
+    var copy = copySource(entry.source, entry.bankId);
+    if (onlyBlank) state.sources = [copy]; else state.sources.push(copy);
+    save();
+    renderSources();
+    setBankNote('Added “' + bankLabel(entry.source) + '” to this packet as Source ' +
+      LETTERS[(state.sources.length - 1) % 26] + '.');
+    var block = els.sourcesWrap.querySelector('[data-src-id="' + copy.id + '"]');
+    if (block && block.scrollIntoView) block.scrollIntoView({ block: 'center' });
+  }
+
+  function removeBankEntry(bankId) {
+    var bank = loadBank();
+    var entry = bank.find(function (e) { return e.bankId === bankId; });
+    if (!entry) return;
+    if (!confirm('Remove “' + bankLabel(entry.source) + '” from the library? Packets that already use it keep their own copy.')) return;
+    writeBank(bank.filter(function (e) { return e.bankId !== bankId; }));
+    renderBank();
+    setBankNote('Removed “' + bankLabel(entry.source) + '” from the library. Packets built from it are untouched.');
+  }
+
+  function renderBank() {
+    var filter = (els.bankFilter.value || '').trim().toLowerCase();
+    var bank = loadBank();
+    var shown = bank.filter(function (e) {
+      if (!filter) return true;
+      return (e.source.title + ' ' + e.source.citation).toLowerCase().indexOf(filter) !== -1;
+    });
+    if (!bank.length) {
+      els.bankWrap.innerHTML = '<p class="hint">Nothing saved yet. Use “Save to library” on any source above.</p>';
+      return;
+    }
+    if (!shown.length) {
+      els.bankWrap.innerHTML = '<p class="hint">No saved source matches that search.</p>';
+      return;
+    }
+    els.bankWrap.innerHTML = shown.map(function (e) {
+      var s = e.source;
+      var inPacket = state.sources.some(function (ps) { return ps.bankId === e.bankId; });
+      return '<div class="bank-row" data-bank-id="' + e.bankId + '">' +
+        '<div class="bank-info">' +
+        '<span class="bank-title">' + escapeHtml(bankLabel(s)) + '</span>' +
+        '<span class="bank-meta">' + (s.type === 'image' ? 'Image' : 'Text') +
+          (s.citation.trim() ? ' &middot; ' + escapeHtml(s.citation.trim()) : '') +
+          ' &middot; ' + s.questions.filter(function (q) { return q.text.trim(); }).length + ' question(s)' +
+          (inPacket ? ' &middot; <strong>in this packet</strong>' : '') +
+        '</span></div>' +
+        '<span class="btnrow">' +
+        '<button type="button" class="secondary small" data-bank-add="' + e.bankId + '">Add to packet</button>' +
+        '<button type="button" class="danger small" data-bank-del="' + e.bankId + '">Remove</button>' +
+        '</span></div>';
+    }).join('');
+  }
+
+  function openBank() {
+    els.bankPanel.hidden = false;
+    els.toggleBankBtn.setAttribute('aria-expanded', 'true');
+    els.toggleBankBtn.textContent = 'Hide library';
+    renderBank();
+  }
+
+  els.toggleBankBtn.addEventListener('click', function () {
+    if (els.bankPanel.hidden) { openBank(); return; }
+    els.bankPanel.hidden = true;
+    els.toggleBankBtn.setAttribute('aria-expanded', 'false');
+    els.toggleBankBtn.textContent = 'Show library';
+  });
+  els.bankFilter.addEventListener('input', renderBank);
+  els.bankWrap.addEventListener('click', function (ev) {
+    var add = ev.target.getAttribute('data-bank-add');
+    if (add) { addBankSourceToPacket(add); renderBank(); return; }
+    var del = ev.target.getAttribute('data-bank-del');
+    if (del) { removeBankEntry(del); }
+  });
 
   /* ---------- image crop/scale (non-destructive: crop+widthPct sit
      alongside the untouched original data URL in src.image/src.imgW/imgH) ---------- */
@@ -807,6 +1011,11 @@
     renderRubric();
     renderSharedQ();
     renderSources();
+    // Only when the panel is open: rendering it costs a localStorage read and
+    // a full re-render, and the library doesn't change when a packet does —
+    // except for the "in this packet" flags, which is why it re-renders here
+    // rather than once at boot.
+    if (!els.bankPanel.hidden) renderBank();
     setShareNote('');
   }
 
@@ -1181,6 +1390,8 @@
           // The click handler checks for empty text instead.
           ? '<button type="button" class="secondary small" data-to-psa="' + src.id + '" style="margin-left:.5rem;" title="Open this source as a full analysis worksheet in Primary Source Analysis">Analysis worksheet &rarr;</button>'
           : '') +
+        '<button type="button" class="secondary small" data-to-bank="' + src.id + '" style="margin-left:.5rem;">' +
+          (src.bankId ? 'Update in library' : 'Save to library') + '</button>' +
         '<button type="button" class="danger small" data-del-src-btn="' + src.id + '" style="margin-left:.5rem;">Remove source</button>' +
         '</div>';
     }).join('');
@@ -1287,6 +1498,8 @@
     var moveUp = ev.target.getAttribute('data-move-up');
     var moveDown = ev.target.getAttribute('data-move-down');
     var resetCrop = ev.target.getAttribute('data-reset-crop');
+    var toBank = ev.target.getAttribute('data-to-bank');
+    if (toBank) { saveSourceToBank(toBank); return; }
     var toPsa = ev.target.getAttribute('data-to-psa');
     if (toPsa) {
       var psaIdx = state.sources.findIndex(function (s) { return s.id === toPsa; });

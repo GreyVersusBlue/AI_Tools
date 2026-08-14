@@ -201,6 +201,30 @@ here.
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
 
+### Devon-assigned round — tools 015/028/046/050/054/056/062/064 — 2026-08-14 07:08 UTC onward — session `c1jqjp` — branch `claude/tool-improvement-merge-status-c1jqjp`
+
+Devon assigned these eight directly ("at this point, those are the most
+important tools on the entire site"), which the header allows to override the
+don't-re-pick-a-done-tool rule. One shipped item per tool, each with tests.
+
+| Tool | What shipped |
+|---|---|
+| 015 Timeline Builder | Label de-overlap: labels pack into stacked rows instead of colliding. New pure suite (25). Also corrected this file's stale checklist — 7 Quick Wins and 2 Major Features were listed as open despite having shipped. |
+| 028 Primary Source Analysis | Image crop + zoom + printed detail callout, for Source A and B. New browser suite (41). |
+| 046 Blank Map Generator | "Send places to Timeline Builder" — the P7 pairing from the map's side, through 015's own share-link format. New browser suite (22). |
+| 050 Civics Role Cards | Save/open a simulation as a `.civics.json` file; link and file share one payload builder. New browser suite (24). |
+| 054 Current Events Guide | Article link (URL in full + QR on the printed sheet) and a Flesch–Kincaid reading-level band. New pure suite (35) + browser suite (28). |
+| 056 DBQ Packet Builder | A source library stored outside every packet. New browser suite (32). |
+| 062 Geography Bee | World-region tagging on every question, plus a region filter. New browser suite (33). |
+| 064 Trading Card Maker | 3.5×5in reference card, four to a page. Extended the card-size suite (+13). |
+
+**Not built, deliberately:** 062's timed "bee" mode. It contradicts that
+tool's own "no timers, no buzzers" decision from two rounds earlier, so it is
+a call for Devon rather than a guess — recorded in `062-...md`.
+
+`sw.js` CACHE_VERSION went v118 → v126 across the eight commits; one new
+precached file (`cedg-readability.js`).
+
 ### Devon-assigned round 2 — tool 046 — 2026-08-14 03:41 UTC — session `hx4pmz`
 
 Blank Map Generator (`046-blank-map-generator.md`), SS demo round 2.

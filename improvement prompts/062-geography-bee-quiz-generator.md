@@ -12,6 +12,80 @@ banks and all the UI logic are still inline in the one file).
 
 ## Status
 
+**2026-08-14 — Devon-assigned round: region tagging (session `c1jqjp`).**
+The previous round called this one "cheaper now than it was" because the map
+questions come tagged for free; the other 90 were the work, and they are
+done.
+
+- **A second filter axis.** Category says what *kind* of question this is;
+  region says what part of the world it is about — the axis a teacher
+  covering a unit actually plans along. They filter independently and
+  combine with AND, so "map questions about Africa" and "everything about
+  Africa" are both one dropdown pair away.
+- **Every built-in carries its region as data**, a fourth column on
+  `BUILTIN_RAW`, rather than being classified at runtime. `gbq-map.js`'s own
+  header is the argument: an algorithm that decides where a place belongs is
+  confidently wrong often enough (it puts Iraq in Africa and Russia in
+  Europe) that shipping one across 90 questions would mean a teacher
+  filtering to Africa gets Baghdad. The tags were *proposed* from that
+  module's continent lists and then read one by one; six had no country in
+  them at all (the Nile, the Himalayas, Denali, the Sahara, Table Mountain,
+  the Amazon's ocean) and were assigned by hand.
+- **`global` is a real answer, not a missing one.** The 30 map-skills
+  questions — latitude, scale, contour lines — belong to no continent, and
+  a teacher can filter *to* them. The suite asserts the regions sum to the
+  whole bank, which is what would catch an untagged question: it would
+  otherwise vanish from every region filter and only show up as an Africa
+  quiz coming three questions short.
+- **Two transcontinental judgement calls, stated rather than buried.**
+  Russia and Turkey are filed under Europe, because a teacher filtering for
+  a Europe unit expects Moscow and Ankara. That is a *filter* decision and
+  it does not touch the map crop data, where Russia is still drawn on a
+  world map because its geometry wraps the antimeridian.
+- **Custom questions can be tagged too** — from the form, or from a pasted
+  column that may sit on either side of the category column, since a
+  spreadsheet's column order belongs to the teacher. A trailing token is
+  only consumed if it really is a region or a category, so
+  `Iguazu Falls … | Brazil | Argentina` keeps its two-part answer.
+- **Named `area` in the code, not `region`.** This file already uses
+  "region" for the state or country a map question highlights
+  (`item.map.region`, `REGION_LABELS`) — and the first draft of this round
+  did collide with it: the new labels object silently shadowed the map one
+  through `var` hoisting, and the bank printed `[undefined]`. Caught by the
+  new suite before it went anywhere. The UI still says "Region", which is
+  what a teacher calls it.
+
+**Tests.** New `smoke-regions.mjs` (33 assertions), including the
+regions-sum-to-the-bank check, hand-verified spot checks, the combination
+with the category filter, and that the filter reaches the printed sheet and
+not just the projector. Both existing suites pass unchanged.
+
+**Not built this round: the timed "bee" mode.** It is the one open idea here
+that contradicts a decision this tool made deliberately two rounds ago — the
+team tournament's header says "Teacher-operated on purpose: no timers, no
+buzzers, no student devices", and a sudden-death countdown is exactly a
+timer. A real geography bee does run on a clock, so the idea is not wrong;
+it is a call about what this toolkit is, and it wants Devon's answer before
+90 lines of countdown UI, not after. Buzz-in from student devices is the
+same shape of question and stays out for the same reason.
+
+#### Where the next round should pick up
+
+- **The timed bee mode / buzz-in pair**, once the timer question above is
+  answered either way. If the answer is "yes, opt-in", the shape is a mode
+  toggle on the tournament rather than a fourth tab: the scoring, turn
+  order and reload-survival are already there.
+- **Region tagging earns two things it doesn't have yet**: a count per
+  region beside each dropdown option (so a teacher sees "Oceania (7)"
+  before building a quiz that comes up short), and region-aware map
+  question generation — the generator samples any region, so an Oceania
+  filter plus "generate 10 map questions" can still hand back Peru.
+- The distractor logic for multiple choice matches on category only. Now
+  that questions carry a region, a same-region distractor ("which of these
+  four African capitals") would be a harder and better question than a
+  same-category one.
+
+
 **2026-08-14 — SS demo round 2: map questions + team tournament, session
 `gmq7xr`.** The headline and both Supporting items shipped; nothing cut.
 This is the round that finally makes the tool's own meta description true —
@@ -285,12 +359,10 @@ Major Features below, or find a genuinely new gap.
 - **A timed "bee" mode**: sudden-death elimination format with a visible
   countdown per question, matching how an actual geography bee competition
   runs (as opposed to the current self-paced practice format).
-- **Region/continent tagging** beyond the current four categories, so a
-  teacher covering "South America" specifically can filter to just that
-  region's capitals and landmarks instead of the whole world. Cheaper now
-  than it was: `gbq-map.js` already groups every region by continent crop,
-  so the map questions come tagged for free — it's the other 90 that need
-  the work.
+- ~~**Region/continent tagging** beyond the current four categories~~ —
+  **done, 2026-08-14** (session `c1jqjp`). Every question carries a region
+  as data; a second dropdown filters on it and combines with the category
+  filter. See the Status entry, including the two transcontinental calls.
 - ~~**Bulk import a custom bank** from a pasted list~~ — **done,
   2026-08-12** (backlog round; see Status).
 - ~~**Multiple-choice quiz mode**~~ — **done, 2026-08-14** (SS demo round;

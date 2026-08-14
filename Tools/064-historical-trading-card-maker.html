@@ -52,6 +52,7 @@
     transform-style: preserve-3d; transition: transform .55s;
   }
   .htcm-preview-stage.size-fill .htcm-flipper { width: 2.43in; height: 3.4in; }
+  .htcm-preview-stage.size-reference .htcm-flipper { width: 3.5in; height: 5in; }
   .htcm-flipper.flipped { transform: rotateY(180deg); }
   .htcm-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
   .htcm-face.face-back { transform: rotateY(180deg); }
@@ -68,6 +69,7 @@
   /* offscreen host for measuring real card layout (stat-overflow warning) */
   .htcm-measure { position: absolute; left: -10000px; top: 0; width: 2.5in; }
   .htcm-measure.size-fill { width: 2.43in; }
+  .htcm-measure.size-reference { width: 3.5in; }
   .htcm-measure .trading-card { width: 100%; }
 
   button {
@@ -121,6 +123,40 @@
   .size-standard .trading-card { height: 3.5in; width: 2.5in; border-radius: 6px; padding: .15in; }
   .size-standard .pwin { height: 1.35in; }
   .size-standard .trading-card .cname { font-size: .95rem; }
+
+  /* Reference card — 3.5 × 5in, four to a page. Not a trading card: it is
+     the one a group tapes to a poster or a teacher pins on a word wall, so
+     everything on it is sized to be read from a few feet away rather than
+     from the hand. Two columns of 3.5in is 7.15in of grid (inside the 7.9in
+     a letter page clears at the 0.3in margin set below), and two rows of 5in
+     is 10.15in of the 10.4in available — which is why the fronts/backs
+     section labels are dropped for this size in the print rules: there is a
+     quarter inch left on the page and a banner does not fit in it. */
+  .size-reference .card-grid { grid-template-columns: repeat(2, 3.5in); justify-content: center; gap: .15in; }
+  .size-reference .trading-card { height: 5in; width: 3.5in; border-radius: 9px; padding: .22in; }
+  .size-reference .pwin { height: 2in; margin-bottom: .14in; }
+  /* Type is scaled by ~1.35, a little under the card's own 1.4 — a straight
+     ×1.43 of every size was measured first and made the big card hold *less*
+     than the small one (10 wrapping stat lines against 12), because the name
+     plate and the inter-line margins are specified in inches and don't shrink
+     back. A reference card that fits less than the card it magnifies is the
+     wrong trade, so the type gives back what the fixed spacing takes. */
+  .size-reference .trading-card .cname { font-size: 1.3rem; padding: .03in .06in; margin-bottom: .1in; }
+  .size-reference .trading-card .cstars { font-size: .92rem; margin: -.04in 0 .06in; }
+  .size-reference .trading-card .cstats { font-size: .96rem; }
+  .size-reference .trading-card .cstats div { margin-bottom: .06in; }
+  .size-reference .trading-card .stat-ico { width: .15in; height: .15in; margin-right: .045in; vertical-align: -.02in; }
+  .size-reference .cstat-meter .meter-track { height: .16in; border-radius: .08in; }
+  .size-reference .cstat-meter .meter-num { font-size: .78rem; }
+  .size-reference .trading-card .cset { font-size: .76rem; padding-top: .05in; }
+  .size-reference .trading-card.back .cfacts { font-size: .98rem; }
+  .size-reference .trading-card.back .cfacts li { margin-bottom: .07in; }
+  /* Medallion photo windows are centred boxes with their own fixed sizes, so
+     unlike the full-width shapes above they do not scale with the card and
+     have to be restated. Same aspect ratios as the standard card's. */
+  .size-reference .pwin.shape-circle { width: 2.2in; height: 2.2in; }
+  .size-reference .pwin.shape-shield { width: 2.15in; height: 2.35in; }
+  .size-reference .pwin.shape-arch { width: 2.15in; height: 2.5in; }
   .trading-card.blank { visibility: hidden; }
 
   /* the shaped photo window (htcm-photo.js applies the crop; the clip-path
@@ -303,6 +339,11 @@
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
     .section-label { page-break-before: always; }
     .section-label:first-child { page-break-before: auto; }
+    /* Two 5in rows leave a quarter inch on a letter page — not enough for a
+       banner. The fronts still print first and the backs after, which is the
+       part a teacher actually needs; the on-screen hint for this size says
+       so, since the page can't. */
+    .size-reference .section-label { display: none; }
     /* 0.3in, not 0.4in: three 2.5in cards plus two 0.15in gutters is 7.8in of
        grid, and a letter page only clears that with 0.3in side margins. Still
        well inside the ~0.25in unprintable edge most office printers have. */
@@ -465,6 +506,7 @@
     <select id="cardSize">
       <option value="standard">Standard trading card &mdash; 2.5 &times; 3.5 in (6 per page)</option>
       <option value="fill">Fill the page &mdash; 3 across, whatever that works out to (6 per page)</option>
+      <option value="reference">Large reference card &mdash; 3.5 &times; 5 in (4 per page)</option>
     </select>
     <p class="hint" id="cardSizeHint" style="margin-bottom:0;"></p>
   </div>
@@ -538,7 +580,11 @@
     standard: 'Cards print at exactly 2.5 × 3.5 inches — the size a card sleeve or a nine-pocket page is made for. ' +
       'Cut along the card border. The grid is centered, so the leftover margin is even on both sides.',
     fill: 'The layout this tool printed before card size was a choice: three across a 7.7-inch band, about ' +
-      '2.43 × 3.4 inches each. Slightly under standard size in both directions, so these will not sit in a card sleeve.'
+      '2.43 × 3.4 inches each. Slightly under standard size in both directions, so these will not sit in a card sleeve.',
+    reference: 'Four to a page, at index-card size, with the photo and the type scaled up to match — the card ' +
+      'that goes on a poster or a word wall rather than in a sleeve. Two 5-inch rows fill the page, so the ' +
+      '“Card fronts” / “Card backs” banners are dropped: the fronts still print first and the backs after. ' +
+      'PDF and PNG export stay at 2.5 × 3.5in whatever this is set to.'
   };
   var stored = HtcmStore.loadCurrent(); // named-deck store; legacy flat v2/v1 migrate into "My cards"
   var deckName = stored.name;
@@ -580,7 +626,7 @@
     updatePreview();
   }
   els.cardSize.addEventListener('change', function () {
-    cardSize = els.cardSize.value === 'fill' ? 'fill' : 'standard';
+    cardSize = (els.cardSize.value === 'fill' || els.cardSize.value === 'reference') ? els.cardSize.value : 'standard';
     save();
     applyCardSize();
   });
@@ -1272,9 +1318,20 @@
      Generator, were hand-copied here, and moved to _shared/duplex-print.js
      when the PDF exporter became their third consumer — the extraction
      trigger recorded in this tool's improvement prompt. */
-  var PRINT_COLS = 3;
-  var PRINT_ROWS = 2; // 6 cards/page: fits this tool's 3.4in-tall card comfortably within a letter page alongside the section label
-  var PRINT_PER_PAGE = PRINT_COLS * PRINT_ROWS;
+  // Grid per card size. 3 × 2 for the two ~3.4in-tall presets, which clear a
+  // letter page alongside the section label; 2 × 2 for the 5in reference
+  // card, where two rows are all the page holds. The column count is what
+  // mirrorPageRows needs to line the backs up, so it has to follow the size
+  // rather than be a constant.
+  var PRINT_GRIDS = {
+    standard: { cols: 3, rows: 2 },
+    fill: { cols: 3, rows: 2 },
+    reference: { cols: 2, rows: 2 }
+  };
+  function printGrid() {
+    var g = PRINT_GRIDS[cardSize] || PRINT_GRIDS.standard;
+    return { cols: g.cols, perPage: g.cols * g.rows };
+  }
   var paginate = DuplexPrint.paginate;
   var mirrorPageRows = DuplexPrint.mirrorPageRows;
 
@@ -1343,16 +1400,17 @@
 
   els.printBtn.addEventListener('click', function () {
     if (!entries.length) { alert('Add at least one card first.'); return; }
-    var pages = paginate(entries, PRINT_PER_PAGE);
+    var grid = printGrid();
+    var pages = paginate(entries, grid.perPage);
     var frontPages = pages.map(function (page) {
       var padded = page.slice();
-      while (padded.length < PRINT_PER_PAGE) padded.push(null);
+      while (padded.length < grid.perPage) padded.push(null);
       return '<div class="print-page"><div class="card-grid">' + padded.map(frontCardHtml).join('') + '</div></div>';
     });
     var backPages = pages.map(function (page) {
       var padded = page.slice();
-      while (padded.length < PRINT_PER_PAGE) padded.push(null);
-      var mirrored = mirrorPageRows(padded, PRINT_COLS);
+      while (padded.length < grid.perPage) padded.push(null);
+      var mirrored = mirrorPageRows(padded, grid.cols);
       return '<div class="print-page"><div class="card-grid">' + mirrored.map(backCardHtml).join('') + '</div></div>';
     });
     els.printArea.innerHTML =

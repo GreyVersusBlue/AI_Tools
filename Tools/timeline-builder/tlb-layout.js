@@ -238,6 +238,190 @@
     });
   }
 
+  /**
+   * Packs labels into stacked rows on one or both sides of the line so that
+   * no two labels ever cover each other.
+   *
+   * This replaces side-alternation as the *collision* fix. Alternation only
+   * ever bought two slots, so any third event within a label width — and,
+   * far more commonly, any two events one or two years apart, which land
+   * within a couple of pixels of each other — still printed one label on
+   * top of another. Rows are unbounded, so a cluster degrades into a taller
+   * stack rather than into unreadable overlap.
+   *
+   * Rows are used in preference to sliding labels along the axis, which was
+   * the other obvious fix: a label is 9rem wide, so de-overlapping a cluster
+   * of five by pushing them apart in x would move the outermost ones by
+   * ~300px — far enough from their own marker that a leader line becomes
+   * mandatory and the reader still has to trace it. Stacking keeps every
+   * label centred over the marker it describes, which needs no leader line
+   * and cannot mislead. The axis stays honest; only the vertical grows.
+   *
+   * `items` is [{x, w, h}] — centre x, width, height, all in px. Order is
+   * irrelevant (they are sorted by x internally); the returned array is
+   * parallel to `items` as given.
+   *
+   * `opts`:
+   *   sides  — ['above'] or ['above','below'] (compact mode). Slots fill
+   *            row 0 of every side before row 1 of any of them, so compact
+   *            mode still alternates for the common two-event case and only
+   *            grows a second row when a third label genuinely needs one.
+   *   gapX   — minimum horizontal gap between two labels sharing a row.
+   *   gapY   — vertical gap between rows.
+   *   base   — px from the line to the near edge of a row-0 label.
+   *
+   * Returns [{side, row, offset, height}] where `offset` is the distance
+   * from the line to that label's near edge. Row offsets are computed from
+   * the tallest label actually placed in each row, so a row containing a
+   * label with a photo pushes the next row clear of the photo rather than
+   * of an assumed line count.
+   */
+  function packLabels(items, opts) {
+    var o = opts || {};
+    var sides = (o.sides && o.sides.length) ? o.sides : ['above'];
+    var gapX = o.gapX == null ? 6 : o.gapX;
+    var gapY = o.gapY == null ? 6 : o.gapY;
+    var base = o.base == null ? 0 : o.base;
+    var MAX_ROWS = 64; // a stack this deep is already a different problem
+
+    var order = (items || []).map(function (it, i) { return { it: it, i: i }; });
+    // Stable by construction: ties broken by original index, so two events in
+    // the same year always pack in the order the caller listed them.
+    order.sort(function (a, b) { return (a.it.x - b.it.x) || (a.i - b.i); });
+
+    var rowRight = {};  // "side|row" -> right edge of the last label placed there
+    var rowHeight = {}; // "side|row" -> tallest label placed there
+    var out = new Array(order.length);
+
+    order.forEach(function (rec) {
+      var it = rec.it;
+      var w = it.w || 0, h = it.h || 0;
+      var left = it.x - w / 2, right = it.x + w / 2;
+      var placed = null;
+      for (var row = 0; row < MAX_ROWS && !placed; row++) {
+        for (var s = 0; s < sides.length && !placed; s++) {
+          var key = sides[s] + '|' + row;
+          if (rowRight[key] == null || left >= rowRight[key] + gapX) {
+            placed = { side: sides[s], row: row };
+          }
+        }
+      }
+      // Only reachable past MAX_ROWS rows of collisions; overlap in the last
+      // row beats dropping a label off the timeline entirely.
+      if (!placed) placed = { side: sides[0], row: MAX_ROWS - 1 };
+      var pk = placed.side + '|' + placed.row;
+      rowRight[pk] = Math.max(rowRight[pk] == null ? right : rowRight[pk], right);
+      rowHeight[pk] = Math.max(rowHeight[pk] || 0, h);
+      out[rec.i] = placed;
+    });
+
+    var offsets = {};
+    sides.forEach(function (side) {
+      var acc = base;
+      for (var row = 0; row < MAX_ROWS; row++) {
+        var key = side + '|' + row;
+        if (rowHeight[key] == null) break;
+        offsets[key] = acc;
+        acc += rowHeight[key] + gapY;
+      }
+    });
+
+    return out.map(function (p) {
+      var key = p.side + '|' + p.row;
+      return { side: p.side, row: p.row, offset: offsets[key] == null ? base : offsets[key], height: rowHeight[key] || 0 };
+    });
+  }
+
+  /**
+   * How deep the packed stack goes on each side, in px from the line — what
+   * a caller needs to size a lane tall enough to hold its own labels.
+   */
+  function packedDepth(packed) {
+    var depth = { above: 0, below: 0 };
+    (packed || []).forEach(function (p) {
+      var d = p.offset + p.height;
+      if (d > (depth[p.side] || 0)) depth[p.side] = d;
+    });
+    return depth;
+  }
+
+  /**
+   * Nudges small on-the-line badges (the map print's pin numbers, the
+   * worksheet's numbered blanks) apart along x so two events in the same
+   * year don't hide each other's number, and returns a `badgeX` per item.
+   *
+   * Same bargain `spreadPins` makes on the map: the marker dot stays at the
+   * true `x` and only the badge moves, so the timeline never lies about
+   * when something happened. Unlike labels, a badge is ~1.5rem wide, so the
+   * displacement needed is a few px — small enough to read as "these two are
+   * at the same moment" rather than as two separate dates.
+   *
+   * Cluster-and-centre rather than pairwise relaxation: members of a cluster
+   * are laid out at exactly `minSepPx` apart, centred on the cluster's own
+   * mean x, so the group stays put as a whole and the result is the same
+   * every render (a pairwise push settles somewhere slightly different
+   * depending on iteration order, which makes the print jitter between
+   * runs). Clusters that grow into each other are merged and re-centred
+   * until nothing overlaps, so order along the axis is always preserved.
+   */
+  function spreadBadges(items, minSepPx) {
+    var sep = minSepPx == null ? 22 : minSepPx;
+    var order = (items || []).map(function (it, i) { return { x: it.x || 0, i: i }; });
+    order.sort(function (a, b) { return (a.x - b.x) || (a.i - b.i); });
+
+    // Each cluster: {members: [orderIndex], sum: total of true x}
+    var clusters = [];
+    order.forEach(function (rec) {
+      clusters.push({ members: [rec], sum: rec.x });
+      // Merge backwards while the new cluster's leftmost placed position
+      // would collide with the previous cluster's rightmost.
+      for (;;) {
+        var n = clusters.length;
+        if (n < 2) break;
+        var a = clusters[n - 2], b = clusters[n - 1];
+        var aEnd = (a.sum / a.members.length) + (a.members.length - 1) * sep / 2;
+        var bStart = (b.sum / b.members.length) - (b.members.length - 1) * sep / 2;
+        if (bStart - aEnd >= sep) break;
+        a.members = a.members.concat(b.members);
+        a.sum += b.sum;
+        clusters.pop();
+      }
+    });
+
+    var out = new Array(order.length);
+    clusters.forEach(function (c) {
+      var centre = c.sum / c.members.length;
+      var start = centre - (c.members.length - 1) * sep / 2;
+      c.members.forEach(function (rec, k) { out[rec.i] = start + k * sep; });
+    });
+    return out;
+  }
+
+  /**
+   * A deliberately generous estimate of how tall a rendered label will be,
+   * for the cases where measuring it is not possible — a print page built
+   * inside a hidden container reports every height as 0, and packing on
+   * zeros would silently collapse back to one overlapping row on exactly
+   * the artifacts (worksheet, map print) that most need the fix.
+   *
+   * Over-estimating costs a few px of white space; under-estimating costs
+   * an overlap, so every rounding here goes up.
+   */
+  function estimateLabelHeightPx(event, opts) {
+    var o = opts || {};
+    var rem = o.remPx || 16;
+    var width = o.widthPx || 9 * rem;
+    var fontPx = 0.78 * rem;
+    var lineH = fontPx * 1.35;
+    var charPx = fontPx * 0.55;          // generous average glyph width
+    var perLine = Math.max(6, Math.floor(width / charPx));
+    var title = o.blanked ? '' : String((event && event.title) || '');
+    var titleLines = Math.max(1, Math.ceil(title.length / perLine));
+    var h = lineH * (1 + titleLines);    // date line + title lines
+    if (event && event.photo && !o.blanked) h += 2.4 * rem + 0.4 * rem;
+    return Math.ceil(h);
+  }
+
   /** Fixed, distinct palette for event categories (political/cultural/
    * technological/etc.) — picked for reasonable print/grayscale separation. */
   var CATEGORY_PALETTE = ['#2e6b8f', '#a3372b', '#5b8c3a', '#8a5b9e', '#c07a1f', '#1f7a72', '#a34a8a', '#4a5fa3'];
@@ -286,6 +470,10 @@
     computeGridlines: computeGridlines,
     computeEraBands: computeEraBands,
     assignLabelSides: assignLabelSides,
+    packLabels: packLabels,
+    packedDepth: packedDepth,
+    spreadBadges: spreadBadges,
+    estimateLabelHeightPx: estimateLabelHeightPx,
     collectCategories: collectCategories,
     buildCategoryColorMap: buildCategoryColorMap
   };

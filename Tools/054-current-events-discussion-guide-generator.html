@@ -17,6 +17,7 @@
 <script src="../_shared/a11y.js"></script>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
+<script src="current-events-discussion-guide-generator/cedg-readability.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -97,6 +98,10 @@
   .compare-col { border: 1px solid #999; border-radius: 6px; padding: .6rem .7rem; }
   .compare-col h3 { margin: 0 0 .3rem; font-size: .95rem; border-bottom: 1px solid #ccc; padding-bottom: .2rem; }
   .article-source { color: #555; font-size: .78rem; margin: 0 0 .4rem; }
+  /* A URL is one unbreakable token as far as a line box is concerned, so a
+     long one runs off the page unless it is allowed to break anywhere. */
+  .article-source a { color: inherit; word-break: break-all; }
+  .source-qr { float: right; width: .9in; height: .9in; margin: -.9rem 0 .3rem .5rem; image-rendering: pixelated; }
   .core-tag { display: inline-block; background: #eee; border: 1px solid #999; border-radius: 4px; padding: 0 .3rem; font-size: .72rem; font-weight: 700; margin-left: .3rem; }
   tr.core-vocab td:first-child { font-weight: 700; }
 
@@ -199,6 +204,9 @@
         <input type="text" id="articleTitle" placeholder="e.g. City Council Approves New Bike Lanes">
         <label for="articleSource">Source / date (for citation)</label>
         <input type="text" id="articleSource" placeholder="e.g. Local Gazette, March 2026">
+        <label for="articleUrl">Link to the article (optional)</label>
+        <input type="url" id="articleUrl" placeholder="https://…" inputmode="url">
+        <p class="hint" id="articleUrlHint" style="margin-top:-.3rem;"></p>
         <label for="articleText">Paste the article text</label>
         <textarea id="articleText" placeholder="Paste the full article here..."></textarea>
         <div class="btnrow">
@@ -214,6 +222,9 @@
         <input type="text" id="articleTitleB" placeholder="e.g. Council Votes to Remove Fifth Street Parking Lot">
         <label for="articleSourceB">Source / date (for citation)</label>
         <input type="text" id="articleSourceB" placeholder="e.g. Local Gazette, March 2026">
+        <label for="articleUrlB">Link to the article (optional)</label>
+        <input type="url" id="articleUrlB" placeholder="https://…" inputmode="url">
+        <p class="hint" id="articleUrlHintB" style="margin-top:-.3rem;"></p>
         <label for="articleTextB">Paste the second article's text</label>
         <textarea id="articleTextB" placeholder="Paste a second article about the SAME event here..."></textarea>
         <p class="hint" id="wordCountHintB"></p>
@@ -422,11 +433,11 @@
     'toward', 'towards', 'nearly', 'almost', 'usually', 'generally', 'typically', 'mostly', 'largely'];
 
   var els = {};
-  ['articleTitle', 'articleSource', 'articleText', 'analyzeBtn', 'wordCountHint', 'summaryText',
+  ['articleTitle', 'articleSource', 'articleUrl', 'articleUrlHint', 'articleText', 'analyzeBtn', 'wordCountHint', 'summaryText',
    'suggestedWords', 'suggestHint', 'vocabWrap', 'addVocabBtn', 'presetQuestions', 'customQuestionsWrap',
    'addQuestionBtn', 'printBtn', 'printArea', 'clearBtn',
    'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn',
-   'articleBCard', 'articleTitleB', 'articleSourceB', 'articleTextB', 'wordCountHintB', 'addArticleBBtn', 'removeArticleBBtn',
+   'articleBCard', 'articleTitleB', 'articleSourceB', 'articleUrlB', 'articleUrlHintB', 'articleTextB', 'wordCountHintB', 'addArticleBBtn', 'removeArticleBBtn',
    'summaryBWrap', 'summaryTextB', 'comparisonQuestionsWrap', 'comparisonQuestions', 'loadExampleBtn',
    'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
    'levelSelect', 'printAllLevelsBtn', 'kitSift', 'kitHeadline', 'kitClaims', 'claimEditor', 'claimRows', 'addClaimRowBtn'
@@ -449,8 +460,8 @@
   function isLevel(id) { return LEVELS.some(function (l) { return l.id === id; }); }
 
   function emptyGuide(name) {
-    return { name: name, title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [],
-      titleB: '', sourceB: '', articleTextB: '', summaryB: '', comparisonChecked: {},
+    return { name: name, title: '', source: '', url: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [],
+      titleB: '', sourceB: '', urlB: '', articleTextB: '', summaryB: '', comparisonChecked: {},
       level: DEFAULT_LEVEL, kitSift: false, kitHeadline: false, kitClaims: false, claimRows: [] };
   }
   var state = emptyGuide('New Guide');
@@ -493,7 +504,7 @@
   function normalizeGuide(data, name) {
     if (!data || typeof data !== 'object') data = {};
     var g = emptyGuide((typeof data.name === 'string' && data.name) || name || 'New Guide');
-    ['title', 'source', 'articleText', 'summary', 'titleB', 'sourceB', 'articleTextB', 'summaryB'].forEach(function (k) {
+    ['title', 'source', 'url', 'articleText', 'summary', 'titleB', 'sourceB', 'urlB', 'articleTextB', 'summaryB'].forEach(function (k) {
       if (typeof data[k] === 'string') g[k] = data[k];
     });
     if (Array.isArray(data.vocab)) g.vocab = data.vocab;
@@ -575,15 +586,18 @@
     els.guideName.value = state.name;
     els.articleTitle.value = state.title;
     els.articleSource.value = state.source;
+    els.articleUrl.value = state.url;
     els.articleText.value = state.articleText;
     els.summaryText.value = state.summary;
     els.articleTitleB.value = state.titleB;
     els.articleSourceB.value = state.sourceB;
+    els.articleUrlB.value = state.urlB;
     els.articleTextB.value = state.articleTextB;
     els.summaryTextB.value = state.summaryB;
-    articleBVisible = !!(state.titleB.trim() || state.sourceB.trim() || state.articleTextB.trim() || state.summaryB.trim());
+    articleBVisible = !!(state.titleB.trim() || state.sourceB.trim() || state.urlB.trim() || state.articleTextB.trim() || state.summaryB.trim());
     updateWordCount();
     updateWordCountB();
+    updateUrlHints();
     renderSuggestions([]);
     renderVocab();
     renderPresetQuestions();
@@ -646,17 +660,57 @@
 
   function countAndLabel(text) {
     var words = (text || '').split(/\s+/).filter(Boolean);
-    return { words: words, label: words.length ? (words.length + ' words &middot; about ' + Math.max(1, Math.round(words.length / 200)) + ' min read') : '' };
+    /* The label is built by cedg-readability.js, which adds the reading-level
+       estimate to the length and read-time this line always showed. The word
+       list itself is still split here because the callers use it for the
+       vocabulary suggestions, and that split is the one this tool has always
+       counted with — changing it would change the word counts on guides
+       teachers already have. */
+    return { words: words, label: CedgReadability.summaryLine(text) };
   }
   function updateWordCount() {
     var r = countAndLabel(els.articleText.value);
-    els.wordCountHint.innerHTML = r.label;
+    els.wordCountHint.textContent = r.label;
     return r.words;
   }
   function updateWordCountB() {
     var r = countAndLabel(els.articleTextB.value);
-    els.wordCountHintB.innerHTML = r.label;
+    els.wordCountHintB.textContent = r.label;
     return r.words;
+  }
+
+  /* ---------- the article's own link ----------
+     A citation a student can follow. The printed sheet carries the URL as
+     text (and, when it fits, a QR code) so a paper handout still leads back
+     to the source; the editor gets a real click-through so the teacher can
+     check the link is the right one before printing forty copies.
+
+     Only http(s) is accepted. A pasted `javascript:` or `data:` URL would
+     otherwise become a clickable link in the teacher's own page, and there
+     is no reason a news article needs any other scheme. A bare domain typed
+     without a scheme is upgraded to https:// rather than rejected, because
+     that is what a teacher pasting from a browser bar will produce. */
+  function normalizeUrl(raw) {
+    var v = String(raw || '').trim();
+    if (!v) return '';
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = 'https://' + v;
+    var parsed;
+    try { parsed = new URL(v); } catch (e) { return ''; }
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? parsed.href : '';
+  }
+
+  function urlHintHtml(raw) {
+    var typed = String(raw || '').trim();
+    if (!typed) return '';
+    var href = normalizeUrl(typed);
+    if (!href) return '<span style="color:var(--err,#b02a2a);">That doesn’t look like a web address. A link should start with https://</span>';
+    return 'Opens: <a href="' + escapeAttr(href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(href) + '</a> ' +
+      '<span>— printed on the sheet so students can read the source themselves.</span>';
+  }
+
+  function updateUrlHints() {
+    els.articleUrlHint.innerHTML = urlHintHtml(els.articleUrl.value);
+    els.articleUrlHintB.innerHTML = urlHintHtml(els.articleUrlB.value);
   }
 
   function firstSentences(text, n) {
@@ -911,6 +965,7 @@
 
   els.articleTitle.addEventListener('input', function () { state.title = els.articleTitle.value; save(); });
   els.articleSource.addEventListener('input', function () { state.source = els.articleSource.value; save(); });
+  els.articleUrl.addEventListener('input', function () { state.url = els.articleUrl.value; save(); updateUrlHints(); });
   els.articleText.addEventListener('input', function () { state.articleText = els.articleText.value; save(); updateWordCount(); renderVocab(); });
   els.summaryText.addEventListener('input', function () { state.summary = els.summaryText.value; save(); });
   els.analyzeBtn.addEventListener('click', analyzeArticle);
@@ -931,12 +986,13 @@
   });
 
   els.removeArticleBBtn.addEventListener('click', function () {
-    var hasContent = state.titleB.trim() || state.sourceB.trim() || state.articleTextB.trim() || state.summaryB.trim();
+    var hasContent = state.titleB.trim() || state.sourceB.trim() || state.urlB.trim() || state.articleTextB.trim() || state.summaryB.trim();
     if (hasContent && !confirm('Remove Article B and its comparison questions? This clears Article B’s fields.')) return;
-    state.titleB = ''; state.sourceB = ''; state.articleTextB = ''; state.summaryB = ''; state.comparisonChecked = {};
+    state.titleB = ''; state.sourceB = ''; state.urlB = ''; state.articleTextB = ''; state.summaryB = ''; state.comparisonChecked = {};
     articleBVisible = false;
-    els.articleTitleB.value = ''; els.articleSourceB.value = ''; els.articleTextB.value = ''; els.summaryTextB.value = '';
+    els.articleTitleB.value = ''; els.articleSourceB.value = ''; els.articleUrlB.value = ''; els.articleTextB.value = ''; els.summaryTextB.value = '';
     updateWordCountB();
+    updateUrlHints();
     renderComparisonQuestions();
     save();
     updateComparisonUI();
@@ -946,6 +1002,7 @@
 
   els.articleTitleB.addEventListener('input', function () { state.titleB = els.articleTitleB.value; save(); });
   els.articleSourceB.addEventListener('input', function () { state.sourceB = els.articleSourceB.value; save(); });
+  els.articleUrlB.addEventListener('input', function () { state.urlB = els.articleUrlB.value; save(); updateUrlHints(); });
   els.articleTextB.addEventListener('input', function () { state.articleTextB = els.articleTextB.value; save(); updateWordCountB(); renderVocab(); renderClaimRows(); });
   els.summaryTextB.addEventListener('input', function () { state.summaryB = els.summaryTextB.value; save(); });
 
@@ -997,10 +1054,63 @@
     return questionBlockHtml(questions, level);
   }
 
+  /* ---------- the citation block that prints on the sheet ----------
+     "Students should read the source themselves" only means anything if the
+     handout carries a way to get there. On paper that is the URL in full
+     (typeable, and the only form that survives a photocopy) plus a QR code
+     for a phone; on a guide handed out digitally the same text is a link
+     the browser makes clickable.
+
+     The QR is drawn from the already-vendored qrcode.js and inlined as a
+     data URL, since the print HTML is built as a string. A URL too long to
+     encode simply prints without one — a news URL with a long tracking
+     query can exceed what a QR of this size holds, and half a QR code is
+     worse than none. */
+  function sourceQrDataUrl(url) {
+    try {
+      var qr = window.qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      var count = qr.getModuleCount(), quiet = 2, px = 3;
+      var size = (count + quiet * 2) * px;
+      var canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000';
+      for (var r = 0; r < count; r++) {
+        for (var c = 0; c < count; c++) {
+          if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+        }
+      }
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /** `withQr` is off in the two-column comparison layout: a column is about
+      three inches wide, and two QR codes in it crowd out the summary they
+      sit next to. The URL still prints in both layouts. */
+  function citationHtml(sourceText, urlText, withQr) {
+    var src = String(sourceText || '').trim();
+    var href = normalizeUrl(urlText);
+    if (!src && !href) return '';
+    var qr = (href && withQr) ? sourceQrDataUrl(href) : '';
+    return '<p class="article-source">' +
+      (src ? 'Source: ' + escapeHtml(src) : '') +
+      (href
+        ? (src ? '<br>' : '') + 'Read it yourself: <a href="' + escapeAttr(href) + '">' + escapeHtml(href) + '</a>'
+        : '') +
+      '</p>' +
+      (qr ? '<img class="source-qr" src="' + qr + '" alt="QR code linking to the article">' : '');
+  }
+
   function guideHtmlSingle(level, tagLevel) {
     var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Current Events Discussion Guide';
     return '<h1 class="guide-title">' + title + '</h1>' +
-      '<p class="guide-sub">' + (state.source.trim() ? 'Source: ' + escapeHtml(state.source.trim()) : '') + ' &nbsp; Name: __________________________ &nbsp; Date: __________</p>' +
+      '<p class="guide-sub">Name: __________________________ &nbsp; Date: __________</p>' +
+      citationHtml(state.source, state.url, true) +
       '<div class="guide-section">' + sectionHead('Summary', tagLevel) + '<p style="font-size:.9rem;">' + (state.summary.trim() ? escapeHtml(state.summary.trim()) : '&nbsp;') + '</p>' +
       (state.summary.trim() ? '' : '<span class="fill-line"></span><span class="fill-line"></span>') + '</div>' +
       '<div class="guide-section">' + sectionHead('Vocabulary', tagLevel) + '<table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRowsHtml(false) + '</tbody></table></div>' +
@@ -1019,10 +1129,10 @@
       '<p class="guide-sub">Name: __________________________ &nbsp; Date: __________</p>' +
       '<div class="compare-cols">' +
         '<div class="compare-col"><h3>' + escapeHtml(titleA) + '</h3>' +
-          (state.source.trim() ? '<p class="article-source">Source: ' + escapeHtml(state.source.trim()) + '</p>' : '') +
+          citationHtml(state.source, state.url, false) +
           '<p style="font-size:.9rem;">' + (state.summary.trim() ? escapeHtml(state.summary.trim()) : '&nbsp;') + '</p></div>' +
         '<div class="compare-col"><h3>' + escapeHtml(titleB) + '</h3>' +
-          (state.sourceB.trim() ? '<p class="article-source">Source: ' + escapeHtml(state.sourceB.trim()) + '</p>' : '') +
+          citationHtml(state.sourceB, state.urlB, false) +
           '<p style="font-size:.9rem;">' + (state.summaryB.trim() ? escapeHtml(state.summaryB.trim()) : '&nbsp;') + '</p></div>' +
       '</div>' +
       '<div class="guide-section">' + sectionHead('Shared Vocabulary', tagLevel) +

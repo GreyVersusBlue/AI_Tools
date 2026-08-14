@@ -9,6 +9,63 @@
 
 ## Status
 
+**2026-08-14 — Devon-assigned round: image crop, zoom and the detail callout
+(session `c1jqjp`).** The last open Quick Win, and the one that changes what
+the worksheet can ask a student to do: "look closely at *this* part" is a
+different question from "look at this photograph".
+
+- **Drag a rectangle over the image; the worksheet prints that region
+  enlarged.** The zoom is 1/width — a quarter-width crop prints at 4× — and
+  the editor says so in those terms rather than showing four numbers.
+- **The detail callout prints both panels with the detail's position
+  outlined on the whole image.** That outline is the feature: without it the
+  second panel is just a second picture, and the page stops making its own
+  point. Picking a detail turns the side-by-side on by default, since it is
+  what a teacher almost always means; one click turns it off, and then only
+  the detail prints.
+- **CSS on a real `<img>`, never a canvas.** Two reasons, both hard
+  constraints rather than preferences: an image pasted by URL is
+  cross-origin, so a canvas crop would taint and throw; and a real `<img>`
+  prints without the browser's "print background graphics" setting being on,
+  which a background-image crop would silently need. The same reasoning the
+  DBQ builder's crop tool records — and the drag gesture is deliberately
+  identical to that tool's, so a teacher learns it once.
+- **A crop belongs to one picture.** Uploading a different image, or
+  clearing the image, resets the crop instead of pointing at the wrong part
+  of the new one. Asserted, because the failure is silent and lands on paper.
+- **Nothing already saved changes on paper.** With no crop the printed
+  markup is byte-identical to what it was before this existed — the suite
+  compares the two strings directly rather than trusting that it looks the
+  same — and every worksheet saved before this round loads in exactly that
+  state.
+- Source B has the same panel, wired through one set of handlers keyed on
+  `data-crop-for`, not a second copy. Source B was added a round after
+  Source A, and every duplicated pair since has been somewhere the two drift.
+
+**Tests.** New `smoke-crop.mjs` (41 assertions), which asserts the *geometry*
+of the printed detail — the inner image's width and offset percentages, and
+the outline's position and size — rather than that an `<img>` exists. Both
+existing suites pass unchanged.
+
+#### Where the next round should pick up
+
+- **The crop tool now exists in two tools with the same gesture and nearly
+  the same code** (here and `056-dbq-source-packet-builder.html`). That is
+  the threshold this repo uses for extraction: a third consumer, or a bug
+  fixed in one and not the other, and it should become a `_shared/` module.
+  Worth doing before the third tool wants it, not after.
+- **Multiple details from one image** — "compare the top left with the
+  bottom right" is a real analysis task and the current model holds one
+  crop per source. It is a bigger change than it looks: numbered detail
+  callouts would want to interact with the existing numbered-callout
+  feature rather than sit beside it.
+- The crop does not travel in a share link for a URL image any differently
+  than the image does, but for an *uploaded* image the link already omits
+  the pixels — so a shared worksheet arrives with a crop rectangle and no
+  image to apply it to. Today that degrades quietly (the crop simply does
+  nothing until an image is re-uploaded); it should probably say so.
+
+
 **2026-08-14 — SS demo round 2 (session `kx9rtm`): Differentiation levels —
 this tool is the reference implementation of the site-wide three-level
 switch.** Devon teaches Academic, Honors, and Honors GT sections of the same
@@ -359,8 +416,12 @@ teacher, and it has the most room to grow of any content tool on the site.
   sidebar, a simplified paraphrase field, or line numbers for text references.
 - **Done —** **Line numbering** on pasted text — the single most useful formatting
   feature for discussing a document with a class.
-- **Image cropping and zoom** for the uploaded source, plus a
-  "detail callout" that prints an enlarged region next to the whole image.
+- ~~**Image cropping and zoom** for the uploaded source, plus a
+  "detail callout" that prints an enlarged region next to the whole image.~~
+  — **done, 2026-08-14** (session `c1jqjp`), for both Source A and Source B.
+  See the Status entry.
+
+No Quick Wins remain open.
 - **Done — Pass 2, Round 2.** **Downscale and warn on image size** (P12).
 
 ## Major Features

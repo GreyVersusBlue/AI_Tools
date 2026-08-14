@@ -1,14 +1,84 @@
 # Improvement Prompts — 054 — Current Events Discussion Guide Generator
 
 **Tool file:** `Tools/054-current-events-discussion-guide-generator.html`
-**Support folder:** `Tools/current-events-discussion-guide-generator/test/` (two
-Playwright suites). All tool code is still inline in the one HTML file.
+**Support folder:** `Tools/current-events-discussion-guide-generator/` —
+`cedg-readability.js` (the reading-level estimate; pure, no DOM) plus
+`test/` (three Playwright suites and one pure-Node suite). The rest of the
+tool code is still inline in the one HTML file.
 
 **Current description (from README):** Paste a news article to pull out a summary starter and candidate vocabulary automatically, edit both, add your own questions, and print a discussion guide — or add a second article on the same event for a side-by-side bias/framing comparison guide with shared vocabulary. An optional media literacy kit adds a SIFT source-evaluation checklist, a headline rewrite exercise, and a claim vs. evidence organizer, printable at Academic, Honors, or Honors GT (or all three at once).
 
 ---
 
 ## Status
+
+**2026-08-14 — Devon-assigned round: the article's own link, and a reading
+level (session `c1jqjp`).** Two of the three open Major Features shipped.
+
+**Reading-level estimate.** A new pure module,
+`current-events-discussion-guide-generator/cedg-readability.js`, turns the
+pasted article into a Flesch–Kincaid grade and a *band* — "reads around
+grades 7–9" — shown on the same line that already carried the word count and
+read time, for both articles.
+
+- **Flesch–Kincaid because of this site's constraints, not because it is the
+  best measure.** It needs only sentence length and syllable count, both
+  computable from the text itself: no word list to ship, no network, nothing
+  to keep up to date. Its weaknesses are stated in the module header rather
+  than hidden — it cannot see vocabulary difficulty or syntactic complexity,
+  and an article about a familiar local topic and one about monetary policy
+  can score the same and be nothing alike in a classroom.
+- **It refuses to answer on short samples.** Under 40 words the line says
+  "too short to estimate a reading level" instead of printing a number. A
+  confident wrong grade level is worse for a teacher than a blank.
+- **It reports a range, never a single grade**, for the same reason: a
+  teacher reads "grade 9" as a fact and "around grades 8–10" as the estimate
+  it is. The line also shows the average sentence length and long-word
+  percentage it came from, so the number can be argued with.
+- The syllable counter needed exactly one special case beyond vowel groups
+  and the silent final 'e': a final consonant + "le" is its own syllable
+  ("ar-ti-cle", "ta-ble"). Without it the counter undercounts a whole class
+  of ordinary words — including "article", which this tool is entirely about.
+
+**The article's link.** A real URL field per article, alongside the existing
+free-text source line.
+
+- **On paper the URL prints in full and gets a QR code**; on a guide read on
+  a screen the same text is a link. Printing the URL as text is the part
+  that survives a photocopy, and the QR is the part a phone can use — the
+  handout has to work both ways, since this tool's output is usually paper.
+- **Only http(s) is accepted**, and a bare domain is upgraded to `https://`
+  rather than rejected (that is what pasting from a browser bar produces). A
+  `javascript:` or `data:` URL is refused with an explanation and never
+  becomes a clickable link in the teacher's page or on the printed sheet —
+  asserted in the suite for both the editor and the print output.
+- **The QR is skipped, not botched, when a URL is too long to encode** — a
+  news URL with a long tracking query can exceed what a QR of this size
+  holds, and half a QR code is worse than none.
+- **The comparison layout prints both links and no QR codes.** A comparison
+  column is about three inches wide and two QRs crowd out the summary beside
+  them. Deliberate, and asserted so it doesn't get "fixed" without thought.
+
+**Tests.** `readability.test.mjs` (35 assertions, pure Node): a plain news
+story and the same event in dense institutional prose must land in different
+bands — the assertion that stops the estimate from being decoration — plus
+the refusal on short samples, the clamping, and the syllable rules. New
+`smoke-citation.mjs` (28 browser assertions) covers the link end to end,
+including the two refused schemes. The two existing suites pass unchanged.
+
+#### Where the next round should pick up
+
+- **The question-set bank is the last open Major Feature** and is now the
+  obvious next round: two fixed sets exist (general + comparison), and what
+  the idea asks for is a set a teacher can add to and choose between.
+- The reading level is computed for each article separately. In comparison
+  mode, the *difference* between the two is arguably the more useful number
+  ("these two articles are three grades apart — that is why the comparison
+  is hard"), and nothing surfaces it yet.
+- `cedg-readability.js` is general — any tool that takes pasted text could
+  use it. It is one consumer today, so it stays in the tool's folder; a
+  second consumer earns it a move to `_shared/`.
+
 
 **2026-08-14 — SS demo round 2: media literacy kit + differentiation levels
 shipped (session `mk3jq7`).** Devon-assigned round 2 ahead of the live teacher
@@ -311,13 +381,13 @@ friction (one guide per browser, still overwritten week to week).
 
 ## Major Features
 
-- **A real citation/link field with a "students should read the source
-  themselves" framing** — right now "source" is one free-text field; a
-  proper URL field with click-through would matter if this is meant to be
-  handed out digitally, not just printed.
-- **Reading-level flag or estimate** (e.g. average sentence/word length as
-  a rough proxy) so a teacher can gauge whether an article fits their
-  class before building the whole guide around it.
+- ~~**A real citation/link field with a "students should read the source
+  themselves" framing**~~ — **done, 2026-08-14** (session `c1jqjp`). A URL
+  field per article: click-through in the editor, the URL in full plus a QR
+  code on the printed sheet, http(s) only. See the Status entry.
+- ~~**Reading-level flag or estimate**~~ — **done, 2026-08-14** (session
+  `c1jqjp`). Flesch–Kincaid in `cedg-readability.js`, reported as a band
+  rather than a grade, and withheld entirely on samples under 40 words.
 - **A bank of saved "generic" question sets beyond the 6 built-in ones**
   (e.g. a set skewed toward persuasive-writing follow-up, a set skewed
   toward historical-context articles) that a teacher can swap between,

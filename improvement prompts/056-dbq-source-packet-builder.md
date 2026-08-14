@@ -9,6 +9,62 @@
 
 ## Status
 
+**2026-08-14 — Devon-assigned round: the source library (session
+`c1jqjp`).** The last open Major Feature. A teacher who cites the same
+document every year now uploads and captions it once.
+
+- **Saved sources live outside every packet**, in one `dbq:bank` array. That
+  is the whole design decision, and it is structural rather than a policy:
+  if the library lived inside a packet document, deleting an old packet
+  would take a year of saved sources with it, and nobody would find out
+  until it happened. The suite asserts a packet delete leaves the library
+  standing, which is the assertion this feature actually needs.
+- **A packet's source carries a `bankId`** when it came from — or was saved
+  to — the library. That is what makes "Update in library" possible without
+  guessing by title: two different letters from 1776 can share a title, and
+  a teacher who renames a source still means the same source. Asserted both
+  ways: saving twice updates one entry, and two different sources with
+  identical titles stay two entries.
+- **What moves is a copy, with fresh ids** — source id and every question id.
+  Editing the packet's copy must not silently rewrite the library entry, and
+  the same library source added to a packet twice must not collide with
+  itself.
+- **Removing from the library never touches a packet** built from it, and
+  the confirm dialog says so before the teacher commits.
+- **Adding to a brand-new packet replaces its blank first source** rather
+  than leaving an empty "Source A" above every added one. Small, but it is
+  the first thing a teacher would hit.
+- **Quota failure is reported, not swallowed.** Images ride as data URLs,
+  the same exposure packets already have; if the write fails, the note names
+  the source that wouldn't fit and says what to do about it, rather than
+  silently not saving.
+- Empty sources are refused with a reason, and the library has a search over
+  titles and citations, because a library worth having gets long.
+
+**Tests.** New `smoke-source-library.mjs` (32 assertions) covering all of
+the above, including the two independence properties (packet delete vs
+library, library remove vs packet) that are invisible until they bite. Both
+existing suites pass unchanged.
+
+#### Where the next round should pick up
+
+- **The other half of the 028 pairing.** The handoff runs one way — a text
+  source becomes a SOAPSTone worksheet in 028. Pulling a source *out* of
+  028 into a packet is still unbuilt, and the library is now the obvious
+  place for it to land: "add from Primary Source Analysis" alongside "add
+  from library".
+- **The library holds sources, not packets' worth of them.** There is no
+  export/import of the library itself, so it does not move between machines
+  the way a packet does (a packet has a share link and a JSON path). If a
+  teacher asks to move their library to a new laptop, that is the next
+  round, and it should reuse the packet's existing share-link plumbing
+  rather than invent a second format.
+- Image sources in the library are data URLs in localStorage, which is the
+  same quota ceiling packets have — but a library accumulates across years
+  in a way a packet doesn't. If teachers hit it, IndexedDB (as
+  `046-blank-map-generator.html` already does for map images) is the move.
+
+
 **2026-08-11 — First build.** Shipped as a basic, functioning MVP from the
 Ideas Backlog: a packet title and historical-context/task field, an
 editable list of "shared" guiding questions asked after every source, and
@@ -320,10 +376,15 @@ and letting the rubric ride into 028 alongside a source.
   becomes a full SOAPSTone worksheet in 028 in one click, via 028's own
   share-link format. The remaining half of the pairing is the other
   direction (pull a source *out* of 028's library into a packet).
-- **A source bank/library**: save individual sources (not whole packets)
-  to a personal library, so a source used across multiple DBQ packets
-  (e.g. a frequently-cited primary document) doesn't need re-uploading
-  and re-captioning every time.
+- ~~**A source bank/library**: save individual sources (not whole packets)
+  to a personal library~~ — **done, 2026-08-14** (session `c1jqjp`). Stored
+  under its own key, deliberately outside every packet document; a packet's
+  source records which library entry it came from, so a later edit updates
+  that entry instead of making a second one. See the Status entry.
+
+No Major Features remain open. The clearest remaining work is the reverse
+direction of the 028 pairing — see "Where the next round should pick up"
+under the 2026-08-14 entry.
 - ~~**JSON export/import**~~ — **done, SS demo round (`xo4v63`)**, for
   sharing a built packet with another social studies teacher on the
   same team or across a department.
