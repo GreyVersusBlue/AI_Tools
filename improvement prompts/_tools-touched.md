@@ -198,7 +198,6 @@ here.
 | Current Events Discussion Guide Generator | `qfx7mz` | 2026-08-13 23:55 UTC | `claude/ssdemo-054-qfx7mz` |
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
-| Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
 | Geography Bee / Map Skills Quiz Generator | `mee9kj` | 2026-08-14 00:01 UTC | `claude/ssdemo-062-mee9kj` |
 
 ---
@@ -1033,6 +1032,34 @@ empty tracks because a bare `<span>` is inline and ignores `width`.
 source, not the notes): Duty Roster per-staff counts, Experiment Design
 Planner reordering, and Fraction–Decimal–Percent seeded generation, all
 delivered by session `kq3g3h` and never taken off the list.
+
+### Devon-assigned round — tool 015 — 2026-08-14 00:52 UTC — session `mq7fkd`
+
+One of eight parallel sessions in the social studies demo round, each owning
+a single tool ahead of a live staff presentation. Devon-assigned, which
+overrides this file's "don't repick done tools" rule.
+
+| Tool | File | What shipped |
+|---|---|---|
+| Timeline Builder | `015-timeline-builder.md` | **Map + timeline print** (`IDEAS_BACKLOG.md` rank 2 "Timeline plus map print"; P7) — events gained an optional place with a ~145-entry built-in gazetteer, and a new landscape print pairs an auto-fitted base map (numbered pins, US state outlines or world countries as appropriate) with the existing spatial timeline carrying the same numbers. Plus a one-click American Revolution example (P15), share by link/QR excluding photos (P3), and the tool's first automated suite (`npm run test:timeline`, 49 assertions). |
+
+**Backlog row:** rank 2, "Timeline plus map print" — shipped. Nothing found
+stale. The example and the share links came from this tool's own file rather
+than from a numbered row.
+
+The base map is rendered by calling
+`Tools/blank-map-generator/bmg-vector.js` (read first and confirmed
+standalone — it reads only `preset.bounds`/`preset.dataset` and resolves its
+own data directory), not by a second renderer. Nothing new was vendored; that
+module and its `data/` files were already precached. The runtime coupling
+that creates, and the case for moving the renderer into `_shared/`, is logged
+in `_site-requests.md` — it could not be done this round, since `_shared/` was
+off limits to all eight sessions and `Tools/blank-map-generator/` was owned by
+a concurrent one.
+
+Timeline Builder did not clear its list — the projected navigation mode and
+the printed cut-apart ordering activity are still open — so it does not move
+to `stable tools/`.
 
 ---
 
