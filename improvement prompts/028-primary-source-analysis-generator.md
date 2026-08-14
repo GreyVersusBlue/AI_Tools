@@ -9,6 +9,71 @@
 
 ## Status
 
+**2026-08-13 — SS demo round (session `qzmvhx`): Corroboration mode shipped
+(backlog rank 3).** Two sources, one worksheet — stays inside the existing
+single-worksheet shape rather than becoming a multi-source list (that's the
+DBQ / Source Packet Builder's territory, tool 056):
+
+- A **"Compare with a second source"** checkbox (`corroborationMode`) reveals
+  a Source B card: title, type, description, pasted text, image URL/upload
+  (same downscale-and-warn path as Source A), and its own citation
+  (author/date/origin). Off by default — a plain worksheet is byte-for-byte
+  unchanged from before this round.
+- **On, the print worksheet changes shape**: both sources render side by side
+  (`.sources-row`, two `.source-box`es, each labeled "Source A" / "Source B");
+  every framework step keeps its shared questions once, then prints **two**
+  answer areas side by side (`.dual-answer-row`) — one per source — instead
+  of one; and a fixed **comparison block** closes the sheet: where the
+  sources agree, where they disagree, which is more reliable and why. None of
+  this is framework-specific, so it works under any of the six frameworks.
+- The **answer key** mirrors this: per-step teacher notes are now tracked
+  separately per source (`state.notes` for A, a new `state.notesB` for B),
+  both printing side by side on the key, plus a **comparison key** section
+  (`state.comparisonNotes`) for the three closing questions. The notes editor
+  UI grows a second textarea per step and a closing "Comparing the sources"
+  block only when corroboration mode is on.
+- **Load Boston Massacre example** (P15): one click loads a real two-source
+  pair (a description of Paul Revere's 1770 engraving vs. a paraphrased
+  British soldier's account of the shooting, both written for this tool, not
+  reproduced verbatim from any source), turns corroboration mode on, and
+  picks the HIPP framework (works for a text+visual pair, unlike SOAPSTone or
+  OPTIC alone). Asks for confirmation first if the current worksheet already
+  has source content or notes worth losing.
+- The **share link** carries every corroboration field except the two
+  possible uploaded images (`imageDataUrl` and the new `sourceBImageDataUrl`)
+  — consistent with how Source A's image already stayed off the link.
+  `isPlausibleWorksheet()` now also accepts (but doesn't require) `notesB`
+  and `comparisonNotes`, so old exports/links without them still import.
+- **First automated test**: `Tools/primary-source-analysis-generator/test/smoke-corroboration.mjs`
+  (new `test:primary-source` npm script, appended to the main `test` chain).
+  42 assertions: mode off by default still prints exactly one source and no
+  comparison block; on, both sources + dual answer rows + comparison block
+  render in the print DOM on both the blank worksheet and the answer key
+  (with real per-source and comparison teacher notes verified in the printed
+  key text); the example button's confirm-before-replace gate; and a full
+  share-link round trip carrying Source B's text/citation and the
+  comparisonNotes teacher key content to a second browser context. Zero
+  console errors, nothing left the site.
+
+What was hard: nothing structural, mostly careful additive design — the
+biggest risk was accidentally changing what a *non*-corroboration worksheet
+prints, so `sourceBoxHtml()`/`stepBlockHtml()` branch explicitly on
+`state.corroborationMode` and the "off" path is untouched code, verified by
+the first assertion block in the new test. No new localStorage keys were
+needed (everything lives inside the existing per-worksheet blob), so
+`009-backup-restore.html` needed no changes. `sw.js` also needed no changes —
+no new production file was added, only a `test/` folder, which the precache
+list already excludes for every other tool.
+
+**Where a future round should pick up:** the DBQ / multi-source packet
+(three or more sources) is still the single biggest lever and was explicitly
+left alone this round per scope; a source library and image crop/zoom are
+also still open. If corroboration mode gets used a lot, the biggest
+follow-up is probably real page-space testing with two large uploaded images
+at once — this round's side-by-side layout caps each image at 2in tall in
+`.sources-row` but hasn't been checked against a genuinely tall two-image
+pairing under `@page` letter-portrait print margins.
+
 **2026-08-12 — Backlog round: share worksheet by link / QR shipped (backlog
 rank 1).** The tool now loads `_shared/state-link.js` and the site's vendored
 QR encoder (`_shared/vendor/qrcode/qrcode.js`) and grew two toolbar buttons —
@@ -140,6 +205,13 @@ teacher, and it has the most room to grow of any content tool on the site.
   copy a `?worksheet=` URL or show a scannable QR; opening one saves a
   uniquely-named copy. Uploaded images deliberately don't ride the link
   (size), with a visible note saying so
+- **Corroboration mode** (`state.corroborationMode`): an optional Source B
+  (text/description/image/citation) prints side by side with Source A under
+  shared framework questions (`sourceBoxHtml`, dual answer areas via
+  `stepBlockHtml`), plus a fixed comparison block (`comparisonBlockHtml`) —
+  agree / disagree / more reliable — with its own answer-key section
+  (`state.notesB`, `state.comparisonNotes`). A **Load Boston Massacre
+  example** button fills a real two-source pair to try it immediately.
 
 ## Quick Wins
 
@@ -175,7 +247,7 @@ teacher, and it has the most room to grow of any content tool on the site.
 - **Projected analysis mode.** The source shown large with the framework's
   questions revealed one at a time, for working through a document together
   as a class — the no-copier fallback, driven from the teacher's machine.
-- **Corroboration exercises.** Two sources on the same event, side by side,
+- **Done — SS demo round, session `qzmvhx`.** ~~Corroboration exercises.~~ Two sources on the same event, side by side,
   with "where do they agree, where do they conflict, why" — the actual
   historical thinking skill, and a natural extension of a two-source packet.
 - **Timeline and map handoff** (P7). A source has a date and a place;
