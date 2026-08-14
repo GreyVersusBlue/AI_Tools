@@ -170,6 +170,98 @@ multi-save plumbing this round built (triple-key store, share/export
 serializers) is a pattern the next round can extend rather than
 invent from scratch.
 
+**2026-08-14 — SS demo round 2 (session `vn8trq`) — essay planning
+scaffold + rubric page + leveled packets.** The whole scope shipped,
+nothing cut.
+
+- **Essay planning organizer** (headline). A new optional closing page:
+  a thesis line with a level-appropriate sentence-frame hint, a
+  three-body-paragraph planning grid (claim / which documents support it
+  / strongest evidence), a counterargument box, and a conclusion line.
+  The document slots are built from the packet's *actual* sources, not
+  placeholders: the page lists "Source A &mdash; A Factory Inspector's
+  Report, Source B &mdash; &hellip;" and every grid row offers that
+  packet's own letters as check boxes. It is on by default when the
+  packet has an essay prompt, and off for an older packet that has none,
+  so nobody's saved packet silently grows a page.
+- **Scoring rubric page** (headline). An editable criteria&times;levels
+  grid seeded with plain 7th-grade DBQ wording (thesis/claim, use of the
+  documents, outside knowledge, organization and writing) across four
+  levels. Every header and cell is a live input, criteria can be added or
+  removed, and "Reset to the starter rubric" comes back. It prints either
+  as the full four-level grid with a total/comments line, or as a
+  student-facing checklist built from the "meets" column plus a teacher
+  comments block. Opt-in, so it never appears in an existing packet by
+  surprise.
+- **Differentiation levels** (supporting 1), exactly per the toolkit
+  spec: `Academic` / `Honors` / `Honors GT`, defaulting to Honors.
+  **Honors output is byte-identical to what this tool printed before
+  this round** &mdash; verified by rendering the pre-round file and the
+  new one side by side in headless Chromium and string-comparing
+  `#printArea.innerHTML` (identical). Academic adds, to the same
+  questions, a "before you read" gloss of 2&ndash;3 hard words taken from
+  that source's own text, a sentence starter under each question matched
+  to how the teacher worded it, the essay prompt chunked into numbered
+  steps, and pre-filled paragraph frames in the organizer. Honors GT
+  drops the frames and adds an outside-evidence row, a "whose voice is
+  missing from this packet?" question, and a so-what push on the essay
+  page. "Print all three levels" emits all three class sets in one pass
+  (21 pages for the example packet), each page footer-tagged with its
+  level; a single-level print stays untagged, which is what keeps the
+  Honors baseline unchanged.
+- **Send a source to Primary Source Analysis** (supporting 2) &mdash; the
+  P7 pairing the backlog has named since the first build, finally built.
+  Text sources get an "Analysis worksheet &rarr;" button that encodes
+  028's own round-1 `?worksheet=` payload with the same
+  `_shared/state-link.js` encoder 028 uses, on 028's SOAPSTone framework
+  (its written-source framework; OPTIC is for visuals and only text comes
+  through here), and opens 028 in a new tab. Title, text, and citation
+  travel; image pixels stay behind, matching both tools' share rules.
+- **Extended smoke suite** (supporting 3):
+  `Tools/dbq-source-packet-builder/test/smoke-essay-levels.mjs`
+  (`npm run test:dbq`, appended to the root `test` chain) &mdash; 78
+  assertions covering page order, the organizer naming real sources,
+  the rubric appearing/vanishing/printing edits/printing as a checklist,
+  gloss and starters present at Academic and absent at Honors, the GT
+  extras, the 21-page footer-tagged all-levels run, level and toggles
+  surviving a reload, and the 028 handoff URL both decoding as a valid
+  028 payload *and* actually opening in 028 with the source text in it.
+
+**Round-1 links keep working.** The share payload gained `level`,
+`organizerEnabled`, `rubricEnabled`, and `rubric`; the validator treats
+all four as optional-but-shaped, the same way 028's worksheet validator
+handles its own additive fields. A round-1 link (none of those keys) is
+asserted in the suite to still import, land on Honors, default the
+organizer on because it has an essay prompt, and leave the rubric off.
+
+**Hardest part:** deciding what "Honors is the baseline, unchanged"
+actually has to mean once footer tags exist. Tagging every printed page
+with its level is the obviously useful thing, and it would also have
+quietly changed every existing packet's output. Splitting it &mdash;
+tags only in the all-levels run, never in a single-level print &mdash;
+keeps both promises, and the byte-comparison against the pre-round file
+is what proved it rather than eyeballing a PDF.
+
+**Shared-code note:** the level selector, the three exact level names,
+and the footer-tag pattern are going to exist in several tools after
+this round (028 built its own in parallel). That is a real
+`_shared/` extraction candidate &mdash; a tiny `levels.js` with the
+names, the default, and a `levelTag()` helper &mdash; but `_shared/` is
+off-limits during a parallel round, so it is logged here and in
+`_site-requests.md` instead. The word glossary in this tool
+(~60 social-studies terms) is the other obvious candidate: any tool that
+wants an Academic-level vocabulary gloss will want the same list.
+
+**Where the next round should pick up:** the source bank/library is now
+the last big unbuilt item from the Moonshot, and it is the one that
+would remove the biggest recurring cost (re-uploading the same documents
+every year). With 028 gaining a library this round, the cleaner move may
+be a *cross-link* rather than a second library here: pull a source out
+of 028's library into a packet, reusing the link format this round
+already speaks in the other direction. Smaller follow-ons worth a
+backlog row: an organizer with a teacher-set number of body paragraphs,
+and letting the rubric ride into 028 alongside a source.
+
 ## What it does today
 
 - Multiple named saved packets (new/duplicate/delete/rename), migrated
@@ -185,6 +277,21 @@ invent from scratch.
 - Shared guiding questions asked of every source
 - Sources: text or image, citation, source-specific questions,
   auto-lettered (A, B, C&hellip;)
+- An optional essay planning organizer page (thesis, a three-paragraph
+  planning grid built from the packet's own source letters and titles,
+  counterargument, conclusion), on by default when there is an essay
+  prompt
+- An optional scoring rubric page: an editable criteria&times;levels
+  grid seeded with 7th-grade DBQ wording, printable as the full grid or
+  as a student checklist
+- Three levels (Academic / Honors / Honors GT) that change the printed
+  packet, not the editing screen: Academic adds a word gloss, sentence
+  starters, chunked prompt steps, and organizer frames; Honors GT drops
+  the frames and adds outside evidence, a missing-voice question, and a
+  so-what push. "Print all three levels" runs all three class sets in
+  one go, footer-tagged
+- Send any text source to Primary Source Analysis as a full SOAPSTone
+  worksheet in one click
 - Image sources: drag-to-crop box (arbitrary rectangle, non-destructive
   against the original upload) plus a 20&ndash;100% print-width slider,
   applied identically in the editor preview and the printed packet
@@ -208,10 +315,11 @@ invent from scratch.
 
 ## Major Features
 
-- **Direct integration with Primary Source Analysis Worksheet Generator**,
-  which the backlog explicitly names as a pairing — e.g. generate an
-  OPTIC/SOAPSTone-style analysis worksheet per source directly from a
-  packet, instead of building the two documents independently.
+- ~~**Direct integration with Primary Source Analysis Worksheet
+  Generator**~~ — **done, SS demo round 2 (`vn8trq`)**: a text source
+  becomes a full SOAPSTone worksheet in 028 in one click, via 028's own
+  share-link format. The remaining half of the pairing is the other
+  direction (pull a source *out* of 028's library into a packet).
 - **A source bank/library**: save individual sources (not whole packets)
   to a personal library, so a source used across multiple DBQ packets
   (e.g. a frequently-cited primary document) doesn't need re-uploading
@@ -219,9 +327,14 @@ invent from scratch.
 - ~~**JSON export/import**~~ — **done, SS demo round (`xo4v63`)**, for
   sharing a built packet with another social studies teacher on the
   same team or across a department.
-- **Difficulty/scaffolding levels per source** — e.g. a vocabulary gloss
-  or a simplified-language version alongside the original text, for
-  differentiating the same DBQ packet across ability levels.
+- ~~**Difficulty/scaffolding levels**~~ — **done, SS demo round 2
+  (`vn8trq`)**, and the Open Question below is answered: it was worth
+  building as a first-class feature, because "same questions, more
+  support" turned out to be generatable from the teacher's own text (a
+  glossary hit on their words, a starter matched to their question
+  wording) without the tool ever rewriting a historical document. What
+  was *not* built, deliberately, is a simplified-language version of a
+  source — that really does need source-specific human judgment.
 
 ## Moonshot / North Star
 
