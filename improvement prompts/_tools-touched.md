@@ -192,7 +192,7 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Primary Source Analysis Worksheet Generator | `kx9rtm` | 2026-08-14 02:38 UTC | `claude/ssdemo2-028-kx9rtm` |
+| *(none)* | | | |
 
 ---
 
@@ -200,6 +200,33 @@ here.
 
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
+
+### Devon-assigned round 2 — tool 028 — 2026-08-14 02:38 UTC — session `kx9rtm`
+
+Primary Source Analysis Worksheet Generator
+(`028-primary-source-analysis-generator.md`), social studies demo round 2.
+
+- **Differentiation levels** — the reference implementation of the site-wide
+  three-level switch (`Academic` / `Honors` / `Honors GT`, default Honors),
+  which tools 054 and 056 copy. Academic chunks multi-part prompts into
+  lettered steps and hangs a sentence starter generated from each question's
+  own words under it, plus a plain-language gloss of hard words found in the
+  teacher's source. Honors GT adds a per-step open-ended "Go further" prompt
+  and a closing synthesis question, with less ruled space. Honors renders none
+  of it — the baseline worksheet is unchanged, asserted first in the suite.
+- Works in single-source and corroboration modes and on the answer key, which
+  states what a complete answer looks like at that level.
+- **Print all three levels** — three class sets in one flow, each tagged top
+  and bottom so the piles sort. Works for the key too.
+- The share link carries the level; the validator was loosened, not
+  tightened, so round-1 links and 056-built links keep working.
+- **Tagged source library** (`gvb-primary-source:library`) and **annotation
+  callouts** (numbered excerpt markers in the source text with "look closely"
+  questions).
+- Fixed on the way: Source B's type dropdown was never populated at all.
+- New suite `Tools/primary-source-analysis-generator/test/smoke-levels.mjs`
+  (106 assertions), appended to `test:primary-source`. No `sw.js` change —
+  only a `test/` folder was added.
 
 ### Devon-assigned round — tool 046 — 2026-08-13 23:54 UTC — session `q4wmxz`
 

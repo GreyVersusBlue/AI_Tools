@@ -70,7 +70,7 @@
     "offline:build": "node Tools/board-check/make-offline-copy.mjs",
     "offline:verify": "node Tools/board-check/verify-offline-copy.mjs",
     "test:current-events": "node Tools/current-events-discussion-guide-generator/test/smoke-comparison.mjs",
-    "test:primary-source": "node Tools/primary-source-analysis-generator/test/smoke-corroboration.mjs",
+    "test:primary-source": "node Tools/primary-source-analysis-generator/test/smoke-corroboration.mjs && node Tools/primary-source-analysis-generator/test/smoke-levels.mjs",
     "test:dbq": "node Tools/dbq-source-packet-builder/test/smoke-share.mjs",
     "test:civics-case-files": "node Tools/civics-role-card-generator/test/smoke-case-file-packets.mjs",
     "test:timeline": "node Tools/timeline-builder/test/smoke-map-print.mjs"
