@@ -197,7 +197,6 @@ here.
 | Primary Source Analysis Worksheet Generator | `qzmvhx` | 2026-08-13 23:58 UTC | `claude/ssdemo-028-qzmvhx` |
 | Current Events Discussion Guide Generator | `qfx7mz` | 2026-08-13 23:55 UTC | `claude/ssdemo-054-qfx7mz` |
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
-| Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
 | Geography Bee / Map Skills Quiz Generator | `mee9kj` | 2026-08-14 00:01 UTC | `claude/ssdemo-062-mee9kj` |
 
@@ -1033,6 +1032,20 @@ empty tracks because a bare `<span>` is inline and ignores `width`.
 source, not the notes): Duty Roster per-staff counts, Experiment Design
 Planner reordering, and Fraction–Decimal–Percent seeded generation, all
 delivered by session `kq3g3h` and never taken off the list.
+
+### Devon-assigned round — tool 064 — 2026-08-14 00:12 UTC — session `vqrmlk`
+
+One of eight parallel SS-demo-round sessions (see `_preamble.md`), each
+assigned one tool ahead of Devon's live teacher presentation. Step 0 (a
+mandatory revisit) first: **backlog rank 31, "Batch-add blank cards from a
+roster," is confirmed stale** — a paste-a-list batch-add dialog already
+shipped in the prior Visual-upgrade round (2026-08-13), and works as
+described. Nothing to build there; see `064-historical-trading-card-maker.md`
+Status for the full writeup. Then, per this round's own scope:
+
+| Tool | File | What shipped |
+|---|---|---|
+| Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` | Headline (P3): share a deck with another teacher by link or QR code (card text/stats/theme/rarity travel, photos never do; an oversized deck falls back to the copy-link message instead of an unscannable QR; an incoming link always lands as a new deck, never overwriting one already on the device). Supporting: a `np_rosters`-fed class-list dropdown next to the existing roster paste box (P2); a one-click "Load sample deck" with 5 real historical-figure cards, mixed rarity/theme, no photos (P15). New `smoke-share.mjs` (55 assertions) plus the two existing suites stayed green throughout. |
 
 ---
 
