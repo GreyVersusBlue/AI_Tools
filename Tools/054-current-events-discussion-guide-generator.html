@@ -66,6 +66,10 @@
   .vocab-row input.term { flex: 0 0 9rem; font-weight: 700; margin-bottom: 0; }
   .vocab-row input.def { flex: 1; margin-bottom: 0; }
   .q-row input { flex: 1; margin-bottom: 0; }
+  /* The rule above was written for the custom-question text box, but it also
+     matched the preset checkboxes, which stretched them across the row and
+     shoved every question's text against the right edge. */
+  .q-row label input[type="checkbox"] { flex: 0 0 auto; }
   .q-row label { display: flex; align-items: center; gap: .4rem; font-weight: 400; flex: 1; margin-bottom: 0; }
   .word-chip { display: inline-block; background: #e9eef3; color: var(--accent-2); border-radius: 999px; padding: .15rem .6rem; margin: .15rem .3rem .15rem 0; font-size: .82rem; cursor: pointer; }
   .word-chip:hover { background: var(--accent-2); color: #fff; }
@@ -96,6 +100,50 @@
   .core-tag { display: inline-block; background: #eee; border: 1px solid #999; border-radius: 4px; padding: 0 .3rem; font-size: .72rem; font-weight: 700; margin-left: .3rem; }
   tr.core-vocab td:first-child { font-weight: 700; }
 
+  /* Media literacy kit — on-screen controls */
+  select { width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink); background: #fff;
+    border: 1px solid var(--line-strong); border-radius: 6px; padding: .45rem .55rem; margin-bottom: .6rem; }
+  .kit-toggle { display: flex; align-items: flex-start; gap: .5rem; padding: .4rem 0; font-weight: 400; margin-bottom: 0; }
+  .kit-toggle input { margin-top: .3rem; flex: 0 0 auto; }
+  .kit-name { font-weight: 700; font-size: .86rem; }
+  .kit-toggle .hint { margin: .1rem 0 0; }
+  .claim-row { display: grid; grid-template-columns: 4.5rem 1fr 1fr 7.5rem auto; gap: .4rem; align-items: center; padding: .25rem 0; }
+  .claim-row.single { grid-template-columns: 1fr 1fr 7.5rem auto; }
+  .claim-row input, .claim-row select { margin-bottom: 0; }
+  @media (max-width: 760px) { .claim-row, .claim-row.single { grid-template-columns: 1fr; } }
+
+  /* Media literacy kit — printed pages */
+  .kit-intro { font-size: .8rem; color: #555; margin: 0 0 .5rem; }
+  .sift-move { margin-bottom: .8rem; page-break-inside: avoid; }
+  .sift-move h4 { font-size: .9rem; margin: 0 0 .15rem; }
+  .sift-ask { font-size: .86rem; margin: 0 0 .25rem; }
+  .sift-steps { font-size: .84rem; margin: 0 0 .3rem; padding-left: 1.15rem; }
+  .starter { font-size: .8rem; color: #444; font-style: italic; margin: 0 0 .3rem; }
+  .sift-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sift-col h5 { font-size: .76rem; font-weight: 700; margin: 0 0 .2rem; color: #333; border-bottom: 1px solid #ccc; padding-bottom: .1rem; }
+  .headline-quote { border: 1px solid #999; border-radius: 5px; padding: .4rem .6rem; margin: 0 0 .5rem; font-size: .9rem; font-weight: 700; }
+  .headline-quote .hq-label { display: block; font-size: .72rem; font-weight: 400; color: #555; text-transform: uppercase; letter-spacing: .03em; }
+  .kit-task { margin-bottom: .7rem; page-break-inside: avoid; }
+  .kit-task h4 { font-size: .88rem; margin: 0 0 .15rem; }
+  table.claim-table, table.match-table { width: 100%; border-collapse: collapse; }
+  table.claim-table th, table.claim-table td,
+  table.match-table th, table.match-table td { border: 1px solid #999; padding: .4rem .5rem; font-size: .84rem; text-align: left; vertical-align: top; }
+  table.claim-table th, table.match-table th { background: #eee; }
+  table.claim-table td.blank-cell { min-height: 3.2rem; height: 3.2rem; }
+  table.match-table td.blank-cell { min-height: 2rem; height: 2rem; }
+  table.match-table td.match-answer { width: 6.5rem; }
+  .glossary-box { border: 1px solid #999; border-radius: 5px; padding: .45rem .6rem; margin: 0 0 .8rem; font-size: .82rem; }
+  .glossary-box h4 { font-size: .84rem; margin: 0 0 .25rem; }
+  .glossary-box dl { margin: 0; }
+  .glossary-box dt { display: inline; font-weight: 700; }
+  .glossary-box dd { display: inline; margin: 0; }
+  .glossary-box dd:after { content: ""; display: block; margin-bottom: .12rem; }
+  .level-banner { border: 2px solid #333; border-radius: 6px; padding: .3rem .6rem; font-size: .85rem; font-weight: 700; margin: 0 0 .7rem; }
+  .level-footer { margin-top: 1rem; padding-top: .25rem; border-top: 1px solid #999; font-size: .75rem; color: #444;
+    display: flex; justify-content: space-between; gap: 1rem; }
+  .level-chip { float: right; font-size: .72rem; font-weight: 700; color: #555; }
+  .level-set + .level-set { page-break-before: always; }
+
   .guide-title { font-size: 1.3rem; margin: 0 0 .1rem; }
   .guide-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
   .guide-section { margin-bottom: 1rem; }
@@ -120,6 +168,7 @@
       <button class="secondary" id="loadExampleBtn">Load two-article example</button>
       <button class="secondary" id="clearBtn">Clear &amp; start over</button>
       <button class="secondary" id="printBtn">Print discussion guide</button>
+      <button class="secondary" id="printAllLevelsBtn">Print all three levels</button>
     </div>
   </div>
 
@@ -170,6 +219,18 @@
         <p class="hint" id="wordCountHintB"></p>
         <button type="button" class="danger small" id="removeArticleBBtn">Remove Article B</button>
       </div>
+
+      <div class="card">
+        <h2>Class level</h2>
+        <label for="levelSelect">Level</label>
+        <select id="levelSelect">
+          <option value="academic">Academic</option>
+          <option value="honors">Honors</option>
+          <option value="gt">Honors GT</option>
+        </select>
+        <p class="hint">This changes the printed sheet, not what you see here. Academic adds sentence starters, plain-language word glosses, and longer prompts broken into steps. Honors GT opens the prompts up, leaves less pre-structured space, and adds a synthesis question at the end. Honors is the baseline.</p>
+        <p class="hint">&ldquo;Print all three levels&rdquo; runs all three class sets in one go, each page tagged with its level so you can sort the piles after they come off the printer.</p>
+      </div>
     </div>
 
     <div>
@@ -201,6 +262,29 @@
           <h2 style="margin:0 0 .5rem;">Comparing these two articles</h2>
           <p class="hint">Bias and framing questions for when you have two articles about the same event.</p>
           <div id="comparisonQuestions"></div>
+        </div>
+      </div>
+
+      <div class="card" id="kitCard">
+        <h2>Media literacy kit</h2>
+        <p class="hint">Optional pages that turn this guide into a media literacy lesson. Tick what you want and it prints with the guide. These sheets scaffold the thinking &mdash; students do the evaluating, not the tool.</p>
+
+        <label class="kit-toggle"><input type="checkbox" id="kitSift">
+          <span><span class="kit-name">Source evaluation checklist (SIFT)</span>
+          <span class="hint">Stop, Investigate the source, Find better coverage, Trace the claim, with write-in lines under each move. Prints two columns once you have a second article.</span></span></label>
+
+        <label class="kit-toggle"><input type="checkbox" id="kitHeadline">
+          <span><span class="kit-name">Headline rewrite exercise</span>
+          <span class="hint">Prints the real headline, then asks students to rewrite it twice &mdash; once as neutrally as they can, once slanted the other way &mdash; and say what they had to change. With two articles they also match each headline to its framing.</span></span></label>
+
+        <label class="kit-toggle"><input type="checkbox" id="kitClaims">
+          <span><span class="kit-name">Claim vs. evidence organizer</span>
+          <span class="hint">A table for copying claims out of the article next to the evidence given, with a fact / opinion / spin tag per row. Pre-fill the claims below or leave the rows blank for students.</span></span></label>
+
+        <div id="claimEditor" style="display:none;margin-top:.7rem;">
+          <p class="hint" style="margin-bottom:.3rem;">Pre-filled text prints as-is; anything you leave blank prints as writing space.</p>
+          <div id="claimRows"></div>
+          <button type="button" class="secondary small" id="addClaimRowBtn">+ Add row</button>
         </div>
       </div>
     </div>
@@ -249,6 +333,76 @@
     'Which article would you trust more, and why? Point to something specific in the writing that makes you say that.'
   ];
 
+  var CLAIM_TAGS = ['Fact', 'Opinion', 'Spin'];
+
+  /* The four SIFT moves, in order. `ask` is the Honors baseline wording;
+     `steps` chunks the same question for Academic; `open` is the Honors GT
+     wording (same move, less pre-structured). Move 3 stays honest about the
+     offline constraint: this sheet cannot look anything up, so it asks
+     students to plan the search they would run instead of pretending to. */
+  var SIFT_MOVES = [
+    {
+      name: 'Stop',
+      ask: 'Before you believe this or pass it along, stop. What did you already think about this topic before you read a word of it?',
+      steps: ['What is this article about, in one sentence?',
+              'What did you already believe about it before today?',
+              'How do you feel reading it? Name the feeling.'],
+      starter: 'Before I read this I already thought that ______, so I need to watch out for ______.',
+      open: 'Stop before you react. What were you already primed to believe here, and how might that shape which parts of the article you notice?'
+    },
+    {
+      name: 'Investigate the source',
+      ask: 'Who published this, and who wrote it? What can you tell about them from the article itself?',
+      steps: ['Who published it?',
+              'Does it say who wrote it?',
+              'What kind of publication does this look like, and what makes you say that?'],
+      starter: 'This was published by ______. It does / does not name a writer. That matters because ______.',
+      open: 'What would you need to know about this publisher and this writer before you trusted them on this particular story?'
+    },
+    {
+      name: 'Find better coverage',
+      ask: 'Who else reported this story? This sheet cannot look that up for you, so write down where you would go and exactly what you would search.',
+      steps: ['Where would you look for another report on this?',
+              'What words would you type into the search?',
+              'What would make a second report better than this one?'],
+      starter: 'To find other coverage I would search for ______ and then check ______.',
+      open: 'Plan the search you would actually run: which sources, in what order, and what would count as better coverage than what you have here?'
+    },
+    {
+      name: 'Trace the claim',
+      ask: 'Pick one claim from the article. Where did the article get it? Follow it back as far as the article lets you.',
+      steps: ['Write down one claim the article makes.',
+              'Who or what does the article say that came from?',
+              'Could you check it yourself? How would you start?'],
+      starter: 'The article claims that ______. It says that came from ______.',
+      open: 'Trace one claim back as far as the article allows. Where does the trail stop, and what does stopping there tell you about the claim?'
+    }
+  ];
+
+  var SIFT_GT_EXTENSION = 'Extension: find a third report on this same event, from somewhere neither article above came from. Summarize how it frames the story in two or three sentences. What does it put first that neither of these two do?';
+
+  /* Framing statements students match to a headline. Deliberately generic and
+     checkable against any pair of headlines — the tool is not judging which
+     headline is slanted, students are. */
+  var HEADLINE_MATCH_STATEMENTS = [
+    'This headline asks you to notice what somebody gains.',
+    'This headline asks you to notice what somebody loses.',
+    'This headline puts the people who made the decision first.',
+    'This headline puts the people affected by it first.',
+    'This headline uses at least one word that tells you how to feel.'
+  ];
+
+  /* Plain-language glosses for the words the kit itself introduces. Printed
+     for Academic only, and only when a kit page is actually on. */
+  var KIT_GLOSSARY = [
+    ['source', 'who published the article, and who wrote it'],
+    ['claim', 'something the article says is true'],
+    ['evidence', 'the proof the article gives for a claim'],
+    ['neutral', 'written so it does not push you toward one side'],
+    ['framing', 'the choice of what to put first and what to leave out'],
+    ['spin', 'a true fact told in a way that pushes you to feel a certain way']
+  ];
+
   var STOPWORDS = ['about', 'after', 'again', 'because', 'before', 'between', 'could', 'during', 'their', 'there',
     'these', 'those', 'through', 'which', 'while', 'would', 'should', 'other', 'people', 'something', 'according',
     'yesterday', 'tomorrow', 'different', 'another', 'someone', 'everyone', 'anything', 'nothing', 'everything',
@@ -274,12 +428,30 @@
    'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn',
    'articleBCard', 'articleTitleB', 'articleSourceB', 'articleTextB', 'wordCountHintB', 'addArticleBBtn', 'removeArticleBBtn',
    'summaryBWrap', 'summaryTextB', 'comparisonQuestionsWrap', 'comparisonQuestions', 'loadExampleBtn',
-   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
+   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn',
+   'levelSelect', 'printAllLevelsBtn', 'kitSift', 'kitHeadline', 'kitClaims', 'claimEditor', 'claimRows', 'addClaimRowBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  /* Differentiation levels. Honors is the baseline — today's output, unchanged.
+     Academic adds scaffolding on top of the same questions (never fewer or
+     easier ones); Honors GT opens the prompts up and adds a synthesis question.
+     Order here is the order "Print all three levels" prints the piles in. */
+  var LEVELS = [
+    { id: 'academic', label: 'Academic' },
+    { id: 'honors', label: 'Honors' },
+    { id: 'gt', label: 'Honors GT' }
+  ];
+  var DEFAULT_LEVEL = 'honors';
+  function levelLabel(id) {
+    for (var i = 0; i < LEVELS.length; i++) if (LEVELS[i].id === id) return LEVELS[i].label;
+    return 'Honors';
+  }
+  function isLevel(id) { return LEVELS.some(function (l) { return l.id === id; }); }
 
   function emptyGuide(name) {
     return { name: name, title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [],
-      titleB: '', sourceB: '', articleTextB: '', summaryB: '', comparisonChecked: {} };
+      titleB: '', sourceB: '', articleTextB: '', summaryB: '', comparisonChecked: {},
+      level: DEFAULT_LEVEL, kitSift: false, kitHeadline: false, kitClaims: false, claimRows: [] };
   }
   var state = emptyGuide('New Guide');
   var articleBVisible = false;
@@ -328,6 +500,24 @@
     if (data.presetChecked && typeof data.presetChecked === 'object') g.presetChecked = data.presetChecked;
     if (data.comparisonChecked && typeof data.comparisonChecked === 'object') g.comparisonChecked = data.comparisonChecked;
     if (Array.isArray(data.customQuestions)) g.customQuestions = data.customQuestions;
+    /* Round-2 media-literacy fields. Absent on every guide saved before this
+       round and on every share link built before it, so each one falls back to
+       the pre-round default: level Honors, kit off, no claim rows. */
+    if (typeof data.level === 'string' && isLevel(data.level)) g.level = data.level;
+    ['kitSift', 'kitHeadline', 'kitClaims'].forEach(function (k) {
+      if (typeof data[k] === 'boolean') g[k] = data[k];
+    });
+    if (Array.isArray(data.claimRows)) {
+      g.claimRows = data.claimRows.filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
+        return {
+          id: typeof r.id === 'string' && r.id ? r.id : uid(),
+          article: r.article === 'B' ? 'B' : 'A',
+          claim: typeof r.claim === 'string' ? r.claim : '',
+          evidence: typeof r.evidence === 'string' ? r.evidence : '',
+          tag: CLAIM_TAGS.indexOf(r.tag) !== -1 ? r.tag : ''
+        };
+      });
+    }
     return g;
   }
 
@@ -399,6 +589,7 @@
     renderPresetQuestions();
     renderComparisonQuestions();
     renderCustomQuestions();
+    renderKitControls();
     updateComparisonUI();
   }
 
@@ -640,6 +831,84 @@
     save(); renderCustomQuestions();
   });
 
+  /* ---------- class level + media literacy kit controls ---------- */
+  els.levelSelect.addEventListener('change', function () {
+    if (isLevel(els.levelSelect.value)) { state.level = els.levelSelect.value; save(); }
+  });
+
+  function renderKitControls() {
+    els.levelSelect.value = state.level;
+    els.kitSift.checked = !!state.kitSift;
+    els.kitHeadline.checked = !!state.kitHeadline;
+    els.kitClaims.checked = !!state.kitClaims;
+    els.claimEditor.style.display = state.kitClaims ? '' : 'none';
+    renderClaimRows();
+  }
+
+  function renderClaimRows() {
+    var comparison = hasComparisonContent(state);
+    els.claimRows.innerHTML = state.claimRows.map(function (r) {
+      var articleCell = comparison
+        ? '<select class="claim-article" aria-label="Which article this claim came from">' +
+            '<option value="A"' + (r.article === 'B' ? '' : ' selected') + '>A</option>' +
+            '<option value="B"' + (r.article === 'B' ? ' selected' : '') + '>B</option>' +
+          '</select>'
+        : '';
+      var tagOptions = ['<option value="">(blank)</option>'].concat(CLAIM_TAGS.map(function (t) {
+        return '<option value="' + t + '"' + (r.tag === t ? ' selected' : '') + '>' + t + '</option>';
+      })).join('');
+      return '<div class="claim-row' + (comparison ? '' : ' single') + '" data-id="' + r.id + '">' +
+        articleCell +
+        '<input type="text" class="claim-claim" value="' + escapeAttr(r.claim) + '" placeholder="claim from the article (optional)">' +
+        '<input type="text" class="claim-evidence" value="' + escapeAttr(r.evidence) + '" placeholder="evidence given (optional)">' +
+        '<select class="claim-tag" aria-label="Fact, opinion, or spin">' + tagOptions + '</select>' +
+        '<button type="button" class="danger small" data-del-claim="' + r.id + '">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function addClaimRow() { state.claimRows.push({ id: uid(), article: 'A', claim: '', evidence: '', tag: '' }); }
+
+  [['kitSift', 'kitSift'], ['kitHeadline', 'kitHeadline'], ['kitClaims', 'kitClaims']].forEach(function (pair) {
+    els[pair[0]].addEventListener('change', function () {
+      state[pair[1]] = els[pair[0]].checked;
+      /* Turning the organizer on for the first time seeds three empty rows so
+         a teacher sees the shape of the table instead of an empty editor. */
+      if (pair[1] === 'kitClaims' && state.kitClaims && !state.claimRows.length) {
+        addClaimRow(); addClaimRow(); addClaimRow();
+      }
+      save();
+      renderKitControls();
+    });
+  });
+
+  els.addClaimRowBtn.addEventListener('click', function () { addClaimRow(); save(); renderClaimRows(); });
+
+  function claimRowFor(ev) {
+    var row = ev.target.closest('.claim-row');
+    if (!row) return null;
+    var id = row.getAttribute('data-id');
+    return state.claimRows.find(function (r) { return r.id === id; }) || null;
+  }
+  function applyClaimField(ev) {
+    var r = claimRowFor(ev);
+    if (!r) return;
+    if (ev.target.classList.contains('claim-claim')) r.claim = ev.target.value;
+    else if (ev.target.classList.contains('claim-evidence')) r.evidence = ev.target.value;
+    else if (ev.target.classList.contains('claim-tag')) r.tag = ev.target.value;
+    else if (ev.target.classList.contains('claim-article')) r.article = ev.target.value === 'B' ? 'B' : 'A';
+    else return;
+    save();
+  }
+  els.claimRows.addEventListener('input', applyClaimField);
+  els.claimRows.addEventListener('change', applyClaimField);
+  els.claimRows.addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-del-claim');
+    if (!id) return;
+    state.claimRows = state.claimRows.filter(function (r) { return r.id !== id; });
+    save(); renderClaimRows();
+  });
+
   els.articleTitle.addEventListener('input', function () { state.title = els.articleTitle.value; save(); });
   els.articleSource.addEventListener('input', function () { state.source = els.articleSource.value; save(); });
   els.articleText.addEventListener('input', function () { state.articleText = els.articleText.value; save(); updateWordCount(); renderVocab(); });
@@ -672,11 +941,12 @@
     save();
     updateComparisonUI();
     renderVocab();
+    renderClaimRows();
   });
 
   els.articleTitleB.addEventListener('input', function () { state.titleB = els.articleTitleB.value; save(); });
   els.articleSourceB.addEventListener('input', function () { state.sourceB = els.articleSourceB.value; save(); });
-  els.articleTextB.addEventListener('input', function () { state.articleTextB = els.articleTextB.value; save(); updateWordCountB(); renderVocab(); });
+  els.articleTextB.addEventListener('input', function () { state.articleTextB = els.articleTextB.value; save(); updateWordCountB(); renderVocab(); renderClaimRows(); });
   els.summaryTextB.addEventListener('input', function () { state.summaryB = els.summaryTextB.value; save(); });
 
   els.clearBtn.addEventListener('click', function () {
@@ -694,34 +964,57 @@
     }).join('');
   }
 
-  function presetQuestionsHtml() {
-    var questions = PRESET_QUESTIONS.filter(function (q, i) { return state.presetChecked[i] !== false; })
-      .concat(state.customQuestions.filter(function (q) { return q.text.trim(); }).map(function (q) { return escapeHtml(q.text); }));
-    return questions.map(function (q) {
-      return '<div class="q-item">' + q + '</div><span class="fill-line"></span><span class="fill-line"></span>';
+  /* ---------- printed output, level-aware ----------
+     `level` is one of LEVELS[].id and drives the scaffolding. `tagLevel`, when
+     set, prints a small level chip on every section head — used only by
+     "Print all three levels", so that a stack of mixed sheets can be sorted
+     back into three piles page by page. */
+  function fillLines(n) {
+    var out = '';
+    for (var i = 0; i < n; i++) out += '<span class="fill-line"></span>';
+    return out;
+  }
+  /* Academic gets more writing space (the prompts are chunked into steps and
+     answers run longer); Honors and GT keep today's two lines. */
+  function answerLines(level) { return fillLines(level === 'academic' ? 3 : 2); }
+
+  function sectionHead(title, tagLevel) {
+    return '<h3>' + (tagLevel ? '<span class="level-chip">' + levelLabel(tagLevel) + '</span>' : '') + title + '</h3>';
+  }
+
+  function questionBlockHtml(questions, level) {
+    var starter = level === 'academic'
+      ? '<p class="starter">Answer in full sentences. Two ways to start: &ldquo;The article shows ______ when it says ______.&rdquo; or &ldquo;I think ______ because the article says ______.&rdquo;</p>'
+      : '';
+    return starter + questions.map(function (q) {
+      return '<div class="q-item">' + q + '</div>' + answerLines(level);
     }).join('');
   }
 
-  function guideHtmlSingle() {
+  function presetQuestionsHtml(level) {
+    var questions = PRESET_QUESTIONS.filter(function (q, i) { return state.presetChecked[i] !== false; })
+      .concat(state.customQuestions.filter(function (q) { return q.text.trim(); }).map(function (q) { return escapeHtml(q.text); }));
+    return questionBlockHtml(questions, level);
+  }
+
+  function guideHtmlSingle(level, tagLevel) {
     var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Current Events Discussion Guide';
     return '<h1 class="guide-title">' + title + '</h1>' +
       '<p class="guide-sub">' + (state.source.trim() ? 'Source: ' + escapeHtml(state.source.trim()) : '') + ' &nbsp; Name: __________________________ &nbsp; Date: __________</p>' +
-      '<div class="guide-section"><h3>Summary</h3><p style="font-size:.9rem;">' + (state.summary.trim() ? escapeHtml(state.summary.trim()) : '&nbsp;') + '</p>' +
+      '<div class="guide-section">' + sectionHead('Summary', tagLevel) + '<p style="font-size:.9rem;">' + (state.summary.trim() ? escapeHtml(state.summary.trim()) : '&nbsp;') + '</p>' +
       (state.summary.trim() ? '' : '<span class="fill-line"></span><span class="fill-line"></span>') + '</div>' +
-      '<div class="guide-section"><h3>Vocabulary</h3><table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRowsHtml(false) + '</tbody></table></div>' +
-      '<div class="guide-section"><h3>Discussion Questions</h3>' + presetQuestionsHtml() + '</div>';
+      '<div class="guide-section">' + sectionHead('Vocabulary', tagLevel) + '<table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRowsHtml(false) + '</tbody></table></div>' +
+      '<div class="guide-section">' + sectionHead('Discussion Questions', tagLevel) + presetQuestionsHtml(level) + '</div>';
   }
 
-  function guideHtmlComparison() {
+  function guideHtmlComparison(level, tagLevel) {
     var titleA = state.title.trim() || 'Article A';
     var titleB = state.titleB.trim() || 'Article B';
     var guideTitle = (state.title.trim() || state.titleB.trim())
       ? 'Comparing: ' + escapeHtml(titleA) + ' vs. ' + escapeHtml(titleB)
       : 'Two-Article Comparison Guide';
     var compQuestions = COMPARISON_QUESTIONS.filter(function (q, i) { return state.comparisonChecked[i] !== false; });
-    var compQuestionsHtml = compQuestions.map(function (q) {
-      return '<div class="q-item">' + q + '</div><span class="fill-line"></span><span class="fill-line"></span>';
-    }).join('');
+    var compQuestionsHtml = compQuestions.length ? questionBlockHtml(compQuestions, level) : '';
     return '<h1 class="guide-title">' + guideTitle + '</h1>' +
       '<p class="guide-sub">Name: __________________________ &nbsp; Date: __________</p>' +
       '<div class="compare-cols">' +
@@ -732,19 +1025,191 @@
           (state.sourceB.trim() ? '<p class="article-source">Source: ' + escapeHtml(state.sourceB.trim()) + '</p>' : '') +
           '<p style="font-size:.9rem;">' + (state.summaryB.trim() ? escapeHtml(state.summaryB.trim()) : '&nbsp;') + '</p></div>' +
       '</div>' +
-      '<div class="guide-section"><h3>Shared Vocabulary</h3>' +
+      '<div class="guide-section">' + sectionHead('Shared Vocabulary', tagLevel) +
       '<p class="hint" style="margin:0 0 .4rem;">Words marked <span class="core-tag">core</span> appear in both articles &mdash; that&rsquo;s the event&rsquo;s shared vocabulary.</p>' +
       '<table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRowsHtml(true) + '</tbody></table></div>' +
-      '<div class="guide-section"><h3>Discussion Questions</h3>' + presetQuestionsHtml() + '</div>' +
-      (compQuestionsHtml ? '<div class="guide-section"><h3>Comparing These Two Articles</h3>' + compQuestionsHtml + '</div>' : '');
+      '<div class="guide-section">' + sectionHead('Discussion Questions', tagLevel) + presetQuestionsHtml(level) + '</div>' +
+      (compQuestionsHtml ? '<div class="guide-section">' + sectionHead('Comparing These Two Articles', tagLevel) + compQuestionsHtml + '</div>' : '');
   }
 
-  function guideHtml() {
-    return hasComparisonContent(state) ? guideHtmlComparison() : guideHtmlSingle();
+  /* ---------- media literacy kit pages ---------- */
+  function anyKitOn() { return !!(state.kitSift || state.kitHeadline || state.kitClaims); }
+
+  function glossaryHtml(level) {
+    if (level !== 'academic' || !anyKitOn()) return '';
+    return '<div class="glossary-box"><h4>Words you will need on these pages</h4><dl>' +
+      KIT_GLOSSARY.map(function (p) { return '<dt>' + p[0] + ':</dt> <dd>' + p[1] + '</dd>'; }).join('') +
+      '</dl></div>';
+  }
+
+  function siftHtml(level, tagLevel) {
+    if (!state.kitSift) return '';
+    var comparison = hasComparisonContent(state);
+    var titleA = state.title.trim() || 'Article A';
+    var titleB = state.titleB.trim() || 'Article B';
+    var moves = SIFT_MOVES.map(function (m, i) {
+      var prompt;
+      if (level === 'academic') {
+        prompt = '<p class="sift-ask">' + m.ask + '</p>' +
+          '<ol class="sift-steps"><li>' + m.steps.join('</li><li>') + '</li></ol>' +
+          '<p class="starter">Try starting like this: ' + m.starter + '</p>';
+      } else if (level === 'gt') {
+        prompt = '<p class="sift-ask">' + m.open + '</p>';
+      } else {
+        prompt = '<p class="sift-ask">' + m.ask + '</p>';
+      }
+      var space = comparison
+        ? '<div class="sift-cols">' +
+            '<div class="sift-col"><h5>' + escapeHtml(titleA) + '</h5>' + answerLines(level) + '</div>' +
+            '<div class="sift-col"><h5>' + escapeHtml(titleB) + '</h5>' + answerLines(level) + '</div>' +
+          '</div>'
+        : answerLines(level);
+      return '<div class="sift-move"><h4>' + (i + 1) + '. ' + m.name + '</h4>' + prompt + space + '</div>';
+    }).join('');
+    var extension = level === 'gt'
+      ? '<div class="sift-move"><h4>Go further</h4><p class="sift-ask">' + SIFT_GT_EXTENSION + '</p>' + fillLines(4) + '</div>'
+      : '';
+    return '<div class="guide-section">' + sectionHead('Checking the Source (SIFT)', tagLevel) +
+      '<p class="kit-intro">Four moves to make before you decide what to believe. This sheet gives you the questions and the space to answer them; the checking is yours to do. Move 3 needs a device and a search &mdash; nothing on this page can look anything up for you.</p>' +
+      moves + extension + '</div>';
+  }
+
+  function headlineHtml(level, tagLevel) {
+    if (!state.kitHeadline) return '';
+    var comparison = hasComparisonContent(state);
+    var hA = state.title.trim();
+    var hB = state.titleB.trim();
+    var noHeadline = '<span style="font-weight:400;color:#555;">(no headline entered)</span>';
+    var quotes = comparison
+      ? '<div class="headline-quote"><span class="hq-label">Headline A, exactly as it was printed</span>' + (hA ? escapeHtml(hA) : noHeadline) + '</div>' +
+        '<div class="headline-quote"><span class="hq-label">Headline B, exactly as it was printed</span>' + (hB ? escapeHtml(hB) : noHeadline) + '</div>'
+      : '<div class="headline-quote"><span class="hq-label">The headline, exactly as it was printed</span>' + (hA ? escapeHtml(hA) : noHeadline) + '</div>';
+
+    var pick = comparison
+      ? '<p class="sift-ask">Pick one of the two headlines above to rewrite. Circle the one you picked: <strong>A</strong> &nbsp; <strong>B</strong></p>'
+      : '';
+
+    var tasks = [];
+    tasks.push({
+      head: 'Write it straight',
+      ask: level === 'gt'
+        ? 'Rewrite the headline so a reader could not tell which side the writer is on.'
+        : 'Rewrite the headline as neutrally as you can. Who did what, and to whom. No words that push the reader either way.',
+      steps: ['Who did something?', 'What did they do?', 'Who or what did it happen to?'],
+      starter: '______ voted to ______, and it affects ______.'
+    });
+    tasks.push({
+      head: 'Now tip it the other way',
+      ask: level === 'gt'
+        ? 'Rewrite it again, slanted the opposite way from the original. Every word still has to be true.'
+        : 'Now rewrite it slanted the other way from the original. Still true, but pushing the reader toward the other side.',
+      steps: ['Find two words in the original that carry a feeling.',
+              'Swap each one for a word that pulls the other way.',
+              'Read it out loud. Is it still true?'],
+      starter: 'I changed the word ______ to ______.'
+    });
+    tasks.push({
+      head: 'What did you have to change?',
+      ask: 'What did you have to change to move the headline? Name the exact words that were doing the work.',
+      steps: ['Which word did the most work in the original?',
+              'What did you replace it with?',
+              'What does the new headline make a reader expect?'],
+      starter: 'The word ______ made the first headline feel ______. When I changed it to ______, it felt ______ instead.'
+    });
+    if (level === 'gt') {
+      tasks.push({
+        head: 'Push it further',
+        ask: 'Write a third headline that gives away no slant at all. Then answer: is that actually possible for a story like this one? Why or why not?',
+        steps: [], starter: ''
+      });
+    }
+
+    var tasksHtml = tasks.map(function (t, i) {
+      var scaffold = (level === 'academic' && t.steps.length)
+        ? '<ol class="sift-steps"><li>' + t.steps.join('</li><li>') + '</li></ol>' +
+          (t.starter ? '<p class="starter">Try starting like this: ' + t.starter + '</p>' : '')
+        : '';
+      return '<div class="kit-task"><h4>' + (i + 1) + '. ' + t.head + '</h4><p class="sift-ask">' + t.ask + '</p>' +
+        scaffold + fillLines(level === 'academic' ? 3 : 2) + '</div>';
+    }).join('');
+
+    var match = comparison
+      ? '<div class="kit-task"><h4>' + (tasks.length + 1) + '. Match each headline to what it is doing</h4>' +
+        '<p class="sift-ask">Write A, B, both, or neither next to each statement. Then write the exact words that tipped you off.</p>' +
+        '<table class="match-table"><thead><tr><th>What the headline does</th><th class="match-answer">A / B / both / neither</th><th>Words that tipped you off</th></tr></thead><tbody>' +
+        HEADLINE_MATCH_STATEMENTS.map(function (s) {
+          return '<tr><td>' + s + '</td><td class="match-answer blank-cell"></td><td class="blank-cell"></td></tr>';
+        }).join('') +
+        '</tbody></table></div>'
+      : '';
+
+    return '<div class="guide-section">' + sectionHead('Rewriting the Headline', tagLevel) +
+      '<p class="kit-intro">A headline is a choice. Same facts, different first impression. Nothing here decides for you whether a headline is slanted &mdash; that is the part you argue for.</p>' +
+      quotes + pick + tasksHtml + match + '</div>';
+  }
+
+  function claimsHtml(level, tagLevel) {
+    if (!state.kitClaims) return '';
+    var comparison = hasComparisonContent(state);
+    var rows = state.claimRows.length
+      ? state.claimRows
+      : [{ article: '', claim: '', evidence: '', tag: '' },
+         { article: '', claim: '', evidence: '', tag: '' },
+         { article: '', claim: '', evidence: '', tag: '' }];
+    function cell(value, extraClass) {
+      var filled = value && String(value).trim();
+      return '<td class="' + (filled ? '' : 'blank-cell ') + (extraClass || '') + '">' + (filled ? escapeHtml(String(value).trim()) : '') + '</td>';
+    }
+    var head = '<tr>' + (comparison ? '<th>Article</th>' : '') +
+      '<th>Claim the article makes</th><th>Evidence the article gives (or &ldquo;no evidence given&rdquo;)</th><th>Fact, opinion, or spin?</th></tr>';
+    var body = rows.map(function (r) {
+      return '<tr>' + (comparison ? cell(r.article) : '') + cell(r.claim) + cell(r.evidence) + cell(r.tag) + '</tr>';
+    }).join('');
+    var gloss = level === 'academic'
+      ? '<p class="starter">Stuck on the last column? It is a <strong>fact</strong> if you could go check it. It is an <strong>opinion</strong> if it is somebody&rsquo;s judgment. It is <strong>spin</strong> if it is true but told in a way that pushes you to feel a certain way.</p>'
+      : '';
+    var soWhat = level === 'gt'
+      ? '<div class="kit-task"><h4>Which claim matters most?</h4><p class="sift-ask">Which one of these claims, if it turned out to be wrong, would change what you think about this event? Why that one and not the others?</p>' + fillLines(3) + '</div>'
+      : '';
+    return '<div class="guide-section">' + sectionHead('Claim vs. Evidence', tagLevel) +
+      '<p class="kit-intro">Copy a claim out of the article, then write down what the article actually offers as proof. If it offers none, write &ldquo;no evidence given&rdquo; &mdash; that is a real answer, not a blank.</p>' +
+      '<table class="claim-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>' + gloss + soWhat + '</div>';
+  }
+
+  function kitHtml(level, tagLevel) {
+    return glossaryHtml(level) + siftHtml(level, tagLevel) + headlineHtml(level, tagLevel) + claimsHtml(level, tagLevel);
+  }
+
+  /* One closing synthesis question for Honors GT, per the differentiation
+     spec. Academic and Honors do not get it — it is extension, not extra work. */
+  function synthesisHtml(level, tagLevel) {
+    if (level !== 'gt') return '';
+    var q = hasComparisonContent(state)
+      ? 'Put it together: after reading both of these, what do you actually know about this event, and what do you only know about how it was reported? Answer in a short paragraph.'
+      : 'Put it together: what does this article help you understand about the issue itself, and what does it help you understand about how news gets made? Answer in a short paragraph.';
+    return '<div class="guide-section">' + sectionHead('So What?', tagLevel) + '<div class="q-item">' + q + '</div>' + fillLines(5) + '</div>';
+  }
+
+  function levelFooterHtml(level) {
+    return '<div class="level-footer"><span>Level: ' + levelLabel(level) + '</span><span>' + escapeHtml(state.name) + '</span></div>';
+  }
+
+  function guideHtmlFor(level, tagLevel) {
+    var core = hasComparisonContent(state) ? guideHtmlComparison(level, tagLevel) : guideHtmlSingle(level, tagLevel);
+    return core + kitHtml(level, tagLevel) + synthesisHtml(level, tagLevel) + levelFooterHtml(level);
   }
 
   els.printBtn.addEventListener('click', function () {
-    els.printArea.innerHTML = guideHtml();
+    els.printArea.innerHTML = guideHtmlFor(state.level, null);
+    window.print();
+  });
+
+  els.printAllLevelsBtn.addEventListener('click', function () {
+    els.printArea.innerHTML = LEVELS.map(function (l) {
+      return '<div class="level-set" data-level="' + l.id + '">' +
+        '<div class="level-banner">Level: ' + l.label + ' &mdash; ' + escapeHtml(state.name) + '</div>' +
+        guideHtmlFor(l.id, l.id) + '</div>';
+    }).join('');
     window.print();
   });
 
@@ -766,9 +1231,21 @@
       'The council has not announced a plan to replace the lost parking spaces.'
   };
 
+  /* Three claims lifted straight out of the two example articles, claim column
+     only — evidence and the fact/opinion/spin tag are left for students. The
+     first two contradict each other on purpose (the lot is "mostly empty" in
+     one article and "gets full on weekends" in the other), which is the whole
+     lesson sitting in two table rows. */
+  var EXAMPLE_CLAIMS = [
+    { article: 'A', claim: 'The Fifth Street lot has sat mostly empty since the hardware store closed.' },
+    { article: 'B', claim: 'The lot gets full on weekends as it is.' },
+    { article: 'A', claim: 'Kids deserve a place that is built for them.' }
+  ];
+
   function guideHasContent(s) {
     return !!(s.title.trim() || s.source.trim() || s.articleText.trim() || s.summary.trim() ||
-      s.vocab.length || s.customQuestions.length || s.titleB.trim() || s.sourceB.trim() || s.articleTextB.trim() || s.summaryB.trim());
+      s.vocab.length || s.customQuestions.length || s.titleB.trim() || s.sourceB.trim() || s.articleTextB.trim() || s.summaryB.trim() ||
+      s.claimRows.length);
   }
 
   els.loadExampleBtn.addEventListener('click', function () {
@@ -785,6 +1262,14 @@
     state.presetChecked = {};
     state.comparisonChecked = {};
     state.customQuestions = [];
+    /* The whole media literacy kit comes on with the example, so the entire
+       feature demos in one click instead of three more checkbox hunts. */
+    state.kitSift = true;
+    state.kitHeadline = true;
+    state.kitClaims = true;
+    state.claimRows = EXAMPLE_CLAIMS.map(function (c) {
+      return { id: uid(), article: c.article, claim: c.claim, evidence: '', tag: '' };
+    });
     renderAll(); // fields onto the DOM first so analyzeArticle() reads real values
     analyzeArticle();
   });
