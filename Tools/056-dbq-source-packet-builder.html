@@ -19,6 +19,8 @@
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
 <link rel="stylesheet" href="../_shared/print-area.css">
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -87,6 +89,17 @@
   .fill-line { display: block; border-bottom: 1px solid #999; height: 1.2rem; margin: .1rem 0 .5rem; }
   .shared-q { font-size: .9rem; margin-top: 1.5rem; }
 
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+
 </style>
 </head>
 <body>
@@ -99,6 +112,40 @@
     </div>
     <div class="btnrow">
       <button class="secondary" id="printBtn">Print packet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Saved packets</h2>
+    <label for="packetSwitch">Saved packet</label>
+    <select id="packetSwitch"></select>
+    <label for="packetName">Packet name (for saving/switching)</label>
+    <input type="text" id="packetName" placeholder="e.g. Causes of the American Revolution">
+    <div class="btnrow">
+      <button type="button" class="secondary small" id="newPacketBtn">+ New packet</button>
+      <button type="button" class="secondary small" id="duplicatePacketBtn">Duplicate</button>
+      <button type="button" class="danger small" id="deletePacketBtn">Delete</button>
+      <button type="button" class="secondary small" id="loadExampleBtn">Load example packet</button>
+    </div>
+    <p class="hint" style="margin:.5rem 0 0;">Each packet saves separately, so a unit with several DBQ activities stays ready without one overwriting another.</p>
+    <div class="btnrow" style="margin-top:.7rem;">
+      <button type="button" class="secondary small" id="shareLinkBtn">&#128279; Copy link</button>
+      <button type="button" class="secondary small" id="shareQrBtn">&#9638; QR code</button>
+      <button type="button" class="secondary small" id="exportJsonBtn">Export JSON</button>
+      <button type="button" class="secondary small" id="importJsonBtn">Import JSON</button>
+      <input type="file" id="importJsonFile" accept="application/json,.json" style="display:none;">
+    </div>
+    <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+  </div>
+
+  <div class="share-overlay" id="shareOverlay" hidden>
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Packet QR code">
+      <div class="share-head">
+        <span>Scan to open this packet</span>
+        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="shareCanvas"></canvas>
+      <p class="hint" style="margin:.6rem 0 0;">Opens the same packet on that device and saves it there as a new packet. Editing it on either side does not change the other.</p>
     </div>
   </div>
 
@@ -132,14 +179,24 @@
 <script>
 (function () {
   'use strict';
-  var STORE_KEY = 'dbq_packet_v1';
+  /* Multiple named saved packets, same triple-key convention as
+     Historical Trading Card Maker (htcm-store.js) and the other
+     multi-save tools in this round: a list of names, one document per
+     name, and a pointer to the last-open one. The old single-packet blob
+     (dbq_packet_v1) is read once and migrated in as the first named
+     packet, then left in place as a one-release backup. */
+  var LEGACY_KEY = 'dbq_packet_v1';
+  var LIST_KEY = 'dbq:list';
+  var DATA_PREFIX = 'dbq:data:';
+  var CURRENT_KEY = 'dbq:current';
 
   var els = {};
-  ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printArea'].forEach(function (id) {
-    els[id] = document.getElementById(id);
-  });
+  ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printArea',
+   'packetSwitch', 'packetName', 'newPacketBtn', 'duplicatePacketBtn', 'deletePacketBtn', 'loadExampleBtn',
+   'shareLinkBtn', 'shareQrBtn', 'exportJsonBtn', 'importJsonBtn', 'importJsonFile', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
 
-  var state = { title: '', context: '', essayPrompt: '', sharedQuestions: [], sources: [] };
+  var state = { name: 'New Packet', title: '', context: '', essayPrompt: '', sharedQuestions: [], sources: [] };
 
   function uid() { return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -150,21 +207,161 @@
   function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
   var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-  function load() {
+  /* ---------- named-packet store ---------- */
+  function listNames() {
     try {
-      var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-      if (saved && Array.isArray(saved.sources)) state = saved;
-    } catch (e) { /* ignore */ }
-    if (!state.sharedQuestions.length) state.sharedQuestions = [{ id: uid(), text: 'What is the main idea of this source?' }, { id: uid(), text: 'Who created this source, and why might that matter?' }];
-    if (!state.sources.length) state.sources = [{ id: uid(), title: '', type: 'text', text: '', image: null, citation: '', questions: [{ id: uid(), text: '' }] }];
-    if (typeof state.essayPrompt !== 'string') state.essayPrompt = '';
-    state.sources.forEach(function (s) {
-      if (!s.crop || typeof s.crop.w !== 'number') s.crop = { x: 0, y: 0, w: 1, h: 1 };
-      if (typeof s.widthPct !== 'number') s.widthPct = 100;
+      var a = JSON.parse(localStorage.getItem(LIST_KEY) || '[]');
+      return Array.isArray(a) ? a.filter(function (n) { return typeof n === 'string' && n; }) : [];
+    } catch (e) { return []; }
+  }
+  function saveNamed(name, data) {
+    try {
+      var names = listNames();
+      if (names.indexOf(name) === -1) { names.push(name); localStorage.setItem(LIST_KEY, JSON.stringify(names)); }
+      localStorage.setItem(DATA_PREFIX + name, JSON.stringify(data));
+      localStorage.setItem(CURRENT_KEY, name);
+      return true;
+    } catch (e) { return false; } // storage full/blocked, e.g. large images
+  }
+  function loadNamed(name) {
+    try { return JSON.parse(localStorage.getItem(DATA_PREFIX + name) || 'null'); } catch (e) { return null; }
+  }
+  function deleteNamed(name) {
+    var names = listNames().filter(function (n) { return n !== name; });
+    try {
+      localStorage.setItem(LIST_KEY, JSON.stringify(names));
+      localStorage.removeItem(DATA_PREFIX + name);
+      if (localStorage.getItem(CURRENT_KEY) === name) localStorage.removeItem(CURRENT_KEY);
+    } catch (e) { /* removals can't meaningfully fail */ }
+  }
+  function uniqueName(base) {
+    var names = listNames();
+    if (names.indexOf(base) === -1) return base;
+    var i = 2;
+    while (names.indexOf(base + ' (' + i + ')') !== -1) i++;
+    return base + ' (' + i + ')';
+  }
+
+  /* ---------- repair / defaults (also used for share + JSON import) ---------- */
+  function defaultSharedQuestions() {
+    return [
+      { id: uid(), text: 'What is the main idea of this source?' },
+      { id: uid(), text: 'Who created this source, and why might that matter?' }
+    ];
+  }
+  function blankSource() {
+    return { id: uid(), title: '', type: 'text', text: '', image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100, citation: '', questions: [{ id: uid(), text: '' }] };
+  }
+  function repairQuestion(q) {
+    q = (q && typeof q === 'object') ? q : {};
+    return { id: (typeof q.id === 'string' && q.id) ? q.id : uid(), text: typeof q.text === 'string' ? q.text : '' };
+  }
+  function repairSource(s) {
+    s = (s && typeof s === 'object') ? s : {};
+    return {
+      id: (typeof s.id === 'string' && s.id) ? s.id : uid(),
+      title: typeof s.title === 'string' ? s.title : '',
+      type: s.type === 'image' ? 'image' : 'text',
+      text: typeof s.text === 'string' ? s.text : '',
+      image: (typeof s.image === 'string' && /^data:image\//.test(s.image)) ? s.image : null,
+      imgW: (isFinite(Number(s.imgW)) && Number(s.imgW) > 0) ? Math.round(Number(s.imgW)) : 0,
+      imgH: (isFinite(Number(s.imgH)) && Number(s.imgH) > 0) ? Math.round(Number(s.imgH)) : 0,
+      crop: normCrop(s.crop),
+      widthPct: (isFinite(Number(s.widthPct)) && Number(s.widthPct) >= 20 && Number(s.widthPct) <= 100) ? Number(s.widthPct) : 100,
+      citation: typeof s.citation === 'string' ? s.citation : '',
+      questions: Array.isArray(s.questions) && s.questions.length ? s.questions.map(repairQuestion) : [{ id: uid(), text: '' }]
+    };
+  }
+  function repairPacket(data, fallbackName) {
+    data = (data && typeof data === 'object') ? data : {};
+    var name = (typeof data.name === 'string' && data.name.trim()) ? data.name : (fallbackName || 'New Packet');
+    return {
+      name: name,
+      title: typeof data.title === 'string' ? data.title : '',
+      context: typeof data.context === 'string' ? data.context : '',
+      essayPrompt: typeof data.essayPrompt === 'string' ? data.essayPrompt : '',
+      sharedQuestions: Array.isArray(data.sharedQuestions) && data.sharedQuestions.length ? data.sharedQuestions.map(repairQuestion) : defaultSharedQuestions(),
+      sources: Array.isArray(data.sources) && data.sources.length ? data.sources.map(repairSource) : [blankSource()]
+    };
+  }
+
+  /* A worked 3-source mini-DBQ (Industrial Revolution child labor) so a
+     brand-new install opens on a real packet instead of a blank shell.
+     Sources are short composite/adapted testimony, not verbatim archival
+     quotes — each citation says so, so nothing is misattributed. */
+  function examplePacket(name) {
+    return {
+      name: name,
+      title: 'Child Labor in the Industrial Revolution',
+      context: 'During the Industrial Revolution, factories and mines relied heavily on child workers. Reformers pushed for laws limiting child labor, while factory owners argued regulation would hurt production and family income. Use the sources below to explain why child labor became a subject of debate in industrializing Britain.',
+      essayPrompt: 'Using the three sources above and your own knowledge, write an essay explaining why child labor during the Industrial Revolution became a subject of debate between reformers and factory owners. Which side’s argument do you find more convincing, and why?',
+      sharedQuestions: defaultSharedQuestions(),
+      sources: [
+        {
+          id: uid(), title: 'A Factory Inspector’s Report', type: 'text',
+          text: 'In the cotton mills I visited this month, children as young as eight worked twelve-hour shifts tending spinning machines. Several showed signs of exhaustion, and two had lost fingers in unguarded machinery. Overseers explained that small hands were needed to reach beneath the moving parts to clear jammed cotton, a task adult hands were too large to perform safely. I recommend Parliament consider minimum age requirements and mandatory machine guards.',
+          image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100,
+          citation: 'Adapted from British factory inspection reports, 1833.',
+          questions: [{ id: uid(), text: 'According to the inspector, why were children specifically used for this task?' }]
+        },
+        {
+          id: uid(), title: 'A Mill Owner’s Response', type: 'text',
+          text: 'Critics who have never run a mill do not understand what they ask. Without the wages my young workers bring home, many of their families could not pay rent or buy bread. I limit shifts to twelve hours, provide a midday meal, and have never knowingly hired a child under nine. If Parliament bars children from the mills, it will not lift a single family out of poverty. It will only take away the income that keeps them fed.',
+          image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100,
+          citation: 'A mill owner’s letter to a local newspaper, 1833 (adapted for classroom use).',
+          questions: [{ id: uid(), text: 'What argument does the mill owner make in favor of continuing to employ children?' }]
+        },
+        {
+          id: uid(), title: 'A Child Worker’s Testimony', type: 'text',
+          text: 'I started at the mill when I was nine. My job was to crawl under the machines and pick up loose cotton while they were still running, because stopping them cost the owner money. I was tired most days, and some nights I fell asleep at the table before supper. My wages helped my mother pay for our room, so I did not think about quitting even after my hand was hurt by a moving part.',
+          image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100,
+          citation: 'Testimony recorded before a parliamentary committee investigating child labor, 1832 (adapted for classroom use).',
+          questions: [{ id: uid(), text: 'How does the child’s own account compare to the inspector’s report?' }]
+        }
+      ]
+    };
+  }
+
+  function packetHasContent(p) {
+    if (!p) return false;
+    if ((p.title || '').trim() || (p.context || '').trim() || (p.essayPrompt || '').trim()) return true;
+    return (p.sources || []).some(function (s) {
+      return (s.title || '').trim() || (s.text || '').trim() || (s.citation || '').trim() || !!s.image ||
+        (s.questions || []).some(function (q) { return (q.text || '').trim(); });
     });
   }
+
+  /* ---------- migration + boot load ---------- */
+  function migrateLegacyIfNeeded() {
+    if (listNames().length) return;
+    var legacy = null;
+    try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null'); } catch (e) { /* ignore */ }
+    if (legacy && typeof legacy === 'object') {
+      var name = (legacy.title && String(legacy.title).trim()) || 'My Packet';
+      saveNamed(name, repairPacket(legacy, name));
+    }
+  }
+  function load() {
+    var currentName = null;
+    try { currentName = localStorage.getItem(CURRENT_KEY); } catch (e) { /* ignore */ }
+    var loaded = currentName ? loadNamed(currentName) : null;
+    if (!loaded) {
+      var names = listNames();
+      loaded = names.length ? loadNamed(names[0]) : null;
+      if (loaded) currentName = names[0];
+    }
+    if (loaded) {
+      state = repairPacket(loaded, currentName);
+    } else {
+      // Brand-new install: nothing saved anywhere yet. Open on the worked
+      // example instead of a blank shell, so a first look (or a live demo)
+      // shows a real packet.
+      state = examplePacket(uniqueName('Child Labor in the Industrial Revolution (example)'));
+    }
+    save();
+  }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked, e.g. large images */ }
+    saveNamed(state.name, state);
   }
 
   /* ---------- image crop/scale (non-destructive: crop+widthPct sit
@@ -201,6 +398,253 @@
     return 'left:' + (c.x * 100).toFixed(2) + '%;top:' + (c.y * 100).toFixed(2) + '%;width:' + (c.w * 100).toFixed(2) + '%;height:' + (c.h * 100).toFixed(2) + '%;';
   }
 
+  /* ---------- saved-packet switcher (new/duplicate/delete/rename) ---------- */
+  function renderPacketSwitch() {
+    var names = listNames();
+    els.packetSwitch.innerHTML = names.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === state.name ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  }
+
+  function renderAll() {
+    renderPacketSwitch();
+    els.packetName.value = state.name;
+    els.packetTitle.value = state.title;
+    els.packetContext.value = state.context;
+    els.essayPrompt.value = state.essayPrompt;
+    renderSharedQ();
+    renderSources();
+    setShareNote('');
+  }
+
+  function switchTo(name) {
+    var loaded = loadNamed(name);
+    if (!loaded) return;
+    state = repairPacket(loaded, name);
+    try { localStorage.setItem(CURRENT_KEY, name); } catch (e) { /* ignore */ }
+    renderAll();
+  }
+
+  els.packetSwitch.addEventListener('change', function () { switchTo(els.packetSwitch.value); });
+
+  els.packetName.addEventListener('change', function () {
+    var oldName = state.name;
+    var newName = els.packetName.value.trim() || oldName;
+    if (newName !== oldName) {
+      newName = uniqueName(newName);
+      deleteNamed(oldName);
+      state.name = newName;
+    }
+    save();
+    renderPacketSwitch();
+    els.packetName.value = state.name;
+  });
+
+  els.newPacketBtn.addEventListener('click', function () {
+    var name = prompt('Name for the new packet:', 'New Packet');
+    if (!name) return;
+    state = repairPacket(null, uniqueName(name.trim()));
+    save(); renderAll();
+  });
+
+  els.duplicatePacketBtn.addEventListener('click', function () {
+    var clone = JSON.parse(JSON.stringify(state));
+    clone.name = uniqueName(state.name + ' (copy)');
+    state = clone;
+    save(); renderAll();
+  });
+
+  els.deletePacketBtn.addEventListener('click', function () {
+    if (!confirm('Delete “' + state.name + '” completely? This can’t be undone.')) return;
+    deleteNamed(state.name);
+    var names = listNames();
+    if (names.length) {
+      switchTo(names[0]);
+    } else {
+      state = repairPacket(null, uniqueName('New Packet'));
+      save(); renderAll();
+    }
+  });
+
+  els.loadExampleBtn.addEventListener('click', function () {
+    if (packetHasContent(state) && !confirm('Replace what’s in “' + state.name + '” with the example DBQ packet? This can’t be undone.')) return;
+    var name = state.name;
+    state = examplePacket(name);
+    save(); renderAll();
+  });
+
+  /* ---------- share by link / QR (state-link.js, same pattern as 028) ---------- */
+  var SHARE_PARAM = 'packet';
+
+  function setShareNote(text, isError) {
+    if (!els.shareNote) return;
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  /* Which of the CURRENT sources have image data that will NOT ride the
+     link/QR — shown by name so the "identical packet" promise stays honest. */
+  function imagesKeptOnDevice() {
+    var labels = [];
+    state.sources.forEach(function (s, i) {
+      if (s.type === 'image' && s.image) labels.push('Source ' + LETTERS[i % 26] + (s.title.trim() ? ' (' + s.title.trim() + ')' : ''));
+    });
+    return labels;
+  }
+
+  /* An uploaded image is base64'd into src.image and can run to a megabyte
+     or more, far past what a URL (let alone a QR code) can carry. The
+     payload deliberately travels without image pixel data; crop and
+     width-percent metadata still ride along for when the image is
+     re-uploaded on the other end. */
+  function buildSharePayload() {
+    save();
+    return {
+      v: 1,
+      name: state.name,
+      title: state.title,
+      context: state.context,
+      essayPrompt: state.essayPrompt,
+      sharedQuestions: state.sharedQuestions,
+      sources: state.sources.map(function (s) {
+        var copy = {};
+        Object.keys(s).forEach(function (k) { if (k !== 'image') copy[k] = s[k]; });
+        return copy;
+      })
+    };
+  }
+
+  function shareUrl() {
+    return StateLink.buildShareUrl(SHARE_PARAM, buildSharePayload());
+  }
+
+  function shareSuccessMessage() {
+    var msg = 'Link copied. Opening it anywhere loads this packet: title, context, sources, citations, and questions, and saves it there as a new packet.';
+    var imgs = imagesKeptOnDevice();
+    if (imgs.length) {
+      msg += ' These sources keep their images on this device only: ' + imgs.join(', ') + '. Whoever opens the link will need to re-upload them there (crop and width settings are still there once they do).';
+    }
+    return msg;
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    var copy = (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote(shareSuccessMessage()); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here. The link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR code holds far less than a URL bar does. A long, text-heavy
+      // packet can run past it — say so rather than drawing a square
+      // nobody's phone can read.
+      setShareNote('This packet is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead. A pasted link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    var imgs = imagesKeptOnDevice();
+    setShareNote(imgs.length ? 'These sources keep their images on this device only: ' + imgs.join(', ') + '.' : '');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  function isPlausiblePacket(obj) {
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.sources);
+  }
+
+  /** Consume a ?packet= link on load. Saves the arrival as a new packet
+      under a uniqued name — never over an existing one. Returns true if imported. */
+  function importSharedPacket() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
+    var decoded = StateLink.decodeState(raw);
+    if (!isPlausiblePacket(decoded)) {
+      setShareNote('That shared link could not be read. It may have been cut short when it was pasted or emailed.', true);
+      return false;
+    }
+    var name = uniqueName((decoded.name && String(decoded.name).trim()) || 'Shared packet');
+    var packet = repairPacket(decoded, name);
+    packet.name = name;
+    saveNamed(name, packet);
+    state = packet;
+    renderAll();
+    setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your own copy now. Editing it does not change the sender’s.');
+    return true;
+  }
+
+  /* ---------- JSON export / import (carries images; the honest "send everything" path) ---------- */
+  function exportPacket() {
+    save();
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (state.name || 'dbq-packet').replace(/[^a-z0-9\-_ ]/gi, '').trim() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importPacketFromFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try { parsed = JSON.parse(reader.result); } catch (e) { parsed = null; }
+      if (!isPlausiblePacket(parsed)) {
+        alert('That file doesn’t look like a packet exported from this tool.');
+      } else {
+        var name = uniqueName((parsed.name && String(parsed.name).trim()) || 'Imported packet');
+        var packet = repairPacket(parsed, name);
+        packet.name = name;
+        saveNamed(name, packet);
+        state = packet;
+        renderAll();
+      }
+      els.importJsonFile.value = '';
+    };
+    reader.onerror = function () {
+      alert('Could not read that file.');
+      els.importJsonFile.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  els.exportJsonBtn.addEventListener('click', exportPacket);
+  els.importJsonBtn.addEventListener('click', function () { els.importJsonFile.click(); });
+  els.importJsonFile.addEventListener('change', function () {
+    var file = els.importJsonFile.files && els.importJsonFile.files[0];
+    if (file) importPacketFromFile(file);
+  });
+
   function renderSharedQ() {
     els.sharedQWrap.innerHTML = state.sharedQuestions.map(function (q) {
       return '<div class="qrow" data-id="' + q.id + '"><input type="text" data-sq="' + q.id + '" value="' + escapeAttr(q.text) + '">' +
@@ -229,6 +673,13 @@
     els.sourcesWrap.innerHTML = state.sources.map(function (src, i) {
       var label = 'Source ' + LETTERS[i % 26];
       var imgPreview = '';
+      var imgMissingHint = '';
+      if (src.type === 'image' && !src.image) {
+        // Shared links and QR codes never carry image pixel data (see the
+        // share-note copy), and a JSON import can also arrive here if the
+        // sender's own image failed to read. Say so instead of a silent gap.
+        imgMissingHint = '<p class="hint">No image on this device yet. Shared links and QR codes do not carry image data. Upload one to complete this source here.</p>';
+      }
       if (src.type === 'image' && src.image) {
         imgPreview =
           '<label>Crop</label>' +
@@ -263,7 +714,7 @@
         '<label>Type</label><select data-field="type" data-src="' + src.id + '"><option value="text"' + (src.type === 'text' ? ' selected' : '') + '>Text</option><option value="image"' + (src.type === 'image' ? ' selected' : '') + '>Image</option></select>' +
         (src.type === 'text'
           ? '<label>Source text</label><textarea data-field="text" data-src="' + src.id + '">' + escapeHtml(src.text) + '</textarea>'
-          : imgPreview + '<label>Upload image</label><input type="file" accept="image/*" data-field="image" data-src="' + src.id + '">') +
+          : imgMissingHint + imgPreview + '<label>Upload image</label><input type="file" accept="image/*" data-field="image" data-src="' + src.id + '">') +
         '<label>Citation</label><input type="text" data-field="citation" data-src="' + src.id + '" value="' + escapeAttr(src.citation) + '" placeholder="e.g. Letter from John Adams, 1776">' +
         '<label>Source-specific questions</label>' + questions +
         '<button type="button" class="secondary small" data-add-q="' + src.id + '">+ Add question</button>' +
@@ -405,7 +856,7 @@
   });
 
   els.addSourceBtn.addEventListener('click', function () {
-    state.sources.push({ id: uid(), title: '', type: 'text', text: '', image: null, imgW: 0, imgH: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, widthPct: 100, citation: '', questions: [{ id: uid(), text: '' }] });
+    state.sources.push(blankSource());
     save(); renderSources();
   });
 
@@ -421,9 +872,17 @@
       '<p class="print-context">Name: __________________________ &nbsp; Date: __________</p>';
     var sourcesHtml = state.sources.map(function (src, i) {
       var label = 'Source ' + LETTERS[i % 26];
-      var body = src.type === 'image' && src.image
-        ? '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + src.image + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>'
-        : '<div class="source-text">' + escapeHtml(src.text || '(no text entered)') + '</div>';
+      var body;
+      if (src.type === 'image' && src.image) {
+        body = '<div class="crop-frame" style="' + cropFrameStyle(src) + '"><img src="' + src.image + '" alt="" style="' + cropImgStyle(src.crop) + '"></div>';
+      } else if (src.type === 'image') {
+        // Arrived via a shared link/QR/JSON import that could not carry the
+        // image itself (see the share-note copy) — say so on paper too,
+        // rather than printing a blank box.
+        body = '<div class="source-text">(Image not available on this device. Re-upload it here to complete this packet.)</div>';
+      } else {
+        body = '<div class="source-text">' + escapeHtml(src.text || '(no text entered)') + '</div>';
+      }
       var allQuestions = src.questions.filter(function (q) { return q.text.trim(); }).concat(state.sharedQuestions.filter(function (q) { return q.text.trim(); }));
       var qHtml = allQuestions.map(function (q) {
         return '<div class="q-item">' + escapeHtml(q.text) + '</div><span class="fill-line"></span>';
@@ -441,12 +900,14 @@
   });
 
   /* ---------- boot ---------- */
-  load();
-  els.packetTitle.value = state.title;
-  els.packetContext.value = state.context;
-  els.essayPrompt.value = state.essayPrompt;
-  renderSharedQ();
-  renderSources();
+  migrateLegacyIfNeeded();
+  if (!importSharedPacket()) {
+    // importSharedPacket() already renders and sets its own share note on
+    // success — calling renderAll() again here would wipe that note via its
+    // trailing setShareNote(''), so only the non-import path renders here.
+    load();
+    renderAll();
+  }
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>

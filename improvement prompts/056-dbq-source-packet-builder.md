@@ -92,8 +92,95 @@ Generator integration is still the clearest named opportunity (it's an
 explicit backlog pairing, per Platform theme P7) and hasn't been
 touched.
 
+**2026-08-13/14 — SS demo round (session `xo4v63`) — share a packet by
+link (backlog rank 23).** Shipped in full, sequenced exactly as scoped
+(multi-save first, since a shared link needs somewhere to land):
+
+- **Multiple named saved packets.** Replaced the single `dbq_packet_v1`
+  blob with the triple-key convention the Historical Trading Card
+  Maker's `htcm-store.js` established: `dbq:list` (names),
+  `dbq:data:<name>` (one document each), `dbq:current` (last-open
+  packet). A "Saved packets" card (new/duplicate/delete/rename, same
+  interaction shape as 054's guide library) sits above the
+  packet-setup card. The old blob is read once on first load, migrated
+  in as the first named packet under its own title (or "My Packet"),
+  and left in place untouched as a one-release backup, never deleted.
+  `Tools/009-backup-restore.html`'s `KNOWN_GROUPS` entry for this tool
+  now also matches the `dbq:` prefix, not just the legacy key.
+- **Share a packet by link + QR**, copying the pattern from
+  028-primary-source-analysis-generator.html: `_shared/state-link.js`
+  encodes the whole packet (minus each image source's pixel data) into
+  a `?packet=` URL, with a QR-code overlay via
+  `_shared/vendor/qrcode/qrcode.js`. Crop and width-percent metadata
+  still ride along for when an image is re-uploaded. The share note
+  names exactly which sources kept their images on the sending device
+  (by letter and title), so the "identical packet" promise stays
+  honest instead of silently dropping images. A packet whose encoded
+  size overflows what a QR code can hold (a long, text-heavy packet)
+  falls back to a clear size message pointing at "Copy link" instead
+  of drawing an unscannable code, same failure mode as 028. An
+  incoming `?packet=` link always saves as a NEW packet under a
+  uniqued name (never overwrites), even when the name collides with a
+  packet already on the receiving device.
+- **JSON export/import** (first supporting item): downloads the full
+  packet, images included, as a named `.json` file, the honest "send
+  everything" path the share note points recipients at when images
+  matter. Import validates the shape and saves under a uniqued name.
+- **Load example packet** (second supporting item, P15): a 3-source
+  Industrial Revolution child-labor mini-DBQ (a factory inspector's
+  report, a mill owner's response, a child worker's testimony, each a
+  short composite/adapted account under 150 words; citations say
+  "adapted for classroom use" so nothing is misattributed as a
+  verbatim archival quote) with guiding questions and an essay prompt.
+  A brand-new install with nothing saved anywhere now opens on this
+  example instead of a blank shell, so a first look or a live demo
+  shows a real packet. A "Load example packet" button lets a teacher
+  reload it into the current packet at any time, confirming first if
+  that packet already has real content in it.
+- **First smoke test** (third supporting item):
+  `Tools/dbq-source-packet-builder/test/smoke-share.mjs` (`npm run
+  test:dbq`, appended to the root `test` chain) asserts the migration
+  keeps a pre-existing `dbq_packet_v1` packet and its legacy key, a
+  share link round-trips text sources/citations/questions exactly, the
+  image source's pixel data is absent from the payload while its
+  width-percent metadata survives, the share note names the withheld
+  image by letter and title, and an incoming link with a name
+  collision saves under a uniqued name without touching the receiving
+  device's existing packet. 32 assertions, zero console errors, zero
+  offsite requests.
+
+Non-goals held for a later round, as scoped: the Primary Source
+Analysis Worksheet Generator integration, a source bank/library,
+scaffolding levels, image compression changes, PDF export.
+
+**Hardest part:** the boot sequence originally called `renderAll()`
+unconditionally after the import-or-load branch, which silently wiped
+the "opened from a shared link" note that `importSharedPacket()` had
+just set (its own trailing `renderAll()` already rendered everything,
+including a temporary blank note; the real message was set right
+after). Fixed by only calling the outer `renderAll()` on the
+non-import boot path. Caught by the new smoke test, not by manual
+clicking, a good argument for keeping this suite green going forward.
+
+**Where the next round should pick up:** the Primary Source Analysis
+Worksheet Generator integration (still unbuilt, still the clearest
+named opportunity per P7) and a source bank/library are the two
+biggest remaining items; both are now easier to reach since the
+multi-save plumbing this round built (triple-key store, share/export
+serializers) is a pattern the next round can extend rather than
+invent from scratch.
+
 ## What it does today
 
+- Multiple named saved packets (new/duplicate/delete/rename), migrated
+  automatically from the old single-packet save
+- Share a packet with a teammate by link or QR code (text, citations,
+  and questions travel; each image source's pixel data stays on the
+  sending device, named explicitly in the share note; an incoming link
+  always lands as a new, uniquely-named packet)
+- JSON export/import of a full packet, images included
+- A worked example packet (Industrial Revolution child labor) a
+  brand-new install opens on, reloadable at any time
 - Packet title, historical context/task
 - Shared guiding questions asked of every source
 - Sources: text or image, citation, source-specific questions,
@@ -109,14 +196,15 @@ touched.
 - ~~**A final synthesis/essay prompt field**~~ — **done, Round 2** (shipped
   as a closing page, not on the cover page, so it doesn't compete for
   space with the historical context and name/date line).
-- **Multiple named saved packets**, matching the multi-save convention
-  used by most builder tools in this round — one packet per browser right
-  now, so a unit with several DBQ activities can't keep them all ready at
-  once.
+- ~~**Multiple named saved packets**~~ — **done, SS demo round
+  (`xo4v63`)**, matching the multi-save convention used by most
+  builder tools in this round.
 - ~~**Image size/crop control** on upload~~ — **done, 2026-08-13** (a
   drag-to-select crop box plus a 20&ndash;100% print-width slider, stored
   non-destructively per source and applied in both the editor preview and
   the print output).
+- ~~**Share a packet by link + QR**~~ — **done, SS demo round
+  (`xo4v63`)** (backlog rank 23).
 
 ## Major Features
 
@@ -128,8 +216,9 @@ touched.
   to a personal library, so a source used across multiple DBQ packets
   (e.g. a frequently-cited primary document) doesn't need re-uploading
   and re-captioning every time.
-- **JSON export/import**, for sharing a built packet with another social
-  studies teacher on the same team or across a department.
+- ~~**JSON export/import**~~ — **done, SS demo round (`xo4v63`)**, for
+  sharing a built packet with another social studies teacher on the
+  same team or across a department.
 - **Difficulty/scaffolding levels per source** — e.g. a vocabulary gloss
   or a simplified-language version alongside the original text, for
   differentiating the same DBQ packet across ability levels.

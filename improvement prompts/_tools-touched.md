@@ -193,7 +193,6 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
-| DBQ / Source Packet Builder | `xo4v63` | 2026-08-13 23:56 UTC | `claude/ssdemo-056-xo4v63` |
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
@@ -1100,6 +1099,16 @@ live headless-Chromium session. See the tool's own `improvement
 prompts/028-primary-source-analysis-generator.md` Status entry for the full
 writeup and where a future round should pick up (page-space testing with two
 large uploaded images side by side).
+
+### Devon-assigned round — tool 056 — 2026-08-14 00:30 UTC — session `xo4v63`
+
+One of 8 parallel sessions in a Devon-assigned social-studies demo round
+(see `prompts/social-studies-demo/_preamble.md`). Shipped "share a packet by
+link" (backlog rank 23) in full, sequenced multi-save first as scoped:
+
+| Tool | File | What shipped |
+|---|---|---|
+| DBQ / Source Packet Builder | `056-dbq-source-packet-builder.md` | Multiple named saved packets (triple-key `dbq:*` store, migrated from the old single-blob save); share a packet by link/QR that excludes image pixel data but names on-device-only images by letter and title; an incoming link always saves as a new, uniquely-named packet; JSON export/import (carries images); a worked Industrial Revolution child-labor example packet a fresh install opens on. New smoke test `Tools/dbq-source-packet-builder/test/smoke-share.mjs` (`npm run test:dbq`), 32 assertions. |
 
 ---
 
