@@ -4,11 +4,84 @@
 **Support folder:** `Tools/historical-trading-card-maker/` — test suite only;
 the tool itself is still one self-contained file.
 
-**Current description (from README):** Build collectible-style research cards with a live preview: era themes and decorative frames, rarity foil tiers, photo crop/shape editing, stat bars, set numbering, named decks, and roster batch-add — printed as duplex front/back grids or exported as PNG / PDF / zip.
+**Current description (from README):** Build collectible-style research cards with a live preview: era themes and decorative frames, rarity foil tiers, photo crop/shape editing, stat bars, set numbering, named decks, and batch-add from a saved class roster or a pasted list — printed as duplex front/back grids, exported as PNG / PDF / zip, or shared as a finished deck by link or QR code (card text and design, not photos). A one-click sample deck shows off the whole visual system with zero setup.
 
 ---
 
 ## Status
+
+**2026-08-13 — SS demo round: share links, roster integration, sample deck
+(branch `claude/ssdemo-064-vqrmlk`).** Devon-assigned round ahead of the
+live teacher presentation. Step 0 revisit first, per the round's own rule:
+
+- **The backlog row this round was pointed at (rank 31, "Batch-add blank
+  cards from a roster") is confirmed stale — it already shipped.** The
+  prior Visual-upgrade round's "Named decks + roster" bullet (below) added
+  a paste-a-list batch-add dialog (`rosterBtn`/`rosterOverlay`/`rosterText`/
+  `rosterAddBtn`) that creates one blank card per pasted line and inherits
+  the set name — this is a real, working implementation of "batch-add blank
+  cards from a roster or an assigned list," not a partial or misleading
+  version of it. Nothing to build there; this round only added the
+  np_rosters *source* for that existing dialog (below). Devon owns the one
+  bookkeeping pass over `IDEAS_BACKLOG.md`; this file just states the
+  ground truth for that pass.
+
+With that confirmed, this round shipped the P3 share-link headline plus two
+of the three supporting items in order:
+
+- **Share a deck by link + QR (headline, P3).** Copied the pattern from
+  `028-primary-source-analysis-generator.html` (`_shared/state-link.js` +
+  `_shared/vendor/qrcode/qrcode.js`) rather than inventing a new one. The
+  payload is the deck minus photos: every card's `id`/`name`/`stats`/
+  `facts`/`meta`/`theme` travels, `image` is always sent as `null`, and the
+  deck's own `settings` (theme + card size) travels too. A visible hint
+  under the Decks card and the post-copy note both say photos stay on this
+  device and point at Download PDF / All PNGs (zip) as the full-fidelity
+  path. An incoming `?deck=` link always lands as a new, uniquely-named
+  deck via the existing `htcm:*` multi-save — collisions get a `(shared)`
+  suffix, exactly like 028's worksheet import — so it can never overwrite
+  a deck already on the device, including the default "My cards". QR
+  generation is wrapped in the same try/catch 028 uses: `qrcode.js` throws
+  `'code length overflow'` past its max capacity, and a big deck (many
+  cards, long fact lists) catches that and shows the copy-link path with a
+  named reason instead of drawing a square nobody's phone can scan — this
+  is a real failure mode, not a hypothetical one; the smoke test seeds an
+  80-card deck via `localStorage` specifically to trigger it.
+- **np_rosters integration for batch-add (P2).** The existing roster
+  paste dialog now has a class-list `<select>` above the textarea, fed from
+  the shared `np_rosters` key (same read as
+  `050-civics-role-card-generator.html`), showing each saved class list's
+  name and count. Picking one fills the textarea — still the thing actually
+  read on "Add cards" — so paste stays the fallback with no rosters saved,
+  and a teacher can still edit the list before adding. A `storage` event
+  listener refreshes the dropdown live if another tab saves a new roster
+  while this dialog might be open.
+- **"Load sample deck" (P15).** One click drops in a real 5-card deck —
+  Washington, Franklin, Abigail Adams, Hamilton, Phillis Wheatley — with
+  real stats (a `Known for` line plus 2–3 `X/10` meter stats each) and real
+  facts, no photos (this schema's images are teacher-uploaded; a "sample
+  photo" would mean shipping a fake one, so mixed rarity/theme carries the
+  visual demo instead: legendary/epic/rare/rare/common, the `parchment`
+  deck theme with two cards overridden to `renaissance` and `deco` to show
+  the per-card theme-override field actually works). Saves as its own
+  "Sample deck", asks before loading a second copy over an existing one of
+  that name (`window.confirm`, same pattern as `newDeckBtn`/`renameDeckBtn`),
+  and switches to it — the existing "never overwrite" guarantee of
+  `HtcmStore.saveDeck` under a fresh name applies here same as the roster
+  and share-import paths.
+- **Extended the smoke suite**: a new `smoke-share.mjs` (55 assertions —
+  share-link round-trip incl. what does/doesn't travel, the QR-overflow
+  fallback via a seeded 80-card deck, roster dropdown incl. a live
+  `storage`-event refresh, and the sample deck incl. its duplicate-name
+  confirm), wired into `test:trading-cards` and the root `test` chain.
+  `smoke-card-size.mjs` (55) and `smoke-photo.mjs` (34) stayed green
+  before and after every change — 144 assertions total, no console errors,
+  no offsite requests.
+
+No sw.js change was needed: both `state-link.js` and `vendor/qrcode/
+qrcode.js` were already precached (other tools use them), and everything
+new lives inline in the main HTML file rather than a new module, so
+`CACHE_VERSION` did not need a bump.
 
 **2026-08-13 — Visual-upgrade round (branch
 `claude/trading-card-builder-upgrades-ntodvr`).** The big redesign, shipped
@@ -158,15 +231,33 @@ with a photo / 11 without) and was not re-derived for the 3.5in card.
 
 ## What it does today
 
-- Batch-add cards: name, optional image, `Label: Value` stats, one-per-
-  line facts
+- Named decks (new/rename/delete/switch), each with its own cards, theme,
+  and set name — one per class period or unit
+- Add a card individually, or batch-add blank cards from a pasted list or a
+  saved class list (`np_rosters`, shared with Name Picker / Class Roster
+  Hub) — one card per name, set name prefilled
 - Edit an existing card in place
+- Seven era themes (deck-level default, with a per-card override), four
+  rarity tiers with foil badges and a static print-safe glint, 0–5 star
+  rating, `Label: 7/10` stats that render as a filled meter, keyword stat
+  icons, and set numbering (`n / total · SET NAME`)
+- A non-destructive photo/flag editor: pan/zoom crop, six clip shapes,
+  sepia/gray filters
+- A flippable, true-size live preview beside the form, rendering through
+  the same code the print/export paths use, with a measured (not
+  heuristic) stat-overflow warning before print
 - Two print sizes: standard trading card at exactly 2.5 × 3.5in, centered on
   the page (default), or the original fill-the-page layout at about
-  2.43 × 3.4in; the choice persists across visits
+  2.43 × 3.4in; the choice persists per deck
 - Row-mirrored duplex print: 6-card front pages, then row-mirrored back
   pages, so a flipped physical stack lines up automatically
-- A live stat-overflow warning in the editor, before print
+- Export: per-card PNG, a whole-deck duplex PDF, or a zip of every PNG
+- Share a deck with another teacher by link or QR code — card text, stats,
+  themes and rarity travel; photos stay on the sending device and the
+  incoming deck always lands as a new save, never overwriting one already
+  there
+- "Load sample deck" — one click loads a real 5-card demo (mixed rarity and
+  theme, no photos) as its own named deck, for a zero-setup live demo
 
 ## Quick Wins
 
@@ -184,19 +275,14 @@ with a photo / 11 without) and was not re-derived for the 3.5in card.
 
 ## Major Features
 
-- **Batch-add from a roster** (matching the "from a roster or an assigned
-  list" framing in the backlog description) — right now each card is
-  added individually through the form; a bulk-paste mode (name per line,
-  creating blank cards to fill in) would match how a whole-class research
-  project actually gets set up.
-- **Multiple named saved card sets**, matching the multi-save convention
-  used by most builder tools in this round — one flat set per browser
-  right now, so "World Leaders" and "Ancient Civilizations" card sets
-  can't coexist.
-- **A student-facing fill-in mode** via a share link (this toolkit's P3
-  pattern) — each student fills in their own assigned figure's card
-  directly, instead of a teacher typing every student's research into one
-  form.
+- **A student-facing fill-in mode** via a share link — right now the share
+  link this round shipped is teacher-to-teacher (a whole deck, read/write
+  on arrival, saved as a new deck). A true per-student mode — a link to one
+  blank card, identified by deck + name, that a student fills in and hands
+  back — is a different shape: it would need some way for the filled-in
+  card to return to the teacher (there's no server here), which the deck
+  link's "just open it and it's yours" model doesn't solve. Worth scoping
+  as its own round rather than folding into deck-sharing.
 - **Flag/photo library integration** for countries specifically (the
   backlog explicitly covers both historical figures and countries) — a
   small built-in flag-image picker for common countries would remove the
@@ -220,8 +306,11 @@ country-card use case specifically.
   Flashcard & Word Wall Generator is the clearest, most concrete
   print-quality improvement available in this entire round, since a
   working reference implementation already exists in this same toolkit.
-- **P3 (share links)** — student-facing fill-in mode is the natural
-  extension for a whole-class research project.
+- **P3 (share links)** — the teacher-to-teacher deck link/QR shipped this
+  round (state-link.js + vendor qrcode.js, same pattern as 028). A
+  student-facing fill-in mode (one card, not a whole deck, with some way
+  for the filled-in result to get back to the teacher) is the natural next
+  extension for a whole-class research project — see Major Features.
 - **P7 (cross-tool)** — reusing `VocabLayout.mirrorPageRows` (or
   extracting it into a small shared module both tools can use) avoids
   re-implementing duplex mirroring from scratch a second time.

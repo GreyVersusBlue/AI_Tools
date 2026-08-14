@@ -193,7 +193,6 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
-| Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
 
 ---
@@ -1124,6 +1123,20 @@ No new `localStorage` key was introduced (case-file text lives inside the
 existing `crcg_roles_v1` blob), so `009-backup-restore.html` needed no
 changes. No `sw.js` changes either — the only new file is a test file, which
 this repo's convention excludes from `PRECACHE_URLS`.
+
+### Devon-assigned round — tool 064 — 2026-08-14 00:12 UTC — session `vqrmlk`
+
+One of eight parallel SS-demo-round sessions (see `_preamble.md`), each
+assigned one tool ahead of Devon's live teacher presentation. Step 0 (a
+mandatory revisit) first: **backlog rank 31, "Batch-add blank cards from a
+roster," is confirmed stale** — a paste-a-list batch-add dialog already
+shipped in the prior Visual-upgrade round (2026-08-13), and works as
+described. Nothing to build there; see `064-historical-trading-card-maker.md`
+Status for the full writeup. Then, per this round's own scope:
+
+| Tool | File | What shipped |
+|---|---|---|
+| Historical Figure / Country Trading Card Maker | `064-historical-trading-card-maker.md` | Headline (P3): share a deck with another teacher by link or QR code (card text/stats/theme/rarity travel, photos never do; an oversized deck falls back to the copy-link message instead of an unscannable QR; an incoming link always lands as a new deck, never overwriting one already on the device). Supporting: a `np_rosters`-fed class-list dropdown next to the existing roster paste box (P2); a one-click "Load sample deck" with 5 real historical-figure cards, mixed rarity/theme, no photos (P15). New `smoke-share.mjs` (55 assertions) plus the two existing suites stayed green throughout. |
 
 ---
 
