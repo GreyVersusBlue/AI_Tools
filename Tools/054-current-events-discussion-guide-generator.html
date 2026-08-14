@@ -4,17 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Current Events Discussion Guide Generator</title>
-<meta name="description" content="Turn a pasted news article into a printable discussion guide (summary box, vocabulary, guiding questions).">
+<meta name="description" content="Turn one or two pasted news articles into a printable discussion guide (summary, vocabulary, guiding questions, and an optional side-by-side bias/framing comparison).">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AsPerMyLessonPlan.com">
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/054-current-events-discussion-guide-generator.html">
 <meta property="og:title" content="Current Events Discussion Guide Generator — AsPerMyLessonPlan.com">
-<meta property="og:description" content="Turn a pasted news article into a printable discussion guide (summary box, vocabulary, guiding questions).">
+<meta property="og:description" content="Turn one or two pasted news articles into a printable discussion guide (summary, vocabulary, guiding questions, and an optional side-by-side bias/framing comparison).">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Current Events Discussion Guide Generator — AsPerMyLessonPlan.com">
-<meta name="twitter:description" content="Turn a pasted news article into a printable discussion guide (summary box, vocabulary, guiding questions).">
+<meta name="twitter:description" content="Turn one or two pasted news articles into a printable discussion guide (summary, vocabulary, guiding questions, and an optional side-by-side bias/framing comparison).">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 6h18v20H7z' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 11h12M10 15h12M10 19h8' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
 <link rel="stylesheet" href="../_shared/a11y.css">
 <link rel="stylesheet" href="../_shared/base.css">
@@ -67,6 +69,32 @@
   .q-row label { display: flex; align-items: center; gap: .4rem; font-weight: 400; flex: 1; margin-bottom: 0; }
   .word-chip { display: inline-block; background: #e9eef3; color: var(--accent-2); border-radius: 999px; padding: .15rem .6rem; margin: .15rem .3rem .15rem 0; font-size: .82rem; cursor: pointer; }
   .word-chip:hover { background: var(--accent-2); color: #fff; }
+  .word-chip.both { background: #fce8b8; color: #6b4c00; font-weight: 700; }
+  .word-chip.both:hover { background: #6b4c00; color: #fff; }
+
+  #articleBCard h2 { display: flex; align-items: baseline; gap: .4rem; }
+  .both-badge { display: inline-block; background: #fce8b8; color: #6b4c00; border-radius: 999px; padding: .1rem .5rem; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+  .vocab-row.both input.term { color: #6b4c00; }
+
+  /* Share a guide by link / QR (same pattern as 028-primary-source-analysis-generator) */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+
+  /* Comparison-guide print layout */
+  .compare-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1rem; }
+  .compare-col { border: 1px solid #999; border-radius: 6px; padding: .6rem .7rem; }
+  .compare-col h3 { margin: 0 0 .3rem; font-size: .95rem; border-bottom: 1px solid #ccc; padding-bottom: .2rem; }
+  .article-source { color: #555; font-size: .78rem; margin: 0 0 .4rem; }
+  .core-tag { display: inline-block; background: #eee; border: 1px solid #999; border-radius: 4px; padding: 0 .3rem; font-size: .72rem; font-weight: 700; margin-left: .3rem; }
+  tr.core-vocab td:first-child { font-weight: 700; }
 
   .guide-title { font-size: 1.3rem; margin: 0 0 .1rem; }
   .guide-sub { color: #555; font-size: .82rem; margin: 0 0 1rem; }
@@ -86,9 +114,10 @@
     <div>
       <a class="back-link" href="../index.html">&larr; Toolkit</a>
       <h1>Current Events Discussion Guide Generator</h1>
-      <p class="sub">Paste an article, pull out vocabulary and a summary starter, pick discussion questions, print a guide.</p>
+      <p class="sub">Paste an article, pull out vocabulary and a summary starter, pick discussion questions, print a guide &mdash; add a second article on the same event to compare bias and framing.</p>
     </div>
     <div class="btnrow">
+      <button class="secondary" id="loadExampleBtn">Load two-article example</button>
       <button class="secondary" id="clearBtn">Clear &amp; start over</button>
       <button class="secondary" id="printBtn">Print discussion guide</button>
     </div>
@@ -108,6 +137,11 @@
           <button type="button" class="danger small" id="deleteGuideBtn">Delete</button>
         </div>
         <p class="hint" style="margin-top:.5rem;">Each guide saves separately, so a semester of article guides stays retrievable instead of each new article overwriting the last.</p>
+        <div class="btnrow" style="margin-top:.5rem;">
+          <button type="button" class="secondary small" id="shareLinkBtn">&#128279; Copy link</button>
+          <button type="button" class="secondary small" id="shareQrBtn">&#9638; QR code</button>
+        </div>
+        <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
       </div>
 
       <div class="card">
@@ -118,8 +152,23 @@
         <input type="text" id="articleSource" placeholder="e.g. Local Gazette, March 2026">
         <label for="articleText">Paste the article text</label>
         <textarea id="articleText" placeholder="Paste the full article here..."></textarea>
-        <button class="secondary small" id="analyzeBtn">Pull out vocabulary + summary starter</button>
+        <div class="btnrow">
+          <button class="secondary small" id="analyzeBtn">Pull out vocabulary + summary starter</button>
+          <button type="button" class="secondary small" id="addArticleBBtn">+ Add Article B (compare two articles)</button>
+        </div>
         <p class="hint" id="wordCountHint"></p>
+      </div>
+
+      <div class="card" id="articleBCard" style="display:none;">
+        <h2>Article B <span class="hint" style="margin:0;">(for comparison)</span></h2>
+        <label for="articleTitleB">Headline</label>
+        <input type="text" id="articleTitleB" placeholder="e.g. Council Votes to Remove Fifth Street Parking Lot">
+        <label for="articleSourceB">Source / date (for citation)</label>
+        <input type="text" id="articleSourceB" placeholder="e.g. Local Gazette, March 2026">
+        <label for="articleTextB">Paste the second article's text</label>
+        <textarea id="articleTextB" placeholder="Paste a second article about the SAME event here..."></textarea>
+        <p class="hint" id="wordCountHintB"></p>
+        <button type="button" class="danger small" id="removeArticleBBtn">Remove Article B</button>
       </div>
     </div>
 
@@ -128,6 +177,11 @@
         <h2>Summary</h2>
         <p class="hint">Starts with the first couple of sentences of the article &mdash; edit into a real summary, or clear it and write your own.</p>
         <textarea id="summaryText" style="min-height:5rem;"></textarea>
+        <div id="summaryBWrap" style="display:none;margin-top:.8rem;">
+          <h2 style="margin:0 0 .3rem;">Summary &mdash; Article B</h2>
+          <p class="hint">Starts with the first couple of sentences of Article B.</p>
+          <textarea id="summaryTextB" style="min-height:5rem;"></textarea>
+        </div>
       </div>
 
       <div class="card">
@@ -143,8 +197,24 @@
         <div id="presetQuestions"></div>
         <div id="customQuestionsWrap"></div>
         <button class="secondary small" id="addQuestionBtn">+ Add your own question</button>
+        <div id="comparisonQuestionsWrap" style="display:none;margin-top:1rem;">
+          <h2 style="margin:0 0 .5rem;">Comparing these two articles</h2>
+          <p class="hint">Bias and framing questions for when you have two articles about the same event.</p>
+          <div id="comparisonQuestions"></div>
+        </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="share-overlay" id="shareOverlay" hidden>
+  <div class="share-modal" role="dialog" aria-modal="true" aria-label="Discussion guide QR code">
+    <div class="share-head">
+      <span>Scan to open this guide</span>
+      <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <canvas id="shareCanvas"></canvas>
+    <p class="hint" style="margin:.6rem 0 0;">Opens the same guide on that device and saves it there as a new guide &mdash; edits on either side stay put.</p>
   </div>
 </div>
 
@@ -170,6 +240,15 @@
     'What&rsquo;s one question you still have after reading this?'
   ];
 
+  var COMPARISON_QUESTIONS = [
+    'What does each headline emphasize? What is the very first thing each article wants you to think about?',
+    'What did one article include that the other left out? Why might a reporter choose to leave something out?',
+    'How does each article describe the people involved? Look closely at the specific words each one uses.',
+    'Which article spends more time explaining why the decision was made, and which spends more time on who it&rsquo;s affecting? What does that difference tell you?',
+    'If you had only read Article A, what would you believe about this event? What if you had only read Article B?',
+    'Which article would you trust more, and why? Point to something specific in the writing that makes you say that.'
+  ];
+
   var STOPWORDS = ['about', 'after', 'again', 'because', 'before', 'between', 'could', 'during', 'their', 'there',
     'these', 'those', 'through', 'which', 'while', 'would', 'should', 'other', 'people', 'something', 'according',
     'yesterday', 'tomorrow', 'different', 'another', 'someone', 'everyone', 'anything', 'nothing', 'everything',
@@ -192,12 +271,18 @@
   ['articleTitle', 'articleSource', 'articleText', 'analyzeBtn', 'wordCountHint', 'summaryText',
    'suggestedWords', 'suggestHint', 'vocabWrap', 'addVocabBtn', 'presetQuestions', 'customQuestionsWrap',
    'addQuestionBtn', 'printBtn', 'printArea', 'clearBtn',
-   'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'guideSwitch', 'guideName', 'newGuideBtn', 'duplicateGuideBtn', 'deleteGuideBtn',
+   'articleBCard', 'articleTitleB', 'articleSourceB', 'articleTextB', 'wordCountHintB', 'addArticleBBtn', 'removeArticleBBtn',
+   'summaryBWrap', 'summaryTextB', 'comparisonQuestionsWrap', 'comparisonQuestions', 'loadExampleBtn',
+   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   function emptyGuide(name) {
-    return { name: name, title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [] };
+    return { name: name, title: '', source: '', articleText: '', summary: '', vocab: [], presetChecked: {}, customQuestions: [],
+      titleB: '', sourceB: '', articleTextB: '', summaryB: '', comparisonChecked: {} };
   }
   var state = emptyGuide('New Guide');
+  var articleBVisible = false;
 
   function uid() { return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -236,13 +321,29 @@
   function normalizeGuide(data, name) {
     if (!data || typeof data !== 'object') data = {};
     var g = emptyGuide((typeof data.name === 'string' && data.name) || name || 'New Guide');
-    ['title', 'source', 'articleText', 'summary'].forEach(function (k) {
+    ['title', 'source', 'articleText', 'summary', 'titleB', 'sourceB', 'articleTextB', 'summaryB'].forEach(function (k) {
       if (typeof data[k] === 'string') g[k] = data[k];
     });
     if (Array.isArray(data.vocab)) g.vocab = data.vocab;
     if (data.presetChecked && typeof data.presetChecked === 'object') g.presetChecked = data.presetChecked;
+    if (data.comparisonChecked && typeof data.comparisonChecked === 'object') g.comparisonChecked = data.comparisonChecked;
     if (Array.isArray(data.customQuestions)) g.customQuestions = data.customQuestions;
     return g;
+  }
+
+  /** True once Article B has real text to compare against &mdash; the gate for
+      merged-vocabulary flagging, the side-by-side print, and the bias/framing
+      question set. A headline alone isn't enough to compare anything yet. */
+  function hasComparisonContent(s) { return !!(s.articleTextB && s.articleTextB.trim()); }
+
+  function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function containsWord(text, term) {
+    var t = (term || '').trim();
+    if (!t || !text) return false;
+    try { return new RegExp('\\b' + escapeRegExp(t) + '\\b', 'i').test(text); } catch (e) { return false; }
+  }
+  function wordInBothArticles(term) {
+    return hasComparisonContent(state) && containsWord(state.articleText, term) && containsWord(state.articleTextB, term);
   }
 
   function migrateLegacyIfNeeded() {
@@ -286,11 +387,19 @@
     els.articleSource.value = state.source;
     els.articleText.value = state.articleText;
     els.summaryText.value = state.summary;
+    els.articleTitleB.value = state.titleB;
+    els.articleSourceB.value = state.sourceB;
+    els.articleTextB.value = state.articleTextB;
+    els.summaryTextB.value = state.summaryB;
+    articleBVisible = !!(state.titleB.trim() || state.sourceB.trim() || state.articleTextB.trim() || state.summaryB.trim());
     updateWordCount();
+    updateWordCountB();
     renderSuggestions([]);
     renderVocab();
     renderPresetQuestions();
+    renderComparisonQuestions();
     renderCustomQuestions();
+    updateComparisonUI();
   }
 
   function switchTo(name) {
@@ -344,23 +453,27 @@
     }
   });
 
+  function countAndLabel(text) {
+    var words = (text || '').split(/\s+/).filter(Boolean);
+    return { words: words, label: words.length ? (words.length + ' words &middot; about ' + Math.max(1, Math.round(words.length / 200)) + ' min read') : '' };
+  }
   function updateWordCount() {
-    var text = els.articleText.value;
-    var words = text.split(/\s+/).filter(Boolean);
-    els.wordCountHint.innerHTML = words.length ? (words.length + ' words &middot; about ' + Math.max(1, Math.round(words.length / 200)) + ' min read') : '';
-    return words;
+    var r = countAndLabel(els.articleText.value);
+    els.wordCountHint.innerHTML = r.label;
+    return r.words;
+  }
+  function updateWordCountB() {
+    var r = countAndLabel(els.articleTextB.value);
+    els.wordCountHintB.innerHTML = r.label;
+    return r.words;
   }
 
-  function analyzeArticle() {
-    var text = els.articleText.value;
-    var words = updateWordCount();
+  function firstSentences(text, n) {
+    return (text || '').split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, n).join(' ');
+  }
 
-    if (!state.summary) {
-      var sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 2);
-      state.summary = sentences.join(' ');
-      els.summaryText.value = state.summary;
-    }
-
+  function extractCandidates(text) {
+    var words = (text || '').split(/\s+/).filter(Boolean);
     var seen = {};
     var candidates = [];
     words.forEach(function (w) {
@@ -371,17 +484,64 @@
         candidates.push(clean);
       }
     });
-    renderSuggestions(candidates.slice(0, 12));
-    save();
+    return candidates;
   }
 
-  function renderSuggestions(words) {
-    if (!words.length) {
+  /** Merges candidate lists from two articles into one, deduped, words found
+      in both flagged and sorted first &mdash; those are the event's core,
+      shared vocabulary. Caps the total so the chip list stays scannable. */
+  function mergeCandidates(a, b, cap) {
+    var bLower = {};
+    b.forEach(function (w) { bLower[w.toLowerCase()] = true; });
+    var seen = {};
+    var out = [];
+    a.forEach(function (w) {
+      var lower = w.toLowerCase();
+      if (seen[lower]) return;
+      seen[lower] = true;
+      out.push({ word: w, both: !!bLower[lower] });
+    });
+    b.forEach(function (w) {
+      var lower = w.toLowerCase();
+      if (seen[lower]) return;
+      seen[lower] = true;
+      out.push({ word: w, both: false });
+    });
+    out.sort(function (x, y) { return (y.both ? 1 : 0) - (x.both ? 1 : 0); });
+    return out.slice(0, cap);
+  }
+
+  function analyzeArticle() {
+    updateWordCount();
+    if (!state.summary) {
+      state.summary = firstSentences(els.articleText.value, 2);
+      els.summaryText.value = state.summary;
+    }
+    var candidatesA = extractCandidates(els.articleText.value);
+
+    if (articleBVisible && els.articleTextB.value.trim()) {
+      updateWordCountB();
+      if (!state.summaryB) {
+        state.summaryB = firstSentences(els.articleTextB.value, 2);
+        els.summaryTextB.value = state.summaryB;
+      }
+      var candidatesB = extractCandidates(els.articleTextB.value);
+      renderSuggestions(mergeCandidates(candidatesA, candidatesB, 20));
+    } else {
+      renderSuggestions(candidatesA.slice(0, 12).map(function (w) { return { word: w, both: false }; }));
+    }
+    save();
+    renderVocab();
+  }
+
+  function renderSuggestions(candidates) {
+    if (!candidates.length) {
       els.suggestedWords.innerHTML = '<span class="hint">Paste an article and click &ldquo;Pull out vocabulary&rdquo; first.</span>';
       return;
     }
-    els.suggestedWords.innerHTML = words.map(function (w) {
-      return '<span class="word-chip" data-word="' + escapeAttr(w) + '">' + escapeHtml(w) + '</span>';
+    els.suggestedWords.innerHTML = candidates.map(function (c) {
+      return '<span class="word-chip' + (c.both ? ' both' : '') + '" data-word="' + escapeAttr(c.word) + '"' +
+        (c.both ? ' title="Appears in both articles"' : '') + '>' + escapeHtml(c.word) + (c.both ? ' &#9733;' : '') + '</span>';
     }).join('');
   }
 
@@ -396,9 +556,11 @@
 
   function renderVocab() {
     els.vocabWrap.innerHTML = state.vocab.map(function (v) {
-      return '<div class="vocab-row" data-id="' + v.id + '">' +
+      var both = wordInBothArticles(v.term);
+      return '<div class="vocab-row' + (both ? ' both' : '') + '" data-id="' + v.id + '">' +
         '<input type="text" class="term" value="' + escapeAttr(v.term) + '" placeholder="word">' +
         '<input type="text" class="def" value="' + escapeAttr(v.def) + '" placeholder="definition (optional &mdash; blank for students to fill in)">' +
+        (both ? '<span class="both-badge" title="Appears in both articles">Both</span>' : '') +
         '<button type="button" class="danger small" data-del="' + v.id + '">&times;</button>' +
         '</div>';
     }).join('');
@@ -438,6 +600,19 @@
     save();
   });
 
+  function renderComparisonQuestions() {
+    els.comparisonQuestions.innerHTML = COMPARISON_QUESTIONS.map(function (q, i) {
+      var checked = state.comparisonChecked[i] !== false ? ' checked' : '';
+      return '<div class="q-row"><label><input type="checkbox" data-comparison="' + i + '"' + checked + '> ' + q + '</label></div>';
+    }).join('');
+  }
+  els.comparisonQuestions.addEventListener('change', function (ev) {
+    var i = ev.target.getAttribute('data-comparison');
+    if (i === null) return;
+    state.comparisonChecked[i] = ev.target.checked;
+    save();
+  });
+
   function renderCustomQuestions() {
     els.customQuestionsWrap.innerHTML = state.customQuestions.map(function (q) {
       return '<div class="q-row" data-id="' + q.id + '">' +
@@ -467,9 +642,42 @@
 
   els.articleTitle.addEventListener('input', function () { state.title = els.articleTitle.value; save(); });
   els.articleSource.addEventListener('input', function () { state.source = els.articleSource.value; save(); });
-  els.articleText.addEventListener('input', function () { state.articleText = els.articleText.value; save(); updateWordCount(); });
+  els.articleText.addEventListener('input', function () { state.articleText = els.articleText.value; save(); updateWordCount(); renderVocab(); });
   els.summaryText.addEventListener('input', function () { state.summary = els.summaryText.value; save(); });
   els.analyzeBtn.addEventListener('click', analyzeArticle);
+
+  /* ---------- Article B / two-article comparison ---------- */
+  function updateComparisonUI() {
+    els.articleBCard.style.display = articleBVisible ? '' : 'none';
+    els.summaryBWrap.style.display = articleBVisible ? '' : 'none';
+    els.comparisonQuestionsWrap.style.display = articleBVisible ? '' : 'none';
+    els.addArticleBBtn.style.display = articleBVisible ? 'none' : '';
+    els.analyzeBtn.textContent = articleBVisible ? 'Pull out vocabulary + summary starters (both articles)' : 'Pull out vocabulary + summary starter';
+  }
+
+  els.addArticleBBtn.addEventListener('click', function () {
+    articleBVisible = true;
+    updateComparisonUI();
+    els.articleTitleB.focus();
+  });
+
+  els.removeArticleBBtn.addEventListener('click', function () {
+    var hasContent = state.titleB.trim() || state.sourceB.trim() || state.articleTextB.trim() || state.summaryB.trim();
+    if (hasContent && !confirm('Remove Article B and its comparison questions? This clears Article B’s fields.')) return;
+    state.titleB = ''; state.sourceB = ''; state.articleTextB = ''; state.summaryB = ''; state.comparisonChecked = {};
+    articleBVisible = false;
+    els.articleTitleB.value = ''; els.articleSourceB.value = ''; els.articleTextB.value = ''; els.summaryTextB.value = '';
+    updateWordCountB();
+    renderComparisonQuestions();
+    save();
+    updateComparisonUI();
+    renderVocab();
+  });
+
+  els.articleTitleB.addEventListener('input', function () { state.titleB = els.articleTitleB.value; save(); });
+  els.articleSourceB.addEventListener('input', function () { state.sourceB = els.articleSourceB.value; save(); });
+  els.articleTextB.addEventListener('input', function () { state.articleTextB = els.articleTextB.value; save(); updateWordCountB(); renderVocab(); });
+  els.summaryTextB.addEventListener('input', function () { state.summaryB = els.summaryTextB.value; save(); });
 
   els.clearBtn.addEventListener('click', function () {
     if (!confirm('Clear "' + state.name + '" and start over? This cannot be undone.')) return;
@@ -478,22 +686,61 @@
     renderAll();
   });
 
-  function guideHtml() {
-    var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Current Events Discussion Guide';
-    var vocabRows = state.vocab.filter(function (v) { return v.term.trim(); }).map(function (v) {
-      return '<tr><td>' + escapeHtml(v.term) + '</td><td>' + (v.def.trim() ? escapeHtml(v.def) : '') + '</td></tr>';
+  function vocabRowsHtml(comparison) {
+    return state.vocab.filter(function (v) { return v.term.trim(); }).map(function (v) {
+      var both = comparison && wordInBothArticles(v.term);
+      return '<tr' + (both ? ' class="core-vocab"' : '') + '><td>' + escapeHtml(v.term) +
+        (both ? ' <span class="core-tag">core</span>' : '') + '</td><td>' + (v.def.trim() ? escapeHtml(v.def) : '') + '</td></tr>';
     }).join('');
+  }
+
+  function presetQuestionsHtml() {
     var questions = PRESET_QUESTIONS.filter(function (q, i) { return state.presetChecked[i] !== false; })
       .concat(state.customQuestions.filter(function (q) { return q.text.trim(); }).map(function (q) { return escapeHtml(q.text); }));
-    var questionsHtml = questions.map(function (q) {
+    return questions.map(function (q) {
       return '<div class="q-item">' + q + '</div><span class="fill-line"></span><span class="fill-line"></span>';
     }).join('');
+  }
+
+  function guideHtmlSingle() {
+    var title = state.title.trim() ? escapeHtml(state.title.trim()) : 'Current Events Discussion Guide';
     return '<h1 class="guide-title">' + title + '</h1>' +
       '<p class="guide-sub">' + (state.source.trim() ? 'Source: ' + escapeHtml(state.source.trim()) : '') + ' &nbsp; Name: __________________________ &nbsp; Date: __________</p>' +
       '<div class="guide-section"><h3>Summary</h3><p style="font-size:.9rem;">' + (state.summary.trim() ? escapeHtml(state.summary.trim()) : '&nbsp;') + '</p>' +
       (state.summary.trim() ? '' : '<span class="fill-line"></span><span class="fill-line"></span>') + '</div>' +
-      '<div class="guide-section"><h3>Vocabulary</h3><table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRows + '</tbody></table></div>' +
-      '<div class="guide-section"><h3>Discussion Questions</h3>' + questionsHtml + '</div>';
+      '<div class="guide-section"><h3>Vocabulary</h3><table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRowsHtml(false) + '</tbody></table></div>' +
+      '<div class="guide-section"><h3>Discussion Questions</h3>' + presetQuestionsHtml() + '</div>';
+  }
+
+  function guideHtmlComparison() {
+    var titleA = state.title.trim() || 'Article A';
+    var titleB = state.titleB.trim() || 'Article B';
+    var guideTitle = (state.title.trim() || state.titleB.trim())
+      ? 'Comparing: ' + escapeHtml(titleA) + ' vs. ' + escapeHtml(titleB)
+      : 'Two-Article Comparison Guide';
+    var compQuestions = COMPARISON_QUESTIONS.filter(function (q, i) { return state.comparisonChecked[i] !== false; });
+    var compQuestionsHtml = compQuestions.map(function (q) {
+      return '<div class="q-item">' + q + '</div><span class="fill-line"></span><span class="fill-line"></span>';
+    }).join('');
+    return '<h1 class="guide-title">' + guideTitle + '</h1>' +
+      '<p class="guide-sub">Name: __________________________ &nbsp; Date: __________</p>' +
+      '<div class="compare-cols">' +
+        '<div class="compare-col"><h3>' + escapeHtml(titleA) + '</h3>' +
+          (state.source.trim() ? '<p class="article-source">Source: ' + escapeHtml(state.source.trim()) + '</p>' : '') +
+          '<p style="font-size:.9rem;">' + (state.summary.trim() ? escapeHtml(state.summary.trim()) : '&nbsp;') + '</p></div>' +
+        '<div class="compare-col"><h3>' + escapeHtml(titleB) + '</h3>' +
+          (state.sourceB.trim() ? '<p class="article-source">Source: ' + escapeHtml(state.sourceB.trim()) + '</p>' : '') +
+          '<p style="font-size:.9rem;">' + (state.summaryB.trim() ? escapeHtml(state.summaryB.trim()) : '&nbsp;') + '</p></div>' +
+      '</div>' +
+      '<div class="guide-section"><h3>Shared Vocabulary</h3>' +
+      '<p class="hint" style="margin:0 0 .4rem;">Words marked <span class="core-tag">core</span> appear in both articles &mdash; that&rsquo;s the event&rsquo;s shared vocabulary.</p>' +
+      '<table class="vocab-table"><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>' + vocabRowsHtml(true) + '</tbody></table></div>' +
+      '<div class="guide-section"><h3>Discussion Questions</h3>' + presetQuestionsHtml() + '</div>' +
+      (compQuestionsHtml ? '<div class="guide-section"><h3>Comparing These Two Articles</h3>' + compQuestionsHtml + '</div>' : '');
+  }
+
+  function guideHtml() {
+    return hasComparisonContent(state) ? guideHtmlComparison() : guideHtmlSingle();
   }
 
   els.printBtn.addEventListener('click', function () {
@@ -501,8 +748,135 @@
     window.print();
   });
 
+  /* ---------- load example (two fictional articles, same event, different framing) ---------- */
+  var EXAMPLE = {
+    titleA: 'City Council Approves New Skate Park, Teens Cheer',
+    sourceA: 'Maple Ridge Gazette, staff report',
+    bodyA: 'The Maple Ridge City Council voted 4 to 1 on Tuesday night to turn the old Fifth Street parking lot into a skate park. The lot has sat mostly empty since the hardware store next to it closed two years ago.\n\n' +
+      'Fourteen-year-old Jordan Reyes has been asking the council to build a skate park for almost a year. Jordan and a group of friends have been skating in the school parking lot after hours, which is technically against school rules. "We just need somewhere to go," Jordan told the council. "Right now there’s nowhere in town that’s actually built for skating."\n\n' +
+      'Supporters say the new park will give middle and high school students a safe, supervised place to spend afternoons instead of skating in empty lots or on sidewalks downtown. The design includes ramps, rails, and a small bowl section, and construction is expected to start this spring.\n\n' +
+      'Council member Dana Whitfield, who sponsored the proposal, said the town has needed something like this for years. "Kids deserve a place that’s built for them," Whitfield said. "This has been a long time coming."\n\n' +
+      'The skate park is expected to open by August, in time for the new school year.',
+    titleB: 'Council Votes to Remove Fifth Street Parking Lot',
+    sourceB: 'Maple Ridge Gazette, staff report',
+    bodyB: 'The Maple Ridge City Council voted 4 to 1 on Tuesday night to close the Fifth Street parking lot and replace it with a skate park, a decision that has several downtown business owners worried.\n\n' +
+      'The lot has 22 parking spaces and is one of the few free places to park within walking distance of Fifth Street’s shops and restaurants. Maria Ortiz, who owns the flower shop next to the lot, said she depends on customers being able to park nearby. "I don’t know where my customers are supposed to go now," Ortiz said. "That lot gets full on weekends as it is."\n\n' +
+      'Several business owners spoke against the plan at Tuesday’s meeting, asking the council to consider building the skate park somewhere else in town, such as the land near the community center. The council did not discuss alternate locations before the vote.\n\n' +
+      'Council member Dana Whitfield, who proposed the project, said the town needs more for young people to do. Construction on the skate park is expected to begin this spring, with an opening planned for August.\n\n' +
+      'The council has not announced a plan to replace the lost parking spaces.'
+  };
+
+  function guideHasContent(s) {
+    return !!(s.title.trim() || s.source.trim() || s.articleText.trim() || s.summary.trim() ||
+      s.vocab.length || s.customQuestions.length || s.titleB.trim() || s.sourceB.trim() || s.articleTextB.trim() || s.summaryB.trim());
+  }
+
+  els.loadExampleBtn.addEventListener('click', function () {
+    if (guideHasContent(state) && !confirm('Load the two-article skate park example? This replaces everything currently in "' + state.name + '".')) return;
+    state.title = EXAMPLE.titleA;
+    state.source = EXAMPLE.sourceA;
+    state.articleText = EXAMPLE.bodyA;
+    state.summary = '';
+    state.titleB = EXAMPLE.titleB;
+    state.sourceB = EXAMPLE.sourceB;
+    state.articleTextB = EXAMPLE.bodyB;
+    state.summaryB = '';
+    state.vocab = [];
+    state.presetChecked = {};
+    state.comparisonChecked = {};
+    state.customQuestions = [];
+    renderAll(); // fields onto the DOM first so analyzeArticle() reads real values
+    analyzeArticle();
+  });
+
+  /* ---------- share by link / QR (state-link.js, same pattern as 028) ---------- */
+  var SHARE_PARAM = 'guide';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  function shareUrl() {
+    save();
+    return StateLink.buildShareUrl(SHARE_PARAM, state);
+  }
+
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote('Link copied. Opening it anywhere loads this guide — both articles, vocabulary, and your questions — and saves it there as a new guide.'); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      setShareNote('This guide is too long to fit in a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use “Copy link” instead — a pasted link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote('');
+  });
+
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
+
+  function isPlausibleGuide(obj) {
+    return !!obj && typeof obj === 'object' &&
+      (typeof obj.articleText === 'string' || typeof obj.title === 'string');
+  }
+
+  /** Consumes a ?guide= link on load. Saves the arrival as a NEW named guide
+      (never over an existing one). Returns true if a link was found. */
+  function importSharedGuide() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't re-import it
+    var decoded = StateLink.decodeState(raw);
+    if (!isPlausibleGuide(decoded)) {
+      setShareNote('That shared link could not be read — it may have been cut short when it was pasted or emailed.', true);
+      return false;
+    }
+    var name = uniqueName((decoded.name && String(decoded.name).trim()) || (decoded.title && String(decoded.title).trim()) || 'Shared Guide');
+    var guide = normalizeGuide(decoded, name);
+    guide.name = name;
+    saveNamed(name, guide);
+    state = guide;
+    setShareNote('Loaded a shared guide as “' + name + '”.');
+    return true;
+  }
+
   /* ---------- boot ---------- */
-  load();
+  migrateLegacyIfNeeded();
+  if (!importSharedGuide()) {
+    load();
+  }
   renderAll();
 })();
 </script>
