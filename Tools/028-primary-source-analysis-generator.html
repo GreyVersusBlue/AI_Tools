@@ -165,6 +165,22 @@
   .vocab-box li { margin-bottom: .1rem; }
   .vocab-box .vword { font-weight: 700; }
 
+  /* ---- corroboration mode: two sources side by side, dual answer areas, comparison block ---- */
+  .sources-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .sources-row .source-box { flex: 1 1 45%; min-width: 220px; margin-bottom: 0; }
+  .source-label { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #444; margin-bottom: .3rem; font-family: "Segoe UI", sans-serif; }
+  .sources-row .source-image { max-height: 2in; }
+  .dual-answer-row { display: flex; gap: .6rem; margin: .5rem 0 0 2.4rem; flex-wrap: wrap; }
+  .dual-answer-row .answer-lines.sub, .dual-answer-row .step-answer.key.sub { flex: 1 1 45%; min-width: 180px; margin: 0; }
+  .sub-label { font-weight: 700; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: #444; margin-bottom: .25rem; font-family: "Segoe UI", sans-serif; }
+  .comparison-block { border-top: 2px solid #000; margin-top: 1rem; padding-top: .8rem; break-inside: avoid; }
+  .comparison-heading { font-weight: 700; font-size: 1.05rem; margin-bottom: .5rem; }
+  .comparison-step { margin-bottom: .8rem; }
+  .comparison-step .step-q { margin-left: 0; font-weight: 600; }
+  .comparison-step .answer-lines, .comparison-step .step-answer.key { margin-left: 0; }
+  .note-step .subnote-label { font-weight: 700; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: .5rem 0 .25rem 2.1rem; }
+  @media (max-width: 520px) { .dual-answer-row { margin-left: 0; } }
+
   .student-line { font-size: .9rem; margin-bottom: 1rem; }
 
   .steps-wrap { display: flex; flex-direction: column; gap: .9rem; }
@@ -282,6 +298,46 @@
           <img id="imageFilePreview" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
           <button type="button" class="secondary small" id="clearImageFileBtn" style="margin-top:.4rem;">Remove uploaded image</button>
           <p id="imageSizeWarning" class="hint" style="display:none;color:var(--err);font-weight:600;margin:.4rem 0 0;"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Corroboration mode (optional)</div>
+        <p class="hint">Print two sources side by side with shared sourcing questions, plus a comparison block: where do they agree, where do they disagree, and which is more reliable. Stays inside this one worksheet &mdash; for three or more sources, see the DBQ / Source Packet Builder instead.</p>
+        <button type="button" class="secondary full" id="loadExampleBtn">Load Boston Massacre example</button>
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="corroborationEnabled" style="width:auto;margin:0;"> Compare with a second source
+        </label>
+        <div id="corroborationFields" style="display:none;margin-top:.6rem;">
+          <label for="sourceBTitle">Source B title (optional)</label>
+          <input type="text" id="sourceBTitle" placeholder="e.g. A British soldier's account of the shooting">
+
+          <label for="sourceBType">Source B type</label>
+          <select id="sourceBType"></select>
+
+          <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+            <div><label for="sourceBCitationAuthor">Author / creator (optional)</label><input type="text" id="sourceBCitationAuthor" placeholder="e.g. a British soldier"></div>
+            <div><label for="sourceBCitationDate">Date created (optional)</label><input type="text" id="sourceBCitationDate" placeholder="e.g. 1770"></div>
+          </div>
+          <label for="sourceBCitationOrigin">Where it's from (optional)</label>
+          <input type="text" id="sourceBCitationOrigin" placeholder="e.g. trial testimony, 1770">
+
+          <label for="sourceBDescription">Describe what Source B depicts or says</label>
+          <textarea id="sourceBDescription" placeholder="A sentence or two describing Source B."></textarea>
+
+          <label for="sourceBText">Paste Source B's actual text (optional)</label>
+          <textarea id="sourceBText" class="source-text-input" placeholder="Paste Source B's speech, letter, or document excerpt here."></textarea>
+
+          <label for="sourceBImageUrl">Source B image URL (optional)</label>
+          <input type="url" id="sourceBImageUrl" placeholder="https://example.com/image.jpg">
+
+          <label for="sourceBImageFile">Or upload a Source B image from your computer (optional)</label>
+          <input type="file" id="sourceBImageFile" accept="image/*">
+          <div id="sourceBImageFilePreviewWrap" style="display:none;margin:.4rem 0 .8rem;">
+            <img id="sourceBImageFilePreview" style="max-width:100%;max-height:8rem;border:1px solid var(--line-strong);border-radius:6px;">
+            <button type="button" class="secondary small" id="clearSourceBImageFileBtn" style="margin-top:.4rem;">Remove uploaded image</button>
+            <p id="sourceBImageSizeWarning" class="hint" style="display:none;color:var(--err);font-weight:600;margin:.4rem 0 0;"></p>
+          </div>
         </div>
       </div>
 
@@ -566,6 +622,10 @@
     'citationAuthor', 'citationDate', 'citationOrigin', 'lineNumbers', 'vocabSupport',
     'imageFile', 'imageFilePreviewWrap', 'imageFilePreview', 'clearImageFileBtn', 'imageSizeWarning',
     'readingSupportEnabled', 'readingSupportFields', 'readingSummary', 'readingParaphrase',
+    'loadExampleBtn', 'corroborationEnabled', 'corroborationFields',
+    'sourceBTitle', 'sourceBType', 'sourceBDescription', 'sourceBText',
+    'sourceBCitationAuthor', 'sourceBCitationDate', 'sourceBCitationOrigin', 'sourceBImageUrl',
+    'sourceBImageFile', 'sourceBImageFilePreviewWrap', 'sourceBImageFilePreview', 'clearSourceBImageFileBtn', 'sourceBImageSizeWarning',
     'fwOptions', 'notesEditor', 'answerLines',
     'previewArea', 'printBlankBtn', 'printKeyBtn',
     'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
@@ -620,15 +680,22 @@
     return Math.round(b64.length * 0.75);
   }
 
-  function updateImageSizeWarning() {
-    var bytes = estimateDataUrlBytes(state && state.imageDataUrl);
+  function warnIfLargeImage(dataUrl, warningEl) {
+    var bytes = estimateDataUrlBytes(dataUrl);
     if (bytes > IMAGE_WARN_BYTES) {
-      els.imageSizeWarning.textContent = 'This image is about ' + (bytes / (1024 * 1024)).toFixed(1) +
+      warningEl.textContent = 'This image is about ' + (bytes / (1024 * 1024)).toFixed(1) +
         ' MB once stored — that’s a large share of the browser’s ~5MB storage limit shared by all your saved worksheets. Consider a smaller or simpler image if you run into a storage error.';
-      els.imageSizeWarning.style.display = '';
+      warningEl.style.display = '';
     } else {
-      els.imageSizeWarning.style.display = 'none';
+      warningEl.style.display = 'none';
     }
+  }
+
+  function updateImageSizeWarning() {
+    warnIfLargeImage(state && state.imageDataUrl, els.imageSizeWarning);
+  }
+  function updateSourceBImageSizeWarning() {
+    warnIfLargeImage(state && state.sourceBImageDataUrl, els.sourceBImageSizeWarning);
   }
 
   function sourceTypeLabel(value) {
@@ -656,9 +723,31 @@
       framework: 'optic',
       notes: {},
       customQuestions: {},
-      answerLines: 4
+      answerLines: 4,
+      corroborationMode: false,
+      sourceBTitle: '',
+      sourceBType: 'photo',
+      sourceBDescription: '',
+      sourceBText: '',
+      sourceBImageUrl: '',
+      sourceBImageDataUrl: '',
+      sourceBCitationAuthor: '',
+      sourceBCitationDate: '',
+      sourceBCitationOrigin: '',
+      notesB: {},
+      comparisonNotes: {}
     };
   }
+
+  /* Fixed comparison questions for corroboration mode's closing block — not
+     tied to a framework, since "where do they agree/disagree/which is more
+     reliable" is the same historical-thinking move regardless of which
+     sourcing framework analyzed each source above it. */
+  var COMPARISON_QUESTIONS = [
+    { key: 'agree', label: 'Where do the two sources agree?' },
+    { key: 'disagree', label: 'Where do the two sources disagree?' },
+    { key: 'reliable', label: 'Which source do you find more reliable, and why?' }
+  ];
 
   /* "word" or "word: definition" / "word - definition", one per line — same
      tolerant shape as the vocab parsing in 027-novel-study-circles-manager.html. */
@@ -776,7 +865,7 @@
       block.appendChild(customInput);
 
       var ta = document.createElement('textarea');
-      ta.placeholder = 'Teacher notes / model answer for ' + step.label + ' (shown only on the answer key)';
+      ta.placeholder = (state.corroborationMode ? 'Source A: teacher notes for ' : 'Teacher notes / model answer for ') + step.label + ' (shown only on the answer key)';
       ta.value = (state.notes && state.notes[step.key]) || '';
       ta.addEventListener('input', function () {
         if (!state.notes) state.notes = {};
@@ -785,52 +874,127 @@
       });
       block.appendChild(ta);
 
+      if (state.corroborationMode) {
+        var labelB = document.createElement('div');
+        labelB.className = 'subnote-label';
+        labelB.textContent = 'Source B';
+        block.appendChild(labelB);
+
+        var taB = document.createElement('textarea');
+        taB.style.marginLeft = '2.1rem';
+        taB.style.width = 'calc(100% - 2.1rem)';
+        taB.placeholder = 'Source B: teacher notes for ' + step.label + ' (shown only on the answer key)';
+        taB.value = (state.notesB && state.notesB[step.key]) || '';
+        taB.addEventListener('input', function () {
+          if (!state.notesB) state.notesB = {};
+          state.notesB[step.key] = taB.value;
+          renderPreview();
+        });
+        block.appendChild(taB);
+      }
+
       els.notesEditor.appendChild(block);
     });
+
+    if (state.corroborationMode) {
+      var cBlock = document.createElement('div');
+      cBlock.className = 'note-step';
+      var cHead = document.createElement('div');
+      cHead.className = 'note-step-head';
+      var cLetter = document.createElement('span');
+      cLetter.className = 'note-step-letter'; cLetter.textContent = '⇄';
+      var cLabel = document.createElement('span');
+      cLabel.className = 'note-step-label'; cLabel.textContent = 'Comparing the sources';
+      cHead.appendChild(cLetter); cHead.appendChild(cLabel);
+      cBlock.appendChild(cHead);
+
+      COMPARISON_QUESTIONS.forEach(function (cq) {
+        var cq_p = document.createElement('p');
+        cq_p.className = 'note-step-qs';
+        cq_p.style.margin = '0 0 .3rem 2.1rem';
+        cq_p.textContent = cq.label;
+        cBlock.appendChild(cq_p);
+
+        var cTa = document.createElement('textarea');
+        cTa.style.marginLeft = '2.1rem';
+        cTa.style.width = 'calc(100% - 2.1rem)';
+        cTa.placeholder = 'Teacher notes for: ' + cq.label + ' (shown only on the answer key)';
+        cTa.value = (state.comparisonNotes && state.comparisonNotes[cq.key]) || '';
+        cTa.addEventListener('input', function () {
+          if (!state.comparisonNotes) state.comparisonNotes = {};
+          state.comparisonNotes[cq.key] = cTa.value;
+          renderPreview();
+        });
+        cBlock.appendChild(cTa);
+      });
+
+      els.notesEditor.appendChild(cBlock);
+    }
   }
 
   /* ---------- worksheet markup (shared by preview & print) ---------- */
-  function sourceBlockHtml() {
+  var SOURCE_FIELD_KEYS = {
+    A: { title: 'sourceTitle', type: 'sourceType', desc: 'sourceDescription', text: 'sourceText',
+      imageUrl: 'imageUrl', imageData: 'imageDataUrl',
+      citeAuthor: 'citationAuthor', citeDate: 'citationDate', citeOrigin: 'citationOrigin' },
+    B: { title: 'sourceBTitle', type: 'sourceBType', desc: 'sourceBDescription', text: 'sourceBText',
+      imageUrl: 'sourceBImageUrl', imageData: 'sourceBImageDataUrl',
+      citeAuthor: 'sourceBCitationAuthor', citeDate: 'sourceBCitationDate', citeOrigin: 'sourceBCitationOrigin' }
+  };
+
+  /* One source's printed box. Source B intentionally skips vocab support and
+     the reading-support paraphrase — those stay Source-A-only per scope. */
+  function sourceBoxHtml(letter) {
+    var isB = letter === 'B';
+    var k = SOURCE_FIELD_KEYS[letter];
     var parts = ['<div class="source-box">'];
+    if (state.corroborationMode) parts.push('<div class="source-label">Source ' + letter + '</div>');
     parts.push('<div class="source-meta-row">');
-    if (state.sourceTitle) parts.push('<div><span class="meta-k">Source:</span> ' + escapeHtml(state.sourceTitle) + '</div>');
-    parts.push('<div><span class="meta-k">Type:</span> ' + escapeHtml(sourceTypeLabel(state.sourceType)) + '</div>');
+    if (state[k.title]) parts.push('<div><span class="meta-k">Source:</span> ' + escapeHtml(state[k.title]) + '</div>');
+    parts.push('<div><span class="meta-k">Type:</span> ' + escapeHtml(sourceTypeLabel(state[k.type])) + '</div>');
     parts.push('</div>');
-    var imgSrc = state.imageDataUrl || state.imageUrl;
+    var imgSrc = state[k.imageData] || state[k.imageUrl];
     if (imgSrc) {
-      parts.push('<div class="source-image-wrap"><img class="source-image" src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(state.sourceTitle || 'Primary source image') + '" onerror="this.style.display=\'none\'"></div>');
+      parts.push('<div class="source-image-wrap"><img class="source-image" src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(state[k.title] || 'Primary source image') + '" onerror="this.style.display=\'none\'"></div>');
     }
-    if (state.sourceDescription) {
-      parts.push('<div class="source-desc"><span class="meta-k">Description:</span> ' + nlToBr(state.sourceDescription) + '</div>');
-    } else if (!state.sourceText) {
+    if (state[k.desc]) {
+      parts.push('<div class="source-desc"><span class="meta-k">Description:</span> ' + nlToBr(state[k.desc]) + '</div>');
+    } else if (!state[k.text]) {
       parts.push('<div class="source-desc empty">No source description added yet.</div>');
     }
-    if (state.sourceText) {
-      if (state.lineNumbers) {
-        var lines = state.sourceText.split('\n').map(function (line, i) {
+    if (state[k.text]) {
+      if (!isB && state.lineNumbers) {
+        var lines = state[k.text].split('\n').map(function (line, i) {
           return '<div class="stl-line"><span class="stl-num">' + (i + 1) + '</span><span class="stl-text">' + escapeHtml(line) + '</span></div>';
         }).join('');
         parts.push('<div class="source-text-lines">' + lines + '</div>');
       } else {
-        parts.push('<div class="source-text-block">' + nlToBr(state.sourceText) + '</div>');
+        parts.push('<div class="source-text-block">' + nlToBr(state[k.text]) + '</div>');
       }
     }
-    if (state.readingSupportEnabled && state.readingParaphrase) {
+    if (!isB && state.readingSupportEnabled && state.readingParaphrase) {
       parts.push('<div class="reading-paraphrase-box"><p class="reading-support-heading">Simplified / plain-language version</p><div class="reading-support-text">' + nlToBr(state.readingParaphrase) + '</div></div>');
     }
     var citationBits = [];
-    if (state.citationAuthor) citationBits.push(escapeHtml(state.citationAuthor));
-    if (state.citationDate) citationBits.push(escapeHtml(state.citationDate));
-    if (state.citationOrigin) citationBits.push(escapeHtml(state.citationOrigin));
+    if (state[k.citeAuthor]) citationBits.push(escapeHtml(state[k.citeAuthor]));
+    if (state[k.citeDate]) citationBits.push(escapeHtml(state[k.citeDate]));
+    if (state[k.citeOrigin]) citationBits.push(escapeHtml(state[k.citeOrigin]));
     if (citationBits.length) parts.push('<div class="citation-line">' + citationBits.join(' &middot; ') + '</div>');
-    var vocab = parseVocabLines(state.vocabSupport);
-    if (vocab.length) {
-      parts.push('<div class="vocab-box"><p class="vocab-heading">Vocabulary</p><ul>' + vocab.map(function (v) {
-        return '<li><span class="vword">' + escapeHtml(v.word) + '</span>' + (v.definition ? ' &mdash; ' + escapeHtml(v.definition) : '') + '</li>';
-      }).join('') + '</ul></div>');
+    if (!isB) {
+      var vocab = parseVocabLines(state.vocabSupport);
+      if (vocab.length) {
+        parts.push('<div class="vocab-box"><p class="vocab-heading">Vocabulary</p><ul>' + vocab.map(function (v) {
+          return '<li><span class="vword">' + escapeHtml(v.word) + '</span>' + (v.definition ? ' &mdash; ' + escapeHtml(v.definition) : '') + '</li>';
+        }).join('') + '</ul></div>');
+      }
     }
     parts.push('</div>');
     return parts.join('');
+  }
+
+  function sourceBlockHtml() {
+    if (!state.corroborationMode) return sourceBoxHtml('A');
+    return '<div class="sources-row">' + sourceBoxHtml('A') + sourceBoxHtml('B') + '</div>';
   }
 
   function stepBlockHtml(step, mode) {
@@ -838,12 +1002,28 @@
     var customQ = (state.customQuestions && state.customQuestions[step.key]) || '';
     if (customQ) qHtml += '<p class="step-q">' + escapeHtml(customQ) + '</p>';
     var bodyHtml;
-    if (mode === 'key') {
-      var noteText = (state.notes && state.notes[step.key]) || '';
-      bodyHtml = '<div class="step-answer key' + (noteText ? '' : ' empty') + '">' +
-        (noteText ? nlToBr(noteText) : 'No teacher notes added for this step yet.') + '</div>';
+    if (!state.corroborationMode) {
+      if (mode === 'key') {
+        var noteText = (state.notes && state.notes[step.key]) || '';
+        bodyHtml = '<div class="step-answer key' + (noteText ? '' : ' empty') + '">' +
+          (noteText ? nlToBr(noteText) : 'No teacher notes added for this step yet.') + '</div>';
+      } else {
+        bodyHtml = '<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', answerLineCount()) + '</div>';
+      }
     } else {
-      bodyHtml = '<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', answerLineCount()) + '</div>';
+      /* Shared questions above, applied to each source separately below — the
+         "shared sourcing questions that apply to each source" the corroboration
+         worksheet asks for. */
+      var sub = function (letter, notesObj) {
+        if (mode === 'key') {
+          var nText = (notesObj && notesObj[step.key]) || '';
+          return '<div class="step-answer key sub' + (nText ? '' : ' empty') + '"><div class="sub-label">Source ' + letter + '</div>' +
+            (nText ? nlToBr(nText) : 'No teacher notes added for this step yet.') + '</div>';
+        }
+        return '<div class="answer-lines sub"><div class="sub-label">Source ' + letter + '</div>' +
+          repeatHtml('<div class="answer-line"></div>', answerLineCount()) + '</div>';
+      };
+      bodyHtml = '<div class="dual-answer-row">' + sub('A', state.notes) + sub('B', state.notesB) + '</div>';
     }
     return (
       '<div class="step-block">' +
@@ -852,6 +1032,27 @@
         bodyHtml +
       '</div>'
     );
+  }
+
+  /* The comparison block that closes a corroboration worksheet — fixed
+     questions, independent of the chosen framework. */
+  function comparisonBlockHtml(mode) {
+    if (!state.corroborationMode) return '';
+    var parts = ['<div class="comparison-block">', '<div class="comparison-heading">Comparing the sources</div>'];
+    COMPARISON_QUESTIONS.forEach(function (q) {
+      parts.push('<div class="step-block comparison-step">');
+      parts.push('<p class="step-q">' + escapeHtml(q.label) + '</p>');
+      if (mode === 'key') {
+        var noteText = (state.comparisonNotes && state.comparisonNotes[q.key]) || '';
+        parts.push('<div class="step-answer key' + (noteText ? '' : ' empty') + '">' +
+          (noteText ? nlToBr(noteText) : 'No teacher notes added for this question yet.') + '</div>');
+      } else {
+        parts.push('<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', answerLineCount()) + '</div>');
+      }
+      parts.push('</div>');
+    });
+    parts.push('</div>');
+    return parts.join('');
   }
 
   function sheetHtml(mode) {
@@ -874,6 +1075,7 @@
         sourceBlockHtml() +
         studentLine +
         '<div class="steps-wrap">' + stepsHtml + '</div>' +
+        comparisonBlockHtml(mode) +
       '</div>'
     );
   }
@@ -909,6 +1111,26 @@
     }
     updateImageSizeWarning();
     els.answerLines.value = state.answerLines || 4;
+
+    els.corroborationEnabled.checked = !!state.corroborationMode;
+    els.corroborationFields.style.display = state.corroborationMode ? '' : 'none';
+    els.sourceBTitle.value = state.sourceBTitle || '';
+    els.sourceBType.value = state.sourceBType || 'photo';
+    els.sourceBDescription.value = state.sourceBDescription || '';
+    els.sourceBText.value = state.sourceBText || '';
+    els.sourceBImageUrl.value = state.sourceBImageUrl || '';
+    els.sourceBCitationAuthor.value = state.sourceBCitationAuthor || '';
+    els.sourceBCitationDate.value = state.sourceBCitationDate || '';
+    els.sourceBCitationOrigin.value = state.sourceBCitationOrigin || '';
+    els.sourceBImageFile.value = '';
+    if (state.sourceBImageDataUrl) {
+      els.sourceBImageFilePreview.src = state.sourceBImageDataUrl;
+      els.sourceBImageFilePreviewWrap.style.display = '';
+    } else {
+      els.sourceBImageFilePreviewWrap.style.display = 'none';
+    }
+    updateSourceBImageSizeWarning();
+
     renderFrameworkPicker();
     renderNotesEditor();
   }
@@ -945,6 +1167,18 @@
     if (typeof state.readingParaphrase !== 'string') state.readingParaphrase = '';
     state.lineNumbers = !!state.lineNumbers;
     state.readingSupportEnabled = !!state.readingSupportEnabled;
+    state.corroborationMode = !!state.corroborationMode;
+    if (typeof state.sourceBTitle !== 'string') state.sourceBTitle = '';
+    if (typeof state.sourceBType !== 'string') state.sourceBType = 'photo';
+    if (typeof state.sourceBDescription !== 'string') state.sourceBDescription = '';
+    if (typeof state.sourceBText !== 'string') state.sourceBText = '';
+    if (typeof state.sourceBImageUrl !== 'string') state.sourceBImageUrl = '';
+    if (typeof state.sourceBImageDataUrl !== 'string') state.sourceBImageDataUrl = '';
+    if (typeof state.sourceBCitationAuthor !== 'string') state.sourceBCitationAuthor = '';
+    if (typeof state.sourceBCitationDate !== 'string') state.sourceBCitationDate = '';
+    if (typeof state.sourceBCitationOrigin !== 'string') state.sourceBCitationOrigin = '';
+    if (!state.notesB || typeof state.notesB !== 'object') state.notesB = {};
+    if (!state.comparisonNotes || typeof state.comparisonNotes !== 'object') state.comparisonNotes = {};
     Store.setCurrentName(name);
     renderAll();
   }
@@ -978,6 +1212,99 @@
     state.readingSupportEnabled = els.readingSupportEnabled.checked;
     els.readingSupportFields.style.display = state.readingSupportEnabled ? '' : 'none';
     renderPreview();
+  });
+
+  /* ---------- corroboration mode: Source B fields ---------- */
+  bindTextField('sourceBTitle', 'sourceBTitle');
+  bindTextField('sourceBDescription', 'sourceBDescription');
+  bindTextField('sourceBText', 'sourceBText');
+  bindTextField('sourceBImageUrl', 'sourceBImageUrl');
+  bindTextField('sourceBCitationAuthor', 'sourceBCitationAuthor');
+  bindTextField('sourceBCitationDate', 'sourceBCitationDate');
+  bindTextField('sourceBCitationOrigin', 'sourceBCitationOrigin');
+  els.sourceBType.addEventListener('change', function () {
+    state.sourceBType = els.sourceBType.value;
+    renderPreview();
+  });
+
+  els.corroborationEnabled.addEventListener('change', function () {
+    state.corroborationMode = els.corroborationEnabled.checked;
+    els.corroborationFields.style.display = state.corroborationMode ? '' : 'none';
+    renderNotesEditor();
+    renderPreview();
+  });
+
+  els.sourceBImageFile.addEventListener('change', function () {
+    var file = els.sourceBImageFile.files && els.sourceBImageFile.files[0];
+    if (!file) return;
+    downscaleImage(file).then(function (dataUrl) {
+      state.sourceBImageDataUrl = dataUrl;
+      els.sourceBImageFilePreview.src = dataUrl;
+      els.sourceBImageFilePreviewWrap.style.display = '';
+      updateSourceBImageSizeWarning();
+      renderPreview();
+    }).catch(function (err) {
+      alert(err.message);
+      els.sourceBImageFile.value = '';
+    });
+  });
+
+  els.clearSourceBImageFileBtn.addEventListener('click', function () {
+    state.sourceBImageDataUrl = '';
+    els.sourceBImageFile.value = '';
+    els.sourceBImageFilePreviewWrap.style.display = 'none';
+    updateSourceBImageSizeWarning();
+    renderPreview();
+  });
+
+  /* ---------- load example: a canned two-source corroboration pair ---------- */
+  var EXAMPLE_NAME = 'Boston Massacre (corroboration example)';
+  var EXAMPLE_WORKSHEET = {
+    sourceTitle: '“The Bloody Massacre” engraving (1770)',
+    sourceType: 'poster',
+    sourceDescription: 'Paul Revere’s 1770 engraving shows a row of British soldiers firing in a straight line into a crowd of unarmed colonists on a Boston street. Smoke rises from several muskets at once, and an officer with a raised sword stands behind the line as if commanding the volley. Colonists are shown falling and bleeding while others recoil in shock, and a dog stands calmly in the foreground as if nothing dangerous were happening. The building behind the soldiers is labeled “Butcher’s Hall,” a detail Revere invented and added on purpose. The soldiers are drawn shoulder to shoulder in a tidy, deliberate line, making the shooting look planned rather than a chaotic, fearful reaction to a threatening crowd.',
+    sourceText: '',
+    citationAuthor: 'Paul Revere (engraver), after a design by Henry Pelham',
+    citationDate: '1770',
+    citationOrigin: 'Based on prints widely reproduced in American history collections',
+    lineNumbers: false,
+    vocabSupport: '',
+    sourceBTitle: 'A British soldier’s account of the shooting',
+    sourceBType: 'document',
+    sourceBDescription: '',
+    sourceBText: 'I was standing guard that night when a large crowd surrounded us, shouting insults and daring us to shoot. They pressed in close, striking our muskets with clubs and sticks and throwing hard chunks of ice and snow. Someone in the crowd shouted the word “fire,” though it was not our captain’s voice giving the order. In the noise, shoving, and confusion, I could not clearly see who around us carried a weapon. When the firing finally stopped, several colonists lay wounded or dying in the street, and the rest of the crowd scattered. At the time, I honestly believed our lives were in danger from the mob pressing in on us.',
+    sourceBCitationAuthor: 'A British soldier stationed in Boston (testimony paraphrased for classroom use)',
+    sourceBCitationDate: '1770',
+    sourceBCitationOrigin: 'Adapted from themes raised in courtroom testimony after the shooting',
+    framework: 'hipp',
+    corroborationMode: true
+  };
+
+  function hasContentWorthConfirming() {
+    if (!state) return false;
+    var fields = ['sourceTitle', 'sourceDescription', 'sourceText', 'sourceBTitle', 'sourceBDescription', 'sourceBText'];
+    if (fields.some(function (k) { return (state[k] || '').toString().trim(); })) return true;
+    var noteObjs = [state.notes, state.notesB, state.comparisonNotes];
+    return noteObjs.some(function (obj) {
+      return obj && Object.keys(obj).some(function (k) { return (obj[k] || '').toString().trim(); });
+    });
+  }
+
+  els.loadExampleBtn.addEventListener('click', function () {
+    if (hasContentWorthConfirming() &&
+      !confirm('Load the Boston Massacre corroboration example? This replaces the current worksheet’s source content and teacher notes.')) {
+      return;
+    }
+    var oldName = state.name;
+    Object.keys(EXAMPLE_WORKSHEET).forEach(function (k) { state[k] = EXAMPLE_WORKSHEET[k]; });
+    state.imageUrl = ''; state.imageDataUrl = '';
+    state.sourceBImageUrl = ''; state.sourceBImageDataUrl = '';
+    state.notes = {}; state.notesB = {}; state.comparisonNotes = {}; state.customQuestions = {};
+    if (EXAMPLE_NAME !== oldName) {
+      Store.remove(oldName);
+      state.name = EXAMPLE_NAME;
+    }
+    renderAll();
   });
 
   els.answerLines.addEventListener('input', function () {
@@ -1041,7 +1368,12 @@
     return !!obj && typeof obj === 'object' &&
       typeof obj.name === 'string' &&
       Object.prototype.hasOwnProperty.call(FRAMEWORKS, obj.framework) &&
-      typeof obj.notes === 'object';
+      typeof obj.notes === 'object' &&
+      // notesB / comparisonNotes are additive corroboration-mode fields — optional
+      // so older exports/links without them still pass, but must be object-shaped
+      // when present (this validator has silently rotted before on new fields).
+      (obj.notesB === undefined || typeof obj.notesB === 'object') &&
+      (obj.comparisonNotes === undefined || typeof obj.comparisonNotes === 'object');
   }
 
   function exportSheet() {
@@ -1105,7 +1437,7 @@
     save();
     var payload = { v: 1 };
     Object.keys(state).forEach(function (k) {
-      if (k !== 'imageDataUrl') payload[k] = state[k];
+      if (k !== 'imageDataUrl' && k !== 'sourceBImageDataUrl') payload[k] = state[k];
     });
     return payload;
   }
@@ -1117,8 +1449,8 @@
 
   function shareSuccessMessage() {
     var msg = 'Link copied. Opening it anywhere loads this worksheet — framework, source text, citation, and your notes — and saves it there as a copy.';
-    if (state && state.imageDataUrl) {
-      msg += ' The uploaded image is too large to ride in a link, so it stays behind — the recipient re-uploads it, or use Export worksheet to send everything as a file.';
+    if (state && (state.imageDataUrl || state.sourceBImageDataUrl)) {
+      msg += ' Any uploaded image(s) are too large to ride in a link, so they stay behind — the recipient re-uploads them, or use Export worksheet to send everything as a file.';
     }
     return msg;
   }
@@ -1164,8 +1496,8 @@
       return;
     }
     els.shareOverlay.hidden = false;
-    setShareNote(state && state.imageDataUrl
-      ? 'Heads up: the uploaded image is too large to ride in the QR code — the rest of the worksheet travels intact.'
+    setShareNote(state && (state.imageDataUrl || state.sourceBImageDataUrl)
+      ? 'Heads up: uploaded image(s) are too large to ride in the QR code — the rest of the worksheet travels intact.'
       : '');
   });
 
@@ -1193,6 +1525,7 @@
     delete decoded.v;
     decoded.name = name;
     decoded.imageDataUrl = ''; // never rides the link; loadSheetByName defaults the rest
+    decoded.sourceBImageDataUrl = ''; // same for the corroboration mode Source B image
     Store.save(name, decoded);
     loadSheetByName(name);
     setShareNote('Opened from a shared link and saved here as “' + name + '”. It is your copy now — editing it does not change the sender’s.');
