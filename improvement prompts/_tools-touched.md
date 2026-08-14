@@ -195,6 +195,7 @@ here.
 | Primary Source Analysis Worksheet Generator | `kx9rtm` | 2026-08-14 02:38 UTC | `claude/ssdemo2-028-kx9rtm` |
 | Government/Civics Simulation Role Card Generator | `pq4rvn` | 2026-08-14 02:39 UTC | `claude/ssdemo2-050-pq4rvn` |
 | Current Events Discussion Guide Generator | `mk3jq7` | 2026-08-14 02:44 UTC | `claude/ssdemo2-054-mk3jq7` |
+| DBQ / Source Packet Builder | `vn8trq` | 2026-08-14 02:41 UTC | `claude/ssdemo2-056-vn8trq` |
 
 ---
 
