@@ -1,10 +1,11 @@
 # Improvement Prompts — 050 — Government/Civics Simulation Role Card Generator
 
 **Tool file:** `Tools/050-civics-role-card-generator.html`
-**Support folder:** `Tools/civics-role-card-generator/` — test suite only; the
-tool itself is still one self-contained file.
+**Support folder:** `Tools/civics-role-card-generator/` — `crcg-store.js`
+(named saves), `crcg-templates.js` (the five built-in simulations), and the
+test suites.
 
-**Current description (from README):** Three starter templates (Mock Trial, Debate, Legislative Simulation) or build from scratch, each role with an editable position, talking points, and an optional case-file that prints as a companion packet, as a card grid.
+**Current description (from README):** Prints the whole simulation: role cards, private case files, an agenda with time boxes, ballots, a scoring rubric, and reflection sheets. Five starter templates (Mock Trial, Debate, Legislative Simulation, UN Security Council, Constitutional Convention) or build from scratch, saved by name.
 
 ---
 
@@ -148,24 +149,115 @@ lives inside the existing `crcg_roles_v1` blob), so `009-backup-restore.html`
 needed no changes. Multi-save is still the right next step — see "Where the
 next round should pick up" below.
 
+**2026-08-14 — SS demo round 2 (session `pq4rvn`), headline: from role cards
+to a full simulation kit.** The tool now prints the whole class period rather
+than just the cards. Four kit pieces were added, each individually toggleable
+at print time under "What prints": an **agenda page** (ordered phases with
+time boxes, a one-line teacher cue per phase, a tick column and an auto
+total), **ballots** matched to the simulation type (juror verdict slips,
+roll-call vote cards, judge scoring slips), a **scoring rubric page**
+(editable criteria rows against four editable level columns), and a
+**half-page reflection sheet per student** carrying the assigned name and
+role the way the case-file packets already did. Printing emits them in the
+order the period runs: agenda, cards, case files, ballots, rubric,
+reflections.
+
+Four decisions worth recording:
+
+- **"Who gets a ballot" is a flag on the role, not a list inside the ballot
+  settings.** `role.ballot` means "print a slip for every copy of this role",
+  so the slip count follows the copies count with nothing to keep in sync:
+  12 jurors give 12 verdict slips, and the UN template lands on exactly 15
+  vote cards because 5 permanent + 10 elected members is what the real
+  Council is. Duplicating a role carries the flag, deleting one takes it
+  away, and reordering does not matter. A list of role names inside
+  `ballot` would have gone stale the first time a teacher renamed a role.
+- **An empty kit piece prints nothing, which is what makes the print toggles
+  safe to default on.** A simulation migrated from the old `crcg_roles_v1`
+  blob has no agenda, no ballot options, no rubric criteria and no reflection
+  prompts, so it prints exactly the cards and case files it always did even
+  with all six boxes ticked. `repairDoc` therefore defaults kit content to
+  empty and only the built-in templates supply real content. Defaulting the
+  content instead would have silently added 40 pages to an old saved set.
+- **The first thing printed must not force a blank page ahead of itself.**
+  `.kit-section { page-break-before: always }` plus
+  `#printArea > :first-child { page-break-before: auto }` — the id selector
+  outranks the class, so whichever piece happens to be first (agenda today,
+  the card grid if the agenda is unticked) never wastes a sheet. The
+  case-file packets stay direct children of `#printArea` rather than getting
+  wrapped in a section, because they already force their own break and
+  wrapping them would have broken the existing suite's assertion about it.
+- **The rubric keeps level descriptors generic on purpose.** A full
+  criteria×levels grid would have meant writing 16 cells per template and 80
+  across five, most of them padding. Instead each row carries the criterion
+  and one "top score looks like" line, and the four column headings are
+  shared and editable. That is the format a middle-school scorer actually
+  circles, and it stays editable without a wall of text.
+
+Both supporting items also shipped. **Multi-save** (deferred from round 1)
+landed on the sketched `crcg:list` / `crcg:data:<name>` / `crcg:current`
+triple-key pattern in a new `Tools/civics-role-card-generator/crcg-store.js`,
+copied from `htcm-store.js`; the legacy `crcg_roles_v1` blob migrates in as
+"My simulation" on first load and is left in place as a one-release backup,
+and the new `crcg:` prefix is registered in `009-backup-restore.html`
+`KNOWN_GROUPS`. That changed what a share link does: instead of round 1's
+confirm-and-replace, an incoming link files itself away under its own uniqued
+name ("My simulation 2") and touches nothing already saved, which is a
+strictly better answer and is now asserted in both directions. **Two new
+templates** shipped in a new `crcg-templates.js` (all five live there now, out
+of the HTML): a **UN Security Council** resolution debate on earthquake relief
+for a fictional country, and a **Constitutional Convention** compromise
+session on representation in Congress. Both use the real institution's
+structure and rules with a neutral question on the floor, and name roles by
+job rather than by country or historical figure, so no student is asked to
+argue a real nation's or real person's position.
+
+Verified with a new 62-assertion suite,
+`Tools/civics-role-card-generator/test/smoke-simulation-kit.mjs`
+(`npm run test:civics-kit`): print order and the fresh-page break on every
+section, agenda totals and cues, slip counts following copies both ways,
+reflection names matching card names, a toggle only ever subtracting, the two
+new templates' seat and vote counts, the legacy blob migrating in and
+printing unchanged, and two named simulations keeping their own roles across
+a reload. The two existing suites were updated where storage and the import
+path genuinely changed (they read `crcg:data:<current>` now, and the old
+"declining the confirm" case became "opening the same link twice never
+overwrites") and are green at 28 and 28.
+
+**Nothing was cut.** One thing deliberately not built: the Open Question
+below about whether switching simulations should also swap the assigned
+roster is still open, and the answer shipped here is the simple one — the
+roster assignment stays a one-at-a-time action, and each saved simulation
+just keeps whatever names were assigned when it was last open.
+
 ## What it does today
 
-- 3 starter templates (Mock Trial, Debate, Legislative Simulation) + blank,
-  each shipping realistic per-role copy counts and (except the blank) sample
-  case-file text so the packet feature demos out of the box
+- **5 starter templates** (Mock Trial, Debate, Legislative Simulation, UN
+  Security Council, Constitutional Convention) + blank, each shipping
+  realistic per-role copy counts, sample case-file text, an agenda, ballots,
+  a rubric and reflection prompts, so the whole kit demos out of the box
+- **Multiple named saved simulations** (`crcg:list` / `crcg:data:<name>` /
+  `crcg:current`), with New / Rename / Delete, migrating the old
+  `crcg_roles_v1` blob in as "My simulation"
 - Fully editable: role name, position, talking points (add/remove), and an
   optional long-form case file
 - **Per-role copies count** — print N cards for a role N students share
+- **Per-role "Votes" tick** — drives how many ballot slips print
 - **Duplicate-role button** for cloning a role as a starting point
 - **Reorder roles and talking points** via up/down buttons
 - Assign a saved class list (`np_rosters`) across the role slots, optionally
   shuffled, growing the biggest role so nobody is left without a card
-- Print: 2-per-page role card grid, respecting each role's copy count, each
-  card carrying its assigned student's name or a blank name line, followed by
-  one **case-file companion packet per printed copy** of any role that has
-  case-file text, each starting on its own page
-- **Share link + QR code** — round-trips a full role set (state-link.js),
-  asking with a confirm dialog before replacing roles already on screen
+- **The full simulation kit**, each piece individually toggleable at print
+  time and listed in a live "printing now would produce…" summary:
+  - agenda page with time boxes, teacher cues, a tick column and a total
+  - 2-per-page role card grid respecting copy counts and assigned names
+  - one case-file companion packet per printed copy of a role that has one
+  - ballot slips, 4 to a page, counted from the roles ticked "Votes", with a
+    switch for a secret slip (blank name line) or a recorded one (name printed)
+  - scoring rubric page, editable criteria rows against four editable levels
+  - half-page reflection sheet per student, name and role already on it
+- **Share link + QR code** — round-trips a whole simulation (state-link.js)
+  and files an incoming one under its own uniqued name, replacing nothing
 
 ## Quick Wins
 
@@ -178,32 +270,31 @@ next round should pick up" below.
 
 ## Major Features
 
-- **Multiple named saved simulations**, matching the multi-save convention
-  used by most builder tools in this round — one flat role set per
-  browser right now, so a mock trial and a debate can't both stay ready at
-  once. This is the one supporting item the 2026-08-14 round explicitly cut
-  (per its own cut rule) to ship the case-file packet headline and the share
-  link cleanly; the assignment file's suggested shape is the
-  `crcg:list` / `crcg:data:<name>` / `crcg:current` triple-key pattern the
-  trading card maker uses, migrating the existing `crcg_roles_v1` blob in as
-  the first named simulation, with the new keys registered in
-  `009-backup-restore.html` `KNOWN_GROUPS`.
-- **A scoring/rubric companion** tied to each role type, reusing Rubric
-  Builder's existing pattern — a judge/moderator role naturally pairs with
-  a scoring rubric for the simulation.
+- ~~**Multiple named saved simulations**~~ — **shipped 2026-08-14 (SS demo
+  round 2)** on the sketched `crcg:` triple-key pattern; see above.
+- ~~**A scoring/rubric companion** tied to each role type~~ — **shipped
+  2026-08-14 (SS demo round 2)** as part of the kit, built into this tool
+  rather than handed off to Rubric Builder (034). Whether the two should
+  share a rubric format is still an open cross-tool question; the kit's grid
+  is deliberately simpler than 034's.
 - **JSON export/import**, for sharing a built simulation with another
   social studies teacher as a file rather than a link — the share link
-  shipped 2026-08-14 covers the common case, but a file still travels better
-  by email attachment than a URL some mail clients truncate.
+  covers the common case, but a file still travels better by email
+  attachment than a URL some mail clients truncate. This matters more now
+  that a simulation carries a whole kit and the QR path can overflow.
+- **A per-simulation roster memory**, so a debate and a mock trial each
+  remember which class list they were built for (see the Open Question).
 
 ## Moonshot / North Star
 
-**A full simulation kit generator — roles, private case-file details,
+~~**A full simulation kit generator — roles, private case-file details,
 assigned student names, and a scoring rubric — built from one screen and
-handed out ready to run.** Assigned names and per-role fact sheets turn a
-generic role-card set into the actual materials a mock trial or
-legislative simulation needs; a paired rubric closes the loop from
-"here's your role" to "here's how you'll be assessed."
+handed out ready to run.**~~ — **reached 2026-08-14 (SS demo round 2).** The
+tool prints the agenda, the cards, the case files, the ballots, the rubric
+and the reflections from one screen. The next horizon is the other side of
+the period: capturing what came back (vote tallies, rubric scores) without
+turning this into a gradebook, which the Non-goals have consistently ruled
+out. Anything in that direction needs Devon's steer before it is built.
 
 ## Platform themes that matter here
 
@@ -225,18 +316,34 @@ saved roster — shipped 2026-08-12, Round 3 — and case-file content earned
 its own distinct field rather than folding into talking points — shipped
 2026-08-14.)*
 
-- When multiple named saved simulations land, should switching simulations
-  also swap the assigned-roster selection (so a debate and a mock trial can
-  each remember their own class list), or should the roster assignment stay
-  a one-at-a-time action independent of which simulation is loaded?
+- Named saves landed 2026-08-14 and this question is still open, because the
+  round shipped the simple answer rather than deciding it: the roster
+  assignment is a one-at-a-time action, and each saved simulation keeps
+  whichever names were assigned when it was last open. Should switching
+  simulations instead re-run the assignment against a class list remembered
+  per simulation (so a debate and a mock trial each reopen for their own
+  period), or is remembering the names good enough?
+- The kit's rubric grid is deliberately simpler than Rubric Builder's (034).
+  Should they converge on one format, or is a scoring slip a genuinely
+  different object from a graded rubric? The assignment file ruled 034
+  integration out of scope for this round, so nothing was assumed.
 
 ## Where the next round should pick up
 
-Multiple named saved simulations is the one remaining Quick Win/Major
-Feature and the clearest next step — the assignment file already names the
-shape (the `crcg:` triple-key pattern, migrating `crcg_roles_v1` in as the
-first named save, registering the new keys in `009-backup-restore.html`).
-After that, the Open Question above should get answered before building the
-roster-per-simulation behavior, since it changes the shape of the feature.
-The file hasn't cleared its Major Features/Moonshot sections either, so it
-stays out of `stable tools/` for now.
+The Quick Wins, Major Features and Moonshot are now all struck through
+except JSON export/import and the per-simulation roster memory. JSON
+export/import is the clearer next step and got more useful this round: a
+simulation now carries five kit pieces, so the share link is much longer and
+the QR path can overflow on a big one (the tool already says so and tells the
+teacher to use Copy link, but a file would sidestep it and travels better by
+email). The per-simulation roster memory should wait until the first Open
+Question above is answered, since it changes the shape of the feature.
+
+Two smaller things noticed while building and left alone on purpose:
+`crcg_roles_v1` is not in `009-backup-restore.html`'s `STUDENT_KEYS` even
+though it holds assigned student names, and neither is `crcg:` — that is
+pre-existing, it changes year-end-clear behavior, and it was out of scope for
+a hot-file edit in a parallel round. The kit's four editor sections
+(add/move/remove rows against a list in a document) are the same shape as
+half a dozen other builder tools and would extract cleanly into `_shared/`
+one day.

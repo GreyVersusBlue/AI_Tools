@@ -326,3 +326,30 @@ able to trace one named feature on its own, so a highlighted country's holes
 cancel against its own rings and not its neighbours'. A shared version needs
 both entry points, which is why the suggestion above is `traceFeature` rather
 than `traceFeatures`.
+
+## `_shared/levels.js` — one home for the three teaching levels (from 056, round 2)
+
+Round 2 asked several tools to implement the same differentiation spec: a
+selector with exactly `Academic` / `Honors` / `Honors GT`, defaulting to
+Honors, affecting printed output only, plus a "print all three levels" run
+whose pages carry a level footer tag. 056 (DBQ / Source Packet Builder) and
+028 (Primary Source Analysis) both built it independently in the same round,
+and more tools will want it.
+
+The duplicated part is small but exactly the kind that drifts: the three
+label strings, the default, and the footer-tag markup. If two tools ever
+disagree on a label ("Honors GT" vs "Honors-GT") the feature stops reading as
+one coherent thing across the toolkit, which was the whole point of
+specifying it centrally. A `_shared/levels.js` exporting the ordered list,
+`levelLabel(key)`, `isLevel(key)`, and a `levelTag(key, title)` markup
+helper would cost almost nothing and pin all of it.
+
+A second, larger candidate from the same work: 056 ships a ~60-entry
+plain-language glossary of social-studies vocabulary, used to build the
+Academic-level "before you read" gloss from the teacher's own source text,
+with an honest "check these words with a partner" fallback when nothing
+matches. Any tool that wants a vocabulary support line — 028, the vocab
+flashcard generator, the writing prompt generator — wants that same list, and
+a shared one can grow over time instead of three tools each hand-rolling
+sixty definitions. Worth one owner deciding where it lives before a third
+copy exists.

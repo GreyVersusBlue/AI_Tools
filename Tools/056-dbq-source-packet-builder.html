@@ -76,6 +76,18 @@
   .crop-frame { position: relative; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 4px; background: #f1f0ea; margin-bottom: .6rem; }
   .crop-frame img { display: block; max-width: none; }
 
+  .opt-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+  .opt-row > div { flex: 1 1 220px; }
+  .check-row { display: flex; align-items: center; gap: .45rem; margin-bottom: .45rem; }
+  .check-row input[type="checkbox"] { width: auto; margin: 0; }
+  .check-row label { margin: 0; font-weight: 600; font-size: .84rem; }
+
+  .rubric-scroll { overflow-x: auto; }
+  .rubric-grid { width: 100%; min-width: 640px; border-collapse: collapse; font-size: .8rem; }
+  .rubric-grid th, .rubric-grid td { border: 1px solid var(--line-strong); padding: .3rem; vertical-align: top; text-align: left; }
+  .rubric-grid input[type="text"] { margin: 0; font-size: .8rem; }
+  .rubric-grid textarea { margin: 0; min-height: 4.2rem; font-size: .78rem; }
+
   .print-title { font-size: 1.4rem; margin: 0 0 .2rem; }
   .print-context { font-size: .9rem; margin: .3rem 0 1rem; }
   .source-page { page-break-after: always; }
@@ -88,6 +100,25 @@
   .source-page .q-item { font-size: .9rem; margin-bottom: .1rem; }
   .fill-line { display: block; border-bottom: 1px solid #999; height: 1.2rem; margin: .1rem 0 .5rem; }
   .shared-q { font-size: .9rem; margin-top: 1.5rem; }
+
+  /* leveled + essay-scaffold print pieces */
+  .source-page h3 { font-size: .95rem; margin: .8rem 0 .25rem; }
+  .gloss { font-size: .84rem; border: 1px solid #777; border-radius: 4px; padding: .35rem .5rem; margin-bottom: .7rem; }
+  .starter { font-size: .82rem; color: #444; font-style: italic; margin: 0 0 .05rem; }
+  .frame { font-size: .82rem; color: #444; font-style: italic; margin: 0 0 .2rem; }
+  .steps { font-size: .87rem; margin: .2rem 0 .7rem; padding-left: 1.25rem; }
+  .steps li { margin-bottom: .15rem; }
+  .doc-key { font-size: .84rem; margin: .2rem 0 .6rem; }
+  .plan-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin-bottom: .5rem; }
+  .plan-table th, .plan-table td { border: 1px solid #555; padding: .3rem .35rem; vertical-align: top; text-align: left; }
+  .plan-table th { font-size: .76rem; }
+  .plan-cell { min-height: 3.1rem; }
+  .plan-cell.tall { min-height: 4rem; }
+  .print-rubric { width: 100%; border-collapse: collapse; font-size: .74rem; }
+  .print-rubric th, .print-rubric td { border: 1px solid #555; padding: .28rem .32rem; vertical-align: top; text-align: left; }
+  .checklist { font-size: .86rem; list-style: none; padding-left: 0; margin: .3rem 0 .6rem; }
+  .checklist li { margin-bottom: .45rem; }
+  .level-tag { margin-top: 1.1rem; padding-top: .25rem; border-top: 1px solid #999; font-size: .72rem; color: #555; }
 
   .share-note { font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; padding: .55rem .7rem; border-radius: 6px;
     background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
@@ -112,6 +143,7 @@
     </div>
     <div class="btnrow">
       <button class="secondary" id="printBtn">Print packet</button>
+      <button class="secondary" id="printAllLevelsBtn">Print all three levels</button>
     </div>
   </div>
 
@@ -160,6 +192,39 @@
   </div>
 
   <div class="card">
+    <h2>Level and closing pages</h2>
+    <div class="opt-row">
+      <div>
+        <label for="levelSelect">Level</label>
+        <select id="levelSelect">
+          <option value="academic">Academic</option>
+          <option value="honors">Honors</option>
+          <option value="gt">Honors GT</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">Honors is the baseline packet. Academic keeps every question and adds reading support: a short word gloss on each source and a sentence starter under each question. Honors GT opens the planning page up, drops the frames, and asks for outside evidence. Use &ldquo;Print all three levels&rdquo; to run one set of each, footer-tagged so the piles stay sorted.</p>
+    <div class="check-row"><input type="checkbox" id="organizerToggle"><label for="organizerToggle">Include the essay planning organizer page</label></div>
+    <div class="check-row"><input type="checkbox" id="rubricToggle"><label for="rubricToggle">Include the scoring rubric page</label></div>
+    <p class="hint" style="margin:.4rem 0 0;">Pages print in this order: cover, sources, essay prompt, organizer, rubric.</p>
+  </div>
+
+  <div class="card">
+    <div class="btnrow" style="justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;">Scoring rubric</h2>
+      <button type="button" class="secondary small" id="resetRubricBtn">Reset to the starter rubric</button>
+    </div>
+    <p class="hint">Starter wording for a 7th grade DBQ. Every box is editable, so make it your own. It prints only when the rubric page is turned on above.</p>
+    <label for="rubricStyle">Print it as</label>
+    <select id="rubricStyle">
+      <option value="grid">Full grid, all four levels</option>
+      <option value="checklist">Student checklist, what &ldquo;meets&rdquo; looks like</option>
+    </select>
+    <div class="rubric-scroll"><table class="rubric-grid" id="rubricGrid"></table></div>
+    <button type="button" class="secondary small" id="addCriterionBtn" style="margin-top:.6rem;">+ Add criterion</button>
+  </div>
+
+  <div class="card">
     <h2>Shared guiding questions (asked for every source)</h2>
     <div id="sharedQWrap"></div>
     <button type="button" class="secondary small" id="addSharedQBtn">+ Add shared question</button>
@@ -191,12 +256,29 @@
   var CURRENT_KEY = 'dbq:current';
 
   var els = {};
-  ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printArea',
+  ['packetTitle', 'packetContext', 'essayPrompt', 'sharedQWrap', 'addSharedQBtn', 'sourcesWrap', 'addSourceBtn', 'printBtn', 'printAllLevelsBtn', 'printArea',
    'packetSwitch', 'packetName', 'newPacketBtn', 'duplicatePacketBtn', 'deletePacketBtn', 'loadExampleBtn',
+   'levelSelect', 'organizerToggle', 'rubricToggle', 'rubricStyle', 'rubricGrid', 'addCriterionBtn', 'resetRubricBtn',
    'shareLinkBtn', 'shareQrBtn', 'exportJsonBtn', 'importJsonBtn', 'importJsonFile', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
   ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var state = { name: 'New Packet', title: '', context: '', essayPrompt: '', sharedQuestions: [], sources: [] };
+
+  /* The three levels Devon teaches, named exactly as the toolkit's shared
+     differentiation spec names them. `honors` is the baseline: at that level
+     the printed packet is byte-for-byte what this tool produced before
+     levels existed. Academic adds support to the SAME questions; Honors GT
+     opens the planning page up. */
+  var LEVELS = [
+    { key: 'academic', label: 'Academic' },
+    { key: 'honors', label: 'Honors' },
+    { key: 'gt', label: 'Honors GT' }
+  ];
+  function isLevel(k) { return LEVELS.some(function (l) { return l.key === k; }); }
+  function levelLabel(k) {
+    var found = LEVELS.filter(function (l) { return l.key === k; })[0];
+    return found ? found.label : 'Honors';
+  }
 
   function uid() { return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function escapeHtml(s) {
@@ -272,14 +354,78 @@
       questions: Array.isArray(s.questions) && s.questions.length ? s.questions.map(repairQuestion) : [{ id: uid(), text: '' }]
     };
   }
+  /* Starter rubric: plain 7th-grade wording for the four things a DBQ
+     response is actually scored on. Every cell is editable in the UI, so
+     this is a starting point, not a fixed standard. */
+  function defaultRubric() {
+    return {
+      style: 'grid',
+      levels: ['4 — Exceeds', '3 — Meets', '2 — Approaching', '1 — Beginning'],
+      rows: [
+        { id: uid(), criterion: 'Thesis / claim', cells: [
+          'States a clear, arguable claim that answers the whole question and hints at the reasoning behind it.',
+          'States a clear claim that answers the question.',
+          'States a claim, but it repeats the question or answers only part of it.',
+          'No clear claim, or the claim does not match the question.'
+        ] },
+        { id: uid(), criterion: 'Use of the documents', cells: [
+          'Uses evidence from most of the sources and explains what each piece of evidence shows.',
+          'Uses evidence from at least two sources and explains most of it.',
+          'Mentions a source, but mostly retells it instead of using it as evidence.',
+          'Little or no evidence from the sources.'
+        ] },
+        { id: uid(), criterion: 'Outside knowledge', cells: [
+          'Adds accurate information from class or reading that is not in the packet and ties it to the claim.',
+          'Adds at least one accurate piece of outside information.',
+          'Outside information is vague or only loosely connected to the claim.',
+          'No outside information, or what is added is not accurate.'
+        ] },
+        { id: uid(), criterion: 'Organization and writing', cells: [
+          'Paragraphs are ordered and connected so the argument is easy to follow; errors are rare.',
+          'Clear paragraphs with a beginning, middle, and end; errors do not get in the way.',
+          'Ideas are there but jump around; errors sometimes get in the way.',
+          'Hard to follow; errors get in the way of the meaning.'
+        ] }
+      ]
+    };
+  }
+  function repairRubric(r) {
+    var def = defaultRubric();
+    if (!r || typeof r !== 'object') return def;
+    var levels = (Array.isArray(r.levels) && r.levels.length)
+      ? r.levels.slice(0, 6).map(function (l) { return typeof l === 'string' ? l : ''; })
+      : def.levels;
+    var rows = (Array.isArray(r.rows) && r.rows.length) ? r.rows.map(function (row) {
+      row = (row && typeof row === 'object') ? row : {};
+      var cells = Array.isArray(row.cells) ? row.cells.map(function (c) { return typeof c === 'string' ? c : ''; }) : [];
+      while (cells.length < levels.length) cells.push('');
+      return {
+        id: (typeof row.id === 'string' && row.id) ? row.id : uid(),
+        criterion: typeof row.criterion === 'string' ? row.criterion : '',
+        cells: cells.slice(0, levels.length)
+      };
+    }) : def.rows;
+    return { style: r.style === 'checklist' ? 'checklist' : 'grid', levels: levels, rows: rows };
+  }
+
   function repairPacket(data, fallbackName) {
     data = (data && typeof data === 'object') ? data : {};
     var name = (typeof data.name === 'string' && data.name.trim()) ? data.name : (fallbackName || 'New Packet');
+    var essay = typeof data.essayPrompt === 'string' ? data.essayPrompt : '';
     return {
       name: name,
       title: typeof data.title === 'string' ? data.title : '',
       context: typeof data.context === 'string' ? data.context : '',
-      essayPrompt: typeof data.essayPrompt === 'string' ? data.essayPrompt : '',
+      essayPrompt: essay,
+      // A packet saved before levels existed has no level: it is Honors, the
+      // baseline, so nothing a teacher already built changes on paper.
+      level: isLevel(data.level) ? data.level : 'honors',
+      // On by default when there is an essay prompt to plan for. An older
+      // packet with no prompt keeps its old page count.
+      organizerEnabled: typeof data.organizerEnabled === 'boolean' ? data.organizerEnabled : !!essay.trim(),
+      // Opt-in: nobody's existing packet grows a rubric page by surprise.
+      rubricEnabled: data.rubricEnabled === true,
+      rubric: repairRubric(data.rubric),
       sharedQuestions: Array.isArray(data.sharedQuestions) && data.sharedQuestions.length ? data.sharedQuestions.map(repairQuestion) : defaultSharedQuestions(),
       sources: Array.isArray(data.sources) && data.sources.length ? data.sources.map(repairSource) : [blankSource()]
     };
@@ -295,6 +441,10 @@
       title: 'Child Labor in the Industrial Revolution',
       context: 'During the Industrial Revolution, factories and mines relied heavily on child workers. Reformers pushed for laws limiting child labor, while factory owners argued regulation would hurt production and family income. Use the sources below to explain why child labor became a subject of debate in industrializing Britain.',
       essayPrompt: 'Using the three sources above and your own knowledge, write an essay explaining why child labor during the Industrial Revolution became a subject of debate between reformers and factory owners. Which side’s argument do you find more convincing, and why?',
+      level: 'honors',
+      organizerEnabled: true,
+      rubricEnabled: true,
+      rubric: defaultRubric(),
       sharedQuestions: defaultSharedQuestions(),
       sources: [
         {
@@ -398,6 +548,175 @@
     return 'left:' + (c.x * 100).toFixed(2) + '%;top:' + (c.y * 100).toFixed(2) + '%;width:' + (c.w * 100).toFixed(2) + '%;height:' + (c.h * 100).toFixed(2) + '%;';
   }
 
+  /* ---------- Academic scaffolding, generated from the teacher's own text ----------
+     The spec for levels across this toolkit is "same content, more support" —
+     never fewer or easier questions. Everything below therefore ADDS to a
+     source page: a short word gloss and a sentence starter. Both are derived
+     from what the teacher actually typed where that is possible, and fall
+     back to honest generic support (a "check these words" line, a neutral
+     starter) where it isn't, rather than inventing history the teacher
+     didn't write. */
+
+  /* Words a 7th grader hits in historical sources and stumbles on. Kept
+     deliberately small and general — a big word list would be guesswork
+     dressed as certainty, and the fallback below handles everything else
+     honestly. */
+  var GLOSSARY = {
+    abolition: 'ending something completely, especially slavery',
+    amendment: 'an official change or addition to a law or a constitution',
+    apprentice: 'a young worker learning a trade from someone skilled',
+    boycott: 'refusing to buy or use something as a protest',
+    census: 'an official count of the people who live somewhere',
+    citizen: 'an official member of a country, with rights and duties',
+    colony: 'a place ruled by a country far away from it',
+    commerce: 'the buying and selling of goods',
+    constitution: 'the set of rules that says how a government works',
+    debate: 'an argument between people who disagree, usually in public',
+    democracy: 'a system where the people choose their leaders',
+    depression: 'a long stretch when the economy is very bad and jobs are scarce',
+    discrimination: 'treating a group of people worse because of who they are',
+    economy: 'the way a place makes, sells, and uses money and goods',
+    emigrate: 'to leave your own country to live somewhere else',
+    empire: 'a group of countries or lands ruled by one government',
+    exports: 'goods a country sells to other countries',
+    factory: 'a building where goods are made, usually by machines',
+    famine: 'a time when there is not enough food and people starve',
+    federal: 'having to do with the national government',
+    immigrant: 'a person who moves to a new country to live there',
+    imports: 'goods a country buys from other countries',
+    industrial: 'having to do with factories and making goods in large amounts',
+    inspection: 'an official visit to check that rules are being followed',
+    inspector: 'a person whose job is to check that rules are being followed',
+    labor: 'work, especially hard physical work',
+    legislature: 'the part of a government that writes laws',
+    machinery: 'machines, or the moving parts inside them',
+    manufacture: 'to make goods, usually in a factory',
+    migration: 'people moving from one place to another to live',
+    monarchy: 'a country ruled by a king or queen',
+    negotiate: 'to talk with someone in order to reach an agreement',
+    overseer: 'a person in charge of watching and directing workers',
+    parliament: 'the group that makes the laws in Britain and some other countries',
+    petition: 'a written request signed by many people asking for a change',
+    poverty: 'being poor; not having enough money for basic needs',
+    prejudice: 'an unfair opinion about someone formed before you know them',
+    propaganda: 'information spread on purpose to make people think a certain way',
+    prosperity: 'a time when people have money and things are going well',
+    reform: 'a change made to fix something that is unfair or broken',
+    reformer: 'a person who works to fix something unfair or broken',
+    regulation: 'a rule made by a government to control how something is done',
+    representative: 'a person chosen to speak and vote for a group of people',
+    revolution: 'a big, often sudden change in government or in the way people live',
+    rural: 'having to do with the countryside, away from cities',
+    sanitation: 'keeping a place clean enough that people do not get sick',
+    segregation: 'keeping groups of people apart on purpose, usually by race',
+    strike: 'when workers stop working together to demand better treatment',
+    suffrage: 'the right to vote',
+    tariff: 'a tax a country puts on goods coming in from somewhere else',
+    tenement: 'a crowded, run-down apartment building in a city',
+    testimony: 'what a person says about what they saw or lived through',
+    textile: 'cloth, or having to do with making cloth',
+    treaty: 'a formal, written agreement between countries',
+    unemployment: 'not having a job when you want one',
+    union: 'a group of workers who join together to bargain with an employer',
+    urban: 'having to do with cities',
+    wages: 'the money a worker is paid for the work they do'
+  };
+
+  /* Long everyday words that look hard but aren't — kept out of the
+     "check these words" fallback so it stays useful. */
+  var EVERYDAY_LONG = {
+    something: 1, sometimes: 1, everything: 1, understand: 1, different: 1, important: 1,
+    themselves: 1, yourselves: 1, beautiful: 1, difficult: 1, following: 1, questions: 1,
+    including: 1, according: 1, describing: 1, everybody: 1, interested: 1, remember: 1
+  };
+
+  function bareWord(w) { return String(w).toLowerCase().replace(/[^a-z]/g, ''); }
+
+  /** Up to `limit` glossary hits, in the order they appear in the text. */
+  function glossHits(text, limit) {
+    var seen = {}, hits = [], words = String(text || '').split(/\s+/);
+    for (var i = 0; i < words.length && hits.length < limit; i++) {
+      var w = bareWord(words[i]);
+      if (!w || seen[w]) continue;
+      seen[w] = 1;
+      var key = null;
+      if (GLOSSARY[w]) key = w;
+      else if (/ies$/.test(w) && GLOSSARY[w.slice(0, -3) + 'y']) key = w.slice(0, -3) + 'y';
+      else if (/(es|ed)$/.test(w) && GLOSSARY[w.slice(0, -2)]) key = w.slice(0, -2);
+      else if (/ing$/.test(w) && GLOSSARY[w.slice(0, -3)]) key = w.slice(0, -3);
+      else if (/s$/.test(w) && GLOSSARY[w.slice(0, -1)]) key = w.slice(0, -1);
+      if (key) hits.push({ word: w, def: GLOSSARY[key] });
+    }
+    return hits;
+  }
+
+  /** Honest fallback when the glossary has nothing: the longest unusual
+      words in the source, handed to the student to look up rather than
+      given a definition this tool would only be guessing at. */
+  function hardWords(text, limit) {
+    var seen = {}, out = [], words = String(text || '').split(/\s+/);
+    for (var i = 0; i < words.length && out.length < limit; i++) {
+      var w = bareWord(words[i]);
+      if (w.length < 9 || seen[w] || GLOSSARY[w] || EVERYDAY_LONG[w]) continue;
+      seen[w] = 1;
+      out.push(w);
+    }
+    return out;
+  }
+
+  function beforeYouReadHtml(src) {
+    var body = (src.type === 'text') ? (src.text || '') : '';
+    if (!body.trim()) {
+      if (src.type === 'image') {
+        return '<div class="gloss"><b>Before you look:</b> Start in the middle of the image, then move outward. Name three things you can actually see before you decide what the image is about.</div>';
+      }
+      return '';
+    }
+    var hits = glossHits(body, 3);
+    var parts = [];
+    if (hits.length) {
+      parts.push(hits.map(function (h) {
+        return '<b>' + escapeHtml(h.word) + '</b> = ' + escapeHtml(h.def);
+      }).join(' &nbsp;&middot;&nbsp; '));
+    }
+    if (hits.length < 3) {
+      var extra = hardWords(body, 3 - hits.length);
+      if (extra.length) {
+        parts.push('Check ' + (extra.length === 1 ? 'this word' : 'these words') + ' with a partner or a dictionary first: ' + escapeHtml(extra.join(', ')) + '.');
+      }
+    }
+    if (!parts.length) return '';
+    return '<div class="gloss"><b>Before you read:</b> ' + parts.join(' ') + '</div>';
+  }
+
+  /** A sentence starter matched to how the teacher's question is worded. */
+  function sentenceStarter(question) {
+    var raw = String(question || '').trim().toLowerCase();
+    var t = ' ' + raw + ' ';
+    var lead = (raw.match(/^[a-z]+/) || [''])[0];
+    if (/\bcompare\b|\bcontrast\b|\bdiffer\b|\bsimilar\b|\bboth\b/.test(t)) return 'Both sources … , but …';
+    if (lead === 'who') return 'This source came from … , which matters because …';
+    if (/\bwhy\b|\breason/.test(t)) return 'One reason is that …';
+    if (/\bevidence\b|\bsupports?\b|\bproves?\b/.test(t)) return 'The source says “…”, which shows that …';
+    if (/\bdo you (think|agree|find)\b|\bwhich\b|\bconvincing\b|\byour opinion\b/.test(t)) return 'I think … because …';
+    if (/\bargument\b|\bargues?\b|\bclaim\b/.test(t)) return 'The argument is that …';
+    if (/\bmain idea\b|\bmain point\b|\bmostly about\b/.test(t)) return 'The main idea is that …';
+    if (/\bhow\b/.test(t)) return 'One way is that …';
+    if (/\bwhen\b/.test(t)) return 'This happened …';
+    if (/\bwhere\b/.test(t)) return 'This took place …';
+    if (/\bwhat\b/.test(t)) return 'I can tell that …';
+    return 'This source shows that …';
+  }
+
+  /** Splits a long prompt into the steps it is really asking for. */
+  function promptSteps(prompt) {
+    // Deliberately not a lookbehind split: older iPad Safari still chokes on
+    // those, and a school iPad is a real target here.
+    var sentences = (String(prompt || '').match(/[^.?!]+[.?!]*/g) || [])
+      .map(function (s) { return s.trim(); }).filter(Boolean);
+    return sentences.length > 1 ? sentences : [];
+  }
+
   /* ---------- saved-packet switcher (new/duplicate/delete/rename) ---------- */
   function renderPacketSwitch() {
     var names = listNames();
@@ -406,12 +725,86 @@
     }).join('');
   }
 
+  /* ---------- rubric editor ---------- */
+  function renderRubric() {
+    var r = state.rubric;
+    var head = '<thead><tr><th style="width:16%;">Criterion</th>' +
+      r.levels.map(function (l, li) {
+        return '<th><input type="text" data-rlevel="' + li + '" value="' + escapeAttr(l) + '"></th>';
+      }).join('') + '<th style="width:3%;"></th></tr></thead>';
+    var body = '<tbody>' + r.rows.map(function (row) {
+      return '<tr><td><input type="text" data-rcrit="' + row.id + '" value="' + escapeAttr(row.criterion) + '"></td>' +
+        row.cells.map(function (c, ci) {
+          return '<td><textarea data-rcell="' + row.id + '" data-rci="' + ci + '">' + escapeHtml(c) + '</textarea></td>';
+        }).join('') +
+        '<td><button type="button" class="danger small" data-rdel="' + row.id + '" aria-label="Remove this criterion">&times;</button></td></tr>';
+    }).join('') + '</tbody>';
+    els.rubricGrid.innerHTML = head + body;
+  }
+
+  els.rubricGrid.addEventListener('input', function (ev) {
+    var lvl = ev.target.getAttribute('data-rlevel');
+    var crit = ev.target.getAttribute('data-rcrit');
+    var cell = ev.target.getAttribute('data-rcell');
+    if (lvl !== null && lvl !== undefined) { state.rubric.levels[Number(lvl)] = ev.target.value; save(); return; }
+    if (crit) {
+      var row = state.rubric.rows.filter(function (r) { return r.id === crit; })[0];
+      if (row) row.criterion = ev.target.value;
+      save(); return;
+    }
+    if (cell) {
+      var row2 = state.rubric.rows.filter(function (r) { return r.id === cell; })[0];
+      var ci = Number(ev.target.getAttribute('data-rci'));
+      if (row2 && isFinite(ci)) row2.cells[ci] = ev.target.value;
+      save();
+    }
+  });
+
+  els.rubricGrid.addEventListener('click', function (ev) {
+    var del = ev.target.getAttribute('data-rdel');
+    if (!del) return;
+    if (state.rubric.rows.length <= 1) { alert('A rubric needs at least one criterion.'); return; }
+    state.rubric.rows = state.rubric.rows.filter(function (r) { return r.id !== del; });
+    save(); renderRubric();
+  });
+
+  els.addCriterionBtn.addEventListener('click', function () {
+    var cells = state.rubric.levels.map(function () { return ''; });
+    state.rubric.rows.push({ id: uid(), criterion: '', cells: cells });
+    save(); renderRubric();
+  });
+
+  els.resetRubricBtn.addEventListener('click', function () {
+    if (!confirm('Replace this rubric with the starter wording? Any edits you made to it are lost.')) return;
+    var style = state.rubric.style;
+    state.rubric = defaultRubric();
+    state.rubric.style = style;
+    save(); renderRubric();
+  });
+
+  els.rubricStyle.addEventListener('change', function () {
+    state.rubric.style = els.rubricStyle.value === 'checklist' ? 'checklist' : 'grid';
+    save();
+  });
+
+  els.levelSelect.addEventListener('change', function () {
+    state.level = isLevel(els.levelSelect.value) ? els.levelSelect.value : 'honors';
+    save();
+  });
+  els.organizerToggle.addEventListener('change', function () { state.organizerEnabled = els.organizerToggle.checked; save(); });
+  els.rubricToggle.addEventListener('change', function () { state.rubricEnabled = els.rubricToggle.checked; save(); });
+
   function renderAll() {
     renderPacketSwitch();
     els.packetName.value = state.name;
     els.packetTitle.value = state.title;
     els.packetContext.value = state.context;
     els.essayPrompt.value = state.essayPrompt;
+    els.levelSelect.value = state.level;
+    els.organizerToggle.checked = !!state.organizerEnabled;
+    els.rubricToggle.checked = !!state.rubricEnabled;
+    els.rubricStyle.value = state.rubric.style;
+    renderRubric();
     renderSharedQ();
     renderSources();
     setShareNote('');
@@ -506,6 +899,10 @@
       title: state.title,
       context: state.context,
       essayPrompt: state.essayPrompt,
+      level: state.level,
+      organizerEnabled: state.organizerEnabled,
+      rubricEnabled: state.rubricEnabled,
+      rubric: state.rubric,
       sharedQuestions: state.sharedQuestions,
       sources: state.sources.map(function (s) {
         var copy = {};
@@ -575,8 +972,18 @@
   els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') els.shareOverlay.hidden = true; });
 
+  /* Round 2 added level / organizer / rubric fields to the payload. They are
+     validated as OPTIONAL-but-shaped, exactly the way 028's worksheet
+     validator handles its own additive fields: a round-1 link (which has
+     none of them) still passes and still opens, and repairPacket fills the
+     gaps with the Honors baseline. Tightening any of these to "required"
+     would silently break every link already in a teacher's email. */
   function isPlausiblePacket(obj) {
-    return !!obj && typeof obj === 'object' && Array.isArray(obj.sources);
+    return !!obj && typeof obj === 'object' && Array.isArray(obj.sources) &&
+      (obj.level === undefined || typeof obj.level === 'string') &&
+      (obj.organizerEnabled === undefined || typeof obj.organizerEnabled === 'boolean') &&
+      (obj.rubricEnabled === undefined || typeof obj.rubricEnabled === 'boolean') &&
+      (obj.rubric === undefined || (!!obj.rubric && typeof obj.rubric === 'object'));
   }
 
   /** Consume a ?packet= link on load. Saves the arrival as a new packet
@@ -644,6 +1051,55 @@
     var file = els.importJsonFile.files && els.importJsonFile.files[0];
     if (file) importPacketFromFile(file);
   });
+
+  /* ---------- send one source to Primary Source Analysis (028) ----------
+     The backlog's explicit pairing: a source in a packet becomes a full
+     OPTIC/SOAPSTone analysis worksheet in one click. This builds 028's own
+     round-1 ?worksheet= link with the same _shared/state-link.js encoder 028
+     uses to build it, so there is one format, not two. Text sources only:
+     an uploaded image is base64 in this packet and would blow past what a
+     URL can carry, which is the same rule both tools' share links follow. */
+  var PSA_PAGE = '028-primary-source-analysis-generator.html';
+
+  function psaPayload(src, index) {
+    var letter = 'Source ' + LETTERS[index % 26];
+    var titled = (src.title || '').trim() || letter;
+    var packetTitle = (state.title || '').trim() || state.name || 'DBQ packet';
+    return {
+      v: 1,
+      name: titled + ' — ' + packetTitle,
+      sourceTitle: titled,
+      sourceType: 'document',
+      sourceDescription: '',
+      sourceText: src.text || '',
+      imageUrl: '',
+      imageDataUrl: '',
+      citationAuthor: '',
+      citationDate: '',
+      citationOrigin: (src.citation || '').trim(),
+      lineNumbers: false,
+      vocabSupport: '',
+      readingSupportEnabled: false,
+      readingSummary: '',
+      readingParaphrase: '',
+      // SOAPSTone is 028's framework for written sources; OPTIC is its
+      // visual-source framework, and only text sources come through here.
+      framework: 'soapstone',
+      notes: {},
+      customQuestions: {},
+      answerLines: 4,
+      corroborationMode: false,
+      sourceBTitle: '', sourceBType: 'photo', sourceBDescription: '', sourceBText: '',
+      sourceBImageUrl: '', sourceBImageDataUrl: '',
+      sourceBCitationAuthor: '', sourceBCitationDate: '', sourceBCitationOrigin: '',
+      notesB: {}, comparisonNotes: {}
+    };
+  }
+
+  function psaUrl(src, index) {
+    var base = new URL(PSA_PAGE, window.location.href).toString();
+    return StateLink.buildShareUrl('worksheet', psaPayload(src, index), { base: base });
+  }
 
   function renderSharedQ() {
     els.sharedQWrap.innerHTML = state.sharedQuestions.map(function (q) {
@@ -718,6 +1174,13 @@
         '<label>Citation</label><input type="text" data-field="citation" data-src="' + src.id + '" value="' + escapeAttr(src.citation) + '" placeholder="e.g. Letter from John Adams, 1776">' +
         '<label>Source-specific questions</label>' + questions +
         '<button type="button" class="secondary small" data-add-q="' + src.id + '">+ Add question</button>' +
+        (src.type === 'text'
+          // Deliberately never disabled: typing in the source textarea saves
+          // without re-rendering the block (so the caret survives), so a
+          // disabled attribute here would go stale the moment text is typed.
+          // The click handler checks for empty text instead.
+          ? '<button type="button" class="secondary small" data-to-psa="' + src.id + '" style="margin-left:.5rem;" title="Open this source as a full analysis worksheet in Primary Source Analysis">Analysis worksheet &rarr;</button>'
+          : '') +
         '<button type="button" class="danger small" data-del-src-btn="' + src.id + '" style="margin-left:.5rem;">Remove source</button>' +
         '</div>';
     }).join('');
@@ -824,6 +1287,22 @@
     var moveUp = ev.target.getAttribute('data-move-up');
     var moveDown = ev.target.getAttribute('data-move-down');
     var resetCrop = ev.target.getAttribute('data-reset-crop');
+    var toPsa = ev.target.getAttribute('data-to-psa');
+    if (toPsa) {
+      var psaIdx = state.sources.findIndex(function (s) { return s.id === toPsa; });
+      var psaSrc = psaIdx > -1 ? state.sources[psaIdx] : null;
+      if (!psaSrc || psaSrc.type !== 'text') return;
+      if (!(psaSrc.text || '').trim()) {
+        setShareNote('Add this source’s text first, then send it to Primary Source Analysis. Only typed text travels in a link.', true);
+        return;
+      }
+      save();
+      var opened = window.open(psaUrl(psaSrc, psaIdx), '_blank', 'noopener');
+      setShareNote(opened
+        ? 'Sent Source ' + LETTERS[psaIdx % 26] + ' to Primary Source Analysis in a new tab, as a SOAPSTone worksheet. It saves there as its own worksheet; editing it does not change this packet.'
+        : 'Your browser blocked the new tab. Allow pop-ups for this site, then try again.', !opened);
+      return;
+    }
     if (resetCrop) {
       var rsrc = findSource(resetCrop);
       if (rsrc) { rsrc.crop = { x: 0, y: 0, w: 1, h: 1 }; save(); renderSources(); }
@@ -864,12 +1343,120 @@
   els.packetContext.addEventListener('input', function () { state.context = els.packetContext.value; save(); });
   els.essayPrompt.addEventListener('input', function () { state.essayPrompt = els.essayPrompt.value; save(); });
 
-  els.printBtn.addEventListener('click', function () {
-    if (!state.sources.length) { alert('Add at least one source first.'); return; }
-    var title = state.title.trim() || 'DBQ Source Packet';
-    var coverHtml = '<h1 class="print-title">' + escapeHtml(title) + '</h1>' +
+  /* ---------- print ----------
+     One builder, called once per level. At `honors` the output is exactly
+     what this tool printed before levels existed, byte for byte, minus the
+     two optional closing pages a teacher has to turn on. `tagIt` adds the
+     level footer, and is only used by "Print all three levels" — a
+     single-level print stays untagged so the baseline really is unchanged. */
+
+  var FILL = '<span class="fill-line"></span>';
+
+  function organizerBody(level) {
+    var srcs = state.sources;
+    var docKey = srcs.map(function (s, i) {
+      return 'Source ' + LETTERS[i % 26] + ((s.title || '').trim() ? ' — ' + escapeHtml(s.title.trim()) : '');
+    }).join(' &nbsp;&middot;&nbsp; ');
+    var docBoxes = srcs.map(function (s, i) { return '&#9744;&nbsp;' + LETTERS[i % 26]; }).join(' &nbsp; ');
+    var question = (state.essayPrompt || '').trim() || (state.context || '').trim();
+
+    var thesisHint;
+    if (level === 'academic') {
+      thesisHint = '<p class="frame">Fill in the frame, then write it out as your own sentence: Although some people argued ____________, the sources show that ____________ because ____________.</p>';
+    } else if (level === 'gt') {
+      thesisHint = '<p class="frame">One or two sentences, no frame. Make the claim specific enough that someone could disagree with it.</p>';
+    } else {
+      thesisHint = '<p class="frame">Sentence frame if you want one: Although some argued … , the sources show that … because … .</p>';
+    }
+
+    var rows = [
+      { label: 'Body paragraph 1', frame: 'First, the sources show that ____________.' },
+      { label: 'Body paragraph 2', frame: 'The sources also show that ____________.' },
+      { label: 'Body paragraph 3', frame: 'Most importantly, ____________.' }
+    ];
+    if (level === 'gt') {
+      rows.push({ label: 'Outside evidence', outside: true, frame: '', note: 'Something you know from class or your own reading that is not in this packet.' });
+    }
+
+    var grid = '<table class="plan-table"><thead><tr>' +
+      '<th style="width:17%;">Paragraph</th>' +
+      '<th style="width:31%;">Your claim</th>' +
+      '<th style="width:16%;">Documents that support it</th>' +
+      '<th>Strongest evidence (quote or detail)</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (row) {
+        var claimCell = (level === 'academic' && row.frame) ? '<p class="frame">' + escapeHtml(row.frame) + '</p>' : '';
+        if (row.note) claimCell += '<p class="frame">' + escapeHtml(row.note) + '</p>';
+        var docCell = row.outside ? '<span class="doc-key">Not from this packet</span>' : '<span class="doc-key">' + docBoxes + '</span>';
+        var evidenceCell = (level === 'academic')
+          ? '<p class="frame">Source ____ says “____________.” This shows ____________.</p>'
+          : '';
+        return '<tr><td><b>' + escapeHtml(row.label) + '</b></td>' +
+          '<td><div class="plan-cell tall">' + claimCell + '</div></td>' +
+          '<td><div class="plan-cell">' + docCell + '</div></td>' +
+          '<td><div class="plan-cell tall">' + evidenceCell + '</div></td></tr>';
+      }).join('') + '</tbody></table>';
+
+    var counter, conclusion;
+    if (level === 'academic') {
+      counter = '<p class="frame">Someone might argue that ____________. However, ____________ because ____________.</p>';
+      conclusion = '<p class="frame">In conclusion, ____________. This still matters because ____________.</p>';
+    } else if (level === 'gt') {
+      counter = '<p class="frame">What is the strongest case against your thesis? Answer it with evidence, not with opinion.</p>';
+      conclusion = '<p class="frame">Answer the “so what?” without repeating your thesis word for word.</p>';
+    } else {
+      counter = '<p class="frame">What would someone who disagrees with you say? How would you answer them?</p>';
+      conclusion = '<p class="frame">Restate your claim in new words, then answer the “so what?”</p>';
+    }
+
+    var missingVoice = (level === 'gt')
+      ? '<h3>Whose voice is missing from this packet?</h3>' +
+        '<div class="q-item">Which people affected by this question have no source here? How would the argument change if one of them did?</div>' + FILL + FILL
+      : '';
+
+    return '<h2>Essay Planning Organizer</h2>' +
+      '<div class="citation">Name: __________________________ &nbsp; Date: __________</div>' +
+      (question ? '<div class="source-text"><b>The question:</b> ' + escapeHtml(question) + '</div>' : '') +
+      (docKey ? '<p class="doc-key"><b>Your sources:</b> ' + docKey + '</p>' : '') +
+      '<h3>Thesis</h3>' + thesisHint + FILL + FILL +
+      '<h3>Plan your body paragraphs</h3>' + grid +
+      '<h3>Counterargument</h3>' + counter + FILL + FILL +
+      '<h3>Conclusion</h3>' + conclusion + FILL + FILL +
+      missingVoice;
+  }
+
+  function rubricBody() {
+    var r = state.rubric;
+    if (r.style === 'checklist') {
+      // The "meets the target" column, whatever the teacher renamed it to.
+      var meets = Math.min(1, r.levels.length - 1);
+      return '<h2>Before you turn it in</h2>' +
+        '<p class="doc-key">Check each one. This is what a response that meets the target looks like.</p>' +
+        '<ul class="checklist">' + r.rows.map(function (row) {
+          return '<li>&#9744; <b>' + escapeHtml(row.criterion || 'Criterion') + '</b> — ' + escapeHtml(row.cells[meets] || '') + '</li>';
+        }).join('') + '</ul>' +
+        '<h3>Teacher comments</h3>' + FILL + FILL + FILL;
+    }
+    return '<h2>Scoring Rubric</h2>' +
+      '<table class="print-rubric"><thead><tr><th style="width:16%;">Criterion</th>' +
+      r.levels.map(function (l) { return '<th>' + escapeHtml(l) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' +
+      r.rows.map(function (row) {
+        return '<tr><td><b>' + escapeHtml(row.criterion || '') + '</b></td>' +
+          row.cells.map(function (c) { return '<td>' + escapeHtml(c) + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table>' +
+      '<p class="doc-key" style="margin-top:.7rem;">Total: ______ &nbsp;&nbsp; Comments:</p>' + FILL + FILL;
+  }
+
+  function buildPacketHtml(level, tagIt) {
+    var title = (state.title || '').trim() || 'DBQ Source Packet';
+    var tag = tagIt ? '<div class="level-tag">' + escapeHtml(levelLabel(level)) + ' set &middot; ' + escapeHtml(title) + '</div>' : '';
+    function page(inner) { return '<div class="source-page">' + inner + tag + '</div>'; }
+
+    var cover = page('<h1 class="print-title">' + escapeHtml(title) + '</h1>' +
       '<p class="print-context">' + escapeHtml(state.context || '') + '</p>' +
-      '<p class="print-context">Name: __________________________ &nbsp; Date: __________</p>';
+      '<p class="print-context">Name: __________________________ &nbsp; Date: __________</p>');
+
     var sourcesHtml = state.sources.map(function (src, i) {
       var label = 'Source ' + LETTERS[i % 26];
       var body;
@@ -883,19 +1470,55 @@
       } else {
         body = '<div class="source-text">' + escapeHtml(src.text || '(no text entered)') + '</div>';
       }
-      var allQuestions = src.questions.filter(function (q) { return q.text.trim(); }).concat(state.sharedQuestions.filter(function (q) { return q.text.trim(); }));
+      var support = (level === 'academic') ? beforeYouReadHtml(src) : '';
+      var allQuestions = src.questions.filter(function (q) { return q.text.trim(); })
+        .concat(state.sharedQuestions.filter(function (q) { return q.text.trim(); }));
       var qHtml = allQuestions.map(function (q) {
-        return '<div class="q-item">' + escapeHtml(q.text) + '</div><span class="fill-line"></span>';
+        if (level === 'academic') {
+          return '<div class="q-item">' + escapeHtml(q.text) + '</div>' +
+            '<p class="starter">Start with: “' + escapeHtml(sentenceStarter(q.text)) + '”</p>' + FILL + FILL;
+        }
+        return '<div class="q-item">' + escapeHtml(q.text) + '</div>' + FILL;
       }).join('');
-      return '<div class="source-page"><h2>' + label + (src.title.trim() ? ': ' + escapeHtml(src.title.trim()) : '') + '</h2>' +
+      return page('<h2>' + label + (src.title.trim() ? ': ' + escapeHtml(src.title.trim()) : '') + '</h2>' +
         '<div class="citation">' + escapeHtml(src.citation || '') + '</div>' +
-        body + qHtml + '</div>';
+        support + body + qHtml);
     }).join('');
-    var essayHtml = state.essayPrompt.trim()
-      ? '<div class="source-page"><h2>Synthesis / Essay Prompt</h2><div class="source-text">' + escapeHtml(state.essayPrompt.trim()) + '</div>' +
-        '<span class="fill-line"></span><span class="fill-line"></span><span class="fill-line"></span><span class="fill-line"></span></div>'
-      : '';
-    els.printArea.innerHTML = '<div class="source-page">' + coverHtml + '</div>' + sourcesHtml + essayHtml;
+
+    var essayHtml = '';
+    var prompt = (state.essayPrompt || '').trim();
+    if (prompt) {
+      var extra = '';
+      if (level === 'academic') {
+        var items = promptSteps(prompt).map(function (s) { return '<li>' + escapeHtml(s) + '</li>'; });
+        items.push('<li>' + (state.sources.length > 1
+          ? 'Use at least two of the sources above (Source A through Source ' + LETTERS[(state.sources.length - 1) % 26] + ') as evidence.'
+          : 'Use the source above as evidence.') + '</li>');
+        items.push('<li>Explain what each piece of evidence shows. Do not just retell it.</li>');
+        extra = '<h3>Break the prompt into steps</h3><ol class="steps">' + items.join('') + '</ol>';
+      } else if (level === 'gt') {
+        extra = '<h3>Push further</h3><div class="q-item">So what? Why does this question still matter to people now? Work that into your conclusion instead of saving it for the last line.</div>';
+      }
+      essayHtml = page('<h2>Synthesis / Essay Prompt</h2>' +
+        '<div class="source-text">' + escapeHtml(prompt) + '</div>' + extra + FILL + FILL + FILL + FILL);
+    }
+
+    var organizerHtml = state.organizerEnabled ? page(organizerBody(level)) : '';
+    var rubricHtml = state.rubricEnabled ? page(rubricBody()) : '';
+
+    // cover → sources → essay prompt → organizer → rubric
+    return cover + sourcesHtml + essayHtml + organizerHtml + rubricHtml;
+  }
+
+  els.printBtn.addEventListener('click', function () {
+    if (!state.sources.length) { alert('Add at least one source first.'); return; }
+    els.printArea.innerHTML = buildPacketHtml(state.level, false);
+    window.print();
+  });
+
+  els.printAllLevelsBtn.addEventListener('click', function () {
+    if (!state.sources.length) { alert('Add at least one source first.'); return; }
+    els.printArea.innerHTML = LEVELS.map(function (l) { return buildPacketHtml(l.key, true); }).join('');
     window.print();
   });
 

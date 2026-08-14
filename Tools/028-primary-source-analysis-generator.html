@@ -181,6 +181,74 @@
   .note-step .subnote-label { font-weight: 700; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: .5rem 0 .25rem 2.1rem; }
   @media (max-width: 520px) { .dual-answer-row { margin-left: 0; } }
 
+  /* ---- differentiation levels (Academic / Honors / Honors GT) ----
+     Honors is the baseline: at that level none of these rules produce any
+     markup at all, so a plain worksheet prints exactly as it always has. */
+  .level-tag {
+    display: inline-block; font-family: "Segoe UI", sans-serif; font-weight: 700;
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+    border: 1px solid #000; border-radius: 3px; padding: .12rem .45rem; margin-bottom: .35rem;
+  }
+  .level-footer {
+    margin-top: 1.1rem; padding-top: .35rem; border-top: 1px solid #000;
+    font-family: "Segoe UI", sans-serif; font-size: .74rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; text-align: right;
+  }
+  .level-note {
+    border: 1px dashed #666; border-radius: 4px; padding: .45rem .6rem; margin-bottom: .8rem;
+    font-family: "Segoe UI", sans-serif; font-size: .82rem; background: #f7f7f4;
+  }
+  .level-note .meta-k { display: block; }
+  .q-part { margin: 0 0 .15rem; font-size: .88rem; }
+  .q-part .part-letter { font-weight: 700; }
+  .starter-lines { margin: .15rem 0 .5rem 1.1rem; display: flex; flex-direction: column; gap: .3rem; }
+  .starter-line { display: flex; align-items: flex-end; gap: .3rem; font-size: .86rem; }
+  .starter-blank { flex: 1 1 auto; min-width: .9in; border-bottom: 1px solid #666; height: .95rem; }
+  .step-q.gt-open { font-style: italic; border-left: 3px solid #666; padding-left: .5rem; margin-top: .3rem; }
+  .step-q.gt-open .gt-label { font-style: normal; font-weight: 700; }
+  .synthesis-block { border-top: 2px solid #000; margin-top: 1rem; padding-top: .8rem; break-inside: avoid; }
+  .synthesis-heading { font-weight: 700; font-size: 1.05rem; margin-bottom: .35rem; }
+  .synthesis-block .step-q { margin-left: 0; }
+  .synthesis-block .answer-lines, .synthesis-block .step-answer.key { margin-left: 0; }
+  .words-box {
+    border: 1px solid #999; border-radius: 4px; padding: .5rem .7rem; margin: .6rem 0 0; background: #f2f6ee;
+    font-family: "Segoe UI", sans-serif;
+  }
+  .words-box .words-heading { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .3rem; }
+  .words-box ul { margin: 0; padding-left: 1.1rem; font-size: .84rem; }
+  .words-box li { margin-bottom: .1rem; }
+  .words-box .vword { font-weight: 700; }
+  .level-sheet-break { break-before: page; page-break-before: always; }
+
+  /* ---- annotation callouts ---- */
+  .callout-mark {
+    font-family: "Segoe UI", sans-serif; font-size: .62rem; font-weight: 700;
+    border: 1px solid #000; border-radius: 50%; padding: 0 .28rem; margin-left: .15rem; vertical-align: super;
+  }
+  .callouts-box {
+    border: 1px solid #999; border-radius: 4px; padding: .5rem .7rem; margin: .6rem 0 0; background: #fdf6ec;
+    font-family: "Segoe UI", sans-serif;
+  }
+  .callouts-box .callouts-heading { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .35rem; }
+  .callout-item { margin-bottom: .5rem; font-size: .84rem; }
+  .callout-item:last-child { margin-bottom: 0; }
+  .callout-item .callout-num {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 1.2rem; height: 1.2rem;
+    border: 1px solid #000; border-radius: 50%; font-weight: 700; font-size: .72rem; margin-right: .3rem;
+  }
+  .callout-item .callout-excerpt { font-style: italic; }
+  .callout-item .callout-where { color: #555; font-size: .78rem; }
+  .callout-item .answer-lines { margin: .3rem 0 0 1.5rem; }
+
+  /* ---- source library ---- */
+  .lib-entry { border: 1px solid var(--line-strong); border-radius: 7px; padding: .5rem .6rem; margin-bottom: .5rem; }
+  .lib-entry-title { font-weight: 700; font-size: .88rem; }
+  .lib-entry-meta { color: var(--muted); font-size: .76rem; margin: .1rem 0 .35rem; }
+  .lib-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .35rem; }
+  .lib-tag { font-size: .72rem; background: #eaf1f6; border: 1px solid var(--line-strong); border-radius: 10px; padding: .05rem .45rem; }
+  .lib-entry-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .lib-empty { color: var(--muted); font-size: .82rem; margin: 0; }
+
   .student-line { font-size: .9rem; margin-bottom: 1rem; }
 
   .steps-wrap { display: flex; flex-direction: column; gap: .9rem; }
@@ -355,6 +423,50 @@
           <p class="hint">Your own plain-language rewrite of the source text. Prints in its own box right under the original.</p>
           <textarea id="readingParaphrase" placeholder="A plain-language version of the source text, sentence by sentence or paragraph by paragraph."></textarea>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Class level</div>
+        <p class="hint">Same source, same framework, same questions &mdash; the level only changes how much scaffolding prints around them. Honors is the baseline and prints exactly what this tool has always printed.</p>
+        <label for="levelSelect">Level</label>
+        <select id="levelSelect">
+          <option value="academic">Academic</option>
+          <option value="honors">Honors</option>
+          <option value="honorsgt">Honors GT</option>
+        </select>
+        <p class="hint" id="levelExplain" style="margin-top:-.4rem;"></p>
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="printAllLevels" style="width:auto;margin:0;"> Print all three levels (one class set per level)
+        </label>
+        <p class="hint">Prints Academic, Honors, and Honors GT back to back, each tagged with its level at the top and bottom of the set so you can sort the piles. Works for the answer key too.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Annotation callouts (optional)</div>
+        <p class="hint">Pick up to four short excerpts from the pasted source text. Each one gets a numbered marker in the text and a matching &ldquo;look closely&rdquo; question underneath. Type the excerpt exactly as it appears in the source.</p>
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem;">
+          <input type="checkbox" id="calloutsEnabled" style="width:auto;margin:0;"> Add numbered callouts to the source text
+        </label>
+        <div id="calloutFields" style="display:none;margin-top:.6rem;">
+          <div id="calloutList"></div>
+          <button type="button" class="secondary small" id="addCalloutBtn">+ Add a callout</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Source library</div>
+        <p class="hint">Save a source on its own, tagged by unit, topic, or era, and pull it into any worksheet later instead of retyping it. Stays in this browser like everything else here.</p>
+        <label for="libraryTags">Tags for the source you're about to save</label>
+        <p class="hint">Comma separated, e.g. <code>Unit 3, Reconstruction, 1870s</code>.</p>
+        <input type="text" id="libraryTags" placeholder="Unit 3, Reconstruction, 1870s">
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.7rem;">
+          <button type="button" class="secondary small" id="saveSourceALibBtn">Save Source A to library</button>
+          <button type="button" class="secondary small" id="saveSourceBLibBtn" style="display:none;">Save Source B to library</button>
+        </div>
+        <p id="libraryNote" class="hint" style="display:none;font-weight:600;"></p>
+        <label for="libraryFilter">Show</label>
+        <select id="libraryFilter"></select>
+        <div id="libraryList"></div>
       </div>
 
       <div class="card">
@@ -601,6 +713,296 @@
     }
   };
 
+  /* ---------- differentiation levels ----------
+     Devon teaches Academic, Honors, and Honors GT sections of the same course.
+     The level never changes WHICH questions a student gets — it changes how
+     much scaffolding prints around them. Honors is the untouched baseline. */
+  var LEVELS = {
+    academic: {
+      key: 'academic',
+      name: 'Academic',
+      blurb: 'Adds a sentence starter under every open question, splits multi-part questions into lettered steps, and glosses hard words from your source in plain language. Same questions, more support to get into them.',
+      keyNote: 'A complete Academic answer uses the sentence starter and points to at least one specific detail from the source. Accept short answers that name the detail and explain it in the student’s own words.'
+    },
+    honors: {
+      key: 'honors',
+      name: 'Honors',
+      blurb: 'The baseline. Prints exactly what this tool has always printed: the framework questions and blank answer space.',
+      keyNote: 'A complete Honors answer addresses every part of the question in full sentences and cites specific evidence from the source.'
+    },
+    honorsgt: {
+      key: 'honorsgt',
+      name: 'Honors GT',
+      blurb: 'Adds an open-ended “go further” prompt to every step and a closing synthesis question, and trims the pre-lined answer space so students shape their own response.',
+      keyNote: 'A complete Honors GT answer goes past the source itself: it weighs perspective and reliability, and the synthesis question should tie this source to a larger pattern, another source, or something happening now.'
+    }
+  };
+  var LEVEL_ORDER = ['academic', 'honors', 'honorsgt'];
+  var DEFAULT_LEVEL = 'honors';
+
+  /* Deliberately permissive: an unrecognized value falls back to the baseline
+     rather than throwing away the worksheet. The import validator has rotted
+     twice before by being strict about a new field, so strictness lives here
+     (normalization) and not there. */
+  function normalizeLevel(value) {
+    var v = String(value == null ? '' : value).toLowerCase().replace(/[\s_-]+/g, '');
+    if (v === 'academic') return 'academic';
+    if (v === 'honorsgt' || v === 'gt') return 'honorsgt';
+    if (v === 'honors') return 'honors';
+    return DEFAULT_LEVEL;
+  }
+  function currentLevel() { return normalizeLevel(state && state.level); }
+  function levelName(key) { return LEVELS[normalizeLevel(key)].name; }
+
+  /* Run fn with a level temporarily in force — how "print all three levels"
+     renders three sets without threading a level argument through every
+     markup helper. */
+  function withLevel(levelKey, fn) {
+    var prev = state.level;
+    state.level = levelKey;
+    try { return fn(); } finally { state.level = prev; }
+  }
+
+  /* ---------- Academic: sentence starters derived from the question ----------
+     The stem is built out of the question's own words wherever the question's
+     shape allows it, and falls back to an honest generic frame when it
+     doesn't. Nothing here rewrites the source text — that's a non-goal. */
+  function sentenceCase(s) {
+    s = String(s || '').trim();
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  /* A framework "question" is often an instruction plus a question. The
+     operative part — the bit a starter should scaffold — is the last
+     sentence that actually ends in a question mark. */
+  function operativeQuestion(q) {
+    var text = String(q || '').trim();
+    var asked = text.match(/[^.?!]*\?/g);
+    return asked && asked.length ? asked[asked.length - 1].trim() : text;
+  }
+
+  var STARTER_RULES = [
+    { re: /^why\b/i, lines: ['I think ___', 'because ___'] },
+    { re: /^how reliable\b/i, lines: ['I would call this source ___ reliable', 'because ___'] },
+    { re: /^how\b/i, lines: ['One way is ___', 'I can tell because ___'] },
+    { re: /^who\b/i, lines: ['It is ___', 'I know this because ___'] },
+    { re: /^when\b/i, lines: ['It was ___', 'I know this because ___'] },
+    { re: /^where\b/i, lines: ['It was ___', 'I know this because ___'] },
+    { re: /^(?:can you )?state\b/i, lines: ['In one sentence, ___'] },
+    { re: /^(?:identify|list|name|find|choose|pick)\b/i, lines: ['One is ___', 'Another is ___'] },
+    { re: /^(?:describe|explain|compare)\b/i, lines: ['___', 'I can tell because ___'] },
+    // Only the "what is the <noun phrase>" shape can be safely turned back
+    // into a declarative stem. Anything else ("What does it reveal about…")
+    // produces broken grammar when reassembled, so it takes the generic frame.
+    { re: /^what (?:is|are|was|were) (the [^?]+)\?$/i, build: function (m) { return [sentenceCase(m[1]) + ' is ___', 'I can tell because ___']; } },
+    { re: /^what\b/i, lines: ['I think ___', 'I can tell because ___'] },
+    { re: /^which\b/i, lines: ['I would choose ___', 'because ___'] },
+    { re: /^would\b|^is\b|^are\b|^do\b|^does\b|^did\b|^can\b/i, lines: ['My answer is ___', 'because ___'] }
+  ];
+
+  /* Returns an array of stem lines (each may contain ___ blanks), or an empty
+     array for a prompt that isn't really a question. */
+  function sentenceStarterFor(question) {
+    var op = operativeQuestion(question);
+    if (!op) return [];
+    for (var i = 0; i < STARTER_RULES.length; i++) {
+      var rule = STARTER_RULES[i];
+      var m = op.match(rule.re);
+      if (m) return rule.build ? rule.build(m) : rule.lines.slice();
+    }
+    return ['I think ___', 'I can tell because ___'];
+  }
+
+  /* A starter belongs under anything a student actually has to answer: a real
+     question, or an imperative task like "Identify two or three details".
+     A bare instruction ("Now zoom in.") gets none — padding it with a stem
+     would be noise, not support. */
+  function shouldScaffold(part) {
+    return /\?\s*$/.test(part) || /^(?:identify|list|name|find|describe|explain|state|compare|choose|pick)\b/i.test(part.trim());
+  }
+
+  function starterLinesHtml(question) {
+    var lines = sentenceStarterFor(question);
+    if (!lines.length) return '';
+    return '<div class="starter-lines">' + lines.map(function (line) {
+      var html = escapeHtml(line).split('___').join('<span class="starter-blank"></span>');
+      return '<div class="starter-line">' + html + '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* Academic chunking: a question that is really two or three sentences is
+     printed as lettered steps so a student can take them one at a time. */
+  function splitQuestionParts(question) {
+    var text = String(question || '').trim();
+    if (!text) return [];
+    var parts = text.match(/[^.?!]+[.?!]+|[^.?!]+$/g);
+    if (!parts) return [text];
+    parts = parts.map(function (p) { return p.trim(); }).filter(Boolean);
+    return parts.length ? parts : [text];
+  }
+  var PART_LETTERS = 'abcdefghijkl';
+
+  /* ---------- Academic: plain-language gloss of hard words in the source ----
+     A small, hand-written glossary of terms that genuinely turn up in 7th
+     grade social studies sources. Only words actually present in the
+     teacher's own source text are printed, and anything the teacher already
+     glossed in the Vocabulary box is skipped rather than repeated. */
+  var PLAIN_GLOSSARY = {
+    abolition: 'the movement to end slavery',
+    allies: 'countries that agree to help each other, especially in a war',
+    amendment: 'an official change or addition to a constitution or law',
+    armistice: 'an agreement to stop fighting',
+    bias: 'leaning toward one side instead of being fair to all sides',
+    blockade: 'shutting off a place so people and supplies cannot get in or out',
+    boycott: 'refusing to buy or use something as a protest',
+    cabinet: 'the group of advisers who help a president run the government',
+    census: 'an official count of the people living in a place',
+    citizen: 'an official member of a country, with rights and duties',
+    civilian: 'a person who is not in the military',
+    colonist: 'a person living in a colony, ruled by a country far away',
+    colony: 'land settled and controlled by a country far away',
+    commerce: 'buying and selling goods; trade',
+    compromise: 'a deal where each side gives something up to reach agreement',
+    constitution: 'the written plan for how a government works',
+    declaration: 'an official public statement',
+    delegate: 'a person sent to speak or vote for a group',
+    democracy: 'a government in which the people choose their leaders',
+    depression: 'a long stretch when the economy is bad and many people lose work',
+    discrimination: 'treating people unfairly because of who they are',
+    drought: 'a long period with little or no rain',
+    economy: 'how a place makes, sells, and uses money and goods',
+    emancipation: 'setting people free, especially from slavery',
+    embargo: 'an official order stopping trade with another country',
+    engraving: 'a picture printed from lines carved into metal or wood',
+    famine: 'a severe shortage of food across a whole area',
+    federal: 'having to do with the national government',
+    genocide: 'the deliberate killing of an entire group of people',
+    globalization: 'the world becoming more connected through trade and communication',
+    grievance: 'a complaint about something unfair',
+    immigrant: 'a person who moves to a new country to live there',
+    imperialism: 'one country taking control of other lands and peoples',
+    inflation: 'when prices rise so the same money buys less',
+    industry: 'the business of making goods, usually in factories',
+    legislature: 'the part of government that writes and passes laws',
+    liberty: 'freedom to live and act without unfair control',
+    loyalist: 'a colonist who stayed loyal to Britain',
+    massacre: 'the killing of many people who could not defend themselves',
+    migration: 'the movement of people from one place to another to live',
+    militia: 'ordinary citizens trained to fight in an emergency',
+    monopoly: 'when one company controls all of something, with no competition',
+    musket: 'an old-fashioned long gun loaded from the front',
+    nationalism: 'strong pride in your own country, often placed above others',
+    naturalization: 'the legal process of becoming a citizen of a new country',
+    neutral: 'not taking either side in a fight or argument',
+    pandemic: 'a disease outbreak that spreads across many countries',
+    parliament: 'the lawmaking body in Britain and some other countries',
+    patriot: 'a colonist who supported breaking away from Britain',
+    petition: 'a written request signed by many people',
+    plantation: 'a large farm growing one main crop, often worked by enslaved people',
+    propaganda: 'information shaped on purpose to make you think or feel a certain way',
+    prosperity: 'a stretch of time when people have money and things go well',
+    ratify: 'to officially approve something, such as a treaty or amendment',
+    rebellion: 'an organized fight against the people in charge',
+    redcoat: 'a British soldier, named for the red uniform',
+    reform: 'a change made to fix a problem in society or government',
+    refugee: 'a person forced to leave home because it is not safe there',
+    repeal: 'to cancel a law',
+    representative: 'a person chosen to speak and vote for others',
+    republic: 'a country where citizens elect the people who govern them',
+    revolution: 'the overthrow of a government, or a huge change in how things work',
+    sanction: 'a penalty one country places on another to force a change',
+    segregation: 'keeping groups of people separated by law or by custom',
+    sovereignty: 'a government’s power to rule itself',
+    strike: 'when workers stop working to demand better pay or conditions',
+    suffrage: 'the right to vote',
+    surveillance: 'closely watching people in order to gather information',
+    tariff: 'a tax on goods brought in from another country',
+    taxation: 'the collecting of taxes',
+    tenement: 'a crowded, run-down apartment building in a city',
+    testimony: 'what a witness says officially, usually in court',
+    treaty: 'an official agreement between countries',
+    tyranny: 'cruel and unfair rule by someone with total power',
+    unalienable: 'cannot be taken away',
+    urbanization: 'the growth of cities as more people move into them',
+    veto: 'the power to reject a law or decision',
+    volley: 'many guns fired at the same moment'
+  };
+  var GLOSS_MAX = 8;
+
+  function glossaryMatches() {
+    var haystacks = [state.sourceText, state.sourceDescription];
+    if (state.corroborationMode) haystacks.push(state.sourceBText, state.sourceBDescription);
+    var text = haystacks.filter(Boolean).join('\n');
+    if (!text) return [];
+    var alreadyGlossed = {};
+    parseVocabLines(state.vocabSupport).forEach(function (v) { alreadyGlossed[v.word.toLowerCase()] = true; });
+    var found = [];
+    Object.keys(PLAIN_GLOSSARY).forEach(function (word) {
+      if (alreadyGlossed[word]) return;
+      var re = new RegExp('\\b' + word + '(?:s|es|ed|ing)?\\b', 'i');
+      var m = text.match(re);
+      if (!m) return;
+      // Print the dictionary headword, not whatever inflection happened to be
+      // in the text — "repealed — to cancel a law" reads wrong. Proper nouns
+      // (Parliament) keep the capital the source used.
+      var headword = /^[A-Z]/.test(m[0]) ? sentenceCase(word) : word;
+      found.push({ word: headword, definition: PLAIN_GLOSSARY[word], at: text.toLowerCase().indexOf(m[0].toLowerCase()) });
+    });
+    found.sort(function (a, b) { return a.at - b.at; });
+    return found.slice(0, GLOSS_MAX);
+  }
+
+  function wordsToKnowHtml() {
+    if (currentLevel() !== 'academic') return '';
+    var words = glossaryMatches();
+    if (!words.length) return '';
+    return '<div class="words-box"><p class="words-heading">Words to know</p><ul>' + words.map(function (w) {
+      return '<li><span class="vword">' + escapeHtml(w.word) + '</span> &mdash; ' + escapeHtml(w.definition) + '</li>';
+    }).join('') + '</ul></div>';
+  }
+
+  /* ---------- Honors GT: an open-ended extension per framework step ----------
+     Keyed by step key, which the six frameworks share a lot of (audience,
+     purpose, point of view...), with a generic fallback built from the step
+     label so a future framework still gets something real. */
+  var GT_EXTENSIONS = {
+    overview: 'What is deliberately left out of this scene, and how does that absence shape the impression it makes?',
+    parts: 'Which single detail is doing the most persuasive work here, and what happens to the message if you remove it?',
+    title: 'Whose interests does the title serve? Write the title the opposing side would have chosen.',
+    interpretation: 'What would someone who disagreed with the creator say this source gets wrong?',
+    conclusion: 'What can a historian fairly claim using this source, and what would it be dishonest to claim from it alone?',
+    speaker: 'What could this speaker not say out loud in this moment, and why not?',
+    occasion: 'Would this source exist at all if the timing were different by five years? Defend your answer.',
+    audience: 'Rewrite one line the way it would read if it were aimed at a hostile audience instead.',
+    purpose: 'Separate the stated purpose from the unstated one. Which does the evidence actually support?',
+    subject: 'What larger argument is this subject standing in for?',
+    tone: 'Where does the tone shift or slip, and what does that shift reveal?',
+    author: 'What would you need to learn about this author to trust the source more? To trust it less?',
+    'place-time': 'What was happening elsewhere at the same moment that this source ignores?',
+    'prior-knowledge': 'Name one thing you believed before reading this that the source complicates.',
+    reason: 'Whose problem was this source created to solve, and did it work?',
+    'main-idea': 'State the main idea in one sentence, then state the strongest objection to it.',
+    significance: 'Argue for or against including this source in a textbook chapter on this era.',
+    who: 'Who is missing from this source, and how would it read differently if they had made it?',
+    what: 'What does this source present as fact that you would want to verify somewhere else?',
+    when: 'Why this moment and not another? What made it possible, or necessary, right then?',
+    where: 'How would this source be different if it came from somewhere else?',
+    why: 'What did the creator stand to gain, and does that change how far you trust it?',
+    'historical-context': 'Which piece of context does this source assume its audience already knows?',
+    'intended-audience': 'What does the creator assume about the audience that we might no longer share?',
+    'point-of-view': 'Where is this source most reliable and where is it least reliable? Name the specific claims.',
+    see: 'What are you drawn to first, and what does that tell you about how the source was composed?',
+    think: 'Argue the opposite interpretation as convincingly as you can.',
+    wonder: 'Which of your questions could a historian actually answer, and what evidence would that take?'
+  };
+  function gtExtensionFor(step) {
+    return GT_EXTENSIONS[step.key] ||
+      ('What does ' + step.label + ' let you argue about this source that a single glance would miss?');
+  }
+
+  var SYNTHESIS_QUESTION = 'So what? Why does this source matter beyond its moment?';
+  var SYNTHESIS_FOLLOWUP = 'Connect it to another source, a later event, or something happening now, and explain what the connection shows.';
+
   var SOURCE_TYPES = [
     { value: 'photo', label: 'Photograph' },
     { value: 'cartoon', label: 'Political Cartoon' },
@@ -626,6 +1028,9 @@
     'sourceBTitle', 'sourceBType', 'sourceBDescription', 'sourceBText',
     'sourceBCitationAuthor', 'sourceBCitationDate', 'sourceBCitationOrigin', 'sourceBImageUrl',
     'sourceBImageFile', 'sourceBImageFilePreviewWrap', 'sourceBImageFilePreview', 'clearSourceBImageFileBtn', 'sourceBImageSizeWarning',
+    'levelSelect', 'levelExplain', 'printAllLevels',
+    'calloutsEnabled', 'calloutFields', 'calloutList', 'addCalloutBtn',
+    'libraryTags', 'saveSourceALibBtn', 'saveSourceBLibBtn', 'libraryNote', 'libraryFilter', 'libraryList',
     'fwOptions', 'notesEditor', 'answerLines',
     'previewArea', 'printBlankBtn', 'printKeyBtn',
     'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn'
@@ -724,6 +1129,11 @@
       notes: {},
       customQuestions: {},
       answerLines: 4,
+      level: DEFAULT_LEVEL,
+      printAllLevels: false,
+      synthesisNotes: '',
+      calloutsEnabled: false,
+      callouts: [],
       corroborationMode: false,
       sourceBTitle: '',
       sourceBType: 'photo',
@@ -767,7 +1177,75 @@
 
   function answerLineCount() {
     var n = parseInt(state.answerLines, 10);
-    return (isFinite(n) && n > 0) ? Math.min(n, 20) : 4;
+    var base = (isFinite(n) && n > 0) ? Math.min(n, 20) : 4;
+    // Honors GT gets less pre-structured space on purpose — students shape the
+    // response themselves. Academic trims the trailing ruled block for a
+    // different reason: its sentence starters already print ruled writing
+    // space under every lettered part, so the total space per step still goes
+    // UP, not down. Honors, the baseline, is untouched.
+    var level = currentLevel();
+    if (level === 'honorsgt' || level === 'academic') return Math.max(2, base - 2);
+    return base;
+  }
+
+  /* ---------- annotation callouts ---------- */
+  var CALLOUT_MAX = 4;
+  var CALLOUT_DEFAULT_Q = 'Look closely at this line. What does it tell you about the source?';
+
+  function activeCallouts() {
+    if (!state.calloutsEnabled) return [];
+    return (state.callouts || [])
+      .filter(function (c) { return c && String(c.excerpt || '').trim(); })
+      .slice(0, CALLOUT_MAX);
+  }
+
+  /* Escapes the source text once, then splices numbered markers in after each
+     matched excerpt. Working on the escaped string keeps the needle and the
+     haystack in the same encoding, so an excerpt containing & or " still
+     matches. With no callouts this returns exactly escapeHtml(text). */
+  function annotatedSourceTextHtml() {
+    var html = escapeHtml(state.sourceText || '');
+    var hits = [];
+    activeCallouts().forEach(function (c, i) {
+      var needle = escapeHtml(String(c.excerpt).trim());
+      var at = needle ? html.indexOf(needle) : -1;
+      if (at !== -1) hits.push({ end: at + needle.length, n: i + 1 });
+    });
+    hits.sort(function (a, b) { return b.end - a.end; }); // back to front, so earlier offsets stay valid
+    hits.forEach(function (h) {
+      html = html.slice(0, h.end) + '<sup class="callout-mark">' + h.n + '</sup>' + html.slice(h.end);
+    });
+    return html;
+  }
+
+  function calloutLineNumber(excerpt) {
+    var lines = String(state.sourceText || '').split('\n');
+    var needle = String(excerpt || '').trim();
+    if (!needle) return 0;
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf(needle) !== -1) return i + 1;
+    }
+    return 0;
+  }
+
+  function calloutsBoxHtml(mode) {
+    var cos = activeCallouts();
+    if (!cos.length) return '';
+    var parts = ['<div class="callouts-box"><p class="callouts-heading">Look closely</p>'];
+    cos.forEach(function (c, i) {
+      var line = state.lineNumbers ? calloutLineNumber(c.excerpt) : 0;
+      parts.push('<div class="callout-item">');
+      parts.push('<span class="callout-num">' + (i + 1) + '</span>');
+      parts.push('<span class="callout-excerpt">&ldquo;' + escapeHtml(String(c.excerpt).trim()) + '&rdquo;</span>');
+      if (line) parts.push(' <span class="callout-where">(line ' + line + ')</span>');
+      parts.push('<div style="margin-left:1.5rem;">' + escapeHtml(String(c.question || '').trim() || CALLOUT_DEFAULT_Q) + '</div>');
+      if (mode !== 'key') {
+        parts.push('<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', 2) + '</div>');
+      }
+      parts.push('</div>');
+    });
+    parts.push('</div>');
+    return parts.join('');
   }
 
   function save() {
@@ -786,12 +1264,17 @@
     });
   }
 
+  /* Fixed this round: Source B's type dropdown was never populated, so it
+     rendered as an empty select even though state.sourceBType was tracked and
+     printed correctly. Both selects are built from the same list now. */
   function buildSourceTypeSelect() {
-    els.sourceType.innerHTML = '';
-    SOURCE_TYPES.forEach(function (t) {
-      var opt = document.createElement('option');
-      opt.value = t.value; opt.textContent = t.label;
-      els.sourceType.appendChild(opt);
+    [els.sourceType, els.sourceBType].forEach(function (select) {
+      select.innerHTML = '';
+      SOURCE_TYPES.forEach(function (t) {
+        var opt = document.createElement('option');
+        opt.value = t.value; opt.textContent = t.label;
+        select.appendChild(opt);
+      });
     });
   }
 
@@ -825,6 +1308,267 @@
     });
   }
 
+  /* ---------- tagged source library ----------
+     A source saved on its own, independent of any worksheet, so building the
+     next worksheet starts from a source instead of a blank paste. Lives under
+     the same gvb-primary-source: prefix that 009-backup-restore.html already
+     backs up wholesale, so no new registration was needed there. */
+  var LIBRARY_KEY = 'gvb-primary-source:library';
+  var LIBRARY_WARN_BYTES = 2.5 * 1024 * 1024; // library alone, of localStorage's ~5MB
+
+  var Library = {
+    all: function () {
+      var v = safeParse(localStorage.getItem(LIBRARY_KEY), []);
+      return Array.isArray(v) ? v : [];
+    },
+    write: function (entries) {
+      try {
+        localStorage.setItem(LIBRARY_KEY, JSON.stringify(entries));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    bytes: function () {
+      var raw = localStorage.getItem(LIBRARY_KEY);
+      return raw ? raw.length : 0;
+    }
+  };
+
+  function setLibraryNote(text, isError) {
+    els.libraryNote.textContent = text || '';
+    els.libraryNote.style.display = text ? '' : 'none';
+    els.libraryNote.style.color = isError ? 'var(--err)' : 'var(--good)';
+  }
+
+  function parseTags(raw) {
+    return String(raw || '').split(',')
+      .map(function (t) { return t.trim(); })
+      .filter(Boolean)
+      .filter(function (t, i, arr) { return arr.indexOf(t) === i; });
+  }
+
+  function libraryEntryFromSource(letter) {
+    var k = SOURCE_FIELD_KEYS[letter];
+    return {
+      id: 'src-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+      title: state[k.title] || '',
+      type: state[k.type] || 'photo',
+      description: state[k.desc] || '',
+      text: state[k.text] || '',
+      imageUrl: state[k.imageUrl] || '',
+      // Already downscaled on upload (1600px long edge, JPEG) — the library
+      // stores what the worksheet stores, never the raw file.
+      imageDataUrl: state[k.imageData] || '',
+      citationAuthor: state[k.citeAuthor] || '',
+      citationDate: state[k.citeDate] || '',
+      citationOrigin: state[k.citeOrigin] || '',
+      tags: parseTags(els.libraryTags.value),
+      savedAt: new Date().toISOString().slice(0, 10)
+    };
+  }
+
+  function saveSourceToLibrary(letter) {
+    var entry = libraryEntryFromSource(letter);
+    if (!entry.title && !entry.description && !entry.text && !entry.imageUrl && !entry.imageDataUrl) {
+      setLibraryNote('Source ' + letter + ' is empty — add a title, description, or text before saving it.', true);
+      return;
+    }
+    var entries = Library.all();
+    entries.unshift(entry);
+    if (!Library.write(entries)) {
+      setLibraryNote('The browser refused to save that source — its storage is full. Delete a library source with a large image, or export worksheets you no longer need, and try again.', true);
+      return;
+    }
+    els.libraryTags.value = '';
+    renderLibrary();
+    var msg = 'Saved ' + (entry.title ? '“' + entry.title + '”' : 'that source') + ' to the library.';
+    if (Library.bytes() > LIBRARY_WARN_BYTES) {
+      msg += ' Heads up: the library is now about ' + (Library.bytes() / (1024 * 1024)).toFixed(1) +
+        ' MB, a large share of the browser’s ~5MB limit. Sources with uploaded images are the expensive ones.';
+      setLibraryNote(msg, true);
+    } else {
+      setLibraryNote(msg);
+    }
+  }
+
+  function useLibraryEntry(entry, letter) {
+    var k = SOURCE_FIELD_KEYS[letter];
+    var hasContent = ['title', 'desc', 'text'].some(function (f) { return (state[k[f]] || '').toString().trim(); });
+    if (hasContent && !confirm('Replace Source ' + letter + ' with “' + (entry.title || 'this library source') + '”?')) return;
+    state[k.title] = entry.title || '';
+    state[k.type] = entry.type || 'photo';
+    state[k.desc] = entry.description || '';
+    state[k.text] = entry.text || '';
+    state[k.imageUrl] = entry.imageUrl || '';
+    state[k.imageData] = entry.imageDataUrl || '';
+    state[k.citeAuthor] = entry.citationAuthor || '';
+    state[k.citeDate] = entry.citationDate || '';
+    state[k.citeOrigin] = entry.citationOrigin || '';
+    if (letter === 'B') state.corroborationMode = true;
+    renderAll();
+    setLibraryNote('Pulled “' + (entry.title || 'that source') + '” into Source ' + letter + '.');
+  }
+
+  function deleteLibraryEntry(id) {
+    var entries = Library.all().filter(function (e) { return e.id !== id; });
+    Library.write(entries);
+    renderLibrary();
+  }
+
+  function renderLibraryFilter(entries) {
+    var tags = [];
+    entries.forEach(function (e) {
+      (e.tags || []).forEach(function (t) { if (tags.indexOf(t) === -1) tags.push(t); });
+    });
+    tags.sort(function (a, b) { return a.localeCompare(b); });
+    var previous = els.libraryFilter.value;
+    els.libraryFilter.innerHTML = '';
+    var allOpt = document.createElement('option');
+    allOpt.value = ''; allOpt.textContent = 'All sources (' + entries.length + ')';
+    els.libraryFilter.appendChild(allOpt);
+    tags.forEach(function (t) {
+      var opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      els.libraryFilter.appendChild(opt);
+    });
+    if (previous && tags.indexOf(previous) !== -1) els.libraryFilter.value = previous;
+  }
+
+  function renderLibrary() {
+    var entries = Library.all();
+    renderLibraryFilter(entries);
+    var filter = els.libraryFilter.value;
+    var shown = filter ? entries.filter(function (e) { return (e.tags || []).indexOf(filter) !== -1; }) : entries;
+
+    els.libraryList.innerHTML = '';
+    els.saveSourceBLibBtn.style.display = state && state.corroborationMode ? '' : 'none';
+
+    if (!shown.length) {
+      var empty = document.createElement('p');
+      empty.className = 'lib-empty';
+      empty.textContent = entries.length
+        ? 'No saved source carries that tag yet.'
+        : 'Nothing saved yet. Build a source above, then save it here with a tag or two so the next worksheet can start from it.';
+      els.libraryList.appendChild(empty);
+      return;
+    }
+
+    shown.forEach(function (entry) {
+      var row = document.createElement('div');
+      row.className = 'lib-entry';
+
+      var title = document.createElement('div');
+      title.className = 'lib-entry-title';
+      title.textContent = entry.title || 'Untitled source';
+      row.appendChild(title);
+
+      var meta = document.createElement('div');
+      meta.className = 'lib-entry-meta';
+      meta.textContent = sourceTypeLabel(entry.type) + ' · saved ' + (entry.savedAt || 'earlier') +
+        (entry.imageDataUrl ? ' · has an uploaded image' : '');
+      row.appendChild(meta);
+
+      if ((entry.tags || []).length) {
+        var tagWrap = document.createElement('div');
+        tagWrap.className = 'lib-tags';
+        entry.tags.forEach(function (t) {
+          var chip = document.createElement('span');
+          chip.className = 'lib-tag';
+          chip.textContent = t;
+          tagWrap.appendChild(chip);
+        });
+        row.appendChild(tagWrap);
+      }
+
+      var actions = document.createElement('div');
+      actions.className = 'lib-entry-actions';
+
+      var useA = document.createElement('button');
+      useA.type = 'button'; useA.className = 'secondary small';
+      useA.textContent = 'Use as Source A';
+      useA.addEventListener('click', function () { useLibraryEntry(entry, 'A'); });
+      actions.appendChild(useA);
+
+      var useB = document.createElement('button');
+      useB.type = 'button'; useB.className = 'secondary small';
+      useB.textContent = 'Use as Source B';
+      useB.addEventListener('click', function () { useLibraryEntry(entry, 'B'); });
+      actions.appendChild(useB);
+
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'danger small';
+      del.textContent = 'Delete';
+      del.addEventListener('click', function () {
+        if (confirm('Remove “' + (entry.title || 'this source') + '” from the library? Worksheets already built from it are untouched.')) {
+          deleteLibraryEntry(entry.id);
+        }
+      });
+      actions.appendChild(del);
+
+      row.appendChild(actions);
+      els.libraryList.appendChild(row);
+    });
+  }
+
+  /* ---------- annotation callout editor ---------- */
+  function renderCalloutEditor() {
+    els.calloutList.innerHTML = '';
+    var callouts = state.callouts || [];
+    callouts.forEach(function (c, i) {
+      var row = document.createElement('div');
+      row.style.borderBottom = '1px dashed var(--line)';
+      row.style.paddingBottom = '.5rem';
+      row.style.marginBottom = '.5rem';
+
+      var head = document.createElement('label');
+      head.textContent = 'Callout ' + (i + 1) + ' — excerpt from the source text';
+      row.appendChild(head);
+
+      var excerpt = document.createElement('input');
+      excerpt.type = 'text';
+      excerpt.className = 'callout-excerpt-input';
+      excerpt.placeholder = 'Paste the exact words you want students to look at';
+      excerpt.value = c.excerpt || '';
+      excerpt.addEventListener('input', function () {
+        state.callouts[i].excerpt = excerpt.value;
+        renderPreview();
+      });
+      row.appendChild(excerpt);
+
+      var qLabel = document.createElement('label');
+      qLabel.textContent = 'Question for this excerpt (optional)';
+      row.appendChild(qLabel);
+
+      var question = document.createElement('input');
+      question.type = 'text';
+      question.className = 'callout-question-input';
+      question.placeholder = CALLOUT_DEFAULT_Q;
+      question.value = c.question || '';
+      question.addEventListener('input', function () {
+        state.callouts[i].question = question.value;
+        renderPreview();
+      });
+      row.appendChild(question);
+
+      var remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'secondary small';
+      remove.textContent = 'Remove callout ' + (i + 1);
+      remove.addEventListener('click', function () {
+        state.callouts.splice(i, 1);
+        renderCalloutEditor();
+        renderPreview();
+      });
+      row.appendChild(remove);
+
+      els.calloutList.appendChild(row);
+    });
+    els.addCalloutBtn.disabled = callouts.length >= CALLOUT_MAX;
+    els.addCalloutBtn.textContent = callouts.length >= CALLOUT_MAX
+      ? 'Four callouts is the maximum'
+      : '+ Add a callout';
+  }
+
   /* ---------- notes editor (rebuilt when framework changes) ---------- */
   function renderNotesEditor() {
     els.notesEditor.innerHTML = '';
@@ -832,6 +1576,11 @@
     fw.steps.forEach(function (step) {
       var block = document.createElement('div');
       block.className = 'note-step';
+      // Stable hooks so tests (and future blocks) don't depend on the order
+      // these are appended in — the comparison block stopped being last the
+      // moment the synthesis block was added.
+      block.dataset.noteBlock = 'step';
+      block.dataset.stepKey = step.key;
 
       var head = document.createElement('div');
       head.className = 'note-step-head';
@@ -899,6 +1648,7 @@
     if (state.corroborationMode) {
       var cBlock = document.createElement('div');
       cBlock.className = 'note-step';
+      cBlock.dataset.noteBlock = 'comparison';
       var cHead = document.createElement('div');
       cHead.className = 'note-step-head';
       var cLetter = document.createElement('span');
@@ -930,6 +1680,40 @@
 
       els.notesEditor.appendChild(cBlock);
     }
+
+    /* The synthesis note is always editable, not just when the level happens
+       to be Honors GT — otherwise "print all three levels" would hand back a
+       GT answer key with an empty synthesis section. */
+    var sBlock = document.createElement('div');
+    sBlock.className = 'note-step';
+    sBlock.dataset.noteBlock = 'synthesis';
+    var sHead = document.createElement('div');
+    sHead.className = 'note-step-head';
+    var sLetter = document.createElement('span');
+    sLetter.className = 'note-step-letter'; sLetter.textContent = '★';
+    var sLabel = document.createElement('span');
+    sLabel.className = 'note-step-label'; sLabel.textContent = 'Synthesis (Honors GT)';
+    sHead.appendChild(sLetter); sHead.appendChild(sLabel);
+    sBlock.appendChild(sHead);
+
+    var sQ = document.createElement('p');
+    sQ.className = 'note-step-qs';
+    sQ.style.margin = '0 0 .3rem 2.1rem';
+    sQ.textContent = SYNTHESIS_QUESTION + ' ' + SYNTHESIS_FOLLOWUP;
+    sBlock.appendChild(sQ);
+
+    var sTa = document.createElement('textarea');
+    sTa.id = 'synthesisNotes';
+    sTa.style.marginLeft = '2.1rem';
+    sTa.style.width = 'calc(100% - 2.1rem)';
+    sTa.placeholder = 'Teacher notes for the synthesis question (prints on the Honors GT answer key)';
+    sTa.value = state.synthesisNotes || '';
+    sTa.addEventListener('input', function () {
+      state.synthesisNotes = sTa.value;
+      renderPreview();
+    });
+    sBlock.appendChild(sTa);
+    els.notesEditor.appendChild(sBlock);
   }
 
   /* ---------- worksheet markup (shared by preview & print) ---------- */
@@ -963,13 +1747,16 @@
       parts.push('<div class="source-desc empty">No source description added yet.</div>');
     }
     if (state[k.text]) {
+      // Source A's text can carry numbered callout markers; Source B's never
+      // does (callouts are Source-A-only, like vocab and reading support).
+      var textHtml = isB ? escapeHtml(state[k.text]) : annotatedSourceTextHtml();
       if (!isB && state.lineNumbers) {
-        var lines = state[k.text].split('\n').map(function (line, i) {
-          return '<div class="stl-line"><span class="stl-num">' + (i + 1) + '</span><span class="stl-text">' + escapeHtml(line) + '</span></div>';
+        var lines = textHtml.split('\n').map(function (line, i) {
+          return '<div class="stl-line"><span class="stl-num">' + (i + 1) + '</span><span class="stl-text">' + line + '</span></div>';
         }).join('');
         parts.push('<div class="source-text-lines">' + lines + '</div>');
       } else {
-        parts.push('<div class="source-text-block">' + nlToBr(state[k.text]) + '</div>');
+        parts.push('<div class="source-text-block">' + textHtml.replace(/\n/g, '<br>') + '</div>');
       }
     }
     if (!isB && state.readingSupportEnabled && state.readingParaphrase) {
@@ -997,10 +1784,38 @@
     return '<div class="sources-row">' + sourceBoxHtml('A') + sourceBoxHtml('B') + '</div>';
   }
 
-  function stepBlockHtml(step, mode) {
-    var qHtml = step.questions.map(function (q) { return '<p class="step-q">' + escapeHtml(q) + '</p>'; }).join('');
+  /* The questions half of a step block. Honors prints them exactly as it
+     always has. Academic chunks each multi-part question into lettered steps
+     and hangs a sentence starter under every part that is really a question.
+     Honors GT keeps the questions and adds one open-ended extension. */
+  function stepQuestionsHtml(step) {
+    var level = currentLevel();
+    var questions = step.questions.slice();
     var customQ = (state.customQuestions && state.customQuestions[step.key]) || '';
-    if (customQ) qHtml += '<p class="step-q">' + escapeHtml(customQ) + '</p>';
+    if (customQ) questions.push(customQ);
+
+    if (level === 'academic') {
+      var letterIdx = 0;
+      var html = questions.map(function (q) {
+        return splitQuestionParts(q).map(function (part) {
+          var letter = PART_LETTERS.charAt(letterIdx++) || '•';
+          var out = '<p class="q-part"><span class="part-letter">' + letter + '.</span> ' + escapeHtml(part) + '</p>';
+          if (shouldScaffold(part)) out += starterLinesHtml(part);
+          return out;
+        }).join('');
+      }).join('');
+      return html;
+    }
+
+    var qHtml = questions.map(function (q) { return '<p class="step-q">' + escapeHtml(q) + '</p>'; }).join('');
+    if (level === 'honorsgt') {
+      qHtml += '<p class="step-q gt-open"><span class="gt-label">Go further:</span> ' + escapeHtml(gtExtensionFor(step)) + '</p>';
+    }
+    return qHtml;
+  }
+
+  function stepBlockHtml(step, mode) {
+    var qHtml = stepQuestionsHtml(step);
     var bodyHtml;
     if (!state.corroborationMode) {
       if (mode === 'key') {
@@ -1042,6 +1857,7 @@
     COMPARISON_QUESTIONS.forEach(function (q) {
       parts.push('<div class="step-block comparison-step">');
       parts.push('<p class="step-q">' + escapeHtml(q.label) + '</p>');
+      if (mode !== 'key' && currentLevel() === 'academic') parts.push(starterLinesHtml(q.label));
       if (mode === 'key') {
         var noteText = (state.comparisonNotes && state.comparisonNotes[q.key]) || '';
         parts.push('<div class="step-answer key' + (noteText ? '' : ' empty') + '">' +
@@ -1055,35 +1871,84 @@
     return parts.join('');
   }
 
-  function sheetHtml(mode) {
+  /* The closing synthesis question — Honors GT only. It is the "so what?"
+     move the other two levels reach through the framework steps themselves. */
+  function synthesisBlockHtml(mode) {
+    if (currentLevel() !== 'honorsgt') return '';
+    var parts = ['<div class="synthesis-block">', '<div class="synthesis-heading">Synthesis</div>'];
+    parts.push('<p class="step-q">' + escapeHtml(SYNTHESIS_QUESTION) + '</p>');
+    parts.push('<p class="step-q">' + escapeHtml(SYNTHESIS_FOLLOWUP) + '</p>');
+    if (mode === 'key') {
+      var noteText = (state.synthesisNotes || '').trim();
+      parts.push('<div class="step-answer key' + (noteText ? '' : ' empty') + '">' +
+        (noteText ? nlToBr(noteText) : 'No teacher notes added for the synthesis question yet.') + '</div>');
+    } else {
+      parts.push('<div class="answer-lines">' + repeatHtml('<div class="answer-line"></div>', answerLineCount() + 2) + '</div>');
+    }
+    parts.push('</div>');
+    return parts.join('');
+  }
+
+  /* opts.tagLevel — print the level chip and footer. Always on when printing
+     all three levels (that's how a teacher sorts the piles); on a single
+     print it appears for Academic and Honors GT only, so a plain Honors
+     worksheet stays byte-for-byte what this tool has always produced. */
+  function sheetHtml(mode, opts) {
+    opts = opts || {};
+    var level = currentLevel();
+    var tagLevel = opts.tagLevel === undefined ? (level !== DEFAULT_LEVEL) : !!opts.tagLevel;
     var fw = FRAMEWORKS[state.framework] || FRAMEWORKS.optic;
     var stepsHtml = fw.steps.map(function (s) { return stepBlockHtml(s, mode); }).join('');
     var keyBanner = mode === 'key' ? '<div class="key-banner">Answer key / teacher notes &mdash; for teacher use, not student distribution</div>' : '';
+    var levelNote = (mode === 'key')
+      ? '<div class="level-note"><span class="meta-k">' + escapeHtml(LEVELS[level].name) + ' &mdash; what a complete answer looks like</span>' +
+        escapeHtml(LEVELS[level].keyNote) + '</div>'
+      : '';
     var studentLine = mode === 'blank'
       ? '<div class="student-line">Name: _____________________________ &nbsp;&nbsp; Date: ______________ &nbsp;&nbsp; Class: ______________</div>'
       : '';
     return (
       '<div class="sheet">' +
         keyBanner +
+        (tagLevel ? '<div class="level-tag">' + escapeHtml(LEVELS[level].name) + '</div>' : '') +
         '<div class="sheet-header">' +
           '<div class="sheet-title">Primary Source Analysis' + (state.sourceTitle ? ': ' + escapeHtml(state.sourceTitle) : '') + '</div>' +
           '<div class="sheet-sub">Framework: ' + escapeHtml(fw.fullName) + '</div>' +
         '</div>' +
+        levelNote +
         (state.readingSupportEnabled && state.readingSummary
           ? '<div class="reading-support-box top"><p class="reading-support-heading">Summary</p><div class="reading-support-text">' + nlToBr(state.readingSummary) + '</div></div>'
           : '') +
         sourceBlockHtml() +
+        wordsToKnowHtml() +
+        calloutsBoxHtml(mode) +
         studentLine +
         '<div class="steps-wrap">' + stepsHtml + '</div>' +
         comparisonBlockHtml(mode) +
+        synthesisBlockHtml(mode) +
+        (tagLevel ? '<div class="level-footer">' + escapeHtml(LEVELS[level].name) +
+          ' &mdash; ' + (mode === 'key' ? 'answer key' : 'student worksheet') + '</div>' : '') +
       '</div>'
     );
+  }
+
+  /* One print flow, three class sets — Academic, Honors, Honors GT — each
+     tagged top and bottom with its level and starting on a fresh page. */
+  function allLevelsHtml(mode) {
+    return LEVEL_ORDER.map(function (levelKey, i) {
+      var sheet = withLevel(levelKey, function () { return sheetHtml(mode, { tagLevel: true }); });
+      return i === 0 ? sheet : '<div class="level-sheet-break">' + sheet + '</div>';
+    }).join('');
+  }
+
+  function outputHtml(mode) {
+    return state.printAllLevels ? allLevelsHtml(mode) : sheetHtml(mode);
   }
 
   /* ---------- render orchestration ---------- */
   function renderPreview() {
     save();
-    els.previewArea.innerHTML = sheetHtml(previewMode);
+    els.previewArea.innerHTML = outputHtml(previewMode);
   }
 
   function fillForm() {
@@ -1112,6 +1977,13 @@
     updateImageSizeWarning();
     els.answerLines.value = state.answerLines || 4;
 
+    els.levelSelect.value = currentLevel();
+    els.levelExplain.textContent = LEVELS[currentLevel()].blurb;
+    els.printAllLevels.checked = !!state.printAllLevels;
+    els.calloutsEnabled.checked = !!state.calloutsEnabled;
+    els.calloutFields.style.display = state.calloutsEnabled ? '' : 'none';
+    renderCalloutEditor();
+
     els.corroborationEnabled.checked = !!state.corroborationMode;
     els.corroborationFields.style.display = state.corroborationMode ? '' : 'none';
     els.sourceBTitle.value = state.sourceBTitle || '';
@@ -1139,6 +2011,7 @@
     refreshSwitcher();
     els.toolbar.style.display = '';
     fillForm();
+    renderLibrary();
     renderPreview();
   }
 
@@ -1179,6 +2052,17 @@
     if (typeof state.sourceBCitationOrigin !== 'string') state.sourceBCitationOrigin = '';
     if (!state.notesB || typeof state.notesB !== 'object') state.notesB = {};
     if (!state.comparisonNotes || typeof state.comparisonNotes !== 'object') state.comparisonNotes = {};
+    // Differentiation fields — every worksheet saved before this round has no
+    // level at all, and normalizes to the Honors baseline it was written at.
+    state.level = normalizeLevel(state.level);
+    state.printAllLevels = !!state.printAllLevels;
+    if (typeof state.synthesisNotes !== 'string') state.synthesisNotes = '';
+    state.calloutsEnabled = !!state.calloutsEnabled;
+    state.callouts = Array.isArray(state.callouts)
+      ? state.callouts.slice(0, CALLOUT_MAX).map(function (c) {
+        return { excerpt: (c && typeof c.excerpt === 'string') ? c.excerpt : '', question: (c && typeof c.question === 'string') ? c.question : '' };
+      })
+      : [];
     Store.setCurrentName(name);
     renderAll();
   }
@@ -1214,6 +2098,38 @@
     renderPreview();
   });
 
+  /* ---------- differentiation level ---------- */
+  els.levelSelect.addEventListener('change', function () {
+    state.level = normalizeLevel(els.levelSelect.value);
+    els.levelExplain.textContent = LEVELS[currentLevel()].blurb;
+    renderPreview();
+  });
+  els.printAllLevels.addEventListener('change', function () {
+    state.printAllLevels = els.printAllLevels.checked;
+    renderPreview();
+  });
+
+  /* ---------- annotation callouts ---------- */
+  els.calloutsEnabled.addEventListener('change', function () {
+    state.calloutsEnabled = els.calloutsEnabled.checked;
+    els.calloutFields.style.display = state.calloutsEnabled ? '' : 'none';
+    if (state.calloutsEnabled && !(state.callouts || []).length) state.callouts = [{ excerpt: '', question: '' }];
+    renderCalloutEditor();
+    renderPreview();
+  });
+  els.addCalloutBtn.addEventListener('click', function () {
+    if (!Array.isArray(state.callouts)) state.callouts = [];
+    if (state.callouts.length >= CALLOUT_MAX) return;
+    state.callouts.push({ excerpt: '', question: '' });
+    renderCalloutEditor();
+    renderPreview();
+  });
+
+  /* ---------- source library ---------- */
+  els.saveSourceALibBtn.addEventListener('click', function () { saveSourceToLibrary('A'); });
+  els.saveSourceBLibBtn.addEventListener('click', function () { saveSourceToLibrary('B'); });
+  els.libraryFilter.addEventListener('change', renderLibrary);
+
   /* ---------- corroboration mode: Source B fields ---------- */
   bindTextField('sourceBTitle', 'sourceBTitle');
   bindTextField('sourceBDescription', 'sourceBDescription');
@@ -1230,6 +2146,7 @@
   els.corroborationEnabled.addEventListener('change', function () {
     state.corroborationMode = els.corroborationEnabled.checked;
     els.corroborationFields.style.display = state.corroborationMode ? '' : 'none';
+    els.saveSourceBLibBtn.style.display = state.corroborationMode ? '' : 'none';
     renderNotesEditor();
     renderPreview();
   });
@@ -1300,6 +2217,10 @@
     state.imageUrl = ''; state.imageDataUrl = '';
     state.sourceBImageUrl = ''; state.sourceBImageDataUrl = '';
     state.notes = {}; state.notesB = {}; state.comparisonNotes = {}; state.customQuestions = {};
+    state.synthesisNotes = '';
+    // Callouts quote the old source text word for word — they'd point at
+    // nothing once the example replaces it.
+    state.calloutsEnabled = false; state.callouts = [];
     if (EXAMPLE_NAME !== oldName) {
       Store.remove(oldName);
       state.name = EXAMPLE_NAME;
@@ -1373,7 +2294,15 @@
       // so older exports/links without them still pass, but must be object-shaped
       // when present (this validator has silently rotted before on new fields).
       (obj.notesB === undefined || typeof obj.notesB === 'object') &&
-      (obj.comparisonNotes === undefined || typeof obj.comparisonNotes === 'object');
+      (obj.comparisonNotes === undefined || typeof obj.comparisonNotes === 'object') &&
+      // Differentiation fields, added the round after corroboration. Optional
+      // and loosely typed on purpose: round-1 links carry none of them, and
+      // tool 056 builds 028-format links too. An unrecognized level string is
+      // normalized to the Honors baseline at load rather than rejected here —
+      // strictness in this validator is exactly what rotted it twice before.
+      (obj.level === undefined || typeof obj.level === 'string') &&
+      (obj.callouts === undefined || Array.isArray(obj.callouts)) &&
+      (obj.synthesisNotes === undefined || typeof obj.synthesisNotes === 'string');
   }
 
   function exportSheet() {
@@ -1542,11 +2471,11 @@
   });
 
   els.printBlankBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = sheetHtml('blank');
+    document.getElementById('printArea').innerHTML = outputHtml('blank');
     window.print();
   });
   els.printKeyBtn.addEventListener('click', function () {
-    document.getElementById('printArea').innerHTML = sheetHtml('key');
+    document.getElementById('printArea').innerHTML = outputHtml('key');
     window.print();
   });
 

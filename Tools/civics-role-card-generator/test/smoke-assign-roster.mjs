@@ -100,8 +100,12 @@ eq(new Set(named).size, 28, 'no student is on two cards');
 eq(named.slice().sort().join(',') === CLASS.slice().sort().join(','), true, 'and every student in the class got one');
 
 /* ── 4. the growth lands on the role built to scale ──────────────────────── */
+// Simulations are saved by name now (crcg:list / crcg:data:<name> /
+// crcg:current), so the live document is whichever one crcg:current points at
+// rather than the old flat crcg_roles_v1 blob. Section 10 below still writes
+// that legacy key on purpose, to prove it migrates in.
 const grownRole = (await page.evaluate(() => {
-  const s = JSON.parse(localStorage.getItem('crcg_roles_v1'));
+  const s = JSON.parse(localStorage.getItem('crcg:data:' + localStorage.getItem('crcg:current')));
   return s.roles.slice().sort((a, b) => b.copies - a.copies)[0];
 }));
 eq(grownRole.role, 'Juror', 'the extra cards went to the jury, not to the bench');
@@ -117,9 +121,10 @@ eq(new Set(jurors).size, 19, 'each juror card names a different student');
 
 /* ── 6. with growth off, leftovers are counted, not dropped ──────────────── */
 await page.evaluate(() => {
-  const s = JSON.parse(localStorage.getItem('crcg_roles_v1'));
+  const key = 'crcg:data:' + localStorage.getItem('crcg:current');
+  const s = JSON.parse(localStorage.getItem(key));
   s.roles.forEach(r => { r.copies = 2; r.students = []; });
-  localStorage.setItem('crcg_roles_v1', JSON.stringify(s));
+  localStorage.setItem(key, JSON.stringify(s));
 });
 await page.reload({ waitUntil: 'networkidle' });
 await settle(page);
