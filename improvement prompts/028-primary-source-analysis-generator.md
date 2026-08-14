@@ -9,6 +9,119 @@
 
 ## Status
 
+**2026-08-14 — SS demo round 2 (session `kx9rtm`): Differentiation levels —
+this tool is the reference implementation of the site-wide three-level
+switch.** Devon teaches Academic, Honors, and Honors GT sections of the same
+course; tools 054 and 056 copy this pattern, so the spec-visible parts
+(option names, the Honors default, the footer tags) are exactly as the round
+prompt states.
+
+- A **Level selector** (`Academic` / `Honors` / `Honors GT`, `state.level`,
+  default `honors`) stored with the worksheet. **Honors is the untouched
+  baseline** — at that level not one line of the new markup renders, so a
+  plain worksheet prints byte-for-byte what it printed before this round.
+  That is the first assertion block in the new suite, not an assumption.
+- **Academic** adds support around the *same* questions, never fewer or
+  lower-level ones: every multi-part prompt is split into lettered steps
+  (`a.`, `b.`, `c.` — the OPTIC Overview step really is an instruction
+  followed by a question, and now reads that way), each part that a student
+  actually answers gets a **sentence starter derived from the question's own
+  words**, and hard words from the teacher's own source text are glossed in
+  plain language in a **Words to know** box.
+- Starters are generated, not canned. `sentenceStarterFor()` finds the
+  operative question (the last sentence ending in `?`) and runs an ordered
+  rule table over it, so "What is the overall scene or setting?" becomes
+  "The overall scene or setting is ___ / I can tell because ___". Two
+  grammar bugs were caught by reading the actual printed output rather than
+  the DOM: a rule that reassembled "What does it reveal about…?" into "It
+  reveal about ___" (deleted — only the `what is the <noun phrase>` shape can
+  be safely reassembled, everything else takes the generic frame), and
+  imperative tasks like "Identify two or three details" getting no starter at
+  all because they don't end in a question mark. Both are now asserted
+  against.
+- **Honors GT** adds extension: a per-step open-ended **"Go further:"** prompt
+  (`GT_EXTENSIONS`, 28 hand-written entries keyed by step key, which the six
+  frameworks share heavily, plus a label-derived fallback), the closing
+  **synthesis question** ("So what? Why does this source matter beyond its
+  moment?"), and less pre-lined space (`answerLineCount()` drops by two).
+- Works in **both single-source and corroboration modes** — the level is
+  applied in `stepQuestionsHtml()`, which both shapes route through, the
+  comparison block gets Academic starters, and the glossary scans Source B's
+  text too. Verified for both.
+- The **answer key** gains a `.level-note` describing what a complete answer
+  looks like at the level in force, and the synthesis teacher-note field is
+  always editable (not only when the level happens to be GT) so
+  print-all-three never hands back a GT key with an empty synthesis section.
+- **Print all three levels** (`state.printAllLevels`) renders Academic,
+  Honors, and Honors GT back to back, each on a fresh page, each tagged with
+  a `.level-tag` chip at the top and a `.level-footer` at the bottom. It
+  works for the answer key as well as the student worksheet. The live preview
+  shows all three when it is on, which is also the clearest way to demo the
+  feature. **Tradeoff worth knowing:** the tag is per *set*, not per physical
+  *page* — Chrome supports neither `@page` margin-box content nor a reliable
+  repeating footer inside this tool's `position: absolute` print root, so a
+  set that runs to three sheets carries its level on the first and last of
+  them, not all three. Good enough to sort piles; worth revisiting if anyone
+  complains.
+- The **share link** carries the level automatically (the payload copies all
+  state keys). The validator was made *more* permissive, not less:
+  `level` / `callouts` / `synthesisNotes` are optional and loosely typed, and
+  an unrecognized level normalizes to the Honors baseline at load rather than
+  rejecting the whole worksheet. Round-1-format links (no level field at all)
+  and 056-generated links both keep working, asserted with a hand-built
+  legacy payload and a payload carrying the display name `"Honors GT"`.
+
+Supporting items, all three shipped:
+
+1. **Tagged source library** (`gvb-primary-source:library`) — save Source A or
+   B on its own with free-text tags, filter the list by tag, and pull an entry
+   into Source A or Source B of any worksheet instead of retyping it. Images
+   are the already-downscaled ones (1600px long edge, JPEG); a quota-exceeded
+   write is reported instead of silently losing the source, and the panel
+   warns once the library passes ~2.5MB. **No change was needed in
+   `009-backup-restore.html`** — it registers the whole `gvb-primary-source:`
+   prefix, so the new key is already backed up.
+2. **Annotation callouts** — up to four teacher-chosen excerpts get a numbered
+   marker spliced into the printed source text and a matching numbered
+   "look closely" question underneath, with a real default question when the
+   teacher leaves it blank and a "(line N)" pointer when line numbering is on.
+   Markers are spliced into the *escaped* string so an excerpt containing
+   `&` or `"` still matches, and with no callouts the output is identical to
+   `escapeHtml(text)` — the no-callouts path is the old path.
+3. **Extended smoke suite** — new
+   `Tools/primary-source-analysis-generator/test/smoke-levels.mjs`, 106
+   assertions, appended to `test:primary-source`.
+
+Also fixed on the way: **Source B's type dropdown was never populated.**
+`buildSourceTypeSelect()` only ever filled Source A's select, so the
+corroboration Source B "Type" control rendered empty. Printing was unaffected
+(it reads `state.sourceBType`, not the DOM), which is why it survived a round.
+Both selects are built from the same list now.
+
+What was hard: nothing structural, but two things are worth passing on.
+First, **the DOM being right is not the same as the worksheet reading right** —
+both starter bugs above passed every structural assertion and only showed up
+when the printed text was dumped and read as a teacher would. Second, the
+round-1 suite selected the comparison notes block positionally
+(`steps[steps.length - 1]`), which broke the moment a synthesis block was
+appended; the notes editor blocks now carry `data-note-block` /
+`data-step-key` hooks and both suites address them by attribute.
+`sw.js` needed no change again — only a `test/` folder was added, which the
+precache list excludes for every tool — and so `CACHE_VERSION` was not bumped.
+
+**Where a future round should pick up:** the DBQ / multi-source packet is
+*still* the biggest lever and is now genuinely tool 056's territory, so the
+real question is whether this tool should hand off to it rather than grow.
+Nearer term: the level tag is per-set rather than per-page (above); the source
+library has no export/import of its own, so a teacher moving machines has to
+carry it through 009's whole-site backup; and image crop/zoom with a detail
+callout is the natural next step now that numbered callouts exist for text.
+A **cross-tool extraction opportunity**: `normalizeLevel` / `LEVELS` /
+`withLevel` and the level tag and footer CSS are the parts 054 and 056 will
+copy verbatim — once all three have shipped, that is a real candidate for
+`_shared/levels.js`, and nothing was extracted this round only because
+`_shared/` is off limits to a parallel session.
+
 **2026-08-13 — SS demo round (session `qzmvhx`): Corroboration mode shipped
 (backlog rank 3).** Two sources, one worksheet — stays inside the existing
 single-worksheet shape rather than becoming a multi-source list (that's the
@@ -212,6 +325,23 @@ teacher, and it has the most room to grow of any content tool on the site.
   agree / disagree / more reliable — with its own answer-key section
   (`state.notesB`, `state.comparisonNotes`). A **Load Boston Massacre
   example** button fills a real two-source pair to try it immediately.
+- **Differentiation levels** (`state.level`: `academic` / `honors` /
+  `honorsgt`, default Honors). Academic chunks multi-part prompts into
+  lettered steps, hangs a generated sentence starter under each
+  (`sentenceStarterFor`, `starterLinesHtml`), and glosses hard words from the
+  teacher's own source (`PLAIN_GLOSSARY`, `wordsToKnowHtml`). Honors GT adds a
+  per-step "Go further" prompt (`GT_EXTENSIONS`) and a closing synthesis
+  question (`synthesisBlockHtml`), with less ruled space. Applies in both
+  single-source and corroboration modes and on the answer key, which states
+  the expected depth for the level. **Print all three levels**
+  (`state.printAllLevels`, `allLevelsHtml`) prints three tagged class sets in
+  one flow.
+- **Tagged source library** (`gvb-primary-source:library`): save a source on
+  its own with free-text tags, filter by tag, and pull it into Source A or B
+  of any worksheet.
+- **Annotation callouts** (`state.callouts`, up to four): numbered markers
+  spliced into the printed source text plus matching "look closely" questions,
+  with a "(line N)" pointer when line numbering is on.
 
 ## Quick Wins
 
@@ -240,10 +370,11 @@ teacher, and it has the most room to grow of any content tool on the site.
   a shared set of guiding questions plus a synthesis prompt. Building it here
   is far less work than building it separately, and this tool's framework
   machinery is exactly what it needs.
-- **A source library.** Shipped or teacher-built collections of frequently-used
-  sources by unit, so building a worksheet starts from a source rather than a
-  blank paste. Combined with `046-blank-map-generator.html`'s Wikimedia search,
-  there's a precedent for finding public-domain material in-browser (P7).
+- **Done — SS demo round 2, session `kx9rtm`.** ~~A source library.~~ Teacher-built collections of frequently-used
+  sources, tagged by unit / topic / era, so building a worksheet starts from a
+  source rather than a blank paste. Still open from the original idea: a
+  *shipped* starter collection, and searching public-domain material
+  in-browser the way `046-blank-map-generator.html` handles Wikimedia (P7).
 - **Projected analysis mode.** The source shown large with the framework's
   questions revealed one at a time, for working through a document together
   as a class — the no-copier fallback, driven from the teacher's machine.
