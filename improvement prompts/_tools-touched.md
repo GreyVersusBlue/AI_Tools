@@ -198,7 +198,6 @@ here.
 | DBQ / Source Packet Builder | `vn8trq` | 2026-08-14 02:41 UTC | `claude/ssdemo2-056-vn8trq` |
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
 | Timeline Builder | `vt7kqa` | 2026-08-14 02:41 UTC | `claude/ssdemo2-015-vt7kqa` |
-| Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
 
 ---
 
@@ -206,6 +205,37 @@ here.
 
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
+
+### Devon-assigned round 2 — tool 062 — 2026-08-14 03:48 UTC — session `gmq7xr`
+
+Geography Bee / Map Skills Quiz Generator
+(`062-geography-bee-quiz-generator.md`), social studies demo round 2. Headline
+plus both Supporting items; nothing cut.
+
+- **Map questions** — a fourth built-in category (`maps`, 30 questions,
+  `bi90`–`bi119`): an outline map with one region shaded, asking which country
+  or US state it is. 15 states, 15 countries.
+- New `Tools/geography-bee-quiz-generator/gbq-map.js` reads 046's vendored
+  Natural Earth GeoJSON and its `BASE_MAP_PRESETS` crops (guarded dynamic
+  import of `bmg-vector.js`, the `tlb-places.js` pattern) and draws the snippet
+  locally. **Nothing under `Tools/blank-map-generator/` was written** — that
+  folder belonged to another session this round. Local drawing rather than
+  `renderBaseMapCanvas()` because that renders a 4000 px long side for every
+  call; a printed quiz needs ten 230 px thumbnails.
+- Works on the projector, in the printed quiz, and on the answer key (each map
+  repeated as a grading thumbnail, asserted to be the identical image). Map
+  multiple choice draws distractors from the region pool of the same dataset,
+  so a state question is never offered a country.
+- Bulk generation: pick US states or world countries and N, and the tool
+  samples regions that don't already have a question.
+- **Team tournament** on the projector tab — 2–6 named teams, live scoreboard,
+  alternating turns, teacher-marked right/wrong, final standings, persisted in
+  the new `gbq_tournament_v1` (registered in `009-backup-restore.html`, along
+  with `gbq_disabled_v1` / `gbq_settings_v1`, which had never been registered).
+- New suite `test/smoke-map-tournament.mjs` (74 checks) reads pixels back
+  through the renderer's own projection rather than trusting that an `<img>`
+  appeared; wired into `test:geo-bee` and the end of the `test` chain. The
+  existing 29-check MC suite still passes.
 
 ### Devon-assigned round — tool 046 — 2026-08-13 23:54 UTC — session `q4wmxz`
 

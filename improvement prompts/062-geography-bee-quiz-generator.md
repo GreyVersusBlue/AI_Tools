@@ -1,15 +1,102 @@
 # Improvement Prompts — 062 — Geography Bee / Map Skills Quiz Generator
 
-**Tool file:** `Tools/062-geography-bee-quiz-generator.html` (everything still
-inline in the one file — no support folder for the tool itself).
-**Test folder:** `Tools/geography-bee-quiz-generator/test/` (test-only,
-added 2026-08-14; the tool's own code has no separate module files).
+**Tool file:** `Tools/062-geography-bee-quiz-generator.html` (the question
+banks and all the UI logic are still inline in the one file).
+**Support folder:** `Tools/geography-bee-quiz-generator/` —
+`gbq-map.js` (the outline-map snippet renderer, added 2026-08-14) and
+`test/`.
 
-**Current description (from README):** A 90-question built-in bank across capitals, landmarks, and map-reading skills, filterable by category, projected one at a time or printed as a quiz with an answer key &mdash; short answer or multiple choice, with auto-generated same-category distractors and a seeded, reprintable quiz version.
+**Current description (from README):** A 120-question built-in bank across capitals, landmarks, map-reading skills, and outline-map &ldquo;which country/state is highlighted?&rdquo; questions drawn offline from the Blank Map Generator&rsquo;s own map data &mdash; filterable by category, projected one at a time or printed as a quiz with an answer key, short answer or multiple choice with same-category distractors and a seeded, reprintable quiz version, plus a 2&ndash;6 team tournament scoreboard for the projector.
 
 ---
 
 ## Status
+
+**2026-08-14 — SS demo round 2: map questions + team tournament, session
+`gmq7xr`.** The headline and both Supporting items shipped; nothing cut.
+This is the round that finally makes the tool's own meta description true —
+it has claimed to be "the quiz-format companion to the Blank Map Generator"
+since it was built, while sharing nothing with 046 but a colour scheme.
+
+- **Map questions (new built-in category `maps`, 30 questions,
+  `bi90`–`bi119`).** An outline map with one region shaded, asking "which
+  country / US state is highlighted?". 15 US states (Maryland first) and 15
+  world countries, ids appended after `bi89` and never renumbered.
+- **New module `Tools/geography-bee-quiz-generator/gbq-map.js`.** Reads 046's
+  vendored Natural Earth GeoJSON in `Tools/blank-map-generator/data/` and its
+  `BASE_MAP_PRESETS` crops (guarded dynamic `import()` of `bmg-vector.js`,
+  same trick as `tlb-places.js`), and **writes nothing under
+  `Tools/blank-map-generator/`** — another session owned that folder this
+  round. Draws to a canvas and hands back a PNG data URL.
+- **Why the drawing is local rather than 046's `renderBaseMapCanvas()`:**
+  that function always renders a 4000 px long side because it is building a
+  poster-quality base map for IndexedDB. A quiz wants a 320 px thumbnail next
+  to question 7, and a printed quiz wants ten of them. Rendering ten 4000 px
+  continents and throwing 99% of each away is the wrong trade on a Chromebook,
+  and the snippet needs styling the base map has no concept of. The prompt
+  file explicitly blessed this fallback and 015 had already proven it. What is
+  genuinely shared is the geometry and the crops.
+- **Crops are data, not an algorithm.** A "smallest preset whose bounds
+  contain the region" rule gets most countries right on its own, but it puts
+  Iraq and Saudi Arabia on an *Africa* map (both fit inside that crop) and
+  Russia on *Europe* (its geometry wraps the antimeridian, so its bounding box
+  is the whole world). Rather than ship known-wrong answers on a demo day, the
+  crop is stated per region in `gbq-map.js`'s pool; the algorithm survives only
+  as the fallback for anything not listed.
+- **Small regions get a locator ring.** Rhode Island on a lower-48 map is
+  about four pixels wide. Anything under 7% of the canvas's long side gets a
+  circle drawn round it. Verified by eye: Rhode Island, Delaware, Hawaii ring;
+  Maryland and Texas don't need to.
+- **Works everywhere questions work.** Projector display (460 px map above the
+  options), printed quiz (inline data-URL image per question), and the answer
+  key, which repeats each map as a 90 px thumbnail — grading twenty "which
+  country is this?" papers against a list of bare names means counting down
+  the page and hoping. The key thumbnail is asserted to be the *identical*
+  image the student got, not a second render that could drift.
+- **Map multiple choice.** Distractors for a map question come from the region
+  pool of the same dataset, not from other questions' answers: "which state is
+  highlighted?" wants three other state names, and a teacher with four map
+  questions in rotation would otherwise get the same three every time. Nothing
+  leaks by naming a region with no question of its own — the answer *is* the
+  place name. A state question can never be offered a country (asserted across
+  all 30). Still drawn from the one seeded rng stream, so a printed map quiz
+  reprints identically, pictures and all.
+- **Bulk generation.** Bank tab: pick US states or world countries and N, and
+  the tool samples regions that don't already have a map question, so running
+  it twice gives twenty different states rather than the same ten again.
+- **Team tournament** on the projector tab: 2–6 named teams, configurable
+  points per question, a live scoreboard with the current team ringed,
+  alternating turns, and a final standings screen with ties handled. Scoring
+  is locked until Reveal — it's the click that ends the guessing, and it stops
+  a stray tap awarding points to a team that hasn't answered. Marking a
+  question advances the turn *and* the question, because those always happen
+  together. An in-progress game persists in the new `gbq_tournament_v1` and
+  reopens itself on load; the projector laptop does get closed at lunch.
+  Registered in `Tools/009-backup-restore.html` along with `gbq_disabled_v1`
+  and `gbq_settings_v1`, which had never been registered and so were silently
+  missing from teachers' backups.
+- **New suite `test/smoke-map-tournament.mjs`** (74 checks, wired into
+  `npm run test:geo-bee` and the end of the root `test` chain). The map half
+  is deliberately paranoid: rather than checking an `<img>` exists, it projects
+  two known lat/lons through the same plate carrée the renderer uses and reads
+  the pixels back — a point in Texas must come out highlight-coloured and a
+  point in California, on the same image, must not. It also draws all 30
+  built-ins (a typo in "Dem. Rep. Congo" would otherwise only surface the day
+  a teacher landed on it) and checks that two regions on one crop don't produce
+  the same PNG. The existing 29-check MC suite still passes unchanged.
+  Verified headless: zero console errors, zero offsite requests.
+
+**Where round 3 should pick up:** buzzer hardware / WebRTC pairing for the
+tournament was an explicit non-goal here and is the natural extension — the
+site already has a WebRTC pairing layer in `_shared/` that
+`021-pe-tournament-stations` and `004-classroom-timer` use, so student devices
+could buzz in without this tool growing a server. A timed bee mode and
+region/continent tagging are still unbuilt, and region tagging is now much
+cheaper than it was: `gbq-map.js` already groups every region by continent
+crop, so a "South America only" filter is mostly plumbing. Worth a backlog row
+rather than guessing: whether map questions should also be able to ask the
+*reverse* ("shade in Egypt on this blank map"), which is really a Blank Map
+Generator worksheet and probably belongs there.
 
 **2026-08-14 — SS demo round: multiple-choice quiz mode shipped (backlog
 rank 29), session `mee9kj`.** The headline feature from
@@ -146,21 +233,29 @@ link) before implementation.
 
 ## What it does today
 
-- 90 built-in questions, 3 categories (Capitals, Landmarks, Map Skills),
-  30 each, world-balanced
+- 120 built-in questions, 4 categories (Capitals, Landmarks, Map Skills,
+  Map Questions), 30 each, world-balanced
+- **Map questions**: an outline map with one region shaded, drawn offline
+  from the Blank Map Generator's vendored Natural Earth data by
+  `geography-bee-quiz-generator/gbq-map.js` — on the projector, on the
+  printed quiz, and as a thumbnail on the answer key
 - Category filter applies across all three views, and persists across
   page loads along with the printable-quiz question count
 - **Quiz format**: Short answer or Multiple choice, persisted, applied to
-  both the projector display and the printed quiz
+  both the projector display and the printed quiz. Map questions draw their
+  distractors from other regions in the same dataset
 - Projector mode: shuffle, reveal (in MC mode, reveal highlights the
   correct A&ndash;D option and states it in text)
+- **Team tournament**: 2&ndash;6 named teams, live scoreboard, alternating
+  turns, teacher-marked right/wrong, final standings, survives a reload
 - Print: randomized quiz subset + matching answer key, either short-answer
   blanks or lettered MC options with a letter+text key; a "Quiz version"
   number reseeds the same reproducible paper on demand
 - Custom question bank layered on the built-ins; individual built-ins can
   be hidden/shown without deleting them
 - **Bulk import** (tab/pipe lines, optional tolerant category token) that
-  appends to the custom bank
+  appends to the custom bank, and **bulk map-question generation** that
+  samples regions not already covered
 
 ## Quick Wins
 
@@ -178,17 +273,24 @@ Major Features below, or find a genuinely new gap.
 
 ## Major Features
 
-- **Direct integration with Blank Map Generator**, which the backlog
-  explicitly names as this tool's companion — e.g. a landmark or capital
-  question could link to (or auto-open) the relevant location on a Blank
-  Map Generator map, turning a text quiz into a map-and-quiz combined
-  activity. Still unbuilt; still blocked on the Open Question below.
+- ~~**Direct integration with Blank Map Generator**~~ — **done, 2026-08-14**
+  (SS demo round 2, headline; see Status). Answered the first Open Question
+  below in a third way neither option anticipated: not a link and not a
+  cross-page state handoff, but reading 046's data and crops directly and
+  drawing the map *inside* the question. Nothing is passed between pages, so
+  the toolkit still has no cross-tool navigation state anywhere.
+- **Buzz-in from student devices** — the tournament's natural next step, and
+  the explicit non-goal of round 2. `_shared/` already has the WebRTC pairing
+  layer that 021 and 004 use, so this needs no server.
 - **A timed "bee" mode**: sudden-death elimination format with a visible
   countdown per question, matching how an actual geography bee competition
   runs (as opposed to the current self-paced practice format).
-- **Region/continent tagging** beyond the current three categories, so a
+- **Region/continent tagging** beyond the current four categories, so a
   teacher covering "South America" specifically can filter to just that
-  region's capitals and landmarks instead of the whole world.
+  region's capitals and landmarks instead of the whole world. Cheaper now
+  than it was: `gbq-map.js` already groups every region by continent crop,
+  so the map questions come tagged for free — it's the other 90 that need
+  the work.
 - ~~**Bulk import a custom bank** from a pasted list~~ — **done,
   2026-08-12** (backlog round; see Status).
 - ~~**Multiple-choice quiz mode**~~ — **done, 2026-08-14** (SS demo round;
@@ -214,12 +316,17 @@ theme.
 
 ## Open Questions
 
-- Should Blank Map Generator integration be "click a question, jump to
-  that location on a map" (requires passing state between two separate
-  tool pages, which this toolkit doesn't currently do anywhere) or a
-  lighter-weight "here's a link to look this location up on Blank Map
-  Generator" (much simpler, less seamless)?
+- ~~Should Blank Map Generator integration be "jump to that location on a
+  map" or a lighter-weight link?~~ — **resolved 2026-08-14**: neither. The
+  map is drawn inside the question from 046's own data, so no state crosses
+  a page boundary and there is nothing to click away to.
 - Is a timed competitive-bee mode worth building as a mode within this
   tool, or does the self-paced practice format already cover the more
   common classroom use case (individual/small-group practice) well enough
-  that a full competition mode is lower priority than more content?
+  that a full competition mode is lower priority than more content? Round 2
+  narrowed this: the team tournament covers "run it as a game" without any
+  timing, so what's actually left open is whether *timing* adds anything a
+  teacher wants, not whether competition does.
+- Should map questions be able to run in reverse — "shade in Egypt on this
+  blank map" — or is that a Blank Map Generator worksheet that belongs in
+  046 rather than here? Worth a backlog row before anyone builds it.

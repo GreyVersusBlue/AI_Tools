@@ -298,3 +298,31 @@ colour ramp plus a WCAG relative-luminance helper (`RAMPS`,
 by an ordered value — the grade distribution visualizer is the obvious one —
 wants exactly this, and "does it survive the photocopier" is a property worth
 asserting in one place rather than re-arguing per tool.
+
+## Antimeridian-safe GeoJSON ring drawing now exists in three places (from 062, SS demo round 2)
+
+`unwrapRing()` / `drawableRings()` — the pair of functions that stop a plate
+carrée render of Natural Earth from ruling a stray line clean across the map
+every time a country's ring is clamped to ±180 (Fiji, Chukotka, Antarctica's
+closing edge) — now exists three times:
+
+- `Tools/blank-map-generator/bmg-vector.js` — the original, with the best
+  comments.
+- `Tools/timeline-builder/tlb-places.js` — delegates the render, but carries
+  its own copy of the projection maths for pin placement.
+- `Tools/geography-bee-quiz-generator/gbq-map.js` — added this round, adapted
+  from bmg-vector for snippet-sized renders.
+
+Three copies is the usual threshold. The natural extraction is a small
+`_shared/geo-project.js` holding the projection, its inverse, `unwrapRing`,
+`drawableRings` and a `traceFeature(ctx, …)` — deliberately *not* a renderer,
+since each consumer wants different paint and a different output size.
+`_shared/` is out of bounds during a parallel round, so this is a note rather
+than a change.
+
+Worth knowing before anyone does it: the three copies are not interchangeable.
+bmg-vector traces a whole FeatureCollection into one path; gbq-map has to be
+able to trace one named feature on its own, so a highlighted country's holes
+cancel against its own rings and not its neighbours'. A shared version needs
+both entry points, which is why the suggestion above is `traceFeature` rather
+than `traceFeatures`.
