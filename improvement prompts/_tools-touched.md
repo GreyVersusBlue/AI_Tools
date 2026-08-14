@@ -202,7 +202,6 @@ here.
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
 
-<<<<<<< HEAD
 ### Devon-assigned round 2 — tool 062 — 2026-08-14 03:48 UTC — session `gmq7xr`
 
 Geography Bee / Map Skills Quiz Generator
