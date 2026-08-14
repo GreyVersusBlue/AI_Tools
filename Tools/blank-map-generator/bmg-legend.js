@@ -31,8 +31,16 @@ export function lineLegendKey(color, style) {
   return style && style !== "solid" ? `${color}::${style}` : color;
 }
 
+// Choropleth class rows are keyed by class index, not by colour: the whole
+// point of a sequential ramp is that the colours are positions in an order,
+// so "the third band" is the stable thing to hang a caption on. Rebuilding
+// the map with a different ramp keeps whatever the teacher typed.
+export function choroLegendKey(classIndex) {
+  return `choro:${classIndex}`;
+}
+
 export function createLegendPanel(panelEl, {
-  onMarkerTextChange, onRegionTextChange, onLineTextChange,
+  onMarkerTextChange, onRegionTextChange, onLineTextChange, onChoroTextChange,
   onMarkerColorChange, onMarkerSizeChange, onMove, onReorder,
   onNumberedTextChange, onNumberedColorChange, onNumberedSizeChange,
 } = {}) {
@@ -76,9 +84,12 @@ export function createLegendPanel(panelEl, {
     row.className = "legend-row";
     row.innerHTML = `
       <span class="legend-icon" data-no-pan>${iconHtml}</span>
-      <input type="text" class="legend-input" data-no-pan placeholder="${placeholder}">
+      <input type="text" class="legend-input" data-no-pan>
     `;
     const input = row.querySelector("input");
+    // Set as a property, not in the markup: a choropleth row's placeholder is
+    // its generated numeric range, which is data rather than a literal.
+    input.placeholder = placeholder;
     input.value = (legendText && legendText[key]) || "";
     input.addEventListener("input", () => onInput?.(key, input.value));
     input.addEventListener("pointerdown", e => e.stopPropagation());
@@ -167,6 +178,7 @@ export function createLegendPanel(panelEl, {
     markers, legendText, iconSvg, markerColorHex, colorOptions = [], sizeOptions = [],
     regions, regionLegendText, swatchSvg,
     lines, lineLegendText, lineSwatchSvg: lineSwatch,
+    choroRows, choroLegendText, choroSwatchSvg: choroSwatch,
     order,
   } = {}) {
     const groups = [];
@@ -195,10 +207,18 @@ export function createLegendPanel(panelEl, {
       seenLineGroup.add(gkey);
       lineGroups.push({ color: l.color, style: l.style });
     });
-    if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length) { panelEl.hidden = true; return; }
+    const choro = (choroRows || []).filter(r => r && r.hex);
+    if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length && !choro.length) { panelEl.hidden = true; return; }
     panelEl.hidden = false;
 
     const items = [];
+    // Data-shading classes lead the key by default: on a shaded map they are
+    // what the reader has to decode before anything else means much. They are
+    // still ordinary draggable rows, so a teacher can reorder them.
+    choro.forEach(r => items.push({
+      row: buildCaptionRow(r.key, choroLegendText, choroSwatch(r.hex, 18), r.label, onChoroTextChange),
+      key: r.key,
+    }));
     groups.forEach(g => items.push(buildMarkerRow(g, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions)));
     numbered.forEach((m, i) => items.push(buildNumberedRow(m, i + 1, legendText, iconSvg, markerColorHex, colorOptions, sizeOptions)));
     regionGroups.forEach(g => {

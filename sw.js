@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v112';
+const CACHE_VERSION = 'v113';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -49,6 +49,7 @@ const PRECACHE_URLS = [
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
   "Tools/046-blank-map-generator.html",
+  "Tools/blank-map-generator/bmg-choropleth.js",
   "Tools/blank-map-generator/bmg-colors.js",
   "Tools/blank-map-generator/bmg-commons.js",
   "Tools/blank-map-generator/bmg-geography.js",

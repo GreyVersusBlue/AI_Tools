@@ -33,7 +33,13 @@ function blankProjectData() {
     pageFormat: { type: "letter", flipped: false, customW: 4, customH: 3 },
     grayscaleSafePrint: true,
     worksheet: blankWorksheetSettings(),
+    choropleth: blankChoroplethSettings(), choroLegendText: {},
   };
+}
+
+/** Data-shading settings for a built-in base map (see bmg-choropleth.js). The pasted text lives here rather than only in the textarea so a shaded map comes back shaded — and re-editable — after a reload. */
+function blankChoroplethSettings() {
+  return { enabled: false, text: "", classes: 5, ramp: "blues", legendRows: [] };
 }
 
 /** Defaults for the numbered-blank worksheet builder (see the worksheet section of 046-blank-map-generator.html). Saved per project so a teacher's chosen wording/layout comes back with the map it belongs to. */
@@ -76,6 +82,20 @@ function normalizeProjectData(p) {
   if (!Number.isFinite(p.pageFormat.customW) || p.pageFormat.customW <= 0) p.pageFormat.customW = 4;
   if (!Number.isFinite(p.pageFormat.customH) || p.pageFormat.customH <= 0) p.pageFormat.customH = 3;
   if (typeof p.grayscaleSafePrint !== "boolean") p.grayscaleSafePrint = true;
+  p.choropleth = { ...blankChoroplethSettings(), ...(p.choropleth && typeof p.choropleth === "object" ? p.choropleth : {}) };
+  if (typeof p.choropleth.enabled !== "boolean") p.choropleth.enabled = false;
+  if (typeof p.choropleth.text !== "string") p.choropleth.text = "";
+  if (!Number.isFinite(p.choropleth.classes)) p.choropleth.classes = 5;
+  p.choropleth.classes = Math.max(4, Math.min(6, Math.round(p.choropleth.classes)));
+  if (typeof p.choropleth.ramp !== "string") p.choropleth.ramp = "blues";
+  // The class rows are stored, not recomputed: they are the key that belongs
+  // to the raster already in the map cache, so a reload shows the same map
+  // with the same key without re-reading a 250 KB data file.
+  if (!Array.isArray(p.choropleth.legendRows)) p.choropleth.legendRows = [];
+  p.choropleth.legendRows = p.choropleth.legendRows
+    .filter(r => r && typeof r.key === "string" && typeof r.hex === "string")
+    .map(r => ({ key: r.key, label: String(r.label || ""), hex: r.hex }));
+  if (!p.choroLegendText || typeof p.choroLegendText !== "object") p.choroLegendText = {};
   p.worksheet = { ...blankWorksheetSettings(), ...(p.worksheet && typeof p.worksheet === "object" ? p.worksheet : {}) };
   if (!["beside", "below"].includes(p.worksheet.listPlacement)) p.worksheet.listPlacement = "beside";
   if (!Number.isFinite(p.worksheet.versions) || p.worksheet.versions < 1) p.worksheet.versions = 1;
