@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Historical Figure / Country Trading Card Maker</title>
-<meta name="description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, and PNG/PDF export, from a roster or an assigned list.">
+<meta name="description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, roster batch-add, and share a finished deck by link or QR code.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AsPerMyLessonPlan.com">
 <meta property="og:url" content="https://www.aspermylessonplan.com/Tools/064-historical-trading-card-maker.html">
 <meta property="og:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
-<meta property="og:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, and PNG/PDF export, from a roster or an assigned list.">
+<meta property="og:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, roster batch-add, and share a finished deck by link or QR code.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Historical Figure / Country Trading Card Maker — AsPerMyLessonPlan.com">
-<meta name="twitter:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, and PNG/PDF export, from a roster or an assigned list.">
+<meta name="twitter:description" content="Design collectible research trading cards with era themes, rarity foils, photo crop &amp; shapes, and stat bars — live preview, duplex printing, PNG/PDF/zip export, roster batch-add, and share a finished deck by link or QR code.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='7' y='5' width='18' height='22' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Ccircle cx='16' cy='13' r='3.5' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M10 22c1-3 4-4 6-4s5 1 6 4' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3C/svg%3E">
 <script src="../_shared/a11y.js"></script>
 <link rel="stylesheet" href="../_shared/ink-paper.css">
@@ -185,6 +185,19 @@
   }
   .save-warn.show { display: block; }
 
+  /* ---- share a deck by link / QR (state-link.js, same pattern as
+     028-primary-source-analysis-generator.html) ---- */
+  .share-note { font-size: .8rem; line-height: 1.5; margin: .5rem 0 0; padding: .55rem .7rem; border-radius: 6px;
+    background: rgba(42, 109, 176, .09); border: 1px solid rgba(42, 109, 176, .3); word-break: break-all; }
+  .share-note.error { background: rgba(176, 42, 42, .09); border-color: rgba(176, 42, 42, .35); }
+  .share-overlay { position: fixed; inset: 0; background: rgba(10, 10, 14, .6); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 80; }
+  .share-overlay[hidden] { display: none; }
+  .share-modal { background: #fff; color: var(--ink); border-radius: 10px; padding: 16px 18px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); }
+  .share-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-weight: 700; margin-bottom: 10px; }
+  #shareCanvas { display: block; width: 264px; height: 264px; margin: 0 auto; image-rendering: pixelated; }
+
   .theme-swatches { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
   .theme-swatch {
     font-size: .78rem; font-weight: 700; color: #222; text-shadow: 0 1px 2px rgba(255,255,255,.85);
@@ -253,6 +266,25 @@
       <button type="button" class="danger" id="deleteDeckBtn">Delete</button>
     </div>
     <p class="hint" style="margin-bottom:0;">Each deck keeps its own cards, theme, and set name &mdash; e.g. one per class period or unit.</p>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-start; margin-top:.7rem;">
+      <button type="button" class="secondary" id="shareLinkBtn">&#128279; Share deck link</button>
+      <button type="button" class="secondary" id="shareQrBtn">&#9638; QR code</button>
+      <button type="button" class="secondary" id="sampleDeckBtn">Load sample deck</button>
+    </div>
+    <p class="hint" id="shareHint" style="margin:.4rem 0 0;">A share link carries card text, stats, themes, and rarity &mdash; not photos, which stay on this device. To send finished cards with photos, use Download PDF or All PNGs (zip) above.</p>
+    <p id="shareNote" class="share-note" style="display:none;" aria-live="polite"></p>
+  </div>
+
+  <div class="share-overlay" id="shareOverlay" hidden>
+    <div class="share-modal" role="dialog" aria-modal="true" aria-label="Deck QR code">
+      <div class="share-head">
+        <span>Scan to open this deck</span>
+        <button type="button" class="secondary" style="width:auto;margin:0;" id="shareCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <canvas id="shareCanvas"></canvas>
+      <p class="hint" style="margin:.6rem 0 0;">Opens on that device and saves there as a new deck &mdash;
+        it never overwrites a deck already on that device. Photos stay behind.</p>
+    </div>
   </div>
 
   <div class="card">
@@ -311,6 +343,9 @@
   <div class="photo-editor-overlay" id="rosterOverlay" style="display:none;">
     <div class="photo-editor" role="dialog" aria-label="Batch-add from a roster">
       <h3>Batch-add from a roster</h3>
+      <label for="rosterClassSelect">Load a saved class list (optional)</label>
+      <select id="rosterClassSelect"></select>
+      <p class="hint">From Name Picker or Class Roster Hub &mdash; fills the box below, still editable before you add.</p>
       <p class="hint">One name per line &mdash; a historical figure, a country, or a student&rsquo;s assigned topic. Each line becomes a blank card to fill in.</p>
       <textarea id="rosterText" style="min-height:8rem;" placeholder="Harriet Tubman&#10;Frederick Douglass&#10;Sojourner Truth"></textarea>
       <div class="pe-actions">
@@ -356,6 +391,8 @@
 <script src="historical-trading-card-maker/htcm-render.js"></script>
 <script src="../_shared/duplex-print.js"></script>
 <script src="historical-trading-card-maker/htcm-export.js"></script>
+<script src="../_shared/state-link.js"></script>
+<script src="../_shared/vendor/qrcode/qrcode.js"></script>
 <script src="../_shared/vendor/jspdf/jspdf.umd.min.js" defer></script>
 <script src="../_shared/vendor/jszip/jszip.min.js" defer></script>
 <script>
@@ -367,7 +404,8 @@
    'previewStage', 'previewFlipper', 'previewFront', 'previewBack', 'flipBtn', 'themeSwatches', 'newRarity',
    'adjustBtn', 'newStars', 'setNameInput', 'numberBtn', 'pngBtn', 'pdfBtn', 'zipBtn',
    'deckSelect', 'newDeckBtn', 'renameDeckBtn', 'deleteDeckBtn',
-   'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn'].forEach(function (id) {
+   'rosterBtn', 'rosterOverlay', 'rosterText', 'rosterAddBtn', 'rosterCancelBtn', 'rosterClassSelect',
+   'shareLinkBtn', 'shareQrBtn', 'shareNote', 'shareOverlay', 'shareCanvas', 'shareCloseBtn', 'sampleDeckBtn'].forEach(function (id) {
     els[id] = document.getElementById(id);
   });
 
@@ -687,8 +725,214 @@
     }
   });
 
-  /* ---------- roster batch-add ---------- */
+  /* ---------- share a deck by link / QR (state-link.js, same pattern as
+     028-primary-source-analysis-generator.html) ----------
+     The payload deliberately drops every card's `image` — a downscaled photo
+     is still a data URL that can run past what a URL bar (let alone a QR
+     code) can carry. Everything typed travels intact: stats, facts, rarity,
+     stars, per-card theme override, and the deck's own theme/size settings. */
+  var SHARE_PARAM = 'deck';
+
+  function setShareNote(text, isError) {
+    els.shareNote.textContent = text || '';
+    els.shareNote.style.display = text ? '' : 'none';
+    els.shareNote.classList.toggle('error', !!isError);
+  }
+
+  function buildSharePayload() {
+    if (!entries.length) return null;
+    return {
+      v: 1,
+      name: deckName,
+      settings: doc.settings,
+      cards: entries.map(function (c) {
+        return {
+          id: c.id, name: c.name, image: null, stats: c.stats, facts: c.facts,
+          meta: c.meta, theme: c.theme
+        };
+      })
+    };
+  }
+  function shareUrl() {
+    var payload = buildSharePayload();
+    return payload ? StateLink.buildShareUrl(SHARE_PARAM, payload) : null;
+  }
+  function shareSuccessMessage() {
+    var msg = 'Link copied. Opening it anywhere saves this deck there as a new deck — card text, stats, themes, and rarity travel; it never overwrites a deck already on that device.';
+    if (entries.some(function (e) { return e.image; })) {
+      msg += ' Photos are too large to ride in a link, so they stay on this device — use Download PDF or All PNGs (zip) to send the finished cards with photos.';
+    }
+    return msg;
+  }
+  els.shareLinkBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Add at least one card first.', true); return; }
+    var copy = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(url) : Promise.reject();
+    copy.then(
+      function () { setShareNote(shareSuccessMessage()); },
+      function () { window.prompt('Copy this link:', url); setShareNote('Clipboard unavailable here — the link is in the box above.'); }
+    );
+  });
+
+  function drawShareQr(canvas, text) {
+    var qr = window.qrcode(0, 'L');
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount(), quiet = 4, px = 6;
+    var size = (count + quiet * 2) * px;
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#16181d';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((quiet + c) * px, (quiet + r) * px, px, px);
+      }
+    }
+  }
+  els.shareQrBtn.addEventListener('click', function () {
+    var url = shareUrl();
+    if (!url) { setShareNote('Add at least one card first.', true); return; }
+    try {
+      drawShareQr(els.shareCanvas, url);
+    } catch (e) {
+      // A QR code holds far less than a URL bar does — a big deck (many cards,
+      // long fact lists) can overrun even the largest QR version. Say so and
+      // point at the link instead of drawing a square nobody's phone can read.
+      setShareNote('This deck is too big for a QR code (' + Math.round(url.length / 1024) +
+        ' KB of link). Use "Share deck link" instead — a copied link has no such limit.', true);
+      return;
+    }
+    els.shareOverlay.hidden = false;
+    setShareNote(entries.some(function (e) { return e.image; })
+      ? 'Heads up: photos don’t fit in the QR code — the rest of the deck travels intact.' : '');
+  });
+  els.shareCloseBtn.addEventListener('click', function () { els.shareOverlay.hidden = true; });
+  els.shareOverlay.addEventListener('mousedown', function (e) { if (e.target === els.shareOverlay) els.shareOverlay.hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !els.shareOverlay.hidden) els.shareOverlay.hidden = true; });
+
+  /** Consume a ?deck= link on load. Saves the arrival as a new, uniquely-named
+      deck — never over an existing one, including "My cards". Returns true
+      only if it actually opened a new deck (and therefore already rendered
+      everything boot() would otherwise render itself). */
+  function importSharedDeck() {
+    var raw = StateLink.getParam(SHARE_PARAM);
+    if (!raw) return false;
+    StateLink.clearParam(SHARE_PARAM); // consumed up front so a refresh can't import it twice
+    var decoded = StateLink.decodeState(raw);
+    if (!decoded || typeof decoded !== 'object' || !Array.isArray(decoded.cards) || !decoded.cards.length) {
+      alert('That shared deck link could not be read — it may have been cut short when it was copied or emailed.');
+      return false; // nothing opened — let the normal boot path render the current deck
+    }
+    var name = (decoded.name && String(decoded.name).trim()) || 'Shared deck';
+    var existing = HtcmStore.listDecks();
+    if (existing.indexOf(name) !== -1) {
+      name = name + ' (shared)';
+      while (existing.indexOf(name) !== -1) name = name + ' 2';
+    }
+    var fresh = HtcmStore.repairDoc({ cards: decoded.cards, settings: decoded.settings });
+    HtcmStore.saveDeck(name, fresh);
+    openDeck(name, fresh);
+    setShareNote('Opened from a shared link and saved here as “' + name + '”. It’s your copy now — photos stayed behind, so add them here if you want them.');
+    return true;
+  }
+
+  /* ---------- load sample deck ----------
+     One click, for the moment this tool needs to look great with zero setup
+     — a live demo, a first look by a colleague. Real research-card content
+     (no stock photos: this schema's images are teacher-uploaded, so a
+     "sample photo" would mean shipping a fake one), mixed rarities and
+     themes to show off the visual system, saved as its own deck so it never
+     touches whatever a teacher already has. */
+  function sampleDeckCards() {
+    return [
+      { name: 'George Washington', rarity: 'legendary', stars: 5, theme: null,
+        stats: [['Born', '1732'], ['Died', '1799'], ['Known for', 'First U.S. President'], ['Leadership', '9/10'], ['Legacy', '10/10']],
+        facts: ['Commanded the Continental Army through the Revolutionary War.',
+          'Presided over the Constitutional Convention in 1787.',
+          'Stepped down after two terms, setting a precedent that lasted until the 22nd Amendment.'] },
+      { name: 'Benjamin Franklin', rarity: 'epic', stars: 4, theme: null,
+        stats: [['Born', '1706'], ['Died', '1790'], ['Known for', 'Inventor & diplomat'], ['Ingenuity', '10/10'], ['Influence', '8/10']],
+        facts: ['Published Poor Richard’s Almanack and built a successful printing business.',
+          'Studied electricity, including the famous kite-and-key experiment.',
+          'Helped negotiate French support for the Revolution and later signed the Treaty of Paris.'] },
+      { name: 'Abigail Adams', rarity: 'rare', stars: 3, theme: 'renaissance',
+        stats: [['Born', '1744'], ['Died', '1818'], ['Known for', 'Advisor & advocate'], ['Influence', '7/10'], ['Correspondence', '9/10']],
+        facts: ['Wrote hundreds of letters to John Adams, including the famous "remember the ladies" letter.',
+          'Ran the family farm and finances while John served in Congress and abroad.',
+          'Became the first second lady and the second first lady of the United States.'] },
+      { name: 'Alexander Hamilton', rarity: 'rare', stars: 4, theme: 'deco',
+        stats: [['Born', '1755'], ['Died', '1804'], ['Known for', 'First Treasury Secretary'], ['Ambition', '9/10'], ['Financial skill', '10/10']],
+        facts: ['Wrote most of the Federalist Papers arguing for ratifying the Constitution.',
+          'Founded the national bank and set up the young country’s financial system.',
+          'Died in 1804 after a duel with Vice President Aaron Burr.'] },
+      { name: 'Phillis Wheatley', rarity: 'common', stars: 3, theme: null,
+        stats: [['Born', '1753'], ['Died', '1784'], ['Known for', 'Poet'], ['Talent', '9/10'], ['Legacy', '8/10']],
+        facts: ['Became the first published African American poet in 1773.',
+          'Was enslaved as a child and taught to read and write by the Wheatley family.',
+          'Her poetry gained her renown in both America and England.'] }
+    ];
+  }
+  els.sampleDeckBtn.addEventListener('click', function () {
+    var raw = sampleDeckCards();
+    var name = 'Sample deck';
+    var existing = HtcmStore.listDecks();
+    if (existing.indexOf(name) !== -1) {
+      if (!window.confirm('A deck named “' + name + '” already exists. Load another copy as a new deck?')) return;
+      var n = 2;
+      while (existing.indexOf(name + ' ' + n) !== -1) n++;
+      name = name + ' ' + n;
+    }
+    var cards = raw.map(function (c, i) {
+      return {
+        id: uid(), name: c.name, image: null,
+        stats: c.stats.map(function (s) { return { label: s[0], value: s[1] }; }),
+        facts: c.facts,
+        meta: { rarity: c.rarity, setName: 'American Revolution Figures', cardNo: i + 1, setSize: raw.length, stars: c.stars },
+        theme: c.theme
+      };
+    });
+    var fresh = HtcmStore.repairDoc({ cards: cards, settings: { theme: 'parchment', size: cardSize } });
+    HtcmStore.saveDeck(name, fresh);
+    openDeck(name, fresh);
+  });
+
+  /* ---------- roster batch-add ----------
+     Rosters live in `np_rosters`, written by Name Picker and Class Roster
+     Hub — the toolkit's shared class list (same read pattern as
+     050-civics-role-card-generator.html). The dropdown is a convenience:
+     picking a class list fills the paste textarea below it, which stays the
+     fallback (and the thing actually read on "Add cards") when no rosters
+     exist or a teacher wants to type/paste a custom list instead. */
+  function loadRosters() {
+    try {
+      var r = JSON.parse(localStorage.getItem('np_rosters') || '{}');
+      return (r && typeof r === 'object') ? r : {};
+    } catch (e) { return {}; }
+  }
+  function populateRosterClassSelect() {
+    var rosters = loadRosters();
+    var names = Object.keys(rosters).filter(function (n) { return Array.isArray(rosters[n]) && rosters[n].length; });
+    if (!names.length) {
+      els.rosterClassSelect.innerHTML = '<option value="">No saved class lists found &mdash; paste names below</option>';
+      return;
+    }
+    els.rosterClassSelect.innerHTML = '<option value="">Paste names manually below&hellip;</option>' +
+      names.map(function (n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+  }
+  els.rosterClassSelect.addEventListener('change', function () {
+    var name = els.rosterClassSelect.value;
+    if (!name) return;
+    var list = loadRosters()[name];
+    if (Array.isArray(list) && list.length) els.rosterText.value = list.join('\n');
+  });
+  window.addEventListener('storage', function (ev) {
+    if (ev.key === 'np_rosters') populateRosterClassSelect();
+  });
+
   els.rosterBtn.addEventListener('click', function () {
+    populateRosterClassSelect(); // refresh in case a roster was saved since the page loaded
     els.rosterOverlay.style.display = '';
     els.rosterText.focus();
   });
@@ -863,12 +1107,17 @@
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', HtcmFrames.defsSvg());
-  if (entries.length && entries[0].meta.setName) els.setNameInput.value = entries[0].meta.setName;
-  renderDeckSelect();
-  applyCardSize();
-  renderThemeSwatches();
-  renderEntries();
-  updateFormMode();
+  populateRosterClassSelect();
+  if (!importSharedDeck()) {
+    // openDeck() (called from inside importSharedDeck on success) already
+    // renders everything a fresh boot needs; only run this path otherwise.
+    if (entries.length && entries[0].meta.setName) els.setNameInput.value = entries[0].meta.setName;
+    renderDeckSelect();
+    applyCardSize();
+    renderThemeSwatches();
+    renderEntries();
+    updateFormMode();
+  }
 })();
 </script>
 <script src="../_shared/sw-register.js" defer></script>
