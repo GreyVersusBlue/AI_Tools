@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v115';
+const CACHE_VERSION = 'v116';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -115,6 +115,7 @@ const PRECACHE_URLS = [
   "Tools/formula-sheet-builder/fsb-templates.js",
   "Tools/017-gallery-walk-qr.html",
   "Tools/062-geography-bee-quiz-generator.html",
+  "Tools/geography-bee-quiz-generator/gbq-map.js",
   "Tools/037-grade-distribution-visualizer.html",
   "Tools/063-grammar-mad-libs-generator.html",
   "Tools/012-graph-paper-generator.html",

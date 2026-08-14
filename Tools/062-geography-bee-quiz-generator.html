@@ -94,6 +94,32 @@
   .mc-print-options { margin-top: .35rem; display: grid; grid-template-columns: 1fr 1fr; gap: .2rem .9rem; font-size: .9rem; }
   .mc-print-opt { padding-left: .1rem; }
 
+  /* map questions */
+  .display-map { width: 100%; display: flex; justify-content: center; }
+  .display-map.hidden { display: none; }
+  .map-snippet { display: block; max-width: 100%; height: auto; border-radius: 6px; }
+  .map-status { color: var(--muted); font-size: .85rem; margin: .3rem 0; }
+  .problem .map-snippet { margin: .35rem 0 .2rem; }
+  .key-list .map-snippet { display: inline-block; vertical-align: middle; margin-right: .4rem; }
+
+  /* team tournament */
+  .tour-board { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 .7rem; }
+  .tour-team {
+    display: flex; align-items: baseline; gap: .5rem; padding: .4rem .8rem;
+    border: 1px solid var(--line-strong); border-radius: 999px; background: #fff; font-size: .9rem;
+  }
+  .tour-team.up { border-color: var(--accent); background: rgba(42, 109, 176, .1); font-weight: 700; }
+  .tour-team .tour-score { font-weight: 700; font-size: 1.05rem; }
+  .tour-turn { font-size: .95rem; margin: 0 0 .6rem; }
+  .tour-turn b { color: var(--accent-2); }
+  .tour-names { display: flex; flex-wrap: wrap; gap: .6rem; margin: .6rem 0; }
+  .tour-names input { max-width: 11rem; margin-bottom: 0; }
+  .tour-standings { margin: .3rem 0 0; padding: 0; list-style: none; font-size: 1rem; }
+  .tour-standings li { padding: .35rem 0; border-bottom: 1px dashed var(--line); }
+  .tour-standings li:last-child { border-bottom: none; }
+  .tour-standings .place { display: inline-block; min-width: 2.4rem; font-weight: 700; color: var(--muted); }
+  .tour-standings .lead { color: var(--ok); font-weight: 700; }
+
   .bank-row { padding: .4rem 0; border-bottom: 1px dashed var(--line); font-size: .86rem; }
   .bank-row:last-child { border-bottom: none; }
   .bank-list { max-height: 40vh; overflow-y: auto; }
@@ -114,6 +140,10 @@
     #printArea, #printArea * { visibility: visible; }
     #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; }
     .sheet-page { border: none; page-break-after: always; }
+    /* A map and its question belong on the same page; splitting them turns the
+       question into "which country is highlighted on the map overleaf?". */
+    .problem, .key-list li { page-break-inside: avoid; break-inside: avoid; }
+    .map-snippet { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -123,7 +153,7 @@
     <div>
       <a class="back-link" href="../index.html">&larr; Toolkit</a>
       <h1>Geography Bee / Map Skills Quiz Generator</h1>
-      <p class="sub">Capitals, landmarks, and map-reading questions &mdash; project one at a time or print a quiz with an answer key.</p>
+      <p class="sub">Capitals, landmarks, map-reading skills, and outline-map questions &mdash; project one at a time, print a quiz with an answer key, or run it as a team tournament.</p>
     </div>
   </div>
 
@@ -136,6 +166,7 @@
           <option value="capitals">Capitals</option>
           <option value="landmarks">Landmarks</option>
           <option value="mapskills">Map Skills</option>
+          <option value="maps">Map Questions</option>
         </select>
       </div>
       <div class="field">
@@ -160,11 +191,57 @@
   <div class="stage active" id="stage-display">
     <div class="btnrow" style="margin-bottom:1rem;">
       <button class="secondary small" id="shuffleBtn">Shuffle order</button>
+      <button class="secondary small" type="button" id="tourToggleBtn" aria-expanded="false">Team tournament</button>
     </div>
+
+    <div class="card" id="tournamentCard" style="display:none;">
+      <h2>Team tournament</h2>
+      <div id="tourSetup">
+        <p class="hint">Teams take turns. Reveal the answer, mark it right or wrong, and the tool keeps score and
+          moves on to the next team. No timers, no student devices &mdash; you drive it from the front of the room.</p>
+        <div class="controls">
+          <div class="field">
+            <label for="tourTeams">How many teams</label>
+            <select id="tourTeams">
+              <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tourPoints">Points for a correct answer</label>
+            <input type="number" id="tourPoints" value="1" min="1" max="10">
+          </div>
+          <div class="field">
+            <button type="button" id="tourStartBtn">Start tournament</button>
+          </div>
+        </div>
+        <label>Team names</label>
+        <div class="tour-names" id="tourNames"></div>
+      </div>
+      <div id="tourLive" style="display:none;">
+        <div class="tour-board" id="tourBoard"></div>
+        <p class="tour-turn" id="tourTurn" aria-live="polite"></p>
+        <div class="btnrow">
+          <button type="button" id="tourRightBtn">Correct</button>
+          <button type="button" class="secondary" id="tourWrongBtn">No points</button>
+          <button type="button" class="secondary" id="tourStandingsBtn">Final standings</button>
+          <button type="button" class="danger small" id="tourEndBtn">End tournament</button>
+        </div>
+      </div>
+      <div id="tourStandings" style="display:none;">
+        <h2 id="tourStandingsTitle">Final standings</h2>
+        <ol class="tour-standings" id="tourStandingsList"></ol>
+        <div class="btnrow" style="margin-top:.8rem;">
+          <button type="button" class="secondary" id="tourResumeBtn">Keep playing</button>
+          <button type="button" class="danger" id="tourNewBtn">New tournament</button>
+        </div>
+      </div>
+    </div>
+
     <div class="display-card">
       <div class="display-num" id="displayNum"></div>
       <div class="display-cat" id="displayCat"></div>
       <div class="display-q" id="displayQ"></div>
+      <div class="display-map hidden" id="displayMap"></div>
       <div class="display-options hidden" id="displayOptions"></div>
       <div class="display-a" id="displayA"></div>
       <div class="display-nav">
@@ -218,6 +295,29 @@
       <button id="addQBtn">Add to bank</button>
     </div>
     <div class="card">
+      <h2>Generate map questions</h2>
+      <p class="hint">Builds &ldquo;which one is highlighted?&rdquo; questions from the same offline map data the
+        Blank Map Generator draws with. Pick how many and the tool samples regions you haven&rsquo;t already got a
+        map question for, so running it twice keeps adding new ones instead of repeating itself.</p>
+      <div class="controls">
+        <div class="field">
+          <label for="mapGenDataset">Regions</label>
+          <select id="mapGenDataset">
+            <option value="us">US states</option>
+            <option value="world">World countries</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="mapGenCount">How many</label>
+          <input type="number" id="mapGenCount" value="10" min="1" max="40">
+        </div>
+        <div class="field">
+          <button type="button" class="secondary" id="mapGenBtn">Generate</button>
+        </div>
+      </div>
+      <p class="bulk-note" id="mapGenNote" style="display:none;" aria-live="polite"></p>
+    </div>
+    <div class="card">
       <h2>Bulk import a custom bank</h2>
       <p class="hint">One question per line: <code>question | answer | category</code> (or paste straight from a
         spreadsheet &mdash; tab-separated works). Category is optional &mdash; <code>capitals</code>,
@@ -241,7 +341,8 @@
   var CUSTOM_KEY = 'gbq_custom_v1';
   var DISABLED_KEY = 'gbq_disabled_v1';
   var SETTINGS_KEY = 'gbq_settings_v1';
-  var CAT_LABELS = { capitals: 'Capitals', landmarks: 'Landmarks', mapskills: 'Map Skills' };
+  var TOURNAMENT_KEY = 'gbq_tournament_v1';
+  var CAT_LABELS = { capitals: 'Capitals', landmarks: 'Landmarks', mapskills: 'Map Skills', maps: 'Map Questions' };
 
   var BUILTIN_RAW = [
     ['capitals', 'What is the capital of France?', 'Paris'],
@@ -341,18 +442,105 @@
     ['mapskills', 'What is another name for lines of longitude?', 'Meridians'],
     ['mapskills', 'On most maps, what symbol marks a country’s capital city?', 'A star']
   ];
-  var BUILTIN = BUILTIN_RAW.map(function (row, i) { return { id: 'bi' + i, category: row[0], q: row[1], a: row[2], custom: false }; });
+
+  /* ---------- built-in map questions (SS demo round 2) ----------
+     A fourth question type: an outline map with one region picked out, drawn
+     offline from the Blank Map Generator's own vendored Natural Earth data by
+     ./geography-bee-quiz-generator/gbq-map.js.
+
+     Each row is [dataset, name in the map data, what the student writes, crop].
+     The name has to match the data exactly ("Dem. Rep. Congo"); the answer is
+     what a 7th grader should actually put on the line. The crop is stated here
+     rather than looked up so these 30 keep drawing even if the module can't
+     load its region table.
+
+     Ids continue the bi<N> scheme straight after bi89 and are NEVER
+     renumbered — a teacher's hidden-question list points at them by id, so
+     inserting a row above would silently hide the wrong question. Append only. */
+  var MAP_BUILTINS = [
+    ['us', 'Maryland', 'Maryland', 'usa-48'],
+    ['us', 'Texas', 'Texas', 'usa-48'],
+    ['us', 'California', 'California', 'usa-48'],
+    ['us', 'Florida', 'Florida', 'usa-48'],
+    ['us', 'New York', 'New York', 'usa-48'],
+    ['us', 'Pennsylvania', 'Pennsylvania', 'usa-48'],
+    ['us', 'Michigan', 'Michigan', 'usa-48'],
+    ['us', 'Colorado', 'Colorado', 'usa-48'],
+    ['us', 'Louisiana', 'Louisiana', 'usa-48'],
+    ['us', 'Virginia', 'Virginia', 'usa-48'],
+    ['us', 'Ohio', 'Ohio', 'usa-48'],
+    ['us', 'Nevada', 'Nevada', 'usa-48'],
+    ['us', 'Maine', 'Maine', 'usa-48'],
+    ['us', 'Alaska', 'Alaska', 'usa-50'],
+    ['us', 'Hawaii', 'Hawaii', 'usa-50'],
+    ['world', 'France', 'France', 'europe'],
+    ['world', 'Italy', 'Italy', 'europe'],
+    ['world', 'Germany', 'Germany', 'europe'],
+    ['world', 'Egypt', 'Egypt', 'africa'],
+    ['world', 'Kenya', 'Kenya', 'africa'],
+    ['world', 'South Africa', 'South Africa', 'africa'],
+    ['world', 'Brazil', 'Brazil', 'south-america'],
+    ['world', 'Argentina', 'Argentina', 'south-america'],
+    ['world', 'Japan', 'Japan', 'asia'],
+    ['world', 'India', 'India', 'asia'],
+    ['world', 'China', 'China', 'asia'],
+    ['world', 'Australia', 'Australia', 'oceania'],
+    ['world', 'Mexico', 'Mexico', 'north-america'],
+    ['world', 'Canada', 'Canada', 'north-america'],
+    ['world', 'Russia', 'Russia', 'world']
+  ];
+  function mapQuestionText(dataset) {
+    return dataset === 'us'
+      ? 'Which US state is highlighted on the map?'
+      : 'Which country is highlighted on the map?';
+  }
+
+  var BUILTIN = BUILTIN_RAW.map(function (row, i) { return { id: 'bi' + i, category: row[0], q: row[1], a: row[2], custom: false }; })
+    .concat(MAP_BUILTINS.map(function (row, i) {
+      return {
+        id: 'bi' + (BUILTIN_RAW.length + i), category: 'maps', custom: false,
+        q: mapQuestionText(row[0]), a: row[2],
+        map: { dataset: row[0], region: row[1], context: row[3] }
+      };
+    }));
 
   var els = {};
-  ['categoryFilter', 'formatSelect', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayOptions', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
+  ['categoryFilter', 'formatSelect', 'applyFilterBtn', 'displayNum', 'displayCat', 'displayQ', 'displayMap', 'displayOptions', 'displayA', 'prevBtn', 'revealBtn', 'nextBtn', 'shuffleBtn',
    'sheetCount', 'quizVersion', 'buildSheetBtn', 'newVersionBtn', 'printBtn', 'sheetProblems', 'sheetKey',
    'newCategory', 'newQ', 'newA', 'addQBtn', 'bankCount', 'bankList',
-   'bulkInput', 'bulkImportBtn', 'bulkNote'].forEach(function (id) { els[id] = document.getElementById(id); });
+   'bulkInput', 'bulkImportBtn', 'bulkNote',
+   'mapGenDataset', 'mapGenCount', 'mapGenBtn', 'mapGenNote',
+   'tourToggleBtn', 'tournamentCard', 'tourSetup', 'tourTeams', 'tourPoints', 'tourStartBtn', 'tourNames',
+   'tourLive', 'tourBoard', 'tourTurn', 'tourRightBtn', 'tourWrongBtn', 'tourStandingsBtn', 'tourEndBtn',
+   'tourStandings', 'tourStandingsTitle', 'tourStandingsList', 'tourResumeBtn', 'tourNewBtn'
+  ].forEach(function (id) { els[id] = document.getElementById(id); });
 
   var custom = [];
   var disabled = {};
   var order = [];
   var idx = 0;
+
+  /* ---------- the map module ----------
+     Loaded lazily so a teacher who never opens a map question never pays for
+     it, and guarded so a failed load degrades to "the question still reads and
+     the answer is still right" instead of a broken page. REGION_LABELS is the
+     synchronous mirror the multiple-choice code needs — see buildMcOptions. */
+  var mapModulePromise = null;
+  var REGION_LABELS = { us: null, world: null };
+  function ensureMapModule() {
+    if (!mapModulePromise) {
+      mapModulePromise = import('./geography-bee-quiz-generator/gbq-map.js').then(function (m) {
+        ['us', 'world'].forEach(function (ds) {
+          REGION_LABELS[ds] = m.regionsFor(ds).map(function (r) { return r.label; });
+        });
+        return m;
+      }).catch(function (err) {
+        mapModulePromise = null; // a network blip shouldn't disable maps for the rest of the lesson
+        throw err;
+      });
+    }
+    return mapModulePromise;
+  }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -402,7 +590,7 @@
 
   function allQuestions() {
     return BUILTIN.concat(custom.map(function (c) {
-      return { category: c.category, q: c.q, a: c.a, custom: true, id: c.id };
+      return { category: c.category, q: c.q, a: c.a, custom: true, id: c.id, map: c.map || null };
     }));
   }
   function activeQuestions() {
@@ -460,13 +648,32 @@
     var seen = {};
     seen[String(item.a).trim().toLowerCase()] = true;
     var candidates = [];
-    pool.forEach(function (other) {
-      if (other === item || other.category !== item.category) return;
-      var key = String(other.a).trim().toLowerCase();
-      if (seen[key]) return;
-      seen[key] = true;
-      candidates.push(other.a);
-    });
+    /* Map questions draw their wrong answers from the region list itself, not
+       from the bank. "Which state is highlighted?" wants three other state
+       names, and a teacher with four map questions in rotation would otherwise
+       get the same three every time — or, with a dataset filter on, a country
+       offered as a wrong answer to a state question. Nothing leaks by naming a
+       region that has no question of its own: the answer IS the place name. */
+    var regionSource = item.map && REGION_LABELS[item.map.dataset];
+    if (regionSource && regionSource.length > 3) {
+      regionSource.forEach(function (label) {
+        var key = String(label).trim().toLowerCase();
+        if (seen[key]) return;
+        seen[key] = true;
+        candidates.push(label);
+      });
+    } else {
+      pool.forEach(function (other) {
+        if (other === item || other.category !== item.category) return;
+        // Within the maps category, a state question must not be offered a
+        // country as a distractor (and vice versa).
+        if (item.map && (!other.map || other.map.dataset !== item.map.dataset)) return;
+        var key = String(other.a).trim().toLowerCase();
+        if (seen[key]) return;
+        seen[key] = true;
+        candidates.push(other.a);
+      });
+    }
     shuffleWithRng(candidates, rng);
     var distractors = candidates.slice(0, 3);
     if (!distractors.length) return null;
@@ -483,11 +690,44 @@
 
   var currentMc = null;
 
+  /* Every render gets a token so a slow map draw for question 4 can't paint
+     itself into the card after the teacher has already clicked through to
+     question 5. */
+  var renderToken = 0;
+
+  function clearDisplayMap() {
+    els.displayMap.innerHTML = '';
+    els.displayMap.classList.add('hidden');
+  }
+
+  function renderDisplayMap(item, token) {
+    els.displayMap.classList.remove('hidden');
+    els.displayMap.innerHTML = '<p class="map-status">Drawing the map&hellip;</p>';
+    ensureMapModule().then(function (m) {
+      return m.renderSnippet({
+        dataset: item.map.dataset, region: item.map.region,
+        context: item.map.context, width: 460, ratio: 2
+      });
+    }).then(function (res) {
+      if (token !== renderToken) return;
+      els.displayMap.innerHTML = '<img class="map-snippet" src="' + res.url + '" width="' + res.width +
+        '" height="' + res.height + '" alt="Outline map of ' + escapeHtml(res.crop.replace(/-/g, ' ')) +
+        ' with one region shaded in">';
+    }).catch(function () {
+      if (token !== renderToken) return;
+      els.displayMap.innerHTML = '<p class="map-status">The map could not be drawn on this device. ' +
+        'Reveal still shows the answer.</p>';
+    });
+  }
+
   function renderDisplay() {
     var all = filteredQuestions();
     currentMc = null;
+    var token = ++renderToken;
     els.displayA.classList.remove('shown');
     els.displayOptions.classList.remove('revealed');
+    tourSetScoringEnabled(false);
+    clearDisplayMap();
     if (!all.length || !order.length) {
       els.displayNum.textContent = '';
       els.displayCat.textContent = '';
@@ -501,6 +741,7 @@
     els.displayNum.textContent = 'Question ' + (idx + 1) + ' of ' + order.length;
     els.displayCat.textContent = CAT_LABELS[item.category] || item.category;
     els.displayQ.textContent = item.q;
+    if (item.map) renderDisplayMap(item, token);
 
     var opts = els.formatSelect.value === 'mc' ? buildMcOptions(item, all, Math.random) : null;
     if (opts) {
@@ -525,10 +766,33 @@
   els.revealBtn.addEventListener('click', function () {
     els.displayA.classList.toggle('shown');
     if (currentMc) els.displayOptions.classList.toggle('revealed');
+    // Scoring only opens once the answer is out — it's the click that ends the
+    // guessing, and it stops a stray tap on "Correct" awarding points to a
+    // team that hasn't answered yet.
+    tourSetScoringEnabled(els.displayA.classList.contains('shown'));
   });
   els.shuffleBtn.addEventListener('click', function () { shuffle(order); idx = 0; renderDisplay(); });
 
-  els.buildSheetBtn.addEventListener('click', function () {
+  /* Printed map snippets are narrower than the projector's and drawn at a
+     higher pixel ratio: ~230 CSS px at 2.6x is about 600 px of bitmap, which
+     lands near 200 dpi on paper and still leaves room for the lettered options
+     beside it. */
+  var PRINT_MAP_WIDTH = 230;
+
+  function attachPrintSnippets(data) {
+    var mapItems = data.filter(function (d) { return d.item.map; });
+    if (!mapItems.length) return Promise.resolve();
+    return ensureMapModule().then(function (m) {
+      return Promise.all(mapItems.map(function (d) {
+        return m.renderSnippet({
+          dataset: d.item.map.dataset, region: d.item.map.region,
+          context: d.item.map.context, width: PRINT_MAP_WIDTH, ratio: 2.6
+        }).then(function (res) { d.snippet = res; }, function () { d.snippet = null; });
+      }));
+    }).catch(function () { /* no module, no pictures — the questions still print */ });
+  }
+
+  function buildSheet() {
     saveSettings();
     // Seeded so "Quiz version 3" always regenerates byte-for-byte the same
     // paper: the seed depends only on the version number, never on the
@@ -545,32 +809,49 @@
     // the problem list and the key below — recomputing them a second time
     // would draw further from the same rng stream and desync the two.
     var data = chosen.map(function (item) {
-      return { item: item, mc: format === 'mc' ? buildMcOptions(item, pool, rng) : null };
+      return { item: item, mc: format === 'mc' ? buildMcOptions(item, pool, rng) : null, snippet: null };
     });
-    els.sheetProblems.innerHTML = data.map(function (d, i) {
-      var head = '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + escapeHtml(d.item.q);
-      if (d.mc) {
-        var optsHtml = d.mc.map(function (o, oi) {
-          return '<div class="mc-print-opt">' + MC_LETTERS[oi] + '. ' + escapeHtml(o.text) + '</div>';
-        }).join('');
-        return head + '<div class="mc-print-options">' + optsHtml + '</div></div>';
-      }
-      return head + '<span class="worksheet-line"></span></div>';
-    }).join('');
-    els.sheetKey.innerHTML = data.map(function (d, i) {
-      if (d.mc) {
-        return '<li>' + (i + 1) + '. ' + MC_LETTERS[mcCorrectIndex(d.mc)] + ' &mdash; ' + escapeHtml(d.item.a) + '</li>';
-      }
-      return '<li>' + (i + 1) + '. ' + escapeHtml(d.item.a) + '</li>';
-    }).join('');
-  });
+    // The rng has finished drawing by this point, so awaiting the map renders
+    // below cannot change which questions or options end up on the paper —
+    // "quiz version 3" stays byte-for-byte reproducible.
+    return attachPrintSnippets(data).then(function () {
+      els.sheetProblems.innerHTML = data.map(function (d, i) {
+        var head = '<div class="problem"><span class="pnum">' + (i + 1) + '.</span>' + escapeHtml(d.item.q);
+        if (d.snippet) {
+          head += '<img class="map-snippet" src="' + d.snippet.url + '" width="' + d.snippet.width +
+            '" height="' + d.snippet.height + '" alt="Outline map with one region shaded in">';
+        }
+        if (d.mc) {
+          var optsHtml = d.mc.map(function (o, oi) {
+            return '<div class="mc-print-opt">' + MC_LETTERS[oi] + '. ' + escapeHtml(o.text) + '</div>';
+          }).join('');
+          return head + '<div class="mc-print-options">' + optsHtml + '</div></div>';
+        }
+        return head + '<span class="worksheet-line"></span></div>';
+      }).join('');
+      els.sheetKey.innerHTML = data.map(function (d, i) {
+        // A thumbnail on the key too: grading twenty "which country is this?"
+        // papers against a list of bare names means counting down the page and
+        // hoping. The picture is the same one the student saw.
+        var thumb = d.snippet ? '<img class="map-snippet" src="' + d.snippet.url + '" width="90" alt="">' : '';
+        if (d.mc) {
+          return '<li>' + (i + 1) + '. ' + thumb + MC_LETTERS[mcCorrectIndex(d.mc)] + ' &mdash; ' + escapeHtml(d.item.a) + '</li>';
+        }
+        return '<li>' + (i + 1) + '. ' + thumb + escapeHtml(d.item.a) + '</li>';
+      }).join('');
+      return data;
+    });
+  }
+  els.buildSheetBtn.addEventListener('click', function () { buildSheet(); });
   els.newVersionBtn.addEventListener('click', function () {
     els.quizVersion.value = (parseInt(els.quizVersion.value, 10) || 1) + 1;
-    els.buildSheetBtn.click();
+    buildSheet();
   });
   els.printBtn.addEventListener('click', function () {
-    if (!els.sheetProblems.innerHTML.trim()) els.buildSheetBtn.click();
-    window.print();
+    // Map images are data URLs built on demand, so printing has to wait for
+    // the build to finish or the paper comes out with empty boxes.
+    if (!els.sheetProblems.innerHTML.trim()) buildSheet().then(function () { window.print(); });
+    else window.print();
   });
 
   els.addQBtn.addEventListener('click', function () {
@@ -632,6 +913,186 @@
     setBulkNote(msg, !added);
   });
 
+  /* ---------- generate map questions in bulk ---------- */
+  /* Samples regions the bank doesn't already have a map question for, so a
+     teacher can run it twice and get twenty different states rather than the
+     same ten again. Deliberately unseeded: this is content entry, not a
+     printed paper that has to reprint identically. */
+  function existingMapRegions(dataset) {
+    var used = {};
+    allQuestions().forEach(function (item) {
+      if (item.map && item.map.dataset === dataset) used[String(item.map.region).toLowerCase()] = true;
+    });
+    return used;
+  }
+  function setMapGenNote(text, isError) {
+    els.mapGenNote.textContent = text || '';
+    els.mapGenNote.className = 'bulk-note' + (isError ? ' error' : '');
+    els.mapGenNote.style.display = text ? '' : 'none';
+  }
+  function generateMapQuestions() {
+    var dataset = els.mapGenDataset.value === 'world' ? 'world' : 'us';
+    var want = Math.max(1, Math.min(40, parseInt(els.mapGenCount.value, 10) || 10));
+    setMapGenNote('Reading the built-in map data…', false);
+    return ensureMapModule().then(function (m) {
+      var used = existingMapRegions(dataset);
+      var free = m.regionsFor(dataset).filter(function (r) { return !used[r.name.toLowerCase()]; });
+      if (!free.length) {
+        setMapGenNote('Every ' + (dataset === 'us' ? 'state' : 'country') +
+          ' in the built-in list already has a map question. Delete some custom ones to free them up.', true);
+        return 0;
+      }
+      shuffle(free);
+      var take = free.slice(0, want);
+      take.forEach(function (r) {
+        custom.push({
+          id: uid(), category: 'maps', q: mapQuestionText(dataset), a: r.label,
+          map: { dataset: dataset, region: r.name, context: r.crop }
+        });
+      });
+      saveCustom();
+      resetOrder(); renderDisplay(); renderBank();
+      var msg = 'Added ' + take.length + ' map question' + (take.length === 1 ? '' : 's') + ' to your custom bank.';
+      if (take.length < want) msg += ' That was every one left that didn’t already have a question.';
+      setMapGenNote(msg, false);
+      return take.length;
+    }).catch(function () {
+      setMapGenNote('The map data could not be read, so no questions were generated. ' +
+        'Open the tool online once and it will be cached for offline use.', true);
+      return 0;
+    });
+  }
+  els.mapGenBtn.addEventListener('click', function () { generateMapQuestions(); });
+
+  /* ---------- team tournament ----------
+     Teacher-operated on purpose: no timers, no buzzers, no student devices.
+     The teacher reveals, decides right or wrong, and the tool does the two
+     things that are genuinely annoying to do at the board — keeping score and
+     remembering whose turn it is. An in-progress game survives a reload
+     (gbq_tournament_v1) because the projector laptop does get closed at lunch. */
+  var tour = null;
+
+  function loadTournament() {
+    try {
+      var t = JSON.parse(localStorage.getItem(TOURNAMENT_KEY) || 'null');
+      if (t && Array.isArray(t.teams) && t.teams.length >= 2) {
+        tour = {
+          teams: t.teams.map(function (x) { return { name: String(x.name || 'Team'), score: Number(x.score) || 0 }; }),
+          turn: Math.max(0, Math.min(t.teams.length - 1, parseInt(t.turn, 10) || 0)),
+          asked: Math.max(0, parseInt(t.asked, 10) || 0),
+          points: Math.max(1, Math.min(10, parseInt(t.points, 10) || 1))
+        };
+      }
+    } catch (e) { tour = null; }
+  }
+  function saveTournament() {
+    try {
+      if (tour) localStorage.setItem(TOURNAMENT_KEY, JSON.stringify(tour));
+      else localStorage.removeItem(TOURNAMENT_KEY);
+    } catch (e) { /* storage full/blocked */ }
+  }
+
+  function renderTeamNameInputs() {
+    var n = parseInt(els.tourTeams.value, 10) || 4;
+    var existing = {};
+    Array.prototype.forEach.call(els.tourNames.querySelectorAll('input'), function (inp, i) { existing[i] = inp.value; });
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      var val = existing[i] || 'Team ' + (i + 1);
+      html += '<input type="text" data-team="' + i + '" value="' + escapeHtml(val) +
+        '" aria-label="Name for team ' + (i + 1) + '">';
+    }
+    els.tourNames.innerHTML = html;
+  }
+
+  function tourSetScoringEnabled(on) {
+    if (!els.tourRightBtn) return;
+    els.tourRightBtn.disabled = !on;
+    els.tourWrongBtn.disabled = !on;
+  }
+
+  function renderTournament() {
+    els.tourSetup.style.display = tour ? 'none' : '';
+    if (!tour) {
+      els.tourLive.style.display = 'none';
+      els.tourStandings.style.display = 'none';
+      return;
+    }
+    els.tourBoard.innerHTML = tour.teams.map(function (t, i) {
+      return '<span class="tour-team' + (i === tour.turn ? ' up' : '') + '">' + escapeHtml(t.name) +
+        ' <span class="tour-score">' + t.score + '</span></span>';
+    }).join('');
+    els.tourTurn.innerHTML = '<b>' + escapeHtml(tour.teams[tour.turn].name) + '</b> is up &mdash; ' +
+      'reveal the answer, then mark it. ' + tour.asked + ' question' + (tour.asked === 1 ? '' : 's') + ' scored so far.';
+  }
+
+  function startTournament() {
+    var names = Array.prototype.map.call(els.tourNames.querySelectorAll('input'), function (inp, i) {
+      return inp.value.trim() || 'Team ' + (i + 1);
+    });
+    tour = {
+      teams: names.map(function (n) { return { name: n, score: 0 }; }),
+      turn: 0, asked: 0,
+      points: Math.max(1, Math.min(10, parseInt(els.tourPoints.value, 10) || 1))
+    };
+    saveTournament();
+    els.tourStandings.style.display = 'none';
+    els.tourLive.style.display = '';
+    renderTournament();
+    tourSetScoringEnabled(els.displayA.classList.contains('shown'));
+  }
+
+  function scoreTurn(correct) {
+    if (!tour) return;
+    if (correct) tour.teams[tour.turn].score += tour.points;
+    tour.asked++;
+    tour.turn = (tour.turn + 1) % tour.teams.length;
+    saveTournament();
+    renderTournament();
+    // Next team, next question — the two things that always happen together.
+    if (order.length) idx = (idx + 1) % order.length;
+    renderDisplay();
+  }
+
+  function showStandings() {
+    if (!tour) return;
+    var ranked = tour.teams.map(function (t) { return t; }).slice().sort(function (a, b) { return b.score - a.score; });
+    var top = ranked.length ? ranked[0].score : 0;
+    var place = 0, lastScore = null;
+    els.tourStandingsList.innerHTML = ranked.map(function (t, i) {
+      if (t.score !== lastScore) { place = i + 1; lastScore = t.score; }
+      return '<li><span class="place">' + place + '.</span> <span' + (t.score === top && top > 0 ? ' class="lead"' : '') + '>' +
+        escapeHtml(t.name) + '</span> &mdash; ' + t.score + ' point' + (t.score === 1 ? '' : 's') + '</li>';
+    }).join('');
+    els.tourStandingsTitle.textContent = tour.asked ? 'Final standings' : 'Standings';
+    els.tourLive.style.display = 'none';
+    els.tourStandings.style.display = '';
+  }
+
+  els.tourToggleBtn.addEventListener('click', function () {
+    var open = els.tournamentCard.style.display !== 'none';
+    els.tournamentCard.style.display = open ? 'none' : '';
+    els.tourToggleBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  });
+  els.tourTeams.addEventListener('change', renderTeamNameInputs);
+  els.tourStartBtn.addEventListener('click', startTournament);
+  els.tourRightBtn.addEventListener('click', function () { scoreTurn(true); });
+  els.tourWrongBtn.addEventListener('click', function () { scoreTurn(false); });
+  els.tourStandingsBtn.addEventListener('click', showStandings);
+  els.tourResumeBtn.addEventListener('click', function () {
+    els.tourStandings.style.display = 'none';
+    els.tourLive.style.display = '';
+    renderTournament();
+  });
+  els.tourEndBtn.addEventListener('click', showStandings);
+  els.tourNewBtn.addEventListener('click', function () {
+    tour = null;
+    saveTournament();
+    els.tourStandings.style.display = 'none';
+    renderTeamNameInputs();
+    renderTournament();
+  });
+
   function renderBank() {
     var all = allQuestions();
     var activeCount = activeQuestions().length;
@@ -676,9 +1137,25 @@
   loadCustom();
   loadDisabled();
   loadSettings();
+  loadTournament();
   resetOrder();
   renderDisplay();
   renderBank();
+  renderTeamNameInputs();
+  renderTournament();
+  if (tour) {
+    // A game was in progress when the laptop was closed — show it rather than
+    // making the teacher set the same four teams up again.
+    els.tournamentCard.style.display = '';
+    els.tourToggleBtn.setAttribute('aria-expanded', 'true');
+    els.tourLive.style.display = '';
+  }
+  tourSetScoringEnabled(false);
+
+  /* The region list feeds multiple-choice distractors synchronously, so warm
+     the module up now and repaint once it lands. Importing it costs one small
+     file; the map data itself is only fetched when a map is actually drawn. */
+  ensureMapModule().then(function () { renderDisplay(); }, function () { /* maps stay unavailable; everything else works */ });
 
   // Test-only hook (matches this repo's window.__ convention, e.g.
   // window.__hallPassSync in 001-hall-pass-log.html) so the MC-mode smoke
@@ -688,7 +1165,13 @@
     buildMcOptions: buildMcOptions,
     makeRng: makeRng,
     filteredQuestions: filteredQuestions,
-    allQuestions: allQuestions
+    allQuestions: allQuestions,
+    // Round 2: the map/tournament suite needs to await an async build and read
+    // tournament state without scraping it back out of the scoreboard markup.
+    buildSheet: buildSheet,
+    mapModule: ensureMapModule,
+    generateMapQuestions: generateMapQuestions,
+    tournament: function () { return tour; }
   };
 })();
 </script>
