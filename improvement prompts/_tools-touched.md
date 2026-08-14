@@ -199,6 +199,7 @@ here.
 | Historical Figure / Country Trading Card Maker | `h7ntqk` | 2026-08-14 02:46 UTC | `claude/ssdemo2-064-h7ntqk` |
 | Timeline Builder | `vt7kqa` | 2026-08-14 02:41 UTC | `claude/ssdemo2-015-vt7kqa` |
 | Geography Bee / Map Skills Quiz Generator | `gmq7xr` | 2026-08-14 02:44 UTC | `claude/ssdemo2-062-gmq7xr` |
+| Blank Map Generator | `hx4pmz` | 2026-08-14 02:47 UTC | `claude/ssdemo2-046-hx4pmz` |
 
 ---
 
