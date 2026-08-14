@@ -269,3 +269,32 @@ because reaching into another tool's data for *content* felt like a bigger
 commitment than reaching into it for a *renderer*. If a third tool ever wants
 "a list of places a middle school course names", that data should be shared
 rather than hand-grown a third time.
+## Two-column pasted data is now parsed in at least three places
+
+Raised by the Blank Map Generator's choropleth round (2026-08-13, session
+`q4wmxz`), which needed to turn pasted `name, value` rows into numbers and
+deliberately did **not** reach into `_shared/` (the round rules forbid it,
+for good reason with 8 sessions running).
+
+What now exists independently:
+
+- `Tools/blank-map-generator/bmg-choropleth.js` — `parseDataRows()`:
+  tabs / semicolons / pipes / commas, thousands separators, `$` and `%`,
+  blank lines, header-row detection, and the awkward case of a *name* that
+  contains the delimiter (`Congo, Dem. Rep., 95000000`).
+- `Tools/038-data-chart-builder.html` — its own pasted-table parsing.
+- `Tools/blank-map-generator/bmg-label-sets.js` — `parseCoordLine()`, the
+  same shape of problem for `name, lat, lon`.
+
+None of these is wrong, and none should be ripped out on spec. But a third
+independent implementation is the point at which it's worth someone deciding
+whether `_shared/paste-table.js` should exist, with one documented set of
+rules about delimiters, headers and thousands separators. That decision needs
+a quiet moment and one owner, not a parallel round.
+
+A second, smaller candidate from the same work: a grayscale-safe sequential
+colour ramp plus a WCAG relative-luminance helper (`RAMPS`,
+`relativeLuminance()` in `bmg-choropleth.js`). Any tool that shades something
+by an ordered value — the grade distribution visualizer is the obvious one —
+wants exactly this, and "does it survive the photocopier" is a property worth
+asserting in one place rather than re-arguing per tool.

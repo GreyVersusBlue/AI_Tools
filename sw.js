@@ -49,6 +49,7 @@ const PRECACHE_URLS = [
   "Tools/008-behavior-points-tracker.html",
   "Tools/behavior-points-tracker/seating-layout.js",
   "Tools/046-blank-map-generator.html",
+  "Tools/blank-map-generator/bmg-choropleth.js",
   "Tools/blank-map-generator/bmg-colors.js",
   "Tools/blank-map-generator/bmg-commons.js",
   "Tools/blank-map-generator/bmg-geography.js",

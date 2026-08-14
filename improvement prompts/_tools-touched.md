@@ -192,7 +192,7 @@ here.
 
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
-| Blank Map Generator | `q4wmxz` | 2026-08-13 23:54 UTC | `claude/ssdemo-046-q4wmxz` |
+| *(none)* | | | |
 
 ---
 
@@ -200,6 +200,29 @@ here.
 
 Counted from the start of the improvement-prompts programme. A tool may have
 had unrelated fixes before that; those are not rounds.
+
+### Devon-assigned round — tool 046 — 2026-08-13 23:54 UTC — session `q4wmxz`
+
+Blank Map Generator (`046-blank-map-generator.md`), social studies demo round.
+
+- **Choropleth from pasted data** (`IDEAS_BACKLOG.md` rank 13, "Choropleth
+  from a data table") — paste `place, value` rows and the built-in vector base
+  map shades itself in 4–6 quantile bands with a self-writing key. New
+  `Tools/blank-map-generator/bmg-choropleth.js` (parse / match / classify /
+  ramp, no DOM); `bmg-vector.js` paints the fills as it draws the raster, so
+  every existing export path works on a shaded map unchanged.
+- Grayscale-safe by construction: single-hue ramps with a guaranteed minimum
+  luminance drop per band, verified in the suite and inspected as an actual
+  grayscale render.
+- Alias table + "48 of 50 rows matched" reporting; unmatched rows are named,
+  never dropped.
+- "Load example data" — rounded populations for all 50 states.
+- Shaded renders take a `:choro:<hash>` cache-id suffix; `sameBaseMap()` keeps
+  a teacher's placed labels through a re-shade.
+- Fixed on the way: Student Handout Mode was blanking the class ranges, which
+  makes a shaded map unreadable rather than fill-in-the-blank.
+- New suite `Tools/blank-map-generator/test/smoke-choropleth.mjs` (59 checks),
+  wired into `test:blank-map` and the end of the `test` chain.
 
 ### Pass 1 — complete (46/46 tools, Rounds 1–10, PRs #51–#65)
 

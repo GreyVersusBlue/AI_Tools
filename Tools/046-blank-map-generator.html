@@ -52,6 +52,15 @@
   .baseMapRow select { min-width: 150px; }
   .baseMapCheck { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--ink); }
   .baseMapCheck input { margin: 0; }
+  .choroPanel { margin-top: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+  .choroInput {
+    width: 100%; font-family: inherit; font-size: 0.82rem; padding: 7px 9px; line-height: 1.4;
+    border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--ink); resize: vertical;
+  }
+  .choroControls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .choroControls select { min-width: 88px; }
+  #choroReport.err { color: var(--err); font-weight: 600; }
+  #choroReport.ok { color: var(--ok); }
   .baseMapDivider { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
   .baseMapDivider::before, .baseMapDivider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .baseMapDivider span { font-size: 0.72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
@@ -336,6 +345,10 @@
      (see bmg-labels.js applyStyle()), which otherwise outranks this rule. */
   body.student-blank .bmg-label .lbl-text { color: transparent !important; }
   body.student-blank #legendPanel .legend-input { color: transparent; }
+  /* Data-shading class rows are the exception: a choropleth's key is how you
+     read the map at all, not an answer to be filled in. Blanking "1.4M to
+     3.2M" would hand a student a shaded map with no way to interpret it. */
+  body.student-blank #legendPanel .legend-row[data-legend-key^="choro:"] .legend-input { color: var(--ink); }
 
   /* Self-check quiz mode: hides each label's own text until it's clicked,
      so a finished (labeled) map can be used as a click-to-reveal study tool
@@ -432,8 +445,21 @@
         <select id="baseMapStyleSelect" class="styleSelect" data-no-pan></select>
         <label class="baseMapCheck"><input type="checkbox" id="baseMapBorders" checked data-no-pan> Show borders</label>
         <button id="btnBaseMap" class="small primary">Use this base map</button>
+        <button id="btnChoroToggle" class="small toggle" title="Shade each state or country according to a number you paste in — population, rainfall, votes, anything with one value per place.">Shade by data&hellip;</button>
       </div>
       <p class="hint" id="baseMapHint">Drawn here on your own machine from map data that ships with this tool &mdash; no internet, no searching, and the map arrives already calibrated, so the lat/long grid, scale bar, distance tool and label sets all work straight away.</p>
+      <div id="choroPanel" class="choroPanel" hidden>
+        <p class="hint" style="margin:0 0 7px;">Paste one place and one number per line, straight out of a spreadsheet. Places with bigger numbers come out darker, and the key writes itself. Works on the built-in base maps above.</p>
+        <textarea id="choroInput" class="choroInput" rows="6" spellcheck="false" data-no-pan placeholder="Maryland, 6200000&#10;Virginia, 8700000&#10;Delaware, 1000000"></textarea>
+        <div class="choroControls">
+          <button id="btnChoroExample" class="small">Load example data</button>
+          <label class="baseMapCheck">Bands <select id="choroClassSelect" class="styleSelect" data-no-pan></select></label>
+          <label class="baseMapCheck">Shades <select id="choroRampSelect" class="styleSelect" data-no-pan></select></label>
+          <button id="btnChoroApply" class="small primary">Shade the map</button>
+          <button id="btnChoroClear" class="small">Remove shading</button>
+        </div>
+        <p class="hint" id="choroReport" style="margin:7px 0 0;"></p>
+      </div>
     </div>
     <div class="baseMapDivider"><span>or search the web</span></div>
     <div class="searchRow">
@@ -755,10 +781,16 @@ import {
 } from './blank-map-generator/bmg-lines.js';
 import { BUILT_IN_LABEL_SETS, findBuiltInSet, isValidPlaceList } from './blank-map-generator/bmg-label-sets.js';
 import { createLegendPanel, markerLegendKey, regionLegendKey, lineLegendKey } from './blank-map-generator/bmg-legend.js';
+import {
+  buildChoropleth, choroSwatchSvg, RAMPS, MIN_CLASSES, MAX_CLASSES, EXAMPLE_US_POPULATION,
+} from './blank-map-generator/bmg-choropleth.js';
 import { createLocatorInset } from './blank-map-generator/bmg-locator.js';
 import { isCalibrated, toLatLon, fromLatLon, formatLatLon, computeGraticule, computeScaleBar } from './blank-map-generator/bmg-latlong.js';
 import * as cache from './blank-map-generator/bmg-map-cache.js';
-import { BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord } from './blank-map-generator/bmg-vector.js';
+import {
+  BASE_MAP_PRESETS, BASE_MAP_STYLES, findPreset, baseMapId, buildBaseMapRecord,
+  listRegionNames, sameBaseMap,
+} from './blank-map-generator/bmg-vector.js';
 
 const store = createStore();
 let project = store.getActiveProject();
@@ -821,6 +853,7 @@ const legendPanel = createLegendPanel(el('legendPanel'), {
   onMarkerTextChange(key, text) { project.legendText[key] = text; save(); },
   onRegionTextChange(key, text) { project.regionLegendText[key] = text; save(); },
   onLineTextChange(key, text) { project.lineLegendText[key] = text; save(); },
+  onChoroTextChange(key, text) { project.choroLegendText[key] = text; save(); },
   onMarkerColorChange(style, oldColor, newColor) {
     if (oldColor === newColor) return;
     const oldKey = markerLegendKey(style, oldColor);
@@ -918,8 +951,15 @@ function renderLegend() {
     markerColorHex, colorOptions: MARKER_COLORS, sizeOptions: MARKER_SIZES,
     regions: project.regions, regionLegendText: project.regionLegendText, swatchSvg: regionSwatchSvg,
     lines: project.lines, lineLegendText: project.lineLegendText, lineSwatchSvg,
+    choroRows: activeChoroRows(), choroLegendText: project.choroLegendText, choroSwatchSvg,
     order: project.legendOrder,
   });
+}
+
+/** The class rows the map on screen was actually shaded with, or none. Stored on the project rather than recomputed, so a reload brings the key back without re-reading the vector data — and so the key can never disagree with the raster it belongs to. */
+function activeChoroRows() {
+  const c = project.choropleth;
+  return (c && c.enabled && Array.isArray(c.legendRows)) ? c.legendRows : [];
 }
 
 // --- Undo/redo history ---------------------------------------------
@@ -943,6 +983,7 @@ function snapshotContent() {
   return JSON.stringify({
     labels: project.labels, markers: project.markers, regions: project.regions, lines: project.lines,
     legendText: project.legendText, regionLegendText: project.regionLegendText, lineLegendText: project.lineLegendText,
+    choroLegendText: project.choroLegendText,
     legendOrder: project.legendOrder,
   });
 }
@@ -983,6 +1024,7 @@ function applySnapshot(json) {
   project.legendText = data.legendText;
   project.regionLegendText = data.regionLegendText;
   project.lineLegendText = data.lineLegendText;
+  project.choroLegendText = data.choroLegendText || {};
   project.legendOrder = data.legendOrder;
   labelLayer.setLabels(project.labels);
   markerLayer.setMarkers(project.markers);
@@ -2079,16 +2121,34 @@ async function useBuiltInBaseMap() {
   btn.disabled = true;
   setStatus('<span class="spinner"></span>Drawing that base map&hellip;');
   try {
-    const id = baseMapId(preset, style, borders);
+    // Data shading (if any) is baked into the raster here, so nothing
+    // downstream — annotation, worksheets, the four export paths, the poster
+    // tiles — has to learn what a choropleth is. A shading that matched
+    // nothing on this map renders as a plain base map rather than a blank
+    // one; renderChoroReport() has already said why on screen.
+    const choro = await buildActiveChoropleth(preset);
+    const shaded = !!(choro && choro.ok);
+    const choroKey = shaded ? choro.key : '';
     // Cache-stable id: the same choice regenerates to the same key, so a
     // second visit reuses the stored raster rather than re-rendering it (and
-    // never re-reads the vector data).
+    // never re-reads the vector data). Shading adds a `:choro:<hash>` suffix,
+    // so plain base maps keep their own clean records.
+    const id = baseMapId(preset, style, borders, choroKey);
     let record = await cache.getCachedMap(id).catch(() => null);
     if (!record) {
-      record = await buildBaseMapRecord(preset, { style, borders });
+      record = await buildBaseMapRecord(preset, { style, borders, fills: shaded ? choro.fills : null, choroKey });
       await cache.putCachedMap(record).catch(() => {});
     }
-    displayMap(record);
+    // Re-shading (or un-shading) a map the project is already on is the same
+    // piece of paper with different ink: same preset, same crop, same pixel
+    // size, same calibration. Labels and markers a teacher has already placed
+    // still belong exactly where they are, so displayMap() must not treat the
+    // new id as a different map and clear them.
+    const keepAnnotations = sameBaseMap(project.mapId, id);
+    project.choropleth.legendRows = shaded
+      ? choro.legendRows.map(r => ({ key: r.key, label: r.label, hex: r.hex }))
+      : [];
+    displayMap(record, { keepAnnotations, choroApplied: shaded });
     setStatus('');
   } catch (err) {
     setStatus(`Couldn't draw that base map (${escapeHtml(err.message)}).`, true);
@@ -2098,6 +2158,145 @@ async function useBuiltInBaseMap() {
 }
 el('btnBaseMap').addEventListener('click', useBuiltInBaseMap);
 
+// --- Choropleth: shade the base map from pasted data ---------------------
+// The teacher pastes "place, number" rows; bmg-choropleth.js parses, matches
+// them against the names in the vector data, sorts them into quantile bands
+// and picks a grayscale-safe ramp; bmg-vector.js paints the bands as it draws
+// the base raster. This section is only the wiring between those two and the
+// panel — deliberately thin, because the logic worth testing lives in the
+// module, not here.
+
+RAMPS.forEach(r => {
+  const opt = document.createElement('option');
+  opt.value = r.key;
+  opt.textContent = r.label;
+  el('choroRampSelect').appendChild(opt);
+});
+for (let n = MIN_CLASSES; n <= MAX_CLASSES; n++) {
+  const opt = document.createElement('option');
+  opt.value = String(n);
+  opt.textContent = String(n);
+  el('choroClassSelect').appendChild(opt);
+}
+
+/** Runs the pasted data against whichever preset is selected. Returns null when there is nothing to shade with. */
+async function buildActiveChoropleth(preset, { force = false } = {}) {
+  const c = project.choropleth;
+  if (!c || (!force && !c.enabled) || !c.text.trim()) return null;
+  const regionNames = await listRegionNames(preset);
+  return buildChoropleth({ text: c.text, regionNames, classes: c.classes, ramp: c.ramp });
+}
+
+/**
+ * Says what happened to the pasted rows, in plain words, before anything is
+ * drawn. The count is the headline ("48 of 50 rows matched"); every name that
+ * didn't match is printed in full, because a silently-dropped row is a state
+ * missing from a map a class is about to look at.
+ */
+function renderChoroReport(result) {
+  const out = el('choroReport');
+  out.classList.remove('err', 'ok');
+  if (!project.choropleth.text.trim()) {
+    out.textContent = 'Paste your data above, or load the example, then choose "Shade the map".';
+    return;
+  }
+  if (!result) { out.textContent = ''; return; }
+  const total = result.rowCount;
+  const parts = [];
+  if (!result.matchedCount) {
+    out.classList.add('err');
+    out.textContent = `None of those ${total} row${total === 1 ? '' : 's'} matched a place on this map. Check the spelling, or pick a base map that has these places on it.`;
+    return;
+  }
+  parts.push(`${result.matchedCount} of ${total} row${total === 1 ? '' : 's'} matched.`);
+  if (result.headerSkipped) parts.push(`Treated "${result.headerSkipped}" as a header row and skipped it.`);
+  if (result.unmatched.length) parts.push(`No match on this map for: ${result.unmatched.join(', ')}.`);
+  if (result.unreadable.length) {
+    parts.push(`${result.unreadable.length} line${result.unreadable.length === 1 ? '' : 's'} had no number to read: "${result.unreadable[0]}"${result.unreadable.length > 1 ? '…' : ''}`);
+  }
+  out.classList.add(result.unmatched.length || result.unreadable.length ? 'err' : 'ok');
+  out.textContent = parts.join(' ');
+}
+
+let choroReportTimer = null;
+/** Re-reads the paste box and refreshes the report, without touching the map. Debounced, because it re-parses on every keystroke. */
+function scheduleChoroReport() {
+  clearTimeout(choroReportTimer);
+  choroReportTimer = setTimeout(async () => {
+    const preset = findPreset(el('baseMapSelect').value);
+    if (!preset) return;
+    try { renderChoroReport(await buildActiveChoropleth(preset, { force: true })); }
+    catch (e) { /* the data files are unreachable; the map button reports it properly */ }
+  }, 300);
+}
+
+function syncChoroControls() {
+  const c = project.choropleth;
+  el('choroInput').value = c.text || '';
+  el('choroClassSelect').value = String(c.classes);
+  el('choroRampSelect').value = c.ramp;
+  el('btnChoroToggle').classList.toggle('active', !el('choroPanel').hidden);
+  el('btnChoroClear').disabled = !c.enabled;
+}
+
+el('btnChoroToggle').addEventListener('click', () => {
+  const panel = el('choroPanel');
+  panel.hidden = !panel.hidden;
+  el('btnChoroToggle').classList.toggle('active', !panel.hidden);
+  if (!panel.hidden) { syncChoroControls(); scheduleChoroReport(); }
+});
+
+el('choroInput').addEventListener('input', () => {
+  project.choropleth.text = el('choroInput').value;
+  save();
+  scheduleChoroReport();
+});
+
+el('choroClassSelect').addEventListener('change', () => {
+  project.choropleth.classes = Number(el('choroClassSelect').value);
+  save();
+  scheduleChoroReport();
+});
+
+el('choroRampSelect').addEventListener('change', () => {
+  project.choropleth.ramp = el('choroRampSelect').value;
+  save();
+  scheduleChoroReport();
+});
+
+el('btnChoroExample').addEventListener('click', () => {
+  project.choropleth.text = EXAMPLE_US_POPULATION;
+  el('choroInput').value = EXAMPLE_US_POPULATION;
+  // The example is state populations, so point the picker at a map that can
+  // show them — otherwise the first thing a teacher sees is "none of those
+  // rows matched", which is true and useless.
+  if (findPreset(el('baseMapSelect').value).dataset !== 'us') {
+    el('baseMapSelect').value = 'usa-48';
+    renderBaseMapHint();
+  }
+  save();
+  scheduleChoroReport();
+});
+
+el('btnChoroApply').addEventListener('click', async () => {
+  project.choropleth.text = el('choroInput').value;
+  project.choropleth.enabled = true;
+  save();
+  await useBuiltInBaseMap();
+  const preset = findPreset(el('baseMapSelect').value);
+  if (preset) renderChoroReport(await buildActiveChoropleth(preset, { force: true }));
+  syncChoroControls();
+});
+
+el('btnChoroClear').addEventListener('click', async () => {
+  project.choropleth.enabled = false;
+  project.choropleth.legendRows = [];
+  save();
+  await useBuiltInBaseMap();
+  syncChoroControls();
+  scheduleChoroReport();
+});
+
 el('btnUploadMap').addEventListener('click', () => el('uploadMapInput').click());
 el('uploadMapInput').addEventListener('change', () => {
   const file = el('uploadMapInput').files[0];
@@ -2105,8 +2304,16 @@ el('uploadMapInput').addEventListener('change', () => {
   useUploadedFile(file);
 });
 
-function displayMap(record) {
-  const isSameMap = project.mapId === record.id;
+/**
+ * `opts.keepAnnotations` says "this is the same piece of paper, redrawn" —
+ * currently only the choropleth path, which re-renders a built-in base map at
+ * the identical preset, crop, style and pixel size with data shading added or
+ * removed. Everything a teacher has placed still belongs exactly where it is,
+ * so the fresh-map reset below is skipped and the view is kept, just as it is
+ * for a genuinely identical map id.
+ */
+function displayMap(record, opts = {}) {
+  const isSameMap = project.mapId === record.id || !!opts.keepAnnotations;
   if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
   currentObjectUrl = URL.createObjectURL(record.blob);
   currentSize = { width: record.width, height: record.height };
@@ -2164,10 +2371,21 @@ function displayMap(record) {
     project.regionLegendText = {};
     project.lines = [];
     project.lineLegendText = {};
+    project.choroLegendText = {};
     project.legendOrder = [];
     project.calibration = null;
     project.gridEnabled = false;
     project.scaleBarEnabled = false;
+    // Shading belongs to the map it was painted onto. Loading a different
+    // map (a Commons result, an upload, another preset) drops the shaded
+    // state and its key so the legend can't advertise bands the picture on
+    // screen doesn't have — but the teacher's pasted data itself is kept, so
+    // they can shade the new map with it in one click. `choroApplied` is the
+    // one caller that has just painted these bands into this very raster.
+    if (!opts.choroApplied) {
+      project.choropleth.enabled = false;
+      project.choropleth.legendRows = [];
+    }
   }
   // A built-in base map knows its own projection and extent exactly — it was
   // drawn to them (see bmg-vector.js) — so it calibrates itself instead of
@@ -2486,12 +2704,13 @@ async function drawPngLegend(ctx) {
     seenLineGroup.add(gkey);
     lineGroups.push({ color: l.color, style: l.style });
   });
-  if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length) return;
+  const choroRows = activeChoroRows();
+  if (!groups.length && !numbered.length && !regionGroups.length && !lineGroups.length && !choroRows.length) return;
   const grayscaleMap = buildGrayscalePatternMap();
   const hideText = !!project.studentBlankMode;
   const pos = project.legendPos || { x: 12, y: 12 };
   const padX = 10, padTop = 10, titleH = 16, rowH = 24, iconSize = 18, width = 176;
-  const rows = groups.length + numbered.length + regionGroups.length + lineGroups.length;
+  const rows = groups.length + numbered.length + regionGroups.length + lineGroups.length + choroRows.length;
   const height = padTop + titleH + rows * rowH + 8;
 
   pngRoundRect(ctx, pos.x, pos.y, width, height, 8);
@@ -2505,6 +2724,7 @@ async function drawPngLegend(ctx) {
   ctx.fillText('KEY', pos.x + padX, pos.y + padTop + 8);
 
   const items = [
+    ...choroRows.map(r => ({ key: r.key, kind: 'choro', data: r })),
     ...groups.map(g => ({ key: markerLegendKey(g.style, g.color), kind: 'marker', data: g })),
     ...numbered.map((m, i) => ({ key: m.id, kind: 'numbered', data: { m, number: i + 1 } })),
     ...regionGroups.map(g => ({ key: regionLegendKey(g.color, g.pattern), kind: 'region', data: g })),
@@ -2522,6 +2742,13 @@ async function drawPngLegend(ctx) {
       img = await svgToImage(markerIconSvg('number', iconSize, markerColorHex(data.m.color), data.number));
       fallback = `(#${data.number})`;
       textVal = project.legendText[key];
+    } else if (kind === 'choro') {
+      // The class range ("1.4M to 3.2M") is the fallback caption rather than
+      // a placeholder here, because on paper there is nothing to type into —
+      // an uncaptioned band still has to say what it means.
+      img = await svgToImage(choroSwatchSvg(data.hex, iconSize));
+      fallback = data.label;
+      textVal = project.choroLegendText[key];
     } else if (kind === 'region') {
       // The legend text lookup key above stays on the region's real,
       // user-chosen pattern (regionLegendKey) — only the drawn swatch
@@ -2537,7 +2764,10 @@ async function drawPngLegend(ctx) {
       textVal = project.lineLegendText[key];
     }
     ctx.drawImage(img, pos.x + padX, rowY, iconSize, iconSize);
-    if (!hideText) {
+    // Same exception the on-screen panel makes: a shaded map's class ranges
+    // print even in Student Handout Mode, because they are the map's units,
+    // not its answers.
+    if (!hideText || kind === 'choro') {
       ctx.fillStyle = '#1f2430';
       ctx.font = '12px sans-serif';
       ctx.fillText(textVal || fallback, pos.x + padX + iconSize + 8, rowY + iconSize - 5);
@@ -3563,6 +3793,7 @@ async function loadActiveProjectIntoUI(opts) {
   syncPageFormatControls();
   applyViewportSize();
   el('grayscaleSafeCheck').checked = project.grayscaleSafePrint !== false;
+  syncChoroControls();
   syncWorksheetControls();
   refreshLabelSetSelect();
   if (project.mapId) {

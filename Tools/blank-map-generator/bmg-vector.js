@@ -102,18 +102,51 @@ async function loadGeoJson(file) {
  * — and, more importantly, re-opening a saved project finds its map already
  * there without the vector data being fetched again.
  */
-export function baseMapId(preset, style, borders) {
+export function baseMapId(preset, style, borders, choroKey) {
   const b = preset.bounds;
   const bounds = [b.north, b.south, b.west, b.east].join(',');
-  return `vector:${preset.key}:${bounds}:${style}${borders ? '+borders' : ''}`;
+  const base = `vector:${preset.key}:${bounds}:${style}${borders ? '+borders' : ''}`;
+  // Data shading is a suffix, not a new id scheme, for two reasons: the
+  // plain base maps already in bmg-map-cache.js keep their exact keys and
+  // stay reusable, and stripBaseMapId() below can recover the unshaded
+  // identity — which is how the host page knows that re-shading a map it is
+  // already showing is the same piece of paper, not a different one, and so
+  // must not throw the teacher's labels away.
+  return choroKey ? `${base}:choro:${choroKey}` : base;
 }
 
-export function baseMapTitle(preset, style, borders) {
+/** The id with any `:choro:<hash>` suffix removed — i.e. which base map this is, regardless of how it is shaded. */
+export function stripBaseMapId(id) {
+  return String(id || '').replace(/:choro:[^:]*$/, '');
+}
+
+/** True when two ids are the same base map (same preset, crop, style, borders) differing at most in their data shading. */
+export function sameBaseMap(a, b) {
+  if (!a || !b) return false;
+  return stripBaseMapId(a) === stripBaseMapId(b);
+}
+
+export function baseMapTitle(preset, style, borders, shaded) {
   const parts = [preset.label];
   if (preset.dataset === 'us') parts.push(borders ? 'state outlines' : 'national outline');
   else parts.push(borders ? 'country outlines' : 'coastlines only');
   if (style === 'land') parts.push('land fill');
+  if (shaded) parts.push('shaded by data');
   return parts.join(' — ');
+}
+
+/**
+ * Every region name this preset's data can draw, in file order. The
+ * choropleth matcher needs it to tell "I don't recognise that name" from "I
+ * recognise it but it isn't on this crop", and the picker uses it for the
+ * paste box's placeholder. Always the *divided* file: the undivided landmass
+ * has no per-region names in it.
+ */
+export async function listRegionNames(preset) {
+  const files = DATASETS[preset.dataset];
+  if (!files) return [];
+  const geo = await loadGeoJson(files.divided);
+  return (geo.features || []).map(f => (f.properties && f.properties.name) || '').filter(Boolean);
 }
 
 // Target size of the raster's longer side. Big enough that a full-page or
@@ -212,14 +245,39 @@ function tracePolygon(ctx, rings, bounds, width, height, forStroke) {
   }
 }
 
+function traceOneFeature(ctx, feature, bounds, width, height, forStroke) {
+  const g = feature.geometry;
+  if (!g) return;
+  if (g.type === 'Polygon') tracePolygon(ctx, g.coordinates, bounds, width, height, forStroke);
+  else if (g.type === 'MultiPolygon') for (const poly of g.coordinates) tracePolygon(ctx, poly, bounds, width, height, forStroke);
+}
+
 /** Adds every polygon of a FeatureCollection to the current path. `evenodd` filling then handles holes (lakes, enclaves) correctly. `forStroke` drops the synthetic polar closure described in drawableRings(). */
 function traceFeatures(ctx, geojson, bounds, width, height, forStroke = false) {
   ctx.beginPath();
+  for (const feature of geojson.features || []) traceOneFeature(ctx, feature, bounds, width, height, forStroke);
+}
+
+/**
+ * Paints each named region that has a colour in `fills` (see
+ * bmg-choropleth.js) on top of the land fill and underneath the boundary
+ * strokes, so a shaded map still shows its borders.
+ *
+ * One feature at a time with its own `evenodd` fill, rather than one path
+ * per colour class: a country's holes (Lesotho inside South Africa, an
+ * enclave) only cancel correctly against that country's own rings, and
+ * batching two neighbours into one path would make their shared edge
+ * disappear into the interior.
+ */
+function paintChoropleth(ctx, geojson, bounds, width, height, fills) {
   for (const feature of geojson.features || []) {
-    const g = feature.geometry;
-    if (!g) continue;
-    if (g.type === 'Polygon') tracePolygon(ctx, g.coordinates, bounds, width, height, forStroke);
-    else if (g.type === 'MultiPolygon') for (const poly of g.coordinates) tracePolygon(ctx, poly, bounds, width, height, forStroke);
+    const name = feature.properties && feature.properties.name;
+    const hex = name && fills[name];
+    if (!hex) continue;
+    ctx.beginPath();
+    traceOneFeature(ctx, feature, bounds, width, height, false);
+    ctx.fillStyle = hex;
+    ctx.fill('evenodd');
   }
 }
 
@@ -228,15 +286,19 @@ function traceFeatures(ctx, geojson, bounds, width, height, forStroke = false) {
  * that describes it — which is not derived or guessed, it *is* the bounds
  * the drawing used.
  */
-export async function renderBaseMapCanvas(preset, { style = 'outline', borders = true } = {}) {
+export async function renderBaseMapCanvas(preset, { style = 'outline', borders = true, fills = null } = {}) {
   const paint = STYLE_PAINT[style] || STYLE_PAINT.outline;
   const bounds = preset.bounds;
   const { width, height } = pixelSizeFor(bounds);
   const files = DATASETS[preset.dataset];
   if (!files) throw new Error(`unknown base map dataset "${preset.dataset}"`);
+  const shading = fills && Object.keys(fills).length ? fills : null;
 
   const whole = await loadGeoJson(files.whole);
-  const divided = borders ? await loadGeoJson(files.divided) : null;
+  // Data shading is per-region, so it needs the divided file even when the
+  // teacher has boundaries switched off — you can still shade Maryland on a
+  // borderless map, the shapes just aren't outlined.
+  const divided = (borders || shading) ? await loadGeoJson(files.divided) : null;
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -252,11 +314,13 @@ export async function renderBaseMapCanvas(preset, { style = 'outline', borders =
   ctx.fillStyle = paint.land;
   ctx.fill('evenodd');
 
+  if (shading) paintChoropleth(ctx, divided, bounds, width, height, shading);
+
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.strokeStyle = paint.stroke;
   ctx.lineWidth = Math.max(1, Math.round(Math.max(width, height) / 1600));
-  traceFeatures(ctx, divided || whole, bounds, width, height, true);
+  traceFeatures(ctx, borders ? divided : whole, bounds, width, height, true);
   ctx.stroke();
 
   return {
@@ -278,12 +342,12 @@ function canvasToBlob(canvas) {
  * `useUploadedFile()` builds, plus a `calibration` field, so displayMap()
  * and the IndexedDB cache need to know nothing new about vectors.
  */
-export async function buildBaseMapRecord(preset, { style = 'outline', borders = true } = {}) {
-  const { canvas, width, height, calibration } = await renderBaseMapCanvas(preset, { style, borders });
+export async function buildBaseMapRecord(preset, { style = 'outline', borders = true, fills = null, choroKey = '' } = {}) {
+  const { canvas, width, height, calibration } = await renderBaseMapCanvas(preset, { style, borders, fills });
   const blob = await canvasToBlob(canvas);
   return {
-    id: baseMapId(preset, style, borders),
-    title: baseMapTitle(preset, style, borders),
+    id: baseMapId(preset, style, borders, choroKey),
+    title: baseMapTitle(preset, style, borders, !!choroKey),
     blob,
     mime: 'image/png',
     width,
