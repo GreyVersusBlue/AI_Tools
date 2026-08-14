@@ -193,6 +193,7 @@ here.
 | Tool | Session | Claimed at (UTC) | Branch |
 |---|---|---|---|
 | Primary Source Analysis Worksheet Generator | `kx9rtm` | 2026-08-14 02:38 UTC | `claude/ssdemo2-028-kx9rtm` |
+| Government/Civics Simulation Role Card Generator | `pq4rvn` | 2026-08-14 02:39 UTC | `claude/ssdemo2-050-pq4rvn` |
 
 ---
 
