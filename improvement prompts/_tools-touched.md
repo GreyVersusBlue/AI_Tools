@@ -199,6 +199,7 @@ here.
 | Government/Civics Simulation Role Card Generator | `tjkd6u` | 2026-08-13 23:55 UTC | `claude/ssdemo-050-tjkd6u` |
 | Historical Figure / Country Trading Card Maker | `vqrmlk` | 2026-08-13 23:59 UTC | `claude/ssdemo-064-vqrmlk` |
 | Timeline Builder | `mq7fkd` | 2026-08-13 23:54 UTC | `claude/ssdemo-015-mq7fkd` |
+| Geography Bee / Map Skills Quiz Generator | `mee9kj` | 2026-08-14 00:01 UTC | `claude/ssdemo-062-mee9kj` |
 
 ---
 
