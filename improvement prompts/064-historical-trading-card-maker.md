@@ -13,6 +13,72 @@ true at the visual-upgrade round.)
 
 ## Status
 
+**2026-08-14 — Devon-assigned round: the large reference card (branch
+`claude/tool-improvement-merge-status-c1jqjp`, session `c1jqjp`).** Shipped
+the last real Quick Win on the list, and found that the other one had been
+quietly solved already.
+
+- **Third card size: 3.5 × 5in, four to a page.** The card that goes on a
+  poster or a word wall rather than in a sleeve — everything on it (photo
+  window, name plate, stat type, facts, meters, icons) scales with the card,
+  so it reads from a few feet away rather than just being a bigger rectangle
+  around the same 8pt text.
+- **The page budget is the whole constraint, and it is tight.** Two columns
+  of 3.5in is 7.15in of the 7.9in a letter page clears at this tool's 0.3in
+  margin; two rows of 5in is 10.15in of the 10.4in available. That quarter
+  inch is why the **"Card fronts" / "Card backs" banners are dropped at this
+  size** (`.size-reference .section-label { display: none }` in the print
+  rules) — exactly what the Quick Win predicted. The fronts still print
+  first and the backs after; the size hint on screen says so, since the page
+  no longer can.
+- **The duplex mirror had to stop being a constant.** `PRINT_COLS`/`ROWS`
+  became a `PRINT_GRIDS` table keyed by size, and `mirrorPageRows` is handed
+  the *current* column count. A stale 3 there would have misaligned every
+  back sheet at two columns — the kind of bug that only shows up on paper,
+  after the printing.
+- **Type is scaled by ~1.35, deliberately under the card's own 1.4.** A
+  straight ×1.43 of every size was built and measured first, and it made the
+  big card hold *less* than the small one — 10 wrapping stat lines against
+  12 — because the name plate and the inter-line margins are specified in
+  inches and don't shrink back. A reference card that fits less than the
+  card it magnifies is the wrong trade, so the type gives back what the
+  fixed spacing takes. It now holds 12 against 12, in much bigger letters.
+- **"Re-derive the stat-overflow heuristic per card size" was already
+  done** and the list hadn't caught up: the 6-lines-with-photo / 11-without
+  thresholds were replaced in an earlier round by rendering the real card
+  offscreen at the chosen size and asking the box whether it overflows.
+  The new size inherited a correct overflow warning for free — one
+  `.htcm-measure.size-reference { width: 3.5in }` rule was the whole change.
+  Struck through below.
+- **Store validation widened**, and made a whitelist rather than a binary:
+  an unknown `settings.size` (a future round's preset, a hand-edited export)
+  now falls back to `standard` instead of putting an unknown class on the
+  print area and laying out as nothing.
+
+**Known limitation, stated rather than hidden:** PDF and PNG/zip export stay
+at 2.5 × 3.5in whatever the size is set to. `htcm-export.js` is a 445-line
+canvas renderer with `W`/`H` and every layout constant derived from the
+standard card at 300 DPI; parameterizing it is a round of its own, not a
+rider on this one. The size hint on screen says so outright, so nobody
+discovers it from a PDF full of the wrong-sized cards.
+
+**Tests.** `smoke-card-size.mjs` grew a reference-card section (13
+assertions, 68 total): both dimensions measured in laid-out pixels, the grid
+proven to fit the page in *both* directions, the mirror proven to follow the
+column count, the type proven materially larger, and the overflow warning
+proven to be re-measured per size rather than a constant in disguise.
+
+#### Where the next round should pick up
+
+- **The PDF/PNG exporters are now the odd ones out.** Parameterizing
+  `htcm-export.js` by card size is the obvious next round, and it is worth
+  doing as its own: `W`, `H`, `PAD`, `WINDOWS` and every font size in it are
+  standard-card constants.
+- The projector review game renders `size-standard` cards explicitly. That
+  is right today (it scales one card to fill a screen), but if a teacher
+  ever wants the game to mirror the deck's chosen size, that call site is
+  where it lives.
+
 **2026-08-14 — SS demo round 2: review game, subject theme packs, a sample
 deck per pack (branch `claude/ssdemo2-064-h7ntqk`, session `h7ntqk`).** The
 headline plus all three supporting items shipped; nothing was cut.
@@ -371,14 +437,19 @@ with a photo / 11 without) and was not re-derived for the 3.5in card.
 - **Done — Card size options** (2026-08-12). Standard 2.5&times;3.5in
   (default) alongside the original fill-the-page layout; see the Round 3
   note above.
-- **A genuinely large reference card** (3.5&times;5in, four to a page) — the
-  thing the backlog row mistakenly believed already existed. Needs the
-  section labels moved or dropped, since 2 rows of 5in plus a label does not
-  clear a letter page, and needs the stat-overflow heuristic re-derived for
-  the taller card.
-- **Re-derive the stat-overflow heuristic per card size.** The 6-lines-with-
-  photo / 11-without thresholds were measured against the old 3.4in card and
-  are now applied unchanged to a 3.5in one with tighter padding.
+- ~~**A genuinely large reference card** (3.5&times;5in, four to a page)~~ —
+  **done, 2026-08-14** (session `c1jqjp`). The section labels were dropped
+  at this size, as predicted: two 5in rows leave a quarter inch on a letter
+  page. See the Status entry for the page budget and the type-scaling
+  decision.
+- ~~**Re-derive the stat-overflow heuristic per card size.**~~ — **already
+  done, and this list hadn't caught up.** The 6-lines-with-photo /
+  11-without thresholds were replaced by rendering the real card offscreen
+  at the chosen size and asking the box whether it overflows, so the check
+  re-derives itself for any new size. Confirmed against the source and
+  asserted in `smoke-card-size.mjs` in the 2026-08-14 round.
+
+No Quick Wins remain open.
 
 ## Major Features
 

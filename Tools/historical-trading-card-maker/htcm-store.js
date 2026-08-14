@@ -21,7 +21,7 @@
          meta: { rarity, setName, cardNo, setSize, stars },
          theme: null | themeKey                     // null = deck default
        }],
-       settings: { size: 'standard'|'fill', theme: themeKey } }
+       settings: { size: 'standard'|'fill'|'reference', theme: themeKey } }
 
    Discipline modeled on assets/js/gvb-save.js: repair() runs on every load and
    fills defaults for every field, so later feature rounds can add fields
@@ -101,7 +101,10 @@
   function repairSettings(s) {
     s = (s && typeof s === 'object') ? s : {};
     return {
-      size: s.size === 'fill' ? 'fill' : 'standard',
+      // Any value that isn't a known preset falls back to 'standard' — a
+      // deck saved by a future round, or a hand-edited export, must not put
+      // an unknown class on the print area and lay out as nothing at all.
+      size: (s.size === 'fill' || s.size === 'reference') ? s.size : 'standard',
       theme: typeof s.theme === 'string' ? s.theme : 'classic'
     };
   }

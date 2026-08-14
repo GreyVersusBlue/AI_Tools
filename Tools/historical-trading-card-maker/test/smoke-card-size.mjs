@@ -1,4 +1,5 @@
-// smoke-card-size.mjs — the standard 2.5 × 3.5in card preset.
+// smoke-card-size.mjs — the card size presets: standard 2.5 × 3.5in, the
+// legacy fill-the-page layout, and the 3.5 × 5in reference card.
 //
 //   node Tools/historical-trading-card-maker/test/smoke-card-size.mjs
 //
@@ -18,7 +19,13 @@
 //   and the sheet is wasted.
 //
 //   The preset is remembered, the old sizing is still reachable, and the
-//   duplex row-mirroring the previous round built is unaffected by either.
+//   duplex row-mirroring the previous round built is unaffected by any of
+//   them — the mirror follows the column count, which is 3 for the small
+//   cards and 2 for the reference card.
+//
+//   The reference card fits the page in BOTH directions. It is the preset
+//   with no slack: two 5in rows is 10.15in of a 10.4in printable height, so
+//   a drift that would be invisible on a 3.5in card costs half a sheet here.
 //
 //   No console errors, ever — the site's standing bar for every tool.
 //
@@ -46,7 +53,7 @@ const server = await serve(PORT);
 const browser = await launch();
 const page = await prepPage(browser, BASE, { width: 1280, height: 900 });
 
-console.log('Trading Card Maker — standard 2.5 × 3.5in card preset');
+console.log('Trading Card Maker — card size presets (standard, fill, reference)');
 
 await page.goto(URL_PAGE, { waitUntil: 'networkidle' });
 
@@ -269,7 +276,122 @@ await page.selectOption('#deckSelect', 'My cards');
 await settle(page);
 eq(await page.textContent('#entryCount'), '4', 'switching decks brings the original cards back');
 
-/* ── 12. no console noise anywhere in the run ────────────────────────────── */
+/* ── 12. the large reference card — 3.5 × 5in, four to a page ───────────── */
+// The third preset is the one for a poster or a word wall rather than a card
+// sleeve, and it is the one where the page budget is genuinely tight: two 5in
+// rows is 10.15in of grid inside the 10.4in a letter page clears at a 0.3in
+// margin. If either dimension drifts, a row silently moves to a page of its
+// own and every sheet after it is half empty, which is exactly the failure a
+// teacher only discovers at the printer.
+await page.selectOption('#cardSize', 'reference');
+await settle(page);
+const ref = await measureCards();
+eq(ref.count, 4, 'four cards to a page');
+eq(ref.rows, 2, 'laid out as two rows of two');
+near(ref.width / IN, 3.5, 0.02, 'a reference card measures 3.5in across');
+near(ref.height / IN, 5, 0.02, 'and 5in tall');
+
+const refSpan = (ref.spanRight - ref.spanLeft) / IN;
+ok(refSpan <= usable + 0.001, `two reference cards plus the gutter (${refSpan.toFixed(2)}in) fit the ${usable.toFixed(2)}in printable width`);
+const refPageHeight = (ref.height * 2) / IN + 0.15; // two rows plus one gutter
+ok(refPageHeight <= 11 - PAGE_MARGIN * 2 + 0.001,
+   `two rows plus the gutter (${refPageHeight.toFixed(2)}in) fit the ${(11 - PAGE_MARGIN * 2).toFixed(2)}in printable height`);
+
+// The banners are dropped at this size for exactly that reason — asserted so
+// nobody "fixes" the missing label back in without redoing the page budget.
+ok(await page.evaluate(() => {
+  const label = document.querySelector('#printArea .section-label');
+  if (!label) return false;
+  // display:none only applies under print media, so check the rule applies to
+  // this size rather than the computed screen style.
+  return document.getElementById('printArea').className === 'size-reference';
+}), 'the print area carries the reference size, which is what hides the fronts/backs banners in print');
+
+// Duplex mirroring has to follow the column count, not a constant: at two
+// columns a row reverses as a pair, and a stale 3 would leave the backs
+// misaligned with the fronts on every sheet.
+const [deckOrder, refFronts, refBacks] = await page.evaluate(() => {
+  const pages = Array.from(document.querySelectorAll('#printArea .print-page'));
+  const names = el => Array.from(el.querySelectorAll('.trading-card')).map(c => {
+    const n = c.querySelector('.cname');
+    return n ? n.textContent : '';
+  });
+  const deck = Array.from(document.querySelectorAll('#entriesWrap .entry-row .ename')).map(e => e.textContent);
+  return [deck, names(pages[0]), names(pages[pages.length - 1])];
+});
+eq(refFronts.slice(0, 2).join(','), deckOrder.slice(0, 2).join(','), 'reference fronts print in entry order');
+eq(refBacks.slice(0, 2).join(','), deckOrder.slice(0, 2).reverse().join(','),
+   'and the backs mirror across two columns, not three');
+
+// Type is scaled up with the card: a reference card read from across the room
+// is the point of the preset, so a card that merely got bigger would miss it.
+const nameSizes = await page.evaluate(() => {
+  const read = (size) => {
+    const probe = document.createElement('div');
+    probe.className = size;
+    probe.style.cssText = 'position:absolute;left:-10000px;top:0;';
+    probe.innerHTML = document.querySelector('#printArea .trading-card').outerHTML;
+    document.body.appendChild(probe);
+    const px = parseFloat(getComputedStyle(probe.querySelector('.cname')).fontSize);
+    probe.remove();
+    return px;
+  };
+  return { standard: read('size-standard'), reference: read('size-reference') };
+});
+ok(nameSizes.reference > nameSizes.standard * 1.3,
+   `the name is set materially larger on a reference card (${nameSizes.reference}px vs ${nameSizes.standard}px)`);
+
+// The overflow warning measures the real card at the chosen size, so the
+// bigger card must accept stats the small one clips — otherwise the warning
+// is just a constant wearing a measurement's clothes.
+await page.fill('#newName', 'Overflow probe');
+async function statCapacity() {
+  // The largest number of stat lines that does NOT trip the warning, found by
+  // walking up from a card that plainly fits. Reading the threshold rather
+  // than asserting one fixed count keeps this honest across theme and padding
+  // changes.
+  //
+  // The values are deliberately long enough to wrap. Type is scaled up with
+  // the card, so a *short* stat line uses about the same fraction of either
+  // card and both sizes hold a similar count — measured, and it is 12 on
+  // each. Width is where the sizes really differ (2.5in vs 3.5in of column),
+  // so a wrapping value is what makes the difference visible, and a wrapping
+  // value is also what a real stat looks like.
+  let last = 0;
+  for (let n = 2; n <= 24; n += 1) {
+    await page.fill('#newStats', Array.from({ length: n },
+      (_, i) => `Stat ${i}: a reasonably long value that wraps`).join('\n'));
+    await page.waitForTimeout(160);
+    if (await page.isVisible('#statWarn')) break;
+    last = n;
+  }
+  return last;
+}
+const refCapacity = await statCapacity();
+await page.selectOption('#cardSize', 'standard');
+await settle(page);
+const stdCapacity = await statCapacity();
+// At least as many, not strictly more: type is scaled with the card on
+// purpose, so the reference card is meant to hold the same content in bigger
+// letters rather than more of it. Holding *less* than the card it magnifies
+// would be the real bug — an early pass of this preset did exactly that
+// (10 lines against 12) before the type was dialled back.
+ok(refCapacity >= stdCapacity,
+   `the reference card holds at least as many stat lines as the standard one (${refCapacity} vs ${stdCapacity})`);
+await page.fill('#newStats', 'Born: 1900');
+await page.waitForTimeout(250);
+
+// And the choice persists like the other two.
+await page.selectOption('#cardSize', 'reference');
+await settle(page);
+await page.reload({ waitUntil: 'networkidle' });
+await settle(page);
+eq(await page.inputValue('#cardSize'), 'reference', 'the reference size survives a reload');
+eq(await page.evaluate(() => document.getElementById('printArea').className), 'size-reference', 'and is applied to the print area');
+await page.selectOption('#cardSize', 'standard');
+await settle(page);
+
+/* ── 13. no console noise anywhere in the run ────────────────────────────── */
 eq(page.__errs.length, 0, 'no page/console errors: ' + JSON.stringify(page.__errs));
 eq(page.__blocked.length, 0, 'nothing tried to leave the site: ' + JSON.stringify(page.__blocked));
 
