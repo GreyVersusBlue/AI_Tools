@@ -60,6 +60,8 @@
        c) add a new <li> at the TOP of .log (the "Progress report" changelog below)
           describing what changed, using the same date and the existing date/entry
           format, and bump the "N recent entries" tally in the <summary> to match.
+          KEEP IT SHORT: a <b>Title.</b> lead plus 1-2 sentences, no more. The
+          full detail of a pass belongs in the git commit, not the changelog.
      Do this every time, even for small tweaks. Do not skip it and do not remove
      this note in future passes.
 
@@ -2194,220 +2196,224 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <h2>Progress report</h2>
-      <span class="tally">56 recent entries</span>
+      <span class="tally">57 recent entries</span>
     </summary>
     <ul class="log">
       <li>
         <time datetime="2026-08-15">Aug 15, 2026</time>
-        <span><b>Legibility pass.</b> The grey ink got greyer than intended over time &mdash; every text color on this page now meets WCAG AA contrast, the smallest labels got a size bump, and row borders are actually visible. New: a dark theme via the same floating accessibility widget the tools use (bottom-right), and the General category now starts open so the list isn&rsquo;t hiding on first visit. Search easter eggs still fire, but they no longer eat your real results. The 15 tools that had no way back here now have a &ldquo;&larr; Toolkit&rdquo; link. The &ldquo;Try: Inbox&rdquo; floating pill retired to comment code C6 below.</span>
+        <span><b>Progress report condensed.</b> Every changelog entry now fits in a sentence or two; the full detail of each pass lives in git history. New house rule: entries stay this short.</span>
+      </li>
+      <li>
+        <time datetime="2026-08-15">Aug 15, 2026</time>
+        <span><b>Legibility pass.</b> Every text color on this page now meets WCAG AA contrast, the smallest labels got a size bump, and a dark theme arrived via the same accessibility widget the tools use. The General category starts open, search easter eggs no longer eat real results, 15 tools got their missing &ldquo;&larr; Toolkit&rdquo; link, and the &ldquo;Try: Inbox&rdquo; pill retired to comment code C6.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Home screen reorganized.</b> The 81-row list is now grouped into collapsible category sections (closed by default; whatever you open is remembered on this device), with an Expand all / Collapse all control. New &ldquo;Filter by tag&rdquo; panel: every tool got a curated set of behind-the-scenes tags (<code>data-filter-tags</code>); pick one or more tags to narrow the list (multiple tags = tools matching all of them), with live match counts on each tag button. The three little tag chips on each row were regenerated from the new tag set and are now clickable shortcuts to the same filter. A star on each row pins tools to a &ldquo;My Tools&rdquo; section at the top (saved on this device only). Known caveat, on purpose: the star and chips are interactive elements nested inside each row&rsquo;s link &mdash; spans with <code>role=button</code>, since real buttons are invalid inside anchors. Text search is unchanged and composes with the tag filter.</span>
+        <span><b>Home screen reorganized.</b> The 81-row list is now grouped into collapsible category sections with a &ldquo;Filter by tag&rdquo; panel, clickable tag chips, and a star that pins tools to a &ldquo;My Tools&rdquo; section &mdash; open state, tags, and pins all remembered on this device.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>PE Warm-Up Circuit Card Generator.</b> A default 8-station calisthenics circuit (or build from scratch), each station with an emoji, duration/reps, and instructions, printed as a set of large station cards to post around the gym. Closes out the &ldquo;coming soon&rdquo; list &mdash; every idea that was on the board has shipped. 81 real tools now, 0 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>PE Warm-Up Circuit Card Generator.</b> Build a station circuit (or use the default 8-station set) and print large station cards to post around the gym. Closes out the &ldquo;coming soon&rdquo; list &mdash; 81 real tools, 0 ideas left.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Music Sight-Reading / Rhythm Warm-Up Generator.</b> Two warm-up modes: randomized rhythm patterns (built-in note-value pool, any of 4/4, 3/4, or 2/4) shown as one measure at a time, and randomized pitch sight-reading drawn on a real treble or bass clef staff with ledger lines, for a projector display or printed handout. 80 real tools now, 1 &ldquo;coming soon&rdquo; idea left.</span>
+        <span><b>Music Sight-Reading / Rhythm Warm-Up Generator.</b> Randomized rhythm patterns and treble/bass staff sight-reading drills, for the projector or a printed handout.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Student Art Portfolio Label &amp; QR Tag Maker.</b> Add a title, photo, and artist statement per piece; print portfolio labels with a thumbnail and a QR code that carries the statement text itself &mdash; nothing hosted, so any scanner can read it offline. 79 real tools now, 2 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Student Art Portfolio Label &amp; QR Tag Maker.</b> Print portfolio labels with a thumbnail and a QR code that carries the artist statement itself &mdash; nothing hosted, so any scanner reads it offline.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Fitness &amp; Skill Assessment Tracker.</b> Save a roster, add or edit fitness-test events (time-based or count-based), enter results in a per-student grid with live class average/range stats, and print a clean report. 78 real tools now, 3 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Fitness &amp; Skill Assessment Tracker.</b> Enter fitness-test results in a per-student grid with live class stats, and print a clean report.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Cognates &amp; False Friends Reference List Builder.</b> Spanish and French starter example lists (or build from scratch) split into true cognates and false friends, each false friend noting what it looks like versus what it actually means, printed as a two-section reference sheet. Closes out World Language for now. 77 real tools now, 4 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Cognates &amp; False Friends Reference List Builder.</b> Spanish and French starter lists split into true cognates and false friends, printed as a two-section reference sheet.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Picture-Prompt Speaking/Writing Task Generator.</b> Upload a batch of images, pair each with a random editable task prompt, and step through them no-repeats-until-cycled (matching Name Picker's convention) for a projector display, or print a set of image + prompt cards for stations. 76 real tools now, 5 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Picture-Prompt Speaking/Writing Task Generator.</b> Pair uploaded images with editable task prompts and step through them on the projector, or print image-plus-prompt cards for stations.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Cultural Trivia Card Generator.</b> A 30-question built-in bank across Hispanic World, Francophone World, and Global Culture categories, filterable, projected one at a time with a reveal-answer button or printed as matching front/back trivia card grids, plus a teacher-editable custom bank. 75 real tools now, 6 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Cultural Trivia Card Generator.</b> A 30-question bank across three culture categories, projected with a reveal button or printed as front/back trivia cards, plus a teacher-editable custom bank.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Classroom Label Maker (Target Language).</b> Paste a target-word/English vocabulary list, pick a language, and print small labels each with a QR code linking to a pronunciation page (built with the browser's own text-to-speech, no server or hosted audio needed) plus a plain reference sheet. 74 real tools now, 7 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Classroom Label Maker (Target Language).</b> Paste a vocabulary list and print small labels whose QR codes link to browser-built text-to-speech pronunciation pages &mdash; no server or hosted audio.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Geography Bee / Map Skills Quiz Generator.</b> A 30-question built-in bank across capitals, landmarks, and map-reading skills, filterable by category, projected one at a time with a reveal-answer button or printed as a quiz with an answer key, plus a teacher-editable custom bank. Closes out Social Studies for now. 73 real tools now, 8 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Geography Bee / Map Skills Quiz Generator.</b> A 30-question bank across capitals, landmarks, and map skills, projected or printed with an answer key, plus a custom bank.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Government/Civics Simulation Role Card Generator.</b> Three starter templates (Mock Trial, Debate, Legislative Simulation) or build from scratch, each role with an editable position and talking points list, printed as a 2-per-page card grid. 72 real tools now, 9 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Government/Civics Simulation Role Card Generator.</b> Mock Trial, Debate, and Legislative starter templates with editable positions and talking points, printed as a card grid.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Historical Figure / Country Trading Card Maker.</b> Batch-add cards with a photo/flag image, label:value stats, and back-of-card facts, printed as two card-front and card-back grids in the same order for a research project. 71 real tools now, 10 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Historical Figure / Country Trading Card Maker.</b> Batch-build cards with an image, stats, and back-of-card facts, printed as matching front and back grids.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>DBQ / Source Packet Builder.</b> Add text or image sources with a citation and source-specific guiding questions, plus a shared question set asked of every source, printed as one packet (cover page, one source per page, blank lines under each question). Pairs with the existing Primary Source Analysis Worksheet Generator. 70 real tools now, 11 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>DBQ / Source Packet Builder.</b> Assemble text or image sources with citations and guiding questions into one printable packet &mdash; pairs with the Primary Source Analysis Generator.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Dichotomous Key Builder.</b> Numbered couplets with a leads-to-another-step or final-answer choice per branch, optional example specimens tagged under each result, printed as a student worksheet (shuffled specimens to classify) plus a matching answer key. Closes out Science for now. 69 real tools now, 12 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Dichotomous Key Builder.</b> Build numbered couplets that branch to further steps or final answers, printed as a classify-the-specimens worksheet with an answer key.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Science Fair Project Tracker.</b> Six editable milestones with due dates (question &amp; hypothesis through presentation ready), a per-student checkbox grid with a live progress percentage, and a printable report with a &ldquo;still missing, by milestone&rdquo; chase-list. 68 real tools now, 13 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Science Fair Project Tracker.</b> Six editable milestones with a per-student checkbox grid, live progress stats, and a printable &ldquo;still missing&rdquo; chase-list.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Scientific Method / Experiment Design Planner.</b> A guided pre-lab worksheet &mdash; testable question, an If/then/because hypothesis, independent/dependent/controlled variables, materials, and procedure steps &mdash; printable as a fillable planning packet. The pre-lab companion to Lab Report Template Builder. 67 real tools now, 14 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Scientific Method / Experiment Design Planner.</b> A guided pre-lab worksheet &mdash; question, hypothesis, variables, materials, procedure &mdash; printable as a fillable packet.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Science Safety Symbol &amp; Equipment Label Maker.</b> Ten hazard/equipment icons (flammable, corrosive, toxic, biohazard, electrical, sharp objects, eye protection, hot surface, fragile, plain equipment), custom label text and copy counts, printed as a grid of storage-bin labels &mdash; pairs with the Lab Safety Contract Tracker. 66 real tools now, 15 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Science Safety Symbol &amp; Equipment Label Maker.</b> Ten hazard and equipment icons with custom label text and copy counts, printed as storage-bin labels.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Story Elements / Plot Diagram Builder.</b> A five-stage plot-mountain diagram (exposition through resolution, each with its own editable note) alongside a characters/setting/conflict/theme summary, printable or projectable as one shared reference. Closes out English/Language Arts for now. 65 real tools now, 16 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Story Elements / Plot Diagram Builder.</b> A five-stage plot-mountain diagram plus a characters/setting/conflict/theme summary, printable or projectable.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Grammar Mad Libs Generator.</b> Four built-in story templates (or write your own with {tag} placeholders), each parsed for its parts-of-speech blanks, a &ldquo;fill randomly&rdquo; demo reveal for the projector, and a printable worksheet with a word-bank suggestion box per blank type. 64 real tools now, 17 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Grammar Mad Libs Generator.</b> Built-in story templates (or your own with placeholder tags), with a projector reveal and a printable worksheet with word banks.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Book Tasting Menu Generator.</b> Add books with title, author, genre, blurb, and an optional cover image, then print either a two-column restaurant-style menu or fold-in-half table tents (mirrored top/bottom so they read right-side-up standing up). 63 real tools now, 18 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Book Tasting Menu Generator.</b> Add books with blurbs and covers, then print a restaurant-style menu or fold-in-half table tents.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator.</b> Randomized conversion rows across three difficulty tiers, one form given (fraction, decimal, or percent, chosen at random or fixed) and the other two left blank, with a matching answer key. Closes out Math for now. 62 real tools now, 19 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Fraction&ndash;Decimal&ndash;Percent Conversion Drill Generator.</b> Randomized conversion rows across three difficulty tiers with a matching answer key.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator.</b> A 15-problem built-in bank spanning order of operations, fractions, one-step and two-step equations, exponents, and percents &mdash; each a worked solution with one deliberate error, revealed on a projector display or printed as a worksheet with an explanation-and-answer key. 61 real tools now, 20 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Math &ldquo;Find the Mistake&rdquo; Warm-Up Generator.</b> Worked solutions each hiding one deliberate error, revealed on the projector or printed with an explanation key.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Virtual Manipulatives Board.</b> Draggable base-ten blocks, fraction tiles (halves through twelfths), and algebra tiles on a shared board, plus a separate draggable number line, each with a one-click PNG snapshot. 60 real tools now, 21 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Virtual Manipulatives Board.</b> Draggable base-ten blocks, fraction tiles, and algebra tiles plus a number line, each with one-click PNG snapshots.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Testing Accommodations Reference Card Generator.</b> A roster &times; accommodation-type grid (extended time, separate setting, read-aloud, and more, all editable) with a per-student note field, printed as small reference cards &mdash; entirely local, like the Final Grade Checker. This closes out General/Classroom Logistics for now. 59 real tools now, 22 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Testing Accommodations Reference Card Generator.</b> A roster-by-accommodation grid with per-student notes, printed as small reference cards &mdash; entirely local.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Sub Note / Feedback Slip Generator.</b> An editable list of prompts (what worked, what didn&rsquo;t, names to know for tomorrow), each printed with blank lines, as repeated half-sheets a substitute fills out by hand before leaving. 58 real tools now, 23 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Sub Note / Feedback Slip Generator.</b> Editable prompts printed as repeated half-sheets a substitute fills out by hand before leaving.</span>
       </li>
       <li>
         <time datetime="2026-08-11">Aug 11, 2026</time>
-        <span><b>Duty Roster Builder.</b> Editable duty locations and staff list, a round-robin auto-fill across the week, and a printable Monday&ndash;Friday grid for the workroom board. First tool of a new batch working through the rest of the Ideas Backlog. 57 real tools now, 24 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Duty Roster Builder.</b> Editable duty locations and staff with round-robin auto-fill, printed as a Monday&ndash;Friday grid for the workroom board.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Art Critique Worksheet Generator.</b> A four-step describe/analyze/interpret/judge critique worksheet with editable main prompts and follow-up questions per step, printed as repeated half-sheets with artwork title/reviewer lines &mdash; pairs with the existing Gallery Walk QR Codes tool. 56 real tools now, 25 &ldquo;coming soon&rdquo; ideas left. <b>This closes out a 10-tool batch pulled from the Ideas Backlog in one pass</b> (Parent/Guardian Contact Log through this one) &mdash; see each tool&rsquo;s entry in <code>improvement prompts/</code> for where a future round should push further.</span>
+        <span><b>Art Critique Worksheet Generator.</b> A describe/analyze/interpret/judge worksheet with editable prompts, printed as repeated half-sheets. Closed out a 10-tool backlog batch.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Verb Conjugation Reference Poster Generator.</b> Spanish present/preterite and French present-tense starter templates (or build from scratch), editable subject/person labels and verb-group panels, printed as a large-font wall poster &mdash; the visual-reference companion to Vocab &amp; Conjugation Drill Generator. 55 real tools now, 26 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Verb Conjugation Reference Poster Generator.</b> Spanish and French starter templates with editable panels, printed as a large-font wall poster.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Current Events Discussion Guide Generator.</b> Paste an article and pull out a summary starter and candidate vocabulary words automatically, then edit both, add your own vocabulary and questions, and print a discussion guide with six preset critical-thinking questions to choose from. 54 real tools now, 27 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Current Events Discussion Guide Generator.</b> Paste an article to auto-pull a summary starter and vocabulary, then print a discussion guide with critical-thinking questions.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Lab Report Template Builder.</b> Four subject-flavored starter templates (generic, chemistry, biology, physics) covering hypothesis, materials, procedure, a configurable data table, observations, and conclusion questions, all editable, printed as one fillable packet per lab. 53 real tools now, 28 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Lab Report Template Builder.</b> Four subject-flavored templates covering hypothesis through conclusion, printed as a fillable packet per lab.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Peer Feedback / Editing Checklist Generator.</b> Four starter templates (narrative, argumentative, informative, general) with editable categories and checklist items, tied to an assignment title, printed as repeated half-sheets (author/reviewer name lines plus a comments area) for a whole class. 52 real tools now, 29 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Peer Feedback / Editing Checklist Generator.</b> Four starter templates with editable checklist items, printed as repeated half-sheets for a whole class.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Daily Editing / DOL Warm-Up Generator.</b> A 24-sentence built-in bank of common grammar/punctuation slip-ups, projected one at a time with a reveal-the-fix button, plus a printable worksheet + answer key and a teacher-editable custom sentence bank that layers on top of the built-ins. 51 real tools now, 30 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Daily Editing / DOL Warm-Up Generator.</b> A 24-sentence bank of grammar slip-ups with a projector reveal, a printable worksheet with key, and a custom sentence bank.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Unit Conversion Reference Chart Builder.</b> Check off the customary, metric, cross-system, temperature, and time unit sets you want, add your own custom lines, and print a one-page reference chart &mdash; the measurement-focused cousin of the Formula Reference Sheet Builder. 50 real tools now, 31 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Unit Conversion Reference Chart Builder.</b> Check off the unit sets you want, add custom lines, and print a one-page reference chart.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Word Problem Warm-Up Generator.</b> Randomized word problems by operation (addition/subtraction/multiplication/division) and grade band, either projected one at a time with a reveal-answer button or printed as a full worksheet with a matching answer key. 49 real tools now, 32 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Word Problem Warm-Up Generator.</b> Randomized word problems by operation and grade band, projected one at a time or printed with an answer key.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Staff Directory / Quick-Reference Builder.</b> Add staff one at a time or paste a whole list from a spreadsheet, sort by any column, search across name/room/subject, and print a clean one-page directory. 48 real tools now, 33 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Staff Directory / Quick-Reference Builder.</b> Add or paste a staff list, sort and search it, and print a one-page directory.</span>
       </li>
       <li>
         <time datetime="2026-08-10">Aug 10, 2026</time>
-        <span><b>Parent/Guardian Contact Log.</b> Log a call, email, or note home per student &mdash; date, method, and outcome &mdash; with a per-student contact count, a filterable history table, and a one-click print of either the full filtered list or a single student&rsquo;s history before a conference. Roster can be typed in directly or pulled from a saved Name Picker roster. 47 real tools now, 34 &ldquo;coming soon&rdquo; ideas left.</span>
+        <span><b>Parent/Guardian Contact Log.</b> Log calls, emails, and notes home per student with a filterable history and one-click prints for conferences.</span>
       </li>
       <li>
         <time datetime="2026-08-09">Aug 9, 2026</time>
-        <span><b>Big ideas backlog expansion.</b> Four more &ldquo;coming soon&rdquo; ideas added to every single category (28 new placeholders total, on top of the one already added per category) and the ranked Existing Tools enhancement list more than doubled, from 12 rows to 33 &mdash; plus four new Platform-Wide &ldquo;big swing&rdquo; ideas (Bulk CSV Roster Import Hub, Custom Theme/Branding Pass, Voice Command Input, Printable &ldquo;Cheat Sheet&rdquo; Bundle Export). 35 &ldquo;coming soon&rdquo; rows now sit alongside the 46 real tools; none of them count toward the record/file totals above.</span>
+        <span><b>Big ideas backlog expansion.</b> 28 more &ldquo;coming soon&rdquo; placeholders across every category, four new platform-wide big swings, and the enhancement list grew from 12 to 33 rows.</span>
       </li>
       <li>
         <time datetime="2026-08-09">Aug 9, 2026</time>
-        <span><b>Ideas backlog refresh, retired the tool improvement plan.</b> Seven new &ldquo;coming soon&rdquo; ideas across every category &mdash; Parent/Guardian Contact Log, Virtual Manipulatives Board, Daily Editing/DOL Warm-Up Generator, Lab Report Template Builder, DBQ/Source Packet Builder, Classroom Label Maker, and Art Critique Worksheet Generator &mdash; plus a freshly ranked 12-row Existing Tools enhancement list (folding in the two loose suggestions that were still sitting in the old plan file). <code>TOOL_IMPROVEMENTS_PLAN.md</code> is retired; <code>IDEAS_BACKLOG.md</code> is now the single working list for both new-tool and enhancement ideas.</span>
+        <span><b>Ideas backlog refresh, retired the tool improvement plan.</b> Seven new &ldquo;coming soon&rdquo; ideas and a freshly ranked enhancement list; <code>IDEAS_BACKLOG.md</code> is now the single working list.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Live Student-View Sync.</b> The fifth and last platform-wide &ldquo;big swing,&rdquo; and the hardest one honestly: real peer-to-peer WebRTC needs an SDP offer/answer handshake, which normally means a signaling server, and &ldquo;no server&rdquo; is a real constraint here, not a formality. The serverless answer is manual signaling &mdash; Classroom Timer's new &ldquo;Mirror to a device&rdquo; shows a QR code containing the connection offer, the other device (open <code>classroom-timer/mirror.html</code>, or scan it directly) scans it and shows an answer code back, camera-to-camera or copy/pasted by hand either way. Once paired, the countdown mirrors live over a direct data-channel connection &mdash; no server relays it, so it only works between devices that can already reach each other (the same classroom Wi-Fi). Scoped to exactly this one pairing rather than a generalized system, per the backlog's own note; verified end-to-end with two separate simulated browser sessions actually connecting and syncing live, not just each half in isolation.</span>
+        <span><b>Live Student-View Sync.</b> Classroom Timer&rsquo;s &ldquo;Mirror to a device&rdquo; pairs two devices over WebRTC using QR codes as the serverless handshake &mdash; it works between devices that can already reach each other, like the same classroom Wi-Fi.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Cross-Tool Shareable State Links.</b> The fourth platform-wide &ldquo;big swing&rdquo;: a shared <code>_shared/state-link.js</code> helper encodes a tool's current board into the page URL itself (the same base64-in-a-query-param trick the Digital Escape Room Builder already uses for its QR codes), so pasting a link opens that exact board somewhere else &mdash; no server, no login, just a longer link. Wired into three high-value tools first: Seating Chart Generator (share the active section), Bracket / Tournament Generator (share the current bracket, picks included), and Rubric Builder (share the current rubric). Opening a shared link always imports as a new, uniquely-named section/bracket/rubric rather than overwriting anything already saved in that browser, so the same link is safe to open twice. More tools to follow in a later pass.</span>
+        <span><b>Cross-Tool Shareable State Links.</b> A shared helper encodes a tool&rsquo;s current board into the URL itself, wired into Seating Chart, Bracket Generator, and Rubric Builder first; shared links import as new copies, never overwriting.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Sitewide Accessibility Pass.</b> The third platform-wide &ldquo;big swing&rdquo;: a floating &ldquo;Aa&rdquo; widget (bottom-right corner) with adjustable text size, a dark theme, a dyslexia-friendly font toggle, and read-aloud via the browser's built-in text-to-speech &mdash; all sharing one saved preference. This supersedes the old light/dark-only toggle on the six tools that had it (Seating Chart Generator, Word Doc Merger, Classroom Timer, Final Grade Checker, Prompt Builder, Image &rarr; PDF Assembler) rather than running a second parallel theme system alongside it: those tools keep their own native dark palette, while newly-wired tools get a generic dark-mode filter since they don't share that palette. Wired into the three tools named on the backlog first &mdash; Writing Prompt Generator, Vocab &amp; Conjugation Drill Generator, and the Silent Reading (SSR) Log Tracker &mdash; with more tools to follow in later passes.</span>
+        <span><b>Sitewide Accessibility Pass.</b> A floating &ldquo;Aa&rdquo; widget with adjustable text size, a dark theme, a dyslexia-friendly font, and read-aloud, sharing one saved preference across tools.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Full Offline Install (PWA).</b> The second platform-wide &ldquo;big swing&rdquo;: a <code>manifest.json</code> and a service worker (<code>sw.js</code>) turn the toolkit into an installable app that keeps working with no connection. Every tool page, and the scripts/styles/fonts each one needs, are cached the first time you visit; Blank Map Generator's Wikimedia downloads get their own capped runtime cache instead (no trying to cache the whole internet). Install it from the browser's address bar or share menu once you've loaded the site over the real domain; anything visited once keeps working offline after.</span>
+        <span><b>Full Offline Install (PWA).</b> A manifest and service worker make the toolkit installable and cache every visited page, so anything loaded once keeps working offline.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Landing Page Command Palette.</b> Press <code>Ctrl</code>/<code>&#8984;</code>+<code>K</code> anywhere on this page (or click the &ldquo;Quick jump&rdquo; badge in the app bar) to open a fuzzy-search jump box over every tool &mdash; type a few letters of a name, tag, or description, arrow through the matches, and hit Enter to open one. First of the platform-wide &ldquo;big swings&rdquo; off the backlog; the rest (offline install, accessibility pass, shareable state links, live student-view sync) are still ahead.</span>
+        <span><b>Landing Page Command Palette.</b> Press <code>Ctrl</code>/<code>&#8984;</code>+<code>K</code> anywhere on this page (or click &ldquo;Quick jump&rdquo;) for a fuzzy-search jump box over every tool.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Lab Safety Contract Tracker, Primary Source Analysis Worksheet Generator, Immersion Roleplay Scenario Generator, and Tournament Bracket &amp; Station Rotation.</b> Four more off the backlog &mdash; every subject-specific idea and every General/Classroom Logistics idea collected so far is now built. Lab Safety Contract Tracker gives every student a one-tap signed/not-signed toggle stamped with today's date, with a live &ldquo;N of M signed&rdquo; count and a missing-list before lab day. Primary Source Analysis Worksheet Generator builds a printable OPTIC (visual sources) or SOAPSTone (text sources) worksheet around a described or pasted-in source, using the real guiding questions for each framework step, with an answer key built from the teacher's own per-step notes. Immersion Roleplay Scenario Generator pairs 38 real-life dialogue scenarios with vocabulary scaffolding cards a teacher fills in for whatever language they teach, printable per-pair or as a multi-scenario handout set. Tournament Bracket &amp; Station Rotation combines a projector-friendly station rotation timer (named stations and groups, correct wraparound at any group-to-station ratio) with a tournament bracket reusing the existing Bracket Generator's own bye-handling algorithm.</span>
+        <span><b>Lab Safety Contract Tracker, Primary Source Analysis Worksheet Generator, Immersion Roleplay Scenario Generator, and Tournament Bracket &amp; Station Rotation.</b> Four more off the backlog: signed/not-signed contract tracking with a missing-list, OPTIC/SOAPSTone source worksheets, 38 roleplay dialogue scenarios with vocabulary cards, and a station-rotation timer paired with a tournament bracket.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Sub Binder / Day Bundle Generator, Number Talks / Mental Math Routine Board, and Novel Study / Reading Circles Manager.</b> Three more off the backlog, closing out the &ldquo;General / Classroom Logistics&rdquo; section entirely. Sub Binder / Day Bundle Generator pulls the standing details already saved in Sub Plan Builder together with a read-only summary of the current Seating Chart (desks in reading order, each student&rsquo;s note and flag carried over) and a freeform &ldquo;today&rsquo;s lesson&rdquo; box into one two-page printable packet, with links out to the full Sub Plan Builder document and Schedule Browser for anything the summary doesn&rsquo;t cover. Number Talks / Mental Math Routine Board is a bank of 56 real number-talk prompts across 7 grade-band categories &mdash; multi-expression strings reveal one expression at a time on a projector display, the actual mechanic of the routine, paired with a lightweight strategy-sharing board for jotting a few students&rsquo; reasoning as they share out. Novel Study / Reading Circles Manager splits a roster into reading circles and rotates discussion roles (Discussion Director, Summarizer, Word Wizard, and the rest) meeting after meeting using the same fairness memory Lab Group &amp; Role Randomizer already has, with a chapter/page checkpoint logged every meeting and a printable roles sheet.</span>
+        <span><b>Sub Binder / Day Bundle Generator, Number Talks / Mental Math Routine Board, and Novel Study / Reading Circles Manager.</b> Three more off the backlog: a two-page sub packet built from Sub Plan Builder and Seating Chart data, a 56-prompt number-talks board with one-expression-at-a-time reveals, and reading circles with rotating roles and per-meeting checkpoints.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Command Center, Field Trip Permission Slip Generator, and Digital Escape Room / Puzzle Lock Builder.</b> Three more off the backlog. Command Center is a single projector page combining a countdown timer, a read of today&rsquo;s entry from the School Calendar Visualizer (day type badges plus any lesson/pacing note, with a graceful nudge to set one up if there isn&rsquo;t one yet), and a no-repeats-until-everyone&rsquo;s-had-a-turn quick-call picker over a saved roster. Field Trip Permission Slip Generator fills in trip details once and prints a signature-ready slip for one student, a whole class in batch, or blank copies to hand-write, and saves the trip as a reusable template for next year. Digital Escape Room / Puzzle Lock Builder chains QR-code puzzle stations &mdash; linear or branching &mdash; into a build-once, print-and-post activity: the whole puzzle travels inside the QR codes themselves (no server, no accounts), and scanning a station out of order sends a student back to find the right one instead of leaking the clue.</span>
+        <span><b>Command Center, Field Trip Permission Slip Generator, and Digital Escape Room / Puzzle Lock Builder.</b> Three more off the backlog: a projector dashboard (timer, today&rsquo;s calendar entry, quick-call picker), signature-ready permission slips printable per student or in batch, and QR-code puzzle stations that carry the whole activity inside the codes themselves.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Class Roster Hub, Digital Hall Pass / Sign-Out Log, and Exit Ticket / Bell Ringer Generator.</b> Three more off the backlog. Class Roster Hub is a dedicated place to build and save a class list, sharing the exact same saved-roster storage Name Picker already uses &mdash; so a roster built in either one now shows up in both, plus in a &ldquo;Load a saved roster&hellip;&rdquo; option newly added to Seating Chart Generator, Lab Group &amp; Role Randomizer, Gallery Walk QR Codes, and the SSR Log Tracker (Group/Team Generator and Behavior &amp; Points Tracker already had it). Digital Hall Pass / Sign-Out Log tracks who&rsquo;s out of the room in real time &mdash; tap a destination, tap a student, and a live board shows elapsed time until they&rsquo;re signed back in, with a per-day log, an archived history, and a printable report. Exit Ticket / Bell Ringer Generator pairs a bank of nearly 100 short warm-up and reflection prompts &mdash; filterable by subject, with a big projector display &mdash; with a printable handout mode that repeats the current prompt 2 or 4 to a page for cut-apart half- or quarter-sheets.</span>
+        <span><b>Class Roster Hub, Digital Hall Pass / Sign-Out Log, and Exit Ticket / Bell Ringer Generator.</b> Three more off the backlog: a shared roster store now readable across seven tools, a live who&rsquo;s-out-of-the-room board with history and reports, and a nearly-100-prompt warm-up bank with projector and half-sheet print modes.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Backup &amp; Restore.</b> Graduated the &ldquo;One-Click Backup / Restore&rdquo; idea off the platform-wide backlog. Scans this browser&rsquo;s storage and groups everything it finds by which tool saved it &mdash; rosters, sections, saved rubrics and boards, settings, all of it &mdash; then downloads the whole thing as one <code>.json</code> file. Restoring reads that file back in, previews what&rsquo;s new versus what it would overwrite, and merges it into local storage on confirm. No per-tool wiring needed: it works off whatever any tool has saved, past or future, so a wiped browser cache or a move to a new computer no longer means starting every saved roster and rubric over from scratch.</span>
+        <span><b>Backup &amp; Restore.</b> Scans everything any tool has saved in this browser and downloads it as one <code>.json</code> file; restoring previews new-versus-overwrite before merging it back in.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Behavior &amp; Points Tracker.</b> Graduated off the ideas backlog. Arm a behavior chip (built-in +1/&minus;1, or an editable list of point-valued behaviors like &ldquo;Helping Others&rdquo; or &ldquo;Talking Out&rdquo;), then tap any student&rsquo;s card to apply it &mdash; a live per-student running total, sortable by name or points, with a flash on the tapped card and an undo button for the last tap. An activity feed shows the recent log; &ldquo;Archive Day &amp; Reset&rdquo; snapshots the day&rsquo;s totals into an expandable history list and zeroes everyone back to 0, so points can reset daily or run all week, whichever a section needs. Prints a clean report of the current live totals. Multiple named sections, and can load a roster saved in the Name Picker.</span>
+        <span><b>Behavior &amp; Points Tracker.</b> Arm a behavior chip and tap student cards to award points, with live totals, undo, a daily archive-and-reset, and printable reports.</span>
       </li>
       <li>
         <time datetime="2026-08-08">Aug 8, 2026</time>
-        <span><b>Six more ideas-backlog tools, a full site-wide bug pass, and a big backlog refresh.</b> Shipped Gallery Walk QR Codes, Vocab &amp; Conjugation Drill Generator, Grade Distribution Visualizer, Rubric Builder, Silent Reading (SSR) Log Tracker, and Lab Group &amp; Role Randomizer &mdash; see the toolkit table above for what each does. Then audited every tool on the site and fixed what turned up: seven tools (Certificate &amp; Award Maker, Formula Reference Sheet Builder, Math Fact Drill Sheet Generator, Rubric Builder, Timeline Builder, Vocab &amp; Conjugation Drill Generator, Vocabulary Flashcard &amp; Word Wall Generator) were printing a completely blank page; Name Picker's backup export/import buttons called functions that didn't exist; the Bracket Generator mis-highlighted winners when two entrants shared a name; the Schedule Browser and School Layout Visualizer could crash on a teacher name containing an apostrophe; Blank Map Generator could leave a leftover drawing tool active across a project switch; and a long tail of smaller date-math, print-layout, and data-loss fixes landed across the Sub Plan Builder, School Calendar Visualizer, Graph Paper Generator, Classroom Timer, Writing Prompt Generator, Word Doc Merger, Image &rarr; PDF Assembler, Quiz/Review Game Board, QR Scavenger Hunt Builder, Gallery Walk QR, Grade Distribution Visualizer, Group/Team Generator, Prompt Builder, and Seating Chart Generator. Also added a wave of new ideas to the <a href="ideas-backlog.html">ideas backlog</a>: a Class Roster Hub, Sub Binder/Day Bundle Generator, Command Center dashboard, and Digital Escape Room Builder, one new idea apiece for Math, ELA, Social Studies, and World Language, and six platform-wide &ldquo;big swings&rdquo; &mdash; shareable state links, a full offline install, one-click backup/restore, a sitewide accessibility pass, a landing-page command palette, and live student-view sync.</span>
+        <span><b>Six more ideas-backlog tools, a full site-wide bug pass, and a big backlog refresh.</b> Shipped Gallery Walk QR Codes, Vocab &amp; Conjugation Drill Generator, Grade Distribution Visualizer, Rubric Builder, SSR Log Tracker, and Lab Group &amp; Role Randomizer, then audited every tool on the site and fixed what turned up &mdash; including seven tools that printed a blank page. Also added a wave of new ideas to the <a href="ideas-backlog.html">ideas backlog</a>, from a Class Roster Hub to six platform-wide big swings.</span>
       </li>
       <li>
         <time datetime="2026-08-07">Aug 7, 2026</time>
-        <span><b>13 new tools, eight Blank Map Generator upgrade passes, and subject sections.</b> Shipped the next batch off the backlog: Bracket / Tournament Generator, Quiz / Review Game Board, Certificate &amp; Award Maker, Graph Paper &amp; Number Line Generator, Math Fact Drill Sheet Generator, Formula Reference Sheet Builder, Vocabulary Flashcard &amp; Word Wall Generator, Writing Prompt Generator, Timeline Builder, Group / Team Generator, Data Table &rarr; Chart Builder, and QR Scavenger Hunt Builder &mdash; see the toolkit table above for what each does. Blank Map Generator launched the same day and grew through eight more passes: shaded regions + undo; draggable overlays, PNG export, and better search; freehand lines, Mercator calibration, and per-marker color/size; named map projects; continent/country browsing; student handout mode, label styling, and numbered pins; a scale bar and batch coordinate placement; and uploading your own map with accessibility hatching, keyboard nudge, and legend reordering &mdash; capped off with tiled poster printing and a full undo/redo stack. Also grouped the toolkit into subject sections (Math, ELA, Science, Social Studies, World Language, Arts &amp; PE) and introduced the <a href="ideas-backlog.html">ideas backlog</a>.</span>
+        <span><b>13 new tools, eight Blank Map Generator upgrade passes, and subject sections.</b> Shipped a 12-tool batch off the backlog plus the Blank Map Generator, which grew through eight upgrade passes the same day. Also grouped the toolkit into subject sections and introduced the <a href="ideas-backlog.html">ideas backlog</a>.</span>
       </li>
       <li>
         <time datetime="2026-08-06">Aug 6, 2026</time>
-        <span><b>School Calendar Visualizer, Classroom Timer, and a header layout pass.</b> School Calendar Visualizer: full-year calendar template with tagged day types (holidays, half days, workdays, testing windows) and lesson pacing notes, saved locally and printable. Classroom Timer: countdown, transition, random-interval, stopwatch, and round-robin modes, big digits for the back row. Also moved the memo block (To/From/Date/CC/Attach) beside the headline instead of stacked above it, and corrected the "7 records"/"7 files" counts to match the actual tool count.</span>
+        <span><b>School Calendar Visualizer, Classroom Timer, and a header layout pass.</b> A full-year calendar with tagged day types and pacing notes, a five-mode timer with big digits for the back row, and a reworked memo header with corrected record counts.</span>
       </li>
       <li>
         <time datetime="2026-07-30">Jul 30, 2026</time>
