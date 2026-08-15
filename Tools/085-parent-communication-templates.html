@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parent Communication Template Generator</title>
+<meta name="description" content="Fill in the blanks on ready-made parent letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email. Batch-fill a whole roster at once.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/085-parent-communication-templates.html">
+<meta property="og:title" content="Parent Communication Template Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Fill in the blanks on ready-made parent letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email. Batch-fill a whole roster at once.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Parent Communication Template Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Fill in the blanks on ready-made parent letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email. Batch-fill a whole roster at once.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='6' y='10' width='20' height='14' rx='2' fill='none' stroke='%231f3550' stroke-width='2'/%3E%3Cpath d='M6 11l10 8 10-8' stroke='%231f3550' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<script src="../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1150px; margin: 0 auto; }
+  .app-header h1 { font-size: 1.6rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
+  select, input[type="text"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem;
+  }
+  textarea { resize: vertical; }
+
+  button {
+    font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+    border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--accent); }
+  button.secondary:hover { background: #eef2f6; }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: #fbecea; }
+
+  .layout { display: grid; grid-template-columns: 17rem 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 62rem) { .layout { grid-template-columns: 1fr; } }
+
+  .catbar { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .7rem; }
+  .catbar button { padding: .25rem .6rem; font-size: .75rem; border-radius: 12px; background: #fff; color: var(--accent); }
+  .catbar button.active { background: var(--accent); color: #fff; }
+
+  .tpl-row { border: 1px solid var(--line); border-radius: 7px; padding: .5rem .6rem; margin-bottom: .4rem; cursor: pointer; font-size: .84rem; display: flex; justify-content: space-between; align-items: center; gap: .4rem; }
+  .tpl-row:hover { border-color: var(--accent-2); }
+  .tpl-row.active { border-color: var(--accent); background: #eef4f8; }
+  .tpl-row .tname { flex: 1; }
+  .tpl-row .cattag { font-size: .68rem; color: var(--muted); display: block; }
+  .tpl-row .delx { border: none; background: none; color: var(--err); font-weight: 700; padding: 0 .3rem; }
+
+  .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
+  .toprow .field { min-width: 10rem; }
+  .toprow .grow { flex: 1 1 12rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .6rem .9rem; margin-bottom: .8rem; }
+
+  .preview { border: 1px dashed var(--line-strong); border-radius: 8px; padding: .8rem 1rem; background: #fff; white-space: pre-wrap; font-size: .9rem; }
+  .preview .psubj { font-weight: 700; margin-bottom: .5rem; }
+
+  .batchbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .6rem; font-weight: 600; font-size: .85rem; }
+  .batchbar input { width: auto; }
+
+  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .share-note.error { color: var(--err); }
+
+  #printArea .letter { font-family: Georgia, "Times New Roman", serif; color: #111; padding: .6in .7in; page-break-after: always; white-space: pre-wrap; }
+  #printArea .letter .subj { font-weight: bold; font-size: 12.5pt; margin-bottom: 1em; }
+  #printArea .letter .body { font-size: 12pt; }
+  @media print { @page { margin: 0.6in; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Parent Communication Template Generator</h1>
+      <p class="sub">Pick a template, fill in the blanks, and copy, print, or email it &mdash; or turn on batch mode to fill the same letter for a whole roster at once.</p>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      <h2>Templates</h2>
+      <div class="catbar" id="catBar"></div>
+      <div id="templateList"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="toprow">
+          <div class="field grow"><label for="subjInput">Subject</label><input type="text" id="subjInput"></div>
+        </div>
+        <label for="bodyInput">Body &mdash; edit freely, including the bracketed prompts</label>
+        <textarea id="bodyInput" rows="12"></textarea>
+        <div class="btnrow" style="margin-top:.6rem">
+          <button type="button" class="secondary" id="saveCustomBtn">Save as custom template</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Fill in the blanks</h2>
+        <div class="fields-grid" id="blanksWrap"></div>
+
+        <div class="batchbar">
+          <label style="margin:0"><input type="checkbox" id="batchToggle"> Batch mode &mdash; fill for a whole roster</label>
+        </div>
+        <div id="batchWrap" hidden>
+          <div class="fields-grid">
+            <div class="field">
+              <label for="importSelect">Load a saved Name Picker roster</label>
+              <select id="importSelect"></select>
+            </div>
+          </div>
+          <p class="hint" id="batchStatus">No roster loaded.</p>
+        </div>
+
+        <h2 style="margin-top:1rem">Preview</h2>
+        <div class="preview" id="previewBox"></div>
+        <p class="share-note" id="shareNote"></p>
+        <div class="btnrow" style="margin-top:.8rem">
+          <button type="button" class="secondary" id="copyBtn">Copy</button>
+          <button type="button" class="secondary" id="emailBtn">Compose email</button>
+          <button type="button" class="primary" id="printOneBtn">Print letter</button>
+          <button type="button" class="primary" id="printBatchBtn" hidden>Print all for roster</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var CUSTOM_KEY = 'pct:custom';
+  var VALUES_KEY = 'pct:lastValues';
+  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
+  var KNOWN_FIELDS = ['Student', 'Parent/Guardian', 'Class', 'Teacher Name', 'Date', 'Assignment', 'Grade', 'Time'];
+
+  var CATEGORIES = [
+    { key: 'positive', label: 'Positive' },
+    { key: 'academic', label: 'Academic Concern' },
+    { key: 'behavior', label: 'Behavior' },
+    { key: 'meetings', label: 'Meetings' },
+    { key: 'logistics', label: 'Logistics' }
+  ];
+  var CAT_LABEL = {};
+  CATEGORIES.forEach(function (c) { CAT_LABEL[c.key] = c.label; });
+
+  var BUILTIN = [
+    { id: 'pos_praise', category: 'positive', title: 'General Praise Note',
+      subject: 'A quick note about [Student]',
+      body: 'Dear [Parent/Guardian],\n\nI wanted to take a moment to share something positive. [Student] [describe what they did well] in [Class] today. It really stood out to me, and I wanted you to know.\n\nThanks for all you do at home to support [Student] — it shows.\n\nWarmly,\n[Teacher Name]' },
+    { id: 'pos_improvement', category: 'positive', title: 'Improvement Note',
+      subject: '[Student] is making real progress',
+      body: "Dear [Parent/Guardian],\n\nI wanted to let you know that [Student] has shown real improvement in [Class] recently, especially with [specific skill or behavior]. I'm proud of the effort, and I hope [Student] hears that from us both.\n\nBest,\n[Teacher Name]" },
+    { id: 'pos_kindness', category: 'positive', title: 'Kindness / Citizenship Shout-Out',
+      subject: "[Student] made someone's day today",
+      body: "Dear [Parent/Guardian],\n\nI just had to share this: today in [Class], [Student] [describe the kind act]. It's the kind of thing that doesn't show up on a report card but matters just as much. Thank you for raising a kid who notices others.\n\n[Teacher Name]" },
+    { id: 'pos_thankyou', category: 'positive', title: 'Thank-You (Volunteer / Chaperone / Donation)',
+      subject: 'Thank you for [what they did]',
+      body: "Dear [Parent/Guardian],\n\nThank you so much for [volunteering / chaperoning / donating] for [event or activity] on [Date]. It genuinely made a difference, and the students noticed too.\n\nWe couldn't do what we do without support like yours.\n\nGratefully,\n[Teacher Name]" },
+    { id: 'aca_missing', category: 'academic', title: 'Missing / Late Work Notice',
+      subject: 'Missing work for [Student] in [Class]',
+      body: "Dear [Parent/Guardian],\n\nI wanted to flag that [Student] currently has missing or late work in [Class] as of [Date]:\n\n- [Assignment]\n\nMissing work can be turned in for credit through [makeup deadline]. Please check in with [Student] about this when you can, and reach out if there's something going on that's getting in the way.\n\nThank you,\n[Teacher Name]" },
+    { id: 'aca_grade', category: 'academic', title: 'Grade-Drop Notice',
+      subject: "[Student]'s grade in [Class]",
+      body: "Dear [Parent/Guardian],\n\nI wanted to reach out because [Student]'s grade in [Class] has dropped to [Grade] as of [Date]. The main factor seems to be [reason].\n\nI'd like to work with [Student] on a plan to turn this around — [ideas: tutoring, retakes, organization]. Let me know a good time to talk if you'd like to discuss further.\n\n[Teacher Name]" },
+    { id: 'aca_makeup', category: 'academic', title: 'Makeup Work Reminder',
+      subject: 'Makeup work for [Student]',
+      body: "Dear [Parent/Guardian],\n\nNow that [Student] is back, here's what needs to be made up from being out on [Date]:\n\n- [Assignment]\n\nThe deadline to turn this in is [makeup deadline]. Let me know if [Student] needs any extra support catching up.\n\n[Teacher Name]" },
+    { id: 'aca_tutor', category: 'academic', title: 'Tutoring / Extra-Help Offer',
+      subject: 'Extra help available for [Student] in [Class]',
+      body: "Dear [Parent/Guardian],\n\nI'd like to offer [Student] some extra support in [Class] with [topic or skill]. I'm available [Time] for tutoring or extra help if that works for your schedule — no pressure, just wanted to make sure the option is on your radar.\n\n[Teacher Name]" },
+    { id: 'beh_concern', category: 'behavior', title: 'Behavior Concern Notice',
+      subject: 'A behavior concern in [Class]',
+      body: "Dear [Parent/Guardian],\n\nI wanted to let you know about something that happened in [Class] on [Date]: [description of what happened].\n\nWe talked about it in class, and I've asked [Student] to [expectation going forward]. I wanted you to hear it from me directly. Please reach out if you'd like to talk it through.\n\n[Teacher Name]" },
+    { id: 'meet_request', category: 'meetings', title: 'Conference Request',
+      subject: 'Requesting a conference about [Student]',
+      body: "Dear [Parent/Guardian],\n\nI'd like to set up a time to talk about [Student]'s progress in [Class]. Would [option 1] or [option 2] work for you? We can meet in person, by phone, or virtually — whatever's easiest.\n\nLooking forward to connecting,\n[Teacher Name]" },
+    { id: 'meet_confirm', category: 'meetings', title: 'Conference Confirmation',
+      subject: 'Confirming our meeting about [Student]',
+      body: 'Dear [Parent/Guardian],\n\nJust confirming our conference about [Student] on [Date] at [Time], [location, phone, or video link]. Let me know if anything changes on your end.\n\nSee you then,\n[Teacher Name]' },
+    { id: 'log_absence', category: 'logistics', title: 'Absence / Attendance Follow-Up',
+      subject: "Checking in about [Student]'s attendance",
+      body: "Dear [Parent/Guardian],\n\nI noticed [Student] has been absent from [Class] a few times recently. I wanted to check in and see if everything is okay, and let you know I'm happy to help [Student] catch up on anything missed.\n\n[Teacher Name]" },
+    { id: 'log_fieldtrip', category: 'logistics', title: 'Field Trip Reminder',
+      subject: 'Reminder: [event] on [Date]',
+      body: 'Dear [Parent/Guardian],\n\nJust a reminder that [Class] has [event] on [Date]. Please make sure [Student] has [items needed] and that the permission slip is turned in by [deadline].\n\nThanks!\n[Teacher Name]' },
+    { id: 'log_supplies', category: 'logistics', title: 'Supplies / Forms Reminder',
+      subject: '[Student] still needs [item]',
+      body: "Dear [Parent/Guardian],\n\nJust a friendly reminder that [Student] still needs to bring in [supplies or forms] for [Class]. If that's a barrier for any reason, please let me know — happy to help find a solution.\n\nThanks,\n[Teacher Name]" },
+    { id: 'log_welcome', category: 'logistics', title: 'Beginning-of-Year Welcome Letter',
+      subject: 'Welcome to [Class]!',
+      body: "Dear [Parent/Guardian],\n\nWelcome to [Class]! I'm excited to have [Student] this year. A few quick things: [supply list, communication preferences, classroom expectations].\n\nPlease don't hesitate to reach out anytime at [contact info]. Looking forward to a great year.\n\n[Teacher Name]" },
+    { id: 'log_progress', category: 'logistics', title: 'End-of-Unit / Quarter Progress Update',
+      subject: "[Student]'s progress update — [Class]",
+      body: "Dear [Parent/Guardian],\n\nHere's a quick update on [Student]'s progress in [Class] as of [Date]:\n\nCurrent grade: [Grade]\nStrengths: [strengths]\nAreas to work on: [areas]\n\nLet me know if you'd like to talk more.\n\n[Teacher Name]" }
+  ];
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function escAttr(v) {
+    v = v == null ? '' : String(v);
+    return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var els = {};
+  ['catBar','templateList','subjInput','bodyInput','saveCustomBtn','blanksWrap','batchToggle','batchWrap',
+   'importSelect','batchStatus','previewBox','shareNote','copyBtn','emailBtn','printOneBtn','printBatchBtn','printArea']
+    .forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var customTemplates = [];
+  var activeCat = 'all';
+  var current = null; // { id, category, title, subject, body }
+  var values = {};
+  var batchNames = [];
+
+  function loadCustom() {
+    try { customTemplates = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch (e) { customTemplates = []; }
+  }
+  function saveCustom() {
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customTemplates)); } catch (e) { setNote('Could not save the custom template.', true); }
+  }
+  function loadValues() {
+    try { values = JSON.parse(localStorage.getItem(VALUES_KEY) || '{}'); } catch (e) { values = {}; }
+  }
+  function saveValues() {
+    try { localStorage.setItem(VALUES_KEY, JSON.stringify(values)); } catch (e) {}
+  }
+
+  function setNote(text, isError) {
+    els.shareNote.innerHTML = text;
+    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    window.clearTimeout(setNote._t);
+    setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
+  }
+
+  function allTemplates() { return BUILTIN.concat(customTemplates); }
+
+  function renderCatBar() {
+    var html = '<button type="button" data-cat="all" class="' + (activeCat === 'all' ? 'active' : '') + '">All</button>';
+    CATEGORIES.forEach(function (c) {
+      html += '<button type="button" data-cat="' + c.key + '" class="' + (activeCat === c.key ? 'active' : '') + '">' + esc(c.label) + '</button>';
+    });
+    els.catBar.innerHTML = html;
+  }
+
+  function renderTemplateList() {
+    var list = allTemplates().filter(function (t) { return activeCat === 'all' || t.category === activeCat; });
+    var html = '';
+    list.forEach(function (t) {
+      var isCustom = t.id.indexOf('custom_') === 0;
+      html += '<div class="tpl-row' + (current && current.id === t.id ? ' active' : '') + '" data-id="' + escAttr(t.id) + '">' +
+        '<span class="tname">' + esc(t.title) + '<span class="cattag">' + esc(CAT_LABEL[t.category] || t.category) + '</span></span>' +
+        (isCustom ? '<button type="button" class="delx" data-del="' + escAttr(t.id) + '" title="Delete custom template">&times;</button>' : '') +
+        '</div>';
+    });
+    els.templateList.innerHTML = html || '<p class="hint">No templates in this category.</p>';
+  }
+
+  function selectTemplate(id) {
+    var t = allTemplates().filter(function (x) { return x.id === id; })[0];
+    if (!t) return;
+    current = { id: t.id, category: t.category, title: t.title, subject: t.subject, body: t.body };
+    els.subjInput.value = current.subject;
+    els.bodyInput.value = current.body;
+    renderTemplateList();
+    renderBlanks();
+    renderPreview();
+  }
+
+  function usedFieldsInText() {
+    var text = (els.subjInput.value || '') + '\n' + (els.bodyInput.value || '');
+    return KNOWN_FIELDS.filter(function (f) { return text.indexOf('[' + f + ']') > -1; });
+  }
+
+  function renderBlanks() {
+    var used = usedFieldsInText();
+    var batchOn = els.batchToggle.checked;
+    var html = '';
+    used.forEach(function (f) {
+      if (batchOn && f === 'Student') return; // filled per-student in batch mode
+      html += '<div class="field"><label>' + esc(f) + '</label><input type="text" data-field="' + escAttr(f) + '" value="' + escAttr(values[f] || '') + '"></div>';
+    });
+    els.blanksWrap.innerHTML = html || '<p class="hint">This template has no fill-in fields — edit the body directly.</p>';
+    var inputs = els.blanksWrap.querySelectorAll('input[data-field]');
+    inputs.forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        values[inp.getAttribute('data-field')] = inp.value;
+        saveValues();
+        renderPreview();
+      });
+    });
+  }
+
+  function mergeText(text, vals) {
+    return text.replace(/\[([^\]]+)\]/g, function (m, key) {
+      var k = key.trim();
+      if (Object.prototype.hasOwnProperty.call(vals, k) && vals[k]) return vals[k];
+      return m;
+    });
+  }
+
+  function renderPreview() {
+    var subj = mergeText(els.subjInput.value || '', values);
+    var body = mergeText(els.bodyInput.value || '', values);
+    els.previewBox.innerHTML = '<div class="psubj">Subject: ' + esc(subj) + '</div><div>' + esc(body) + '</div>';
+  }
+
+  els.templateList.addEventListener('click', function (e) {
+    var del = e.target.closest ? e.target.closest('button[data-del]') : null;
+    if (del) {
+      var id = del.getAttribute('data-del');
+      if (!window.confirm('Delete this custom template?')) return;
+      customTemplates = customTemplates.filter(function (t) { return t.id !== id; });
+      saveCustom();
+      if (current && current.id === id) current = null;
+      renderTemplateList();
+      return;
+    }
+    var row = e.target.closest ? e.target.closest('.tpl-row') : null;
+    if (row) selectTemplate(row.getAttribute('data-id'));
+  });
+
+  els.catBar.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-cat]') : null;
+    if (!btn) return;
+    activeCat = btn.getAttribute('data-cat');
+    renderCatBar();
+    renderTemplateList();
+  });
+
+  els.subjInput.addEventListener('input', function () { renderBlanks(); renderPreview(); });
+  els.bodyInput.addEventListener('input', function () { renderBlanks(); renderPreview(); });
+
+  els.saveCustomBtn.addEventListener('click', function () {
+    var title = window.prompt('Name this custom template:', (current && current.title) ? current.title + ' (copy)' : 'My Template');
+    if (!title) return;
+    var cat = (current && current.category) || 'logistics';
+    var id = 'custom_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    customTemplates.push({ id: id, category: cat, title: title.trim(), subject: els.subjInput.value, body: els.bodyInput.value });
+    saveCustom();
+    activeCat = 'all';
+    renderCatBar();
+    selectTemplate(id);
+    setNote('Saved as a custom template.', false);
+  });
+
+  els.batchToggle.addEventListener('change', function () {
+    els.batchWrap.hidden = !els.batchToggle.checked;
+    els.printBatchBtn.hidden = !els.batchToggle.checked;
+    els.printOneBtn.hidden = els.batchToggle.checked;
+    els.emailBtn.hidden = els.batchToggle.checked;
+    renderBlanks();
+  });
+
+  function refreshImportSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var names = Object.keys(rosters);
+      if (!names.length) { els.importSelect.innerHTML = '<option value="">No saved rosters found</option>'; return; }
+      els.importSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escAttr(n) + '">' + esc(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) { els.importSelect.innerHTML = '<option value="">No saved rosters found</option>'; }
+  }
+  els.importSelect.addEventListener('change', function () {
+    var name = els.importSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var list = rosters[name];
+      if (list && list.length) {
+        batchNames = list.slice();
+        els.batchStatus.textContent = batchNames.length + ' students loaded from "' + name + '".';
+      }
+    } catch (e) {}
+  });
+
+  function copyText(text, ok) {
+    var p = (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(text) : Promise.reject();
+    p.then(ok, function () { window.prompt('Copy this text:', text); });
+  }
+
+  els.copyBtn.addEventListener('click', function () {
+    var subj = mergeText(els.subjInput.value || '', values);
+    var body = mergeText(els.bodyInput.value || '', values);
+    copyText('Subject: ' + subj + '\n\n' + body, function () { setNote('Copied.', false); });
+  });
+
+  els.emailBtn.addEventListener('click', function () {
+    var subj = mergeText(els.subjInput.value || '', values);
+    var body = mergeText(els.bodyInput.value || '', values);
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  });
+
+  els.printOneBtn.addEventListener('click', function () {
+    var subj = mergeText(els.subjInput.value || '', values);
+    var body = mergeText(els.bodyInput.value || '', values);
+    els.printArea.innerHTML = '<div class="letter"><div class="subj">Subject: ' + esc(subj) + '</div><div class="body">' + esc(body) + '</div></div>';
+    window.print();
+  });
+
+  els.printBatchBtn.addEventListener('click', function () {
+    if (!batchNames.length) { setNote('Load a roster first.', true); return; }
+    var html = '';
+    batchNames.forEach(function (name) {
+      var vals = {};
+      for (var k in values) { if (Object.prototype.hasOwnProperty.call(values, k)) vals[k] = values[k]; }
+      vals.Student = name;
+      var subj = mergeText(els.subjInput.value || '', vals);
+      var body = mergeText(els.bodyInput.value || '', vals);
+      html += '<div class="letter"><div class="subj">Subject: ' + esc(subj) + '</div><div class="body">' + esc(body) + '</div></div>';
+    });
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  function init() {
+    loadCustom();
+    loadValues();
+    renderCatBar();
+    renderTemplateList();
+    refreshImportSelect();
+    selectTemplate(BUILTIN[0].id);
+  }
+  init();
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>

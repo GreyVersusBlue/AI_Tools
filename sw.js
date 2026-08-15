@@ -24,7 +24,7 @@
 // Bump CACHE_VERSION any time PRECACHE_URLS changes, so the old cache gets
 // cleaned up on activate instead of lingering forever.
 
-const CACHE_VERSION = 'v128';
+const CACHE_VERSION = 'v129';
 const PRECACHE = `aplp-precache-${CACHE_VERSION}`;
 const RUNTIME = `aplp-runtime-${CACHE_VERSION}`;
 const WIKI_CACHE = `aplp-wiki-${CACHE_VERSION}`;
@@ -76,6 +76,7 @@ const PRECACHE_URLS = [
   "Tools/042-certificate-award-maker.html",
   "Tools/certificate-award-maker/cam-borders.js",
   "Tools/certificate-award-maker/cam-store.js",
+  "Tools/082-citation-generator.html",
   "Tools/050-civics-role-card-generator.html",
   "Tools/civics-role-card-generator/crcg-store.js",
   "Tools/civics-role-card-generator/crcg-templates.js",
@@ -161,6 +162,7 @@ const PRECACHE_URLS = [
   "Tools/name-picker/np-store.js",
   "Tools/027-novel-study-circles-manager.html",
   "Tools/024-number-talks-board.html",
+  "Tools/085-parent-communication-templates.html",
   "Tools/068-parent-contact-log.html",
   "Tools/021-pe-tournament-stations.html",
   "Tools/069-pe-warmup-circuit-generator.html",
@@ -169,6 +171,7 @@ const PRECACHE_URLS = [
   "Tools/072-plot-diagram-builder.html",
   "Tools/028-primary-source-analysis-generator.html",
   "Tools/029-prompt-builder.html",
+  "Tools/083-propaganda-analysis-worksheet-generator.html",
   "Tools/016-qr-code-generator.html",
   "Tools/018-qr-scavenger-hunt-builder.html",
   "Tools/030-review-game-board.html",
@@ -203,6 +206,7 @@ const PRECACHE_URLS = [
   "Tools/073-science-fair-project-tracker.html",
   "Tools/074-science-safety-label-maker.html",
   "Tools/seating-chart/seating.mjs",
+  "Tools/084-socratic-seminar-prep-organizer.html",
   "Tools/075-staff-directory-builder.html",
   "Tools/033-ssr-log-tracker.html",
   "Tools/045-sub-binder-generator.html",

@@ -91,6 +91,10 @@ Small, single-file tools built for the day-to-day classroom logistics that eat p
 | Student Art Portfolio Label & QR Tag Maker | `Tools/048-art-portfolio-label-maker.html` | Add a title, photo, and artist statement per piece; print portfolio labels with a thumbnail and a QR code carrying the statement text itself, no hosting needed. |
 | Music Sight-Reading / Rhythm Warm-Up Generator | `Tools/067-music-sightreading-generator.html` | Randomized rhythm patterns (4/4, 3/4, or 2/4) or randomized pitch sight-reading on a real treble/bass staff, for a projector display or printed handout. |
 | PE Warm-Up Circuit Card Generator | `Tools/069-pe-warmup-circuit-generator.html` | A default 8-station calisthenics circuit (or build from scratch), each with an emoji, duration/reps, and instructions, printed as large station cards. |
+| Citation Generator | `Tools/082-citation-generator.html` | Add books, articles, websites, Wikipedia pages, videos, and more, then print a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style, alphabetized automatically. |
+| Propaganda & Persuasion Analysis Worksheet Generator | `Tools/083-propaganda-analysis-worksheet-generator.html` | Set up a poster, cartoon, or ad once and print a leveled student worksheet — symbols, a propaganda-technique checklist, ethos/pathos/logos, message and audience — plus a matching teacher answer key. |
+| Socratic Seminar Prep & Tracker | `Tools/084-socratic-seminar-prep-organizer.html` | Print a claim/evidence/rebuttal prep sheet for a central question, then run a live speaking-order and participation tracker with shuffle, drag-to-reorder, and an optional inner/outer fishbowl split. |
+| Parent Communication Template Generator | `Tools/085-parent-communication-templates.html` | Fill in the blanks on ready-made letters — positive notes, missing-work notices, conference requests, and more — then copy, print, or email one, or batch-fill the same letter for a whole roster at once. |
 
 ## Using these
 

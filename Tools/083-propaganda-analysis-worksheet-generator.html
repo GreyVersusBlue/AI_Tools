@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propaganda &amp; Persuasion Analysis Worksheet Generator</title>
+<meta name="description" content="Build a printable propaganda-poster or political-cartoon analysis worksheet — symbols, technique checklist, ethos/pathos/logos, message and audience — leveled Academic, Honors, or Honors GT, with a matching teacher answer key.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/083-propaganda-analysis-worksheet-generator.html">
+<meta property="og:title" content="Propaganda &amp; Persuasion Analysis Worksheet Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Build a printable propaganda-poster or political-cartoon analysis worksheet — symbols, technique checklist, ethos/pathos/logos, message and audience — leveled Academic, Honors, or Honors GT, with a matching teacher answer key.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Propaganda &amp; Persuasion Analysis Worksheet Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Build a printable propaganda-poster or political-cartoon analysis worksheet — symbols, technique checklist, ethos/pathos/logos, message and audience — leveled Academic, Honors, or Honors GT, with a matching teacher answer key.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M9 6v20M9 8h12l-3.5 4L21 16H9' fill='none' stroke='%231f3550' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script src="../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header h1 { font-size: 1.6rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  .card h3 { font-size: .92rem; margin: 0 0 .3rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
+  select, input[type="text"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem;
+  }
+  textarea { resize: vertical; min-height: 3.5rem; }
+
+  button {
+    font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+    border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--accent); }
+  button.secondary:hover { background: #eef2f6; }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: #fbecea; }
+
+  .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
+  .toprow .field { min-width: 10rem; }
+  .toprow .grow { flex: 1 1 12rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .7rem .9rem; }
+
+  .imgbox { display: flex; align-items: center; gap: .8rem; margin-top: .6rem; }
+  .imgbox img { max-width: 8rem; max-height: 8rem; border: 1px solid var(--line); border-radius: 6px; object-fit: contain; background: #fff; }
+
+  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .share-note.error { color: var(--err); }
+
+  .step { border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin-bottom: .7rem; }
+  .step .letter { display: inline-flex; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: #fff; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; margin-right: .5rem; }
+  .step .q { margin: .4rem 0 0; }
+  .step .note { margin: .5rem 0 0; padding: .5rem .7rem; background: #eef4f8; border-radius: 6px; font-size: .82rem; color: var(--accent-2); }
+  .techlist { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .4rem; }
+  .techlist li { display: flex; gap: .5rem; font-size: .86rem; }
+  .techlist b { min-width: 11rem; flex-shrink: 0; }
+
+  #printArea .sheet { font-family: Georgia, "Times New Roman", serif; color: #111; padding: .4in .5in; }
+  #printArea h1 { font-size: 15pt; margin: 0 0 .1em; }
+  #printArea .meta { font-size: 10.5pt; margin: 0 0 .8em; }
+  #printArea .meta div { margin: 0; }
+  #printArea .photo { max-width: 2.4in; max-height: 2.4in; display: block; margin: 0 0 .8em; border: 1px solid #999; }
+  #printArea .pstep { margin-bottom: 1em; page-break-inside: avoid; }
+  #printArea .pstep h2 { font-size: 12pt; margin: 0 0 .2em; }
+  #printArea .pstep p.q { font-size: 11pt; margin: 0 0 .3em; }
+  #printArea .lines { border-bottom: 1px solid #999; height: 1.1em; margin-bottom: .1em; }
+  #printArea .keynote { font-size: 10.5pt; font-style: italic; border: 1px dashed #999; padding: .3em .5em; }
+  #printArea ul.ptech { list-style: none; margin: .3em 0 0; padding: 0; }
+  #printArea ul.ptech li { font-size: 10.5pt; margin-bottom: .5em; }
+  #printArea ul.ptech .box { display: inline-block; width: .9em; height: .9em; border: 1px solid #333; margin-right: .4em; vertical-align: -1px; }
+  @media print { @page { margin: 0.6in; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Propaganda &amp; Persuasion Analysis Worksheet Generator</h1>
+      <p class="sub">Set up a poster, cartoon, or ad once and print a student worksheet plus a matching teacher answer key, leveled for Academic, Honors, or Honors GT.</p>
+    </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="printKeyBtn">Print answer key</button>
+      <button type="button" class="primary" id="printWorksheetBtn">Print worksheet</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toprow">
+      <div class="field grow">
+        <label for="projName">Worksheet name</label>
+        <input type="text" id="projName">
+      </div>
+      <div class="field grow">
+        <label for="projSwitch">Saved worksheets</label>
+        <select id="projSwitch"></select>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="secondary" id="newListBtn">New worksheet</button>
+        <button type="button" class="danger" id="delListBtn">Delete</button>
+      </div>
+    </div>
+    <p class="share-note" id="shareNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>Source</h2>
+    <div class="fields-grid">
+      <div class="field"><label for="srcTitle">Title</label><input type="text" id="srcTitle" placeholder="&quot;I Want You for U.S. Army&quot;"></div>
+      <div class="field"><label for="srcCreator">Creator, if known</label><input type="text" id="srcCreator" placeholder="James Montgomery Flagg"></div>
+      <div class="field"><label for="srcDate">Date / period</label><input type="text" id="srcDate" placeholder="1917"></div>
+      <div class="field"><label for="srcOrigin">Where it was published/displayed</label><input type="text" id="srcOrigin" placeholder="U.S. Army recruitment poster"></div>
+      <div class="field">
+        <label for="levelSelect">Level</label>
+        <select id="levelSelect">
+          <option value="academic" selected>Academic</option>
+          <option value="honors">Honors</option>
+          <option value="gt">Honors GT</option>
+        </select>
+      </div>
+    </div>
+    <div class="imgbox">
+      <button type="button" class="secondary" id="imgBtn">Upload image</button>
+      <button type="button" class="danger" id="imgRemoveBtn" hidden>Remove image</button>
+      <input type="file" id="imgInput" accept="image/*" hidden>
+      <img id="imgPreview" hidden alt="Uploaded source image">
+    </div>
+    <p class="hint">Optional &mdash; paste in the actual poster/cartoon so it prints with the worksheet. Large images use more browser storage; resize first if your browser's storage fills up.</p>
+  </div>
+
+  <div class="card">
+    <h2>Analysis steps <span id="levelBadge" class="hint" style="display:inline"></span></h2>
+    <div id="stepsWrap"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LIST_KEY = 'propa:list';
+  var DATA_PREFIX = 'propa:data:';
+  var CURRENT_KEY = 'propa:current';
+
+  var LEVEL_LABEL = { academic: 'Academic', honors: 'Honors', gt: 'Honors GT' };
+
+  var TECHNIQUES = [
+    { key: 'bandwagon', label: 'Bandwagon', def: 'Everyone else is doing it, so you should too.' },
+    { key: 'testimonial', label: 'Testimonial', def: 'A well-known or trusted person endorses the message.' },
+    { key: 'nameCalling', label: 'Name-Calling', def: 'An unflattering label is attached to a person, group, or idea to make it seem bad.' },
+    { key: 'glittering', label: 'Glittering Generalities', def: 'Vague, emotionally appealing words (freedom, hope, justice) used without real evidence.' },
+    { key: 'plainFolks', label: 'Plain Folks', def: 'The message-maker presents themselves as an ordinary, relatable person.' },
+    { key: 'cardStacking', label: 'Card Stacking', def: 'Only facts that support one side are shown; opposing facts are left out.' },
+    { key: 'transfer', label: 'Transfer', def: 'The prestige or emotion of a symbol (a flag, a respected figure) is linked to the message.' },
+    { key: 'fear', label: 'Fear Appeal', def: "The message warns of a bad outcome if you don't agree or act." },
+    { key: 'repetition', label: 'Repetition', def: 'A word, phrase, or image is repeated so it sticks in your memory.' }
+  ];
+
+  var STEPS = [
+    { letter: 'A', key: 'overview', title: 'Overview', type: 'text',
+      q: {
+        academic: "What is this source? Who created it, and when? Who do you think it was made for?",
+        honors: "Identify the source, creator, and date. Based on the style and content, who was the intended audience?",
+        gt: "Identify the source, creator, date, and intended audience. What historical event or situation likely prompted this piece?"
+      },
+      note: 'Look for source/date/creator identification and a reasonable audience guess grounded in specific details, not a wild guess.' },
+    { letter: 'B', key: 'symbols', title: 'Symbols & Imagery', type: 'text',
+      q: {
+        academic: "List two things you see in the image. What do they represent?",
+        honors: "What symbols, exaggeration, or caricature do you notice? What is each one meant to suggest?",
+        gt: "Analyze the visual choices (symbols, exaggeration, caricature, color, composition). Why might the creator have made these specific choices instead of others?"
+      },
+      note: 'Students should name specific visual details, not just a general impression like "it looks scary."' },
+    { letter: 'C', key: 'techniques', title: 'Propaganda Technique Checklist', type: 'checklist',
+      q: {
+        academic: "Check every technique you can find. For each one you check, write down exactly what in the source made you think so.",
+        honors: "Check every technique you can find and cite specific evidence for each.",
+        gt: "Check every technique you can find, cite specific evidence, and note which technique is doing the most work to persuade the audience."
+      },
+      note: 'Give credit for correctly identifying at least 2-3 techniques with real evidence from the source, not just a guessed label.' },
+    { letter: 'D', key: 'appeals', title: 'Persuasive Appeals (Ethos / Pathos / Logos)', type: 'text',
+      q: {
+        academic: "Does this source try to make you trust the speaker (ethos), feel an emotion (pathos), or think it's logical (logos)? Pick one and explain.",
+        honors: "Identify at least two persuasive appeals (ethos, pathos, logos) used in this source and explain how each works.",
+        gt: "Analyze how ethos, pathos, and logos work together in this source. Which appeal is strongest, and why is it effective for the intended audience?"
+      },
+      note: "Any of the three appeals is acceptable if the student's reasoning connects it to something actually in the source." },
+    { letter: 'E', key: 'message', title: 'Message & Audience', type: 'text',
+      q: {
+        academic: "What is this source trying to get people to think or do? Who is it aimed at?",
+        honors: "State the intended message and call to action, if any. How is the message tailored to its target audience?",
+        gt: "State the message and any call to action. Evaluate how effectively the piece is tailored to persuade its specific target audience."
+      },
+      note: 'The message and audience should be specific to this source, not a generic restatement of the topic.' },
+    { letter: 'F', key: 'evaluate', title: 'Evaluate', type: 'text',
+      q: {
+        academic: "Do you think this source is fair or one-sided? Why?",
+        honors: "Is this source biased? What perspective is missing? How effective do you think it is?",
+        gt: "Evaluate the source's bias, missing perspectives, and overall effectiveness. How might someone with a different point of view respond to it?"
+      },
+      note: "There's no single right answer here &mdash; grade the reasoning, not the conclusion." }
+  ];
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function escAttr(v) {
+    v = v == null ? '' : String(v);
+    return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var els = {};
+  ['projName','projSwitch','newListBtn','delListBtn','srcTitle','srcCreator','srcDate','srcOrigin',
+   'levelSelect','levelBadge','imgBtn','imgRemoveBtn','imgInput','imgPreview','stepsWrap','shareNote',
+   'printKeyBtn','printWorksheetBtn','printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var doc = null;
+
+  function listNames() { try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; } }
+  function saveListNames(names) { try { localStorage.setItem(LIST_KEY, JSON.stringify(names)); } catch (e) {} }
+  function loadDoc(name) {
+    try { var raw = localStorage.getItem(DATA_PREFIX + name); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function saveDoc(d) {
+    try {
+      localStorage.setItem(DATA_PREFIX + d.name, JSON.stringify(d));
+      var names = listNames();
+      if (names.indexOf(d.name) === -1) { names.push(d.name); saveListNames(names); }
+      localStorage.setItem(CURRENT_KEY, d.name);
+    } catch (e) { setNote('Could not save &mdash; your browser storage may be full (large images use a lot of space).', true); }
+  }
+  function deleteDoc(name) {
+    try { localStorage.removeItem(DATA_PREFIX + name); saveListNames(listNames().filter(function (n) { return n !== name; })); } catch (e) {}
+  }
+
+  function setNote(text, isError) {
+    els.shareNote.innerHTML = text;
+    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    window.clearTimeout(setNote._t);
+    setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
+  }
+
+  function refreshProjSelect() {
+    var names = listNames();
+    if (names.indexOf(doc.name) === -1) names.push(doc.name);
+    var html = '';
+    for (var i = 0; i < names.length; i++) {
+      html += '<option value="' + escAttr(names[i]) + '"' + (names[i] === doc.name ? ' selected' : '') + '>' + esc(names[i]) + '</option>';
+    }
+    els.projSwitch.innerHTML = html;
+  }
+
+  function renderSteps() {
+    els.levelBadge.textContent = '(' + LEVEL_LABEL[doc.level] + ')';
+    var html = '';
+    for (var i = 0; i < STEPS.length; i++) {
+      var s = STEPS[i];
+      html += '<div class="step"><h3><span class="letter">' + s.letter + '</span>' + esc(s.title) + '</h3>';
+      html += '<p class="q">' + esc(s.q[doc.level]) + '</p>';
+      if (s.type === 'checklist') {
+        html += '<ul class="techlist">';
+        for (var j = 0; j < TECHNIQUES.length; j++) {
+          html += '<li><b>' + esc(TECHNIQUES[j].label) + '</b><span>' + esc(TECHNIQUES[j].def) + '</span></li>';
+        }
+        html += '</ul>';
+      }
+      html += '<div class="note">Teacher note: ' + s.note + '</div></div>';
+    }
+    els.stepsWrap.innerHTML = html;
+  }
+
+  function refreshAll() {
+    els.projName.value = doc.name;
+    els.srcTitle.value = doc.source.title || '';
+    els.srcCreator.value = doc.source.creator || '';
+    els.srcDate.value = doc.source.date || '';
+    els.srcOrigin.value = doc.source.origin || '';
+    els.levelSelect.value = doc.level;
+    if (doc.source.imageDataUrl) { els.imgPreview.src = doc.source.imageDataUrl; els.imgPreview.hidden = false; els.imgRemoveBtn.hidden = false; }
+    else { els.imgPreview.hidden = true; els.imgRemoveBtn.hidden = true; }
+    refreshProjSelect();
+    renderSteps();
+  }
+
+  function bindField(input, key) {
+    input.addEventListener('change', function () {
+      doc.source[key] = input.value.trim();
+      saveDoc(doc);
+    });
+  }
+  bindField(els.srcTitle, 'title');
+  bindField(els.srcCreator, 'creator');
+  bindField(els.srcDate, 'date');
+  bindField(els.srcOrigin, 'origin');
+
+  els.levelSelect.addEventListener('change', function () {
+    doc.level = els.levelSelect.value;
+    saveDoc(doc);
+    renderSteps();
+  });
+
+  els.imgBtn.addEventListener('click', function () { els.imgInput.click(); });
+  els.imgInput.addEventListener('change', function () {
+    var file = els.imgInput.files && els.imgInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      doc.source.imageDataUrl = reader.result;
+      saveDoc(doc);
+      els.imgPreview.src = reader.result;
+      els.imgPreview.hidden = false;
+      els.imgRemoveBtn.hidden = false;
+    };
+    reader.readAsDataURL(file);
+    els.imgInput.value = '';
+  });
+  els.imgRemoveBtn.addEventListener('click', function () {
+    doc.source.imageDataUrl = '';
+    saveDoc(doc);
+    els.imgPreview.hidden = true;
+    els.imgRemoveBtn.hidden = true;
+  });
+
+  els.projSwitch.addEventListener('change', function () {
+    var loaded = loadDoc(els.projSwitch.value);
+    if (loaded) {
+      doc = loaded;
+      if (!doc.level) doc.level = 'academic';
+      if (!doc.source) doc.source = {};
+      try { localStorage.setItem(CURRENT_KEY, doc.name); } catch (e) {}
+      refreshAll();
+    }
+  });
+
+  els.newListBtn.addEventListener('click', function () {
+    var name = window.prompt('Name this worksheet:', 'New Worksheet');
+    if (!name) return;
+    doc = { name: name.trim(), level: 'academic', source: { title: '', creator: '', date: '', origin: '', imageDataUrl: '' } };
+    saveDoc(doc);
+    refreshAll();
+  });
+
+  els.projName.addEventListener('change', function () {
+    var newName = els.projName.value.trim();
+    if (!newName || newName === doc.name) { els.projName.value = doc.name; return; }
+    if (listNames().indexOf(newName) > -1) { setNote('A worksheet with that name already exists.', true); els.projName.value = doc.name; return; }
+    deleteDoc(doc.name);
+    doc.name = newName;
+    saveDoc(doc);
+    refreshProjSelect();
+  });
+
+  els.delListBtn.addEventListener('click', function () {
+    if (!window.confirm('Delete "' + doc.name + '"? This cannot be undone.')) return;
+    deleteDoc(doc.name);
+    var names = listNames();
+    doc = (names.length && loadDoc(names[0])) || { name: 'New Worksheet', level: 'academic', source: { title: '', creator: '', date: '', origin: '', imageDataUrl: '' } };
+    saveDoc(doc);
+    refreshAll();
+  });
+
+  function buildSheetHtml(mode) {
+    var s = doc.source;
+    var html = '<div class="sheet"><h1>Propaganda &amp; Persuasion Analysis' + (mode === 'key' ? ' &mdash; Answer Key' : '') + '</h1>';
+    html += '<p class="meta"><div><b>Name:</b> ___________________________ &nbsp; <b>Date:</b> _________ &nbsp; <b>Level:</b> ' + esc(LEVEL_LABEL[doc.level]) + '</div>';
+    html += '<div><b>Source:</b> ' + esc(s.title || '(untitled)') + (s.creator ? ' &mdash; ' + esc(s.creator) : '') + (s.date ? ' (' + esc(s.date) + ')' : '') + '</div>';
+    if (s.origin) html += '<div>' + esc(s.origin) + '</div>';
+    html += '</p>';
+    if (s.imageDataUrl) html += '<img class="photo" src="' + s.imageDataUrl + '" alt="">';
+
+    for (var i = 0; i < STEPS.length; i++) {
+      var st = STEPS[i];
+      html += '<div class="pstep"><h2>' + st.letter + '. ' + esc(st.title) + '</h2>';
+      html += '<p class="q">' + esc(st.q[doc.level]) + '</p>';
+      if (st.type === 'checklist') {
+        html += '<ul class="ptech">';
+        for (var j = 0; j < TECHNIQUES.length; j++) {
+          var t = TECHNIQUES[j];
+          html += '<li><span class="box"></span><b>' + esc(t.label) + '</b> &mdash; ' + esc(t.def) + '<div class="lines"></div></li>';
+        }
+        html += '</ul>';
+        if (mode === 'key') html += '<p class="keynote">' + st.note + '</p>';
+      } else if (mode === 'key') {
+        html += '<p class="keynote">' + st.note + '</p>';
+      } else {
+        html += '<div class="lines"></div><div class="lines"></div><div class="lines"></div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  els.printWorksheetBtn.addEventListener('click', function () {
+    els.printArea.innerHTML = buildSheetHtml('worksheet');
+    window.print();
+  });
+  els.printKeyBtn.addEventListener('click', function () {
+    els.printArea.innerHTML = buildSheetHtml('key');
+    window.print();
+  });
+
+  function init() {
+    var lastName = null;
+    try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
+    doc = (lastName && loadDoc(lastName)) || null;
+    if (!doc) {
+      var names = listNames();
+      doc = (names.length && loadDoc(names[0])) || { name: 'New Worksheet', level: 'academic', source: { title: '', creator: '', date: '', origin: '', imageDataUrl: '' } };
+    }
+    if (!doc.level) doc.level = 'academic';
+    if (!doc.source) doc.source = {};
+    saveDoc(doc);
+    refreshAll();
+  }
+  init();
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>
