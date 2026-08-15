@@ -216,6 +216,8 @@
     table.pairing-grid { font-size: 0.62rem; }
     table.pairing-grid th, table.pairing-grid td { border: 1px solid #999; color: #000; background: #fff; }
   }
+  .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
+  .back-link:hover { color: var(--accent); }
 </style>
 <script src="../_shared/state-link.js"></script>
 <script src="../_shared/vendor/qrcode/qrcode.js"></script>
@@ -223,6 +225,7 @@
 <body>
 
 <header>
+  <a class="back-link" href="../index.html">&larr; Toolkit</a>
   <h1>Group / Team Generator</h1>
   <p>Paste a roster, set constraints, and split it into random groups — everything stays in your browser</p>
 </header>

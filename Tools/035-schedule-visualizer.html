@@ -2788,13 +2788,16 @@
         transition-duration: 0.001ms !important; scroll-behavior: auto !important;
       }
     }
-  </style>
+      #app-header .back-link{color:inherit;opacity:.75;text-decoration:none;font-size:12px;white-space:nowrap;margin-right:10px;}
+    #app-header .back-link:hover{opacity:1;}
+</style>
 </head>
 <body>
 <div id="app-visualizer">
 
   <!-- ═══ HEADER ═══ -->
   <header id="app-header">
+    <a class="back-link" href="../index.html">&larr; Toolkit</a>
     <div class="header-logo">
       <div class="header-logo-icon">
         <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
