@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socratic Seminar Prep &amp; Tracker</title>
+<meta name="description" content="Print a claim/evidence/rebuttal prep sheet for a Socratic seminar, then run a live speaking-order and participation tracker with optional inner/outer fishbowl circles.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/084-socratic-seminar-prep-organizer.html">
+<meta property="og:title" content="Socratic Seminar Prep &amp; Tracker — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Print a claim/evidence/rebuttal prep sheet for a Socratic seminar, then run a live speaking-order and participation tracker with optional inner/outer fishbowl circles.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Socratic Seminar Prep &amp; Tracker — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Print a claim/evidence/rebuttal prep sheet for a Socratic seminar, then run a live speaking-order and participation tracker with optional inner/outer fishbowl circles.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Cpath d='M7 9h12a2 2 0 012 2v6a2 2 0 01-2 2h-7l-4 4v-4H7a2 2 0 01-2-2v-6a2 2 0 012-2z' stroke='%231f3550' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<script src="../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header h1 { font-size: 1.6rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
+  select, input[type="text"], input[type="number"], textarea {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem;
+  }
+  textarea { resize: vertical; min-height: 3.5rem; }
+
+  button {
+    font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+    border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--accent); }
+  button.secondary:hover { background: #eef2f6; }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: #fbecea; }
+  button.tiny { padding: .15rem .4rem; font-size: .75rem; border-radius: 4px; }
+
+  .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
+  .toprow .field { min-width: 10rem; }
+  .toprow .grow { flex: 1 1 12rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .7rem .9rem; }
+
+  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .share-note.error { color: var(--err); }
+
+  .roster-tools { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: .8rem; }
+  .roster-tools > div { flex: 1 1 16rem; }
+
+  .fishbowl-toggle { display: flex; align-items: center; gap: .5rem; margin: .6rem 0 1rem; font-weight: 600; font-size: .85rem; }
+  .fishbowl-toggle input { width: auto; }
+
+  .orow { display: flex; align-items: center; gap: .7rem; border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; margin-bottom: .4rem; background: #fff; cursor: grab; }
+  .orow .handle { color: var(--muted); font-size: 1rem; user-select: none; }
+  .orow .oname { flex: 1 1 10rem; font-weight: 600; font-size: .9rem; }
+  .orow .grouptag { font-size: .72rem; padding: .15rem .5rem; border-radius: 10px; border: 1px solid var(--line-strong); background: #f3f5f7; cursor: pointer; }
+  .orow .grouptag.inner { background: #eaf3ff; border-color: #9dc4f0; color: #1f5ea3; }
+  .orow .grouptag.outer { background: #fff2e6; border-color: #f0c69d; color: #a3611f; }
+  .tally { display: flex; gap: .6rem; align-items: center; }
+  .tally .t { display: flex; align-items: center; gap: .3rem; font-size: .78rem; color: var(--muted); }
+  .tally .t b { color: var(--ink); min-width: 1.1em; text-align: center; }
+
+  .empty { color: var(--muted); font-size: .88rem; font-style: italic; }
+
+  #printArea .pseminar { font-family: Georgia, "Times New Roman", serif; color: #111; padding: .4in .6in; page-break-after: always; }
+  #printArea h1 { font-size: 15pt; margin: 0 0 .5em; }
+  #printArea p.meta, #printArea p.q, #printArea p.src { font-size: 11pt; margin: 0 0 .5em; }
+  #printArea p.lbl { font-size: 11pt; font-weight: bold; margin: .8em 0 .2em; }
+  #printArea .lines { border-bottom: 1px solid #999; height: 1.3em; margin-bottom: .1em; }
+  @media print { @page { margin: 0.6in; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Socratic Seminar Prep &amp; Tracker</h1>
+      <p class="sub">Set the question and roster once — print a claim/evidence/rebuttal prep sheet, then run a live speaking-order and participation tracker during the seminar.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toprow">
+      <div class="field grow">
+        <label for="projName">Seminar name</label>
+        <input type="text" id="projName">
+      </div>
+      <div class="field grow">
+        <label for="projSwitch">Saved seminars</label>
+        <select id="projSwitch"></select>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="secondary" id="newListBtn">New seminar</button>
+        <button type="button" class="danger" id="delListBtn">Delete</button>
+      </div>
+    </div>
+    <p class="share-note" id="shareNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>Setup</h2>
+    <div class="fields-grid">
+      <div class="field" style="grid-column: 1 / -1;">
+        <label for="questionInput">Central question</label>
+        <textarea id="questionInput" placeholder="Was the New Deal ultimately a success?"></textarea>
+      </div>
+      <div class="field"><label for="sourceInput">Text / source</label><input type="text" id="sourceInput" placeholder="Ch. 14, &quot;The New Deal,&quot; textbook"></div>
+      <div class="field"><label for="dateInput">Date</label><input type="text" id="dateInput" placeholder="Friday, period 3"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Roster</h2>
+    <div class="roster-tools">
+      <div>
+        <label for="rosterText">Paste names, one per line</label>
+        <textarea id="rosterText" placeholder="Ava Chen
+Marcus Lee
+..."></textarea>
+        <div class="btnrow" style="margin-top:.5rem"><button type="button" class="secondary" id="applyNamesBtn">Apply names</button></div>
+      </div>
+      <div>
+        <label for="importSelect">Or load a saved Name Picker roster</label>
+        <select id="importSelect"></select>
+        <p class="hint">Reads rosters already saved in the Name Picker tool on this device &mdash; nothing is uploaded.</p>
+        <div class="btnrow"><button type="button" class="danger" id="clearRosterBtn">Clear roster</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Speaking order &amp; participation tracker</h2>
+    <label class="fishbowl-toggle"><input type="checkbox" id="fishbowlToggle"> Split into inner / outer circle (fishbowl)</label>
+    <div class="btnrow" style="margin-bottom:.8rem">
+      <button type="button" class="secondary" id="shuffleBtn">Shuffle speaking order</button>
+      <button type="button" class="danger" id="resetTalliesBtn">Reset all tallies</button>
+      <span class="hint" style="margin:0">Drag a row's &#8942;&#8942; handle to reorder.</span>
+    </div>
+    <div id="orderWrap"><p class="empty">No roster loaded yet.</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Print prep sheets</h2>
+    <p class="hint">Each sheet has the central question, a claim line, three evidence blocks, rebuttal prep, and one question to bring to the group.</p>
+    <div class="btnrow">
+      <button type="button" class="primary" id="printRosterBtn">Print one per roster student</button>
+      <span>or</span>
+      <input type="number" id="blankCount" value="30" min="1" max="40" style="width:5rem">
+      <button type="button" class="secondary" id="printBlankBtn">Print blank copies</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LIST_KEY = 'socsem:list';
+  var DATA_PREFIX = 'socsem:data:';
+  var CURRENT_KEY = 'socsem:current';
+  var NAME_PICKER_ROSTERS_KEY = 'np_rosters';
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function escAttr(v) {
+    v = v == null ? '' : String(v);
+    return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  var els = {};
+  ['projName','projSwitch','newListBtn','delListBtn','shareNote','questionInput','sourceInput','dateInput',
+   'rosterText','applyNamesBtn','importSelect','clearRosterBtn','fishbowlToggle','shuffleBtn','resetTalliesBtn',
+   'orderWrap','printRosterBtn','printBlankBtn','blankCount','printArea'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  var doc = null;
+  var dragId = null;
+
+  function listNames() { try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; } }
+  function saveListNames(names) { try { localStorage.setItem(LIST_KEY, JSON.stringify(names)); } catch (e) {} }
+  function loadDoc(name) {
+    try { var raw = localStorage.getItem(DATA_PREFIX + name); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function saveDoc(d) {
+    try {
+      localStorage.setItem(DATA_PREFIX + d.name, JSON.stringify(d));
+      var names = listNames();
+      if (names.indexOf(d.name) === -1) { names.push(d.name); saveListNames(names); }
+      localStorage.setItem(CURRENT_KEY, d.name);
+    } catch (e) { setNote('Could not save &mdash; your browser storage may be full.', true); }
+  }
+  function deleteDoc(name) {
+    try { localStorage.removeItem(DATA_PREFIX + name); saveListNames(listNames().filter(function (n) { return n !== name; })); } catch (e) {}
+  }
+  function setNote(text, isError) {
+    els.shareNote.innerHTML = text;
+    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    window.clearTimeout(setNote._t);
+    setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
+  }
+
+  function blankDoc(name) {
+    return { name: name, question: '', sourceTitle: '', date: '', roster: [], order: [], fishbowl: false, groups: {}, tallies: {} };
+  }
+
+  function findRoster(id) {
+    for (var i = 0; i < doc.roster.length; i++) { if (doc.roster[i].id === id) return doc.roster[i]; }
+    return null;
+  }
+
+  function applyRoster(names) {
+    doc.roster = names.map(function (n) { return { id: uid(), name: n }; });
+    doc.order = doc.roster.map(function (r) { return r.id; });
+    doc.groups = {};
+    doc.tallies = {};
+    doc.roster.forEach(function (r, i) {
+      doc.tallies[r.id] = { c: 0, b: 0, e: 0 };
+      if (doc.fishbowl) doc.groups[r.id] = i % 2 === 0 ? 'inner' : 'outer';
+    });
+    saveDoc(doc);
+    renderOrder();
+  }
+
+  function refreshProjSelect() {
+    var names = listNames();
+    if (names.indexOf(doc.name) === -1) names.push(doc.name);
+    var html = '';
+    for (var i = 0; i < names.length; i++) {
+      html += '<option value="' + escAttr(names[i]) + '"' + (names[i] === doc.name ? ' selected' : '') + '>' + esc(names[i]) + '</option>';
+    }
+    els.projSwitch.innerHTML = html;
+  }
+
+  function refreshImportSelect() {
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var names = Object.keys(rosters);
+      if (!names.length) { els.importSelect.innerHTML = '<option value="">No saved rosters found</option>'; return; }
+      els.importSelect.innerHTML = '<option value="">Load a saved roster&hellip;</option>' +
+        names.map(function (n) { return '<option value="' + escAttr(n) + '">' + esc(n) + ' (' + rosters[n].length + ')</option>'; }).join('');
+    } catch (e) { els.importSelect.innerHTML = '<option value="">No saved rosters found</option>'; }
+  }
+
+  function renderOrder() {
+    if (!doc.roster.length) { els.orderWrap.innerHTML = '<p class="empty">No roster loaded yet.</p>'; return; }
+    var html = '';
+    for (var i = 0; i < doc.order.length; i++) {
+      var id = doc.order[i], r = findRoster(id);
+      if (!r) continue;
+      var tal = doc.tallies[id] || { c: 0, b: 0, e: 0 };
+      var grp = doc.groups[id] || 'inner';
+      html += '<div class="orow" draggable="true" data-id="' + id + '">' +
+        '<span class="handle">&#8942;&#8942;</span>' +
+        '<span class="oname">' + (i + 1) + '. ' + esc(r.name) + '</span>';
+      if (doc.fishbowl) html += '<button type="button" class="grouptag ' + grp + '" data-act="togglegroup">' + (grp === 'inner' ? 'Inner circle' : 'Outer circle') + '</button>';
+      html += '<div class="tally">' +
+        tallyHtml(id, 'c', 'Contributed', tal.c) +
+        tallyHtml(id, 'b', 'Built on idea', tal.b) +
+        tallyHtml(id, 'e', 'Cited evidence', tal.e) +
+        '</div></div>';
+    }
+    els.orderWrap.innerHTML = html;
+    bindRows();
+  }
+
+  function tallyHtml(id, field, label, val) {
+    return '<span class="t" title="' + escAttr(label) + '">' +
+      '<button type="button" class="tiny secondary" data-act="tally-" data-field="' + field + '" data-id="' + id + '">&minus;</button>' +
+      '<b>' + val + '</b>' +
+      '<button type="button" class="tiny secondary" data-act="tally+" data-field="' + field + '" data-id="' + id + '">+</button>' +
+      '<span style="font-size:.68rem">' + esc(label) + '</span></span>';
+  }
+
+  function bindRows() {
+    var rows = els.orderWrap.querySelectorAll('.orow');
+    rows.forEach(function (row) {
+      row.addEventListener('dragstart', function () { dragId = row.getAttribute('data-id'); });
+      row.addEventListener('dragover', function (e) { e.preventDefault(); });
+      row.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var targetId = row.getAttribute('data-id');
+        if (!dragId || dragId === targetId) return;
+        var arr = doc.order, from = arr.indexOf(dragId), to = arr.indexOf(targetId);
+        if (from === -1 || to === -1) return;
+        arr.splice(from, 1);
+        arr.splice(to, 0, dragId);
+        saveDoc(doc);
+        renderOrder();
+      });
+    });
+  }
+
+  els.orderWrap.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'togglegroup') {
+      var row = btn.closest('.orow'), id = row.getAttribute('data-id');
+      doc.groups[id] = (doc.groups[id] === 'inner') ? 'outer' : 'inner';
+      saveDoc(doc);
+      renderOrder();
+    } else if (act === 'tally+' || act === 'tally-') {
+      var id2 = btn.getAttribute('data-id'), field = btn.getAttribute('data-field');
+      var tal = doc.tallies[id2] || (doc.tallies[id2] = { c: 0, b: 0, e: 0 });
+      tal[field] = Math.max(0, (tal[field] || 0) + (act === 'tally+' ? 1 : -1));
+      saveDoc(doc);
+      renderOrder();
+    }
+  });
+
+  els.applyNamesBtn.addEventListener('click', function () {
+    var names = els.rosterText.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!names.length) { setNote('Type at least one name.', true); return; }
+    applyRoster(names);
+  });
+
+  els.importSelect.addEventListener('change', function () {
+    var name = els.importSelect.value;
+    if (!name) return;
+    try {
+      var rosters = JSON.parse(localStorage.getItem(NAME_PICKER_ROSTERS_KEY) || '{}');
+      var list = rosters[name];
+      if (list && list.length) {
+        applyRoster(list.slice());
+        els.rosterText.value = list.join('\n');
+        setNote('Loaded "' + esc(name) + '".', false);
+      }
+    } catch (e) {}
+  });
+
+  els.clearRosterBtn.addEventListener('click', function () {
+    if (!doc.roster.length) return;
+    if (!window.confirm('Clear the roster, speaking order, and all tallies?')) return;
+    applyRoster([]);
+    els.rosterText.value = '';
+  });
+
+  els.fishbowlToggle.addEventListener('change', function () {
+    doc.fishbowl = els.fishbowlToggle.checked;
+    if (doc.fishbowl) {
+      doc.order.forEach(function (id, i) { if (!doc.groups[id]) doc.groups[id] = i % 2 === 0 ? 'inner' : 'outer'; });
+    }
+    saveDoc(doc);
+    renderOrder();
+  });
+
+  els.shuffleBtn.addEventListener('click', function () {
+    if (doc.order.length < 2) return;
+    var arr = doc.order.slice();
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    doc.order = arr;
+    saveDoc(doc);
+    renderOrder();
+  });
+
+  els.resetTalliesBtn.addEventListener('click', function () {
+    if (!doc.roster.length) return;
+    if (!window.confirm('Reset all participation tallies to zero?')) return;
+    doc.roster.forEach(function (r) { doc.tallies[r.id] = { c: 0, b: 0, e: 0 }; });
+    saveDoc(doc);
+    renderOrder();
+  });
+
+  function bindField(input, key, isTextarea) {
+    input.addEventListener('change', function () { doc[key] = input.value.trim(); saveDoc(doc); });
+  }
+  bindField(els.questionInput, 'question');
+  bindField(els.sourceInput, 'sourceTitle');
+  bindField(els.dateInput, 'date');
+
+  function refreshAll() {
+    els.projName.value = doc.name;
+    els.questionInput.value = doc.question || '';
+    els.sourceInput.value = doc.sourceTitle || '';
+    els.dateInput.value = doc.date || '';
+    els.rosterText.value = doc.roster.map(function (r) { return r.name; }).join('\n');
+    els.fishbowlToggle.checked = !!doc.fishbowl;
+    refreshProjSelect();
+    refreshImportSelect();
+    renderOrder();
+  }
+
+  els.projSwitch.addEventListener('change', function () {
+    var loaded = loadDoc(els.projSwitch.value);
+    if (loaded) {
+      doc = loaded;
+      if (!doc.roster) doc.roster = [];
+      if (!doc.order) doc.order = [];
+      if (!doc.groups) doc.groups = {};
+      if (!doc.tallies) doc.tallies = {};
+      try { localStorage.setItem(CURRENT_KEY, doc.name); } catch (e) {}
+      refreshAll();
+    }
+  });
+
+  els.newListBtn.addEventListener('click', function () {
+    var name = window.prompt('Name this seminar:', 'New Seminar');
+    if (!name) return;
+    doc = blankDoc(name.trim());
+    saveDoc(doc);
+    refreshAll();
+  });
+
+  els.projName.addEventListener('change', function () {
+    var newName = els.projName.value.trim();
+    if (!newName || newName === doc.name) { els.projName.value = doc.name; return; }
+    if (listNames().indexOf(newName) > -1) { setNote('A seminar with that name already exists.', true); els.projName.value = doc.name; return; }
+    deleteDoc(doc.name);
+    doc.name = newName;
+    saveDoc(doc);
+    refreshProjSelect();
+  });
+
+  els.delListBtn.addEventListener('click', function () {
+    if (!window.confirm('Delete "' + doc.name + '"? This cannot be undone.')) return;
+    deleteDoc(doc.name);
+    var names = listNames();
+    doc = (names.length && loadDoc(names[0])) || blankDoc('New Seminar');
+    saveDoc(doc);
+    refreshAll();
+  });
+
+  function prepSheetBlock(nameLabel) {
+    var html = '<div class="pseminar">';
+    html += '<h1>Socratic Seminar Prep</h1>';
+    html += '<p class="meta"><b>Name:</b> ' + (nameLabel ? esc(nameLabel) : '_______________________') + ' &nbsp;&nbsp; <b>Date:</b> ' + esc(doc.date || '_______') + '</p>';
+    html += '<p class="q"><b>Central question:</b> ' + esc(doc.question || '') + '</p>';
+    if (doc.sourceTitle) html += '<p class="src"><b>Text / source:</b> ' + esc(doc.sourceTitle) + '</p>';
+    html += '<p class="lbl">My claim:</p><div class="lines"></div>';
+    html += '<p class="lbl">Evidence to support my claim:</p><div class="lines"></div><div class="lines"></div><div class="lines"></div>';
+    html += '<p class="lbl">A counterargument I should be ready to answer, and how I&rsquo;d respond:</p><div class="lines"></div><div class="lines"></div>';
+    html += '<p class="lbl">A question I will ask the group:</p><div class="lines"></div>';
+    html += '</div>';
+    return html;
+  }
+
+  els.printRosterBtn.addEventListener('click', function () {
+    if (!doc.roster.length) { setNote('Load a roster first, or use "Print blank copies" instead.', true); return; }
+    var html = '';
+    for (var i = 0; i < doc.order.length; i++) {
+      var r = findRoster(doc.order[i]);
+      html += prepSheetBlock(r ? r.name : '');
+    }
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  els.printBlankBtn.addEventListener('click', function () {
+    var n = parseInt(els.blankCount.value, 10) || 1;
+    if (n < 1) n = 1;
+    if (n > 40) n = 40;
+    var html = '';
+    for (var i = 0; i < n; i++) html += prepSheetBlock(null);
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  function init() {
+    var lastName = null;
+    try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
+    doc = (lastName && loadDoc(lastName)) || null;
+    if (!doc) {
+      var names = listNames();
+      doc = (names.length && loadDoc(names[0])) || blankDoc('New Seminar');
+    }
+    if (!doc.roster) doc.roster = [];
+    if (!doc.order) doc.order = [];
+    if (!doc.groups) doc.groups = {};
+    if (!doc.tallies) doc.tallies = {};
+    saveDoc(doc);
+    refreshAll();
+  }
+  init();
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>

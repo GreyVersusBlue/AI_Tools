@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citation Generator</title>
+<meta name="description" content="Build a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style — books, articles, websites, Wikipedia, videos, and more. Stays entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AsPerMyLessonPlan.com">
+<meta property="og:url" content="https://www.aspermylessonplan.com/Tools/082-citation-generator.html">
+<meta property="og:title" content="Citation Generator — AsPerMyLessonPlan.com">
+<meta property="og:description" content="Build a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style — books, articles, websites, Wikipedia, videos, and more. Stays entirely in your browser.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Citation Generator — AsPerMyLessonPlan.com">
+<meta name="twitter:description" content="Build a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style — books, articles, websites, Wikipedia, videos, and more. Stays entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23F6F7F9'/%3E%3Crect x='9' y='11' width='3' height='6' rx='1.5' fill='%231f3550' transform='rotate(-15 10.5 14)'/%3E%3Crect x='19' y='11' width='3' height='6' rx='1.5' fill='%231f3550' transform='rotate(-15 20.5 14)'/%3E%3C/svg%3E">
+<script src="../_shared/a11y.js"></script>
+<link rel="stylesheet" href="../_shared/ink-paper.css">
+<link rel="stylesheet" href="../_shared/a11y.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/print-area.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Georgia, "Times New Roman", serif;
+    background: var(--paper); color: var(--ink); margin: 0;
+    padding: 24px 20px 100px; line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .app-header h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  .app-header .sub { color: var(--muted); font-size: .88rem; margin: 0; max-width: 46em; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .back-link:hover { color: var(--accent-2); }
+
+  .card h2 { font-size: 1rem; margin: 0 0 .7rem; }
+  label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .3rem; }
+  .hint { color: var(--muted); font-size: .78rem; margin: -.15rem 0 .8rem; }
+  select, input[type="text"] {
+    width: 100%; font-family: inherit; font-size: .9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: .45rem .55rem;
+  }
+
+  button {
+    font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+    border-radius: 6px; padding: .5rem .9rem; border: 1px solid var(--accent);
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  button.secondary { background: #fff; color: var(--accent); }
+  button.secondary:hover { background: #eef2f6; }
+  button.danger { background: #fff; color: var(--err); border-color: var(--err); }
+  button.danger:hover { background: #fbecea; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .toprow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; margin-bottom: .9rem; }
+  .toprow .field { min-width: 10rem; }
+  .toprow .grow { flex: 1 1 12rem; }
+  .btnrow { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .7rem .9rem; margin-bottom: .9rem; }
+  .field.date-field .date-row { display: flex; gap: .4rem; }
+  .date-row input { min-width: 0; }
+
+  .list-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; }
+  .list-head h2 { margin: 0; }
+  .empty { color: var(--muted); font-size: .88rem; font-style: italic; }
+
+  .entry { border: 1px solid var(--line); border-radius: 8px; padding: .7rem .9rem; margin-bottom: .6rem; display: flex; gap: .8rem; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+  .entry .cite { flex: 1 1 20rem; font-size: .92rem; }
+  .entry .cite i { font-style: italic; }
+  .entry .row-btns { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .entry .row-btns button { padding: .3rem .6rem; font-size: .78rem; }
+  .entry .type-tag { display: inline-block; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .25rem; }
+
+  .share-note { font-size: .82rem; color: var(--accent-2); min-height: 1.2em; margin: .4rem 0 0; }
+  .share-note.error { color: var(--err); }
+
+  .scope-note { background: #fff8e6; border: 1px solid #e9d9a0; border-radius: 8px; padding: .6rem .8rem; font-size: .82rem; color: #6b5a1f; margin-bottom: 1rem; }
+
+  #printArea .print-sheet { font-family: "Times New Roman", Georgia, serif; color: #111; padding: 0.5in; }
+  #printArea h1 { font-size: 14pt; text-align: center; font-weight: normal; margin: 0 0 1em; }
+  #printArea .wc-entry { font-size: 12pt; line-height: 2; margin: 0 0 0 2em; text-indent: -2em; }
+  @media print {
+    @page { margin: 0.75in; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <div>
+      <a class="back-link" href="../index.html">&larr; Toolkit</a>
+      <h1>Citation Generator</h1>
+      <p class="sub">Add sources, pick a style, get a formatted Works Cited / References / Bibliography page — copy it or print it. Nothing leaves this browser.</p>
+    </div>
+    <div class="btnrow">
+      <button type="button" class="secondary" id="copyBtn">Copy full list</button>
+      <button type="button" class="primary" id="printBtn">Print list</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toprow">
+      <div class="field grow">
+        <label for="projName">Citation list name</label>
+        <input type="text" id="projName">
+      </div>
+      <div class="field grow">
+        <label for="projSwitch">Saved lists</label>
+        <select id="projSwitch"></select>
+      </div>
+      <div class="field">
+        <label for="styleSelect">Style</label>
+        <select id="styleSelect">
+          <option value="mla" selected>MLA (9th ed.)</option>
+          <option value="apa">APA (7th ed.)</option>
+          <option value="chicago">Chicago (bibliography)</option>
+        </select>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="secondary" id="newListBtn">New list</button>
+        <button type="button" class="danger" id="delListBtn">Delete list</button>
+      </div>
+    </div>
+    <p class="share-note" id="shareNote"></p>
+  </div>
+
+  <div class="scope-note">Citations use reasonable, classroom-standard defaults for each style. Unusual sources (rare formats, multiple authors, missing information) may need a small manual tweak — have students spot-check against their style guide.</div>
+
+  <div class="card">
+    <h2 id="formTitle">Add a source</h2>
+    <div class="toprow">
+      <div class="field grow">
+        <label for="typeSelect">Source type</label>
+        <select id="typeSelect"></select>
+      </div>
+    </div>
+    <div class="fields-grid" id="fieldsWrap"></div>
+    <div class="btnrow">
+      <button type="button" class="primary" id="addBtn">Add to list</button>
+      <button type="button" class="secondary" id="clearBtn">Clear form</button>
+      <button type="button" class="secondary" id="cancelEditBtn" hidden>Cancel edit</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="list-head">
+      <h2 id="listHeading">Works Cited</h2>
+    </div>
+    <div id="listWrap"><p class="empty">No sources yet — add one above.</p></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LIST_KEY = 'citegen:list';
+  var DATA_PREFIX = 'citegen:data:';
+  var CURRENT_KEY = 'citegen:current';
+
+  var MONTHS = [
+    {n:1,full:'January',abbr:'Jan.'},{n:2,full:'February',abbr:'Feb.'},{n:3,full:'March',abbr:'Mar.'},
+    {n:4,full:'April',abbr:'Apr.'},{n:5,full:'May',abbr:'May'},{n:6,full:'June',abbr:'June'},
+    {n:7,full:'July',abbr:'July'},{n:8,full:'August',abbr:'Aug.'},{n:9,full:'September',abbr:'Sep.'},
+    {n:10,full:'October',abbr:'Oct.'},{n:11,full:'November',abbr:'Nov.'},{n:12,full:'December',abbr:'Dec.'}
+  ];
+
+  function findMonth(v) {
+    if (!v) return null;
+    var s = String(v).trim().toLowerCase();
+    if (!s) return null;
+    var asNum = parseInt(s, 10);
+    for (var i = 0; i < MONTHS.length; i++) {
+      var m = MONTHS[i];
+      if (asNum === m.n) return m;
+      if (m.full.toLowerCase() === s) return m;
+      if (m.abbr.toLowerCase().replace('.', '') === s.replace('.', '')) return m;
+      if (s.length >= 3 && m.full.toLowerCase().indexOf(s) === 0) return m;
+    }
+    return null;
+  }
+  function monthAbbr(v) { var m = findMonth(v); return m ? m.abbr : (v || ''); }
+  function monthFull(v) { var m = findMonth(v); return m ? m.full : (v || ''); }
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function escAttr(v) {
+    v = v == null ? '' : String(v);
+    return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function italic(s) { return s ? '<i>' + esc(s) + '</i>' : ''; }
+  function quote(s) { return s ? '“' + esc(s) + '”' : ''; }
+  function joinComma(arr) {
+    var out = [];
+    for (var i = 0; i < arr.length; i++) { if (arr[i]) out.push(arr[i]); }
+    return out.join(', ');
+  }
+  function stripHtml(s) { return (s || '').replace(/<[^>]+>/g, '').replace(/&ldquo;|“/g, '"').replace(/&rdquo;|”/g, '"'); }
+
+  function parseAuthor(str) {
+    str = (str || '').trim();
+    if (!str) return null;
+    var idx = str.indexOf(',');
+    if (idx > -1) return { org: false, last: str.slice(0, idx).trim(), first: str.slice(idx + 1).trim() };
+    return { org: true, name: str };
+  }
+  function initialsOf(first) {
+    if (!first) return '';
+    var words = first.trim().split(/\s+/), out = [];
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i].replace(/\./g, '');
+      if (w) out.push(w.charAt(0).toUpperCase() + '.');
+    }
+    return out.join(' ');
+  }
+  function authorMLA(str) {
+    var a = parseAuthor(str);
+    if (!a) return '';
+    return a.org ? (esc(a.name) + '.') : (esc(a.last) + ', ' + esc(a.first) + '.');
+  }
+  function authorChicago(str) { return authorMLA(str); }
+  function authorAPA(str) {
+    var a = parseAuthor(str);
+    if (!a) return '';
+    return a.org ? (esc(a.name) + '.') : (esc(a.last) + ', ' + initialsOf(a.first) + '.');
+  }
+  function stripArticle(t) { return (t || '').replace(/^(a|an|the)\s+/i, ''); }
+  function sortKeyFor(f) {
+    var a = parseAuthor(f.author);
+    if (a) return (a.org ? a.name : a.last).toLowerCase();
+    return stripArticle(f.title || f.container || '').toLowerCase();
+  }
+
+  function mlaDate(f) {
+    var parts = [];
+    if (f.pubDay) parts.push(f.pubDay);
+    if (f.pubMonth) parts.push(monthAbbr(f.pubMonth));
+    if (f.pubYear) parts.push(f.pubYear);
+    return parts.join(' ');
+  }
+  function mlaAccessDate(f) {
+    var parts = [];
+    if (f.accessDay) parts.push(f.accessDay);
+    if (f.accessMonth) parts.push(monthAbbr(f.accessMonth));
+    if (f.accessYear) parts.push(f.accessYear);
+    return parts.join(' ');
+  }
+  function mlaUpdatedDate(f) {
+    var parts = [];
+    if (f.updatedDay) parts.push(f.updatedDay);
+    if (f.updatedMonth) parts.push(monthAbbr(f.updatedMonth));
+    if (f.updatedYear) parts.push(f.updatedYear);
+    return parts.join(' ');
+  }
+  function chicagoDate(f) {
+    var mm = f.pubMonth ? monthFull(f.pubMonth) : '';
+    var head = [mm, f.pubDay].join(' ').trim();
+    return (head ? head + ', ' : '') + (f.pubYear || '');
+  }
+  function chicagoUpdatedDate(f) {
+    var mm = f.updatedMonth ? monthFull(f.updatedMonth) : '';
+    var head = [mm, f.updatedDay].join(' ').trim();
+    return (head ? head + ', ' : '') + (f.updatedYear || '');
+  }
+  function apaDateParen(f) {
+    if (!f.pubYear) return '';
+    var mm = f.pubMonth ? monthFull(f.pubMonth) : '';
+    var tail = [mm, f.pubDay].join(' ').trim();
+    return '(' + f.pubYear + (tail ? ', ' + tail : '') + ').';
+  }
+  function apaUpdatedParen(f) {
+    if (!f.updatedYear) return '(n.d.).';
+    var mm = f.updatedMonth ? monthFull(f.updatedMonth) : '';
+    var tail = [mm, f.updatedDay].join(' ').trim();
+    return '(' + f.updatedYear + (tail ? ', ' + tail : '') + ').';
+  }
+  function apaInlineDate(f) {
+    var mm = f.pubMonth ? monthFull(f.pubMonth) : '';
+    var tail = [mm, f.pubDay].join(' ').trim();
+    return (tail ? tail : '') + (f.pubYear ? (tail ? ', ' : '') + f.pubYear : '');
+  }
+  function yearOnlyAPA(y) { return y ? '(' + esc(y) + ').' : ''; }
+
+  var TYPES = {
+    book: { label: 'Book', fields: [
+      {k:'author', label:'Author', ph:'Last, First (or organization)'},
+      {k:'title', label:'Book title', ph:'The Giver'},
+      {k:'publisher', label:'Publisher', ph:'HMH'},
+      {k:'city', label:'City of publication (Chicago only, optional)', ph:'Boston'},
+      {k:'year', label:'Year published', ph:'1993'}
+    ]},
+    bookChapter: { label: 'Book Chapter / Essay in a Collection', fields: [
+      {k:'author', label:'Chapter author', ph:'Last, First'},
+      {k:'title', label:'Chapter/essay title', ph:'The Roaring Twenties'},
+      {k:'container', label:'Book title', ph:'An American History Reader'},
+      {k:'editors', label:'Editor(s), optional', ph:'Last, First'},
+      {k:'publisher', label:'Publisher', ph:''},
+      {k:'city', label:'City of publication (Chicago only, optional)', ph:''},
+      {k:'year', label:'Year', ph:''},
+      {k:'pages', label:'Pages', ph:'45-60'}
+    ]},
+    magazine: { label: 'Magazine Article', fields: [
+      {k:'author', label:'Author', ph:'Last, First'},
+      {k:'title', label:'Article title', ph:''},
+      {k:'container', label:'Magazine name', ph:'Time'},
+      {k:'pub', label:'Publication date', kind:'date'},
+      {k:'pages', label:'Pages, optional', ph:'22-25'},
+      {k:'url', label:'URL, optional', ph:''}
+    ]},
+    newspaper: { label: 'Newspaper Article', fields: [
+      {k:'author', label:'Author', ph:'Last, First'},
+      {k:'title', label:'Article title', ph:''},
+      {k:'container', label:'Newspaper name', ph:'The New York Times'},
+      {k:'pub', label:'Publication date', kind:'date'},
+      {k:'pages', label:'Pages, optional', ph:''},
+      {k:'url', label:'URL, optional', ph:''}
+    ]},
+    journal: { label: 'Journal Article', fields: [
+      {k:'author', label:'Author', ph:'Last, First'},
+      {k:'title', label:'Article title', ph:''},
+      {k:'container', label:'Journal name', ph:''},
+      {k:'volume', label:'Volume', ph:'12'},
+      {k:'issue', label:'Issue', ph:'3'},
+      {k:'year', label:'Year', ph:''},
+      {k:'pages', label:'Pages', ph:'110-125'},
+      {k:'url', label:'URL, optional', ph:''}
+    ]},
+    website: { label: 'Website', fields: [
+      {k:'author', label:'Author (org name if no individual author)', ph:''},
+      {k:'title', label:'Page title', ph:''},
+      {k:'container', label:'Website name', ph:''},
+      {k:'publisher', label:'Publisher/sponsor, if different, optional', ph:''},
+      {k:'pub', label:'Date published, optional', kind:'date'},
+      {k:'url', label:'URL', ph:'https://'},
+      {k:'access', label:'Date you accessed it', kind:'date'}
+    ]},
+    wikipedia: { label: 'Wikipedia Article', fields: [
+      {k:'title', label:'Article title', ph:''},
+      {k:'updated', label:'Date page last edited', kind:'date'},
+      {k:'url', label:'URL', ph:'https://en.wikipedia.org/...'},
+      {k:'access', label:'Date you accessed it', kind:'date'}
+    ]},
+    encyclopedia: { label: 'Encyclopedia Article', fields: [
+      {k:'author', label:'Author, optional', ph:''},
+      {k:'title', label:'Entry title', ph:''},
+      {k:'container', label:'Encyclopedia name', ph:'Encyclopaedia Britannica'},
+      {k:'edition', label:'Edition, optional', ph:'15th'},
+      {k:'year', label:'Year', ph:''},
+      {k:'url', label:'URL, optional', ph:''}
+    ]},
+    video: { label: 'Online Video / YouTube', fields: [
+      {k:'author', label:'Uploaded by / channel name', ph:''},
+      {k:'title', label:'Video title', ph:''},
+      {k:'container', label:'Platform', ph:'YouTube'},
+      {k:'pub', label:'Date posted', kind:'date'},
+      {k:'url', label:'URL', ph:'https://'}
+    ]},
+    interview: { label: 'Interview', fields: [
+      {k:'author', label:'Person interviewed (Last, First)', ph:''},
+      {k:'interviewer', label:'Interviewer, leave blank if you conducted it', ph:''},
+      {k:'pub', label:'Date of interview', kind:'date'}
+    ]},
+    image: { label: 'Image / Photograph', fields: [
+      {k:'author', label:'Artist / creator', ph:''},
+      {k:'title', label:'Title of work', ph:''},
+      {k:'institution', label:'Museum / collection', ph:''},
+      {k:'city', label:'City, optional', ph:''},
+      {k:'year', label:'Year', ph:''},
+      {k:'url', label:'URL, if viewed online, optional', ph:''}
+    ]},
+    govdoc: { label: 'Government / Court Document', fields: [
+      {k:'author', label:'Government body / agency', ph:''},
+      {k:'title', label:'Document title', ph:''},
+      {k:'publisher', label:'Publisher (agency or GPO)', ph:''},
+      {k:'city', label:'City, optional', ph:''},
+      {k:'year', label:'Year', ph:''},
+      {k:'url', label:'URL, optional', ph:''}
+    ]}
+  };
+  var TYPE_ORDER = ['book','bookChapter','magazine','newspaper','journal','website','wikipedia','encyclopedia','video','interview','image','govdoc'];
+
+  function formatMLA(type, f) {
+    var A = authorMLA(f.author), out = [];
+    function add(x) { if (x && x.replace(/[.\s]/g,'')) out.push(x); }
+    switch (type) {
+      case 'book':
+        add(A); add(italic(f.title) + '.'); add(joinComma([f.publisher, f.year]) + '.');
+        break;
+      case 'bookChapter':
+        add(A); add(quote(f.title) + '.'); add(italic(f.container) + (f.editors ? ', edited by ' + esc(f.editors) : '') + ',');
+        add(joinComma([f.publisher, f.year]) + (f.pages ? ', pp. ' + esc(f.pages) : '') + '.');
+        break;
+      case 'magazine':
+      case 'newspaper':
+        add(A); add(quote(f.title) + '.'); add(italic(f.container) + ',');
+        add(mlaDate(f) + (f.pages ? ', pp. ' + esc(f.pages) : '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'journal':
+        add(A); add(quote(f.title) + '.'); add(italic(f.container) + ',');
+        var vi = [];
+        if (f.volume) vi.push('vol. ' + esc(f.volume));
+        if (f.issue) vi.push('no. ' + esc(f.issue));
+        add((vi.length ? vi.join(', ') + ', ' : '') + (f.year || '') + (f.pages ? ', pp. ' + esc(f.pages) : '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'website':
+        add(A); add(quote(f.title) + '.'); add(italic(f.container) + ',');
+        add((f.publisher ? esc(f.publisher) + ', ' : '') + mlaDate(f) + ',');
+        add(esc(f.url) + '.');
+        if (f.accessYear) add('Accessed ' + mlaAccessDate(f) + '.');
+        break;
+      case 'wikipedia':
+        add(quote(f.title) + '.'); add(italic('Wikipedia') + ', Wikimedia Foundation,');
+        add((f.updatedYear ? mlaUpdatedDate(f) + ', ' : '') + esc(f.url) + '.');
+        if (f.accessYear) add('Accessed ' + mlaAccessDate(f) + '.');
+        break;
+      case 'encyclopedia':
+        add(A); add(quote(f.title) + '.');
+        add(italic(f.container) + (f.edition ? ', ' + esc(f.edition) + ' ed.,' : ',') + ' ' + (f.year || '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'video':
+        add(quote(f.title) + '.'); add(italic(f.container || 'YouTube') + ', uploaded by ' + esc(f.author || 'Unknown') + ',');
+        add(mlaDate(f) + ', ' + esc(f.url) + '.');
+        break;
+      case 'interview':
+        add(A); add((f.interviewer ? 'Interview by ' + esc(f.interviewer) : 'Personal interview') + '.');
+        add(mlaDate(f) + '.');
+        break;
+      case 'image':
+        add(A); add(italic(f.title) + '.');
+        add((f.year || '') + ',' + (f.institution ? ' ' + esc(f.institution) + ',' : '') + (f.city ? ' ' + esc(f.city) + '.' : '.'));
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'govdoc':
+        add(A); add(italic(f.title) + '.'); add(joinComma([f.publisher, f.year]) + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+    }
+    return out.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function formatAPA(type, f) {
+    var A = authorAPA(f.author), out = [];
+    function add(x) { if (x && x.replace(/[.\s]/g,'')) out.push(x); }
+    switch (type) {
+      case 'book':
+        add(A); add(yearOnlyAPA(f.year)); add(esc(f.title) + '.'); add((f.publisher ? esc(f.publisher) + '.' : ''));
+        break;
+      case 'bookChapter':
+        add(A); add(yearOnlyAPA(f.year)); add(esc(f.title) + '.');
+        add('In ' + (f.editors ? esc(f.editors) + ' (Ed.), ' : '') + italic(f.container) + (f.pages ? ' (pp. ' + esc(f.pages) + ')' : '') + '.');
+        add(f.publisher ? esc(f.publisher) + '.' : '');
+        break;
+      case 'magazine':
+      case 'newspaper':
+        add(A); add(apaDateParen(f)); add(esc(f.title) + '.');
+        add(italic(f.container) + (f.pages ? ', ' + esc(f.pages) : '') + '.');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'journal':
+        add(A); add(yearOnlyAPA(f.year)); add(esc(f.title) + '.');
+        add(italic(f.container) + (f.volume ? ', ' + italic(f.volume) : '') + (f.issue ? '(' + esc(f.issue) + ')' : '') + (f.pages ? ', ' + esc(f.pages) : '') + '.');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'website':
+        add(A || (f.container ? esc(f.container) + '.' : ''));
+        add(apaDateParen(f)); add(esc(f.title) + '.');
+        add(f.container ? italic(f.container) + '.' : '');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'wikipedia':
+        add('Wikipedia.'); add(apaUpdatedParen(f)); add(esc(f.title) + '.'); add('In ' + italic('Wikipedia') + '.');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'encyclopedia':
+        add(A || (f.container ? esc(f.container) + '.' : ''));
+        add(yearOnlyAPA(f.year)); add(esc(f.title) + '.');
+        add('In ' + italic(f.container) + (f.edition ? ' (' + esc(f.edition) + ' ed.)' : '') + '.');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'video':
+        add(esc(f.author || 'Unknown') + '.'); add(apaDateParen(f));
+        add(esc(f.title) + ' [Video].'); add((f.container || 'YouTube') + '.');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'interview':
+        var who = parseAuthor(f.author);
+        add('Personal communications like interviews are not part of an APA reference list &mdash; cite them in-text only, e.g. (' + esc(who ? (who.org ? who.name : who.last) : 'Name') + ', personal communication, ' + apaInlineDate(f) + ').');
+        break;
+      case 'image':
+        add(A); add(yearOnlyAPA(f.year)); add(esc(f.title) + ' [Image].'); add(f.institution ? esc(f.institution) + '.' : '');
+        if (f.url) add(esc(f.url));
+        break;
+      case 'govdoc':
+        add(A); add(yearOnlyAPA(f.year)); add(italic(f.title) + '.'); add(f.publisher ? esc(f.publisher) + '.' : '');
+        if (f.url) add(esc(f.url));
+        break;
+    }
+    return out.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function formatChicago(type, f) {
+    var A = authorChicago(f.author), out = [];
+    function add(x) { if (x && x.replace(/[.\s]/g,'')) out.push(x); }
+    var place;
+    switch (type) {
+      case 'book':
+        add(A); add(italic(f.title) + '.');
+        place = f.city ? esc(f.city) + ': ' : '';
+        add(place + (f.publisher ? esc(f.publisher) : '') + ', ' + (f.year || '') + '.');
+        break;
+      case 'bookChapter':
+        add(A); add(quote(f.title) + '.');
+        add('In ' + italic(f.container) + (f.editors ? ', edited by ' + esc(f.editors) : '') + (f.pages ? ', ' + esc(f.pages) : '') + '.');
+        place = f.city ? esc(f.city) + ': ' : '';
+        add(place + (f.publisher ? esc(f.publisher) : '') + ', ' + (f.year || '') + '.');
+        break;
+      case 'magazine':
+      case 'newspaper':
+        add(A); add(quote(f.title) + '.'); add(italic(f.container) + ', ' + chicagoDate(f) + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'journal':
+        add(A); add(quote(f.title) + '.');
+        add(italic(f.container) + ' ' + (f.volume || '') + (f.issue ? ', no. ' + esc(f.issue) : '') + ' (' + (f.year || '') + ')' + (f.pages ? ': ' + esc(f.pages) : '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'website':
+        add(A); add(quote(f.title) + '.');
+        add(italic(f.container) + '.' + (f.publisher ? ' ' + esc(f.publisher) + ',' : '') + ' ' + chicagoDate(f) + '.');
+        add(esc(f.url) + '.');
+        break;
+      case 'wikipedia':
+        add(quote(f.title) + '.'); add(italic('Wikipedia') + '.');
+        add('Last modified ' + chicagoUpdatedDate(f) + '.');
+        add(esc(f.url) + '.');
+        break;
+      case 'encyclopedia':
+        add(A); add(quote(f.title) + '.');
+        add(italic(f.container) + (f.edition ? ', ' + esc(f.edition) + ' ed.' : '') + ', ' + (f.year || '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'video':
+        add(quote(f.title) + '.'); add('YouTube video.');
+        add('Posted by ' + esc(f.author || 'Unknown') + ', ' + chicagoDate(f) + '.');
+        add(esc(f.url) + '.');
+        break;
+      case 'interview':
+        add(A); add('Interview' + (f.interviewer ? ' by ' + esc(f.interviewer) : '') + '.');
+        add(chicagoDate(f) + '.');
+        break;
+      case 'image':
+        add(A); add(italic(f.title) + '.'); add((f.year || '') + '.');
+        add((f.institution ? esc(f.institution) : '') + (f.city ? ', ' + esc(f.city) : '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+      case 'govdoc':
+        add(A); add(italic(f.title) + '.');
+        place = f.city ? esc(f.city) + ': ' : '';
+        add(place + (f.publisher ? esc(f.publisher) : '') + ', ' + (f.year || '') + '.');
+        if (f.url) add(esc(f.url) + '.');
+        break;
+    }
+    return out.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function formatCitation(style, type, f) {
+    if (style === 'apa') return formatAPA(type, f);
+    if (style === 'chicago') return formatChicago(type, f);
+    return formatMLA(type, f);
+  }
+  function headingFor(style) {
+    if (style === 'apa') return 'References';
+    if (style === 'chicago') return 'Bibliography';
+    return 'Works Cited';
+  }
+
+  var els = {
+    projName: document.getElementById('projName'),
+    projSwitch: document.getElementById('projSwitch'),
+    styleSelect: document.getElementById('styleSelect'),
+    newListBtn: document.getElementById('newListBtn'),
+    delListBtn: document.getElementById('delListBtn'),
+    typeSelect: document.getElementById('typeSelect'),
+    fieldsWrap: document.getElementById('fieldsWrap'),
+    addBtn: document.getElementById('addBtn'),
+    clearBtn: document.getElementById('clearBtn'),
+    cancelEditBtn: document.getElementById('cancelEditBtn'),
+    formTitle: document.getElementById('formTitle'),
+    listHeading: document.getElementById('listHeading'),
+    listWrap: document.getElementById('listWrap'),
+    copyBtn: document.getElementById('copyBtn'),
+    printBtn: document.getElementById('printBtn'),
+    printArea: document.getElementById('printArea'),
+    shareNote: document.getElementById('shareNote')
+  };
+
+  var doc = null;
+  var editingId = null;
+
+  function listNames() {
+    try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveListNames(names) {
+    try { localStorage.setItem(LIST_KEY, JSON.stringify(names)); } catch (e) {}
+  }
+  function loadDoc(name) {
+    try {
+      var raw = localStorage.getItem(DATA_PREFIX + name);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function saveDoc(d) {
+    try {
+      localStorage.setItem(DATA_PREFIX + d.name, JSON.stringify(d));
+      var names = listNames();
+      if (names.indexOf(d.name) === -1) { names.push(d.name); saveListNames(names); }
+      localStorage.setItem(CURRENT_KEY, d.name);
+    } catch (e) { setNote('Could not save &mdash; your browser storage may be full.', true); }
+  }
+  function deleteDoc(name) {
+    try {
+      localStorage.removeItem(DATA_PREFIX + name);
+      saveListNames(listNames().filter(function (n) { return n !== name; }));
+    } catch (e) {}
+  }
+
+  function setNote(text, isError) {
+    els.shareNote.innerHTML = text;
+    els.shareNote.className = 'share-note' + (isError ? ' error' : '');
+    window.clearTimeout(setNote._t);
+    setNote._t = window.setTimeout(function () { els.shareNote.textContent = ''; }, 4000);
+  }
+
+  function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function typeOptionsHtml() {
+    var html = '';
+    for (var i = 0; i < TYPE_ORDER.length; i++) {
+      var t = TYPE_ORDER[i];
+      html += '<option value="' + t + '">' + esc(TYPES[t].label) + '</option>';
+    }
+    return html;
+  }
+
+  function renderFields(type, existing) {
+    existing = existing || {};
+    var cfg = TYPES[type];
+    var html = '';
+    for (var i = 0; i < cfg.fields.length; i++) {
+      var f = cfg.fields[i];
+      if (f.kind === 'date') {
+        html += '<div class="field date-field"><label>' + esc(f.label) + '</label><div class="date-row">' +
+          '<input type="text" data-k="' + f.k + 'Month" placeholder="Month" value="' + escAttr(existing[f.k + 'Month']) + '">' +
+          '<input type="text" data-k="' + f.k + 'Day" placeholder="Day" value="' + escAttr(existing[f.k + 'Day']) + '">' +
+          '<input type="text" data-k="' + f.k + 'Year" placeholder="Year" value="' + escAttr(existing[f.k + 'Year']) + '">' +
+          '</div></div>';
+      } else {
+        html += '<div class="field"><label>' + esc(f.label) + '</label>' +
+          '<input type="text" data-k="' + f.k + '" placeholder="' + escAttr(f.ph || '') + '" value="' + escAttr(existing[f.k]) + '"></div>';
+      }
+    }
+    els.fieldsWrap.innerHTML = html;
+  }
+
+  function collectFields() {
+    var f = {};
+    var inputs = els.fieldsWrap.querySelectorAll('input[data-k]');
+    for (var i = 0; i < inputs.length; i++) { f[inputs[i].getAttribute('data-k')] = inputs[i].value.trim(); }
+    return f;
+  }
+
+  function sortedEntries() {
+    var arr = doc.sources.slice();
+    arr.sort(function (a, b) {
+      var ka = sortKeyFor(a.fields), kb = sortKeyFor(b.fields);
+      return ka < kb ? -1 : (ka > kb ? 1 : 0);
+    });
+    return arr;
+  }
+
+  function findSource(id) {
+    for (var i = 0; i < doc.sources.length; i++) { if (doc.sources[i].id === id) return doc.sources[i]; }
+    return null;
+  }
+
+  function renderList() {
+    els.listHeading.textContent = headingFor(doc.style) + (doc.sources.length ? ' (' + doc.sources.length + ')' : '');
+    if (!doc.sources.length) { els.listWrap.innerHTML = '<p class="empty">No sources yet &mdash; add one above.</p>'; return; }
+    var items = sortedEntries(), html = '';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var cite = formatCitation(doc.style, it.type, it.fields);
+      html += '<div class="entry" data-id="' + it.id + '">' +
+        '<div class="cite"><span class="type-tag">' + esc((TYPES[it.type] || {}).label || it.type) + '</span><br>' + cite + '</div>' +
+        '<div class="row-btns">' +
+        '<button type="button" class="secondary" data-act="copy">Copy</button>' +
+        '<button type="button" class="secondary" data-act="edit">Edit</button>' +
+        '<button type="button" class="danger" data-act="delete">Delete</button>' +
+        '</div></div>';
+    }
+    els.listWrap.innerHTML = html;
+  }
+
+  function copyText(text, ok, fail) {
+    var p = (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(text) : Promise.reject();
+    p.then(ok, function () { window.prompt('Copy this text:', text); if (fail) fail(); });
+  }
+
+  function refreshProjSelect() {
+    var names = listNames();
+    if (names.indexOf(doc.name) === -1) names.push(doc.name);
+    var html = '';
+    for (var i = 0; i < names.length; i++) {
+      html += '<option value="' + escAttr(names[i]) + '"' + (names[i] === doc.name ? ' selected' : '') + '>' + esc(names[i]) + '</option>';
+    }
+    els.projSwitch.innerHTML = html;
+  }
+
+  function resetFormToAdd() {
+    editingId = null;
+    els.addBtn.textContent = 'Add to list';
+    els.cancelEditBtn.hidden = true;
+    els.formTitle.textContent = 'Add a source';
+    renderFields(els.typeSelect.value, {});
+  }
+
+  function refreshAll() {
+    els.projName.value = doc.name;
+    els.styleSelect.value = doc.style;
+    refreshProjSelect();
+    renderList();
+    resetFormToAdd();
+  }
+
+  els.typeSelect.innerHTML = typeOptionsHtml();
+
+  els.typeSelect.addEventListener('change', function () {
+    if (!editingId) renderFields(els.typeSelect.value, {});
+  });
+
+  els.addBtn.addEventListener('click', function () {
+    var type = els.typeSelect.value, fields = collectFields();
+    if (editingId) {
+      var src = findSource(editingId);
+      if (src) { src.type = type; src.fields = fields; }
+    } else {
+      doc.sources.push({ id: uid(), type: type, fields: fields });
+    }
+    saveDoc(doc);
+    renderList();
+    resetFormToAdd();
+    setNote('Saved.', false);
+  });
+
+  els.clearBtn.addEventListener('click', function () { resetFormToAdd(); });
+  els.cancelEditBtn.addEventListener('click', function () { resetFormToAdd(); });
+
+  els.listWrap.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!btn) return;
+    var row = btn.closest('.entry');
+    var id = row.getAttribute('data-id');
+    var src = findSource(id);
+    if (!src) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'delete') {
+      if (!window.confirm('Delete this citation?')) return;
+      doc.sources = doc.sources.filter(function (s) { return s.id !== id; });
+      saveDoc(doc); renderList();
+      if (editingId === id) resetFormToAdd();
+    } else if (act === 'edit') {
+      editingId = id;
+      els.typeSelect.value = src.type;
+      renderFields(src.type, src.fields);
+      els.addBtn.textContent = 'Save changes';
+      els.cancelEditBtn.hidden = false;
+      els.formTitle.textContent = 'Edit source';
+      els.formTitle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (act === 'copy') {
+      copyText(stripHtml(formatCitation(doc.style, src.type, src.fields)), function () { setNote('Citation copied.', false); });
+    }
+  });
+
+  els.styleSelect.addEventListener('change', function () {
+    doc.style = els.styleSelect.value;
+    saveDoc(doc);
+    renderList();
+  });
+
+  els.projSwitch.addEventListener('change', function () {
+    var name = els.projSwitch.value;
+    var loaded = loadDoc(name);
+    if (loaded) {
+      doc = loaded;
+      if (!doc.style) doc.style = 'mla';
+      if (!doc.sources) doc.sources = [];
+      try { localStorage.setItem(CURRENT_KEY, doc.name); } catch (e) {}
+      refreshAll();
+    }
+  });
+
+  els.newListBtn.addEventListener('click', function () {
+    var name = window.prompt('Name this citation list:', 'New List');
+    if (!name) return;
+    doc = { name: name.trim(), style: doc.style, sources: [] };
+    saveDoc(doc);
+    refreshAll();
+  });
+
+  els.projName.addEventListener('change', function () {
+    var newName = els.projName.value.trim();
+    if (!newName || newName === doc.name) { els.projName.value = doc.name; return; }
+    if (listNames().indexOf(newName) > -1) { setNote('A list with that name already exists.', true); els.projName.value = doc.name; return; }
+    deleteDoc(doc.name);
+    doc.name = newName;
+    saveDoc(doc);
+    refreshProjSelect();
+  });
+
+  els.delListBtn.addEventListener('click', function () {
+    if (!window.confirm('Delete "' + doc.name + '"? This cannot be undone.')) return;
+    deleteDoc(doc.name);
+    var names = listNames();
+    doc = (names.length && loadDoc(names[0])) || { name: 'My Citations', style: 'mla', sources: [] };
+    saveDoc(doc);
+    refreshAll();
+  });
+
+  els.copyBtn.addEventListener('click', function () {
+    if (!doc.sources.length) { setNote('Add at least one source first.', true); return; }
+    var items = sortedEntries(), lines = [];
+    for (var i = 0; i < items.length; i++) { lines.push(stripHtml(formatCitation(doc.style, items[i].type, items[i].fields))); }
+    copyText(headingFor(doc.style) + '\n\n' + lines.join('\n\n'), function () { setNote('Full list copied.', false); });
+  });
+
+  els.printBtn.addEventListener('click', function () {
+    if (!doc.sources.length) { setNote('Add at least one source first.', true); return; }
+    var items = sortedEntries(), html = '<div class="print-sheet"><h1>' + esc(headingFor(doc.style)) + '</h1>';
+    for (var i = 0; i < items.length; i++) { html += '<p class="wc-entry">' + formatCitation(doc.style, items[i].type, items[i].fields) + '</p>'; }
+    html += '</div>';
+    els.printArea.innerHTML = html;
+    window.print();
+  });
+
+  function init() {
+    var lastName = null;
+    try { lastName = localStorage.getItem(CURRENT_KEY); } catch (e) {}
+    doc = (lastName && loadDoc(lastName)) || null;
+    if (!doc) {
+      var names = listNames();
+      doc = (names.length && loadDoc(names[0])) || { name: 'My Citations', style: 'mla', sources: [] };
+    }
+    if (!doc.style) doc.style = 'mla';
+    if (!doc.sources) doc.sources = [];
+    saveDoc(doc);
+    els.typeSelect.value = 'book';
+    refreshAll();
+  }
+  init();
+})();
+</script>
+<script src="../_shared/sw-register.js" defer></script>
+</body>
+</html>
