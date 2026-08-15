@@ -125,11 +125,14 @@
     body.printing #print-area svg { width: 100%; height: auto; }
     @page { size: letter landscape; margin: 0.4in; }
   }
+  .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; font-size: .85rem; padding: .3rem .5rem .3rem 0; }
+  .back-link:hover { color: var(--accent); }
 </style>
 </head>
 <body>
 
 <header>
+  <a class="back-link" href="../index.html">&larr; Toolkit</a>
   <h1>Data Table → Chart Builder</h1>
   <p>Paste a table from a spreadsheet or lab notebook — pick your columns and get a chart, right in your browser</p>
 </header>
