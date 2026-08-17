@@ -72,32 +72,43 @@
      a REAL (built, clickable) tool row must manually update both of these to
      match the new row count. See note 6 below for why placeholders don't count.
 
-  6. CATEGORY SECTIONS, TAGS, AND PINS (rewritten 2026-08-11; replaces the
-     retired "coming soon" placeholder note — all placeholders graduated)
-     #rows contains 8 <details class="cat" data-cat="..."> category wrappers
-     (general, math, ela, science, social-studies, world-language, arts-pe,
+  6. CATEGORY SECTIONS, TAGS, AND PINS (rewritten 2026-08-17; the former
+     single "general" catch-all was split into 5 function categories —
+     replaces the retired "coming soon" placeholder note — all placeholders
+     graduated)
+     #rows contains 12 <details class="cat" data-cat="..."> category wrappers
+     (classroom-mgmt, scheduling-subs, assessment-grading, games-rewards,
+     docs-comm, math, ela, science, social-studies, world-language, arts-pe,
      platform), each with a <summary class="section-head"> (caret + name +
      "N tools" count) and that category's <a class="row ink"> entries, plus a
-     JS-populated <details id="pinnedCat"> "My Tools" section at the top.
-       - A NEW TOOL ROW goes inside its category's <details>, and its
-         summary's "N tools" count must be bumped by hand (notes 4/5 still
-         apply too).
+     JS-populated <details id="pinnedCat"> "My Tools" section at the top. The
+     first 5 are function categories (no shared subject); the rest are
+     subject categories plus "platform" for site-wide tools.
+       - A NEW TOOL ROW goes inside whichever category fits best (a subject
+         category if it teaches one, otherwise the closest-fitting function
+         category), and its summary's "N tools" count must be bumped by hand
+         (notes 4/5 still apply too). Don't let a function category regrow
+         past ~10-12 tools without considering a further split.
        - Every row carries TWO tag attributes: data-tags (free-text search
          keywords for the live filter + Cmd+K — legacy vocabulary, fine to
          extend) and data-filter-tags (curated canonical tags that drive the
          "Filter by tag" panel; taxonomy = 8 subject tags + function tags like
          timer/printable/review-game + output tags). Give a new tool 2–6
-         data-filter-tags; subject tag LAST (general tools get none). The
-         panel is built at runtime from these attributes — no list to update.
+         data-filter-tags; subject tag LAST (function-category tools get
+         none). The panel is built at runtime from these attributes — no list
+         to update.
        - The 3 visible chips in .tags must be <span data-tag="x">x</span>
          using the row's FIRST THREE data-filter-tags, in order — they are
          click-to-filter shortcuts, so chip text and filter tags must match.
        - Each row's .per cell contains a pin star: a span[role=button] with
          data-pin (spans, not <button>, because buttons are invalid inside
-         the row <a>; this nested-interactive setup is deliberate).
+         the row <a>; this nested-interactive setup is deliberate). The
+         number in .per b is a permanent per-tool "add order" badge (matches
+         the tool's original addition sequence, not its position in the
+         DOM) — never renumber it when moving a row between categories.
        - localStorage: gvb-home-cats (per-category open state; all categories
-         ship closed in markup EXCEPT "general", which ships open as the
-         first-visit default — the JS default state mirrors this),
+         ship closed in markup EXCEPT "classroom-mgmt", which ships open as
+         the first-visit default — the JS default state mirrors this),
          gvb-home-pins (array of data-tool slugs).
      The old .row.soon placeholder convention is retired; IDEAS_BACKLOG.md /
      ideas-backlog.html still track future ideas.
@@ -816,11 +827,11 @@
     <div id="pinnedRows"></div>
     </details>
 
-    <details class="cat" data-cat="general" open>
+    <details class="cat" data-cat="classroom-mgmt" open>
     <summary class="section-head ink" style="--d:460ms">
       <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <h2>General / Classroom Logistics</h2>
-      <span class="cat-count">35 tools</span>
+      <h2>Classroom Management &amp; Engagement</h2>
+      <span class="cat-count">10 tools</span>
     </summary>
 
     <a class="row ink" style="--d:480ms" href="Tools/007-Name%20Picker.html"
@@ -855,150 +866,6 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <a class="row ink" style="--d:620ms" href="Tools/034-schedule-browser.html"
-       data-tool="schedule-browser" data-tags="schedule teacher room period blocks a/b day lookup coverage substitute"
-       data-filter-tags="schedule reference">
-      <span class="per"><span class="lbl">Per</span><b>3</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Schedule Browser to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Schedule Browser</span>
-        <span class="pitch">Look up any teacher, room, or period in seconds.</span>
-        <span class="comment" aria-hidden="true">Knows where everyone is. Even you.</span>
-      </span>
-      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
-      <span class="grade" title="Comment: always knows where everyone is supposed to be.">A+
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:690ms" href="Tools/035-schedule-visualizer.html"
-       data-tool="layout-visualizer" data-tags="building map layout rooms clusters hallways floors wayfinding schedule"
-       data-filter-tags="maps schedule reference">
-      <span class="per"><span class="lbl">Per</span><b>4</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Layout Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">School Layout Visualizer</span>
-        <span class="pitch">See the whole building&rsquo;s schedule, hyperlinked.</span>
-        <span class="comment" aria-hidden="true">Finds every hallway shortcut you&rsquo;ve been hiding.</span>
-      </span>
-      <span class="tags"><span data-tag="maps">maps</span><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
-      <span class="grade" title="Comment: sees the big picture.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:760ms" href="Tools/036-final_grade_checker.html"
-       data-tool="grade-checker" data-tags="grades grading report cards math weights averages quarter exam gradebook export"
-       data-filter-tags="grades reference export">
-      <span class="per"><span class="lbl">Per</span><b>5</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Final Grade Checker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Final Grade Checker</span>
-        <span class="pitch">Double-check the math before report cards go out.</span>
-        <span class="comment" aria-hidden="true">Catches my math before the parents do.</span>
-      </span>
-      <span class="tags"><span data-tag="grades">grades</span><span data-tag="reference">reference</span><span data-tag="export">export</span></span>
-      <span class="grade" title="Comment: shows all work.">A+
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:830ms" href="Tools/011-image-to-pdf.html"
-       data-tool="image-to-pdf" data-tags="pdf images photos scans handouts merge combine documents"
-       data-filter-tags="export printable">
-      <span class="per"><span class="lbl">Per</span><b>6</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Image &rarr; PDF Assembler to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Image &rarr; PDF Assembler</span>
-        <span class="pitch">Turn a stack of photos into one clean PDF.</span>
-        <span class="comment" aria-hidden="true">Turns chaos into one PDF. Occasionally sideways.</span>
-      </span>
-      <span class="tags"><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: turns work in on time, stapled.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:900ms" href="Tools/029-prompt-builder.html"
-       data-tool="prompt-builder" data-tags="prompt ai writing template builder chatgpt claude questions"
-       data-filter-tags="planning writing reference">
-      <span class="per"><span class="lbl">Per</span><b>7</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Prompt Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Prompt Builder</span>
-        <span class="pitch">Answer a few questions, get a ready-to-use AI prompt.</span>
-        <span class="comment" aria-hidden="true">Better at asking questions than most staff meetings.</span>
-      </span>
-      <span class="tags"><span data-tag="planning">planning</span><span data-tag="writing">writing</span><span data-tag="reference">reference</span></span>
-      <span class="grade" title="Comment: asks good questions.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:970ms" href="Tools/031-docx-merger.html"
-       data-tool="docx-merger" data-tags="word docx merge combine documents template letters"
-       data-filter-tags="export communication">
-      <span class="per"><span class="lbl">Per</span><b>8</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Word Doc Merger to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Word Doc Merger</span>
-        <span class="pitch">Combine multiple Word docs into one, in order.</span>
-        <span class="comment" aria-hidden="true">Plays well with others. Literally.</span>
-      </span>
-      <span class="tags"><span data-tag="export">export</span><span data-tag="communication">communication</span></span>
-      <span class="grade" title="Comment: works well with others.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1040ms" href="Tools/044-Sub%20Plan%20Builder.html"
-       data-tool="sub-plan-builder" data-tags="sub plans substitute lesson word docx emergency"
-       data-filter-tags="sub-plans export printable">
-      <span class="per"><span class="lbl">Per</span><b>9</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Plan Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Sub Plan Builder</span>
-        <span class="pitch">Fill in the boilerplate once, then export a ready-to-print sub plan.</span>
-        <span class="comment" aria-hidden="true">Covers your class. Doesn't cover for you.</span>
-      </span>
-      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: leaves detailed instructions.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1110ms" href="Tools/016-qr-code-generator.html"
-       data-tool="qr-code-generator" data-tags="qr code generator link station schoology forms logo"
-       data-filter-tags="qr printable">
-      <span class="per"><span class="lbl">Per</span><b>10</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin QR Code Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">QR Code Generator</span>
-        <span class="pitch">Turn a link or short text into a printable QR code, with an optional logo in the center.</span>
-        <span class="comment" aria-hidden="true">Scans on the first try. Unlike the fire alarm.</span>
-      </span>
-      <span class="tags"><span data-tag="qr">qr</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: scans on the first try.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1180ms" href="Tools/032-School%20Calendar%20Visualizer.html"
-       data-tool="school-calendar-visualizer" data-tags="calendar pacing holidays half days grading periods testing windows template"
-       data-filter-tags="schedule planning charts">
-      <span class="per"><span class="lbl">Per</span><b>11</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Calendar Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">School Calendar Visualizer</span>
-        <span class="pitch">Build a full-year calendar template — holidays, half days, workdays, grading periods — and lay lesson pacing on top: paste a lesson list or import the county pacing spreadsheet, and bumps or snow days reflow the whole sequence.</span>
-        <span class="comment" aria-hidden="true">Sees the whole year coming. Still not ready for it.</span>
-      </span>
-      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="planning">planning</span><span data-tag="charts">charts</span></span>
-      <span class="grade" title="Comment: plans ahead.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
     <a class="row ink" style="--d:1250ms" href="Tools/004-Classroom%20Timer.html"
        data-tool="classroom-timer" data-tags="timer countdown transition random interval stopwatch round robin stations projector"
        data-filter-tags="timer projector randomizer">
@@ -1010,54 +877,6 @@
       </span>
       <span class="tags"><span data-tag="timer">timer</span><span data-tag="projector">projector</span><span data-tag="randomizer">randomizer</span></span>
       <span class="grade" title="Comment: readable from the back row.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1260ms" href="Tools/020-bracket-tournament-generator.html"
-       data-tool="bracket-tournament-generator" data-tags="bracket tournament review game elimination groups teams"
-       data-filter-tags="review-game groups printable projector">
-      <span class="per"><span class="lbl">Per</span><b>13</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Bracket / Tournament Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Bracket / Tournament Generator</span>
-        <span class="pitch">Build a single-elimination bracket, run it live, and pick winners as rounds finish.</span>
-        <span class="comment" aria-hidden="true">Somebody has to lose in the first round. Sorry, Eve.</span>
-      </span>
-      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="groups">groups</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: handles elimination gracefully.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1272ms" href="Tools/030-review-game-board.html"
-       data-tool="review-game-board" data-tags="jeopardy review game quiz board projector excel import"
-       data-filter-tags="review-game projector">
-      <span class="per"><span class="lbl">Per</span><b>14</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Quiz / Review Game Board to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Quiz / Review Game Board</span>
-        <span class="pitch">A Jeopardy-style board for the projector &mdash; type in questions or import them from a spreadsheet.</span>
-        <span class="comment" aria-hidden="true">Daily Double energy, minus the Sony lawyers.</span>
-      </span>
-      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="projector">projector</span></span>
-      <span class="grade" title="Comment: knows the answer, in the form of a question.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1284ms" href="Tools/042-certificate-award-maker.html"
-       data-tool="certificate-award-maker" data-tags="certificate award printable recognition batch"
-       data-filter-tags="printable cards communication">
-      <span class="per"><span class="lbl">Per</span><b>15</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Certificate &amp; Award Maker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Certificate &amp; Award Maker</span>
-        <span class="pitch">Pick a template and border, type in the details, print one certificate or a whole class set.</span>
-        <span class="comment" aria-hidden="true">Everyone&rsquo;s a winner. Some more officially than others.</span>
-      </span>
-      <span class="tags"><span data-tag="printable">printable</span><span data-tag="cards">cards</span><span data-tag="communication">communication</span></span>
-      <span class="grade" title="Comment: everyone&rsquo;s a winner.">A+
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
@@ -1095,86 +914,6 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <a class="row ink" style="--d:1320ms" href="Tools/023-exit-ticket-generator.html"
-       data-tool="exit-ticket-generator" data-tags="exit ticket bell ringer warm up printable"
-       data-filter-tags="warm-up printable writing">
-      <span class="per"><span class="lbl">Per</span><b>18</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Exit Ticket / Bell Ringer Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Exit Ticket / Bell Ringer Generator</span>
-        <span class="pitch">A bank of short warm-up and exit-ticket prompts with a projector display, or print half- or quarter-sheet handouts for the whole class.</span>
-        <span class="comment" aria-hidden="true">Three minutes of writing. Zero minutes of grading.</span>
-      </span>
-      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="printable">printable</span><span data-tag="writing">writing</span></span>
-      <span class="grade" title="Comment: three minutes of writing, zero minutes of grading.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1332ms" href="Tools/003-rubric-builder.html"
-       data-tool="rubric-builder" data-tags="rubric grading criteria printable"
-       data-filter-tags="grades reference printable">
-      <span class="per"><span class="lbl">Per</span><b>19</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Rubric Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Rubric Builder</span>
-        <span class="pitch">Build, save, and print grading rubrics &mdash; editable criteria and performance levels, from a template or from scratch.</span>
-        <span class="comment" aria-hidden="true">Grades the assignment. Not you.</span>
-      </span>
-      <span class="tags"><span data-tag="grades">grades</span><span data-tag="reference">reference</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: grades the assignment, not you.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1344ms" href="Tools/043-field-trip-permission-slip.html"
-       data-tool="field-trip-permission-slip" data-tags="field trip permission slip printable"
-       data-filter-tags="printable communication">
-      <span class="per"><span class="lbl">Per</span><b>20</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Field Trip Permission Slip Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Field Trip Permission Slip Generator</span>
-        <span class="pitch">Fill in the trip details once, then print one slip, a whole class set, or blank copies to hand-write &mdash; save the trip as a template for next year.</span>
-        <span class="comment" aria-hidden="true">Fills in the fine print. You still chase the signatures.</span>
-      </span>
-      <span class="tags"><span data-tag="printable">printable</span><span data-tag="communication">communication</span></span>
-      <span class="grade" title="Comment: fills in the fine print, you still chase the signatures.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1356ms" href="Tools/037-grade-distribution-visualizer.html"
-       data-tool="grade-distribution-visualizer" data-tags="grades distribution histogram stats gradebook"
-       data-filter-tags="grades charts">
-      <span class="per"><span class="lbl">Per</span><b>21</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Grade Distribution Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Grade Distribution Visualizer</span>
-        <span class="pitch">Paste a gradebook export and see class-wide stats, a letter-grade breakdown, and a score histogram &mdash; a companion to the Final Grade Checker.</span>
-        <span class="comment" aria-hidden="true">The curve, visualized. No promises about the curve itself.</span>
-      </span>
-      <span class="tags"><span data-tag="grades">grades</span><span data-tag="charts">charts</span></span>
-      <span class="grade" title="Comment: the curve, visualized.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1368ms" href="Tools/018-qr-scavenger-hunt-builder.html"
-       data-tool="qr-scavenger-hunt-builder" data-tags="qr code scavenger hunt stations answer key"
-       data-filter-tags="qr review-game printable">
-      <span class="per"><span class="lbl">Per</span><b>22</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin QR Scavenger Hunt Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">QR Scavenger Hunt Builder</span>
-        <span class="pitch">Batch-generate a set of station QR codes plus an answer key.</span>
-        <span class="comment" aria-hidden="true">Sends them all over the building. Keeps the answers to itself.</span>
-      </span>
-      <span class="tags"><span data-tag="qr">qr</span><span data-tag="review-game">review-game</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: keeps the answers to itself.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
     <a class="row ink" style="--d:1380ms" href="Tools/001-hall-pass-log.html"
        data-tool="hall-pass-log" data-tags="hall pass sign out log tracking"
        data-filter-tags="tracker behavior">
@@ -1207,22 +946,6 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <a class="row ink" style="--d:1396ms" href="Tools/045-sub-binder-generator.html"
-       data-tool="sub-binder-generator" data-tags="sub plans bundle print pdf combine emergency seating schedule"
-       data-filter-tags="sub-plans export printable seating schedule">
-      <span class="per"><span class="lbl">Per</span><b>25</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Binder / Day Bundle Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Sub Binder / Day Bundle Generator</span>
-        <span class="pitch">Pulls the standing details saved in Sub Plan Builder and the current Seating Chart into one two-page printable packet, plus today&rsquo;s lesson.</span>
-        <span class="comment" aria-hidden="true">One stack for the sub. Not three separate tabs.</span>
-      </span>
-      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
-      <span class="grade" title="Comment: one stack for the sub, not three separate tabs.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
     <a class="row ink" style="--d:1404ms" href="Tools/010-command-center-dashboard.html"
        data-tool="command-center-dashboard" data-tags="dashboard timer schedule today overview projector"
        data-filter-tags="projector timer schedule">
@@ -1239,38 +962,6 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <a class="row ink" style="--d:1412ms" href="Tools/019-escape-room-builder.html"
-       data-tool="escape-room-builder" data-tags="escape room puzzle lock qr code stations game"
-       data-filter-tags="review-game qr projector">
-      <span class="per"><span class="lbl">Per</span><b>27</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Digital Escape Room / Puzzle Lock Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Digital Escape Room / Puzzle Lock Builder</span>
-        <span class="pitch">Chain QR-code puzzle stations into a linear or branching escape room &mdash; scanning one out of order sends a student back instead of giving away the clue.</span>
-        <span class="comment" aria-hidden="true">The only lock in the building that&rsquo;s supposed to be picked.</span>
-      </span>
-      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="qr">qr</span><span data-tag="projector">projector</span></span>
-      <span class="grade" title="Comment: the only lock in the building that&rsquo;s supposed to be picked.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
-    <a class="row ink" style="--d:1416ms" href="Tools/068-parent-contact-log.html"
-       data-tool="parent-contact-log" data-tags="general parent contact log communication tracker conference"
-       data-filter-tags="communication tracker">
-      <span class="per"><span class="lbl">Per</span><b>28</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Parent/Guardian Contact Log to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
-      <span>
-        <span class="name">Parent/Guardian Contact Log</span>
-        <span class="pitch">Log a call, email, or note home per student &mdash; date, method, and outcome &mdash; for quick reference before a conference or a difficult phone call.</span>
-        <span class="comment" aria-hidden="true">Remembers so you don&rsquo;t have to, right before that call.</span>
-      </span>
-      <span class="tags"><span data-tag="communication">communication</span><span data-tag="tracker">tracker</span></span>
-      <span class="grade" title="Comment: remembers so you don't have to.">A
-        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </span>
-      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-    </a>
-
     <a class="row ink" style="--d:1304ms" href="Tools/058-duty-roster-builder.html"
        data-tool="duty-roster-builder" data-tags="general duty roster hallway cafeteria bus rotation printable"
        data-filter-tags="schedule planning printable">
@@ -1282,6 +973,111 @@
       </span>
       <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="planning">planning</span><span data-tag="printable">printable</span></span>
       <span class="grade" title="Comment: nobody forgets cafeteria duty again.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" href="Tools/084-socratic-seminar-prep-organizer.html"
+       data-tool="socratic-seminar-prep-organizer" data-tags="general socratic seminar discussion claim evidence rebuttal speaking order fishbowl tracker"
+       data-filter-tags="discussion printable tracker">
+      <span class="per"><span class="lbl">Per</span><b>84</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Socratic Seminar Prep to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Socratic Seminar Prep &amp; Tracker</span>
+        <span class="pitch">Print a claim/evidence/rebuttal prep sheet for a central question, then run a live speaking-order and participation tracker with shuffle, drag-to-reorder, and an optional inner/outer fishbowl split.</span>
+        <span class="comment" aria-hidden="true">Know who talked without a clipboard tally.</span>
+      </span>
+      <span class="tags"><span data-tag="discussion">discussion</span><span data-tag="printable">printable</span><span data-tag="tracker">tracker</span></span>
+      <span class="grade" title="Comment: know who talked without a clipboard tally.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    </details>
+
+    <details class="cat" data-cat="scheduling-subs">
+    <summary class="section-head ink" style="--d:480ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <h2>Scheduling &amp; Substitute Planning</h2>
+      <span class="cat-count">7 tools</span>
+    </summary>
+
+    <a class="row ink" style="--d:620ms" href="Tools/034-schedule-browser.html"
+       data-tool="schedule-browser" data-tags="schedule teacher room period blocks a/b day lookup coverage substitute"
+       data-filter-tags="schedule reference">
+      <span class="per"><span class="lbl">Per</span><b>3</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Schedule Browser to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Schedule Browser</span>
+        <span class="pitch">Look up any teacher, room, or period in seconds.</span>
+        <span class="comment" aria-hidden="true">Knows where everyone is. Even you.</span>
+      </span>
+      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
+      <span class="grade" title="Comment: always knows where everyone is supposed to be.">A+
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:690ms" href="Tools/035-schedule-visualizer.html"
+       data-tool="layout-visualizer" data-tags="building map layout rooms clusters hallways floors wayfinding schedule"
+       data-filter-tags="maps schedule reference">
+      <span class="per"><span class="lbl">Per</span><b>4</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Layout Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">School Layout Visualizer</span>
+        <span class="pitch">See the whole building&rsquo;s schedule, hyperlinked.</span>
+        <span class="comment" aria-hidden="true">Finds every hallway shortcut you&rsquo;ve been hiding.</span>
+      </span>
+      <span class="tags"><span data-tag="maps">maps</span><span data-tag="schedule">schedule</span><span data-tag="reference">reference</span></span>
+      <span class="grade" title="Comment: sees the big picture.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1180ms" href="Tools/032-School%20Calendar%20Visualizer.html"
+       data-tool="school-calendar-visualizer" data-tags="calendar pacing holidays half days grading periods testing windows template"
+       data-filter-tags="schedule planning charts">
+      <span class="per"><span class="lbl">Per</span><b>11</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin School Calendar Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">School Calendar Visualizer</span>
+        <span class="pitch">Build a full-year calendar template — holidays, half days, workdays, grading periods — and lay lesson pacing on top: paste a lesson list or import the county pacing spreadsheet, and bumps or snow days reflow the whole sequence.</span>
+        <span class="comment" aria-hidden="true">Sees the whole year coming. Still not ready for it.</span>
+      </span>
+      <span class="tags"><span data-tag="schedule">schedule</span><span data-tag="planning">planning</span><span data-tag="charts">charts</span></span>
+      <span class="grade" title="Comment: plans ahead.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1040ms" href="Tools/044-Sub%20Plan%20Builder.html"
+       data-tool="sub-plan-builder" data-tags="sub plans substitute lesson word docx emergency"
+       data-filter-tags="sub-plans export printable">
+      <span class="per"><span class="lbl">Per</span><b>9</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Plan Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Sub Plan Builder</span>
+        <span class="pitch">Fill in the boilerplate once, then export a ready-to-print sub plan.</span>
+        <span class="comment" aria-hidden="true">Covers your class. Doesn't cover for you.</span>
+      </span>
+      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: leaves detailed instructions.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1396ms" href="Tools/045-sub-binder-generator.html"
+       data-tool="sub-binder-generator" data-tags="sub plans bundle print pdf combine emergency seating schedule"
+       data-filter-tags="sub-plans export printable seating schedule">
+      <span class="per"><span class="lbl">Per</span><b>25</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Sub Binder / Day Bundle Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Sub Binder / Day Bundle Generator</span>
+        <span class="pitch">Pulls the standing details saved in Sub Plan Builder and the current Seating Chart into one two-page printable packet, plus today&rsquo;s lesson.</span>
+        <span class="comment" aria-hidden="true">One stack for the sub. Not three separate tabs.</span>
+      </span>
+      <span class="tags"><span data-tag="sub-plans">sub-plans</span><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: one stack for the sub, not three separate tabs.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
@@ -1319,6 +1115,79 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
+    </details>
+
+    <details class="cat" data-cat="assessment-grading">
+    <summary class="section-head ink" style="--d:500ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <h2>Assessment &amp; Grading</h2>
+      <span class="cat-count">5 tools</span>
+    </summary>
+
+    <a class="row ink" style="--d:760ms" href="Tools/036-final_grade_checker.html"
+       data-tool="grade-checker" data-tags="grades grading report cards math weights averages quarter exam gradebook export"
+       data-filter-tags="grades reference export">
+      <span class="per"><span class="lbl">Per</span><b>5</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Final Grade Checker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Final Grade Checker</span>
+        <span class="pitch">Double-check the math before report cards go out.</span>
+        <span class="comment" aria-hidden="true">Catches my math before the parents do.</span>
+      </span>
+      <span class="tags"><span data-tag="grades">grades</span><span data-tag="reference">reference</span><span data-tag="export">export</span></span>
+      <span class="grade" title="Comment: shows all work.">A+
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1332ms" href="Tools/003-rubric-builder.html"
+       data-tool="rubric-builder" data-tags="rubric grading criteria printable"
+       data-filter-tags="grades reference printable">
+      <span class="per"><span class="lbl">Per</span><b>19</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Rubric Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Rubric Builder</span>
+        <span class="pitch">Build, save, and print grading rubrics &mdash; editable criteria and performance levels, from a template or from scratch.</span>
+        <span class="comment" aria-hidden="true">Grades the assignment. Not you.</span>
+      </span>
+      <span class="tags"><span data-tag="grades">grades</span><span data-tag="reference">reference</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: grades the assignment, not you.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1356ms" href="Tools/037-grade-distribution-visualizer.html"
+       data-tool="grade-distribution-visualizer" data-tags="grades distribution histogram stats gradebook"
+       data-filter-tags="grades charts">
+      <span class="per"><span class="lbl">Per</span><b>21</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Grade Distribution Visualizer to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Grade Distribution Visualizer</span>
+        <span class="pitch">Paste a gradebook export and see class-wide stats, a letter-grade breakdown, and a score histogram &mdash; a companion to the Final Grade Checker.</span>
+        <span class="comment" aria-hidden="true">The curve, visualized. No promises about the curve itself.</span>
+      </span>
+      <span class="tags"><span data-tag="grades">grades</span><span data-tag="charts">charts</span></span>
+      <span class="grade" title="Comment: the curve, visualized.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1320ms" href="Tools/023-exit-ticket-generator.html"
+       data-tool="exit-ticket-generator" data-tags="exit ticket bell ringer warm up printable"
+       data-filter-tags="warm-up printable writing">
+      <span class="per"><span class="lbl">Per</span><b>18</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Exit Ticket / Bell Ringer Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Exit Ticket / Bell Ringer Generator</span>
+        <span class="pitch">A bank of short warm-up and exit-ticket prompts with a projector display, or print half- or quarter-sheet handouts for the whole class.</span>
+        <span class="comment" aria-hidden="true">Three minutes of writing. Zero minutes of grading.</span>
+      </span>
+      <span class="tags"><span data-tag="warm-up">warm-up</span><span data-tag="printable">printable</span><span data-tag="writing">writing</span></span>
+      <span class="grade" title="Comment: three minutes of writing, zero minutes of grading.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
     <a class="row ink" style="--d:1316ms" href="Tools/077-testing-accommodations-card-generator.html"
        data-tool="testing-accommodations-card-generator" data-tags="general testing accommodations reference card printable"
        data-filter-tags="reference cards printable">
@@ -1335,33 +1204,195 @@
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <a class="row ink" href="Tools/082-citation-generator.html"
-       data-tool="citation-generator" data-tags="general citation generator mla apa chicago works cited references bibliography book website wikipedia"
-       data-filter-tags="writing printable reference">
-      <span class="per"><span class="lbl">Per</span><b>82</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Citation Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+    </details>
+
+    <details class="cat" data-cat="games-rewards">
+    <summary class="section-head ink" style="--d:520ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <h2>Games, Review &amp; Rewards</h2>
+      <span class="cat-count">6 tools</span>
+    </summary>
+
+    <a class="row ink" style="--d:1260ms" href="Tools/020-bracket-tournament-generator.html"
+       data-tool="bracket-tournament-generator" data-tags="bracket tournament review game elimination groups teams"
+       data-filter-tags="review-game groups printable projector">
+      <span class="per"><span class="lbl">Per</span><b>13</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Bracket / Tournament Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
-        <span class="name">Citation Generator</span>
-        <span class="pitch">Add books, articles, websites, Wikipedia pages, videos, and more, then print a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style, alphabetized automatically.</span>
-        <span class="comment" aria-hidden="true">No more &ldquo;how do I cite Wikipedia&rdquo; mid-class.</span>
+        <span class="name">Bracket / Tournament Generator</span>
+        <span class="pitch">Build a single-elimination bracket, run it live, and pick winners as rounds finish.</span>
+        <span class="comment" aria-hidden="true">Somebody has to lose in the first round. Sorry, Eve.</span>
       </span>
-      <span class="tags"><span data-tag="writing">writing</span><span data-tag="printable">printable</span><span data-tag="reference">reference</span></span>
-      <span class="grade" title="Comment: no more how do I cite Wikipedia mid-class.">A
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="groups">groups</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: handles elimination gracefully.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
     </a>
 
-    <a class="row ink" href="Tools/084-socratic-seminar-prep-organizer.html"
-       data-tool="socratic-seminar-prep-organizer" data-tags="general socratic seminar discussion claim evidence rebuttal speaking order fishbowl tracker"
-       data-filter-tags="discussion printable tracker">
-      <span class="per"><span class="lbl">Per</span><b>84</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Socratic Seminar Prep to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+    <a class="row ink" style="--d:1272ms" href="Tools/030-review-game-board.html"
+       data-tool="review-game-board" data-tags="jeopardy review game quiz board projector excel import"
+       data-filter-tags="review-game projector">
+      <span class="per"><span class="lbl">Per</span><b>14</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Quiz / Review Game Board to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
       <span>
-        <span class="name">Socratic Seminar Prep &amp; Tracker</span>
-        <span class="pitch">Print a claim/evidence/rebuttal prep sheet for a central question, then run a live speaking-order and participation tracker with shuffle, drag-to-reorder, and an optional inner/outer fishbowl split.</span>
-        <span class="comment" aria-hidden="true">Know who talked without a clipboard tally.</span>
+        <span class="name">Quiz / Review Game Board</span>
+        <span class="pitch">A Jeopardy-style board for the projector &mdash; type in questions or import them from a spreadsheet.</span>
+        <span class="comment" aria-hidden="true">Daily Double energy, minus the Sony lawyers.</span>
       </span>
-      <span class="tags"><span data-tag="discussion">discussion</span><span data-tag="printable">printable</span><span data-tag="tracker">tracker</span></span>
-      <span class="grade" title="Comment: know who talked without a clipboard tally.">A
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="projector">projector</span></span>
+      <span class="grade" title="Comment: knows the answer, in the form of a question.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1368ms" href="Tools/018-qr-scavenger-hunt-builder.html"
+       data-tool="qr-scavenger-hunt-builder" data-tags="qr code scavenger hunt stations answer key"
+       data-filter-tags="qr review-game printable">
+      <span class="per"><span class="lbl">Per</span><b>22</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin QR Scavenger Hunt Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">QR Scavenger Hunt Builder</span>
+        <span class="pitch">Batch-generate a set of station QR codes plus an answer key.</span>
+        <span class="comment" aria-hidden="true">Sends them all over the building. Keeps the answers to itself.</span>
+      </span>
+      <span class="tags"><span data-tag="qr">qr</span><span data-tag="review-game">review-game</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: keeps the answers to itself.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1412ms" href="Tools/019-escape-room-builder.html"
+       data-tool="escape-room-builder" data-tags="escape room puzzle lock qr code stations game"
+       data-filter-tags="review-game qr projector">
+      <span class="per"><span class="lbl">Per</span><b>27</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Digital Escape Room / Puzzle Lock Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Digital Escape Room / Puzzle Lock Builder</span>
+        <span class="pitch">Chain QR-code puzzle stations into a linear or branching escape room &mdash; scanning one out of order sends a student back instead of giving away the clue.</span>
+        <span class="comment" aria-hidden="true">The only lock in the building that&rsquo;s supposed to be picked.</span>
+      </span>
+      <span class="tags"><span data-tag="review-game">review-game</span><span data-tag="qr">qr</span><span data-tag="projector">projector</span></span>
+      <span class="grade" title="Comment: the only lock in the building that&rsquo;s supposed to be picked.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1110ms" href="Tools/016-qr-code-generator.html"
+       data-tool="qr-code-generator" data-tags="qr code generator link station schoology forms logo"
+       data-filter-tags="qr printable">
+      <span class="per"><span class="lbl">Per</span><b>10</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin QR Code Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">QR Code Generator</span>
+        <span class="pitch">Turn a link or short text into a printable QR code, with an optional logo in the center.</span>
+        <span class="comment" aria-hidden="true">Scans on the first try. Unlike the fire alarm.</span>
+      </span>
+      <span class="tags"><span data-tag="qr">qr</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: scans on the first try.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1284ms" href="Tools/042-certificate-award-maker.html"
+       data-tool="certificate-award-maker" data-tags="certificate award printable recognition batch"
+       data-filter-tags="printable cards communication">
+      <span class="per"><span class="lbl">Per</span><b>15</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Certificate &amp; Award Maker to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Certificate &amp; Award Maker</span>
+        <span class="pitch">Pick a template and border, type in the details, print one certificate or a whole class set.</span>
+        <span class="comment" aria-hidden="true">Everyone&rsquo;s a winner. Some more officially than others.</span>
+      </span>
+      <span class="tags"><span data-tag="printable">printable</span><span data-tag="cards">cards</span><span data-tag="communication">communication</span></span>
+      <span class="grade" title="Comment: everyone&rsquo;s a winner.">A+
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    </details>
+
+    <details class="cat" data-cat="docs-comm">
+    <summary class="section-head ink" style="--d:540ms">
+      <span class="caret" aria-hidden="true"><svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <h2>Documents &amp; Communication</h2>
+      <span class="cat-count">7 tools</span>
+    </summary>
+
+    <a class="row ink" style="--d:830ms" href="Tools/011-image-to-pdf.html"
+       data-tool="image-to-pdf" data-tags="pdf images photos scans handouts merge combine documents"
+       data-filter-tags="export printable">
+      <span class="per"><span class="lbl">Per</span><b>6</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Image &rarr; PDF Assembler to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Image &rarr; PDF Assembler</span>
+        <span class="pitch">Turn a stack of photos into one clean PDF.</span>
+        <span class="comment" aria-hidden="true">Turns chaos into one PDF. Occasionally sideways.</span>
+      </span>
+      <span class="tags"><span data-tag="export">export</span><span data-tag="printable">printable</span></span>
+      <span class="grade" title="Comment: turns work in on time, stapled.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:970ms" href="Tools/031-docx-merger.html"
+       data-tool="docx-merger" data-tags="word docx merge combine documents template letters"
+       data-filter-tags="export communication">
+      <span class="per"><span class="lbl">Per</span><b>8</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Word Doc Merger to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Word Doc Merger</span>
+        <span class="pitch">Combine multiple Word docs into one, in order.</span>
+        <span class="comment" aria-hidden="true">Plays well with others. Literally.</span>
+      </span>
+      <span class="tags"><span data-tag="export">export</span><span data-tag="communication">communication</span></span>
+      <span class="grade" title="Comment: works well with others.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:900ms" href="Tools/029-prompt-builder.html"
+       data-tool="prompt-builder" data-tags="prompt ai writing template builder chatgpt claude questions"
+       data-filter-tags="planning writing reference">
+      <span class="per"><span class="lbl">Per</span><b>7</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Prompt Builder to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Prompt Builder</span>
+        <span class="pitch">Answer a few questions, get a ready-to-use AI prompt.</span>
+        <span class="comment" aria-hidden="true">Better at asking questions than most staff meetings.</span>
+      </span>
+      <span class="tags"><span data-tag="planning">planning</span><span data-tag="writing">writing</span><span data-tag="reference">reference</span></span>
+      <span class="grade" title="Comment: asks good questions.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1344ms" href="Tools/043-field-trip-permission-slip.html"
+       data-tool="field-trip-permission-slip" data-tags="field trip permission slip printable"
+       data-filter-tags="printable communication">
+      <span class="per"><span class="lbl">Per</span><b>20</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Field Trip Permission Slip Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Field Trip Permission Slip Generator</span>
+        <span class="pitch">Fill in the trip details once, then print one slip, a whole class set, or blank copies to hand-write &mdash; save the trip as a template for next year.</span>
+        <span class="comment" aria-hidden="true">Fills in the fine print. You still chase the signatures.</span>
+      </span>
+      <span class="tags"><span data-tag="printable">printable</span><span data-tag="communication">communication</span></span>
+      <span class="grade" title="Comment: fills in the fine print, you still chase the signatures.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" style="--d:1416ms" href="Tools/068-parent-contact-log.html"
+       data-tool="parent-contact-log" data-tags="general parent contact log communication tracker conference"
+       data-filter-tags="communication tracker">
+      <span class="per"><span class="lbl">Per</span><b>28</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Parent/Guardian Contact Log to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Parent/Guardian Contact Log</span>
+        <span class="pitch">Log a call, email, or note home per student &mdash; date, method, and outcome &mdash; for quick reference before a conference or a difficult phone call.</span>
+        <span class="comment" aria-hidden="true">Remembers so you don&rsquo;t have to, right before that call.</span>
+      </span>
+      <span class="tags"><span data-tag="communication">communication</span><span data-tag="tracker">tracker</span></span>
+      <span class="grade" title="Comment: remembers so you don't have to.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
@@ -1378,6 +1409,22 @@
       </span>
       <span class="tags"><span data-tag="communication">communication</span><span data-tag="printable">printable</span><span data-tag="letters">letters</span></span>
       <span class="grade" title="Comment: a drafted email beats a blank compose window.">A
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </a>
+
+    <a class="row ink" href="Tools/082-citation-generator.html"
+       data-tool="citation-generator" data-tags="general citation generator mla apa chicago works cited references bibliography book website wikipedia"
+       data-filter-tags="writing printable reference">
+      <span class="per"><span class="lbl">Per</span><b>82</b> <span class="pin" role="button" tabindex="0" aria-pressed="false" aria-label="Pin Citation Generator to My Tools" data-pin><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span></span>
+      <span>
+        <span class="name">Citation Generator</span>
+        <span class="pitch">Add books, articles, websites, Wikipedia pages, videos, and more, then print a Works Cited, References, or Bibliography page in MLA, APA, or Chicago style, alphabetized automatically.</span>
+        <span class="comment" aria-hidden="true">No more &ldquo;how do I cite Wikipedia&rdquo; mid-class.</span>
+      </span>
+      <span class="tags"><span data-tag="writing">writing</span><span data-tag="printable">printable</span><span data-tag="reference">reference</span></span>
+      <span class="grade" title="Comment: no more how do I cite Wikipedia mid-class.">A
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true"><path d="M22 5C10 4 4 11 4.5 21.5 5 33 14 40 23 39.5 34 39 40.5 31 39.5 20.5 38.6 11 31 5.6 22.5 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </span>
       <span class="open">Open<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5h9M6 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
@@ -2260,9 +2307,13 @@
         <svg width="9" height="10" viewBox="0 0 9 10" fill="none"><path d="M2 1.5L6.5 5 2 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <h2>Progress report</h2>
-      <span class="tally">58 recent entries</span>
+      <span class="tally">59 recent entries</span>
     </summary>
     <ul class="log">
+      <li>
+        <time datetime="2026-08-17">Aug 17, 2026</time>
+        <span><b>General category split.</b> The 35-tool "General / Classroom Logistics" catch-all is now 5 focused sections &mdash; Classroom Management &amp; Engagement, Scheduling &amp; Substitute Planning, Assessment &amp; Grading, Games/Review &amp; Rewards, and Documents &amp; Communication. Open state, tags, and pins are unaffected.</span>
+      </li>
       <li>
         <time datetime="2026-08-15">Aug 15, 2026</time>
         <span><b>Four new tools.</b> Citation Generator (MLA/APA/Chicago), a Propaganda &amp; Persuasion Analysis Worksheet Generator, Socratic Seminar Prep &amp; Tracker, and a Parent Communication Template Generator joined the toolkit.</span>
@@ -2566,7 +2617,7 @@
   if (!savedCatState || typeof savedCatState !== 'object' || Array.isArray(savedCatState)) {
     /* first visit: the first category ships open so the page shows tools
        immediately; an explicit collapse persists via the toggle handler */
-    savedCatState = { general: true };
+    savedCatState = { 'classroom-mgmt': true };
   }
   var pins = lsGet(LS_PINS) || [];
   if (Object.prototype.toString.call(pins) !== '[object Array]') pins = [];
