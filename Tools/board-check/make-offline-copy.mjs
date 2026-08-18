@@ -382,22 +382,20 @@ function walkHtmlFiles(dir) {
 }
 
 // index.html itself links to two things this trimmed copy excludes: a
-// floating "Try: Inbox" button that switches to the alternate v1-inbox.html
-// landing-page theme, and 3 "ideas backlog" mentions pointing at
-// ideas-backlog.html. Left alone, both would be dead links on the one page
-// every recipient is guaranteed to open — worse than not having them at all.
+// "Prefer a different look?" comment-code link that points at the alternate
+// v1-inbox.html landing-page theme, and 3 "ideas backlog" mentions pointing
+// at ideas-backlog.html. Left alone, both would be dead links on the one
+// page every recipient is guaranteed to open — worse than not having them
+// at all.
 function sanitizeEntryPoint(html) {
   // Normalized to LF for the same reason as bmg-vector.js above: the
   // multi-line template literals below are LF-only once parsed (per the JS
   // spec's template-literal line-terminator normalization), but index.html
   // on disk may still be CRLF (e.g. on a Windows checkout).
   html = html.replace(/\r\n/g, '\n');
-  const themeSwitch = `<a class="theme-switch" href="v1-inbox.html" title="Switch landing page theme" aria-label="Switch to Inbox theme">
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11 2l3 3-3 3M14 5H5.5A3.5 3.5 0 0 0 2 8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14l-3-3 3-3M2 11h8.5A3.5 3.5 0 0 0 14 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <span>Try: Inbox</span>
-</a>`;
-  assertExactlyOne(html, themeSwitch, 'index.html theme-switch button');
-  html = html.replace(themeSwitch, '');
+  const themeSwitch = `Prefer a different look? Try the <a href="v1-inbox.html">Inbox edition</a>.`;
+  assertExactlyOne(html, themeSwitch, 'index.html theme-switch link');
+  html = html.replace(themeSwitch, 'Prefer a different look? The Inbox edition isn&rsquo;t included in this offline copy.');
 
   const ideasLink = `<a href="ideas-backlog.html">ideas backlog</a>`;
   const ideasCount = html.split(ideasLink).length - 1;
