@@ -415,6 +415,18 @@ input, select, textarea { font: inherit; }
   </div>
 </section>
 
+<!-- target peek / hint modal -->
+<div id="peekModal" class="overlay" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="peekTitle" style="text-align:left;max-width:520px">
+    <h3 id="peekTitle" style="margin:0 0 8px;color:var(--green)"></h3>
+    <img id="peekImg" alt="" style="float:right;max-width:160px;margin:0 0 10px 12px;border-radius:8px" hidden>
+    <div id="peekBody" style="font-weight:400;font-size:.95rem;max-height:50vh;overflow:auto"></div>
+    <div style="clear:both;text-align:right;margin-top:14px">
+      <button id="peekCloseBtn" class="btn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- loading / error overlays -->
 <div id="loadingOverlay" class="overlay" hidden>
   <div class="box"><div class="spinner" aria-hidden="true"></div><span id="loadingMsg">Loading article&hellip;</span></div>
@@ -1000,13 +1012,191 @@ function showResults() {
   showScreen('results');
 }
 
-/* Placeholder codec — completed in the finish-code section (next commit). */
-function buildFinishCode() { return Promise.resolve('(finish codes coming online…)'); }
+/* =====================================================================
+   finish code — WR1.<checksum>.<base64url deflate JSON>, or WR0 with
+   plain base64url where CompressionStream is unavailable. The checksum
+   is salted FNV-1a: deterrence against edited codes, not cryptography —
+   the salt is readable right here in the source, which is fine for a
+   classroom game.
+   ===================================================================== */
+var CODE_SALT = 'EMS-BULLDOGS-WR-2026';
+
+function fnv1a(str) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+function checksum(prefix, dataB64) {
+  return fnv1a(CODE_SALT + prefix + '.' + dataB64).toString(36).padStart(6, '0').slice(-6);
+}
+function b64urlFromBytes(bytes) {
+  var s = '';
+  for (var i = 0; i < bytes.length; i += 0x8000) {
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function bytesFromB64url(b64) {
+  b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  var s = atob(b64);
+  var out = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+function pipeBytes(bytes, TransformCtor, kind) {
+  var stream = new Blob([bytes]).stream().pipeThrough(new TransformCtor(kind));
+  return new Response(stream).arrayBuffer().then(function (buf) { return new Uint8Array(buf); });
+}
+
+function buildFinishCode() {
+  var payload = {
+    v: 1, s: state.seed, d: state.difficulty,
+    t: Math.round(state.elapsedMs), c: state.clicks, h: state.hints,
+    p: state.path
+  };
+  var bytes = new TextEncoder().encode(JSON.stringify(payload));
+  var done = (typeof CompressionStream !== 'undefined')
+    ? pipeBytes(bytes, CompressionStream, 'deflate-raw').then(function (out) {
+        return { prefix: 'WR1', data: b64urlFromBytes(out) };
+      })
+    : Promise.resolve({ prefix: 'WR0', data: b64urlFromBytes(bytes) });
+  return done.then(function (r) {
+    return r.prefix + '.' + checksum(r.prefix, r.data) + '.' + r.data;
+  });
+}
+
+function decodeFinishCode(code) {
+  return Promise.resolve().then(function () {
+    var parts = String(code).trim().split('.');
+    if (parts.length !== 3) throw new Error('That doesn’t look like a finish code (expected three dot-separated parts).');
+    var prefix = parts[0], sum = parts[1], data = parts[2];
+    if (prefix !== 'WR1' && prefix !== 'WR0') throw new Error('Unknown code type “' + prefix + '”.');
+    if (checksum(prefix, data) !== sum) throw new Error('Checksum doesn’t match — the code was mistyped or edited.');
+    var bytes = bytesFromB64url(data);
+    if (prefix === 'WR0') {
+      return JSON.parse(new TextDecoder().decode(bytes));
+    }
+    if (typeof DecompressionStream === 'undefined') {
+      throw new Error('This browser can’t read WR1 codes (no DecompressionStream) — try a current Chrome, Edge, or Firefox.');
+    }
+    return pipeBytes(bytes, DecompressionStream, 'deflate-raw').then(function (out) {
+      return JSON.parse(new TextDecoder().decode(out));
+    });
+  }).then(function (payload) {
+    if (payload.v !== 1 || !Array.isArray(payload.p) || !payload.p.length) {
+      throw new Error('Unsupported or incomplete finish code.');
+    }
+    return payload;
+  });
+}
 
 /* =====================================================================
-   stuck helpers (peek / hint / find) — wired in next commit
+   verify mode — teacher pastes a code, we validate and project it
+   ===================================================================== */
+function runVerify() {
+  var box = $('verifyResult');
+  var code = $('verifyInput').value;
+  if (!code.trim()) { box.textContent = ''; return; }
+  box.innerHTML = '<em>Checking…</em>';
+  decodeFinishCode(code).then(function (p) {
+    var penaltyMs = p.h * 30000;
+    var expected = computeMatchup(p.s, p.d);
+    // Soft consistency note: path endpoints are canonical titles, the drawn
+    // matchup is our stored form — compare loosely and only warn.
+    var startOk = tnorm(p.p[0]) === tnorm(expected.start);
+    var endOk = tnorm(p.p[p.p.length - 1]) === tnorm(expected.target);
+    var rows = [
+      ['Seed', p.s], ['Difficulty', p.d],
+      ['Race', p.p[0] + ' ➞ ' + p.p[p.p.length - 1]],
+      ['Base time', fmtTime(p.t)],
+      ['Hints', p.h + (p.h ? ' (+' + fmtTime(penaltyMs) + ')' : '')],
+      ['Final time', fmtTime(p.t + penaltyMs)],
+      ['Clicks', p.c],
+      ['Articles visited', p.p.length]
+    ];
+    var html = '<span class="badge badge-ok">&#10003; VALID CODE</span>';
+    if (!startOk || !endOk) {
+      html += ' <span class="badge badge-bad" title="The path endpoints don’t match what this seed + difficulty produces (a redirect can cause this — spot-check by running the seed).">&#9888; check matchup</span>';
+    }
+    html += '<table style="margin-top:12px;border-collapse:collapse">' + rows.map(function (r) {
+      return '<tr><th style="text-align:left;padding:3px 14px 3px 0;color:var(--muted)">' + r[0] +
+        '</th><td style="padding:3px 0;font-weight:700">' + escapeHtml(String(r[1])) + '</td></tr>';
+    }).join('') + '</table>';
+    html += '<h3 style="margin-bottom:4px">Path</h3><ol class="path-chain">' + p.p.map(function (t) {
+      return '<li>' + escapeHtml(t) + '</li>';
+    }).join('') + '</ol>';
+    box.innerHTML = html;
+  }).catch(function (err) {
+    box.innerHTML = '<span class="badge badge-bad">&#10007; INVALID</span>' +
+      '<p style="color:var(--danger);font-weight:600">' + escapeHtml(err.message) + '</p>';
+  });
+}
+
+/* =====================================================================
+   stuck helpers (peek / hint / find)
    ===================================================================== */
 var targetPreview = null;
+
+function loadTargetPreview() {
+  if (targetPreview) return Promise.resolve(targetPreview);
+  return fetchTargetPreview(state.targetCanonical).then(function (p) {
+    targetPreview = p;
+    return p;
+  });
+}
+
+function openPeekModal(title, bodyText, thumb) {
+  $('peekTitle').textContent = title;
+  $('peekBody').textContent = bodyText;
+  var img = $('peekImg');
+  if (thumb) { img.src = thumb; img.hidden = false; } else { img.hidden = true; img.removeAttribute('src'); }
+  $('peekModal').hidden = false;
+  $('peekCloseBtn').focus();
+}
+
+function doPeek() { // free: what does the target article look like?
+  $('peekBtn').disabled = true;
+  loadTargetPreview().then(function (p) {
+    openPeekModal('🎯 Target: ' + state.targetCanonical, p.extract, p.thumb);
+  }).catch(function (err) {
+    openPeekModal('🎯 Target: ' + state.targetCanonical, 'Couldn’t load the preview (' + errText(err) + ')', null);
+  }).finally(function () { $('peekBtn').disabled = false; });
+}
+
+function doHint() { // +30s: which direction should I head?
+  if (state.status !== 'racing') return;
+  state.hints++;
+  var cat = categoryOf(state.targetTitle);
+  var base = 'Head toward ' + (cat ? cat.toUpperCase() : 'the target') + ' topics.';
+  loadTargetPreview().then(function (p) {
+    var firstSentence = (p.extract.match(/^[^.!?]*[.!?]/) || [p.extract.slice(0, 160)])[0];
+    openPeekModal('💡 Hint (+30s)', base + '\n\n' + firstSentence, null);
+  }).catch(function () {
+    openPeekModal('💡 Hint (+30s)', base, null);
+  });
+}
+
+function runFind() {
+  var q = $('findInput').value.trim().toLowerCase();
+  els.articleHost.querySelectorAll('.wr-find-hit').forEach(function (el) {
+    el.classList.remove('wr-find-hit');
+  });
+  if (!q) { $('findCount').textContent = ''; return; }
+  var hits = [];
+  els.articleHost.querySelectorAll('a[data-wr="nav"]').forEach(function (a) {
+    if (a.textContent.toLowerCase().indexOf(q) !== -1) {
+      a.classList.add('wr-find-hit');
+      hits.push(a);
+    }
+  });
+  $('findCount').textContent = hits.length + ' link' + (hits.length === 1 ? '' : 's');
+  return hits;
+}
+
 function clearFind() {
   els.articleHost.querySelectorAll('.wr-find-hit').forEach(function (el) {
     el.classList.remove('wr-find-hit');
@@ -1060,6 +1250,36 @@ $('againBtn').addEventListener('click', function () {
 
 $('toVerifyBtn').addEventListener('click', function () { showScreen('verify'); });
 $('verifyBackBtn').addEventListener('click', function () { showScreen('start'); });
+$('verifyBtn').addEventListener('click', runVerify);
+
+$('peekBtn').addEventListener('click', doPeek);
+$('hintBtn').addEventListener('click', doHint);
+$('peekCloseBtn').addEventListener('click', function () { $('peekModal').hidden = true; });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !$('peekModal').hidden) $('peekModal').hidden = true;
+});
+$('findInput').addEventListener('input', runFind);
+$('findInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    var hit = els.articleHost.querySelector('.wr-find-hit');
+    if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+});
+
+$('copyCodeBtn').addEventListener('click', function () {
+  var ta = $('finishCode');
+  var done = function () {
+    $('copyCodeBtn').textContent = 'Copied!';
+    setTimeout(function () { $('copyCodeBtn').textContent = 'Copy code'; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done).catch(function () {
+      ta.select(); document.execCommand('copy'); done();
+    });
+  } else { // clipboard API can be unavailable on file://
+    ta.select(); document.execCommand('copy'); done();
+  }
+});
 
 function refreshOnline() {
   els.offlineBanner.hidden = navigator.onLine !== false;
@@ -1069,7 +1289,10 @@ window.addEventListener('offline', refreshOnline);
 refreshOnline();
 
 /* tiny debug/test hook (used by the repo's throwaway e2e checks) */
-window.__wr = { state: state, navigateTo: navigateTo, computeMatchup: computeMatchup, TOPICS: TOPICS };
+window.__wr = {
+  state: state, navigateTo: navigateTo, computeMatchup: computeMatchup,
+  TOPICS: TOPICS, buildFinishCode: buildFinishCode, decodeFinishCode: decodeFinishCode
+};
 
 })();
 </script>
